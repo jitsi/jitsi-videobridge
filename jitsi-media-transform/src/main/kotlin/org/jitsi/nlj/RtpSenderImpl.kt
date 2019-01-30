@@ -78,6 +78,12 @@ class RtpSenderImpl(
     var running = true
     private var localVideoSsrc: Long? = null
     private var localAudioSsrc: Long? = null
+    //TODO(brian): this is changed to a handler instead of a queue because we want to use
+    // a PacketQueue, and the handler for a PacketQueue must be set at the time of creation.
+    // since we want the handler to be another entity (something in jvb) we just use
+    // a generic handler here and then the bridge can put it into its PacketQueue and have
+    // its handler (likely in another thread) grab the packet and send it out
+    private var outgoingPacketHandler: PacketHandler? = null
 
     private var firstQueueReadTime: Long = -1
     private var lastQueueReadTime: Long = -1
@@ -110,7 +116,7 @@ class RtpSenderImpl(
                     logger.cerror { "Packet took >100ms to get through bridge:\n${it.timeline}"}
                 }
             }
-            this@RtpSenderImpl.packetSender.processPackets(p)
+            outgoingPacketHandler?.processPackets(p)
         }
     }
 
@@ -181,6 +187,10 @@ class RtpSenderImpl(
     }
 
     override fun sendProbing(mediaSsrc: Long, numBytes: Int): Int = probingDataSender.sendProbing(mediaSsrc, numBytes)
+
+    override fun onOutgoingPacket(handler: PacketHandler) {
+        outgoingPacketHandler = handler
+    }
 
     override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {
         srtpEncryptWrapper.setTransformer(srtpTransformer)
