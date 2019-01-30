@@ -35,6 +35,7 @@ import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
 import org.jitsi.nlj.transform.node.outgoing.SrtpTransformerEncryptNode
 import org.jitsi.nlj.transform.node.outgoing.TccSeqNumTagger
 import org.jitsi.nlj.transform.pipeline
+import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
@@ -70,7 +71,7 @@ class RtpSenderImpl(
     private val outgoingRtpRoot: Node
     private val outgoingRtxRoot: Node
     private val outgoingRtcpRoot: Node
-    val incomingPacketQueue = LinkedBlockingQueue<PacketInfo>()
+    private val incomingPacketQueue = PacketInfoQueue(id, executor, this::processPacket)
     var numIncomingBytes: Long = 0
     var firstPacketWrittenTime = -1L
     var lastPacketWrittenTime = -1L
@@ -157,8 +158,6 @@ class RtpSenderImpl(
         }
 
         probingDataSender = ProbingDataSender(outgoingPacketCache.getPacketCache(), outgoingRtxRoot, absSendTime)
-
-        executor.execute(this::doWork)
     }
 
     override fun sendPackets(pkts: List<PacketInfo>) {
@@ -166,7 +165,7 @@ class RtpSenderImpl(
             numIncomingBytes += it.packet.size
             it.addEvent(PACKET_QUEUE_ENTRY_EVENT)
         }
-        incomingPacketQueue.addAll(pkts)
+        pkts.forEach(incomingPacketQueue::add)
         if (firstPacketWrittenTime == -1L) {
             firstPacketWrittenTime = System.currentTimeMillis()
         }
@@ -195,19 +194,19 @@ class RtpSenderImpl(
         keyframeRequester.requestKeyframe(mediaSsrc)
     }
 
-    private fun doWork() {
-        while (running) {
+    private fun processPacket(packet: PacketInfo): Boolean {
+        if (running) {
             val now = System.currentTimeMillis()
             if (firstQueueReadTime == -1L) {
                 firstQueueReadTime = now
             }
             numQueueReads++
             lastQueueReadTime = now
-            incomingPacketQueue.poll(100, TimeUnit.MILLISECONDS)?.let {
-                it.addEvent(PACKET_QUEUE_EXIT_EVENT)
-                outgoingRtpRoot.processPackets(listOf(it))
-            }
+            packet.addEvent(PACKET_QUEUE_EXIT_EVENT)
+            outgoingRtpRoot.processPackets(listOf(packet))
+            return true
         }
+        return false
     }
 
     override fun getStreamStats(): Map<Long, OutgoingStreamStatistics.Snapshot> {
@@ -233,7 +232,6 @@ class RtpSenderImpl(
     override fun getNodeStats(): NodeStatsBlock {
         val bitRateMbps = getMbps(numBytesSent, Duration.ofMillis(lastPacketSentTime - firstPacketSentTime))
         return NodeStatsBlock("RTP sender $id").apply {
-            addStat("queue size: ${incomingPacketQueue.size}")
             addStat("$numIncomingBytes incoming bytes in ${lastPacketWrittenTime - firstPacketWrittenTime} (${getMbps(numIncomingBytes, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
             addStat("Sent $numPacketsSent packets in ${lastPacketSentTime - firstPacketSentTime} ms")
             addStat("Sent $numBytesSent bytes in ${lastPacketSentTime - firstPacketSentTime} ms ($bitRateMbps mbps)")
