@@ -17,7 +17,7 @@ package org.jitsi.nlj
 
 import org.jitsi.nlj.transform.NodeStatsProducer
 
-interface PacketHandler : EventHandler, NodeStatsProducer {
+interface PacketHandler {
     /**
      * Process the given packets
      */
