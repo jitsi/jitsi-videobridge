@@ -127,10 +127,6 @@ fun createRtpSender(executor: ExecutorService, backgroundExecutor: ScheduledExec
 
     sender.handleEvent(RtpExtensionAddedEvent(11, RTPExtension(URI(RTPExtension.ABS_SEND_TIME_URN))))
     sender.handleEvent(RtpExtensionAddedEvent(5, RTPExtension(URI(RTPExtension.TRANSPORT_CC_URN))))
-    sender.packetSender = object : Node("Packet sender") {
-        override fun doProcessPackets(p: List<PacketInfo>) {
-        }
-    }
     return sender
 }
 

@@ -23,11 +23,10 @@ import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
-import org.jitsi.nlj.stats.PacketIOActivity
 import org.jitsi.nlj.stats.NodeStatsBlock
+import org.jitsi.nlj.stats.PacketIOActivity
 import org.jitsi.nlj.stats.TransceiverStats
 import org.jitsi.nlj.transform.NodeStatsProducer
-import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.extensions.toHex
@@ -43,7 +42,6 @@ import org.jitsi_modified.service.neomedia.rtp.BandwidthEstimator
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ScheduledExecutorService
 
 // This is an API class, so its usages will largely be outside of this library
@@ -115,20 +113,12 @@ class Transceiver(
             backgroundExecutor,
             logLevelDelegate
         )
-    val outgoingQueue = LinkedBlockingQueue<PacketInfo>()
 
     init {
         logger.cinfo { "Transceiver ${this.hashCode()} using receiver executor ${receiverExecutor.hashCode()} " +
                 "and sender executor ${senderExecutor.hashCode()}" }
 
         rtcpEventNotifier.addRtcpEventListener(endpointConnectionStats)
-
-        // Replace the sender's default packet handler with one that will add packets to outgoingQueue
-        rtpSender.packetSender = object : Node("RTP packet sender") {
-            override fun doProcessPackets(p: List<PacketInfo>) {
-                outgoingQueue.addAll(p)
-            }
-        }
 
         endpointConnectionStats.addListener(bandwidthEstimator)
         rtcpEventNotifier.addRtcpEventListener(bandwidthEstimator)
@@ -176,6 +166,14 @@ class Transceiver(
      */
     fun setIncomingRtpHandler(rtpHandler: PacketHandler) {
         rtpReceiver.rtpPacketHandler = rtpHandler
+    }
+
+    /**
+     * Set a handler to be invoked when outgoing packets have finished
+     * being processed (and are ready to be sent)
+     */
+    fun setOutgoingPacketHandler(outgoingPacketHandler: PacketHandler) {
+        rtpSender.onOutgoingPacket(outgoingPacketHandler)
     }
 
     /**
