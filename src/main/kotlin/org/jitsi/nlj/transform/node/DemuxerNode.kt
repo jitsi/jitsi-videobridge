@@ -35,7 +35,7 @@ class DemuxerNode(name: String) : Node("$name demuxer") {
         // Is this scheme always better? Or only when the list of
         // packets is above a certain size?
         transformPaths.forEach { conditionalPath ->
-            val pathPackets = p.filter { conditionalPath.predicate.invoke(it.packet) }
+            val pathPackets = p.filter { conditionalPath.predicate(it.packet) }
             next(conditionalPath.path, pathPackets)
         }
     }
