@@ -303,11 +303,13 @@ public class Endpoint
         return false;
     }
 
-    //TODO(brian): temp declare a pre-set array to use for passing into the transformer
-    RawPacket[] packets = new RawPacket[1];
     @Override
     public void sendRtp(PacketInfo packetInfo)
     {
+        //TODO(brian): need to declare this here (not as a member, due to the fact that will be
+        // called from multiple threads).  in the future hopefully we can get rid of the need for
+        // this array
+        RawPacket[] packets = new RawPacket[1];
         Packet packet = packetInfo.getPacket();
         if (packet instanceof VideoRtpPacket)
         {
