@@ -353,7 +353,7 @@ public class VP8FrameProjection
             // packet of a frame, the first packet of another frame may have
             // already been accepted, which means there's no longer space to
             // piggyback anything.
-            if (accept(lastPacket))
+            if (lastPacket != null && accept(lastPacket))
             {
                 piggyBackedPackets.add(lastPacket);
             }
