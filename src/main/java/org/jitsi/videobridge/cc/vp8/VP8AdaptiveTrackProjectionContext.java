@@ -23,6 +23,7 @@ import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.cc.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -441,7 +442,7 @@ public class VP8AdaptiveTrackProjectionContext
      */
     @Override
     public RawPacket[] rewriteRtp(
-        @NotNull RawPacket rtpPacket, RawPacketCache incomingRawPacketCache)
+        @NotNull RawPacket rtpPacket, NewRawPacketCache incomingRawPacketCache)
         throws RewriteException
     {
         VP8FrameProjection vp8FrameProjection

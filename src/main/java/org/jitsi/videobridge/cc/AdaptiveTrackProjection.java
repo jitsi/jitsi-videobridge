@@ -21,6 +21,7 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.cc.vp8.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc;
 import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc;
 
@@ -179,6 +180,8 @@ public class AdaptiveTrackProjection
      */
     private final Consumer<Long> keyframeRequester;
 
+    private final NewRawPacketCache packetCache = new NewRawPacketCache(hashCode());
+
     /**
      * Determines whether an RTP packet needs to be accepted or not.
      *
@@ -193,6 +196,7 @@ public class AdaptiveTrackProjection
         {
             return false;
         }
+        packetCache.cachePacket(rtpPacket);
 
         // XXX We want to let the context know that the stream has been
         // suspended so that it can raise the needsKeyframe flag and also allow
@@ -316,36 +320,7 @@ public class AdaptiveTrackProjection
             return EMPTY_PACKET_ARR;
         }
 
-        RawPacketCache incomingRawPacketCache = null;
-        MediaStreamTrackDesc source = getSource();
-        if (source != null)
-        {
-            //TODO(brian): give this access to the incoming raw packet cache
-//            MediaStreamImpl
-//                stream = source.getMediaStreamTrackReceiver().getStream();
-//
-//            if (stream != null)
-//            {
-//                CachingTransformer
-//                    cachingTransformer = stream.getCachingTransformer();
-//
-//                if (cachingTransformer != null)
-//                {
-//                    incomingRawPacketCache
-//                        = cachingTransformer.getIncomingRawPacketCache();
-//                }
-//                else
-//                {
-//                    logger.warn("incoming packet cache is null.");
-//                }
-//            }
-//            else
-//            {
-//                logger.warn("stream is null.");
-//            }
-        }
-
-        return contextCopy.rewriteRtp(rtpPacket, incomingRawPacketCache);
+        return contextCopy.rewriteRtp(rtpPacket, packetCache);
     }
 
     /**

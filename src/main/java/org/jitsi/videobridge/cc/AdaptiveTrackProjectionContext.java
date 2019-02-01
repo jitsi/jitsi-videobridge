@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc;
 
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 
 /**
  * Implementations of this interface are responsible for projecting a specific
@@ -70,7 +71,7 @@ public interface AdaptiveTrackProjectionContext
      * RTP packet that is specified as an argument.
      */
     RawPacket[]
-    rewriteRtp(RawPacket rtpPacket, RawPacketCache incomingRawPacketCache)
+    rewriteRtp(RawPacket rtpPacket, NewRawPacketCache incomingRawPacketCache)
         throws RewriteException;
 
     /**

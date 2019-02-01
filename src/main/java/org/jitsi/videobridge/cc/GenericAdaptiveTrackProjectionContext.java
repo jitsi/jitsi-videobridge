@@ -19,9 +19,11 @@ import net.sf.fmj.media.rtp.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.*;
+import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc;
 import org.jitsi.nlj.format.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 
 /**
  * A generic implementation of an adaptive track projection context that can be
@@ -223,7 +225,7 @@ class GenericAdaptiveTrackProjectionContext
      */
     @Override
     public RawPacket[] rewriteRtp(
-        @NotNull RawPacket rtpPacket, RawPacketCache incomingRawPacketCache)
+        @NotNull RawPacket rtpPacket, NewRawPacketCache incomingRawPacketCache)
     {
         int sourceSequenceNumber = rtpPacket.getSequenceNumber();
         int destinationSequenceNumber

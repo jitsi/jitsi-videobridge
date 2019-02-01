@@ -163,7 +163,10 @@ public class Endpoint
             @Override
             public void bandwidthEstimationChanged(long newValueBps)
             {
-                System.out.println("TEMP: Endpoint " + getID() + "'s estimated bandwidth is now " + newValueBps + " bps");
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Endpoint " + getID() + "'s estimated bandwidth is now " + newValueBps + " bps");
+                }
                 bitrateController.update(getConference().getSpeechActivity().getEndpoints(), newValueBps);
             }
         });

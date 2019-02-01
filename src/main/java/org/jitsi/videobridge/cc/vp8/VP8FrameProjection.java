@@ -21,6 +21,7 @@ import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.cc.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 
 import java.util.*;
 
@@ -284,7 +285,7 @@ public class VP8FrameProjection
      * @param cache the cache to pull piggy-backed packets from.
      * @param rtpPacket the RTP packet to project.
      */
-    RawPacket[] rewriteRtp(@NotNull RawPacket rtpPacket, RawPacketCache cache)
+    RawPacket[] rewriteRtp(@NotNull RawPacket rtpPacket, NewRawPacketCache cache)
     {
         int originalSequenceNumber = rtpPacket.getSequenceNumber();
 
@@ -339,6 +340,10 @@ public class VP8FrameProjection
 
         if (piggyBackedPackets.size() > 0)
         {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Sending " + piggyBackedPackets.size() + " piggybacked packets");
+            }
             for (RawPacket pktOut : piggyBackedPackets)
             {
                 rewriteRtpInternal(pktOut);

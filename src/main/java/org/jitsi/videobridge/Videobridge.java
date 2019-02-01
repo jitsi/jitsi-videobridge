@@ -599,6 +599,7 @@ public class Videobridge
      */
     public IQ handleColibriConferenceIq2(ColibriConferenceIQ conferenceIQ, int options)
     {
+        logger.info("Received conference IQ:\n" + conferenceIQ.toXML());
         Jid focus = conferenceIQ.getFrom();
 
         if (!accept(focus, options))
