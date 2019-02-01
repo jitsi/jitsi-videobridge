@@ -366,8 +366,7 @@ public class VP8FrameProjection
                 rewriteRtpInternal(pktOut);
             }
 
-            return piggyBackedPackets.toArray(
-                new RawPacket[piggyBackedPackets.size()]);
+            return piggyBackedPackets.toArray(new RawPacket[0]);
         }
         else
         {
