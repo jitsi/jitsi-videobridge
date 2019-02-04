@@ -38,7 +38,6 @@ import java.beans.*;
 import java.io.*;
 import java.net.*;
 import java.nio.*;
-import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -65,9 +64,10 @@ public class IceDtlsTransportManager
     private List<Runnable> transportConnectedSubscribers = new ArrayList<>();
     private List<Runnable> dtlsConnectedSubscribers = new ArrayList<>();
     LinkedBlockingQueue<PacketInfo> sctpAppPackets = new LinkedBlockingQueue<>();
+    private final PacketInfoQueue outgoingPacketQueue;
     private Transceiver transceiver = null;
     class SocketSenderNode extends Node {
-        public MultiplexingDatagramSocket socket = null;
+        public DatagramSocket socket = null;
         SocketSenderNode() {
             super("Socket sender");
         }
@@ -93,6 +93,7 @@ public class IceDtlsTransportManager
 
     private Node incomingPipelineRoot = createIncomingPipeline();
     private Node outgoingDtlsPipelineRoot = createOutgoingDtlsPipeline();
+    private Node outgoingSrtpPipelineRoot = createOutgoingSrtpPipeline();
     private String id;
     protected boolean dtlsHandshakeComplete = false;
 
@@ -103,8 +104,9 @@ public class IceDtlsTransportManager
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
         this.id = id;
         this.ICE_STREAM_NAME = "ice-stream-" + id;
-//        executor = Executors.newCachedThreadPool(new NameableThreadFactory("Transport manager threadpool-" + id));
         iceAgent.addStateChangeListener(this::iceAgentStateChange);
+
+        outgoingPacketQueue = new PacketInfoQueue(id, TaskPools.IO_POOL, this::handleOutgoingPacket);
         logger.info("BRIAN: finished IceDtlsTransportManager ctor");
     }
 
@@ -428,40 +430,29 @@ public class IceDtlsTransportManager
         return builder.build();
     }
 
+    private Node createOutgoingSrtpPipeline()
+    {
+        PipelineBuilder builder = new PipelineBuilder();
+        builder.node(packetSender);
+        return builder.build();
+    }
+
     public void sendDtlsData(PacketInfo packet) {
         outgoingDtlsPipelineRoot.processPackets(Collections.singletonList(packet));
     }
 
-    /**
-     * Create a PacketQueue to hold the outgoing packets.  We'll install a handler which will
-     * synchronously add the outgoing packets into that queue, and handle packets from that
-     * point (send them out on the socket) in the IO_POOL
-     * @param s
-     */
-    private void installTransceiverOutgoingPacketSenders(MultiplexingDatagramSocket s) {
-        PacketInfoQueue outgoingQueue = new PacketInfoQueue(this.id, TaskPools.IO_POOL, pktInfo -> {
-            if (!closed)
-            {
-                Packet pkt = pktInfo.getPacket();
-                try
-                {
-                    s.send(new DatagramPacket(pkt.getBuffer().array(), pkt.getBuffer().arrayOffset(), pkt.getBuffer().limit()));
-                } catch (IOException e)
-                {
-                    logger.error("Error sending on socket for local ufrag " + iceAgent.getLocalUfrag() +
-                            ", stopping writer");
-                    return false;
-                }
-                return true;
-            }
-            return false;
-        });
-        transceiver.setOutgoingPacketHandler(packets -> packets.forEach(outgoingQueue::add));
+    private boolean handleOutgoingPacket(PacketInfo packetInfo)
+    {
+        outgoingSrtpPipelineRoot.processPackets(Collections.singletonList(packetInfo));
+        return true;
     }
 
-    // Start a thread to read from the socket.  Handle DTLS, forward srtp off to the transceiver
-    private void installIncomingPacketReader(MultiplexingDatagramSocket s) {
-        //TODO(brian): this does a bit more than just read from the socket (does a bit of processing
+    /**
+     * Read packets from the given socket and process them in the incoming pipeline
+     * @param socket the socket to read from
+     */
+    private void installIncomingPacketReader(DatagramSocket socket) {
+        //TODO(brian): this does a bit more than just read from the iceSocket (does a bit of processing
         // for each packet) but I think it's little enough (it'll only be a bit of the DTLS path)
         // that running it in the IO pool is fine
         TaskPools.IO_POOL.submit(() -> {
@@ -470,7 +461,7 @@ public class IceDtlsTransportManager
                 DatagramPacket p = new DatagramPacket(buf, 0, 1500);
                 try
                 {
-                    s.receive(p);
+                    socket.receive(p);
                     ByteBuffer packetBuf = ByteBuffer.allocate(p.getLength());
                     packetBuf.put(ByteBuffer.wrap(buf, 0, p.getLength())).flip();
                     Packet pkt = new UnparsedPacket(packetBuf);
@@ -504,14 +495,13 @@ public class IceDtlsTransportManager
         logger.info("BRIAN: iceConnected for transport manager " + id);
         transportConnectedSubscribers.forEach(Runnable::run);
         iceConnectedProcessed = true;
-        MultiplexingDatagramSocket s = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
+        DatagramSocket socket = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
 
-        // Socket writer thread
-        installTransceiverOutgoingPacketSenders(s);
+        transceiver.setOutgoingPacketHandler(packets -> packets.forEach(outgoingPacketQueue::add));
 
-        // Socket reader thread.  Read from the underlying socket and pass to the incoming
+        // Socket reader thread.  Read from the underlying iceSocket and pass to the incoming
         // module chain
-        installIncomingPacketReader(s);
+        installIncomingPacketReader(socket);
 
         dtlsStack.onHandshakeComplete((tlsContext) -> {
             dtlsHandshakeComplete = true;
@@ -527,7 +517,7 @@ public class IceDtlsTransportManager
             return Unit.INSTANCE;
         });
 
-        packetSender.socket = s;
+        packetSender.socket = socket;
         logger.info("BRIAN: transport manager " + this.hashCode() + " starting dtls");
         TaskPools.IO_POOL.submit(() -> {
             try {
