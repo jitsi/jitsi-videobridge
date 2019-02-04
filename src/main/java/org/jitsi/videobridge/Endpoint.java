@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.bouncycastle.crypto.tls.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -347,6 +348,20 @@ public class Endpoint
         }
     }
 
+    public void srtpPacketReceived(PacketInfo srtpPacket)
+    {
+        transceiver.handleIncomingPacket(srtpPacket);
+    }
+
+    public void setOutgoingSrtpPacketHandler(PacketHandler handler)
+    {
+        transceiver.setOutgoingPacketHandler(handler);
+    }
+
+    public void setSrtpInformation(int chosenSrtpProtectionProfile, TlsContext tlsContext) {
+        transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsContext);
+    }
+
     private Node createIncomingDtlsPipeline()
     {
         PipelineBuilder builder = new PipelineBuilder();
@@ -483,7 +498,7 @@ public class Endpoint
             TaskPools.IO_POOL.submit(this::readIncomingSctpPackets);
         });
 
-        ((IceDtlsTransportManager)transportManager).setTransceiver(this.transceiver);
+        ((IceDtlsTransportManager)transportManager).setEndpoint(this);
         onTransportManagerSet.complete(true);
     }
 

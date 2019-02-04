@@ -65,7 +65,7 @@ public class IceDtlsTransportManager
     private List<Runnable> dtlsConnectedSubscribers = new ArrayList<>();
     LinkedBlockingQueue<PacketInfo> dtlsAppPackets = new LinkedBlockingQueue<>();
     private final PacketInfoQueue outgoingPacketQueue;
-    private Transceiver transceiver = null;
+    private Endpoint endpoint = null;
     class SocketSenderNode extends Node {
         public DatagramSocket socket = null;
         SocketSenderNode() {
@@ -214,10 +214,6 @@ public class IceDtlsTransportManager
         }
     }
 
-    private Transceiver getTransceiver() {
-        return this.transceiver;
-    }
-
     /**
      *
      * @param candidates
@@ -304,8 +300,12 @@ public class IceDtlsTransportManager
         return remoteCandidateCount;
     }
 
-    public void setTransceiver(Transceiver transceiver) {
-        this.transceiver = transceiver;
+    public void setEndpoint(Endpoint endpoint)
+    {
+        //TODO(brian): i think eventually we'll have the endpoint create its transport manager,
+        // which case we can just pass it in via the ctor (assuming we want to expose the entire
+        // endpoint.  maybe there's a more limited interface we can expose to the transportmanager?)
+        this.endpoint = endpoint;
     }
 
     @Override
@@ -405,15 +405,8 @@ public class IceDtlsTransportManager
         });
         PipelineBuilder srtpPipelineBuilder = new PipelineBuilder();
         srtpPipelineBuilder.simpleNode("SRTP path", packetInfos -> {
-            // Every srtp packet will go to every transceiver.  The transceivers are responsible
-            // for filtering out the payload types they don't want
             packetInfos.forEach( pktInfo -> {
-                Transceiver transceiver = getTransceiver();
-                if (transceiver == null) {
-                    logger.error("Null transceiver in SRTP path for transport manager " + hashCode());
-                } else {
-                    transceiver.handleIncomingPacket(pktInfo);
-                }
+                endpoint.srtpPacketReceived(pktInfo);
             });
             return Collections.emptyList();
         });
@@ -498,7 +491,7 @@ public class IceDtlsTransportManager
         iceConnectedProcessed = true;
         DatagramSocket socket = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
 
-        transceiver.setOutgoingPacketHandler(packets -> packets.forEach(outgoingPacketQueue::add));
+        endpoint.setOutgoingSrtpPacketHandler(packets -> packets.forEach(outgoingPacketQueue::add));
 
         // Socket reader thread.  Read from the underlying iceSocket and pass to the incoming
         // module chain
@@ -508,13 +501,9 @@ public class IceDtlsTransportManager
             dtlsHandshakeComplete = true;
             logger.info("TransportManager " + id + " DTLS handshake complete.  Got SRTP profile " +
                     dtlsStack.getChosenSrtpProtectionProfile());
-            if (transceiver != null) {
-                //TODO: emit this as part of the dtls handshake complete event?
-                transceiver.setSrtpInformation(dtlsStack.getChosenSrtpProtectionProfile(), tlsContext);
-                dtlsConnectedSubscribers.forEach(Runnable::run);
-            } else {
-                logger.error("Couldn't get transceiver to set srtp information");
-            }
+            //TODO: emit this as part of the dtls handshake complete event?
+            endpoint.setSrtpInformation(dtlsStack.getChosenSrtpProtectionProfile(), tlsContext);
+            dtlsConnectedSubscribers.forEach(Runnable::run);
             return Unit.INSTANCE;
         });
 
