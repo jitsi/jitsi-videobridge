@@ -18,8 +18,8 @@ package org.jitsi.videobridge.datachannel;
 
 import org.jitsi.util.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
-import org.jitsi_modified.sctp4j.*;
 
+import java.nio.*;
 import java.util.*;
 
 /**
@@ -31,51 +31,47 @@ import java.util.*;
 public class DataChannelStack
 {
     private final Map<Integer, DataChannel> dataChannels = new HashMap<>();
-    private final SctpSocket sctpSocket;
+    private final DataChannelDataSender dataChannelDataSender;
     private final Logger logger = Logger.getLogger(this.getClass());
     private DataChannelStackEventListener listener;
 
-    //TODO(brian): use generic onIncomingData/dataSender lambda/interfaces rather than
-    // passing the sctpsocket in directly
-    public DataChannelStack(SctpSocket sctpSocket)
+    public DataChannelStack(DataChannelDataSender dataChannelDataSender)
     {
-        this.sctpSocket = sctpSocket;
-        // We assume right now that the only thing of interest coming out of an SCTP socket will be
-        // data channel data (since that's all we currently use them for).  If that changed, we'd want to
-        // put something else as the SCTP data callback which could then demux the data to a datachannel
-        // and whatever else sent/received data over SCTP.
-        sctpSocket.dataCallback = (data, sid, ssn, tsn, ppid, context, flags) -> {
-            if (logger.isDebugEnabled())
+        this.dataChannelDataSender = dataChannelDataSender;
+    }
+
+    public void onIncomingDataChannelPacket(ByteBuffer data, int sid, int ppid)
+    {
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Data channel stack reveived SCTP message");
+        }
+        DataChannelMessage message = DataChannelProtocolMessageParser.parse(data.array(), ppid);
+        if (message instanceof OpenChannelMessage)
+        {
+            logger.info("Received data channel open message");
+            OpenChannelMessage openChannelMessage = (OpenChannelMessage)message;
+            // Remote side wants to open a channel
+            DataChannel dataChannel = new RemotelyOpenedDataChannel(
+                    dataChannelDataSender,
+                    openChannelMessage.channelType,
+                    openChannelMessage.priority,
+                    openChannelMessage.reliability,
+                    sid,
+                    openChannelMessage.label);
+            dataChannels.put(sid, dataChannel);
+            listener.onDataChannelOpenedRemotely(dataChannel);
+        }
+        else
+        {
+            DataChannel dataChannel= dataChannels.get(sid);
+            if (dataChannel == null)
             {
-                logger.debug("Data channel stack reveived SCTP message");
+                logger.error("Could not find data channel for sid " + sid);
+                return;
             }
-            DataChannelMessage message = DataChannelProtocolMessageParser.parse(data, ppid);
-            if (message instanceof OpenChannelMessage)
-            {
-                logger.info("Received data channel open message");
-                OpenChannelMessage openChannelMessage = (OpenChannelMessage)message;
-                // Remote side wants to open a channel
-                DataChannel dataChannel = new RemotelyOpenedDataChannel(
-                        sctpSocket,
-                        openChannelMessage.channelType,
-                        openChannelMessage.priority,
-                        openChannelMessage.reliability,
-                        sid,
-                        openChannelMessage.label);
-                dataChannels.put(sid, dataChannel);
-                listener.onDataChannelOpenedRemotely(dataChannel);
-            }
-            else
-            {
-                DataChannel dataChannel= dataChannels.get(sid);
-                if (dataChannel == null)
-                {
-                    logger.error("Could not find data channel for sid " + sid);
-                    return;
-                }
-                dataChannel.onIncomingMsg(message);
-            }
-        };
+            dataChannel.onIncomingMsg(message);
+        }
     }
 
     public void onDataChannelStackEvents(DataChannelStackEventListener listener)
@@ -117,7 +113,7 @@ public class DataChannelStack
     public DataChannel createDataChannel(int channelType, int priority, long reliability, int sid, String label)
     {
         synchronized (dataChannels) {
-            DataChannel dataChannel = new DataChannel(sctpSocket, channelType, priority, reliability, sid, label);
+            DataChannel dataChannel = new DataChannel(dataChannelDataSender, channelType, priority, reliability, sid, label);
             dataChannels.put(sid, dataChannel);
             return dataChannel;
         }
@@ -135,5 +131,9 @@ public class DataChannelStack
 
     public interface DataChannelMessageListener {
         void onDataChannelMessage(DataChannelMessage dataChannelMessage);
+    }
+
+    public interface DataChannelDataSender {
+        int send(ByteBuffer data, int sid, int ppid);
     }
 }

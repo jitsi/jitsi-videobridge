@@ -501,7 +501,7 @@ public class Endpoint
                 logger.info("Endpoint " + getID() + "'s SCTP connection is disconnected");
             }
         };
-        dataChannelStack = new DataChannelStack(socket);
+        dataChannelStack = new DataChannelStack((data, sid, ppid) -> socket.send(data, true, sid, ppid));
         dataChannelStack.onDataChannelStackEvents(new DataChannelStack.DataChannelStackEventListener()
         {
             @Override
@@ -510,6 +510,10 @@ public class Endpoint
                 logger.info("Remote side opened a data channel.  This is not handled!");
             }
         });
+        socket.dataCallback = (data, sid, ssn, tsn, ppid, context, flags) -> {
+            // We assume all data coming over SCTP will be datachannel data
+            dataChannelStack.onIncomingDataChannelPacket(ByteBuffer.wrap(data), sid, (int)ppid);
+        };
         socket.listen();
         // We don't want to block the calling thread on the onTransportManagerSet future completing
         // to add the onDtlsHandshakeComplete handler, so we'll asynchronously run the code which

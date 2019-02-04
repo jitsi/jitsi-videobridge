@@ -25,7 +25,7 @@ import java.nio.*;
 
 public class DataChannel
 {
-    protected final SctpSocket sctpSocket;
+    private final DataChannelStack.DataChannelDataSender dataChannelDataSender;
     protected final int channelType;
     protected final int priority;
     protected final long reliability;
@@ -39,10 +39,11 @@ public class DataChannel
     private DataChannelStack.DataChannelEventListener eventListener;
     private DataChannelStack.DataChannelMessageListener messageListener;
 
-    //TODO: all data channel instances will be sharing the socket, so make sure it's thread safe
-    public DataChannel(SctpSocket sctpSocket, int channelType, int priority, long reliability, int sid, String label)
+    public DataChannel(
+            DataChannelStack.DataChannelDataSender dataChannelDataSender,
+            int channelType, int priority, long reliability, int sid, String label)
     {
-        this.sctpSocket = sctpSocket;
+        this.dataChannelDataSender = dataChannelDataSender;
         this.channelType = channelType;
         this.priority = priority;
         this.reliability = reliability;
@@ -60,7 +61,7 @@ public class DataChannel
                 DataChannelProtocolConstants.PROTOCOL_STRING);
 
         ByteBuffer msg = openMessage.getBuffer();
-        if (sctpSocket.send(msg, true, sid, DataChannelProtocolConstants.WEBRTC_DCEP_PPID) < 0)
+        if (dataChannelDataSender.send(msg, sid, DataChannelProtocolConstants.WEBRTC_DCEP_PPID) < 0)
         {
             logger.error("Error sending data channel open message");
         }
@@ -109,6 +110,11 @@ public class DataChannel
         messageListener.onDataChannelMessage(message);
     }
 
+    protected int sendData(ByteBuffer data, int sid, int ppid)
+    {
+        return dataChannelDataSender.send(data, sid, ppid);
+    }
+
     public void sendString(String message)
     {
         if (logger.isDebugEnabled())
@@ -116,6 +122,6 @@ public class DataChannel
             logger.debug("Sending string data channel message: '" + message + "'");
         }
         DataChannelStringMessage stringMessage = new DataChannelStringMessage(message);
-        sctpSocket.send(stringMessage.getBuffer(), true, sid, DataChannelProtocolConstants.WEBRTC_PPID_STRING);
+        dataChannelDataSender.send(stringMessage.getBuffer(), sid, DataChannelProtocolConstants.WEBRTC_PPID_STRING);
     }
 }

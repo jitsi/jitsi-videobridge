@@ -25,6 +25,7 @@ public class DataChannelProtocolMessageParser
         return ByteBuffer.wrap(data).get(0) & 0xFF;
     }
 
+    //TODO(brian): change data to be a ByteBuffer
     public static DataChannelMessage parse(byte[] data, long ppid)
     {
         if (ppid == DataChannelProtocolConstants.WEBRTC_DCEP_PPID)

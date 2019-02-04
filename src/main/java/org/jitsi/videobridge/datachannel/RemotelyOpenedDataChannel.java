@@ -26,9 +26,9 @@ import java.nio.*;
  */
 public class RemotelyOpenedDataChannel extends DataChannel
 {
-    public RemotelyOpenedDataChannel(SctpSocket sctpSocket, int channelType, int priority, long reliability, int sid, String label)
+    public RemotelyOpenedDataChannel(DataChannelStack.DataChannelDataSender dataChannelDataSender, int channelType, int priority, long reliability, int sid, String label)
     {
-        super(sctpSocket, channelType, priority, reliability, sid, label);
+        super(dataChannelDataSender, channelType, priority, reliability, sid, label);
         ready = true;
         sendOpenChannelAck();
     }
@@ -38,6 +38,6 @@ public class RemotelyOpenedDataChannel extends DataChannel
         OpenChannelAckMessage openChannelAckMessage = new OpenChannelAckMessage();
 
         ByteBuffer msg = openChannelAckMessage.getBuffer();
-        sctpSocket.send(msg, true, sid, DataChannelProtocolConstants.WEBRTC_DCEP_PPID);
+        sendData(msg, sid, DataChannelProtocolConstants.WEBRTC_DCEP_PPID);
     }
 }
