@@ -354,16 +354,30 @@ public class Endpoint
         }
     }
 
+    /**
+     * Handle an SRTP packet which has just been received (i.e. not processed by the
+     * incoming pipeline)
+     * @param srtpPacket
+     */
     public void srtpPacketReceived(PacketInfo srtpPacket)
     {
         transceiver.handleIncomingPacket(srtpPacket);
     }
 
+    /**
+     * Handle a DTLS app packet (that is, a packet of some other protocol sent over DTLS)
+     * which has just been received
+     * @param dtlsAppPacket
+     */
     public void dtlsAppPacketReceived(PacketInfo dtlsAppPacket)
     {
         sctpHandler.doProcessPackets(Collections.singletonList(dtlsAppPacket));
     }
 
+    /**
+     * Set the handler which will send packets ready to go out onto the network
+     * @param handler
+     */
     public void setOutgoingSrtpPacketHandler(PacketHandler handler)
     {
         transceiver.setOutgoingPacketHandler(handler);
@@ -372,15 +386,6 @@ public class Endpoint
     public void setSrtpInformation(int chosenSrtpProtectionProfile, TlsContext tlsContext) {
         transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsContext);
     }
-
-    private Node createIncomingDtlsPipeline()
-    {
-        PipelineBuilder builder = new PipelineBuilder();
-        builder.node(sctpHandler);
-        builder.node(dataChannelHandler);
-        return builder.build();
-    }
-
 
     @Override
     public void addPayloadType(PayloadType payloadType)
@@ -526,7 +531,6 @@ public class Endpoint
         };
         socket.dataCallback = (data, sid, ssn, tsn, ppid, context, flags) -> {
             // We assume all data coming over SCTP will be datachannel data
-            logger.debug("got sctp app packet");
             DataChannelPacket dcp = new DataChannelPacket(ByteBuffer.wrap(data), sid, (int)ppid);
             dataChannelHandler.doProcessPackets(Collections.singletonList(new PacketInfo(dcp)));
         };
@@ -720,12 +724,10 @@ public class Endpoint
             {
                 if (sctpManager == null)
                 {
-                    logger.debug("Sctp manager is null, caching packet");
                     cachedSctpPackets.addAll(packets);
                 }
                 else
                 {
-                    logger.debug("Sctp manager is not null, forwarding packet");
                     packets.forEach(sctpManager::handleIncomingSctp);
                 }
             }
@@ -802,7 +804,6 @@ public class Endpoint
                 {
                     this.dataChannelStack = dataChannelStack;
                     cachedDataChannelPackets.forEach(packetInfo -> {
-                        logger.info("Forwarding cached data channel packet");
                         DataChannelPacket dcp = (DataChannelPacket)packetInfo.getPacket();
                         //TODO(brian): have datachannelstack accept DataChannelPackets?
                         dataChannelStack.onIncomingDataChannelPacket(dcp.getBuffer(), dcp.sid, dcp.ppid);

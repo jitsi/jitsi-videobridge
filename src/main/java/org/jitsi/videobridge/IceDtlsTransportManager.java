@@ -386,7 +386,6 @@ public class IceDtlsTransportManager
         PipelineBuilder dtlsPipelineBuilder = new PipelineBuilder();
         dtlsPipelineBuilder.node(dtlsReceiver);
         dtlsPipelineBuilder.simpleNode("sctp app packet handler", packets -> {
-            logger.info("transport manager writing dtls app packet to queue");
             packets.forEach(endpoint::dtlsAppPacketReceived);
 
             return Collections.emptyList();
