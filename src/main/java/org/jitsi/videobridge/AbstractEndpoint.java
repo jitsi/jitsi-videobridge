@@ -19,12 +19,14 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.transform.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.sctp.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 
@@ -32,6 +34,7 @@ import java.beans.*;
 import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
@@ -186,6 +189,11 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         return lastNFilter.wants(sourceEndpointId);
     }
 
+    /**
+     * Handle incoming RTP packets which have been fully processed by the transceiver's
+     * incoming pipeline
+     * @param packetInfos
+     */
     protected void handleIncomingRtp(List<PacketInfo> packetInfos)
     {
         // For now, just write every packet to every channel other than ourselves
@@ -205,6 +213,15 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
                 }
             });
         });
+    }
+
+    /**
+     * Handle incoming DTLS app packets
+     * @param dtlsAppPackets
+     */
+    public void handleIncomingDtlsAppPackets(List<PacketInfo> dtlsAppPackets)
+    {
+
     }
 
     public void sendRtp(PacketInfo packetInfo)

@@ -15,10 +15,13 @@
  */
 package org.jitsi.videobridge;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.stats.*;
+import org.jitsi.nlj.transform.*;
+import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.service.neomedia.*;
@@ -40,6 +43,7 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
+import java.util.stream.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
@@ -87,6 +91,10 @@ public class Endpoint
      * The {@link SctpManager} instance we'll use to manage the SCTP connection
      */
     private SctpManager sctpManager;
+
+    private final SctpHandler sctpHandler = new SctpHandler();
+
+    private final DataChannelHandler dataChannelHandler = new DataChannelHandler();
 
     private AudioLevelListenerImpl audioLevelListener;
 
@@ -339,6 +347,15 @@ public class Endpoint
         }
     }
 
+    private Node createIncomingDtlsPipeline()
+    {
+        PipelineBuilder builder = new PipelineBuilder();
+        builder.node(sctpHandler);
+        builder.node(dataChannelHandler);
+        return builder.build();
+    }
+
+
     @Override
     public void addPayloadType(PayloadType payloadType)
     {
@@ -420,27 +437,36 @@ public class Endpoint
     private void readIncomingSctpPackets()
     {
         LinkedBlockingQueue<PacketInfo> sctpPackets =
-                ((IceDtlsTransportManager)transportManager).sctpAppPackets;
+                ((IceDtlsTransportManager)transportManager).dtlsAppPackets;
         while (true) {
             try {
+                logger.info("Endpoint " + getID() + " trying to read dtls app packets");
                 PacketInfo sctpPacket = sctpPackets.take();
+                logger.info("Endpoint " + getID() + " read dtls app packets");
                 if (logger.isDebugEnabled())
                 {
                     logger.debug("Endpoint " + getID() + " received an incoming sctp packet " +
                             " (size " + sctpPacket.getPacket().getBuffer().limit() + ")");
 
                 }
-                if (sctpManager != null)
-                {
-                    sctpManager.handleIncomingSctp(sctpPacket);
-                }
-                else
-                {
-                    logger.warn("Endpoint " + getID() + " received an SCTP packet but the SCTP manager is " +
-                            "null, dropping the packet");
-                }
-            } catch (InterruptedException e) {
+                sctpHandler.doProcessPackets(Collections.singletonList(sctpPacket));
+//                if (sctpManager != null)
+//                {
+//                    sctpManager.handleIncomingSctp(sctpPacket);
+//                }
+//                else
+//                {
+//                    logger.warn("Endpoint " + getID() + " received an SCTP packet but the SCTP manager is " +
+//                            "null, dropping the packet");
+//                }
+            }
+            catch (InterruptedException e)
+            {
                 logger.error("Interrupted while reading from sctp packet queue: " + e.toString());
+            } catch (Exception e)
+            {
+
+                logger.error(getID() + " encountered error while reading SCTP packets: " + e.toString());
             }
         }
     }
@@ -471,6 +497,7 @@ public class Endpoint
                     return 0;
                 }
         );
+        sctpHandler.setSctpManager(sctpManager);
         // NOTE(brian): as far as I know we always act as the 'server' for sctp connections, but if not we can make
         // which type we use dynamic
         SctpServerSocket socket = sctpManager.createServerSocket();
@@ -510,9 +537,12 @@ public class Endpoint
                 logger.info("Remote side opened a data channel.  This is not handled!");
             }
         });
+        dataChannelHandler.setDataChannelStack(dataChannelStack);
         socket.dataCallback = (data, sid, ssn, tsn, ppid, context, flags) -> {
             // We assume all data coming over SCTP will be datachannel data
-            dataChannelStack.onIncomingDataChannelPacket(ByteBuffer.wrap(data), sid, (int)ppid);
+            logger.debug("got sctp app packet");
+            DataChannelPacket dcp = new DataChannelPacket(ByteBuffer.wrap(data), sid, (int)ppid);
+            dataChannelHandler.doProcessPackets(Collections.singletonList(new PacketInfo(dcp)));
         };
         socket.listen();
         // We don't want to block the calling thread on the onTransportManagerSet future completing
@@ -680,6 +710,118 @@ public class Endpoint
             {
                 logger.error("Error sending SelectedUpdate message: " + e);
             }
+        }
+    }
+
+    /**
+     * A node which can be placed in the pipeline to cache SCTP packets until the SCTPManager
+     * is ready to handle them.
+     */
+    private class SctpHandler extends Node
+    {
+        private final Object sctpManagerLock = new Object();
+        public SctpManager sctpManager = null;
+        public BlockingQueue<PacketInfo> cachedSctpPackets = new LinkedBlockingQueue<>();
+        public SctpHandler()
+        {
+            super("SCTP handler");
+        }
+
+        @Override
+        protected void doProcessPackets(@NotNull List<PacketInfo> packets)
+        {
+            synchronized (sctpManagerLock)
+            {
+                if (sctpManager == null)
+                {
+                    logger.debug("Sctp manager is null, caching packet");
+                    cachedSctpPackets.addAll(packets);
+                }
+                else
+                {
+                    logger.debug("Sctp manager is not null, forwarding packet");
+                    packets.forEach(sctpManager::handleIncomingSctp);
+                }
+            }
+        }
+
+        public void setSctpManager(SctpManager sctpManager)
+        {
+            // Submit this to the pool since we wait on the lock and process any
+            // cached packets here as well
+            TaskPools.IO_POOL.submit(() -> {
+                // We grab the lock here so that we can set the SCTP manager and
+                // process any previously-cached packets as an atomic operation.
+                // It also prevents another thread from coming in via {@link #doProcessPackets}
+                // and processing packets at the same time in another thread, which would
+                // be a problem.
+                synchronized (sctpManagerLock)
+                {
+                    this.sctpManager = sctpManager;
+                    cachedSctpPackets.forEach(sctpManager::handleIncomingSctp);
+                    cachedSctpPackets.clear();
+                }
+            });
+        }
+    }
+
+    /**
+     * A node which can be placed in the pipeline to cache Data channel packets until
+     * the DataChannelStack is ready to handle them.
+     */
+    private class DataChannelHandler extends Node
+    {
+        private final Object dataChannelStackLock = new Object();
+        public DataChannelStack dataChannelStack = null;
+        public BlockingQueue<PacketInfo> cachedDataChannelPackets = new LinkedBlockingQueue<>();
+        public DataChannelHandler()
+        {
+            super("Data channel handler");
+        }
+
+        @Override
+        protected void doProcessPackets(@NotNull List<PacketInfo> packets)
+        {
+            synchronized (dataChannelStackLock)
+            {
+                List<PacketInfo> dataChannelPackets = packets.stream()
+                        .filter(packetInfo -> packetInfo.getPacket() instanceof DataChannelPacket)
+                        .collect(Collectors.toList());
+                if (dataChannelStack == null)
+                {
+                    cachedDataChannelPackets.addAll(dataChannelPackets);
+                }
+                else
+                {
+                    dataChannelPackets.forEach(packetInfo -> {
+                        DataChannelPacket dcp = (DataChannelPacket)packetInfo.getPacket();
+                        //TODO(brian): have datachannelstack accept DataChannelPackets?
+                        dataChannelStack.onIncomingDataChannelPacket(dcp.getBuffer(), dcp.sid, dcp.ppid);
+                    });
+                }
+            }
+        }
+
+        public void setDataChannelStack(DataChannelStack dataChannelStack)
+        {
+            // Submit this to the pool since we wait on the lock and process any
+            // cached packets here as well
+            TaskPools.IO_POOL.submit(() -> {
+                // We grab the lock here so that we can set the SCTP manager and
+                // process any previously-cached packets as an atomic operation.
+                // It also prevents another thread from coming in via {@link #doProcessPackets}
+                // and processing packets at the same time in another thread, which would
+                // be a problem.
+                synchronized (dataChannelStackLock)
+                {
+                    this.dataChannelStack = dataChannelStack;
+                    cachedDataChannelPackets.forEach(packetInfo -> {
+                        DataChannelPacket dcp = (DataChannelPacket)packetInfo.getPacket();
+                        //TODO(brian): have datachannelstack accept DataChannelPackets?
+                        dataChannelStack.onIncomingDataChannelPacket(dcp.getBuffer(), dcp.sid, dcp.ppid);
+                    });
+                }
+            });
         }
     }
 }

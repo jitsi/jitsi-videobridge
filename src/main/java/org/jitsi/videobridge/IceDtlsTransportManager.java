@@ -63,7 +63,7 @@ public class IceDtlsTransportManager
     // but, what about thingds like dtlsConnected which only appliesd to IceDtlsTransportManager?
     private List<Runnable> transportConnectedSubscribers = new ArrayList<>();
     private List<Runnable> dtlsConnectedSubscribers = new ArrayList<>();
-    LinkedBlockingQueue<PacketInfo> sctpAppPackets = new LinkedBlockingQueue<>();
+    LinkedBlockingQueue<PacketInfo> dtlsAppPackets = new LinkedBlockingQueue<>();
     private final PacketInfoQueue outgoingPacketQueue;
     private Transceiver transceiver = null;
     class SocketSenderNode extends Node {
@@ -388,7 +388,8 @@ public class IceDtlsTransportManager
         PipelineBuilder dtlsPipelineBuilder = new PipelineBuilder();
         dtlsPipelineBuilder.node(dtlsReceiver);
         dtlsPipelineBuilder.simpleNode("sctp app packet handler", packets -> {
-            sctpAppPackets.addAll(packets);
+            logger.info("transport manager writing dtls app packet to queue");
+            dtlsAppPackets.addAll(packets);
 
             return Collections.emptyList();
         });
