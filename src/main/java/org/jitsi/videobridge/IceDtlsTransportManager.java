@@ -39,7 +39,6 @@ import java.io.*;
 import java.net.*;
 import java.nio.*;
 import java.util.*;
-import java.util.concurrent.*;
 
 /**
  * @author bbaldino
@@ -63,7 +62,6 @@ public class IceDtlsTransportManager
     // but, what about thingds like dtlsConnected which only appliesd to IceDtlsTransportManager?
     private List<Runnable> transportConnectedSubscribers = new ArrayList<>();
     private List<Runnable> dtlsConnectedSubscribers = new ArrayList<>();
-    LinkedBlockingQueue<PacketInfo> dtlsAppPackets = new LinkedBlockingQueue<>();
     private final PacketInfoQueue outgoingPacketQueue;
     private Endpoint endpoint = null;
     class SocketSenderNode extends Node {
@@ -389,7 +387,7 @@ public class IceDtlsTransportManager
         dtlsPipelineBuilder.node(dtlsReceiver);
         dtlsPipelineBuilder.simpleNode("sctp app packet handler", packets -> {
             logger.info("transport manager writing dtls app packet to queue");
-            dtlsAppPackets.addAll(packets);
+            packets.forEach(endpoint::dtlsAppPacketReceived);
 
             return Collections.emptyList();
         });

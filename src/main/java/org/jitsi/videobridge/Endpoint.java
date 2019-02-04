@@ -353,6 +353,11 @@ public class Endpoint
         transceiver.handleIncomingPacket(srtpPacket);
     }
 
+    public void dtlsAppPacketReceived(PacketInfo dtlsAppPacket)
+    {
+        sctpHandler.doProcessPackets(Collections.singletonList(dtlsAppPacket));
+    }
+
     public void setOutgoingSrtpPacketHandler(PacketHandler handler)
     {
         transceiver.setOutgoingPacketHandler(handler);
@@ -449,55 +454,11 @@ public class Endpoint
     private DataChannelStack dataChannelStack;
     private IceUdpTransportManager transportManager;
 
-    private void readIncomingSctpPackets()
-    {
-        LinkedBlockingQueue<PacketInfo> sctpPackets =
-                ((IceDtlsTransportManager)transportManager).dtlsAppPackets;
-        while (true) {
-            try {
-                logger.info("Endpoint " + getID() + " trying to read dtls app packets");
-                PacketInfo sctpPacket = sctpPackets.take();
-                logger.info("Endpoint " + getID() + " read dtls app packets");
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug("Endpoint " + getID() + " received an incoming sctp packet " +
-                            " (size " + sctpPacket.getPacket().getBuffer().limit() + ")");
-
-                }
-                sctpHandler.doProcessPackets(Collections.singletonList(sctpPacket));
-//                if (sctpManager != null)
-//                {
-//                    sctpManager.handleIncomingSctp(sctpPacket);
-//                }
-//                else
-//                {
-//                    logger.warn("Endpoint " + getID() + " received an SCTP packet but the SCTP manager is " +
-//                            "null, dropping the packet");
-//                }
-            }
-            catch (InterruptedException e)
-            {
-                logger.error("Interrupted while reading from sctp packet queue: " + e.toString());
-            } catch (Exception e)
-            {
-
-                logger.error(getID() + " encountered error while reading SCTP packets: " + e.toString());
-            }
-        }
-    }
-
     //TODO(brian): not sure if this is the final way we'll associate the transport manager and endpoint/transceiver,
     // but it's a step.
     public void setTransportManager(IceUdpTransportManager transportManager)
     {
         this.transportManager = transportManager;
-        ((IceDtlsTransportManager)transportManager).onDtlsHandshakeComplete(() -> {
-            logger.info("Endpoint " + getID() + " dtls handshake is complete, starting a reader for incoming SCTP" +
-                    " packets");
-            //TODO(brian): i think this work is not that CPU intensive, so using the IO pool is ok?
-            TaskPools.IO_POOL.submit(this::readIncomingSctpPackets);
-        });
-
         ((IceDtlsTransportManager)transportManager).setEndpoint(this);
         onTransportManagerSet.complete(true);
     }
