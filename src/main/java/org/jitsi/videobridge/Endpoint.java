@@ -140,6 +140,7 @@ public class Endpoint
 
         bitrateController = new BitrateController(
                 getID(),
+                conference.getLogger(),
                 transceiver.getBandwidthEstimator(),
                 transceiver.getDiagnosticContext(),
                 this::requestKeyframe);
