@@ -293,9 +293,15 @@ public class BitrateController
     private long lastBwe = -1;
 
     /**
+     * The most recent list of endpoints, ordered by dominant speaker order,
+     * we've been notified of.
+     */
+    private List<AbstractEndpoint> lastEndpointOrdering;
+
+    /**
      * The current padding parameters list for {@link Endpoint}.
      */
-    private List<AdaptiveTrackProjection> adaptiveTrackProjections;
+    private List<AdaptiveTrackProjection> adaptiveTrackProjections = Collections.emptyList();
 
     /**
      * The maximum frame height, in pixels, the endpoint with which this
@@ -326,8 +332,6 @@ public class BitrateController
      */
     private final String destinationEndpointId;
 
-    private final BandwidthEstimator bandwidthEstimator;
-
     private final DiagnosticContext diagnosticContext;
 
     private final Consumer<Long> keyframeRequester;
@@ -348,14 +352,12 @@ public class BitrateController
     public BitrateController(
             String destinationEndpointId,
             Logger logLevelDelegate,
-            @NotNull BandwidthEstimator bandwidthEstimator,
             @NotNull DiagnosticContext diagnosticContext,
             Consumer<Long> keyframeRequester
     )
     {
         this.destinationEndpointId = destinationEndpointId;
         this.logger = Logger.getLogger(logLevelDelegate, classLogger);
-        this.bandwidthEstimator = bandwidthEstimator;
         this.diagnosticContext = diagnosticContext;
         this.keyframeRequester = keyframeRequester;
 
@@ -380,6 +382,10 @@ public class BitrateController
     private static boolean isLargerThanBweThreshold(
         long previousBwe, long currentBwe)
     {
+        if (previousBwe == -1 || currentBwe == -1)
+        {
+            return true;
+        }
         return Math.abs(previousBwe - currentBwe)
             >= previousBwe * BWE_CHANGE_THRESHOLD_PCT / 100;
     }
@@ -497,79 +503,18 @@ public class BitrateController
     }
 
     /**
-     * Computes a new bitrate allocation for every endpoint in the conference,
-     * and updates the state of this instance so that bitrate allocation is
-     * eventually met.
-     * The list of endpoints will be fetched from the
-     * {@link ConferenceSpeechActivity} of the conference.
-     *
-     * @param bweBps the current bandwidth estimation (in bps).
+     * We can't just use {@link #lastBwe} to get the most recent bandwidth
+     * estimate as we must take into account the initial join period where
+     * we don't 'trust' the bwe anyway, as well as whether or not we'll
+     * trust it at all (we ignore it always if the endpoint doesn't support
+     * RTX, which is our way of filtering out endpoints that don't do
+     * probing)
+     * @return the estimated bandwidth, in bps, based on the last update
+     * we received and taking into account whether or not we 'trust' the
+     * bandwidth estimate.
      */
-    public void update(long bweBps)
+    private long getAvailableBandwidth()
     {
-        update(null, bweBps);
-    }
-
-    /**
-     * Computes a new bitrate allocation for every endpoint in the conference,
-     * and updates the state of this instance so that bitrate allocation is
-     * eventually met.
-     * The list of endpoints will be fetched from the
-     * {@link ConferenceSpeechActivity} of the conference, and the estimated
-     * available bandwidth will be fetched from the {@link BandwidthEstimator}.
-     */
-    public void update()
-    {
-        update(null, -1);
-    }
-
-    /**
-     * Computes a new bitrate allocation for every endpoint in the conference,
-     * and updates the state of this instance so that bitrate allocation is
-     * eventually met.
-     *
-     * @param conferenceEndpoints the ordered list of {@link Endpoint}s
-     * participating in the multipoint conference with the dominant (speaker)
-     * {@link Endpoint} at the beginning of the list i.e. the dominant speaker
-     * history. This parameter is optional but it can be used for performance;
-     * if it's omitted it will be fetched from the
-     * {@link ConferenceSpeechActivity}.
-     * @param bweBps the current bandwidth estimation (in bps), or -1 to fetch
-     * the value from the {@link BandwidthEstimator}.
-     */
-    public void update(List<AbstractEndpoint> conferenceEndpoints, long bweBps)
-    {
-        if (bweBps > -1)
-        {
-            if (!isLargerThanBweThreshold(lastBwe, bweBps))
-            {
-                // If this is a "negligible" change in the bandwidth estimation
-                // wrt the last bandwidth estimation that we reacted to, then
-                // do not update the bitrate allocation. The goal is to limit
-                // the resolution changes due to bandwidth estimation changes,
-                // as often resolution changes can negatively impact user
-                // experience.
-                return;
-            }
-
-            lastBwe = bweBps;
-        }
-        logger.debug("TEMP: BitrateController " + hashCode() + " updating. " +
-                "bwebps is " + bweBps);
-
-        // Gather the conference allocation input.
-        //TODO(brian): commenting this out for now, see if we can always pass it in?
-//        if (conferenceEndpoints == null)
-//        {
-//            conferenceEndpoints
-//                = dest.getConferenceSpeechActivity().getEndpoints();
-//        }
-//        else
-        {
-            // Create a copy as we may modify the list in the prioritize method.
-            conferenceEndpoints = new ArrayList<>(conferenceEndpoints);
-        }
-
         long nowMs = System.currentTimeMillis();
         boolean trustBwe = this.trustBwe;
         if (trustBwe)
@@ -584,15 +529,101 @@ public class BitrateController
             }
         }
 
-        if (bweBps == -1 && trustBwe)
+        if (!trustBwe || !supportsRtx)
         {
-            bweBps = bandwidthEstimator.getLatestEstimate();
+            return Long.MAX_VALUE;
+        }
+        else
+        {
+            return lastBwe;
+        }
+    }
+
+    /**
+     * Called when the estimated banwidth for the endpoint to which this BitrateController belongs
+     * has changed (which may therefore result in a different set of streams being forwarded)
+     * @param newBandwidthBps the newly estimated bandwidth in bps
+     */
+    public void bandwidthChanged(long newBandwidthBps)
+    {
+        if (logger.isDebugEnabled())
+        {
+            logger.debug(destinationEndpointId + " bandwidth has changed, updating");
         }
 
-        if (bweBps < 0 || !trustBwe || !supportsRtx)
+        if (!isLargerThanBweThreshold(lastBwe, newBandwidthBps))
         {
-            bweBps = Long.MAX_VALUE;
+            logger.debug("New bandwidth (" + newBandwidthBps  + ") is not signifcantly " +
+                    "changed from previous estimate (" + lastBwe + "), ignoring");
+            // If this is a "negligible" change in the bandwidth estimation
+            // wrt the last bandwidth estimation that we reacted to, then
+            // do not update the bitrate allocation. The goal is to limit
+            // the resolution changes due to bandwidth estimation changes,
+            // as often resolution changes can negatively impact user
+            // experience.
+            return;
         }
+        update(lastEndpointOrdering, newBandwidthBps);
+    }
+
+    /**
+     * Called when the ordering of endpoints has changed in some way.  This could be due to an
+     * endpoint joining or leaving, a new dominant speaker, or a change in which endpoints are
+     * selected
+     * @param conferenceEndpoints the endpoints of the conference sorted in dominant speaker
+     *                            order (NOTE this does NOT take into account orderings specific
+     *                            to this particular endpoint, e.g. selected or pinned, though
+     *                            this method SHOULD be invoked when those things change; they
+     *                            will be taken into account in this flow)
+     */
+    public void endpointOrderingChanged(List<AbstractEndpoint> conferenceEndpoints)
+    {
+        if (logger.isDebugEnabled())
+        {
+            logger.debug(destinationEndpointId + " endpoint ordering has changed, updating");
+        }
+        update(conferenceEndpoints, getAvailableBandwidth());
+    }
+
+    /**
+     * Called to signal constraints on the endpoint to which this BitrateController
+     * belongs have changed, so we should recalculate which streams we're forwarding.
+     */
+    public void constraintsChanged()
+    {
+        if (logger.isDebugEnabled())
+        {
+            logger.debug(destinationEndpointId + " constraints have changed, updating");
+        }
+        // Neither the endpoints list nor the available bandwidth has changed, so we
+        // just use the most recent values of each to drive a new update to take
+        // the constraint changes into account
+        update(lastEndpointOrdering, getAvailableBandwidth());
+    }
+
+    /**
+     * Computes a new bitrate allocation for every endpoint in the conference,
+     * and updates the state of this instance so that bitrate allocation is
+     * eventually met.
+     *
+     * @param conferenceEndpoints the ordered list of {@link Endpoint}s
+     * participating in the multipoint conference with the dominant (speaker)
+     * {@link Endpoint} at the beginning of the list i.e. the dominant speaker
+     * history. This parameter is optional but it can be used for performance;
+     * if it's omitted it will be fetched from the
+     * {@link ConferenceSpeechActivity}.
+     * @param bweBps the current bandwidth estimation (in bps)
+     */
+    private synchronized void update(List<AbstractEndpoint> conferenceEndpoints, long bweBps)
+    {
+        lastEndpointOrdering = conferenceEndpoints;
+        lastBwe = bweBps;
+
+        logger.debug("TEMP: BitrateController " + hashCode() + " updating. " +
+                "bwebps is " + bweBps);
+
+        // Create a copy as we may modify the list in the prioritize method.
+        conferenceEndpoints = new ArrayList<>(conferenceEndpoints);
 
         // Compute the bitrate allocation.
         TrackBitrateAllocation[]
@@ -612,6 +643,8 @@ public class BitrateController
         // Accumulators used for tracing purposes.
         long totalIdealBps = 0, totalTargetBps = 0;
         int totalIdealIdx = 0, totalTargetIdx = 0;
+
+        long nowMs = System.currentTimeMillis();
 
         List<AdaptiveTrackProjection> adaptiveTrackProjections = new ArrayList<>();
         if (!ArrayUtils.isNullOrEmpty(trackBitrateAllocations))

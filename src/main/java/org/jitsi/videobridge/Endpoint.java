@@ -141,7 +141,6 @@ public class Endpoint
         bitrateController = new BitrateController(
                 getID(),
                 conference.getLogger(),
-                transceiver.getBandwidthEstimator(),
                 transceiver.getDiagnosticContext(),
                 this::requestKeyframe);
 
@@ -168,7 +167,7 @@ public class Endpoint
                 {
                     logger.debug("Endpoint " + getID() + "'s estimated bandwidth is now " + newValueBps + " bps");
                 }
-                bitrateController.update(getConference().getSpeechActivity().getEndpoints(), newValueBps);
+                bitrateController.bandwidthChanged(newValueBps);
             }
         });
         transceiver.onBandwidthEstimateChanged(bandwidthProbing);
@@ -244,7 +243,7 @@ public class Endpoint
         super.propertyChange(evt);
         if (Conference.ENDPOINTS_PROPERTY_NAME.equals(evt.getPropertyName()))
         {
-            bitrateController.update(getConference().getSpeechActivity().getEndpoints(), -1);
+            bitrateController.endpointOrderingChanged(getConference().getSpeechActivity().getEndpoints());
         }
     }
 
@@ -279,7 +278,7 @@ public class Endpoint
     {
         super.setMaxReceiveFrameHeightPx(maxReceiveFrameHeightPx);
         bitrateController.setMaxRxFrameHeightPx(maxReceiveFrameHeightPx);
-        bitrateController.update(getConference().getSpeechActivity().getEndpoints(), -1);
+        bitrateController.constraintsChanged();
     }
 
     @Override

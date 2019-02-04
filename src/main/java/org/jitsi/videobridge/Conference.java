@@ -1044,9 +1044,10 @@ public class Conference
                 .map(this::getEndpoint)
                 .filter(Objects::nonNull)
                 .forEach(AbstractEndpoint::incrementSelectedCount);
-
-            //TODO(brian): hack this for now to drive an update after the endpoint encodings have been set
-            getEndpoints().forEach(ep -> ep.propertyChange(new PropertyChangeEvent(this, Conference.ENDPOINTS_PROPERTY_NAME, null, null)));
+        }
+        else if (AbstractEndpoint.ENDPOINT_CHANGED_PROPERTY_NAME.equals(ev.getPropertyName()))
+        {
+            firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
         }
     }
 

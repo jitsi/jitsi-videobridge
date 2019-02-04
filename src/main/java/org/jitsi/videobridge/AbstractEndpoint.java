@@ -23,7 +23,6 @@ import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.util.*;
@@ -32,9 +31,7 @@ import org.jitsi_modified.impl.neomedia.rtp.*;
 import java.beans.*;
 import java.io.*;
 import java.lang.ref.*;
-import java.time.*;
 import java.util.*;
-import java.util.concurrent.*;
 
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
@@ -48,6 +45,8 @@ import java.util.concurrent.*;
 public abstract class AbstractEndpoint extends PropertyChangeNotifier
     implements EncodingsManager.EncodingsUpdateListener, PropertyChangeListener
 {
+    public static final String ENDPOINT_CHANGED_PROPERTY_NAME =
+            AbstractEndpoint.class.getName() + ".endpoint_changed";
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt>.
@@ -279,6 +278,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public void setMediaStreamTracks(MediaStreamTrackDesc[] mediaStreamTracks)
     {
         transceiver.setMediaStreamTracks(mediaStreamTracks);
+        firePropertyChange(ENDPOINT_CHANGED_PROPERTY_NAME, null, null);
     }
 
     public MediaStreamTrackDesc[] getMediaStreamTracks()
