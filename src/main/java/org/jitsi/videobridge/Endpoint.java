@@ -122,6 +122,12 @@ public class Endpoint
 
     private final BandwidthProbing bandwidthProbing;
 
+    /**
+     * Whether or not the bridge should be the peer which opens the data channel
+     * (as opposed to letting the far peer/client open it).
+     */
+    private static final boolean OPEN_DATA_LOCALLY = false;
+
     //TODO(brian): align the recurringrunnable stuff with whatever we end up doing with all the other executors
     private static final RecurringRunnableExecutor recurringRunnableExecutor =
             new RecurringRunnableExecutor(Endpoint.class.getSimpleName());
@@ -482,20 +488,34 @@ public class Endpoint
             @Override
             public void onReady()
             {
-                //NOTE(brian): i believe the bridge is responsible for opening the data channel, but if not we can
-                // make how we open/wait for the datachannel connection dynamic
-                logger.info("Endpoint " + getID() + "'s SCTP connection is ready. Opening data channel");
-                //TODO: there's a chance we could miss a data channel open message here if the sctp connection
-                // opens and the remote side sends an open channel message before the datachannel has set itself as
-                // the handler for data on the sctp connection
-                DataChannel dataChannel = dataChannelStack.createDataChannel(
-                        DataChannelProtocolConstants.RELIABLE,
-                        0,
-                        0,
-                        0,
-                        "default");
-                Endpoint.this.messageTransport.setDataChannel(dataChannel);
-                dataChannel.open();
+                logger.info(getID() + "'s SCTP connection is ready, creating the Data channel stack");
+                dataChannelStack = new DataChannelStack((data, sid, ppid) -> socket.send(data, true, sid, ppid));
+                dataChannelStack.onDataChannelStackEvents(new DataChannelStack.DataChannelStackEventListener()
+                {
+                    @Override
+                    public void onDataChannelOpenedRemotely(DataChannel dataChannel)
+                    {
+                        logger.info("Remote side opened a data channel");
+                        Endpoint.this.messageTransport.setDataChannel(dataChannel);
+                    }
+                });
+                dataChannelHandler.setDataChannelStack(dataChannelStack);
+                if (OPEN_DATA_LOCALLY)
+                {
+                    logger.info(getID() + " will open the data channel");
+                    DataChannel dataChannel = dataChannelStack.createDataChannel(
+                            DataChannelProtocolConstants.RELIABLE,
+                            0,
+                            0,
+                            0,
+                            "default");
+                    Endpoint.this.messageTransport.setDataChannel(dataChannel);
+                    dataChannel.open();
+                }
+                else
+                {
+                    logger.info(getID() + " will wait for the remote side to open the data channel");
+                }
             }
 
             @Override
@@ -504,16 +524,6 @@ public class Endpoint
                 logger.info("Endpoint " + getID() + "'s SCTP connection is disconnected");
             }
         };
-        dataChannelStack = new DataChannelStack((data, sid, ppid) -> socket.send(data, true, sid, ppid));
-        dataChannelStack.onDataChannelStackEvents(new DataChannelStack.DataChannelStackEventListener()
-        {
-            @Override
-            public void onDataChannelOpenedRemotely(DataChannel dataChannel)
-            {
-                logger.info("Remote side opened a data channel.  This is not handled!");
-            }
-        });
-        dataChannelHandler.setDataChannelStack(dataChannelStack);
         socket.dataCallback = (data, sid, ssn, tsn, ppid, context, flags) -> {
             // We assume all data coming over SCTP will be datachannel data
             logger.debug("got sctp app packet");
@@ -792,6 +802,7 @@ public class Endpoint
                 {
                     this.dataChannelStack = dataChannelStack;
                     cachedDataChannelPackets.forEach(packetInfo -> {
+                        logger.info("Forwarding cached data channel packet");
                         DataChannelPacket dcp = (DataChannelPacket)packetInfo.getPacket();
                         //TODO(brian): have datachannelstack accept DataChannelPackets?
                         dataChannelStack.onIncomingDataChannelPacket(dcp.getBuffer(), dcp.sid, dcp.ppid);
