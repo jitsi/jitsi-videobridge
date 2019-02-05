@@ -46,9 +46,7 @@ import org.jitsi.util.Logger
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
 
 class RtpSenderImpl(
         val id: String,
@@ -152,10 +150,16 @@ class RtpSenderImpl(
         outgoingRtcpRoot = pipeline {
             node(keyframeRequester)
             node(SentRtcpStats())
+            //TODO(brian): not sure this is a great idea.  it works as a catch-call but can also be error-prone
+            // (i found i was accidentally clobbering the sender ssrc for SRs which caused issues).  I think
+            // it'd be better to notify everything creating RTCP the bridge SSRCs and then everything should be
+            // responsible for setting it themselves
             simpleNode("RTCP sender ssrc setter") { pktInfos ->
                 val senderSsrc = localVideoSsrc ?: return@simpleNode emptyList<PacketInfo>()
                 pktInfos.forEachAs<RtcpPacket> { _, pkt ->
-                    pkt.header.senderSsrc = senderSsrc
+                    if (pkt.header.senderSsrc == 0L) {
+                        pkt.header.senderSsrc = senderSsrc
+                    }
                 }
                 pktInfos
             }
