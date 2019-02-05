@@ -18,6 +18,7 @@ package org.jitsi.videobridge.xmpp;
 import net.java.sip.communicator.impl.protocol.jabber.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.health.*;
+import net.java.sip.communicator.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.version.*;
 import org.jitsi.videobridge.*;
@@ -36,6 +37,12 @@ import org.osgi.framework.*;
  */
 class XmppCommon
 {
+    /**
+     * The {@link Logger} used by the {@link XmppCommon} class and its
+     * instances for logging output.
+     */
+    private static final org.jitsi.util.Logger logger
+        =  org.jitsi.util.Logger.getLogger(XmppCommon.class);
 
     static final String[] FEATURES
         = new String[]
@@ -105,6 +112,22 @@ class XmppCommon
             : null;
     }
 
+    IQ handleIQ(IQ requestIQ)
+    {
+        if (logger.isDebugEnabled() && requestIQ != null)
+        {
+            logger.debug("RECV: " + requestIQ.toXML());
+        }
+
+        IQ replyIQ = handleIQInternal(requestIQ);
+
+        if (logger.isDebugEnabled() && replyIQ != null)
+        {
+            logger.debug("SENT: " + replyIQ.toXML());
+        }
+
+        return replyIQ;
+    }
     /**
      * Handles an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza of type
      * <tt>get</tt> or <tt>set</tt> which represents a request.
@@ -115,7 +138,7 @@ class XmppCommon
      * represents the response to the specified request or <tt>null</tt> to
      * reply with <tt>feature-not-implemented</tt>
      */
-    IQ handleIQ(IQ iq)
+    private IQ handleIQInternal(IQ iq)
     {
         IQ responseIQ = null;
 
