@@ -97,6 +97,10 @@ class EndpointConnectionStats : RtcpListener {
                 rtt = receivedTime - srSentTime - remoteProcessingDelayMs
                 endpointConnectionStatsListeners.forEach { it.onRttUpdate(rtt) }
             }
+        } else {
+            logger.cdebug { "Report block for ssrc ${reportBlock.ssrc} didn't have SR data: " +
+                    "lastSrTimestamp was ${reportBlock.lastSrTimestamp}, " +
+                    "delaySinceLastSr was ${reportBlock.delaySinceLastSr}"}
         }
     }
 }
