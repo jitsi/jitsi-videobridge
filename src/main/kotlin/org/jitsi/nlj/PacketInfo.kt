@@ -74,7 +74,7 @@ class EventTimeline(
 class PacketInfo @JvmOverloads constructor(
     var packet: Packet,
     val timeline: EventTimeline = EventTimeline()
-    ) {
+) {
     /**
      * An explicit tag for when this packet was originally received (assuming it
      * was an incoming packet and not one created by jvb itself).
