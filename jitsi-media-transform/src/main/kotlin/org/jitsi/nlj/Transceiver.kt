@@ -209,6 +209,7 @@ class Transceiver(
     fun receivesSsrc(ssrc: Long): Boolean = receiveSsrcs.contains(ssrc)
 
     fun setMediaStreamTracks(mediaStreamTracks: Array<MediaStreamTrackDesc>) {
+        logger.cinfo { "$id setting media stream tracks: ${mediaStreamTracks.joinToString()}" }
         this.mediaStreamTracks = mediaStreamTracks
         rtpReceiver.handleEvent(SetMediaStreamTracksEvent(mediaStreamTracks))
     }

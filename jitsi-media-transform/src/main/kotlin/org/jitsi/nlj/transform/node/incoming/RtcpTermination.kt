@@ -39,6 +39,8 @@ class RtcpTermination(
     private var numNacksReceived = 0
     private var numFirsReceived = 0
     private var numPlisReceived = 0
+    private var numRrsReceiver = 0
+    private var numSrsReceived = 0
 
     override fun doProcessPackets(p: List<PacketInfo>) {
         val outPackets = mutableListOf<PacketInfo>()
@@ -50,13 +52,13 @@ class RtcpTermination(
                     numNacksReceived++
                 }
                 is RtcpSrPacket -> {
-                    //TODO
+                    numSrsReceived++
                 }
                 is RtcpRrPacket -> {
-                    //TODO
+                    numRrsReceiver++
                 }
                 is RtcpByePacket -> {
-                    logger.cinfo { "BRIAN: got BYE packet:\n ${pkt.getBuffer().toHex()}"}
+                    logger.cinfo { "BRIAN: got BYE packet:\n$pkt" }
                     //TODO
                 }
                 is RtcpSdesPacket -> {
@@ -94,6 +96,8 @@ class RtcpTermination(
             addStat("num NACK packets rx: $numNacksReceived")
             addStat("num PLI packets rx: $numPlisReceived")
             addStat("num FIR packets rx: $numFirsReceived")
+            addStat("num SR packets rx: $numSrsReceived")
+            addStat("num RR packets rx: $numRrsReceiver")
         }
     }
 }

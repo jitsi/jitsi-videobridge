@@ -17,6 +17,8 @@ package org.jitsi.nlj.rtcp
 
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.util.RtpUtils
+import org.jitsi.nlj.util.cdebug
+import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
@@ -30,6 +32,7 @@ class RtcpSrGenerator(
     private val rtcpSender: (RtcpPacket) -> Unit = {},
     private val outgoingStatisticsTracker: OutgoingStatisticsTracker
 ) {
+    private val logger = getLogger(this::class.java)
     var running: Boolean = true
 
     init {
@@ -55,6 +58,7 @@ class RtcpSrGenerator(
                     header = RtcpHeader(packetType = RtcpSrPacket.PT, senderSsrc = ssrc),
                     senderInfo = senderInfo
                 )
+                logger.cdebug { "Sending SR packet $srPacket" }
                 rtcpSender(srPacket)
             }
 
