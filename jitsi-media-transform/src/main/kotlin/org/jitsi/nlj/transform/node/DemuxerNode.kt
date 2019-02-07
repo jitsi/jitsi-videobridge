@@ -17,6 +17,7 @@ package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.NodeVisitor
+import kotlin.streams.toList
 
 class DemuxerNode(name: String) : Node("$name demuxer") {
     private var transformPaths: MutableSet<ConditionalPacketPath> = mutableSetOf()
@@ -47,4 +48,6 @@ class DemuxerNode(name: String) : Node("$name demuxer") {
             conditionalPath.path.visit(visitor)
         }
     }
+
+    override fun getChildren(): Collection<Node> = transformPaths.stream().map(ConditionalPacketPath::path).toList()
 }

@@ -20,19 +20,44 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
 
-interface NodeVisitor {
-    fun visit(node: Node)
+abstract class NodeVisitor {
+    open fun visit(node: Node) {
+        doWork(node)
+        node.getChildren().forEach { this.visit(it) }
+    }
+
+    /**
+     * [reverseVisit] is used for traversing an 'outgoing'-style tree which
+     * has many input paths but terminates at a single point (as opposed to an
+     * 'incoming'-style tree which starts at a single point and then branches
+     * into multiple paths.  With reverseVisit, we start at the single terminating
+     * point and traverse backwards through the tree.  It should be noted, however,
+     * that reverseVisit is done in a 'postorder' traversal style (meaning that a [Node]'s
+     * 'inputNodes' are visited before that Node itself.
+     * TODO: protect against visiting the same node twice in the event of a cycle (which
+     * we should do for 'visit' as well)
+     */
+    fun reverseVisit(node: Node) {
+        //NOTE(brian): although we're doing a reverse visit here, we still visit the node
+        // in 'normal' order by going up through all the parents first and then calling
+        // doWork on our way back 'down', as it's usually more useful to do things like
+        // view the stats in the 'normal' order and just use the 'reverse' visit as a
+        // way to handle the 'outgoing' tree style (as mentioned in the comment above)
+        node.getParents().forEach { this.reverseVisit(it) }
+        doWork(node)
+    }
+    abstract protected fun doWork(node: Node)
 }
 
-class NodeStatsVisitor(val nodeStatsBlock: NodeStatsBlock) : NodeVisitor {
-    override fun visit(node: Node) {
+class NodeStatsVisitor(val nodeStatsBlock: NodeStatsBlock) : NodeVisitor() {
+    override fun doWork(node: Node) {
         val block = node.getNodeStats()
         nodeStatsBlock.addStat(block.name, block)
     }
 }
 
-class NodeEventVisitor(val event: Event) : NodeVisitor {
-    override fun visit(node: Node) {
+class NodeEventVisitor(val event: Event) : NodeVisitor() {
+    override fun doWork(node: Node) {
         node.handleEvent(event)
     }
 }

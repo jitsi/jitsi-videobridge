@@ -278,8 +278,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
             val queueReadTotal = lastQueueReadTime - firstQueueReadTime
             addStat("Read from queue at a rate of " + "${numQueueReads / (Duration.ofMillis(queueReadTotal).seconds.toDouble())} times per second")
             addStat("The queue was empty $numTimesQueueEmpty out of $numQueueReads times")
-            val statsVisitor = NodeStatsVisitor(this)
-            inputTreeRoot.visit(statsVisitor)
+            NodeStatsVisitor(this).visit(inputTreeRoot)
         }
     }
 
@@ -304,7 +303,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
 
     override fun handleEvent(event: Event) {
-        inputTreeRoot.visit(NodeEventVisitor(event))
+        NodeEventVisitor(event).visit(inputTreeRoot)
     }
 
     override fun setAudioLevelListener(audioLevelListener: AudioLevelListener) {
