@@ -320,5 +320,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     override fun stop() {
         running = false
         rtcpRrGenerator.running = false
+        incomingPacketQueue.close()
+        //TODO: tear down pipeline
     }
 }
