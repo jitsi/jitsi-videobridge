@@ -15,12 +15,20 @@
  */
 package org.jitsi.nlj.dtls
 
-import org.bouncycastle.crypto.AsymmetricCipherKeyPair
+import java.security.KeyPair
 
+/**
+ * Store various information about a generated Certificate, including:
+ * The [KeyPair] used to build and sign it, as well as the fingerprint
+ * hash function and the calculated fingerprint we use (which is transmitted
+ * over the signaling channel so the certificate can be verified).  We also
+ * store the time at which this certificate was created so we can refresh it
+ * appropriately.
+ */
 data class CertificateInfo(
-    val keyPair: AsymmetricCipherKeyPair,
-    val certificate: org.bouncycastle.crypto.tls.Certificate,
+    val keyPair: KeyPair,
+    val certificate: org.bouncycastle.tls.Certificate,
     val localFingerprintHashFunction: String,
     val localFingerprint: String,
-    val timestamp: Long
+    val creationTimestampMs: Long
 )

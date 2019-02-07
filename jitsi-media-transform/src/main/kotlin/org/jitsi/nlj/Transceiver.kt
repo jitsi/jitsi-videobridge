@@ -31,6 +31,7 @@ import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
+import org.jitsi.rtp.extensions.bytearray.toHex
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.Logger
@@ -270,21 +271,23 @@ class Transceiver(
         rtpSender.handleEvent(ssrcAssociationEvent)
     }
 
-    fun setSrtpInformation(chosenSrtpProtectionProfile: Int, tlsContext: TlsContext) {
+    fun setSrtpInformation(chosenSrtpProtectionProfile: Int, tlsRole: TlsRole, keyingMaterial: ByteArray) {
         val srtpProfileInfo =
             SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(chosenSrtpProtectionProfile)
-        val keyingMaterial = SrtpUtil.getKeyingMaterial(tlsContext, srtpProfileInfo)
-        logger.cdebug { "Setting SRTP info" }
+        logger.cinfo { "Transceiver $id creating transformers with:\n" +
+                "profile info:\n$srtpProfileInfo\n" +
+                "keyingMaterial:\n${keyingMaterial.toHex()}\n" +
+                "tls role: $tlsRole" }
         val srtpTransformer = SrtpUtil.initializeTransformer(
             srtpProfileInfo,
             keyingMaterial,
-            TlsRole.fromTlsContext(tlsContext),
+            tlsRole,
             false
         )
         val srtcpTransformer = SrtpUtil.initializeTransformer(
             srtpProfileInfo,
             keyingMaterial,
-            TlsRole.fromTlsContext(tlsContext),
+            tlsRole,
             true
         )
 
