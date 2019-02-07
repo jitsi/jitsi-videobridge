@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2018 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +15,20 @@
  */
 package org.jitsi.nlj.dtls
 
-import org.bouncycastle.crypto.tls.Certificate
-import org.bouncycastle.crypto.tls.DTLSTransport
-import org.bouncycastle.crypto.tls.DatagramTransport
-import org.bouncycastle.crypto.tls.TlsContext
+import org.bouncycastle.tls.Certificate
+import org.bouncycastle.tls.DTLSTransport
+import org.bouncycastle.tls.DatagramTransport
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.protocol.ProtocolStack
 import org.jitsi.nlj.util.BufferPool
+import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.clone
 import java.nio.ByteBuffer
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
@@ -57,33 +58,18 @@ import java.util.concurrent.TimeUnit
  *  dtlsStack.sendDtlsAppData(dtlsAppPacket)
  *
  */
-abstract class DtlsStack : ProtocolStack, DatagramTransport {
-    companion object {
-        /**
-         * Because generating the certificate can be expensive, we generate a single
-         * one to be used everywhere which expires in 24 hours (when we'll generate
-         * another one).
-         */
-        private var certificate: CertificateInfo = DtlsUtils.generateCertificateInfo()
-        private val syncRoot: Any = Any()
-        fun getCertificate(): CertificateInfo {
-            synchronized(DtlsStack.syncRoot) {
-                val expiration = Duration.ofDays(1).toMillis()
-                if (DtlsStack.certificate.timestamp + expiration < System.currentTimeMillis()) {
-                    DtlsStack.certificate = DtlsUtils.generateCertificateInfo()
-                }
-                return DtlsStack.certificate
-            }
-        }
-    }
-
-    protected val logger = getLogger(this.javaClass)
+class DtlsStack(
+    val id: String
+) : ProtocolStack, DatagramTransport {
+    private val logger = getLogger(this.javaClass)
+    private val logPrefix = "[$id]"
+    private val roleSet = CompletableFuture<Unit>()
 
     val localFingerprint: String
-        get() = DtlsStack.getCertificate().localFingerprint
+        get() = DtlsStack.getCertificateInfo().localFingerprint
 
     val localFingerprintHashFunction: String
-        get() = DtlsStack.getCertificate().localFingerprintHashFunction
+        get() = DtlsStack.getCertificateInfo().localFingerprintHashFunction
 
     /**
      * The remote fingerprints sent to us over the signaling path.
@@ -93,10 +79,12 @@ abstract class DtlsStack : ProtocolStack, DatagramTransport {
     /**
      * Checks that a specific [Certificate] matches the remote fingerprints sent to us over the signaling path.
      */
-    protected fun verifyAndValidateRemoteCertificate(certificate: Certificate){
-        DtlsUtils.verifyAndValidateCertificate(certificate, remoteFingerprints)
-        // The above throws an exception if the checks fail.
-        logger.cdebug { "Fingerprints verified." }
+    protected fun verifyAndValidateRemoteCertificate(remoteCertificate: Certificate?) {
+        remoteCertificate?.let {
+            DtlsUtils.verifyAndValidateCertificate(it, remoteFingerprints)
+            // The above throws an exception if the checks fail.
+            logger.cdebug { "$logPrefix Fingerprints verified." }
+        }
     }
 
     /**
@@ -114,17 +102,46 @@ abstract class DtlsStack : ProtocolStack, DatagramTransport {
     /**
      * The negotiated DTLS transport.  This is used to read and write DTLS app data.
      */
-    protected var dtlsTransport: DTLSTransport? = null
+    private var dtlsTransport: DTLSTransport? = null
+
+    /**
+     * The [DtlsRole] 'plugin' that will determine how this stack operates (as a client
+     * or a server).  A call to [actAsClient] or [actAsServer] must be made to fill out
+     * this role and successfully call [start]
+     */
+    var role: DtlsRole? = null
+        private set
 
     /**
      * A buffer we'll use to receive data from [dtlsTransport].
      */
     private val dtlsAppDataBuf = ByteBuffer.allocate(1500)
 
-    fun onHandshakeComplete(handler: (TlsContext) -> Unit) {
+    /**
+     * Install a handler to be invoked when the DTLS handshake is finished.
+     *
+     * NOTE this MUST be called before calling either [actAsServer] or
+     * [actAsClient]!
+     */
+    fun onHandshakeComplete(handler: (Int, TlsRole, ByteArray) -> Unit) {
         handshakeCompleteHandler = handler
     }
-    protected var handshakeCompleteHandler: (TlsContext) -> Unit = {}
+
+    fun actAsServer() {
+        role = DtlsServer(id, this, handshakeCompleteHandler, this::verifyAndValidateRemoteCertificate)
+        roleSet.complete(Unit)
+    }
+
+    fun actAsClient() {
+        role = DtlsClient(id, this, handshakeCompleteHandler, this::verifyAndValidateRemoteCertificate)
+        roleSet.complete(Unit)
+    }
+
+    /**
+     * The handler to be invoked when the DTLS handshake is complete.  A [ByteArray]
+     * containing the SRTP keying material is passed
+     */
+    private var handshakeCompleteHandler: (Int, TlsRole, ByteArray) -> Unit = { _, _, _ -> }
 
     override fun processIncomingProtocolData(packetInfo: PacketInfo): List<PacketInfo> {
         incomingProtocolData.add(packetInfo)
@@ -133,10 +150,9 @@ abstract class DtlsStack : ProtocolStack, DatagramTransport {
         do {
             bytesReceived = dtlsTransport?.receive(dtlsAppDataBuf.array(), 0, 1500, 1) ?: -1
             if (bytesReceived > 0) {
-                val bufCopy = dtlsAppDataBuf.clone();
+                val bufCopy = dtlsAppDataBuf.clone()
                 bufCopy.limit(bytesReceived)
-//                outPackets.add(PacketInfo(DtlsProtocolPacket(bufCopy)))
-                outPackets.add(PacketInfo(UnparsedPacket(bufCopy.array(), bufCopy.arrayOffset(), bufCopy.limit())))
+                outPackets.add(PacketInfo(DtlsProtocolPacket(bufCopy.array(), 0, bytesReceived)))
             }
         } while (bytesReceived > 0)
         return outPackets
@@ -144,6 +160,17 @@ abstract class DtlsStack : ProtocolStack, DatagramTransport {
 
     override fun sendApplicationData(packetInfo: PacketInfo) {
         dtlsTransport?.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
+    }
+
+    /**
+     * 'start' this stack, in whatever role it has been told to operate (client or server).  If a role
+     * has not yet been yet (via [actAsServer] or [actAsClient]), then it will block until the role
+     * has been set.
+     */
+    fun start() {
+        roleSet.thenRun {
+            dtlsTransport = role?.start()
+        }
     }
 
     override fun close() {}
@@ -182,5 +209,22 @@ abstract class DtlsStack : ProtocolStack, DatagramTransport {
         onOutgoingProtocolData(listOf(packet))
     }
 
-    abstract fun getChosenSrtpProtectionProfile(): Int
+    companion object {
+        /**
+         * Because generating the certificateInfo can be expensive, we generate a single
+         * one to be used everywhere which expires in 24 hours (when we'll generate
+         * another one).
+         */
+        private var certificateInfo: CertificateInfo = DtlsUtils.generateCertificateInfo()
+        private val syncRoot: Any = Any()
+        fun getCertificateInfo(): CertificateInfo {
+            synchronized(DtlsStack.syncRoot) {
+                val expirationPeriodMs = Duration.ofDays(1).toMillis()
+                if (DtlsStack.certificateInfo.creationTimestampMs + expirationPeriodMs < System.currentTimeMillis()) {
+                    DtlsStack.certificateInfo = DtlsUtils.generateCertificateInfo()
+                }
+                return DtlsStack.certificateInfo
+            }
+        }
+    }
 }
