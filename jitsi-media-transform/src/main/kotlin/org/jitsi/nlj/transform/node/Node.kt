@@ -22,28 +22,12 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.Stoppable
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
+import org.jitsi.nlj.transform.NodeVisitor
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.getLogger
 import java.time.Duration
 import kotlin.properties.Delegates
-
-interface NodeVisitor {
-    fun visit(node: Node)
-}
-
-class NodeStatsVisitor(val nodeStatsBlock: NodeStatsBlock) : NodeVisitor {
-    override fun visit(node: Node) {
-        val block = node.getNodeStats()
-        nodeStatsBlock.addStat(block.name, block)
-    }
-}
-
-class NodeEventVisitor(val event: Event) : NodeVisitor {
-    override fun visit(node: Node) {
-        node.handleEvent(event)
-    }
-}
 
 /**
  * An abstract base class for all [Node] subclasses.  This class
