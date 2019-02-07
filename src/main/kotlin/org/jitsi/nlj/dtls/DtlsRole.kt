@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-package org.jitsi.nlj.transform.node.incoming
+package org.jitsi.nlj.dtls
 
-import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.protocol.ProtocolStack
-import org.jitsi.nlj.transform.node.MultipleOutputTransformerNode
+import org.bouncycastle.tls.DTLSTransport
 
-class ProtocolReceiver @JvmOverloads constructor(
-    private val stack: ProtocolStack,
-    name: String = stack::class.toString()
-) : MultipleOutputTransformerNode(name) {
-
-    override fun transform(packetInfo: PacketInfo): List<PacketInfo> {
-        return stack.processIncomingProtocolData(packetInfo)
-    }
+interface DtlsRole {
+    /**
+     * 'Starts' a DTLS connection.  Blocks until the connection
+     * has been successfully established (an exception is thrown
+     * upon failure).  Returns the resulting [DTLSTransport].
+     *
+     * The definition of 'start' varies between roles.  For a client
+     * this means 'connect' to a remote server, for a server it means
+     * 'accept' and wait for an incoming connection.
+     */
+    fun start(): DTLSTransport
 }
