@@ -60,24 +60,8 @@ abstract class Node(
 
     open fun visit(visitor: NodeVisitor) {
         visitor.visit(this)
-        nextNode?.visit(visitor)
     }
 
-    /**
-     * [reverseVisit] is used for traversing an 'outgoing'-style tree which
-     * has many input paths but terminates at a single point (as opposed to an
-     * 'incoming'-style tree which starts at a single point and then branches
-     * into multiple paths.  With reverseVisit, we start at the single terminating
-     * point and traverse backwards through the tree.  It should be noted, however,
-     * that reverseVisit is done in a 'postorder' traversal style (meaning that a [Node]'s
-     * 'inputNodes' are visited before that Node itself.
-     * TODO: protect against visiting the same node twice in the event of a cycle (which
-     * we should do for 'visit' as well)
-     */
-    open fun reverseVisit(visitor: NodeVisitor) {
-        inputNodes.forEach { it.reverseVisit(visitor) }
-        visitor.visit(this)
-    }
     /**
      * The function that all subclasses should implement to do the actual
      * packet processing.  A protected method is used for this so we can
@@ -101,6 +85,13 @@ abstract class Node(
         onEntry(pkts)
         doProcessPackets(pkts)
     }
+
+    open fun getChildren(): Collection<Node> {
+        val actualNextNode = nextNode ?: return listOf()
+        return listOf(actualNextNode)
+    }
+
+    open fun getParents(): Collection<Node> = inputNodes
 
     override fun handleEvent(event: Event) {
         // No-op by default
