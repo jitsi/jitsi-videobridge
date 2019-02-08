@@ -55,4 +55,6 @@ abstract class RtpReceiver :
     abstract fun setAudioLevelListener(audioLevelListener: AudioLevelListener)
 
     abstract fun getStreamStats(): Map<Long, IncomingStreamStatistics.Snapshot>
+
+    abstract fun tearDown()
 }

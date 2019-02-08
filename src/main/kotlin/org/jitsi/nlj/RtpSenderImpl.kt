@@ -264,6 +264,9 @@ class RtpSenderImpl(
         running = false
         rtcpSrGenerator.running = false
         incomingPacketQueue.close()
+    }
+
+    override fun tearDown() {
         NodeTeardownVisitor().reverseVisit(outputPipelineTerminationNode)
     }
 }

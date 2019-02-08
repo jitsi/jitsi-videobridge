@@ -316,4 +316,9 @@ class Transceiver(
         rtpReceiver.stop()
         rtpSender.stop()
     }
+
+    fun teardown() {
+        rtpReceiver.tearDown()
+        rtpSender.tearDown()
+    }
 }
