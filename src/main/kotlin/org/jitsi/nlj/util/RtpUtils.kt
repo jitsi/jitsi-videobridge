@@ -47,6 +47,8 @@ infix fun Int.isNextAfter(otherSeqNum: Int): Boolean = RTPUtils.getSequenceNumbe
  */
 infix fun Int.isNewerThan(otherSeqNum: Int): Boolean = RTPUtils.isOlderSequenceNumberThan(otherSeqNum, this)
 
+infix fun Int.isOlderThan(otherSeqNum: Int): Boolean = RTPUtils.isOlderSequenceNumberThan(this, otherSeqNum)
+
 /**
  * Return the amount of packets between the RTP sequence number represented by [this] and the [otherSeqNum].  NOTE:
  * [this] must represent an older RTP sequence number than [otherSeqNum] (TODO: validate/enforce that)

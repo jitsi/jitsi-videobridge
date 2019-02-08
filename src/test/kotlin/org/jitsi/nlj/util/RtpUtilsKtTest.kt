@@ -33,5 +33,21 @@ internal class RtpUtilsKtTest : ShouldSpec() {
                 0 rolledOverTo 65535 shouldBe false
             }
         }
+        "isNewerThan" {
+            should("return true for an immediately newer sequence number") {
+                2 isNewerThan 1 shouldBe true
+            }
+            should("return true in the case of a rollover") {
+                2 isNewerThan 65530 shouldBe true
+            }
+        }
+        "isOlderThan" {
+            should("return true for an older packet (no rollover)") {
+                1 isOlderThan 2 shouldBe true
+            }
+            should("return true for an older packet (with rollover)") {
+                65530 isOlderThan 2 shouldBe true
+            }
+        }
     }
 }
