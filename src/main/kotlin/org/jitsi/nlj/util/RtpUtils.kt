@@ -67,5 +67,22 @@ class RtpUtils {
         fun convertRtpTimestampToMs(rtpTimestamp: Int, ticksPerSecond: Int): Long {
             return ((rtpTimestamp / (ticksPerSecond.toDouble())) * 1000).toLong()
         }
+
+        /**
+         * Returns a sequence of Ints from olderSeqNum (exclusive) to newerSeqNum (exclusive),
+         * taking rollover into account
+         */
+        fun sequenceNumbersBetween(olderSeqNum: Int, newerSeqNum: Int): Sequence<Int> {
+            var currSeqNum = olderSeqNum
+            return generateSequence {
+                currSeqNum = (currSeqNum + 1) % 0x1_0000
+                if (currSeqNum == newerSeqNum) {
+                    null
+                }
+                else {
+                    currSeqNum
+                }
+            }
+        }
     }
 }

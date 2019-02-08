@@ -17,6 +17,7 @@
 package org.jitsi.nlj.util
 
 import io.kotlintest.IsolationMode
+import io.kotlintest.matchers.collections.shouldContainInOrder
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 
@@ -47,6 +48,16 @@ internal class RtpUtilsKtTest : ShouldSpec() {
             }
             should("return true for an older packet (with rollover)") {
                 65530 isOlderThan 2 shouldBe true
+            }
+        }
+        "sequenceNumbersBetween" {
+            should("contain all sequence numbers between 2 values") {
+                RtpUtils.sequenceNumbersBetween(1, 10).toList() shouldContainInOrder
+                        listOf(2, 3, 4, 5, 6, 7, 8, 9)
+            }
+            should("contain all sequence numbers between 2 values, even with rollover") {
+                RtpUtils.sequenceNumbersBetween(65530, 5).toList() shouldContainInOrder
+                        listOf(65531, 65532, 65533, 65535, 0, 1, 2, 3, 4)
             }
         }
     }
