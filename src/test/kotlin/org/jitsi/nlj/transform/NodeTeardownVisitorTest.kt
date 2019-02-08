@@ -16,13 +16,14 @@
 
 package org.jitsi.nlj.transform
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.Node
 import org.junit.jupiter.api.Assertions.*
 
 internal class NodeTeardownVisitorTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val testIncomingPipeline = pipeline {
         simpleNode("Node 1") { pkts -> pkts }

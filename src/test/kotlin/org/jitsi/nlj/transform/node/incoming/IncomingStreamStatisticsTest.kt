@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.transform.node.incoming
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.plusOrMinus
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
@@ -63,7 +64,7 @@ private val JitterPacketInfos = listOf(
 )
 
 internal class IncomingStreamStatisticsTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
         "Jitter" {

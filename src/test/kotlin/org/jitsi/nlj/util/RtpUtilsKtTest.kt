@@ -16,11 +16,12 @@
 
 package org.jitsi.nlj.util
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 
 internal class RtpUtilsKtTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
         "rolledOverTo" {

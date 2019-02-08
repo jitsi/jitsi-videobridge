@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.util
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.shouldThrow
 import io.kotlintest.specs.ShouldSpec
 import java.time.Duration
@@ -24,7 +25,7 @@ import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.LinkedBlockingQueue
 
 internal class ExecutorUtilsKtTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val executor = Executors.newSingleThreadExecutor()
 
