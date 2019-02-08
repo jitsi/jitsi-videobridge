@@ -23,6 +23,7 @@ import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
+import org.jitsi.nlj.transform.NodeTeardownVisitor
 import org.jitsi.nlj.transform.node.MediaTypeParser
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketParser
@@ -320,6 +321,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
         running = false
         rtcpRrGenerator.running = false
         incomingPacketQueue.close()
-        //TODO: tear down pipeline
+        NodeTeardownVisitor().visit(inputTreeRoot)
     }
 }

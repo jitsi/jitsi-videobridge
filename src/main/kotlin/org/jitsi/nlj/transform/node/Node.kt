@@ -74,11 +74,19 @@ abstract class Node(
      * Marking this as open since Demuxer wants to throw an exception
      * if attach is called.
      */
-    open fun attach(node: Node) {
+    open fun attach(node: Node?) {
         // Remove ourselves as an input from the node we're currently connected to
-        nextNode?.inputNodes?.remove(this)
+        nextNode?.removeParent(this)
         nextNode = node
-        node.inputNodes.add(this)
+        node?.addParent(this)
+    }
+
+    fun addParent(newParent: Node) {
+        inputNodes.add(newParent)
+    }
+
+    fun removeParent(parent: Node) {
+        inputNodes.remove(parent)
     }
 
     override fun processPackets(pkts: List<PacketInfo>) {
