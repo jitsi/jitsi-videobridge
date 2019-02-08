@@ -17,8 +17,8 @@ package org.jitsi_modified.impl.neomedia.transform;
 
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.nlj.format.PayloadType;
+import org.jitsi.nlj.util.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
 
 import java.util.Map;
@@ -77,7 +77,7 @@ public class RetransmissionRequesterImpl
     public RetransmissionRequesterImpl(/*MediaStream stream,*/ Consumer<RawPacket> rtcpSender)
     {
 //        this.stream = stream;
-        retransmissionRequesterDelegate = new RetransmissionRequesterDelegate(/*stream,*/ new TimeProvider());
+        retransmissionRequesterDelegate = new RetransmissionRequesterDelegate(/*stream,*/);
         retransmissionRequesterDelegate.rtcpSender = rtcpSender;
         recurringRunnableExecutor.registerRecurringRunnable(retransmissionRequesterDelegate);
         retransmissionRequesterDelegate.setWorkReadyCallback(
