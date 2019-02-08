@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.transform.module
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.bouncycastle.cert.X509CertificateHolder
@@ -130,6 +131,8 @@ class TlsServerImpl : DefaultTlsServer() {
 
 // A simple, somewhat hacky test just to verify the handshake can complete and we can send data
 internal class DtlsStackTest : ShouldSpec() {
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
+
     init {
         val dtls = DtlsClientStack()
         val receiver = DtlsReceiver(dtls)
