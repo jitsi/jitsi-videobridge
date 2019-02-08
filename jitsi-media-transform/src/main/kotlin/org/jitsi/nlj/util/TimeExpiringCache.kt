@@ -32,9 +32,15 @@ import java.util.TreeMap
  * not be pruned when expected, but if the ordering of [IndexType]
  * roughly follows the insertion order, it should not be too bad.
  */
-//TODO(brian): add max size as well
 class TimeExpiringCache<IndexType, DataType>(
+    /**
+     * The amount of time after which an element should be pruned from the cache
+     */
     private val dataTimeout: Duration,
+    /**
+     * The maximum amount of elements we'll allow in the cache
+     */
+    private val maxNumElements: Int,
     private val timeProvider: TimeProvider = SystemTimeProvider()
 ) {
     private val cache: TreeMap<IndexType, Container<DataType>> = TreeMap()
@@ -54,12 +60,31 @@ class TimeExpiringCache<IndexType, DataType>(
         }
     }
 
+    /**
+     * For each element in this cache, in descending order of the value of their
+     * [IndexType], run the given [predicate].  If [predicate] returns false, stop
+     * the iteration.
+     */
+    fun forEachDescending(predicate: (DataType) -> Boolean) {
+        synchronized(cache) {
+            val iter = cache.descendingMap().iterator()
+            while (iter.hasNext()) {
+                val (_, container) = iter.next()
+                if (!predicate(container.data)) {
+                    break
+                }
+            }
+        }
+    }
+
     private fun clean(expirationTimestamp: Long) {
         synchronized (cache) {
             val iter = cache.entries.iterator()
             while (iter.hasNext()) {
                 val (_, container) = iter.next()
-                if (container.timeAdded <= expirationTimestamp) {
+                if (cache.size > maxNumElements) {
+                    iter.remove()
+                } else if (container.timeAdded <= expirationTimestamp) {
                     iter.remove()
                 } else {
                     // We'll break out of the loop once we find an insertion time that
@@ -75,8 +100,5 @@ class TimeExpiringCache<IndexType, DataType>(
      * added to the data structure so that we can time out
      * old [Container]s
      */
-    private data class Container<Type>(
-            var data: Type,
-            var timeAdded: Long
-    )
+    private data class Container<Type>(var data: Type, var timeAdded: Long)
 }

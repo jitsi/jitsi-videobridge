@@ -25,7 +25,7 @@ import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.transform.node.PacketCache
+import org.jitsi.nlj.transform.node.PacketCacher
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStreamStatistics
@@ -91,7 +91,7 @@ class RtpSenderImpl(
 
     private val srtpEncryptWrapper = SrtpTransformerEncryptNode()
     private val srtcpEncryptWrapper = SrtcpTransformerEncryptNode()
-    private val outgoingPacketCache = PacketCache()
+    private val outgoingPacketCache = PacketCacher()
     private val absSendTime = AbsSendTime()
     private val statTracker = OutgoingStatisticsTracker()
     private val keyframeRequester = KeyframeRequester()
