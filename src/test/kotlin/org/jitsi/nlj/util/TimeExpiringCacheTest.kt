@@ -33,7 +33,11 @@ internal class TimeExpiringCacheTest : ShouldSpec() {
         override fun currentTimeMillis(): Long = currentTimeMillis
     }
 
-    private val timeExpiringCache = TimeExpiringCache<Int, Dummy>(Duration.ofSeconds(1), timeProvider)
+    private val timeExpiringCache = TimeExpiringCache<Int, Dummy>(
+            Duration.ofSeconds(1),
+            20,
+            timeProvider
+    )
 
     init {
         "adding data" {
@@ -68,27 +72,27 @@ internal class TimeExpiringCacheTest : ShouldSpec() {
             }
         }
         "adding lots of data over time" {
-            for (i in 0..10) {
+            for (i in 1..10) {
                 timeExpiringCache.insert(i, Dummy(i))
                 timeProvider.currentTimeMillis += Duration.ofSeconds(1).toMillis()
             }
             should("expire things properly") {
                 // Only the last value should still be present
-                for (i in 0..9) {
+                for (i in 1..9) {
                     timeExpiringCache.get(i) shouldBe null
                 }
                 timeExpiringCache.get(10) shouldNotBe null
             }
         }
         "adding data at the same time" {
-            for (i in 0..10) {
+            for (i in 1..10) {
                 timeExpiringCache.insert(i, Dummy(i))
             }
             "and then another > timeout period later" {
                 timeProvider.currentTimeMillis += Duration.ofSeconds(10).toMillis()
                 timeExpiringCache.insert(11, Dummy(11))
                 should("expire all the old data") {
-                    for (i in 0..10) {
+                    for (i in 1..10) {
                         timeExpiringCache.get(i) shouldBe null
                     }
                 }
@@ -115,7 +119,24 @@ internal class TimeExpiringCacheTest : ShouldSpec() {
                 timeExpiringCache.get(3) shouldNotBe null
                 timeExpiringCache.get(4) shouldNotBe null
             }
-
+        }
+        "adding more than the maximum amount of elements" {
+            for (i in 1..20) {
+                timeExpiringCache.insert(i, Dummy(i))
+            }
+            should("remove the oldest indices") {
+                for (i in 21..30) {
+                    timeExpiringCache.insert(i, Dummy(i))
+                }
+                // 1 through 10 should not be gone...
+                for (i in 1..10) {
+                    timeExpiringCache.get(i) shouldBe null
+                }
+                // ...but 11 through 30 should still be there
+                for (i in 11..30) {
+                    timeExpiringCache.get(i) shouldNotBe null
+                }
+            }
         }
     }
 }

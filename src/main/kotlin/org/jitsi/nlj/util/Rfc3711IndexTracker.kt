@@ -17,7 +17,8 @@
 package org.jitsi.nlj.util
 
 class Rfc3711IndexTracker {
-    private var roc: Int = 0
+    var roc: Int = 0
+        private set
     private var highestSeqNumReceived = -1
 
     /**
