@@ -23,6 +23,7 @@ import org.jitsi.nlj.rtcp.RtcpSrGenerator
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
+import org.jitsi.nlj.transform.NodeTeardownVisitor
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketCache
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
@@ -262,5 +263,7 @@ class RtpSenderImpl(
     override fun stop() {
         running = false
         rtcpSrGenerator.running = false
+        incomingPacketQueue.close()
+        NodeTeardownVisitor().reverseVisit(outputPipelineTerminationNode)
     }
 }

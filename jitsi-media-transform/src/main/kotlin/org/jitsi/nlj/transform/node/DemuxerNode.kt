@@ -31,7 +31,13 @@ class DemuxerNode(name: String) : Node("$name demuxer") {
         super.attach(pp.path)
     }
 
-    override fun attach(node: Node) = throw Exception()
+    fun removePacketPaths() {
+        //TODO: concurrency issues here
+        transformPaths.forEach { it.path.removeParent(this) }
+        transformPaths.clear()
+    }
+
+    override fun attach(node: Node?) = throw Exception()
 
     override fun doProcessPackets(p: List<PacketInfo>) {
         // Is this scheme always better? Or only when the list of
