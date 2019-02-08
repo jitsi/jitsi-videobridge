@@ -20,6 +20,7 @@ import java.util.function.*;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.util.*;
+import org.jitsi.nlj.util.TimeProvider;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -107,6 +108,11 @@ public class RetransmissionRequesterDelegate
     {
 //        this.stream = stream;
         this.timeProvider = timeProvider;
+    }
+
+    public RetransmissionRequesterDelegate()
+    {
+        this(new SystemTimeProvider());
     }
 
     /**
