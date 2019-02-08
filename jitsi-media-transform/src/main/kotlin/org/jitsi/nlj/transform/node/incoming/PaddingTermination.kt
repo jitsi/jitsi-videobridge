@@ -15,28 +15,35 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.impl.neomedia.transform.PaddingTermination
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.util.toRawPacket
+import org.jitsi.rtp.RtpPacket
+import org.jitsi.util.LRUCache
+import java.util.Collections
+import java.util.TreeMap
 
 class PaddingTermination : Node("Padding termination") {
-    private val paddingTermination = PaddingTermination()
+    private val replayContexts: MutableMap<Long, MutableSet<Int>> = TreeMap()
     private var numPaddingPacketsSeen = 0
 
     override fun doProcessPackets(p: List<PacketInfo>) {
         val outPackets = mutableListOf<PacketInfo>()
         p.forEach { packetInfo ->
-            paddingTermination.reverseTransform(packetInfo.packet.toRawPacket())?.let {
-                // If paddingTermination didn't return null, that means this is a packet
-                // that should be forwarded.
+            checkPacket(packetInfo.packetAs<RtpPacket>())?.let {
                 outPackets.add(packetInfo)
             } ?: run {
                 numPaddingPacketsSeen++
             }
         }
         next(outPackets)
+    }
+
+    private fun checkPacket(packet: RtpPacket): RtpPacket? {
+        val replayContext = replayContexts.computeIfAbsent(packet.header.ssrc) {
+            Collections.newSetFromMap(LRUCache(1500))
+        }
+        return if (replayContext.add(packet.header.sequenceNumber)) packet else null
     }
 
     override fun getNodeStats(): NodeStatsBlock {
