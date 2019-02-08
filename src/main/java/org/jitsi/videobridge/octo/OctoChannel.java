@@ -44,6 +44,11 @@ public class OctoChannel
         = Logger.getLogger(OctoChannel.class);
 
     /**
+     * Expiration timeout for Octo channels.
+     */
+    private static final int OCTO_EXPIRE = 2 * 60 * 60 * 1000;
+
+    /**
      * The Octo ID of the conference, configured in {@link Conference} as the
      * global ID ({@link Conference#getGid()}).
      */
@@ -129,6 +134,8 @@ public class OctoChannel
 
         logger
             = Logger.getLogger(classLogger, content.getConference().getLogger());
+
+        setExpire(OCTO_EXPIRE);
     }
 
     /**
@@ -451,5 +458,19 @@ public class OctoChannel
         }
 
         return false;
+    }
+
+    /**
+     * Don't expire Octo channels due to lack of transport activity, but allow
+     * for them to be explicitly expired by signaling (by setting expire=0).
+     */
+    @Override
+    public void setExpire(int expire)
+    {
+        if (expire > 0)
+        {
+            expire = Math.max(expire, OCTO_EXPIRE);
+        }
+        super.setExpire(expire);
     }
 }
