@@ -321,6 +321,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
         running = false
         rtcpRrGenerator.running = false
         incomingPacketQueue.close()
+    }
+
+    override fun tearDown() {
         NodeTeardownVisitor().visit(inputTreeRoot)
     }
 }
