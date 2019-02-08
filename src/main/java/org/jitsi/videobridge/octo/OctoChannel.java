@@ -129,6 +129,8 @@ public class OctoChannel
 
         logger
             = Logger.getLogger(classLogger, content.getConference().getLogger());
+
+        setExpire(Integer.MAX_VALUE);
     }
 
     /**
@@ -451,5 +453,19 @@ public class OctoChannel
         }
 
         return false;
+    }
+
+    /**
+     * Don't expire Octo channels due to lack of transport activity, but allow
+     * for them to be explicitly expired by signaling (by setting expire=0).
+     */
+    @Override
+    public void setExpire(int expire)
+    {
+        if (expire > 0)
+        {
+            expire = Integer.MAX_VALUE;
+        }
+        super.setExpire(expire);
     }
 }
