@@ -27,8 +27,9 @@ public class SctpConnectionShim extends ChannelShim
 {
     public SctpConnectionShim(
             @NotNull String id,
-            @NotNull AbstractEndpoint endpoint)
+            @NotNull AbstractEndpoint endpoint,
+            ContentShim contentShim)
     {
-        super(id, endpoint, -1, false);
+        super(id, endpoint, 1, contentShim);
     }
 }

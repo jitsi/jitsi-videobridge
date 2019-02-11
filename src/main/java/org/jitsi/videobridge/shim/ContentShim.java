@@ -15,44 +15,68 @@
  */
 package org.jitsi.videobridge.shim;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.*;
+import org.jivesoftware.smack.packet.*;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Handles Colibri-related logic for a {@code Content}, e.g.
  * creates and expires channels.
  *
  * @author Brian Baldino
+ * @author Boris Grozev
  */
 public class ContentShim
 {
-    private final MediaType type;
-    private final Conference conference;
-    private final Map<String, ChannelShim> channels = new HashMap<>();
-    //TODO(brian): this used to be called 'initialLocalSSRC' in the content.  'Initial' presumably because
-    // it could be changed in the event of a collision (I think by the other lib?).  Since we send it out
-    // in the initial offer, assuming it's up to the other side not to conflict with us and therefore it
-    // won't need to be changed.
-    final long localSsrc = Videobridge.RANDOM.nextLong() & 0xffff_ffffL;
-
-    public ContentShim(Conference conference, MediaType type)
-    {
-        this.type = type;
-        this.conference = conference;
-    }
-
     /**
      * Generates a new <tt>Channel</tt> ID which is not guaranteed to be unique.
      *
-     * @return a new <tt>Channel</tt> ID which is not guaranteed to be unique
+     * @return a new <tt>Channel</tt> ID which is not guaranteed to be unique.
      */
-    private String generateChannelID()
+    private static String generateChannelID()
     {
         return
-                Long.toHexString(
-                        System.currentTimeMillis() + Videobridge.RANDOM.nextLong());
+            Long.toHexString(
+                System.currentTimeMillis() + Videobridge.RANDOM.nextLong());
+    }
+
+    /**
+     * The media type of this content.
+     */
+    private final MediaType mediaType;
+
+    /**
+     * The parent conference.
+     */
+    private final Conference conference;
+
+    /**
+     * This {@link ContentShim}'s channels.
+     */
+    private final Map<String, ChannelShim> channels = new ConcurrentHashMap<>();
+
+    /**
+     * TODO(brian): this used to be called 'initialLocalSSRC' in the content.
+     * 'Initial' presumably because it could be changed in the event of a
+     * collision (I think by the other lib?). Since we send it out in the
+     * initial offer, assuming it's up to the other side not to conflict with us
+     * and therefore it won't need to be changed.
+     */
+    final long localSsrc = Videobridge.RANDOM.nextLong() & 0xffff_ffffL;
+
+    /**
+     * Initializes a new {@link ContentShim} instance.
+     * @param conference the parent conference.
+     * @param mediaType the media type (audio/video).
+     */
+    public ContentShim(Conference conference, MediaType mediaType)
+    {
+        this.mediaType = mediaType;
+        this.conference = conference;
     }
 
     /**
@@ -74,28 +98,45 @@ public class ContentShim
         }
     }
 
-    public MediaType getType() {
-        return type;
+    /**
+     * @return  this {@link ContentShim}'s media type.
+     */
+    public MediaType getMediaType()
+    {
+        return mediaType;
     }
 
-
-    public ChannelShim createRtpChannel(
-            ConferenceShim conference,
-            String endpointId,
-            boolean isOcto) {
+    /**
+     * Creates a new {@code RtpChannel} and adds it to the list of channels.
+     * @param endpointId the ID of the endpoint the channel belongs to.
+     * @return the created channel.
+     */
+    private ChannelShim createRtpChannel(String endpointId)
+    {
         synchronized (channels)
         {
             String channelId = generateUniqueChannelID();
 
-            ChannelShim channelShim =
-                    new ChannelShim(channelId, conference.getOrCreateEndpoint(endpointId), localSsrc, isOcto);
-            channelShim.endpoint.setLocalSsrc(type, localSsrc);
+            ChannelShim channelShim
+                = new ChannelShim(
+                    channelId,
+                    conference.getOrCreateEndpoint(endpointId),
+                    localSsrc,
+                    this);
+            channelShim.getEndpoint().setLocalSsrc(mediaType, localSsrc);
             channels.put(channelId, channelShim);
             return channelShim;
         }
     }
 
-    public SctpConnectionShim createSctpConnection(String conferenceId, String endpointId)
+    /**
+     * Creates a new {@link SctpConnectionShim} and adds it to the list of
+     * channels.
+     * @param endpointId the ID of the endpoint that the sctp connection
+     * belongs to.
+     * @return the created {@link SctpConnectionShim}.
+     */
+    private SctpConnectionShim createSctpConnection(String endpointId)
     {
         synchronized (channels)
         {
@@ -104,7 +145,8 @@ public class ContentShim
             if (endpoint instanceof Endpoint)
             {
                 String sctpConnId = generateUniqueChannelID();
-                SctpConnectionShim connection = new SctpConnectionShim(sctpConnId, endpoint);
+                SctpConnectionShim connection
+                        = new SctpConnectionShim(sctpConnId, endpoint, this);
                 channels.put(sctpConnId, connection);
 
                 // Trigger the creation of the actual new SCTP connection
@@ -114,12 +156,18 @@ public class ContentShim
             }
             else
             {
-                throw new Error("Tried to create an SCTP connection on invalid ep type: " + endpoint.getClass());
+                throw new Error(
+                    "Could not find the Endpoint for a new SctpConnectionShim: "
+                            + endpointId);
             }
         }
     }
 
-    public ChannelShim getChannel(String channelId)
+    /**
+     * @return The channel from this content's list with the given ID, or
+     * {@code null}.
+     */
+    private ChannelShim getChannel(String channelId)
     {
         synchronized (channels)
         {
@@ -127,7 +175,18 @@ public class ContentShim
         }
     }
 
-    public Collection<ChannelShim> getChannels()
+    /**
+     * @return the number of channels in this content's list.
+     */
+    public int getChannelCount()
+    {
+        return channels.size();
+    }
+
+    /**
+     * Returns a copy of this content's list of channels.
+     */
+    List<ChannelShim> getChannelShims()
     {
         synchronized (channels)
         {
@@ -135,7 +194,11 @@ public class ContentShim
         }
     }
 
-    public SctpConnectionShim getSctpConnection(String id)
+    /**
+     * @return The SCTP connection from this content's list with the given ID,
+     * or {@code null}.
+     */
+    private SctpConnectionShim getSctpConnection(String id)
     {
         synchronized (channels)
         {
@@ -148,12 +211,207 @@ public class ContentShim
         }
     }
 
-    void expire()
+    /**
+     * Process an incoming {@link ColibriConferenceIQ.Channel} and returns the
+     * {@link ChannelShim} associated with it. If {@code channelIq} requests
+     * the creation of a new channel, a new channel will be created. Also
+     * updates the expire value of the channel. Returns the channel
+     * corresponding to {@code channelIq}, or {@code null} if the channel
+     * is expired.
+     * @param channelIq the received Colibri packet extension which describes
+     *                  a channel.
+     * @return the channel described by {@code channelIq}, or {@code null} if
+     * the channel is expired.
+     * @throws VideobridgeShim.IqProcessingException if {@code channelIq}
+     * contains invalid fields.
+     */
+    ChannelShim getOrCreateChannelShim(
+            ColibriConferenceIQ.Channel channelIq)
+            throws VideobridgeShim.IqProcessingException
     {
-        synchronized (channels)
+        String channelId = channelIq.getID();
+        int channelExpire = channelIq.getExpire();
+        String channelBundleId = channelIq.getChannelBundleId();
+        String endpointId = channelIq.getEndpoint();
+
+        ChannelShim channelShim;
+        if (channelId == null)
         {
-            channels.values().forEach(channel -> channel.setExpire(0));
-            channels.clear();
+            if (channelExpire == 0)
+            {
+                // An expire attribute in the channel element with value
+                // equal to zero requests the immediate expiration of the
+                // channel in question. Consequently, it does not make sense
+                // to have it in a channel allocation request.
+                throw new VideobridgeShim.IqProcessingException(
+                        XMPPError.Condition.bad_request,
+                        "Channel expire request for empty ID");
+            }
+            if (endpointId == null)
+            {
+                throw new VideobridgeShim.IqProcessingException(
+                        XMPPError.Condition.bad_request,
+                        "Channel creation requested without endpoint ID");
+            }
+            if (!endpointId.equals(channelBundleId))
+            {
+                throw new VideobridgeShim.IqProcessingException(
+                        XMPPError.Condition.bad_request,
+                        "Endpoint ID does not match channel bundle ID");
+            }
+            channelShim = createRtpChannel(endpointId);
+            if (channelShim == null)
+            {
+                throw new VideobridgeShim.IqProcessingException(
+                        XMPPError.Condition.internal_server_error,
+                        "Error creating channel");
+            }
         }
+        else
+        {
+            channelShim = getChannel(channelId);
+            if (channelShim == null)
+            {
+                if (channelExpire == 0)
+                {
+                    // Channel expired on its own before it was requested to be
+                    // expired
+                    return null;
+                }
+                throw new VideobridgeShim.IqProcessingException(
+                        XMPPError.Condition.internal_server_error,
+                        "Error finding channel " + channelId);
+            }
+        }
+
+        try
+        {
+            if (!setExpire(channelShim, channelExpire))
+            {
+                return null;
+            }
+        }
+        catch (IllegalArgumentException iae)
+        {
+            throw new VideobridgeShim.IqProcessingException(
+                    XMPPError.Condition.bad_request,
+                    iae.getMessage());
+        }
+
+        return channelShim;
+    }
+
+    /**
+     * Process an incoming {@link ColibriConferenceIQ.SctpConnection} and
+     * returns the {@link SctpConnectionShim} associated with it. If
+     * {@code sctpConnectionIq} requests the creation of a new SCTP connection,
+     * a new one will be created. Also updates the expire value. Returns
+     * {@code null} if the SCTP connection is expired.
+     *
+     * @param sctpConnectionIq the received Colibri packet extension which
+     * describes an SCTP connection.
+     *
+     * @return the {@link SctpConnectionShim} described by
+     * {@code sctpConnectionIq}, or {@code null} if it is expired.
+     * @throws VideobridgeShim.IqProcessingException if {@code sctpConnectionIq}
+     * contains invalid fields.
+     */
+    SctpConnectionShim getOrCreateSctpConnectionShim(
+            ColibriConferenceIQ.SctpConnection sctpConnectionIq)
+            throws VideobridgeShim.IqProcessingException
+    {
+        String id = sctpConnectionIq.getID();
+        String endpointId = sctpConnectionIq.getEndpoint();
+        SctpConnectionShim sctpConnectionShim;
+        int expire = sctpConnectionIq.getExpire();
+
+        if (id == null)
+        {
+            if (expire == 0)
+            {
+                throw new VideobridgeShim.IqProcessingException(
+                        XMPPError.Condition.bad_request,
+                        "SCTP connection expire request for empty ID");
+            }
+
+            if (endpointId == null)
+            {
+                throw new VideobridgeShim.IqProcessingException(
+                        XMPPError.Condition.bad_request,
+                        "No endpoint ID specified for the new SCTP connection");
+            }
+
+            sctpConnectionShim
+                    = createSctpConnection(endpointId);
+        }
+        else
+        {
+            sctpConnectionShim = getSctpConnection(id);
+            if (sctpConnectionShim == null && expire == 0)
+            {
+                // Expire request, already expired.
+                return null;
+            }
+            else if (sctpConnectionShim == null)
+            {
+                throw new VideobridgeShim.IqProcessingException(
+                        XMPPError.Condition.bad_request,
+                        "No SCTP connection found for ID: " + id);
+            }
+        }
+
+        try
+        {
+            if (!setExpire(sctpConnectionShim, expire))
+            {
+                return null;
+            }
+        }
+        catch (IllegalArgumentException iae)
+        {
+            throw new VideobridgeShim.IqProcessingException(
+                    XMPPError.Condition.bad_request,
+                    iae.getMessage());
+        }
+
+        return sctpConnectionShim;
+    }
+
+    /**
+     * Sets the {@code expire} value of an {@link ChannelShim} (or a
+     * {@link SctpConnectionShim}). Returns {@code true} if the given channel is
+     * still active (non-expired) after the call.
+     * @param channelShim the {@code ChannelShim} on which to set expire.
+     * @param expire the value to set.
+     * @return {@code true} if after setting the expire value the channel is
+     * still active, and {@code false} if the channel is expired (and should
+     * therefore not be included in Colibri responses).
+     */
+    private static boolean setExpire(ChannelShim channelShim, int expire)
+    {
+        if (expire != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+        {
+            if (expire < 0)
+            {
+                throw new IllegalArgumentException(
+                        "Invalid 'expire' value: " + expire);
+            }
+
+            channelShim.setExpire(expire);
+
+            // If the request indicates that it wants the channel
+            // expired and the channel is indeed expired, then
+            // the request is valid and has correctly been acted upon.
+            if ((expire == 0) && channelShim.isExpired())
+            {
+                return false;
+            }
+        }
+        else
+        {
+            channelShim.setExpire(VideobridgeExpireThread.DEFAULT_EXPIRE);
+        }
+
+        return true;
     }
 }

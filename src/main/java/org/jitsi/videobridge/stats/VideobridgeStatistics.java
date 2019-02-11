@@ -585,8 +585,8 @@ public class VideobridgeStatistics
 
                 for (ContentShim contentShim : conferenceShim.getContents())
                 {
-                    int contentChannelCount = contentShim.getChannels().size();
-                    MediaType mediaType = contentShim.getType();
+                    int contentChannelCount = contentShim.getChannelCount();
+                    MediaType mediaType = contentShim.getMediaType();
                     if (MediaType.AUDIO.equals(mediaType))
                     {
                         audioChannels += contentChannelCount;

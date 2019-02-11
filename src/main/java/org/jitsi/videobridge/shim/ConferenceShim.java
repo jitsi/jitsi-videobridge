@@ -30,41 +30,70 @@ import java.util.*;
  */
 public class ConferenceShim
 {
+    /**
+     * The correcsponding {@link Conference}.
+     */
     public final Conference conference;
 
+    /**
+     * The list of contents in this conference.
+     */
     private final Map<MediaType, ContentShim> contents = new HashMap<>();
-    private final Map<String, ChannelBundleShim> channelBundles = new HashMap<>();
 
+    /**
+     * The list of channel bundles in this conference.
+     *
+     * Boris: can we get away with storing these in their associated endpoints
+     * directly?
+     */
+    private final Map<String, ChannelBundleShim> channelBundles
+            = new HashMap<>();
+
+    /**
+     * Initializes a new {@link ConferenceShim} instance.
+     *
+     * @param conference the corresponding conference.
+     */
     public ConferenceShim(Conference conference)
     {
         this.conference = conference;
-        System.out.println("ConferenceShim created conference " + conference.getID());
     }
 
-    public ContentShim getOrCreateContent(MediaType type) {
+    /**
+     * Gets the content of type {@code type}, creating it if necessary.
+     *
+     * @param type the media type of the content to add.
+     *
+     * @return the content.
+     */
+    public ContentShim getOrCreateContent(MediaType type)
+    {
         synchronized (contents)
         {
             return contents.computeIfAbsent(type,
                     key -> new ContentShim(getConference(), type));
         }
     }
+
+    /**
+     * @return the corresponding conference.
+     */
     public Conference getConference()
     {
         return conference;
     }
 
+    /**
+     * Gets a copy of the list of contents.
+     *
+     * @return
+     */
     public Collection<ContentShim> getContents()
     {
         synchronized (contents)
         {
             return new ArrayList<>(contents.values());
         }
-    }
-
-    public AbstractEndpoint getOrCreateEndpoint(String endpointId)
-    {
-        System.out.println("ConferenceShim " + getId() + " creating endpoint " + endpointId);
-        return conference.getOrCreateEndpoint(endpointId);
     }
 
     public ChannelBundleShim getOrCreateChannelBundle(String channelBundleId)
@@ -77,46 +106,14 @@ public class ConferenceShim
         }
     }
 
-    public ChannelBundleShim getChannelBundle(String channelBundleId)
-    {
-        synchronized (channelBundles)
-        {
-            return channelBundles.get(channelBundleId);
-        }
-    }
-
     public Collection<AbstractEndpoint> getEndpoints()
     {
         return conference.getEndpoints();
     }
 
-    public boolean shouldExpire()
-    {
-        return conference.shouldExpire();
-    }
-
-    /**
-     * Expire this conference and everything within it
-     * NOTE: this should only be called from {@link ColibriShim} so that the conference shim can be removed
-     * from the list of conferences
-     */
-    private void expire()
-    {
-        synchronized (contents)
-        {
-            contents.values().forEach(ContentShim::expire);
-            contents.clear();
-        }
-        synchronized (channelBundles)
-        {
-            channelBundles.clear();
-        }
-
-        conference.getEndpoints().forEach(AbstractEndpoint::expire);
-        conference.safeExpire();
-    }
-
-    public void describeChannelBundles(ColibriConferenceIQ iq, Set<String> channelBundleIdsToDescribe)
+    public void describeChannelBundles(
+            ColibriConferenceIQ iq,
+            Set<String> channelBundleIdsToDescribe)
     {
         synchronized (channelBundles)
         {
@@ -172,25 +169,24 @@ public class ConferenceShim
      * @param iq the <tt>ColibriConferenceIQ</tt> to set the values of the
      * properties of this instance on
      */
-    //TODO(brian): port this logic over to the shim
     public void describeDeep(ColibriConferenceIQ iq)
     {
         describeShallow(iq);
 
-//        for (Content content : getContents())
-//        {
-//            ColibriConferenceIQ.Content contentIQ
-//                = iq.getOrCreateContent(content.getName());
-//
-//            for (Channel channel : content.getChannels())
-//            {
-//                ColibriConferenceIQ.Channel channelIQ
-//                    = new ColibriConferenceIQ.Channel();
-//
-//                channel.describe(channelIQ);
-//                contentIQ.addChannel(channelIQ);
-//            }
-//        }
-    }
+        for (ContentShim contentShim : getContents())
+        {
+            ColibriConferenceIQ.Content contentIQ
+                = iq.getOrCreateContent(contentShim.getMediaType().toString());
 
+            for (ChannelShim channelShim : contentShim.getChannelShims())
+            {
+                ColibriConferenceIQ.Channel channelIQ
+                    = new ColibriConferenceIQ.Channel();
+
+                channelShim.describe(channelIQ);
+                contentIQ.addChannel(channelIQ);
+            }
+        }
+        // Do we also want endpoint-s anc channel-bundle-id-s?
+    }
 }

@@ -391,7 +391,7 @@ public class Videobridge
         {
             for (ContentShim contentShim : conference.getShim().getContents())
             {
-                channelCount += contentShim.getChannels().size();
+                channelCount += contentShim.getChannelCount();
             }
         }
 

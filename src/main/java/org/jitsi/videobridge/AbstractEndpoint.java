@@ -19,23 +19,21 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.nlj.transform.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
-import org.jitsi.videobridge.sctp.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.shim.*;
+import org.jitsi.videobridge.xmpp.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 
 import java.beans.*;
 import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
-import java.util.concurrent.*;
 
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
@@ -478,4 +476,45 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     {
         // No-op
     }
+
+    /**
+     * Recreates this {@link AbstractEndpoint}'s media stream tracks based
+     * on the sources (and source groups) described in it's video channel.
+     */
+    public void recreateMediaStreamTracks()
+    {
+        ChannelShim videoChannel = getChannelOfMediaType(MediaType.VIDEO);
+        if (videoChannel != null)
+        {
+            MediaStreamTrackDesc[] tracks =
+                    MediaStreamTrackFactory.createMediaStreamTracks(
+                            videoChannel.getSources(),
+                            videoChannel.getSourceGroups());
+            setMediaStreamTracks(tracks);
+        }
+    }
+
+    /**
+     * Gets this {@link AbstractEndpoint}'s channel of media type
+     * {@code mediaType} (although it's not strictly enforced, endpoints have
+     * at most one channel with a given media type).
+     *
+     * @param mediaType the media type of the channel.
+     *
+     * @return the channel.
+     */
+    private ChannelShim getChannelOfMediaType(MediaType mediaType)
+    {
+        return
+            channelShims.stream()
+                    .filter(Objects::nonNull)
+                    .map(WeakReference::get)
+                    .filter(
+                        channel ->
+                            channel != null &&
+                            channel.getMediaType().equals(mediaType))
+                    .findAny().orElse(null);
+
+    }
+
 }
