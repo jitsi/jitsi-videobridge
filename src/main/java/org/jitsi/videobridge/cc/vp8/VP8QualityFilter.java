@@ -20,8 +20,6 @@ import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 
-import java.util.*;
-
 /**
  * This class is responsible for dropping VP8 simulcast/svc packets based on
  * their quality, i.e. packets that correspond to qualities that are above a
@@ -45,21 +43,9 @@ class VP8QualityFilter
     private static final int MIN_KEY_FRAME_WAIT_MS = 300;
 
     /**
-     * Constants that define the minimum heights that a VP8 stream needs to have
-     * in order to be considered HD, SD or LD.
-     */
-    private static final int MIN_HD_HEIGHT = 540, MIN_SD_HEIGHT = 360;
-
-    /**
      * The HD, SD, LD and suspended spatial/quality layer IDs.
      */
-    private static final int HD_LAYER_ID = 2, SD_LAYER_ID = 1,
-        LD_LAYER_ID = 0, SUSPENDED_LAYER_ID = -1;
-
-    /**
-     * A map that caches the spatial/quality layer ID of each simulcast SSRC.
-     */
-    private final Map<Long, Integer> ssrcToSpatialLayerQuality = new HashMap<>();
+    private static final int SUSPENDED_LAYER_ID = -1;
 
     /**
      * Holds the arrival time (in millis) of the most recent keyframe group.
@@ -95,85 +81,6 @@ class VP8QualityFilter
     private int currentSpatialLayerId = SUSPENDED_LAYER_ID;
 
     /**
-     * Gets the spatial/quality layer ID of a packet. Before this method is able
-     * to return a meaningful value (not -1) it has to have received at least
-     * one keyframe from the SSRC that is queried.
-     *
-     * @param firstPacketOfFrame the RTP packet whose spatial/quality layer
-     * index needs to be returned.
-     * @param isKeyframe a boolean that indicates whether or not the packet that
-     * is specified as an argument is a keyframe
-     * @return the spatial/quality index of the packet that is specified as an
-     * argument, or -1 in case it's impossible to resolve.
-     */
-    private int getSpatialLayerIndex(
-        @NotNull RawPacket firstPacketOfFrame, boolean isKeyframe)
-    {
-        long ssrc = firstPacketOfFrame.getSSRCAsLong();
-        if (ssrcToSpatialLayerQuality.containsKey(ssrc))
-        {
-            return ssrcToSpatialLayerQuality.get(ssrc);
-        }
-        else if (isKeyframe)
-        {
-            int spatialLayerId
-                = getSpatialLayerIndexFromKeyframe(firstPacketOfFrame);
-            if (spatialLayerId > -1)
-            {
-                ssrcToSpatialLayerQuality.put(ssrc, spatialLayerId);
-            }
-
-            return spatialLayerId;
-        }
-        {
-            return -1;
-        }
-    }
-
-    /**
-     * Gets the spatial/quality layer ID of a packet. The specified packet MUST
-     * be a VP8 keyframe because the frame height, which allows us to map the
-     * different simulcast layers into spatial/quality layer IDs, are found in
-     * the keyframe header.
-     *
-     * @param firstPacketOfKeyframe the first packet of a keyframe to map/get
-     * its spatial/quality layer id.
-     * @return the spatial/quality layer id of the packet.
-     */
-    private static int getSpatialLayerIndexFromKeyframe(
-        @NotNull RawPacket firstPacketOfKeyframe)
-    {
-        byte[] buf = firstPacketOfKeyframe.getBuffer();
-        int payloadOffset = firstPacketOfKeyframe.getPayloadOffset(),
-            payloadLen = firstPacketOfKeyframe.getPayloadLength(),
-            payloadHeaderLen = 3;
-
-        int payloadDescriptorLen = DePacketizer
-            .VP8PayloadDescriptor.getSize(buf, payloadOffset, payloadLen);
-
-        int height = DePacketizer.VP8KeyframeHeader.getHeight(
-            buf, payloadOffset + payloadDescriptorLen + payloadHeaderLen);
-
-        if (height >= MIN_HD_HEIGHT)
-        {
-            return HD_LAYER_ID;
-        }
-        else if (height >= MIN_SD_HEIGHT)
-        {
-            return SD_LAYER_ID;
-        }
-        else if (height > -1)
-        {
-            return LD_LAYER_ID;
-        }
-        else
-        {
-            // Some error occurred.
-            return -1;
-        }
-    }
-
-    /**
      * @return true if a the target spatial/quality layer id has changed and a
      * keyframe hasn't been received yet, false otherwise.
      */
@@ -192,6 +99,7 @@ class VP8QualityFilter
      * method at a time.
      *
      * @param firstPacketOfFrame the first packet of the VP8 frame.
+     * @param incomingIndex the quality index of the incoming RTP packet
      * @param externalTargetIndex the target quality index that the user of this
      * instance wants to achieve.
      * @param nowMs the current time (in millis)
@@ -199,6 +107,7 @@ class VP8QualityFilter
      */
     synchronized boolean acceptFrame(
         @NotNull RawPacket firstPacketOfFrame,
+        int incomingIndex,
         int externalTargetIndex, long nowMs)
     {
         // We make local copies of the externalTemporalLayerIdTarget and the
@@ -245,14 +154,15 @@ class VP8QualityFilter
             temporalLayerIdOfFrame = 0;
         }
 
+        int spatialLayerId = getSpatialLayerId(incomingIndex);
         if (DePacketizer.isKeyFrame(buf, payloadOff, payloadLen))
         {
-            return acceptKeyframe(firstPacketOfFrame, nowMs);
+            return acceptKeyframe(spatialLayerId, nowMs);
         }
         else if (currentSpatialLayerId > SUSPENDED_LAYER_ID)
         {
             if (!isInSwitchingPhase(nowMs)
-                && isPossibleToSwitch(firstPacketOfFrame))
+                && isPossibleToSwitch(firstPacketOfFrame, spatialLayerId))
             {
                 needsKeyframe = true;
             }
@@ -311,10 +221,8 @@ class VP8QualityFilter
      * method for specific details).
      */
     private synchronized boolean isPossibleToSwitch(
-        @NotNull RawPacket firstPacketOfFrame)
+        @NotNull RawPacket firstPacketOfFrame, int spatialLayerId)
     {
-        int spatialLayerId
-            = getSpatialLayerIndex(firstPacketOfFrame, false);
         if (spatialLayerId == -1)
         {
             // We failed to resolve the spatial/quality layer of the packet.
@@ -347,19 +255,15 @@ class VP8QualityFilter
      * synchronized keyword because there's only one thread accessing this
      * method at a time.
      *
-     * @param firstPacketOfKeyframe the first packet of a VP8 keyframe.
      * @param nowMs the current time (in millis)
      * @return true to accept the VP8 keyframe, otherwise false.
      */
     private synchronized boolean acceptKeyframe(
-        @NotNull RawPacket firstPacketOfKeyframe, long nowMs)
+        int spatialLayerIdOfKeyframe, long nowMs)
     {
         // This branch writes the {@link #currentSpatialLayerId} and it
         // determines whether or not we should switch to another simulcast
         // stream.
-
-        int spatialLayerIdOfKeyframe
-            = getSpatialLayerIndex(firstPacketOfKeyframe, true);
         if (spatialLayerIdOfKeyframe < 0)
         {
             // something went terribly wrong, normally we should be able to
