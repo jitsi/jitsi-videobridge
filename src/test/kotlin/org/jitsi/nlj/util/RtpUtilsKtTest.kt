@@ -60,5 +60,16 @@ internal class RtpUtilsKtTest : ShouldSpec() {
                         listOf(65531, 65532, 65533, 65535, 0, 1, 2, 3, 4)
             }
         }
+        "isNextAfter" {
+            should("return true for sequential packets") {
+                2 isNextAfter 1 shouldBe true
+                0 isNextAfter 65535 shouldBe true
+            }
+            should("return false for non-sequential packets") {
+                2 isNextAfter 0 shouldBe false
+                1 isNextAfter 2 shouldBe false
+                1 isNextAfter 65535 shouldBe false
+            }
+        }
     }
 }

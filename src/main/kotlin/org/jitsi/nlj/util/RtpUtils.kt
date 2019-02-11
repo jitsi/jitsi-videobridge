@@ -39,7 +39,7 @@ infix fun Int.rolledOverTo(otherSeqNum: Int): Boolean {
  * Returns true if [this] is sequentially after [otherSeqNum], according to the rules of RTP sequence
  * numbers
  */
-infix fun Int.isNextAfter(otherSeqNum: Int): Boolean = RTPUtils.getSequenceNumberDelta(this, otherSeqNum) == -1
+infix fun Int.isNextAfter(otherSeqNum: Int): Boolean = RTPUtils.getSequenceNumberDelta(this, otherSeqNum) == 1
 
 /**
  * Returns true if the RTP sequence number represented by [this] represents a more recent RTP packet than the one
