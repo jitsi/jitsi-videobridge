@@ -117,9 +117,8 @@ public class EndpointRecorder
         if (closed)
             return;
 
-        try
+        try(FileWriter writer = new FileWriter(file, false))
         {
-            FileWriter writer = new FileWriter(file, false);
             writer.write("[\n");
 
             synchronized (endpoints)
@@ -137,7 +136,6 @@ public class EndpointRecorder
             }
 
             writer.write("]\n");
-            writer.close();
         }
         catch (IOException ioe)
         {
