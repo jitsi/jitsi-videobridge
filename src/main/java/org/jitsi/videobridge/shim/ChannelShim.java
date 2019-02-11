@@ -274,8 +274,9 @@ public class ChannelShim
     public void addPayloadTypes(
             Collection<PayloadTypePacketExtension> payloadTypes)
     {
+        MediaType mediaType = getMediaType();
         payloadTypes.forEach(ext -> {
-            PayloadType pt = PayloadTypeUtil.create(ext);
+            PayloadType pt = PayloadTypeUtil.create(ext, mediaType);
             if (pt == null)
             {
                 logger.warn("Unrecognized payload type " + ext.toXML());
