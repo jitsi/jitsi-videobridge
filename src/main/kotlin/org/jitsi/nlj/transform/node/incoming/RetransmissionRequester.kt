@@ -15,53 +15,29 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi_modified.impl.neomedia.transform.RetransmissionRequesterImpl
-import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.RtpPayloadTypeAddedEvent
-import org.jitsi.nlj.RtpPayloadTypeClearEvent
+import org.jitsi.nlj.forEachAs
+import org.jitsi.nlj.rtcp.RetransmissionRequester
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.util.cinfo
-import org.jitsi.nlj.util.getByteBuffer
-import org.jitsi.nlj.util.toRawPacket
+import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.service.neomedia.RawPacket
-import unsigned.toUInt
+import java.util.concurrent.ScheduledExecutorService
 
-class RetransmissionRequester(rtcpSender: (RtcpPacket) -> Unit) : Node("Retransmission requester") {
-    /**
-     * Wrap the given [rtcpSender] method with one that takes a RawPacket (which
-     * is what the retransmission requester will use).
-     */
-    private val rtcpSenderAdapter: (RawPacket) -> Unit = { rawPacket ->
-        val rtcpPacket = RtcpPacket.fromBuffer(rawPacket.getByteBuffer())
-        rtcpSender(rtcpPacket)
-    }
-
-    private val retransmissionRequester = RetransmissionRequesterImpl(rtcpSenderAdapter)
+class RetransmissionRequester(
+    rtcpSender: (RtcpPacket) -> Unit,
+    scheduler: ScheduledExecutorService
+) : Node("Retransmission requester") {
+    private val retransmissionRequester = RetransmissionRequester(rtcpSender, scheduler)
 
     override fun doProcessPackets(p: List<PacketInfo>) {
-        p.forEach { packetInfo ->
-            val rp = packetInfo.packet.toRawPacket()
-            retransmissionRequester.reverseTransform(rp)
+        p.forEachAs<RtpPacket> { _, packet ->
+            retransmissionRequester.packetReceived(packet.header.ssrc, packet.header.sequenceNumber)
         }
         next(p)
     }
 
-    override fun handleEvent(event: Event) {
-        when (event) {
-            is RtpPayloadTypeAddedEvent -> {
-                logger.cinfo { "RetransmissionRequester ${hashCode()} now accepting " +
-                        "PT ${event.payloadType.pt.toUInt()}" }
-                retransmissionRequester.payloadTypes[event.payloadType.pt] = event.payloadType
-            }
-            is RtpPayloadTypeClearEvent -> retransmissionRequester.payloadTypes.clear()
-        }
-        super.handleEvent(event)
-    }
-
     override fun stop() {
         super.stop()
-        retransmissionRequester.close()
+        retransmissionRequester.stop()
     }
 }
