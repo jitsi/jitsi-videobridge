@@ -417,6 +417,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         this.transceiver.stop();
         logger.info(transceiver.getNodeStats().prettyPrint(0));
 
+        transceiver.teardown();
+
         Conference conference = getConference();
         if (conference != null)
         {
