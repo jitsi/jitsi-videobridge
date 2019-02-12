@@ -25,9 +25,9 @@ import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.stats.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.octo.*;
+import org.jitsi.videobridge.shim.*;
 import org.json.simple.*;
 import org.osgi.framework.*;
 
@@ -558,10 +558,10 @@ public class VideobridgeStatistics
             totalPacketsReceivedOcto += jvbStats.totalPacketsReceivedOcto.get();
             totalPacketsSentOcto += jvbStats.totalPacketsSentOcto.get();
 
-            for (ColibriShim.ConferenceShim conferenceShim : videobridge.getColibriShim().getConferences())
+            for (Conference conference : videobridge.getConferences())
             {
+                ConferenceShim conferenceShim = conference.getShim();
                 //TODO: can/should we do everything here via the shim only?
-                Conference conference = conferenceShim.conference;
                 System.out.println("TEMP: getting stats, looking at conference " + conference.getID());
                 if (!conference.includeInStatistics())
                 {
@@ -581,12 +581,12 @@ public class VideobridgeStatistics
                         : conferenceSizes.length - 1;
                 conferenceSizes[conferenceSizeIndex]++;
 
-                endpoints+= numConferenceEndpoints;
+                endpoints += numConferenceEndpoints;
 
-                for (ColibriShim.ContentShim contentShim : conferenceShim.getContents())
+                for (ContentShim contentShim : conferenceShim.getContents())
                 {
-                    int contentChannelCount = contentShim.getChannels().size();
-                    MediaType mediaType = contentShim.getType();
+                    int contentChannelCount = contentShim.getChannelCount();
+                    MediaType mediaType = contentShim.getMediaType();
                     if (MediaType.AUDIO.equals(mediaType))
                     {
                         audioChannels += contentChannelCount;

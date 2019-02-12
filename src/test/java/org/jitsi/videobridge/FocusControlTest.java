@@ -72,7 +72,7 @@ public class FocusControlTest
                                      int processingOptions)
         throws Exception
     {
-        IQ respIq = bridge.handleColibriConferenceIq2(confIq, processingOptions);
+        IQ respIq = bridge.handleColibriConferenceIQ(confIq, processingOptions);
 
         assertEquals(IQ.Type.result, respIq.getType());
         assertTrue(respIq instanceof ColibriConferenceIQ);
@@ -82,7 +82,7 @@ public class FocusControlTest
                                             int processingOptions)
         throws Exception
     {
-        IQ respIq = bridge.handleColibriConferenceIq2(confIq, processingOptions);
+        IQ respIq = bridge.handleColibriConferenceIQ(confIq, processingOptions);
 
         Logger.getLogger(FocusControlTest.class).info(respIq.toXML());
 
@@ -161,7 +161,7 @@ public class FocusControlTest
         ColibriConferenceIQ confIq = ColibriUtilities.createConferenceIq(null);
         int options = Videobridge.OPTION_ALLOW_NO_FOCUS;
 
-        IQ respIq = bridge.handleColibriConferenceIq2(confIq, options);
+        IQ respIq = bridge.handleColibriConferenceIQ(confIq, options);
         assertTrue(respIq instanceof ColibriConferenceIQ);
 
         ColibriConferenceIQ respConfIq = (ColibriConferenceIQ) respIq;
@@ -169,7 +169,7 @@ public class FocusControlTest
         confIq.setID(respConfIq.getID());
 
         confIq.setFrom(JidCreate.from("someJid"));
-        respIq = bridge.handleColibriConferenceIq2(confIq, options);
+        respIq = bridge.handleColibriConferenceIQ(confIq, options);
         assertNotNull(respIq);
     }
 
@@ -187,7 +187,7 @@ public class FocusControlTest
             = ColibriUtilities.createConferenceIq(focusJid);
         int options = Videobridge.OPTION_ALLOW_ANY_FOCUS;
 
-        IQ respIq = bridge.handleColibriConferenceIq2(confIq, options);
+        IQ respIq = bridge.handleColibriConferenceIQ(confIq, options);
 
         assertTrue(respIq instanceof ColibriConferenceIQ);
 
@@ -198,15 +198,15 @@ public class FocusControlTest
 
         // Anyone can access the conference
         confIq.setFrom(JidCreate.from("someOtherJid"));
-        assertNotNull(bridge.handleColibriConferenceIq2(confIq, options));
+        assertNotNull(bridge.handleColibriConferenceIQ(confIq, options));
         confIq.setFrom((Jid)null);
-        assertNotNull(bridge.handleColibriConferenceIq2(confIq, options));
+        assertNotNull(bridge.handleColibriConferenceIQ(confIq, options));
 
         options = Videobridge.OPTION_ALLOW_NO_FOCUS;
         confIq.setFrom((Jid)null);
-        assertNotNull(bridge.handleColibriConferenceIq2(confIq, options));
+        assertNotNull(bridge.handleColibriConferenceIQ(confIq, options));
         confIq.setFrom(JidCreate.from("focus3"));
-        assertNotNull(bridge.handleColibriConferenceIq2(confIq, options));
+        assertNotNull(bridge.handleColibriConferenceIQ(confIq, options));
     }
 
     @Test

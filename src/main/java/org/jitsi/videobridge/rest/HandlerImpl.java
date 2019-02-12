@@ -343,7 +343,7 @@ class HandlerImpl
             {
                 ColibriConferenceIQ conferenceIQ = new ColibriConferenceIQ();
 
-                conference.describeDeep(conferenceIQ);
+                conference.getShim().describeDeep(conferenceIQ);
 
                 JSONObject conferenceJSONObject
                     = JSONSerializer.serializeConference(conferenceIQ);
@@ -687,13 +687,9 @@ class HandlerImpl
                         try
                         {
                             IQ responseIQ
-                                    = videobridge.handleColibriConferenceIq2(
+                                    = videobridge.handleColibriConferenceIQ(
                                     requestConferenceIQ,
                                     Videobridge.OPTION_ALLOW_NO_FOCUS);
-//                            IQ responseIQ
-//                                = videobridge.handleColibriConferenceIQ(
-//                                        requestConferenceIQ,
-//                                        Videobridge.OPTION_ALLOW_NO_FOCUS);
 
                             if (responseIQ instanceof ColibriConferenceIQ)
                             {
@@ -828,13 +824,9 @@ class HandlerImpl
                     try
                     {
                         IQ responseIQ
-                                = videobridge.handleColibriConferenceIq2(
+                                = videobridge.handleColibriConferenceIQ(
                                 requestConferenceIQ,
                                 Videobridge.OPTION_ALLOW_NO_FOCUS);
-//                        IQ responseIQ
-//                            = videobridge.handleColibriConferenceIQ(
-//                                    requestConferenceIQ,
-//                                    Videobridge.OPTION_ALLOW_NO_FOCUS);
 
                         if (responseIQ instanceof ColibriConferenceIQ)
                         {

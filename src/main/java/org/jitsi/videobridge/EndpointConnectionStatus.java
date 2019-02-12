@@ -19,6 +19,7 @@ import net.java.sip.communicator.util.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.videobridge.shim.*;
 import org.osgi.framework.*;
 
 import java.lang.ref.*;
@@ -235,9 +236,9 @@ public class EndpointConnectionStatus
         String endpointId = endpoint.getID();
 
         long mostRecentChannelCreated = endpoint.channelShims.stream()
-                .map(WeakReference<ColibriShim.ChannelShim>::get)
+                .map(WeakReference<ChannelShim>::get)
                 .filter(Objects::nonNull)
-                .mapToLong(ColibriShim.ChannelShim::getCreationTimestampMs)
+                .mapToLong(ChannelShim::getCreationTimestampMs)
                 .max()
                 .orElse(0);
 

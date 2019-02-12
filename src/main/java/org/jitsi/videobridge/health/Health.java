@@ -98,13 +98,13 @@ public class Health
      * specific {@link Conference}. The specified {@code conference} will be
      * used to perform the check i.e. for testing purposes.
      *
-     * @param conferenceShim the {@code Conference} associated with the
+     * @param conference the {@code Conference} associated with the
      * {@code Videobridge} to check the health (status) of
      * @throws Exception if an error occurs while checking the health (status)
      * of the {@code videobridge} associated with {@code conference} or the
      * check determines that the {@code Videobridge} is not healthy
      */
-    private static void check(ColibriShim.ConferenceShim conferenceShim)
+    private static void check(Conference conference)
     {
         final int numEndpoints = 2;
         ArrayList<Endpoint> endpoints = new ArrayList<>(numEndpoints);
@@ -112,7 +112,7 @@ public class Health
         for (int i = 0; i < numEndpoints; ++i)
         {
             Endpoint endpoint
-                = (Endpoint) conferenceShim.getOrCreateEndpoint(generateEndpointID());
+                = (Endpoint) conference.getOrCreateEndpoint(generateEndpointID());
 
             // Fail as quickly as possible.
             if (endpoint == null)
@@ -121,7 +121,7 @@ public class Health
             }
 
             // Create and install the transport manager
-            conferenceShim.getOrCreateChannelBundle(endpoint.getID());
+            conference.getShim().getOrCreateChannelBundle(endpoint.getID());
 
             endpoints.add(endpoint);
             endpoints.add(endpoint);
@@ -182,11 +182,11 @@ public class Health
         checkXmppConnection(videobridge);
 
         // Conference
-        ColibriShim.ConferenceShim conferenceShim =
-                videobridge.getColibriShim().createConference(null, null, false, null);
+        Conference conference =
+                videobridge.createConference(null, null, false, null);
 
         // Fail as quickly as possible.
-        if (conferenceShim == null || conferenceShim.conference == null)
+        if (conference == null)
         {
             throw new NullPointerException("Failed to create a conference");
         }
@@ -194,11 +194,11 @@ public class Health
         {
             try
             {
-                check(conferenceShim);
+                check(conference);
             }
             finally
             {
-                videobridge.getColibriShim().expireConference(conferenceShim.getId());
+                videobridge.expireConference(conference);
             }
         }
     }

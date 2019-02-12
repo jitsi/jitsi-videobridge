@@ -18,7 +18,6 @@ package org.jitsi.videobridge;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.format.*;
-import org.jitsi.service.neomedia.MediaType;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@code jitsi-media-transform}.
  *
  * @author Boris Grozev
+ * @author Brian Baldino
  */
 public class PayloadTypeUtil
 {
