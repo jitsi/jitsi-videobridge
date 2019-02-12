@@ -1113,6 +1113,7 @@ public class BitrateController
                 return;
             }
 
+            long nowMs = System.currentTimeMillis();
             List<RateSnapshot> ratesList = new ArrayList<>();
             // Initialize the list of flows that we will consider for sending
             // for this track. For example, for the on-stage participant we
@@ -1128,13 +1129,15 @@ public class BitrateController
                 }
                 if (selected)
                 {
-                    // For the selected participant we favor resolution over
-                    // frame rate.
+                    // For the selected participant we favor frame rate over
+                    // resolution. Basically what we want for the on-stage
+                    // participant is 180p7.5fps, 180p15fps, 180p30fps,
+                    // 360p30fps and 720p30fps.
                     if (encoding.getHeight() < ONSTAGE_PREFERRED_HEIGHT
                         || encoding.getFrameRate() >= ONSTAGE_PREFERRED_FRAME_RATE)
                     {
                         ratesList.add(new RateSnapshot(
-                            encoding.getLastStableBitrateBps(System.currentTimeMillis()), encoding));
+                            encoding.getBitrateBps(nowMs), encoding));
                     }
 
                     if (encoding.getHeight() <= ONSTAGE_PREFERRED_HEIGHT)
