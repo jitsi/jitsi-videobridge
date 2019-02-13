@@ -92,15 +92,13 @@ public class IceDtlsTransportManager
     private Node incomingPipelineRoot = createIncomingPipeline();
     private Node outgoingDtlsPipelineRoot = createOutgoingDtlsPipeline();
     private Node outgoingSrtpPipelineRoot = createOutgoingSrtpPipeline();
-    private String id;
     protected boolean dtlsHandshakeComplete = false;
 
     public IceDtlsTransportManager(String id, Conference conference)
             throws IOException
     {
-        super(conference, true, null);
+        super(conference, true, id);
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
-        this.id = id;
         this.ICE_STREAM_NAME = "ice-stream-" + id;
         iceAgent.addStateChangeListener(this::iceAgentStateChange);
 
