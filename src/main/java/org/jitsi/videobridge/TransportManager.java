@@ -15,17 +15,10 @@
  */
 package org.jitsi.videobridge;
 
-import java.beans.*;
-import java.util.*;
-
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import net.java.sip.communicator.util.*;
-import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.impl.neomedia.transform.dtls.*;
-import org.jitsi.nlj.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
 
 /**
@@ -187,9 +180,10 @@ public abstract class TransportManager
      */
     public abstract boolean isConnected();
 
-    public void onTransportConnected(Runnable handler) {
-        //TODO: revisit whether this method makes sense long term and, if so, clean it up when we clean up the
-        // transport manager object hierarchy/which types will stick around/etc.
-        // no op by default
+    public void onTransportConnected(Runnable handler)
+    {
+        //TODO: revisit whether this method makes sense long term and, if so,
+        // clean it up when we clean up the transport manager object
+        // hierarchy/which types will stick around/etc. no op by default
     }
 }

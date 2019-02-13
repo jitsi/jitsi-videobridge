@@ -17,28 +17,17 @@ package org.jitsi.videobridge;
 
 import java.beans.*;
 import java.io.*;
-import java.net.*;
-import java.util.*;
-import java.util.logging.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
-import net.java.sip.communicator.service.protocol.*;
 import net.java.sip.communicator.util.*;
 
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
-import org.ice4j.socket.*;
 import org.jitsi.eventadmin.*;
-import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
-import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.transport.*;
 import org.osgi.framework.*;
@@ -172,24 +161,14 @@ public abstract class IceUdpTransportManager
      * <tt>TransportManager</tt>.
      * @param controlling {@code true} if the new instance is to serve as a
      * controlling ICE agent and passive DTLS endpoint; otherwise, {@code false}
-     * @param numComponents the number of ICE components that this instance is
-     * to start with.
-     * @param iceStreamName the name of the ICE stream to be created by this
-     * instance.
      * @param id an identifier of the {@link IceUdpTransportManager}.
      * @throws IOException
      */
     public IceUdpTransportManager(Conference conference,
                                   boolean controlling,
-                                  int numComponents,
-                                  String iceStreamName,
                                   String id)
         throws IOException
     {
-        if (numComponents != 1)
-        {
-            throw new Error("Non-RTCPMUX currently unsupported");
-        }
         this.conference = conference;
         this.id = id;
         this.controlling = controlling;
@@ -199,8 +178,8 @@ public abstract class IceUdpTransportManager
         conference.appendDiagnosticInformation(diagnosticContext);
         diagnosticContext.put("transport", hashCode());
 
-        iceAgent = createIceAgent(controlling, iceStreamName, true /* rtcpmux */);
-        iceStream = iceAgent.getStream(iceStreamName);
+        iceAgent = createIceAgent(controlling, DEFAULT_ICE_STREAM_NAME);
+        iceStream = iceAgent.getStream(DEFAULT_ICE_STREAM_NAME);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
 
         EventAdmin eventAdmin = conference.getEventAdmin();
@@ -218,10 +197,9 @@ public abstract class IceUdpTransportManager
      *
      * @param iceAgent the {@link Agent} that we'd like to append new harvesters
      * to.
-     * @param rtcpmux whether rtcpmux will be used by this
      * <tt>IceUdpTransportManager</tt>.
      */
-    private void configureHarvesters(Agent iceAgent, boolean rtcpmux)
+    private void configureHarvesters(Agent iceAgent)
     {
         ConfigurationService cfg
             = ServiceUtils.getService(
@@ -247,29 +225,25 @@ public abstract class IceUdpTransportManager
             keepAliveStrategy = strategy;
         }
 
-        if (rtcpmux)
-        {
-            // TODO CandidateHarvesters may take (non-trivial) time to
-            // initialize so initialize them as soon as possible, don't wa it to
-            // initialize them after a Channel is requested.
-            // XXX Unfortunately, TcpHarvester binds to specific local addresses
-            // while Jetty binds to all/any local addresses and, consequently,
-            // the order of the binding is important at the time of this
-            // writing. That's why TcpHarvester is left to initialize as late as
-            // possible right now.
-            Harvesters.initializeStaticConfiguration(cfg);
+        // TODO CandidateHarvesters may take (non-trivial) time to initialize so
+        // initialize them as soon as possible, don't wa it to initialize them
+        // after a Channel is requested.
+        // XXX Unfortunately, TcpHarvester binds to specific local addresses
+        // while Jetty binds to all/any local addresses and, consequently, the
+        // order of the binding is important at the time of this writing. That's
+        // why TcpHarvester is left to initialize as late as possible right now.
+        Harvesters.initializeStaticConfiguration(cfg);
 
-            if (Harvesters.tcpHarvester != null)
+        if (Harvesters.tcpHarvester != null)
+        {
+            iceAgent.addCandidateHarvester(Harvesters.tcpHarvester);
+        }
+        if (Harvesters.singlePortHarvesters != null)
+        {
+            for (CandidateHarvester harvester : Harvesters.singlePortHarvesters)
             {
-                iceAgent.addCandidateHarvester(Harvesters.tcpHarvester);
-            }
-            if (Harvesters.singlePortHarvesters != null)
-            {
-                for (CandidateHarvester harvester : Harvesters.singlePortHarvesters)
-                {
-                    iceAgent.addCandidateHarvester(harvester);
-                    disableDynamicHostHarvester = true;
-                }
+                iceAgent.addCandidateHarvester(harvester);
+                disableDynamicHostHarvester = true;
             }
         }
 
@@ -315,7 +289,6 @@ public abstract class IceUdpTransportManager
      *
      * @param controlling
      * @param iceStreamName
-     * @param rtcpmux
      * @return a new <tt>Agent</tt> instance which implements the ICE protocol
      * and which is to be used by this instance to implement the Jingle ICE-UDP
      * transport
@@ -323,15 +296,14 @@ public abstract class IceUdpTransportManager
      * purposes of this <tt>TransportManager</tt> fails
      */
     private Agent createIceAgent(boolean controlling,
-                                 String iceStreamName,
-                                 boolean rtcpmux)
+                                 String iceStreamName)
             throws IOException
     {
         Agent iceAgent = new Agent(logger.getLevel(), iceUfragPrefix);
 
         //add videobridge specific harvesters such as a mapping and an Amazon
         //AWS EC2 harvester
-        configureHarvesters(iceAgent, rtcpmux);
+        configureHarvesters(iceAgent);
         iceAgent.setControlling(controlling);
         iceAgent.setPerformConsentFreshness(true);
 
@@ -344,15 +316,6 @@ public abstract class IceUdpTransportManager
                 portBase, portBase, portBase + 100,
                 keepAliveStrategy,
                 useComponentSocket);
-
-//         if (numComponents > 1)
-//         {
-//             iceAgent.createComponent(
-//                     iceStream, Transport.UDP,
-//                     portBase + 1, portBase + 1, portBase + 101,
-//                     keepAliveStrategy,
-//                     useComponentSocket);
-//         }
 
         // Attempt to minimize subsequent bind retries: see if we have allocated
         // any ports from the dynamic range, and if so update the port tracker.
@@ -471,22 +434,6 @@ public abstract class IceUdpTransportManager
 //            getChannels().forEach(
 //                channel -> channel.touch(Channel.ActivityType.TRANSPORT));
         }
-    }
-
-    /**
-     * The name of the property which controls whether health checks failures
-     * should be permanent. If this is set to true and the bridge fails its
-     * health check once, it will not go back to the healthy state.
-     */
-    private static final String PERMANENT_FAILURE_PNAME
-        = Health.class.getName() + ".PERMANENT_FAILURE";
-
-    private static BundleContext bundleContext = null;
-    private static boolean permanentFailureMode = false;
-
-    private void setRtcpmux(IceUdpTransportPacketExtension transport)
-    {
-        //TODO(brian): need to reimeplement this if we're going to support non-rtcpmux
     }
 
     /**
