@@ -98,7 +98,7 @@ public class IceDtlsTransportManager
     public IceDtlsTransportManager(String id, Conference conference)
             throws IOException
     {
-        super(conference, true, 1, "ice-stream-" + id, null);
+        super(conference, true, null);
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
         this.id = id;
         this.ICE_STREAM_NAME = "ice-stream-" + id;

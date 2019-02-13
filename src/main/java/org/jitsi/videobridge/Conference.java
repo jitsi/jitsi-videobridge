@@ -18,7 +18,6 @@ package org.jitsi.videobridge;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.eventadmin.*;
-import org.jitsi.nlj.util.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.*;
