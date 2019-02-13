@@ -57,37 +57,15 @@ public class IceDtlsTransportManager
     private DtlsClientStack dtlsStack = new DtlsClientStack();
     private DtlsReceiver dtlsReceiver = new DtlsReceiver(dtlsStack);
     private DtlsSender dtlsSender = new DtlsSender(dtlsStack);
-    //TODO(brian): these 2 subscriber lists should be combined into a sort of 'transportmanagereventhandler' interface
-    // but, what about thingds like dtlsConnected which only appliesd to IceDtlsTransportManager?
+    //TODO(brian): these 2 subscriber lists should be combined into a sort of
+    // 'transportmanagereventhandler' interface but, what about things like
+    // dtlsConnected which only applies to IceDtlsTransportManager?
     private List<Runnable> transportConnectedSubscribers = new ArrayList<>();
     private List<Runnable> dtlsConnectedSubscribers = new ArrayList<>();
     private final PacketInfoQueue outgoingPacketQueue;
     private Endpoint endpoint = null;
-    class SocketSenderNode extends Node {
-        public DatagramSocket socket = null;
-        SocketSenderNode() {
-            super("Socket sender");
-        }
-        @Override
-        protected void doProcessPackets(@NotNull List<PacketInfo> pkts)
-        {
-            if (socket != null) {
-                pkts.forEach(pktInfo -> {
-                    try
-                    {
-                        socket.send(new DatagramPacket(pktInfo.getPacket().getBuffer().array(), 0, pktInfo.getPacket().getBuffer().limit()));
-                    } catch (IOException e)
-                    {
-                        System.out.println("BRIAN: error sending outgoing dtls packet: " + e.toString());
-                        throw new RuntimeException(e);
-                    }
-                });
-            }
 
-        }
-    }
     private SocketSenderNode packetSender = new SocketSenderNode();
-
     private Node incomingPipelineRoot = createIncomingPipeline();
     private Node outgoingDtlsPipelineRoot = createOutgoingDtlsPipeline();
     private Node outgoingSrtpPipelineRoot = createOutgoingSrtpPipeline();
@@ -100,12 +78,16 @@ public class IceDtlsTransportManager
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
         iceAgent.addStateChangeListener(this::iceAgentStateChange);
 
-        outgoingPacketQueue = new PacketInfoQueue(id, TaskPools.IO_POOL, this::handleOutgoingPacket);
-        logger.info("BRIAN: finished IceDtlsTransportManager ctor");
+        outgoingPacketQueue
+                = new PacketInfoQueue(
+                        "TM-outgoing-" + id,
+                        TaskPools.IO_POOL,
+                        this::handleOutgoingPacket);
+        logger.debug("Constructor finished, id=" + id);
     }
 
-    //TODO: need to take another look and make sure we're properly replicating all the behavior of this
-    // method in IceUdpTransportManager
+    //TODO: need to take another look and make sure we're properly replicating
+    // all the behavior of this method in IceUdpTransportManager
     @Override
     public void startConnectivityEstablishment(IceUdpTransportPacketExtension remoteTransportInformation)
     {
@@ -298,9 +280,10 @@ public class IceDtlsTransportManager
 
     public void setEndpoint(Endpoint endpoint)
     {
-        //TODO(brian): i think eventually we'll have the endpoint create its transport manager,
-        // which case we can just pass it in via the ctor (assuming we want to expose the entire
-        // endpoint.  maybe there's a more limited interface we can expose to the transportmanager?)
+        //TODO(brian): i think eventually we'll have the endpoint create its
+        // transport manager, which case we can just pass it in via the ctor
+        // (assuming we want to expose the entire endpoint.  maybe there's a
+        // more limited interface we can expose to the transportmanager?)
         this.endpoint = endpoint;
     }
 
@@ -614,5 +597,29 @@ public class IceDtlsTransportManager
         }
         super.close();
         logger.info("Closed transport manager " + id);
+    }
+
+    class SocketSenderNode extends Node {
+        public DatagramSocket socket = null;
+        SocketSenderNode() {
+            super("Socket sender");
+        }
+        @Override
+        protected void doProcessPackets(@NotNull List<PacketInfo> pkts)
+        {
+            if (socket != null) {
+                pkts.forEach(pktInfo -> {
+                    try
+                    {
+                        socket.send(new DatagramPacket(pktInfo.getPacket().getBuffer().array(), 0, pktInfo.getPacket().getBuffer().limit()));
+                    } catch (IOException e)
+                    {
+                        System.out.println("BRIAN: error sending outgoing dtls packet: " + e.toString());
+                        throw new RuntimeException(e);
+                    }
+                });
+            }
+
+        }
     }
 }
