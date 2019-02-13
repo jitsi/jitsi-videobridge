@@ -116,7 +116,7 @@ public abstract class IceUdpTransportManager
     /**
      * An identifier of this {@link IceUdpTransportManager}.
      */
-    private final String id;
+    protected final String id;
 
     /**
      * The ICE {@link Agent}.
