@@ -54,7 +54,6 @@ public class IceDtlsTransportManager
     private static final Logger classLogger
             = Logger.getLogger(IceDtlsTransportManager.class);
     private final Logger logger;
-    private final String ICE_STREAM_NAME;
     private DtlsClientStack dtlsStack = new DtlsClientStack();
     private DtlsReceiver dtlsReceiver = new DtlsReceiver(dtlsStack);
     private DtlsSender dtlsSender = new DtlsSender(dtlsStack);
@@ -99,7 +98,6 @@ public class IceDtlsTransportManager
     {
         super(conference, true, id);
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
-        this.ICE_STREAM_NAME = "ice-stream-" + id;
         iceAgent.addStateChangeListener(this::iceAgentStateChange);
 
         outgoingPacketQueue = new PacketInfoQueue(id, TaskPools.IO_POOL, this::handleOutgoingPacket);
@@ -149,11 +147,13 @@ public class IceDtlsTransportManager
         }
 
         // Set the remote ufrag/password
-        if (remoteTransportInformation.getUfrag() != null) {
-            iceAgent.getStream(ICE_STREAM_NAME).setRemoteUfrag(remoteTransportInformation.getUfrag());
+        if (remoteTransportInformation.getUfrag() != null)
+        {
+            iceStream.setRemoteUfrag(remoteTransportInformation.getUfrag());
         }
-        if (remoteTransportInformation.getPassword() != null) {
-            iceAgent.getStream(ICE_STREAM_NAME).setRemotePassword(remoteTransportInformation.getPassword());
+        if (remoteTransportInformation.getPassword() != null)
+        {
+            iceStream.setRemotePassword(remoteTransportInformation.getPassword());
         }
 
         // If ICE is running already, we try to update the checklists with the
@@ -200,8 +200,8 @@ public class IceDtlsTransportManager
                 iceAgent.startConnectivityEstablishment();
             }
         }
-        else if (iceAgent.getStream(ICE_STREAM_NAME).getRemoteUfrag() != null
-                && iceAgent.getStream(ICE_STREAM_NAME).getRemotePassword() != null)
+        else if (iceStream.getRemoteUfrag() != null
+                && iceStream.getRemotePassword() != null)
         {
             // We don't have any remote candidates, but we already know the
             // remote ufrag and password, so we can start ICE.
@@ -240,7 +240,7 @@ public class IceDtlsTransportManager
                 continue;
 
             Component component
-                    = iceAgent.getStream(ICE_STREAM_NAME).getComponent(candidate.getComponent());
+                    = iceStream.getComponent(candidate.getComponent());
             String relAddr;
             int relPort;
             TransportAddress relatedAddress = null;
@@ -315,7 +315,7 @@ public class IceDtlsTransportManager
     {
         pe.setPassword(iceAgent.getLocalPassword());
         pe.setUfrag(iceAgent.getLocalUfrag());
-        iceAgent.getStream(ICE_STREAM_NAME).getComponents().forEach(component -> {
+        iceStream.getComponents().forEach(component -> {
             List<LocalCandidate> localCandidates = component.getLocalCandidates();
             if (localCandidates != null) {
                 localCandidates.forEach(localCandidate -> {
@@ -484,7 +484,7 @@ public class IceDtlsTransportManager
         logger.info("BRIAN: iceConnected for transport manager " + id);
         transportConnectedSubscribers.forEach(Runnable::run);
         iceConnectedProcessed = true;
-        DatagramSocket socket = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
+        DatagramSocket socket = iceStream.getComponents().get(0).getSocket();
 
         endpoint.setOutgoingSrtpPacketHandler(packets -> packets.forEach(outgoingPacketQueue::add));
 

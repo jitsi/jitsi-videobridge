@@ -46,7 +46,7 @@ public abstract class IceUdpTransportManager
      * The name default of the single <tt>IceStream</tt> that this
      * <tt>TransportManager</tt> will create/use.
      */
-    private static final String DEFAULT_ICE_STREAM_NAME = "stream";
+    protected static final String DEFAULT_ICE_STREAM_NAME = "stream";
 
     /**
      * The {@link Logger} used by the {@link IceUdpTransportManager} class to
@@ -132,7 +132,7 @@ public abstract class IceUdpTransportManager
      * The <tt>IceMediaStream</tt> of {@link #iceAgent} associated with the
      * <tt>Channel</tt> of this instance.
      */
-    private final IceMediaStream iceStream;
+    protected final IceMediaStream iceStream;
 
     /**
      * The <tt>PropertyChangeListener</tt> which is (to be) notified about
@@ -178,7 +178,7 @@ public abstract class IceUdpTransportManager
         conference.appendDiagnosticInformation(diagnosticContext);
         diagnosticContext.put("transport", hashCode());
 
-        iceAgent = createIceAgent(controlling, DEFAULT_ICE_STREAM_NAME);
+        iceAgent = createIceAgent(controlling);
         iceStream = iceAgent.getStream(DEFAULT_ICE_STREAM_NAME);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
 
@@ -295,8 +295,7 @@ public abstract class IceUdpTransportManager
      * @throws IOException if initializing a new <tt>Agent</tt> instance for the
      * purposes of this <tt>TransportManager</tt> fails
      */
-    private Agent createIceAgent(boolean controlling,
-                                 String iceStreamName)
+    private Agent createIceAgent(boolean controlling)
             throws IOException
     {
         Agent iceAgent = new Agent(logger.getLevel(), iceUfragPrefix);
@@ -309,7 +308,8 @@ public abstract class IceUdpTransportManager
 
         int portBase = portTracker.getPort();
 
-        IceMediaStream iceStream = iceAgent.createMediaStream(iceStreamName);
+        IceMediaStream iceStream
+                = iceAgent.createMediaStream(DEFAULT_ICE_STREAM_NAME);
 
         iceAgent.createComponent(
                 iceStream, Transport.UDP,
