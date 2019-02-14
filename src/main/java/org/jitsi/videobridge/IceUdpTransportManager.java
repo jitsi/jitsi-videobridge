@@ -151,6 +151,13 @@ public class IceUdpTransportManager
         = this::iceStreamPairChange;
 
     /**
+     * The listener we register with the {@link Agent} to listen to ICE state
+     * change events.
+     */
+    private final PropertyChangeListener iceStateChangeListener
+            = this::iceStateChange;
+
+    /**
      * Whether this <tt>IceUdpTransportManager</tt> will serve as the the
      * controlling or controlled ICE agent.
      */
@@ -198,7 +205,7 @@ public class IceUdpTransportManager
             eventAdmin.sendEvent(EventFactory.transportCreated(this));
         }
 
-        iceAgent.addStateChangeListener(this::iceAgentStateChange);
+        iceAgent.addStateChangeListener(iceStateChangeListener);
     }
 
     /**
@@ -286,7 +293,7 @@ public class IceUdpTransportManager
             }
             if (iceAgent != null)
             {
-                iceAgent.removeStateChangeListener(this::iceAgentStateChange);
+                iceAgent.removeStateChangeListener(iceStateChangeListener);
                 iceAgent.free();
                 iceAgent = null;
             }
@@ -732,7 +739,7 @@ public class IceUdpTransportManager
         return candidateID.toString();
     }
 
-    private void iceAgentStateChange(PropertyChangeEvent ev)
+    private void iceStateChange(PropertyChangeEvent ev)
     {
         IceProcessingState oldState = (IceProcessingState) ev.getOldValue();
         IceProcessingState newState = (IceProcessingState) ev.getNewValue();
