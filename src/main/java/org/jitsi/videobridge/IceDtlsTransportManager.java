@@ -31,7 +31,6 @@ import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.util.*;
-import org.jitsi.videobridge.transport.*;
 import org.jitsi.videobridge.util.*;
 
 import java.beans.*;
@@ -41,7 +40,8 @@ import java.nio.*;
 import java.util.*;
 
 /**
- * @author bbaldino
+ * @author Brian Baldino
+ * @author Boris Grozev
  */
 public class IceDtlsTransportManager
     extends IceUdpTransportManager
@@ -86,196 +86,45 @@ public class IceDtlsTransportManager
         logger.debug("Constructor finished, id=" + id);
     }
 
-    //TODO: need to take another look and make sure we're properly replicating
-    // all the behavior of this method in IceUdpTransportManager
+    /**
+     * Reads the DTLS fingerprints from, the transport extension before
+     * passing it over to the ICE transport manager.
+     * @param transportPacketExtension
+     */
     @Override
-    public void startConnectivityEstablishment(IceUdpTransportPacketExtension remoteTransportInformation)
+    public void startConnectivityEstablishment(
+            IceUdpTransportPacketExtension transportPacketExtension)
     {
-        if (iceAgent.getState().isEstablished()) {
-            logger.info(id + " with local ufrag " + iceAgent.getLocalUfrag() +
-                    " is already established, not restarting");
-            return;
-        }
-        logger.info(id + " with local ufrag " + iceAgent.getLocalUfrag() +
-                " starting connectivity establishment with extension: " + remoteTransportInformation.toXML());
-
-        // Get the remote fingerprints and set them in the DTLS stack so we
-        // can verify the remove certificate later.
         // TODO(boris): read the Setup attribute and support acting like the
         // DTLS server.
         List<DtlsFingerprintPacketExtension> fingerprintExtensions
-                = remoteTransportInformation.getChildExtensionsOfType(DtlsFingerprintPacketExtension.class);
+                = transportPacketExtension.getChildExtensionsOfType(
+                        DtlsFingerprintPacketExtension.class);
 
         Map<String, String> remoteFingerprints = new HashMap<>();
         fingerprintExtensions.forEach(fingerprintExtension -> {
-            if (fingerprintExtension.getHash() != null && fingerprintExtension.getFingerprint() != null) {
-                logger.debug("Adding fingerprint " + fingerprintExtension.getHash() +
-                        " -> " + fingerprintExtension.getFingerprint());
-                remoteFingerprints.put(fingerprintExtension.getHash(), fingerprintExtension.getFingerprint());
-            } else {
-                logger.debug("Ignoring empty DtlsFingerprint extension");
+            if (fingerprintExtension.getHash() != null
+                    && fingerprintExtension.getFingerprint() != null) {
+                remoteFingerprints.put(
+                        fingerprintExtension.getHash(),
+                        fingerprintExtension.getFingerprint());
+            }
+            else
+            {
+                logger.warn(
+                        "Ignoring empty DtlsFingerprint extension: "
+                                + transportPacketExtension.toXML());
             }
         });
 
-        if (remoteFingerprints.isEmpty()) {
-            // Don't pass an empty list to the stack in order to avoid wiping
-            // certificates that were contained in a previous request.
-            logger.debug(id + " with local ufrag " + iceAgent.getLocalUfrag() +
-                    " empty transport extension");
-        }
-        else
+        // Don't pass an empty list to the stack in order to avoid wiping
+        // certificates that were contained in a previous request.
+        if (!remoteFingerprints.isEmpty())
         {
             dtlsStack.setRemoteFingerprints(remoteFingerprints);
         }
 
-        // Set the remote ufrag/password
-        if (remoteTransportInformation.getUfrag() != null)
-        {
-            iceStream.setRemoteUfrag(remoteTransportInformation.getUfrag());
-        }
-        if (remoteTransportInformation.getPassword() != null)
-        {
-            iceStream.setRemotePassword(remoteTransportInformation.getPassword());
-        }
-
-        // If ICE is running already, we try to update the checklists with the
-        // candidates. Note that this is a best effort.
-        boolean iceAgentStateIsRunning
-                = IceProcessingState.RUNNING.equals(iceAgent.getState());
-
-        List<CandidatePacketExtension> remoteCandidates
-                = remoteTransportInformation.getChildExtensionsOfType(CandidatePacketExtension.class);
-        if (iceAgentStateIsRunning && remoteCandidates.isEmpty()) {
-            logger.info("ICE agent is already running and this extension contained no new candidates, returning");
-            return;
-        }
-
-        int remoteCandidateCount = addRemoteCandidates(remoteCandidates, iceAgentStateIsRunning);
-
-        if (iceAgentStateIsRunning) {
-            if (remoteCandidateCount == 0) {
-                // XXX Effectively, the check above but realizing that all
-                // candidates were ignored:
-                // iceAgentStateIsRunning && candidates.isEmpty().
-            } else {
-                // update all components of all streams
-                iceAgent.getStreams()
-                        .forEach(stream -> stream.getComponents()
-                                .forEach(Component::updateRemoteCandidates));
-            }
-        }
-        else if (remoteCandidateCount != 0)
-        {
-            // Once again, because the ICE Agent does not support adding
-            // candidates after the connectivity establishment has been started
-            // and because multiple transport-info JingleIQs may be used to send
-            // the whole set of transport candidates from the remote peer to the
-            // local peer, do not really start the connectivity establishment
-            // until we have at least one remote candidate per ICE Component.
-            if (iceAgent.getStreams().stream().allMatch(
-                    stream -> stream.getComponents().stream().allMatch(
-                            component -> component.getRemoteCandidateCount() >= 1)))
-            {
-                logger.info(
-                        "We have remote candidates for all ICE components. "
-                                + "Starting the ICE agent.");
-                iceAgent.startConnectivityEstablishment();
-            }
-        }
-        else if (iceStream.getRemoteUfrag() != null
-                && iceStream.getRemotePassword() != null)
-        {
-            // We don't have any remote candidates, but we already know the
-            // remote ufrag and password, so we can start ICE.
-            logger.info("Starting ICE agent without remote candidates.");
-            iceAgent.startConnectivityEstablishment();
-        }
-    }
-
-    /**
-     *
-     * @param candidates
-     * @param iceAgentStateIsRunning
-     * @return the number of network reachable remote candidates contained in the given list of candidates
-     *
-     * NOTE(brian): Almost the same as the one that was in IceUdpTransportManager, but we don't use the iceStream
-     * member (we get the stream dynamically) and we always assume rtcpmux
-     */
-    private int addRemoteCandidates(
-            List<CandidatePacketExtension> candidates,
-            boolean iceAgentStateIsRunning)
-    {
-        // Sort the remote candidates (host < reflexive < relayed) in order to
-        // create first the host, then the reflexive, the relayed candidates and
-        // thus be able to set the relative-candidate matching the
-        // rel-addr/rel-port attribute.
-        Collections.sort(candidates);
-
-        int generation = iceAgent.getGeneration();
-        int remoteCandidateCount = 0;
-
-        for (CandidatePacketExtension candidate : candidates)
-        {
-            // Is the remote candidate from the current generation of the
-            // iceAgent?
-            if (candidate.getGeneration() != generation)
-                continue;
-
-            Component component
-                    = iceStream.getComponent(candidate.getComponent());
-            String relAddr;
-            int relPort;
-            TransportAddress relatedAddress = null;
-
-            if ((relAddr = candidate.getRelAddr()) != null
-                    && (relPort = candidate.getRelPort()) != -1)
-            {
-                relatedAddress
-                        = new TransportAddress(
-                        relAddr,
-                        relPort,
-                        Transport.parse(candidate.getProtocol()));
-            }
-
-            RemoteCandidate relatedCandidate
-                    = component.findRemoteCandidate(relatedAddress);
-            RemoteCandidate remoteCandidate
-                    = new RemoteCandidate(
-                    new TransportAddress(
-                            candidate.getIP(),
-                            candidate.getPort(),
-                            Transport.parse(candidate.getProtocol())),
-                    component,
-                    org.ice4j.ice.CandidateType.parse(
-                            candidate.getType().toString()),
-                    candidate.getFoundation(),
-                    candidate.getPriority(),
-                    relatedCandidate);
-
-            // XXX IceUdpTransportManager harvests host candidates only and the
-            // ICE Components utilize the UDP protocol/transport only at the
-            // time of this writing. The ice4j library will, of course, check
-            // the theoretical reachability between the local and the remote
-            // candidates. However, we would like (1) to not mess with a
-            // possibly running iceAgent and (2) to return a consistent return
-            // value.
-            if (!TransportUtils.canReach(component, remoteCandidate))
-            {
-                continue;
-            }
-
-            if (iceAgentStateIsRunning)
-            {
-                component.addUpdateRemoteCandidates(remoteCandidate);
-            }
-            else
-            {
-                component.addRemoteCandidate(remoteCandidate);
-            }
-            remoteCandidateCount++;
-        }
-
-        return remoteCandidateCount;
+        super.startConnectivityEstablishment(transportPacketExtension);
     }
 
     public void setEndpoint(Endpoint endpoint)

@@ -17,6 +17,7 @@ package org.jitsi.videobridge;
 
 import java.beans.*;
 import java.io.*;
+import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.util.*;
@@ -46,7 +47,7 @@ public abstract class IceUdpTransportManager
      * The name default of the single <tt>IceStream</tt> that this
      * <tt>TransportManager</tt> will create/use.
      */
-    protected static final String DEFAULT_ICE_STREAM_NAME = "stream";
+    private static final String DEFAULT_ICE_STREAM_NAME = "stream";
 
     /**
      * The {@link Logger} used by the {@link IceUdpTransportManager} class to
@@ -135,6 +136,12 @@ public abstract class IceUdpTransportManager
     protected final IceMediaStream iceStream;
 
     /**
+     * The single {@link Component} that we have
+     * (since we use bundle and rtcp-mux).
+     */
+    private final Component iceComponent;
+
+    /**
      * The <tt>PropertyChangeListener</tt> which is (to be) notified about
      * changes in the properties of the <tt>CandidatePair</tt>s of
      * {@link #iceStream}.
@@ -164,9 +171,10 @@ public abstract class IceUdpTransportManager
      * @param id an identifier of the {@link IceUdpTransportManager}.
      * @throws IOException
      */
-    public IceUdpTransportManager(Conference conference,
-                                  boolean controlling,
-                                  String id)
+    IceUdpTransportManager(
+            Conference conference,
+            boolean controlling,
+            String id)
         throws IOException
     {
         this.conference = conference;
@@ -180,6 +188,7 @@ public abstract class IceUdpTransportManager
 
         iceAgent = createIceAgent(controlling);
         iceStream = iceAgent.getStream(DEFAULT_ICE_STREAM_NAME);
+        iceComponent = iceStream.getComponent(Component.RTP);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
 
         EventAdmin eventAdmin = conference.getEventAdmin();
@@ -375,7 +384,7 @@ public abstract class IceUdpTransportManager
     /**
      * Gets the ICE local username fragment.
      */
-    public String getLocalUfrag()
+    String getLocalUfrag()
     {
         Agent iceAgent = this.iceAgent;
         return iceAgent == null ? null : iceAgent.getLocalUfrag();
@@ -384,7 +393,7 @@ public abstract class IceUdpTransportManager
     /**
      * Gets the ICE password.
      */
-    public String getIcePassword()
+    String getIcePassword()
     {
         Agent iceAgent = this.iceAgent;
         return iceAgent == null ? null : iceAgent.getLocalPassword();
@@ -443,5 +452,194 @@ public abstract class IceUdpTransportManager
     public boolean isConnected()
     {
         return iceConnected;
+    }
+
+    /**
+     * Gets a string with identifying information for this instance to be used
+     * when logging.
+     * @return
+     */
+    private String getLoggingId()
+    {
+        return "[endpointId=" + id + " local_ufrag=" + getLocalUfrag() + "] ";
+    }
+
+    /**
+     * {@inheritDoc}
+     * @param transportPacketExtension
+     */
+    @Override
+    public void startConnectivityEstablishment(
+            IceUdpTransportPacketExtension transportPacketExtension)
+    {
+        if (iceAgent.getState().isEstablished())
+        {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Connection already established for " +
+                        getLoggingId());
+            }
+            return;
+        }
+
+        // Set the remote ufrag/password
+        if (transportPacketExtension.getUfrag() != null)
+        {
+            iceStream.setRemoteUfrag(transportPacketExtension.getUfrag());
+        }
+        if (transportPacketExtension.getPassword() != null)
+        {
+            iceStream.setRemotePassword(transportPacketExtension.getPassword());
+        }
+
+        // If ICE is running already, we try to update the checklists with the
+        // candidates. Note that this is a best effort.
+        boolean iceAgentStateIsRunning
+                = IceProcessingState.RUNNING.equals(iceAgent.getState());
+
+        List<CandidatePacketExtension> remoteCandidates
+                = transportPacketExtension.getChildExtensionsOfType(
+                        CandidatePacketExtension.class);
+        if (iceAgentStateIsRunning && remoteCandidates.isEmpty()) {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(getLoggingId() +
+                        "Ignoring transport extension with no candidates, "
+                        + "the Agent is already running.");
+            }
+            return;
+        }
+
+        int remoteCandidateCount
+                = addRemoteCandidates(remoteCandidates, iceAgentStateIsRunning);
+
+        if (iceAgentStateIsRunning)
+        {
+            if (remoteCandidateCount == 0)
+            {
+                // XXX Effectively, the check above but realizing that all
+                // candidates were ignored:
+                // iceAgentStateIsRunning && candidates.isEmpty().
+            }
+            else
+            {
+                iceComponent.updateRemoteCandidates();
+            }
+        }
+        else if (remoteCandidateCount != 0)
+        {
+            // Once again, because the ICE Agent does not support adding
+            // candidates after the connectivity establishment has been started
+            // and because multiple transport-info JingleIQs may be used to send
+            // the whole set of transport candidates from the remote peer to the
+            // local peer, do not really start the connectivity establishment
+            // until we have at least one remote candidate per ICE Component.
+            if (iceComponent.getRemoteCandidateCount() >= 1)
+            {
+                logger.info(getLoggingId() +
+                        "Starting the agent with remote candidates.");
+                iceAgent.startConnectivityEstablishment();
+            }
+        }
+        else if (iceStream.getRemoteUfrag() != null
+                && iceStream.getRemotePassword() != null)
+        {
+            // We don't have any remote candidates, but we already know the
+            // remote ufrag and password, so we can start ICE.
+            logger.info(getLoggingId() +
+                    "Starting the Agent without remote candidates. ");
+            iceAgent.startConnectivityEstablishment();
+        }
+        else
+        {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(getLoggingId() +
+                        " Not starting ICE, no ufrag and pwd yet. " +
+                        transportPacketExtension.toXML());
+            }
+        }
+
+    }
+
+    /**
+     * @return the number of network reachable remote candidates contained in
+     * the given list of candidates.
+     */
+    private int addRemoteCandidates(
+            List<CandidatePacketExtension> candidates,
+            boolean iceAgentStateIsRunning)
+    {
+        // Sort the remote candidates (host < reflexive < relayed) in order to
+        // create first the host, then the reflexive, the relayed candidates and
+        // thus be able to set the relative-candidate matching the
+        // rel-addr/rel-port attribute.
+        Collections.sort(candidates);
+
+        int generation = iceAgent.getGeneration();
+        int remoteCandidateCount = 0;
+
+        for (CandidatePacketExtension candidate : candidates)
+        {
+            // Is the remote candidate from the current generation of the
+            // iceAgent?
+            if (candidate.getGeneration() != generation)
+                continue;
+
+            Component component
+                    = iceStream.getComponent(candidate.getComponent());
+            String relAddr;
+            int relPort;
+            TransportAddress relatedAddress = null;
+
+            if ((relAddr = candidate.getRelAddr()) != null
+                    && (relPort = candidate.getRelPort()) != -1)
+            {
+                relatedAddress
+                        = new TransportAddress(
+                        relAddr,
+                        relPort,
+                        Transport.parse(candidate.getProtocol()));
+            }
+
+            RemoteCandidate relatedCandidate
+                    = component.findRemoteCandidate(relatedAddress);
+            RemoteCandidate remoteCandidate
+                    = new RemoteCandidate(
+                    new TransportAddress(
+                            candidate.getIP(),
+                            candidate.getPort(),
+                            Transport.parse(candidate.getProtocol())),
+                    component,
+                    org.ice4j.ice.CandidateType.parse(
+                            candidate.getType().toString()),
+                    candidate.getFoundation(),
+                    candidate.getPriority(),
+                    relatedCandidate);
+
+            // XXX IceUdpTransportManager harvests host candidates only and the
+            // ICE Components utilize the UDP protocol/transport only at the
+            // time of this writing. The ice4j library will, of course, check
+            // the theoretical reachability between the local and the remote
+            // candidates. However, we would like (1) to not mess with a
+            // possibly running iceAgent and (2) to return a consistent return
+            // value.
+            if (!TransportUtils.canReach(component, remoteCandidate))
+            {
+                continue;
+            }
+
+            if (iceAgentStateIsRunning)
+            {
+                component.addUpdateRemoteCandidates(remoteCandidate);
+            }
+            else
+            {
+                component.addRemoteCandidate(remoteCandidate);
+            }
+            remoteCandidateCount++;
+        }
+
+        return remoteCandidateCount;
     }
 }
