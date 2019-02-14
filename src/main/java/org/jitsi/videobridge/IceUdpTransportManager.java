@@ -20,6 +20,7 @@ import java.io.*;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
 import net.java.sip.communicator.util.*;
 
 import org.ice4j.*;
@@ -40,7 +41,7 @@ import org.osgi.framework.*;
  * @author Pawel Domas
  * @author Boris Grozev
  */
-public abstract class IceUdpTransportManager
+public class IceUdpTransportManager
     extends TransportManager
 {
     /**
@@ -642,4 +643,91 @@ public abstract class IceUdpTransportManager
 
         return remoteCandidateCount;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void describe(IceUdpTransportPacketExtension pe)
+    {
+        pe.setPassword(iceAgent.getLocalPassword());
+        pe.setUfrag(iceAgent.getLocalUfrag());
+        List<LocalCandidate> localCandidates = iceComponent.getLocalCandidates();
+        if (localCandidates != null)
+        {
+            localCandidates.forEach(
+                    localCandidate -> describe(localCandidate, pe));
+        }
+        pe.addChildExtension(new RtcpmuxPacketExtension());
+
+        //TODO(brian): need to include the Colibiri websocket url when describing
+        // (see IceUdpTransportManager#describe and #getColibriWsUrl)
+    }
+
+    private void describe(
+            LocalCandidate candidate,
+            IceUdpTransportPacketExtension pe)
+    {
+        CandidatePacketExtension candidatePE = new CandidatePacketExtension();
+        org.ice4j.ice.Component component = candidate.getParentComponent();
+
+        candidatePE.setComponent(component.getComponentID());
+        candidatePE.setFoundation(candidate.getFoundation());
+        candidatePE.setGeneration(
+                component.getParentStream().getParentAgent().getGeneration());
+        candidatePE.setID(generateCandidateID(candidate));
+        candidatePE.setNetwork(0);
+        candidatePE.setPriority(candidate.getPriority());
+
+        // Advertise 'tcp' candidates for which SSL is enabled as 'ssltcp'
+        // (although internally their transport protocol remains "tcp")
+        Transport transport = candidate.getTransport();
+        if (transport == Transport.TCP && candidate.isSSL())
+        {
+            transport = Transport.SSLTCP;
+        }
+        candidatePE.setProtocol(transport.toString());
+
+        if (transport == Transport.TCP || transport == Transport.SSLTCP)
+        {
+            candidatePE.setTcpType(candidate.getTcpType());
+        }
+
+        candidatePE.setType(
+                CandidateType.valueOf(candidate.getType().toString()));
+
+        TransportAddress transportAddress = candidate.getTransportAddress();
+
+        candidatePE.setIP(transportAddress.getHostAddress());
+        candidatePE.setPort(transportAddress.getPort());
+
+        TransportAddress relatedAddress = candidate.getRelatedAddress();
+
+        if (relatedAddress != null)
+        {
+            candidatePE.setRelAddr(relatedAddress.getHostAddress());
+            candidatePE.setRelPort(relatedAddress.getPort());
+        }
+
+        pe.addChildExtension(candidatePE);
+    }
+
+    private String generateCandidateID(LocalCandidate candidate)
+    {
+        StringBuilder candidateID = new StringBuilder();
+
+        candidateID.append(conference.getID());
+        candidateID.append(Long.toHexString(hashCode()));
+
+        Agent iceAgent
+                = candidate.getParentComponent().getParentStream().getParentAgent();
+
+        candidateID.append(Long.toHexString(iceAgent.hashCode()));
+        candidateID.append(Long.toHexString(iceAgent.getGeneration()));
+        candidateID.append(Long.toHexString(candidate.hashCode()));
+
+        return candidateID.toString();
+    }
+
+
 }

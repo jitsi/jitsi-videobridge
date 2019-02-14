@@ -17,8 +17,6 @@ package org.jitsi.videobridge;
 
 import kotlin.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
-import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.ice4j.socket.*;
 import org.jetbrains.annotations.*;
@@ -145,33 +143,21 @@ public class IceDtlsTransportManager
     @Override
     protected void describe(IceUdpTransportPacketExtension pe)
     {
-        pe.setPassword(iceAgent.getLocalPassword());
-        pe.setUfrag(iceAgent.getLocalUfrag());
-        iceStream.getComponents().forEach(component -> {
-            List<LocalCandidate> localCandidates = component.getLocalCandidates();
-            if (localCandidates != null) {
-                localCandidates.forEach(localCandidate -> {
-                    describe(localCandidate, pe);
-                });
-            }
-        });
-        pe.addChildExtension(new RtcpmuxPacketExtension());
+        super.describe(pe);
 
         // Describe dtls
         DtlsFingerprintPacketExtension fingerprintPE
-                = pe.getFirstChildOfType(
-                DtlsFingerprintPacketExtension.class);
-        if (fingerprintPE == null) {
+                = pe.getFirstChildOfType(DtlsFingerprintPacketExtension.class);
+        if (fingerprintPE == null)
+        {
             fingerprintPE = new DtlsFingerprintPacketExtension();
             pe.addChildExtension(fingerprintPE);
         }
         fingerprintPE.setFingerprint(dtlsStack.getLocalFingerprint());
         fingerprintPE.setHash(dtlsStack.getLocalFingerprintHashFunction());
+
+        // TODO: don't we only support ACTIVE right now?
         fingerprintPE.setSetup("ACTPASS");
-        //TODO(brian): need to include the Colibiri websocket url when describing
-        // (see IceUdpTransportManager#describe and #getColibriWsUrl)
-        //TODO(brian): also in IceUdpTransportManager#describe, look at #generateCandidateID, do
-        // we need this?
     }
 
     @Override
@@ -370,71 +356,6 @@ public class IceDtlsTransportManager
         {
             logger.info("BRIAN: ICE failed, local ufrag " + iceAgent.getLocalUfrag());
         }
-    }
-
-    private void describe(
-            LocalCandidate candidate,
-            IceUdpTransportPacketExtension pe)
-    {
-        CandidatePacketExtension candidatePE = new CandidatePacketExtension();
-        org.ice4j.ice.Component component = candidate.getParentComponent();
-
-        candidatePE.setComponent(component.getComponentID());
-        candidatePE.setFoundation(candidate.getFoundation());
-        candidatePE.setGeneration(
-                component.getParentStream().getParentAgent().getGeneration());
-        candidatePE.setID(generateCandidateID(candidate));
-        candidatePE.setNetwork(0);
-        candidatePE.setPriority(candidate.getPriority());
-
-        // Advertise 'tcp' candidates for which SSL is enabled as 'ssltcp'
-        // (although internally their transport protocol remains "tcp")
-        Transport transport = candidate.getTransport();
-        if (transport == Transport.TCP && candidate.isSSL())
-        {
-            transport = Transport.SSLTCP;
-        }
-        candidatePE.setProtocol(transport.toString());
-
-        if (transport == Transport.TCP || transport == Transport.SSLTCP)
-        {
-            candidatePE.setTcpType(candidate.getTcpType());
-        }
-
-        candidatePE.setType(
-                CandidateType.valueOf(candidate.getType().toString()));
-
-        TransportAddress transportAddress = candidate.getTransportAddress();
-
-        candidatePE.setIP(transportAddress.getHostAddress());
-        candidatePE.setPort(transportAddress.getPort());
-
-        TransportAddress relatedAddress = candidate.getRelatedAddress();
-
-        if (relatedAddress != null)
-        {
-            candidatePE.setRelAddr(relatedAddress.getHostAddress());
-            candidatePE.setRelPort(relatedAddress.getPort());
-        }
-
-        pe.addChildExtension(candidatePE);
-    }
-
-    private String generateCandidateID(LocalCandidate candidate)
-    {
-        StringBuilder candidateID = new StringBuilder();
-
-        candidateID.append(conference.getID());
-        candidateID.append(Long.toHexString(hashCode()));
-
-        Agent iceAgent
-                = candidate.getParentComponent().getParentStream().getParentAgent();
-
-        candidateID.append(Long.toHexString(iceAgent.hashCode()));
-        candidateID.append(Long.toHexString(iceAgent.getGeneration()));
-        candidateID.append(Long.toHexString(candidate.hashCode()));
-
-        return candidateID.toString();
     }
 
     @Override
