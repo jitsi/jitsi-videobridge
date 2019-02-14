@@ -33,7 +33,7 @@ abstract class PayloadType(
     /**
      * The encoding name.
      */
-    val encoding: String,
+    val encoding: PayloadTypeEncoding,
     /**
      * The media type (audio or video).
      */
@@ -52,20 +52,42 @@ abstract class PayloadType(
 
         toString()
     }
+}
+
+enum class PayloadTypeEncoding {
+    OTHER,
+    VP8,
+    VP9,
+    H264,
+    RTX,
+    OPUS;
+
+    var unknownVal: String? = null
 
     companion object {
-        const val VP8 = "vp8"
-        const val VP9 = "vp9"
-        const val H264 = "h264"
-        const val RTX = "rtx"
-        const val RTX_APT = "apt"
-        const val OPUS = "opus"
+        /**
+         * [valueOf] does not allow for case-insensitivity and can't be overridden, so this
+         * method should be used when creating an instance of this enum from a string
+         */
+        fun createFrom(value: String): PayloadTypeEncoding {
+            return try {
+                PayloadTypeEncoding.valueOf(value.toUpperCase())
+            } catch (e: IllegalArgumentException) {
+                return PayloadTypeEncoding.OTHER.also { it.unknownVal = value }
+            }
+        }
+    }
+
+    override fun toString(): String = with (StringBuffer()) {
+        append(super.toString())
+        unknownVal?.let { append(" (").append(it).append(")")}
+        toString()
     }
 }
 
-open class VideoPayloadType(
+abstract class VideoPayloadType(
     pt: Byte,
-    encoding: String,
+    encoding: PayloadTypeEncoding,
     clockRate: Int = 90000,
     parameters: PayloadTypeParams = ConcurrentHashMap()
 ) : PayloadType(pt, encoding, MediaType.VIDEO, clockRate, parameters)
@@ -73,26 +95,26 @@ open class VideoPayloadType(
 class Vp8PayloadType(
     pt: Byte,
     parameters: PayloadTypeParams = ConcurrentHashMap()
-) : VideoPayloadType(pt, VP8, parameters = parameters)
+) : VideoPayloadType(pt, PayloadTypeEncoding.VP8, parameters = parameters)
 
 class Vp9PayloadType(
         pt: Byte,
         parameters: PayloadTypeParams = ConcurrentHashMap()
-) : VideoPayloadType(pt, VP9, parameters = parameters)
+) : VideoPayloadType(pt, PayloadTypeEncoding.VP9, parameters = parameters)
 
 class H264PayloadType(
     pt: Byte,
     parameters: PayloadTypeParams = ConcurrentHashMap()
-) : VideoPayloadType(pt, H264, parameters = parameters)
+) : VideoPayloadType(pt, PayloadTypeEncoding.H264, parameters = parameters)
 
 class RtxPayloadType(
     pt: Byte,
     parameters: PayloadTypeParams = ConcurrentHashMap()
-) : VideoPayloadType(pt, RTX, parameters = parameters)
+) : VideoPayloadType(pt, PayloadTypeEncoding.RTX, parameters = parameters)
 
-open class AudioPayloadType(
+abstract class AudioPayloadType(
     pt: Byte,
-    encoding: String,
+    encoding: PayloadTypeEncoding,
     clockRate: Int = 48000,
     parameters: PayloadTypeParams = ConcurrentHashMap()
 ) : PayloadType(pt, encoding, MediaType.AUDIO, clockRate, parameters)
@@ -100,4 +122,16 @@ open class AudioPayloadType(
 class OpusPayloadType(
     pt: Byte,
     parameters: PayloadTypeParams = ConcurrentHashMap()
-) : AudioPayloadType(pt, OPUS, parameters = parameters)
+) : AudioPayloadType(pt, PayloadTypeEncoding.OPUS, parameters = parameters)
+
+class OtherAudioPayloadType(
+    pt: Byte,
+    clockRate: Int,
+    parameters: PayloadTypeParams = ConcurrentHashMap()
+) : AudioPayloadType(pt, PayloadTypeEncoding.OTHER, clockRate, parameters)
+
+class OtherVideoPayloadType(
+    pt: Byte,
+    clockRate: Int,
+    parameters: PayloadTypeParams = ConcurrentHashMap()
+) : VideoPayloadType(pt, PayloadTypeEncoding.OTHER, clockRate, parameters)
