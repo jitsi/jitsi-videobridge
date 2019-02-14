@@ -470,7 +470,7 @@ public class IceUdpTransportManager
      * when logging.
      * @return
      */
-    private String getLoggingId()
+    public String getLoggingId()
     {
         return "[endpointId=" + id + " local_ufrag=" + getLocalUfrag() + "] ";
     }
@@ -753,6 +753,7 @@ public class IceUdpTransportManager
         // case separately below.
         if (IceProcessingState.COMPLETED.equals(newState))
         {
+            iceConnected = true;
             onIceConnected();
         }
         else if (IceProcessingState.FAILED.equals(newState)

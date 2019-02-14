@@ -17,7 +17,6 @@ package org.jitsi.videobridge;
 
 import kotlin.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import org.ice4j.ice.*;
 import org.ice4j.socket.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
@@ -31,7 +30,6 @@ import org.jitsi.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.util.*;
 
-import java.beans.*;
 import java.io.*;
 import java.net.*;
 import java.nio.*;
@@ -55,10 +53,6 @@ public class IceDtlsTransportManager
     private DtlsClientStack dtlsStack = new DtlsClientStack();
     private DtlsReceiver dtlsReceiver = new DtlsReceiver(dtlsStack);
     private DtlsSender dtlsSender = new DtlsSender(dtlsStack);
-    //TODO(brian): these 2 subscriber lists should be combined into a sort of
-    // 'transportmanagereventhandler' interface but, what about things like
-    // dtlsConnected which only applies to IceDtlsTransportManager?
-    private List<Runnable> transportConnectedSubscribers = new ArrayList<>();
     private List<Runnable> dtlsConnectedSubscribers = new ArrayList<>();
     private final PacketInfoQueue outgoingPacketQueue;
     private Endpoint endpoint = null;
@@ -68,6 +62,7 @@ public class IceDtlsTransportManager
     private Node outgoingDtlsPipelineRoot = createOutgoingDtlsPipeline();
     private Node outgoingSrtpPipelineRoot = createOutgoingSrtpPipeline();
     protected boolean dtlsHandshakeComplete = false;
+    private boolean iceConnectedProcessed = false;
 
     public IceDtlsTransportManager(String id, Conference conference)
             throws IOException
@@ -80,7 +75,10 @@ public class IceDtlsTransportManager
                         "TM-outgoing-" + id,
                         TaskPools.IO_POOL,
                         this::handleOutgoingPacket);
-        logger.debug("Constructor finished, id=" + id);
+        if (logger.isDebugEnabled())
+        {
+            logger.debug(getLoggingId() + "Constructor finished.");
+        }
     }
 
     /**
@@ -136,9 +134,14 @@ public class IceDtlsTransportManager
     @Override
     public boolean isConnected()
     {
-        return iceAgent.getState().isEstablished();
+        // TODO: do we consider this TM connected when ICE completes, or when
+        // ICE and DTLS both complete?
+        return super.isConnected();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected void describe(IceUdpTransportPacketExtension pe)
     {
@@ -159,22 +162,6 @@ public class IceDtlsTransportManager
         fingerprintPE.setSetup("ACTPASS");
     }
 
-    @Override
-    public String getXmlNamespace()
-    {
-        return IceUdpTransportPacketExtension.NAMESPACE;
-    }
-
-    @Override
-    public void onTransportConnected(Runnable handler)
-    {
-        if (isConnected()) {
-            handler.run();
-        } else {
-            transportConnectedSubscribers.add(handler);
-        }
-    }
-
     public void onDtlsHandshakeComplete(Runnable handler)
     {
         if (dtlsHandshakeComplete)
@@ -187,7 +174,8 @@ public class IceDtlsTransportManager
         }
     }
 
-    private Node createIncomingPipeline() {
+    private Node createIncomingPipeline()
+    {
         PipelineBuilder builder = new PipelineBuilder();
 
         DemuxerNode dtlsSrtpDemuxer = new DemuxerNode("DTLS/SRTP");
@@ -217,9 +205,7 @@ public class IceDtlsTransportManager
         });
         PipelineBuilder srtpPipelineBuilder = new PipelineBuilder();
         srtpPipelineBuilder.simpleNode("SRTP path", packetInfos -> {
-            packetInfos.forEach( pktInfo -> {
-                endpoint.srtpPacketReceived(pktInfo);
-            });
+            packetInfos.forEach(endpoint::srtpPacketReceived);
             return Collections.emptyList();
         });
         srtpPath.setPath(srtpPipelineBuilder.build());
@@ -229,7 +215,8 @@ public class IceDtlsTransportManager
         return builder.build();
     }
 
-    private Node createOutgoingDtlsPipeline() {
+    private Node createOutgoingDtlsPipeline()
+    {
         PipelineBuilder builder = new PipelineBuilder();
         builder.node(dtlsSender);
         builder.node(packetSender);
@@ -243,7 +230,8 @@ public class IceDtlsTransportManager
         return builder.build();
     }
 
-    public void sendDtlsData(PacketInfo packet) {
+    public void sendDtlsData(PacketInfo packet)
+    {
         outgoingDtlsPipelineRoot.processPackets(Collections.singletonList(packet));
     }
 
@@ -257,10 +245,12 @@ public class IceDtlsTransportManager
      * Read packets from the given socket and process them in the incoming pipeline
      * @param socket the socket to read from
      */
-    private void installIncomingPacketReader(DatagramSocket socket) {
-        //TODO(brian): this does a bit more than just read from the iceSocket (does a bit of processing
-        // for each packet) but I think it's little enough (it'll only be a bit of the DTLS path)
-        // that running it in the IO pool is fine
+    private void installIncomingPacketReader(DatagramSocket socket)
+    {
+        //TODO(brian): this does a bit more than just read from the iceSocket
+        // (does a bit of processing for each packet) but I think it's little
+        // enough (it'll only be a bit of the DTLS path) that running it in the
+        // IO pool is fine
         TaskPools.IO_POOL.submit(() -> {
             byte[] buf = new byte[1500];
             while (!closed) {
@@ -273,83 +263,98 @@ public class IceDtlsTransportManager
                     Packet pkt = new UnparsedPacket(packetBuf);
                     PacketInfo pktInfo = new PacketInfo(pkt);
                     pktInfo.setReceivedTime(System.currentTimeMillis());
-                    incomingPipelineRoot.processPackets(Collections.singletonList(pktInfo));
+                    incomingPipelineRoot
+                            .processPackets(Collections.singletonList(pktInfo));
                 }
                 catch (SocketClosedException e)
                 {
-                    logger.info("Socket closed for local ufrag " + iceAgent.getLocalUfrag() + ", stopping reader");
+                    logger.info(getLoggingId() +
+                            "Socket closed, stopping reader.");
                     break;
                 }
                 catch (IOException e)
                 {
-                    e.printStackTrace();
+                    logger.warn(getLoggingId() +
+                            "Stopping reader: ", e);
                     break;
                 }
             }
         });
     }
 
-    private boolean iceConnectedProcessed = false;
-
     @Override
-    protected void onIceConnected() {
-        iceConnected = true;
-        if (iceConnectedProcessed) {
+    protected void onIceConnected()
+    {
+        if (iceConnectedProcessed)
+        {
             return;
         }
-        // The sctp connection start is triggered by this, but otherwise i don't think we need it (the other channel
-        // types no longer do anything needed in there)
-        logger.info("BRIAN: iceConnected for transport manager " + id);
-        transportConnectedSubscribers.forEach(Runnable::run);
         iceConnectedProcessed = true;
+
         DatagramSocket socket = iceStream.getComponents().get(0).getSocket();
 
-        endpoint.setOutgoingSrtpPacketHandler(packets -> packets.forEach(outgoingPacketQueue::add));
+        endpoint.setOutgoingSrtpPacketHandler(
+                packets -> packets.forEach(outgoingPacketQueue::add));
 
-        // Socket reader thread.  Read from the underlying iceSocket and pass to the incoming
-        // module chain
+        // Socket reader thread. Read from the underlying iceSocket and pass
+        // to the incoming module chain.
         installIncomingPacketReader(socket);
 
         dtlsStack.onHandshakeComplete((tlsContext) -> {
             dtlsHandshakeComplete = true;
-            logger.info("TransportManager " + id + " DTLS handshake complete.  Got SRTP profile " +
-                    dtlsStack.getChosenSrtpProtectionProfile());
+            logger.info(getLoggingId() +
+                    " DTLS handshake complete. Got SRTP profile " +
+                        dtlsStack.getChosenSrtpProtectionProfile());
             //TODO: emit this as part of the dtls handshake complete event?
-            endpoint.setSrtpInformation(dtlsStack.getChosenSrtpProtectionProfile(), tlsContext);
+            endpoint.setSrtpInformation(
+                    dtlsStack.getChosenSrtpProtectionProfile(), tlsContext);
             dtlsConnectedSubscribers.forEach(Runnable::run);
             return Unit.INSTANCE;
         });
 
         packetSender.socket = socket;
-        logger.info("BRIAN: transport manager " + this.hashCode() + " starting dtls");
+        logger.info(getLoggingId() + " Starting DTLS.");
         TaskPools.IO_POOL.submit(() -> {
-            try {
+            try
+            {
                 dtlsStack.connect();
             }
             catch (Exception e)
             {
-                logger.error("Error during dtls negotiation: " + e.toString() + ", closing this transport manager");
+                logger.error(getLoggingId() +
+                        "Error during DTLS negotiation: " + e.toString() +
+                        ", closing this transport manager");
                 close();
             }
         });
     }
 
-    class SocketSenderNode extends Node {
+    class SocketSenderNode extends Node
+    {
         public DatagramSocket socket = null;
-        SocketSenderNode() {
+        SocketSenderNode()
+        {
             super("Socket sender");
         }
+
         @Override
         protected void doProcessPackets(@NotNull List<PacketInfo> pkts)
         {
-            if (socket != null) {
+            if (socket != null)
+            {
                 pkts.forEach(pktInfo -> {
                     try
                     {
-                        socket.send(new DatagramPacket(pktInfo.getPacket().getBuffer().array(), 0, pktInfo.getPacket().getBuffer().limit()));
-                    } catch (IOException e)
+                        socket.send(
+                            new DatagramPacket(
+                                    pktInfo.getPacket().getBuffer().array(),
+                                    0,
+                                    pktInfo.getPacket().getBuffer().limit()));
+                    }
+                    catch (IOException e)
                     {
-                        System.out.println("BRIAN: error sending outgoing dtls packet: " + e.toString());
+                        logger.error(getLoggingId() +
+                                "Error sending packet: " + e.toString());
                         throw new RuntimeException(e);
                     }
                 });
