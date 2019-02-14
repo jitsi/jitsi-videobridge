@@ -17,7 +17,6 @@ package org.jitsi.videobridge;
 
 import org.jitsi.cmd.*;
 import org.jitsi.meet.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.xmpp.*;
 

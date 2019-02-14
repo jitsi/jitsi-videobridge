@@ -74,7 +74,6 @@ public class IceDtlsTransportManager
     {
         super(conference, true, id);
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
-        iceAgent.addStateChangeListener(this::iceAgentStateChange);
 
         outgoingPacketQueue
                 = new PacketInfoQueue(
@@ -292,7 +291,8 @@ public class IceDtlsTransportManager
 
     private boolean iceConnectedProcessed = false;
 
-    private void onIceConnected() {
+    @Override
+    protected void onIceConnected() {
         iceConnected = true;
         if (iceConnectedProcessed) {
             return;
@@ -332,41 +332,6 @@ public class IceDtlsTransportManager
                 close();
             }
         });
-    }
-
-    private void iceAgentStateChange(PropertyChangeEvent ev)
-    {
-        IceProcessingState oldState = (IceProcessingState) ev.getOldValue();
-        IceProcessingState newState = (IceProcessingState) ev.getNewValue();
-
-        logger.info(Logger.Category.STATISTICS,
-                "BRIAN: ice_state_change,"
-                        + " old_state=" + oldState
-                        + ",new_state=" + newState);
-        //TODO(brian): this isn't accurate enough to know that we connected.  It's possible we go from RUNNING to
-        // TERMINATED and isEstablished returns true for TERMINATED no matter what.  is there something better
-        // we can key off of?
-//        if (newState.isEstablished()) {
-        if (IceProcessingState.COMPLETED.equals(newState))
-        {
-            logger.info("BRIAN: local ufrag " + iceAgent.getLocalUfrag() + " ICE connected, need to start dtls");
-            onIceConnected();
-        }
-        else if (IceProcessingState.FAILED.equals(newState))
-        {
-            logger.info("BRIAN: ICE failed, local ufrag " + iceAgent.getLocalUfrag());
-        }
-    }
-
-    @Override
-    public synchronized void close()
-    {
-        logger.info("Closing Transport manager " + id);
-        if (iceAgent != null) {
-            iceAgent.removeStateChangeListener(this::iceAgentStateChange);
-        }
-        super.close();
-        logger.info("Closed transport manager " + id);
     }
 
     class SocketSenderNode extends Node {
