@@ -20,8 +20,8 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.service.neomedia.*;
 
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Utilities to deserialize {@link PayloadTypePacketExtension} into a
@@ -50,37 +50,37 @@ public class PayloadTypeUtil
         }
 
         byte id = (byte)ext.getID();
-        String encoding = ext.getName();
+        PayloadTypeEncoding encoding
+                = PayloadTypeEncoding.Companion.createFrom(ext.getName());
+        int clockRate = ext.getClockrate();
 
-        if (PayloadType.VP8.equalsIgnoreCase(encoding))
+        if (PayloadTypeEncoding.VP8 == encoding)
         {
             return new Vp8PayloadType(id, parameters);
         }
-        else if (PayloadType.H264.equalsIgnoreCase(encoding))
+        else if (PayloadTypeEncoding.H264 == encoding)
         {
             return new H264PayloadType(id, parameters);
         }
-        else if (PayloadType.VP9.equalsIgnoreCase(encoding))
+        else if (PayloadTypeEncoding.VP9 == encoding)
         {
             return new Vp9PayloadType(id, parameters);
         }
-        else if (PayloadType.RTX.equalsIgnoreCase(encoding))
+        else if (PayloadTypeEncoding.RTX == encoding)
         {
             return new RtxPayloadType(id, parameters);
         }
-        else if (PayloadType.OPUS.equalsIgnoreCase(encoding))
+        else if (PayloadTypeEncoding.OPUS == encoding)
         {
             return new OpusPayloadType(id, parameters);
         }
-        else if (MediaType.VIDEO.equals(mediaType))
-        {
-            return new VideoPayloadType(
-                    id, encoding, ext.getClockrate(), parameters);
-        }
         else if (MediaType.AUDIO.equals(mediaType))
         {
-            return new AudioPayloadType(
-                    id, encoding, ext.getClockrate(), parameters);
+            return new OtherAudioPayloadType(id, clockRate, parameters);
+        }
+        else if (MediaType.VIDEO.equals(mediaType))
+        {
+            return new OtherVideoPayloadType(id, clockRate, parameters);
         }
 
         return null;
