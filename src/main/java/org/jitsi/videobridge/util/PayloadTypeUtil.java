@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge;
+package org.jitsi.videobridge.util;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.format.*;
+import org.jitsi.service.neomedia.*;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,7 +39,9 @@ public class PayloadTypeUtil
      * given {@link PayloadTypePacketExtension}.
      * @param ext the XML extension which describes the payload type.
      */
-    public static PayloadType create(@NotNull PayloadTypePacketExtension ext)
+    public static PayloadType create(
+            @NotNull PayloadTypePacketExtension ext,
+            MediaType mediaType)
     {
         Map<String, String> parameters = new ConcurrentHashMap<>();
         for (ParameterPacketExtension parameter : ext.getParameters())
@@ -47,8 +50,9 @@ public class PayloadTypeUtil
         }
 
         byte id = (byte)ext.getID();
+        PayloadTypeEncoding encoding
+                = PayloadTypeEncoding.Companion.createFrom(ext.getName());
         int clockRate = ext.getClockrate();
-        PayloadTypeEncoding encoding = PayloadTypeEncoding.Companion.createFrom(ext.getName());
 
         if (PayloadTypeEncoding.VP8 == encoding)
         {
@@ -69,6 +73,14 @@ public class PayloadTypeUtil
         else if (PayloadTypeEncoding.OPUS == encoding)
         {
             return new OpusPayloadType(id, parameters);
+        }
+        else if (MediaType.AUDIO.equals(mediaType))
+        {
+            return new OtherAudioPayloadType(id, clockRate, parameters);
+        }
+        else if (MediaType.VIDEO.equals(mediaType))
+        {
+            return new OtherVideoPayloadType(id, clockRate, parameters);
         }
 
         return null;
