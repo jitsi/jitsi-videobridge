@@ -93,7 +93,7 @@ class RtxHandler : Node("RTX handler") {
             is RtpPayloadTypeAddedEvent -> {
                 if (event.payloadType is RtxPayloadType) {
                     val rtxPt = event.payloadType.pt.toUInt()
-                    event.payloadType.parameters[PayloadType.RTX_APT]?.toByte()?.toUInt()?.let {
+                    event.payloadType.parameters["apt"]?.toByte()?.toUInt()?.let {
                         val associatedPt = it
                         logger.cinfo { "RtxHandler associating RTX payload type $rtxPt with primary $associatedPt" }
                         associatedPayloadTypes[rtxPt] = associatedPt

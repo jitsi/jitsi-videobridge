@@ -96,7 +96,7 @@ class RetransmissionSender : Node("Retransmission sender") {
             is RtpPayloadTypeAddedEvent -> {
                 if (event.payloadType is RtxPayloadType) {
                     val rtxPt = event.payloadType.pt.toUInt()
-                    event.payloadType.parameters[PayloadType.RTX_APT]?.toByte()?.toUInt()?.let {
+                    event.payloadType.parameters["apt"]?.toByte()?.toUInt()?.let {
                         val associatedPt = it
                         logger.cinfo { "Retransmission sender ${hashCode()} associating RTX payload type " +
                                 "$rtxPt with primary $associatedPt" }
