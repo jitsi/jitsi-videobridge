@@ -23,6 +23,7 @@ typealias PayloadTypeParams = Map<String, String>
  * Represents an RTP payload type.
  *
  * @author Boris Grozev
+ * @author Brian Baldino
  */
 abstract class PayloadType(
     /**
@@ -54,12 +55,11 @@ abstract class PayloadType(
 }
 
 enum class PayloadTypeEncoding {
-    UNKNOWN,
+    OTHER,
     VP8,
     VP9,
     H264,
     RTX,
-    RTX_APT,
     OPUS;
 
     var unknownVal: String? = null
@@ -73,7 +73,7 @@ enum class PayloadTypeEncoding {
             return try {
                 PayloadTypeEncoding.valueOf(value.toUpperCase())
             } catch (e: IllegalArgumentException) {
-                return PayloadTypeEncoding.UNKNOWN.also { it.unknownVal = value }
+                return PayloadTypeEncoding.OTHER.also { it.unknownVal = value }
             }
         }
     }
@@ -123,3 +123,15 @@ class OpusPayloadType(
     pt: Byte,
     parameters: PayloadTypeParams = ConcurrentHashMap()
 ) : AudioPayloadType(pt, PayloadTypeEncoding.OPUS, parameters = parameters)
+
+class OtherAudioPayloadType(
+    pt: Byte,
+    clockRate: Int,
+    parameters: PayloadTypeParams = ConcurrentHashMap()
+) : AudioPayloadType(pt, PayloadTypeEncoding.OTHER, clockRate, parameters)
+
+class OtherVideoPayloadType(
+    pt: Byte,
+    clockRate: Int,
+    parameters: PayloadTypeParams = ConcurrentHashMap()
+) : VideoPayloadType(pt, PayloadTypeEncoding.OTHER, clockRate, parameters)
