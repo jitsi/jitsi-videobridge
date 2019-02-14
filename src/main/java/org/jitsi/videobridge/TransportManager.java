@@ -179,11 +179,4 @@ public abstract class TransportManager
      * connectivity.
      */
     public abstract boolean isConnected();
-
-    public void onTransportConnected(Runnable handler)
-    {
-        //TODO: revisit whether this method makes sense long term and, if so,
-        // clean it up when we clean up the transport manager object
-        // hierarchy/which types will stick around/etc. no op by default
-    }
 }
