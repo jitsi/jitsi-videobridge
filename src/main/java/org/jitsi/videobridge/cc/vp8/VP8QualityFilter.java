@@ -17,6 +17,8 @@ package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
+import org.jitsi.service.configuration.ConfigurationService;
+import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 
@@ -35,6 +37,30 @@ class VP8QualityFilter
      */
     private static final Logger
         logger = Logger.getLogger(VP8QualityFilter.class);
+
+    /**
+     * The system property name that for a boolean that's controlling whether or
+     * not to enable temporal scalability filtering for VP8.
+     */
+    public static final String ENABLE_SVC_PNAME = "org.jitsi" +
+            ".videobridge.ENABLE_SVC";
+
+    /**
+     * The {@link ConfigurationService} to pull configuration options from.
+     */
+    private static ConfigurationService cfg = LibJitsi.getConfigurationService();
+
+    /**
+     * A boolean that's controlling whether or not to enable SVC filtering for
+     * scalable video codecs.
+     */
+    private static final Boolean ENABLE_SVC
+            = cfg.getBoolean(ENABLE_SVC_PNAME, false);
+
+    /**
+     * Constant which defines the number of temporal layers per VP8 stream.
+     */
+    private static final int NUM_TEMPORAL_LAYERS = ENABLE_SVC ? 3 : 1;
 
     /**
      * The default maximum frequency (in millis) at which the media engine
@@ -110,13 +136,24 @@ class VP8QualityFilter
         int incomingIndex,
         int externalTargetIndex, long nowMs)
     {
+        byte[] buf = firstPacketOfFrame.getBuffer();
+        int payloadOff = firstPacketOfFrame.getPayloadOffset(),
+                payloadLen = firstPacketOfFrame.getPayloadLength();
+        int temporalLayerIdOfFrame = DePacketizer.VP8PayloadDescriptor
+                .getTemporalLayerIndex(buf, payloadOff, payloadLen);
+
+        // If the stream does not have temporal scalability enabled it contains
+        // only one temporal layer and in such case externalTargetIndex
+        // may be use both as an index of temporal and spatial layer target.
+        boolean frameHasTemporalLayerIndex = temporalLayerIdOfFrame > -1;
+
         // We make local copies of the externalTemporalLayerIdTarget and the
         // externalSpatialLayerIdTarget (as they may be updated by some other
         // thread).
-        int externalTemporalLayerIdTarget
-            = getTemporalLayerId(externalTargetIndex);
-        int externalSpatialLayerIdTarget
-            = getSpatialLayerId(externalTargetIndex);
+        int externalTemporalLayerIdTarget = frameHasTemporalLayerIndex
+                ? getTemporalLayerId(externalTargetIndex) : externalTargetIndex;
+        int externalSpatialLayerIdTarget = frameHasTemporalLayerIndex
+                ? getSpatialLayerId(externalTargetIndex) : externalTargetIndex;
 
         if (externalSpatialLayerIdTarget != internalSpatialLayerIdTarget)
         {
@@ -138,19 +175,10 @@ class VP8QualityFilter
             return false;
         }
 
-        byte[] buf = firstPacketOfFrame.getBuffer();
-        int payloadOff = firstPacketOfFrame.getPayloadOffset(),
-            payloadLen = firstPacketOfFrame.getPayloadLength();
-        int temporalLayerIdOfFrame = DePacketizer.VP8PayloadDescriptor
-            .getTemporalLayerIndex(buf, payloadOff, payloadLen);
-
         if (temporalLayerIdOfFrame < 0)
         {
-            // This is strange; If temporal scalability is enabled the TID is
-            // included in every packet (keyframe, interframe, continuation). So
-            // it seems like the encoder has disabled (or maybe it has never
-            // enabled?) temporal scalability.. For now we will pretend that
-            // this is the base temporal layer.
+            // This means that temporal scalability is disabled. We should treat
+            // it as a base temporal layer.
             temporalLayerIdOfFrame = 0;
         }
 
@@ -165,6 +193,13 @@ class VP8QualityFilter
                 && isPossibleToSwitch(firstPacketOfFrame, spatialLayerId))
             {
                 needsKeyframe = true;
+            }
+
+            if (!ENABLE_SVC)
+            {
+                // Temporal scalability filtering is disabled, we should
+                // accept all temporal layers.
+                return true;
             }
 
             // This branch reads the {@link #currentSpatialLayerId} and it
@@ -359,7 +394,7 @@ class VP8QualityFilter
      */
     private static int getTemporalLayerId(int index)
     {
-        return index > -1 ? index % 3 : -1;
+        return index > -1 ? index % NUM_TEMPORAL_LAYERS : -1;
     }
 
     /**
@@ -374,6 +409,6 @@ class VP8QualityFilter
      */
     private static int getSpatialLayerId(int index)
     {
-        return index > -1 ? index / 3 : -1;
+        return index > -1 ? index / NUM_TEMPORAL_LAYERS : -1;
     }
 }

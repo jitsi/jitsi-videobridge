@@ -71,6 +71,18 @@ class VP8Frame
 
     /**
      * A boolean that indicates whether the incoming VP8 frame that this
+     * instance refers to contains temporal-layer index (RFC7741).
+     */
+    private final boolean hasTemporalLayerIndex;
+
+    /**
+     * The VP8 extended PictureID of the incoming VP8 frame that this instance
+     * refers to (RFC7741).
+     */
+    private final int extendedPictureId;
+
+    /**
+     * A boolean that indicates whether the incoming VP8 frame that this
      * instance refers to is a keyframe (RFC7741).
      */
     private final boolean isKeyframe;
@@ -137,6 +149,10 @@ class VP8Frame
             .VP8PayloadDescriptor.isReference(buf, payloadOffset, payloadLen);
         this.isTL0 = DePacketizer.VP8PayloadDescriptor
             .getTemporalLayerIndex(buf, payloadOffset, payloadLen) == 0;
+        this.extendedPictureId = DePacketizer.VP8PayloadDescriptor
+                .getPictureId(buf, payloadOffset);
+        this.hasTemporalLayerIndex = DePacketizer.VP8PayloadDescriptor
+                .getTemporalLayerIndex(buf, payloadOffset, payloadLen) > -1;
     }
 
     /**
@@ -225,6 +241,31 @@ class VP8Frame
     {
         return matchesSSRC(vp8Frame) && vp8Frame.isTL0
             && nextTL0PICIDX(tl0PICIDX) == vp8Frame.tl0PICIDX;
+    }
+
+    /**
+     * Tiny utility method that returns the next extended picture id as an int.
+     *
+     * @return the next extended picture id as an int.
+     */
+    private int nextExtendedPictureId(int extendedPictureId)
+    {
+        return (extendedPictureId + 1)
+            & DePacketizer.VP8PayloadDescriptor.EXTENDED_PICTURE_ID_MASK;
+    }
+
+    /**
+     * Small utility method that checks whether the {@link VP8Frame} that is
+     * specified as a parameter is the next (with respect to the frame that this
+     * instance represents) VP8 frame based on its picture id.
+     *
+     * @param vp8Frame the {@link VP8Frame} to check whether it's the next frame.
+     * @return true if the VP8 frame is the next frame.
+     */
+    private boolean isNextFrame(@NotNull VP8Frame vp8Frame)
+    {
+        return matchesSSRC(vp8Frame) && nextExtendedPictureId(extendedPictureId)
+            == vp8Frame.extendedPictureId;
     }
 
     /**
@@ -333,6 +374,25 @@ class VP8Frame
         if (!matchesSSRC(vp8Frame))
         {
             return false;
+        }
+
+        // If this instance is not a scalable VP8 frame, we don't check any
+        // temporal properties
+        if (!hasTemporalLayerIndex)
+        {
+            if (!isReference)
+            {
+                // This instance is a non-reference frame, we can "massacre" it if
+                // needed.
+                return true;
+            }
+            else
+            {
+                // This instance is a reference frame. Reference
+                // frames MUST NOT be corrupted, unless the new frame is a
+                // keyframe
+                return isNextFrame(vp8Frame) && endingSequenceNumberIsKnown();
+            }
         }
 
         if (!isReference)

@@ -396,10 +396,15 @@ public class VP8FrameProjection
         int payloadOff = pkt.getPayloadOffset()
             , payloadLen = pkt.getPayloadLength();
 
-        if (!DePacketizer.VP8PayloadDescriptor.setTL0PICIDX(
-            buf, payloadOff, payloadLen, tl0PICIDX))
-        {
-            logger.warn("Failed to set the TL0PICIDX of a VP8 packet.");
+        boolean hasTemporalLayerIndex = DePacketizer.VP8PayloadDescriptor
+            .getTemporalLayerIndex(buf, payloadOff, payloadLen) > -1;
+
+        if (hasTemporalLayerIndex) {
+            if (!DePacketizer.VP8PayloadDescriptor.setTL0PICIDX(
+                    buf, payloadOff, payloadLen, tl0PICIDX))
+            {
+                logger.warn("Failed to set the TL0PICIDX of a VP8 packet.");
+            }
         }
 
         if (!DePacketizer.VP8PayloadDescriptor.setExtendedPictureId(

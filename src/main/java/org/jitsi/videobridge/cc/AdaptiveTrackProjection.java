@@ -264,32 +264,17 @@ public class AdaptiveTrackProjection
 
         if (Constants.VP8.equalsIgnoreCase(format.getEncoding()))
         {
-            // Context switch between VP8 simulcast and VP8 non-simulcast (sort
-            // of pretend that they're different codecs).
-            //
-            // HACK: When simulcast is activated, we also get temporal
-            // scalability, conversely if temporal scalability is disabled
-            // then simulcast is disabled.
-
-            byte[] buf = rtpPacket.getBuffer();
-            int payloadOffset = rtpPacket.getPayloadOffset(),
-                payloadLen = rtpPacket.getPayloadLength();
-
-            boolean hasTemporalLayerIndex = DePacketizer.VP8PayloadDescriptor
-                .getTemporalLayerIndex(buf, payloadOffset, payloadLen) > -1;
-
-            if (hasTemporalLayerIndex
-                && !(context instanceof VP8AdaptiveTrackProjectionContext))
+            // We use VP8 simulcast context for any kind of VP8 stream as
+            // currently we don't have any mean of distinguishing single VP8
+            // stream from simulcast VP8 stream from here.
+            // VP8 simulcast stream may or may not have temporal scalability
+            // enabled depending on the encoder configuration.
+            // TODO: use GenericAdaptiveTrackProjectionContext for single VP8
+            // stream
+            if (!(context instanceof VP8AdaptiveTrackProjectionContext))
             {
                 // context switch
                 context = new VP8AdaptiveTrackProjectionContext(format, getRtpState());
-                contextPayloadType = payloadType;
-            }
-            else if (!hasTemporalLayerIndex
-                && !(context instanceof GenericAdaptiveTrackProjectionContext))
-            {
-                // context switch
-                context = new GenericAdaptiveTrackProjectionContext(format, getRtpState());
                 contextPayloadType = payloadType;
             }
 
