@@ -197,6 +197,8 @@ public class IceUdpTransportManager
         {
             eventAdmin.sendEvent(EventFactory.transportCreated(this));
         }
+
+        iceAgent.addStateChangeListener(this::iceAgentStateChange);
     }
 
     /**
@@ -284,6 +286,7 @@ public class IceUdpTransportManager
             }
             if (iceAgent != null)
             {
+                iceAgent.removeStateChangeListener(this::iceAgentStateChange);
                 iceAgent.free();
                 iceAgent = null;
             }
@@ -727,6 +730,38 @@ public class IceUdpTransportManager
         candidateID.append(Long.toHexString(candidate.hashCode()));
 
         return candidateID.toString();
+    }
+
+    private void iceAgentStateChange(PropertyChangeEvent ev)
+    {
+        IceProcessingState oldState = (IceProcessingState) ev.getOldValue();
+        IceProcessingState newState = (IceProcessingState) ev.getNewValue();
+
+        logger.info(getLoggingId() + "ICE state changed old_state=" +
+                oldState + " new_state=" + newState);
+
+        // We should be using newState.isEstablished() here, but we see
+        // transitions from RUNNING to COMPLETED, which should not happen and
+        // when they happen the connection is not successful. So we handle that
+        // case separately below.
+        if (IceProcessingState.COMPLETED.equals(newState))
+        {
+            onIceConnected();
+        }
+        else if (IceProcessingState.FAILED.equals(newState)
+            || (IceProcessingState.RUNNING.equals(oldState)
+                    && IceProcessingState.TERMINATED.equals(newState)))
+        {
+            onIceFailed();
+        }
+    }
+
+    protected void onIceConnected()
+    {
+    }
+
+    protected void onIceFailed()
+    {
     }
 
 
