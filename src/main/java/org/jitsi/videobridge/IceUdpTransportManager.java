@@ -21,7 +21,6 @@ import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
-import net.java.sip.communicator.util.*;
 
 import org.ice4j.*;
 import org.ice4j.ice.*;
@@ -30,9 +29,7 @@ import org.jitsi.eventadmin.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
-import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.transport.*;
-import org.osgi.framework.*;
 
 /**
  * Implements the Jingle ICE-UDP transport.
@@ -99,20 +96,9 @@ public class IceUdpTransportManager
     protected boolean closed = false;
 
     /**
-     * The <tt>Conference</tt> object that this <tt>TransportManager</tt> is
-     * associated with.
-     */
-    protected final Conference conference;
-
-    /**
      * The {@link DiagnosticContext} of this diagnostic instance provider.
      */
     private final DiagnosticContext diagnosticContext = new DiagnosticContext();
-
-    /**
-     * An identifier of this {@link IceUdpTransportManager}.
-     */
-    protected final String id;
 
     /**
      * The ICE {@link Agent}.
@@ -164,6 +150,11 @@ public class IceUdpTransportManager
     private final Logger logger;
 
     /**
+     * A string to add to log messages to identify the instance.
+     */
+    protected final String logPrefix;
+
+    /**
      * Initializes a new <tt>IceUdpTransportManager</tt> instance.
      *
      * @param conference the <tt>Conference</tt> which created this
@@ -174,13 +165,11 @@ public class IceUdpTransportManager
      * @throws IOException
      */
     IceUdpTransportManager(
-            Conference conference,
-            boolean controlling,
-            String id)
+            Endpoint endpoint,
+            boolean controlling)
         throws IOException
     {
-        this.conference = conference;
-        this.id = id;
+        Conference conference = endpoint.getConference();
         this.controlling = controlling;
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
 
@@ -188,11 +177,18 @@ public class IceUdpTransportManager
         conference.appendDiagnosticInformation(diagnosticContext);
         diagnosticContext.put("transport", hashCode());
 
-        String streamName = "stream-" + id;
-        iceAgent = createIceAgent(controlling, streamName);
+        ConfigurationService cfg
+                = conference.getVideobridge().getConfigurationService();
+        String streamName = "stream-" + endpoint.getID();
+        iceAgent = createIceAgent(controlling, streamName, cfg);
         iceStream = iceAgent.getStream(streamName);
         iceComponent = iceStream.getComponent(Component.RTP);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
+
+        this.logPrefix
+                = "[endpoint=" + endpoint.getID() +
+                " conference=" + conference.getID() +
+                " local_ufrag=" + iceAgent.getLocalUfrag() + "] ";
 
         EventAdmin eventAdmin = conference.getEventAdmin();
         if (eventAdmin != null)
@@ -213,17 +209,21 @@ public class IceUdpTransportManager
      * to.
      * <tt>IceUdpTransportManager</tt>.
      */
-    private void configureHarvesters(Agent iceAgent)
+    private void configureHarvesters(Agent iceAgent, ConfigurationService cfg)
     {
-        ConfigurationService cfg
-            = ServiceUtils.getService(
-                    getBundleContext(),
-                    ConfigurationService.class);
         boolean disableDynamicHostHarvester = false;
 
-        useComponentSocket
-                = cfg.getBoolean(USE_COMPONENT_SOCKET_PNAME, useComponentSocket);
-        logger.info("Using component socket: " + useComponentSocket);
+        if (cfg != null)
+        {
+            useComponentSocket
+                    = cfg.getBoolean(
+                            USE_COMPONENT_SOCKET_PNAME,
+                            useComponentSocket);
+        }
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Using component socket: " + useComponentSocket);
+        }
 
         iceUfragPrefix = cfg.getString(ICE_UFRAG_PREFIX_PNAME, null);
         String strategyName = cfg.getString(KEEP_ALIVE_STRATEGY_PNAME);
@@ -293,6 +293,9 @@ public class IceUdpTransportManager
                 iceAgent = null;
             }
 
+            // TODO do we have any sockets left to close, or does Component
+            // take care of that?
+
             super.close();
         }
     }
@@ -310,14 +313,15 @@ public class IceUdpTransportManager
      * @throws IOException if initializing a new <tt>Agent</tt> instance for the
      * purposes of this <tt>TransportManager</tt> fails
      */
-    private Agent createIceAgent(boolean controlling, String streamName)
+    private Agent createIceAgent(
+            boolean controlling, String streamName, ConfigurationService cfg)
             throws IOException
     {
         Agent iceAgent = new Agent(logger.getLevel(), iceUfragPrefix);
 
         //add videobridge specific harvesters such as a mapping and an Amazon
         //AWS EC2 harvester
-        configureHarvesters(iceAgent);
+        configureHarvesters(iceAgent, cfg);
         iceAgent.setControlling(controlling);
         iceAgent.setPerformConsentFreshness(true);
 
@@ -360,6 +364,7 @@ public class IceUdpTransportManager
      * @return the URL to advertise for COLIBRI WebSocket connections for this
      * transport manager.
      */
+    /*
     private String getColibriWsUrl()
     {
         BundleContext bundleContext
@@ -371,25 +376,18 @@ public class IceUdpTransportManager
         {
             return colibriWebSocketService.getColibriWebSocketUrl(
                 getConference().getID(),
-                id,
+                endpoint.getID(),
                 iceAgent.getLocalPassword());
         }
 
         return null;
     }
-
-    /**
-     * Gets the <tt>Conference</tt> object that this <tt>TransportManager</tt>
-     * is associated with.
-     */
-    protected Conference getConference()
-    {
-        return conference;
-    }
+    */
 
     /**
      * Gets the ICE local username fragment.
      */
+    @SuppressWarnings("unused") // colibri ws
     String getLocalUfrag()
     {
         Agent iceAgent = this.iceAgent;
@@ -403,22 +401,6 @@ public class IceUdpTransportManager
     {
         Agent iceAgent = this.iceAgent;
         return iceAgent == null ? null : iceAgent.getLocalPassword();
-    }
-
-    /**
-     * Gets the <tt>BundleContext</tt> associated with the <tt>Channel</tt>
-     * that this {@link net.java.sip.communicator.service.protocol.media
-     * .TransportManager} is servicing. The method is a
-     * convenience which gets the <tt>BundleContext</tt> associated with the
-     * XMPP component implementation in which the <tt>Videobridge</tt>
-     * associated with this instance is executing.
-     *
-     * @return the <tt>BundleContext</tt> associated with this
-     * <tt>IceUdpTransportManager</tt>
-     */
-    public BundleContext getBundleContext()
-    {
-        return conference != null ? conference.getBundleContext() : null;
     }
 
     /**
@@ -446,6 +428,8 @@ public class IceUdpTransportManager
             //TODO(brian): touch activity in new scheme here
             // TODO we might not necessarily want to keep all channels alive by
             // the ICE connection.
+            // Boris: I think we should do it for all channels, because it's
+            // limited to ActivityType.TRANSPORT
 //            getChannels().forEach(
 //                channel -> channel.touch(Channel.ActivityType.TRANSPORT));
         }
@@ -461,16 +445,6 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Gets a string with identifying information for this instance to be used
-     * when logging.
-     * @return
-     */
-    public String getLoggingId()
-    {
-        return "[endpointId=" + id + " local_ufrag=" + getLocalUfrag() + "] ";
-    }
-
-    /**
      * {@inheritDoc}
      * @param transportPacketExtension
      */
@@ -482,8 +456,7 @@ public class IceUdpTransportManager
         {
             if (logger.isDebugEnabled())
             {
-                logger.debug("Connection already established for " +
-                        getLoggingId());
+                logger.debug(logPrefix + "Connection already established.");
             }
             return;
         }
@@ -509,7 +482,7 @@ public class IceUdpTransportManager
         if (iceAgentStateIsRunning && remoteCandidates.isEmpty()) {
             if (logger.isDebugEnabled())
             {
-                logger.debug(getLoggingId() +
+                logger.debug(logPrefix +
                         "Ignoring transport extension with no candidates, "
                         + "the Agent is already running.");
             }
@@ -542,7 +515,7 @@ public class IceUdpTransportManager
             // until we have at least one remote candidate per ICE Component.
             if (iceComponent.getRemoteCandidateCount() >= 1)
             {
-                logger.info(getLoggingId() +
+                logger.info(logPrefix +
                         "Starting the agent with remote candidates.");
                 iceAgent.startConnectivityEstablishment();
             }
@@ -552,7 +525,7 @@ public class IceUdpTransportManager
         {
             // We don't have any remote candidates, but we already know the
             // remote ufrag and password, so we can start ICE.
-            logger.info(getLoggingId() +
+            logger.info(logPrefix +
                     "Starting the Agent without remote candidates. ");
             iceAgent.startConnectivityEstablishment();
         }
@@ -560,7 +533,7 @@ public class IceUdpTransportManager
         {
             if (logger.isDebugEnabled())
             {
-                logger.debug(getLoggingId() +
+                logger.debug(logPrefix +
                         " Not starting ICE, no ufrag and pwd yet. " +
                         transportPacketExtension.toXML());
             }
@@ -721,7 +694,6 @@ public class IceUdpTransportManager
     {
         StringBuilder candidateID = new StringBuilder();
 
-        candidateID.append(conference.getID());
         candidateID.append(Long.toHexString(hashCode()));
 
         Agent iceAgent
@@ -739,7 +711,7 @@ public class IceUdpTransportManager
         IceProcessingState oldState = (IceProcessingState) ev.getOldValue();
         IceProcessingState newState = (IceProcessingState) ev.getNewValue();
 
-        logger.info(getLoggingId() + "ICE state changed old_state=" +
+        logger.info(logPrefix + "ICE state changed old_state=" +
                 oldState + " new_state=" + newState);
 
         // We should be using newState.isEstablished() here, but we see
@@ -766,6 +738,4 @@ public class IceUdpTransportManager
     protected void onIceFailed()
     {
     }
-
-
 }

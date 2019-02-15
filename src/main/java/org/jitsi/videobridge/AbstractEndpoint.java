@@ -56,17 +56,16 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     private final String id;
 
     /**
-     * The string used to identify this endpoint for the purposes of logging.
-     */
-    private final String loggingId;
-
-    /**
      * The {@link Logger} used by the {@link Endpoint} class to print debug
      * information.
      */
-    private static final Logger classLogger = Logger.getLogger(AbstractEndpoint.class);
+    private static final Logger classLogger
+            = Logger.getLogger(AbstractEndpoint.class);
 
-    protected final Logger logger;
+    /**
+     * The instance logger.
+     */
+    private final Logger logger;
 
     /**
      * A reference to the <tt>Conference</tt> this <tt>Endpoint</tt> belongs to.
@@ -99,8 +98,16 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     private boolean expired = false;
 
-    //Public for now since the channel needs to reach in and grab it
+     /**
+     * The string used to identify this endpoint for the purposes of logging.
+     */
+    protected final String logPrefix;
+
+    /**
+     * Public for now since the channel needs to reach in and grab it
+     */
     public Transceiver transceiver;
+
     /**
      * Initializes a new {@link AbstractEndpoint} instance.
      * @param conference the {@link Conference} which this endpoint is to be a
@@ -110,11 +117,18 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     protected AbstractEndpoint(Conference conference, String id)
     {
         this.conference = Objects.requireNonNull(conference, "conference");
+        logPrefix
+            = "[id=" + id + " conference=" + conference.getID() + "] ";
         logger = Logger.getLogger(classLogger, conference.getLogger());
         this.id = Objects.requireNonNull(id, "id");
         this.lastNFilter = new LastNFilter(id);
-        loggingId = conference.getLoggingId() + ",endp_id=" + id;
-        transceiver = new Transceiver(getID(), TaskPools.CPU_POOL, TaskPools.CPU_POOL, TaskPools.SCHEDULED_POOL, logger);
+        transceiver
+                = new Transceiver(
+                        id,
+                        TaskPools.CPU_POOL,
+                        TaskPools.CPU_POOL,
+                        TaskPools.SCHEDULED_POOL,
+                        logger);
         transceiver.setIncomingRtpHandler(new Node("RTP receiver chain handler")
         {
             @Override
@@ -140,7 +154,12 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     }
 
     @Override
-    public void onNewSsrcAssociation(String epId, long primarySsrc, long secondarySsrc, SsrcAssociationType type) {
+    public void onNewSsrcAssociation(
+            String endpointId,
+            long primarySsrc,
+            long secondarySsrc,
+            SsrcAssociationType type)
+    {
         transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, type);
     }
 
@@ -148,7 +167,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     {
         if (logger.isDebugEnabled())
         {
-            logger.debug("Endpoint " + getID() + " got notified about active endpoints: " + endpoints);
+            logger.debug(logPrefix +
+                    "Got notified about active endpoints: " + endpoints);
         }
         lastNFilter.setEndpointsSortedByActivity(endpoints);
     }
@@ -245,7 +265,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         });
     }
 
-    public boolean receivesSsrc(long ssrc) {
+    public boolean receivesSsrc(long ssrc)
+    {
         return transceiver.receivesSsrc(ssrc);
     }
 
@@ -253,7 +274,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     {
         if (logger.isDebugEnabled())
         {
-            logger.debug("Endpoint " + getID() + " adding receive ssrc " + ssrc);
+            logger.debug(logPrefix + "Adding receive ssrc " + ssrc);
         }
         transceiver.addReceiveSsrc(ssrc);
     }
@@ -390,7 +411,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     public void expire()
     {
-        logger.info("Endpoint " + getID() + " expiring");
+        logger.info(logPrefix + "Expiring.");
         logger.info(UtilKt.getStackTrace());
         this.expired = true;
         this.transceiver.stop();
@@ -400,22 +421,18 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         if (conference != null)
         {
             conference.removePropertyChangeListener(this);
-            TransportManager tm = conference.getTransportManager(this.id);
-            if (tm != null)
-            {
-                tm.close();
-            }
             conference.endpointExpired(this);
         }
     }
 
     /**
-     * Return true if this endpoint should expire (based on whatever logic is appropriate for that endpoint
-     * implementation.
+     * Return true if this endpoint should expire (based on whatever logic is
+     * appropriate for that endpoint implementation.
      *
-     * NOTE(brian): Currently the bridge will automatically expire an endpoint if all of its channel shims are removed.
-     *  Maybe we should instead have this logic always be called before expiring instead?  But that would mean that
-     *  expiration in the case of channel removal would take longer.
+     * NOTE(brian): Currently the bridge will automatically expire an endpoint
+     * if all of its channel shims are removed. Maybe we should instead have
+     * this logic always be called before expiring instead? But that would mean
+     * that expiration in the case of channel removal would take longer.
      *
      * @return true if this endpoint should expire, false otherwise
      */
@@ -428,16 +445,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public long getLastActivity()
     {
         return 0;
-    }
-
-    /**
-     * @return a string which identifies this {@link Endpoint} for the
-     * purposes of logging. The string is a comma-separated list of "key=value"
-     * pairs.
-     */
-    public String getLoggingId()
-    {
-        return loggingId;
     }
 
     /**
@@ -516,5 +523,4 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
                     .findAny().orElse(null);
 
     }
-
 }

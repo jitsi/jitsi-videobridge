@@ -41,15 +41,6 @@ public class ConferenceShim
     private final Map<MediaType, ContentShim> contents = new HashMap<>();
 
     /**
-     * The list of channel bundles in this conference.
-     *
-     * Boris: can we get away with storing these in their associated endpoints
-     * directly?
-     */
-    private final Map<String, ChannelBundleShim> channelBundles
-            = new HashMap<>();
-
-    /**
      * Initializes a new {@link ConferenceShim} instance.
      *
      * @param conference the corresponding conference.
@@ -96,16 +87,6 @@ public class ConferenceShim
         }
     }
 
-    public ChannelBundleShim getOrCreateChannelBundle(String channelBundleId)
-    {
-        synchronized (channelBundles)
-        {
-            return channelBundles.computeIfAbsent(
-                    channelBundleId,
-                    id -> new ChannelBundleShim(conference, channelBundleId));
-        }
-    }
-
     public Collection<AbstractEndpoint> getEndpoints()
     {
         return conference.getEndpoints();
@@ -113,21 +94,25 @@ public class ConferenceShim
 
     public void describeChannelBundles(
             ColibriConferenceIQ iq,
-            Set<String> channelBundleIdsToDescribe)
+            Set<String> endpointIds)
     {
-        synchronized (channelBundles)
+        for (AbstractEndpoint endpoint : getEndpoints())
         {
-            channelBundleIdsToDescribe.forEach(bundleId -> {
-                ChannelBundleShim channelBundle = channelBundles.get(bundleId);
-                if (channelBundle != null)
+            String endpointId = endpoint.getID();
+            if (endpointIds.contains(endpointId))
+            {
+                TransportManager transportManager
+                        = ((Endpoint)endpoint).getTransportManager();
+
+                if (transportManager != null)
                 {
                     ColibriConferenceIQ.ChannelBundle responseBundleIQ
-                            = new ColibriConferenceIQ.ChannelBundle(bundleId);
-                    channelBundle.describe(responseBundleIQ);
+                            = new ColibriConferenceIQ.ChannelBundle(endpointId);
+                    transportManager.describe(responseBundleIQ);
 
                     iq.addChannelBundle(responseBundleIQ);
                 }
-            });
+            }
         }
     }
 

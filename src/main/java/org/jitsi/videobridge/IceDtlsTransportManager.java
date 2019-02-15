@@ -55,7 +55,7 @@ public class IceDtlsTransportManager
     private DtlsSender dtlsSender = new DtlsSender(dtlsStack);
     private List<Runnable> dtlsConnectedSubscribers = new ArrayList<>();
     private final PacketInfoQueue outgoingPacketQueue;
-    private Endpoint endpoint = null;
+    private final Endpoint endpoint;
 
     private SocketSenderNode packetSender = new SocketSenderNode();
     private Node incomingPipelineRoot = createIncomingPipeline();
@@ -64,15 +64,20 @@ public class IceDtlsTransportManager
     protected boolean dtlsHandshakeComplete = false;
     private boolean iceConnectedProcessed = false;
 
-    public IceDtlsTransportManager(String id, Conference conference)
+    public IceDtlsTransportManager(Endpoint endpoint)
             throws IOException
     {
-        super(conference, true, id);
-        this.logger = Logger.getLogger(classLogger, conference.getLogger());
+        super(endpoint, true);
+        this.endpoint = endpoint;
+
+        this.logger
+                = Logger.getLogger(
+                        classLogger,
+                        endpoint.getConference().getLogger());
 
         outgoingPacketQueue
                 = new PacketInfoQueue(
-                        "TM-outgoing-" + id,
+                        "TM-outgoing-" + endpoint.getID(),
                         TaskPools.IO_POOL,
                         this::handleOutgoingPacket);
     }
@@ -102,7 +107,7 @@ public class IceDtlsTransportManager
             }
             else
             {
-                logger.warn(
+                logger.warn(logPrefix +
                         "Ignoring empty DtlsFingerprint extension: "
                                 + transportPacketExtension.toXML());
             }
@@ -116,15 +121,6 @@ public class IceDtlsTransportManager
         }
 
         super.startConnectivityEstablishment(transportPacketExtension);
-    }
-
-    public void setEndpoint(Endpoint endpoint)
-    {
-        //TODO(brian): i think eventually we'll have the endpoint create its
-        // transport manager, which case we can just pass it in via the ctor
-        // (assuming we want to expose the entire endpoint.  maybe there's a
-        // more limited interface we can expose to the transportmanager?)
-        this.endpoint = endpoint;
     }
 
     @Override
@@ -264,14 +260,12 @@ public class IceDtlsTransportManager
                 }
                 catch (SocketClosedException e)
                 {
-                    logger.info(getLoggingId() +
-                            "Socket closed, stopping reader.");
+                    logger.info(logPrefix + "Socket closed, stopping reader.");
                     break;
                 }
                 catch (IOException e)
                 {
-                    logger.warn(getLoggingId() +
-                            "Stopping reader: ", e);
+                    logger.warn(logPrefix + "Stopping reader: ", e);
                     break;
                 }
             }
@@ -298,8 +292,8 @@ public class IceDtlsTransportManager
 
         dtlsStack.onHandshakeComplete((tlsContext) -> {
             dtlsHandshakeComplete = true;
-            logger.info(getLoggingId() +
-                    " DTLS handshake complete. Got SRTP profile " +
+            logger.info(logPrefix +
+                    "DTLS handshake complete. Got SRTP profile " +
                         dtlsStack.getChosenSrtpProtectionProfile());
             //TODO: emit this as part of the dtls handshake complete event?
             endpoint.setSrtpInformation(
@@ -309,7 +303,7 @@ public class IceDtlsTransportManager
         });
 
         packetSender.socket = socket;
-        logger.info(getLoggingId() + " Starting DTLS.");
+        logger.info(logPrefix + "Starting DTLS.");
         TaskPools.IO_POOL.submit(() -> {
             try
             {
@@ -317,7 +311,7 @@ public class IceDtlsTransportManager
             }
             catch (Exception e)
             {
-                logger.error(getLoggingId() +
+                logger.error(logPrefix +
                         "Error during DTLS negotiation: " + e.toString() +
                         ", closing this transport manager");
                 close();
@@ -349,7 +343,7 @@ public class IceDtlsTransportManager
                     }
                     catch (IOException e)
                     {
-                        logger.error(getLoggingId() +
+                        logger.error(logPrefix +
                                 "Error sending packet: " + e.toString());
                         throw new RuntimeException(e);
                     }

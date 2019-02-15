@@ -120,10 +120,13 @@ public class Health
                 throw new NullPointerException("Failed to create an endpoint.");
             }
 
-            // Create and install the transport manager
-            conference.getShim().getOrCreateChannelBundle(endpoint.getID());
+            // Trigger the creation of the transport manager.
+            if (endpoint.getTransportManager() == null)
+            {
+                throw new NullPointerException(
+                        "Failed to initialize the transport manager.");
+            }
 
-            endpoints.add(endpoint);
             endpoints.add(endpoint);
 
             endpoint.createSctpConnection();

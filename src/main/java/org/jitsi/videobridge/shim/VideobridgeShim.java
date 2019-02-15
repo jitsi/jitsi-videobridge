@@ -24,6 +24,7 @@ import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jxmpp.jid.*;
 
+import java.io.*;
 import java.util.*;
 
 /**
@@ -135,6 +136,9 @@ public class VideobridgeShim
                     = new ColibriConferenceIQ.Channel();
             channelShim.describe(responseChannelIQ);
             createdOrUpdatedChannels.add(responseChannelIQ);
+
+            // TODO: do we still want to support the legacy mode of putting
+            // <transport> inside <channel>?
         }
 
         return createdOrUpdatedChannels;
@@ -309,15 +313,30 @@ public class VideobridgeShim
         for (ColibriConferenceIQ.ChannelBundle channelBundleIq
                 : conferenceIQ.getChannelBundles())
         {
-            ChannelBundleShim channelBundleShim =
-                conferenceShim.getOrCreateChannelBundle(
-                    channelBundleIq.getId());
             IceUdpTransportPacketExtension transportIq
                     = channelBundleIq.getTransport();
-
-            if (channelBundleShim != null && transportIq != null)
+            if (transportIq == null)
             {
-                channelBundleShim.startConnectivityEstablishment(transportIq);
+                continue;
+            }
+
+            AbstractEndpoint endpoint
+                    = conference.getEndpoint(channelBundleIq.getId(), true);
+            if (endpoint instanceof Endpoint)
+            {
+                try
+                {
+                    ((Endpoint)endpoint).setTransportInfo(transportIq);
+                }
+                catch (IOException ioe)
+                {
+                    logger.error(
+                        "Error processing channel-bundle: " + ioe.toString());
+                    return IQUtils.createError(
+                            conferenceIQ,
+                            XMPPError.Condition.internal_server_error,
+                            "Failed to set transport: " + ioe.getMessage());
+                }
             }
         }
 

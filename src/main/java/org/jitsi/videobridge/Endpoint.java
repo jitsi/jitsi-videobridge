@@ -15,17 +15,18 @@
  */
 package org.jitsi.videobridge;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.bouncycastle.crypto.tls.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.stats.*;
-import org.jitsi.nlj.transform.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
@@ -35,7 +36,6 @@ import org.jitsi.videobridge.sctp.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi_modified.sctp4j.*;
-import org.jitsi_modified.service.neomedia.rtp.*;
 
 import java.beans.*;
 import java.io.*;
@@ -57,7 +57,6 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  * @author Pawel Domas
  * @author George Politis
  */
-@SuppressWarnings("JavadocReference")
 public class Endpoint
     extends AbstractEndpoint
 {
@@ -77,6 +76,18 @@ public class Endpoint
      */
     public static final String SELECTED_ENDPOINTS_PROPERTY_NAME
         = Endpoint.class.getName() + ".selectedEndpoints";
+
+    /**
+     * The {@link Logger} used by the {@link Endpoint} class to print debug
+     * information.
+     */
+    private static final Logger classLogger
+            = Logger.getLogger(Endpoint.class);
+
+    /**
+     * The logger for the instance.
+     */
+    private final Logger logger;
 
     /**
      * The set of IDs of the pinned endpoints of this {@code Endpoint}.
@@ -102,16 +113,6 @@ public class Endpoint
 
     private CompletableFuture<Boolean> onTransportManagerSet = new CompletableFuture<>();
 
-    /**
-     * The password of the ICE Agent associated with this endpoint: note that
-     * without bundle an endpoint might have multiple channels with different
-     * ICE Agents. In this case one of the channels will be chosen (in an
-     * unspecified way).
-     *
-     * Initialized lazily.
-     */
-    private String icePassword;
-
     private final EndpointMessageTransport messageTransport;
 
     /**
@@ -122,6 +123,22 @@ public class Endpoint
     private final BitrateController bitrateController;
 
     private final BandwidthProbing bandwidthProbing;
+
+    private DataChannelStack dataChannelStack;
+
+    /**
+     * This {@link Endpoint}'s transport manager.
+     * Since it contains an ICE Agent we don't want to initialize it
+     * prematurely, or more than once.
+     *
+     */
+    private IceDtlsTransportManager transportManager;
+
+    /**
+     * The exception thrown from the attempt to initialize the transport manager,
+     * if any.
+     */
+    private IOException transportManagerException = null;
 
     /**
      * Whether or not the bridge should be the peer which opens the data channel
@@ -154,6 +171,7 @@ public class Endpoint
     {
         super(conference, id);
 
+        logger = Logger.getLogger(classLogger, conference.getLogger());
         bitrateController = new BitrateController(
                 getID(),
                 conference.getLogger(),
@@ -163,28 +181,21 @@ public class Endpoint
         messageTransport = new EndpointMessageTransport(this);
 
         audioLevelListener = new AudioLevelListenerImpl(conference.getSpeechActivity());
-        bandwidthProbing = new BandwidthProbing(new BandwidthProbing.ProbingDataSender()
-        {
-            @Override
-            public int sendProbing(long mediaSsrc, int numBytes)
-            {
-                return Endpoint.this.transceiver.sendProbing(mediaSsrc, numBytes);
-            }
-        });
-        bandwidthProbing.setDiagnosticContext(transceiver.getDiagnosticContext());
+        bandwidthProbing
+            = new BandwidthProbing((mediaSsrc, numBytes) ->
+                    Endpoint.this.transceiver.sendProbing(mediaSsrc, numBytes));
+        bandwidthProbing.setDiagnosticContext(
+                transceiver.getDiagnosticContext());
         bandwidthProbing.setBitrateController(bitrateController);
         transceiver.setAudioLevelListener(audioLevelListener);
-        transceiver.onBandwidthEstimateChanged(new BandwidthEstimator.Listener()
+        transceiver.onBandwidthEstimateChanged(newValueBps ->
         {
-            @Override
-            public void bandwidthEstimationChanged(long newValueBps)
+            if (logger.isDebugEnabled())
             {
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug("Endpoint " + getID() + "'s estimated bandwidth is now " + newValueBps + " bps");
-                }
-                bitrateController.bandwidthChanged(newValueBps);
+                logger.debug(logPrefix +
+                        "Estimated bandwidth is now " + newValueBps + " bps.");
             }
+            bitrateController.bandwidthChanged(newValueBps);
         });
         transceiver.onBandwidthEstimateChanged(bandwidthProbing);
 
@@ -221,7 +232,7 @@ public class Endpoint
 
             if (logger.isDebugEnabled())
             {
-                logger.debug(getID() + " pinned "
+                logger.debug(logPrefix + "Pinned "
                     + Arrays.toString(pinnedEndpoints.toArray()));
             }
 
@@ -242,7 +253,7 @@ public class Endpoint
 
             if (logger.isDebugEnabled())
             {
-                logger.debug(getID() + " selected "
+                logger.debug(logPrefix + "Selected "
                     + Arrays.toString(selectedEndpoints.toArray()));
             }
 
@@ -410,7 +421,8 @@ public class Endpoint
     @Override
     public boolean shouldExpire()
     {
-        PacketIOActivity packetIOActivity = this.transceiver.getPacketIOActivity();
+        PacketIOActivity packetIOActivity
+                = this.transceiver.getPacketIOActivity();
 
         int maxExpireTimeSecsFromChannelShims = channelShims.stream()
                 .map(WeakReference::get)
@@ -418,17 +430,25 @@ public class Endpoint
                 .map(ChannelShim::getExpire)
                 .mapToInt(exp -> exp)
                 .max()
-                .orElse(0);
+                .orElse(60);
 
+        // TODO: if the expire thread decides to wake up and run before we've
+        // received or sent any packets it would expire us.
         long now = System.currentTimeMillis();
-        Duration timeSincePacketReceived = Duration.ofMillis(now - packetIOActivity.getLastPacketReceivedTimestampMs());
-        Duration timeSincePacketSent = Duration.ofMillis(now - packetIOActivity.getLastPacketSentTimestampMs());
+        Duration timeSincePacketReceived
+            = Duration.ofMillis(
+                    now - packetIOActivity.getLastPacketReceivedTimestampMs());
+        Duration timeSincePacketSent
+                = Duration.ofMillis(
+                    now - packetIOActivity.getLastPacketSentTimestampMs());
 
         if (timeSincePacketReceived.getSeconds() > maxExpireTimeSecsFromChannelShims &&
                 timeSincePacketSent.getSeconds() > maxExpireTimeSecsFromChannelShims)
         {
-            System.out.println("Endpoint " + getID() + " has neither received nor sent a packet in over " +
-                    maxExpireTimeSecsFromChannelShims + " seconds, should expire");
+            logger.info(logPrefix +
+                    "Has neither received nor sent a packet in over " +
+                    maxExpireTimeSecsFromChannelShims +
+                    " seconds, should expire.");
             return true;
         }
         return false;
@@ -444,7 +464,6 @@ public class Endpoint
 
         try
         {
-
             AbstractEndpointMessageTransport messageTransport = getMessageTransport();
             if (messageTransport != null)
             {
@@ -454,34 +473,33 @@ public class Endpoint
             {
                 sctpManager.closeConnection();
             }
-        } catch (Exception e) {
-            logger.error("Exception while expiring endpoint " + getID() + ": " + e.toString());
+        } catch (Exception e)
+        {
+            logger.error(logPrefix +
+                    "Exception while expiring: " + e.toString());
         }
         bandwidthProbing.enabled = false;
         recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing);
 
-        logger.info("Endpoint " + getID() + " expired");
+        if (transportManager != null)
+        {
+            transportManager.close();
+        }
+
+        logger.info(logPrefix + "Expired.");
     }
 
-    private DataChannelStack dataChannelStack;
-    private IceUdpTransportManager transportManager;
-
-    //TODO(brian): not sure if this is the final way we'll associate the transport manager and endpoint/transceiver,
-    // but it's a step.
-    public void setTransportManager(IceUdpTransportManager transportManager)
+    public void createSctpConnection()
     {
-        this.transportManager = transportManager;
-        ((IceDtlsTransportManager)transportManager).setEndpoint(this);
-        onTransportManagerSet.complete(true);
-    }
-
-    public void createSctpConnection() {
-        logger.info("Endpoint " + getID() + " creating SCTP manager");
+        if (logger.isDebugEnabled())
+        {
+            logger.debug(logPrefix + "Creating SCTP manager.");
+        }
         // Create the SctpManager and provide it a method for sending SCTP data
         this.sctpManager = new SctpManager(
                 (data, offset, length) -> {
                     PacketInfo packet = new PacketInfo(new UnparsedPacket(ByteBuffer.wrap(data, offset, length)));
-                    ((IceDtlsTransportManager)transportManager).sendDtlsData(packet);
+                    transportManager.sendDtlsData(packet);
                     return 0;
                 }
         );
@@ -494,21 +512,18 @@ public class Endpoint
             @Override
             public void onReady()
             {
-                logger.info(getID() + "'s SCTP connection is ready, creating the Data channel stack");
+                logger.info(logPrefix +
+                        "SCTP connection is ready, creating the Data channel stack");
                 dataChannelStack = new DataChannelStack((data, sid, ppid) -> socket.send(data, true, sid, ppid));
-                dataChannelStack.onDataChannelStackEvents(new DataChannelStack.DataChannelStackEventListener()
+                dataChannelStack.onDataChannelStackEvents(dataChannel ->
                 {
-                    @Override
-                    public void onDataChannelOpenedRemotely(DataChannel dataChannel)
-                    {
-                        logger.info("Remote side opened a data channel");
-                        Endpoint.this.messageTransport.setDataChannel(dataChannel);
-                    }
+                    logger.info(logPrefix + "Remote side opened a data channel.");
+                    Endpoint.this.messageTransport.setDataChannel(dataChannel);
                 });
                 dataChannelHandler.setDataChannelStack(dataChannelStack);
                 if (OPEN_DATA_LOCALLY)
                 {
-                    logger.info(getID() + " will open the data channel");
+                    logger.info(logPrefix + "Will open the data channel.");
                     DataChannel dataChannel = dataChannelStack.createDataChannel(
                             DataChannelProtocolConstants.RELIABLE,
                             0,
@@ -520,27 +535,31 @@ public class Endpoint
                 }
                 else
                 {
-                    logger.info(getID() + " will wait for the remote side to open the data channel");
+                    logger.info(logPrefix +
+                        "Will wait for the remote side to open the data channel.");
                 }
             }
 
             @Override
             public void onDisconnected()
             {
-                logger.info("Endpoint " + getID() + "'s SCTP connection is disconnected");
+                logger.info(logPrefix + "SCTP connection is disconnected.");
             }
         };
         socket.dataCallback = (data, sid, ssn, tsn, ppid, context, flags) -> {
             // We assume all data coming over SCTP will be datachannel data
-            DataChannelPacket dcp = new DataChannelPacket(ByteBuffer.wrap(data), sid, (int)ppid);
-            dataChannelHandler.doProcessPackets(Collections.singletonList(new PacketInfo(dcp)));
+            DataChannelPacket dcp
+                    = new DataChannelPacket(
+                            ByteBuffer.wrap(data), sid, (int)ppid);
+            dataChannelHandler.doProcessPackets(
+                    Collections.singletonList(new PacketInfo(dcp)));
         };
         socket.listen();
         // We don't want to block the calling thread on the onTransportManagerSet future completing
         // to add the onDtlsHandshakeComplete handler, so we'll asynchronously run the code which
         // adds the onDtlsHandshakeComplete handler from the IO pool.
         onTransportManagerSet.thenRunAsync(() -> {
-            ((IceDtlsTransportManager)transportManager).onDtlsHandshakeComplete(() -> {
+            transportManager.onDtlsHandshakeComplete(() -> {
                 // We don't want to block the thread calling onDtlsHandshakeComplete so run
                 // the socket acceptance in an IO pool thread
                 //TODO(brian): we should have a common 'notifier'/'publisher' interface that
@@ -556,7 +575,12 @@ public class Endpoint
                             break;
                         }
                     }
-                    logger.info("SCTP socket " + socket.hashCode() + " accepted connection");
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug(logPrefix +
+                                "SCTP socket " + socket.hashCode() +
+                                " accepted connection.");
+                    }
                 });
             });
         }, TaskPools.IO_POOL);
@@ -566,16 +590,16 @@ public class Endpoint
      * Checks whether a WebSocket connection with a specific password string
      * should be accepted for this {@link Endpoint}.
      * @param password the
-     * @return {@code true} iff the password matches and the WebSocket
+     * @return {@code true} iff the password matches.
      */
     public boolean acceptWebSocket(String password)
     {
         String icePassword = getIcePassword();
         if (icePassword == null || !icePassword.equals(password))
         {
-            logger.warn("Incoming web socket request with an invalid password."
-                            + "Expected: " + icePassword
-                            + ", received " + password);
+            logger.warn(logPrefix +
+                    "Incoming web socket request with an invalid password." +
+                    "Expected: " + icePassword + ", received " + password);
             return false;
         }
 
@@ -634,22 +658,8 @@ public class Endpoint
      */
     private String getIcePassword()
     {
-        if (icePassword != null)
-        {
-            return icePassword;
-        }
-
-        if (transportManager != null)
-        {
-            String password = transportManager.getIcePassword();
-            if (password != null)
-            {
-                this.icePassword = password;
-                return password;
-            }
-        }
-
-        return null;
+        return transportManager == null
+                ? null : transportManager.getIcePassword();
     }
 
     /**
@@ -664,8 +674,8 @@ public class Endpoint
             String selectedUpdate = createSelectedUpdateMessage(true);
             if (logger.isDebugEnabled())
             {
-                logger.debug("Endpoint " + getID() + " is now "
-                    + "selected, sending message: " + selectedUpdate);
+                logger.debug(logPrefix +
+                        "Is now selected, sending message: " + selectedUpdate);
             }
             try
             {
@@ -673,7 +683,8 @@ public class Endpoint
             }
             catch (IOException e)
             {
-                logger.error("Error sending SelectedUpdate message: " + e);
+                logger.error(logPrefix +
+                        "Error sending SelectedUpdate message: " + e);
             }
         }
     }
@@ -690,8 +701,9 @@ public class Endpoint
             String selectedUpdate = createSelectedUpdateMessage(false);
             if (logger.isDebugEnabled())
             {
-                logger.debug("Endpoint " + getID() + " is no longer "
-                    + "selected, sending message: " + selectedUpdate);
+                logger.debug(logPrefix +
+                        "Is no longer selected, sending message: " +
+                        selectedUpdate);
             }
             try
             {
@@ -699,9 +711,73 @@ public class Endpoint
             }
             catch (IOException e)
             {
-                logger.error("Error sending SelectedUpdate message: " + e);
+                logger.error(logPrefix +
+                        "Error sending SelectedUpdate message: " + e);
             }
         }
+    }
+
+    /**
+     * Gets this {@link Endpoint}'s transport manager. If there was a previous
+     * attempt to initialize the transport manager which failed, does not
+     * re-try and returns {@code null}.
+     *
+     * @return this {@link Endpoint}'s transport manager, or {@code null} if it
+     * failed to initialize.
+     */
+    public IceDtlsTransportManager getTransportManager()
+    {
+        if (transportManager != null)
+        {
+            return transportManager;
+        }
+        else if (transportManagerException != null)
+        {
+            // We've already tried and failed to initialize the TM.
+            return null;
+        }
+        else
+        {
+            try
+            {
+                transportManager = new IceDtlsTransportManager(this);
+            }
+            catch (IOException ioe)
+            {
+                transportManagerException = ioe;
+            }
+        }
+
+        return transportManager;
+    }
+
+    /**
+     * Sets the remote transport information (ICE candidates, DTLS fingerprints).
+     *
+     * @param transportInfo the XML extension which contains the remote
+     * transport information.
+     * @throws IOException if the endpoint's transport manager failed to
+     * initialize.
+     */
+    public void setTransportInfo(IceUdpTransportPacketExtension transportInfo)
+            throws IOException
+    {
+        IceDtlsTransportManager transportManager = getTransportManager();
+        if (transportManager == null)
+        {
+            IOException exception = transportManagerException;
+            if (exception == null)
+            {
+                // This should never happen.
+                exception
+                    = new IOException(
+                        "Unknown failure to initialize a transport manager.");
+            }
+
+            throw exception;
+        }
+
+        transportManager.startConnectivityEstablishment(transportInfo);
     }
 
     /**
