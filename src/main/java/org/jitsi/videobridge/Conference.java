@@ -30,7 +30,6 @@ import org.osgi.framework.*;
 
 import java.beans.*;
 import java.io.*;
-import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.logging.*;
@@ -64,18 +63,6 @@ public class Conference
      * #logger} instead.
      */
     private static final Logger classLogger = Logger.getLogger(Conference.class);
-
-    /**
-     * @return a string which identifies a specific {@link Conference} for the
-     * purposes of logging. The string is a comma-separated list of "key=value"
-     * pairs.
-     * @param conference The conference for which to return a string.
-     */
-    public static String getLoggingId(Conference conference)
-    {
-        return
-            (conference == null ? "conf_id=null" : conference.getLoggingId());
-    }
 
     /**
      * The <tt>Endpoint</tt>s participating in this <tt>Conference</tt>.
@@ -127,7 +114,7 @@ public class Conference
     /**
      * The string used to identify this conference for the purposes of logging.
      */
-    private final String loggingId;
+    private final String logPrefix;
 
     /**
      * The world readable name of this instance if any.
@@ -160,13 +147,6 @@ public class Conference
      * <tt>Conference</tt>.
      */
     private final ConferenceSpeechActivity speechActivity;
-
-    /**
-     * Maps an ID of a channel-bundle to the <tt>TransportManager</tt> instance
-     * responsible for its transport.
-     */
-    private final Map<String, IceUdpTransportManager> transportManagers
-        = new HashMap<>();
 
     /**
      * The <tt>Videobridge</tt> which has initialized this <tt>Conference</tt>.
@@ -236,11 +216,11 @@ public class Conference
         this.shim = new ConferenceShim(this);
         this.id = Objects.requireNonNull(id, "id");
         this.gid = gid;
-        this.loggingId = "conf_id=" + id;
         this.focus = focus;
         this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
         this.includeInStatistics = enableLogging;
         this.name = name;
+        this.logPrefix = "[id=" + id + " gid=" + gid + " name=" + name + "] ";
 
         if (!enableLogging)
         {
@@ -252,7 +232,7 @@ public class Conference
         speechActivity = new ConferenceSpeechActivity(this);
         speechActivity.addPropertyChangeListener(propertyChangeListener);
 
-        expireableImpl = new ExpireableImpl(loggingId, this::expire);
+        expireableImpl = new ExpireableImpl(logPrefix, this::expire);
 
         if (enableLogging)
         {
@@ -379,91 +359,6 @@ public class Conference
     }
 
     /**
-     * Closes given {@link #transportManagers} of this <tt>Conference</tt>
-     * and removes corresponding channel bundle.
-     */
-    void closeTransportManager(TransportManager transportManager)
-    {
-        synchronized (transportManagers)
-        {
-            transportManagers.values().removeIf(tm -> tm == transportManager);
-
-            // Close manager
-            try
-            {
-                transportManager.close();
-            }
-            catch (Throwable t)
-            {
-                logger.warn(
-                        "Failed to close an IceUdpTransportManager of"
-                                + " conference " + getID() + "!",
-                        t);
-                // The whole point of explicitly closing the
-                // transportManagers of this Conference is to prevent memory
-                // leaks. Hence, it does not make sense to possibly leave
-                // TransportManagers open because a TransportManager has
-                // failed to close.
-                if (t instanceof InterruptedException)
-                {
-                    Thread.currentThread().interrupt();
-                }
-                else if (t instanceof ThreadDeath)
-                {
-                    throw (ThreadDeath) t;
-                }
-            }
-        }
-    }
-
-    /**
-     * Closes the {@link #transportManagers} of this <tt>Conference</tt>.
-     */
-    private void closeTransportManagers()
-    {
-        synchronized (transportManagers)
-        {
-            while (!transportManagers.isEmpty())
-            {
-                // closeTransportManager handles the removal
-                closeTransportManager(transportManagers.values().iterator().next());
-            }
-        }
-    }
-
-
-    /**
-     * Adds the channel-bundles of this <tt>Conference</tt> as
-     * <tt>ColibriConferenceIQ.ChannelBundle</tt> instances in <tt>iq</tt>.
-     * @param iq the <tt>ColibriConferenceIQ</tt> in which to describe.
-     * @param channelBundleIdsToDescribe a filter of the IDs of channel bundles
-     * to describe. Channel bundles with IDs not on the list will not be
-     * described. If {@code channelBundleIdsToDescribe} is {@code null}, all
-     * channel bundles will be described.
-     */
-    void describeChannelBundles(
-        ColibriConferenceIQ iq, Set<String> channelBundleIdsToDescribe)
-    {
-        synchronized (transportManagers)
-        {
-            for (Map.Entry<String, IceUdpTransportManager> entry
-                    : transportManagers.entrySet())
-            {
-                String id = entry.getKey();
-                if (channelBundleIdsToDescribe == null
-                    || channelBundleIdsToDescribe.contains(id))
-                {
-                    ColibriConferenceIQ.ChannelBundle responseBundleIQ
-                        = new ColibriConferenceIQ.ChannelBundle(id);
-
-                    entry.getValue().describe(responseBundleIQ);
-                    iq.addChannelBundle(responseBundleIQ);
-                }
-            }
-        }
-    }
-
-    /**
      * Sets the values of the properties of a specific
      * <tt>ColibriConferenceIQ</tt> to the values of the respective
      * properties of this instance. Thus, the specified <tt>iq</tt> may be
@@ -496,9 +391,7 @@ public class Conference
         {
             String id
                 = dominantSpeaker == null ? "null" : dominantSpeaker.getID();
-            logger.info(Logger.Category.STATISTICS,
-                        "ds_change," + getLoggingId()
-                        + " ds_id=" + id);
+            logger.info(getLogPrefix() + "ds_change ds_id=" + id);
         }
 
         if (dominantSpeaker != null)
@@ -529,6 +422,7 @@ public class Conference
             }
         }
 
+        logger.warn(logPrefix + "Expiring.");
         EventAdmin eventAdmin = getEventAdmin();
         if (eventAdmin != null)
         {
@@ -543,13 +437,11 @@ public class Conference
         }
         finally
         {
-            // Close the transportManagers of this Conference. Normally, there
-            // will be no TransportManager left to close at this point because
-            // all Channels have expired and the last Channel to be removed from
-            // a TransportManager closes the TransportManager. However, a
-            // Channel may have expired before it has learned of its
-            // TransportManager and then the TransportManager will not close.
-            closeTransportManagers();
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(logPrefix + "Expiring endpoints.");
+            }
+            getEndpoints().forEach(AbstractEndpoint::expire);
 
             if (includeInStatistics)
             {
@@ -626,8 +518,8 @@ public class Conference
             int[] metrics = videobridge.getConferenceChannelAndStreamCount();
 
             StringBuilder sb = new StringBuilder("expire_conf,");
-            sb.append(getLoggingId())
-                .append(" duration=").append(durationSeconds)
+            sb.append(logPrefix)
+                .append("duration=").append(durationSeconds)
                 .append(",conf_count=").append(metrics[0])
                 .append(",ch_count=").append(metrics[1])
                 .append(",v_streams=").append(metrics[2])
@@ -706,7 +598,7 @@ public class Conference
      * which has the specified <tt>id</tt> or <tt>null</tt> if there is no such
      * <tt>Endpoint</tt> and <tt>create</tt> equals <tt>false</tt>
      */
-    private AbstractEndpoint getEndpoint(String id, boolean create)
+    public AbstractEndpoint getEndpoint(String id, boolean create)
     {
         AbstractEndpoint endpoint;
         boolean changed;
@@ -864,67 +756,6 @@ public class Conference
     public ConferenceSpeechActivity getSpeechActivity()
     {
         return speechActivity;
-    }
-
-    /**
-     * Returns, the <tt>TransportManager</tt> instance for the channel-bundle
-     * with ID <tt>channelBundleId</tt>, or <tt>null</tt> if one doesn't exist.
-     *
-     * @param channelBundleId the ID of the channel-bundle for which to return
-     * the <tt>TransportManager</tt>.
-     * @return the <tt>TransportManager</tt> instance for the channel-bundle
-     * with ID <tt>channelBundleId</tt>, or <tt>null</tt> if one doesn't exist.
-     */
-    TransportManager getTransportManager(String channelBundleId)
-    {
-        // If create is false then initiator parameter will not be used.
-        // So here it doesn't matter it is true, or false.
-        return getTransportManager(channelBundleId, false, true);
-    }
-
-    /**
-     * Returns, the <tt>TransportManager</tt> instance for the channel-bundle
-     * with ID <tt>channelBundleId</tt>. If no instance exists and
-     * <tt>create</tt> is <tt>true</tt>, one will be created.
-     *
-     * @param channelBundleId the ID of the channel-bundle for which to return
-     * the <tt>TransportManager</tt>.
-     * @param create whether to create a new instance, if one doesn't exist.
-     * @param initiator determines ICE controlling/controlled and DTLS role.
-     * @return the <tt>TransportManager</tt> instance for the channel-bundle
-     * with ID <tt>channelBundleId</tt>.
-     */
-    public IceUdpTransportManager getTransportManager(
-            String channelBundleId,
-            boolean create,
-            boolean initiator)
-    {
-        IceUdpTransportManager transportManager;
-
-        synchronized (transportManagers)
-        {
-            transportManager = transportManagers.get(channelBundleId);
-            if (transportManager == null && create && !isExpired())
-            {
-                try
-                {
-                    transportManager = new IceDtlsTransportManager(channelBundleId, this);
-                }
-                catch (IOException ioe)
-                {
-                    throw new UndeclaredThrowableException(ioe);
-                }
-                transportManagers.put(channelBundleId, transportManager);
-
-                logger.info(Logger.Category.STATISTICS,
-                            "create_ice_tm," + getLoggingId()
-                            + " ufrag=" + transportManager.getLocalUfrag()
-                            + ",bundle=" + channelBundleId
-                            + ",initiator=" + initiator);
-            }
-        }
-
-        return transportManager;
     }
 
     /**
@@ -1249,15 +1080,16 @@ public class Conference
      * purposes of logging. The string is a comma-separated list of "key=value"
      * pairs.
      */
-    public String getLoggingId()
+    public String getLogPrefix()
     {
-        return loggingId;
+        return logPrefix;
     }
 
     /**
      * @return the global ID of the conference, or {@code null} if none has been
      * set.
      */
+    @SuppressWarnings("unused") // Octo
     public String getGid()
     {
         return gid;

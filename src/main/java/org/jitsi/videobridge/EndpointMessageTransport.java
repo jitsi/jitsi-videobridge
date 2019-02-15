@@ -209,8 +209,8 @@ class EndpointMessageTransport
         Object o = jsonObject.get("pinnedEndpoints");
         if (!(o instanceof JSONArray))
         {
-            logger.warn("Received invalid or unexpected JSON ("
-                            + endpoint.getLoggingId() + "):" + jsonObject);
+            logger.warn(endpoint.logPrefix +
+                    "Received invalid or unexpected JSON: " + jsonObject);
             return;
         }
 
@@ -226,9 +226,7 @@ class EndpointMessageTransport
 
         if (logger.isDebugEnabled())
         {
-            logger.debug(Logger.Category.STATISTICS,
-                         "pinned," + endpoint.getLoggingId()
-                             + " pinned=" + newPinnedEndpoints);
+            logger.debug(endpoint.logPrefix + "Pinned " + newPinnedEndpoints);
         }
         endpoint.pinnedEndpointsChanged(newPinnedEndpoints);
     }
@@ -265,7 +263,8 @@ class EndpointMessageTransport
         Object o = jsonObject.get("selectedEndpoints");
         if (!(o instanceof JSONArray))
         {
-            logger.warn("Received invalid or unexpected JSON: " + jsonObject);
+            logger.warn(endpoint.logPrefix +
+                    "Received invalid or unexpected JSON: " + jsonObject);
             return;
         }
 
@@ -307,7 +306,8 @@ class EndpointMessageTransport
         Object dst = getActiveTransportChannel();
         if (dst == null)
         {
-            logger.warn("No available transport channel, can't send a message");
+            logger.info(endpoint.logPrefix +
+                    "No available transport channel, can't send a message");
         }
         else
         {
@@ -351,8 +351,8 @@ class EndpointMessageTransport
             }
             else
             {
-                logger.warn(
-                    "SCTP connection with " + endpointId + " not ready yet.");
+                logger.info(endpoint.logPrefix +
+                    "SCTP connection not ready yet.");
             }
         }
 
@@ -407,8 +407,9 @@ class EndpointMessageTransport
                 webSocketLastActive = false;
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug("Web socket closed for endpoint "
-                        + endpoint.getID() + ": " + statusCode + " " + reason);
+                    logger.debug(endpoint.logPrefix +
+                            "Web socket closed, statusCode " + statusCode
+                            + " ( " + reason + ").");
                 }
             }
         }
@@ -431,7 +432,7 @@ class EndpointMessageTransport
                 webSocket = null;
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug(
+                    logger.debug(endpoint.logPrefix +
                         "Endpoint expired, closed colibri web-socket.");
                 }
             }
@@ -448,8 +449,8 @@ class EndpointMessageTransport
     {
         if (ws == null || !ws.equals(webSocket))
         {
-            logger.warn("Received text from an unknown web socket "
-                            + "(endpoint=" + endpoint.getID() + ").");
+            logger.warn(endpoint.logPrefix +
+                    "Received text from an unknown web socket.");
             return;
         }
 

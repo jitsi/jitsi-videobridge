@@ -286,10 +286,8 @@ public class Videobridge
         // risks of causing deadlocks.
         if (logger.isInfoEnabled())
         {
-            logger.info(Logger.Category.STATISTICS,
-                        "create_conf," + conference.getLoggingId()
-                        + " conf_name=" + name
-                        + ",logging=" + enableLogging
+            logger.info("create_conf," + conference.getLogPrefix()
+                        + "logging=" + enableLogging
                         + "," + getConferenceCountString());
         }
 
