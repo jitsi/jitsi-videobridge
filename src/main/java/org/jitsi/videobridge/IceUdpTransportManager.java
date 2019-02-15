@@ -45,12 +45,6 @@ public class IceUdpTransportManager
     extends TransportManager
 {
     /**
-     * The name default of the single <tt>IceStream</tt> that this
-     * <tt>TransportManager</tt> will create/use.
-     */
-    private static final String DEFAULT_ICE_STREAM_NAME = "stream";
-
-    /**
      * The {@link Logger} used by the {@link IceUdpTransportManager} class to
      * print debug information. Note that instances should use {@link #logger}
      * instead.
@@ -194,8 +188,9 @@ public class IceUdpTransportManager
         conference.appendDiagnosticInformation(diagnosticContext);
         diagnosticContext.put("transport", hashCode());
 
-        iceAgent = createIceAgent(controlling);
-        iceStream = iceAgent.getStream(DEFAULT_ICE_STREAM_NAME);
+        String streamName = "stream-" + id;
+        iceAgent = createIceAgent(controlling, streamName);
+        iceStream = iceAgent.getStream(streamName);
         iceComponent = iceStream.getComponent(Component.RTP);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
 
@@ -315,7 +310,7 @@ public class IceUdpTransportManager
      * @throws IOException if initializing a new <tt>Agent</tt> instance for the
      * purposes of this <tt>TransportManager</tt> fails
      */
-    private Agent createIceAgent(boolean controlling)
+    private Agent createIceAgent(boolean controlling, String streamName)
             throws IOException
     {
         Agent iceAgent = new Agent(logger.getLevel(), iceUfragPrefix);
@@ -329,7 +324,7 @@ public class IceUdpTransportManager
         int portBase = portTracker.getPort();
 
         IceMediaStream iceStream
-                = iceAgent.createMediaStream(DEFAULT_ICE_STREAM_NAME);
+                = iceAgent.createMediaStream(streamName);
 
         iceAgent.createComponent(
                 iceStream, Transport.UDP,

@@ -75,10 +75,6 @@ public class IceDtlsTransportManager
                         "TM-outgoing-" + id,
                         TaskPools.IO_POOL,
                         this::handleOutgoingPacket);
-        if (logger.isDebugEnabled())
-        {
-            logger.debug(getLoggingId() + "Constructor finished.");
-        }
     }
 
     /**
