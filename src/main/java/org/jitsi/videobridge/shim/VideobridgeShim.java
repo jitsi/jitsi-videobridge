@@ -321,7 +321,7 @@ public class VideobridgeShim
             }
 
             AbstractEndpoint endpoint
-                    = conference.getEndpoint(channelBundleIq.getId(), true);
+                    = conference.getOrCreateEndpoint(channelBundleIq.getId());
             if (endpoint instanceof Endpoint)
             {
                 try

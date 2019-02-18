@@ -464,7 +464,8 @@ public class Endpoint
 
         try
         {
-            AbstractEndpointMessageTransport messageTransport = getMessageTransport();
+            AbstractEndpointMessageTransport messageTransport
+                    = getMessageTransport();
             if (messageTransport != null)
             {
                 messageTransport.close();
@@ -473,7 +474,8 @@ public class Endpoint
             {
                 sctpManager.closeConnection();
             }
-        } catch (Exception e)
+        }
+        catch (Exception e)
         {
             logger.error(logPrefix +
                     "Exception while expiring: " + e.toString());
@@ -498,7 +500,10 @@ public class Endpoint
         // Create the SctpManager and provide it a method for sending SCTP data
         this.sctpManager = new SctpManager(
                 (data, offset, length) -> {
-                    PacketInfo packet = new PacketInfo(new UnparsedPacket(ByteBuffer.wrap(data, offset, length)));
+                    PacketInfo packet =
+                        new PacketInfo(
+                            new UnparsedPacket(
+                                    ByteBuffer.wrap(data, offset, length)));
                     transportManager.sendDtlsData(packet);
                     return 0;
                 }
