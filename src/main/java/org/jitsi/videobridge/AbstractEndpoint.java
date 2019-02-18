@@ -412,7 +412,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public void expire()
     {
         logger.info(logPrefix + "Expiring.");
-        logger.info(UtilKt.getStackTrace());
         this.expired = true;
         this.transceiver.stop();
         logger.info(transceiver.getNodeStats().prettyPrint(0));

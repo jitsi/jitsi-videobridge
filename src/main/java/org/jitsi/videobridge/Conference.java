@@ -422,7 +422,7 @@ public class Conference
             }
         }
 
-        logger.warn(logPrefix + "Expiring.");
+        logger.info(logPrefix + "Expiring.");
         EventAdmin eventAdmin = getEventAdmin();
         if (eventAdmin != null)
         {
@@ -598,7 +598,7 @@ public class Conference
      * which has the specified <tt>id</tt> or <tt>null</tt> if there is no such
      * <tt>Endpoint</tt> and <tt>create</tt> equals <tt>false</tt>
      */
-    public AbstractEndpoint getEndpoint(String id, boolean create)
+    private AbstractEndpoint getEndpoint(String id, boolean create)
     {
         AbstractEndpoint endpoint;
         boolean changed;
