@@ -816,6 +816,8 @@ public class Videobridge
      */
     void start(final BundleContext bundleContext)
     {
+        this.bundleContext = bundleContext;
+
         UlimitCheck.printUlimits();
 
         ConfigurationService cfg = getConfigurationService();
@@ -929,8 +931,6 @@ public class Videobridge
                 HealthCheckIQ.ELEMENT_NAME,
                 HealthCheckIQ.NAMESPACE,
                 new HealthCheckIQProvider());
-
-        this.bundleContext = bundleContext;
 
         startIce4j(bundleContext, cfg);
     }

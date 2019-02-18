@@ -287,6 +287,11 @@ public class Health
     {
         super(videobridge, PERIOD_DEFAULT, true);
 
+        if (cfg == null)
+        {
+            logger.warn("Configuration service is null, using only defaults.");
+        }
+
         int period =
             cfg == null ? PERIOD_DEFAULT
                 : cfg.getInt(PERIOD_PNAME, PERIOD_DEFAULT);
