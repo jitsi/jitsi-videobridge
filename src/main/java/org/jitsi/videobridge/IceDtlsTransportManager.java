@@ -100,7 +100,8 @@ public class IceDtlsTransportManager
         Map<String, String> remoteFingerprints = new HashMap<>();
         fingerprintExtensions.forEach(fingerprintExtension -> {
             if (fingerprintExtension.getHash() != null
-                    && fingerprintExtension.getFingerprint() != null) {
+                    && fingerprintExtension.getFingerprint() != null)
+            {
                 remoteFingerprints.put(
                         fingerprintExtension.getHash(),
                         fingerprintExtension.getFingerprint());

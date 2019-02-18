@@ -177,8 +177,15 @@ public class IceUdpTransportManager
         conference.appendDiagnosticInformation(diagnosticContext);
         diagnosticContext.put("transport", hashCode());
 
+        // We've seen some instances where the configuration service is not
+        // yet initialized. These are now fixed, but just in case this happens
+        // again we break early (otherwise we may initialize some of the static
+        // fields, and it will not be re-initialized when the configuration
+        // service is available).
         ConfigurationService cfg
-                = conference.getVideobridge().getConfigurationService();
+                = Objects.requireNonNull(
+                        conference.getVideobridge().getConfigurationService(),
+                        "No configuration service.");
         String streamName = "stream-" + endpoint.getID();
         iceAgent = createIceAgent(controlling, streamName, cfg);
         iceStream = iceAgent.getStream(streamName);
@@ -711,8 +718,8 @@ public class IceUdpTransportManager
         IceProcessingState oldState = (IceProcessingState) ev.getOldValue();
         IceProcessingState newState = (IceProcessingState) ev.getNewValue();
 
-        logger.info(logPrefix + "ICE state changed old_state=" +
-                oldState + " new_state=" + newState);
+        logger.info(logPrefix + "ICE state changed old=" +
+                oldState + " new=" + newState);
 
         // We should be using newState.isEstablished() here, but we see
         // transitions from RUNNING to COMPLETED, which should not happen and
@@ -737,5 +744,6 @@ public class IceUdpTransportManager
 
     protected void onIceFailed()
     {
+        logger.warn(logPrefix + "ICE failed!");
     }
 }
