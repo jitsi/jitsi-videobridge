@@ -137,8 +137,16 @@ public class VideobridgeShim
             channelShim.describe(responseChannelIQ);
             createdOrUpdatedChannels.add(responseChannelIQ);
 
-            // TODO: do we still want to support the legacy mode of putting
-            // <transport> inside <channel>?
+            if (channelIq.getTransport() != null)
+            {
+                String message =
+                        "Received a COLIBRI request with 'transport' inside " +
+                        "'channel'. This legacy mode is no longer supported";
+                logger.warn(message);
+                throw new IqProcessingException(
+                        XMPPError.Condition.bad_request,
+                        message);
+            }
         }
 
         return createdOrUpdatedChannels;
