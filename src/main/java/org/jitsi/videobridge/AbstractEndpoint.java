@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -521,5 +522,16 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
                             channel.getMediaType().equals(mediaType))
                     .findAny().orElse(null);
 
+    }
+
+    /**
+     * Describes this endpoint's transport in the given channel bundle XML
+     * element.
+     *
+     * @param channelBundle the channel bundle element to describe in.
+     */
+    public void describe(ColibriConferenceIQ.ChannelBundle channelBundle)
+            throws IOException
+    {
     }
 }

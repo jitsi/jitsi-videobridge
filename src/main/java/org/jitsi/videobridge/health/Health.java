@@ -23,6 +23,7 @@ import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.transport.*;
 import org.jitsi.videobridge.xmpp.*;
 
+import java.io.*;
 import java.util.*;
 
 /**
@@ -121,10 +122,13 @@ public class Health
             }
 
             // Trigger the creation of the transport manager.
-            if (endpoint.getTransportManager() == null)
+            try
             {
-                throw new NullPointerException(
-                        "Failed to initialize the transport manager.");
+                endpoint.getTransportManager();
+            }
+            catch (IOException ioe)
+            {
+                throw new RuntimeException(ioe);
             }
 
             endpoints.add(endpoint);

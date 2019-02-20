@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.bouncycastle.crypto.tls.*;
 import org.jetbrains.annotations.*;
@@ -430,7 +431,7 @@ public class Endpoint
                 .map(ChannelShim::getExpire)
                 .mapToInt(exp -> exp)
                 .max()
-                .orElse(60);
+                .orElse(0);
 
         // TODO: if the expire thread decides to wake up and run before we've
         // received or sent any packets it would expire us.
@@ -723,14 +724,16 @@ public class Endpoint
     }
 
     /**
-     * Gets this {@link Endpoint}'s transport manager. If there was a previous
-     * attempt to initialize the transport manager which failed, does not
-     * re-try and returns {@code null}.
+     * Gets this {@link Endpoint}'s transport manager, initializing it if it
+     * wasn't already initialized. If there was a previous unsuccessful attempt
+     * to initialize it, re-throws the same exception.
      *
-     * @return this {@link Endpoint}'s transport manager, or {@code null} if it
-     * failed to initialize.
+     * @return this {@link Endpoint}'s transport manager.
+     *
+     * @throws IOException if the transport manager fails to initialize.
      */
     public IceDtlsTransportManager getTransportManager()
+        throws IOException
     {
         if (transportManager != null)
         {
@@ -739,21 +742,19 @@ public class Endpoint
         else if (transportManagerException != null)
         {
             // We've already tried and failed to initialize the TM.
-            return null;
+            throw transportManagerException;
         }
         else
         {
             try
             {
-                transportManager = new IceDtlsTransportManager(this);
+                return transportManager = new IceDtlsTransportManager(this);
             }
             catch (IOException ioe)
             {
-                transportManagerException = ioe;
+                throw transportManagerException = ioe;
             }
         }
-
-        return transportManager;
     }
 
     /**
@@ -767,22 +768,7 @@ public class Endpoint
     public void setTransportInfo(IceUdpTransportPacketExtension transportInfo)
             throws IOException
     {
-        IceDtlsTransportManager transportManager = getTransportManager();
-        if (transportManager == null)
-        {
-            IOException exception = transportManagerException;
-            if (exception == null)
-            {
-                // This should never happen.
-                exception
-                    = new IOException(
-                        "Unknown failure to initialize a transport manager.");
-            }
-
-            throw exception;
-        }
-
-        transportManager.startConnectivityEstablishment(transportInfo);
+        getTransportManager().startConnectivityEstablishment(transportInfo);
     }
 
     /**
@@ -893,5 +879,16 @@ public class Endpoint
                 }
             });
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     * @throws IOException if the transport manager fails to initialize.
+     */
+    @Override
+    public void describe(ColibriConferenceIQ.ChannelBundle channelBundle)
+            throws IOException
+    {
+        getTransportManager().describe(channelBundle);
     }
 }
