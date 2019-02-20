@@ -18,7 +18,9 @@ package org.jitsi.videobridge.shim;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.*;
+import org.jivesoftware.smack.packet.*;
 
+import java.io.*;
 import java.util.*;
 
 /**
@@ -95,23 +97,27 @@ public class ConferenceShim
     public void describeChannelBundles(
             ColibriConferenceIQ iq,
             Set<String> endpointIds)
+            throws VideobridgeShim.IqProcessingException
     {
         for (AbstractEndpoint endpoint : getEndpoints())
         {
             String endpointId = endpoint.getID();
             if (endpointIds.contains(endpointId))
             {
-                TransportManager transportManager
-                        = ((Endpoint)endpoint).getTransportManager();
-
-                if (transportManager != null)
+                ColibriConferenceIQ.ChannelBundle responseBundleIQ
+                    = new ColibriConferenceIQ.ChannelBundle(endpointId);
+                try
                 {
-                    ColibriConferenceIQ.ChannelBundle responseBundleIQ
-                            = new ColibriConferenceIQ.ChannelBundle(endpointId);
-                    transportManager.describe(responseBundleIQ);
-
-                    iq.addChannelBundle(responseBundleIQ);
+                    endpoint.describe(responseBundleIQ);
                 }
+                catch (IOException ioe)
+                {
+                    throw new VideobridgeShim.IqProcessingException(
+                            XMPPError.Condition.internal_server_error,
+                            ioe.getMessage());
+                }
+
+                iq.addChannelBundle(responseBundleIQ);
             }
         }
     }

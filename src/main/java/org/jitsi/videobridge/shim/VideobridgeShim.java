@@ -340,13 +340,22 @@ public class VideobridgeShim
             }
         }
 
-        // TODO read "endpoint" elements?
 
         Set<String> channelBundleIdsToDescribe
                 = getAllSignaledChannelBundleIds(conferenceIQ);
-        conferenceShim.describeChannelBundles(
-                responseConferenceIQ,
-                channelBundleIdsToDescribe);
+        try
+        {
+            conferenceShim.describeChannelBundles(
+                    responseConferenceIQ,
+                    channelBundleIdsToDescribe);
+        }
+        catch (IqProcessingException e)
+        {
+            return IQUtils.createError(conferenceIQ, e.condition, e.errorMessage);
+        }
+
+        // TODO read "endpoint" elements (with e.g. display names)? Do we want
+        // to always describe all endpoints?
         conferenceShim.describeEndpoints(responseConferenceIQ);
 
         responseConferenceIQ.setType(IQ.Type.result);
