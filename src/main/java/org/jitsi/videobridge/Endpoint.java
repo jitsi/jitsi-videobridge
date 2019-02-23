@@ -25,7 +25,8 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.rtp.*;
+import org.jitsi.rtp.new_scheme3.*;
+import org.jitsi.rtp.new_scheme3.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
@@ -357,7 +358,10 @@ public class Endpoint
                 {
                     continue;
                 }
-                VideoRtpPacket videoPacket = new VideoRtpPacket(PacketExtensionsKt.getByteBuffer(pkt));
+                //TODO(brian): we can clean this up once the transformer is moved over
+                VideoRtpPacket videoPacket =
+                        RtpPacket.Companion.fromBuffer(PacketExtensionsKt.getByteBuffer(pkt))
+                                .toOtherRtpPacketType(VideoRtpPacket::new);
                 super.sendRtp(new PacketInfo(videoPacket));
             }
         }

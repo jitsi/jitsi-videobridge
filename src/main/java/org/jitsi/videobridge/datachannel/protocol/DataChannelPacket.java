@@ -17,8 +17,8 @@
 package org.jitsi.videobridge.datachannel.protocol;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.rtp.*;
 import org.jitsi.rtp.extensions.*;
+import org.jitsi.rtp.new_scheme3.*;
 
 import java.nio.*;
 
@@ -36,7 +36,7 @@ public class DataChannelPacket extends Packet
     }
 
     @Override
-    public int getSize()
+    public int getSizeBytes()
     {
         return data.limit();
     }
@@ -46,6 +46,14 @@ public class DataChannelPacket extends Packet
     public ByteBuffer getBuffer()
     {
         return data;
+    }
+
+    @Override
+    public void serializeTo(@NotNull ByteBuffer byteBuffer)
+    {
+        data.rewind();
+        byteBuffer.put(data);
+        data.rewind();
     }
 
     @NotNull
