@@ -26,7 +26,7 @@ import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.rtp.*;
+import org.jitsi.rtp.new_scheme3.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.util.*;
 
@@ -358,6 +358,8 @@ public class IceDtlsTransportManager
                 pkts.forEach(pktInfo -> {
                     try
                     {
+                        //TODO(brian): would it be an improvement to keep a single, local buffer here and have
+                        // the packet serialize into it instead of calling getBuffer?
                         socket.send(
                             new DatagramPacket(
                                     pktInfo.getPacket().getBuffer().array(),
