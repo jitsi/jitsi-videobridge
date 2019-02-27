@@ -246,7 +246,8 @@ public class IceDtlsTransportManager
         // IO pool is fine
         TaskPools.IO_POOL.submit(() -> {
             byte[] buf = new byte[1500];
-            while (!closed) {
+            while (!closed)
+            {
                 DatagramPacket p = new DatagramPacket(buf, 0, 1500);
                 try
                 {
@@ -282,7 +283,7 @@ public class IceDtlsTransportManager
         }
         iceConnectedProcessed = true;
 
-        DatagramSocket socket = iceStream.getComponents().get(0).getSocket();
+        DatagramSocket socket = iceComponent.getSocket();
 
         endpoint.setOutgoingSrtpPacketHandler(
                 packets -> packets.forEach(outgoingPacketQueue::add));
