@@ -49,7 +49,8 @@ public class SctpManager {
 
     // We hard-code 5000 in the offer, so just mark it as the default here.
     private static int DEFAULT_SCTP_PORT = 5000;
-    static {
+    static
+    {
         Sctp4j.init(DEFAULT_SCTP_PORT);
     }
 
@@ -58,7 +59,8 @@ public class SctpManager {
      * @param dataSender a {@link SctpDataSender} which will be used when we need to send SCTP packets to the remote
      *                   peer
      */
-    public SctpManager(SctpDataSender dataSender) {
+    public SctpManager(SctpDataSender dataSender)
+    {
         this.dataSender = dataSender;
     }
 
@@ -95,7 +97,7 @@ public class SctpManager {
      * Create an {@link SctpClientSocket} to be used to open an SCTP connection
      * @return an {@link SctpClientSocket}
      */
-    public SctpClientSocket crerateClientSocket() {
+    public SctpClientSocket createClientSocket() {
         socket = Sctp4j.createClientSocket(DEFAULT_SCTP_PORT);
         socket.outgoingDataSender = this.dataSender;
         if (logger.isDebugEnabled())

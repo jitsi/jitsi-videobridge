@@ -353,8 +353,7 @@ public class BitrateController
             String destinationEndpointId,
             Logger logLevelDelegate,
             @NotNull DiagnosticContext diagnosticContext,
-            Consumer<Long> keyframeRequester
-    )
+            Consumer<Long> keyframeRequester)
     {
         this.destinationEndpointId = destinationEndpointId;
         this.logger = Logger.getLogger(logLevelDelegate, classLogger);

@@ -199,9 +199,11 @@ public class IceDtlsTransportManager
         ConditionalPacketPath srtpPath = new ConditionalPacketPath("SRTP path");
         srtpPath.setPredicate(dtlsPredicate.negate());
         PipelineBuilder srtpPipelineBuilder = new PipelineBuilder();
-        srtpPipelineBuilder.simpleNode("SRTP path", packetInfos -> {
-            packetInfos.forEach(endpoint::srtpPacketReceived);
-            return Collections.emptyList();
+        srtpPipelineBuilder.simpleNode(
+                "SRTP path",
+                packets -> {
+                    packets.forEach(endpoint::srtpPacketReceived);
+                    return Collections.emptyList();
         });
         srtpPath.setPath(srtpPipelineBuilder.build());
         dtlsSrtpDemuxer.addPacketPath(srtpPath);

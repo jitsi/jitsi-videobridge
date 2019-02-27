@@ -21,7 +21,6 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.transform.node.*;
-import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -44,6 +43,7 @@ import java.util.*;
  * same conference (if Octo is being used).
  *
  * @author Boris Grozev
+ * @author Brian Baldino
  */
 public abstract class AbstractEndpoint extends PropertyChangeNotifier
     implements EncodingsManager.EncodingsUpdateListener, PropertyChangeListener
@@ -315,7 +315,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         }
     }
 
-    public void setMediaStreamTracks(MediaStreamTrackDesc[] mediaStreamTracks)
+    private void setMediaStreamTracks(MediaStreamTrackDesc[] mediaStreamTracks)
     {
         transceiver.setMediaStreamTracks(mediaStreamTracks);
         firePropertyChange(ENDPOINT_CHANGED_PROPERTY_NAME, null, null);
