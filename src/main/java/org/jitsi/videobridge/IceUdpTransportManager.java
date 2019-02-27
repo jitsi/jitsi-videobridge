@@ -120,7 +120,7 @@ public class IceUdpTransportManager
      * The single {@link Component} that we have
      * (since we use bundle and rtcp-mux).
      */
-    private final Component iceComponent;
+    protected final Component iceComponent;
 
     /**
      * The <tt>PropertyChangeListener</tt> which is (to be) notified about
