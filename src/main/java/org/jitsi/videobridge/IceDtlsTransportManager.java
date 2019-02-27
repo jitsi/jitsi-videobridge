@@ -34,6 +34,7 @@ import java.io.*;
 import java.net.*;
 import java.nio.*;
 import java.util.*;
+import java.util.function.*;
 
 /**
  * @author Brian Baldino
@@ -169,33 +170,34 @@ public class IceDtlsTransportManager
 
     private Node createIncomingPipeline()
     {
+        // do we need a builder if we're using a single node?
         PipelineBuilder builder = new PipelineBuilder();
 
         DemuxerNode dtlsSrtpDemuxer = new DemuxerNode("DTLS/SRTP");
         // DTLS path
-        ConditionalPacketPath dtlsPath = new ConditionalPacketPath();
-        dtlsPath.setName("DTLS path");
-        dtlsPath.setPredicate((packet) -> {
+        Predicate<Packet> dtlsPredicate = packet -> {
+            // This comes from DTLSDatagramFilter.java, but what is the
+            // rationale?
             int b = packet.getBuffer().get(0) & 0xFF;
-            return (b >= 20 && b <= 63);
-        });
+            return (20 <= b && b <= 63);
+        };
+        ConditionalPacketPath dtlsPath
+                = new ConditionalPacketPath("DTLS path");
+        dtlsPath.setPredicate(dtlsPredicate);
         PipelineBuilder dtlsPipelineBuilder = new PipelineBuilder();
         dtlsPipelineBuilder.node(dtlsReceiver);
-        dtlsPipelineBuilder.simpleNode("sctp app packet handler", packets -> {
-            packets.forEach(endpoint::dtlsAppPacketReceived);
-
-            return Collections.emptyList();
+        dtlsPipelineBuilder.simpleNode(
+                "sctp app packet handler",
+                packets -> {
+                    packets.forEach(endpoint::dtlsAppPacketReceived);
+                    return Collections.emptyList();
         });
         dtlsPath.setPath(dtlsPipelineBuilder.build());
         dtlsSrtpDemuxer.addPacketPath(dtlsPath);
 
         // SRTP path
-        ConditionalPacketPath srtpPath = new ConditionalPacketPath();
-        srtpPath.setName("SRTP path");
-        srtpPath.setPredicate(packet -> {
-            int b = packet.getBuffer().get(0) & 0xFF;
-            return (b < 20 || b > 63);
-        });
+        ConditionalPacketPath srtpPath = new ConditionalPacketPath("SRTP path");
+        srtpPath.setPredicate(dtlsPredicate.negate());
         PipelineBuilder srtpPipelineBuilder = new PipelineBuilder();
         srtpPipelineBuilder.simpleNode("SRTP path", packetInfos -> {
             packetInfos.forEach(endpoint::srtpPacketReceived);
