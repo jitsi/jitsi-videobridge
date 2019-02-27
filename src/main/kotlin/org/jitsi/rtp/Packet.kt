@@ -23,6 +23,7 @@ import org.jitsi.rtp.util.RtpProtocol
 import toUInt
 import unsigned.toUInt
 import java.nio.ByteBuffer
+import java.util.function.Predicate
 
 abstract class Packet : Serializable {
     abstract val size: Int
@@ -123,3 +124,5 @@ class DtlsProtocolPacket(private val buf: ByteBuffer) : Packet() {
         return DtlsProtocolPacket(buf.clone())
     }
 }
+
+typealias PacketPredicate = Predicate<Packet>
