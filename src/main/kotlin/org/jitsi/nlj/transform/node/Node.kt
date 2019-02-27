@@ -23,9 +23,9 @@ import org.jitsi.nlj.Stoppable
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.NodeVisitor
-import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.getLogger
+import org.jitsi.rtp.PacketPredicate
 import java.time.Duration
 import kotlin.properties.Delegates
 
