@@ -422,6 +422,14 @@ public class Endpoint
     @Override
     public boolean shouldExpire()
     {
+        boolean iceFailed
+                = transportManager != null && transportManager.hasIceFailed();
+        if (iceFailed)
+        {
+            logger.warn(logPrefix + "Allowing to expire because ICE failed.");
+            return true;
+        }
+
         PacketIOActivity packetIOActivity
                 = this.transceiver.getPacketIOActivity();
 
@@ -433,23 +441,22 @@ public class Endpoint
                 .max()
                 .orElse(0);
 
-        // TODO: if the expire thread decides to wake up and run before we've
-        // received or sent any packets it would expire us.
-        long now = System.currentTimeMillis();
-        Duration timeSincePacketReceived
-            = Duration.ofMillis(
-                    now - packetIOActivity.getLastPacketReceivedTimestampMs());
-        Duration timeSincePacketSent
-                = Duration.ofMillis(
-                    now - packetIOActivity.getLastPacketSentTimestampMs());
+        long lastActivity
+                = packetIOActivity.getLastOverallActivityTimestampMs();
+        if (lastActivity <= 0)
+        {
+            // We haven't seen any activity yet. If this continues ICE will
+            // eventually fail (which is handled above).
+            return false;
+        }
 
-        if (timeSincePacketReceived.getSeconds() > maxExpireTimeSecsFromChannelShims &&
-                timeSincePacketSent.getSeconds() > maxExpireTimeSecsFromChannelShims)
+        long now = System.currentTimeMillis();
+        if (Duration.ofMillis(now - lastActivity).getSeconds()
+                > maxExpireTimeSecsFromChannelShims)
         {
             logger.info(logPrefix +
-                    "Has neither received nor sent a packet in over " +
-                    maxExpireTimeSecsFromChannelShims +
-                    " seconds, should expire.");
+                    "Allowing to expire because of no activity in over " +
+                    maxExpireTimeSecsFromChannelShims + " seconds.");
             return true;
         }
         return false;
