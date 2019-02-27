@@ -79,3 +79,11 @@ fun getLogger(loggerDelegate: Logger, levelDelegate: Logger?): Logger {
 fun <T: Any> logger(forClass: KClass<T>): Logger {
     return getLogger(forClass.java)
 }
+
+fun StringBuffer.appendIndent(numSpaces: Int, msg: String) {
+    append(" ".repeat(numSpaces)).append(msg)
+}
+
+fun StringBuffer.appendLnIndent(numSpaces: Int, msg: String) {
+    append(" ".repeat(numSpaces)).appendln(msg)
+}
