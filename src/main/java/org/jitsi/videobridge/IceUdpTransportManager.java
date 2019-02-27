@@ -155,6 +155,11 @@ public class IceUdpTransportManager
     protected final String logPrefix;
 
     /**
+     * A flag which is raised if ICE has run and failed.
+     */
+    private boolean iceFailed = false;
+
+    /**
      * Initializes a new <tt>IceUdpTransportManager</tt> instance.
      *
      * @param conference the <tt>Conference</tt> which created this
@@ -745,5 +750,14 @@ public class IceUdpTransportManager
     protected void onIceFailed()
     {
         logger.warn(logPrefix + "ICE failed!");
+        iceFailed = true;
+    }
+
+    /**
+     * @return {@code true} if ICE has run and failed.
+     */
+    public boolean hasIceFailed()
+    {
+        return iceFailed;
     }
 }
