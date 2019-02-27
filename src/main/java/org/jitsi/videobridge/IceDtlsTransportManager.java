@@ -50,6 +50,24 @@ public class IceDtlsTransportManager
      */
     private static final Logger classLogger
             = Logger.getLogger(IceDtlsTransportManager.class);
+
+    /**
+     * A predicate which is true for DTLS packets. See
+     * https://tools.ietf.org/html/rfc7983#section-7
+     */
+    private static final Predicate<Packet> DTLS_PREDICATE
+        = packet -> {
+                int b = packet.getBuffer().get(0) & 0xFF;
+                return (20 <= b && b <= 63);
+        };
+
+    /**
+     * A predicate which is true for all non-DTLS packets. See
+     * https://tools.ietf.org/html/rfc7983#section-7
+     */
+    private static final Predicate<Packet> NON_DTLS_PREDICATE
+            = DTLS_PREDICATE.negate();
+
     private final Logger logger;
     private DtlsClientStack dtlsStack = new DtlsClientStack();
     private DtlsReceiver dtlsReceiver = new DtlsReceiver(dtlsStack);
@@ -175,15 +193,9 @@ public class IceDtlsTransportManager
 
         DemuxerNode dtlsSrtpDemuxer = new DemuxerNode("DTLS/SRTP");
         // DTLS path
-        Predicate<Packet> dtlsPredicate = packet -> {
-            // This comes from DTLSDatagramFilter.java, but what is the
-            // rationale?
-            int b = packet.getBuffer().get(0) & 0xFF;
-            return (20 <= b && b <= 63);
-        };
         ConditionalPacketPath dtlsPath
                 = new ConditionalPacketPath("DTLS path");
-        dtlsPath.setPredicate(dtlsPredicate);
+        dtlsPath.setPredicate(DTLS_PREDICATE);
         PipelineBuilder dtlsPipelineBuilder = new PipelineBuilder();
         dtlsPipelineBuilder.node(dtlsReceiver);
         dtlsPipelineBuilder.simpleNode(
@@ -197,7 +209,12 @@ public class IceDtlsTransportManager
 
         // SRTP path
         ConditionalPacketPath srtpPath = new ConditionalPacketPath("SRTP path");
-        srtpPath.setPredicate(dtlsPredicate.negate());
+        // We pass anything non-DTLS to the SRTP stack. This is fine, as STUN
+        // packets have already been filtered out in ice4j, and we don't expect
+        // anything else. It might be nice to log a warning if we see anything
+        // outside the RTP range (see RFC7983), but adding a separate packet
+        // path here might be expensive.
+        srtpPath.setPredicate(NON_DTLS_PREDICATE);
         PipelineBuilder srtpPipelineBuilder = new PipelineBuilder();
         srtpPipelineBuilder.simpleNode(
                 "SRTP path",
