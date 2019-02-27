@@ -793,7 +793,7 @@ public class Endpoint
         }
 
         @Override
-        protected void doProcessPackets(@NotNull List<PacketInfo> packets)
+        protected List<PacketInfo> doProcessPackets(@NotNull List<PacketInfo> packets)
         {
             synchronized (sctpManagerLock)
             {
@@ -806,6 +806,9 @@ public class Endpoint
                     packets.forEach(sctpManager::handleIncomingSctp);
                 }
             }
+
+            // This is a terminating node.
+            return Collections.EMPTY_LIST;
         }
 
         public void setSctpManager(SctpManager sctpManager)
@@ -843,7 +846,7 @@ public class Endpoint
         }
 
         @Override
-        protected void doProcessPackets(@NotNull List<PacketInfo> packets)
+        protected List<PacketInfo> doProcessPackets(@NotNull List<PacketInfo> packets)
         {
             synchronized (dataChannelStackLock)
             {
@@ -863,6 +866,9 @@ public class Endpoint
                     });
                 }
             }
+
+            // This is a terminating node.
+            return Collections.EMPTY_LIST;
         }
 
         public void setDataChannelStack(DataChannelStack dataChannelStack)

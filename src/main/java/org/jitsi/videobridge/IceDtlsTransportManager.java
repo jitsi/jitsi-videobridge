@@ -351,7 +351,7 @@ public class IceDtlsTransportManager
         }
 
         @Override
-        protected void doProcessPackets(@NotNull List<PacketInfo> pkts)
+        protected List<PacketInfo> doProcessPackets(@NotNull List<PacketInfo> pkts)
         {
             if (socket != null)
             {
@@ -373,6 +373,8 @@ public class IceDtlsTransportManager
                 });
             }
 
+            // This is a terminating node.
+            return Collections.EMPTY_LIST;
         }
     }
 }

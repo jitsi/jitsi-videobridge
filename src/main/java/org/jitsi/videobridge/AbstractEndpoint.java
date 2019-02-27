@@ -133,16 +133,22 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         transceiver.setIncomingRtpHandler(new Node("RTP receiver chain handler")
         {
             @Override
-            protected void doProcessPackets(@NotNull List<PacketInfo> pkts)
+            protected List<PacketInfo> doProcessPackets(@NotNull List<PacketInfo> pkts)
             {
                 handleIncomingRtp(pkts);
+
+                // This is a terminating node.
+                return Collections.EMPTY_LIST;
             }
         });
         transceiver.setIncomingRtcpHandler(new Node("RTCP receiver chain handler") {
             @Override
-            public void doProcessPackets(@NotNull List<PacketInfo> pkts)
+            public List<PacketInfo> doProcessPackets(@NotNull List<PacketInfo> pkts)
             {
                 handleIncomingRtcp(pkts);
+
+                // This is a terminating node.
+                return Collections.EMPTY_LIST;
             }
         });
         conference.encodingsManager.subscribe(this);
