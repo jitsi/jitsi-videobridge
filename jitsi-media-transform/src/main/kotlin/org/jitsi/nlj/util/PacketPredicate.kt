@@ -23,11 +23,3 @@ typealias PacketPredicate = (Packet) -> Boolean
 val AllPackets = object : (Packet) -> Boolean {
     override fun invoke(p1: Packet): Boolean = true
 }
-
-fun StringBuffer.appendIndent(numSpaces: Int, msg: String) {
-    append(" ".repeat(numSpaces)).append(msg)
-}
-
-fun StringBuffer.appendLnIndent(numSpaces: Int, msg: String) {
-    append(" ".repeat(numSpaces)).appendln(msg)
-}
