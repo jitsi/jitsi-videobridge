@@ -161,9 +161,13 @@ abstract class Node(
     }
 }
 
-class ConditionalPacketPath {
+class ConditionalPacketPath() {
     var name: String by Delegates.notNull()
     var predicate: PacketPredicate by Delegates.notNull()
     var path: Node by Delegates.notNull()
+
+    constructor(name: String): this() {
+        this.name = name
+    }
 }
 
