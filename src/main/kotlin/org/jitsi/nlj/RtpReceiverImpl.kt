@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpRrGenerator
 import org.jitsi.nlj.rtp.AudioRtpPacket
@@ -32,7 +31,7 @@ import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.IncomingStreamStatistics
 import org.jitsi.nlj.transform.node.incoming.PaddingTermination
-import org.jitsi.nlj.transform.node.incoming.RetransmissionRequester
+import org.jitsi.nlj.transform.node.incoming.RetransmissionRequesterNode
 import org.jitsi.nlj.transform.node.incoming.RtcpTermination
 import org.jitsi.nlj.transform.node.incoming.RtxHandler
 import org.jitsi.nlj.transform.node.incoming.SrtcpTransformerDecryptNode
@@ -50,15 +49,16 @@ import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.PacketPredicate
-import org.jitsi.rtp.SrtcpPacket
-import org.jitsi.rtp.SrtpPacket
-import org.jitsi.rtp.SrtpProtocolPacket
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpIterator
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.rtp.srtcp.SrtcpPacket
+import org.jitsi.rtp.srtp.SrtpPacket
+import org.jitsi.rtp.srtp.SrtpProtocolPacket
 import org.jitsi.rtp.util.RtpProtocol
 import org.jitsi.util.Logger
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
+import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
@@ -166,7 +166,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     name = "SRTP path"
                     predicate = PacketPredicate { RtpProtocol.isRtp(it.getBuffer()) }
                     path = pipeline {
-                        node(PacketParser("SRTP Parser") { SrtpPacket(it.getBuffer()) })
+                        node(PacketParser("SRTP Parser") { SrtpPacket.create(it.getBuffer()) })
                         node(payloadTypeFilter)
                         node(tccGenerator)
                         node(srtpDecryptWrapper)
@@ -190,7 +190,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                     node(VideoParser())
                                     node(Vp8Parser())
                                     node(VideoBitrateCalculator())
-                                    node(RetransmissionRequester(rtcpSender, backgroundExecutor))
+                                    node(RetransmissionRequesterNode(rtcpSender, backgroundExecutor))
                                     node(rtpPacketHandlerWrapper)
                                 }
                             }
@@ -202,7 +202,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     predicate = PacketPredicate { RtpProtocol.isRtcp(it.getBuffer()) }
                     path = pipeline {
                         val prevRtcpPackets = mutableListOf<Packet>()
-                        node(PacketParser("SRTCP parser") { SrtcpPacket(it.getBuffer())} )
+                        node(PacketParser("SRTCP parser") { SrtcpPacket.create(it.getBuffer()) } )
                         node(srtcpDecryptWrapper)
                         simpleNode("RTCP pre-parse cache ${hashCode()}") { pkts ->
                             prevRtcpPackets.clear()
@@ -211,7 +211,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
                             }
                             pkts
                         }
-                        node(PacketParser("RTCP parser") { RtcpPacket.fromBuffer(it.getBuffer()) })
                         //TODO: probably just make a class for this, but for now we're using the cache above to debug
                         simpleNode("Compound RTCP splitter") { pktInfos ->
                             try {
@@ -259,7 +258,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
             numQueueReads++
             lastQueueReadTime = now
             packet.addEvent(PACKET_QUEUE_EXIT_EVENT)
-            bytesProcessed += packet.packet.size
+            bytesProcessed += packet.packet.sizeBytes
             packetsProcessed++
             if (firstPacketProcessedTime == 0L) {
                 firstPacketProcessedTime = System.currentTimeMillis()
@@ -286,7 +285,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun enqueuePacket(p: PacketInfo) {
 //        logger.cinfo { "Receiver ${hashCode()} enqueing data" }
-        bytesReceived += p.packet.size
+        bytesReceived += p.packet.sizeBytes
         p.addEvent(PACKET_QUEUE_ENTRY_EVENT)
         incomingPacketQueue.add(p)
         packetsReceived++

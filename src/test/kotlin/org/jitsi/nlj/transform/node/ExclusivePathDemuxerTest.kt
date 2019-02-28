@@ -23,10 +23,9 @@ import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.PacketPredicate
-import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
-import java.nio.ByteBuffer
+import org.jitsi.rtp.rtp.RtpPacket
 
 internal class ExclusivePathDemuxerTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -38,15 +37,10 @@ internal class ExclusivePathDemuxerTest : ShouldSpec() {
         }
     }
 
-    private class DummyRtcpPacket : RtcpPacket() {
-        override var header: RtcpHeader = RtcpHeader()
-        override val size: Int = 0
+    private class DummyRtcpPacket : RtcpPacket(RtcpHeader(), null) {
+        override val sizeBytes: Int = 0
         override fun clone(): Packet {
             return DummyRtcpPacket()
-        }
-
-        override fun getBuffer(): ByteBuffer {
-            return ByteBuffer.allocate(0)
         }
     }
 

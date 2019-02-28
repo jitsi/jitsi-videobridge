@@ -21,8 +21,8 @@ import io.kotlintest.matchers.plusOrMinus
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.rtp.RtpHeader
-import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.rtp.RtpHeader
+import org.jitsi.rtp.rtp.RtpPacket
 
 private data class StatPacketInfo(
     val packetInfo: PacketInfo,
@@ -35,7 +35,7 @@ private data class JitterPacketInfo(
 )
 
 private fun createStatPacketInfo(seqNum: Int, sentTime: Long, receivedTime: Long): StatPacketInfo {
-    val packetInfo = PacketInfo(RtpPacket(header = RtpHeader(sequenceNumber = seqNum)))
+    val packetInfo = PacketInfo(RtpPacket(RtpHeader(sequenceNumber = seqNum)))
     packetInfo.receivedTime = receivedTime
     return StatPacketInfo(packetInfo, sentTime)
 }

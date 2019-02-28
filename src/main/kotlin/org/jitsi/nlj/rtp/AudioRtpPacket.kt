@@ -15,7 +15,13 @@
  */
 package org.jitsi.nlj.rtp
 
-import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.rtp.RtpHeader
+import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.rtp.util.ByteBufferUtils
 import java.nio.ByteBuffer
 
-class AudioRtpPacket(buf: ByteBuffer) : RtpPacket(buf)
+class AudioRtpPacket(
+    header: RtpHeader = RtpHeader(),
+    payload: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER,
+    backingBuffer: ByteBuffer? = null
+) : RtpPacket(header, payload, backingBuffer)

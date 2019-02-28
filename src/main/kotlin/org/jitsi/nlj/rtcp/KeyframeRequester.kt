@@ -21,9 +21,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbFirPacket
-import java.time.Duration
 
 /**
  * [KeyframeRequester] handles a few things around keyframes:
@@ -55,7 +53,7 @@ class KeyframeRequester : Node("Keyframe Requester") {
             numKeyframeRequestsDropped++
         } else {
             keyframeRequests[mediaSsrc] = now
-            val firPacket = RtcpFbFirPacket(mediaSourceSsrc = mediaSsrc, seqNum = firCommandSequenceNumber++)
+            val firPacket = RtcpFbFirPacket.fromValues(firSsrc = mediaSsrc, commandSeqNum = firCommandSequenceNumber++)
             logger.cdebug { "Keyframe requester requesting keyframe with FIR for $mediaSsrc" }
             numKeyframesRequestedByBridge++
             processPackets(listOf(PacketInfo(firPacket)))

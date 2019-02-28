@@ -21,16 +21,16 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.forEachAs
-import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.RtxPayloadType
+import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
-import org.jitsi.rtp.RtpPacket
-import org.jitsi.rtp.RtxPacket
+import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.rtp.rtp.RtxPacket
 import org.jitsi.util.Logger
 import unsigned.toUInt
 import java.util.concurrent.ConcurrentHashMap
@@ -41,8 +41,8 @@ import java.util.concurrent.ConcurrentHashMap
  * https://tools.ietf.org/html/rfc4588
  */
 class RtxHandler : Node("RTX handler") {
-    var numPaddingPacketsReceived = 0
-    var numRtxPacketsReceived = 0
+    private var numPaddingPacketsReceived = 0
+    private var numRtxPacketsReceived = 0
     /**
      * Maps the RTX payload types to their associated video payload types
      */
@@ -60,11 +60,11 @@ class RtxHandler : Node("RTX handler") {
         val outPackets = mutableListOf<PacketInfo>()
         p.forEachAs<RtpPacket> { packetInfo, pkt ->
             if (associatedPayloadTypes.containsKey(pkt.header.payloadType)) {
-                val rtxPacket = RtxPacket(pkt.getBuffer())
+                val rtxPacket = RtxPacket.parseAsRtx(pkt)
 //                logger.cdebug { "Received RTX packet: ssrc ${rtxPacket.header.ssrc}, seq num: ${rtxPacket.header.sequenceNumber} " +
 //                        "rtx payload size: ${rtxPacket.payload.limit()}, padding size: ${rtxPacket.getPaddingSize()} " +
 //                        "buffer:\n${rtxPacket.getBuffer().toHex()}" }
-                if (rtxPacket.payload.limit() - rtxPacket.getPaddingSize() < 2) {
+                if (rtxPacket.payload.limit() - rtxPacket.paddingSize < 2) {
                     logger.cdebug { "RTX packet is padding, ignore" }
                     numPaddingPacketsReceived++
                     return@forEachAs
@@ -73,7 +73,7 @@ class RtxHandler : Node("RTX handler") {
                 val originalPt = associatedPayloadTypes[pkt.header.payloadType]!!
                 val originalSsrc = associatedSsrcs[pkt.header.ssrc]!!
 
-                val originalPacket = rtxPacket.toRtpPacket()
+                val originalPacket = rtxPacket as RtpPacket
                 originalPacket.header.sequenceNumber = originalSeqNum
                 originalPacket.header.payloadType = originalPt
                 originalPacket.header.ssrc = originalSsrc

@@ -19,8 +19,6 @@ import io.pkts.Pcap
 import io.pkts.packet.Packet
 import io.pkts.packet.UDPPacket
 import io.pkts.protocol.Protocol
-import org.jitsi.nlj.srtp.SrtpProfileInformation
-import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.util.ByteBufferUtils
 import java.nio.ByteBuffer
@@ -39,25 +37,14 @@ abstract class AbstractPacketProducer : PacketProducer {
     }
 }
 
-data class SrtpInformation(
-    val srtpProfileInformation: SrtpProfileInformation,
-    val keyingMaterial: ByteArray,
-    val tlsRole: TlsRole
-)
-
-data class PcapFileInformation(
-    val filePath: String,
-    val srtpInformation: SrtpInformation
-)
-
 /**
  * Read data from a PCAP file and play it out at a rate consistent with the packet arrival times.  I.e. if the PCAP
  * file captured data flowing at 2mbps, this producer will play it out at 2mbps
  */
 class PcapPacketProducer(
-    pcapFileInformation: PcapFileInformation
+    pcapFilePath: String
 ) : AbstractPacketProducer() {
-    private val pcap = Pcap.openStream(pcapFileInformation.filePath)
+    private val pcap = Pcap.openStream(pcapFilePath)
     var running: Boolean = true
 
     companion object {

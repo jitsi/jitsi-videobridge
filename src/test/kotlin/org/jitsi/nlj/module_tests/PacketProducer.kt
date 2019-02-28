@@ -15,7 +15,9 @@
  */
 package org.jitsi.nlj.module_tests
 
-typealias PacketReceiver = (org.jitsi.rtp.Packet) -> Unit
+import org.jitsi.rtp.Packet
+
+typealias PacketReceiver = (Packet) -> Unit
 
 interface PacketProducer {
     fun subscribe(handler: PacketReceiver)

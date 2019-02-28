@@ -31,7 +31,7 @@ import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.PacketCache
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.rtp.RtpHeader
+import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.service.neomedia.MediaType
 import unsigned.toUInt
 import java.util.Random
@@ -102,7 +102,7 @@ class ProbingDataSender(
             while (lastNPacketIter.hasNext())
             {
                 val packet = lastNPacketIter.next()
-                val packetLen = packet.size
+                val packetLen = packet.sizeBytes
                 if (bytesSent + packetLen > numBytes) {
                     // We don't have enough 'room' to send this packet; we're done
                     break
@@ -134,7 +134,7 @@ class ProbingDataSender(
         val senderSsrc = localVideoSsrc ?: return bytesSent
         //TODO(brian): shouldn't this take into account numBytes? what if it's less than
         // the size of one dummy packet?
-        val packetLength = RtpHeader.FIXED_SIZE_BYTES + 0xFF
+        val packetLength = RtpHeader.FIXED_HEADER_SIZE_BYTES + 0xFF
         val numPackets = (numBytes / packetLength) + 1 /* account for the mod */
         for (i in 0 until numPackets) {
             val paddingPacket = PaddingVideoPacket(
@@ -142,7 +142,8 @@ class ProbingDataSender(
                     payloadType = pt.pt.toUInt(),
                     ssrc = senderSsrc,
                     timestamp = currDummyTimestamp,
-                    sequenceNumber = currDummySeqNum),
+                    sequenceNumber = currDummySeqNum
+                ),
                 packetLength
             )
             garbageDataSender.processPackets(listOf(PacketInfo(paddingPacket)))

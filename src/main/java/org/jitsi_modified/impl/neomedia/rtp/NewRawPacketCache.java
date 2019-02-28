@@ -49,19 +49,19 @@ public class NewRawPacketCache
      * Configuration property for number of streams to cache
      */
     public final static String NACK_CACHE_SIZE_STREAMS
-        = "org.jitsi.impl.neomedia.transform.CachingTransformer.CACHE_SIZE_STREAMS";
+        = "org.jitsi_modified.impl.neomedia.rtp.NewRawPacketCache.CACHE_SIZE_STREAMS";
 
     /**
      * Configuration property number of packets to cache.
      */
     public final static String NACK_CACHE_SIZE_PACKETS
-        = "org.jitsi.impl.neomedia.transform.CachingTransformer.CACHE_SIZE_PACKETS";
+        = "org.jitsi_modified.impl.neomedia.rtp.NewRawPacketCache.CACHE_SIZE_PACKETS";
 
     /**
      * Configuration property for nack cache size in milliseconds.
      */
     public final static String NACK_CACHE_SIZE_MILLIS
-        = "org.jitsi.impl.neomedia.transform.CachingTransformer.CACHE_SIZE_MILLIS";
+        = "org.jitsi_modified.impl.neomedia.rtp.NewRawPacketCache.CACHE_SIZE_MILLIS";
 
     private static Configuration defaultConfiguration = new Configuration();
 
@@ -370,7 +370,7 @@ public class NewRawPacketCache
         {
             if (logger.isDebugEnabled())
             {
-                logger.debug("Cleaning CachingTransformer " + hashCode());
+                logger.debug("Cleaning NewRawPacketCache " + hashCode());
             }
 
             Iterator<Map.Entry<Long,Cache>> iter

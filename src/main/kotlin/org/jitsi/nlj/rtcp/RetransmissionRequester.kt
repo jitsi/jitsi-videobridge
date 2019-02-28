@@ -65,11 +65,11 @@ class RetransmissionRequester(
      * Manages retransmission requests for all packets for a specific SSRC
      */
     class StreamPacketRequester(
-            val ssrc: Long,
-            private val scheduler: ScheduledExecutorService,
-            private val clock: Clock,
-            private val rtcpSender: (RtcpPacket) -> Unit,
-            private val maxMissingSeqNums: Int = 100
+        val ssrc: Long,
+        private val scheduler: ScheduledExecutorService,
+        private val clock: Clock,
+        private val rtcpSender: (RtcpPacket) -> Unit,
+        private val maxMissingSeqNums: Int = 100
     ) {
         companion object {
             val NO_REQUEST_DUE: Instant = Instant.MAX
@@ -114,7 +114,8 @@ class RetransmissionRequester(
                     }
                     else -> { // diff > maxMissingSeqNums
                         logger.cwarn {
-                            "$ssrc large jump in sequence numbers detected (${highestReceivedSeqNum numPacketsTo seqNum})" +
+                            "$ssrc large jump in sequence numbers detected (highest received was $highestReceivedSeqNum," +
+                                    " current is $seqNum, jump of ${highestReceivedSeqNum numPacketsTo seqNum})" +
                                     ", not requesting retransmissions"
                         }
                         highestReceivedSeqNum = seqNum
@@ -164,7 +165,7 @@ class RetransmissionRequester(
             logger.cdebug { "$ssrc doing work at ${clock.instant()}" }
             val now = clock.instant()
             val missingSeqNums = getMissingSeqNums()
-            val nackPacket = RtcpFbNackPacket(ssrc, missingSeqNums)
+            val nackPacket = RtcpFbNackPacket.fromValues(mediaSourceSsrc = ssrc, missingSeqNums = missingSeqNums)
             notifyNackSent(now, missingSeqNums)
             rtcpSender(nackPacket)
         }

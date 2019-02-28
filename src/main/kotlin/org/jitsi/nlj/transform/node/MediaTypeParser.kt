@@ -24,7 +24,7 @@ import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.cdebug
-import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.service.neomedia.MediaType
 import unsigned.toUByte
 import java.util.concurrent.ConcurrentHashMap
@@ -42,8 +42,8 @@ class MediaTypeParser : Node("Media type parser") {
                 return@forEachAs
             }
             pktInfo.packet = when (mediaType) {
-                MediaType.AUDIO -> AudioRtpPacket(pkt.getBuffer())
-                MediaType.VIDEO -> VideoRtpPacket(pkt.getBuffer())
+                MediaType.AUDIO -> pkt.toOtherRtpPacketType(::AudioRtpPacket)
+                MediaType.VIDEO -> pkt.toOtherRtpPacketType(::VideoRtpPacket)
                 else -> throw Exception("Unrecognized media type: '$mediaType'")
             }
         }
