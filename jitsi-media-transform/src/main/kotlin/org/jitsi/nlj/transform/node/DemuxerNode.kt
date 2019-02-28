@@ -19,8 +19,8 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.NodeVisitor
 import kotlin.streams.toList
 
-class DemuxerNode(name: String) : Node("$name demuxer") {
-    private var transformPaths: MutableSet<ConditionalPacketPath> = mutableSetOf()
+abstract class DemuxerNode(name: String) : Node("$name demuxer") {
+    protected var transformPaths: MutableSet<ConditionalPacketPath> = mutableSetOf()
 
     fun addPacketPath(pp: ConditionalPacketPath) {
         transformPaths.add(pp)
@@ -38,15 +38,6 @@ class DemuxerNode(name: String) : Node("$name demuxer") {
     }
 
     override fun attach(node: Node?) = throw Exception()
-
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        // Is this scheme always better? Or only when the list of
-        // packets is above a certain size?
-        transformPaths.forEach { conditionalPath ->
-            val pathPackets = p.filter { conditionalPath.predicate.test(it.packet) }
-            next(conditionalPath.path, pathPackets)
-        }
-    }
 
     override fun visit(visitor: NodeVisitor) {
         visitor.visit(this)
