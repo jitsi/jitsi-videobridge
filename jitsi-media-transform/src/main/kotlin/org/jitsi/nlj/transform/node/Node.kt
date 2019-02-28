@@ -23,9 +23,9 @@ import org.jitsi.nlj.Stoppable
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.NodeVisitor
-import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.getLogger
+import org.jitsi.rtp.PacketPredicate
 import java.time.Duration
 import kotlin.properties.Delegates
 
@@ -71,7 +71,7 @@ abstract class Node(
     protected abstract fun doProcessPackets(p: List<PacketInfo>)
 
     /**
-     * Marking this as open since Demuxer wants to throw an exception
+     * Marking this as open since [DemuxerNode] wants to throw an exception
      * if attach is called.
      */
     open fun attach(node: Node?) {
@@ -122,11 +122,7 @@ abstract class Node(
     }
 
     protected fun next(outPackets: List<PacketInfo>) {
-        onExit(outPackets)
-        numOutputPackets += outPackets.size
-        if (outPackets.isNotEmpty()) {
-            nextNode?.processPackets(outPackets)
-        }
+        next(nextNode, outPackets)
     }
 
     /**
@@ -135,11 +131,11 @@ abstract class Node(
      * multiple subsequent paths packets can flow down, so they don't use the singular
      * [nextNode].
      */
-    protected fun next(nextNode: Node, outPackets: List<PacketInfo>) {
+    protected fun next(nextNode: Node?, outPackets: List<PacketInfo>) {
         onExit(outPackets)
         if (outPackets.isNotEmpty()) {
             numOutputPackets += outPackets.size
-            nextNode.processPackets(outPackets)
+            nextNode?.processPackets(outPackets)
         }
     }
 
@@ -165,9 +161,13 @@ abstract class Node(
     }
 }
 
-class ConditionalPacketPath {
+class ConditionalPacketPath() {
     var name: String by Delegates.notNull()
     var predicate: PacketPredicate by Delegates.notNull()
     var path: Node by Delegates.notNull()
+
+    constructor(name: String): this() {
+        this.name = name
+    }
 }
 

@@ -49,6 +49,7 @@ import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.PacketPredicate
 import org.jitsi.rtp.SrtcpPacket
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.SrtpProtocolPacket
@@ -163,7 +164,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
             demux("SRTP/SRTCP") {
                 packetPath {
                     name = "SRTP path"
-                    predicate = { pkt -> RtpProtocol.isRtp(pkt.getBuffer()) }
+                    predicate = PacketPredicate { RtpProtocol.isRtp(it.getBuffer()) }
                     path = pipeline {
                         node(PacketParser("SRTP Parser") { SrtpPacket(it.getBuffer()) })
                         node(payloadTypeFilter)
@@ -174,7 +175,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         demux("Media type") {
                             packetPath {
                                 name = "Audio path"
-                                predicate = { pkt -> pkt is AudioRtpPacket }
+                                predicate = PacketPredicate { it is AudioRtpPacket }
                                 path = pipeline {
                                     node(audioLevelReader)
                                     node(rtpPacketHandlerWrapper)
@@ -182,7 +183,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                             }
                             packetPath {
                                 name = "Video path"
-                                predicate = { pkt -> pkt is VideoRtpPacket }
+                                predicate = PacketPredicate { it is VideoRtpPacket }
                                 path = pipeline {
                                     node(RtxHandler())
                                     node(PaddingTermination())
@@ -198,7 +199,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                 }
                 packetPath {
                     name = "SRTCP path"
-                    predicate = { pkt -> RtpProtocol.isRtcp(pkt.getBuffer()) }
+                    predicate = PacketPredicate { RtpProtocol.isRtcp(it.getBuffer()) }
                     path = pipeline {
                         val prevRtcpPackets = mutableListOf<Packet>()
                         node(PacketParser("SRTCP parser") { SrtcpPacket(it.getBuffer())} )
