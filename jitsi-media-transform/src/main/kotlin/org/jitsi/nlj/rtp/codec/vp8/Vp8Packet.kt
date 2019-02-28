@@ -18,11 +18,15 @@ package org.jitsi.nlj.rtp.codec.vp8
 
 import org.jitsi.nlj.codec.vp8.Vp8Utils
 import org.jitsi.nlj.rtp.VideoRtpPacket
-import org.jitsi.rtp.Packet
-import org.jitsi.rtp.extensions.clone
+import org.jitsi.rtp.rtp.RtpHeader
+import org.jitsi.rtp.util.ByteBufferUtils
 import java.nio.ByteBuffer
 
-class Vp8Packet : VideoRtpPacket {
+class Vp8Packet(
+    header: RtpHeader = RtpHeader(),
+    payload: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER,
+    backingBuffer: ByteBuffer? = null
+) : VideoRtpPacket(header, payload, backingBuffer) {
     var temporalLayerIndex: Int = -1
     /**
      * This is currently used as an overall spatial index, not an in-band spatial quality index a la vp9.  That is,
@@ -31,7 +35,7 @@ class Vp8Packet : VideoRtpPacket {
      */
     var spatialLayerIndex: Int = -1
 
-    constructor (buf: ByteBuffer) : super(buf) {
+    init {
         isKeyFrame = Vp8Utils.isKeyFrame(payload)
         if (isKeyFrame) {
             spatialLayerIndex = Vp8Utils.getSpatialLayerIndexFromKeyFrame(payload)
@@ -39,8 +43,8 @@ class Vp8Packet : VideoRtpPacket {
         temporalLayerIndex = Vp8Utils.getTemporalLayerIdOfFrame(payload)
     }
 
-    override fun clone(): Packet {
-        val clone = Vp8Packet(getBuffer().clone())
+    override fun clone(): Vp8Packet {
+        val clone = Vp8Packet(header.clone(), cloneMutablePayload())
         clone.temporalLayerIndex = temporalLayerIndex
         clone.spatialLayerIndex = spatialLayerIndex
 

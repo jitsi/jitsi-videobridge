@@ -25,10 +25,10 @@ import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cinfo
-import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
-import org.jitsi.rtp.rtcp.rtcpfb.Tcc
+import org.jitsi.rtp.rtcp.rtcpfb.fci.tcc.Tcc
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.service.neomedia.RTPExtension
 import unsigned.toUInt
 
@@ -53,7 +53,7 @@ class TccGeneratorNode(
 
     override fun doProcessPackets(p: List<PacketInfo>) {
         tccExtensionId?.let { tccExtId ->
-            p.forEachAs<SrtpPacket> { pktInfo, pkt ->
+            p.forEachAs<RtpPacket> { pktInfo, pkt ->
                 pkt.header.getExtension(tccExtId).let currPkt@ { tccExt ->
                     //TODO: check if it's a one byte or two byte ext?
                     // TODO: add a tcc ext type that handles the seq num parsing?
@@ -80,7 +80,7 @@ class TccGeneratorNode(
     }
 
     private fun addPacket(tccSeqNum: Int, timestamp: Long) {
-        currTcc.getFci().addPacket(tccSeqNum, timestamp)
+        currTcc.addPacket(tccSeqNum, timestamp)
 
         if (isTccReadyToSend()) {
             val mediaSsrc = if (mediaSsrcs.isNotEmpty()) mediaSsrcs.iterator().next() else -1L
@@ -94,7 +94,7 @@ class TccGeneratorNode(
 
     private fun isTccReadyToSend(): Boolean {
         return (System.currentTimeMillis() - lastTccSentTime >= 70) ||
-            currTcc.numPackets() >= 20
+            currTcc.numPackets >= 20
     }
 
     override fun getNodeStats(): NodeStatsBlock {

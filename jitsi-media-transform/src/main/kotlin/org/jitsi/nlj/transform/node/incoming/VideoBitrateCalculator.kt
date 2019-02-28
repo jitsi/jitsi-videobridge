@@ -40,7 +40,7 @@ class VideoBitrateCalculator : Node("Video bitrate calculator") {
             mediaStreamTrackDescs.forEach {
                 it.findRtpEncodingDesc(videoRtpPacket)?.let { encoding ->
                     val now = System.currentTimeMillis()
-                    encoding.update(videoRtpPacket.toRawPacket(), now)
+                    encoding.update(videoRtpPacket.sizeBytes, now)
                     videoRtpPacket.bitrateSnapshot = encoding.getLastStableBitrateBps(now)
                 }
             }

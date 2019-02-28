@@ -24,10 +24,9 @@ import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.VideoPayloadType
 import org.jitsi.nlj.format.Vp8PayloadType
-import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.rtp.RtpPacket
 import unsigned.toUByte
 import java.util.ArrayList
 import java.util.concurrent.ConcurrentHashMap
@@ -49,8 +48,8 @@ class VideoParser : Node("Video parser") {
             val pt = pkt.header.payloadType.toUByte()
             payloadTypes[pt]?.let { payloadType ->
                 val videoRtpPacket = when (payloadType) {
-                    is Vp8PayloadType -> Vp8Packet(pkt.getBuffer())
-                    else -> VideoRtpPacket(pkt.getBuffer())
+                    is Vp8PayloadType -> pkt.toOtherRtpPacketType(::Vp8Packet)
+                    else -> pkt
                 }
                 packetInfo.packet = videoRtpPacket
                 outPackets.add(packetInfo)

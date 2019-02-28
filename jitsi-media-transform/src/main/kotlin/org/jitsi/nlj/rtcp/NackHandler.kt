@@ -47,6 +47,8 @@ class NackHandler(
     }
 
     private fun onNackPacket(nackPacket: RtcpFbNackPacket) {
+        logger.cdebug { "Nack received for ${nackPacket.mediaSourceSsrc} ${nackPacket.missingSeqNums}" }
+
         numNacksReceived++
         val nackedPackets = mutableListOf<Packet>()
         val ssrc = nackPacket.mediaSourceSsrc

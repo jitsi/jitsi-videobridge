@@ -145,7 +145,7 @@ abstract class Node(
             firstPacketTime = startTime
         }
         incomingPackets.forEach {
-            numBytes += it.packet.size
+            numBytes += it.packet.sizeBytes
             it.addEvent(nodeEntryString)
         }
         lastPacketTime = System.nanoTime()

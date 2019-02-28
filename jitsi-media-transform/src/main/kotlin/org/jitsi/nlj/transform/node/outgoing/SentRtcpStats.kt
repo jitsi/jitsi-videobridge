@@ -29,7 +29,7 @@ class SentRtcpStats : Node("Sent RTCP stats") {
     private var numFirsSent = 0
 
     override fun doProcessPackets(p: List<PacketInfo>) {
-        p.forEachAs<RtcpPacket> { packetInfo, expectedPacketType ->
+        p.forEachAs<RtcpPacket> { _, expectedPacketType ->
             when (expectedPacketType) {
                 is RtcpFbPliPacket -> numPlisSent++
                 is RtcpFbFirPacket -> numFirsSent++

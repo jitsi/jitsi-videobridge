@@ -18,18 +18,18 @@ package org.jitsi.nlj.transform.node.outgoing
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.rtp.RtpPacket
 import java.util.concurrent.ConcurrentHashMap
 
 class OutgoingStatisticsTracker : Node("Outgoing statistics tracker") {
     private val streamStats: MutableMap<Long, OutgoingStreamStatistics> = ConcurrentHashMap()
 
     override fun doProcessPackets(p: List<PacketInfo>) {
-        p.forEachAs<RtpPacket> { pktInfo, rtpPacket ->
+        p.forEachAs<RtpPacket> { _, rtpPacket ->
             val stats = streamStats.computeIfAbsent(rtpPacket.header.ssrc) {
                 OutgoingStreamStatistics(rtpPacket.header.ssrc)
             }
-            stats.packetSent(rtpPacket.size, rtpPacket.header.timestamp)
+            stats.packetSent(rtpPacket.sizeBytes, rtpPacket.header.timestamp)
         }
         next(p)
     }

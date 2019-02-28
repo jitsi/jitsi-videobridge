@@ -23,7 +23,7 @@ import org.jitsi.nlj.RtpExtensionClearEvent
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cinfo
-import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.service.neomedia.RTPExtension
 import unsigned.toUInt
 import kotlin.experimental.and
