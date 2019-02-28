@@ -358,6 +358,8 @@ public class IceDtlsTransportManager
                 pkts.forEach(pktInfo -> {
                     try
                     {
+                        //TODO(brian): would it be an improvement to keep a single, local buffer here and have
+                        // the packet serialize into it instead of calling getBuffer?
                         socket.send(
                             new DatagramPacket(
                                     pktInfo.getPacket().getBuffer().array(),

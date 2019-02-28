@@ -40,16 +40,17 @@ public class SctpPacket extends Packet
     }
 
     @Override
-    public int getSize()
+    public int getSizeBytes()
     {
         return data.limit();
     }
 
-    @NotNull
     @Override
-    public ByteBuffer getBuffer()
+    public void serializeTo(@NotNull ByteBuffer byteBuffer)
     {
-        return data;
+        data.rewind();
+        byteBuffer.put(data);
+        data.rewind();
     }
 
     @NotNull

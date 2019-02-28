@@ -21,12 +21,14 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.transform.node.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
+import org.jitsi.rtp.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
-import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.shim.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 
@@ -230,6 +232,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
                 // changed in 'wants'
                 if (endpoint.wants(pktInfo, getID()))
                 {
+                    RtpPacket p = (RtpPacket)pktInfo.getPacket();
                     PacketInfo pktInfoCopy = pktInfo.clone();
                     endpoint.sendRtp(pktInfoCopy);
                 }
@@ -416,6 +419,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         this.expired = true;
         this.transceiver.stop();
         logger.info(transceiver.getNodeStats().prettyPrint(0));
+
+        transceiver.teardown();
 
         Conference conference = getConference();
         if (conference != null)
