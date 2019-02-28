@@ -22,6 +22,7 @@ import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.PacketPredicate
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -62,11 +63,11 @@ internal class ExclusivePathDemuxerTest : ShouldSpec() {
     override fun beforeSpec(spec: Spec) {
         super.beforeSpec(spec)
         rtpPath.name = "RTP"
-        rtpPath.predicate = { it is RtpPacket }
+        rtpPath.predicate = PacketPredicate { it is RtpPacket }
         rtpPath.path = rtpHandler
 
         rtcpPath.name = "RTCP"
-        rtcpPath.predicate = { it is RtcpPacket }
+        rtcpPath.predicate = PacketPredicate { it is RtcpPacket }
         rtcpPath.path = rtcpHandler
 
         demuxer.addPacketPath(rtpPath)
@@ -85,7 +86,7 @@ internal class ExclusivePathDemuxerTest : ShouldSpec() {
             val rtpPath2 = ConditionalPacketPath()
             val handler = DummyHandler("RTP 2")
             rtpPath2.name = "RTP 2"
-            rtpPath2.predicate = { it is RtpPacket }
+            rtpPath2.predicate = PacketPredicate { it is RtpPacket }
             rtpPath2.path = handler
             demuxer.addPacketPath(rtpPath2)
             demuxer.processPackets(listOf(rtpPacket))
