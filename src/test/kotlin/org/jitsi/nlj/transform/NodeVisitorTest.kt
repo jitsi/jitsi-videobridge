@@ -22,6 +22,7 @@ import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.rtp.PacketPredicate
 
 internal class NodeVisitorTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -31,7 +32,7 @@ internal class NodeVisitorTest : ShouldSpec() {
         demux("Node 2") {
             packetPath {
                 name = "Node 2 path 1"
-                predicate = { pkt -> true}
+                predicate = PacketPredicate { true }
                 path = pipeline {
                     simpleNode("Node 2 path 1 Node 1") { pkts -> pkts }
                     simpleNode("Node 2 path 1 Node 2") { pkts -> pkts }
@@ -39,7 +40,7 @@ internal class NodeVisitorTest : ShouldSpec() {
             }
             packetPath {
                 name = "Node 2 path 2"
-                predicate = { pkt -> true}
+                predicate = PacketPredicate { true }
                 path = pipeline {
                     simpleNode("Node 2 path 2 Node 1") { pkts -> pkts }
                     simpleNode("Node 2 path 2 Node 2") { pkts -> pkts }
