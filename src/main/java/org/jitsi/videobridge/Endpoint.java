@@ -755,7 +755,9 @@ public class Endpoint
         {
             try
             {
-                return transportManager = new IceDtlsTransportManager(this);
+                transportManager = new IceDtlsTransportManager(this);
+                onTransportManagerSet.complete(true);
+                return transportManager;
             }
             catch (IOException ioe)
             {
