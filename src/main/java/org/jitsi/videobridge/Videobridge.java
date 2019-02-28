@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import kotlin.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.health.*;
@@ -25,7 +26,9 @@ import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
+import org.jitsi.rtp.util.BufferPool;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.*;
@@ -202,6 +205,20 @@ public class Videobridge
      * {@link Videobridge}.
      */
     private final VideobridgeShim shim = new VideobridgeShim(this);
+
+    static
+    {
+        BufferPool.Companion.setGetBuffer(ByteBufferPool::getBuffer);
+        BufferPool.Companion.setReturnBuffer(buffer -> {
+            ByteBufferPool.returnBuffer(buffer);
+            return Unit.INSTANCE;
+        });
+        org.jitsi.nlj.util.BufferPool.Companion.setGetBuffer(ByteBufferPool::getBuffer);
+        org.jitsi.nlj.util.BufferPool.Companion.setReturnBuffer(buffer -> {
+            ByteBufferPool.returnBuffer(buffer);
+            return Unit.INSTANCE;
+        });
+    }
 
     /**
      * Initializes a new <tt>Videobridge</tt> instance.

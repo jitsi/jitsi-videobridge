@@ -27,6 +27,8 @@ import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
+import org.jitsi.rtp.extensions.*;
+import org.jitsi.rtp.rtcp.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.util.*;
 
@@ -266,19 +268,20 @@ public class IceDtlsTransportManager
         // enough (it'll only be a bit of the DTLS path) that running it in the
         // IO pool is fine
         TaskPools.IO_POOL.submit(() -> {
-            byte[] buf = new byte[1500];
+            ByteBuffer bbuf = ByteBufferPool.getBuffer(1500);
+            DatagramPacket p = new DatagramPacket(bbuf.array(), bbuf.arrayOffset(), bbuf.limit());
             while (!closed)
             {
-                DatagramPacket p = new DatagramPacket(buf, 0, 1500);
                 try
                 {
                     socket.receive(p);
-                    ByteBuffer packetBuf = ByteBuffer.allocate(p.getLength());
-                    packetBuf.put(ByteBuffer.wrap(buf, 0, p.getLength())).flip();
-                    Packet pkt = new UnparsedPacket(packetBuf);
+                    bbuf.limit(p.getLength());
+                    Packet pkt = new UnparsedPacket(bbuf);
                     PacketInfo pktInfo = new PacketInfo(pkt);
                     pktInfo.setReceivedTime(System.currentTimeMillis());
                     incomingPipelineRoot.processPacket(pktInfo);
+                    bbuf = ByteBufferPool.getBuffer(1500);
+                    p.setData(bbuf.array(), bbuf.arrayOffset(), bbuf.limit());
                 }
                 catch (SocketClosedException e)
                 {
@@ -360,6 +363,9 @@ public class IceDtlsTransportManager
                                 packetInfo.getPacket().getBuffer().array(),
                                 0,
                                 packetInfo.getPacket().getBuffer().limit()));
+//                    System.out.println("IceDtlsTransportManager#send returning buf " +
+//                            System.identityHashCode(packetInfo.getPacket().getBuffer().array()));
+                    ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
                 }
                 catch (IOException e)
                 {

@@ -19,6 +19,8 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.nlj.*;
+import org.jitsi.rtp.*;
+import org.jitsi.rtp.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.*;
@@ -451,6 +453,9 @@ public class Conference
             {
                 updateStatisticsOnExpire();
             }
+        }
+        if (includeInStatistics) {
+            System.out.println(ByteBufferPool.getStats());
         }
     }
 
@@ -1128,13 +1133,21 @@ public class Conference
             if (endpoint instanceof Endpoint
                     && endpoint.wants(packetInfo, source != null ? source.getID() : null))
             {
-                ((Endpoint) endpoint).sendRtp(packetInfo.clone());
+                //TODO: add a version of packetinfo.clone to do this (use a buffer)?
+                Packet packet = ((RtpPacket)packetInfo.getPacket()).cloneWithBackingBuffer(ByteBufferPool.getBuffer(1500));
+                PacketInfo packetInfoCopy = new PacketInfo(packet, packetInfo.getTimeline().clone());
+                packetInfoCopy.setReceivedTime(packetInfo.getReceivedTime());
+                ((Endpoint) endpoint).sendRtp(packetInfoCopy);
             }
         });
         if (tentacle != null && tentacle.wants(packetInfo, source))
         {
-            tentacle.sendRtp(packetInfo.clone(), source);
+            Packet packet = ((RtpPacket)packetInfo.getPacket()).cloneWithBackingBuffer(ByteBufferPool.getBuffer(1500));
+            PacketInfo packetInfoCopy = new PacketInfo(packet, packetInfo.getTimeline().clone());
+            packetInfoCopy.setReceivedTime(packetInfo.getReceivedTime());
+            tentacle.sendRtp(packetInfoCopy, source);
         }
+        ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
     }
 
     /**
