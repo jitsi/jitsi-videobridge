@@ -16,15 +16,16 @@
 package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.util.PacketCache
-import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.rtp.RtpPacket
 
 class PacketCacher : Node("Packet cache") {
     private val packetCache = PacketCache()
 
     override fun doProcessPackets(p: List<PacketInfo>) {
-        p.forEach { packetInfo ->
-            packetCache.cachePacket(packetInfo.packetAs<RtpPacket>())
+        p.forEachAs<RtpPacket> { _, rtpPacket ->
+            packetCache.cachePacket(rtpPacket)
         }
         next(p)
     }

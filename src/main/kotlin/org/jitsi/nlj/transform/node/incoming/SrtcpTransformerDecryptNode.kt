@@ -15,28 +15,19 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.AbstractSrtpTransformerNode
-import org.jitsi.nlj.util.toRawPacket
-import org.jitsi.rtp.UnparsedPacket
-import org.jitsi.rtp.util.ByteBufferUtils
+import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
 
 class SrtcpTransformerDecryptNode : AbstractSrtpTransformerNode("SRTCP decrypt") {
     override fun doTransform(pkts: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo> {
         val outPackets = mutableListOf<PacketInfo>()
         pkts.forEach {
-            val rp = it.packet.toRawPacket()
-            transformer.reverseTransform(rp)?.let { decryptedRawPacket ->
-                val packet = UnparsedPacket(
-                    ByteBufferUtils.wrapSubArray(
-                        decryptedRawPacket.buffer,
-                        decryptedRawPacket.offset,
-                        decryptedRawPacket.length
-                    )
-                )
-                it.packet = packet
+            transformer.reverseTransform(it.packet)?.let { decryptedPacket ->
+                it.packet = decryptedPacket
                 outPackets.add(it)
+            } ?: run {
+                logger.error("Error decrypting RTCP")
             }
         }
         return outPackets

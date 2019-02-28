@@ -16,8 +16,8 @@
 
 package org.jitsi.nlj.rtcp;
 
-import org.jitsi.nlj.PacketInfo;
-import org.jitsi.rtp.rtcp.RtcpPacket;
+import org.jitsi.nlj.*;
+import org.jitsi.rtp.rtcp.*;
 
 /**
  * NOTE(brian): Java doesn't see default implementation interface methods when

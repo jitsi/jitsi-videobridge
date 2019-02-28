@@ -31,7 +31,7 @@ import org.jitsi.nlj.util.isNewerThan
 import org.jitsi.nlj.util.isNextAfter
 import org.jitsi.nlj.util.numPacketsTo
 import org.jitsi.nlj.util.rolledOverTo
-import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.rtp.RtpPacket
 import toUInt
 import unsigned.toUShort
 import java.time.Duration
@@ -228,7 +228,7 @@ class IncomingStreamStatistics(
         val packetSequenceNumber = packet.header.sequenceNumber
         synchronized(statsLock) {
             numReceivedPackets++
-            bitrate.update(packet.size, System.currentTimeMillis())
+            bitrate.update(packet.sizeBytes, System.currentTimeMillis())
             if (packetSequenceNumber isNewerThan maxSeqNum) {
                 if (packetSequenceNumber isNextAfter maxSeqNum) {
                     if (probation > 0) {

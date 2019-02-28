@@ -366,13 +366,13 @@ public class RTPEncodingDesc
 
     /**
      *
-     * @param pkt
+     * @param packetSizeBytes
      * @param nowMs
      */
-    public void update(RawPacket pkt, long nowMs)
+    public void update(int packetSizeBytes, long nowMs)
     {
         // Update rate stats (this should run after padding termination).
-        rateStatistics.update(pkt.getLength(), nowMs);
+        rateStatistics.update(packetSizeBytes , nowMs);
     }
 
     /**

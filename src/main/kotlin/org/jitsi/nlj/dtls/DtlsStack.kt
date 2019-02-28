@@ -160,9 +160,9 @@ abstract class DtlsStack : DatagramTransport {
     override fun receive(buf: ByteArray, off: Int, length: Int, waitMillis: Int): Int {
         val packetInfo = incomingProtocolData.poll(waitMillis.toLong(), TimeUnit.MILLISECONDS) ?: return -1
         val packet = packetInfo.packet
-        System.arraycopy(packet.getBuffer().array(), 0, buf, off, Math.min(length, packet.size))
+        System.arraycopy(packet.getBuffer().array(), 0, buf, off, Math.min(length, packet.sizeBytes))
 
-        return packet.size
+        return packet.sizeBytes
     }
 
     /**

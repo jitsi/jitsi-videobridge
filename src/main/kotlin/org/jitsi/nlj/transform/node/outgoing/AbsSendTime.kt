@@ -24,7 +24,7 @@ import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getByteBuffer
 import org.jitsi.nlj.util.toRawPacket
-import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.service.neomedia.RTPExtension
 import unsigned.toUInt
 
@@ -39,7 +39,7 @@ class AbsSendTime : Node("Absolute send time") {
             // whatever this packet was as an RtpPacket, but I don't think
             // this will be a problem.  Eventually we will port the old transformers
             // over to Packet from RawPacket.
-            pktInfo.packet = RtpPacket(rawPacket.getByteBuffer())
+            pktInfo.packet = RtpPacket.fromBuffer(rawPacket.getByteBuffer())
         }
         next(p)
     }

@@ -16,7 +16,7 @@
 
 package org.jitsi.nlj.rtp
 
-import org.jitsi.rtp.RtpHeader
+import org.jitsi.rtp.rtp.RtpHeader
 import java.nio.ByteBuffer
 
 class PaddingVideoPacket(

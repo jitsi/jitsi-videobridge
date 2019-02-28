@@ -15,11 +15,11 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.node.incoming.IncomingStreamStatistics
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
+import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
 
 abstract class RtpReceiver :
     PacketHandler, EventHandler, NodeStatsProducer, Stoppable {

@@ -16,7 +16,7 @@
 
 package org.jitsi.nlj.util
 
-import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.rtp.RtpPacket
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 
@@ -91,7 +91,7 @@ class PacketCache {
             val packets = mutableSetOf<RtpPacket>()
             cache.forEachDescending { pkt ->
                 packets.add(pkt)
-                bytesRemaining -= pkt.size
+                bytesRemaining -= pkt.sizeBytes
                 bytesRemaining > 0
             }
             return packets

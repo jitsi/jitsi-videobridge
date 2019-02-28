@@ -24,12 +24,12 @@ import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpByePacket
 import org.jitsi.rtp.rtcp.RtcpRrPacket
-import org.jitsi.rtp.rtcp.RtcpSdesPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbNackPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
+import org.jitsi.rtp.rtcp.sdes.RtcpSdesPacket
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 
 class RtcpTermination(
@@ -41,6 +41,7 @@ class RtcpTermination(
     private var numPlisReceived = 0
     private var numRrsReceiver = 0
     private var numSrsReceived = 0
+    private var numSdesReceived = 0
 
     override fun doProcessPackets(p: List<PacketInfo>) {
         val outPackets = mutableListOf<PacketInfo>()
@@ -62,7 +63,7 @@ class RtcpTermination(
                     //TODO
                 }
                 is RtcpSdesPacket -> {
-                    //TODO
+                    numSdesReceived++
                 }
                 is RtcpFbPliPacket, is RtcpFbFirPacket -> {
                     if (pkt is RtcpFbPliPacket) {
@@ -98,6 +99,7 @@ class RtcpTermination(
             addStat("num FIR packets rx: $numFirsReceived")
             addStat("num SR packets rx: $numSrsReceived")
             addStat("num RR packets rx: $numRrsReceiver")
+            addStat("num SDES packets rx: $numSdesReceived")
         }
     }
 }
