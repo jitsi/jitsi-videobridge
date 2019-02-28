@@ -191,7 +191,7 @@ public class IceDtlsTransportManager
         // do we need a builder if we're using a single node?
         PipelineBuilder builder = new PipelineBuilder();
 
-        DemuxerNode dtlsSrtpDemuxer = new DemuxerNode("DTLS/SRTP");
+        DemuxerNode dtlsSrtpDemuxer = new ExclusivePathDemuxer("DTLS/SRTP");
         // DTLS path
         ConditionalPacketPath dtlsPath
                 = new ConditionalPacketPath("DTLS path");
