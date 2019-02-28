@@ -19,6 +19,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.DemuxerNode
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.ConditionalPacketPath
+import org.jitsi.nlj.transform.node.ExclusivePathDemuxer
 import org.jitsi.rtp.Packet
 
 
@@ -63,7 +64,7 @@ class PipelineBuilder {
     }
 
     fun demux(name: String, block: DemuxerNode.() -> Unit) {
-        val demuxer = DemuxerNode(name).apply(block)
+        val demuxer = ExclusivePathDemuxer(name).apply(block)
         addNode(demuxer)
     }
 
