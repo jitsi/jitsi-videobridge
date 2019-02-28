@@ -34,6 +34,7 @@ fun ByteBuffer.clone(): ByteBuffer {
     clone.put(this)
     this.position(startPosition)
     clone.flip()
+    //TODO(brian): handle if this was a readonly buffer
     return clone
 }
 
@@ -59,6 +60,7 @@ fun ByteBuffer.put3Bytes(index: Int, value: Int) {
     this.put(index + 1, ((value and 0x0000FF00) ushr 8).toByte())
     this.put(index + 2, (value and 0x000000FF).toByte())
 }
+
 
 /**
  * Reads the next 3 bytes into the right-most
@@ -132,20 +134,19 @@ fun ByteBuffer.toHex() : String {
 /**
  * Returns a newly constructed [ByteBuffer] whose position 0 will
  * start at [startPosition] in the current buffer and whose limit
- * will be [size]
+ * and capacity will be [size]
  */
-fun ByteBuffer.subBuffer(startPosition: Int, size: Int): ByteBuffer {
-    return (duplicate().position(startPosition) as ByteBuffer).slice().limit(size) as ByteBuffer
-}
+fun ByteBuffer.subBuffer(startPosition: Int, size: Int): ByteBuffer =
+    (duplicate().position(startPosition).limit(startPosition + size) as ByteBuffer).slice()
 
 /**
  * Returns a newly constructed [ByteBuffer] whose position 0 will
  * start at [startPosition] in the current buffer and whose limit
- * will be the end of the original buffer
+ * and capacity will be the amount of bytes between [startPosition] and
+ * the current buffer's [limit()]
  */
-fun ByteBuffer.subBuffer(startPosition: Int): ByteBuffer {
-    return (duplicate().position(startPosition) as ByteBuffer).slice()
-}
+fun ByteBuffer.subBuffer(startPosition: Int): ByteBuffer =
+    subBuffer(startPosition, limit() - startPosition)
 
 /**
  * Put [buf] into this buffer starting at [index]
@@ -158,6 +159,12 @@ fun ByteBuffer.put(index: Int, buf: ByteBuffer): ByteBuffer {
     return this
 }
 
+fun ByteBuffer.incrementPosition(value: Int) {
+    position(position() + value)
+}
+fun ByteBuffer.decrementPosition(value: Int) {
+    position(position() - value)
+}
 /**
  * Compare the contents of two ByteBuffers, each starting from their position 0
  */
@@ -165,4 +172,17 @@ fun ByteBuffer.compareToFromBeginning(other: ByteBuffer): Int {
     val thisRewound = this.duplicate().rewind() as ByteBuffer
     val otherRewound = other.duplicate().rewind() as ByteBuffer
     return thisRewound.compareTo(otherRewound)
+}
+
+/**
+ * Return a new ByteBuffer that includes the contents of this one
+ * plus [other]
+ */
+operator fun ByteBuffer.plus(other: ByteBuffer): ByteBuffer {
+    val newBuf = ByteBuffer.allocate(limit() + other.limit())
+    newBuf.put(duplicate().rewind() as ByteBuffer)
+    newBuf.put(other.duplicate().rewind() as ByteBuffer)
+    newBuf.flip()
+
+    return newBuf
 }

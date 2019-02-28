@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2018 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,23 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.jitsi.rtp.rtcp.rtcpfb
 
 import org.jitsi.rtp.rtcp.RtcpHeader
+import org.jitsi.rtp.rtcp.rtcpfb.fci.FeedbackControlInformation
 import java.nio.ByteBuffer
 
-abstract class PayloadSpecificFbPacket : RtcpFbPacket {
+abstract class PayloadSpecificFbPacket(
+    header: RtcpHeader = RtcpHeader(),
+    mediaSourceSsrc: Long = -1,
+    fci: FeedbackControlInformation,
+    backingBuffer: ByteBuffer? = null
+) : RtcpFbPacket(header.apply { packetType = PT }, mediaSourceSsrc, fci, backingBuffer) {
     companion object {
         const val PT = 206
-    }
-    constructor(buf: ByteBuffer) : super(buf) {
-        super.header.packetType = PT
-    }
-
-    constructor(
-        header: RtcpHeader = RtcpHeader(),
-        mediaSourceSsrc: Long = 0
-    ) : super(header, mediaSourceSsrc) {
-        super.header.packetType = PT
     }
 }

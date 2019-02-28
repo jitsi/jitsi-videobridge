@@ -25,6 +25,24 @@ import java.nio.ByteBuffer
 internal class RtcpHeaderTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
+    companion object {
+        fun rtcpHeaderEquals(left: RtcpHeader?, right: RtcpHeader?): Boolean {
+            if (left === right) {
+                return true
+            }
+            if (left == null || right == null) {
+                return false
+            }
+            return (left.sizeBytes == right.sizeBytes &&
+                    left.version == right.version &&
+                    left.hasPadding == right.hasPadding &&
+                    left.reportCount == right.reportCount &&
+                    left.packetType == right.packetType &&
+                    left.length == right.length &&
+                    left.senderSsrc == right.senderSsrc)
+        }
+    }
+
     private val headerBuf = with(ByteBuffer.allocate(8)) {
         val bitBuffer = BitBuffer(this)
         bitBuffer.putBits(2.toByte(), 2) // version
@@ -39,14 +57,17 @@ internal class RtcpHeaderTest : ShouldSpec() {
     init {
         "creation" {
             "from a buffer" {
-                val header = RtcpHeader(headerBuf)
-                should("fromBuffer the values correctly") {
+                val header = RtcpHeader.fromBuffer(headerBuf)
+                should("parse the values correctly") {
                     header.version shouldBe 2
                     header.hasPadding shouldBe false
                     header.reportCount shouldBe 1
                     header.packetType shouldBe 200
                     header.length shouldBe 0xFFFF
                     header.senderSsrc shouldBe 0xFFFFFFFF
+                }
+                should("leave the buffer's position after the parsed data") {
+                    headerBuf.position() shouldBe RtcpHeader.SIZE_BYTES
                 }
             }
             "from a complete set of values" {
@@ -75,12 +96,11 @@ internal class RtcpHeaderTest : ShouldSpec() {
 
                 should("set the default version") {
                     header.version shouldBe 2
-
                 }
             }
         }
         "serialization" {
-            val header = RtcpHeader(headerBuf)
+            val header = RtcpHeader.fromBuffer(headerBuf)
             val newBuf = header.getBuffer()
             should("write the correct data to the buffer") {
                 newBuf.rewind() shouldBe headerBuf.rewind()

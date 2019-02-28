@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2018 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.jitsi.rtp.rtcp
 
 import org.jitsi.rtp.extensions.toHex
@@ -36,14 +37,17 @@ class RtcpIterator(buf: ByteBuffer) {
         if (!hasNext()) {
             throw Exception("No more items left on iterator")
         }
+        //TODO: we should be able to get rid of this now that packets
+        // correctly start parsing from the buf's current position
         val subBuf = buf.slice()
         try {
-            val packet = RtcpPacket.fromBuffer(subBuf)
-            // It's important we use the length from the header here instead of
-            // packet.size, because packet.size will give us the size the packet
-            // will be serialized to, not necessarily the size it was in the given
-            // buffer (tcc packets, for example)
-            buf.position(buf.position() + (packet.header.length + 1) * 4)
+            val startPosition = buf.position()
+            val packet = RtcpPacket.parse(subBuf)
+            // We continue to set this, even though all packets should now leave
+            // the buffer's position at where their data ended, just in case
+            // we have some parsing errors (specifically, i'm worried about us
+            // not parsing potentially multiple FCI blocks for some packets)
+            buf.position(startPosition + (packet.header.length + 1) * 4)
             return packet
         } catch (e: Exception) {
             println("Exception parsing packet in RTCPIterator: $e.  sub buf limit: ${subBuf.limit()}\n" +

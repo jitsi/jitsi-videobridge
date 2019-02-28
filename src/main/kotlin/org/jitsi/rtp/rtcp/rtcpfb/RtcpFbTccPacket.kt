@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2018 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,41 +13,89 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.jitsi.rtp.rtcp.rtcpfb
 
-import org.jitsi.rtp.Packet
-import org.jitsi.rtp.extensions.clone
+import org.jitsi.rtp.extensions.incrementPosition
 import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.rtcp.RtcpHeader
+import org.jitsi.rtp.rtcp.rtcpfb.fci.tcc.Tcc
 import java.nio.ByteBuffer
 
 /**
- * https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01#section-3.1
+ *
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |V=2|P|  FMT=15 |    PT=205     |           length              |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                     SSRC of packet sender                     |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                      SSRC of media source                     |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |      base sequence number     |      packet status count      |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                 reference time                | fb pkt. count |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |          packet chunk         |         packet chunk          |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * .                                                               .
+ * .                                                               .
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |         packet chunk          |  recv delta   |  recv delta   |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * .                                                               .
+ * .                                                               .
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |           recv delta          |  recv delta   | zero padding  |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-class RtcpFbTccPacket : TransportLayerFbPacket {
-    private var fci: Tcc
-    override fun getFci(): Tcc = fci
+class RtcpFbTccPacket(
+    header: RtcpHeader = RtcpHeader(),
+    mediaSourceSsrc: Long = -1,
+    private val fci: Tcc = Tcc(),
+    backingBuffer: ByteBuffer? = null
+) : TransportLayerFbPacket(header.apply { reportCount = FMT }, mediaSourceSsrc, fci, backingBuffer) {
+
+    val numPackets: Int get() = fci.numPackets
+
+    fun addPacket(seqNum: Int, timestamp: Long) {
+        fci.addPacket(seqNum, timestamp)
+        payloadModified()
+    }
+
+    val referenceTimeMs: Long get() = fci.referenceTimeMs
+
+    /**
+     * Iterate over the pairs of (sequence number, timestamp) represented by this TCC packet
+     */
+    fun forEach(action: (Int, Long) -> Unit) = fci.forEach(action)
+
+    override fun clone(): RtcpFbTccPacket {
+        return RtcpFbTccPacket(header.clone(), mediaSourceSsrc, fci.clone())
+    }
 
     companion object {
         const val FMT = 15
-    }
 
-    constructor(buf: ByteBuffer) : super(buf) {
-        fci = Tcc(buf.subBuffer(RtcpFbPacket.FCI_OFFSET))
-    }
+        fun fromBuffer(buf: ByteBuffer): RtcpFbTccPacket {
+            val header = RtcpHeader.fromBuffer(buf)
+            val mediaSourceSsrc = getMediaSourceSsrc(buf)
+            // TCC FCI's parse wants the buffer to start at the beginning of
+            // the FCI block, so create a wrapper buffer for it to make
+            // that the case
+            val fciBuf = buf.subBuffer(buf.position())
+            val fci = Tcc.fromBuffer(fciBuf)
+            // Increment buf's position by however much was parsed from fciBu
+            buf.incrementPosition(fciBuf.position())
+            //NOTE(brian): in my pcap replays I'm seeing instances
+            // of TCC packets with padding without the padding bit
+            // being set in the header
+//            if (header.hasPadding) {
+                consumePadding(buf)
+//            }
 
-    constructor(
-        mediaSourceSsrc: Long = 0,
-        fci: Tcc = Tcc()
-    ) : super(mediaSourceSsrc = mediaSourceSsrc) {
-        this.fci = fci
-    }
-
-    /**
-     * How many packets are currently represented by this TCC packets
-     */
-    fun numPackets(): Int = fci.numPackets()
-
-    override fun clone(): Packet {
-        return RtcpFbTccPacket(getBuffer().clone())
+            return RtcpFbTccPacket(header, mediaSourceSsrc, fci, buf)
+        }
     }
 }

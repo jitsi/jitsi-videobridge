@@ -17,15 +17,17 @@
 package org.jitsi.rtp.rtcp
 
 import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.spy
 import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.containAll
 import io.kotlintest.matchers.haveSize
 import io.kotlintest.should
 import io.kotlintest.shouldBe
-import io.kotlintest.shouldThrow
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.rtp.extensions.put3Bytes
+import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.util.BitBuffer
+import org.jitsi.test_helpers.matchers.haveSameContentAs
 import java.nio.ByteBuffer
 
 internal class RtcpRrPacketTest : ShouldSpec() {
@@ -58,7 +60,7 @@ internal class RtcpRrPacketTest : ShouldSpec() {
             putBits(0x2, 2) // Version
             putBoolean(false) // Padding
             putBits(0x2, 5) // Report count
-            packetBuf.put(200.toByte()) // Payload type
+            packetBuf.put(RtcpRrPacket.PT.toByte()) // Payload type
             packetBuf.putShort(0xFFFF.toShort()) // length
             packetBuf.putInt(0xFFFFFFFF.toInt()) // sender ssrc
 
@@ -79,13 +81,16 @@ internal class RtcpRrPacketTest : ShouldSpec() {
         }
         "creation" {
             "from a buffer" {
-                val rrPacket = RtcpRrPacket(packetBuf)
+                val rrPacket = RtcpRrPacket.fromBuffer(packetBuf)
                 should("read all values correctly") {
                     rrPacket.reportBlocks should haveSize(2)
                 }
+                should("leave the buffer's position at the end of the parsed data") {
+                    packetBuf.position() shouldBe packetBuf.limit()
+                }
             }
             "from values" {
-                val header: RtcpHeader = mock()
+                val header: RtcpHeader = spy()
                 val reportBlocks: MutableList<RtcpReportBlock> = mutableListOf(mock(), mock())
                 val rrPacket = RtcpRrPacket(header, reportBlocks)
                 should("set all values correctly") {
@@ -95,10 +100,24 @@ internal class RtcpRrPacketTest : ShouldSpec() {
             }
         }
         "serialization" {
-            val rrPacket = RtcpRrPacket(packetBuf)
-            val newBuf = rrPacket.getBuffer()
-            should("write everything correctly") {
-                newBuf.rewind() shouldBe packetBuf.rewind()
+            val rrPacket = RtcpRrPacket.fromBuffer(packetBuf)
+            "via requesting a new buffer" {
+                val newBuf = rrPacket.getBuffer()
+                should("write everything correctly") {
+                    newBuf should haveSameContentAs(packetBuf)
+                }
+            }
+            "to an existing buffer" {
+                val existingBuf = ByteBuffer.allocate(10 + rrPacket.sizeBytes)
+                existingBuf.position(10)
+                rrPacket.serializeTo(existingBuf)
+                should("write the data to the proper place") {
+                    val subBuf = existingBuf.subBuffer(10)
+                    subBuf should haveSameContentAs(packetBuf)
+                }
+                should("leave the buffer's position after the field it just wrote") {
+                    existingBuf.position() shouldBe existingBuf.limit()
+                }
             }
         }
     }

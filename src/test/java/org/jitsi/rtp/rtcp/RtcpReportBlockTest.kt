@@ -17,10 +17,12 @@
 package org.jitsi.rtp.rtcp
 
 import io.kotlintest.IsolationMode
+import io.kotlintest.should
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.rtp.extensions.put3Bytes
-import org.jitsi.rtp.extensions.toHex
+import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.test_helpers.matchers.haveSameContentAs
 import java.nio.ByteBuffer
 
 internal class RtcpReportBlockTest : ShouldSpec() {
@@ -48,7 +50,7 @@ internal class RtcpReportBlockTest : ShouldSpec() {
 
         "creation" {
             "from a buffer" {
-                val reportBlock = RtcpReportBlock(reportBlockData)
+                val reportBlock = RtcpReportBlock.fromBuffer(reportBlockData)
                 should("read the values correctly") {
                     reportBlock.ssrc shouldBe expectedSsrc
                     reportBlock.fractionLost shouldBe expectedFractionLost
@@ -58,6 +60,9 @@ internal class RtcpReportBlockTest : ShouldSpec() {
                     reportBlock.interarrivalJitter shouldBe expectedInterarrivalJitter
                     reportBlock.lastSrTimestamp shouldBe expectedLastSrTimestamp
                     reportBlock.delaySinceLastSr shouldBe expectedDelaySinceLastSr
+                }
+                should("leave the position of the buffer at the end of the parsed data") {
+                    reportBlockData.position() shouldBe reportBlockData.limit()
                 }
             }
             "from values" {
@@ -93,12 +98,22 @@ internal class RtcpReportBlockTest : ShouldSpec() {
                 interarrivalJitter = expectedInterarrivalJitter,
                 lastSrTimestamp = expectedLastSrTimestamp,
                 delaySinceLastSr = expectedDelaySinceLastSr
-                )
+            )
             val newBuf = reportBlock.getBuffer()
             should("write the values correctly") {
-                println(newBuf.toHex())
-                println(reportBlockData.toHex())
-                newBuf.rewind() shouldBe reportBlockData.rewind()
+                newBuf should haveSameContentAs(reportBlockData)
+            }
+            "to an existing buffer" {
+                val existingBuf = ByteBuffer.allocate(RtcpReportBlock.SIZE_BYTES + 20)
+                existingBuf.position(10)
+                reportBlock.serializeTo(existingBuf)
+                should("write the data to the correct place") {
+                    existingBuf.subBuffer(10, RtcpReportBlock.SIZE_BYTES) should haveSameContentAs(reportBlockData)
+                }
+                should("set the buffer position to the end of the written data") {
+                    existingBuf.position() shouldBe (10 + RtcpReportBlock.SIZE_BYTES)
+
+                }
             }
         }
     }

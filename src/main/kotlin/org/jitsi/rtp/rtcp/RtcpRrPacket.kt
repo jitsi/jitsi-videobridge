@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2018 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,15 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.jitsi.rtp.rtcp
 
-import org.jitsi.rtp.Packet
-import org.jitsi.rtp.extensions.clone
-import org.jitsi.rtp.extensions.subBuffer
-import org.jitsi.rtp.extensions.toHex
 import java.nio.ByteBuffer
-import kotlin.properties.Delegates
-
 
 /**
  * https://tools.ietf.org/html/rfc3550#section-6.4.2
@@ -52,63 +47,35 @@ import kotlin.properties.Delegates
  *        |                  profile-specific extensions                  |
  *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-class RtcpRrPacket : RtcpPacket {
-    private var buf: ByteBuffer? = null
-    override var header: RtcpHeader
-    var reportBlocks: MutableList<RtcpReportBlock> = mutableListOf()
-    override val size: Int
-        get() = RtcpHeader.SIZE_BYTES + reportBlocks.size * RtcpReportBlock.SIZE_BYTES
+class RtcpRrPacket(
+    header: RtcpHeader = RtcpHeader(),
+    val reportBlocks: List<RtcpReportBlock> = listOf(),
+    backingBuffer: ByteBuffer? = null
+) : RtcpPacket(header.apply { packetType = PT; reportCount = reportBlocks.size }, backingBuffer) {
+    override val sizeBytes: Int
+        get() = header.sizeBytes + (reportBlocks.size * RtcpReportBlock.SIZE_BYTES)
+
+    override fun serializeTo(buf: ByteBuffer) {
+        super.serializeTo(buf)
+        reportBlocks.forEach { it.serializeTo(buf) }
+    }
+
+    override fun clone(): RtcpRrPacket {
+        val clonedReportBlocks = reportBlocks
+                .map(RtcpReportBlock::clone)
+                .toList()
+        return RtcpRrPacket(header.clone(), clonedReportBlocks)
+    }
 
     companion object {
         const val PT: Int = 201
-    }
 
-    constructor(buf: ByteBuffer) {
-        this.buf = buf.duplicate()
-        this.header = RtcpHeader(buf)
-        val reportBlockStartPos = RtcpHeader.SIZE_BYTES
-        repeat (header.reportCount) {
-            val reportBlock = RtcpReportBlock(buf.subBuffer(reportBlockStartPos + (it * RtcpReportBlock.SIZE_BYTES), RtcpReportBlock.SIZE_BYTES))
-            reportBlocks.add(reportBlock)
-        }
-    }
-
-    constructor(
-        header: RtcpHeader = RtcpHeader(),
-        reportBlocks: MutableList<RtcpReportBlock> = mutableListOf()
-    ) {
-        this.header = header
-        this.reportBlocks = reportBlocks
-    }
-
-    override fun getBuffer(): ByteBuffer {
-        if (this.buf == null || this.buf!!.limit() < size) {
-            this.buf = ByteBuffer.allocate(size)
-        }
-        this.buf!!.rewind()
-        header.length = lengthValue
-        this.buf!!.put(header.getBuffer())
-        reportBlocks.forEach {
-            this.buf!!.put(it.getBuffer())
-        }
-
-        this.buf!!.rewind()
-        return this.buf!!
-    }
-
-    override fun clone(): Packet {
-        return RtcpRrPacket(getBuffer().clone())
-    }
-
-    override fun toString(): String {
-        return with (StringBuffer()) {
-            appendln("RR packet")
-            appendln(super.toString())
-            appendln("Report blocks:")
-            reportBlocks.forEach {
-                appendln("  ${it}")
-            }
-            toString()
+        fun fromBuffer(buf: ByteBuffer): RtcpRrPacket {
+            val header = RtcpHeader.fromBuffer(buf)
+            val reportBlocks = (1..header.reportCount)
+                    .map { RtcpReportBlock.fromBuffer(buf) }
+                    .toList()
+            return RtcpRrPacket(header, reportBlocks, buf)
         }
     }
 }

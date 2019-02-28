@@ -16,26 +16,73 @@
 
 package org.jitsi.rtp.rtcp.rtcpfb
 
+import io.kotlintest.IsolationMode
+import io.kotlintest.matchers.collections.shouldContainInOrder
+import io.kotlintest.should
+import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
-import org.jitsi.rtp.util.byteBufferOf
-
+import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.rtcp.RtcpHeader
+import org.jitsi.rtp.rtcp.rtcpfb.fci.GenericNackBlp
+import org.jitsi.test_helpers.matchers.haveSameContentAs
+import java.nio.ByteBuffer
 
 internal class RtcpFbNackPacketTest : ShouldSpec() {
-    val buf = byteBufferOf(
-        0x81.toByte(), 0xcd.toByte(), 0x00.toByte(), 0x04.toByte(),
-        0xc6.toByte(), 0x47.toByte(), 0x34.toByte(), 0x07.toByte(),
-        0x12.toByte(), 0x95.toByte(), 0xf4.toByte(), 0x8f.toByte(),
-        0x21.toByte(), 0x03.toByte(), 0xff.toByte(), 0xff.toByte(),
-        0x21.toByte(), 0x14.toByte(), 0x00.toByte(), 0x7f.toByte()
-    )
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
+
+    private val samplePacketId = 0
+    private val sampleBlp = GenericNackBlp(listOf(1, 3, 5, 7, 9, 11, 13, 15))
+    private val sampleMediaSsrc = 12345L
+    private val sampleHeader =
+        RtcpHeader(length = 3, packetType = TransportLayerFbPacket.PT,
+            reportCount = RtcpFbNackPacket.FMT)
+    val sampleRtcpFbNackPacketBuf = ByteBuffer.allocate(16).apply {
+        put(sampleHeader.getBuffer())
+        putInt(sampleMediaSsrc.toInt())
+        putShort(samplePacketId.toShort())
+        put(sampleBlp.getBuffer())
+    }.flip() as ByteBuffer
+
 
     init {
-        "Parsing a NACK packet" {
-            val nackPacket = RtcpFbNackPacket(buf)
-
-            println(nackPacket.missingSeqNums)
+        "Creating an RtcpFbNackPacket" {
+            "from a buffer" {
+                val nackPacket = RtcpFbNackPacket.fromBuffer(sampleRtcpFbNackPacketBuf)
+                should("parse the values correctly") {
+                    nackPacket.mediaSourceSsrc shouldBe sampleMediaSsrc
+                    nackPacket.missingSeqNums.shouldContainInOrder(1, 3, 5, 7, 9, 11, 13, 15)
+                }
+                should("leave the buffer's position after the parsed data") {
+                    sampleRtcpFbNackPacketBuf.position() shouldBe sampleRtcpFbNackPacketBuf.limit()
+                }
+            }
+            "from values" {
+                val nackPacket =
+                    RtcpFbNackPacket.fromValues(sampleHeader, sampleMediaSsrc, listOf(0, 1, 3, 5, 7, 9, 11, 13, 15))
+                should("set the values correctly") {
+                    nackPacket.mediaSourceSsrc shouldBe sampleMediaSsrc
+                    nackPacket.missingSeqNums.shouldContainInOrder(0, 1, 3, 5, 7, 9, 11, 13, 15)
+                }
+                "and then serializing it" {
+                    "by requesting a buffer" {
+                        val buf = nackPacket.getBuffer()
+                        should("serialize the data correctly") {
+                            buf should haveSameContentAs(sampleRtcpFbNackPacketBuf)
+                        }
+                    }
+                    "to an existing buffer" {
+                        val existingBuf = ByteBuffer.allocate(RtcpFbNackPacket.SIZE_BYTES + 8)
+                        existingBuf.position(8)
+                        nackPacket.serializeTo(existingBuf)
+                        should("write the data to the correct place") {
+                            existingBuf.subBuffer(8) should haveSameContentAs(sampleRtcpFbNackPacketBuf)
+                        }
+                        should("leave the buffer's position after the written data") {
+                            existingBuf.position() shouldBe existingBuf.limit()
+                        }
+                    }
+                }
+            }
         }
     }
-
 }
-

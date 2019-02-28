@@ -103,7 +103,72 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                     }
                 }
             }
-        }
+            "subBuffer(startPosition, size)" {
+                val originalBuf = ByteBuffer.allocate(100)
+                "created from a default original buffer" {
+                    val subBuf = originalBuf.subBuffer(10, 30)
+                    should("have a correctly set position, limit and capacity") {
+                        subBuf.position() shouldBe 0
+                        subBuf.limit() shouldBe 30
+                        subBuf.capacity() shouldBe 30
+                    }
+                    should("not affect the original buffer in any way") {
+                        originalBuf.position() shouldBe 0
+                        originalBuf.limit() shouldBe 100
+                        originalBuf.capacity() shouldBe 100
+                    }
+                    should("represent the correct spot in the original buffer") {
+                        repeat (subBuf.limit()) { subBuf.put(it, 0x42) }
 
+                        (0..9).forEach { originalBuf.get(it) shouldBe 0x00.toByte() }
+                        (10..39).forEach { originalBuf.get(it) shouldBe 0x42.toByte() }
+                        (40..99).forEach { originalBuf.get(it) shouldBe 0x00.toByte() }
+                    }
+                }
+                "created from a buffer whose current position isn't 0" {
+                    originalBuf.position(10)
+                    val subBuf = originalBuf.subBuffer(5, 10)
+                    should("represent the correct spot in the original buffer") {
+                        repeat (subBuf.limit()) { subBuf.put(it, 0x42) }
+
+                        (0..4).forEach { originalBuf.get(it) shouldBe 0x00.toByte() }
+                        (5..14).forEach { originalBuf.get(it) shouldBe 0x42.toByte() }
+                        (15..99).forEach { originalBuf.get(it) shouldBe 0x00.toByte() }
+                    }
+                }
+            }
+            "subBuffer(startPosition)" {
+                val originalBuf = ByteBuffer.allocate(100)
+                "created from a default original buffer" {
+                    val subBuf = originalBuf.subBuffer(10)
+                    should("have a correctly set position, limit and capacity") {
+                        subBuf.position() shouldBe 0
+                        subBuf.limit() shouldBe 90
+                        subBuf.capacity() shouldBe 90
+                    }
+                    should("not affect the original buffer in any way") {
+                        originalBuf.position() shouldBe 0
+                        originalBuf.limit() shouldBe 100
+                        originalBuf.capacity() shouldBe 100
+                    }
+                    should("represent the correct spot in the original buffer") {
+                        repeat (subBuf.limit()) { subBuf.put(it, 0x42) }
+
+                        (0..9).forEach { originalBuf.get(it) shouldBe 0x00.toByte() }
+                        (10..99).forEach { originalBuf.get(it) shouldBe 0x42.toByte() }
+                    }
+                }
+                "created from a buffer whose current position isn't 0" {
+                    originalBuf.position(10)
+                    val subBuf = originalBuf.subBuffer(5)
+                    should("represent the correct spot in the original buffer") {
+                        repeat (subBuf.limit()) { subBuf.put(it, 0x42) }
+
+                        (0..4).forEach { originalBuf.get(it) shouldBe 0x00.toByte() }
+                        (5..99).forEach { originalBuf.get(it) shouldBe 0x42.toByte() }
+                    }
+                }
+            }
+        }
     }
 }

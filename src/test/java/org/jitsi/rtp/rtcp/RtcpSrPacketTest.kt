@@ -22,9 +22,9 @@ import io.kotlintest.matchers.haveSize
 import io.kotlintest.should
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
-import org.jitsi.rtp.extensions.toHex
+import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.test_helpers.matchers.haveSameContentAs
 import java.nio.ByteBuffer
-import kotlin.math.exp
 
 internal class RtcpSrPacketTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -58,17 +58,16 @@ internal class RtcpSrPacketTest : ShouldSpec() {
     )
 
     private val lengthValue =
-            (RtcpHeader.SIZE_BYTES + SenderInfo.SIZE_BYTES + RtcpReportBlock.SIZE_BYTES + RtcpReportBlock.SIZE_BYTES + 3) / 4 - 1
+        (RtcpHeader.SIZE_BYTES + SenderInfo.SIZE_BYTES + RtcpReportBlock.SIZE_BYTES + RtcpReportBlock.SIZE_BYTES + 3) / 4 - 1
 
     private val expectedHeader = RtcpHeader(
-            version = 2,
-            hasPadding = false,
-            reportCount = 2,
-            packetType = 200,
-            length = lengthValue,
-            senderSsrc = 12345
+        version = 2,
+        hasPadding = false,
+        reportCount = 2,
+        packetType = 200,
+        length = lengthValue,
+        senderSsrc = 12345
     )
-
 
     init {
         "creation" {
@@ -78,8 +77,8 @@ internal class RtcpSrPacketTest : ShouldSpec() {
                 buf.put(expectedSenderInfo.getBuffer())
                 buf.put(reportBlock1.getBuffer())
                 buf.put(reportBlock2.getBuffer())
-                buf.rewind()
-                val srPacket = RtcpSrPacket(buf)
+                buf.flip()
+                val srPacket = RtcpSrPacket.fromBuffer(buf)
                 should("read everything correctly") {
                     srPacket.senderInfo.ntpTimestamp shouldBe expectedSenderInfo.ntpTimestamp
                     srPacket.senderInfo.compactedNtpTimestamp shouldBe 0xFFFFFFFF
@@ -89,6 +88,9 @@ internal class RtcpSrPacketTest : ShouldSpec() {
                     srPacket.reportBlocks should haveSize(2)
                     srPacket.reportBlocks[0] shouldBe reportBlock1
                     srPacket.reportBlocks[1] shouldBe reportBlock2
+                }
+                should("leave the buffer's position at the end of the parsed data") {
+                    buf.position() shouldBe buf.limit()
                 }
             }
             "from explicit values" {
@@ -108,16 +110,16 @@ internal class RtcpSrPacketTest : ShouldSpec() {
             }
             "from an incomplete set of values" {
                 val srPacket = RtcpSrPacket(
-                    header = RtcpHeader(senderSsrc = 12345),
+                    header = RtcpHeader(reportCount = 2, senderSsrc = 12345),
                     senderInfo = expectedSenderInfo,
                     reportBlocks = mutableListOf(
-                            reportBlock1,
-                            reportBlock2
+                        reportBlock1,
+                        reportBlock2
                     )
                 )
-                val parsedPacket = RtcpSrPacket(srPacket.getBuffer())
+                val parsedPacket = RtcpSrPacket.fromBuffer(srPacket.getBuffer())
                 should("set all values correctly") {
-                    parsedPacket.header shouldBe expectedHeader
+                    RtcpHeaderTest.rtcpHeaderEquals(parsedPacket.header, expectedHeader)
                     parsedPacket.senderInfo shouldBe expectedSenderInfo
                     parsedPacket.reportBlocks should containAll(reportBlock1, reportBlock2)
                 }
@@ -129,13 +131,27 @@ internal class RtcpSrPacketTest : ShouldSpec() {
             expectedBuf.put(expectedSenderInfo.getBuffer())
             expectedBuf.put(reportBlock1.getBuffer())
             expectedBuf.put(reportBlock2.getBuffer())
-            expectedBuf.position(0)
-            val srPacket = RtcpSrPacket(expectedBuf)
+            expectedBuf.flip()
+            val srPacket = RtcpSrPacket.fromBuffer(expectedBuf)
 
-            val actualBuf = srPacket.getBuffer()
-            should("write all values correctly") {
-                for (i in 0 until actualBuf.limit()) {
-                    actualBuf.get(i) shouldBe expectedBuf.get(i)
+            "via getting its buffer" {
+                val actualBuf = srPacket.getBuffer()
+                should("write all values correctly") {
+                    for (i in 0 until actualBuf.limit()) {
+                        actualBuf.get(i) shouldBe expectedBuf.get(i)
+                    }
+                }
+            }
+            "to an existing buffer" {
+                val existingBuf = ByteBuffer.allocate(1024)
+                existingBuf.position(10)
+                srPacket.serializeTo(existingBuf)
+                should("write the data to the proper place") {
+                    val subBuf = existingBuf.subBuffer(10, expectedBuf.limit())
+                    subBuf should haveSameContentAs(expectedBuf)
+                }
+                should("leave the buffer's position after the field it just wrote") {
+                    existingBuf.position() shouldBe (10 + expectedBuf.limit())
                 }
             }
         }

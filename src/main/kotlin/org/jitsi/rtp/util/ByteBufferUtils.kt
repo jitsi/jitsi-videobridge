@@ -20,17 +20,46 @@ import java.nio.ByteBuffer
 
 class ByteBufferUtils {
     companion object {
-        val EMPTY_BUFFER = ByteBuffer.allocate(0)
+        val EMPTY_BUFFER: ByteBuffer = ByteBuffer.allocate(0)
         /**
-         * Returns [buf] if it is non-null and its limit is large enough to hold
-         * [capacity] bytes.  If not, allocate and return a new ByteBuffer of
-         * size [capacity]
+         * Returns [buf] if it is non-null and its capacity is large enough to hold
+         * [requiredCapacity] bytes.  If not, allocate and return a new ByteBuffer of
+         * size [requiredCapacity].
+         * Note that, in the case of allocating a new buffer, the content of the
+         * original buffer ([buf]) is NOT copied over.
          */
-        fun ensureCapacity(buf: ByteBuffer?, capacity: Int): ByteBuffer {
-            return if (buf == null || buf.limit() < capacity) {
-                ByteBuffer.allocate(capacity)
+        fun ensureCapacity(buf: ByteBuffer?, requiredCapacity: Int): ByteBuffer {
+            val newBuf = if (buf == null || buf.capacity() < requiredCapacity) {
+                ByteBuffer.allocate(requiredCapacity)
             } else {
                 buf
+            }
+            newBuf.rewind()
+            newBuf.limit(requiredCapacity)
+            return newBuf
+        }
+
+        /**
+         * 'Grow' the given buffer, if needed.  This means that, if [buf]'s
+         * capacity is not >= [requiredCapacity], allocate a new buffer of
+         * size [requiredCapacity] and copy all of [buf]'s content into it
+         * (starting at position 0 [buf] and the newly-allocated buffer).
+         *
+         * The returned buffer will have capacity/limit [requiredCapacity]
+         * and be at position 0.
+         */
+        fun growIfNeeded(buf: ByteBuffer, requiredCapacity: Int): ByteBuffer {
+            return if (buf.capacity() < requiredCapacity) {
+                val newBuf = ByteBuffer.allocate(requiredCapacity)
+                buf.rewind()
+                newBuf.put(buf)
+
+                newBuf.rewind() as ByteBuffer
+            } else {
+                if (buf.limit() < requiredCapacity) {
+                    buf.limit(requiredCapacity)
+                }
+                buf.rewind() as ByteBuffer
             }
         }
 
@@ -46,9 +75,7 @@ class ByteBufferUtils {
 
 fun byteBufferOf(vararg elements: Byte): ByteBuffer = ByteBuffer.wrap(byteArrayOf(*elements))
 
-//TODO: maybe this is a good way to avoid having to do the annoying '.toByte()' conversions?  verify it works
-// correctly
-//fun byteBufferOf(vararg elements: Any): ByteBuffer {
-//    val bytes = elements.map { (it as Number).toByte() }.toByteArray()
-//    return ByteBuffer.wrap(bytes)
-//}
+fun byteBufferOf(vararg elements: Any): ByteBuffer {
+    val bytes = elements.map { (it as Number).toByte() }.toByteArray()
+    return ByteBuffer.wrap(bytes)
+}

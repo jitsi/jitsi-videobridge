@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2018 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,25 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.jitsi.rtp.rtcp
 
 import org.jitsi.rtp.extensions.get3Bytes
 import org.jitsi.rtp.extensions.put3Bytes
-import org.jitsi.rtp.extensions.subBuffer
-import org.jitsi.rtp.util.ByteBufferUtils
-import toUInt
-import unsigned.toUBigInt
-import unsigned.toUByte
-import unsigned.toUInt
-import unsigned.toULong
-import unsigned.toUShort
+import org.jitsi.rtp.extensions.unsigned.toPositiveInt
+import org.jitsi.rtp.extensions.unsigned.toPositiveLong
+import org.jitsi.rtp.Serializable
 import java.nio.ByteBuffer
 import java.util.Objects
-import kotlin.properties.Delegates
 
 /**
- * [buf] is a buffer which points to the start of a report
- * block
  * +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
  * |                 SSRC_1 (SSRC of first source)                 |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -46,14 +39,13 @@ import kotlin.properties.Delegates
  * |                   delay since last SR (DLSR)                  |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-class RtcpReportBlock {
-    private var buf: ByteBuffer? = null
+class RtcpReportBlock(
     /**
      * SSRC_n (source identifier): 32 bits
      *     The SSRC identifier of the source to which the information in this
      *     reception report block pertains.
      */
-    var ssrc: Long
+    val ssrc: Long = 0,
     /**
      * fraction lost: 8 bits
      *     The fraction of RTP data packets from source SSRC_n lost since the
@@ -70,7 +62,7 @@ class RtcpReportBlock {
      *     if all packets from that source sent during the last reporting
      *     interval have been lost.
      */
-    var fractionLost: Int
+    val fractionLost: Int = 0,
     /**
      * cumulative number of packets lost: 24 bits
      *     The total number of RTP data packets from source SSRC_n that have
@@ -84,30 +76,17 @@ class RtcpReportBlock {
      *     defined next, less the initial sequence number received.  This may
      *     be calculated as shown in Appendix A.3.
      */
-    var cumulativePacketsLost: Int
-    /**
-     * extended highest sequence number received: 32 bits
-     *     The low 16 bits contain the highest sequence number received in an
-     *     RTP data packet from source SSRC_n, and the most significant 16
-     *     bits extend that sequence number with the corresponding count of
-     *     sequence number cycles, which may be maintained according to the
-     *     algorithm in Appendix A.1.  Note that different receivers within
-     *     the same session will generate different extensions to the
-     *     sequence number if their start times differ significantly.
-     */
-    var extendedHighestSeqNum: Long
+    val cumulativePacketsLost: Int = 0,
     /**
      * A convenience member for accessing the number of sequence number cycles
      * field from [extendedHighestSeqNum]
      */
-    val seqNumCycles: Int
-        get() = extendedHighestSeqNum.ushr(16).toUInt()
+    val seqNumCycles: Int = 0,
     /**
      * A convenience member for accessing the sequence number field from
      * [extendedHighestSeqNum]
      */
-    val seqNum: Int
-        get() = (extendedHighestSeqNum and (0x0000FFFF)).toUInt()
+    val seqNum: Int = 0,
     /**
      * interarrival jitter: 32 bits
      *     An estimate of the statistical variance of the RTP data packet
@@ -120,23 +99,23 @@ class RtcpReportBlock {
      *     the relative transit time is the difference between a packet's RTP
      *     timestamp and the receiver's clock at the time of arrival,
      *     measured in the same units.
-
+     *
      *     If Si is the RTP timestamp from packet i, and Ri is the time of
      *     arrival in RTP timestamp units for packet i, then for two packets
      *     i and j, D may be expressed as
-
+     *
      *     D(i,j) = (Rj - Ri) - (Sj - Si) = (Rj - Sj) - (Ri - Si)
-
+     *
      *     The interarrival jitter SHOULD be calculated continuously as each
      *     data packet i is received from source SSRC_n, using this
      *     difference D for that packet and the previous packet i-1 in order
      *     of arrival (not necessarily in sequence), according to the formula
-
+     *
      *     J(i) = J(i-1) + (|D(i-1,i)| - J(i-1))/16
-
+     *
      *     Whenever a reception report is issued, the current value of J is
      *     sampled.
-
+     *
      *     The jitter calculation MUST conform to the formula specified here
      *     in order to allow profile-independent monitors to make valid
      *     interpretations of reports coming from different implementations.
@@ -147,8 +126,7 @@ class RtcpReportBlock {
      *     discussion of the effects of varying packet duration and delay
      *     before transmission.
      */
-    var interarrivalJitter: Long
-
+    val interarrivalJitter: Long = 0,
     /**
      * last SR timestamp (LSR): 32 bits
      *     The middle 32 bits out of 64 in the NTP timestamp (as explained in
@@ -156,8 +134,7 @@ class RtcpReportBlock {
      *     (SR) packet from source SSRC_n.  If no SR has been received yet,
      *     the field is set to zero.
      */
-    var lastSrTimestamp: Long
-
+    val lastSrTimestamp: Long = 0,
     /**
      * delay since last SR (DLSR): 32 bits
      *     The delay, expressed in units of 1/65536 seconds, between
@@ -198,95 +175,54 @@ class RtcpReportBlock {
      *
      *             Figure 2: Example for round-trip time computation
      */
-    var delaySinceLastSr: Long
+    val delaySinceLastSr: Long = 0
+) : Serializable(), Cloneable {
+    /**
+     * extended highest sequence number received: 32 bits
+     *     The low 16 bits contain the highest sequence number received in an
+     *     RTP data packet from source SSRC_n, and the most significant 16
+     *     bits extend that sequence number with the corresponding count of
+     *     sequence number cycles, which may be maintained according to the
+     *     algorithm in Appendix A.1.  Note that different receivers within
+     *     the same session will generate different extensions to the
+     *     sequence number if their start times differ significantly.
+     */
+    val extendedHighestSeqNum: Long
+        get() = (seqNumCycles.shl(16) or seqNum).toPositiveLong()
+
+    override val sizeBytes: Int = SIZE_BYTES
+
     companion object {
         const val SIZE_BYTES = 24
 
-        fun getSsrc(buf: ByteBuffer): Long = buf.getInt(0).toULong()
-        fun setSsrc(buf: ByteBuffer, ssrc: Long) {
-            buf.putInt(0, ssrc.toUInt())
+        fun fromBuffer(buf: ByteBuffer): RtcpReportBlock {
+            val ssrc = buf.getInt().toPositiveLong()
+            val fractionLost = buf.get().toPositiveInt()
+            val cumulativePacketsLost = buf.get3Bytes()
+            val seqNumCycles = buf.getShort().toPositiveInt()
+            val seqNum = buf.getShort().toPositiveInt()
+            val interarrivalJitter = buf.getInt().toPositiveLong()
+            val lastSrTimestamp = buf.getInt().toPositiveLong()
+            val delaySinceLastSr = buf.getInt().toPositiveLong()
+
+            return RtcpReportBlock(ssrc, fractionLost, cumulativePacketsLost, seqNumCycles,
+                seqNum, interarrivalJitter, lastSrTimestamp, delaySinceLastSr)
         }
-
-        fun getFractionLost(buf: ByteBuffer): Int = buf.get(4).toUInt()
-        fun setFractionLost(buf: ByteBuffer, fractionLost: Int) {
-            buf.put(4, fractionLost.toByte())
-        }
-
-        fun getCumulativeLost(buf: ByteBuffer): Int = buf.get3Bytes(5)
-        fun setCumulativeLost(buf: ByteBuffer, cumulativeLost: Int) {
-            buf.put3Bytes(5, cumulativeLost)
-        }
-
-        fun getExtendedHighestSeqNum(buf: ByteBuffer): Long = buf.getInt(8).toULong()
-
-        fun getSeqNumCycles(buf: ByteBuffer): Int = buf.getShort(8).toUInt()
-        fun setSeqNumCycles(buf: ByteBuffer, seqNumCycles: Int) {
-            buf.putShort(8, seqNumCycles.toUShort())
-        }
-
-        fun getSeqNum(buf: ByteBuffer): Int = buf.getShort(10).toUInt()
-        fun setSeqNum(buf: ByteBuffer, seqNum: Int) {
-            buf.putShort(10, seqNum.toUShort())
-        }
-
-        fun getInterarrivalJitter(buf: ByteBuffer): Long = buf.getInt(12).toULong()
-        fun setInterarrivalJitter(buf: ByteBuffer, interarrivalJitter: Long) = buf.putInt(12, interarrivalJitter.toUInt())
-
-        fun getLastSrTimestamp(buf: ByteBuffer): Long = buf.getInt(16).toULong()
-        fun setLastSrTimestamp(buf: ByteBuffer, lastSrTimestamp: Long) = buf.putInt(16, lastSrTimestamp.toUInt())
-
-        fun getDelaySinceLastSr(buf: ByteBuffer): Long = buf.getInt(20).toULong()
-        fun setDelaySinceLastSr(buf: ByteBuffer, delaySinceLastSr: Long) = buf.putInt(20, delaySinceLastSr.toUInt())
     }
 
-    constructor(buf: ByteBuffer) {
-        this.buf = buf.subBuffer(0, RtcpReportBlock.SIZE_BYTES)
-        this.ssrc = RtcpReportBlock.getSsrc(buf)
-        this.fractionLost = RtcpReportBlock.getFractionLost(buf)
-        this.cumulativePacketsLost = RtcpReportBlock.getCumulativeLost(buf)
-        this.extendedHighestSeqNum = RtcpReportBlock.getExtendedHighestSeqNum(buf)
-        this.interarrivalJitter = RtcpReportBlock.getInterarrivalJitter(buf)
-        this.lastSrTimestamp = RtcpReportBlock.getLastSrTimestamp(buf)
-        this.delaySinceLastSr = RtcpReportBlock.getDelaySinceLastSr(buf)
+    override fun serializeTo(buf: ByteBuffer) {
+        buf.putInt(ssrc.toInt())
+        buf.put(fractionLost.toByte())
+        buf.put3Bytes(cumulativePacketsLost)
+        buf.putShort(seqNumCycles.toShort())
+        buf.putShort(seqNum.toShort())
+        buf.putInt(interarrivalJitter.toInt())
+        buf.putInt(lastSrTimestamp.toInt())
+        buf.putInt(delaySinceLastSr.toInt())
     }
 
-    constructor(
-        ssrc: Long = 0,
-        fractionLost: Int = 0,
-        cumulativePacketsLost: Int = 0,
-        seqNumCycles: Int = 0,
-        seqNum: Int = 0,
-        interarrivalJitter: Long = 0,
-        lastSrTimestamp: Long = 0,
-        delaySinceLastSr: Long = 0
-    ) {
-        this.ssrc = ssrc
-        this.fractionLost = fractionLost
-        this.cumulativePacketsLost = cumulativePacketsLost
-        this.extendedHighestSeqNum = (seqNumCycles.shl(16) or seqNum).toULong()
-        this.interarrivalJitter = interarrivalJitter
-        this.lastSrTimestamp = lastSrTimestamp
-        this.delaySinceLastSr = delaySinceLastSr
-    }
-
-    fun getBuffer(): ByteBuffer {
-        val b = ByteBufferUtils.ensureCapacity(buf, RtcpReportBlock.SIZE_BYTES)
-        b.rewind()
-        b.limit(RtcpReportBlock.SIZE_BYTES)
-
-        RtcpReportBlock.setSsrc(b, this.ssrc)
-        RtcpReportBlock.setFractionLost(b, this.fractionLost)
-        RtcpReportBlock.setCumulativeLost(b, this.cumulativePacketsLost)
-        RtcpReportBlock.setSeqNumCycles(b, this.seqNumCycles)
-        RtcpReportBlock.setSeqNum(b, this.seqNum)
-        RtcpReportBlock.setInterarrivalJitter(b, this.interarrivalJitter)
-        RtcpReportBlock.setLastSrTimestamp(b, this.lastSrTimestamp)
-        RtcpReportBlock.setDelaySinceLastSr(b, this.delaySinceLastSr)
-
-        b.rewind()
-        buf = b
-
-        return b
+    public override fun clone(): RtcpReportBlock {
+        return RtcpReportBlock(ssrc, fractionLost, cumulativePacketsLost, seqNumCycles, seqNum, interarrivalJitter, lastSrTimestamp, delaySinceLastSr)
     }
 
     override fun toString(): String {
@@ -325,6 +261,6 @@ class RtcpReportBlock {
 
     override fun hashCode(): Int {
         return Objects.hash(ssrc, fractionLost, cumulativePacketsLost, seqNumCycles, seqNum,
-                interarrivalJitter, lastSrTimestamp, delaySinceLastSr)
+            interarrivalJitter, lastSrTimestamp, delaySinceLastSr)
     }
 }

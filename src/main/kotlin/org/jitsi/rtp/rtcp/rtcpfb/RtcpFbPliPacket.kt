@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2018 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,9 @@
 package org.jitsi.rtp.rtcp.rtcpfb
 
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.extensions.clone
+import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.rtcp.RtcpHeader
+import org.jitsi.rtp.rtcp.rtcpfb.fci.Pli
 import java.nio.ByteBuffer
 
 /**
@@ -24,19 +26,24 @@ import java.nio.ByteBuffer
  * PLI does not require parameters.  Therefore, the length field MUST be
  *  2, and there MUST NOT be any Feedback Control Information.
  */
-class RtcpFbPliPacket : PayloadSpecificFbPacket {
-    private var fci: Pli = Pli()
-    override fun getFci(): Pli = fci
+class RtcpFbPliPacket(
+    header: RtcpHeader = RtcpHeader(),
+    mediaSourceSsrc: Long = -1,
+    backingBuffer: ByteBuffer? = null
+) : PayloadSpecificFbPacket(header.apply { reportCount = FMT }, mediaSourceSsrc, Pli(), backingBuffer) {
+
+    override fun clone(): Packet {
+        return RtcpFbPliPacket(header.clone(), mediaSourceSsrc)
+    }
 
     companion object {
         const val FMT = 1
-    }
 
-    constructor(buf: ByteBuffer) : super(buf)
-
-    constructor(mediaSourceSsrc: Long = 0) : super(mediaSourceSsrc = mediaSourceSsrc)
-
-    override fun clone(): Packet {
-        return RtcpFbPliPacket(getBuffer().clone())
+        fun fromBuffer(buf: ByteBuffer): RtcpFbPliPacket {
+            val bufStartPosition = buf.position()
+            val header = RtcpHeader.fromBuffer(buf)
+            val mediaSourceSsrc = getMediaSourceSsrc(buf)
+            return RtcpFbPliPacket(header, mediaSourceSsrc, buf.subBuffer(bufStartPosition, buf.position()))
+        }
     }
 }

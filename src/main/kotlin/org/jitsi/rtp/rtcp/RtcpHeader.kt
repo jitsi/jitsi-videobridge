@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2018 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,21 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.jitsi.rtp.rtcp
 
-import org.jitsi.rtp.Serializable
 import org.jitsi.rtp.extensions.getBitAsBool
 import org.jitsi.rtp.extensions.getBits
+import org.jitsi.rtp.extensions.incrementPosition
 import org.jitsi.rtp.extensions.putBitAsBoolean
 import org.jitsi.rtp.extensions.putBits
 import org.jitsi.rtp.extensions.subBuffer
-import org.jitsi.rtp.util.ByteBufferUtils
-import toUInt
-import unsigned.toUInt
-import unsigned.toULong
-import unsigned.toUShort
+import org.jitsi.rtp.extensions.unsigned.toPositiveInt
+import org.jitsi.rtp.extensions.unsigned.toPositiveLong
+import org.jitsi.rtp.Serializable
+import org.jitsi.rtp.SerializedField
 import java.nio.ByteBuffer
-import java.util.Objects
 
 /**
  * Models the RTCP header as defined in https://tools.ietf.org/html/rfc3550#section-6.1
@@ -39,117 +38,95 @@ import java.util.Objects
  * |                         SSRC of sender                        |
  * +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
  */
-open class RtcpHeader : Serializable {
-    private var buf: ByteBuffer? = null
-    val size: Int = RtcpHeader.SIZE_BYTES
-    var version: Int
-    var hasPadding: Boolean
-    var reportCount: Int
-    var packetType: Int
-    var length: Int
-    var senderSsrc: Long
+class RtcpHeader(
+    version: Int = 2,
+    hasPadding: Boolean = false,
+    reportCount: Int = -1,
+    packetType: Int = -1,
+    length: Int = -1,
+    senderSsrc: Long = -1
+) : Serializable(), Cloneable {
+    override val sizeBytes: Int = SIZE_BYTES
 
-    constructor(buf: ByteBuffer) : super() {
-        this.buf = buf.subBuffer(0, size)
-        this.version = RtcpHeader.getVersion(buf)
-        this.hasPadding = RtcpHeader.hasPadding(buf)
-        this.reportCount = RtcpHeader.getReportCount(buf)
-        this.packetType = RtcpHeader.getPacketType(buf)
-        this.length = RtcpHeader.getLength(buf)
-        this.senderSsrc = RtcpHeader.getSenderSsrc(buf)
+    // The length field in the RTCP header is given as the number of
+    // 32-bit words - 1, we'll expose the actual length in bytes here
+    val lengthBytes: Int get() = (length + 1) * 4
+
+    var dirty: Boolean = true
+        private set
+
+    var version: Int by SerializedField(version, ::dirty)
+    var hasPadding: Boolean by SerializedField(hasPadding, ::dirty)
+    var reportCount: Int by SerializedField(reportCount, ::dirty)
+    var packetType: Int by SerializedField(packetType, ::dirty)
+    var length: Int by SerializedField(length, ::dirty)
+    var senderSsrc: Long by SerializedField(senderSsrc, ::dirty)
+
+    override fun serializeTo(buf: ByteBuffer) {
+        // Because of the nature of the fields in the RTCP header, it's easier for us
+        // to write the values using absolute positions within the given buffer.  However,
+        // those values assume position 0 of the buffer is where the header should start,
+        // which isn't necessarily the case (and doesn't match the rest of the implementations
+        // of serializeTo), so we create a temporary wrapper around the given buffer whose
+        // position 0 is at buf's current position and then we manually increment
+        // buf's position to after the header data we just wrote
+        val absBuf = buf.subBuffer(buf.position(), SIZE_BYTES)
+        setVersion(absBuf, version)
+        setPadding(absBuf, hasPadding)
+        setReportCount(absBuf, reportCount)
+        setPacketType(absBuf, packetType)
+        setLength(absBuf, length)
+        setSenderSsrc(absBuf, senderSsrc)
+        buf.incrementPosition(SIZE_BYTES)
     }
 
-    @JvmOverloads
-    constructor(
-        version: Int = 2,
-        hasPadding: Boolean = false,
-        reportCount: Int = 0,
-        packetType: Int = 0,
-        length: Int = 0,
-        senderSsrc: Long = 0
-    ) : super() {
-        this.version = version
-        this.hasPadding = hasPadding
-        this.reportCount = reportCount
-        this.packetType = packetType
-        this.length = length
-        this.senderSsrc = senderSsrc
-    }
-
-    override fun getBuffer(): ByteBuffer {
-        val b = ByteBufferUtils.ensureCapacity(buf, size)
-        b.rewind()
-        b.limit(size)
-
-        RtcpHeader.setVersion(b, version)
-        RtcpHeader.setPadding(b, hasPadding)
-        RtcpHeader.setReportCount(b, reportCount)
-        RtcpHeader.setPacketType(b, packetType)
-        RtcpHeader.setLength(b, length)
-        RtcpHeader.setSenderSsrc(b, senderSsrc)
-
-        b.rewind()
-        buf = b
-        return b
+    public override fun clone(): RtcpHeader {
+        return RtcpHeader(
+            version,
+            hasPadding,
+            reportCount,
+            packetType,
+            length,
+            senderSsrc
+        )
     }
 
     companion object {
         const val SIZE_BYTES = 8
-        fun getVersion(buf: ByteBuffer): Int = buf.get(0).getBits(0, 2).toUInt()
+        fun fromBuffer(buf: ByteBuffer): RtcpHeader {
+            val version = getVersion(buf)
+            val hasPadding = hasPadding(buf)
+            val reportCount = getReportCount(buf)
+            val packetType = getPacketType(buf)
+            val length = getLength(buf)
+            val senderSsrc = getSenderSsrc(buf)
+
+            buf.incrementPosition(SIZE_BYTES)
+            return RtcpHeader(version, hasPadding, reportCount, packetType, length, senderSsrc)
+        }
+
+        fun getVersion(buf: ByteBuffer): Int = buf.get(0).getBits(0, 2).toInt()
         fun setVersion(buf: ByteBuffer, version: Int) = buf.putBits(0, 0, version.toByte(), 2)
 
         fun hasPadding(buf: ByteBuffer): Boolean = buf.get(0).getBitAsBool(2)
         fun setPadding(buf: ByteBuffer, hasPadding: Boolean) = buf.putBitAsBoolean(0, 2, hasPadding)
 
-        fun getReportCount(buf: ByteBuffer): Int = buf.get(0).getBits(3, 5).toUInt()
+        fun getReportCount(buf: ByteBuffer): Int = buf.get(0).getBits(3, 5).toInt()
         fun setReportCount(buf: ByteBuffer, reportCount: Int) = buf.putBits(0, 3, reportCount.toByte(), 5)
 
-        fun getPacketType(buf: ByteBuffer): Int = buf.get(1).toUInt()
+        fun getPacketType(buf: ByteBuffer): Int = buf.get(1).toPositiveInt()
         fun setPacketType(buf: ByteBuffer, packetType: Int) {
             buf.put(1, packetType.toByte())
         }
 
-        fun getLength(buf: ByteBuffer): Int = buf.getShort(2).toUInt()
+        fun getLength(buf: ByteBuffer): Int = buf.getShort(2).toPositiveInt()
         fun setLength(buf: ByteBuffer, length: Int) {
-            buf.putShort(2, length.toUShort())
+            buf.putShort(2, length.toShort())
         }
 
-        fun getSenderSsrc(buf: ByteBuffer): Long = buf.getInt(4).toULong()
+        fun getSenderSsrc(buf: ByteBuffer): Long = buf.getInt(4).toPositiveLong()
         fun setSenderSsrc(buf: ByteBuffer, senderSsrc: Long) {
-            buf.putInt(4, senderSsrc.toUInt())
+            buf.putInt(4, senderSsrc.toInt())
         }
-    }
-
-    override fun toString(): String {
-        return with(StringBuffer()) {
-            appendln("version: $version")
-            appendln("hasPadding: $hasPadding")
-            appendln("reportCount: $reportCount")
-            appendln("packetType: $packetType")
-            appendln("length: ${this@RtcpHeader.length}")
-            appendln("senderSsrc: $senderSsrc")
-            this.toString()
-        }
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other?.javaClass != javaClass) {
-            return false
-        }
-        other as RtcpHeader
-        return (size == other.size &&
-                version == other.version &&
-                hasPadding == other.hasPadding &&
-                reportCount == other.reportCount &&
-                packetType == other.packetType &&
-                length == other.length &&
-                senderSsrc == other.senderSsrc)
-    }
-
-    override fun hashCode(): Int {
-        return Objects.hash(size, version, hasPadding, reportCount, packetType, length, senderSsrc)
     }
 }
