@@ -26,7 +26,7 @@ import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.rtp.new_scheme3.*;
+import org.jitsi.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.util.*;
 
