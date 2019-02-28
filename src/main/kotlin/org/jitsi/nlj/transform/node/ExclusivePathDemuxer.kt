@@ -25,7 +25,7 @@ class ExclusivePathDemuxer(name: String) : DemuxerNode(name) {
     override fun doProcessPackets(p: List<PacketInfo>) {
         p.forEach packets@ { packetInfo ->
             transformPaths.forEach { conditionalPath ->
-                if (conditionalPath.predicate(packetInfo.packet)) {
+                if (conditionalPath.predicate.test(packetInfo.packet)) {
                     next(conditionalPath.path, listOf(packetInfo))
                     return@packets
                 }
