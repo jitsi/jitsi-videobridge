@@ -21,9 +21,7 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.transform.node.*;
-import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
-import org.jitsi.rtp.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
@@ -132,19 +130,22 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
                         TaskPools.CPU_POOL,
                         TaskPools.SCHEDULED_POOL,
                         logger);
-        transceiver.setIncomingRtpHandler(new Node("RTP receiver chain handler")
+        transceiver.setIncomingRtpHandler(
+                new ConsumerNode("RTP receiver chain handler")
         {
             @Override
-            protected void doProcessPackets(@NotNull List<PacketInfo> pkts)
+            protected void consume(@NotNull PacketInfo packetInfo)
             {
-                handleIncomingRtp(pkts);
+                handleIncomingRtp(packetInfo);
             }
         });
-        transceiver.setIncomingRtcpHandler(new Node("RTCP receiver chain handler") {
+        transceiver.setIncomingRtcpHandler(
+                new ConsumerNode("RTCP receiver chain handler")
+        {
             @Override
-            public void doProcessPackets(@NotNull List<PacketInfo> pkts)
+            public void consume(@NotNull PacketInfo packetInfo)
             {
-                handleIncomingRtcp(pkts);
+                handleIncomingRtcp(packetInfo);
             }
         });
         conference.encodingsManager.subscribe(this);
@@ -214,58 +215,48 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     }
 
     /**
-     * Handle incoming RTP packets which have been fully processed by the transceiver's
-     * incoming pipeline
-     * @param packetInfos
+     * Handle incoming RTP packets which have been fully processed by the
+     * transceiver's incoming pipeline.
+     * @param packetInfo the packet.
      */
-    protected void handleIncomingRtp(List<PacketInfo> packetInfos)
+    protected void handleIncomingRtp(PacketInfo packetInfo)
     {
         // For now, just write every packet to every channel other than ourselves
-        packetInfos.forEach(pktInfo -> {
-            getConference().getEndpointsFast().forEach(endpoint -> {
-                if (endpoint == this)
-                {
-                    return;
-                }
-                //TODO(brian): we don't use a copy when passing to 'wants', which makes sense, but it would be nice
-                // to be able to enforce a 'read only' version of the packet here so we can guarantee nothing is
-                // changed in 'wants'
-                if (endpoint.wants(pktInfo, getID()))
-                {
-                    RtpPacket p = (RtpPacket)pktInfo.getPacket();
-                    PacketInfo pktInfoCopy = pktInfo.clone();
-                    endpoint.sendRtp(pktInfoCopy);
-                }
-            });
+        getConference().getEndpointsFast().forEach(endpoint -> {
+            if (endpoint == this)
+            {
+                return;
+            }
+            //TODO(brian): we don't use a copy when passing to 'wants', which makes sense, but it would be nice
+            // to be able to enforce a 'read only' version of the packet here so we can guarantee nothing is
+            // changed in 'wants'
+            if (endpoint.wants(packetInfo, getID()))
+            {
+                PacketInfo pktInfoCopy = packetInfo.clone();
+                endpoint.sendRtp(pktInfoCopy);
+            }
         });
-    }
-
-    /**
-     * Handle incoming DTLS app packets
-     * @param dtlsAppPackets
-     */
-    public void handleIncomingDtlsAppPackets(List<PacketInfo> dtlsAppPackets)
-    {
-
     }
 
     public void sendRtp(PacketInfo packetInfo)
     {
         // By default just add it to the sender's queue
-        transceiver.sendRtp(Collections.singletonList(packetInfo));
+        transceiver.sendRtp(packetInfo);
     }
 
-    protected void handleIncomingRtcp(List<PacketInfo> packetInfos)
+    protected void handleIncomingRtcp(PacketInfo packetInfo)
     {
         // We don't need to copy RTCP packets for each dest like we do with RTP because each one
         // will only have a single destination
         getConference().getEndpoints().forEach(endpoint -> {
-            packetInfos.forEach(packetInfo -> {
+            if (packetInfo.getPacket() instanceof RtcpFbPacket)
+            {
                 RtcpFbPacket rtcpPacket = (RtcpFbPacket) packetInfo.getPacket();
-                if (endpoint.receivesSsrc(rtcpPacket.getMediaSourceSsrc())) {
-                    endpoint.transceiver.sendRtcp(Collections.singletonList(rtcpPacket));
+                if (endpoint.receivesSsrc(rtcpPacket.getMediaSourceSsrc()))
+                {
+                    endpoint.transceiver.sendRtcp(rtcpPacket);
                 }
-            });
+            }
         });
     }
 
