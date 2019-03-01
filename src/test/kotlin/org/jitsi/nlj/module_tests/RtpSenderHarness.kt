@@ -45,16 +45,10 @@ fun main(args: Array<String>) {
     val numSenders = 1
     val senders = mutableListOf<RtpSender>()
     repeat(numSenders) {
-        val sender = SenderFactory.createSender(senderExecutor, backgroundExecutor, pcap.srtpData)
-        pcap.payloadTypes.forEach {
-            sender.handleEvent(RtpPayloadTypeAddedEvent(it))
-        }
-        pcap.headerExtensions.forEach {
-            sender.handleEvent(RtpExtensionAddedEvent(it.id.toByte(), it.extension))
-        }
-        pcap.ssrcAssociations.forEach {
-            sender.handleEvent(SsrcAssociationEvent(it.primarySsrc, it.secondarySsrc, it.associationType))
-        }
+        val sender = SenderFactory.createSender(
+            senderExecutor, backgroundExecutor, pcap.srtpData,
+            pcap.payloadTypes, pcap.headerExtensions, pcap.ssrcAssociations
+        )
         senders.add(sender)
     }
 
