@@ -52,6 +52,13 @@ data class PcapInformation(
     var ssrcAssociations: List<SourceAssociation>
 )
 
+val DEFAULT_HEADER_EXTENSIONS = listOf(
+    RtpExtensionInfo(1, RTPExtension(URI(RTPExtension.SSRC_AUDIO_LEVEL_URN))),
+    RtpExtensionInfo(3, RTPExtension(URI(RTPExtension.ABS_SEND_TIME_URN))),
+    RtpExtensionInfo(4, RTPExtension(URI(RTPExtension.RTP_STREAM_ID_URN))),
+    RtpExtensionInfo(5, RTPExtension(URI(RTPExtension.TRANSPORT_CC_URN)))
+)
+
 object Pcaps {
     object Incoming {
         val ONE_PARTICIPANT_RTP_RTCP_SIM_RTX = PcapInformation(
@@ -82,17 +89,11 @@ object Pcaps {
                 Vp8PayloadType(100),
                 OpusPayloadType(111)
             ),
-            headerExtensions = listOf(
-                RtpExtensionInfo(1, RTPExtension(URI(RTPExtension.SSRC_AUDIO_LEVEL_URN))),
-                RtpExtensionInfo(3, RTPExtension(URI(RTPExtension.ABS_SEND_TIME_URN))),
-                RtpExtensionInfo(4, RTPExtension(URI(RTPExtension.RTP_STREAM_ID_URN))),
-                RtpExtensionInfo(5, RTPExtension(URI(RTPExtension.TRANSPORT_CC_URN)))
-            ),
+            headerExtensions = DEFAULT_HEADER_EXTENSIONS,
             ssrcAssociations = listOf(
                 SourceAssociation(1632300152, 1929115835, SsrcAssociationType.RTX),
                 SourceAssociation(3232245189, 3407277242, SsrcAssociationType.RTX),
                 SourceAssociation(1465075899, 3483093671, SsrcAssociationType.RTX)
-
             )
         )
         val ONE_PARTICIPANT_RTP_RTCP = PcapInformation(
@@ -130,9 +131,7 @@ object Pcaps {
                 Vp8PayloadType(100),
                 OpusPayloadType(111)
             ),
-            headerExtensions = listOf(
-                RtpExtensionInfo(5, RTPExtension(URI(RTPExtension.TRANSPORT_CC_URN)))
-            ),
+            headerExtensions = DEFAULT_HEADER_EXTENSIONS,
             ssrcAssociations = listOf()
         )
     }
@@ -172,9 +171,7 @@ object Pcaps {
                 Vp8PayloadType(100),
                 OpusPayloadType(111)
             ),
-            headerExtensions = listOf(
-                RtpExtensionInfo(5, RTPExtension(URI(RTPExtension.TRANSPORT_CC_URN)))
-            ),
+            headerExtensions = DEFAULT_HEADER_EXTENSIONS,
             ssrcAssociations = listOf()
         )
     }
