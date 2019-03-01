@@ -200,9 +200,9 @@ public class IceDtlsTransportManager
         dtlsPipelineBuilder.node(dtlsReceiver);
         dtlsPipelineBuilder.simpleNode(
                 "sctp app packet handler",
-                packets -> {
-                    packets.forEach(endpoint::dtlsAppPacketReceived);
-                    return Collections.emptyList();
+                packetInfo -> {
+                    endpoint.dtlsAppPacketReceived(packetInfo);
+                    return null;
         });
         dtlsPath.setPath(dtlsPipelineBuilder.build());
         dtlsSrtpDemuxer.addPacketPath(dtlsPath);
@@ -218,9 +218,9 @@ public class IceDtlsTransportManager
         PipelineBuilder srtpPipelineBuilder = new PipelineBuilder();
         srtpPipelineBuilder.simpleNode(
                 "SRTP path",
-                packets -> {
-                    packets.forEach(endpoint::srtpPacketReceived);
-                    return Collections.emptyList();
+                packetInfo -> {
+                    endpoint.srtpPacketReceived(packetInfo);
+                    return null;
         });
         srtpPath.setPath(srtpPipelineBuilder.build());
         dtlsSrtpDemuxer.addPacketPath(srtpPath);
@@ -244,14 +244,14 @@ public class IceDtlsTransportManager
         return builder.build();
     }
 
-    public void sendDtlsData(PacketInfo packet)
+    public void sendDtlsData(PacketInfo packetInfo)
     {
-        outgoingDtlsPipelineRoot.processPackets(Collections.singletonList(packet));
+        outgoingDtlsPipelineRoot.processPacket(packetInfo);
     }
 
     private boolean handleOutgoingPacket(PacketInfo packetInfo)
     {
-        outgoingSrtpPipelineRoot.processPackets(Collections.singletonList(packetInfo));
+        outgoingSrtpPipelineRoot.processPacket(packetInfo);
         return true;
     }
 
@@ -278,8 +278,7 @@ public class IceDtlsTransportManager
                     Packet pkt = new UnparsedPacket(packetBuf);
                     PacketInfo pktInfo = new PacketInfo(pkt);
                     pktInfo.setReceivedTime(System.currentTimeMillis());
-                    incomingPipelineRoot
-                            .processPackets(Collections.singletonList(pktInfo));
+                    incomingPipelineRoot.processPacket(pktInfo);
                 }
                 catch (SocketClosedException e)
                 {
@@ -306,8 +305,7 @@ public class IceDtlsTransportManager
 
         DatagramSocket socket = iceComponent.getSocket();
 
-        endpoint.setOutgoingSrtpPacketHandler(
-                packets -> packets.forEach(outgoingPacketQueue::add));
+        endpoint.setOutgoingSrtpPacketHandler(outgoingPacketQueue::add);
 
         // Socket reader thread. Read from the underlying iceSocket and pass
         // to the incoming module chain.
@@ -342,7 +340,7 @@ public class IceDtlsTransportManager
         });
     }
 
-    class SocketSenderNode extends Node
+    class SocketSenderNode extends ConsumerNode
     {
         public DatagramSocket socket = null;
         SocketSenderNode()
@@ -351,30 +349,25 @@ public class IceDtlsTransportManager
         }
 
         @Override
-        protected void doProcessPackets(@NotNull List<PacketInfo> pkts)
+        protected void consume(@NotNull PacketInfo packetInfo)
         {
             if (socket != null)
             {
-                pkts.forEach(pktInfo -> {
-                    try
-                    {
-                        //TODO(brian): would it be an improvement to keep a single, local buffer here and have
-                        // the packet serialize into it instead of calling getBuffer?
-                        socket.send(
-                            new DatagramPacket(
-                                    pktInfo.getPacket().getBuffer().array(),
-                                    0,
-                                    pktInfo.getPacket().getBuffer().limit()));
-                    }
-                    catch (IOException e)
-                    {
-                        logger.error(logPrefix +
-                                "Error sending packet: " + e.toString());
-                        throw new RuntimeException(e);
-                    }
-                });
+                try
+                {
+                    socket.send(
+                        new DatagramPacket(
+                                packetInfo.getPacket().getBuffer().array(),
+                                0,
+                                packetInfo.getPacket().getBuffer().limit()));
+                }
+                catch (IOException e)
+                {
+                    logger.error(logPrefix +
+                            "Error sending packet: " + e.toString());
+                    throw new RuntimeException(e);
+                }
             }
-
         }
     }
 }

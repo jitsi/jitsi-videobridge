@@ -18,7 +18,6 @@ package org.jitsi.videobridge;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.bouncycastle.crypto.tls.*;
-import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
@@ -26,7 +25,6 @@ import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
-import org.jitsi.rtp.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
@@ -360,7 +358,7 @@ public class Endpoint
                 }
                 //TODO(brian): we can clean this up once the transformer is moved over
                 VideoRtpPacket videoPacket =
-                        RtpPacket.Companion.fromBuffer(PacketExtensionsKt.getByteBuffer(pkt))
+                        org.jitsi.rtp.rtp.RtpPacket.Companion.fromBuffer(PacketExtensionsKt.getByteBuffer(pkt))
                                 .toOtherRtpPacketType(VideoRtpPacket::new);
                 super.sendRtp(new PacketInfo(videoPacket));
             }
@@ -388,7 +386,7 @@ public class Endpoint
      */
     public void dtlsAppPacketReceived(PacketInfo dtlsAppPacket)
     {
-        sctpHandler.doProcessPackets(Collections.singletonList(dtlsAppPacket));
+        sctpHandler.consume(dtlsAppPacket);
     }
 
     /**
@@ -568,8 +566,7 @@ public class Endpoint
             DataChannelPacket dcp
                     = new DataChannelPacket(
                             ByteBuffer.wrap(data), sid, (int)ppid);
-            dataChannelHandler.doProcessPackets(
-                    Collections.singletonList(new PacketInfo(dcp)));
+            dataChannelHandler.consume(new PacketInfo(dcp));
         };
         socket.listen();
         // We don't want to block the calling thread on the onTransportManagerSet future completing
@@ -788,7 +785,7 @@ public class Endpoint
      * A node which can be placed in the pipeline to cache SCTP packets until the SCTPManager
      * is ready to handle them.
      */
-    private class SctpHandler extends Node
+    private class SctpHandler extends ConsumerNode
     {
         private final Object sctpManagerLock = new Object();
         public SctpManager sctpManager = null;
@@ -799,17 +796,17 @@ public class Endpoint
         }
 
         @Override
-        protected void doProcessPackets(@NotNull List<PacketInfo> packets)
+        protected void consume(PacketInfo packetInfo)
         {
             synchronized (sctpManagerLock)
             {
                 if (sctpManager == null)
                 {
-                    cachedSctpPackets.addAll(packets);
+                    cachedSctpPackets.add(packetInfo);
                 }
                 else
                 {
-                    packets.forEach(sctpManager::handleIncomingSctp);
+                    sctpManager.handleIncomingSctp(packetInfo);
                 }
             }
         }
@@ -838,7 +835,7 @@ public class Endpoint
      * A node which can be placed in the pipeline to cache Data channel packets until
      * the DataChannelStack is ready to handle them.
      */
-    private class DataChannelHandler extends Node
+    private class DataChannelHandler extends ConsumerNode
     {
         private final Object dataChannelStackLock = new Object();
         public DataChannelStack dataChannelStack = null;
@@ -849,24 +846,23 @@ public class Endpoint
         }
 
         @Override
-        protected void doProcessPackets(@NotNull List<PacketInfo> packets)
+        protected void consume(PacketInfo packetInfo)
         {
             synchronized (dataChannelStackLock)
             {
-                List<PacketInfo> dataChannelPackets = packets.stream()
-                        .filter(packetInfo -> packetInfo.getPacket() instanceof DataChannelPacket)
-                        .collect(Collectors.toList());
-                if (dataChannelStack == null)
+                if (packetInfo.getPacket() instanceof DataChannelPacket)
                 {
-                    cachedDataChannelPackets.addAll(dataChannelPackets);
-                }
-                else
-                {
-                    dataChannelPackets.forEach(packetInfo -> {
-                        DataChannelPacket dcp = (DataChannelPacket)packetInfo.getPacket();
-                        //TODO(brian): have datachannelstack accept DataChannelPackets?
-                        dataChannelStack.onIncomingDataChannelPacket(dcp.getBuffer(), dcp.sid, dcp.ppid);
-                    });
+                    if (dataChannelStack == null)
+                    {
+                        cachedDataChannelPackets.add(packetInfo);
+                    }
+                    else
+                    {
+                        DataChannelPacket dcp
+                                = (DataChannelPacket) packetInfo.getPacket();
+                        dataChannelStack.onIncomingDataChannelPacket(
+                                dcp.getBuffer(), dcp.sid, dcp.ppid);
+                    }
                 }
             }
         }
