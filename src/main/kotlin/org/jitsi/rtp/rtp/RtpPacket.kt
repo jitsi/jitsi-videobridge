@@ -69,8 +69,9 @@ open class RtpPacket(
         }
 
     @Suppress("UNCHECKED_CAST")
-    fun <OtherType : RtpPacket>toOtherRtpPacketType(factory: (RtpHeader, ByteBuffer, ByteBuffer?) -> RtpPacket): OtherType =
-        factory(header, _payload, backingBuffer) as OtherType
+    fun <OtherType : RtpPacket>toOtherRtpPacketType(
+        factory: (RtpHeader, ByteBuffer, ByteBuffer?) -> RtpPacket
+    ): OtherType = factory(header, _payload, backingBuffer) as OtherType
 
     override fun clone(): Packet {
         return RtpPacket(header.clone(), _payload.clone())
@@ -85,13 +86,12 @@ open class RtpPacket(
             backingBuffer = buf
             dirty = false
         }
-        return backingBuffer!!
+        return backingBuffer!!.duplicate()
     }
 
     override fun serializeTo(buf: ByteBuffer) {
         header.serializeTo(buf)
-        _payload.rewind()
-        buf.put(_payload)
+        buf.put(payload)
     }
 
     companion object {

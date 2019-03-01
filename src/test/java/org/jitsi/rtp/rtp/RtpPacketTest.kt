@@ -23,7 +23,6 @@ import io.kotlintest.specs.BehaviorSpec
 internal class RtpPacketTest : BehaviorSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-
     init {
         given("an RTP packet") {
             val rtpPacket = RtpPacket()
