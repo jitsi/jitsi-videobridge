@@ -16,9 +16,15 @@
 
 package org.jitsi.nlj.module_tests
 
+import org.jitsi.nlj.RtpExtensionAddedEvent
+import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpSender
 import org.jitsi.nlj.RtpSenderImpl
+import org.jitsi.nlj.SsrcAssociationEvent
+import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
+import org.jitsi.test_utils.RtpExtensionInfo
+import org.jitsi.test_utils.SourceAssociation
 import org.jitsi.test_utils.SrtpData
 import java.util.Random
 import java.util.concurrent.ExecutorService
@@ -29,7 +35,10 @@ class SenderFactory {
         fun createSender(
             executor: ExecutorService,
             backgroundExecutor: ScheduledExecutorService,
-            srtpData: SrtpData
+            srtpData: SrtpData,
+            payloadTypes: List<PayloadType>,
+            headerExtensions: List<RtpExtensionInfo>,
+            ssrcAssociations: List<SourceAssociation>
         ): RtpSender {
             val sender = RtpSenderImpl(
                 Random().nextLong().toString(),
@@ -40,6 +49,16 @@ class SenderFactory {
             )
             sender.setSrtpTransformer(SrtpTransformerFactory.createSrtpTransformer(srtpData))
             sender.setSrtcpTransformer(SrtpTransformerFactory.createSrtcpTransformer(srtpData))
+
+            payloadTypes.forEach {
+                sender.handleEvent(RtpPayloadTypeAddedEvent(it))
+            }
+            headerExtensions.forEach {
+                sender.handleEvent(RtpExtensionAddedEvent(it.id.toByte(), it.extension))
+            }
+            ssrcAssociations.forEach {
+                sender.handleEvent(SsrcAssociationEvent(it.primarySsrc, it.secondarySsrc, it.associationType))
+            }
 
             return sender
         }
