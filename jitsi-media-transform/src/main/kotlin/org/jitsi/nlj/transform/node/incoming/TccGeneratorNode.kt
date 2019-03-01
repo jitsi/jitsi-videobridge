@@ -29,6 +29,7 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.fci.tcc.Tcc
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi.service.neomedia.RTPExtension
 import unsigned.toUInt
 
@@ -54,11 +55,8 @@ class TccGeneratorNode(
     override fun doProcessPackets(p: List<PacketInfo>) {
         tccExtensionId?.let { tccExtId ->
             p.forEachAs<RtpPacket> { pktInfo, pkt ->
-                pkt.header.getExtension(tccExtId).let currPkt@ { tccExt ->
-                    //TODO: check if it's a one byte or two byte ext?
-                    // TODO: add a tcc ext type that handles the seq num parsing?
-                    val tccSeqNum = tccExt?.data?.getShort(0)?.toUInt() ?: return@currPkt
-                    addPacket(tccSeqNum, pktInfo.receivedTime)
+                pkt.header.getExtensionAs(tccExtId, TccHeaderExtension.Companion::fromUnparsed)?.let { tccExt ->
+                    addPacket(tccExt.tccSeqNum, pktInfo.receivedTime)
                 }
             }
         }
