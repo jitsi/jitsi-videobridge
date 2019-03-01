@@ -51,21 +51,6 @@ import kotlin.system.measureTimeMillis
  * N receivers given a certain input bit rate (determined by the PCAP file)
  */
 
-fun createReceiver(executor: ExecutorService, backgroundExecutor: ScheduledExecutorService, srtpData: SrtpData): RtpReceiver {
-    val receiver = RtpReceiverImpl(
-        Random().nextLong().toString(),
-        {},
-        null,
-        RtcpEventNotifier(),
-        executor,
-        backgroundExecutor
-    )
-    receiver.setSrtpTransformer(SrtpTransformerFactory.createSrtpTransformer(srtpData))
-    receiver.setSrtcpTransformer(SrtpTransformerFactory.createSrtcpTransformer(srtpData))
-
-    return receiver
-}
-
 fun main(args: Array<String>) {
     Thread.sleep(10000)
     val pcap = Pcaps.Incoming.ONE_PARTICIPANT_RTP_RTCP_SIM_RTX
@@ -77,7 +62,7 @@ fun main(args: Array<String>) {
     val numReceivers = 1
     val receivers = mutableListOf<RtpReceiver>()
     repeat(numReceivers) {
-        val receiver = createReceiver(executor, backgroundExecutor, pcap.srtpData)
+        val receiver = ReceiverFactory.createReceiver(executor, backgroundExecutor, pcap.srtpData)
         pcap.payloadTypes.forEach {
             receiver.handleEvent(RtpPayloadTypeAddedEvent(it))
         }
