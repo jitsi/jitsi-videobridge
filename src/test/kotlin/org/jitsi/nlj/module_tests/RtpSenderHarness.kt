@@ -35,20 +35,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import kotlin.system.measureTimeMillis
 
-private fun createSender(executor: ExecutorService, backgroundExecutor: ScheduledExecutorService, srtpData: SrtpData): RtpSender {
-    val sender = RtpSenderImpl(
-        Random().nextLong().toString(),
-        null,
-        RtcpEventNotifier(),
-        executor,
-        backgroundExecutor
-    )
-    sender.setSrtpTransformer(SrtpTransformerFactory.createSrtpTransformer(srtpData))
-    sender.setSrtcpTransformer(SrtpTransformerFactory.createSrtcpTransformer(srtpData))
-
-    return sender
-}
-
 fun main(args: Array<String>) {
     val pcap = Pcaps.Outgoing.ONE_PARITICPANT_RTP_AND_RTCP_DECRYPTED
 
@@ -59,7 +45,7 @@ fun main(args: Array<String>) {
     val numSenders = 1
     val senders = mutableListOf<RtpSender>()
     repeat(numSenders) {
-        val sender = createSender(senderExecutor, backgroundExecutor, pcap.srtpData)
+        val sender = SenderFactory.createSender(senderExecutor, backgroundExecutor, pcap.srtpData)
         pcap.payloadTypes.forEach {
             sender.handleEvent(RtpPayloadTypeAddedEvent(it))
         }
