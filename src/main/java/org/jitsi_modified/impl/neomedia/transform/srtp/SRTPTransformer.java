@@ -58,11 +58,6 @@ public class SRTPTransformer
         this(factory, factory);
     }
 
-    String filePath = "/tmp/lj_" + System.currentTimeMillis() + ".rtpdump";
-    Path path = Paths.get(filePath);
-    FileChannel fileWriter;
-    ByteBuffer intBuffer = ByteBuffer.allocate(4);
-
     /**
      * Constructs a SRTPTransformer object.
      *
@@ -78,21 +73,6 @@ public class SRTPTransformer
         this.forwardFactory = forwardFactory;
         this.reverseFactory = reverseFactory;
         this.contexts = new HashMap<Integer, SRTPCryptoContext>();
-
-//        try
-//        {
-//            Files.createFile(path);
-//            Set perms = Files.readAttributes(path, PosixFileAttributes.class).permissions();
-//            perms.add(PosixFilePermission.GROUP_WRITE);
-//            perms.add(PosixFilePermission.OTHERS_WRITE);
-//            Files.setPosixFilePermissions(path, perms);
-//            FileOutputStream fos = new FileOutputStream(path.toFile());
-//            fileWriter = fos.getChannel();
-//        } catch (IOException e)
-//        {
-//            System.out.println("BRIAN: error creating packet dump file: " + e.toString());
-//            e.printStackTrace();
-//        }
     }
 
     /**
