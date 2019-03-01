@@ -47,7 +47,7 @@ class RtpTwoByteHeaderExtension(
         get() = HEADER_SIZE + data.limit()
 
     private val _data: ByteBuffer = data.rewind() as ByteBuffer
-    override val data: ByteBuffer
+    /*override*/ val data: ByteBuffer
         get() = _data.duplicate()
 
     override fun serializeTo(buf: ByteBuffer) {

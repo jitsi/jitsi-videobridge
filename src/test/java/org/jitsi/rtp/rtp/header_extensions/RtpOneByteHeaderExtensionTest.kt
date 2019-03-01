@@ -19,6 +19,7 @@ package org.jitsi.rtp.rtp.header_extensions
 import io.kotlintest.IsolationMode
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
+import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.util.BitBuffer
 import org.jitsi.rtp.util.byteBufferOf
 
@@ -49,8 +50,9 @@ internal class RtpOneByteHeaderExtensionTest : ShouldSpec() {
                 val ext = RtpOneByteHeaderExtension.fromBuffer(length0Extension)
                 should("have the correct id, size and data") {
                     ext.id shouldBe 1
-                    ext.data.limit() shouldBe 1
-                    ext.data.get() shouldBe 0x42.toByte()
+                    val data = ext.getBuffer().subBuffer(1)
+                    data.limit() shouldBe 1
+                    data.get() shouldBe 0x42.toByte()
                 }
                 should("put the buffer's position in the correct place") {
                     length0Extension.position() shouldBe 2
@@ -89,9 +91,10 @@ internal class RtpOneByteHeaderExtensionTest : ShouldSpec() {
                 }
                 should("have the right id, size, and data") {
                     ext.id shouldBe 1
-                    ext.data.limit() shouldBe 4
-                    repeat(ext.data.limit()) {
-                        ext.data.get() shouldBe 0x42.toByte()
+                    val data = ext.getBuffer().subBuffer(1)
+                    data.limit() shouldBe 4
+                    repeat(data.limit()) {
+                        data.get() shouldBe 0x42.toByte()
                     }
                     ext.sizeBytes shouldBe 5
                 }

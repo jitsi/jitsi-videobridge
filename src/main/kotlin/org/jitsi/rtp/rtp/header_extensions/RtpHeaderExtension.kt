@@ -30,7 +30,7 @@ abstract class RtpHeaderExtension : Serializable() {
     /**
      * The data for this extension
      */
-    abstract val data: ByteBuffer
+//    abstract val data: ByteBuffer
 
     companion object {
         //TODO: do we need to put a size limit on this, in case the first byte

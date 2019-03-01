@@ -27,6 +27,7 @@ import org.jitsi.rtp.Serializable
 import org.jitsi.rtp.SerializedField
 import org.jitsi.rtp.rtp.header_extensions.RtpHeaderExtension
 import org.jitsi.rtp.rtp.header_extensions.RtpHeaderExtensions
+import org.jitsi.rtp.rtp.header_extensions.UnknownRtpOneByteHeaderExtension
 import java.nio.ByteBuffer
 
 /**
@@ -86,6 +87,17 @@ class RtpHeader(
         dirty = true
     }
 
+    inline fun <reified ExtType>getExtensionAs(id: Int, factory: (Int, ByteBuffer) -> ExtType): ExtType? {
+        val ext = getExtension(id)
+        if (ext != null) {
+            if (ext is ExtType) {
+                return ext
+            } else if (ext is UnknownRtpOneByteHeaderExtension) {
+                return factory(id, ext.data)
+            }
+        }
+        return null
+    }
     fun getExtension(id: Int): RtpHeaderExtension? = extensions.getExtension(id)
     fun addExtension(id: Int, extension: RtpHeaderExtension) {
         extensions.addExtension(id, extension)

@@ -15,17 +15,33 @@
  */
 package org.jitsi.rtp.rtp.header_extensions
 
+import org.jitsi.rtp.extensions.incrementPosition
+import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import java.nio.ByteBuffer
 
 /**
  * https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01#section-2.2
  */
-class TccHeaderExtension(id: Int, tccSeqNum: Int) : RtpOneByteHeaderExtension(id, createDataBuf(tccSeqNum)) {
+class TccHeaderExtension(
+    id: Int,
+    val tccSeqNum: Int
+) : RtpOneByteHeaderExtension(id) {
+
+    override val sizeBytes: Int
+        get() = HEADER_SIZE + 2
+
+    override fun serializeTo(buf: ByteBuffer) {
+        val absBuf = buf.subBuffer(buf.position())
+        setId(absBuf, id)
+        setLength(absBuf, 2)
+        absBuf.incrementPosition(1)
+        absBuf.putShort(tccSeqNum.toShort())
+    }
+
     companion object {
-        fun createDataBuf(tccSeqNum: Int): ByteBuffer {
-            val dataBuf = ByteBuffer.allocate(2)
-            dataBuf.putShort(tccSeqNum.toShort())
-            return dataBuf
+        fun fromUnknown(id: Int, data: ByteBuffer): TccHeaderExtension {
+            return TccHeaderExtension(id, data.getShort().toPositiveInt())
         }
     }
 }

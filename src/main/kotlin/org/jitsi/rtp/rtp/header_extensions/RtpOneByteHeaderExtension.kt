@@ -51,36 +51,36 @@ import java.nio.ByteBuffer
  * |                          data                                 |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-open class RtpOneByteHeaderExtension(
-    final override val id: Int = -1,
-    data: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER
+abstract class RtpOneByteHeaderExtension(
+    final override val id: Int = -1
+//    data: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER
 ) : RtpHeaderExtension() {
-    final override val sizeBytes: Int
-        get() = HEADER_SIZE + data.limit()
+//    final override val sizeBytes: Int
+//        get() = HEADER_SIZE + data.limit()
 
     //TODO: do this for all exposed ByteBuffer members?
-    private val _data: ByteBuffer = data.rewind() as ByteBuffer
-    final override val data: ByteBuffer
-        get() = _data.duplicate()
+//    private val _data: ByteBuffer = data.rewind() as ByteBuffer
+//    final override val data: ByteBuffer
+//        get() = _data.duplicate()
 
-    override fun serializeTo(buf: ByteBuffer) {
-        val absBuf = buf.subBuffer(buf.position())
-        setId(absBuf, id)
-        setLength(absBuf, data.limit())
-        data.rewind()
-        setData(absBuf, data)
-        data.rewind()
-        buf.incrementPosition(sizeBytes)
-    }
+//    override fun serializeTo(buf: ByteBuffer) {
+//        val absBuf = buf.subBuffer(buf.position())
+//        setId(absBuf, id)
+//        setLength(absBuf, data.limit())
+//        data.rewind()
+//        setData(absBuf, data)
+//        data.rewind()
+//        buf.incrementPosition(sizeBytes)
+//    }
 
-    override fun toString(): String {
-        return with (StringBuffer()) {
-            append("id: $id, ")
-            append("lengthBytes: ${data.limit()}, ")
-            append("data: ${data.toHex()}")
-            toString()
-        }
-    }
+//    override fun toString(): String {
+//        return with (StringBuffer()) {
+//            append("id: $id, ")
+//            append("lengthBytes: ${data.limit()}, ")
+//            append("data: ${data.toHex()}")
+//            toString()
+//        }
+//    }
 
     companion object {
         const val HEADER_SIZE = 1
@@ -129,11 +129,34 @@ open class RtpOneByteHeaderExtension(
             val id = getId(buf)
             val lengthBytes = getLength(buf)
             val data = getData(buf, lengthBytes)
-            val extension = RtpOneByteHeaderExtension(id, data)
+            val extension = UnknownRtpOneByteHeaderExtension(id, data)
             // Advance the buffer's position to the end of the data for this extension
             buf.incrementPosition(extension.sizeBytes)
 
             return extension
         }
+    }
+}
+
+class UnknownRtpOneByteHeaderExtension(
+    id: Int = -1,
+    data: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER
+) : RtpOneByteHeaderExtension(id) {
+
+    override val sizeBytes: Int
+        get() = HEADER_SIZE + _data.limit()
+
+    private val _data: ByteBuffer = data
+    val data: ByteBuffer
+        get() = _data.duplicate().asReadOnlyBuffer()
+
+    override fun serializeTo(buf: ByteBuffer) {
+        val absBuf = buf.subBuffer(buf.position())
+        setId(absBuf, id)
+        setLength(absBuf, data.limit())
+        data.rewind()
+        setData(absBuf, data)
+        data.rewind()
+        buf.incrementPosition(sizeBytes)
     }
 }

@@ -17,7 +17,7 @@
 package org.jitsi.rtp.rtp.header_extensions
 
 import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.types.shouldBeTypeOf
+import io.kotlintest.matchers.types.shouldBeInstanceOf
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldNotBe
 import io.kotlintest.specs.ShouldSpec
@@ -57,7 +57,7 @@ internal class RtpHeaderExtensionsTest : ShouldSpec() {
                     for (i in 1..3) {
                         val ext = extensions.getExtension(i)
                         ext shouldNotBe null
-                        ext.shouldBeTypeOf<RtpOneByteHeaderExtension>()
+                        ext.shouldBeInstanceOf<RtpOneByteHeaderExtension>()
                     }
                 }
                 should("leave the buffer at the end of the data") {
@@ -101,7 +101,7 @@ internal class RtpHeaderExtensionsTest : ShouldSpec() {
                     for (i in 1..3) {
                         val ext = extensions.getExtension(i)
                         ext shouldNotBe null
-                        ext.shouldBeTypeOf<RtpTwoByteHeaderExtension>()
+                        ext.shouldBeInstanceOf<RtpTwoByteHeaderExtension>()
                     }
                 }
                 "and then serializing it" {

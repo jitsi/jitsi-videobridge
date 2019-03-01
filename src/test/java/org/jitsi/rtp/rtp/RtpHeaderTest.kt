@@ -19,6 +19,7 @@ package org.jitsi.rtp.rtp
 import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.collections.shouldContainInOrder
 import io.kotlintest.matchers.haveSize
+import io.kotlintest.matchers.types.shouldBeInstanceOf
 import io.kotlintest.matchers.types.shouldBeTypeOf
 import io.kotlintest.should
 import io.kotlintest.shouldBe
@@ -117,22 +118,22 @@ internal class RtpHeaderTest : ShouldSpec() {
                         val ext = header.getExtension(i)
                         ext shouldNotBe null
                         ext as RtpHeaderExtension
-                        ext.shouldBeTypeOf<RtpOneByteHeaderExtension>()
+                        ext.shouldBeInstanceOf<RtpOneByteHeaderExtension>()
                     }
                     val ext1 = header.getExtension(1)
                     ext1 as RtpHeaderExtension
                     ext1.id shouldBe 1
-                    ext1.data should haveSameContentAs(byteBufferOf(0x42))
+                    ext1.getBuffer().subBuffer(1) should haveSameContentAs(byteBufferOf(0x42))
 
                     val ext2 = header.getExtension(2)
                     ext2 as RtpHeaderExtension
                     ext2.id shouldBe 2
-                    ext2.data should haveSameContentAs(byteBufferOf(0x42, 0x42))
+                    ext2.getBuffer().subBuffer(1) should haveSameContentAs(byteBufferOf(0x42, 0x42))
 
                     val ext3 = header.getExtension(3)
                     ext3 as RtpHeaderExtension
                     ext3.id shouldBe 3
-                    ext3.data should haveSameContentAs(byteBufferOf(0x42, 0x42, 0x42, 0x42))
+                    ext3.getBuffer().subBuffer(1) should haveSameContentAs(byteBufferOf(0x42, 0x42, 0x42, 0x42))
                 }
             }
             "a header with two byte extensions" {
