@@ -19,6 +19,7 @@ package org.jitsi.nlj.module_tests
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.safeShutdown
+import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.test_utils.Pcaps
 import java.time.Duration
 import java.util.concurrent.Executors
@@ -62,6 +63,12 @@ fun main() {
                 println("forwarding buffer ${System.identityHashCode(buf)} $buf to sender")
             }
             sender.sendPackets(pkts)
+        }
+    }
+
+    receiver.rtcpPacketHandler = object : PacketHandler {
+        override fun processPackets(pkts: List<PacketInfo>) {
+            sender.sendRtcp(pkts.map(PacketInfo::packet).map { it as RtcpPacket }.toList())
         }
     }
 
