@@ -16,6 +16,7 @@
 package org.jitsi.nlj.transform.node.outgoing
 
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.AbstractSrtpTransformerNode
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
@@ -24,20 +25,10 @@ import java.nio.ByteBuffer
 class SrtcpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTCP Encrypt wrapper") {
     override fun doTransform(pkts: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo> {
         val encryptedPackets = mutableListOf<PacketInfo>()
-        pkts.forEach {
-            val packetBuf = it.packet.getBuffer()
-            //TODO: if this rtcp packet was from a compound rtcp packet, the array backing
-            // the packetBuf will have previous compound packets in it.  Although we pass
-            // the proper offset as packetBuf.arrayOffset, not all methods in the transformer
-            // properly take that offset into account.  for now, we'll make a new copy of the
-            // buffer.  in the future we should clean up the transformer methods to take
-            // the offset into account correctly
-            val bufCopy = ByteBuffer.allocate(packetBuf.limit())
-            bufCopy.put(packetBuf).flip()
-            val rtcpPacket = RtcpPacket.parse(bufCopy)
+        pkts.forEachAs<RtcpPacket> { pktInfo, rtcpPacket ->
             transformer.transform(rtcpPacket)?.let { srtcpPacket ->
-                it.packet = srtcpPacket
-                encryptedPackets.add(it)
+                pktInfo.packet = srtcpPacket
+                encryptedPackets.add(pktInfo)
             } ?: run {
                 logger.error("Error encrypting RTCP")
             }
