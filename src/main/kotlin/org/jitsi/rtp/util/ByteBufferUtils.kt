@@ -75,7 +75,7 @@ class ByteBufferUtils {
 
 fun byteBufferOf(vararg elements: Byte): ByteBuffer = ByteBuffer.wrap(byteArrayOf(*elements))
 
-fun byteBufferOf(vararg elements: Any): ByteBuffer {
-    val bytes = elements.map { (it as Number).toByte() }.toByteArray()
+fun byteBufferOf(vararg elements: Number): ByteBuffer {
+    val bytes = elements.map { it.toByte() }.toByteArray()
     return ByteBuffer.wrap(bytes)
 }

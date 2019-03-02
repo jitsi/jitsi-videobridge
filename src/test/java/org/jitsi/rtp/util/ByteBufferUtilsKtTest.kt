@@ -35,12 +35,6 @@ internal class ByteBufferUtilsKtTest : ShouldSpec() {
                 buf.get(2) shouldBe 0xFF.toByte()
                 buf.get(3) shouldBe 0xFE.toByte()
             }
-            should("throw if incompatible values are passed") {
-                shouldThrow<ClassCastException> {
-                    val buf = byteBufferOf(0x00, 0x01, "foo")
-                    Unit
-                }
-            }
         }
     }
 }
