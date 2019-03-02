@@ -21,19 +21,16 @@ import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbFirPacket
-import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPliPacket
+import kotlin.reflect.KClass
 
 class SentRtcpStats : Node("Sent RTCP stats") {
     private var numPlisSent = 0
     private var numFirsSent = 0
+    private var sentRtcpCounts = mutableMapOf<KClass<out RtcpPacket>, Int>().withDefault { 0 }
 
     override fun doProcessPackets(p: List<PacketInfo>) {
         p.forEachAs<RtcpPacket> { _, expectedPacketType ->
-            when (expectedPacketType) {
-                is RtcpFbPliPacket -> numPlisSent++
-                is RtcpFbFirPacket -> numFirsSent++
-            }
+            sentRtcpCounts.merge(expectedPacketType::class, 1, Int::plus)
         }
         next(p)
     }
@@ -42,8 +39,9 @@ class SentRtcpStats : Node("Sent RTCP stats") {
         val parentStats = super.getNodeStats()
         return NodeStatsBlock(name).apply {
             addAll(parentStats)
-            addStat("num PLI packets tx: $numPlisSent")
-            addStat("num FIR packets tx: $numFirsSent")
+            sentRtcpCounts.forEach {(rtcpType, count) ->
+                addStat("num $rtcpType packets tx: $count")
+            }
         }
     }
 }
