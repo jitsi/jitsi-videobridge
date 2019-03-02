@@ -15,10 +15,8 @@
  */
 package org.jitsi.rtp.rtp.header_extensions
 
-import org.jitsi.rtp.extensions.incrementPosition
-import org.jitsi.rtp.extensions.rewindOneByte
-import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.Serializable
+import org.jitsi.rtp.extensions.rewindOneByte
 import unsigned.toUInt
 import unsigned.toUShort
 import java.nio.ByteBuffer
@@ -47,7 +45,8 @@ class RtpHeaderExtensions(
         get() {
             if (sizeNeedsToBeRecalculated) {
                 val dataSizeBytes = if (extensionMap.isNotEmpty()) {
-                    EXTENSIONS_HEADER_SIZE + extensionMap.values.map { it.sizeBytes }.sum()
+                    val headerExtType = getHeaderExtType()
+                    EXTENSIONS_HEADER_SIZE + extensionMap.values.map { it.sizeBytesAs(headerExtType) }.sum()
                 } else {
                     0
                 }
@@ -60,6 +59,23 @@ class RtpHeaderExtensions(
             }
             return _sizeBytes
         }
+
+    /**
+     * Based on the sizes of the contained header extensions, determine if
+     * we'll serialize using the one-byte or two-byte header type
+     */
+    private fun getHeaderExtType(): HeaderExtensionType {
+        return extensionMap.values
+                .fold(HeaderExtensionType.ONE_BYTE_HEADER_EXT) { currExtType, currExt ->
+                    if (currExt.type.value > currExtType.value) {
+                        currExt.type
+                    } else {
+                        currExtType
+                    }
+                }
+    }
+
+
     fun isEmpty(): Boolean = extensionMap.isEmpty()
     fun isNotEmpty(): Boolean = extensionMap.isNotEmpty()
     fun getExtension(id: Int): RtpHeaderExtension? = extensionMap.getOrDefault(id, null)
@@ -72,19 +88,14 @@ class RtpHeaderExtensions(
         if (extensionMap.isEmpty()) {
             return
         }
-        // The helpers below assume they should start writing to position 0
-        // in the given buf, so create a temp buffer that start at where they
-        // expect
-        val absBuf = buf.subBuffer(buf.position())
-        val cookie = when(extensionMap.values.stream().findFirst().get()) {
-            is RtpOneByteHeaderExtension -> RtpOneByteHeaderExtension.COOKIE
-            is RtpTwoByteHeaderExtension -> RtpTwoByteHeaderExtension.COOKIE
-            else -> throw Exception("unrecognized extension type")
+        val headerExtType = getHeaderExtType()
+        val cookie = headerExtType.toCookie()
+        buf.putShort(cookie)
+        buf.putShort((((sizeBytes + 3) / 4) - 1).toShort())
+        extensionMap.values.map { it.serializeToAs(headerExtType, buf)}
+        while (buf.position() % 4 != 0) {
+            buf.put(PADDING_BYTE)
         }
-        setHeaderExtensionType(absBuf, cookie)
-        setHeaderExtensionsLength(absBuf, sizeBytes)
-        setExtensionsAndPadding(absBuf, extensionMap.values)
-        buf.incrementPosition(sizeBytes)
     }
 
     public override fun clone(): RtpHeaderExtensions =
@@ -94,6 +105,8 @@ class RtpHeaderExtensions(
 
     companion object {
         const val EXTENSIONS_HEADER_SIZE = 4
+        const val ONE_BYTE_COOKIE: Short = 0xBEDE.toShort()
+        const val TWO_BYTE_COOKIE: Short = 0x1000
         /**
          * The offset, relative to the start of the entire header extensions block, where the first
          * actual extension starts
@@ -106,15 +119,6 @@ class RtpHeaderExtensions(
             val extensionsMap = getExtensions(buf)
             return RtpHeaderExtensions(extensionsMap)
         }
-
-        private fun Short.isOneByteHeaderType(): Boolean
-                = this.compareTo(RtpOneByteHeaderExtension.COOKIE) == 0
-        /**
-         *  Checks if this [Short] matches the IDs used by [RtpTwoByteHeaderExtension].
-         *  See https://tools.ietf.org/html/rfc5285#section-4.3
-         */
-        fun Short.isTwoByteHeaderType(): Boolean
-                = RtpTwoByteHeaderExtension.COOKIE.compareTo(this.toInt() and 0xfff0) == 0
 
 
         private const val PADDING_BYTE = 0x00.toByte()
@@ -140,8 +144,8 @@ class RtpHeaderExtensions(
                 buf.rewindOneByte()
             }
         }
-        fun getHeaderExtensionType(buf: ByteBuffer): Short = buf.getShort(0)
-        fun setHeaderExtensionType(buf: ByteBuffer, type: Short) {
+        fun getHeaderExtensionTypeCookie(buf: ByteBuffer): Short = buf.getShort(0)
+        fun setHeaderExtensionTypeCookie(buf: ByteBuffer, type: Short) {
             buf.putShort(0, type)
         }
 
@@ -159,19 +163,13 @@ class RtpHeaderExtensions(
          * extension header).
          */
         fun getExtensions(buf: ByteBuffer): MutableMap<Int, RtpHeaderExtension> {
-            val headerExtensionType = getHeaderExtensionType(buf)
-            val headerExtensionParser: (ByteBuffer) -> RtpHeaderExtension = when {
-                headerExtensionType.isOneByteHeaderType() -> RtpOneByteHeaderExtension.Companion::fromBuffer
-                headerExtensionType.isTwoByteHeaderType() -> RtpTwoByteHeaderExtension.Companion::fromBuffer
-                else -> throw Exception("unrecognized extension type: ${headerExtensionType.toString(16)}")
-            }
+            val headerExtensionType = HeaderExtensionType.fromCookie(getHeaderExtensionTypeCookie(buf))
             val lengthBytes = getHeaderExtensionsLength(buf)
             buf.position(EXTENSION_START_OFFSET)
             val extensionMap = mutableMapOf<Int, RtpHeaderExtension>()
             while (buf.position() < lengthBytes) {
-                val ext = headerExtensionParser(buf.subBuffer(buf.position()))
+                val ext = UnparsedHeaderExtension.fromBuffer(buf, headerExtensionType)
                 extensionMap[ext.id] = ext
-                buf.position(buf.position() + ext.sizeBytes)
                 // Consume any padding that may have been present after this extension:
                 // "[Padding] may be placed between extension elements, if desired for
                 // alignment, or after the last extension element, if needed for padding."

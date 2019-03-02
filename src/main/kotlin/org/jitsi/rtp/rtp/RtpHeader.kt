@@ -16,6 +16,8 @@
 
 package org.jitsi.rtp.rtp
 
+import org.jitsi.rtp.Serializable
+import org.jitsi.rtp.SerializedField
 import org.jitsi.rtp.extensions.getBitAsBool
 import org.jitsi.rtp.extensions.getBits
 import org.jitsi.rtp.extensions.putBitAsBoolean
@@ -23,11 +25,9 @@ import org.jitsi.rtp.extensions.putBits
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
-import org.jitsi.rtp.Serializable
-import org.jitsi.rtp.SerializedField
 import org.jitsi.rtp.rtp.header_extensions.RtpHeaderExtension
 import org.jitsi.rtp.rtp.header_extensions.RtpHeaderExtensions
-import org.jitsi.rtp.rtp.header_extensions.UnknownRtpOneByteHeaderExtension
+import org.jitsi.rtp.rtp.header_extensions.UnparsedHeaderExtension
 import java.nio.ByteBuffer
 
 /**
@@ -87,16 +87,16 @@ class RtpHeader(
         dirty = true
     }
 
-    inline fun <reified ExtType>getExtensionAs(id: Int, factory: (Int, ByteBuffer) -> ExtType): ExtType? {
-        val ext = getExtension(id)
-        if (ext != null) {
-            if (ext is ExtType) {
-                return ext
-            } else if (ext is UnknownRtpOneByteHeaderExtension) {
-                return factory(id, ext.data)
+    inline fun <reified ExtType>getExtensionAs(id: Int, factory: (UnparsedHeaderExtension) -> ExtType): ExtType? {
+        return getExtension(id)?.let {
+            return if (it is ExtType) {
+                it
+            } else if (it is UnparsedHeaderExtension) {
+                factory(it)
+            } else {
+               null
             }
         }
-        return null
     }
     fun getExtension(id: Int): RtpHeaderExtension? = extensions.getExtension(id)
     fun addExtension(id: Int, extension: RtpHeaderExtension) {

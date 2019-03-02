@@ -17,7 +17,6 @@
 package org.jitsi.rtp.rtp.header_extensions
 
 import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.types.shouldBeInstanceOf
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldNotBe
 import io.kotlintest.specs.ShouldSpec
@@ -28,40 +27,54 @@ import java.nio.ByteBuffer
 internal class RtpHeaderExtensionsTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-    private fun idLengthByte(id: Int, length: Int): Byte {
-        return ((id shl 4) or length).toByte()
-    }
-    init {
-        val oneByteHeaderExtBlock = byteBufferOf(
+    companion object {
+        private fun idLengthByte(id: Int, length: Int): Byte {
+            return ((id shl 4) or length).toByte()
+        }
+        val oneByteHeaderExtBlockWithPaddingBetweenElements = byteBufferOf(
             0xBE,                            0xDE,           0x00,                          0x03,
             idLengthByte(1, 0),   0x42,           idLengthByte(2, 1), 0x42,
             0x42,                            0x00,           0x00,                          idLengthByte(3, 3),
             0x42,                            0x42,           0x42,                          0x42
         )
-        val oneByteHeaderExtBlockWithPadding = byteBufferOf(
-            0xBE,                            0xDE,           0x00,                          0x03,
-            idLengthByte(1, 0),   0x42,           idLengthByte(2, 1), 0x42,
-            0x42,                            0x00,           0x00,                          idLengthByte(3, 1),
-            0x42,                            0x42,           0x00,                          0x00
+        val oneByteHeaderExtBlockWithPaddingAtTheEnd = byteBufferOf(
+            0xBE,                            0xDE,                          0x00,                          0x03,
+            idLengthByte(1, 0),   0x42,                          idLengthByte(2, 1), 0x42,
+            0x42,                            idLengthByte(3, 3), 0x42,                          0x42,
+            0x42,                            0x42,                          0x00,                          0x00
         )
         val twoByteHeaderExtBlock = byteBufferOf(
-            0x10, 0x00, 0x00, 0x03,
+            0x10, 0x00, 0x00, 0x0A,
             0x01, 0x00, 0x02, 0x01,
-            0x42, 0x00, 0x03, 0x04,
+            0x42, 0x00, 0x03, 0x20,
+            0x42, 0x42, 0x42, 0x42,
+            0x42, 0x42, 0x42, 0x42,
+            0x42, 0x42, 0x42, 0x42,
+            0x42, 0x42, 0x42, 0x42,
+            0x42, 0x42, 0x42, 0x42,
+            0x42, 0x42, 0x42, 0x42,
+            0x42, 0x42, 0x42, 0x42,
             0x42, 0x42, 0x42, 0x42
         )
+    }
+
+    init {
         "parsing" {
             "a one byte header extension block" {
-                val extensions = RtpHeaderExtensions.fromBuffer(oneByteHeaderExtBlock)
+                val extensions = RtpHeaderExtensions.fromBuffer(oneByteHeaderExtBlockWithPaddingBetweenElements)
                 should("parse all the extensions") {
                     for (i in 1..3) {
                         val ext = extensions.getExtension(i)
                         ext shouldNotBe null
-                        ext.shouldBeInstanceOf<RtpOneByteHeaderExtension>()
+                        ext as UnparsedHeaderExtension
+                        val data = ext.data
+                        while (data.remaining() > 0) {
+                            data.get() shouldBe 0x42.toByte()
+                        }
                     }
                 }
                 should("leave the buffer at the end of the data") {
-                    oneByteHeaderExtBlock.position() shouldBe oneByteHeaderExtBlock.limit()
+                    oneByteHeaderExtBlockWithPaddingBetweenElements.position() shouldBe oneByteHeaderExtBlockWithPaddingBetweenElements.limit()
                 }
                 "and then serializing it" {
                     "by requesting a buffer" {
@@ -72,13 +85,13 @@ internal class RtpHeaderExtensionsTest : ShouldSpec() {
                         should("write it correctly") {
                             buf.rewind()
                             // Cookie
-                            buf.getShort() shouldBe RtpOneByteHeaderExtension.COOKIE
+                            buf.getShort() shouldBe RtpHeaderExtensions.ONE_BYTE_COOKIE
                             // Length
                             buf.getShort().toInt() shouldBe 3
                         }
                     }
                     "to an existing buffer" {
-                        val existingBuf = ByteBuffer.allocate(8 + oneByteHeaderExtBlock.limit())
+                        val existingBuf = ByteBuffer.allocate(8 + oneByteHeaderExtBlockWithPaddingBetweenElements.limit())
                         existingBuf.position(8)
                         extensions.serializeTo(existingBuf)
                         should("write the data to the correct place") {
@@ -86,11 +99,10 @@ internal class RtpHeaderExtensionsTest : ShouldSpec() {
                             // be in a different place.  Just make sure the cookie is in the
                             // right spot.
                             existingBuf.subBuffer(8, 2).getShort() shouldBe
-                                    RtpOneByteHeaderExtension.COOKIE
+                                    RtpHeaderExtensions.ONE_BYTE_COOKIE
                         }
                         should("leave the buffer's position to after the written data") {
                             existingBuf.position() shouldBe existingBuf.limit()
-
                         }
                     }
                 }
@@ -101,7 +113,11 @@ internal class RtpHeaderExtensionsTest : ShouldSpec() {
                     for (i in 1..3) {
                         val ext = extensions.getExtension(i)
                         ext shouldNotBe null
-                        ext.shouldBeInstanceOf<RtpTwoByteHeaderExtension>()
+                        ext as UnparsedHeaderExtension
+                        val data = ext.data
+                        while (data.remaining() > 0) {
+                            data.get() shouldBe 0x42.toByte()
+                        }
                     }
                 }
                 "and then serializing it" {
@@ -112,13 +128,13 @@ internal class RtpHeaderExtensionsTest : ShouldSpec() {
                         }
                         should("write it correctly") {
                             // Cookie
-                            buf.getShort() shouldBe RtpTwoByteHeaderExtension.COOKIE
+                            buf.getShort() shouldBe RtpHeaderExtensions.TWO_BYTE_COOKIE
                             // Length
-                            buf.getShort().toInt() shouldBe 3
+                            buf.getShort().toInt() shouldBe 10
                         }
                     }
                     "to an existing buffer" {
-                        val existingBuf = ByteBuffer.allocate(8 + oneByteHeaderExtBlock.limit())
+                        val existingBuf = ByteBuffer.allocate(8 + twoByteHeaderExtBlock.limit())
                         existingBuf.position(8)
                         extensions.serializeTo(existingBuf)
                         should("write the data to the correct place") {
@@ -126,7 +142,7 @@ internal class RtpHeaderExtensionsTest : ShouldSpec() {
                             // be in a different place.  Just make sure the cookie is in the
                             // right spot.
                             existingBuf.subBuffer(8, 2).getShort() shouldBe
-                                    RtpTwoByteHeaderExtension.COOKIE
+                                    RtpHeaderExtensions.TWO_BYTE_COOKIE
                         }
                         should("leave the buffer's position to after the written data") {
                             existingBuf.position() shouldBe existingBuf.limit()

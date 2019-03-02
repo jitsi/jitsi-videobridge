@@ -38,29 +38,25 @@ class AudioLevelHeaderExtension(
     id: Int = -1,
     val containsVoice: Boolean = false,
     val audioLevel: Int = -1
-) : RtpOneByteHeaderExtension(id) {
-    override val sizeBytes: Int
-        get() = HEADER_SIZE + 1
+) : RtpHeaderExtension(id) {
+    override val dataSizeBytes: Int = 1
 
-    override fun serializeTo(buf: ByteBuffer) {
-        val absBuf = buf.subBuffer(buf.position())
-        setId(absBuf, id)
-        setLength(absBuf, 2)
-        absBuf.incrementPosition(1)
+    override fun serializeData(buf: ByteBuffer) {
         // We set the audio level first so we don't overwrite the containsVoice
         // bit
-        absBuf.put(absBuf.position(), (audioLevel and AUDIO_LEVEL_MASK).toByte())
-        absBuf.putBitAsBoolean(absBuf.position(), 0, containsVoice)
+        buf.put(buf.position(),(audioLevel and AUDIO_LEVEL_MASK).toByte())
+        buf.putBitAsBoolean(buf.position(), 0, containsVoice)
     }
 
     companion object {
         const val AUDIO_LEVEL_MASK = 0x7F
 
-        fun fromUnknown(id: Int, data: ByteBuffer): AudioLevelHeaderExtension {
+        fun fromUnparsed(unparsedHeaderExtension: UnparsedHeaderExtension): AudioLevelHeaderExtension {
+            val data = unparsedHeaderExtension.data
             val containsVoice = data.get(0).getBitAsBool(0)
             val audioLevel = data.get(0).toPositiveInt() and AUDIO_LEVEL_MASK
 
-            return AudioLevelHeaderExtension(id, containsVoice, audioLevel)
+            return AudioLevelHeaderExtension(unparsedHeaderExtension.id, containsVoice, audioLevel)
         }
     }
 }
