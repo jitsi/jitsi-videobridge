@@ -20,7 +20,7 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpExtensionAddedEvent
 import org.jitsi.nlj.RtpExtensionClearEvent
-import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getByteBuffer
 import org.jitsi.nlj.util.toRawPacket
@@ -28,20 +28,19 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.service.neomedia.RTPExtension
 import unsigned.toUInt
 
-class AbsSendTime : Node("Absolute send time") {
+class AbsSendTime : TransformerNode("Absolute send time") {
     private val absSendTimeEngine = AbsSendTimeEngine()
 
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        p.forEach { pktInfo ->
-            val rawPacket = pktInfo.packet.toRawPacket()
-            absSendTimeEngine.transform(rawPacket)
-            // We 'lose' some information here because we have to recreate
-            // whatever this packet was as an RtpPacket, but I don't think
-            // this will be a problem.  Eventually we will port the old transformers
-            // over to Packet from RawPacket.
-            pktInfo.packet = RtpPacket.fromBuffer(rawPacket.getByteBuffer())
-        }
-        next(p)
+    override fun transform(packetInfo: PacketInfo): PacketInfo? {
+        val rawPacket = packetInfo.packet.toRawPacket()
+        absSendTimeEngine.transform(rawPacket)
+        // We 'lose' some information here because we have to recreate
+        // whatever this packet was as an RtpPacket, but I don't think
+        // this will be a problem.  Eventually we will port the old transformers
+        // over to Packet from RawPacket.
+        packetInfo.packet = RtpPacket.fromBuffer(rawPacket.getByteBuffer())
+
+        return packetInfo
     }
 
     override fun handleEvent(event: Event) {

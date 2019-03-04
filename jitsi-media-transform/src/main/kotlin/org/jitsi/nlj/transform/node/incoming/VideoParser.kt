@@ -20,12 +20,11 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
-import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.VideoPayloadType
 import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
-import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.rtp.rtp.RtpPacket
 import unsigned.toUByte
 import java.util.ArrayList
@@ -34,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Parse video packets at a codec level and set appropriate meta-information
  */
-class VideoParser : Node("Video parser") {
+class VideoParser : TransformerNode("Video parser") {
     private val payloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
     private var rtpEncodings: List<RTPEncodingDesc> = ArrayList()
 
@@ -42,23 +41,19 @@ class VideoParser : Node("Video parser") {
     // does this packet belong to a keyframe?
     // does this packet represent the start of a frame?
     // does this packet represent the end of a frame?
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        val outPackets = mutableListOf<PacketInfo>()
-        p.forEachAs<RtpPacket> { packetInfo, pkt ->
-            val pt = pkt.header.payloadType.toUByte()
-            payloadTypes[pt]?.let { payloadType ->
-                val videoRtpPacket = when (payloadType) {
-                    is Vp8PayloadType -> pkt.toOtherRtpPacketType(::Vp8Packet)
-                    else -> pkt
-                }
-                packetInfo.packet = videoRtpPacket
-                outPackets.add(packetInfo)
-            } ?: run {
-                logger.error("Unrecognized video payload type $pt, cannot parse video information")
-                outPackets.add(packetInfo)
+    override fun transform(packetInfo: PacketInfo): PacketInfo? {
+        val rtpPacket = packetInfo.packetAs<RtpPacket>()
+        val pt = rtpPacket.header.payloadType.toUByte()
+        payloadTypes[pt]?.let { payloadType ->
+            val videoRtpPacket = when (payloadType) {
+                is Vp8PayloadType -> rtpPacket.toOtherRtpPacketType(::Vp8Packet)
+                else -> rtpPacket
             }
+            packetInfo.packet = videoRtpPacket
+        } ?: run {
+            logger.error("Unrecognized video payload type $pt, cannot parse video information")
         }
-        next(outPackets)
+        return packetInfo
     }
 
     override fun handleEvent(event: Event) {

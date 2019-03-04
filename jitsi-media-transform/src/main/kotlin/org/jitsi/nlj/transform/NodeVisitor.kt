@@ -68,7 +68,7 @@ class NodeTeardownVisitor : NodeVisitor() {
         node.stop()
         when (node) {
             is DemuxerNode -> node.removePacketPaths()
-            else -> node.attach(null)
+            else -> node.detachNext()
         }
     }
 

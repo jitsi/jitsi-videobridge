@@ -19,7 +19,6 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
-import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
@@ -32,22 +31,21 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Parse RTP packets as either [VideoRtpPacket]s or [AudioRtpPacket]s
  */
-class MediaTypeParser : Node("Media type parser") {
+class MediaTypeParser : TransformerNode("Media type parser") {
     private val payloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
 
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        p.forEachAs<RtpPacket> { pktInfo, pkt ->
-            val mediaType = payloadTypes[pkt.header.payloadType.toUByte()]?.mediaType ?: run {
-                logger.cdebug { "Unable to find format for payload type ${pkt.header.payloadType}" }
-                return@forEachAs
-            }
-            pktInfo.packet = when (mediaType) {
-                MediaType.AUDIO -> pkt.toOtherRtpPacketType(::AudioRtpPacket)
-                MediaType.VIDEO -> pkt.toOtherRtpPacketType(::VideoRtpPacket)
-                else -> throw Exception("Unrecognized media type: '$mediaType'")
-            }
+    override fun transform(packetInfo: PacketInfo): PacketInfo? {
+        val rtpPacket = packetInfo.packetAs<RtpPacket>()
+        val mediaType = payloadTypes[rtpPacket.header.payloadType.toUByte()]?.mediaType ?: run {
+            logger.cdebug { "Unable to find format for payload type ${rtpPacket.header.payloadType}" }
+            return packetInfo
         }
-        next(p)
+        packetInfo.packet = when (mediaType) {
+            MediaType.AUDIO -> rtpPacket.toOtherRtpPacketType(::AudioRtpPacket)
+            MediaType.VIDEO -> rtpPacket.toOtherRtpPacketType(::VideoRtpPacket)
+            else -> throw Exception("Unrecognized media type: '$mediaType'")
+        }
+        return packetInfo
     }
 
     override fun handleEvent(event: Event) {

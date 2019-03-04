@@ -19,6 +19,6 @@ interface PacketHandler {
     /**
      * Process the given packets
      */
-    fun processPackets(pkts: List<PacketInfo>)
+    fun processPacket(packetInfo: PacketInfo)
 }
 

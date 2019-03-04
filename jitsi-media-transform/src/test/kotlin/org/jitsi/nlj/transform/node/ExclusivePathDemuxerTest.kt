@@ -30,10 +30,10 @@ import org.jitsi.rtp.rtp.RtpPacket
 internal class ExclusivePathDemuxerTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-    private class DummyHandler(name: String) : Node(name) {
+    private class DummyHandler(name: String) : ConsumerNode(name) {
         var numReceived = 0
-        override fun doProcessPackets(p: List<PacketInfo>) {
-            numReceived += p.size
+        override fun consume(packetInfo: PacketInfo) {
+            numReceived++
         }
     }
 
@@ -70,7 +70,7 @@ internal class ExclusivePathDemuxerTest : ShouldSpec() {
 
     init {
         "a packet which matches only one predicate" {
-            demuxer.processPackets(listOf(rtcpPacket))
+            demuxer.processPacket(rtcpPacket)
             should("only be demuxed to one path") {
                 rtpHandler.numReceived shouldBe 0
                 rtcpHandler.numReceived shouldBe 1
@@ -83,7 +83,7 @@ internal class ExclusivePathDemuxerTest : ShouldSpec() {
             rtpPath2.predicate = PacketPredicate { it is RtpPacket }
             rtpPath2.path = handler
             demuxer.addPacketPath(rtpPath2)
-            demuxer.processPackets(listOf(rtpPacket))
+            demuxer.processPacket(rtpPacket)
             should("only be demuxed to one path") {
                 rtpHandler.numReceived shouldBe 1
                 rtcpHandler.numReceived shouldBe 0

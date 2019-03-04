@@ -62,9 +62,7 @@ class NackHandler(
                 numCacheMisses++
             }
         }
-        if (nackedPackets.isNotEmpty()) {
-            onNackedPacketsReady.processPackets(nackedPackets.map { PacketInfo(it) })
-        }
+        nackedPackets.forEach { onNackedPacketsReady.processPacket(PacketInfo(it)) }
     }
 
     override fun getNodeStats(): NodeStatsBlock {

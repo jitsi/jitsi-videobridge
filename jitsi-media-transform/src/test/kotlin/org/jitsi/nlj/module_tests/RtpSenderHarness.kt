@@ -56,9 +56,9 @@ fun main(args: Array<String>) {
         senders.forEach {
             if (RtpProtocol.isRtp(pkt.getBuffer())) {
                 val rtpPacket = RtpPacket.fromBuffer(pkt.getBuffer())
-                it.sendPackets(listOf(PacketInfo(rtpPacket.clone())))
+                it.sendPacket(PacketInfo(rtpPacket.clone()))
             } else {
-                it.sendRtcp(listOf(RtcpPacket.parse(pkt.clone().getBuffer())))
+                it.sendRtcp(RtcpPacket.parse(pkt.clone().getBuffer()))
             }
         }
     }

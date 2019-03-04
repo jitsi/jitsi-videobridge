@@ -18,7 +18,7 @@ package org.jitsi.nlj.transform.node.incoming
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.FilterNode
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.extensions.toHex
@@ -35,7 +35,7 @@ import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 class RtcpTermination(
     private val rtcpEventNotifier: RtcpEventNotifier,
     private val transportCcEngine: TransportCCEngine? = null
-) : Node("RTCP termination") {
+) : FilterNode("RTCP termination") {
     private var numNacksReceived = 0
     private var numFirsReceived = 0
     private var numPlisReceived = 0
@@ -43,47 +43,47 @@ class RtcpTermination(
     private var numSrsReceived = 0
     private var numSdesReceived = 0
 
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        val outPackets = mutableListOf<PacketInfo>()
-        p.forEach { packetInfo ->
-            val pkt = packetInfo.packet
-            when (pkt) {
-                is RtcpFbTccPacket -> handleTccPacket(pkt)
-                is RtcpFbNackPacket -> {
-                    numNacksReceived++
-                }
-                is RtcpSrPacket -> {
-                    numSrsReceived++
-                }
-                is RtcpRrPacket -> {
-                    numRrsReceiver++
-                }
-                is RtcpByePacket -> {
-                    logger.cinfo { "BRIAN: got BYE packet:\n$pkt" }
-                    //TODO
-                }
-                is RtcpSdesPacket -> {
-                    numSdesReceived++
-                }
-                is RtcpFbPliPacket, is RtcpFbFirPacket -> {
-                    if (pkt is RtcpFbPliPacket) {
-                        numPlisReceived++
-                    } else {
-                        numFirsReceived++
-                    }
-                    // We'll let these pass through and be forwarded to the sender who will be
-                    // responsible for translating/aggregating them
-                    logger.cdebug { "BRIAN: passing through ${pkt::class} rtcp packet: ${pkt.getBuffer().toHex()}" }
-                    outPackets.add(packetInfo)
-                }
-                else -> {
-                    logger.cinfo { "TODO: not yet handling RTCP packet of type ${pkt.javaClass}"}
-                }
+    override fun accept(packetInfo: PacketInfo): Boolean {
+        var accept = false
+
+        val pkt = packetInfo.packet
+        when (pkt) {
+            is RtcpFbTccPacket -> handleTccPacket(pkt)
+            is RtcpFbNackPacket -> {
+                numNacksReceived++
             }
-            //TODO: keep an eye on if anything in here takes a while it could slow the packet pipeline down
-            rtcpEventNotifier.notifyRtcpReceived(packetInfo)
+            is RtcpSrPacket -> {
+                numSrsReceived++
+            }
+            is RtcpRrPacket -> {
+                numRrsReceiver++
+            }
+            is RtcpByePacket -> {
+                logger.cinfo { "BRIAN: got BYE packet:\n$pkt" }
+                //TODO
+            }
+            is RtcpSdesPacket -> {
+                numSdesReceived++
+            }
+            is RtcpFbPliPacket, is RtcpFbFirPacket -> {
+                if (pkt is RtcpFbPliPacket) {
+                    numPlisReceived++
+                } else {
+                    numFirsReceived++
+                }
+                // We'll let these pass through and be forwarded to the sender who will be
+                // responsible for translating/aggregating them
+                logger.cdebug { "BRIAN: passing through ${pkt::class} rtcp packet: ${pkt.getBuffer().toHex()}" }
+                accept = true
+            }
+            else -> {
+                logger.cinfo { "TODO: not yet handling RTCP packet of type ${pkt.javaClass}"}
+            }
         }
-        next(outPackets)
+        //TODO: keep an eye on if anything in here takes a while it could slow the packet pipeline down
+        rtcpEventNotifier.notifyRtcpReceived(packetInfo)
+
+        return accept
     }
 
     private fun handleTccPacket(tccPacket: RtcpFbTccPacket) {

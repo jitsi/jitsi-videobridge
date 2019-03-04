@@ -20,11 +20,11 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
-import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.ConsumerNode
+import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.RtpUtils.Companion.convertRtpTimestampToMs
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.isNewerThan
@@ -40,20 +40,18 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Track various statistics about received RTP streams to be used in SR/RR report blocks
  */
-class IncomingStatisticsTracker : Node("Incoming statistics tracker") {
+class IncomingStatisticsTracker : ObserverNode("Incoming statistics tracker") {
     private val streamStats: MutableMap<Long, IncomingStreamStatistics> = ConcurrentHashMap()
     private val payloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        p.forEachAs<RtpPacket> { packetInfo, rtpPacket ->
-            val stats = streamStats.computeIfAbsent(rtpPacket.header.ssrc) {
-                IncomingStreamStatistics(rtpPacket.header.ssrc, rtpPacket.header.sequenceNumber)
-            }
-            payloadTypes[rtpPacket.header.payloadType.toByte()]?.let {
-                val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.header.timestamp.toUInt(), it.clockRate)
-                stats.packetReceived(rtpPacket, packetSentTimestamp, packetInfo.receivedTime)
-            }
+    override fun observe(packetInfo: PacketInfo) {
+        val rtpPacket = packetInfo.packetAs<RtpPacket>()
+        val stats = streamStats.computeIfAbsent(rtpPacket.header.ssrc) {
+            IncomingStreamStatistics(rtpPacket.header.ssrc, rtpPacket.header.sequenceNumber)
         }
-        next(p)
+        payloadTypes[rtpPacket.header.payloadType.toByte()]?.let {
+            val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.header.timestamp.toUInt(), it.clockRate)
+            stats.packetReceived(rtpPacket, packetSentTimestamp, packetInfo.receivedTime)
+        }
     }
 
     fun getCurrentStats(): Map<Long, IncomingStreamStatistics> = streamStats.toMap()
@@ -411,21 +409,21 @@ class StreamStatistics2 {
     }
 }
 
-class Receiver : Node("RTP receiver"){
+// TODO ???
+class Receiver : ConsumerNode("RTP receiver"){
     val sources = mutableMapOf<Long, Source>()
 
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        p.forEachAs<RtpPacket> { packetInfo, rtpPacket ->
-            val source = sources.computeIfAbsent(rtpPacket.header.ssrc) {
-                val newSource = Source()
-                StreamStatistics2.init_seq(newSource, rtpPacket.header.sequenceNumber.toShort())
-                newSource.max_seq = (rtpPacket.header.sequenceNumber - 1).toShort()
-                newSource.probation = StreamStatistics2.MIN_SEQUENTIAL
+    override fun consume(packetInfo: PacketInfo) {
+        val rtpPacket = packetInfo.packetAs<RtpPacket>()
+        val source = sources.computeIfAbsent(rtpPacket.header.ssrc) {
+            val newSource = Source()
+            StreamStatistics2.init_seq(newSource, rtpPacket.header.sequenceNumber.toShort())
+            newSource.max_seq = (rtpPacket.header.sequenceNumber - 1).toShort()
+            newSource.probation = StreamStatistics2.MIN_SEQUENTIAL
 
-                newSource
-            }
-            StreamStatistics2.update_seq(source, rtpPacket.header.sequenceNumber.toShort())
+            newSource
         }
+        StreamStatistics2.update_seq(source, rtpPacket.header.sequenceNumber.toShort())
     }
 
 
