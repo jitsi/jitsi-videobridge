@@ -92,13 +92,7 @@ class RtcpRrGenerator(
                 ))
             }
             if (reportBlocks.isNotEmpty()) {
-                val rrPacket = RtcpRrPacket(
-                    header = RtcpHeader(
-                        reportCount = reportBlocks.size,
-                        packetType = RtcpRrPacket.PT
-                    ),
-                    reportBlocks = reportBlocks
-                )
+                val rrPacket = RtcpRrPacket(reportBlocks = reportBlocks)
                 rtcpSender(rrPacket)
             }
             backgroundExecutor.schedule(this::doWork, 1, TimeUnit.SECONDS)
