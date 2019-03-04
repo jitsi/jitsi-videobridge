@@ -23,6 +23,7 @@ import org.jitsi.nlj.RtpReceiverImpl
 import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
+import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.test_utils.RtpExtensionInfo
 import org.jitsi.test_utils.SourceAssociation
 import org.jitsi.test_utils.SrtpData
@@ -38,11 +39,12 @@ class ReceiverFactory {
             srtpData: SrtpData,
             payloadTypes: List<PayloadType>,
             headerExtensions: List<RtpExtensionInfo>,
-            ssrcAssociations: List<SourceAssociation>
+            ssrcAssociations: List<SourceAssociation>,
+            rtcpSender: (RtcpPacket) -> Unit = {}
             ): RtpReceiver {
             val receiver = RtpReceiverImpl(
                 Random().nextLong().toString(),
-                {},
+                rtcpSender,
                 null,
                 RtcpEventNotifier(),
                 executor,
