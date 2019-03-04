@@ -103,6 +103,7 @@ abstract class DtlsStack : DatagramTransport {
      * by the underlying DTLS library via the [receive] method, which the library calls to receive incoming data.
      */
     private val incomingProtocolData = LinkedBlockingQueue<PacketInfo>()
+    // TODO convert to single packet?
     var onOutgoingProtocolData: (List<PacketInfo>) -> Unit = {}
 
     /**
@@ -125,8 +126,8 @@ abstract class DtlsStack : DatagramTransport {
      * be sent to the stack via this method.  Returns any DTLS app packets which were processed by the stack as part
      * of this call.
      */
-    fun processIncomingDtlsPackets(packetInfos: List<PacketInfo>): List<PacketInfo> {
-        incomingProtocolData.addAll(packetInfos)
+    fun processIncomingDtlsPackets(packetInfo: PacketInfo): List<PacketInfo> {
+        incomingProtocolData.add(packetInfo)
         var bytesReceived: Int
         val outPackets = mutableListOf<PacketInfo>()
         do {

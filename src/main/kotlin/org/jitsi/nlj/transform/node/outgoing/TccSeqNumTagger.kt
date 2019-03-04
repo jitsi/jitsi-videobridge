@@ -19,8 +19,7 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpExtensionAddedEvent
 import org.jitsi.nlj.RtpExtensionClearEvent
-import org.jitsi.nlj.forEachAs
-import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.toRawPacket
 import org.jitsi.rtp.rtp.RtpPacket
@@ -31,19 +30,21 @@ import unsigned.toUInt
 
 class TccSeqNumTagger(
     private val transportCcEngine: TransportCCEngine? = null
-) : Node("TCC sequence number tagger") {
+) : TransformerNode("TCC sequence number tagger") {
     private var currTccSeqNum: Int = 1
     private var tccExtensionId: Int? = null
 
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        p.forEachAs<RtpPacket> { _, pkt ->
-            tccExtensionId?.let { tccExtId ->
-                val ext = TccHeaderExtension(tccExtId, currTccSeqNum++)
-                pkt.header.addExtension(tccExtId, ext)
-            }
+    override fun transform(packetInfo: PacketInfo): PacketInfo? {
+        tccExtensionId?.let { tccExtId ->
+            val ext = TccHeaderExtension(tccExtId, currTccSeqNum++)
+            val rtpPacket = packetInfo.packetAs<RtpPacket>()
+            rtpPacket.header.addExtension(tccExtId, ext)
         }
-        transportCcEngine?.egressEngine?.rtpTransformer?.transform(p.map { it.packet.toRawPacket() }.toTypedArray())
-        next(p)
+
+        transportCcEngine?.egressEngine?.rtpTransformer?.transform(
+            Array(1) { packetInfo.packet.toRawPacket()})
+
+        return packetInfo
     }
 
     override fun handleEvent(event: Event) {

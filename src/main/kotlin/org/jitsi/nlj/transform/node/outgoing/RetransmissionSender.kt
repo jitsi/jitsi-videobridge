@@ -20,11 +20,10 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
-import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
@@ -33,7 +32,7 @@ import org.jitsi.rtp.rtp.RtxPacket
 import unsigned.toUInt
 import java.util.concurrent.ConcurrentHashMap
 
-class RetransmissionSender : Node("Retransmission sender") {
+class RetransmissionSender : TransformerNode("Retransmission sender") {
     /**
      * Maps the video payload types to their RTX payload types
      */
@@ -51,43 +50,36 @@ class RetransmissionSender : Node("Retransmission sender") {
     private var numRetransmissionsRequested = 0
     private var numRetransmittedPackets = 0
 
-    /**
-     * Creates RTX packets from the given RTP packets and passes them down the pipeline
-     */
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        val outPackets = mutableListOf<PacketInfo>()
-        p.forEachAs<RtpPacket> { packetInfo, pkt ->
-            logger.cdebug { "Retransmission sender ${hashCode()} retransmitting packet with original ssrc " +
-                    "${pkt.header.ssrc}, original sequence number ${pkt.header.sequenceNumber} and original " +
-                    "payload type: ${pkt.header.payloadType}" }
-            numRetransmissionsRequested++
-            val rtxSsrc = associatedSsrcs[pkt.header.ssrc] ?: run {
-                logger.cerror { "Retransmission sender ${hashCode()} could not find an associated RTX ssrc for original packet ssrc " +
-                        pkt.header.ssrc }
-                return@forEachAs
-            }
-            val rtxPt = associatedPayloadTypes[pkt.header.payloadType] ?: run {
-                logger.cerror { "Retransmission sender ${hashCode()} could not find an associated RTX payload type for original payload type " +
-                        pkt.header.payloadType }
-                return@forEachAs
-            }
-            // Get a default value of 1 to start if it isn't present in the map.  If it is present
-            // in the map, get the value and increment it by 1
-            val rtxSeqNum = rtxStreamSeqNums.merge(rtxSsrc, 1, Integer::sum)!!
-
-            val rtxPacket = RtxPacket.fromRtpPacket(pkt)
-            rtxPacket.header.ssrc = rtxSsrc
-            rtxPacket.header.payloadType = rtxPt
-            rtxPacket.header.sequenceNumber = rtxSeqNum
-            logger.cdebug { "Retransmission sender ${hashCode()} sending RTX packet with " +
-                    "ssrc $rtxSsrc with pt $rtxPt and seqNum $rtxSeqNum" }
-            packetInfo.packet = rtxPacket
-            numRetransmittedPackets++
-
-            outPackets.add(packetInfo)
+    override fun transform(packetInfo: PacketInfo): PacketInfo? {
+        val rtpPacket = packetInfo.packetAs<RtpPacket>()
+        logger.cdebug { "Retransmission sender ${hashCode()} retransmitting packet with original ssrc " +
+                "${rtpPacket.header.ssrc}, original sequence number ${rtpPacket.header.sequenceNumber} and original " +
+                "payload type: ${rtpPacket.header.payloadType}" }
+        numRetransmissionsRequested++
+        val rtxSsrc = associatedSsrcs[rtpPacket.header.ssrc] ?: run {
+            logger.cerror { "Retransmission sender ${hashCode()} could not find an associated RTX ssrc for original packet ssrc " +
+                    rtpPacket.header.ssrc }
+            return null
         }
+        val rtxPt = associatedPayloadTypes[rtpPacket.header.payloadType] ?: run {
+            logger.cerror { "Retransmission sender ${hashCode()} could not find an associated RTX payload type for original payload type " +
+                    rtpPacket.header.payloadType }
+            return null
+        }
+        // Get a default value of 1 to start if it isn't present in the map.  If it is present
+        // in the map, get the value and increment it by 1
+        val rtxSeqNum = rtxStreamSeqNums.merge(rtxSsrc, 1, Integer::sum)!!
 
-        next(outPackets)
+        val rtxPacket = RtxPacket.fromRtpPacket(rtpPacket)
+        rtxPacket.header.ssrc = rtxSsrc
+        rtxPacket.header.payloadType = rtxPt
+        rtxPacket.header.sequenceNumber = rtxSeqNum
+        logger.cdebug { "Retransmission sender ${hashCode()} sending RTX packet with " +
+                "ssrc $rtxSsrc with pt $rtxPt and seqNum $rtxSeqNum" }
+
+        packetInfo.packet = rtxPacket
+        numRetransmittedPackets++
+        return packetInfo
     }
 
     override fun handleEvent(event: Event) {

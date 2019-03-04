@@ -17,7 +17,6 @@ package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.cinfo
-import org.jitsi.rtp.extensions.toHex
 import org.pcap4j.core.Pcaps
 import org.pcap4j.packet.EthernetPacket
 import org.pcap4j.packet.IpV4Packet
@@ -38,28 +37,26 @@ import java.util.Random
 
 class PcapWriter(
     filePath: String = "/tmp/${Random().nextLong()}.pcap}"
-) : Node("PCAP writer") {
+) : ObserverNode("PCAP writer") {
     val handle = Pcaps.openDead(DataLinkType.EN10MB, 65536);
     val writer = handle.dumpOpen(filePath)
 
     init {
         logger.cinfo { "Pcap writer writing to file $filePath" }
     }
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        p.forEach {
-            val udpPayload = UnknownPacket.Builder()
-            val pktBuf = it.packet.getBuffer()
-            // We can't pass offset/limit values to udpPayload.rawData, so we need to create an array that contains
-            // only exactly what we want to write
-            val subBuf = ByteBuffer.wrap(
-                Arrays.copyOfRange(
-                    pktBuf.array(),
-                    pktBuf.arrayOffset(),
-                    pktBuf.arrayOffset() + pktBuf.limit()
-                )
-            )
-            udpPayload.rawData(subBuf.array())
-            val udp = UdpPacket.Builder()
+
+    override fun observe(packetInfo: PacketInfo) {
+        val udpPayload = UnknownPacket.Builder()
+        val pktBuf = packetInfo.packet.getBuffer()
+        // We can't pass offset/limit values to udpPayload.rawData, so we need to create an array that contains
+        // only exactly what we want to write
+        val subBuf = ByteBuffer.wrap(
+            Arrays.copyOfRange(
+                pktBuf.array(),
+                pktBuf.arrayOffset(),
+                pktBuf.arrayOffset() + pktBuf.limit()))
+        udpPayload.rawData(subBuf.array())
+        val udp = UdpPacket.Builder()
                 .srcPort(UdpPort(123, "blah"))
                 .dstPort(UdpPort(456, "blah"))
                 .srcAddr(Inet4Address.getLocalHost() as Inet4Address)
@@ -68,7 +65,7 @@ class PcapWriter(
                 .correctLengthAtBuild(true)
                 .payloadBuilder(udpPayload)
 
-            val ipPacket = IpV4Packet.Builder()
+        val ipPacket = IpV4Packet.Builder()
                 .srcAddr(Inet4Address.getLocalHost() as Inet4Address)
                 .dstAddr(Inet4Address.getLocalHost() as Inet4Address)
                 .protocol(IpNumber.UDP)
@@ -77,7 +74,7 @@ class PcapWriter(
                 .correctLengthAtBuild(true)
                 .payloadBuilder(udp)
 
-            val eth = EthernetPacket.Builder()
+        val eth = EthernetPacket.Builder()
                 .srcAddr(MacAddress.ETHER_BROADCAST_ADDRESS)
                 .dstAddr(MacAddress.ETHER_BROADCAST_ADDRESS)
                 .type(EtherType.IPV4)
@@ -85,9 +82,6 @@ class PcapWriter(
                 .payloadBuilder(ipPacket)
                 .build()
 
-            writer.dump(eth)
-        }
-
-        next(p)
+        writer.dump(eth)
     }
 }

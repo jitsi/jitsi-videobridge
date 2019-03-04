@@ -31,8 +31,8 @@ abstract class RtpSender : EventHandler, Stoppable,NodeStatsProducer {
     var numBytesSent: Long = 0
     var firstPacketSentTime: Long = -1
     var lastPacketSentTime: Long = -1
-    abstract fun sendPackets(pkts: List<PacketInfo>)
-    abstract fun sendRtcp(pkts: List<RtcpPacket>)
+    abstract fun sendPacket(packetInfo: PacketInfo)
+    abstract fun sendRtcp(rtcpPacket: RtcpPacket)
     abstract fun sendProbing(mediaSsrc: Long, numBytes: Int): Int
     abstract fun onOutgoingPacket(handler: PacketHandler)
     abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)

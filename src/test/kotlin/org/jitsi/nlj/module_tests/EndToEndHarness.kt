@@ -57,18 +57,16 @@ fun main() {
     )
 
     receiver.rtpPacketHandler = object : PacketHandler {
-        override fun processPackets(pkts: List<PacketInfo>) {
-            pkts.forEach { pkt ->
-                val buf = pkt.packet.getBuffer()
-                println("forwarding buffer ${System.identityHashCode(buf)} $buf to sender")
-            }
-            sender.sendPackets(pkts)
+        override fun processPacket(packetInfo: PacketInfo) {
+            val buf = packetInfo.packet.getBuffer()
+            println("forwarding buffer ${System.identityHashCode(buf)} $buf to sender")
+            sender.sendPacket(packetInfo)
         }
     }
 
     receiver.rtcpPacketHandler = object : PacketHandler {
-        override fun processPackets(pkts: List<PacketInfo>) {
-            sender.sendRtcp(pkts.map(PacketInfo::packet).map { it as RtcpPacket }.toList())
+        override fun processPacket(packetInfo: PacketInfo) {
+            sender.sendRtcp(packetInfo.packetAs())
         }
     }
 

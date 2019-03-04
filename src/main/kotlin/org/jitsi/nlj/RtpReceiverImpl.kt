@@ -23,10 +23,7 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
-import org.jitsi.nlj.transform.node.MediaTypeParser
-import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.transform.node.PacketParser
-import org.jitsi.nlj.transform.node.PayloadTypeFilterNode
+import org.jitsi.nlj.transform.node.*
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.IncomingStreamStatistics
@@ -88,7 +85,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val logger = getLogger(classLogger, logLevelDelegate)
     private var running: Boolean = true
     private val inputTreeRoot: Node
-    private val incomingPacketQueue = PacketInfoQueue(id, executor, this::processPacket)
+    private val incomingPacketQueue = PacketInfoQueue(id, executor, this::handleIncomingPacket)
     private val srtpDecryptWrapper = SrtpTransformerDecryptNode()
     private val srtcpDecryptWrapper = SrtcpTransformerDecryptNode()
     private val tccGenerator = TccGeneratorNode(rtcpSender)
@@ -122,9 +119,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
      * its place in the receive pipeline.  To support both keeping it in the same
      * place and allowing it to be re-assigned, we wrap it with this.
      */
-    private val rtpPacketHandlerWrapper = object : Node("RTP packet handler wrapper") {
-        override fun doProcessPackets(p: List<PacketInfo>) {
-            rtpPacketHandler?.processPackets(p)
+    private val rtpPacketHandlerWrapper = object : ConsumerNode("RTP packet handler wrapper") {
+        override fun consume(packetInfo: PacketInfo) {
+            rtpPacketHandler?.processPacket(packetInfo)
         }
     }
 
@@ -133,9 +130,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
      * its place in the receive pipeline.  To support both keeping it in the same
      * place and allowing it to be re-assigned, we wrap it with this.
      */
-    private val rtcpPacketHandlerWrapper = object : Node("RTCP packet handler wrapper") {
-        override fun doProcessPackets(p: List<PacketInfo>) {
-            rtcpPacketHandler?.processPackets(p)
+    private val rtcpPacketHandlerWrapper = object : ConsumerNode("RTCP packet handler wrapper") {
+        override fun consume(packetInfo: PacketInfo) {
+            rtcpPacketHandler?.processPacket(packetInfo)
         }
     }
 
@@ -201,46 +198,43 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     name = "SRTCP path"
                     predicate = PacketPredicate { RtpProtocol.isRtcp(it.getBuffer()) }
                     path = pipeline {
-                        val prevRtcpPackets = mutableListOf<Packet>()
+                        var prevRtcpPacket: Packet? = null
                         node(PacketParser("SRTCP parser") { SrtcpPacket.create(it.getBuffer()) } )
                         node(srtcpDecryptWrapper)
-                        simpleNode("RTCP pre-parse cache ${hashCode()}") { pkts ->
-                            prevRtcpPackets.clear()
-                            pkts.forEach {
-                                prevRtcpPackets.add(it.packet.clone())
-                            }
-                            pkts
+                        simpleNode("RTCP pre-parse cache ${hashCode()}") { packetInfo ->
+                            prevRtcpPacket = packetInfo.packet.clone()
+                            packetInfo
                         }
                         //TODO: probably just make a class for this, but for now we're using the cache above to debug
-                        simpleNode("Compound RTCP splitter") { pktInfos ->
-                            try {
-                                val outPackets = mutableListOf<PacketInfo>()
-                                pktInfos.forEach { pktInfo ->
-                                    val compoundRtcpPackets = RtcpIterator(pktInfo.packet.getBuffer()).getAll()
-                                    compoundRtcpPackets.forEach {
-                                        // For each compound RTCP packet, create a new PacketInfo
-                                        val splitPacket = PacketInfo(it, timeline = pktInfo.timeline.clone())
-                                        splitPacket.receivedTime = pktInfo.receivedTime
-                                        outPackets.add(splitPacket)
-                                    }
-                                }
-                                outPackets
-                            } catch (e: Exception) {
-                                logger.cerror {
-                                    with (StringBuffer()) {
-                                        appendln("Exception extracting RTCP.  The original, decrypted packet buffer is " +
-                                                "one of these:")
-                                        prevRtcpPackets.forEach {
-                                            appendln(it.getBuffer().toHex())
+                        node(object: MultipleOutputTransformerNode("Compound RTCP splitter") {
+                                override fun transform(packetInfo: PacketInfo): List<PacketInfo> {
+                                    try {
+                                        val outPackets = mutableListOf<PacketInfo>()
+                                        val compoundRtcpPackets = RtcpIterator(packetInfo.packet.getBuffer()).getAll()
+                                        compoundRtcpPackets.forEach {
+                                            // For each compound RTCP packet, create a new PacketInfo
+                                            val splitPacket = PacketInfo(it, timeline = packetInfo.timeline.clone())
+                                            splitPacket.receivedTime = packetInfo.receivedTime
+                                            outPackets.add(splitPacket)
                                         }
-
-                                        toString()
+                                        return outPackets
                                     }
+                                    catch (e: Exception) {
+                                        logger.cerror {
+                                            with(StringBuffer()) {
+                                                appendln(
+                                                    "Exception extracting RTCP.  The original, decrypted packet buffer is " +
+                                                            "one of these:"
+                                                )
+                                                appendln(prevRtcpPacket?.getBuffer()?.toHex())
 
+                                                toString()
+                                            }
+                                        }
+                                    }
+                                    return emptyList()
                                 }
-                                emptyList()
-                            }
-                        }
+                            })
                         node(rtcpTermination)
                         node(rtcpPacketHandlerWrapper)
                     }
@@ -249,7 +243,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
         }
     }
 
-    private fun processPacket(packet: PacketInfo): Boolean {
+    private fun handleIncomingPacket(packet: PacketInfo): Boolean {
         if (running) {
             val now = System.currentTimeMillis()
             if (firstQueueReadTime == -1L) {
@@ -264,13 +258,13 @@ class RtpReceiverImpl @JvmOverloads constructor(
                 firstPacketProcessedTime = System.currentTimeMillis()
             }
             lastPacketProcessedTime = System.currentTimeMillis()
-            processPackets(listOf(packet))
+            processPacket(packet)
             return true
         }
         return false
     }
 
-    override fun processPackets(pkts: List<PacketInfo>) = inputTreeRoot.processPackets(pkts)
+    override fun processPacket(packetInfo: PacketInfo) = inputTreeRoot.processPacket(packetInfo)
 
     override fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("RTP receiver $id").apply {

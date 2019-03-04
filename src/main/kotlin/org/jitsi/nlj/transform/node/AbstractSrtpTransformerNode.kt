@@ -19,7 +19,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
 
-abstract class AbstractSrtpTransformerNode(name: String) : Node(name) {
+abstract class AbstractSrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
     /**
      * The [SinglePacketTransformer] instance to use for srtp transform/reverseTransforms.
      * Note that this is private on purpose: subclasses should use the transformer given to
@@ -54,7 +54,7 @@ abstract class AbstractSrtpTransformerNode(name: String) : Node(name) {
      */
     private var numCachedPackets = 0
 
-    override fun doProcessPackets(p: List<PacketInfo>) {
+    override fun transform(packetInfo: PacketInfo): List<PacketInfo> {
         if (firstPacketReceivedTimestamp == -1L) {
             firstPacketReceivedTimestamp = System.currentTimeMillis()
         }
@@ -65,15 +65,16 @@ abstract class AbstractSrtpTransformerNode(name: String) : Node(name) {
             val outPackets = mutableListOf<PacketInfo>()
             outPackets.addAll(doTransform(cachedPackets, it))
             cachedPackets.clear()
-            outPackets.addAll(doTransform(p, it))
-            next(outPackets)
+            outPackets.addAll(doTransform(listOf(packetInfo), it))
+            return outPackets
         } ?: run {
-            numCachedPackets += p.size
-            cachedPackets.addAll(p)
+            numCachedPackets++
+            cachedPackets.add(packetInfo)
             while (cachedPackets.size > 1024) {
                 cachedPackets.removeAt(0)
                 numDroppedPackets++
             }
+            return emptyList()
         }
     }
 

@@ -20,12 +20,10 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
-import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.format.RtxPayloadType
-import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
@@ -40,7 +38,7 @@ import java.util.concurrent.ConcurrentHashMap
  * look like their original packets.
  * https://tools.ietf.org/html/rfc4588
  */
-class RtxHandler : Node("RTX handler") {
+class RtxHandler : TransformerNode("RTX handler") {
     private var numPaddingPacketsReceived = 0
     private var numRtxPacketsReceived = 0
     /**
@@ -56,36 +54,35 @@ class RtxHandler : Node("RTX handler") {
         val logger: Logger = Logger.getLogger(this::class.java)
     }
 
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        val outPackets = mutableListOf<PacketInfo>()
-        p.forEachAs<RtpPacket> { packetInfo, pkt ->
-            if (associatedPayloadTypes.containsKey(pkt.header.payloadType)) {
-                val rtxPacket = RtxPacket.parseAsRtx(pkt)
-//                logger.cdebug { "Received RTX packet: ssrc ${rtxPacket.header.ssrc}, seq num: ${rtxPacket.header.sequenceNumber} " +
-//                        "rtx payload size: ${rtxPacket.payload.limit()}, padding size: ${rtxPacket.getPaddingSize()} " +
-//                        "buffer:\n${rtxPacket.getBuffer().toHex()}" }
-                if (rtxPacket.payload.limit() - rtxPacket.paddingSize < 2) {
-                    logger.cdebug { "RTX packet is padding, ignore" }
-                    numPaddingPacketsReceived++
-                    return@forEachAs
-                }
-                val originalSeqNum = rtxPacket.originalSequenceNumber
-                val originalPt = associatedPayloadTypes[pkt.header.payloadType]!!
-                val originalSsrc = associatedSsrcs[pkt.header.ssrc]!!
-
-                val originalPacket = rtxPacket as RtpPacket
-                originalPacket.header.sequenceNumber = originalSeqNum
-                originalPacket.header.payloadType = originalPt
-                originalPacket.header.ssrc = originalSsrc
-                logger.cdebug { "Recovered RTX packet.  Original packet: $originalSsrc $originalSeqNum" }
-                numRtxPacketsReceived++
-                packetInfo.packet = originalPacket
-                outPackets.add(packetInfo)
-            } else {
-                outPackets.add(packetInfo)
+    override fun transform(packetInfo: PacketInfo): PacketInfo? {
+        val rtpPacket = packetInfo.packetAs<RtpPacket>()
+        if (associatedPayloadTypes.containsKey(rtpPacket.header.payloadType)) {
+            val rtxPacket = RtxPacket.parseAsRtx(rtpPacket)
+//          logger.cdebug {
+//             "Received RTX packet: ssrc ${rtxPacket.header.ssrc}, seq num: ${rtxPacket.header.sequenceNumber} " +
+//             "rtx payload size: ${rtxPacket.payload.limit()}, padding size: ${rtxPacket.getPaddingSize()} " +
+//             "buffer:\n${rtxPacket.getBuffer().toHex()}" }
+            if (rtxPacket.payload.limit() - rtxPacket.paddingSize < 2) {
+                logger.cdebug { "RTX packet is padding, ignore" }
+                numPaddingPacketsReceived++
+                return null
             }
+
+            val originalSeqNum = rtxPacket.originalSequenceNumber
+            val originalPt = associatedPayloadTypes[rtpPacket.header.payloadType]!!
+            val originalSsrc = associatedSsrcs[rtpPacket.header.ssrc]!!
+
+            val originalPacket = rtxPacket as RtpPacket
+            originalPacket.header.sequenceNumber = originalSeqNum
+            originalPacket.header.payloadType = originalPt
+            originalPacket.header.ssrc = originalSsrc
+            logger.cdebug { "Recovered RTX packet.  Original packet: $originalSsrc $originalSeqNum" }
+            numRtxPacketsReceived++
+            packetInfo.packet = originalPacket
+            return packetInfo
+        } else {
+            return packetInfo
         }
-        next(outPackets)
     }
 
     override fun handleEvent(event: Event) {

@@ -105,7 +105,7 @@ class Transceiver(
         RtpReceiverImpl(
             id,
             { rtcpPacket ->
-                rtpSender.sendRtcp(listOf(rtcpPacket))
+                rtpSender.sendRtcp(rtcpPacket)
             },
             transportCcEngine,
             rtcpEventNotifier,
@@ -151,12 +151,12 @@ class Transceiver(
      * Send packets to the endpoint this transceiver is associated with by
      * passing them out the sender's outgoing pipeline
      */
-    fun sendRtp(rtpPackets: List<PacketInfo>) {
+    fun sendRtp(packetInfo: PacketInfo) {
         packetIOActivity.lastPacketSentTimestampMs = System.currentTimeMillis()
-        rtpSender.sendPackets(rtpPackets)
+        rtpSender.sendPacket(packetInfo)
     }
 
-    fun sendRtcp(rtcpPackets: List<RtcpPacket>) = rtpSender.sendRtcp(rtcpPackets)
+    fun sendRtcp(rtcpPacket: RtcpPacket) = rtpSender.sendRtcp(rtcpPacket)
 
     fun sendProbing(mediaSsrc: Long, numBytes: Int): Int = rtpSender.sendProbing(mediaSsrc, numBytes)
 

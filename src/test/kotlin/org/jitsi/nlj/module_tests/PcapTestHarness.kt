@@ -31,7 +31,7 @@ import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
-import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.util.NameableThreadFactory
 import org.jitsi.nlj.util.safeShutdown
 import org.jitsi.rtp.UnparsedPacket
@@ -150,20 +150,15 @@ fun main(args: Array<String>) {
         val rtpReceiver = createRtpReceiver(receiverExecutor, backgroundExecutor)
         var numReceivedPackets = 0
         val doneFuture = CompletableFuture<Unit>()
-        rtpReceiver.rtpPacketHandler = (object : Node("Packet receiver") {
-            override fun doProcessPackets(p: List<PacketInfo>) {
-                numReceivedPackets += p.size
+        rtpReceiver.rtpPacketHandler = (object : ConsumerNode("Packet receiver") {
+            override fun consume(packetInfo: PacketInfo) {
+                numReceivedPackets++
                 if (numReceivedPackets == numExpectedPackets) {
                     println("ALL PACKETS FORWARDED")
                     doneFuture.complete(Unit)
                 }
-                val clonedPackets = p.map { it.packet.clone()}
-                        .map { PacketInfo(it) }
-                        .toList()
-//                p.forEach {
-//                    it.packet = it.packet.clone()
-//                }
-                sender.sendPackets(clonedPackets)
+                val clonedPacketInfo = PacketInfo(packetInfo.packet.clone())
+                sender.sendPacket(clonedPacketInfo)
             }
         })
         receivers.add(rtpReceiver)

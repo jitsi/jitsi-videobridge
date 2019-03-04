@@ -119,7 +119,7 @@ class ProbingDataSender(
         // context (or whoever calls this) which i don't think we want.  Need look at getting all the pipeline
         // work posted to one thread so we don't have to worry about concurrency nightmares
         if (packetsToResend.isNotEmpty()) {
-            rtxDataSender.processPackets(packetsToResend)
+            packetsToResend.forEach { rtxDataSender.processPacket(it) }
         }
 
         return bytesSent
@@ -146,7 +146,7 @@ class ProbingDataSender(
                 ),
                 packetLength
             )
-            garbageDataSender.processPackets(listOf(PacketInfo(paddingPacket)))
+            garbageDataSender.processPacket(PacketInfo(paddingPacket))
 
             currDummySeqNum++
             bytesSent += packetLength
