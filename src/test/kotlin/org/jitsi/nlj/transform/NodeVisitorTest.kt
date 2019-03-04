@@ -21,6 +21,7 @@ import io.kotlintest.matchers.collections.shouldHaveSize
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.rtp.PacketPredicate
 
@@ -51,8 +52,8 @@ internal class NodeVisitorTest : ShouldSpec() {
 
     // 'Outgoing' style is harder to define: we actually need multiple separate pipeline that
     // terminate at the same node
-    private val testOutgoingPipelineTermination = object : Node("Output termination") {
-        override fun doProcessPackets(p: List<PacketInfo>) {}
+    private val testOutgoingPipelineTermination = object : ConsumerNode("Output termination") {
+        override fun consume(packetInfo: PacketInfo) {}
     }
 
     private val testOutgoingPipeline1 = pipeline {

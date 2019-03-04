@@ -22,15 +22,18 @@ import java.util.*
 /**
  * Randomly drops packets at a rate of [lossRate].
  */
-class PacketLoss(private val lossRate: Double) : Node("Packet loss") {
+class PacketLoss(private val lossRate: Double) : FilterNode("Packet loss") {
     private val random = Random()
     private var packetsSeen = 0
     private var packetsDropped = 0
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        packetsSeen += p.size
-        val forwardedPackets = p.filter { random.nextDouble() > lossRate }
-        packetsDropped += (p.size - forwardedPackets.size)
-        next(forwardedPackets)
+    override fun accept(packetInfo: PacketInfo): Boolean {
+        packetsSeen ++
+        if (random.nextDouble() > lossRate) {
+            packetsDropped++
+            return false
+        } else {
+            return true
+        }
     }
 
     override fun getNodeStats(): NodeStatsBlock {
@@ -46,30 +49,29 @@ class PacketLoss(private val lossRate: Double) : Node("Packet loss") {
 class BurstPacketLoss(
     private val burstSize: Int = 30,
     private val burstInterval: Int = 3000
-) : Node("Burst packet loss") {
+) : FilterNode("Burst packet loss") {
     private var packetsSeen = 0
     private var totalPacketsDropped = 0
     private var inBurst = false
     private var currentBurstPacketsDropped = 0
 
 
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        val outPackets = mutableListOf<PacketInfo>()
-        p.forEach {
-            packetsSeen++
-            if (packetsSeen % burstInterval == 0) {
-                inBurst = true
-            }
-            if (inBurst) {
-                currentBurstPacketsDropped++
-                if (currentBurstPacketsDropped == burstSize) {
-                    inBurst = false
-                }
-            } else {
-                outPackets.add(it)
-            }
+    override fun accept(packetInfo: PacketInfo): Boolean {
+        packetsSeen++
+        if (packetsSeen % burstInterval == 0) {
+            inBurst = true
         }
-        next(outPackets)
+
+        return if (inBurst) {
+            totalPacketsDropped++
+            currentBurstPacketsDropped++
+            if (currentBurstPacketsDropped == burstSize) {
+                inBurst = false
+            }
+            false
+        } else {
+            true
+        }
     }
 
 }

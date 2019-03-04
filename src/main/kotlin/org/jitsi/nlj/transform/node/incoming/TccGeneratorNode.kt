@@ -21,9 +21,8 @@ import org.jitsi.nlj.ReceiveSsrcAddedEvent
 import org.jitsi.nlj.ReceiveSsrcRemovedEvent
 import org.jitsi.nlj.RtpExtensionAddedEvent
 import org.jitsi.nlj.RtpExtensionClearEvent
-import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
@@ -39,7 +38,7 @@ import unsigned.toUInt
  */
 class TccGeneratorNode(
     private val onTccPacketReady: (RtcpPacket) -> Unit = {}
-) : Node("TCC generator") {
+) : ObserverNode("TCC generator") {
     private var tccExtensionId: Int? = null
     private var currTccSeqNum: Int = 0
     private var currTcc: RtcpFbTccPacket = RtcpFbTccPacket(fci = Tcc(feedbackPacketCount = currTccSeqNum++))
@@ -52,15 +51,13 @@ class TccGeneratorNode(
     private var mediaSsrcs: MutableSet<Long> = mutableSetOf()
     private var numTccSent: Int = 0
 
-    override fun doProcessPackets(p: List<PacketInfo>) {
+    override fun observe(packetInfo: PacketInfo) {
         tccExtensionId?.let { tccExtId ->
-            p.forEachAs<RtpPacket> { pktInfo, pkt ->
-                pkt.header.getExtensionAs(tccExtId, TccHeaderExtension.Companion::fromUnparsed)?.let { tccExt ->
-                    addPacket(tccExt.tccSeqNum, pktInfo.receivedTime)
-                }
+            val rtpPacket: RtpPacket = packetInfo.packetAs()
+           rtpPacket.header.getExtensionAs(tccExtId, TccHeaderExtension.Companion::fromUnparsed)?.let { tccExt ->
+                addPacket(tccExt.tccSeqNum, packetInfo.receivedTime)
             }
         }
-        next(p)
     }
 
     override fun handleEvent(event: Event) {

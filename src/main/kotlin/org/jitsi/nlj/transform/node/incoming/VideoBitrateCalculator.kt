@@ -19,11 +19,9 @@ package org.jitsi.nlj.transform.node.incoming
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.SetMediaStreamTracksEvent
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.rtp.VideoRtpPacket
-import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.toRawPacket
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 
 /**
@@ -32,20 +30,18 @@ import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
  * individual encoding (that is, each forwardable stream taking into account spatial and temporal scalability) and
  * tags the [VideoRtpPacket] with a snapshot of the current estimated bitrate for the encoding to which it belongs
  */
-class VideoBitrateCalculator : Node("Video bitrate calculator") {
+class VideoBitrateCalculator : ObserverNode("Video bitrate calculator") {
     private var mediaStreamTrackDescs: Array<MediaStreamTrackDesc> = arrayOf()
 
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        p.forEachAs<VideoRtpPacket> { _, videoRtpPacket ->
-            mediaStreamTrackDescs.forEach {
-                it.findRtpEncodingDesc(videoRtpPacket)?.let { encoding ->
-                    val now = System.currentTimeMillis()
-                    encoding.update(videoRtpPacket.sizeBytes, now)
-                    videoRtpPacket.bitrateSnapshot = encoding.getLastStableBitrateBps(now)
-                }
+    override fun observe(packetInfo: PacketInfo) {
+        val videoRtpPacket: VideoRtpPacket = packetInfo.packet as VideoRtpPacket
+        mediaStreamTrackDescs.forEach {
+            it.findRtpEncodingDesc(videoRtpPacket)?.let { encoding ->
+                val now = System.currentTimeMillis()
+                encoding.update(videoRtpPacket.sizeBytes, now)
+                videoRtpPacket.bitrateSnapshot = encoding.getLastStableBitrateBps(now)
             }
         }
-        next(p)
     }
 
     override fun handleEvent(event: Event) {

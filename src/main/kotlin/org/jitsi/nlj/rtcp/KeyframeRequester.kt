@@ -19,7 +19,7 @@ package org.jitsi.nlj.rtcp
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbFirPacket
 
@@ -31,7 +31,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbFirPacket
  * on what the client supports
  * 3) Aggregation.  This class will pace outgoing requests such that we don't spam the sender
  */
-class KeyframeRequester : Node("Keyframe Requester") {
+class KeyframeRequester : ObserverNode("Keyframe Requester") {
     // Map a SSRC to the timestamp (in ms) of when we last requested a keyframe for it
     private val keyframeRequests = mutableMapOf<Long, Long>()
     private var firCommandSequenceNumber: Int = 0
@@ -39,10 +39,9 @@ class KeyframeRequester : Node("Keyframe Requester") {
     private var numKeyframesRequestedByBridge: Int = 0
     private var numKeyframeRequestsDropped: Int = 0
 
-    override fun doProcessPackets(p: List<PacketInfo>) {
+    override fun observe(packetInfo: PacketInfo) {
         //TODO: translation
         //TODO: aggregation
-        next(p)
     }
 
     fun requestKeyframe(mediaSsrc: Long) {
@@ -56,7 +55,7 @@ class KeyframeRequester : Node("Keyframe Requester") {
             val firPacket = RtcpFbFirPacket.fromValues(firSsrc = mediaSsrc, commandSeqNum = firCommandSequenceNumber++)
             logger.cdebug { "Keyframe requester requesting keyframe with FIR for $mediaSsrc" }
             numKeyframesRequestedByBridge++
-            processPackets(listOf(PacketInfo(firPacket)))
+            processPacket(PacketInfo(firPacket))
         }
     }
 

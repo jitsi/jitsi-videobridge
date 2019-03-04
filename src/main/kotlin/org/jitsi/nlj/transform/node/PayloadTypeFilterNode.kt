@@ -24,13 +24,11 @@ import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpPacket
 import java.util.concurrent.ConcurrentHashMap
 
-class PayloadTypeFilterNode : Node("RTP payload type filter") {
+class PayloadTypeFilterNode : FilterNode("RTP payload type filter") {
     private val acceptedPayloadTypes: MutableSet<Int> = ConcurrentHashMap.newKeySet()
 
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        val filteredPackets = p
-            .filter { acceptedPayloadTypes.contains(it.packetAs<RtpPacket>().header.payloadType) }
-        next(filteredPackets)
+    override fun accept(packetInfo: PacketInfo): Boolean {
+        return acceptedPayloadTypes.contains(packetInfo.packetAs<RtpPacket>().header.payloadType)
     }
 
     override fun handleEvent(event: Event) {

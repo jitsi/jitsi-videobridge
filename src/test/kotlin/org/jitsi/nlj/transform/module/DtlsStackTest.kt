@@ -39,7 +39,7 @@ import org.bouncycastle.operator.DefaultSignatureAlgorithmIdentifierFinder
 import org.bouncycastle.operator.bc.BcRSAContentSignerBuilder
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.dtls.DtlsClientStack
-import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.incoming.DtlsReceiver
 import org.jitsi.nlj.transform.node.outgoing.DtlsSender
 import org.jitsi.rtp.UnparsedPacket
@@ -153,16 +153,15 @@ internal class DtlsStackTest : ShouldSpec() {
         val serverProtocol = DTLSServerProtocol(SecureRandom())
 
         serverTransport.sendFunc = { buf, off, len ->
-            receiver.processPackets(listOf(PacketInfo(UnparsedPacket(ByteBuffer.wrap(buf, off, len)))))
+            receiver.processPacket(PacketInfo(UnparsedPacket(ByteBuffer.wrap(buf, off, len))))
         }
-        sender.attach(object : Node("sender network") {
-            override fun doProcessPackets(p: List<PacketInfo>) {
-                p.forEach {
-                    serverTransport.incomingQueue.add(PacketData(
-                            it.packet.getBuffer().array(),
-                            it.packet.getBuffer().arrayOffset(),
-                            it.packet.getBuffer().limit()))
-                }
+        sender.attach(object : ConsumerNode("sender network") {
+            override fun consume(packetInfo: PacketInfo) {
+                serverTransport.incomingQueue.add(
+                        PacketData(
+                                packetInfo.packet.getBuffer().array(),
+                                packetInfo.packet.getBuffer().arrayOffset(),
+                                packetInfo.packet.getBuffer().limit()))
             }
         })
 

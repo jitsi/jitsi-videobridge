@@ -23,6 +23,7 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
+import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketCacher
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
@@ -103,19 +104,17 @@ class RtpSenderImpl(
      */
     private val rtcpSrGenerator = RtcpSrGenerator(
             backgroundExecutor,
-            { rtcpPacket -> sendRtcp(listOf(rtcpPacket)) },
+            { rtcpPacket -> sendRtcp(rtcpPacket) },
             statTracker
     )
     private val nackHandler: NackHandler
 
-    private val outputPipelineTerminationNode = object : Node("Output pipeline termination node") {
-        override fun doProcessPackets(p: List<PacketInfo>) {
-            p.forEach {
-                if (it.timeline.totalDelay() > Duration.ofMillis(100)) {
-                    logger.cerror { "Packet took >100ms to get through bridge:\n${it.timeline}"}
-                }
+    private val outputPipelineTerminationNode = object : ConsumerNode("Output pipeline termination node") {
+        override fun consume(packetInfo: PacketInfo) {
+            if (packetInfo.timeline.totalDelay() > Duration.ofMillis(100)) {
+                logger.cerror { "Packet took >100ms to get through bridge:\n${packetInfo.timeline}"}
             }
-            outgoingPacketHandler?.processPackets(p)
+            outgoingPacketHandler?.processPacket(packetInfo)
         }
     }
 
@@ -155,14 +154,13 @@ class RtpSenderImpl(
             // (i found i was accidentally clobbering the sender ssrc for SRs which caused issues).  I think
             // it'd be better to notify everything creating RTCP the bridge SSRCs and then everything should be
             // responsible for setting it themselves
-            simpleNode("RTCP sender ssrc setter") { pktInfos ->
-                val senderSsrc = localVideoSsrc ?: return@simpleNode emptyList<PacketInfo>()
-                pktInfos.forEachAs<RtcpPacket> { _, pkt ->
-                    if (pkt.header.senderSsrc == 0L) {
-                        pkt.header.senderSsrc = senderSsrc
-                    }
+            simpleNode("RTCP sender ssrc setter") { packetInfo ->
+                val senderSsrc = localVideoSsrc ?: return@simpleNode null
+                val rtcpPacket = packetInfo.packetAs<RtcpPacket>()
+                if (rtcpPacket.header.senderSsrc == 0L) {
+                    rtcpPacket.header.senderSsrc = senderSsrc
                 }
-                pktInfos
+                packetInfo
             }
             node(srtcpEncryptWrapper)
             node(outputPipelineTerminationNode)
@@ -171,24 +169,20 @@ class RtpSenderImpl(
         probingDataSender = ProbingDataSender(outgoingPacketCache.getPacketCache(), outgoingRtxRoot, absSendTime)
     }
 
-    override fun sendPackets(pkts: List<PacketInfo>) {
-        pkts.forEach {
-            numIncomingBytes += it.packet.sizeBytes
-            it.addEvent(PACKET_QUEUE_ENTRY_EVENT)
-        }
-        pkts.forEach(incomingPacketQueue::add)
+    override fun sendPacket(packetInfo: PacketInfo) {
+        numIncomingBytes += packetInfo.packet.sizeBytes
+        packetInfo.addEvent(PACKET_QUEUE_ENTRY_EVENT)
+        incomingPacketQueue.add(packetInfo)
         if (firstPacketWrittenTime == -1L) {
             firstPacketWrittenTime = System.currentTimeMillis()
         }
         lastPacketWrittenTime = System.currentTimeMillis()
     }
 
-    override fun sendRtcp(pkts: List<RtcpPacket>) {
-        pkts.forEach {
-            rtcpEventNotifier.notifyRtcpSent(it)
-        }
+    override fun sendRtcp(rtcpPacket: RtcpPacket) {
+        rtcpEventNotifier.notifyRtcpSent(rtcpPacket)
         //TODO: do we want to allow for PacketInfo to be passed in to sendRtcp?
-        outgoingRtcpRoot.processPackets(pkts.map { PacketInfo(it) })
+        outgoingRtcpRoot.processPacket(PacketInfo(rtcpPacket))
     }
 
     override fun sendProbing(mediaSsrc: Long, numBytes: Int): Int = probingDataSender.sendProbing(mediaSsrc, numBytes)
@@ -218,7 +212,7 @@ class RtpSenderImpl(
             numQueueReads++
             lastQueueReadTime = now
             packet.addEvent(PACKET_QUEUE_EXIT_EVENT)
-            outgoingRtpRoot.processPackets(listOf(packet))
+            outgoingRtpRoot.processPacket(packet)
             return true
         }
         return false

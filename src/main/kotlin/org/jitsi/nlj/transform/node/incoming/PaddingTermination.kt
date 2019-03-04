@@ -17,33 +17,28 @@ package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.FilterNode
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.util.LRUCache
 import java.util.Collections
 import java.util.TreeMap
 
-class PaddingTermination : Node("Padding termination") {
+class PaddingTermination : FilterNode("Padding termination") {
     private val replayContexts: MutableMap<Long, MutableSet<Int>> = TreeMap()
     private var numPaddingPacketsSeen = 0
 
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        val outPackets = mutableListOf<PacketInfo>()
-        p.forEach { packetInfo ->
-            checkPacket(packetInfo.packetAs<RtpPacket>())?.let {
-                outPackets.add(packetInfo)
-            } ?: run {
-                numPaddingPacketsSeen++
-            }
-        }
-        next(outPackets)
-    }
-
-    private fun checkPacket(packet: RtpPacket): RtpPacket? {
-        val replayContext = replayContexts.computeIfAbsent(packet.header.ssrc) {
+    override fun accept(packetInfo: PacketInfo): Boolean {
+        val rtpPacket: RtpPacket = packetInfo.packetAs()
+        val replayContext = replayContexts.computeIfAbsent(rtpPacket.header.ssrc) {
             Collections.newSetFromMap(LRUCache(1500))
         }
-        return if (replayContext.add(packet.header.sequenceNumber)) packet else null
+
+        return if (replayContext.add(rtpPacket.header.sequenceNumber)) {
+            true
+        } else {
+            numPaddingPacketsSeen++
+            false
+        }
     }
 
     override fun getNodeStats(): NodeStatsBlock {

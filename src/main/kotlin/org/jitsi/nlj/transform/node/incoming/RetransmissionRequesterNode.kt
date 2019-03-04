@@ -16,9 +16,8 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.rtcp.RetransmissionRequester
-import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import java.util.concurrent.ScheduledExecutorService
@@ -26,14 +25,12 @@ import java.util.concurrent.ScheduledExecutorService
 class RetransmissionRequesterNode(
     rtcpSender: (RtcpPacket) -> Unit,
     scheduler: ScheduledExecutorService
-) : Node("Retransmission requester") {
+) : ObserverNode("Retransmission requester") {
     private val retransmissionRequester = RetransmissionRequester(rtcpSender, scheduler)
 
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        p.forEachAs<RtpPacket> { _, packet ->
-            retransmissionRequester.packetReceived(packet.header.ssrc, packet.header.sequenceNumber)
-        }
-        next(p)
+    override fun observe(packetInfo: PacketInfo) {
+        val rtpPacket = packetInfo.packetAs<RtpPacket>()
+        retransmissionRequester.packetReceived(rtpPacket.header.ssrc, rtpPacket.header.sequenceNumber)
     }
 
     override fun stop() {

@@ -17,11 +17,10 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cdebug
 
 /**
@@ -29,27 +28,27 @@ import org.jitsi.nlj.util.cdebug
  * layer index can only be acquired from keyframes).  This class keeps a longer-running 'memory' of the information
  * needed to fill out fields like that in [Vp8Packet]s
  */
-class Vp8Parser : Node("Vp8 parser") {
+class Vp8Parser : TransformerNode("Vp8 parser") {
     private val ssrcToSpatialLayerQuality: MutableMap<Long, Int> = HashMap()
     // Stats
     private var numKeyframes: Int = 0
 
-    override fun doProcessPackets(p: List<PacketInfo>) {
-        p.forEachAs<VideoRtpPacket> { _, pkt ->
-            if (pkt is Vp8Packet) {
-                // If this was part of a keyframe, it will have already had it set
-                if (pkt.spatialLayerIndex > -1) {
-                    ssrcToSpatialLayerQuality.putIfAbsent(pkt.header.ssrc, pkt.spatialLayerIndex)
-                } else {
-                    pkt.spatialLayerIndex = ssrcToSpatialLayerQuality[pkt.header.ssrc] ?: -1
-                }
-                if (pkt.isKeyFrame) {
-                    logger.cdebug { "Received a keyframe for ssrc ${pkt.header.ssrc}" }
-                    numKeyframes++
-                }
+    override fun transform(packetInfo: PacketInfo): PacketInfo? {
+        val videoRtpPacket: VideoRtpPacket = packetInfo.packet as VideoRtpPacket
+        if (videoRtpPacket is Vp8Packet) {
+            // If this was part of a keyframe, it will have already had it set
+            if (videoRtpPacket.spatialLayerIndex > -1) {
+                ssrcToSpatialLayerQuality.putIfAbsent(videoRtpPacket.header.ssrc, videoRtpPacket.spatialLayerIndex)
+            } else {
+                videoRtpPacket.spatialLayerIndex = ssrcToSpatialLayerQuality[videoRtpPacket.header.ssrc] ?: -1
+            }
+            if (videoRtpPacket.isKeyFrame) {
+                logger.cdebug { "Received a keyframe for ssrc ${videoRtpPacket.header.ssrc}" }
+                numKeyframes++
             }
         }
-        next(p)
+
+        return packetInfo
     }
 
     override fun getNodeStats(): NodeStatsBlock {
