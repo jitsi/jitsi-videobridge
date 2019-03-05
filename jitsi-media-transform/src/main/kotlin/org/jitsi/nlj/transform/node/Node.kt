@@ -292,7 +292,6 @@ abstract class MultipleOutputTransformerNode(
     protected abstract fun transform(packetInfo: PacketInfo): List<PacketInfo>
 
     override fun doProcessPacket(packetInfo: PacketInfo) {
-
         val outputPacketInfos = transform(packetInfo)
         doneProcessing(outputPacketInfos)
         next(outputPacketInfos)
