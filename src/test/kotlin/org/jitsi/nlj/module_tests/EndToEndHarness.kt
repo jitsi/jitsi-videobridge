@@ -19,7 +19,6 @@ package org.jitsi.nlj.module_tests
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.safeShutdown
-import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.test_utils.Pcaps
 import java.time.Duration
 import java.util.concurrent.Executors
@@ -51,7 +50,7 @@ fun main() {
     val receiver = ReceiverFactory.createReceiver(
         executor, backgroundExecutor, pcap.srtpData,
         pcap.payloadTypes, pcap.headerExtensions, pcap.ssrcAssociations,
-        { rtcpPacket -> sender.sendRtcp(listOf(rtcpPacket))})
+        { rtcpPacket -> sender.sendRtcp(rtcpPacket)})
 
     producer.subscribe { pkt ->
         val packetInfo = PacketInfo(pkt)
@@ -61,8 +60,6 @@ fun main() {
 
     receiver.rtpPacketHandler = object : PacketHandler {
         override fun processPacket(packetInfo: PacketInfo) {
-            val buf = packetInfo.packet.getBuffer()
-            println("forwarding buffer ${System.identityHashCode(buf)} $buf to sender")
             sender.sendPacket(packetInfo)
         }
     }

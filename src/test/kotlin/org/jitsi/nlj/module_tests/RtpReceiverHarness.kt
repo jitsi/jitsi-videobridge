@@ -16,28 +16,11 @@
 package org.jitsi.nlj.module_tests
 
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.RtpExtensionAddedEvent
-import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpReceiver
-import org.jitsi.nlj.RtpReceiverImpl
-import org.jitsi.nlj.SsrcAssociationEvent
-import org.jitsi.nlj.format.OpusPayloadType
-import org.jitsi.nlj.format.Vp8PayloadType
-import org.jitsi.nlj.rtcp.RtcpEventNotifier
-import org.jitsi.nlj.srtp.SrtpProfileInformation
-import org.jitsi.nlj.srtp.SrtpUtil
-import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.util.safeShutdown
-import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.test_utils.Pcaps
-import org.jitsi.test_utils.SrtpData
-import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
-import java.net.URI
 import java.time.Duration
-import java.util.Random
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
 import kotlin.system.measureTimeMillis
 
 /**
@@ -70,7 +53,9 @@ fun main(args: Array<String>) {
     }
 
     producer.subscribe { pkt ->
-        receivers.forEach { it.enqueuePacket(PacketInfo(pkt.clone())) }
+        val packetInfo = PacketInfo(pkt)
+        packetInfo.receivedTime = System.currentTimeMillis()
+        receivers.forEach { it.enqueuePacket(packetInfo.clone()) }
     }
 
     val time = measureTimeMillis {
@@ -83,3 +68,4 @@ fun main(args: Array<String>) {
 
     receivers.forEach { println(it.getNodeStats().prettyPrint()) }
 }
+
