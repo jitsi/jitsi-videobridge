@@ -16,10 +16,12 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.AbstractSrtpTransformerNode
 import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
 
 class SrtcpTransformerDecryptNode : AbstractSrtpTransformerNode("SRTCP decrypt") {
+    private var numDecryptFailures = 0
     override fun doTransform(pkts: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo> {
         val outPackets = mutableListOf<PacketInfo>()
         pkts.forEach {
@@ -28,8 +30,17 @@ class SrtcpTransformerDecryptNode : AbstractSrtpTransformerNode("SRTCP decrypt")
                 outPackets.add(it)
             } ?: run {
                 logger.error("Error decrypting RTCP")
+                numDecryptFailures++
             }
         }
         return outPackets
+    }
+
+    override fun getNodeStats(): NodeStatsBlock {
+        val parentStats = super.getNodeStats()
+        return NodeStatsBlock(name).apply {
+            addAll(parentStats)
+            addStat("num decrypt failures: $numDecryptFailures")
+        }
     }
 }
