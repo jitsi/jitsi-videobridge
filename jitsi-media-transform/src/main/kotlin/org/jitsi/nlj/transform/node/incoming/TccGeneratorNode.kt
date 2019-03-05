@@ -49,13 +49,17 @@ class TccGeneratorNode(
      * TCC packets we generate
      */
     private var mediaSsrcs: MutableSet<Long> = mutableSetOf()
+    private fun <T>MutableSet<T>.firstOr(defaultValue: T): T {
+        val iter = iterator()
+        return if (iter.hasNext()) iter.next() else defaultValue
+    }
     private var numTccSent: Int = 0
 
     override fun observe(packetInfo: PacketInfo) {
         tccExtensionId?.let { tccExtId ->
-            val rtpPacket: RtpPacket = packetInfo.packetAs()
+            val rtpPacket = packetInfo.packetAs<RtpPacket>()
            rtpPacket.header.getExtensionAs(tccExtId, TccHeaderExtension.Companion::fromUnparsed)?.let { tccExt ->
-                addPacket(tccExt.tccSeqNum, packetInfo.receivedTime)
+                addPacket(tccExt.tccSeqNum, packetInfo.receivedTime, rtpPacket.header.marker)
             }
         }
     }
@@ -74,22 +78,25 @@ class TccGeneratorNode(
         }
     }
 
-    private fun addPacket(tccSeqNum: Int, timestamp: Long) {
+    private fun addPacket(tccSeqNum: Int, timestamp: Long, isMarked: Boolean) {
         currTcc.addPacket(tccSeqNum, timestamp)
 
-        if (isTccReadyToSend()) {
-            val mediaSsrc = if (mediaSsrcs.isNotEmpty()) mediaSsrcs.iterator().next() else -1L
+        if (isTccReadyToSend(isMarked)) {
+            val mediaSsrc = mediaSsrcs.firstOr(-1L)
             currTcc.mediaSourceSsrc = mediaSsrc
             onTccPacketReady(currTcc)
             numTccSent++
+            lastTccSentTime = System.currentTimeMillis()
             // Create a new TCC instance for the next set of information
             currTcc = RtcpFbTccPacket(fci = Tcc(feedbackPacketCount = currTccSeqNum++))
         }
     }
 
-    private fun isTccReadyToSend(): Boolean {
-        return (System.currentTimeMillis() - lastTccSentTime >= 70) ||
-            currTcc.numPackets >= 20
+    private fun isTccReadyToSend(currentPacketMarked: Boolean): Boolean {
+        val timeSinceLastTcc = if (lastTccSentTime == -1L) 0 else System.currentTimeMillis() - lastTccSentTime
+        return timeSinceLastTcc >= 100 ||
+            currTcc.numPackets >= 100 ||
+            ((timeSinceLastTcc >= 20) && currentPacketMarked)
     }
 
     override fun getNodeStats(): NodeStatsBlock {
