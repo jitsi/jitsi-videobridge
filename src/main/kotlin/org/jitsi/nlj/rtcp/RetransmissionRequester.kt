@@ -165,8 +165,14 @@ class RetransmissionRequester(
         private fun doWork() {
             logger.cdebug { "$ssrc doing work at ${clock.instant()}" }
             val now = clock.instant()
-            val missingSeqNums = getMissingSeqNums()
-            val nackPacket = RtcpFbNackPacket.fromValues(mediaSourceSsrc = ssrc, missingSeqNums = missingSeqNums)
+            val missingSeqNums = run {
+                //TODO: we don't support multiple NACK blocks yet, so we can't nack a range of packets
+                // larger than a single nack BLP can contain.
+                val allMissingSeqNums = getMissingSeqNums()
+                allMissingSeqNums.headSet(allMissingSeqNums.first() + 17)
+            }
+            val nackPacket = RtcpFbNackPacket.fromValues(
+                mediaSourceSsrc = ssrc, missingSeqNums = missingSeqNums)
             notifyNackSent(now, missingSeqNums)
             rtcpSender(nackPacket)
         }
