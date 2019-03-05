@@ -37,6 +37,13 @@ import java.nio.ByteBuffer
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                         SSRC of sender                        |
  * +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+ *
+ * length: 16 bits
+ *   The length of this RTCP packet in 32-bit words minus one,
+ *   including the header and any padding.  (The offset of one makes
+ *   zero a valid length and avoids a possible infinite loop in
+ *   scanning a compound RTCP packet, while counting 32-bit words
+ *   avoids a validity check for a multiple of 4.)
  */
 class RtcpHeader(
     version: Int = 2,
