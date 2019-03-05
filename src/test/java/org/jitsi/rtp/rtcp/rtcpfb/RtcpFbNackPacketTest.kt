@@ -58,7 +58,7 @@ internal class RtcpFbNackPacketTest : ShouldSpec() {
             }
             "from values" {
                 val nackPacket =
-                    RtcpFbNackPacket.fromValues(sampleHeader, sampleMediaSsrc, listOf(0, 1, 3, 5, 7, 9, 11, 13, 15))
+                    RtcpFbNackPacket.fromValues(sampleHeader, sampleMediaSsrc, sortedSetOf(0, 1, 3, 5, 7, 9, 11, 13, 15))
                 should("set the values correctly") {
                     nackPacket.mediaSourceSsrc shouldBe sampleMediaSsrc
                     nackPacket.missingSeqNums.shouldContainInOrder(0, 1, 3, 5, 7, 9, 11, 13, 15)

@@ -31,10 +31,23 @@ internal class GenericNackTest : ShouldSpec() {
         "Creating a GenericNack" {
             "from values" {
                 val missingSeqNums = listOf(10, 11, 13, 15, 17, 19, 21, 23, 26)
-                val genericNack = GenericNack.fromValues(missingSeqNums)
+                val genericNack = GenericNack.fromValues(missingSeqNums.toSortedSet())
                 should("set the missing seq nums correctly") {
                     genericNack.missingSeqNums shouldContainExactly missingSeqNums
                 }
+                "and then serializing it" {
+                    val buf = genericNack.getBuffer()
+                    should("write the data correctly") {
+                        // We test parsing from a buffer works correctly below, so here we can reparse the
+                        // buffer and use that to verify the values
+                        val parsedNack = GenericNack.fromBuffer(buf)
+                        parsedNack.missingSeqNums shouldContainExactly missingSeqNums
+                    }
+                }
+            }
+            "from unsorted values" {
+                val missingSeqNums = sortedSetOf(34612, 34602, 34603, 34606)
+                val genericNack = GenericNack.fromValues(missingSeqNums)
                 "and then serializing it" {
                     val buf = genericNack.getBuffer()
                     should("write the data correctly") {

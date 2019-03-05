@@ -20,6 +20,7 @@ import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.rtcpfb.fci.GenericNack
 import java.nio.ByteBuffer
+import java.util.SortedSet
 
 /**
  * https://tools.ietf.org/html/rfc4585#section-6.2.1
@@ -65,7 +66,7 @@ class RtcpFbNackPacket(
         fun fromValues(
             header: RtcpHeader = RtcpHeader(),
             mediaSourceSsrc: Long = -1,
-            missingSeqNums: List<Int> = listOf()
+            missingSeqNums: SortedSet<Int> = sortedSetOf()
         ): RtcpFbNackPacket {
             val fci = GenericNack.fromValues(missingSeqNums)
             return RtcpFbNackPacket(header, mediaSourceSsrc, fci)

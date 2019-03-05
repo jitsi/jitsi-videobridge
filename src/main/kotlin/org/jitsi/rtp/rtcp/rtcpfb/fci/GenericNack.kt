@@ -19,8 +19,10 @@ package org.jitsi.rtp.rtcp.rtcpfb.fci
 import org.jitsi.rtp.extensions.incrementPosition
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.Serializable
+import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.util.RightToLeftBufferUtils
 import java.nio.ByteBuffer
+import java.util.SortedSet
 
 /**
  * Models a single Generic NACK field
@@ -50,11 +52,11 @@ class GenericNack(
     companion object {
         const val SIZE_BYTES  = 2 + GenericNackBlp.SIZE_BYTES
         fun fromBuffer(buf: ByteBuffer): GenericNack {
-            val packetId = buf.short.toInt()
+            val packetId = buf.short.toPositiveInt()
             val blp = GenericNackBlp.parse(buf)
             return GenericNack(packetId, blp)
         }
-        fun fromValues(missingSeqNums: List<Int>): GenericNack {
+        fun fromValues(missingSeqNums: SortedSet<Int>): GenericNack {
             val packetId = missingSeqNums.first()
             val lostPacketOffsets = missingSeqNums.drop(1)
                     .map { it - packetId }
