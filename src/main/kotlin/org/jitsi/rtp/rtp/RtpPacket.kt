@@ -19,6 +19,7 @@ package org.jitsi.rtp.rtp
 import org.jitsi.rtp.extensions.clone
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.util.ByteBufferUtils
 import java.nio.ByteBuffer
 
@@ -62,7 +63,7 @@ open class RtpPacket(
                 // padding octets should be ignored, including itself.
 
                 // It's an 8-bit unsigned number.
-                payload.get(payload.limit() - 1).toInt()
+                payload.get(payload.limit() - 1).toPositiveInt()
             } else {
                 0
             }
