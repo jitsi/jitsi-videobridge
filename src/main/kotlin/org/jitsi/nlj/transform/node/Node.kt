@@ -218,7 +218,9 @@ abstract class TransformerNode(
     override fun doProcessPacket(packetInfo: PacketInfo) {
         val transformedPacket = transform(packetInfo)
         doneProcessing(transformedPacket)
-        next(packetInfo)
+        if (transformedPacket != null) {
+            next(transformedPacket)
+        }
     }
 }
 
