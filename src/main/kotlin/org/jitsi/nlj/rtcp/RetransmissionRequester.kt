@@ -29,6 +29,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbNackPacket
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.SortedSet
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -188,7 +189,7 @@ class RetransmissionRequester(
             }
         }
 
-        private fun getMissingSeqNums(): List<Int> = synchronized (requests) { requests.keys.toList() }
+        private fun getMissingSeqNums(): SortedSet<Int> = synchronized (requests) { requests.keys.toSortedSet() }
     }
 
     /**
