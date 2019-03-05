@@ -277,7 +277,7 @@ abstract class ConsumerNode(
 
     // Consumer nodes shouldn't have children, because they don't forward
     // any packets anyway.
-    override fun attach(node: Node) = throw Exception()
+    override fun attach(node: Node): Node = throw Exception()
 }
 
 /**
