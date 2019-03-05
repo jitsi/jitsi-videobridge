@@ -21,6 +21,8 @@ import io.kotlintest.matchers.numerics.shouldBeGreaterThan
 import io.kotlintest.should
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
+import org.jitsi.rtp.extensions.toHex
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
 import org.jitsi.rtp.util.byteBufferOf
 import org.jitsi.test_helpers.matchers.haveSameContentAs
 import java.nio.ByteBuffer
@@ -150,6 +152,13 @@ internal class TccTest : ShouldSpec() {
         numDeltas
     }
 
+    /**
+     * Convert a timestamp into what should be used as a TCC reference time
+     * for that timestamp (which is the same as time the timestamp itself, but
+     * with the lower 6 bits zero'd out)
+     */
+    private fun toExpectedReferenceTime(timestamp: Long): Long = (timestamp ushr 6) shl 6
+
     init {
         "Parsing a TCC FCI from a buffer" {
             "with one bit and two bit symbols" {
@@ -203,9 +212,21 @@ internal class TccTest : ShouldSpec() {
                 seqNumsAndTimestamps.forEach { seqNum, ts ->
                     tcc.addPacket(seqNum, ts)
                 }
+                should("set the reference time correctly") {
+                    // The reference time should be the same as the first packet timestamp but
+                    // with the lower 6 bits zero'd out (which we do here by shifting right and
+                    // then back left)
+                    tcc.referenceTimeMs shouldBe toExpectedReferenceTime(1537916094447)
+                }
                 "and then serializing it" {
                     "by asking it for a buffer" {
                         val buf = tcc.getBuffer()
+                        val recreatedTcc = Tcc.fromBuffer(buf)
+                        // The reference time should be the first timestamp in the sequence above (1537916094447)
+                        // with the lower 6 bits zero'd out (which we do here by shifting right and
+                        // then back left) and, since we're parsing from a buffer here, it will be
+                        // capped to 32 bits (
+                        recreatedTcc.referenceTimeMs shouldBe (toExpectedReferenceTime(1537916094447) and 0xFFFFFFFF)
                         should("serialize the data correctly") {
                             //TODO: hard to check
                         }

@@ -21,6 +21,7 @@ import org.jitsi.rtp.extensions.incrementPosition
 import org.jitsi.rtp.extensions.put3Bytes
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
+import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.rtcp.rtcpfb.fci.FeedbackControlInformation
 import org.jitsi.rtp.util.RtpUtils
 import java.nio.ByteBuffer
@@ -124,6 +125,15 @@ class Tcc(
 
     var feedbackPacketCount: Int = feedbackPacketCount
         private set
+    /**
+     * This is held in milliseconds, and is 64 bits wide but with the
+     * lower 6 bits masked out.
+     * When creating a TCC FCI from values, we will take the first packet's timestamp
+     * and mask out the lower 6 bits.
+     * When parsing a TCC FCI from a buffer, we read the value in the buffer (which
+     * is a 24 bit number, represented as a multiple of 64 ms) and shift it to
+     * the left 6 bits to turn it from a multiple of 64ms to just plain milliseconds.
+     */
     var referenceTimeMs: Long = referenceTimeMs
         private set
     var packetInfo: PacketMap = packetInfo
@@ -169,7 +179,12 @@ class Tcc(
 
     fun addPacket(seqNum: Int, timestamp: Long) {
         if (this.referenceTimeMs == -1L) {
-            this.referenceTimeMs = timestamp
+            // Mask out the lower 6 bits, since that precision will be lost
+            // when we serialize it and, when calculating the deltas, we need
+            // to compare other timestamps against this lower-precision value
+            // (since that's how they will be reconstructed on the other
+            // side).
+            this.referenceTimeMs = timestamp - (timestamp % 64)
         }
         packetInfo[seqNum] = timestamp
         sizeNeedsToBeRecalculated = true
@@ -241,7 +256,7 @@ class Tcc(
          * as a multiple of 64ms.  The time returned here is the translated time
          * (i.e. not a multiple of 64ms but a timestamp in milliseconds directly)
          */
-        fun getReferenceTimeMs(buf: ByteBuffer): Long = (buf.get3Bytes(4) shl 6).toLong()
+        fun getReferenceTimeMs(buf: ByteBuffer): Long = (buf.get3Bytes(4) shl 6).toPositiveLong()
 
         /**
          * [referenceTime] should be a standard timestamp in milliseconds, this method
@@ -249,7 +264,7 @@ class Tcc(
          * [buf] should start at the beginning of the TCC FCI buffer
          */
         fun setReferenceTimeMs(buf: ByteBuffer, referenceTime: Long) {
-            buf.put3Bytes(4, (referenceTime.toInt() shr 6) and 0xFFFFFF)
+            buf.put3Bytes(4, (referenceTime.toInt() ushr 6) and 0xFFFFFF)
         }
 
         fun getFeedbackPacketCount(buf: ByteBuffer): Int = buf.get(7).toPositiveInt()
@@ -336,6 +351,8 @@ class Tcc(
          * Given [buf], which is a buffer that starts at the first packet status chunk, write all the
          * TCC packet information contained in [packetInfo] to the buffer.
          * For now we will always write status vector chunks with 2-bit symbols.
+         * [referenceTimeMs] should be the timestamp of the first packet (64 bits) but with
+         * the lower 6 bits masked out (as that precision will be lost when serializing)
          */
         fun setPacketInfo(buf: ByteBuffer, packetInfo: PacketMap, referenceTimestamp: Long) {
             if (packetInfo.isEmpty()) {

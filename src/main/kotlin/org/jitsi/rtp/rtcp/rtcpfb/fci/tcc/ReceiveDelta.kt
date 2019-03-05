@@ -17,6 +17,7 @@
 package org.jitsi.rtp.rtcp.rtcpfb.fci.tcc
 
 import org.jitsi.rtp.Serializable
+import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import java.nio.ByteBuffer
 
 abstract class ReceiveDelta : Serializable() {
@@ -70,7 +71,7 @@ class EightBitReceiveDelta : ReceiveDelta {
          * The value written in the field is represented as multiples of 250us
          */
         private fun getDeltaMs(buf: ByteBuffer): Double {
-            val uSecMultiple = buf.get().toInt()
+            val uSecMultiple = buf.get().toPositiveInt()
             val uSecs = uSecMultiple * 250.0
             return uSecs / 1000.0
         }
@@ -112,7 +113,7 @@ class SixteenBitReceiveDelta : ReceiveDelta {
          * The value written in the field is represented as multiples of 250us
          */
         fun getDeltaMs(buf: ByteBuffer): Double {
-            val uSecMultiple = buf.short.toInt()
+            val uSecMultiple = buf.short.toPositiveInt()
             val uSecs = uSecMultiple * 250.0
             return uSecs / 1000.0
         }
