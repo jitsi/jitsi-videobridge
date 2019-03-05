@@ -17,12 +17,15 @@ package org.jitsi.nlj.transform.node.outgoing
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.forEachAs
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.AbstractSrtpTransformerNode
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
 import java.nio.ByteBuffer
 
 class SrtcpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTCP Encrypt wrapper") {
+    private var numEncryptFailures = 0
+    private var TEMPnumOut = 0
     override fun doTransform(pkts: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo> {
         val encryptedPackets = mutableListOf<PacketInfo>()
         pkts.forEachAs<RtcpPacket> { pktInfo, rtcpPacket ->
@@ -31,8 +34,22 @@ class SrtcpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTCP Encrypt w
                 encryptedPackets.add(pktInfo)
             } ?: run {
                 logger.error("Error encrypting RTCP")
+                numEncryptFailures++
             }
         }
+        TEMPnumOut += encryptedPackets.size
+        if (encryptedPackets.size < pkts.size) {
+            println("blah")
+        }
         return encryptedPackets
+    }
+
+    override fun getNodeStats(): NodeStatsBlock {
+        val parentStats = super.getNodeStats()
+        return NodeStatsBlock(name).apply {
+            addAll(parentStats)
+            addStat("num encrypt failures: $numEncryptFailures")
+            addStat("temp num out: $TEMPnumOut")
+        }
     }
 }
