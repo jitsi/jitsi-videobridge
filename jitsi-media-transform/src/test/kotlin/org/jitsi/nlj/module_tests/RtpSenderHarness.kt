@@ -16,23 +16,14 @@
 package org.jitsi.nlj.module_tests
 
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.RtpExtensionAddedEvent
-import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpSender
-import org.jitsi.nlj.RtpSenderImpl
-import org.jitsi.nlj.SsrcAssociationEvent
-import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.util.safeShutdown
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.RtpProtocol
 import org.jitsi.test_utils.Pcaps
-import org.jitsi.test_utils.SrtpData
 import java.time.Duration
-import java.util.Random
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
 import kotlin.system.measureTimeMillis
 
 fun main(args: Array<String>) {
@@ -53,12 +44,15 @@ fun main(args: Array<String>) {
     }
 
     producer.subscribe { pkt ->
+        val packet = if (RtpProtocol.isRtp(pkt.getBuffer())) {
+            RtpPacket.fromBuffer(pkt.getBuffer())
+        } else {
+            RtcpPacket.parse(pkt.getBuffer())
+        }
         senders.forEach {
-            if (RtpProtocol.isRtp(pkt.getBuffer())) {
-                val rtpPacket = RtpPacket.fromBuffer(pkt.getBuffer())
-                it.sendPacket(PacketInfo(rtpPacket.clone()))
-            } else {
-                it.sendRtcp(RtcpPacket.parse(pkt.clone().getBuffer()))
+            when (packet) {
+                is RtpPacket -> it.sendPacket(PacketInfo(packet.clone()))
+                is RtcpPacket -> it.sendRtcp(packet.clone() as RtcpPacket)
             }
         }
     }
