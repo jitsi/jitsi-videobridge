@@ -566,7 +566,11 @@ public class Endpoint
             DataChannelPacket dcp
                     = new DataChannelPacket(
                             ByteBuffer.wrap(data), sid, (int)ppid);
-            dataChannelHandler.consume(new PacketInfo(dcp));
+            // Post the rest of the task here because the current context is holding a lock inside
+            // the SctpSocket which can cause a deadlock if two endpoints are trying to send
+            // datachannel messages to one another (with stats broadcasting it can happen
+            // often)
+            TaskPools.IO_POOL.execute(() -> dataChannelHandler.consume(new PacketInfo(dcp)));
         };
         socket.listen();
         // We don't want to block the calling thread on the onTransportManagerSet future completing
