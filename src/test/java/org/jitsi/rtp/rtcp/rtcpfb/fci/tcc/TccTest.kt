@@ -106,6 +106,33 @@ internal class TccTest : ShouldSpec() {
         0x00.toByte(), 0x00.toByte(), 0x00.toByte()
     ))
 
+    val fciNegativeDelta = byteBufferOf(
+        0x01, 0x81, 0x00, 0x08,
+        0x19, 0xAE, 0xE8, 0x45,
+        0xD9, 0x55, 0x20, 0x01,
+        0xA8, 0xFF, 0xFC, 0x04,
+        0x00, 0x50, 0x04, 0x00,
+        0x00, 0x00, 0x00, 0x00
+    )
+    // The deltas contained in the above FCI block
+    val deltas = listOf(42, -1, 1, 0, 20, 1, 0, 0)
+    val fciNegativeDeltaReferenceTime = 1683176 shl 6
+
+    // Build the list of expected timestamps by taking
+    // the reference time and summing all the deltas up
+    // to that packet's index (since the deltas are
+    // additive)
+    val fciNegativeDeltaExpectedTimestamps = mapOf(
+        385 to fciNegativeDeltaReferenceTime + deltas.subList(0, 1).sum(),
+        386 to fciNegativeDeltaReferenceTime + deltas.subList(0, 2).sum(),
+        387 to fciNegativeDeltaReferenceTime + deltas.subList(0, 3).sum(),
+        388 to fciNegativeDeltaReferenceTime + deltas.subList(0, 4).sum(),
+        389 to fciNegativeDeltaReferenceTime + deltas.subList(0, 5).sum(),
+        390 to fciNegativeDeltaReferenceTime + deltas.subList(0, 6).sum(),
+        391 to fciNegativeDeltaReferenceTime + deltas.subList(0, 7).sum(),
+        392 to fciNegativeDeltaReferenceTime + deltas.subList(0, 8).sum()
+    )
+
     private val pktFromCall = ByteBuffer.wrap(byteArrayOf(
         0x00.toByte(), 0x01.toByte(), 0x00.toByte(), 0x7A.toByte(),
         0x9D.toByte(), 0xFB.toByte(), 0xF0.toByte(), 0x00.toByte(),
@@ -174,6 +201,14 @@ internal class TccTest : ShouldSpec() {
                 }
                 should("leave the buffer's position after the parsed data") {
                     fci.position() shouldBe fci.limit()
+                }
+            }
+            "with a negative delta" {
+                val tcc = Tcc.fromBuffer(fciNegativeDelta)
+                should("parse the values correctly") {
+                    tcc.forEach { seqNum, timestamp ->
+                        fciNegativeDeltaExpectedTimestamps[seqNum] shouldBe timestamp
+                    }
                 }
             }
             "with all 2 bit symbols" {

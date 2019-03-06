@@ -113,7 +113,8 @@ class SixteenBitReceiveDelta : ReceiveDelta {
          * The value written in the field is represented as multiples of 250us
          */
         fun getDeltaMs(buf: ByteBuffer): Double {
-            val uSecMultiple = buf.short.toPositiveInt()
+            // The delta value in a 16 bit delta is signed
+            val uSecMultiple = buf.short.toInt()
             val uSecs = uSecMultiple * 250.0
             return uSecs / 1000.0
         }
