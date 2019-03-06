@@ -24,6 +24,63 @@ import org.jitsi.rtp.util.RightToLeftBufferUtils
 import java.nio.ByteBuffer
 import java.util.SortedSet
 
+private fun List<Int>.chunkMaxDifference(maxDifference: Int): List<List<Int>> {
+    val chunks = mutableListOf<List<Int>>()
+    if (this.isEmpty()) {
+        return chunks
+    }
+    var currentChunk = mutableListOf<Int>(first())
+    chunks.add(currentChunk)
+    // Ignore the first value which we already put in the current chunk
+    drop(1).forEach {
+        if (it - currentChunk.first() > maxDifference) {
+            currentChunk = mutableListOf(it)
+            chunks.add(currentChunk)
+        } else {
+            currentChunk.add(it)
+        }
+    }
+    return chunks
+}
+
+/**
+ * Models potentially multiple [GenericNack] blocks
+ */
+class GenericNackFci(
+    val genericNacks: List<GenericNack> = listOf()
+) : FeedbackControlInformation() {
+    override val sizeBytes: Int = genericNacks.map(GenericNack::sizeBytes).sum()
+
+    override fun serializeTo(buf: ByteBuffer) {
+        genericNacks.forEach { it.serializeTo(buf) }
+    }
+
+    val missingSeqNums: List<Int> = genericNacks.flatMap { it.missingSeqNums }.toList()
+
+    public override fun clone(): GenericNackFci {
+        return GenericNackFci(genericNacks.map { it.clone() }.toList())
+    }
+
+    companion object {
+        /**
+         * [buf]'s current position should be the start of the NACK blocks
+         * and its limit should be the end of those blocks
+         */
+        fun fromBuffer(buf: ByteBuffer): GenericNackFci {
+            val genericNacks = mutableListOf<GenericNack>()
+            while (buf.remaining() >= GenericNack.SIZE_BYTES) {
+                genericNacks.add(GenericNack.fromBuffer(buf))
+            }
+            return GenericNackFci(genericNacks)
+        }
+        fun fromValues(missingSeqNums: SortedSet<Int>): GenericNackFci {
+            val missingSeqNumChunks = missingSeqNums.toList().chunkMaxDifference(16)
+            val nackBlocks = missingSeqNumChunks.map { GenericNack.fromValues(it.toSortedSet()) }.toList()
+            return GenericNackFci(nackBlocks)
+        }
+    }
+}
+
 /**
  * Models a single Generic NACK field
  *
@@ -36,7 +93,7 @@ import java.util.SortedSet
 class GenericNack(
     private val packetId: Int = 0,
     private val genericNackBlp: GenericNackBlp = GenericNackBlp()
-) : FeedbackControlInformation() {
+) : Serializable(), Cloneable {
     override val sizeBytes: Int = SIZE_BYTES
 
     val missingSeqNums: List<Int> = listOf(packetId) + genericNackBlp.lostPacketOffsets.map { it + packetId }

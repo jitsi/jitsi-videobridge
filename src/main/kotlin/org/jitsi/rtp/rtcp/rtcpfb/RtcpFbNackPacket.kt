@@ -19,6 +19,7 @@ package org.jitsi.rtp.rtcp.rtcpfb
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.rtcpfb.fci.GenericNack
+import org.jitsi.rtp.rtcp.rtcpfb.fci.GenericNackFci
 import java.nio.ByteBuffer
 import java.util.SortedSet
 
@@ -38,11 +39,10 @@ import java.util.SortedSet
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *
  */
-//TODO: support multiple NACK FCIs in one packet
 class RtcpFbNackPacket(
     header: RtcpHeader = RtcpHeader(),
     mediaSourceSsrc: Long = -1,
-    private val fci: GenericNack = GenericNack(),
+    private val fci: GenericNackFci = GenericNackFci(),
     backingBuffer: ByteBuffer? = null
 ) : TransportLayerFbPacket(header.apply { reportCount = FMT }, mediaSourceSsrc, fci, backingBuffer) {
 
@@ -58,17 +58,29 @@ class RtcpFbNackPacket(
         fun fromBuffer(buf: ByteBuffer): RtcpFbNackPacket {
             val bufStartPosition = buf.position()
             val header = RtcpHeader.fromBuffer(buf)
-            val mediaSourceSsrc = getMediaSourceSsrc(buf)
-            val fci = GenericNack.fromBuffer(buf)
+            // The amount of NACK blocks contained in the packet is just determined
+            // by the size in the header, and GenericNackFci.fromBuffer will keep
+            // parsing until the buffer has no remaining data.  Since this might
+            // be part of a compound packet, create a buffer which contains only
+            // this packet's data so that we can parse it entirely.
+            // TODO: should we just set this as a general requirement when
+            // parsing RTCP packets and have the iterator take care of the
+            // sub-buffer?
+            val packetBuf = buf.subBuffer(bufStartPosition, header.lengthBytes)
+            packetBuf.position(header.sizeBytes)
+            val mediaSourceSsrc = getMediaSourceSsrc(packetBuf)
+            val fci = GenericNackFci.fromBuffer(packetBuf)
 
-            return RtcpFbNackPacket(header, mediaSourceSsrc, fci, buf.subBuffer(bufStartPosition, buf.position()))
+            buf.position(bufStartPosition + header.lengthBytes)
+
+            return RtcpFbNackPacket(header, mediaSourceSsrc, fci, packetBuf)
         }
         fun fromValues(
             header: RtcpHeader = RtcpHeader(),
             mediaSourceSsrc: Long = -1,
             missingSeqNums: SortedSet<Int> = sortedSetOf()
         ): RtcpFbNackPacket {
-            val fci = GenericNack.fromValues(missingSeqNums)
+            val fci = GenericNackFci.fromValues(missingSeqNums)
             return RtcpFbNackPacket(header, mediaSourceSsrc, fci)
         }
     }

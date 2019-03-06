@@ -23,7 +23,9 @@ import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.rtcp.RtcpHeader
+import org.jitsi.rtp.rtcp.RtcpIterator
 import org.jitsi.rtp.rtcp.rtcpfb.fci.GenericNackBlp
+import org.jitsi.rtp.util.byteBufferOf
 import org.jitsi.test_helpers.matchers.haveSameContentAs
 import java.nio.ByteBuffer
 
@@ -43,6 +45,15 @@ internal class RtcpFbNackPacketTest : ShouldSpec() {
         put(sampleBlp.getBuffer())
     }.flip() as ByteBuffer
 
+    val multipleNackBlocksBuf = byteBufferOf(
+        0x81, 0xCD, 0x00, 0x04,
+        0xA2, 0x78, 0xEB, 0x18,
+        0x84, 0x50, 0x49, 0x6C,
+        // packet id = 44832, other nacked packets = 44838, 44848
+        0xAF, 0x20, 0x80, 0x20,
+        // packet id = 44850, other nacked packets = 44854, 44856
+        0xAF, 0x32, 0x00, 0x28
+    )
 
     init {
         "Creating an RtcpFbNackPacket" {
@@ -54,6 +65,13 @@ internal class RtcpFbNackPacketTest : ShouldSpec() {
                 }
                 should("leave the buffer's position after the parsed data") {
                     sampleRtcpFbNackPacketBuf.position() shouldBe sampleRtcpFbNackPacketBuf.limit()
+                }
+            }
+            "from a buffer with multiple NACK blocks" {
+                val nackPacket = RtcpFbNackPacket.fromBuffer(multipleNackBlocksBuf)
+                should("parse the values correctly") {
+                    nackPacket.missingSeqNums shouldContainInOrder listOf(44832, 44838, 44848, 44850, 44854, 44856)
+
                 }
             }
             "from values" {
@@ -80,6 +98,19 @@ internal class RtcpFbNackPacketTest : ShouldSpec() {
                         should("leave the buffer's position after the written data") {
                             existingBuf.position() shouldBe existingBuf.limit()
                         }
+                    }
+                }
+            }
+            "from values too big to fit into a single NACK block" {
+                val rtcpFbNackPacket =
+                    RtcpFbNackPacket.fromValues(
+                        header = RtcpHeader(senderSsrc = 2725833496),
+                        mediaSourceSsrc = 2219854188,
+                        missingSeqNums = sortedSetOf(44832, 44838, 44848, 44850, 44854, 44856))
+                "and then serializing it" {
+                    val buf = rtcpFbNackPacket.getBuffer()
+                    should("serialize into multiple nack blocks") {
+                        buf should haveSameContentAs(multipleNackBlocksBuf)
                     }
                 }
             }
