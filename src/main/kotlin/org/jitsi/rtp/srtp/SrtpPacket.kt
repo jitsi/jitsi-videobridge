@@ -46,7 +46,7 @@ class SrtpPacket(
         }
     }
 
-    override fun clone(): Packet {
+    override fun clone(): SrtpPacket {
         return SrtpPacket(header.clone(), cloneMutablePayload())
     }
 

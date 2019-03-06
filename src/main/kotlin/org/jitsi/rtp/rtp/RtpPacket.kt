@@ -74,7 +74,7 @@ open class RtpPacket(
         factory: (RtpHeader, ByteBuffer, ByteBuffer?) -> RtpPacket
     ): OtherType = factory(header, _payload, backingBuffer) as OtherType
 
-    override fun clone(): Packet {
+    override fun clone(): RtpPacket {
         return RtpPacket(header.clone(), _payload.clone())
     }
 
