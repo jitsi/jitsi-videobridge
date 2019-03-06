@@ -89,12 +89,10 @@ class RtpHeader(
 
     inline fun <reified ExtType>getExtensionAs(id: Int, factory: (UnparsedHeaderExtension) -> ExtType): ExtType? {
         return getExtension(id)?.let {
-            return if (it is ExtType) {
-                it
-            } else if (it is UnparsedHeaderExtension) {
-                factory(it)
-            } else {
-               null
+            return when (it) {
+                is ExtType -> it
+                is UnparsedHeaderExtension -> factory(it)
+                else -> null
             }
         }
     }
