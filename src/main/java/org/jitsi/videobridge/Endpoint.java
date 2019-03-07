@@ -18,6 +18,10 @@ package org.jitsi.videobridge;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.bouncycastle.crypto.tls.*;
+import org.jetbrains.annotations.*;
+import org.jitsi.rtp.rtcp.rtcpfb.*;
+import org.jitsi.videobridge.xmpp.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
@@ -60,7 +64,6 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 public class Endpoint
     extends AbstractEndpoint
 {
-
     /**
      * The name of the <tt>Endpoint</tt> property <tt>pinnedEndpoint</tt> which
      * specifies the JID of the currently pinned <tt>Endpoint</tt> of this
@@ -141,6 +144,20 @@ public class Endpoint
     private IOException transportManagerException = null;
 
     /**
+     * Public for now since the channel needs to reach in and grab it
+     */
+    // XXX public
+    public Transceiver transceiver;
+
+    /**
+     * The list of {@link ChannelShim}s associated with this endpoint. This
+     * allows us to expire the endpoint once all of its 'channels' have been
+     * removed.
+     */
+    final List<WeakReference<ChannelShim>> channelShims
+            = new LinkedList<>();
+
+    /**
      * Whether or not the bridge should be the peer which opens the data channel
      * (as opposed to letting the far peer/client open it).
      */
@@ -150,14 +167,6 @@ public class Endpoint
     private static final RecurringRunnableExecutor recurringRunnableExecutor =
             new RecurringRunnableExecutor(Endpoint.class.getSimpleName());
 
-    private void requestKeyframe(long ssrc)
-    {
-        AbstractEndpoint ep = getConference().findEndpointByReceiveSSRC(ssrc, MediaType.VIDEO);
-        if (ep != null)
-        {
-            ep.transceiver.requestKeyFrame(ssrc);
-        }
-    }
 
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
@@ -172,6 +181,31 @@ public class Endpoint
         super(conference, id);
 
         logger = Logger.getLogger(classLogger, conference.getLogger());
+        transceiver
+                = new Transceiver(
+                id,
+                TaskPools.CPU_POOL,
+                TaskPools.CPU_POOL,
+                TaskPools.SCHEDULED_POOL,
+                logger);
+        transceiver.setIncomingRtpHandler(
+                new ConsumerNode("RTP receiver chain handler")
+                {
+                    @Override
+                    protected void consume(@NotNull PacketInfo packetInfo)
+                    {
+                        handleIncomingRtp(packetInfo);
+                    }
+                });
+        transceiver.setIncomingRtcpHandler(
+                new ConsumerNode("RTCP receiver chain handler")
+                {
+                    @Override
+                    public void consume(@NotNull PacketInfo packetInfo)
+                    {
+                        handleIncomingRtcp(packetInfo);
+                    }
+                });
         bitrateController = new BitrateController(
                 getID(),
                 conference.getLogger(),
@@ -198,6 +232,7 @@ public class Endpoint
             bitrateController.bandwidthChanged(newValueBps);
         });
         transceiver.onBandwidthEstimateChanged(bandwidthProbing);
+        conference.encodingsManager.subscribe(this);
 
         bandwidthProbing.enabled = true;
         recurringRunnableExecutor.registerRecurringRunnable(bandwidthProbing);
@@ -267,7 +302,6 @@ public class Endpoint
     @Override
     public void propertyChange(PropertyChangeEvent evt)
     {
-        super.propertyChange(evt);
         if (Conference.ENDPOINTS_PROPERTY_NAME.equals(evt.getPropertyName()))
         {
             bitrateController.endpointOrderingChanged(getConference().getSpeechActivity().getEndpoints());
@@ -308,7 +342,6 @@ public class Endpoint
         bitrateController.constraintsChanged();
     }
 
-    @Override
     public void setLocalSsrc(MediaType mediaType, long ssrc)
     {
         transceiver.setLocalSsrc(mediaType, ssrc);
@@ -333,7 +366,6 @@ public class Endpoint
         return false;
     }
 
-    @Override
     public void sendRtp(PacketInfo packetInfo)
     {
         //TODO(brian): need to declare this here (not as a member, due to the fact that will be
@@ -360,12 +392,13 @@ public class Endpoint
                 VideoRtpPacket videoPacket =
                         org.jitsi.rtp.rtp.RtpPacket.Companion.fromBuffer(PacketExtensionsKt.getByteBuffer(pkt))
                                 .toOtherRtpPacketType(VideoRtpPacket::new);
-                super.sendRtp(new PacketInfo(videoPacket));
+                transceiver.sendRtp(new PacketInfo(videoPacket));
             }
         }
         else
         {
-            super.sendRtp(packetInfo);
+            // By default just add it to the sender's queue
+            transceiver.sendRtp(packetInfo);
         }
     }
 
@@ -402,10 +435,9 @@ public class Endpoint
         transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsContext);
     }
 
-    @Override
     public void addPayloadType(PayloadType payloadType)
     {
-        super.addPayloadType(payloadType);
+        transceiver.addPayloadType(payloadType);
         bitrateController.addPayloadType(payloadType);
     }
 
@@ -474,6 +506,11 @@ public class Endpoint
 
         try
         {
+            this.transceiver.stop();
+            logger.info(transceiver.getNodeStats().prettyPrint(0));
+
+            transceiver.teardown();
+
             AbstractEndpointMessageTransport messageTransport
                     = getMessageTransport();
             if (messageTransport != null)
@@ -904,4 +941,156 @@ public class Endpoint
     {
         getTransportManager().describe(channelBundle);
     }
+
+    private void requestKeyframe(long ssrc)
+    {
+        AbstractEndpoint ep = getConference().findEndpointByReceiveSSRC(ssrc, MediaType.VIDEO);
+        if (ep instanceof Endpoint)
+        {
+            ((Endpoint) ep).transceiver.requestKeyFrame(ssrc);
+        }
+    }
+
+    private void setMediaStreamTracks(MediaStreamTrackDesc[] mediaStreamTracks)
+    {
+        transceiver.setMediaStreamTracks(mediaStreamTracks);
+        firePropertyChange(ENDPOINT_CHANGED_PROPERTY_NAME, null, null);
+    }
+
+    @Override
+    public MediaStreamTrackDesc[] getMediaStreamTracks()
+    {
+        return transceiver.getMediaStreamTracks();
+    }
+
+    @Override
+    public void recreateMediaStreamTracks()
+    {
+        ChannelShim videoChannel = getChannelOfMediaType(MediaType.VIDEO);
+        if (videoChannel != null)
+        {
+            MediaStreamTrackDesc[] tracks =
+                    MediaStreamTrackFactory.createMediaStreamTracks(
+                            videoChannel.getSources(),
+                            videoChannel.getSourceGroups());
+            setMediaStreamTracks(tracks);
+        }
+    }
+
+    /**
+     * Gets this {@link AbstractEndpoint}'s channel of media type
+     * {@code mediaType} (although it's not strictly enforced, endpoints have
+     * at most one channel with a given media type).
+     *
+     * @param mediaType the media type of the channel.
+     *
+     * @return the channel.
+     */
+    private ChannelShim getChannelOfMediaType(MediaType mediaType)
+    {
+        return
+                channelShims.stream()
+                        .filter(Objects::nonNull)
+                        .map(WeakReference::get)
+                        .filter(
+                                channel ->
+                                        channel != null &&
+                                                channel.getMediaType().equals(mediaType))
+                        .findAny().orElse(null);
+
+    }
+
+    @Override
+    public boolean receivesSsrc(long ssrc)
+    {
+        return transceiver.receivesSsrc(ssrc);
+    }
+
+    public void addReceiveSsrc(long ssrc)
+    {
+        if (logger.isDebugEnabled())
+        {
+            logger.debug(logPrefix + "Adding receive ssrc " + ssrc);
+        }
+        transceiver.addReceiveSsrc(ssrc);
+    }
+
+    private void handleIncomingRtcp(PacketInfo packetInfo)
+    {
+        // We don't need to copy RTCP packets for each dest like we do with RTP because each one
+        // will only have a single destination
+        // TODO: getEndpointsFast()?
+        getConference().getEndpoints().forEach(endpoint -> {
+            if (packetInfo.getPacket() instanceof RtcpFbPacket)
+            {
+                RtcpFbPacket rtcpPacket = (RtcpFbPacket) packetInfo.getPacket();
+                // TODO route RTCP to Octo too
+                if (endpoint instanceof Endpoint && endpoint.receivesSsrc(rtcpPacket.getMediaSourceSsrc()))
+                {
+                    ((Endpoint) endpoint).transceiver.sendRtcp(rtcpPacket);
+                }
+            }
+        });
+    }
+
+    /**
+     * Handle incoming RTP packets which have been fully processed by the
+     * transceiver's incoming pipeline.
+     * @param packetInfo the packet.
+     */
+    protected void handleIncomingRtp(PacketInfo packetInfo)
+    {
+        // For now, just write every packet to every channel other than ourselves
+        getConference().getEndpointsFast().forEach(endpoint -> {
+            if (endpoint == this)
+            {
+                return;
+            }
+            //TODO(brian): we don't use a copy when passing to 'wants', which makes sense, but it would be nice
+            // to be able to enforce a 'read only' version of the packet here so we can guarantee nothing is
+            // changed in 'wants'
+            if (endpoint instanceof Endpoint && endpoint.wants(packetInfo, getID()))
+            {
+                PacketInfo pktInfoCopy = packetInfo.clone();
+                ((Endpoint) endpoint).sendRtp(pktInfoCopy);
+            }
+        });
+    }
+
+    @Override
+    public void onNewSsrcAssociation(
+            String endpointId,
+            long primarySsrc,
+            long secondarySsrc,
+            SsrcAssociationType type)
+    {
+        transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, type);
+    }
+
+    public void addChannel(ChannelShim channelShim)
+    {
+        synchronized (channelShims)
+        {
+            channelShims.add(new WeakReference<>(channelShim));
+        }
+    }
+
+    public void removeChannel(ChannelShim channelShim)
+    {
+        synchronized (channelShims)
+        {
+            for (Iterator<WeakReference<ChannelShim>> i = channelShims.iterator(); i.hasNext();)
+            {
+                ChannelShim existingChannelShim = i.next().get();
+                if (existingChannelShim != null && existingChannelShim.equals(channelShim)) {
+                    i.remove();
+                }
+            }
+            if (channelShims.isEmpty())
+            {
+                expire();
+            }
+        }
+    }
+
 }
