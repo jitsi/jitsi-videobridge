@@ -507,7 +507,10 @@ public class Endpoint
         try
         {
             this.transceiver.stop();
-            logger.info(transceiver.getNodeStats().prettyPrint(0));
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(transceiver.getNodeStats().prettyPrint(0));
+            }
 
             transceiver.teardown();
 
@@ -953,8 +956,13 @@ public class Endpoint
 
     private void setMediaStreamTracks(MediaStreamTrackDesc[] mediaStreamTracks)
     {
-        transceiver.setMediaStreamTracks(mediaStreamTracks);
-        firePropertyChange(ENDPOINT_CHANGED_PROPERTY_NAME, null, null);
+        if (transceiver.setMediaStreamTracks(mediaStreamTracks))
+        {
+            firePropertyChange(
+                    ENDPOINT_CHANGED_PROPERTY_NAME,
+                    null,
+                    null);
+        }
     }
 
     @Override
@@ -1040,21 +1048,7 @@ public class Endpoint
      */
     protected void handleIncomingRtp(PacketInfo packetInfo)
     {
-        // For now, just write every packet to every channel other than ourselves
-        getConference().getEndpointsFast().forEach(endpoint -> {
-            if (endpoint == this)
-            {
-                return;
-            }
-            //TODO(brian): we don't use a copy when passing to 'wants', which makes sense, but it would be nice
-            // to be able to enforce a 'read only' version of the packet here so we can guarantee nothing is
-            // changed in 'wants'
-            if (endpoint instanceof Endpoint && endpoint.wants(packetInfo, getID()))
-            {
-                PacketInfo pktInfoCopy = packetInfo.clone();
-                ((Endpoint) endpoint).sendRtp(pktInfoCopy);
-            }
-        });
+        getConference().handleIncomingRtp(packetInfo, this);
     }
 
     @Override

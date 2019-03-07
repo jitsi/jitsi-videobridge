@@ -562,13 +562,10 @@ public class VideobridgeStatistics
             {
                 ConferenceShim conferenceShim = conference.getShim();
                 //TODO: can/should we do everything here via the shim only?
-                System.out.println("TEMP: getting stats, looking at conference " + conference.getID());
                 if (!conference.includeInStatistics())
                 {
-                    System.out.println("TEMP: conference " + conference.getID() + " should not be included in stats");
                     continue;
                 }
-                System.out.println("TEMP: conference " + conference.getID() + " will be included in stats");
                 conferences++;
                 int numConferenceEndpoints = conference.getEndpointCount();
                 if (numConferenceEndpoints > largestConferenceSize)

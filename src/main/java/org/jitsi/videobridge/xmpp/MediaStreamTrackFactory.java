@@ -543,7 +543,14 @@ public class MediaStreamTrackFactory
         Collection<SourcePacketExtension> sources,
         Collection<SourceGroupPacketExtension> sourceGroups)
     {
-        List<TrackSsrcs> trackSsrcsList = getTrackSsrcs(sources, sourceGroups);
+        final Collection<SourceGroupPacketExtension> finalSourceGroups
+                = sourceGroups == null ? new ArrayList<>() : sourceGroups;
+        if (sources == null)
+        {
+            sources = new ArrayList<>();
+        }
+
+        List<TrackSsrcs> trackSsrcsList = getTrackSsrcs(sources, finalSourceGroups);
         List<MediaStreamTrackDesc> tracks = new ArrayList<>();
 
         trackSsrcsList.forEach(trackSsrcs -> {
@@ -555,7 +562,7 @@ public class MediaStreamTrackFactory
                 numTemporalLayersPerStream = VP8_SIMULCAST_TEMPORAL_LAYERS;
             }
             Map<Long, SecondarySsrcs> secondarySsrcs
-                = getAllSecondarySsrcs(trackSsrcs, sourceGroups);
+                = getAllSecondarySsrcs(trackSsrcs, finalSourceGroups);
             MediaStreamTrackDesc track
                 = createTrack(
                         trackSsrcs,

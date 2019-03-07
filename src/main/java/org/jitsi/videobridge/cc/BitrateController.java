@@ -356,7 +356,7 @@ public class BitrateController
             Consumer<Long> keyframeRequester)
     {
         this.destinationEndpointId = destinationEndpointId;
-        this.logger = Logger.getLogger(logLevelDelegate, classLogger);
+        this.logger = Logger.getLogger(classLogger, logLevelDelegate);
         this.diagnosticContext = diagnosticContext;
         this.keyframeRequester = keyframeRequester;
 
@@ -1077,8 +1077,6 @@ public class BitrateController
                 MediaStreamTrackDesc[] tracks
                     = sourceEndpoint.getMediaStreamTracks();
 
-                logger.debug("TEMP: BitrateController " + hashCode() + " ep " +
-                        sourceEndpoint.getID() + " has " + tracks.length + " tracks");
                 if (!ArrayUtils.isNullOrEmpty(tracks))
                 {
                     for (MediaStreamTrackDesc track : tracks)

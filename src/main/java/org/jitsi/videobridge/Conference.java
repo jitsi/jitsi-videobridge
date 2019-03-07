@@ -18,10 +18,12 @@ package org.jitsi.videobridge;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.eventadmin.*;
+import org.jitsi.nlj.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jxmpp.jid.*;
@@ -68,15 +70,6 @@ public class Conference
      * The <tt>Endpoint</tt>s participating in this <tt>Conference</tt>.
      */
     private final List<AbstractEndpoint> endpoints = new LinkedList<>();
-
-//    /**
-//     * The {@link OctoEndpoints} instance, if Octo is enabled for this
-//     * conference, which manages the foreign {@link AbstractEndpoint}s of the
-//     * conference (i.e. endpoints connected to remote jitsi-videobridge
-//     * instances).
-//     * If/while Octo is not enabled for the conference, this is {@code null}.
-//     */
-//    private OctoEndpoints octoEndpoints = null;
 
     /**
      * The {@link EventAdmin} instance (to be) used by this {@code Conference}
@@ -186,6 +179,11 @@ public class Conference
 
     //TODO not public
     final public EncodingsManager encodingsManager = new EncodingsManager();
+
+    /**
+     * This {@link Conference}'s link to Octo.
+     */
+    private OctoTentacle tentacle;
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
@@ -875,22 +873,6 @@ public class Conference
         firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
     }
 
-//    /**
-//     * @return the {@link OctoEndpoints} instance for this {@link Conference}.
-//     */
-//    public OctoEndpoints getOctoEndpoints()
-//    {
-//        synchronized (endpoints)
-//        {
-//            if (octoEndpoints == null)
-//            {
-//                octoEndpoints = new OctoEndpoints(this);
-//            }
-//
-//            return octoEndpoints;
-//        }
-//    }
-
     /**
      * Notifies this {@link Conference} that one of its {@link Endpoint}s
      * transport channel has become available.
@@ -1089,7 +1071,6 @@ public class Conference
      * @return the global ID of the conference, or {@code null} if none has been
      * set.
      */
-    @SuppressWarnings("unused") // Octo
     public String getGid()
     {
         return gid;
@@ -1121,6 +1102,41 @@ public class Conference
     public ConferenceShim getShim()
     {
         return shim;
+    }
+
+    /**
+     * Handles an RTP packet coming from a specific endpoint. The packet has
+     * already passed through the incoming chain and been parsed. We use
+     * {@code null} for the {@code source} to indicate that the packet comes
+     * from another bridge via Octo.
+     *
+     * @param packetInfo the packet
+     * @param source the source endpoint, or {@code null} to indicate that the
+     * packet comes from another bridge via Octo.
+     *
+     */
+    public void handleIncomingRtp(PacketInfo packetInfo, AbstractEndpoint source)
+    {
+        getEndpointsFast().forEach(endpoint -> {
+            if (endpoint == source)
+            {
+                return;
+            }
+
+            //TODO(brian): we don't use a copy when passing to 'wants', which
+            // makes sense, but it would be nice to be able to enforce a
+            // 'read only' version of the packet here so we can guarantee
+            // nothing is changed in 'wants'
+            if (endpoint instanceof Endpoint
+                    && endpoint.wants(packetInfo, source != null ? source.getID() : null))
+            {
+                ((Endpoint) endpoint).sendRtp(packetInfo.clone());
+            }
+        });
+        if (tentacle != null && tentacle.wants(packetInfo, source))
+        {
+            tentacle.sendRtp(packetInfo.clone(), source);
+        }
     }
 
     /**
@@ -1202,5 +1218,18 @@ public class Conference
          * that this is only updated when the Octo channels expire.
          */
         public AtomicLong totalPacketsSentOcto = new AtomicLong();
+    }
+
+    /**
+     * @return The {@link OctoTentacle} for this conference.
+     */
+    public OctoTentacle getTentacle()
+    {
+        if (tentacle == null)
+        {
+            tentacle = new OctoTentacle(this);
+            tentacle.addPropertyChangeListener(propertyChangeListener);
+        }
+        return tentacle;
     }
 }

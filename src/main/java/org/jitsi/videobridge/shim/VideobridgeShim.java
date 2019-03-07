@@ -96,7 +96,12 @@ public class VideobridgeShim
         {
             if (channelIq instanceof ColibriConferenceIQ.OctoChannel)
             {
-                logger.warn("Ignoring an octo channel request. Not implemented.");
+                ColibriConferenceIQ.OctoChannel responseOctoChannel
+                    = contentShim.getConferenceShim()
+                        .processOctoChannel(
+                            (ColibriConferenceIQ.OctoChannel)channelIq,
+                            contentShim.getMediaType());
+                createdOrUpdatedChannels.add(responseOctoChannel);
                 continue;
             }
 
