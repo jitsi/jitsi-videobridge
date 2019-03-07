@@ -24,9 +24,8 @@ import java.nio.ByteBuffer
 
 class SrtpPacket(
     header: RtpHeader = RtpHeader(),
-    payloadLength: Int = 0,
-    backingBuffer: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER
-) : RtpPacket(header, payloadLength, backingBuffer) {
+    backingBuffer: ByteBuffer = ByteBuffer.allocate(1500)
+) : RtpPacket(header, backingBuffer) {
 
     fun getAuthTag(tagLen: Int): ByteBuffer =
         payload.subBuffer(payload.limit() - tagLen)
@@ -40,14 +39,14 @@ class SrtpPacket(
     }
 
     override fun clone(): SrtpPacket {
-        return SrtpPacket(header.clone(), payloadLength, cloneBackingBuffer())
+        return SrtpPacket(header.clone(), cloneBackingBuffer())
     }
 
     companion object {
         fun create(buf: ByteBuffer): SrtpPacket {
             val header = RtpHeader.fromBuffer(buf)
             val payloadLength = buf.limit() - header.sizeBytes
-            return SrtpPacket(header, payloadLength, buf)
+            return SrtpPacket(header, buf)
         }
     }
 }

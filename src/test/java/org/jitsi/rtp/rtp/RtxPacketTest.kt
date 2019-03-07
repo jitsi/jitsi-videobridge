@@ -34,7 +34,7 @@ internal class RtxPacketTest : ShouldSpec() {
         header.serializeTo(backingBuffer)
         backingBuffer.put(payload)
         backingBuffer.flip()
-        return RtpPacket(header, payload.limit(), backingBuffer)
+        return RtpPacket(header, backingBuffer)
     }
 
     private val dummyRtpPayload = byteBufferOf(

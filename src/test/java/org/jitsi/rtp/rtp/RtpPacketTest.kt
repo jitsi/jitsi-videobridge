@@ -31,12 +31,13 @@ internal class RtpPacketTest : BehaviorSpec() {
         header: RtpHeader = RtpHeader(),
         payloadLength: Int = 0): RtpPacket {
         val backingBuffer = ByteBuffer.allocate(1500)
+        backingBuffer.position(header.sizeBytes)
         repeat (payloadLength) {
             backingBuffer.put(0x42)
         }
         backingBuffer.flip()
 
-        return RtpPacket(header, payloadLength, backingBuffer)
+        return RtpPacket(header, backingBuffer)
     }
 
     init {
@@ -48,6 +49,7 @@ internal class RtpPacketTest : BehaviorSpec() {
                     rtpPacket.header.ssrc = 123
                     and("get its buffer again") {
                         val newBuf = rtpPacket.getBuffer()
+                        //TODO: verify all fields and payload
                         then("the change should be reflected") {
                             RtpHeader.getSsrc(newBuf) shouldBe 123
                         }

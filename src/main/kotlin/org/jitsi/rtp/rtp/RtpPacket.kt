@@ -35,10 +35,9 @@ import java.nio.ByteBuffer
 // need for payloadLength
 open class RtpPacket(
     val header: RtpHeader = RtpHeader(),
-    payloadLength: Int = 0,
     private var backingBuffer: ByteBuffer = ByteBuffer.allocate(1500)
 ) : Packet() {
-    protected var payloadLength: Int = payloadLength
+    protected var payloadLength: Int = backingBuffer.limit() - header.sizeBytes
         private set
     private var payloadOffset: Int = header.sizeBytes
     private var lastKnownHeaderSizeBytes: Int = header.sizeBytes
@@ -52,7 +51,7 @@ open class RtpPacket(
         get() = header.sizeBytes + payloadLength
 
     protected fun addToPayload(data: ByteBuffer) {
-        if (backingBuffer.capacity() >= backingBuffer.limit() + data.limit()) {
+        if (backingBuffer.capacity() > backingBuffer.limit() + data.limit()) {
             val currentEndOfPayload = backingBuffer.limit()
             backingBuffer.limit(backingBuffer.limit() + data.limit())
             backingBuffer.put(currentEndOfPayload, data)
@@ -60,7 +59,7 @@ open class RtpPacket(
         }
         else {
             // we want to try and avoid this ever happening, so throw for now
-            throw Exception("Buffer not big enough!")
+            throw Exception("Buffer too small! Buf capacity ${backingBuffer.capacity()}, needed ${backingBuffer.limit() + data.limit()}")
         }
     }
 
@@ -86,11 +85,11 @@ open class RtpPacket(
 
     @Suppress("UNCHECKED_CAST")
     fun <OtherType : RtpPacket>toOtherRtpPacketType(
-        factory: (RtpHeader, Int, ByteBuffer) -> RtpPacket
-    ): OtherType = factory(header, payloadLength, backingBuffer) as OtherType
+        factory: (RtpHeader, ByteBuffer) -> RtpPacket
+    ): OtherType = factory(header, backingBuffer) as OtherType
 
     override fun clone(): RtpPacket {
-        return RtpPacket(header.clone(), payloadLength, backingBuffer.clone())
+        return RtpPacket(header.clone(), backingBuffer.clone())
     }
 
     final override fun getBuffer(): ByteBuffer {
@@ -112,7 +111,7 @@ open class RtpPacket(
         return backingBuffer.duplicate()
     }
 
-    override fun serializeTo(buf: ByteBuffer) {
+    final override fun serializeTo(buf: ByteBuffer) {
         header.serializeTo(buf)
         buf.put(payload)
     }
@@ -123,7 +122,7 @@ open class RtpPacket(
             // We subtract 1 here because the buffer starts at position 0 and
             // 'limit' gives us a size (not a 0 based index of the last position)
             val payloadLength = buf.limit() - header.sizeBytes - 1
-            return RtpPacket(header, payloadLength, buf)
+            return RtpPacket(header, buf)
         }
     }
 }
