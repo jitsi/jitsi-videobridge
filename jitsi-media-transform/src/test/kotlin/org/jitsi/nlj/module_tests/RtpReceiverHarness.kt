@@ -35,7 +35,6 @@ import kotlin.system.measureTimeMillis
  */
 
 fun main(args: Array<String>) {
-    Thread.sleep(10000)
     val pcap = Pcaps.Incoming.ONE_PARTICIPANT_RTP_RTCP_SIM_RTX
 
     val producer = PcapPacketProducer(pcap.filePath)
