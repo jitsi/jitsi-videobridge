@@ -23,9 +23,8 @@ import java.nio.ByteBuffer
 
 open class VideoRtpPacket(
     header: RtpHeader = RtpHeader(),
-    payload: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER,
-    backingBuffer: ByteBuffer? = null
-) : RtpPacket(header, payload, backingBuffer) {
+    backingBuffer: ByteBuffer = ByteBuffer.allocate(1500)
+) : RtpPacket(header, backingBuffer) {
     var isKeyFrame: Boolean = false
     var trackEncodings: Array<RTPEncodingDesc>? = null
     /**
@@ -34,7 +33,7 @@ open class VideoRtpPacket(
     var bitrateSnapshot: Long? = null
 
     override fun clone(): VideoRtpPacket {
-        val clone = VideoRtpPacket(header.clone(), cloneMutablePayload())
+        val clone = VideoRtpPacket(header.clone(), cloneBackingBuffer())
         clone.isKeyFrame = isKeyFrame
         clone.trackEncodings = trackEncodings
 

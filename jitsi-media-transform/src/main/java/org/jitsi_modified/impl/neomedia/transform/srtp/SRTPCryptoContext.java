@@ -586,7 +586,7 @@ public class SRTPCryptoContext
 //                            & (Buffer.FLAG_DISCARD | Buffer.FLAG_SILENCE))
 //                        == 0)
                 {
-                    srtpPacket.modifyPayload(payload -> {
+                    srtpPacket.modifyPayloadData(payload -> {
                         switch (policy.getEncType())
                         {
                             // Decrypt the packet using Counter Mode encryption.
@@ -680,7 +680,7 @@ public class SRTPCryptoContext
 
 //        ByteBuffer packetBuf = rtpPacket.getBuffer();
 //        ByteBuffer payload = rtpPacket.getPayload();
-        rtpPacket.modifyPayload(payload -> {
+        rtpPacket.modifyPayloadData(payload -> {
             switch (policy.getEncType())
             {
                 // Encrypt the packet using Counter Mode encryption.
