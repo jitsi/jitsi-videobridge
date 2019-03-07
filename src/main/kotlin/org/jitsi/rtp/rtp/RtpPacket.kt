@@ -68,6 +68,12 @@ open class RtpPacket(
         // We don't need to mark dirty here
     }
 
+    fun modifyPayloadData(block: ByteBuffer.() -> Unit) {
+        with (mutablePayload.duplicate()) {
+            block()
+        }
+    }
+
     protected fun cloneBackingBuffer(): ByteBuffer = backingBuffer.clone()
 
     val paddingSize: Int
