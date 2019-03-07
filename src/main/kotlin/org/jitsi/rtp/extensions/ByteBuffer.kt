@@ -165,6 +165,32 @@ fun ByteBuffer.incrementPosition(value: Int) {
 fun ByteBuffer.decrementPosition(value: Int) {
     position(position() - value)
 }
+
+/**
+ * Shifts the data from [startPos] to [endPos] [numBytes] to the right.
+ * Note that this method may increase the given buffer's limit, up to
+ * its capacity.
+ *
+ * Note that [startPos] and [endPos] are zero-based.
+ */
+fun ByteBuffer.shiftDataRight(startPos: Int, endPos: Int, numBytes: Int) {
+    if (endPos + numBytes >= limit()) {
+        if (capacity() > endPos + numBytes) {
+            limit(endPos + numBytes + 1)
+        }
+    }
+    for (index in endPos downTo startPos) {
+        put(index + numBytes, get(index))
+    }
+}
+
+
+fun ByteBuffer.shiftDataLeft(startPos: Int, endPos: Int, numBytes: Int) {
+    for (index in startPos..endPos) {
+        put(index - numBytes, get(index))
+    }
+}
+
 /**
  * Compare the contents of two ByteBuffers, each starting from their position 0
  */

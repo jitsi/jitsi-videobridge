@@ -16,8 +16,12 @@
 package org.jitsi.rtp.extensions
 
 import io.kotlintest.IsolationMode
+import io.kotlintest.should
 import io.kotlintest.shouldBe
+import io.kotlintest.shouldThrow
 import io.kotlintest.specs.ShouldSpec
+import org.jitsi.rtp.util.byteBufferOf
+import org.jitsi.test_helpers.matchers.haveSameContentAs
 import java.nio.ByteBuffer
 
 class ByteBufferExtensionsTest : ShouldSpec() {
@@ -166,6 +170,45 @@ class ByteBufferExtensionsTest : ShouldSpec() {
 
                         (0..4).forEach { originalBuf.get(it) shouldBe 0x00.toByte() }
                         (5..99).forEach { originalBuf.get(it) shouldBe 0x42.toByte() }
+                    }
+                }
+            }
+            "shiftDataRight" {
+                "moving data" {
+                    val buf = byteBufferOf(0x01, 0x02, 0x03, 0x04, 0x05, 0x06)
+                    buf.shiftDataRight(1, 3, 2)
+                    should("move things correctly") {
+                        buf should haveSameContentAs(byteBufferOf(0x01, 0x02, 0x03, 0x02, 0x03, 0x04))
+                    }
+                }
+                "moving data past the current limit but within the capacity" {
+                    val buf = byteBufferOf(0x01, 0x02, 0x03, 0x04, 0x00, 0x0, 0x00, 0x00)
+                    buf.limit(4)
+                    buf.shiftDataRight(1, 3, 2)
+                    should("move things correctly") {
+                        buf.limit() shouldBe 6
+                        buf should haveSameContentAs(byteBufferOf(0x01, 0x02, 0x03, 0x02, 0x03, 0x04))
+                    }
+                }
+                "moving the data past the capacity" {
+                    val buf = byteBufferOf(0x01, 0x02, 0x03, 0x04, 0x00, 0x0, 0x00, 0x00)
+                    shouldThrow<Exception>() {
+                        buf.shiftDataRight(4, 6, 10)
+                    }
+                }
+            }
+            "shiftDataLeft" {
+                "moving data" {
+                    val buf = byteBufferOf(0x01, 0x02, 0x03, 0x04, 0x05, 0x06)
+                    buf.shiftDataLeft(2, 4, 2)
+                    should("move things correctly") {
+                        buf should haveSameContentAs(byteBufferOf(0x03, 0x04, 0x05, 0x04, 0x05, 0x06))
+                    }
+                }
+                "moving the data past the start" {
+                    val buf = byteBufferOf(0x01, 0x02, 0x03, 0x04, 0x00, 0x0, 0x00, 0x00)
+                    shouldThrow<Exception>() {
+                        buf.shiftDataLeft(1, 2, 2)
                     }
                 }
             }
