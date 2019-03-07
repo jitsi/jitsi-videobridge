@@ -35,11 +35,11 @@ class Vp8Packet(
     var spatialLayerIndex: Int = -1
 
     init {
-        isKeyFrame = Vp8Utils.isKeyFrame(payload)
+        isKeyFrame = Vp8Utils.isKeyFrame(TEMPORARYgetMutablePayload())
         if (isKeyFrame) {
-            spatialLayerIndex = Vp8Utils.getSpatialLayerIndexFromKeyFrame(payload)
+            spatialLayerIndex = Vp8Utils.getSpatialLayerIndexFromKeyFrame(TEMPORARYgetMutablePayload())
         }
-        temporalLayerIndex = Vp8Utils.getTemporalLayerIdOfFrame(payload)
+        temporalLayerIndex = Vp8Utils.getTemporalLayerIdOfFrame(TEMPORARYgetMutablePayload())
     }
 
     override fun clone(): Vp8Packet {
