@@ -216,11 +216,10 @@ public class ConferenceShim
 
         // Like for payload types, we never clear the transceiver's list of RTP
         // header extensions. See the note in #addPayloadTypes.
-        //rtpHeaderExtensions.forEach(ext ->
-        //        endpoint.transceiver.addRtpExtension(
-        //                Byte.valueOf(ext.getID()),
-        //                new RTPExtension(ext.getURI())));
-
+        channel.getRtpHeaderExtensions().forEach(ext ->
+              tentacle.addRtpExtension(
+                      Byte.valueOf(ext.getID()),
+                      new RTPExtension(ext.getURI())));
 
         List<PayloadTypePacketExtension> payloadTypes = channel.getPayloadTypes();
         payloadTypes.forEach(ext -> {

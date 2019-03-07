@@ -26,6 +26,7 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.rtp.util.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
@@ -69,15 +70,16 @@ class OctoTransceiver
 
     /**
      * Initializes a new {@link OctoTransceiver} instance.
+     *
      * @param tentacle
      */
     OctoTransceiver(OctoTentacle tentacle)
     {
         this.tentacle = tentacle;
         incomingPacketQueue = new PacketInfoQueue(
-            "octo-tranceiver-q-"+hashCode(),
-            TaskPools.CPU_POOL,
-            this::processPacket);
+                "octo-tranceiver-q-" + hashCode(),
+                TaskPools.CPU_POOL,
+                this::processPacket);
     }
 
     /**
@@ -87,8 +89,9 @@ class OctoTransceiver
      * tracks.
      *
      * @param tracks the tracks to set
-     * @return {@code true} if the call resulted in any changes in our list
-     * of tracks, and {@code false} otherwise.
+     *
+     * @return {@code true} if the call resulted in any changes in our list of
+     * tracks, and {@code false} otherwise.
      */
     boolean setMediaStreamTracks(MediaStreamTrackDesc[] tracks)
     {
@@ -96,8 +99,7 @@ class OctoTransceiver
     }
 
     /**
-     * Gets the current list of
-     * @return
+     * @return the current list of media stream tracks.
      */
     MediaStreamTrackDesc[] getMediaStreamTracks()
     {
@@ -106,6 +108,7 @@ class OctoTransceiver
 
     /**
      * Handles a packet for this conference coming from a remote Octo relay.
+     *
      * @param buf the buffer which contains the packet.
      * @param off the offset at which data starts
      * @param len the length of the packet
@@ -124,7 +127,9 @@ class OctoTransceiver
 
     /**
      * Process a packet in the {@link #incomingPacketQueue} thread.
+     *
      * @param packetInfo the packet to process.
+     *
      * @return
      */
     private boolean processPacket(PacketInfo packetInfo)
@@ -135,6 +140,7 @@ class OctoTransceiver
 
     /**
      * Creates the tree of {@link Node} to use for processing incoming packets.
+     *
      * @return
      */
     private Node createInputTree()
@@ -154,53 +160,57 @@ class OctoTransceiver
         Node videoRoot = new VideoParser();
         videoRoot.attach(new Vp8Parser()).attach(terminationNode);
 
-        Node audioRoot = new AudioLevelReader();
+        AudioLevelReader audioLevelReader = new AudioLevelReader();
+        audioLevelReader.setAudioLevelListener(tentacle.getAudioLevelListener());
+
+        Node audioRoot = audioLevelReader;
         audioRoot.attach(terminationNode);
 
         DemuxerNode audioVideoDemuxer
-            = new ExclusivePathDemuxer("Audio/Video")
+                = new ExclusivePathDemuxer("Audio/Video")
                 .addPacketPath(
-                    "Video",
-                    pkt -> pkt instanceof VideoRtpPacket,
-                    videoRoot)
+                        "Video",
+                        pkt -> pkt instanceof VideoRtpPacket,
+                        videoRoot)
                 .addPacketPath(
-                    "Audio",
-                    pkt -> pkt instanceof AudioRtpPacket,
-                    audioRoot);
+                        "Audio",
+                        pkt -> pkt instanceof AudioRtpPacket,
+                        audioRoot);
 
         Node rtpRoot
-            = new PacketParser(
+                = new PacketParser(
                 "RTP parser",
                 packet -> RtpPacket.Companion.fromBuffer(packet.getBuffer()));
         rtpRoot.attach(new MediaTypeParser()).attach(audioVideoDemuxer);
 
         DemuxerNode root
-            = new ExclusivePathDemuxer("RTP/RTCP")
+                = new ExclusivePathDemuxer("RTP/RTCP")
                 .addPacketPath(
-                    "RTP",
-                    pkt -> RtpProtocol.Companion.isRtp(pkt.getBuffer()),
-                    rtpRoot)
+                        "RTP",
+                        pkt -> RtpProtocol.Companion.isRtp(pkt.getBuffer()),
+                        rtpRoot)
                 .addPacketPath(
-                    "RTCP",
-                    pkt -> RtpProtocol.Companion.isRtcp(pkt.getBuffer()),
-                    new ConsumerNode("OctoRTCPHandler (no-op)")
-                    {
-                        /**
-                         * Are we going to need this in the future?
-                         */
-                        @NotNull
-                        @Override
-                        protected void consume(PacketInfo packetInfo)
+                        "RTCP",
+                        pkt -> RtpProtocol.Companion.isRtcp(pkt.getBuffer()),
+                        new ConsumerNode("OctoRTCPHandler (no-op)")
                         {
-                            logger.info("Ignoring an RTCP packet ");
-                        }
-                    });
+                            /**
+                             * Are we going to need this in the future?
+                             */
+                            @NotNull
+                            @Override
+                            protected void consume(PacketInfo packetInfo)
+                            {
+                                logger.info("Ignoring an RTCP packet ");
+                            }
+                        });
 
         return root;
     }
 
     /**
      * Adds a payload type to this transceiver.
+     *
      * @param payloadType
      */
     void addPayloadType(PayloadType payloadType)
@@ -208,5 +218,18 @@ class OctoTransceiver
         RtpPayloadTypeAddedEvent event
                 = new RtpPayloadTypeAddedEvent(payloadType);
         new NodeEventVisitor(event).visit(inputTreeRoot);
+    }
+
+    /**
+     * Adds an RTP header extension to this transceiver.
+     * @param extensionId
+     * @param rtpExtension
+     */
+    public void addRtpExtension(Byte extensionId, RTPExtension rtpExtension)
+    {
+        RtpExtensionAddedEvent rtpExtensionAddedEvent
+                = new RtpExtensionAddedEvent(extensionId, rtpExtension);
+
+        new NodeEventVisitor(rtpExtensionAddedEvent).visit(inputTreeRoot);
     }
 }
