@@ -20,6 +20,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.osgi.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -62,6 +63,11 @@ public class OctoTentacle extends PropertyChangeNotifier
     private final OctoRelay relay;
 
     /**
+     * The audio level listener for this instance.
+     */
+    private final AudioLevelListener audioLevelListener;
+
+    /**
      * The list of remote Octo targets.
      */
     private Set<SocketAddress> targets
@@ -74,6 +80,8 @@ public class OctoTentacle extends PropertyChangeNotifier
     public OctoTentacle(Conference conference)
     {
         this.conference = conference;
+        audioLevelListener
+                = new AudioLevelListenerImpl(conference.getSpeechActivity());
         octoEndpoints = new OctoEndpoints(conference);
         transceiver = new OctoTransceiver(this);
 
@@ -83,6 +91,15 @@ public class OctoTentacle extends PropertyChangeNotifier
                 ServiceUtils2.getService(bundleContext, OctoRelayService.class);
 
         relay = octoRelayService == null ? null : octoRelayService.getRelay();
+    }
+
+    /**
+     * Gets the audio level listener.
+     * @return
+     */
+    AudioLevelListener getAudioLevelListener()
+    {
+        return audioLevelListener;
     }
 
     /**
@@ -199,12 +216,24 @@ public class OctoTentacle extends PropertyChangeNotifier
 
             if (targets.isEmpty())
             {
+                System.err.println("xxx remove Octo handler " + conference.getGid());
                 relay.removeHandler(conference.getGid());
             }
             else
             {
+                System.err.println("xxx register Octo handler "+conference.getGid());
                 relay.addHandler(conference.getGid(), transceiver);
             }
         }
+    }
+
+    /**
+     * Adds an RTP header extension.
+     * @param extensionId
+     * @param rtpExtension
+     */
+    public void addRtpExtension(Byte extensionId, RTPExtension rtpExtension)
+    {
+        transceiver.addRtpExtension(extensionId, rtpExtension);
     }
 }
