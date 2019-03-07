@@ -24,9 +24,8 @@ import java.nio.ByteBuffer
 
 class Vp8Packet(
     header: RtpHeader = RtpHeader(),
-    payload: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER,
-    backingBuffer: ByteBuffer? = null
-) : VideoRtpPacket(header, payload, backingBuffer) {
+    backingBuffer: ByteBuffer = ByteBuffer.allocate(1500)
+) : VideoRtpPacket(header, backingBuffer) {
     var temporalLayerIndex: Int = -1
     /**
      * This is currently used as an overall spatial index, not an in-band spatial quality index a la vp9.  That is,
@@ -44,7 +43,7 @@ class Vp8Packet(
     }
 
     override fun clone(): Vp8Packet {
-        val clone = Vp8Packet(header.clone(), cloneMutablePayload())
+        val clone = Vp8Packet(header.clone(), cloneBackingBuffer())
         clone.temporalLayerIndex = temporalLayerIndex
         clone.spatialLayerIndex = spatialLayerIndex
 

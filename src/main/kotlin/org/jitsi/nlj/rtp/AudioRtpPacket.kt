@@ -22,6 +22,5 @@ import java.nio.ByteBuffer
 
 class AudioRtpPacket(
     header: RtpHeader = RtpHeader(),
-    payload: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER,
-    backingBuffer: ByteBuffer? = null
-) : RtpPacket(header, payload, backingBuffer)
+    backingBuffer: ByteBuffer = ByteBuffer.allocate(1500)
+) : RtpPacket(header, backingBuffer)
