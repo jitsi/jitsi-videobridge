@@ -63,11 +63,6 @@ public class OctoTentacle extends PropertyChangeNotifier
     private final OctoRelay relay;
 
     /**
-     * The audio level listener for this instance.
-     */
-    private final AudioLevelListener audioLevelListener;
-
-    /**
      * The list of remote Octo targets.
      */
     private Set<SocketAddress> targets
@@ -80,8 +75,6 @@ public class OctoTentacle extends PropertyChangeNotifier
     public OctoTentacle(Conference conference)
     {
         this.conference = conference;
-        audioLevelListener
-                = new AudioLevelListenerImpl(conference.getSpeechActivity());
         octoEndpoints = new OctoEndpoints(conference);
         transceiver = new OctoTransceiver(this);
 
@@ -99,7 +92,7 @@ public class OctoTentacle extends PropertyChangeNotifier
      */
     AudioLevelListener getAudioLevelListener()
     {
-        return audioLevelListener;
+        return conference.getAudioLevelListener();
     }
 
     /**

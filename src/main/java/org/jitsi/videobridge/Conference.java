@@ -142,6 +142,11 @@ public class Conference
     private final ConferenceSpeechActivity speechActivity;
 
     /**
+     * The audio level listener.
+     */
+    private final AudioLevelListener audioLevelListener;
+
+    /**
      * The <tt>Videobridge</tt> which has initialized this <tt>Conference</tt>.
      */
     private final Videobridge videobridge;
@@ -229,6 +234,7 @@ public class Conference
 
         speechActivity = new ConferenceSpeechActivity(this);
         speechActivity.addPropertyChangeListener(propertyChangeListener);
+        audioLevelListener = new AudioLevelListenerImpl(speechActivity);
 
         expireableImpl = new ExpireableImpl(logPrefix, this::expire);
 
@@ -1132,6 +1138,27 @@ public class Conference
     }
 
     /**
+     * Gets the audio level listener.
+     */
+    public AudioLevelListener getAudioLevelListener()
+    {
+        return audioLevelListener;
+    }
+
+    /**
+     * @return The {@link OctoTentacle} for this conference.
+     */
+    public OctoTentacle getTentacle()
+    {
+        if (tentacle == null)
+        {
+            tentacle = new OctoTentacle(this);
+            tentacle.addPropertyChangeListener(propertyChangeListener);
+        }
+        return tentacle;
+    }
+
+    /**
      * Holds conference statistics.
      */
     public class Statistics
@@ -1186,18 +1213,5 @@ public class Conference
          * conference. Note that this is only updated when channels expire.
          */
         AtomicLong totalPacketsSent = new AtomicLong();
-    }
-
-    /**
-     * @return The {@link OctoTentacle} for this conference.
-     */
-    public OctoTentacle getTentacle()
-    {
-        if (tentacle == null)
-        {
-            tentacle = new OctoTentacle(this);
-            tentacle.addPropertyChangeListener(propertyChangeListener);
-        }
-        return tentacle;
     }
 }
