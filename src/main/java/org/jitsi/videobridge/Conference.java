@@ -484,14 +484,6 @@ public class Conference
             statistics.totalPacketsReceived.get());
         videobridgeStatistics.totalPacketsSent.addAndGet(
             statistics.totalPacketsSent.get());
-        videobridgeStatistics.totalBytesReceivedOcto.addAndGet(
-            statistics.totalBytesReceivedOcto.get());
-        videobridgeStatistics.totalBytesSentOcto.addAndGet(
-            statistics.totalBytesSentOcto.get());
-        videobridgeStatistics.totalPacketsReceivedOcto.addAndGet(
-            statistics.totalPacketsReceivedOcto.get());
-        videobridgeStatistics.totalPacketsSentOcto.addAndGet(
-            statistics.totalPacketsSentOcto.get());
 
         boolean hasFailed
             = statistics.totalNoPayloadChannels.get()
@@ -1194,30 +1186,6 @@ public class Conference
          * conference. Note that this is only updated when channels expire.
          */
         AtomicLong totalPacketsSent = new AtomicLong();
-
-        /**
-         * The total number of bytes received via Octo in this conference. Note
-         * that this is only updated when the Octo channels expire.
-         */
-        public AtomicLong totalBytesReceivedOcto = new AtomicLong();
-
-        /**
-         * The total number of bytes sent via Octo in this conference. Note
-         * that this is only updated when the Octo channels expire.
-         */
-        public AtomicLong totalBytesSentOcto = new AtomicLong();
-
-        /**
-         * The total number of packets received via Octo in this conference.
-         * Note that this is only updated when the Octo channels expire.
-         */
-        public AtomicLong totalPacketsReceivedOcto = new AtomicLong();
-
-        /**
-         * The total number of packets sent via Octo in this conference. Note
-         * that this is only updated when the Octo channels expire.
-         */
-        public AtomicLong totalPacketsSentOcto = new AtomicLong();
     }
 
     /**

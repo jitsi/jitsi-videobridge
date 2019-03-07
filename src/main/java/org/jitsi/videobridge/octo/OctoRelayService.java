@@ -126,12 +126,4 @@ public class OctoRelayService
             relay.stop();
         }
     }
-
-    /**
-     * @return the ID of the Octo relay managed by this {@link OctoRelayService}.
-     */
-    public String getRelayId()
-    {
-        return relay.getId();
-    }
 }

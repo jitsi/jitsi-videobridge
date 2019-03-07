@@ -1343,31 +1343,5 @@ public class Videobridge
          * expire.
          */
         public AtomicLong totalPacketsSent = new AtomicLong();
-
-        /**
-         * The total number of bytes received in Octo packets in conferences on
-         * this videobridge. Note that this is only updated when conferences
-         * expire.
-         */
-        public AtomicLong totalBytesReceivedOcto = new AtomicLong();
-
-        /**
-         * The total number of bytes sent in Octo packets in conferences on
-         * this videobridge. Note that this is only updated when conferences
-         * expire.
-         */
-        public AtomicLong totalBytesSentOcto = new AtomicLong();
-
-        /**
-         * The total number of Octo packets received in conferences on this
-         * videobridge. Note that this is only updated when conferences expire.
-         */
-        public AtomicLong totalPacketsReceivedOcto = new AtomicLong();
-
-        /**
-         * The total number of Octo packets sent in conferences on this
-         * videobridge. Note that this is only updated when conferences expire.
-         */
-        public AtomicLong totalPacketsSentOcto = new AtomicLong();
     }
 }

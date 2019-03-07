@@ -25,6 +25,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 
 /**
  * Implements a bridge-to-bridge (Octo) relay. This class is responsible for
@@ -67,6 +68,31 @@ public class OctoRelay
      * The port to use.
      */
     private int port;
+
+    /**
+     * Number of bytes received.
+     */
+    private AtomicLong bytesReceived = new AtomicLong();
+
+    /**
+     * Number of bytes sent.
+     */
+    private AtomicLong bytesSent = new AtomicLong();
+
+    /**
+     * Number of packets received.
+     */
+    private AtomicLong packetsReceived = new AtomicLong();
+
+    /**
+     * Number of packets sent.
+     */
+    private AtomicLong packetsSent = new AtomicLong();
+
+    /**
+     * Packets dropped (failure to parse, or wrong conference ID).
+     */
+    private AtomicLong packetsDropped = new AtomicLong();
 
     /**
      * Maps a conference ID (as contained in Octo packets) to a packet handler.
@@ -175,10 +201,14 @@ public class OctoRelay
         int off = p.getOffset();
         int len = p.getLength();
 
+        bytesReceived.addAndGet(len);
+        packetsReceived.incrementAndGet();
+
         String conferenceId = OctoPacket.readConferenceId(buf, off, len);
         if (conferenceId == null)
         {
             logger.warn("Invalid Octo packet, can not read conference ID.");
+            packetsDropped.incrementAndGet();
             // XXX return packet to cache
             return;
         }
@@ -186,7 +216,7 @@ public class OctoRelay
         PacketHandler handler = packetHandlers.get(conferenceId);
         if (handler == null)
         {
-            // packet for an unknown conference
+            packetsDropped.incrementAndGet();
             logger.warn("Received an Octo packet for an unknown conference: "
                     + conferenceId);
             // XXX return to cache
@@ -255,6 +285,8 @@ public class OctoRelay
             datagramPacket.setSocketAddress(target);
             try
             {
+                bytesSent.addAndGet(datagramPacket.getLength());
+                packetsSent.incrementAndGet();
                 socket.send(datagramPacket);
             }
             catch (IOException ioe)
@@ -290,5 +322,45 @@ public class OctoRelay
     interface PacketHandler
     {
         void handlePacket(byte[] buf, int off, int len);
+    }
+
+    /**
+     * @return the number of bytes received.
+     */
+    public long getBytesReceived()
+    {
+        return bytesReceived.get();
+    }
+
+    /**
+     * @return the number of bytes sent.
+     */
+    public long getBytesSent()
+    {
+        return bytesSent.get();
+    }
+
+    /**
+     * @return the number of packets received.
+     */
+    public long getPacketsReceived()
+    {
+        return packetsReceived.get();
+    }
+
+    /**
+     * @return the number of packets sent.
+     */
+    public long getPacketsSent()
+    {
+        return packetsSent.get();
+    }
+
+    /**
+     * @return the number of packets dropped.
+     */
+    public long getPacketsDropped()
+    {
+        return packetsDropped.get();
     }
 }

@@ -317,6 +317,13 @@ public class VideobridgeStatistics
         = "total_packets_sent_octo";
 
     /**
+     * The name of the stat indicating the total number of Octo packets which
+     * were dropped (due to a failure to parse, or an unknown conference ID).
+     */
+    private static final String TOTAL_PACKETS_DROPPED_OCTO
+        = "total_packets_dropped_octo";
+
+    /**
      * The name of used memory statistic. Its runtime type is {@code Integer}.
      */
     public static final String USED_MEMORY = "used_memory";
@@ -511,13 +518,24 @@ public class VideobridgeStatistics
         long totalBytesSentOcto = 0;
         long totalPacketsReceivedOcto = 0;
         long totalPacketsSentOcto = 0;
+        long totalPacketsDroppedOcto = 0;
 
         BundleContext bundleContext
             = StatsManagerBundleActivator.getBundleContext();
 
         OctoRelayService relayService
             = ServiceUtils.getService(bundleContext, OctoRelayService.class);
-        String relayId = relayService == null ? null : relayService.getRelayId();
+        OctoRelay octoRelay
+            = relayService == null ? null : relayService.getRelay();
+
+        if (octoRelay != null)
+        {
+            totalBytesReceivedOcto = octoRelay.getBytesReceived();
+            totalBytesSentOcto = octoRelay.getBytesSent();
+            totalPacketsReceivedOcto = octoRelay.getPacketsReceived();
+            totalPacketsSentOcto = octoRelay.getPacketsSent();
+            totalPacketsDroppedOcto = octoRelay.getPacketsDropped();
+        }
 
         for (Videobridge videobridge
                 : Videobridge.getVideobridges(bundleContext))
@@ -553,10 +571,6 @@ public class VideobridgeStatistics
             totalBytesSent += jvbStats.totalBytesSent.get();
             totalPacketsReceived += jvbStats.totalPacketsReceived.get();
             totalPacketsSent += jvbStats.totalPacketsSent.get();
-            totalBytesReceivedOcto += jvbStats.totalBytesReceivedOcto.get();
-            totalBytesSentOcto += jvbStats.totalBytesSentOcto.get();
-            totalPacketsReceivedOcto += jvbStats.totalPacketsReceivedOcto.get();
-            totalPacketsSentOcto += jvbStats.totalPacketsSentOcto.get();
 
             for (Conference conference : videobridge.getConferences())
             {
@@ -853,11 +867,13 @@ public class VideobridgeStatistics
             unlockedSetStat(TOTAL_PACKETS_RECEIVED_OCTO,
                             totalPacketsReceivedOcto);
             unlockedSetStat(TOTAL_PACKETS_SENT_OCTO, totalPacketsSentOcto);
+            unlockedSetStat(
+                    TOTAL_PACKETS_DROPPED_OCTO, totalPacketsDroppedOcto);
 
             unlockedSetStat(TIMESTAMP, timestamp);
-            if (relayId != null)
+            if (octoRelay != null)
             {
-                unlockedSetStat(RELAY_ID, relayId);
+                unlockedSetStat(RELAY_ID, octoRelay.getId());
             }
             if (region != null)
             {
