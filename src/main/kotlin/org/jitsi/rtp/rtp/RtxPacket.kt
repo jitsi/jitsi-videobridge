@@ -17,6 +17,8 @@
 package org.jitsi.rtp.rtp
 
 import org.jitsi.rtp.extensions.clone
+import org.jitsi.rtp.extensions.shiftDataLeft
+import org.jitsi.rtp.extensions.shiftDataRight
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.util.ByteBufferUtils
@@ -39,18 +41,28 @@ import java.nio.ByteBuffer
  */
 class RtxPacket internal constructor(
     header: RtpHeader = RtpHeader(),
-    payload: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER,
-    val originalSequenceNumber: Int = 0,
-    backingBuffer: ByteBuffer? = null
-) : RtpPacket(header, payload, backingBuffer) {
+    payloadLength: Int = 0,
+    backingBuffer: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER
+) : RtpPacket(header, payloadLength, backingBuffer) {
 
     override val sizeBytes: Int
         get() = super.sizeBytes + 2
 
+    val originalSequenceNumber: Int = backingBuffer.getShort(header.sizeBytes).toPositiveInt()
+
+    //TODO: will this work correctly with the new scheme?
     override fun serializeTo(buf: ByteBuffer) {
         header.serializeTo(buf)
-        buf.putShort(originalSequenceNumber.toShort())
+//        buf.putShort(originalSequenceNumber.toShort())
         buf.put(payload)
+    }
+
+    fun getOriginalRtpPacket(): RtpPacket {
+        return toOtherRtpPacketType { rtpHeader, payloadLength, backingBuffer ->
+            backingBuffer.shiftDataLeft(rtpHeader.sizeBytes + 2, rtpHeader.sizeBytes + payloadLength - 1, 2)
+            backingBuffer.limit(backingBuffer.limit() - 2)
+            RtpPacket(rtpHeader, payloadLength - 2, backingBuffer)
+        }
     }
 
     companion object {
@@ -62,26 +74,21 @@ class RtxPacket internal constructor(
         // TODO(brian): this is a good use case for being able to mark a
         // packet as immutable (at least to throw at runtime)
         fun fromRtpPacket(rtpPacket: RtpPacket): RtxPacket {
-            return rtpPacket.toOtherRtpPacketType { rtpHeader, payload, backingBuffer ->
-                RtxPacket(rtpHeader.clone(), payload.clone(), rtpPacket.header.sequenceNumber)
-            }
-        }
-        // Convert a packet, currently parsed as an RTP packet, to an RTX packet
-        // (i.e., an incoming packet, previously parsed as an RTP packet, has been
-        // determined to actually be an RTX packet, so re-parse it as such
-        fun parseAsRtx(rtpPacket: RtpPacket): RtxPacket {
-            return rtpPacket.toOtherRtpPacketType { rtpHeader, payload, backingBuffer ->
-                val originalSequenceNumber = payload.getShort().toPositiveInt()
-                RtxPacket(rtpHeader, payload.subBuffer(payload.position()), originalSequenceNumber, backingBuffer)
+            return rtpPacket.toOtherRtpPacketType { rtpHeader, payloadLength, backingBuffer ->
+                val clonedBuffer = backingBuffer.clone()
+                // We need to move the payload to make room for the original sequence number
+                clonedBuffer.shiftDataRight(rtpHeader.sizeBytes, rtpHeader.sizeBytes + payloadLength, 2)
+                clonedBuffer.putShort(rtpHeader.sizeBytes, rtpPacket.header.sequenceNumber.toShort())
+
+                RtxPacket(rtpHeader.clone(), payloadLength + 2, clonedBuffer)
             }
         }
         // Parse a buffer as an RTX packet
         fun fromBuffer(buf: ByteBuffer): RtxPacket {
             val header = RtpHeader.fromBuffer(buf)
-            val originalSequenceNumber = buf.getShort(header.sizeBytes).toPositiveInt()
-            val payload = buf.subBuffer(header.sizeBytes + 2)
+            val payloadLength = buf.limit() - header.sizeBytes
 
-            return RtxPacket(header, payload, originalSequenceNumber, buf)
+            return RtxPacket(header, payloadLength, buf)
         }
     }
 }

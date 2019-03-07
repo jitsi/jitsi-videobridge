@@ -19,42 +19,57 @@ package org.jitsi.rtp.rtp
 import org.jitsi.rtp.extensions.clone
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.extensions.put
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.util.ByteBufferUtils
 import java.nio.ByteBuffer
 
+/**
+ * An [RtpPacket] will always be backed by a backing buffer (a buffer dedicated
+ * to this instance).
+ * [backingBuffer] MUST be the buffer from which this packet was parsed: it is
+ * at least expected that the payload of the RTP packet lives in the range
+ * of backingBuffer[header.sizeBytes] to backingBuffer[header.sizeBytes + payloadLength]
+ */
+//TODO: backing buffer's limit should be set correctly, then there is no
+// need for payloadLength
 open class RtpPacket(
     val header: RtpHeader = RtpHeader(),
-    private var _payload: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER,
-    private var backingBuffer: ByteBuffer? = null
+    payloadLength: Int = 0,
+    private var backingBuffer: ByteBuffer = ByteBuffer.allocate(1500)
 ) : Packet() {
-    val payload: ByteBuffer get() = _payload.duplicate().asReadOnlyBuffer()
+    protected var payloadLength: Int = payloadLength
+        private set
+    private var payloadOffset: Int = header.sizeBytes
+    private var lastKnownHeaderSizeBytes: Int = header.sizeBytes
+
+    private val mutablePayload
+        get() = backingBuffer.subBuffer(payloadOffset, payloadLength)
+
+    val payload: ByteBuffer get() = mutablePayload.asReadOnlyBuffer()
 
     override val sizeBytes: Int
-        get() = header.sizeBytes + _payload.limit()
+        get() = header.sizeBytes + payloadLength
 
-    private var dirty: Boolean = true
-
-    fun modifyPayload(block: ByteBuffer.() -> Unit) {
-        with (_payload) {
-            block()
+    protected fun addToPayload(data: ByteBuffer) {
+        if (backingBuffer.capacity() >= backingBuffer.limit() + data.limit()) {
+            val currentEndOfPayload = backingBuffer.limit()
+            backingBuffer.limit(backingBuffer.limit() + data.limit())
+            backingBuffer.put(currentEndOfPayload, data)
+            payloadLength += data.limit()
         }
-        _payload.rewind()
-        dirty = true
+        else {
+            // we want to try and avoid this ever happening, so throw for now
+            throw Exception("Buffer not big enough!")
+        }
     }
 
-    /**
-     * Since the mutable [_payload] is not exposed to subclasses, this method
-     * allows them to ensure the buffer is large enough for the requested
-     * capacity (used to make sure we have enough room to add the auth tag).
-     * TODO: should we just override sizeBytes and serializeTo in SrtpPacket
-     * instead?
-     */
-    protected fun growPayloadIfNeeded(requiredCapacity: Int) {
-        _payload = ByteBufferUtils.growIfNeeded(_payload, requiredCapacity)
+    protected fun shrinkPayload(numBytesToRemoveFromEnd: Int) {
+        backingBuffer.limit(backingBuffer.limit() - numBytesToRemoveFromEnd)
+        // We don't need to mark dirty here
     }
 
-    protected fun cloneMutablePayload(): ByteBuffer = _payload.clone()
+    protected fun cloneBackingBuffer(): ByteBuffer = backingBuffer.clone()
 
     val paddingSize: Int
         get() {
@@ -71,23 +86,30 @@ open class RtpPacket(
 
     @Suppress("UNCHECKED_CAST")
     fun <OtherType : RtpPacket>toOtherRtpPacketType(
-        factory: (RtpHeader, ByteBuffer, ByteBuffer?) -> RtpPacket
-    ): OtherType = factory(header, _payload, backingBuffer) as OtherType
+        factory: (RtpHeader, Int, ByteBuffer) -> RtpPacket
+    ): OtherType = factory(header, payloadLength, backingBuffer) as OtherType
 
     override fun clone(): RtpPacket {
-        return RtpPacket(header.clone(), _payload.clone())
+        return RtpPacket(header.clone(), payloadLength, backingBuffer.clone())
     }
 
     final override fun getBuffer(): ByteBuffer {
-        if (dirty || header.dirty) {
-            val buf = ByteBufferUtils.ensureCapacity(backingBuffer, sizeBytes)
-            serializeTo(buf)
-
-            buf.rewind()
-            backingBuffer = buf
-            dirty = false
+        //TODO; how to reset this?  we could do it from here, but really
+        // it shouldn't be the header managing this at all, since it's only
+        // from our perspective that we care about changes (changes since
+        // the PACKET last serialized).
+        if (header.dirty) {
+            if (lastKnownHeaderSizeBytes != header.sizeBytes) {
+                // The header has changed in size, we need to move the payload
+                backingBuffer.limit(header.sizeBytes + payload.limit())
+                backingBuffer.put(header.sizeBytes, payload)
+                payloadOffset = header.sizeBytes
+                lastKnownHeaderSizeBytes = header.sizeBytes
+            }
+            backingBuffer.position(0)
+            header.serializeTo(backingBuffer)
         }
-        return backingBuffer!!.duplicate()
+        return backingBuffer.duplicate()
     }
 
     override fun serializeTo(buf: ByteBuffer) {
@@ -98,8 +120,10 @@ open class RtpPacket(
     companion object {
         fun fromBuffer(buf: ByteBuffer): RtpPacket {
             val header = RtpHeader.fromBuffer(buf)
-            val payload = buf.subBuffer(header.sizeBytes)
-            return RtpPacket(header, payload, buf)
+            // We subtract 1 here because the buffer starts at position 0 and
+            // 'limit' gives us a size (not a 0 based index of the last position)
+            val payloadLength = buf.limit() - header.sizeBytes - 1
+            return RtpPacket(header, payloadLength, buf)
         }
     }
 }

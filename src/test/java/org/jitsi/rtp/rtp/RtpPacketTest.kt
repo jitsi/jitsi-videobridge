@@ -19,13 +19,29 @@ package org.jitsi.rtp.rtp
 import io.kotlintest.IsolationMode
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.BehaviorSpec
+import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.rtp.header_extensions.UnparsedHeaderExtension
+import org.jitsi.rtp.util.byteBufferOf
+import java.nio.ByteBuffer
 
 internal class RtpPacketTest : BehaviorSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
+    fun createRtpPacket(
+        header: RtpHeader = RtpHeader(),
+        payloadLength: Int = 0): RtpPacket {
+        val backingBuffer = ByteBuffer.allocate(1500)
+        repeat (payloadLength) {
+            backingBuffer.put(0x42)
+        }
+        backingBuffer.flip()
+
+        return RtpPacket(header, payloadLength, backingBuffer)
+    }
+
     init {
         given("an RTP packet") {
-            val rtpPacket = RtpPacket()
+            val rtpPacket = createRtpPacket(payloadLength = 100)
             `when`("we get its buffer") {
                 val buf = rtpPacket.getBuffer()
                 and("then modify its header") {
@@ -34,6 +50,15 @@ internal class RtpPacketTest : BehaviorSpec() {
                         val newBuf = rtpPacket.getBuffer()
                         then("the change should be reflected") {
                             RtpHeader.getSsrc(newBuf) shouldBe 123
+                        }
+                    }
+                }
+                and("then modify its header in a way that increases its size") {
+                    rtpPacket.header.addExtension(1, UnparsedHeaderExtension(1, byteBufferOf(0x01, 0x02, 0x03)))
+                    and("get its buffer again") {
+                        val newBuf = rtpPacket.getBuffer()
+                        then("the changes should be reflected") {
+                            rtpPacket.payload.limit() shouldBe 100
                         }
                     }
                 }

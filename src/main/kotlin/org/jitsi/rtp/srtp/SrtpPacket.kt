@@ -17,7 +17,6 @@
 package org.jitsi.rtp.srtp
 
 import org.jitsi.rtp.extensions.subBuffer
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.ByteBufferUtils
@@ -25,36 +24,30 @@ import java.nio.ByteBuffer
 
 class SrtpPacket(
     header: RtpHeader = RtpHeader(),
-    payload: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER,
-    backingBuffer: ByteBuffer? = null
-) : RtpPacket(header, payload, backingBuffer) {
+    payloadLength: Int = 0,
+    backingBuffer: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER
+) : RtpPacket(header, payloadLength, backingBuffer) {
 
     fun getAuthTag(tagLen: Int): ByteBuffer =
         payload.subBuffer(payload.limit() - tagLen)
 
     fun removeAuthTag(tagLen: Int) {
-        modifyPayload {
-           limit(limit() - tagLen)
-        }
+        shrinkPayload(tagLen)
     }
 
     fun addAuthTag(authTag: ByteBuffer) {
-        growPayloadIfNeeded(payload.limit() + authTag.limit())
-        modifyPayload {
-            position(limit() - authTag.limit())
-            put(authTag)
-        }
+        addToPayload(authTag)
     }
 
     override fun clone(): SrtpPacket {
-        return SrtpPacket(header.clone(), cloneMutablePayload())
+        return SrtpPacket(header.clone(), payloadLength, cloneBackingBuffer())
     }
 
     companion object {
         fun create(buf: ByteBuffer): SrtpPacket {
             val header = RtpHeader.fromBuffer(buf)
-            val payload = buf.subBuffer(header.sizeBytes)
-            return SrtpPacket(header, payload, buf)
+            val payloadLength = buf.limit() - header.sizeBytes
+            return SrtpPacket(header, payloadLength, buf)
         }
     }
 }
