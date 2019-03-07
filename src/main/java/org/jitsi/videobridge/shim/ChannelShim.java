@@ -77,7 +77,7 @@ public class ChannelShim
     /**
      * This channel's endpoint.
      */
-    private final AbstractEndpoint endpoint;
+        private final Endpoint endpoint;
 
     /**
      * The bridge's ssrc for this channel
@@ -129,7 +129,7 @@ public class ChannelShim
      */
     public ChannelShim(
             @NotNull String id,
-            @NotNull AbstractEndpoint endpoint,
+            @NotNull Endpoint endpoint,
             long localSsrc,
             ContentShim contentShim)
     {
@@ -345,7 +345,7 @@ public class ChannelShim
     /**
      * @return This {@link ChannelShim}'s endpoint.
      */
-    AbstractEndpoint getEndpoint()
+    Endpoint getEndpoint()
     {
         return endpoint;
     }

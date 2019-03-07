@@ -16,18 +16,13 @@
 package org.jitsi.videobridge;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.nlj.transform.node.*;
-import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.shim.*;
-import org.jitsi.videobridge.util.*;
-import org.jitsi.videobridge.xmpp.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 
 import java.beans.*;
@@ -73,13 +68,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     private final Conference conference;
 
-    /**
-     * The list of {@link ChannelShim}s associated with this endpoint. This
-     * allows us to expire the endpoint once all of its 'channels' have been
-     * removed.
-     */
-    protected final List<WeakReference<ChannelShim>> channelShims
-            = new LinkedList<>();
 
     private final LastNFilter lastNFilter;
 
@@ -105,11 +93,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     protected final String logPrefix;
 
     /**
-     * Public for now since the channel needs to reach in and grab it
-     */
-    public Transceiver transceiver;
-
-    /**
      * Initializes a new {@link AbstractEndpoint} instance.
      * @param conference the {@link Conference} which this endpoint is to be a
      * part of.
@@ -123,48 +106,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         logger = Logger.getLogger(classLogger, conference.getLogger());
         this.id = Objects.requireNonNull(id, "id");
         this.lastNFilter = new LastNFilter(id);
-        transceiver
-                = new Transceiver(
-                        id,
-                        TaskPools.CPU_POOL,
-                        TaskPools.CPU_POOL,
-                        TaskPools.SCHEDULED_POOL,
-                        logger);
-        transceiver.setIncomingRtpHandler(
-                new ConsumerNode("RTP receiver chain handler")
-        {
-            @Override
-            protected void consume(@NotNull PacketInfo packetInfo)
-            {
-                handleIncomingRtp(packetInfo);
-            }
-        });
-        transceiver.setIncomingRtcpHandler(
-                new ConsumerNode("RTCP receiver chain handler")
-        {
-            @Override
-            public void consume(@NotNull PacketInfo packetInfo)
-            {
-                handleIncomingRtcp(packetInfo);
-            }
-        });
-        conference.encodingsManager.subscribe(this);
         conference.addPropertyChangeListener(this);
-    }
-
-    @Override
-    public void propertyChange(PropertyChangeEvent evt)
-    {
-    }
-
-    @Override
-    public void onNewSsrcAssociation(
-            String endpointId,
-            long primarySsrc,
-            long secondarySsrc,
-            SsrcAssociationType type)
-    {
-        transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, type);
     }
 
     void speechActivityEndpointsChanged(List<String> endpoints)
@@ -189,13 +131,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         return lastNFilter.getLastNValue();
     }
 
-    public void addPayloadType(PayloadType payloadType)
-    {
-        transceiver.addPayloadType(payloadType);
-    }
-
-    public void setLocalSsrc(MediaType mediaType, long ssrc) {}
-
     //TODO(brian): the nice thing about having 'wants' as a pre-check before we forward a packet is that if
     // 'wants' returns false, we don't have to make a copy of the packet to forward down.  If, instead, we
     // had a scheme where we pass a packet reference and the egress pipeline copies once it decides the packet should
@@ -214,64 +149,9 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         return lastNFilter.wants(sourceEndpointId);
     }
 
-    /**
-     * Handle incoming RTP packets which have been fully processed by the
-     * transceiver's incoming pipeline.
-     * @param packetInfo the packet.
-     */
-    protected void handleIncomingRtp(PacketInfo packetInfo)
-    {
-        // For now, just write every packet to every channel other than ourselves
-        getConference().getEndpointsFast().forEach(endpoint -> {
-            if (endpoint == this)
-            {
-                return;
-            }
-            //TODO(brian): we don't use a copy when passing to 'wants', which makes sense, but it would be nice
-            // to be able to enforce a 'read only' version of the packet here so we can guarantee nothing is
-            // changed in 'wants'
-            if (endpoint.wants(packetInfo, getID()))
-            {
-                PacketInfo pktInfoCopy = packetInfo.clone();
-                endpoint.sendRtp(pktInfoCopy);
-            }
-        });
-    }
-
-    public void sendRtp(PacketInfo packetInfo)
-    {
-        // By default just add it to the sender's queue
-        transceiver.sendRtp(packetInfo);
-    }
-
-    protected void handleIncomingRtcp(PacketInfo packetInfo)
-    {
-        // We don't need to copy RTCP packets for each dest like we do with RTP because each one
-        // will only have a single destination
-        getConference().getEndpoints().forEach(endpoint -> {
-            if (packetInfo.getPacket() instanceof RtcpFbPacket)
-            {
-                RtcpFbPacket rtcpPacket = (RtcpFbPacket) packetInfo.getPacket();
-                if (endpoint.receivesSsrc(rtcpPacket.getMediaSourceSsrc()))
-                {
-                    endpoint.transceiver.sendRtcp(rtcpPacket);
-                }
-            }
-        });
-    }
-
     public boolean receivesSsrc(long ssrc)
     {
-        return transceiver.receivesSsrc(ssrc);
-    }
-
-    public void addReceiveSsrc(long ssrc)
-    {
-        if (logger.isDebugEnabled())
-        {
-            logger.debug(logPrefix + "Adding receive ssrc " + ssrc);
-        }
-        transceiver.addReceiveSsrc(ssrc);
+        return false;
     }
 
     /**
@@ -283,42 +163,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         return null;
     }
 
-    public void addChannel(ChannelShim channelShim)
-    {
-        synchronized (channelShims)
-        {
-            channelShims.add(new WeakReference<>(channelShim));
-        }
-    }
-
-    public void removeChannel(ChannelShim channelShim)
-    {
-        synchronized (channelShims)
-        {
-            for (Iterator<WeakReference<ChannelShim>> i = channelShims.iterator(); i.hasNext();)
-            {
-                ChannelShim existingChannelShim = i.next().get();
-                if (existingChannelShim != null && existingChannelShim.equals(channelShim)) {
-                    i.remove();
-                }
-            }
-            if (channelShims.isEmpty())
-            {
-                expire();
-            }
-        }
-    }
-
-    private void setMediaStreamTracks(MediaStreamTrackDesc[] mediaStreamTracks)
-    {
-        transceiver.setMediaStreamTracks(mediaStreamTracks);
-        firePropertyChange(ENDPOINT_CHANGED_PROPERTY_NAME, null, null);
-    }
-
-    public MediaStreamTrackDesc[] getMediaStreamTracks()
-    {
-        return transceiver.getMediaStreamTracks();
-    }
+    abstract public MediaStreamTrackDesc[] getMediaStreamTracks();
 
     /**
      * Returns the display name of this <tt>Endpoint</tt>.
@@ -408,10 +253,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     {
         logger.info(logPrefix + "Expiring.");
         this.expired = true;
-        this.transceiver.stop();
-        logger.info(transceiver.getNodeStats().prettyPrint(0));
-
-        transceiver.teardown();
 
         Conference conference = getConference();
         if (conference != null)
@@ -486,38 +327,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     public void recreateMediaStreamTracks()
     {
-        ChannelShim videoChannel = getChannelOfMediaType(MediaType.VIDEO);
-        if (videoChannel != null)
-        {
-            MediaStreamTrackDesc[] tracks =
-                    MediaStreamTrackFactory.createMediaStreamTracks(
-                            videoChannel.getSources(),
-                            videoChannel.getSourceGroups());
-            setMediaStreamTracks(tracks);
-        }
-    }
-
-    /**
-     * Gets this {@link AbstractEndpoint}'s channel of media type
-     * {@code mediaType} (although it's not strictly enforced, endpoints have
-     * at most one channel with a given media type).
-     *
-     * @param mediaType the media type of the channel.
-     *
-     * @return the channel.
-     */
-    private ChannelShim getChannelOfMediaType(MediaType mediaType)
-    {
-        return
-            channelShims.stream()
-                    .filter(Objects::nonNull)
-                    .map(WeakReference::get)
-                    .filter(
-                        channel ->
-                            channel != null &&
-                            channel.getMediaType().equals(mediaType))
-                    .findAny().orElse(null);
-
     }
 
     /**
