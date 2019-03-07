@@ -112,8 +112,6 @@ public class Endpoint
 
     private final DataChannelHandler dataChannelHandler = new DataChannelHandler();
 
-    private AudioLevelListenerImpl audioLevelListener;
-
     private CompletableFuture<Boolean> onTransportManagerSet = new CompletableFuture<>();
 
     private final EndpointMessageTransport messageTransport;
@@ -214,14 +212,13 @@ public class Endpoint
 
         messageTransport = new EndpointMessageTransport(this);
 
-        audioLevelListener = new AudioLevelListenerImpl(conference.getSpeechActivity());
         bandwidthProbing
             = new BandwidthProbing((mediaSsrc, numBytes) ->
                     Endpoint.this.transceiver.sendProbing(mediaSsrc, numBytes));
         bandwidthProbing.setDiagnosticContext(
                 transceiver.getDiagnosticContext());
         bandwidthProbing.setBitrateController(bitrateController);
-        transceiver.setAudioLevelListener(audioLevelListener);
+        transceiver.setAudioLevelListener(conference.getAudioLevelListener());
         transceiver.onBandwidthEstimateChanged(newValueBps ->
         {
             if (logger.isDebugEnabled())
