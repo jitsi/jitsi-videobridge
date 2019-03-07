@@ -15,12 +15,14 @@
  */
 package org.jitsi.videobridge.octo;
 
-import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.service.neomedia.*;
+import org.jitsi.nlj.rtp.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 
+import java.beans.*;
 import java.util.*;
+import java.util.stream.*;
 
 /**
  * Represents an endpoint in a conference, which is connected to another
@@ -28,73 +30,59 @@ import java.util.*;
  *
  * @author Boris Grozev
  */
-//TODO(brian): reimplement
-//public class OctoEndpoint
-//    extends AbstractEndpoint
-//{
-//    OctoEndpoint(Conference conference, String id)
-//    {
-//        super(conference, id);
-//    }
-//
-//    /**
-//     * {@inheritDoc}
-//     */
-//    @Override
-//    public void sendMessage(String msg)
-//    {
-//        // This is intentionally a no-op. Since a conference can have
-//        // multiple OctoEndpoint instances, but we want a single message
-//        // to be sent through Octo, the message should be sent through the
-//        // single OctoEndpoints instance.
-//    }
-//
-//    /**
-//     * {@inheritDoc}
-//     * </p>
-//     * {@link OctoEndpoint}s are added/removed solely based on signaling. An
-//     * endpoint is expired when the signaled media stream tracks for the
-//     * Octo channels do not include any tracks for this endpoint.
-//     */
-//    @Override
-//    protected void maybeExpire()
-//    {
-//        MediaStreamTrackDesc[] audioTracks
-//            = getMediaStreamTracks(MediaType.AUDIO);
-//        MediaStreamTrackDesc[] videoTracks
-//            = getMediaStreamTracks(MediaType.VIDEO);
-//
-//        if (ArrayUtils.isNullOrEmpty(audioTracks)
-//            && ArrayUtils.isNullOrEmpty(videoTracks))
-//        {
-//            expire();
-//        }
-//    }
-//
-//    /**
-//     * @return the list of all {@link MediaStreamTrackDesc} (both audio and
-//     * video) of this endpoint.
-//     */
-//    List<MediaStreamTrackDesc> getMediaStreamTracks()
-//    {
-//        List<MediaStreamTrackDesc> tracks = new LinkedList<>();
-//        tracks.addAll(Arrays.asList(getMediaStreamTracks(MediaType.AUDIO)));
-//        tracks.addAll(Arrays.asList(getMediaStreamTracks(MediaType.VIDEO)));
-//
-//        return tracks;
-//    }
-//
-//    /**
-//     * {@inheritDoc}
-//     */
-//    @Override
-//    public MediaStreamTrackDesc[] getMediaStreamTracks(MediaType mediaType)
-//    {
-//        // With Octo a channel can have tracks belonging to different endpoints,
-//        // so filter out only those that belong to this endpoint.
-//        String id = getID();
-//        return getAllMediaStreamTracks(mediaType).stream()
-//            .filter(track -> id.equals(track.getOwner()))
-//            .toArray(MediaStreamTrackDesc[]::new);
-//    }
-//}
+public class OctoEndpoint
+    extends AbstractEndpoint
+{
+    private final OctoEndpoints octoEndpoints;
+    OctoEndpoint(Conference conference, String id, OctoEndpoints octoEndpoints)
+    {
+        super(conference, id);
+        this.octoEndpoints = octoEndpoints;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void sendMessage(String msg)
+    {
+        // This is intentionally a no-op. Since a conference can have
+        // multiple OctoEndpoint instances, but we want a single message
+        // to be sent through Octo, the message should be sent through the
+        // single OctoEndpoints instance.
+    }
+
+    @Override
+    public boolean shouldExpire()
+    {
+        return ArrayUtils.isNullOrEmpty(getMediaStreamTracks());
+    }
+
+    /**
+     * @return the list of all {@link MediaStreamTrackDesc} (both audio and
+     * video) of this endpoint.
+     */
+    @Override
+    public MediaStreamTrackDesc[] getMediaStreamTracks()
+    {
+        List<MediaStreamTrackDesc> l = Arrays.stream(getConference().getTentacle().transceiver.getMediaStreamTracks())
+                .filter(t -> t.getOwner() == getID()).collect(Collectors.toList());
+        return l.toArray(new MediaStreamTrackDesc[0]);
+    }
+
+    @Override
+    public void propertyChange(PropertyChangeEvent evt)
+    {
+
+    }
+
+    @Override
+    public void onNewSsrcAssociation(
+            String epId,
+            long primarySsrc,
+            long secondarySsrc,
+            SsrcAssociationType type)
+    {
+
+    }
+}

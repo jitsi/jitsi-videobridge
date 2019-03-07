@@ -16,9 +16,15 @@
 package org.jitsi.videobridge.octo;
 
 import org.ice4j.socket.*;
+import org.jitsi.rtp.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.util.*;
 
+import java.io.*;
 import java.net.*;
+import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Implements a bridge-to-bridge (Octo) relay. This class is responsible for
@@ -29,6 +35,7 @@ import java.net.*;
  * @author Boris Grozev
  */
 public class OctoRelay
+    implements Runnable
 {
     /**
      * The {@link Logger} used by the {@link OctoRelay} class and its
@@ -40,7 +47,7 @@ public class OctoRelay
     /**
      * The socket used to send and receive Octo packets.
      */
-    private MultiplexingDatagramSocket socket;
+    private DatagramSocket socket;
 
     /**
      * The Octo relay ID which will be advertised by jitsi-videobridge.
@@ -50,10 +57,22 @@ public class OctoRelay
      * e.g. "10.0.0.1:20000"
      */
     private String relayId;
-    
+
+    /**
+     * The address to use advertise in the relay ID.
+     */
     private String publicAddress;
 
+    /**
+     * The port to use.
+     */
     private int port;
+
+    /**
+     * Maps a conference ID (as contained in Octo packets) to a packet handler.
+     */
+    private Map<String, PacketHandler> packetHandlers
+            = new ConcurrentHashMap<>();
 
     /**
      * Initializes a new {@link OctoRelay} instance, binding on a specific
@@ -64,13 +83,14 @@ public class OctoRelay
     public OctoRelay(String address, int port)
         throws UnknownHostException, SocketException
     {
-        DatagramSocket s
+        socket
             = new DatagramSocket(
                     new InetSocketAddress(InetAddress.getByName(address), port));
-        socket = new MultiplexingDatagramSocket(s, true /* persistent */);
         this.port = port;
         String id = address + ":" + port;
         setRelayId(id);
+
+        TaskPools.IO_POOL.submit(this);
     }
 
     /**
@@ -114,12 +134,161 @@ public class OctoRelay
          setRelayId(id);
     }
 
-    /**
-     * @return  the {@link MultiplexingDatagramSocket} used by this
-     * {@link OctoRelay}.
-     */
-    public MultiplexingDatagramSocket getSocket()
+    @Override
+    public void run()
     {
-        return socket;
+        while (true)
+        {
+            DatagramPacket p = getPacket(1500);
+            try
+            {
+                socket.receive(p);
+
+                handlePacket(p);
+            }
+            catch (SocketClosedException sce)
+            {
+                logger.info("Octo socket closed, stopping.");
+                break;
+            }
+            catch (IOException ioe)
+            {
+                logger.warn("Exception while reading: ", ioe);
+            }
+        }
+    }
+
+    // XXX cache
+    private DatagramPacket getPacket(int size)
+    {
+        DatagramPacket p = new DatagramPacket(new byte[size], 0, size);
+        return p;
+    }
+
+    /**
+     * Handles an Octo packet that was received from the socket.
+     * @param p the packet.
+     */
+    private void handlePacket(DatagramPacket p)
+    {
+        byte[] buf = p.getData();
+        int off = p.getOffset();
+        int len = p.getLength();
+
+        String conferenceId = OctoPacket.readConferenceId(buf, off, len);
+        if (conferenceId == null)
+        {
+            logger.warn("Invalid Octo packet, can not read conference ID.");
+            // XXX return packet to cache
+            return;
+        }
+
+        PacketHandler handler = packetHandlers.get(conferenceId);
+        if (handler == null)
+        {
+            // packet for an unknown conference
+            logger.warn("Received an Octo packet for an unknown conference: "
+                    + conferenceId);
+            // XXX return to cache
+        }
+        else
+        {
+            handler.handlePacket(
+                    buf,
+                    off + OctoPacket.OCTO_HEADER_LENGTH,
+                    len - OctoPacket.OCTO_HEADER_LENGTH);
+        }
+    }
+
+     /**
+      * Converts a "relay ID" to a socket address. The current implementation
+      * assumes that the ID has the form of "address:port".
+      * @param relayId the relay ID to convert
+      * @return the socket address encoded in {@code relayId}.
+      */
+     static SocketAddress relayIdToSocketAddress(String relayId)
+     {
+         if (relayId == null || !relayId.contains(":"))
+         {
+             return null;
+         }
+
+         try
+         {
+             String[] addressAndPort = relayId.split(":");
+             return new InetSocketAddress(
+                 addressAndPort[0], Integer.valueOf(addressAndPort[1]));
+         }
+         catch (NumberFormatException nfe)
+         {
+             return null;
+         }
+     }
+
+    void sendRtp(
+            Packet packet,
+            Set<SocketAddress> targets,
+            String conferenceId,
+            String endpointId)
+    {
+        // XXX optimize
+        int size = packet.getSizeBytes();
+        DatagramPacket datagramPacket
+                = getPacket(size + OctoPacket.OCTO_HEADER_LENGTH);
+        byte[] buf = datagramPacket.getData();
+        System.arraycopy(
+                packet.getBuffer().array(), 0,
+                buf, OctoPacket.OCTO_HEADER_LENGTH,
+                size);
+
+
+        OctoPacket.writeHeaders(
+                buf, 0,
+                true /* source is a relay */,
+                MediaType.VIDEO, // we don't care about the value anymore
+                0 /* simulcast layers info */,
+                conferenceId,
+                endpointId);
+
+        for (SocketAddress target : targets)
+        {
+            datagramPacket.setSocketAddress(target);
+            try
+            {
+                socket.send(datagramPacket);
+            }
+            catch (IOException ioe)
+            {
+                logger.warn("Failed to send packet ", ioe);
+            }
+        }
+
+    }
+
+    /**
+     * Registers a {@link PacketHandler} for a particular {@code conferenceId}.
+     * @param conferenceId the conference ID.
+     * @param handler the handler
+     */
+    void addHandler(String conferenceId, PacketHandler handler)
+    {
+        packetHandlers.put(conferenceId, handler);
+    }
+
+    /**
+     * Removes the {@link PacketHandler} for a particular {@code conderenceId}
+     * @param conferenceId the conference ID.
+     */
+    void removeHandler(String conferenceId)
+    {
+        packetHandlers.remove(conferenceId);
+    }
+
+    /**
+     * Packet handler interface.
+     */
+    interface PacketHandler
+    {
+        void handlePacket(byte[] buf, int off, int len);
     }
 }

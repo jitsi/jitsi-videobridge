@@ -414,4 +414,9 @@ public class ContentShim
 
         return true;
     }
+
+    ConferenceShim getConferenceShim()
+    {
+        return conference.getShim();
+    }
 }

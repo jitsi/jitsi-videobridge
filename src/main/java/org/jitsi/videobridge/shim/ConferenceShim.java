@@ -16,8 +16,13 @@
 package org.jitsi.videobridge.shim;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import org.jitsi.nlj.format.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.octo.*;
+import org.jitsi.videobridge.util.*;
 import org.jivesoftware.smack.packet.*;
 
 import java.io.*;
@@ -33,7 +38,13 @@ import java.util.*;
 public class ConferenceShim
 {
     /**
-     * The correcsponding {@link Conference}.
+     * The {@link Logger} used by the {@link ConferenceShim} class to print
+     * debug information.
+     */
+    private static final Logger logger = Logger.getLogger(ConferenceShim.class);
+
+    /**
+     * The corresponding {@link Conference}.
      */
     public final Conference conference;
 
@@ -179,5 +190,59 @@ public class ConferenceShim
             }
         }
         // Do we also want endpoint-s anc channel-bundle-id-s?
+    }
+
+    /**
+     * Processes an Octo channel for this conference.
+     * @param channel the channel that was received.
+     * @param mediaType the channel's media type.
+     * @return
+     */
+    public ColibriConferenceIQ.OctoChannel
+        processOctoChannel(
+                ColibriConferenceIQ.OctoChannel channel,
+                MediaType mediaType)
+    {
+        OctoTentacle tentacle = conference.getTentacle();
+
+        if (channel.getExpire() == 0)
+        {
+            tentacle.setRelays(new LinkedList<>());
+        }
+        else
+        {
+            tentacle.setRelays(channel.getRelays());
+        }
+
+        // Like for payload types, we never clear the transceiver's list of RTP
+        // header extensions. See the note in #addPayloadTypes.
+        //rtpHeaderExtensions.forEach(ext ->
+        //        endpoint.transceiver.addRtpExtension(
+        //                Byte.valueOf(ext.getID()),
+        //                new RTPExtension(ext.getURI())));
+
+
+        List<PayloadTypePacketExtension> payloadTypes = channel.getPayloadTypes();
+        payloadTypes.forEach(ext -> {
+            PayloadType pt = PayloadTypeUtil.create(ext, mediaType);
+            if (pt == null)
+            {
+                logger.warn("Unrecognized payload type " + ext.toXML());
+            }
+            else
+            {
+                tentacle.addPayloadType(pt);
+            }
+        });
+
+        if (MediaType.VIDEO.equals(mediaType))
+        {
+            tentacle.setSources(channel.getSources(), channel.getSourceGroups());
+        }
+
+        ColibriConferenceIQ.OctoChannel response
+                = new ColibriConferenceIQ.OctoChannel();
+        response.setID("octo-" + mediaType);
+        return response;
     }
 }

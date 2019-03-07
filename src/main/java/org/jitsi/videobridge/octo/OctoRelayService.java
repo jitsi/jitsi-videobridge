@@ -44,8 +44,8 @@ public class OctoRelayService
         = "org.jitsi.videobridge.octo.BIND_ADDRESS";
         
     /**
-     * The name of the configuration property which controls the public address which 
-     * will be used as part of relayId.
+     * The name of the configuration property which controls the public address
+     * which will be used as part of relayId.
      */
     public static final String PUBLIC_ADDRESS_PNAME
         = "org.jitsi.videobridge.octo.PUBLIC_ADDRESS";
