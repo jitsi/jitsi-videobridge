@@ -21,6 +21,7 @@ import org.jitsi.rtp.extensions.shiftDataLeft
 import org.jitsi.rtp.extensions.shiftDataRight
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
+import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.ByteBufferUtils
 import java.nio.ByteBuffer
 
@@ -41,7 +42,7 @@ import java.nio.ByteBuffer
  */
 class RtxPacket constructor(
     header: RtpHeader = RtpHeader(),
-    backingBuffer: ByteBuffer = ByteBuffer.allocate(1500)
+    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
 ) : RtpPacket(header, backingBuffer) {
 
     override val sizeBytes: Int

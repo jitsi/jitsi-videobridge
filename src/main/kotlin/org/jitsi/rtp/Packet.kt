@@ -17,6 +17,7 @@
 package org.jitsi.rtp
 
 import org.jitsi.rtp.extensions.clone
+import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.ByteBufferUtils
 import java.nio.ByteBuffer
 import java.util.function.Predicate
@@ -33,7 +34,7 @@ abstract class Serializable {
      * 0 and its limit at the end of the serialized data.
      */
     open fun getBuffer(): ByteBuffer {
-        val b = ByteBuffer.allocate(sizeBytes)
+        val b = BufferPool.getBuffer(sizeBytes)
         serializeTo(b)
 
         return b.rewind() as ByteBuffer

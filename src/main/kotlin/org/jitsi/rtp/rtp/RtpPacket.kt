@@ -21,6 +21,7 @@ import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.put
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
+import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.ByteBufferUtils
 import java.nio.ByteBuffer
 
@@ -35,7 +36,7 @@ import java.nio.ByteBuffer
 // need for payloadLength
 open class RtpPacket(
     val header: RtpHeader = RtpHeader(),
-    private var backingBuffer: ByteBuffer = ByteBuffer.allocate(1500)
+    private var backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
 ) : Packet() {
     protected var payloadLength: Int = backingBuffer.limit() - header.sizeBytes
         private set

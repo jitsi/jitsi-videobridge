@@ -30,7 +30,9 @@ class ByteBufferUtils {
          */
         fun ensureCapacity(buf: ByteBuffer?, requiredCapacity: Int): ByteBuffer {
             val newBuf = if (buf == null || buf.capacity() < requiredCapacity) {
-                ByteBuffer.allocate(requiredCapacity)
+                println("Had to get new buffer to match capacity: given buffer had capacity " +
+                        "${buf?.capacity()}, needed $requiredCapacity")
+                BufferPool.getBuffer(requiredCapacity)
             } else {
                 buf
             }
@@ -50,7 +52,9 @@ class ByteBufferUtils {
          */
         fun growIfNeeded(buf: ByteBuffer, requiredCapacity: Int): ByteBuffer {
             return if (buf.capacity() < requiredCapacity) {
-                val newBuf = ByteBuffer.allocate(requiredCapacity)
+                println("Had to get new buffer to grow: given buffer had capacity " +
+                        "${buf.capacity()}, needed $requiredCapacity")
+                val newBuf = BufferPool.getBuffer(requiredCapacity)
                 buf.rewind()
                 newBuf.put(buf)
 

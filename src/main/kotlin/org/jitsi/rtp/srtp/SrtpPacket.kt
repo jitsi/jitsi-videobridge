@@ -19,12 +19,13 @@ package org.jitsi.rtp.srtp
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.ByteBufferUtils
 import java.nio.ByteBuffer
 
 class SrtpPacket(
     header: RtpHeader = RtpHeader(),
-    backingBuffer: ByteBuffer = ByteBuffer.allocate(1500)
+    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
 ) : RtpPacket(header, backingBuffer) {
 
     fun getAuthTag(tagLen: Int): ByteBuffer =

@@ -18,13 +18,15 @@ package org.jitsi.rtp.rtcp.rtcpfb.fci.tcc
 
 import org.jitsi.rtp.Serializable
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
+import org.jitsi.rtp.util.BufferPool
 import java.nio.ByteBuffer
 
 abstract class ReceiveDelta : Serializable() {
     abstract var deltaMs: Double //TODO: should we be able to hold this as a long? don't think a double makes sense?
 
+    //TODO: is this still needed?
     final override fun getBuffer(): ByteBuffer {
-        val b = ByteBuffer.allocate(sizeBytes)
+        val b = BufferPool.getBuffer(sizeBytes)
         serializeTo(b)
 
         return b.rewind() as ByteBuffer

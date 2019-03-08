@@ -15,6 +15,7 @@
  */
 package org.jitsi.rtp.extensions
 
+import org.jitsi.rtp.util.BufferPool
 import unsigned.toUInt
 import java.nio.ByteBuffer
 
@@ -29,7 +30,7 @@ import java.nio.ByteBuffer
  */
 fun ByteBuffer.clone(): ByteBuffer {
     val startPosition = this.position()
-    val clone = ByteBuffer.allocate(this.capacity())
+    val clone = BufferPool.getBuffer(this.capacity())
     this.rewind()
     clone.put(this)
     this.position(startPosition)
@@ -205,7 +206,7 @@ fun ByteBuffer.compareToFromBeginning(other: ByteBuffer): Int {
  * plus [other]
  */
 operator fun ByteBuffer.plus(other: ByteBuffer): ByteBuffer {
-    val newBuf = ByteBuffer.allocate(limit() + other.limit())
+    val newBuf = BufferPool.getBuffer(limit() + other.limit())
     newBuf.put(duplicate().rewind() as ByteBuffer)
     newBuf.put(other.duplicate().rewind() as ByteBuffer)
     newBuf.flip()
