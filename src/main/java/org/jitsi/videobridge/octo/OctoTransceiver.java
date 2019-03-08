@@ -61,7 +61,7 @@ class OctoTransceiver
     /**
      * The tree of {@link Node}s which handles incoming packets.
      */
-    private final Node inputTreeRoot = createInputTree();
+    private final Node inputTreeRoot;
 
     /**
      * The set of media stream tracks that have been signaled to us.
@@ -76,6 +76,7 @@ class OctoTransceiver
     OctoTransceiver(OctoTentacle tentacle)
     {
         this.tentacle = tentacle;
+        inputTreeRoot = createInputTree();
         incomingPacketQueue = new PacketInfoQueue(
                 "octo-tranceiver-q-" + hashCode(),
                 TaskPools.CPU_POOL,
