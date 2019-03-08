@@ -17,6 +17,7 @@ package org.jitsi.videobridge.shim;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -198,31 +199,44 @@ public class ConferenceShim
      * @param mediaType the channel's media type.
      * @return
      */
-    public ColibriConferenceIQ.OctoChannel
-        processOctoChannel(
-                ColibriConferenceIQ.OctoChannel channel,
-                MediaType mediaType)
+    public void processOctoChannels(
+                @NotNull ColibriConferenceIQ.OctoChannel audioChannel,
+                @NotNull ColibriConferenceIQ.OctoChannel videoChannel)
     {
         OctoTentacle tentacle = conference.getTentacle();
 
-        if (channel.getExpire() == 0)
+        int expire
+                = Math.min(audioChannel.getExpire(), videoChannel.getExpire());
+        if (expire == 0)
         {
-            tentacle.setRelays(new LinkedList<>());
+            tentacle.expire();
         }
         else
         {
-            tentacle.setRelays(channel.getRelays());
+            Set<String> relays = new HashSet<>(audioChannel.getRelays());
+            relays.addAll(videoChannel.getRelays());
+            tentacle.setRelays(relays);
         }
+
+        Set<RTPHdrExtPacketExtension> headerExtensions
+                = new HashSet<>(audioChannel.getRtpHeaderExtensions());
+        headerExtensions.addAll(videoChannel.getRtpHeaderExtensions());
 
         // Like for payload types, we never clear the transceiver's list of RTP
         // header extensions. See the note in #addPayloadTypes.
-        channel.getRtpHeaderExtensions().forEach(ext ->
+        headerExtensions.forEach(ext ->
               tentacle.addRtpExtension(
                       Byte.valueOf(ext.getID()),
                       new RTPExtension(ext.getURI())));
 
-        List<PayloadTypePacketExtension> payloadTypes = channel.getPayloadTypes();
-        payloadTypes.forEach(ext -> {
+        Map<PayloadTypePacketExtension, MediaType> payloadTypes
+                = new HashMap<>();
+        audioChannel.getPayloadTypes()
+                .forEach(ext -> payloadTypes.put(ext, MediaType.AUDIO));
+        videoChannel.getPayloadTypes()
+                .forEach(ext -> payloadTypes.put(ext, MediaType.VIDEO));
+
+        payloadTypes.forEach((ext, mediaType) -> {
             PayloadType pt = PayloadTypeUtil.create(ext, mediaType);
             if (pt == null)
             {
@@ -234,14 +248,9 @@ public class ConferenceShim
             }
         });
 
-        if (MediaType.VIDEO.equals(mediaType))
-        {
-            tentacle.setSources(channel.getSources(), channel.getSourceGroups());
-        }
-
-        ColibriConferenceIQ.OctoChannel response
-                = new ColibriConferenceIQ.OctoChannel();
-        response.setID("octo-" + mediaType);
-        return response;
+        tentacle.setSources(
+                audioChannel.getSources(),
+                videoChannel.getSources(),
+                videoChannel.getSourceGroups());
     }
 }

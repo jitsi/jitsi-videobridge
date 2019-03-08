@@ -33,6 +33,11 @@ import java.util.stream.*;
 public class OctoEndpoint
     extends AbstractEndpoint
 {
+    /**
+     * The SSRCs that this endpoint has.
+     */
+    private final Set<Long> receiveSsrcs = new HashSet<>();
+
     private final OctoEndpoints octoEndpoints;
     OctoEndpoint(Conference conference, String id, OctoEndpoints octoEndpoints)
     {
@@ -85,4 +90,23 @@ public class OctoEndpoint
     {
 
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean receivesSsrc(long ssrc)
+    {
+        return receiveSsrcs.contains(ssrc);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void addReceiveSsrc(long ssrc)
+    {
+        receiveSsrcs.add(ssrc);
+    }
+
 }

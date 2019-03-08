@@ -49,7 +49,6 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
-import java.util.stream.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
@@ -1005,12 +1004,19 @@ public class Endpoint
 
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean receivesSsrc(long ssrc)
     {
         return transceiver.receivesSsrc(ssrc);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void addReceiveSsrc(long ssrc)
     {
         if (logger.isDebugEnabled())
