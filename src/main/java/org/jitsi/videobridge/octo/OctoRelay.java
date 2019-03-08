@@ -106,7 +106,7 @@ public class OctoRelay
      * @param address the address on which to bind.
      * @param port the port on which to bind.
      */
-    public OctoRelay(String address, int port)
+    OctoRelay(String address, int port)
         throws UnknownHostException, SocketException
     {
         socket
@@ -145,7 +145,7 @@ public class OctoRelay
     /**
     * Set the relayId
     **/
-    public void setRelayId(String id)
+    private void setRelayId(String id)
     {
         relayId = id;
     }
@@ -153,7 +153,7 @@ public class OctoRelay
     /**
     * Set the public address to be used as part of relayId
     **/
-    public void setPublicAddress(String address)
+    void setPublicAddress(String address)
     {
          publicAddress = address;
          String id = publicAddress + ":" + port;

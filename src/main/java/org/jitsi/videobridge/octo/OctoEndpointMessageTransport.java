@@ -24,7 +24,7 @@ import java.util.*;
 /**
  * Extends {@link AbstractEndpointMessageTransport} for the purposes of Octo.
  */
-public class OctoEndpointMessageTransport
+class OctoEndpointMessageTransport
     extends AbstractEndpointMessageTransport
 {
     /**
@@ -42,7 +42,7 @@ public class OctoEndpointMessageTransport
     /**
      * Initializes a new {@link AbstractEndpointMessageTransport} instance.
      */
-    public OctoEndpointMessageTransport(OctoEndpoints octoEndpoints)
+    OctoEndpointMessageTransport(OctoEndpoints octoEndpoints)
     {
         super(null);
         this.octoEndpoints = octoEndpoints;

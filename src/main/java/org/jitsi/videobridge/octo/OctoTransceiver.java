@@ -225,7 +225,7 @@ class OctoTransceiver
      * @param extensionId
      * @param rtpExtension
      */
-    public void addRtpExtension(Byte extensionId, RTPExtension rtpExtension)
+    void addRtpExtension(Byte extensionId, RTPExtension rtpExtension)
     {
         RtpExtensionAddedEvent rtpExtensionAddedEvent
                 = new RtpExtensionAddedEvent(extensionId, rtpExtension);

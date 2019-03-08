@@ -27,7 +27,7 @@ import java.util.stream.*;
  *
  * @author Boris Grozev
  */
- public class OctoEndpoints
+ class OctoEndpoints
  {
      /**
       * The {@link Logger} used by the {@link RtpChannel} class to print debug
@@ -94,7 +94,7 @@ import java.util.stream.*;
       * this does not necessarily mean that we should expire/remove it (because
       * it might have tracks in the other channel).
       */
-     public void updateEndpoints(Set<String> endpointIds)
+     void updateEndpoints(Set<String> endpointIds)
      {
          Set<String> existingEndpointIds = octoEndpointIds;
 
@@ -135,7 +135,7 @@ import java.util.stream.*;
       * Sends a message through the Octo channel.
       * @param msg the message to send.
       */
-     public void sendMessage(String msg)
+     private void sendMessage(String msg)
      {
          logger.warn("Can not send a message, no channels.");
      }
