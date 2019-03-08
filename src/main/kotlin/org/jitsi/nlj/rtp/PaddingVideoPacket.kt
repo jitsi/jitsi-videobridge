@@ -22,4 +22,4 @@ import java.nio.ByteBuffer
 class PaddingVideoPacket(
     header: RtpHeader,
     size: Int
-) : VideoRtpPacket(header, ByteBuffer.allocate(size))
+) : VideoRtpPacket(header, ByteBuffer.allocate(1500).limit(size) as ByteBuffer)
