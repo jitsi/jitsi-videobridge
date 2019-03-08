@@ -53,9 +53,9 @@ class SdesChunk(
     override fun serializeTo(buf: ByteBuffer) {
         buf.putInt(ssrc.toInt())
         sdesItems.forEach {
-            buf.put(it.getBuffer())
+            it.serializeTo(buf)
         }
-        buf.put(EmptySdesItem.getBuffer())
+        EmptySdesItem.serializeTo(buf)
         while (buf.position() % 4 != 0) {
             buf.put(0x00)
         }
