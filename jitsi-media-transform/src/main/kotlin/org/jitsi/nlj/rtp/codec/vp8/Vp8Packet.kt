@@ -18,7 +18,9 @@ package org.jitsi.nlj.rtp.codec.vp8
 
 import org.jitsi.nlj.codec.vp8.Vp8Utils
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.rtp.extensions.put
 import org.jitsi.rtp.rtp.RtpHeader
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.ByteBufferUtils
 import java.nio.ByteBuffer
 
@@ -44,6 +46,20 @@ class Vp8Packet(
 
     override fun clone(): Vp8Packet {
         val clone = Vp8Packet(header.clone(), cloneBackingBuffer())
+        clone.temporalLayerIndex = temporalLayerIndex
+        clone.spatialLayerIndex = spatialLayerIndex
+        clone.isKeyFrame = isKeyFrame
+        clone.trackEncodings = trackEncodings
+
+        return clone
+    }
+
+    override fun cloneWithBackingBuffer(backingBuffer: ByteBuffer): Vp8Packet {
+        backingBuffer.put(header.sizeBytes, payload)
+        backingBuffer.limit(header.sizeBytes + payload.limit())
+        val clone = Vp8Packet(header.clone(), backingBuffer)
+        clone.isKeyFrame = isKeyFrame
+        clone.trackEncodings = trackEncodings
         clone.temporalLayerIndex = temporalLayerIndex
         clone.spatialLayerIndex = spatialLayerIndex
 
