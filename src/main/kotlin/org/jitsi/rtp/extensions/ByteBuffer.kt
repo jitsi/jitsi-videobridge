@@ -167,6 +167,14 @@ fun ByteBuffer.decrementPosition(value: Int) {
     position(position() - value)
 }
 
+// Caller must check that capacity is large enough first
+fun ByteBuffer.increaseLimitBy(value: Int) {
+    limit(limit() + value)
+}
+fun ByteBuffer.decreaseLimitBy(value: Int) {
+    limit(limit() - value)
+}
+
 /**
  * Shifts the data from [startPos] to [endPos] [numBytes] to the right.
  * Note that this method may increase the given buffer's limit, up to
