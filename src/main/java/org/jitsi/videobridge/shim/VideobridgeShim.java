@@ -94,14 +94,9 @@ public class VideobridgeShim
 
         for (ColibriConferenceIQ.Channel channelIq : channelIqs)
         {
+            // Octo channels are handled separately.
             if (channelIq instanceof ColibriConferenceIQ.OctoChannel)
             {
-                ColibriConferenceIQ.OctoChannel responseOctoChannel
-                    = contentShim.getConferenceShim()
-                        .processOctoChannel(
-                            (ColibriConferenceIQ.OctoChannel)channelIq,
-                            contentShim.getMediaType());
-                createdOrUpdatedChannels.add(responseOctoChannel);
                 continue;
             }
 
@@ -275,6 +270,9 @@ public class VideobridgeShim
         responseConferenceIQ.setGracefulShutdown(
                 videobridge.isShutdownInProgress());
 
+        ColibriConferenceIQ.OctoChannel octoAudioChannel = null;
+        ColibriConferenceIQ.OctoChannel octoVideoChannel = null;
+
         for (ColibriConferenceIQ.Content contentIQ : conferenceIQ.getContents())
         {
              // The content element springs into existence whenever it gets
@@ -309,6 +307,26 @@ public class VideobridgeShim
                         conferenceIQ, e.condition, e.errorMessage);
             }
 
+            // We want to handle the two Octo channels together.
+            ColibriConferenceIQ.OctoChannel octoChannel
+                    = findOctoChannel(contentIQ);
+            if (octoChannel != null)
+            {
+                if (MediaType.VIDEO.equals(contentType))
+                {
+                    octoVideoChannel = octoChannel;
+                }
+                else
+                {
+                    octoAudioChannel = octoChannel;
+                }
+
+                ColibriConferenceIQ.OctoChannel octoChannelResponse
+                        = new ColibriConferenceIQ.OctoChannel();
+                octoChannelResponse.setID("octo-" + contentType);
+                responseContentIQ.addChannel(octoChannelResponse);
+            }
+
             try
             {
                 processSctpConnections(contentIQ.getSctpConnections(), contentShim)
@@ -321,6 +339,21 @@ public class VideobridgeShim
                 return IQUtils.createError(
                         conferenceIQ, e.condition, e.errorMessage);
             }
+        }
+
+        if (octoAudioChannel != null && octoVideoChannel != null)
+        {
+            conferenceShim.processOctoChannels(
+                    octoAudioChannel, octoVideoChannel);
+
+        }
+        else if (octoAudioChannel != null || octoVideoChannel != null)
+        {
+            logger.error("Octo must be enabled for audio and video together");
+            return IQUtils.createError(
+                    conferenceIQ,
+                    XMPPError.Condition.bad_request,
+                    "Octo only enabled for one media type");
         }
 
         for (ColibriConferenceIQ.ChannelBundle channelBundleIq
@@ -374,6 +407,23 @@ public class VideobridgeShim
         responseConferenceIQ.setType(IQ.Type.result);
 
         return responseConferenceIQ;
+    }
+
+    /**
+     * Gets the first {@code OctoChannel} in the given content, or null.
+     */
+    private static ColibriConferenceIQ.OctoChannel findOctoChannel(
+            ColibriConferenceIQ.Content content)
+    {
+        for (ColibriConferenceIQ.Channel channel : content.getChannels())
+        {
+            if (channel instanceof ColibriConferenceIQ.OctoChannel)
+            {
+                return (ColibriConferenceIQ.OctoChannel) channel;
+            }
+        }
+
+        return null;
     }
 
     static class IqProcessingException extends Exception

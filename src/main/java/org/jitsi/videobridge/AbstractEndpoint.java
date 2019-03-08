@@ -17,17 +17,13 @@ package org.jitsi.videobridge;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import org.jitsi.nlj.*;
-import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
-import org.jitsi.videobridge.shim.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 
 import java.beans.*;
 import java.io.*;
-import java.lang.ref.*;
 import java.util.*;
 
 /**
@@ -149,10 +145,18 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         return lastNFilter.wants(sourceEndpointId);
     }
 
-    public boolean receivesSsrc(long ssrc)
-    {
-        return false;
-    }
+    /**
+     * Checks whether a specific SSRC belongs to this endpoint.
+     * @param ssrc
+     * @return
+     */
+    public abstract boolean receivesSsrc(long ssrc);
+
+    /**
+     * Adds an SSRC to this endpoint.
+     * @param ssrc
+     */
+    public abstract void addReceiveSsrc(long ssrc);
 
     /**
      * @return the {@link AbstractEndpointMessageTransport} associated with

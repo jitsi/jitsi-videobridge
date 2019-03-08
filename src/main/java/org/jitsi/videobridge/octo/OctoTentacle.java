@@ -21,6 +21,7 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -41,6 +42,13 @@ import static org.jitsi.videobridge.AbstractEndpoint.ENDPOINT_CHANGED_PROPERTY_N
  */
 public class OctoTentacle extends PropertyChangeNotifier
 {
+    /**
+     * The {@link Logger} used by the {@link OctoTentacle} class and its
+     * instances to print debug information.
+     */
+    private static final Logger logger
+            = Logger.getLogger(OctoTentacle.class);
+
     /**
      * The conference for this {@link OctoTentacle}.
      */
@@ -122,7 +130,7 @@ public class OctoTentacle extends PropertyChangeNotifier
      * @param relays the list of relay IDs, which are converted to addresses
      * using the logic in {@link OctoRelay}.
      */
-    public void setRelays(List<String> relays)
+    public void setRelays(Collection<String> relays)
     {
         Objects.requireNonNull(
                 relay,
@@ -163,28 +171,51 @@ public class OctoTentacle extends PropertyChangeNotifier
      * @param sources the list of sources.
      * @param sourceGroups the list of source groups.
      */
-    public void setSources(List<SourcePacketExtension> sources, List<SourceGroupPacketExtension> sourceGroups)
+    public void setSources(
+            List<SourcePacketExtension> audioSources,
+            List<SourcePacketExtension> videoSources,
+            List<SourceGroupPacketExtension> videoSourceGroups)
     {
         MediaStreamTrackDesc[] tracks =
-                MediaStreamTrackFactory.createMediaStreamTracks(
-                        sources,
-                        sourceGroups);
-        if (transceiver.setMediaStreamTracks(tracks))
-        {
-            // Octo endpoints are created and expired solely based on signaling
-            // of sources. We maintain endpoint objects for those endpoints
-            // which are the owner of a track.
-            Set<String> newEndpointIds
-                = Arrays.stream(transceiver.getMediaStreamTracks())
-                    .map(MediaStreamTrackDesc::getOwner)
-                    .collect(Collectors.toSet());
-            octoEndpoints.updateEndpoints(newEndpointIds);
+            MediaStreamTrackFactory.createMediaStreamTracks(
+                    videoSources, videoSourceGroups);
+        transceiver.setMediaStreamTracks(tracks);
 
+        List<SourcePacketExtension> allSources = new LinkedList<>(audioSources);
+        allSources.addAll(videoSources);
+
+        Set<String> endpointIds
+                = allSources.stream()
+                    .map(source -> MediaStreamTrackFactory.getOwner(source))
+                    .collect(Collectors.toSet());
+
+        if (octoEndpoints.setEndpoints(endpointIds))
+        {
             firePropertyChange(
-                    ENDPOINT_CHANGED_PROPERTY_NAME,
-                    null,
-                    null);
+                ENDPOINT_CHANGED_PROPERTY_NAME,
+                null,
+                null);
         }
+
+        allSources.forEach(source ->
+        {
+            String owner = MediaStreamTrackFactory.getOwner(source);
+            if (owner == null)
+            {
+                logger.warn("Source has no owner. Can not add receive SSRC.");
+                return;
+            }
+
+            AbstractEndpoint endpoint = conference.getEndpoint(owner);
+            if (endpoint == null)
+            {
+                logger.warn(
+                    "No endpoint for a source's owner. Can not add receive SSRC.");
+                return;
+            }
+
+            endpoint.addReceiveSsrc(source.getSSRC());
+        });
     }
 
     /**
@@ -228,5 +259,14 @@ public class OctoTentacle extends PropertyChangeNotifier
     public void addRtpExtension(Byte extensionId, RTPExtension rtpExtension)
     {
         transceiver.addRtpExtension(extensionId, rtpExtension);
+    }
+
+    /**
+     * Expires the Octo-related parts of a confence.
+     */
+    public void expire()
+    {
+        setRelays(new LinkedList<>());
+        octoEndpoints.setEndpoints(Collections.EMPTY_SET);
     }
 }

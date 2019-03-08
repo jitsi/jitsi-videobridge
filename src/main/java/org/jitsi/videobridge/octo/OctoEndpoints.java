@@ -87,32 +87,29 @@ import java.util.stream.*;
 
      /**
       * Updates the list of {@link OctoEndpoint}s maintained by this instance.
-      * The list {@code endpointIds} specifies the current list of endpoints
-      * associated with a particular channel. If the list contains IDs which
-      * this instance does not know about, then an associated endpoint should
-      * be added. But if an {@link OctoEndpoint}'s ID is missing from the list,
-      * this does not necessarily mean that we should expire/remove it (because
-      * it might have tracks in the other channel).
       */
-     void updateEndpoints(Set<String> endpointIds)
+     boolean setEndpoints(Set<String> endpointIds)
      {
-         Set<String> existingEndpointIds = octoEndpointIds;
+         Set<String> toExpire = new HashSet<>(octoEndpointIds);
+         toExpire.removeAll(endpointIds);
 
-         // Create new OctoEndpoint instances for endpoint IDs which we
-         // don't yet have in the conference.
-         endpointIds.forEach(endpointId ->
+         Set<String> toCreate = new HashSet<>(endpointIds);
+         toCreate.removeAll(octoEndpointIds);
+
+         toCreate.forEach(this::addEndpoint);
+         toExpire.forEach(id ->
          {
-             if (!existingEndpointIds.contains(endpointId))
+             AbstractEndpoint endpoint = conference.getEndpoint(id);
+             if (endpoint != null)
              {
-                 addEndpoint(endpointId);
+                 endpoint.expire();
              }
          });
 
+
          octoEndpointIds = Collections.unmodifiableSet(endpointIds);
 
-         // The endpoints that are not signaled anymore will be left to be
-         // expired by the expire thread. We could expire them right now.
-         // Should we?
+         return !toCreate.isEmpty() || !toExpire.isEmpty();
      }
 
      /**
