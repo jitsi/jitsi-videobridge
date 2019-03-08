@@ -45,6 +45,10 @@ open class RtpPacket(
     private val mutablePayload
         get() = backingBuffer.subBuffer(payloadOffset, payloadLength)
 
+    //TODO: some functions (vp8 keyframe detection) need to be adapted to work
+    // on a bytebuffer directly so they can work with a read only buffer
+    fun TEMPORARYgetMutablePayload(): ByteBuffer = mutablePayload.duplicate()
+
     val payload: ByteBuffer get() = mutablePayload.asReadOnlyBuffer()
 
     override val sizeBytes: Int
