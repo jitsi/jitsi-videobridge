@@ -23,6 +23,7 @@ import org.jitsi.nlj.Stoppable
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.NodeVisitor
+import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.PacketPredicate
@@ -234,7 +235,12 @@ abstract class FilterNode(
     protected abstract fun accept(packetInfo: PacketInfo): Boolean
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
-        return if (accept(packetInfo)) packetInfo else null
+        return if (accept(packetInfo)) {
+            packetInfo
+        } else {
+            BufferPool.returnBuffer(packetInfo.packet.getBuffer())
+            null
+        }
     }
 }
 

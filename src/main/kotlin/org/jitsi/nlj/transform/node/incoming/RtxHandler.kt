@@ -24,6 +24,7 @@ import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
+import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
@@ -65,6 +66,10 @@ class RtxHandler : TransformerNode("RTX handler") {
             if (rtxPacket.payload.limit() - rtxPacket.paddingSize < 2) {
                 logger.cdebug { "RTX packet is padding, ignore" }
                 numPaddingPacketsReceived++
+                //TODO: we can't return the buffer from the parent node, as many things
+                // may return null and that does not necessarily mean we're done with
+                // the packet (e.g. a consumer)
+                BufferPool.returnBuffer(rtxPacket.getBuffer())
                 return null
             }
 
