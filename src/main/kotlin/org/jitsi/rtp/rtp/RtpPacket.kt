@@ -102,6 +102,14 @@ open class RtpPacket(
         return RtpPacket(header.clone(), backingBuffer.clone())
     }
 
+    //TODO: do this in such a way that we force subclasses to implement it
+    open fun cloneWithBackingBuffer(backingBuffer: ByteBuffer): RtpPacket {
+        // Write the payload into the given backing buffer
+        backingBuffer.put(header.sizeBytes, payload)
+        backingBuffer.limit(header.sizeBytes + payload.limit())
+        return RtpPacket(header.clone(), backingBuffer)
+    }
+
     final override fun getBuffer(): ByteBuffer {
         //TODO; how to reset this?  we could do it from here, but really
         // it shouldn't be the header managing this at all, since it's only
