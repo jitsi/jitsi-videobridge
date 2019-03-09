@@ -136,16 +136,23 @@ abstract class RtcpPacket(
      * up to date
      */
     private fun synchronizeDataToBackingBufferIfNeeded() {
-        //TODO: only update header when headerdirty = true,
-        // only payload when payloaddirty = true
-        if (payloadDirty || headerDirty) {
-            updateHeaderFields()
-            _header.serializeTo(backingBuffer)
-            serializePayloadDataInto(backingBuffer)
-            backingBuffer.flip()
-
-            payloadDirty = false
-            headerDirty = false
+        if (headerDirty || payloadDirty) {
+            if (headerDirty) {
+                updateHeaderFields()
+                _header.serializeTo(backingBuffer)
+                headerDirty = false
+            }
+            if (payloadDirty) {
+                backingBuffer.position(_header.sizeBytes)
+                serializePayloadDataInto(backingBuffer)
+                // The header length never changes, so it
+                // changing can't affect the length but
+                // the payload's length does, so make sure we
+                // update backingBuffer.limit() here
+                backingBuffer.flip()
+                payloadDirty = false
+            }
+            backingBuffer.rewind()
         }
     }
 
