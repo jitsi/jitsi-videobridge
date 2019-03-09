@@ -609,7 +609,6 @@ public class SRTPCryptoContext
                 // Update the rollover counter and highest sequence number if
                 // necessary.
                 update(seqNum, guessedIndex);
-                //TODO(brian): re-use buffer
                 return srtpPacket.toOtherRtpPacketType(RtpPacket::new);
             }
             else

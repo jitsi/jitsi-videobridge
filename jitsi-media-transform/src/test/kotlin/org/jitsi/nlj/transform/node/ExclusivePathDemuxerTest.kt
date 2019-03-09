@@ -26,6 +26,7 @@ import org.jitsi.rtp.PacketPredicate
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtp.RtpPacket
+import java.nio.ByteBuffer
 
 internal class ExclusivePathDemuxerTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -37,8 +38,11 @@ internal class ExclusivePathDemuxerTest : ShouldSpec() {
         }
     }
 
-    private class DummyRtcpPacket : RtcpPacket(RtcpHeader(), null) {
-        override val sizeBytes: Int = 0
+    private class DummyRtcpPacket : RtcpPacket() {
+        override val payloadDataSize: Int = 0
+        override fun serializePayloadDataInto(backingBuffer: ByteBuffer) {
+
+        }
         override fun clone(): Packet {
             return DummyRtcpPacket()
         }

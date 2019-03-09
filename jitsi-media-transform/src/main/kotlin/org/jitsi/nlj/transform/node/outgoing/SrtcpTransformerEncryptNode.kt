@@ -25,7 +25,6 @@ import java.nio.ByteBuffer
 
 class SrtcpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTCP Encrypt wrapper") {
     private var numEncryptFailures = 0
-    private var TEMPnumOut = 0
     override fun doTransform(pkts: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo> {
         val encryptedPackets = mutableListOf<PacketInfo>()
         pkts.forEachAs<RtcpPacket> { pktInfo, rtcpPacket ->
@@ -37,10 +36,6 @@ class SrtcpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTCP Encrypt w
                 numEncryptFailures++
             }
         }
-        TEMPnumOut += encryptedPackets.size
-        if (encryptedPackets.size < pkts.size) {
-            println("blah")
-        }
         return encryptedPackets
     }
 
@@ -49,7 +44,6 @@ class SrtcpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTCP Encrypt w
         return NodeStatsBlock(name).apply {
             addAll(parentStats)
             addStat("num encrypt failures: $numEncryptFailures")
-            addStat("temp num out: $TEMPnumOut")
         }
     }
 }

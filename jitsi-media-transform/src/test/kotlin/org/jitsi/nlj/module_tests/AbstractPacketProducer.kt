@@ -19,8 +19,8 @@ import io.pkts.Pcap
 import io.pkts.packet.Packet
 import io.pkts.packet.UDPPacket
 import io.pkts.protocol.Protocol
+import org.jitsi.nlj.util.BufferPool
 import org.jitsi.rtp.UnparsedPacket
-import org.jitsi.rtp.util.ByteBufferUtils
 import java.nio.ByteBuffer
 import java.util.concurrent.TimeUnit
 
@@ -49,14 +49,16 @@ class PcapPacketProducer(
 
     companion object {
         private fun translateToUnparsedPacket(pktsPacket: Packet): UnparsedPacket {
+            // We always allocate a buffer with capacity 1500, so the packet has room to 'grow'
+            val packetBuf = BufferPool.getBuffer(1500)
             val buf = if (pktsPacket.hasProtocol(Protocol.UDP)) {
                 val udpPacket = pktsPacket.getPacket(Protocol.UDP) as UDPPacket
-                ByteBuffer.wrap(udpPacket.payload.array)
+                packetBuf.put(udpPacket.payload.array).flip() as ByteBuffer
             } else {
                 // When capturing on the loopback interface, the packets have a null ethernet
                 // frame which messes up the pkts libary's parsing, so instead use a hack to
                 // grab the buffer directly
-                ByteBufferUtils.wrapSubArray(pktsPacket.payload.rawArray, 32, pktsPacket.payload.rawArray.size - 32)
+                packetBuf.put(pktsPacket.payload.rawArray, 32, pktsPacket.payload.rawArray.size - 32).flip() as ByteBuffer
             }
             return UnparsedPacket(buf)
         }

@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.rtp
 
+import org.jitsi.nlj.util.BufferPool
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.ByteBufferUtils
@@ -22,5 +23,5 @@ import java.nio.ByteBuffer
 
 class AudioRtpPacket(
     header: RtpHeader = RtpHeader(),
-    backingBuffer: ByteBuffer = ByteBuffer.allocate(1500)
+    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
 ) : RtpPacket(header, backingBuffer)

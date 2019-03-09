@@ -19,7 +19,6 @@ import org.bouncycastle.crypto.*;
 import org.bouncycastle.crypto.engines.*;
 import org.jitsi.bccontrib.macs.*;
 import org.jitsi.impl.neomedia.transform.srtp.*;
-import org.jitsi.service.neomedia.*;
 
 import java.nio.*;
 import java.util.*;

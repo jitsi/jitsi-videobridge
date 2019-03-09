@@ -39,6 +39,7 @@ import org.jitsi.nlj.transform.node.incoming.VideoParser
 import org.jitsi.nlj.transform.node.incoming.Vp8Parser
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
+import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.cerror
@@ -49,7 +50,7 @@ import org.jitsi.rtp.PacketPredicate
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpIterator
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.rtp.srtcp.SrtcpPacket
+import org.jitsi.rtp.srtcp.AuthenticatedSrtcpPacket
 import org.jitsi.rtp.srtp.SrtpPacket
 import org.jitsi.rtp.srtp.SrtpProtocolPacket
 import org.jitsi.rtp.util.RtpProtocol
@@ -199,9 +200,12 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     predicate = PacketPredicate { RtpProtocol.isRtcp(it.getBuffer()) }
                     path = pipeline {
                         var prevRtcpPacket: Packet? = null
-                        node(PacketParser("SRTCP parser") { SrtcpPacket.create(it.getBuffer()) } )
+                        node(PacketParser("SRTCP parser") { AuthenticatedSrtcpPacket.create(it.getBuffer()) } )
                         node(srtcpDecryptWrapper)
-                        simpleNode("RTCP pre-parse cache ${hashCode()}") { packetInfo ->
+                        simpleNode("RTCP pre-parse cache $id") { packetInfo ->
+                            prevRtcpPacket?.let {
+                                BufferPool.returnBuffer(it.getBuffer())
+                            }
                             prevRtcpPacket = packetInfo.packet.clone()
                             packetInfo
                         }
@@ -213,10 +217,11 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                         val compoundRtcpPackets = RtcpIterator(packetInfo.packet.getBuffer()).getAll()
                                         compoundRtcpPackets.forEach {
                                             // For each compound RTCP packet, create a new PacketInfo
-                                            val splitPacket = PacketInfo(it, timeline = packetInfo.timeline.clone())
+                                            val splitPacket = PacketInfo(it.clone(), timeline = packetInfo.timeline.clone())
                                             splitPacket.receivedTime = packetInfo.receivedTime
                                             outPackets.add(splitPacket)
                                         }
+                                        BufferPool.returnBuffer(packetInfo.packet.getBuffer())
                                         return outPackets
                                     }
                                     catch (e: Exception) {
@@ -278,7 +283,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
 
     override fun enqueuePacket(p: PacketInfo) {
-//        logger.cinfo { "Receiver ${hashCode()} enqueing data" }
+//        logger.cinfo { "Receiver $id enqueing data" }
         bytesReceived += p.packet.sizeBytes
         p.addEvent(PACKET_QUEUE_ENTRY_EVENT)
         incomingPacketQueue.add(p)

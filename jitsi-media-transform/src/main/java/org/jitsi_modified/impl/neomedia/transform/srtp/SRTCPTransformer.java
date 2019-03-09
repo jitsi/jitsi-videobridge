@@ -177,14 +177,14 @@ public class SRTCPTransformer
     @Override
     public Packet reverseTransform(Packet packet)
     {
-        SrtcpPacket srtcpPacket = (SrtcpPacket)packet;
-        SRTCPCryptoContext context = getContext((int)srtcpPacket.getHeader().getSenderSsrc(), reverseFactory);
+        AuthenticatedSrtcpPacket authenticatedSrtcpPacket = (AuthenticatedSrtcpPacket) packet;
+        SRTCPCryptoContext context = getContext((int)authenticatedSrtcpPacket.getHeader().getSenderSsrc(), reverseFactory);
 
         if (context == null)
         {
             return null;
         }
-        return context.reverseTransformPacket(srtcpPacket);
+        return context.reverseTransformPacket(authenticatedSrtcpPacket);
     }
 
     /**

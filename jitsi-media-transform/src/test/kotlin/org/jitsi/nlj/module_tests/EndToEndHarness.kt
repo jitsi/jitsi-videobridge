@@ -18,8 +18,10 @@ package org.jitsi.nlj.module_tests
 
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.safeShutdown
 import org.jitsi.test_utils.Pcaps
+import java.nio.ByteBuffer
 import java.time.Duration
 import java.util.concurrent.Executors
 
@@ -34,9 +36,23 @@ import java.util.concurrent.Executors
  * probing, or other behaviors)
  */
 
-
 fun main() {
     val pcap = Pcaps.Incoming.ONE_PARTICIPANT_RTP_RTCP_SIM_RTX
+
+    var numBuffersRequested = 0
+    fun getBuffer(size: Int): ByteBuffer {
+        numBuffersRequested++
+        return ByteBuffer.allocate(size)
+    }
+    var numBuffersReturned = 0
+    fun returnBuffer(buf: ByteBuffer) {
+        numBuffersReturned++
+    }
+    BufferPool.getBuffer = ::getBuffer
+    BufferPool.returnBuffer = ::returnBuffer
+    org.jitsi.rtp.util.BufferPool.getBuffer = ::getBuffer
+    org.jitsi.rtp.util.BufferPool.returnBuffer = ::returnBuffer
+
     val producer = PcapPacketProducer(pcap.filePath)
 
     val backgroundExecutor = Executors.newSingleThreadScheduledExecutor()
@@ -70,6 +86,13 @@ fun main() {
         }
     }
 
+    sender.onOutgoingPacket(object : PacketHandler {
+        override fun processPacket(packetInfo: PacketInfo) {
+            BufferPool.returnBuffer(packetInfo.packet.getBuffer())
+        }
+    })
+
+
     producer.run()
 
     receiver.stop()
@@ -79,4 +102,6 @@ fun main() {
 
     println(receiver.getNodeStats().prettyPrint())
     println(sender.getNodeStats().prettyPrint())
+
+    println("gave out $numBuffersRequested buffers, returned $numBuffersReturned")
 }
