@@ -50,7 +50,8 @@ open class RtpPacket(
     // on a bytebuffer directly so they can work with a read only buffer
     fun TEMPORARYgetMutablePayload(): ByteBuffer = mutablePayload.duplicate()
 
-    val payload: ByteBuffer get() = mutablePayload.asReadOnlyBuffer()
+    val payload: ByteBuffer
+        get() = mutablePayload.asReadOnlyBuffer()
 
     override val sizeBytes: Int
         get() = header.sizeBytes + payloadLength
@@ -75,7 +76,7 @@ open class RtpPacket(
     }
 
     fun modifyPayloadData(block: ByteBuffer.() -> Unit) {
-        with (mutablePayload.duplicate()) {
+        with (mutablePayload) {
             block()
         }
     }
