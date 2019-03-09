@@ -19,12 +19,13 @@ import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc
 import org.jitsi.rtp.extensions.put
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.ByteBufferUtils
 import java.nio.ByteBuffer
 
 open class VideoRtpPacket(
     header: RtpHeader = RtpHeader(),
-    backingBuffer: ByteBuffer = ByteBuffer.allocate(1500)
+    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
 ) : RtpPacket(header, backingBuffer) {
     var isKeyFrame: Boolean = false
     var trackEncodings: Array<RTPEncodingDesc>? = null

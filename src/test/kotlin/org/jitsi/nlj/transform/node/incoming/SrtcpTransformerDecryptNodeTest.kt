@@ -18,6 +18,7 @@ package org.jitsi.nlj.transform.node.incoming
 
 import io.kotlintest.IsolationMode
 import io.kotlintest.should
+import io.kotlintest.shouldNotBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.resources.srtp_samples.SrtpSample
 import org.jitsi.nlj.srtp.SrtpUtil
@@ -38,6 +39,7 @@ internal class SrtcpTransformerDecryptNodeTest : ShouldSpec() {
             val decryptedPacket = srtcpTransformer.reverseTransform(SrtpSample.incomingEncryptedRtcpPacket)
 
             should("decrypt the data correctly") {
+                decryptedPacket shouldNotBe null
                 decryptedPacket.getBuffer() should haveSameContentAs(SrtpSample.expectedDecryptedRtcpData)
             }
         }

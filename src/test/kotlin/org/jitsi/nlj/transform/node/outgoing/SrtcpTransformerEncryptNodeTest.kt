@@ -23,6 +23,8 @@ import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.resources.srtp_samples.SrtpSample
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.test_utils.matchers.haveSameContentAs
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbNackPacket
+import org.jitsi.rtp.srtcp.AuthenticatedSrtcpPacket
 
 internal class SrtcpTransformerEncryptNodeTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -36,9 +38,21 @@ internal class SrtcpTransformerEncryptNodeTest : ShouldSpec() {
 
     init {
         "encrypting a packet" {
-            val encryptedPacket = srtcpTransformer.transform(SrtpSample.outgoingUnencryptedRtcpPacket)
-            should("encrypt the data correctly") {
-                encryptedPacket.getBuffer() should haveSameContentAs(SrtpSample.expectedEncryptedRtcpData)
+            "created from a buffer" {
+                val encryptedPacket = srtcpTransformer.transform(SrtpSample.outgoingUnencryptedRtcpPacket)
+                should("encrypt the data correctly") {
+                    encryptedPacket.getBuffer() should haveSameContentAs(SrtpSample.expectedEncryptedRtcpData)
+                }
+            }
+            "created from values" {
+                val packet =
+                    RtcpFbNackPacket.fromValues(mediaSourceSsrc = 123, missingSeqNums = (10..20 step 2).toSortedSet())
+                packet.getBuffer()
+                val encryptedPacket = srtcpTransformer.transform(packet.clone())
+                should("result in all header fields being correct") {
+                    encryptedPacket as AuthenticatedSrtcpPacket
+                    encryptedPacket.header.length shouldBe packet.header.length
+                }
             }
         }
     }
