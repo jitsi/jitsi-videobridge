@@ -18,6 +18,7 @@ package org.jitsi.nlj.rtp.codec.vp8
 
 import org.jitsi.nlj.codec.vp8.Vp8Utils
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.util.BufferPool
 import org.jitsi.rtp.extensions.put
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
@@ -26,7 +27,7 @@ import java.nio.ByteBuffer
 
 class Vp8Packet(
     header: RtpHeader = RtpHeader(),
-    backingBuffer: ByteBuffer = ByteBuffer.allocate(1500)
+    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
 ) : VideoRtpPacket(header, backingBuffer) {
     var temporalLayerIndex: Int = -1
     /**

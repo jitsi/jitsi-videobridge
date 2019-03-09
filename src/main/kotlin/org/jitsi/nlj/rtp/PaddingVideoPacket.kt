@@ -16,10 +16,11 @@
 
 package org.jitsi.nlj.rtp
 
+import org.jitsi.nlj.util.BufferPool
 import org.jitsi.rtp.rtp.RtpHeader
 import java.nio.ByteBuffer
 
 class PaddingVideoPacket(
     header: RtpHeader,
     size: Int
-) : VideoRtpPacket(header, ByteBuffer.allocate(1500).limit(size) as ByteBuffer)
+) : VideoRtpPacket(header, BufferPool.getBuffer(1500).limit(size) as ByteBuffer)
