@@ -199,7 +199,7 @@ class UnparsedHeaderExtension(
 
 
     override val dataSizeBytes: Int
-        get() = data.limit()
+        get() = _data.limit()
 
     override fun serializeData(buf: ByteBuffer) {
         buf.put(data)
