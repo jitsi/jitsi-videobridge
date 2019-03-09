@@ -19,6 +19,7 @@ import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.rtcpfb.fci.Pli
+import org.jitsi.rtp.util.BufferPool
 import java.nio.ByteBuffer
 
 /**
@@ -29,7 +30,7 @@ import java.nio.ByteBuffer
 class RtcpFbPliPacket(
     header: RtcpHeader = RtcpHeader(),
     mediaSourceSsrc: Long = -1,
-    backingBuffer: ByteBuffer? = null
+    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
 ) : PayloadSpecificFbPacket(header.apply { reportCount = FMT }, mediaSourceSsrc, Pli(), backingBuffer) {
 
     override fun clone(): Packet {

@@ -18,13 +18,14 @@ package org.jitsi.rtp.rtcp.rtcpfb
 
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.rtcpfb.fci.FeedbackControlInformation
+import org.jitsi.rtp.util.BufferPool
 import java.nio.ByteBuffer
 
 abstract class TransportLayerFbPacket(
     header: RtcpHeader = RtcpHeader(),
     mediaSourceSsrc: Long = -1,
     fci: FeedbackControlInformation,
-    backingBuffer: ByteBuffer? = null
+    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
 ) : RtcpFbPacket(header.apply { packetType = PT }, mediaSourceSsrc, fci, backingBuffer) {
     companion object {
         const val PT = 205

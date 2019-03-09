@@ -77,9 +77,21 @@ class ByteBufferUtils {
     }
 }
 
+//TODO: i think these should only be used for tests.  Move them?
 fun byteBufferOf(vararg elements: Byte): ByteBuffer = ByteBuffer.wrap(byteArrayOf(*elements))
 
 fun byteBufferOf(vararg elements: Number): ByteBuffer {
     val bytes = elements.map { it.toByte() }.toByteArray()
     return ByteBuffer.wrap(bytes)
+}
+
+/**
+ * Create a buffer with capacity [capacity] and data [elements].
+ * Limit will be set to the number of given elements
+ */
+fun byteBufferOfWithCapacity(capacity: Int, vararg elements: Number): ByteBuffer {
+    val buf = ByteBuffer.allocate(capacity)
+    elements.map { buf.put(it.toByte()) }
+    buf.flip()
+    return buf
 }

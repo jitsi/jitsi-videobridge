@@ -70,6 +70,7 @@ open class RtpPacket(
 
     protected fun shrinkPayload(numBytesToRemoveFromEnd: Int) {
         backingBuffer.limit(backingBuffer.limit() - numBytesToRemoveFromEnd)
+        payloadLength -= numBytesToRemoveFromEnd
         // We don't need to mark dirty here
     }
 
@@ -124,7 +125,7 @@ open class RtpPacket(
                 payloadOffset = header.sizeBytes
                 lastKnownHeaderSizeBytes = header.sizeBytes
             }
-            backingBuffer.position(0)
+            backingBuffer.rewind()
             header.serializeTo(backingBuffer)
         }
         return backingBuffer.duplicate()

@@ -48,5 +48,14 @@ class RtpUtils {
                 }
             }
         }
+        /**
+         * [sizeBytes] MUST including padding (i.e. it should be 32-bit word aligned)
+         */
+        fun calculateRtcpLengthFieldValue(sizeBytes: Int): Int {
+            if (sizeBytes % 4 != 0) {
+                throw Exception("Invalid RTCP size value")
+            }
+            return (sizeBytes / 4) - 1
+        }
     }
 }

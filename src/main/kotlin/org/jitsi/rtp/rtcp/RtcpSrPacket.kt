@@ -19,6 +19,8 @@ package org.jitsi.rtp.rtcp
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.Serializable
+import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.util.BufferPool
 import java.nio.ByteBuffer
 import java.util.Objects
 
@@ -204,13 +206,13 @@ class RtcpSrPacket(
     header: RtcpHeader = RtcpHeader(),
     val senderInfo: SenderInfo = SenderInfo(),
     val reportBlocks: List<RtcpReportBlock> = listOf(),
-    backingBuffer: ByteBuffer? = null
+    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
 ) : RtcpPacket(header.apply { packetType = PT; reportCount = reportBlocks.size }, backingBuffer) {
-    override val sizeBytes: Int
-        get() = header.sizeBytes + senderInfo.sizeBytes + (reportBlocks.size * RtcpReportBlock.SIZE_BYTES)
 
-    override fun serializeTo(buf: ByteBuffer) {
-        super.serializeTo(buf)
+    override val payloadDataSize: Int
+        get() = senderInfo.sizeBytes + (reportBlocks.size * RtcpReportBlock.SIZE_BYTES)
+
+    override fun serializePayloadDataInto(buf: ByteBuffer) {
         senderInfo.serializeTo(buf)
         reportBlocks.forEach { it.serializeTo(buf) }
     }
@@ -238,12 +240,14 @@ class RtcpSrPacket(
         const val PT: Int = 200
 
         fun fromBuffer(buf: ByteBuffer): RtcpSrPacket {
+            val bufStartPosition = buf.position()
             val header = RtcpHeader.fromBuffer(buf)
             val senderInfo = SenderInfo.fromBuffer(buf)
             val reportBlocks = (0 until header.reportCount)
                     .map { RtcpReportBlock.fromBuffer(buf) }
                     .toMutableList()
-            return RtcpSrPacket(header, senderInfo, reportBlocks, buf)
+            return RtcpSrPacket(header, senderInfo, reportBlocks,
+                buf.subBuffer(bufStartPosition, buf.position() - bufStartPosition))
         }
     }
 }

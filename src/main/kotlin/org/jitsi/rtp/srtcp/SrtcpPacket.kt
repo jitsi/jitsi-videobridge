@@ -16,75 +16,115 @@
 
 package org.jitsi.rtp.srtcp
 
-import org.jitsi.rtp.extensions.clone
+import org.jitsi.rtp.extensions.decreaseLimitBy
+import org.jitsi.rtp.extensions.increaseLimitBy
+import org.jitsi.rtp.extensions.incrementPosition
 import org.jitsi.rtp.extensions.put
 import org.jitsi.rtp.extensions.subBuffer
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.rtp.util.ByteBufferUtils
 import java.nio.ByteBuffer
 
-class SrtcpPacket(
+/**
+ * An SRTCP packet without the SRTCP index or
+ * the auth tag at the end of the payload.
+ */
+class UnauthenticatedSrtcpPacket(
     header: RtcpHeader = RtcpHeader(),
-    private var srtcpPayload: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER,
-    backingBuffer: ByteBuffer? = null
+    backingBuffer: ByteBuffer
 ) : RtcpPacket(header, backingBuffer) {
 
-    override val sizeBytes: Int
-        get() = header.sizeBytes + srtcpPayload.limit()
+    override val payloadDataSize: Int = backingBuffer.limit() - header.sizeBytes
 
-    fun getAuthTag(tagLen: Int): ByteBuffer =
-        srtcpPayload.subBuffer(srtcpPayload.limit() - tagLen)
+    /**
+     * We still trust the original header values for lengthValue
+     * and hasPadding here, since this may be a compound packet
+     * and those values should only reflect the data in the
+     * first RTCP packet of the entire buffer held here.
+     */
+    override val lengthValue: Int = header.length
+    override val hasPadding: Boolean = header.hasPadding
 
-    fun getSrtcpIndex(tagLen: Int): Int =
-        srtcpPayload.getInt(srtcpPayload.limit() - (4 + tagLen)) and SRTCP_INDEX_MASK
+    override fun serializePayloadDataInto(backingBuffer: ByteBuffer) {
+        backingBuffer.incrementPosition(payloadDataSize)
+    }
+
+    override fun clone(): UnauthenticatedSrtcpPacket = UnauthenticatedSrtcpPacket(header.clone(), cloneBackingBuffer())
+
+    /**
+     * Returns an [AuthenticatedSrtcpPacket] instance whose payload contains the given SRTCP index
+     * and auth tag.  After this call this instance should be considered invalidated.
+     * TODO: is the caller taking care of the encrypted flag as part of the index?
+     */
+    fun addIndexAndAuthTag(srtcpIndex: Int, authTag: ByteBuffer): AuthenticatedSrtcpPacket {
+        return toOtherRtcpPacketType { rtcpHeader, backingBuffer ->
+            backingBuffer!!
+            val oldEndOfpayload = backingBuffer.limit()
+            backingBuffer.increaseLimitBy(4 + authTag.limit())
+            backingBuffer.putInt(oldEndOfpayload, srtcpIndex)
+            backingBuffer.put(oldEndOfpayload + 4, authTag)
+            AuthenticatedSrtcpPacket(rtcpHeader, backingBuffer)
+        }
+    }
+
+    companion object {
+        fun create(buf: ByteBuffer): UnauthenticatedSrtcpPacket {
+            val header = RtcpHeader.fromBuffer(buf)
+
+            return UnauthenticatedSrtcpPacket(header, buf.duplicate().rewind() as ByteBuffer)
+        }
+    }
+}
+
+/**
+ * An SRTCP packet which has an SRTCP index and auth tag present
+ */
+class AuthenticatedSrtcpPacket(
+    header: RtcpHeader = RtcpHeader(),
+    backingBuffer: ByteBuffer
+) : RtcpPacket(header, backingBuffer) {
+
+    override val payloadDataSize: Int = backingBuffer.limit() - header.sizeBytes
+
+    /**
+     * We trust the original header values for lengthValue
+     * and hasPadding here, since those fields should not
+     * reflect the srtcp index and auth tag
+     */
+    override val lengthValue: Int = header.length
+    override val hasPadding: Boolean = header.hasPadding
 
     fun isEncrypted(tagLen: Int): Boolean =
-        (srtcpPayload.getInt(srtcpPayload.limit() - (4 + tagLen)) and IS_ENCRYPTED_MASK) == IS_ENCRYPTED_MASK
+        (payload.getInt(payload.limit() - (4 + tagLen)) and IS_ENCRYPTED_MASK) == IS_ENCRYPTED_MASK
 
-    fun removeAuthTagAndSrtcpIndex(tagLen: Int) {
-        srtcpPayload.limit(srtcpPayload.limit() - (4 + tagLen))
-        payloadModified()
+    override fun serializePayloadDataInto(backingBuffer: ByteBuffer) {
+        backingBuffer.incrementPosition(payloadDataSize)
     }
 
-    // NOTE: both the SRTCP index and the auth tag will be added to
-    // the end of the payload, meaning that they must be added in
-    // the proper order (SRTCP index first then auth tag)
-    // TODO: have one method to add both?
-    fun addAuthTag(authTag: ByteBuffer) {
-        val buf = ByteBufferUtils.growIfNeeded(srtcpPayload, srtcpPayload.limit() + authTag.limit())
-        buf.put(buf.limit() - authTag.limit(), authTag)
-        srtcpPayload = buf
-        payloadModified()
-    }
+    override fun clone(): AuthenticatedSrtcpPacket = AuthenticatedSrtcpPacket(header.clone(), cloneBackingBuffer())
 
-    fun addSrtcpIndex(srtcpIndex: Int) {
-        val buf = ByteBufferUtils.growIfNeeded(srtcpPayload, srtcpPayload.limit() + 4)
-        buf.putInt(buf.limit() - 4, srtcpIndex)
-        srtcpPayload = buf
-        payloadModified()
-    }
-
-    override fun clone(): Packet =
-        SrtcpPacket(header.clone(), srtcpPayload.clone())
-
-    override fun shouldUpdateHeaderAndAddPadding(): Boolean = false
-
-    override fun serializeTo(buf: ByteBuffer) {
-        header.serializeTo(buf)
-        srtcpPayload.rewind()
-        buf.put(srtcpPayload.duplicate())
+    /**
+     * Gets the SRTCP index and auth tag, as well as an [UnauthenticatedSrtcpPacket] instance
+     * representing the SRTCP packet without those fields.  After this call this instance should
+     * be considered invalidated.
+     */
+    fun getIndexAndAuthTag(authTagLen: Int): Triple<Int, ByteBuffer, UnauthenticatedSrtcpPacket> {
+        val authTag = payload.subBuffer(payload.limit() - authTagLen)
+        val srtcpIndex = payload.getInt(payload.limit() - (4 + authTagLen)) and SRTCP_INDEX_MASK
+        val unauthenticatedSrtcpPacket = toOtherRtcpPacketType<UnauthenticatedSrtcpPacket> { rtcpHeader, backingBuffer ->
+            backingBuffer!!.decreaseLimitBy(authTagLen + 4)
+            UnauthenticatedSrtcpPacket(header, backingBuffer)
+        }
+        return Triple(srtcpIndex, authTag, unauthenticatedSrtcpPacket)
     }
 
     companion object {
         private const val IS_ENCRYPTED_MASK = 0x80000000.toInt()
         private const val SRTCP_INDEX_MASK = IS_ENCRYPTED_MASK.inv()
-        fun create(buf: ByteBuffer): SrtcpPacket {
+        fun create(buf: ByteBuffer): AuthenticatedSrtcpPacket {
             val header = RtcpHeader.fromBuffer(buf)
-            val payload = buf.subBuffer(header.sizeBytes)
 
-            return SrtcpPacket(header, payload, buf)
+            return AuthenticatedSrtcpPacket(header, buf.duplicate().rewind() as ByteBuffer)
         }
     }
 }

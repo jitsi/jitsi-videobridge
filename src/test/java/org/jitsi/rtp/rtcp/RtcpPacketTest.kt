@@ -18,13 +18,25 @@ package org.jitsi.rtp.rtcp
 
 import io.kotlintest.IsolationMode
 import io.kotlintest.specs.ShouldSpec
+import org.jitsi.rtp.extensions.toHex
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
+import org.jitsi.rtp.rtcp.rtcpfb.fci.tcc.Tcc
 
 internal class RtcpPacketTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
 
     init {
-//        val pkt = RtcpPacket.parse()
+        "an RTCP packet, created from values" {
+            val tccPacket = RtcpFbTccPacket(fci = Tcc(feedbackPacketCount = 1))
+            repeat (10) {
+                tccPacket.addPacket(it, System.currentTimeMillis())
+            }
+            "and getting its payload" {
+                val buf = tccPacket.mutablePayload
+                println(buf.toHex())
+            }
+        }
 
     }
 }

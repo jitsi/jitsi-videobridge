@@ -108,11 +108,11 @@ internal class RtcpRrPacketTest : ShouldSpec() {
                 }
             }
             "to an existing buffer" {
-                val existingBuf = ByteBuffer.allocate(10 + rrPacket.sizeBytes)
-                existingBuf.position(10)
+                val existingBuf = ByteBuffer.allocate(8 + rrPacket.sizeBytes)
+                existingBuf.position(8)
                 rrPacket.serializeTo(existingBuf)
                 should("write the data to the proper place") {
-                    val subBuf = existingBuf.subBuffer(10)
+                    val subBuf = existingBuf.subBuffer(8)
                     subBuf should haveSameContentAs(packetBuf)
                 }
                 should("leave the buffer's position after the field it just wrote") {

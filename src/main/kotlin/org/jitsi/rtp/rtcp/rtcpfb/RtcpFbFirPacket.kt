@@ -18,6 +18,7 @@ package org.jitsi.rtp.rtcp.rtcpfb
 
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.rtcpfb.fci.Fir
+import org.jitsi.rtp.util.BufferPool
 import java.nio.ByteBuffer
 
 /**
@@ -55,7 +56,7 @@ import java.nio.ByteBuffer
 class RtcpFbFirPacket(
     header: RtcpHeader = RtcpHeader(),
     private val fci: Fir = Fir(),
-    backingBuffer: ByteBuffer? = null
+    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
 ) : PayloadSpecificFbPacket(header.apply { reportCount = FMT }, 0, fci, backingBuffer) {
 
     override fun clone(): RtcpFbFirPacket = RtcpFbFirPacket(header.clone(), fci.clone())

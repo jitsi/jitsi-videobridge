@@ -21,6 +21,7 @@ import org.jitsi.rtp.SerializedField
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.fci.FeedbackControlInformation
+import org.jitsi.rtp.util.BufferPool
 import java.nio.ByteBuffer
 
 /**
@@ -44,17 +45,19 @@ abstract class RtcpFbPacket(
     header: RtcpHeader = RtcpHeader(),
     mediaSourceSsrc: Long = -1,
     private val fci: FeedbackControlInformation,
-    backingBuffer: ByteBuffer? = null
+    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
 ) : RtcpPacket(header, backingBuffer) {
     private var dirty: Boolean = true
 
-    final override val sizeBytes: Int
-        get() = header.sizeBytes + 4 + fci.sizeBytes
+    /*
+     * Add 4 to account for the media source SSRC
+     */
+    final override val payloadDataSize: Int
+        get() = 4 + fci.sizeBytes
 
     var mediaSourceSsrc: Long by SerializedField(mediaSourceSsrc, ::dirty)
 
-    final override fun serializeTo(buf: ByteBuffer) {
-        super.serializeTo(buf)
+    final override fun serializePayloadDataInto(buf: ByteBuffer) {
         buf.putInt(mediaSourceSsrc.toInt())
         fci.serializeTo(buf)
 

@@ -137,8 +137,13 @@ fun ByteBuffer.toHex() : String {
  * start at [startPosition] in the current buffer and whose limit
  * and capacity will be [size]
  */
-fun ByteBuffer.subBuffer(startPosition: Int, size: Int): ByteBuffer =
-    (duplicate().position(startPosition).limit(startPosition + size) as ByteBuffer).slice()
+fun ByteBuffer.subBuffer(startPosition: Int, size: Int): ByteBuffer {
+    if (startPosition + size > limit()) {
+        throw Exception("SubBuffer goes beyond the buffer's limit " +
+                "(limit ${limit()}, requested end of buffer ${startPosition + size})")
+    }
+    return (duplicate().position(startPosition).limit(startPosition + size) as ByteBuffer).slice()
+}
 
 /**
  * Returns a newly constructed [ByteBuffer] whose position 0 will

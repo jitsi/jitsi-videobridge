@@ -16,6 +16,8 @@
 
 package org.jitsi.rtp.rtcp
 
+import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.util.BufferPool
 import java.nio.ByteBuffer
 
 /**
@@ -50,13 +52,12 @@ import java.nio.ByteBuffer
 class RtcpRrPacket(
     header: RtcpHeader = RtcpHeader(),
     val reportBlocks: List<RtcpReportBlock> = listOf(),
-    backingBuffer: ByteBuffer? = null
+    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
 ) : RtcpPacket(header.apply { packetType = PT; reportCount = reportBlocks.size }, backingBuffer) {
-    override val sizeBytes: Int
-        get() = header.sizeBytes + (reportBlocks.size * RtcpReportBlock.SIZE_BYTES)
+    override val payloadDataSize: Int
+        get() = reportBlocks.size * RtcpReportBlock.SIZE_BYTES
 
-    override fun serializeTo(buf: ByteBuffer) {
-        super.serializeTo(buf)
+    override fun serializePayloadDataInto(buf: ByteBuffer) {
         reportBlocks.forEach { it.serializeTo(buf) }
     }
 
@@ -71,11 +72,12 @@ class RtcpRrPacket(
         const val PT: Int = 201
 
         fun fromBuffer(buf: ByteBuffer): RtcpRrPacket {
+            val bufStartPosition = buf.position()
             val header = RtcpHeader.fromBuffer(buf)
             val reportBlocks = (1..header.reportCount)
                     .map { RtcpReportBlock.fromBuffer(buf) }
                     .toList()
-            return RtcpRrPacket(header, reportBlocks, buf)
+            return RtcpRrPacket(header, reportBlocks, buf.subBuffer(bufStartPosition, buf.position() - bufStartPosition))
         }
     }
 }

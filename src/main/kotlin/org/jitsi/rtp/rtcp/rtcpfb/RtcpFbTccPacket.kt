@@ -20,6 +20,7 @@ import org.jitsi.rtp.extensions.incrementPosition
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.rtcpfb.fci.tcc.Tcc
+import org.jitsi.rtp.util.BufferPool
 import java.nio.ByteBuffer
 
 /**
@@ -54,14 +55,14 @@ class RtcpFbTccPacket(
     header: RtcpHeader = RtcpHeader(),
     mediaSourceSsrc: Long = -1,
     private val fci: Tcc = Tcc(),
-    backingBuffer: ByteBuffer? = null
+    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
 ) : TransportLayerFbPacket(header.apply { reportCount = FMT }, mediaSourceSsrc, fci, backingBuffer) {
 
     val numPackets: Int get() = fci.numPackets
 
     fun addPacket(seqNum: Int, timestamp: Long) {
         fci.addPacket(seqNum, timestamp)
-        payloadModified()
+        payloadDataModified()
     }
 
     val referenceTimeMs: Long get() = fci.referenceTimeMs
@@ -95,7 +96,7 @@ class RtcpFbTccPacket(
                 consumePadding(buf)
 //            }
 
-            return RtcpFbTccPacket(header, mediaSourceSsrc, fci, buf)
+            return RtcpFbTccPacket(header, mediaSourceSsrc, fci, buf.duplicate().rewind() as ByteBuffer)
         }
     }
 }

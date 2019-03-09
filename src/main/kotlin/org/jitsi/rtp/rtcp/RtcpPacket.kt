@@ -16,134 +16,150 @@
 
 package org.jitsi.rtp.rtcp
 
+import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.clone
 import org.jitsi.rtp.extensions.subBuffer
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.sdes.RtcpSdesPacket
-import org.jitsi.rtp.util.ByteBufferUtils
+import org.jitsi.rtp.util.BufferPool
+import org.jitsi.rtp.util.RtpUtils
 import java.nio.ByteBuffer
 
-/**
- * When performing crypto-related operations (authentication,
- * encryption/decryption) we need to be able to operate on
- * both the packet's entire data or its payload as a single
- * buffer (and, in the case of encryption/decryption, be able
- * to modify it).  These fields (particularly a modifiable payload)
- * are not exposed in RTCP packets (as we model the
- * individual fields of each RTCP packet type) so this class is
- * designed to be used in those cases.  It can be obtained by
- * calling [RtcpPacket#prepareForCrypto].
- */
-class RtcpPacketForCrypto(
-    header: RtcpHeader = RtcpHeader(),
-    private val payload: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER,
-    backingBuffer: ByteBuffer? = null
-) : RtcpPacket(header, backingBuffer) {
-
-    fun getPayload(): ByteBuffer {
-        // We assume that if the payload is retrieved that it's being modified
-        payloadModified()
-        return payload.duplicate()
-    }
-
-    override val sizeBytes: Int
-        get() = header.sizeBytes + payload.limit()
-
-    override fun shouldUpdateHeaderAndAddPadding(): Boolean = false
-
-    override fun clone(): Packet {
-        return RtcpPacketForCrypto(header.clone(), payload.clone())
-    }
-
-    override fun serializeTo(buf: ByteBuffer) {
-        super.serializeTo(buf)
-        payload.rewind()
-        buf.put(payload)
-    }
-}
-
 abstract class RtcpPacket(
-    val header: RtcpHeader,
-    private var backingBuffer: ByteBuffer?
+    header: RtcpHeader = RtcpHeader(),
+    private var backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
 ) : Packet() {
-    private var dirty: Boolean = true
+    /**
+     * Denotes whether or not any data which is contained in the
+     * payload has changed.  Subclasses can call [payloadDataModified]
+     * to notify this parent class that their payload fields have changed
+     */
+    private var payloadDirty = true
+    /**
+     * Denotes whether or not any fields in the header have been modified
+     * so that we know we need to reserialize it
+     */
+    private var headerDirty = true
+    /**
+     * The size of the data portion (everything after the header) for
+     * this packet.  This value MUST include any needed padding.
+     */
+    protected abstract val payloadDataSize: Int
 
     /**
-     * How many padding bytes are needed, if any
-     * TODO: should sizeBytes be exposed publicly?  because it doesn't
-     * include padding it could be misleading
+     * We hide the header as "_header" such that we can expose the
+     * "header" to callers and set [headerDirty] to true (in case
+     * they've modified the field).  Note that uses within this
+     * class itself which only access (not modify) values in
+     * header use the [_header] field directly.
      */
-    private val numPaddingBytes: Int
+    private val _header: RtcpHeader = header
+    val header: RtcpHeader
         get() {
-            //TODO: maybe we can only update this when dirty = true
-            var paddingBytes = 0
-            while ((sizeBytes + paddingBytes) % 4 != 0) {
-                paddingBytes++
-            }
-            return paddingBytes
+            // We can't (currently) _know_ whether or not a header
+            // field was changed here, but to be safe for now we
+            // assume that something has changed (since it may
+            // have been.  In the future we can look at being
+            // smarter here. (This is an improvement over the
+            // old scheme of using the header.dirty field, which
+            // we could read but not write, so we couldn't reset
+            // it)
+            headerDirty = true
+            return _header
         }
 
     /**
-     * Acquire an [RtcpPacketForCrypto] version of this RTCP packet which can be
-     * operated on more easily for crypto-related operations (authentication,
-     * encryption/decryption).  Note that this method does not return a cloned
-     * version, so the [RtcpPacket] instance it's being called on should be
-     * considered 'invalidated' after this call (and should no longer be
-     * used).
+     * The size of this RTCP packet, including any needed padding.
      */
-    fun prepareForCrypto(): RtcpPacketForCrypto {
-        return RtcpPacketForCrypto(header, getBuffer().subBuffer(header.sizeBytes), backingBuffer)
-    }
+    final override val sizeBytes: Int
+        get() = _header.sizeBytes + payloadDataSize
 
     /**
-     * [sizeBytes] MUST including padding (i.e. it should be 32-bit word aligned)
+     * Whether or not the sub-type's payload needs padding.  The subtypes
+     * themselves are responsible for adding the padding in
+     * [serializePayloadDataInto].  It is open, but should almost never be
+     * overridden.  The exception is [SrtcpPacket] which does not
+     * word align due to the auth tag and SRTCP index.
      */
-    private fun calculateLengthFieldValue(sizeBytes: Int): Int {
-        if (sizeBytes % 4 != 0) {
-            throw Exception("Invalid RTCP size value")
-        }
-        return (sizeBytes / 4) - 1
+    protected open val hasPadding: Boolean = false
+
+    /**
+     * The length value that should be written into the RTCP header's
+     * length field.  This is open so that [SrtcpPacket] can override
+     * it (since its length should not include the auth tag and
+     * SRTCP index)
+     */
+    protected open val lengthValue: Int
+        get() = RtpUtils.calculateRtcpLengthFieldValue(sizeBytes)
+
+    protected fun payloadDataModified() {
+        payloadDirty = true
     }
+
+    val mutablePayload: ByteBuffer
+        get() {
+            synchronizeDataToBackingBufferIfNeeded()
+            // We don't need to set the dirty flag here, because the
+            // changes will be reflected directly to the buffer
+            return backingBuffer.subBuffer(_header.sizeBytes, payloadDataSize)
+        }
+
+    val payload: ByteBuffer get() = mutablePayload.asReadOnlyBuffer()
+
+    /**
+     * Subclasses must implement this function, which has them write
+     * their RTCP payload (anything held after the header) into the
+     * backing buffer starting at its current position.
+     */
+    abstract fun serializePayloadDataInto(backingBuffer: ByteBuffer)
+
+    protected fun cloneBackingBuffer(): ByteBuffer = backingBuffer.clone()
 
     private fun updateHeaderFields() {
-        header.hasPadding = numPaddingBytes > 0
-        header.length = calculateLengthFieldValue(this@RtcpPacket.sizeBytes + numPaddingBytes)
-    }
-
-    protected fun payloadModified() {
-        //TODO: do we want to call updateHeaderFields here?
-        dirty = true
+        header.hasPadding = hasPadding
+        header.length = lengthValue
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <OtherType : RtcpPacket>toOtherRtcpPacketType(factory: (RtcpHeader, backingBuffer: ByteBuffer?) -> RtcpPacket): OtherType
-        = factory(header, backingBuffer) as OtherType
-
-    //NOTE: This method should almost NEVER be overridden by subclasses.  The exceptions
-    // are the SRTCP-related classes, whose header values will be inconsistent with the data due to
-    // the auth tag and SRTCP index (and it should not be padded)
-    protected open fun shouldUpdateHeaderAndAddPadding(): Boolean = true
-
-
-    final override fun getBuffer(): ByteBuffer {
-        if (dirty || header.dirty) {
-            if (shouldUpdateHeaderAndAddPadding()) {
-                updateHeaderFields()
-            }
-            val neededSize = if (shouldUpdateHeaderAndAddPadding()) sizeBytes + numPaddingBytes else sizeBytes
-            val b = ByteBufferUtils.ensureCapacity(backingBuffer, neededSize)
-            serializeTo(b)
-            b.rewind()
-
-            backingBuffer = b
-            dirty = false
-        }
-        return backingBuffer!!
+    fun <OtherType : RtcpPacket>toOtherRtcpPacketType(factory: (RtcpHeader, backingBuffer: ByteBuffer?) -> RtcpPacket): OtherType {
+        // It's possible we could convert to another type without the buffer ever being
+        // requested, meaning that backingBuffer could be in a default state (without
+        // the limit being set correctly), so make sure we set it here.  Also make sure we synchronize
+        // the header.
+        synchronizeDataToBackingBufferIfNeeded()
+        return factory(_header, backingBuffer) as OtherType
     }
 
-    override fun serializeTo(buf: ByteBuffer) {
-        header.serializeTo(buf)
+    /**
+     * If something has changed since the last time we wrote the held
+     * data to the backing buffer, re-write it to make sure everything is
+     * up to date
+     */
+    private fun synchronizeDataToBackingBufferIfNeeded() {
+        //TODO: only update header when headerdirty = true,
+        // only payload when payloaddirty = true
+        if (payloadDirty || headerDirty) {
+            updateHeaderFields()
+            _header.serializeTo(backingBuffer)
+            serializePayloadDataInto(backingBuffer)
+            backingBuffer.flip()
+
+            payloadDirty = false
+            headerDirty = false
+        }
+    }
+
+    final override fun getBuffer(): ByteBuffer {
+        synchronizeDataToBackingBufferIfNeeded()
+        return backingBuffer.duplicate()
+    }
+
+    final override fun serializeTo(buf: ByteBuffer) {
+        // The header values themselves (length, hasPadding) may not be in
+        // sync with the payload, so update them
+        updateHeaderFields()
+        _header.serializeTo(buf)
+        buf.put(payload)
     }
 
     companion object {
@@ -169,7 +185,6 @@ abstract class RtcpPacket(
                 buf.put(0x00)
             }
         }
-
         fun consumePadding(buf: ByteBuffer) {
             while (buf.position() % 4 != 0) {
                 buf.put(0x00)

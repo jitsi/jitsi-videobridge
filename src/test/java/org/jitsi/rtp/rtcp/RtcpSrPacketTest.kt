@@ -137,21 +137,19 @@ internal class RtcpSrPacketTest : ShouldSpec() {
             "via getting its buffer" {
                 val actualBuf = srPacket.getBuffer()
                 should("write all values correctly") {
-                    for (i in 0 until actualBuf.limit()) {
-                        actualBuf.get(i) shouldBe expectedBuf.get(i)
-                    }
+                    actualBuf should haveSameContentAs(expectedBuf)
                 }
             }
             "to an existing buffer" {
                 val existingBuf = ByteBuffer.allocate(1024)
-                existingBuf.position(10)
+                existingBuf.position(8)
                 srPacket.serializeTo(existingBuf)
                 should("write the data to the proper place") {
-                    val subBuf = existingBuf.subBuffer(10, expectedBuf.limit())
+                    val subBuf = existingBuf.subBuffer(8, expectedBuf.limit())
                     subBuf should haveSameContentAs(expectedBuf)
                 }
                 should("leave the buffer's position after the field it just wrote") {
-                    existingBuf.position() shouldBe (10 + expectedBuf.limit())
+                    existingBuf.position() shouldBe (8 + expectedBuf.limit())
                 }
             }
         }

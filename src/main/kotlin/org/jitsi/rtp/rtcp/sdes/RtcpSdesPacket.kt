@@ -17,8 +17,10 @@
 package org.jitsi.rtp.rtcp.sdes
 
 import org.jitsi.rtp.extensions.decrementPosition
+import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.rtp.util.BufferPool
 import java.nio.ByteBuffer
 
 /**
@@ -44,17 +46,17 @@ class RtcpSdesPacket(
     // Note that these chunks should include the first chunk, which has its
     // SSRC in the header
     val sdesChunks: List<SdesChunk> = listOf(),
-    backingBuffer: ByteBuffer? = null
+    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
 ) : RtcpPacket(header.apply { packetType = PT }, backingBuffer) {
 
-    // Subtract 4 since the SSRC in the header are actually part of the first
-    // chunk
-    override val sizeBytes: Int = header.sizeBytes - 4 + sdesChunks.map(SdesChunk::sizeBytes).sum()
+    // Subtract 4 since the SSRC of the first SDES chunk is held in the header
+    override val payloadDataSize: Int
+        get() = sdesChunks.map(SdesChunk::sizeBytes).sum() - 4
 
-    override fun serializeTo(buf: ByteBuffer) {
-        super.serializeTo(buf)
-        // Rewind 4 bytes, since the first part of the first chunk is written
-        // into the second 4 bytes of the header
+    override fun serializePayloadDataInto(buf: ByteBuffer) {
+        // This is a bit of a hack. The SSRC of the first SDES chunk uses
+        // the sender SSRC field of the header, so we rewind back to overwrite
+        // the sender SSRC.
         buf.decrementPosition(4)
         sdesChunks.forEach { it.serializeTo(buf) }
     }
@@ -66,6 +68,7 @@ class RtcpSdesPacket(
         const val PT = 202
 
         fun fromBuffer(buf: ByteBuffer): RtcpSdesPacket {
+            val bufStartPosition = buf.position()
             val header = RtcpHeader.fromBuffer(buf)
             // Rewind 4 bytes so we can parse the ssrc in the
             // header as part of the first chunk
@@ -73,7 +76,7 @@ class RtcpSdesPacket(
             val chunks = (0 until header.reportCount)
                     .map { SdesChunk.fromBuffer(buf) }
                     .toList()
-            return RtcpSdesPacket(header, chunks, buf)
+            return RtcpSdesPacket(header, chunks, buf.subBuffer(bufStartPosition, buf.position()))
         }
     }
 }
