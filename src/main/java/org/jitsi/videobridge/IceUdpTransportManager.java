@@ -19,9 +19,11 @@ import java.beans.*;
 import java.io.*;
 import java.util.*;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
 
+import net.java.sip.communicator.util.*;
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
@@ -29,7 +31,9 @@ import org.jitsi.eventadmin.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
+import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.transport.*;
+import org.osgi.framework.*;
 
 /**
  * Implements the Jingle ICE-UDP transport.
@@ -160,6 +164,21 @@ public class IceUdpTransportManager
     private boolean iceFailed = false;
 
     /**
+     * The OSGi bundle context.
+     */
+    private final BundleContext bundleContext;
+
+    /**
+     * The ID of the endpoint.
+     */
+    private final String endpointId;
+
+    /**
+     * The ID of the conference.
+     */
+    private final String conferenceId;
+
+    /**
      * Initializes a new <tt>IceUdpTransportManager</tt> instance.
      *
      * @param conference the <tt>Conference</tt> which created this
@@ -175,6 +194,9 @@ public class IceUdpTransportManager
         throws IOException
     {
         Conference conference = endpoint.getConference();
+        this.bundleContext = conference.getBundleContext();
+        this.endpointId = endpoint.getID();
+        this.conferenceId = conference.getID();
         this.controlling = controlling;
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
 
@@ -376,25 +398,21 @@ public class IceUdpTransportManager
      * @return the URL to advertise for COLIBRI WebSocket connections for this
      * transport manager.
      */
-    /*
     private String getColibriWsUrl()
     {
-        BundleContext bundleContext
-            = getConference().getVideobridge().getBundleContext();
         ColibriWebSocketService colibriWebSocketService
             = ServiceUtils.getService(
                     bundleContext, ColibriWebSocketService.class);
         if (colibriWebSocketService != null)
         {
             return colibriWebSocketService.getColibriWebSocketUrl(
-                getConference().getID(),
-                endpoint.getID(),
+                conferenceId,
+                endpointId,
                 iceAgent.getLocalPassword());
         }
 
         return null;
     }
-    */
 
     /**
      * Gets the ICE local username fragment.
@@ -650,8 +668,13 @@ public class IceUdpTransportManager
         }
         pe.addChildExtension(new RtcpmuxPacketExtension());
 
-        //TODO(brian): need to include the Colibiri websocket url when describing
-        // (see IceUdpTransportManager#describe and #getColibriWsUrl)
+        String colibriWsUrl = getColibriWsUrl();
+        if (colibriWsUrl != null)
+        {
+            WebSocketPacketExtension wsPacketExtension
+                    = new WebSocketPacketExtension(colibriWsUrl);
+            pe.addChildExtension(wsPacketExtension);
+        }
     }
 
     private void describe(
