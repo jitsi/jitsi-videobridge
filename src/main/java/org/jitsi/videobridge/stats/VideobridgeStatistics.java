@@ -551,152 +551,149 @@ public class VideobridgeStatistics
             totalPacketsDroppedOcto = octoRelay.getPacketsDropped();
         }
 
-        for (Videobridge videobridge
-                : Videobridge.getVideobridges(bundleContext))
+        Videobridge videobridge
+            = ServiceUtils.getService(bundleContext, Videobridge.class);
+        Videobridge.Statistics jvbStats = videobridge.getStatistics();
+
+        totalConferencesCreated += jvbStats.totalConferencesCreated.get();
+        totalConferencesCompleted
+            += jvbStats.totalConferencesCompleted.get();
+        totalConferenceSeconds += jvbStats.totalConferenceSeconds.get();
+        totalLossControlledParticipantSeconds
+            += jvbStats.totalLossControlledParticipantMs.get() / 1000;
+        totalLossLimitedParticipantSeconds
+            += jvbStats.totalLossLimitedParticipantMs.get() / 1000;
+        totalLossDegradedParticipantSeconds
+            += jvbStats.totalLossDegradedParticipantMs.get() / 1000;
+        totalFailedConferences += jvbStats.totalFailedConferences.get();
+        totalPartiallyFailedConferences
+            += jvbStats.totalPartiallyFailedConferences.get();
+        totalNoTransportChannels += jvbStats.totalNoTransportChannels.get();
+        totalNoPayloadChannels += jvbStats.totalNoPayloadChannels.get();
+        totalChannels += jvbStats.totalChannels.get();
+        totalUdpConnections += jvbStats.totalUdpTransportManagers.get();
+        totalTcpConnections += jvbStats.totalTcpTransportManagers.get();
+        totalDataChannelMessagesReceived
+            += jvbStats.totalDataChannelMessagesReceived.get();
+        totalDataChannelMessagesSent
+            += jvbStats.totalDataChannelMessagesSent.get();
+        totalColibriWebSocketMessagesReceived
+            += jvbStats.totalColibriWebSocketMessagesReceived.get();
+        totalColibriWebSocketMessagesSent
+            += jvbStats.totalColibriWebSocketMessagesSent.get();
+        totalBytesReceived += jvbStats.totalBytesReceived.get();
+        totalBytesSent += jvbStats.totalBytesSent.get();
+        totalPacketsReceived += jvbStats.totalPacketsReceived.get();
+        totalPacketsSent += jvbStats.totalPacketsSent.get();
+
+        for (Conference conference : videobridge.getConferences())
         {
-            Videobridge.Statistics jvbStats = videobridge.getStatistics();
-            totalConferencesCreated += jvbStats.totalConferencesCreated.get();
-            totalConferencesCompleted
-                += jvbStats.totalConferencesCompleted.get();
-            totalConferenceSeconds += jvbStats.totalConferenceSeconds.get();
-            totalLossControlledParticipantSeconds
-                += jvbStats.totalLossControlledParticipantMs.get() / 1000;
-            totalLossLimitedParticipantSeconds
-                += jvbStats.totalLossLimitedParticipantMs.get() / 1000;
-            totalLossDegradedParticipantSeconds
-                += jvbStats.totalLossDegradedParticipantMs.get() / 1000;
-            totalFailedConferences += jvbStats.totalFailedConferences.get();
-            totalPartiallyFailedConferences
-                += jvbStats.totalPartiallyFailedConferences.get();
-            totalNoTransportChannels += jvbStats.totalNoTransportChannels.get();
-            totalNoPayloadChannels += jvbStats.totalNoPayloadChannels.get();
-            totalChannels += jvbStats.totalChannels.get();
-            totalUdpConnections += jvbStats.totalUdpTransportManagers.get();
-            totalTcpConnections += jvbStats.totalTcpTransportManagers.get();
-            totalDataChannelMessagesReceived
-                += jvbStats.totalDataChannelMessagesReceived.get();
-            totalDataChannelMessagesSent
-                += jvbStats.totalDataChannelMessagesSent.get();
-            totalColibriWebSocketMessagesReceived
-                += jvbStats.totalColibriWebSocketMessagesReceived.get();
-            totalColibriWebSocketMessagesSent
-                += jvbStats.totalColibriWebSocketMessagesSent.get();
-            totalBytesReceived += jvbStats.totalBytesReceived.get();
-            totalBytesSent += jvbStats.totalBytesSent.get();
-            totalPacketsReceived += jvbStats.totalPacketsReceived.get();
-            totalPacketsSent += jvbStats.totalPacketsSent.get();
-
-            for (Conference conference : videobridge.getConferences())
+            ConferenceShim conferenceShim = conference.getShim();
+            //TODO: can/should we do everything here via the shim only?
+            if (!conference.includeInStatistics())
             {
-                ConferenceShim conferenceShim = conference.getShim();
-                //TODO: can/should we do everything here via the shim only?
-                if (!conference.includeInStatistics())
+                continue;
+            }
+            conferences++;
+            int numConferenceEndpoints = conference.getEndpointCount();
+            if (numConferenceEndpoints > largestConferenceSize)
+            {
+                largestConferenceSize = numConferenceEndpoints;
+            }
+            int conferenceSizeIndex
+                    = numConferenceEndpoints < conferenceSizes.length
+                    ? numConferenceEndpoints
+                    : conferenceSizes.length - 1;
+            conferenceSizes[conferenceSizeIndex]++;
+
+            endpoints += numConferenceEndpoints;
+
+            for (ContentShim contentShim : conferenceShim.getContents())
+            {
+                int contentChannelCount = contentShim.getChannelCount();
+                MediaType mediaType = contentShim.getMediaType();
+                if (MediaType.AUDIO.equals(mediaType))
                 {
-                    continue;
+                    audioChannels += contentChannelCount;
                 }
-                conferences++;
-                int numConferenceEndpoints = conference.getEndpointCount();
-                if (numConferenceEndpoints > largestConferenceSize)
+                else if (MediaType.VIDEO.equals(mediaType))
                 {
-                    largestConferenceSize = numConferenceEndpoints;
-                }
-                int conferenceSizeIndex
-                        = numConferenceEndpoints < conferenceSizes.length
-                        ? numConferenceEndpoints
-                        : conferenceSizes.length - 1;
-                conferenceSizes[conferenceSizeIndex]++;
-
-                endpoints += numConferenceEndpoints;
-
-                for (ContentShim contentShim : conferenceShim.getContents())
-                {
-                    int contentChannelCount = contentShim.getChannelCount();
-                    MediaType mediaType = contentShim.getMediaType();
-                    if (MediaType.AUDIO.equals(mediaType))
-                    {
-                        audioChannels += contentChannelCount;
-                    }
-                    else if (MediaType.VIDEO.equals(mediaType))
-                    {
-                        videoChannels += contentChannelCount;
-                    }
-                }
-                for (AbstractEndpoint abstractEndpoint : conference.getEndpoints())
-                {
-                    if (abstractEndpoint instanceof Endpoint)
-                    {
-                        Endpoint endpoint = (Endpoint)abstractEndpoint;
-
-                        TransceiverStats streamStats = endpoint.transceiver.getTransceiverStats();
-                        int transceiverPacketsReceived = streamStats.getIncomingStreamStatistics()
-                                .values()
-                                .stream()
-                                .mapToInt(IncomingStreamStatistics.Snapshot::getNumRececivedPackets)
-                                .sum();
-                        packetsReceived += transceiverPacketsReceived;
-//                        packetsReceivedLost += receiveStats.getCurrentPacketsLost();
-//                        SendTrackStats sendStats = stats.getSendStats();
-//
-//                        fractionLostCount += 1;
-//                        fractionLostSum += sendStats.getLossRate();
-//                        packetRateDownload += receiveStats.getPacketRate();
-//                        packetRateUpload += sendStats.getPacketRate();
-//
-//                        bitrateUploadBps += sendStats.getBitrate();
-
-                        long transceiverIncomingBitrate = streamStats.getIncomingStreamStatistics()
-                                .values()
-                                .stream()
-                                .mapToLong(IncomingStreamStatistics.Snapshot::getBitrate)
-                                .sum();
-                        bitrateDownloadBps += transceiverIncomingBitrate;
-
-
-                        Double endpointRtt
-                                = streamStats.getEndpointConnectionStats()
-                                    .getRtt();
-                        if (endpointRtt != null && endpointRtt > 0)
-                        {
-                            rttSumMs += endpointRtt;
-                            rttCount++;
-                        }
-
-//                        double jitter = sendStats.getJitter();
-//                        if (jitter != TrackStats.JITTER_UNSET)
-//                        {
-//                            // We take the abs because otherwise the
-//                            // aggregate makes no sense.
-//                            jitterSumMs += Math.abs(jitter);
-//                            jitterCount++;
-//                        }
-//                        jitter = receiveStats.getJitter();
-//                        if (jitter != TrackStats.JITTER_UNSET)
-//                        {
-//                            // We take the abs because otherwise the
-//                            // aggregate makes no sense.
-//                            jitterSumMs += Math.abs(jitter);
-//                            jitterCount++;
-//                        }
-
-                        //
-//                                //assume we're receiving a stream
-//                                int channelStreams = 1;
-//                                int lastN = videoChannel.getLastN();
-//                                channelStreams
-//                                    += (lastN == -1)
-//                                        ? (contentChannelCount - 1)
-//                                        : Math.min(
-//                                                lastN, contentChannelCount - 1);
-//
-//                                videoStreams += channelStreams;
-                    }
+                    videoChannels += contentChannelCount;
                 }
             }
-
-            if (videobridge.isShutdownInProgress())
+            for (AbstractEndpoint abstractEndpoint : conference.getEndpoints())
             {
-                shutdownInProgress = true;
+                if (abstractEndpoint instanceof Endpoint)
+                {
+                    Endpoint endpoint = (Endpoint)abstractEndpoint;
+
+                    TransceiverStats streamStats = endpoint.transceiver.getTransceiverStats();
+                    int transceiverPacketsReceived = streamStats.getIncomingStreamStatistics()
+                            .values()
+                            .stream()
+                            .mapToInt(IncomingStreamStatistics.Snapshot::getNumRececivedPackets)
+                            .sum();
+                    packetsReceived += transceiverPacketsReceived;
+//                    packetsReceivedLost += receiveStats.getCurrentPacketsLost();
+//                    SendTrackStats sendStats = stats.getSendStats();
+//
+//                    fractionLostCount += 1;
+//                    fractionLostSum += sendStats.getLossRate();
+//                    packetRateDownload += receiveStats.getPacketRate();
+//                    packetRateUpload += sendStats.getPacketRate();
+//
+//                    bitrateUploadBps += sendStats.getBitrate();
+
+                    long transceiverIncomingBitrate = streamStats.getIncomingStreamStatistics()
+                            .values()
+                            .stream()
+                            .mapToLong(IncomingStreamStatistics.Snapshot::getBitrate)
+                            .sum();
+                    bitrateDownloadBps += transceiverIncomingBitrate;
+
+
+                    Double endpointRtt
+                            = streamStats.getEndpointConnectionStats()
+                                .getRtt();
+                    if (endpointRtt != null && endpointRtt > 0)
+                    {
+                        rttSumMs += endpointRtt;
+                        rttCount++;
+                    }
+
+//                    double jitter = sendStats.getJitter();
+//                    if (jitter != TrackStats.JITTER_UNSET)
+//                    {
+//                        // We take the abs because otherwise the
+//                        // aggregate makes no sense.
+//                        jitterSumMs += Math.abs(jitter);
+//                        jitterCount++;
+//                    }
+//                    jitter = receiveStats.getJitter();
+//                    if (jitter != TrackStats.JITTER_UNSET)
+//                    {
+//                        // We take the abs because otherwise the
+//                        // aggregate makes no sense.
+//                        jitterSumMs += Math.abs(jitter);
+//                        jitterCount++;
+//                    }
+//                            //assume we're receiving a stream
+//                            int channelStreams = 1;
+//                            int lastN = videoChannel.getLastN();
+//                            channelStreams
+//                                += (lastN == -1)
+//                                    ? (contentChannelCount - 1)
+//                                    : Math.min(
+//                                            lastN, contentChannelCount - 1);
+//
+//                            videoStreams += channelStreams;
+                }
             }
+        }
+
+        if (videobridge.isShutdownInProgress())
+        {
+            shutdownInProgress = true;
         }
 
         // Loss rates
