@@ -502,7 +502,7 @@ public class VideobridgeStatistics
         long bitrateDownloadBps = 0; // TODO verify (Transceiver)
         long bitrateUploadBps = 0; // TODO
         int packetRateUpload = 0; // TODO
-        int packetRateDownload = 0; // TODO
+        int packetRateDownload = 0; // TODO verify
 
         // Average jitter and RTT across MediaStreams which report a valid value.
         double jitterSumMs = 0; // TODO verify
@@ -561,7 +561,7 @@ public class VideobridgeStatistics
                     {
                         packetsReceived += ssrcStats.getNumRececivedPackets();
                         bitrateDownloadBps += ssrcStats.getBitrate();
-                        //packetRateDownload += ssrcStats.getPacketRate();
+                        packetRateDownload += ssrcStats.getPacketRate();
 
                         packetsReceivedLost += ssrcStats.getCumulativePacketsLost();
 
