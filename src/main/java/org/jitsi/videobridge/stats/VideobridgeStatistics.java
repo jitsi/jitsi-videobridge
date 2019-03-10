@@ -23,6 +23,7 @@ import java.util.concurrent.locks.*;
 import net.java.sip.communicator.util.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
+import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.*;
@@ -494,20 +495,20 @@ public class VideobridgeStatistics
         int conferences = 0;
         int endpoints = 0;
         int videoStreams = 0; // TODO
-        double fractionLostSum = 0d; // TODO
-        int fractionLostCount = 0;  // TODO
+        double fractionLostSum = 0d; // TODO verify
+        int fractionLostCount = 0;  // TODO verify
         long packetsReceived = 0; // TODO verify (Transceiver)
-        long packetsReceivedLost = 0; // TODO
+        long packetsReceivedLost = 0; // TODO verify
         long bitrateDownloadBps = 0; // TODO verify (Transceiver)
         long bitrateUploadBps = 0; // TODO
         int packetRateUpload = 0; // TODO
         int packetRateDownload = 0; // TODO
 
         // Average jitter and RTT across MediaStreams which report a valid value.
-        double jitterSumMs = 0; // TODO
-        int jitterCount = 0; // TODO
+        double jitterSumMs = 0; // TODO verify
+        int jitterCount = 0; // TODO verify
         long rttSumMs = 0; // TODO verify (Transceiver)
-        long rttCount = 0;
+        long rttCount = 0; // TODO verify
         int largestConferenceSize = 0;
         int[] conferenceSizes = new int[CONFERENCE_SIZE_BUCKETS];
 
@@ -553,66 +554,55 @@ public class VideobridgeStatistics
                 {
                     Endpoint endpoint = (Endpoint)abstractEndpoint;
 
-                    TransceiverStats streamStats = endpoint.transceiver.getTransceiverStats();
-                    int transceiverPacketsReceived = streamStats.getIncomingStreamStatistics()
-                            .values()
-                            .stream()
-                            .mapToInt(IncomingStreamStatistics.Snapshot::getNumRececivedPackets)
-                            .sum();
-                    packetsReceived += transceiverPacketsReceived;
-//                    packetsReceivedLost += receiveStats.getCurrentPacketsLost();
-//                    SendTrackStats sendStats = stats.getSendStats();
-//
-//                    fractionLostCount += 1;
-//                    fractionLostSum += sendStats.getLossRate();
-//                    packetRateDownload += receiveStats.getPacketRate();
-//                    packetRateUpload += sendStats.getPacketRate();
-//
-//                    bitrateUploadBps += sendStats.getBitrate();
+                    TransceiverStats transceiverStats
+                            = endpoint.transceiver.getTransceiverStats();
+                    for (IncomingStreamStatistics.Snapshot ssrcStats
+                            : transceiverStats.getIncomingStreamStatistics().values())
+                    {
+                        packetsReceived += ssrcStats.getNumRececivedPackets();
+                        bitrateDownloadBps += ssrcStats.getBitrate();
+                        //packetRateDownload += ssrcStats.getPacketRate();
 
-                    long transceiverIncomingBitrate = streamStats.getIncomingStreamStatistics()
-                            .values()
-                            .stream()
-                            .mapToLong(IncomingStreamStatistics.Snapshot::getBitrate)
-                            .sum();
-                    bitrateDownloadBps += transceiverIncomingBitrate;
+                        packetsReceivedLost += ssrcStats.getCumulativePacketsLost();
 
+                        fractionLostCount++;
+                        fractionLostSum += ssrcStats.getFractionLost() / 256;
+
+                        Double ssrcJitter = ssrcStats.getJitter();
+                        if (ssrcJitter != null && ssrcJitter != 0)
+                        {
+                            // We take the abs because otherwise the
+                            // aggregate makes no sense.
+                            jitterSumMs += Math.abs(ssrcJitter);
+                            jitterCount++;
+                        }
+
+                    }
+
+                    //for (OutgoingStreamStatistics.Snapshot ssrcStats
+                    //    : transceiverStats.getOutgoingStreamStatistics().values())
+                    //{
+                        // packetRateUpload += sendStats.getPacketRate();
+                        // bitrateUploadBps += sendStats.getBitrate();
+                    //}
 
                     Double endpointRtt
-                            = streamStats.getEndpointConnectionStats()
-                                .getRtt();
+                            = transceiverStats.getEndpointConnectionStats().getRtt();
                     if (endpointRtt != null && endpointRtt > 0)
                     {
                         rttSumMs += endpointRtt;
                         rttCount++;
                     }
 
-//                    double jitter = sendStats.getJitter();
-//                    if (jitter != TrackStats.JITTER_UNSET)
-//                    {
-//                        // We take the abs because otherwise the
-//                        // aggregate makes no sense.
-//                        jitterSumMs += Math.abs(jitter);
-//                        jitterCount++;
-//                    }
-//                    jitter = receiveStats.getJitter();
-//                    if (jitter != TrackStats.JITTER_UNSET)
-//                    {
-//                        // We take the abs because otherwise the
-//                        // aggregate makes no sense.
-//                        jitterSumMs += Math.abs(jitter);
-//                        jitterCount++;
-//                    }
-//                            //assume we're receiving a stream
-//                            int channelStreams = 1;
-//                            int lastN = videoChannel.getLastN();
-//                            channelStreams
-//                                += (lastN == -1)
-//                                    ? (contentChannelCount - 1)
-//                                    : Math.min(
-//                                            lastN, contentChannelCount - 1);
+//                  //assume we're receiving a stream
+//                  int channelStreams = 1;
+//                  int lastN = videoChannel.getLastN();
+//                  channelStreams
+//                     += (lastN == -1)
+//                         ? (contentChannelCount - 1)
+//                         : Math.min(lastN, contentChannelCount - 1);
 //
-//                            videoStreams += channelStreams;
+//                   videoStreams += channelStreams;
                 }
             }
         }
