@@ -479,6 +479,17 @@ public class VideobridgeStatistics
      */
     protected void generate0()
     {
+        BundleContext bundleContext
+                = StatsManagerBundleActivator.getBundleContext();
+        OctoRelayService relayService
+                = ServiceUtils.getService(bundleContext, OctoRelayService.class);
+        OctoRelay octoRelay
+                = relayService == null ? null : relayService.getRelay();
+        Videobridge videobridge
+                = ServiceUtils.getService(bundleContext, Videobridge.class);
+        Videobridge.Statistics jvbStats = videobridge.getStatistics();
+
+        // TODO switch from channel counts to endpoint counts
         int audioChannels = 0, videoChannels = 0; // TODO verify
         int conferences = 0;
         int endpoints = 0;
@@ -500,91 +511,6 @@ public class VideobridgeStatistics
         int largestConferenceSize = 0;
         int[] conferenceSizes = new int[CONFERENCE_SIZE_BUCKETS];
 
-        boolean shutdownInProgress = false;
-
-        // TODO switch from channel counts to endpoint counts
-        int totalConferencesCreated = 0, totalConferencesCompleted = 0;
-        int totalFailedConferences = 0; // TODO verify
-        int totalPartiallyFailedConferences = 0; // TODO verify
-        int totalNoTransportChannels = 0; // TODO verify
-        int totalNoPayloadChannels = 0; // TODO verify
-        int totalChannels = 0; // TODO (Conference doesn't keep track)
-        long totalConferenceSeconds = 0;
-
-        long totalLossControlledParticipantSeconds = 0; // TODO
-        long totalLossLimitedParticipantSeconds = 0; // TODO
-        long totalLossDegradedParticipantSeconds = 0; // TODO
-
-        int totalUdpConnections = 0; // TODO
-        int totalTcpConnections = 0; // TODO
-
-        long totalDataChannelMessagesReceived = 0;
-        long totalDataChannelMessagesSent = 0;
-        long totalColibriWebSocketMessagesReceived = 0;
-        long totalColibriWebSocketMessagesSent = 0;
-
-        long totalBytesReceived = 0; // TODO
-        long totalBytesSent = 0; // TODO
-        long totalPacketsReceived = 0; // TODO
-        long totalPacketsSent = 0; // TODO
-
-        long totalBytesReceivedOcto = 0;
-        long totalBytesSentOcto = 0;
-        long totalPacketsReceivedOcto = 0;
-        long totalPacketsSentOcto = 0;
-        long totalPacketsDroppedOcto = 0;
-
-        BundleContext bundleContext
-            = StatsManagerBundleActivator.getBundleContext();
-
-        OctoRelayService relayService
-            = ServiceUtils.getService(bundleContext, OctoRelayService.class);
-        OctoRelay octoRelay
-            = relayService == null ? null : relayService.getRelay();
-
-        if (octoRelay != null)
-        {
-            totalBytesReceivedOcto = octoRelay.getBytesReceived();
-            totalBytesSentOcto = octoRelay.getBytesSent();
-            totalPacketsReceivedOcto = octoRelay.getPacketsReceived();
-            totalPacketsSentOcto = octoRelay.getPacketsSent();
-            totalPacketsDroppedOcto = octoRelay.getPacketsDropped();
-        }
-
-        Videobridge videobridge
-            = ServiceUtils.getService(bundleContext, Videobridge.class);
-        Videobridge.Statistics jvbStats = videobridge.getStatistics();
-
-        totalConferencesCreated += jvbStats.totalConferencesCreated.get();
-        totalConferencesCompleted
-            += jvbStats.totalConferencesCompleted.get();
-        totalConferenceSeconds += jvbStats.totalConferenceSeconds.get();
-        totalLossControlledParticipantSeconds
-            += jvbStats.totalLossControlledParticipantMs.get() / 1000;
-        totalLossLimitedParticipantSeconds
-            += jvbStats.totalLossLimitedParticipantMs.get() / 1000;
-        totalLossDegradedParticipantSeconds
-            += jvbStats.totalLossDegradedParticipantMs.get() / 1000;
-        totalFailedConferences += jvbStats.totalFailedConferences.get();
-        totalPartiallyFailedConferences
-            += jvbStats.totalPartiallyFailedConferences.get();
-        totalNoTransportChannels += jvbStats.totalNoTransportChannels.get();
-        totalNoPayloadChannels += jvbStats.totalNoPayloadChannels.get();
-        totalChannels += jvbStats.totalChannels.get();
-        totalUdpConnections += jvbStats.totalUdpTransportManagers.get();
-        totalTcpConnections += jvbStats.totalTcpTransportManagers.get();
-        totalDataChannelMessagesReceived
-            += jvbStats.totalDataChannelMessagesReceived.get();
-        totalDataChannelMessagesSent
-            += jvbStats.totalDataChannelMessagesSent.get();
-        totalColibriWebSocketMessagesReceived
-            += jvbStats.totalColibriWebSocketMessagesReceived.get();
-        totalColibriWebSocketMessagesSent
-            += jvbStats.totalColibriWebSocketMessagesSent.get();
-        totalBytesReceived += jvbStats.totalBytesReceived.get();
-        totalBytesSent += jvbStats.totalBytesSent.get();
-        totalPacketsReceived += jvbStats.totalPacketsReceived.get();
-        totalPacketsSent += jvbStats.totalPacketsSent.get();
 
         for (Conference conference : videobridge.getConferences())
         {
@@ -691,11 +617,6 @@ public class VideobridgeStatistics
             }
         }
 
-        if (videobridge.isShutdownInProgress())
-        {
-            shutdownInProgress = true;
-        }
-
         // Loss rates
         double lossRateDownload
             = (packetsReceived + packetsReceivedLost > 0)
@@ -760,32 +681,53 @@ public class VideobridgeStatistics
             unlockedSetStat(JITTER_AGGREGATE, jitterAggregate);
             unlockedSetStat(RTT_AGGREGATE, rttAggregate);
             unlockedSetStat(AUDIOCHANNELS, audioChannels);
-            unlockedSetStat(TOTAL_FAILED_CONFERENCES, totalFailedConferences);
+            // TODO verify
+            unlockedSetStat(
+                    TOTAL_FAILED_CONFERENCES,
+                    jvbStats.totalFailedConferences.get());
+            // TODO verify
             unlockedSetStat(
                     TOTAL_PARTIALLY_FAILED_CONFERENCES,
-                    totalPartiallyFailedConferences);
+                    jvbStats.totalPartiallyFailedConferences.get());
+            // TODO verify
             unlockedSetStat(
                     TOTAL_NO_PAYLOAD_CHANNELS,
-                    totalNoPayloadChannels);
+                    jvbStats.totalNoPayloadChannels.get());
+            // TODO verify
             unlockedSetStat(
                     TOTAL_NO_TRANSPORT_CHANNELS,
-                    totalNoTransportChannels);
+                    jvbStats.totalNoTransportChannels.get());
             unlockedSetStat(
                     TOTAL_CONFERENCES_CREATED,
-                    totalConferencesCreated);
+                    jvbStats.totalConferencesCreated.get());
             unlockedSetStat(
                     TOTAL_CONFERENCES_COMPLETED,
-                    totalConferencesCompleted);
-            unlockedSetStat(TOTAL_UDP_CONNECTIONS, totalUdpConnections);
-            unlockedSetStat(TOTAL_TCP_CONNECTIONS, totalTcpConnections);
-            unlockedSetStat(TOTAL_CONFERENCE_SECONDS, totalConferenceSeconds);
-            unlockedSetStat(TOTAL_LOSS_CONTROLLED_PARTICIPANT_SECONDS,
-                totalLossControlledParticipantSeconds);
-            unlockedSetStat(TOTAL_LOSS_LIMITED_PARTICIPANT_SECONDS,
-                    totalLossLimitedParticipantSeconds);
-            unlockedSetStat(TOTAL_LOSS_DEGRADED_PARTICIPANT_SECONDS,
-                    totalLossDegradedParticipantSeconds);
-            unlockedSetStat(TOTAL_CHANNELS, totalChannels);
+                    jvbStats.totalConferencesCompleted.get());
+            // TODO (backend not implemented)
+            unlockedSetStat(
+                    TOTAL_UDP_CONNECTIONS,
+                    jvbStats.totalUdpTransportManagers.get());
+            unlockedSetStat(
+                    TOTAL_TCP_CONNECTIONS,
+                    jvbStats.totalTcpTransportManagers.get());
+            unlockedSetStat(
+                    TOTAL_CONFERENCE_SECONDS,
+                    jvbStats.totalConferenceSeconds.get());
+
+            // TODO (backend not implemented)
+            unlockedSetStat(
+                    TOTAL_LOSS_CONTROLLED_PARTICIPANT_SECONDS,
+                    jvbStats.totalLossControlledParticipantMs.get() / 1000);
+            // TODO (backend not implemented)
+            unlockedSetStat(
+                    TOTAL_LOSS_LIMITED_PARTICIPANT_SECONDS,
+                    jvbStats.totalLossLimitedParticipantMs.get() / 1000);
+            // TODO (backend not implemented)
+            unlockedSetStat(
+                    TOTAL_LOSS_DEGRADED_PARTICIPANT_SECONDS,
+                   jvbStats.totalLossDegradedParticipantMs.get() / 1000);
+            // TODO (Conference doesn't keep track).
+            unlockedSetStat(TOTAL_CHANNELS, jvbStats.totalChannels.get());
             unlockedSetStat(CONFERENCES, conferences);
             unlockedSetStat(NUMBEROFPARTICIPANTS, endpoints);
             unlockedSetStat(VIDEOCHANNELS, videoChannels);
@@ -796,26 +738,39 @@ public class VideobridgeStatistics
             unlockedSetStat(CPU_USAGE, Math.max(cpuUsage, 0));
             unlockedSetStat(TOTAL_MEMORY, Math.max(totalMemory, 0));
             unlockedSetStat(USED_MEMORY, Math.max(usedMemory, 0));
-            unlockedSetStat(SHUTDOWN_IN_PROGRESS, shutdownInProgress);
-            unlockedSetStat(TOTAL_DATA_CHANNEL_MESSAGES_RECEIVED,
-                            totalDataChannelMessagesReceived);
-            unlockedSetStat(TOTAL_DATA_CHANNEL_MESSAGES_SENT,
-                            totalDataChannelMessagesSent);
-            unlockedSetStat(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_RECEIVED,
-                            totalColibriWebSocketMessagesReceived);
-            unlockedSetStat(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT,
-                            totalColibriWebSocketMessagesSent);
-            unlockedSetStat(TOTAL_BYTES_RECEIVED, totalBytesReceived);
-            unlockedSetStat(TOTAL_BYTES_SENT, totalBytesSent);
-            unlockedSetStat(TOTAL_PACKETS_RECEIVED, totalPacketsReceived);
-            unlockedSetStat(TOTAL_PACKETS_SENT, totalPacketsSent);
-            unlockedSetStat(TOTAL_BYTES_RECEIVED_OCTO, totalBytesReceivedOcto);
-            unlockedSetStat(TOTAL_BYTES_SENT_OCTO, totalBytesSentOcto);
-            unlockedSetStat(TOTAL_PACKETS_RECEIVED_OCTO,
-                            totalPacketsReceivedOcto);
-            unlockedSetStat(TOTAL_PACKETS_SENT_OCTO, totalPacketsSentOcto);
             unlockedSetStat(
-                    TOTAL_PACKETS_DROPPED_OCTO, totalPacketsDroppedOcto);
+                    SHUTDOWN_IN_PROGRESS,
+                    videobridge.isShutdownInProgress());
+            unlockedSetStat(TOTAL_DATA_CHANNEL_MESSAGES_RECEIVED,
+                            jvbStats.totalDataChannelMessagesReceived.get());
+            unlockedSetStat(TOTAL_DATA_CHANNEL_MESSAGES_SENT,
+                            jvbStats.totalDataChannelMessagesSent.get());
+            unlockedSetStat(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_RECEIVED,
+                            jvbStats.totalColibriWebSocketMessagesReceived.get());
+            unlockedSetStat(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT,
+                            jvbStats.totalColibriWebSocketMessagesSent.get());
+            unlockedSetStat(
+                    TOTAL_BYTES_RECEIVED, jvbStats.totalBytesReceived.get());
+            unlockedSetStat(TOTAL_BYTES_SENT, jvbStats.totalBytesSent.get());
+            unlockedSetStat(
+                    TOTAL_PACKETS_RECEIVED, jvbStats.totalPacketsReceived.get());
+            unlockedSetStat(TOTAL_PACKETS_SENT, jvbStats.totalPacketsSent.get());
+
+            unlockedSetStat(
+                    TOTAL_BYTES_RECEIVED_OCTO,
+                    octoRelay == null ? 0 : octoRelay.getBytesReceived());
+            unlockedSetStat(
+                    TOTAL_BYTES_SENT_OCTO,
+                    octoRelay == null ? 0 : octoRelay.getBytesSent());
+            unlockedSetStat(
+                    TOTAL_PACKETS_RECEIVED_OCTO,
+                    octoRelay == null ? 0 : octoRelay.getPacketsReceived());
+            unlockedSetStat(
+                    TOTAL_PACKETS_SENT_OCTO,
+                    octoRelay == null ? 0 : octoRelay.getPacketsSent());
+            unlockedSetStat(
+                    TOTAL_PACKETS_DROPPED_OCTO,
+                    octoRelay == null ? 0 : octoRelay.getPacketsDropped());
 
             unlockedSetStat(TIMESTAMP, timestamp);
             if (octoRelay != null)
