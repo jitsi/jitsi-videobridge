@@ -660,21 +660,29 @@ public class VideobridgeStatistics
         lock.lock();
         try
         {
+            // TODO verify
             unlockedSetStat(
                     BITRATE_DOWNLOAD,
                     bitrateDownloadBps / 1000 /* kbps */);
+            // TODO verify
             unlockedSetStat(
                     BITRATE_UPLOAD,
                     bitrateUploadBps / 1000 /* kbps */);
+            // TODO verify
             unlockedSetStat(PACKET_RATE_DOWNLOAD, packetRateDownload);
+            // TODO verify
             unlockedSetStat(PACKET_RATE_UPLOAD, packetRateUpload);
             // Keep for backward compatibility
             unlockedSetStat(
                     RTP_LOSS,
                     lossRateDownload + lossRateUpload);
+            // TODO verify
             unlockedSetStat(LOSS_RATE_DOWNLOAD, lossRateDownload);
+            // TODO verify
             unlockedSetStat(LOSS_RATE_UPLOAD, lossRateUpload);
+            // TODO verify
             unlockedSetStat(JITTER_AGGREGATE, jitterAggregate);
+            // TODO verify
             unlockedSetStat(RTT_AGGREGATE, rttAggregate);
             unlockedSetStat(AUDIOCHANNELS, audioChannels);
             // TODO verify
@@ -703,6 +711,7 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     TOTAL_UDP_CONNECTIONS,
                     jvbStats.totalUdpTransportManagers.get());
+            // TODO (backend not implemented)
             unlockedSetStat(
                     TOTAL_TCP_CONNECTIONS,
                     jvbStats.totalTcpTransportManagers.get());
@@ -745,11 +754,15 @@ public class VideobridgeStatistics
                             jvbStats.totalColibriWebSocketMessagesReceived.get());
             unlockedSetStat(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT,
                             jvbStats.totalColibriWebSocketMessagesSent.get());
+            // TODO (Conference doesn't keep track).
             unlockedSetStat(
                     TOTAL_BYTES_RECEIVED, jvbStats.totalBytesReceived.get());
+            // TODO (Conference doesn't keep track).
             unlockedSetStat(TOTAL_BYTES_SENT, jvbStats.totalBytesSent.get());
+            // TODO (Conference doesn't keep track).
             unlockedSetStat(
                     TOTAL_PACKETS_RECEIVED, jvbStats.totalPacketsReceived.get());
+            // TODO (Conference doesn't keep track).
             unlockedSetStat(TOTAL_PACKETS_SENT, jvbStats.totalPacketsSent.get());
 
             unlockedSetStat(
