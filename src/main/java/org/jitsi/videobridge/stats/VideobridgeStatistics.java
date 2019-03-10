@@ -594,15 +594,21 @@ public class VideobridgeStatistics
                         rttCount++;
                     }
 
-//                  //assume we're receiving a stream
-//                  int channelStreams = 1;
-//                  int lastN = videoChannel.getLastN();
-//                  channelStreams
-//                     += (lastN == -1)
-//                         ? (contentChannelCount - 1)
-//                         : Math.min(lastN, contentChannelCount - 1);
-//
-//                   videoStreams += channelStreams;
+                    // Assume we're receiving a video stream from the endpoint
+                    int endpointStreams = 1;
+
+                    // Assume we're sending one video stream to this endpoint
+                    // for each other endpoint in the conference unless there's
+                    // a limit imposed by lastN.
+                    // TODO: can we get the actual numnber of streams that we're
+                    // sending from the bitrate controller?
+                    Integer lastN = endpoint.getLastN();
+                    endpointStreams
+                       += (lastN == null || lastN == -1)
+                           ? (numConferenceEndpoints - 1)
+                           : Math.min(lastN, numConferenceEndpoints - 1);
+
+                   videoStreams += endpointStreams;
                 }
             }
         }
