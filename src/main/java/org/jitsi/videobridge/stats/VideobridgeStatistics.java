@@ -749,15 +749,11 @@ public class VideobridgeStatistics
                             jvbStats.totalColibriWebSocketMessagesReceived.get());
             unlockedSetStat(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT,
                             jvbStats.totalColibriWebSocketMessagesSent.get());
-            // TODO (Conference doesn't keep track).
             unlockedSetStat(
                     TOTAL_BYTES_RECEIVED, jvbStats.totalBytesReceived.get());
-            // TODO (Conference doesn't keep track).
             unlockedSetStat(TOTAL_BYTES_SENT, jvbStats.totalBytesSent.get());
-            // TODO (Conference doesn't keep track).
             unlockedSetStat(
                     TOTAL_PACKETS_RECEIVED, jvbStats.totalPacketsReceived.get());
-            // TODO (Conference doesn't keep track).
             unlockedSetStat(TOTAL_PACKETS_SENT, jvbStats.totalPacketsSent.get());
 
             unlockedSetStat(

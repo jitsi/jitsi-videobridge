@@ -19,6 +19,8 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.bouncycastle.crypto.tls.*;
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.transform.node.incoming.*;
+import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
@@ -500,10 +502,15 @@ public class Endpoint
     @Override
     public void expire()
     {
+        if (super.isExpired())
+        {
+            return;
+        }
         super.expire();
 
         try
         {
+            updateStatsOnExpire();
             this.transceiver.stop();
             if (logger.isDebugEnabled())
             {
@@ -537,6 +544,26 @@ public class Endpoint
         }
 
         logger.info(logPrefix + "Expired.");
+    }
+
+    /**
+     * Updates the conference statistics with value from this endpoint. Since
+     * the values are cumulative this should execute only once when the endpoint
+     * expires.
+     */
+    private void updateStatsOnExpire()
+    {
+        Conference.Statistics stats = getConference().getStatistics();
+        TransceiverStats transceiverStats = transceiver.getTransceiverStats();
+        IncomingStatisticsSnapshot incomingStats
+                = transceiverStats.getIncomingStats();
+        OutgoingStatisticsSnapshot outgoingStats
+                = transceiverStats.getOutgoingStats();
+
+        stats.totalBytesReceived.addAndGet(incomingStats.getBytesReceived());
+        stats.totalPacketsReceived.addAndGet(incomingStats.getPacketsReceived());
+        stats.totalBytesSent.addAndGet(outgoingStats.getBytesSent());
+        stats.totalPacketsSent.addAndGet(outgoingStats.getPacketsSent());
     }
 
     public void createSctpConnection()
