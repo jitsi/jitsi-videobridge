@@ -235,6 +235,12 @@ public class Endpoint
 
         bandwidthProbing.enabled = true;
         recurringRunnableExecutor.registerRecurringRunnable(bandwidthProbing);
+
+        if (conference.includeInStatistics())
+        {
+            conference.getVideobridge().getStatistics()
+                    .totalEndpoints.incrementAndGet();
+        }
     }
 
     /**

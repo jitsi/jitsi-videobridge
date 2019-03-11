@@ -1209,25 +1209,6 @@ public class Videobridge
     public static class Statistics
     {
         /**
-         * The cumulative/total number of channels created on this
-         * {@link Videobridge}.
-         */
-        public AtomicInteger totalChannels = new AtomicInteger(0);
-
-        /**
-         * The cumulative/total number of channels that failed because of no
-         * transport activity on this {@link Videobridge}.
-         */
-        public AtomicInteger totalNoTransportChannels
-            = new AtomicInteger(0);
-
-        /**
-         * The cumulative/total number of channels that failed because of no
-         * payload activity on this {@link Videobridge}.
-         */
-        public AtomicInteger totalNoPayloadChannels = new AtomicInteger(0);
-
-        /**
          * The cumulative/total number of conferences that had all of their
          * channels failed because there was no transport activity (which
          * includes those that failed because there was no payload activity).
@@ -1348,5 +1329,10 @@ public class Videobridge
          * expire.
          */
         public AtomicLong totalPacketsSent = new AtomicLong();
+
+        /**
+         * The total number of endpoints created.
+         */
+        public AtomicInteger totalEndpoints = new AtomicInteger();
     }
 }
