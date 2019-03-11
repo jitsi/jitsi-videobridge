@@ -114,6 +114,7 @@ class IncomingStreamStatistics(
     private var jitter: Double = 0.0
     private var numReceivedPackets: Int = 0
     private val bitrate = RateStatistics(Duration.ofSeconds(1).toMillis().toUInt())
+    private val packetRate = RateStatistics(Duration.ofSeconds(1).toMillis().toUInt(), 1000f)
     // End variables protected by statsLock
 
     /**
@@ -196,7 +197,7 @@ class IncomingStreamStatistics(
     fun getSnapshot(): Snapshot {
         synchronized (statsLock) {
             return Snapshot(numReceivedPackets, maxSeqNum, seqNumCycles, numExpectedPackets,
-                    cumulativePacketsLost, jitter, bitrate.rate)
+                    cumulativePacketsLost, jitter, bitrate.rate, packetRate.rate)
         }
     }
 
@@ -226,7 +227,9 @@ class IncomingStreamStatistics(
         val packetSequenceNumber = packet.header.sequenceNumber
         synchronized(statsLock) {
             numReceivedPackets++
-            bitrate.update(packet.sizeBytes, System.currentTimeMillis())
+            val now = System.currentTimeMillis()
+            bitrate.update(packet.sizeBytes, now)
+            packetRate.update(1, now)
             if (packetSequenceNumber isNewerThan maxSeqNum) {
                 if (packetSequenceNumber isNextAfter maxSeqNum) {
                     if (probation > 0) {
@@ -286,6 +289,7 @@ class IncomingStreamStatistics(
 
     /**
      * A class to export a consistent snapshot of the data held inside [IncomingStreamStatistics]
+     * TODO: these really need to be documented!
      */
     data class Snapshot(
         val numRececivedPackets: Int = 0,
@@ -294,7 +298,10 @@ class IncomingStreamStatistics(
         val numExpectedPackets: Int = 0,
         val cumulativePacketsLost: Int = 0,
         val jitter: Double = 0.0,
-        val bitrate: Long = 0
+        // bits per second
+        val bitrate: Long = 0,
+        // pps
+        val packetRate: Long = 0
     ) {
         val fractionLost: Int
             get() = (cumulativePacketsLost / numExpectedPackets) * 256
