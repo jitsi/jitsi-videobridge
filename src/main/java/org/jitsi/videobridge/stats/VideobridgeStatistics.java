@@ -23,6 +23,7 @@ import java.util.concurrent.locks.*;
 import net.java.sip.communicator.util.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
+import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.*;
@@ -580,12 +581,10 @@ public class VideobridgeStatistics
 
                     }
 
-                    //for (OutgoingStreamStatistics.Snapshot ssrcStats
-                    //    : transceiverStats.getOutgoingStreamStatistics().values())
-                    //{
-                        // packetRateUpload += sendStats.getPacketRate();
-                        // bitrateUploadBps += sendStats.getBitrate();
-                    //}
+                    OutgoingStatisticsSnapshot outgoingStats
+                            = transceiverStats.getOutgoingStats();
+                    bitrateUploadBps += outgoingStats.getBitrate();
+                    packetRateUpload += outgoingStats.getPacketRate();
 
                     Double endpointRtt
                             = transceiverStats.getEndpointConnectionStats().getRtt();
@@ -664,12 +663,10 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     BITRATE_DOWNLOAD,
                     bitrateDownloadBps / 1000 /* kbps */);
-            // TODO (backend not implemented)
             unlockedSetStat(
                     BITRATE_UPLOAD,
                     bitrateUploadBps / 1000 /* kbps */);
             unlockedSetStat(PACKET_RATE_DOWNLOAD, packetRateDownload);
-            // TODO (backend not implemenred)
             unlockedSetStat(PACKET_RATE_UPLOAD, packetRateUpload);
             // Keep for backward compatibility
             unlockedSetStat(
@@ -679,7 +676,7 @@ public class VideobridgeStatistics
             unlockedSetStat(LOSS_RATE_DOWNLOAD, lossRateDownload);
             // TODO verify
             unlockedSetStat(LOSS_RATE_UPLOAD, lossRateUpload);
-            // TODO verify
+            // TODO seems broken (I see values of > 11 seconds)
             unlockedSetStat(JITTER_AGGREGATE, jitterAggregate);
             unlockedSetStat(RTT_AGGREGATE, rttAggregate);
             unlockedSetStat(AUDIOCHANNELS, audioChannels);
