@@ -19,6 +19,7 @@ import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.util.RtpUtils
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
+import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
@@ -48,8 +49,8 @@ class RtcpSrGenerator(
                     //TODO: from what I can tell, the old code didn't generate an RTP timestamp to map to the current
                     // ntp timestamp, and instead used the most recent rtp timestamp we'd seen
                     rtpTimestamp = statsSnapshot.mostRecentRtpTimestamp,
-                    sendersPacketCount = statsSnapshot.packetCount.toLong(),
-                    sendersOctetCount = statsSnapshot.octetCount.toLong()
+                    sendersPacketCount = statsSnapshot.packetCount.toPositiveLong(),
+                    sendersOctetCount = statsSnapshot.octetCount.toPositiveLong()
                 )
 
                 val srPacket = RtcpSrPacket(
