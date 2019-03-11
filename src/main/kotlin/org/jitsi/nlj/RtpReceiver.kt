@@ -15,10 +15,9 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.transform.NodeStatsProducer
-import org.jitsi.nlj.transform.node.incoming.IncomingStreamStatistics
-import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
+import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
+import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
 
 abstract class RtpReceiver :
@@ -54,7 +53,7 @@ abstract class RtpReceiver :
 
     abstract fun setAudioLevelListener(audioLevelListener: AudioLevelListener)
 
-    abstract fun getStreamStats(): Map<Long, IncomingStreamStatistics.Snapshot>
+    abstract fun getStreamStats(): IncomingStatisticsSnapshot
 
     abstract fun tearDown()
 }
