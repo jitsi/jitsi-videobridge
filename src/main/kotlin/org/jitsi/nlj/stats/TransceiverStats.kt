@@ -16,12 +16,14 @@
 
 package org.jitsi.nlj.stats
 
-import org.jitsi.nlj.transform.node.incoming.IncomingStreamStatistics
-import org.jitsi.nlj.transform.node.outgoing.OutgoingStreamStatistics
+import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
+import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
+import org.jitsi_modified.service.neomedia.rtp.BandwidthEstimator
 
 
 data class TransceiverStats(
     val endpointConnectionStats: EndpointConnectionStats.Snapshot,
-    val incomingStreamStatistics: Map<Long, IncomingStreamStatistics.Snapshot>,
-    val outgoingStreamStatistics: Map<Long, OutgoingStreamStatistics.Snapshot>
+    val incomingStats: IncomingStatisticsSnapshot,
+    val outgoingStats: OutgoingStatisticsSnapshot,
+    val bandwidthEstimatorStats: BandwidthEstimator.Statistics
 )
