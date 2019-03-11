@@ -23,7 +23,6 @@ import java.util.concurrent.locks.*;
 import net.java.sip.communicator.util.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
-import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.*;
@@ -556,12 +555,14 @@ public class VideobridgeStatistics
 
                     TransceiverStats transceiverStats
                             = endpoint.transceiver.getTransceiverStats();
-                    for (IncomingStreamStatistics.Snapshot ssrcStats
-                            : transceiverStats.getIncomingStreamStatistics().values())
+                    IncomingStatisticsSnapshot incomingStats
+                            = transceiverStats.getIncomingStats();
+                    bitrateDownloadBps += incomingStats.getBitrate();
+                    packetRateDownload += incomingStats.getPacketRate();
+                    for (IncomingSsrcStats.Snapshot ssrcStats
+                            : incomingStats.getSsrcStats().values())
                     {
                         packetsReceived += ssrcStats.getNumRececivedPackets();
-                        bitrateDownloadBps += ssrcStats.getBitrate();
-                        packetRateDownload += ssrcStats.getPacketRate();
 
                         packetsReceivedLost += ssrcStats.getCumulativePacketsLost();
 
