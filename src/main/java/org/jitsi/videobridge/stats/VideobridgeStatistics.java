@@ -660,17 +660,15 @@ public class VideobridgeStatistics
         lock.lock();
         try
         {
-            // TODO verify
             unlockedSetStat(
                     BITRATE_DOWNLOAD,
                     bitrateDownloadBps / 1000 /* kbps */);
-            // TODO verify
+            // TODO (backend not implemented)
             unlockedSetStat(
                     BITRATE_UPLOAD,
                     bitrateUploadBps / 1000 /* kbps */);
-            // TODO verify
             unlockedSetStat(PACKET_RATE_DOWNLOAD, packetRateDownload);
-            // TODO verify
+            // TODO (backend not implemenred)
             unlockedSetStat(PACKET_RATE_UPLOAD, packetRateUpload);
             // Keep for backward compatibility
             unlockedSetStat(
@@ -682,22 +680,21 @@ public class VideobridgeStatistics
             unlockedSetStat(LOSS_RATE_UPLOAD, lossRateUpload);
             // TODO verify
             unlockedSetStat(JITTER_AGGREGATE, jitterAggregate);
-            // TODO verify
             unlockedSetStat(RTT_AGGREGATE, rttAggregate);
             unlockedSetStat(AUDIOCHANNELS, audioChannels);
-            // TODO verify
+            // TODO
             unlockedSetStat(
                     TOTAL_FAILED_CONFERENCES,
                     jvbStats.totalFailedConferences.get());
-            // TODO verify
+            // TODO
             unlockedSetStat(
                     TOTAL_PARTIALLY_FAILED_CONFERENCES,
                     jvbStats.totalPartiallyFailedConferences.get());
-            // TODO verify
+            // TODO
             unlockedSetStat(
                     TOTAL_NO_PAYLOAD_CHANNELS,
                     jvbStats.totalNoPayloadChannels.get());
-            // TODO verify
+            // TODO
             unlockedSetStat(
                     TOTAL_NO_TRANSPORT_CHANNELS,
                     jvbStats.totalNoTransportChannels.get());

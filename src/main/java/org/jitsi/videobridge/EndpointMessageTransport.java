@@ -159,6 +159,8 @@ class EndpointMessageTransport
     private void sendMessage(DataChannel dst, String message, String errorMessage)
     {
         dst.sendString(message);
+        endpoint.getConference().getVideobridge().getStatistics()
+                .totalDataChannelMessagesSent.incrementAndGet();
     }
 
     /**
@@ -469,14 +471,7 @@ class EndpointMessageTransport
             this.dataChannel = new WeakReference<>(dataChannel);
             // We install the handler first, otherwise the 'ready' might fire after we check it but before we
             //  install the handler
-            dataChannel.onDataChannelEvents(new DataChannelStack.DataChannelEventListener()
-            {
-                @Override
-                public void onDataChannelOpened()
-                {
-                    notifyTransportChannelConnected();
-                }
-            });
+            dataChannel.onDataChannelEvents(this::notifyTransportChannelConnected);
             if (dataChannel.isReady())
             {
                 notifyTransportChannelConnected();
