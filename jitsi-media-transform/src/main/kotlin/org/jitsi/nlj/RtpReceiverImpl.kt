@@ -26,7 +26,7 @@ import org.jitsi.nlj.transform.NodeTeardownVisitor
 import org.jitsi.nlj.transform.node.*
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
-import org.jitsi.nlj.transform.node.incoming.IncomingStreamStatistics
+import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 import org.jitsi.nlj.transform.node.incoming.PaddingTermination
 import org.jitsi.nlj.transform.node.incoming.RetransmissionRequesterNode
 import org.jitsi.nlj.transform.node.incoming.RtcpTermination
@@ -91,8 +91,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val tccGenerator = TccGeneratorNode(rtcpSender)
     private val payloadTypeFilter = PayloadTypeFilterNode()
     private val audioLevelReader = AudioLevelReader()
-    private val statTracker = IncomingStatisticsTracker()
-    private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statTracker)
+    private val statsTracker = IncomingStatisticsTracker()
+    private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statsTracker)
     private val rtcpTermination = RtcpTermination(rtcpEventNotifier, transportCcEngine)
 
     companion object {
@@ -168,7 +168,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(tccGenerator)
                         node(srtpDecryptWrapper)
                         node(MediaTypeParser())
-                        node(statTracker)
+                        node(statsTracker)
                         demux("Media type") {
                             packetPath {
                                 name = "Audio path"
@@ -305,10 +305,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
         audioLevelReader.audioLevelListener = audioLevelListener
     }
 
-    override fun getStreamStats(): Map<Long, IncomingStreamStatistics.Snapshot> {
-        return statTracker.getCurrentStats().map { (ssrc, stats) ->
-            Pair(ssrc, stats.getSnapshot())
-        }.toMap()
+    override fun getStreamStats(): IncomingStatisticsSnapshot {
+        return statsTracker.getSnapshot()
     }
 
     override fun stop() {

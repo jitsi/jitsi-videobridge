@@ -41,20 +41,32 @@ import java.util.concurrent.ConcurrentHashMap
  * Track various statistics about received RTP streams to be used in SR/RR report blocks
  */
 class IncomingStatisticsTracker : ObserverNode("Incoming statistics tracker") {
-    private val streamStats: MutableMap<Long, IncomingStreamStatistics> = ConcurrentHashMap()
+    private val ssrcStats: MutableMap<Long, IncomingSsrcStats> = ConcurrentHashMap()
     private val payloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
+
+    /**
+     * The bitrate in bits per seconds (for all RTP streams).
+     */
+    private val bitrate = RateStatistics(Duration.ofSeconds(1).toMillis().toUInt())
+    /**
+     * The packet rate in packets per second (for all RTP streams).
+     */
+    private val packetRate = RateStatistics(Duration.ofSeconds(1).toMillis().toUInt(), 1000f)
+
     override fun observe(packetInfo: PacketInfo) {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        val stats = streamStats.computeIfAbsent(rtpPacket.header.ssrc) {
-            IncomingStreamStatistics(rtpPacket.header.ssrc, rtpPacket.header.sequenceNumber)
+        val stats = ssrcStats.computeIfAbsent(rtpPacket.header.ssrc) {
+            IncomingSsrcStats(rtpPacket.header.ssrc, rtpPacket.header.sequenceNumber)
         }
         payloadTypes[rtpPacket.header.payloadType.toByte()]?.let {
             val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.header.timestamp.toUInt(), it.clockRate)
             stats.packetReceived(rtpPacket, packetSentTimestamp, packetInfo.receivedTime)
         }
-    }
 
-    fun getCurrentStats(): Map<Long, IncomingStreamStatistics> = streamStats.toMap()
+        val now = System.currentTimeMillis()
+        bitrate.update(rtpPacket.sizeBytes, now)
+        packetRate.update(1, now)
+    }
 
     override fun handleEvent(event: Event) {
         when (event) {
@@ -75,15 +87,40 @@ class IncomingStatisticsTracker : ObserverNode("Incoming statistics tracker") {
         val parentStats = super.getNodeStats()
         return NodeStatsBlock(name).apply {
             addAll(parentStats)
-            val stats = getCurrentStats()
-            stats.forEach { ssrc, streamStats ->
+            val stats = getSnapshot()
+            stats.ssrcStats.forEach { ssrc, streamStats ->
                 addStat("source: $ssrc")
-                addStat(streamStats.getSnapshot().toString())
+                addStat(streamStats.toString())
             }
         }
     }
+
+    fun getSnapshot(): IncomingStatisticsSnapshot {
+        val now = System.currentTimeMillis()
+        return IncomingStatisticsSnapshot(
+            bitrate.getRate(now),
+            packetRate.getRate(now),
+            ssrcStats.map { (ssrc, stats) ->
+                Pair(ssrc, stats.getSnapshot())
+            }.toMap()
+        )
+    }
 }
 
+class IncomingStatisticsSnapshot(
+    /**
+     * Bitrate in bits per second.
+     */
+    val bitrate: Long,
+    /**
+     * Packet rate in packets per second.
+     */
+    val packetRate: Long,
+    /**
+     * Per-ssrc stats.
+     */
+    val ssrcStats: Map<Long, IncomingSsrcStats.Snapshot>
+)
 
 /**
  * Tracks various statistics for the stream using ssrc [ssrc].  Some statistics are tracked only
@@ -91,7 +128,7 @@ class IncomingStatisticsTracker : ObserverNode("Incoming statistics tracker") {
  * is tuned for use in generating an RR packet.
  * TODO: max dropout/max misorder/probation handling according to appendix A.1
  */
-class IncomingStreamStatistics(
+class IncomingSsrcStats(
     private val ssrc: Long,
     private var baseSeqNum: Int
 ) {
@@ -113,8 +150,6 @@ class IncomingStreamStatistics(
     private var outOfOrderPacketCount: Int = 0
     private var jitter: Double = 0.0
     private var numReceivedPackets: Int = 0
-    private val bitrate = RateStatistics(Duration.ofSeconds(1).toMillis().toUInt())
-    private val packetRate = RateStatistics(Duration.ofSeconds(1).toMillis().toUInt(), 1000f)
     // End variables protected by statsLock
 
     /**
@@ -197,12 +232,12 @@ class IncomingStreamStatistics(
     fun getSnapshot(): Snapshot {
         synchronized (statsLock) {
             return Snapshot(numReceivedPackets, maxSeqNum, seqNumCycles, numExpectedPackets,
-                    cumulativePacketsLost, jitter, bitrate.rate, packetRate.rate)
+                    cumulativePacketsLost, jitter)
         }
     }
 
     /**
-     * Resets this [IncomingStreamStatistics]'s tracking variables such that:
+     * Resets this [IncomingSsrcStats]'s tracking variables such that:
      * 1) A new base sequence number (the given [newBaseSeqNum]) will be used to start new loss calculations.
      * 2) Any lost packet counters will be reset
      * 3) Jitter calculations will NOT be reset
@@ -214,7 +249,7 @@ class IncomingStreamStatistics(
 //    }
 
     /**
-     * Notify this [IncomingStreamStatistics] instance that an RTP packet [packet] for the stream it is
+     * Notify this [IncomingSsrcStats] instance that an RTP packet [packet] for the stream it is
      * tracking has been received and that it: was sent at [packetSentTimestampMs] (note this is NOT the
      * raw RTP timestamp, but the 'translated' timestamp which is a function of the RTP timestamp and the clockrate)
      * and was received at [packetReceivedTimeMs]
@@ -227,9 +262,6 @@ class IncomingStreamStatistics(
         val packetSequenceNumber = packet.header.sequenceNumber
         synchronized(statsLock) {
             numReceivedPackets++
-            val now = System.currentTimeMillis()
-            bitrate.update(packet.sizeBytes, now)
-            packetRate.update(1, now)
             if (packetSequenceNumber isNewerThan maxSeqNum) {
                 if (packetSequenceNumber isNextAfter maxSeqNum) {
                     if (probation > 0) {
@@ -288,7 +320,7 @@ class IncomingStreamStatistics(
     }
 
     /**
-     * A class to export a consistent snapshot of the data held inside [IncomingStreamStatistics]
+     * A class to export a consistent snapshot of the data held inside [IncomingSsrcStats]
      * TODO: these really need to be documented!
      */
     data class Snapshot(
@@ -297,11 +329,7 @@ class IncomingStreamStatistics(
         val seqNumCycles: Int = 0,
         val numExpectedPackets: Int = 0,
         val cumulativePacketsLost: Int = 0,
-        val jitter: Double = 0.0,
-        // bits per second
-        val bitrate: Long = 0,
-        // pps
-        val packetRate: Long = 0
+        val jitter: Double = 0.0
     ) {
         val fractionLost: Int
             get() = (cumulativePacketsLost / numExpectedPackets) * 256
@@ -313,8 +341,7 @@ class IncomingStreamStatistics(
                 seqNumCycles,
                 numExpectedPackets - previousSnapshot.numExpectedPackets,
                 cumulativePacketsLost - previousSnapshot.cumulativePacketsLost,
-                jitter,
-                bitrate
+                jitter
             )
         }
     }
