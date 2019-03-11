@@ -198,7 +198,7 @@ public class CallStatsIOTransport
             long measurementInterval)
     {
         bsib.audioFabricCount(
-                s.getStatAsInt(VideobridgeStatistics.AUDIOCHANNELS));
+                s.getStatAsInt(VideobridgeStatistics.AUDIO_CHANNELS));
         bsib.avgIntervalJitter(
             s.getStatAsInt(VideobridgeStatistics.JITTER_AGGREGATE));
         bsib.avgIntervalRtt(
@@ -225,12 +225,12 @@ public class CallStatsIOTransport
         bsib.measurementInterval((int) measurementInterval);
         bsib.memoryUsage(s.getStatAsInt(VideobridgeStatistics.USED_MEMORY));
         bsib.participantsCount(
-                s.getStatAsInt(VideobridgeStatistics.NUMBEROFPARTICIPANTS));
-        bsib.threadCount(s.getStatAsInt(VideobridgeStatistics.NUMBEROFTHREADS));
+                s.getStatAsInt(VideobridgeStatistics.PARTICIPANTS));
+        bsib.threadCount(s.getStatAsInt(VideobridgeStatistics.THREADS));
         // TODO totalLoss
         bsib.totalMemory(s.getStatAsInt(VideobridgeStatistics.TOTAL_MEMORY));
         bsib.videoFabricCount(
-                s.getStatAsInt(VideobridgeStatistics.VIDEOCHANNELS));
+                s.getStatAsInt(VideobridgeStatistics.VIDEO_CHANNELS));
     }
 
     /**
