@@ -17,11 +17,11 @@
 package org.jitsi.nlj.stats
 
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
-import org.jitsi.nlj.transform.node.outgoing.OutgoingStreamStatistics
+import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
 
 
 data class TransceiverStats(
     val endpointConnectionStats: EndpointConnectionStats.Snapshot,
     val incomingStats: IncomingStatisticsSnapshot,
-    val outgoingStreamStatistics: Map<Long, OutgoingStreamStatistics.Snapshot>
+    val outgoingStats: OutgoingStatisticsSnapshot
 )

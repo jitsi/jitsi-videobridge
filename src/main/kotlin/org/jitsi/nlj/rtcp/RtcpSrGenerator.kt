@@ -23,7 +23,6 @@ import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.SenderInfo
-import unsigned.toULong
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
@@ -41,17 +40,16 @@ class RtcpSrGenerator(
 
     private fun doWork() {
         if (running) {
-            val streamStats = outgoingStatisticsTracker.getCurrentStats()
+            val outgoingStats = outgoingStatisticsTracker.getSnapshot()
             val now = System.currentTimeMillis()
-            streamStats.forEach { ssrc, sendStats ->
-                val statsSnapshot = sendStats.getSnapshot()
+            outgoingStats.ssrcStats.forEach { ssrc, statsSnapshot ->
                 val senderInfo = SenderInfo(
                     ntpTimestamp = RtpUtils.millisToNtpTimestamp(now),
                     //TODO: from what I can tell, the old code didn't generate an RTP timestamp to map to the current
                     // ntp timestamp, and instead used the most recent rtp timestamp we'd seen
                     rtpTimestamp = statsSnapshot.mostRecentRtpTimestamp,
-                    sendersPacketCount = statsSnapshot.packetCount.toULong(),
-                    sendersOctetCount = statsSnapshot.octetCount.toULong()
+                    sendersPacketCount = statsSnapshot.packetCount.toLong(),
+                    sendersOctetCount = statsSnapshot.octetCount.toLong()
                 )
 
                 val srPacket = RtcpSrPacket(
