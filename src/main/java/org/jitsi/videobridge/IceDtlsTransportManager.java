@@ -17,6 +17,8 @@ package org.jitsi.videobridge;
 
 import kotlin.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import org.ice4j.*;
+import org.ice4j.ice.*;
 import org.ice4j.socket.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
@@ -81,7 +83,6 @@ public class IceDtlsTransportManager
     private Node outgoingDtlsPipelineRoot = createOutgoingDtlsPipeline();
     private Node outgoingSrtpPipelineRoot = createOutgoingSrtpPipeline();
     protected boolean dtlsHandshakeComplete = false;
-    private boolean iceConnectedProcessed = false;
 
     public IceDtlsTransportManager(Endpoint endpoint)
             throws IOException
@@ -297,12 +298,7 @@ public class IceDtlsTransportManager
     @Override
     protected void onIceConnected()
     {
-        if (iceConnectedProcessed)
-        {
-            return;
-        }
-        iceConnectedProcessed = true;
-
+        updateIceConnectedStats();
         DatagramSocket socket = iceComponent.getSocket();
 
         endpoint.setOutgoingSrtpPacketHandler(outgoingPacketQueue::add);
@@ -339,6 +335,44 @@ public class IceDtlsTransportManager
             }
         });
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void onIceFailed()
+    {
+        endpoint.getConference().getVideobridge().getStatistics()
+                .totalIceFailed.incrementAndGet();
+    }
+
+    /**
+     * Bumps the conters of the number of time ICE succeeded in the
+     * {@link Videobridge} statistics.
+     */
+    private void updateIceConnectedStats()
+    {
+        Videobridge.Statistics stats
+                = endpoint.getConference().getVideobridge().getStatistics();
+        stats.totalIceSucceeded.incrementAndGet();
+
+        CandidatePair selectedPair = iceComponent.getSelectedPair();
+        RemoteCandidate remoteCandidate =
+                selectedPair == null ? null : selectedPair.getRemoteCandidate();
+
+        if (remoteCandidate == null)
+        {
+            return;
+        }
+
+
+        if (remoteCandidate.getTransport() == Transport.TCP
+            || remoteCandidate.getTransport() == Transport.SSLTCP)
+        {
+            stats.totalIceSucceededTcp.incrementAndGet();
+        }
+    }
+
 
     class SocketSenderNode extends ConsumerNode
     {
