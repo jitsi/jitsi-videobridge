@@ -230,16 +230,21 @@ public class VideobridgeStatistics
         = "total_loss_degraded_participant_seconds";
 
     /**
-     * The name of the stat indicating the total number of media connections
-     * established over UDP.
+     * The name of the stat indicating the total number of times ICE failed.
      */
-    private static final String TOTAL_UDP_CONNECTIONS = "total_udp_connections";
+    private static final String TOTAL_ICE_FAILED = "total_ice_failed";
 
     /**
-     * The name of the stat indicating the total number of media connections
-     * established over TCP.
+     * The name of the stat indicating the total number of times ICE succeeded.
      */
-    private static final String TOTAL_TCP_CONNECTIONS = "total_tcp_connections";
+    private static final String TOTAL_ICE_SUCCEEDED = "total_ice_succeeded";
+
+    /**
+     * The name of the stat indicating the total number of times ICE succeeded
+     * over TCP.
+     */
+    private static final String TOTAL_ICE_SUCCEEDED_TCP
+            = "total_ice_succeeded_tcp";
 
     /**
      * The name of the stat indicating the total number of messages received
@@ -702,14 +707,15 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     TOTAL_CONFERENCES_COMPLETED,
                     jvbStats.totalConferencesCompleted.get());
-            // TODO (backend not implemented)
             unlockedSetStat(
-                    TOTAL_UDP_CONNECTIONS,
-                    jvbStats.totalUdpTransportManagers.get());
-            // TODO (backend not implemented)
+                    TOTAL_ICE_FAILED,
+                    jvbStats.totalIceFailed.get());
             unlockedSetStat(
-                    TOTAL_TCP_CONNECTIONS,
-                    jvbStats.totalTcpTransportManagers.get());
+                    TOTAL_ICE_SUCCEEDED,
+                    jvbStats.totalIceSucceeded.get());
+            unlockedSetStat(
+                    TOTAL_ICE_SUCCEEDED_TCP,
+                    jvbStats.totalIceSucceededTcp.get());
             unlockedSetStat(
                     TOTAL_CONFERENCE_SECONDS,
                     jvbStats.totalConferenceSeconds.get());
