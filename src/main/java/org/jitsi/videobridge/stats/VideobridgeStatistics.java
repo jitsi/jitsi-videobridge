@@ -45,7 +45,7 @@ public class VideobridgeStatistics
      * The name of the number of audio channels statistic. Its runtime type is
      * {@code Integer}.
      */
-    public static final String AUDIOCHANNELS = "audiochannels";
+    public static final String AUDIO_CHANNELS = "audiochannels";
 
     /**
      * The name of the bit rate statistic for download.
@@ -88,13 +88,13 @@ public class VideobridgeStatistics
      * The name of the number of participants statistic. Its runtime type is
      * {@code Integer}.
      */
-    public static final String NUMBEROFPARTICIPANTS = "participants";
+    public static final String PARTICIPANTS = "participants";
 
     /**
      * The name of the number of threads statistic. Its runtime type is
      * {@code Integer}.
      */
-    public static final String NUMBEROFTHREADS = "threads";
+    public static final String THREADS = "threads";
 
     /**
      * The name of the RTP loss statistic.
@@ -338,13 +338,13 @@ public class VideobridgeStatistics
      * The name of the number of video channels statistic. Its runtime type is
      * {@code Integer}.
      */
-    public static final String VIDEOCHANNELS = "videochannels";
+    public static final String VIDEO_CHANNELS = "videochannels";
 
     /**
      * The name of the number of video streams statistic. Its runtime type is
      * {@code Integer}.
      */
-    public static final String VIDEOSTREAMS = "videostreams";
+    public static final String VIDEO_STREAMS = "videostreams";
 
     /**
      * The name of the "relay_id" statistic.
@@ -406,18 +406,18 @@ public class VideobridgeStatistics
         }
 
         // Is it necessary to set initial values for all of these?
-        unlockedSetStat(AUDIOCHANNELS, 0);
+        unlockedSetStat(AUDIO_CHANNELS, 0);
         unlockedSetStat(BITRATE_DOWNLOAD, 0d);
         unlockedSetStat(BITRATE_UPLOAD, 0d);
         unlockedSetStat(CONFERENCES, 0);
         unlockedSetStat(CPU_USAGE, 0d);
-        unlockedSetStat(NUMBEROFPARTICIPANTS, 0);
-        unlockedSetStat(NUMBEROFTHREADS, 0);
+        unlockedSetStat(PARTICIPANTS, 0);
+        unlockedSetStat(THREADS, 0);
         unlockedSetStat(RTP_LOSS, 0d);
         unlockedSetStat(TOTAL_MEMORY, 0);
         unlockedSetStat(USED_MEMORY, 0);
-        unlockedSetStat(VIDEOCHANNELS, 0);
-        unlockedSetStat(VIDEOSTREAMS, 0);
+        unlockedSetStat(VIDEO_CHANNELS, 0);
+        unlockedSetStat(VIDEO_STREAMS, 0);
         unlockedSetStat(LOSS_RATE_DOWNLOAD, 0d);
         unlockedSetStat(LOSS_RATE_UPLOAD, 0d);
         unlockedSetStat(JITTER_AGGREGATE, 0d);
@@ -645,7 +645,7 @@ public class VideobridgeStatistics
         for (int size : conferenceSizes)
             conferenceSizesJson.add(size);
 
-        // NUMBEROFTHREADS
+        // THREADS
         int threadCount = ManagementFactory.getThreadMXBean().getThreadCount();
 
         // OsStatistics
@@ -684,7 +684,7 @@ public class VideobridgeStatistics
             // TODO seems broken (I see values of > 11 seconds)
             unlockedSetStat(JITTER_AGGREGATE, jitterAggregate);
             unlockedSetStat(RTT_AGGREGATE, rttAggregate);
-            unlockedSetStat(AUDIOCHANNELS, audioChannels);
+            unlockedSetStat(AUDIO_CHANNELS, audioChannels);
             // TODO
             unlockedSetStat(
                     TOTAL_FAILED_CONFERENCES,
@@ -732,12 +732,12 @@ public class VideobridgeStatistics
             // TODO (Conference doesn't keep track).
             unlockedSetStat(TOTAL_CHANNELS, jvbStats.totalChannels.get());
             unlockedSetStat(CONFERENCES, conferences);
-            unlockedSetStat(NUMBEROFPARTICIPANTS, endpoints);
-            unlockedSetStat(VIDEOCHANNELS, videoChannels);
-            unlockedSetStat(VIDEOSTREAMS, videoStreams);
+            unlockedSetStat(PARTICIPANTS, endpoints);
+            unlockedSetStat(VIDEO_CHANNELS, videoChannels);
+            unlockedSetStat(VIDEO_STREAMS, videoStreams);
             unlockedSetStat(LARGEST_CONFERENCE, largestConferenceSize);
             unlockedSetStat(CONFERENCE_SIZES, conferenceSizesJson);
-            unlockedSetStat(NUMBEROFTHREADS, threadCount);
+            unlockedSetStat(THREADS, threadCount);
             unlockedSetStat(CPU_USAGE, Math.max(cpuUsage, 0));
             unlockedSetStat(TOTAL_MEMORY, Math.max(totalMemory, 0));
             unlockedSetStat(USED_MEMORY, Math.max(usedMemory, 0));
