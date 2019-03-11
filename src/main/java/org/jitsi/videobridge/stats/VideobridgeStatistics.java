@@ -91,6 +91,11 @@ public class VideobridgeStatistics
     public static final String PARTICIPANTS = "participants";
 
     /**
+     * The total number of participants/endpoints created on this bridge.
+     */
+    public static final String TOTAL_PARTICIPANTS = "total_participants";
+
+    /**
      * The name of the number of threads statistic. Its runtime type is
      * {@code Integer}.
      */
@@ -168,12 +173,6 @@ public class VideobridgeStatistics
      */
     private static final String TOTAL_NO_TRANSPORT_CHANNELS
         = "total_no_transport_channels";
-
-    /**
-     * The name of the total number of channels (failed + succeeded).
-     */
-    private static final String TOTAL_CHANNELS
-        = "total_channels";
 
     /**
      * The name of the total number of conferences where all channels failed
@@ -685,22 +684,12 @@ public class VideobridgeStatistics
             unlockedSetStat(JITTER_AGGREGATE, jitterAggregate);
             unlockedSetStat(RTT_AGGREGATE, rttAggregate);
             unlockedSetStat(AUDIO_CHANNELS, audioChannels);
-            // TODO
             unlockedSetStat(
                     TOTAL_FAILED_CONFERENCES,
                     jvbStats.totalFailedConferences.get());
-            // TODO
             unlockedSetStat(
                     TOTAL_PARTIALLY_FAILED_CONFERENCES,
                     jvbStats.totalPartiallyFailedConferences.get());
-            // TODO
-            unlockedSetStat(
-                    TOTAL_NO_PAYLOAD_CHANNELS,
-                    jvbStats.totalNoPayloadChannels.get());
-            // TODO
-            unlockedSetStat(
-                    TOTAL_NO_TRANSPORT_CHANNELS,
-                    jvbStats.totalNoTransportChannels.get());
             unlockedSetStat(
                     TOTAL_CONFERENCES_CREATED,
                     jvbStats.totalConferencesCreated.get());
@@ -729,8 +718,7 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     TOTAL_LOSS_DEGRADED_PARTICIPANT_SECONDS,
                    jvbStats.totalLossDegradedParticipantMs.get() / 1000);
-            // TODO (Conference doesn't keep track).
-            unlockedSetStat(TOTAL_CHANNELS, jvbStats.totalChannels.get());
+            unlockedSetStat(TOTAL_PARTICIPANTS, jvbStats.totalEndpoints.get());
             unlockedSetStat(CONFERENCES, conferences);
             unlockedSetStat(PARTICIPANTS, endpoints);
             unlockedSetStat(VIDEO_CHANNELS, videoChannels);

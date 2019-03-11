@@ -475,14 +475,6 @@ public class Conference
         videobridgeStatistics.totalConferenceSeconds.addAndGet(
             durationSeconds);
 
-        videobridgeStatistics.totalNoPayloadChannels.addAndGet(
-            statistics.totalNoPayloadChannels.get());
-        videobridgeStatistics.totalNoTransportChannels.addAndGet(
-            statistics.totalNoTransportChannels.get());
-
-        videobridgeStatistics.totalChannels.addAndGet(
-            statistics.totalChannels.get());
-
         videobridgeStatistics.totalBytesReceived.addAndGet(
             statistics.totalBytesReceived.get());
         videobridgeStatistics.totalBytesSent.addAndGet(
@@ -493,10 +485,11 @@ public class Conference
             statistics.totalPacketsSent.get());
 
         boolean hasFailed
-            = statistics.totalNoPayloadChannels.get()
-                >= statistics.totalChannels.get();
+            = statistics.hasIceFailedEndpoint
+                && !statistics.hasIceSucceededEndpoint;
         boolean hasPartiallyFailed
-            = statistics.totalNoPayloadChannels.get() != 0;
+            = statistics.hasIceFailedEndpoint
+                && statistics.hasIceSucceededEndpoint;
 
         if (hasPartiallyFailed)
         {
@@ -522,12 +515,6 @@ public class Conference
                 .append(",v_streams=").append(metrics[2])
                 .append(",conf_completed=")
                     .append(videobridgeStatistics.totalConferencesCompleted)
-                .append(",no_payload_ch=")
-                    .append(videobridgeStatistics.totalNoPayloadChannels)
-                .append(",no_transport_ch=")
-                    .append(videobridgeStatistics.totalNoTransportChannels)
-                .append(",total_ch=")
-                    .append(videobridgeStatistics.totalChannels)
                 .append(",has_failed=").append(hasFailed)
                 .append(",has_partially_failed=").append(hasPartiallyFailed);
             logger.info(Logger.Category.STATISTICS, sb.toString());
@@ -1173,16 +1160,6 @@ public class Conference
     public class Statistics
     {
         /**
-         * The total number of channels where the transport failed to connect.
-         */
-        AtomicInteger totalNoTransportChannels = new AtomicInteger(0);
-
-        /**
-         * The total number of channels where there was no payload traffic.
-         */
-        AtomicInteger totalNoPayloadChannels = new AtomicInteger(0);
-
-        /**
          * The total number of channels.
          */
         AtomicInteger totalChannels = new AtomicInteger(0);
@@ -1210,5 +1187,16 @@ public class Conference
          * conference. Note that this is only updated when channels expire.
          */
         AtomicLong totalPacketsSent = new AtomicLong();
+
+        /**
+         * Whether at least one endpoint in this conference failed ICE.
+         */
+        boolean hasIceFailedEndpoint = false;
+
+        /**
+         * Whether at least one endpoint in this conference completed ICE
+         * successfully.
+         */
+        boolean hasIceSucceededEndpoint = false;
     }
 }
