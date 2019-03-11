@@ -83,7 +83,7 @@ class Transceiver(
      */
     private val rtcpEventNotifier = RtcpEventNotifier()
 
-    private var mediaStreamTracks = arrayOf<MediaStreamTrackDesc>()
+    private var mediaStreamTracks = MediaStreamTracks()
 
     //NOTE(brian): there were a number of classes in the old code that used this.  I believe it was previously
     // held in the VideoChannel.  We'll create one here and pass it where it's needed.
@@ -208,15 +208,16 @@ class Transceiver(
 
     fun receivesSsrc(ssrc: Long): Boolean = receiveSsrcs.contains(ssrc)
 
-    fun setMediaStreamTracks(mediaStreamTracks: Array<MediaStreamTrackDesc>) {
+    fun setMediaStreamTracks(mediaStreamTracks: Array<MediaStreamTrackDesc>): Boolean {
         logger.cinfo { "$id setting media stream tracks: ${mediaStreamTracks.joinToString()}" }
-        this.mediaStreamTracks = mediaStreamTracks
-        rtpReceiver.handleEvent(SetMediaStreamTracksEvent(mediaStreamTracks))
+        val ret = this.mediaStreamTracks.setMediaStreamTracks(mediaStreamTracks)
+        rtpReceiver.handleEvent(SetMediaStreamTracksEvent(this.mediaStreamTracks.tracks))
+        return ret
     }
 
     //TODO(brian): we should only expose an immutable version of this, but Array doesn't have that.  Go in
     // and change all the storage of the media stream tracks to use a list
-    fun getMediaStreamTracks(): Array<MediaStreamTrackDesc> = mediaStreamTracks
+    fun getMediaStreamTracks(): Array<MediaStreamTrackDesc> = mediaStreamTracks.tracks
 
     fun requestKeyFrame(mediaSsrc: Long) = rtpSender.requestKeyframe(mediaSsrc)
 

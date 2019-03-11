@@ -145,4 +145,17 @@ public class MediaStreamTrackDesc
 
         return sb.toString();
     }
+
+    /**
+     * FIXME: this should probably check whether the specified SSRC is part
+     * of this track (i.e. check all encodings and include secondary SSRCs).
+     *
+     * @param ssrc the SSRC to match.
+     * @return {@code true} if the specified {@code ssrc} is the primary SSRC
+     * for this track.
+     */
+    public boolean matches(long ssrc)
+    {
+        return rtpEncodings.length > 0 && rtpEncodings[0].getPrimarySSRC() == ssrc;
+    }
 }
