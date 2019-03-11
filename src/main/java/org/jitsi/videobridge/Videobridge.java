@@ -1281,16 +1281,21 @@ public class Videobridge
         public AtomicLong totalLossDegradedParticipantMs = new AtomicLong();
 
         /**
-         * The total number of ICE transport managers on this videobridge which
-         * successfully connected over UDP.
+         * The total number of times an ICE Agent failed to establish
+         * connectivity.
          */
-        public AtomicInteger totalUdpTransportManagers = new AtomicInteger();
+        public AtomicInteger totalIceFailed = new AtomicInteger();
 
         /**
-         * The total number of ICE transport managers on this videobridge which
-         * successfully connected over TCP.
+         * The total number of times an ICE Agent succeeded.
          */
-        public AtomicInteger totalTcpTransportManagers = new AtomicInteger();
+        public AtomicInteger totalIceSucceeded = new AtomicInteger();
+
+        /**
+         * The total number of times an ICE Agent succeeded and the selected
+         * candidate was a TCP candidate.
+         */
+        public AtomicInteger totalIceSucceededTcp = new AtomicInteger();
 
         /**
          * The total number of messages received from the data channels of

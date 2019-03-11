@@ -755,25 +755,37 @@ public class IceUdpTransportManager
         // case separately below.
         if (IceProcessingState.COMPLETED.equals(newState))
         {
-            iceConnected = true;
-            onIceConnected();
+            if (!iceConnected)
+            {
+                iceConnected = true;
+                onIceConnected();
+            }
         }
         else if (IceProcessingState.FAILED.equals(newState)
             || (IceProcessingState.RUNNING.equals(oldState)
                     && IceProcessingState.TERMINATED.equals(newState)))
         {
-            onIceFailed();
+            if (!iceFailed)
+            {
+                iceFailed = true;
+                onIceFailed();
+            }
         }
     }
 
+    /**
+     * Called once if ICE completes successfully.
+     */
     protected void onIceConnected()
     {
     }
 
+    /**
+     * Called once if the ICE agent fails.
+     */
     protected void onIceFailed()
     {
         logger.warn(logPrefix + "ICE failed!");
-        iceFailed = true;
     }
 
     /**
