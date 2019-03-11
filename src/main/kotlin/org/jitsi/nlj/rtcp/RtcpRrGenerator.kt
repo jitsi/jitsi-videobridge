@@ -17,8 +17,7 @@ package org.jitsi.nlj.rtcp
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
-import org.jitsi.nlj.transform.node.incoming.IncomingStreamStatistics
-import org.jitsi.rtp.rtcp.RtcpHeader
+import org.jitsi.nlj.transform.node.incoming.IncomingSsrcStats
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
 import org.jitsi.rtp.rtcp.RtcpRrPacket
@@ -35,7 +34,7 @@ import java.util.concurrent.TimeUnit
 private data class SenderInfo(
     var lastSrCompactedTimestamp: Long = 0,
     var lastSrReceivedTime: Long = 0,
-    var statsSnapshot: IncomingStreamStatistics.Snapshot = IncomingStreamStatistics.Snapshot()
+    var statsSnapshot: IncomingSsrcStats.Snapshot = IncomingSsrcStats.Snapshot()
 )
 
 /**
@@ -71,11 +70,10 @@ class RtcpRrGenerator(
 
     private fun doWork() {
         if (running) {
-            val streamStats = incomingStatisticsTracker.getCurrentStats()
+            val streamStats = incomingStatisticsTracker.getSnapshot()
             val now = System.currentTimeMillis()
             val reportBlocks = mutableListOf<RtcpReportBlock>()
-            streamStats.forEach { ssrc, stats ->
-                val statsSnapshot = stats.getSnapshot()
+            streamStats.ssrcStats.forEach { ssrc, statsSnapshot ->
                 val senderInfo = senderInfos.computeIfAbsent(ssrc) {
                     SenderInfo()
                 }

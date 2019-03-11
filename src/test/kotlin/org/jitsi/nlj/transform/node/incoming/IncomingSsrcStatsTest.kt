@@ -63,7 +63,7 @@ private val JitterPacketInfos = listOf(
     createJitterPacketInfo(13, 260, 271, 1.3477)
 )
 
-internal class IncomingStreamStatisticsTest : ShouldSpec() {
+internal class IncomingSsrcStatsTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
@@ -74,7 +74,7 @@ internal class IncomingStreamStatisticsTest : ShouldSpec() {
                 var jitter = 0.0
                 var previousJitterPacketInfo = initialJitterPacketInfo
                 JitterPacketInfos.forEach {
-                    jitter = IncomingStreamStatistics.calculateJitter(
+                    jitter = IncomingSsrcStats.calculateJitter(
                         jitter,
                         previousJitterPacketInfo.statPacketInfo.sentTimeMs,
                         previousJitterPacketInfo.statPacketInfo.packetInfo.receivedTime,
@@ -88,7 +88,7 @@ internal class IncomingStreamStatisticsTest : ShouldSpec() {
         }
         "Expected packet count" {
             should("Handle cases with no rollover") {
-                IncomingStreamStatistics.calculateExpectedPacketCount(
+                IncomingSsrcStats.calculateExpectedPacketCount(
                     0,
                     1,
                     0,
@@ -96,7 +96,7 @@ internal class IncomingStreamStatisticsTest : ShouldSpec() {
                 ) shouldBe 10
             }
             should("handle cases with 1 rollover") {
-                IncomingStreamStatistics.calculateExpectedPacketCount(
+                IncomingSsrcStats.calculateExpectedPacketCount(
                     0,
                     65530,
                     1,
@@ -105,7 +105,7 @@ internal class IncomingStreamStatisticsTest : ShouldSpec() {
             }
             should("handle cases with > 1 rollover") {
                 // Same as the scenario above but with another rollover
-                IncomingStreamStatistics.calculateExpectedPacketCount(
+                IncomingSsrcStats.calculateExpectedPacketCount(
                     0,
                     65530,
                     2,
@@ -128,7 +128,7 @@ internal class IncomingStreamStatisticsTest : ShouldSpec() {
                 createStatPacketInfo(13, 0, 0),
                 createStatPacketInfo(16, 0, 0)
             )
-            val streamStatistics = IncomingStreamStatistics(
+            val streamStatistics = IncomingSsrcStats(
                     123L,
                     packetSequence.first().packetInfo.packetAs<RtpPacket>().header.sequenceNumber
             )
