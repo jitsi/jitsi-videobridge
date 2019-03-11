@@ -714,15 +714,12 @@ public class VideobridgeStatistics
                     TOTAL_CONFERENCE_SECONDS,
                     jvbStats.totalConferenceSeconds.get());
 
-            // TODO (backend not implemented)
             unlockedSetStat(
                     TOTAL_LOSS_CONTROLLED_PARTICIPANT_SECONDS,
                     jvbStats.totalLossControlledParticipantMs.get() / 1000);
-            // TODO (backend not implemented)
             unlockedSetStat(
                     TOTAL_LOSS_LIMITED_PARTICIPANT_SECONDS,
                     jvbStats.totalLossLimitedParticipantMs.get() / 1000);
-            // TODO (backend not implemented)
             unlockedSetStat(
                     TOTAL_LOSS_DEGRADED_PARTICIPANT_SECONDS,
                    jvbStats.totalLossDegradedParticipantMs.get() / 1000);
