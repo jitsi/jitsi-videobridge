@@ -344,6 +344,7 @@ public class IceDtlsTransportManager
     {
         endpoint.getConference().getVideobridge().getStatistics()
                 .totalIceFailed.incrementAndGet();
+        endpoint.getConference().getStatistics().hasIceFailedEndpoint = true;
     }
 
     /**
@@ -352,6 +353,8 @@ public class IceDtlsTransportManager
      */
     private void updateIceConnectedStats()
     {
+        endpoint.getConference().getStatistics().hasIceSucceededEndpoint = true;
+
         Videobridge.Statistics stats
                 = endpoint.getConference().getVideobridge().getStatistics();
         stats.totalIceSucceeded.incrementAndGet();
