@@ -63,6 +63,7 @@ class EventTimeline(
             toString()
         }
     }
+
 }
 
 /**
@@ -93,12 +94,27 @@ class PacketInfo @JvmOverloads constructor(
      * will be copied for the cloned PacketInfo).
      */
     fun clone(): PacketInfo {
-        val clone = PacketInfo(packet.clone(), timeline.clone())
+        val clone = if (ENABLE_TIMELINE) {
+            PacketInfo(packet.clone(), timeline.clone())
+        } else {
+            // If the timeline isn't enabled, we can just share the same one.
+            // (This would change if we allowed enabling the timeline at runtime)
+            PacketInfo(packet.clone(), timeline)
+        }
         clone.receivedTime = receivedTime
         return clone
     }
 
-    fun addEvent(desc: String) = timeline.addEvent(desc)
+    fun addEvent(desc: String) {
+        if (ENABLE_TIMELINE) {
+            timeline.addEvent(desc)
+        }
+    }
+
+    companion object {
+        //TODO: we could make this a public var to allow changing this at runtime
+        private const val ENABLE_TIMELINE = false
+    }
 }
 
 /**
