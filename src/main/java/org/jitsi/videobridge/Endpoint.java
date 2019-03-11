@@ -44,6 +44,7 @@ import org.jitsi.videobridge.sctp.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.sctp4j.*;
+import org.jitsi_modified.service.neomedia.rtp.*;
 
 import java.beans.*;
 import java.io.*;
@@ -553,17 +554,40 @@ public class Endpoint
      */
     private void updateStatsOnExpire()
     {
-        Conference.Statistics stats = getConference().getStatistics();
+        Conference.Statistics conferenceStats = getConference().getStatistics();
         TransceiverStats transceiverStats = transceiver.getTransceiverStats();
         IncomingStatisticsSnapshot incomingStats
                 = transceiverStats.getIncomingStats();
         OutgoingStatisticsSnapshot outgoingStats
                 = transceiverStats.getOutgoingStats();
+        BandwidthEstimator.Statistics bweStats
+                = transceiverStats.getBandwidthEstimatorStats();
 
-        stats.totalBytesReceived.addAndGet(incomingStats.getBytesReceived());
-        stats.totalPacketsReceived.addAndGet(incomingStats.getPacketsReceived());
-        stats.totalBytesSent.addAndGet(outgoingStats.getBytesSent());
-        stats.totalPacketsSent.addAndGet(outgoingStats.getPacketsSent());
+        conferenceStats.totalBytesReceived.addAndGet(
+                incomingStats.getBytesReceived());
+        conferenceStats.totalPacketsReceived.addAndGet(
+                incomingStats.getPacketsReceived());
+        conferenceStats.totalBytesSent.addAndGet(
+                outgoingStats.getBytesSent());
+        conferenceStats.totalPacketsSent.addAndGet(
+                outgoingStats.getPacketsSent());
+
+        bweStats.update(System.currentTimeMillis());
+
+        Videobridge.Statistics videobridgeStats
+                = getConference().getVideobridge().getStatistics();
+
+        long lossLimitedMs = bweStats.getLossLimitedMs();
+        long lossDegradedMs = bweStats.getLossDegradedMs();
+        long participantMs = bweStats.getLossFreeMs()
+                + lossDegradedMs + lossLimitedMs;
+
+        videobridgeStats.totalLossControlledParticipantMs
+                .addAndGet(participantMs);
+        videobridgeStats.totalLossLimitedParticipantMs
+                .addAndGet(lossLimitedMs);
+        videobridgeStats.totalLossDegradedParticipantMs
+                .addAndGet(lossDegradedMs);
     }
 
     public void createSctpConnection()
