@@ -310,7 +310,11 @@ class Transceiver(
      * Get various media and network stats
      */
     fun getTransceiverStats(): TransceiverStats {
-        return TransceiverStats(endpointConnectionStats.getSnapshot(), rtpReceiver.getStreamStats(), rtpSender.getStreamStats())
+        return TransceiverStats(
+            endpointConnectionStats.getSnapshot(),
+            rtpReceiver.getStreamStats(),
+            rtpSender.getStreamStats(),
+            bandwidthEstimator.statistics)
     }
 
     override fun stop() {
