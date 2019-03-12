@@ -28,12 +28,12 @@ import org.jitsi.nlj.format.VideoPayloadType
 import org.jitsi.nlj.rtp.PaddingVideoPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
-import org.jitsi.nlj.util.PacketCache
 import org.jitsi.nlj.util.cdebug
+import org.jitsi.nlj.util.fromLegacyRawPacket
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.rtp.rtp.RtpHeader
+import org.jitsi.rtp.NewRawPacket
 import org.jitsi.service.neomedia.MediaType
-import unsigned.toUInt
+import org.jitsi_modified.impl.neomedia.rtp.NewRawPacketCache
 import java.util.Random
 
 /**
@@ -44,7 +44,7 @@ import java.util.Random
  *
  */
 class ProbingDataSender(
-    private val packetCache: PacketCache,
+    private val packetCache: NewRawPacketCache,
     private val rtxDataSender: PacketHandler,
     private val garbageDataSender: PacketHandler
 ) : EventHandler, NodeStatsProducer {
@@ -102,7 +102,7 @@ class ProbingDataSender(
             while (lastNPacketIter.hasNext())
             {
                 val packet = lastNPacketIter.next()
-                val packetLen = packet.sizeBytes
+                val packetLen = packet.pkt.length
                 if (bytesSent + packetLen > numBytes) {
                     // We don't have enough 'room' to send this packet; we're done
                     break
@@ -112,7 +112,7 @@ class ProbingDataSender(
                 // encapsulating packets as RTX (with the proper ssrc and payload type) so we
                 // just need to find the packets to retransmit and forward them to the next node
                 //TODO(brian): do we need to clone it here?
-                packetsToResend.add(PacketInfo(packet.clone()))
+                packetsToResend.add(PacketInfo(packet.pkt.clone()))
             }
         }
         //TODO(brian): we're in a thread context mess here.  we'll be sending these out from the bandwidthprobing
@@ -134,18 +134,14 @@ class ProbingDataSender(
         val senderSsrc = localVideoSsrc ?: return bytesSent
         //TODO(brian): shouldn't this take into account numBytes? what if it's less than
         // the size of one dummy packet?
-        val packetLength = RtpHeader.FIXED_HEADER_SIZE_BYTES + 0xFF
+        val packetLength = NewRawPacket.FIXED_HEADER_SIZE + 0xFF
         val numPackets = (numBytes / packetLength) + 1 /* account for the mod */
         for (i in 0 until numPackets) {
-            val paddingPacket = PaddingVideoPacket(
-                RtpHeader(
-                    payloadType = pt.pt.toUInt(),
-                    ssrc = senderSsrc,
-                    timestamp = currDummyTimestamp,
-                    sequenceNumber = currDummySeqNum
-                ),
-                packetLength
-            )
+            val paddingPacket = PaddingVideoPacket(packetLength)
+            paddingPacket.payloadType = pt.pt
+            paddingPacket.ssrc = senderSsrc.toInt()
+            paddingPacket.timestamp = currDummyTimestamp
+            paddingPacket.sequenceNumber = currDummySeqNum
             garbageDataSender.processPacket(PacketInfo(paddingPacket))
 
             currDummySeqNum++

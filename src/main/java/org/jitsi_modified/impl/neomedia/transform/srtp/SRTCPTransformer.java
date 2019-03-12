@@ -15,10 +15,9 @@
  */
 package org.jitsi_modified.impl.neomedia.transform.srtp;
 
-//import org.jitsi.rtp.*;
-import org.jitsi.rtp.Packet;
+import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.*;
-import org.jitsi.rtp.srtcp.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi_modified.impl.neomedia.transform.*;
 
 import java.util.*;
@@ -145,9 +144,10 @@ public class SRTCPTransformer
     }
 
     private SRTCPCryptoContext getContext(
-            int ssrc,
+            NewRawPacket pkt,
             SRTPContextFactory engine)
     {
+        int ssrc = (int) pkt.getRTCPSSRC();
         SRTCPCryptoContext context = null;
 
         synchronized (contexts)
@@ -171,37 +171,37 @@ public class SRTCPTransformer
     /**
      * Decrypts a SRTCP packet
      *
-     * @param packet encrypted SRTCP packet to be decrypted
+     * @param pkt encrypted SRTCP packet to be decrypted
      * @return decrypted SRTCP packet
      */
     @Override
-    public Packet reverseTransform(Packet packet)
+    public Packet reverseTransform(Packet pkt)
     {
-        AuthenticatedSrtcpPacket authenticatedSrtcpPacket = (AuthenticatedSrtcpPacket) packet;
-        SRTCPCryptoContext context = getContext((int)authenticatedSrtcpPacket.getHeader().getSenderSsrc(), reverseFactory);
+        NewRawPacket rp = (NewRawPacket)pkt;
+        SRTCPCryptoContext context = getContext(rp, reverseFactory);
 
-        if (context == null)
-        {
-            return null;
-        }
-        return context.reverseTransformPacket(authenticatedSrtcpPacket);
+        return
+            ((context != null) && context.reverseTransformPacket(rp))
+                ? pkt
+                : null;
     }
 
     /**
      * Encrypts a SRTCP packet
      *
-     * @param packet plain SRTCP packet to be encrypted
+     * @param pkt plain SRTCP packet to be encrypted
      * @return encrypted SRTCP packet
      */
     @Override
-    public Packet transform(Packet packet)
+    public Packet transform(Packet pkt)
     {
-        RtcpPacket rtcpPacket = (RtcpPacket)packet;
-        SRTCPCryptoContext context = getContext((int)rtcpPacket.getHeader().getSenderSsrc(), forwardFactory);
+        NewRawPacket rp = new NewRawPacket(pkt.getBuffer(), pkt.getOffset(), pkt.getLength());
+        SRTCPCryptoContext context = getContext(rp, forwardFactory);
 
         if(context != null)
         {
-            return context.transformPacket(rtcpPacket);
+            context.transformPacket(rp);
+            return rp;
         }
         else
         {

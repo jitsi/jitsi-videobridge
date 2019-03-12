@@ -15,47 +15,62 @@
  */
 package org.jitsi.nlj.rtp
 
-import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc
-import org.jitsi.rtp.extensions.put
-import org.jitsi.rtp.rtp.RtpHeader
+import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.rtp.util.BufferPool
-import org.jitsi.rtp.util.ByteBufferUtils
-import java.nio.ByteBuffer
+import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
+
+//open class VideoRtpPacket(
+//    header: RtpHeader = RtpHeader(),
+//    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
+//) : RtpPacket(header, backingBuffer) {
+//    var isKeyFrame: Boolean = false
+//    var trackEncodings: Array<RTPEncodingDesc>? = null
+//    /**
+//     * The estimated bitrate of the encoding to which this packet belongs
+//     */
+//    var bitrateSnapshot: Long? = null
+//
+//    override fun clone(): VideoRtpPacket {
+//        val clone = VideoRtpPacket(header.clone(), cloneBackingBuffer())
+//        clone.isKeyFrame = isKeyFrame
+//        clone.trackEncodings = trackEncodings
+//
+//        return clone
+//    }
+//
+//    override fun cloneWithBackingBuffer(backingBuffer: ByteBuffer): VideoRtpPacket {
+//        backingBuffer.put(header.sizeBytes, payload)
+//        backingBuffer.limit(header.sizeBytes + payload.limit())
+//        val clone = VideoRtpPacket(header.clone(), backingBuffer)
+//        clone.isKeyFrame = isKeyFrame
+//        clone.trackEncodings = trackEncodings
+//
+//        return clone
+//    }
+//
+//    override fun toString(): String = with(StringBuffer()) {
+//        append(super.toString())
+//        appendln("isKeyFrame? $isKeyFrame")
+//        appendln("bitrate snapshot: $bitrateSnapshot bps")
+//        toString()
+//    }
+//}
 
 open class VideoRtpPacket(
-    header: RtpHeader = RtpHeader(),
-    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
-) : RtpPacket(header, backingBuffer) {
-    var isKeyFrame: Boolean = false
-    var trackEncodings: Array<RTPEncodingDesc>? = null
+    data: ByteArray,
+    offset: Int,
+    length: Int
+) : RtpPacket(data, offset, length) {
     /**
      * The estimated bitrate of the encoding to which this packet belongs
      */
     var bitrateSnapshot: Long? = null
+    var isKeyframe = false
+    var trackEncodings: Array<RTPEncodingDesc>? = null
 
     override fun clone(): VideoRtpPacket {
-        val clone = VideoRtpPacket(header.clone(), cloneBackingBuffer())
-        clone.isKeyFrame = isKeyFrame
-        clone.trackEncodings = trackEncodings
-
+        val clone = VideoRtpPacket(buffer.cloneFromPool(), offset, length)
+        clone.isKeyframe = isKeyframe
         return clone
-    }
-
-    override fun cloneWithBackingBuffer(backingBuffer: ByteBuffer): VideoRtpPacket {
-        backingBuffer.put(header.sizeBytes, payload)
-        backingBuffer.limit(header.sizeBytes + payload.limit())
-        val clone = VideoRtpPacket(header.clone(), backingBuffer)
-        clone.isKeyFrame = isKeyFrame
-        clone.trackEncodings = trackEncodings
-
-        return clone
-    }
-
-    override fun toString(): String = with(StringBuffer()) {
-        append(super.toString())
-        appendln("isKeyFrame? $isKeyFrame")
-        appendln("bitrate snapshot: $bitrateSnapshot bps")
-        toString()
     }
 }

@@ -19,8 +19,9 @@ import org.bouncycastle.crypto.*;
 import org.bouncycastle.crypto.engines.*;
 import org.jitsi.bccontrib.macs.*;
 import org.jitsi.impl.neomedia.transform.srtp.*;
+import org.jitsi.rtp.*;
+import org.jitsi.service.neomedia.*;
 
-import java.nio.*;
 import java.util.*;
 
 /**
@@ -253,9 +254,9 @@ class BaseSRTPCryptoContext
      * @param pkt the RTP packet to be authenticated
      * @param rocIn Roll-Over-Counter
      */
-    synchronized protected void authenticatePacketHMAC(ByteBuffer data, int rocIn)
+    synchronized protected void authenticatePacketHMAC(NewRawPacket pkt, int rocIn)
     {
-        mac.update(data.array(), data.arrayOffset(), data.limit());
+        mac.update(pkt.getBuffer(), pkt.getOffset(), pkt.getLength());
         rbStore[0] = (byte) (rocIn >> 24);
         rbStore[1] = (byte) (rocIn >> 16);
         rbStore[2] = (byte) (rocIn >> 8);

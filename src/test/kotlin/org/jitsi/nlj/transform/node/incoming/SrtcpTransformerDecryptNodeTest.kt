@@ -22,7 +22,7 @@ import io.kotlintest.shouldNotBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.resources.srtp_samples.SrtpSample
 import org.jitsi.nlj.srtp.SrtpUtil
-import org.jitsi.nlj.test_utils.matchers.haveSameContentAs
+import org.jitsi.nlj.test_utils.matchers.ByteArrayBuffer.haveSameContentAs
 
 internal class SrtcpTransformerDecryptNodeTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -36,11 +36,12 @@ internal class SrtcpTransformerDecryptNodeTest : ShouldSpec() {
 
     init {
         "decrypting a packet" {
-            val decryptedPacket = srtcpTransformer.reverseTransform(SrtpSample.incomingEncryptedRtcpPacket)
+            val decryptedPacket = srtcpTransformer.reverseTransform(
+                SrtpSample.incomingEncryptedRtcpPacket.clone())
 
             should("decrypt the data correctly") {
                 decryptedPacket shouldNotBe null
-                decryptedPacket.getBuffer() should haveSameContentAs(SrtpSample.expectedDecryptedRtcpData)
+                decryptedPacket should haveSameContentAs(SrtpSample.expectedDecryptedRtcpPacket)
             }
         }
     }

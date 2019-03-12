@@ -19,8 +19,7 @@ import io.pkts.Pcap
 import io.pkts.packet.Packet
 import io.pkts.packet.UDPPacket
 import io.pkts.protocol.Protocol
-import org.jitsi.nlj.util.BufferPool
-import org.jitsi.rtp.UnparsedPacket
+import org.jitsi.rtp.NewRawPacket
 import java.nio.ByteBuffer
 import java.util.concurrent.TimeUnit
 
@@ -32,7 +31,8 @@ abstract class AbstractPacketProducer : PacketProducer {
         handlers.add(handler)
     }
 
-    protected fun onPacket(packet: org.jitsi.rtp.Packet) {
+    //TODO: i think these should be using rtp.Packet, not NewRawPacket
+    protected fun onPacket(packet: NewRawPacket) {
         handlers.forEach { it(packet) }
     }
 }
@@ -48,19 +48,24 @@ class PcapPacketProducer(
     var running: Boolean = true
 
     companion object {
-        private fun translateToUnparsedPacket(pktsPacket: Packet): UnparsedPacket {
+        private fun translateToRawPacket(pktsPacket: Packet): NewRawPacket {
             // We always allocate a buffer with capacity 1500, so the packet has room to 'grow'
-            val packetBuf = BufferPool.getBuffer(1500)
-            val buf = if (pktsPacket.hasProtocol(Protocol.UDP)) {
+//            val packetBuf = BufferPool.getBuffer(1500)
+            val packetBuf = ByteArray(1500)
+            return if (pktsPacket.hasProtocol(Protocol.UDP)) {
                 val udpPacket = pktsPacket.getPacket(Protocol.UDP) as UDPPacket
-                packetBuf.put(udpPacket.payload.array).flip() as ByteBuffer
+                System.arraycopy(udpPacket.payload.array, 0, packetBuf, 0, udpPacket.payload.array.size)
+                NewRawPacket(packetBuf, 0, udpPacket.payload.array.size)
+        //                packetBuf.put(udpPacket.payload.array).flip() as ByteBuffer
             } else {
                 // When capturing on the loopback interface, the packets have a null ethernet
                 // frame which messes up the pkts libary's parsing, so instead use a hack to
                 // grab the buffer directly
-                packetBuf.put(pktsPacket.payload.rawArray, 32, pktsPacket.payload.rawArray.size - 32).flip() as ByteBuffer
+                System.arraycopy(pktsPacket.payload.rawArray, 32, packetBuf, 0, pktsPacket.payload.rawArray.size - 32)
+                NewRawPacket(packetBuf, 0, pktsPacket.payload.rawArray.size - 32)
+
+        //                packetBuf.put(pktsPacket.payload.rawArray, 32, pktsPacket.payload.rawArray.size - 32).flip() as ByteBuffer
             }
-            return UnparsedPacket(buf)
         }
 
         private fun nowMicros(): Long = System.nanoTime() / 1000
@@ -80,7 +85,7 @@ class PcapPacketProducer(
                     TimeUnit.MICROSECONDS.sleep(expectedSendTime - nowClockTime)
                 }
 
-                val packet = translateToUnparsedPacket(pkt)
+                val packet = translateToRawPacket(pkt)
                 onPacket(packet)
                 true
             }

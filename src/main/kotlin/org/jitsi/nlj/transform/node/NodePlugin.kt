@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-package org.jitsi.nlj.rtp
+package org.jitsi.nlj.transform.node
 
-import org.jitsi.nlj.util.BufferPool
+import org.jitsi.nlj.PacketInfo
 
-//TODO: need to set the padding amount at the end of the payload!
-class PaddingVideoPacket(
-    length: Int
-) : VideoRtpPacket(BufferPool.getBuffer(length), 0, length)
+interface NodePlugin {
+    fun observe(context: String, packetInfo: PacketInfo)
+}

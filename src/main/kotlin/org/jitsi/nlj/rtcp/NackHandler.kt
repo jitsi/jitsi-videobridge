@@ -15,22 +15,26 @@
  */
 package org.jitsi.nlj.rtcp
 
+import org.jitsi.impl.neomedia.rtp.RawPacketCache
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.PacketCache
 import org.jitsi.nlj.util.cdebug
+import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.fromLegacyRawPacket
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.rtp.Packet
-import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbNackPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacket
+import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi_modified.impl.neomedia.rtp.NewRawPacketCache
 
 /**
  * When a nack packet is received, the [NackHandler] will try to retrieve the
  * nacked packets from the cache and then send them to the RTX output pipeline.
  */
 class NackHandler(
-    private val packetCache: PacketCache,
+    private val packetCache: NewRawPacketCache,
     private val onNackedPacketsReady: PacketHandler
 ) : NodeStatsProducer, RtcpListener {
     private var numNacksReceived = 0
@@ -50,12 +54,12 @@ class NackHandler(
         logger.cdebug { "Nack received for ${nackPacket.mediaSourceSsrc} ${nackPacket.missingSeqNums}" }
 
         numNacksReceived++
-        val nackedPackets = mutableListOf<Packet>()
+        val nackedPackets = mutableListOf<RtpPacket>()
         val ssrc = nackPacket.mediaSourceSsrc
         numNackedPackets += nackPacket.missingSeqNums.size
         nackPacket.missingSeqNums.forEach { missingSeqNum ->
-            packetCache.getPacket(ssrc, missingSeqNum)?.let {
-                nackedPackets.add(it)
+            packetCache.get(ssrc, missingSeqNum)?.let {
+                nackedPackets.add(it as RtpPacket)
                 numRetransmittedPackets++
             } ?: run {
                 logger.cdebug { "Nack'd packet $ssrc $missingSeqNum wasn't in cache, unable to retransmit" }

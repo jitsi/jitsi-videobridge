@@ -20,10 +20,11 @@ import org.jitsi.nlj.util.RtpUtils
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
-import org.jitsi.rtp.rtcp.RtcpHeader
+import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.rtp.rtcp.RtcpSrPacket
-import org.jitsi.rtp.rtcp.SenderInfo
+import org.jitsi.rtp.rtcp.RtcpSrPacketBuilder
+import org.jitsi.rtp.rtcp.SenderInfoBuilder
+import org.jitsi.util.TimeUtils
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
@@ -44,8 +45,9 @@ class RtcpSrGenerator(
             val outgoingStats = outgoingStatisticsTracker.getSnapshot()
             val now = System.currentTimeMillis()
             outgoingStats.ssrcStats.forEach { ssrc, statsSnapshot ->
-                val senderInfo = SenderInfo(
-                    ntpTimestamp = RtpUtils.millisToNtpTimestamp(now),
+                val senderInfo = SenderInfoBuilder(
+                    ntpTimestampMsw = TimeUtils.getMsw(RtpUtils.millisToNtpTimestamp(now)),
+                    ntpTimestampLsw = TimeUtils.getLsw(RtpUtils.millisToNtpTimestamp(now)),
                     //TODO: from what I can tell, the old code didn't generate an RTP timestamp to map to the current
                     // ntp timestamp, and instead used the most recent rtp timestamp we'd seen
                     rtpTimestamp = statsSnapshot.mostRecentRtpTimestamp,
@@ -53,10 +55,12 @@ class RtcpSrGenerator(
                     sendersOctetCount = statsSnapshot.octetCount.toPositiveLong()
                 )
 
-                val srPacket = RtcpSrPacket(
-                    header = RtcpHeader(packetType = RtcpSrPacket.PT, senderSsrc = ssrc),
+                val srPacket = RtcpSrPacketBuilder(
+                    rtcpHeader = RtcpHeaderBuilder(
+                        senderSsrc = ssrc
+                    ),
                     senderInfo = senderInfo
-                )
+                ).build()
                 logger.cdebug { "Sending SR packet $srPacket" }
                 rtcpSender(srPacket)
             }
