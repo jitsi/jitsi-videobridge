@@ -26,6 +26,7 @@ import org.jitsi.nlj.transform.NodeVisitor
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.getLogger
+import org.jitsi.rtp.Packet
 import org.jitsi.rtp.PacketPredicate
 import java.time.Duration
 import java.util.function.Predicate
@@ -98,13 +99,26 @@ abstract class Node(var name: String
     }
 
     protected fun next(packetInfo: PacketInfo) {
+        if (PLUGINS_ENABLED) {
+            plugins.forEach { it.observe("after $name: ", packetInfo) }
+        }
         nextNode?.processPacket(packetInfo)
     }
 
     protected fun next(packetInfos: List<PacketInfo>) {
         packetInfos.forEach { packetInfo ->
+            if (PLUGINS_ENABLED) {
+                plugins.forEach { it.observe("[${Thread.currentThread().id}] after $name: ", packetInfo) }
+            }
             nextNode?.processPacket(packetInfo)
         }
+    }
+
+    companion object {
+        var PLUGINS_ENABLED = false
+        // 'Plugins' are observers which, when enabled, will be passed every packet that passes through
+        // every node
+        val plugins: MutableList<NodePlugin> = mutableListOf()
     }
 }
 
@@ -172,7 +186,7 @@ sealed class StatsKeepingNode(name: String): Node(name) {
         }
 
         numInputPackets++
-        numInputBytes += packetInfo.packet.sizeBytes
+        numInputBytes += packetInfo.packet.length
 
         packetInfo.addEvent(nodeEntryString)
         lastPacketTime = startTime
@@ -376,7 +390,7 @@ abstract class DemuxerNode(name: String) : StatsKeepingNode("$name demuxer") {
 class ExclusivePathDemuxer(name: String) : DemuxerNode(name) {
     override fun doProcessPacket(packetInfo: PacketInfo) {
         transformPaths.forEach { conditionalPath ->
-            if (conditionalPath.predicate.test(packetInfo.packet)) {
+            if (conditionalPath.predicate.test(packetInfo.packetAs<Packet>())) {
                 doneProcessing(packetInfo)
                 conditionalPath.packetsAccepted++
                 conditionalPath.path.processPacket(packetInfo)

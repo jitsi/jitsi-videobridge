@@ -19,39 +19,47 @@ package org.jitsi.nlj.transform.node.outgoing
 import io.kotlintest.IsolationMode
 import io.kotlintest.should
 import io.kotlintest.shouldBe
+import io.kotlintest.shouldNotBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.resources.srtp_samples.SrtpSample
 import org.jitsi.nlj.srtp.SrtpUtil
-import org.jitsi.nlj.test_utils.matchers.haveSameContentAs
-import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbNackPacket
-import org.jitsi.rtp.srtcp.AuthenticatedSrtcpPacket
+import org.jitsi.nlj.test_utils.matchers.ByteArrayBuffer.haveSameContentAs
+import org.jitsi.rtp.NewRawPacket
+import org.jitsi.rtp.extensions.bytearray.toHex
+import org.jitsi.rtp.rtcp.RtcpHeader
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacketBuilder
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.TransportLayerRtcpFbPacket
 
 internal class SrtcpTransformerEncryptNodeTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val srtcpTransformer = SrtpUtil.initializeTransformer(
-            SrtpSample.srtpProfileInformation,
-            SrtpSample.keyingMaterial.array(),
-            SrtpSample.tlsRole,
-            true
+        SrtpSample.srtpProfileInformation,
+        SrtpSample.keyingMaterial.array(),
+        SrtpSample.tlsRole,
+        true
     )
 
     init {
         "encrypting a packet" {
             "created from a buffer" {
-                val encryptedPacket = srtcpTransformer.transform(SrtpSample.outgoingUnencryptedRtcpPacket)
+                val encryptedPacket = srtcpTransformer.transform(
+                    SrtpSample.outgoingUnencryptedRtcpPacket.clone().toOtherType(::NewRawPacket))
                 should("encrypt the data correctly") {
-                    encryptedPacket.getBuffer() should haveSameContentAs(SrtpSample.expectedEncryptedRtcpData)
+                    encryptedPacket shouldNotBe null
+                    encryptedPacket should haveSameContentAs(SrtpSample.expectedEncryptedRtcpPacket)
                 }
             }
             "created from values" {
-                val packet =
-                    RtcpFbNackPacket.fromValues(mediaSourceSsrc = 123, missingSeqNums = (10..20 step 2).toSortedSet())
-                packet.getBuffer()
+                val packet = RtcpFbNackPacketBuilder(
+                    mediaSourceSsrc = 123,
+                    missingSeqNums = (10..20 step 2).toSortedSet()
+                ).build()
                 val encryptedPacket = srtcpTransformer.transform(packet.clone())
                 should("result in all header fields being correct") {
-                    encryptedPacket as AuthenticatedSrtcpPacket
-                    encryptedPacket.header.length shouldBe packet.header.length
+                    println("original packet:\n${packet.buffer.toHex()}")
+                    println("packet after:\n${encryptedPacket.buffer.toHex()}")
+                    RtcpHeader.getPacketType(encryptedPacket.buffer, encryptedPacket.offset) shouldBe TransportLayerRtcpFbPacket.PT
                 }
             }
         }

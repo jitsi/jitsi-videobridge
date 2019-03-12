@@ -21,27 +21,22 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.FilterNode
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
-import org.jitsi.rtp.extensions.toHex
+import org.jitsi.rtp.extensions.bytearray.toHex
 import org.jitsi.rtp.rtcp.RtcpByePacket
 import org.jitsi.rtp.rtcp.RtcpRrPacket
+import org.jitsi.rtp.rtcp.RtcpSdesPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
-import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbFirPacket
-import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbNackPacket
-import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPliPacket
-import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
-import org.jitsi.rtp.rtcp.sdes.RtcpSdesPacket
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 
 class RtcpTermination(
     private val rtcpEventNotifier: RtcpEventNotifier,
     private val transportCcEngine: TransportCCEngine? = null
 ) : FilterNode("RTCP termination") {
-    private var numNacksReceived = 0
-    private var numFirsReceived = 0
-    private var numPlisReceived = 0
-    private var numRrsReceiver = 0
-    private var numSrsReceived = 0
-    private var numSdesReceived = 0
+    private var packetReceiveCounts = mutableMapOf<String, Int>()
 
     override fun accept(packetInfo: PacketInfo): Boolean {
         var accept = false
@@ -50,30 +45,22 @@ class RtcpTermination(
         when (pkt) {
             is RtcpFbTccPacket -> handleTccPacket(pkt)
             is RtcpFbNackPacket -> {
-                numNacksReceived++
+                println("Nack received for ${pkt.mediaSourceSsrc} ${pkt.missingSeqNums}")
             }
             is RtcpSrPacket -> {
-                numSrsReceived++
             }
             is RtcpRrPacket -> {
-                numRrsReceiver++
             }
             is RtcpByePacket -> {
                 logger.cinfo { "BRIAN: got BYE packet:\n$pkt" }
                 //TODO
             }
             is RtcpSdesPacket -> {
-                numSdesReceived++
             }
             is RtcpFbPliPacket, is RtcpFbFirPacket -> {
-                if (pkt is RtcpFbPliPacket) {
-                    numPlisReceived++
-                } else {
-                    numFirsReceived++
-                }
                 // We'll let these pass through and be forwarded to the sender who will be
                 // responsible for translating/aggregating them
-                logger.cdebug { "BRIAN: passing through ${pkt::class} rtcp packet: ${pkt.getBuffer().toHex()}" }
+                logger.cdebug { "BRIAN: passing through ${pkt::class} rtcp packet: ${pkt.buffer.toHex()}" }
                 accept = true
             }
             else -> {
@@ -81,6 +68,7 @@ class RtcpTermination(
             }
         }
         //TODO: keep an eye on if anything in here takes a while it could slow the packet pipeline down
+        packetReceiveCounts.merge(packetInfo.packet::class.simpleName!!, 1, Int::plus)
         rtcpEventNotifier.notifyRtcpReceived(packetInfo)
 
         return accept
@@ -94,12 +82,9 @@ class RtcpTermination(
         val parentStats = super.getNodeStats()
         return NodeStatsBlock(name).apply {
             addAll(parentStats)
-            addStat("num NACK packets rx: $numNacksReceived")
-            addStat("num PLI packets rx: $numPlisReceived")
-            addStat("num FIR packets rx: $numFirsReceived")
-            addStat("num SR packets rx: $numSrsReceived")
-            addStat("num RR packets rx: $numRrsReceiver")
-            addStat("num SDES packets rx: $numSdesReceived")
+            packetReceiveCounts.forEach {type, count ->
+                addStat("num $type rx: $count")
+            }
         }
     }
 }

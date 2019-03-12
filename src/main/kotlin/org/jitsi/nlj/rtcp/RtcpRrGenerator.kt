@@ -20,7 +20,7 @@ import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.IncomingSsrcStats
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
-import org.jitsi.rtp.rtcp.RtcpRrPacket
+import org.jitsi.rtp.rtcp.RtcpRrPacketBuilder
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ScheduledExecutorService
@@ -35,7 +35,17 @@ private data class SenderInfo(
     var lastSrCompactedTimestamp: Long = 0,
     var lastSrReceivedTime: Long = 0,
     var statsSnapshot: IncomingSsrcStats.Snapshot = IncomingSsrcStats.Snapshot()
-)
+) {
+    private fun hasReceivedSr(): Boolean = lastSrReceivedTime != 0L
+
+    fun getDelaySinceLastSr(now: Long): Long {
+        return if (hasReceivedSr()) {
+            ((now - lastSrReceivedTime) * 65.536).toLong()
+        } else {
+            0
+        }
+    }
+}
 
 /**
  * Retrieves statistics about incoming streams and creates RTCP RR packets.  Since RR packets are created based on
@@ -61,7 +71,7 @@ class RtcpRrGenerator(
                 // Note the time we received an SR so that it can be used when creating RtcpReportBlocks
                 //TODO: we have a concurrency issue here: we could be halfway through updating the senderinfo when
                 // the doWork context thread runs
-                val senderInfo = senderInfos.computeIfAbsent(packet.header.senderSsrc) { SenderInfo() }
+                val senderInfo = senderInfos.computeIfAbsent(packet.senderSsrc) { SenderInfo() }
                 senderInfo.lastSrCompactedTimestamp = packet.senderInfo.compactedNtpTimestamp
                 senderInfo.lastSrReceivedTime = packetInfo.receivedTime
             }
@@ -86,11 +96,11 @@ class RtcpRrGenerator(
                     statsDelta.maxSeqNum,
                     statsDelta.jitter.toLong(),
                     senderInfo.lastSrCompactedTimestamp,
-                    ((now - senderInfo.lastSrReceivedTime) * 65.536).toLong()
+                    senderInfo.getDelaySinceLastSr(now)
                 ))
             }
             if (reportBlocks.isNotEmpty()) {
-                val rrPacket = RtcpRrPacket(reportBlocks = reportBlocks)
+                val rrPacket = RtcpRrPacketBuilder(reportBlocks = reportBlocks).build()
                 rtcpSender(rrPacket)
             }
             backgroundExecutor.schedule(this::doWork, 1, TimeUnit.SECONDS)

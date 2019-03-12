@@ -61,19 +61,19 @@ fun main() {
 
     receiver.rtpPacketHandler = object : PacketHandler {
         override fun processPacket(packetInfo: PacketInfo) {
-            verifyArray(System.identityHashCode(packetInfo.packet.getBuffer().array()))
+//            verifyArray(System.identityHashCode(packetInfo.packet.getBuffer().array()))
         }
     }
 
     receiver.rtcpPacketHandler = object : PacketHandler {
         override fun processPacket(packetInfo: PacketInfo) {
-            verifyArray(System.identityHashCode(packetInfo.packet.getBuffer().array()))
+//            verifyArray(System.identityHashCode(packetInfo.packet.getBuffer().array()))
         }
     }
 
 
     producer.subscribe { pkt ->
-        sentArrays.offer(System.identityHashCode(pkt.getBuffer().array()))
+//        sentArrays.offer(System.identityHashCode(pkt.getBuffer().array()))
         val packetInfo = PacketInfo(pkt)
         packetInfo.receivedTime = System.currentTimeMillis()
         receiver.enqueuePacket(packetInfo)

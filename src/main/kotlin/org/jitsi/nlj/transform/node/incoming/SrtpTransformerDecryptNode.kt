@@ -19,7 +19,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.AbstractSrtpTransformerNode
 import org.jitsi.nlj.util.cerror
-import org.jitsi.rtp.srtp.SrtpPacket
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
 
 class SrtpTransformerDecryptNode : AbstractSrtpTransformerNode("SRTP decrypt wrapper") {
@@ -28,10 +28,10 @@ class SrtpTransformerDecryptNode : AbstractSrtpTransformerNode("SRTP decrypt wra
         val decryptedPackets = mutableListOf<PacketInfo>()
         pkts.forEach {
             transformer.reverseTransform(it.packet)?.let { decryptedPacket ->
-                it.packet = decryptedPacket
+                it.packet = decryptedPacket.toOtherType(::RtpPacket)
                 decryptedPackets.add(it)
             } ?: run {
-                logger.cerror { "SRTP decryption failed for packet ${it.packetAs<SrtpPacket>().header.ssrc} ${it.packetAs<SrtpPacket>().header.sequenceNumber}" }
+                logger.cerror { "SRTP decryption failed for packet ${it.packetAs<RtpPacket>().ssrcAsLong} ${it.packetAs<RtpPacket>().sequenceNumber}" }
                 numDecryptFailures++
             }
         }

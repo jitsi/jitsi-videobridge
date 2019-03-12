@@ -29,10 +29,10 @@ class SrtpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTP Encrypt wra
         pkts.forEach {
             transformer.transform(it.packet)?.let { encryptedPacket ->
                 // Change the PacketInfo to contain the new packet
-                it.packet = encryptedPacket
+                it.packet = encryptedPacket.toOtherType(::RtpPacket);
                 outPackets.add(it)
             } ?: run {
-                logger.cerror { "SRTP encryption failed for packet ${it.packetAs<RtpPacket>().header.ssrc} ${it.packetAs<RtpPacket>().header.sequenceNumber}" }
+                logger.cerror { "SRTP encryption failed for packet ${it.packetAs<RtpPacket>().ssrcAsLong} ${it.packetAs<RtpPacket>().sequenceNumber}" }
                 numEncryptFailures++
             }
         }

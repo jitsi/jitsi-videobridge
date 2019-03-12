@@ -55,7 +55,7 @@ class PacketCache {
         return packetCaches.computeIfAbsent(ssrc) { _ -> RtpPacketCache(timeout, maxNumElements) }
     }
 
-    fun cachePacket(packet: RtpPacket) = getCache(packet.header.ssrc).insert(packet)
+    fun cachePacket(packet: RtpPacket) = getCache(packet.ssrcAsLong).insert(packet)
 
     fun getPacket(ssrc: Long, seqNum: Int): RtpPacket? = getCache(ssrc).get(seqNum)
 
@@ -74,7 +74,7 @@ class PacketCache {
         private val rfc3711IndexTracker = Rfc3711IndexTracker()
 
         fun insert(packet: RtpPacket) {
-            val index = rfc3711IndexTracker.update(packet.header.sequenceNumber)
+            val index = rfc3711IndexTracker.update(packet.sequenceNumber)
             cache.insert(index, packet)
         }
 
@@ -91,7 +91,7 @@ class PacketCache {
             val packets = mutableSetOf<RtpPacket>()
             cache.forEachDescending { pkt ->
                 packets.add(pkt)
-                bytesRemaining -= pkt.sizeBytes
+                bytesRemaining -= pkt.length
                 bytesRemaining > 0
             }
             return packets

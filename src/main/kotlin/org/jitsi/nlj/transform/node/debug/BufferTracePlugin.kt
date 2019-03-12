@@ -17,12 +17,15 @@
 package org.jitsi.nlj.transform.node.debug
 
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.transform.node.NodePlugin
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.rtp.extensions.toHex
 
-class BufferTraceNode(val where: String) : ObserverNode("RtpPacketTraceNode@$where") {
-    override fun observe(packetInfo: PacketInfo) {
-//        val buf = packetInfo.packet.getBuffer()
-//        println("array trace @$where: ${System.identityHashCode(buf.array())} $buf")
+class BufferTracePlugin {
+    companion object : NodePlugin {
+        override fun observe(context: String, packetInfo: PacketInfo) {
+            println("array trace @$context: ${System.identityHashCode(packetInfo.packet.buffer)} " +
+                    "offset ${packetInfo.packet.offset} length ${packetInfo.packet.length}")
+        }
     }
 }

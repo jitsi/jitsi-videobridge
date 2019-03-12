@@ -16,11 +16,12 @@
 package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.rtp.Packet
+import org.jitsi.rtp.NewRawPacket
 
-class PacketParser(name: String, private val action: (Packet) -> Packet) : TransformerNode(name) {
+//TODO: i think this should operate on Packet, not NewRawPacket but other stuff needs to be cleaned up
+class PacketParser(name: String, private val action: (NewRawPacket) -> NewRawPacket) : TransformerNode(name) {
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
-        packetInfo.packet = action(packetInfo.packet)
+        packetInfo.packet = action(packetInfo.packetAs<NewRawPacket>())
         return packetInfo
     }
 }

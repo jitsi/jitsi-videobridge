@@ -23,8 +23,13 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
-import org.jitsi.nlj.transform.node.*
+import org.jitsi.nlj.transform.node.ConsumerNode
+import org.jitsi.nlj.transform.node.MediaTypeParser
+import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.PacketParser
+import org.jitsi.nlj.transform.node.PayloadTypeFilterNode
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
+import org.jitsi.nlj.transform.node.incoming.CompoundRtcpSplitterNode
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 import org.jitsi.nlj.transform.node.incoming.PaddingTermination
@@ -39,22 +44,17 @@ import org.jitsi.nlj.transform.node.incoming.VideoParser
 import org.jitsi.nlj.transform.node.incoming.Vp8Parser
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
-import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.Util.Companion.getMbps
-import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
+import org.jitsi.rtp.NewRawPacket
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.PacketPredicate
-import org.jitsi.rtp.extensions.toHex
-import org.jitsi.rtp.rtcp.RtcpIterator
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.rtp.srtcp.AuthenticatedSrtcpPacket
-import org.jitsi.rtp.srtp.SrtpPacket
-import org.jitsi.rtp.srtp.SrtpProtocolPacket
-import org.jitsi.rtp.util.RtpProtocol
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.util.Logger
+import org.jitsi.util.RTCPUtils
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
 import java.time.Duration
@@ -122,6 +122,11 @@ class RtpReceiverImpl @JvmOverloads constructor(
      */
     private val rtpPacketHandlerWrapper = object : ConsumerNode("RTP packet handler wrapper") {
         override fun consume(packetInfo: PacketInfo) {
+            //TODO: we remove all extensions here because we could otherwise
+            // end up with duplicates.  make sure we're being efficient about space re-use here
+            // (ideally just replace dupes on the outgoing side instead of adding additional.
+            // i don't think it's a problem to forward other extensions all the way through)
+            packetInfo.packetAs<NewRawPacket>().removeExtension()
             rtpPacketHandler?.processPacket(packetInfo)
         }
     }
@@ -158,13 +163,18 @@ class RtpReceiverImpl @JvmOverloads constructor(
         rtcpEventNotifier.addRtcpEventListener(rtcpRrGenerator)
 
         inputTreeRoot = pipeline {
-            node(PacketParser("SRTP protocol parser") { SrtpProtocolPacket(it.getBuffer()) })
+//            node(PacketParser("SRTP protocol parser") { SrtpProtocolPacket(it.getBuffer()) })
             demux("SRTP/SRTCP") {
                 packetPath {
                     name = "SRTP path"
-                    predicate = PacketPredicate { RtpProtocol.isRtp(it.getBuffer()) }
+                    predicate = object : PacketPredicate {
+                        override fun test(t: Packet): Boolean {
+                            return !RTCPUtils.isRtcp(t.buffer, t.offset, t.length)
+                        }
+                    }
                     path = pipeline {
-                        node(PacketParser("SRTP Parser") { SrtpPacket.create(it.getBuffer()) })
+//                        node(PacketParser("SRTP Parser") { SrtpPacket.create(it.getBuffer()) })
+                        node(PacketParser("RTP parser") { RtpPacket(it.buffer, it.offset, it.length) })
                         node(payloadTypeFilter)
                         node(tccGenerator)
                         node(srtpDecryptWrapper)
@@ -173,7 +183,11 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         demux("Media type") {
                             packetPath {
                                 name = "Audio path"
-                                predicate = PacketPredicate { it is AudioRtpPacket }
+                                predicate = object : PacketPredicate {
+                                    override fun test(t: Packet): Boolean {
+                                        return t is AudioRtpPacket
+                                    }
+                                }
                                 path = pipeline {
                                     node(audioLevelReader)
                                     node(rtpPacketHandlerWrapper)
@@ -181,7 +195,11 @@ class RtpReceiverImpl @JvmOverloads constructor(
                             }
                             packetPath {
                                 name = "Video path"
-                                predicate = PacketPredicate { it is VideoRtpPacket }
+                                predicate = object : PacketPredicate {
+                                    override fun test(t: Packet): Boolean {
+                                        return t is VideoRtpPacket
+                                    }
+                                }
                                 path = pipeline {
                                     node(RtxHandler())
                                     node(PaddingTermination())
@@ -197,49 +215,14 @@ class RtpReceiverImpl @JvmOverloads constructor(
                 }
                 packetPath {
                     name = "SRTCP path"
-                    predicate = PacketPredicate { RtpProtocol.isRtcp(it.getBuffer()) }
-                    path = pipeline {
-                        var prevRtcpPacket: Packet? = null
-                        node(PacketParser("SRTCP parser") { AuthenticatedSrtcpPacket.create(it.getBuffer()) } )
-                        node(srtcpDecryptWrapper)
-                        simpleNode("RTCP pre-parse cache $id") { packetInfo ->
-                            prevRtcpPacket?.let {
-                                BufferPool.returnBuffer(it.getBuffer())
-                            }
-                            prevRtcpPacket = packetInfo.packet.clone()
-                            packetInfo
+                    predicate = object : PacketPredicate {
+                        override fun test(t: Packet): Boolean {
+                            return RTCPUtils.isRtcp(t.buffer, t.offset, t.length)
                         }
-                        //TODO: probably just make a class for this, but for now we're using the cache above to debug
-                        node(object: MultipleOutputTransformerNode("Compound RTCP splitter") {
-                                override fun transform(packetInfo: PacketInfo): List<PacketInfo> {
-                                    try {
-                                        val outPackets = mutableListOf<PacketInfo>()
-                                        val compoundRtcpPackets = RtcpIterator(packetInfo.packet.getBuffer()).getAll()
-                                        compoundRtcpPackets.forEach {
-                                            // For each compound RTCP packet, create a new PacketInfo
-                                            val splitPacket = PacketInfo(it.clone(), timeline = packetInfo.timeline.clone())
-                                            splitPacket.receivedTime = packetInfo.receivedTime
-                                            outPackets.add(splitPacket)
-                                        }
-                                        BufferPool.returnBuffer(packetInfo.packet.getBuffer())
-                                        return outPackets
-                                    }
-                                    catch (e: Exception) {
-                                        logger.cerror {
-                                            with(StringBuffer()) {
-                                                appendln(
-                                                    "Exception extracting RTCP.  The original, decrypted packet buffer is " +
-                                                            "one of these:"
-                                                )
-                                                appendln(prevRtcpPacket?.getBuffer()?.toHex())
-
-                                                toString()
-                                            }
-                                        }
-                                    }
-                                    return emptyList()
-                                }
-                            })
+                    }
+                    path = pipeline {
+                        node(srtcpDecryptWrapper)
+                        node(CompoundRtcpSplitterNode())
                         node(rtcpTermination)
                         node(rtcpPacketHandlerWrapper)
                     }
@@ -257,7 +240,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
             numQueueReads++
             lastQueueReadTime = now
             packet.addEvent(PACKET_QUEUE_EXIT_EVENT)
-            bytesProcessed += packet.packet.sizeBytes
+            bytesProcessed += packet.packet.length
             packetsProcessed++
             if (firstPacketProcessedTime == 0L) {
                 firstPacketProcessedTime = System.currentTimeMillis()
@@ -284,7 +267,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun enqueuePacket(p: PacketInfo) {
 //        logger.cinfo { "Receiver $id enqueing data" }
-        bytesReceived += p.packet.sizeBytes
+        bytesReceived += p.packet.length
         p.addEvent(PACKET_QUEUE_ENTRY_EVENT)
         incomingPacketQueue.add(p)
         packetsReceived++
