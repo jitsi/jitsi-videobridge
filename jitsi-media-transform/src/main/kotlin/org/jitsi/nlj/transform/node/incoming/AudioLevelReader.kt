@@ -24,7 +24,6 @@ import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.rtp.rtp.header_extensions.AudioLevelHeaderExtension
 import org.jitsi.service.neomedia.RTPExtension
 import unsigned.toUInt
 
@@ -40,13 +39,14 @@ class AudioLevelReader : ObserverNode("Audio level reader") {
 
     override fun observe(packetInfo: PacketInfo) {
         audioLevelExtId?.let { audioLevelId ->
-            val rtpPacket: RtpPacket = packetInfo.packetAs()
-            rtpPacket.header.getExtensionAs(audioLevelId, AudioLevelHeaderExtension.Companion::fromUnparsed)?.let {
-                val level = it.audioLevel
+            val rtpPacket = packetInfo.packetAs<RtpPacket>()
+            val level = rtpPacket.extractSsrcAudioLevel(audioLevelId.toByte()).toInt()
+//            rtpPacket.header.getExtensionAs(audioLevelId, AudioLevelHeaderExtension.Companion::fromUnparsed)?.let {
+//                val level = it.audioLevel
                 if (level != MUTED_LEVEL) {
-                    audioLevelListener?.onLevelReceived(rtpPacket.header.ssrc, (127 - level).toPositiveLong())
+                    audioLevelListener?.onLevelReceived(rtpPacket.ssrcAsLong, (127 - level).toPositiveLong())
                 }
-            }
+//            }
         }
     }
 

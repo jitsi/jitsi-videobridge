@@ -15,13 +15,16 @@
  */
 package org.jitsi.nlj.rtp
 
-import org.jitsi.nlj.util.BufferPool
-import org.jitsi.rtp.rtp.RtpHeader
+import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.rtp.util.ByteBufferUtils
-import java.nio.ByteBuffer
 
 class AudioRtpPacket(
-    header: RtpHeader = RtpHeader(),
-    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
-) : RtpPacket(header, backingBuffer)
+    data: ByteArray,
+    offset: Int,
+    length: Int
+) : RtpPacket(data, offset, length) {
+
+    override fun clone(): AudioRtpPacket {
+        return AudioRtpPacket(buffer.cloneFromPool(), offset, length)
+    }
+}

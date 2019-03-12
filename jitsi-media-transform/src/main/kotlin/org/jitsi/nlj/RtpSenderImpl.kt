@@ -157,8 +157,8 @@ class RtpSenderImpl(
             simpleNode("RTCP sender ssrc setter") { packetInfo ->
                 val senderSsrc = localVideoSsrc ?: return@simpleNode null
                 val rtcpPacket = packetInfo.packetAs<RtcpPacket>()
-                if (rtcpPacket.header.senderSsrc == -1L) {
-                    rtcpPacket.header.senderSsrc = senderSsrc
+                if (rtcpPacket.senderSsrc == 0L) {
+                    rtcpPacket.senderSsrc = senderSsrc
                 }
                 packetInfo
             }
@@ -170,7 +170,7 @@ class RtpSenderImpl(
     }
 
     override fun sendPacket(packetInfo: PacketInfo) {
-        numIncomingBytes += packetInfo.packet.sizeBytes
+        numIncomingBytes += packetInfo.packet.length
         packetInfo.addEvent(PACKET_QUEUE_ENTRY_EVENT)
         incomingPacketQueue.add(packetInfo)
         if (firstPacketWrittenTime == -1L) {
@@ -246,7 +246,7 @@ class RtpSenderImpl(
             addStat("Read from queue at a rate of " +
                     "${numQueueReads / (Duration.ofMillis(queueReadTotal).seconds.toDouble())} times per second")
             addStat("The queue was empty $numTimesQueueEmpty out of $numQueueReads times")
-            addStat("Nack handler", nackHandler.getNodeStats())
+//            addStat("Nack handler", nackHandler.getNodeStats())
             addStat("Probing data sender", probingDataSender.getNodeStats())
             NodeStatsVisitor(this).reverseVisit(outputPipelineTerminationNode)
         }

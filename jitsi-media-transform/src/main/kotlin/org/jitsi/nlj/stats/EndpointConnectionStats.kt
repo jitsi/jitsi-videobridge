@@ -78,8 +78,7 @@ class EndpointConnectionStats : RtcpListener {
     override fun onRtcpPacketSent(packet: RtcpPacket) {
         when (packet) {
             is RtcpSrPacket -> {
-                logger.cdebug { "Tracking sent SR packet with NTP timestamp ${packet.senderInfo.ntpTimestamp} and " +
-                        "compacted timestamp ${packet.senderInfo.compactedNtpTimestamp}" }
+                logger.cdebug { "Tracking sent SR packet with compacted timestamp ${packet.senderInfo.compactedNtpTimestamp}" }
                 srSentTimes[packet.senderInfo.compactedNtpTimestamp] =
                         System.currentTimeMillis()
             }
