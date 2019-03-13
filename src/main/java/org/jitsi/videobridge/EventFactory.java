@@ -31,18 +31,6 @@ public class EventFactory
     extends AbstractEventFactory
 {
     /**
-     * The name of the topic of a "channel created" event.
-     */
-    public static final String CHANNEL_CREATED_TOPIC
-        = "org/jitsi/videobridge/Channel/CREATED";
-
-    /**
-     * The name of the topic of a "channel expired" event.
-     */
-    public static final String CHANNEL_EXPIRED_TOPIC
-        = "org/jitsi/videobridge/Channel/EXPIRED";
-
-    /**
      * The name of the topic of a "conference created" event.
      */
     public static final String CONFERENCE_CREATED_TOPIC
@@ -121,22 +109,6 @@ public class EventFactory
     public static Event endpointCreated(AbstractEndpoint endpoint)
     {
         return new Event(ENDPOINT_CREATED_TOPIC, makeProperties(endpoint));
-    }
-
-    /**
-     * Creates a new "endpoint display name changed" <tt>Event</tt>, which
-     * conference ID to the JID of the associated MUC.
-     *
-     * @param endpoint the changed endpoint.
-     *
-     * @return the <tt>Event</tt> which was created.
-     */
-    public static Event endpointDisplayNameChanged(AbstractEndpoint endpoint)
-    {
-        return
-            new Event(
-                    ENDPOINT_DISPLAY_NAME_CHANGED_TOPIC,
-                    makeProperties(endpoint));
     }
 
     /**

@@ -248,4 +248,30 @@ public class ConferenceShim
                 videoChannel.getSources(),
                 videoChannel.getSourceGroups());
     }
+
+    /**
+     * Updates an <tt>Endpoint</tt> of this <tt>Conference</tt> with the
+     * information contained in <tt>colibriEndpoint</tt>. The ID of
+     * <tt>colibriEndpoint</tt> is used to select the <tt>Endpoint</tt> to
+     * update.
+     *
+     * @param colibriEndpoint a <tt>ColibriConferenceIQ.Endpoint</tt> instance
+     * that contains information to be set on an <tt>Endpoint</tt> instance of
+     * this <tt>Conference</tt>.
+     */
+    void updateEndpoint(ColibriConferenceIQ.Endpoint colibriEndpoint)
+    {
+        String id = colibriEndpoint.getId();
+
+        if (id != null)
+        {
+            AbstractEndpoint endpoint = conference.getEndpoint(id);
+
+            if (endpoint != null)
+            {
+                endpoint.setDisplayName(colibriEndpoint.getDisplayName());
+                endpoint.setStatsId(colibriEndpoint.getStatsId());
+            }
+        }
+    }
 }

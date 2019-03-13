@@ -396,8 +396,14 @@ public class VideobridgeShim
             return IQUtils.createError(conferenceIQ, e.condition, e.errorMessage);
         }
 
-        // TODO read "endpoint" elements (with e.g. display names)? Do we want
-        // to always describe all endpoints?
+        // Update the endpoint information of Videobridge with the endpoint
+        // information of the IQ.
+        for (ColibriConferenceIQ.Endpoint colibriEndpoint
+                : conferenceIQ.getEndpoints())
+        {
+            conferenceShim.updateEndpoint(colibriEndpoint);
+        }
+
         conferenceShim.describeEndpoints(responseConferenceIQ);
 
         responseConferenceIQ.setType(IQ.Type.result);

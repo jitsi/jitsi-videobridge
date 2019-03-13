@@ -994,49 +994,6 @@ public class Conference
     }
 
     /**
-     * Updates an <tt>Endpoint</tt> of this <tt>Conference</tt> with the
-     * information contained in <tt>colibriEndpoint</tt>. The ID of
-     * <tt>colibriEndpoint</tt> is used to select the <tt>Endpoint</tt> to
-     * update.
-     *
-     * @param colibriEndpoint a <tt>ColibriConferenceIQ.Endpoint</tt> instance
-     * that contains information to be set on an <tt>Endpoint</tt> instance of
-     * this <tt>Conference</tt>.
-     */
-    void updateEndpoint(ColibriConferenceIQ.Endpoint colibriEndpoint)
-    {
-        String id = colibriEndpoint.getId();
-
-        if (id != null)
-        {
-            AbstractEndpoint endpoint = getEndpoint(id);
-
-            if (endpoint != null)
-            {
-                String oldDisplayName = endpoint.getDisplayName();
-                String newDisplayName = colibriEndpoint.getDisplayName();
-
-                if ( (oldDisplayName == null && newDisplayName != null)
-                        || (oldDisplayName != null
-                              && !oldDisplayName.equals(newDisplayName)))
-                {
-                    endpoint.setDisplayName(newDisplayName);
-
-                    EventAdmin eventAdmin = getEventAdmin();
-                    if (eventAdmin != null)
-                    {
-                        eventAdmin.sendEvent(
-                                EventFactory.endpointDisplayNameChanged(
-                                        endpoint));
-                    }
-                }
-
-                endpoint.setStatsId(colibriEndpoint.getStatsId());
-            }
-        }
-    }
-
-    /**
      * Gets the conference name.
      *
      * @return the conference name
