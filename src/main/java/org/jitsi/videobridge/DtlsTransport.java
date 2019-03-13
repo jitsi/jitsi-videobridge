@@ -107,7 +107,7 @@ public class DtlsTransport extends IceTransport
      * @param transportPacketExtension
      */
     @Override
-    public void startConnectivityEstablishment(
+    public void start(
             IceUdpTransportPacketExtension transportPacketExtension)
     {
         // TODO(boris): read the Setup attribute and support acting like the
@@ -140,7 +140,7 @@ public class DtlsTransport extends IceTransport
             dtlsStack.setRemoteFingerprints(remoteFingerprints);
         }
 
-        super.startConnectivityEstablishment(transportPacketExtension);
+        super.start(transportPacketExtension);
     }
 
     @Override

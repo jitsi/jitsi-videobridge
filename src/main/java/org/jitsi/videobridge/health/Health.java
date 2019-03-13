@@ -155,13 +155,13 @@ public class Health
 //        ColibriShim.ChannelBundleShim channelBundle0Shim = conferenceShim.getChannelBundle(ep0.getID());
 //        channelBundle0Shim.describe(channelBundle0Iq);
 //        IceUdpTransportPacketExtension tpe = channelBundle0Iq.getTransport();
-//        ep1TransportManager.startConnectivityEstablishment(channelBundle0Iq.getTransport());
+//        ep1TransportManager.start(channelBundle0Iq.getTransport());
 //
 //        // Connect endpoint 1 to endpoint 0
 //        ColibriConferenceIQ.ChannelBundle channelBundle1Iq = new ColibriConferenceIQ.ChannelBundle(ep1.getID());
 //        ColibriShim.ChannelBundleShim channelBundle1Shim = conferenceShim.getChannelBundle(ep1.getID());
 //        channelBundle1Shim.describe(channelBundle1Iq);
-//        ep0TransportManager.startConnectivityEstablishment(channelBundle1Iq.getTransport());
+//        ep0TransportManager.start(channelBundle1Iq.getTransport());
     }
 
     /**
