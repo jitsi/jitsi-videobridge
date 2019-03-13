@@ -415,8 +415,8 @@ public class ContentShim
         return true;
     }
 
-    ConferenceShim getConferenceShim()
+    void removeChannel(ChannelShim channelShim)
     {
-        return conference.getShim();
+        channels.remove(channelShim.getId());
     }
 }
