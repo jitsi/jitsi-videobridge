@@ -43,7 +43,6 @@ import org.osgi.framework.*;
  * @author Boris Grozev
  */
 public class IceUdpTransportManager
-    extends TransportManager
 {
     /**
      * The {@link Logger} used by the {@link IceUdpTransportManager} class to
@@ -298,7 +297,6 @@ public class IceUdpTransportManager
     /**
      * {@inheritDoc}
      */
-    @Override
     public synchronized void close()
     {
         if (!closed)
@@ -321,8 +319,6 @@ public class IceUdpTransportManager
 
             // TODO do we have any sockets left to close, or does Component
             // take care of that?
-
-            super.close();
         }
     }
 
@@ -385,31 +381,12 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Gets the ICE local username fragment.
-     */
-    @SuppressWarnings("unused") // colibri ws
-    String getLocalUfrag()
-    {
-        Agent iceAgent = this.iceAgent;
-        return iceAgent == null ? null : iceAgent.getLocalUfrag();
-    }
-
-    /**
      * Gets the ICE password.
      */
     String getIcePassword()
     {
         Agent iceAgent = this.iceAgent;
         return iceAgent == null ? null : iceAgent.getLocalPassword();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getXmlNamespace()
-    {
-        return IceUdpTransportPacketExtension.NAMESPACE;
     }
 
     /**
@@ -438,7 +415,6 @@ public class IceUdpTransportManager
     /**
      * {@inheritDoc}
      */
-    @Override
     public boolean isConnected()
     {
         return iceConnected;
@@ -448,7 +424,6 @@ public class IceUdpTransportManager
      * {@inheritDoc}
      * @param transportPacketExtension
      */
-    @Override
     public void startConnectivityEstablishment(
             IceUdpTransportPacketExtension transportPacketExtension)
     {
@@ -625,7 +600,6 @@ public class IceUdpTransportManager
     /**
      * {@inheritDoc}
      */
-    @Override
     protected void describe(IceUdpTransportPacketExtension pe)
     {
         pe.setPassword(iceAgent.getLocalPassword());
@@ -761,8 +735,30 @@ public class IceUdpTransportManager
     /**
      * @return {@code true} if ICE has run and failed.
      */
-    public boolean hasIceFailed()
+    boolean hasIceFailed()
     {
         return iceFailed;
+    }
+
+    /**
+     * Sets the values of the properties of a specific
+     * <tt>ColibriConferenceIQ.ChannelBundle</tt>
+     * to the values of the respective properties of this instance. Thus, the
+     * specified <tt>iq</tt> may be thought of as containing a description of
+     * this instance.
+     *
+     * @param iq the <tt>ColibriConferenceIQ.Channel</tt> on which to set the
+     * values of the properties of this instance
+     */
+    public void describe(ColibriConferenceIQ.ChannelBundle iq)
+    {
+        IceUdpTransportPacketExtension pe = iq.getTransport();
+        if (pe == null)
+        {
+            pe = new IceUdpTransportPacketExtension();
+            iq.setTransport(pe);
+        }
+
+        describe(pe);
     }
 }
