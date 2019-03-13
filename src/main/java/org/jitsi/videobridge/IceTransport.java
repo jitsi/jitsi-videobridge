@@ -42,15 +42,15 @@ import org.osgi.framework.*;
  * @author Pawel Domas
  * @author Boris Grozev
  */
-public class IceUdpTransportManager
+public class IceTransport
 {
     /**
-     * The {@link Logger} used by the {@link IceUdpTransportManager} class to
+     * The {@link Logger} used by the {@link IceTransport} class to
      * print debug information. Note that instances should use {@link #logger}
      * instead.
      */
     private static final Logger classLogger
-        = Logger.getLogger(IceUdpTransportManager.class);
+        = Logger.getLogger(IceTransport.class);
 
     /**
      * The name of the property that can be used to control the value of
@@ -141,8 +141,8 @@ public class IceUdpTransportManager
             = this::iceStateChange;
 
     /**
-     * Whether this <tt>IceUdpTransportManager</tt> will serve as the the
-     * controlling or controlled ICE agent.
+     * Whether this <tt>IceTransport</tt> will serve as the the controlling or
+     * controlled ICE agent.
      */
     private final boolean controlling;
 
@@ -178,18 +178,16 @@ public class IceUdpTransportManager
     private final String conferenceId;
 
     /**
-     * Initializes a new <tt>IceUdpTransportManager</tt> instance.
+     * Initializes a new <tt>IceTransport</tt> instance.
      *
      * @param conference the <tt>Conference</tt> which created this
      * <tt>TransportManager</tt>.
      * @param controlling {@code true} if the new instance is to serve as a
      * controlling ICE agent and passive DTLS endpoint; otherwise, {@code false}
-     * @param id an identifier of the {@link IceUdpTransportManager}.
+     * @param id an identifier of the {@link IceTransport}.
      * @throws IOException
      */
-    IceUdpTransportManager(
-            Endpoint endpoint,
-            boolean controlling)
+    IceTransport(Endpoint endpoint, boolean controlling)
         throws IOException
     {
         Conference conference = endpoint.getConference();
@@ -240,7 +238,6 @@ public class IceUdpTransportManager
      *
      * @param iceAgent the {@link Agent} that we'd like to append new harvesters
      * to.
-     * <tt>IceUdpTransportManager</tt>.
      */
     private void configureHarvesters(Agent iceAgent, ConfigurationService cfg)
     {
@@ -571,7 +568,7 @@ public class IceUdpTransportManager
                     candidate.getPriority(),
                     relatedCandidate);
 
-            // XXX IceUdpTransportManager harvests host candidates only and the
+            // XXX IceTransport harvests host candidates only and the
             // ICE Components utilize the UDP protocol/transport only at the
             // time of this writing. The ice4j library will, of course, check
             // the theoretical reachability between the local and the remote

@@ -16,7 +16,6 @@
 
 package org.jitsi.videobridge.transport;
 
-import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
@@ -122,14 +121,14 @@ public class Harvesters
 
     /**
      * The <tt>SinglePortUdpHarvester</tt>s which will be appended to ICE
-     * <tt>Agent</tt>s managed by <tt>IceUdpTransportManager</tt> instances.
+     * <tt>Agent</tt>s managed by <tt>IceTransport</tt> instances.
      */
     public static List<SinglePortUdpHarvester> singlePortHarvesters = null;
 
 
     /**
      * Initializes the static <tt>Harvester</tt> instances used by all
-     * <tt>IceUdpTransportManager</tt> instances, that is
+     * <tt>IceTransport</tt> instances, that is
      * {@link #tcpHarvester} and {@link #singlePortHarvesters}.
      *
      * @param cfg the {@link ConfigurationService} which provides values to
@@ -231,7 +230,7 @@ public class Harvesters
 
     /**
      * Stops the static <tt>Harvester</tt> instances used by all
-     * <tt>IceUdpTransportManager</tt> instances, that is
+     * <tt>IceTransport</tt> instances, that is
      * {@link #tcpHarvester} and {@link #singlePortHarvesters}.
      *
      * @param cfg the {@link ConfigurationService} which provides values to

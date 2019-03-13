@@ -29,8 +29,6 @@ import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
-import org.jitsi.rtp.extensions.*;
-import org.jitsi.rtp.rtcp.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.util.*;
 
@@ -44,16 +42,15 @@ import java.util.function.*;
  * @author Brian Baldino
  * @author Boris Grozev
  */
-public class IceDtlsTransportManager
-    extends IceUdpTransportManager
+public class DtlsTransport extends IceTransport
 {
     /**
-     * The {@link Logger} used by the {@link IceDtlsTransportManager} class to
+     * The {@link Logger} used by the {@link DtlsTransport} class to
      * print debug information. Note that instances should use {@link #logger}
      * instead.
      */
     private static final Logger classLogger
-            = Logger.getLogger(IceDtlsTransportManager.class);
+            = Logger.getLogger(DtlsTransport.class);
 
     /**
      * A predicate which is true for DTLS packets. See
@@ -86,7 +83,7 @@ public class IceDtlsTransportManager
     private Node outgoingSrtpPipelineRoot = createOutgoingSrtpPipeline();
     protected boolean dtlsHandshakeComplete = false;
 
-    public IceDtlsTransportManager(Endpoint endpoint)
+    public DtlsTransport(Endpoint endpoint)
             throws IOException
     {
         super(endpoint, true);
@@ -400,7 +397,7 @@ public class IceDtlsTransportManager
                                 packetInfo.getPacket().getBuffer().array(),
                                 0,
                                 packetInfo.getPacket().getBuffer().limit()));
-//                    System.out.println("IceDtlsTransportManager#send returning buf " +
+//                    System.out.println("DtlsTransport#send returning buf " +
 //                            System.identityHashCode(packetInfo.getPacket().getBuffer().array()));
                     ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
                 }

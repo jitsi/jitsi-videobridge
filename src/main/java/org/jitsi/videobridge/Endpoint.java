@@ -159,7 +159,7 @@ public class Endpoint
      * prematurely, or more than once.
      *
      */
-    private IceDtlsTransportManager transportManager;
+    private DtlsTransport transportManager;
 
     /**
      * The exception thrown from the attempt to initialize the transport manager,
@@ -944,7 +944,7 @@ public class Endpoint
      *
      * @throws IOException if the transport manager fails to initialize.
      */
-    public IceDtlsTransportManager getTransportManager()
+    public DtlsTransport getTransportManager()
         throws IOException
     {
         if (transportManager != null)
@@ -960,7 +960,7 @@ public class Endpoint
         {
             try
             {
-                transportManager = new IceDtlsTransportManager(this);
+                transportManager = new DtlsTransport(this);
                 onTransportManagerSet.complete(true);
                 return transportManager;
             }
