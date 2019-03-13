@@ -982,7 +982,7 @@ public class Endpoint
     public void setTransportInfo(IceUdpTransportPacketExtension transportInfo)
             throws IOException
     {
-        getTransportManager().startConnectivityEstablishment(transportInfo);
+        getTransportManager().start(transportInfo);
     }
 
     /**
