@@ -245,8 +245,6 @@ public class IceUdpTransportManager
      */
     private void configureHarvesters(Agent iceAgent, ConfigurationService cfg)
     {
-        boolean disableDynamicHostHarvester = false;
-
         if (cfg != null)
         {
             useComponentSocket
@@ -291,16 +289,10 @@ public class IceUdpTransportManager
             for (CandidateHarvester harvester : Harvesters.singlePortHarvesters)
             {
                 iceAgent.addCandidateHarvester(harvester);
-                disableDynamicHostHarvester = true;
             }
         }
 
-        // Disable dynamic ports (UDP) if we're using "single port" (UPD), as
-        // there's no need for a client to try a similar UDP candidate twice.
-        if (disableDynamicHostHarvester)
-        {
-            iceAgent.setUseHostHarvester(false);
-        }
+        iceAgent.setUseHostHarvester(false);
     }
 
     /**
@@ -359,37 +351,15 @@ public class IceUdpTransportManager
         iceAgent.setControlling(controlling);
         iceAgent.setPerformConsentFreshness(true);
 
-        int portBase = portTracker.getPort();
-
         IceMediaStream iceStream
                 = iceAgent.createMediaStream(streamName);
 
+        // We're not using dynamic ports.
         iceAgent.createComponent(
                 iceStream, Transport.UDP,
-                portBase, portBase, portBase + 100,
+                -1, -1, -1,
                 keepAliveStrategy,
                 useComponentSocket);
-
-        // Attempt to minimize subsequent bind retries: see if we have allocated
-        // any ports from the dynamic range, and if so update the port tracker.
-        // Do NOT update the port tracker with non-dynamic ports (e.g. 4443
-        // coming from TCP) because this will force it to revert back it its
-        // configured min port. When maxPort is reached, allocation will begin
-        // from minPort again, so we don't have to worry about wraps.
-        int maxAllocatedPort
-            = TransportUtils.getMaxAllocatedPort(
-                    iceStream,
-                    portTracker.getMinPort(),
-                    portTracker.getMaxPort());
-        if (maxAllocatedPort > 0)
-        {
-            int nextPort = 1 + maxAllocatedPort;
-            portTracker.setNextPort(nextPort);
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Updating the port tracker min port: " + nextPort);
-            }
-        }
 
         return iceAgent;
     }
