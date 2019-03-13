@@ -47,7 +47,6 @@ import org.jitsi_modified.service.neomedia.rtp.*;
 
 import java.beans.*;
 import java.io.*;
-import java.lang.ref.*;
 import java.nio.*;
 import java.time.*;
 import java.util.*;
@@ -155,8 +154,7 @@ public class Endpoint
      * allows us to expire the endpoint once all of its 'channels' have been
      * removed.
      */
-    final List<WeakReference<ChannelShim>> channelShims
-            = new LinkedList<>();
+    final List<ChannelShim> channelShims = new LinkedList<>();
 
     /**
      * Whether this endpoint should accept audio packets. We set this according
@@ -491,8 +489,6 @@ public class Endpoint
                 = this.transceiver.getPacketIOActivity();
 
         int maxExpireTimeSecsFromChannelShims = channelShims.stream()
-                .map(WeakReference::get)
-                .filter(Objects::nonNull)
                 .map(ChannelShim::getExpire)
                 .mapToInt(exp -> exp)
                 .max()
@@ -1069,12 +1065,7 @@ public class Endpoint
     {
         return
                 channelShims.stream()
-                        .filter(Objects::nonNull)
-                        .map(WeakReference::get)
-                        .filter(
-                                channel ->
-                                        channel != null &&
-                                                channel.getMediaType().equals(mediaType))
+                        .filter(c -> c.getMediaType().equals(mediaType))
                         .findAny().orElse(null);
 
     }
@@ -1152,7 +1143,7 @@ public class Endpoint
                     acceptVideo = true;
                     break;
             }
-            channelShims.add(new WeakReference<>(channelShim));
+            channelShims.add(channelShim);
         }
     }
 
@@ -1160,24 +1151,17 @@ public class Endpoint
     {
         synchronized (channelShims)
         {
-            for (Iterator<WeakReference<ChannelShim>> i = channelShims.iterator(); i.hasNext();)
+            switch (channelShim.getMediaType())
             {
-                ChannelShim existingChannelShim = i.next().get();
-                if (existingChannelShim != null && existingChannelShim.equals(channelShim))
-                {
-                    // We assume at most 1 channel per media type
-                    switch (channelShim.getMediaType())
-                    {
-                        case AUDIO:
-                            acceptAudio = false;
-                            break;
-                        case VIDEO:
-                            acceptVideo = false;
-                            break;
-                    }
-                    i.remove();
-                }
+                case AUDIO:
+                    acceptAudio = false;
+                    break;
+                case VIDEO:
+                    acceptVideo = false;
+                    break;
             }
+
+            channelShims.remove(channelShim);
             if (channelShims.isEmpty())
             {
                 expire();
