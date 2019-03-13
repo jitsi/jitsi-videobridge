@@ -55,18 +55,6 @@ public class EventFactory
         = "org/jitsi/videobridge/Conference/EXPIRED";
 
     /**
-     * The name of the topic of a "content created" event.
-     */
-    public static final String CONTENT_CREATED_TOPIC
-        = "org/jitsi/videobridge/Content/CREATED";
-
-    /**
-     * The name of the topic of a "content expired" event.
-     */
-    public static final String CONTENT_EXPIRED_TOPIC
-        = "org/jitsi/videobridge/Content/EXPIRED";
-
-    /**
      * The name of the topic of a "endpoint created" event.
      */
     public static final String ENDPOINT_CREATED_TOPIC
@@ -81,42 +69,23 @@ public class EventFactory
         = "org/jitsi/videobridge/Endpoint/MSG_TRANSPORT_READY_TOPIC";
 
     /**
-     * The name of the topic of a "stream started" event.
-     */
-    public static final String STREAM_STARTED_TOPIC
-        = "org/jitsi/videobridge/Endpoint/STREAM_STARTED";
-
-    /**
-     * The name of the topic of a "transport channel created" event.
-     */
-    public static final String TRANSPORT_CHANNEL_ADDED_TOPIC
-        = "org/jitsi/videobridge/IceUdpTransportManager/"
-            + "TRANSPORT_CHANNEL_ADDED";
-
-    /**
-     * The name of the topic of a "transport channel removed" event.
-     */
-    public static final String TRANSPORT_CHANNEL_REMOVED_TOPIC
-        = "org/jitsi/videobridge/IceUdpTransportManager/" +
-        "TRANSPORT_CHANNEL_REMOVED";
-    /**
      * The name of the topic of a "transport connected" event.
      */
     public static final String TRANSPORT_CONNECTED_TOPIC
-        = "org/jitsi/videobridge/IceUdpTransportManager/"
+        = "org/jitsi/videobridge/IceTransport/"
             + "TRANSPORT_CHANNEL_CONNECTED";
 
     /**
      * The name of the topic of a "transport created" event.
      */
     public static final String TRANSPORT_CREATED_TOPIC
-        = "org/jitsi/videobridge/IceUdpTransportManager/CREATED";
+        = "org/jitsi/videobridge/IceTransport/CREATED";
 
     /**
      * The name of the topic of a "transport state changed" event.
      */
     public static final String TRANSPORT_STATE_CHANGED_TOPIC
-        = "org/jitsi/videobridge/IceUdpTransportManager/TRANSPORT_CHANGED";
+        = "org/jitsi/videobridge/IceTransport/TRANSPORT_CHANGED";
 
     /**
      * Creates a new "conference created" <tt>Event</tt>, which indicates the
@@ -197,7 +166,7 @@ public class EventFactory
      * @return the <tt>Event</tt> which was created.
      */
     public static Event transportConnected(
-            IceUdpTransportManager transportManager)
+            IceTransport transportManager)
     {
         return
             new Event(
@@ -213,7 +182,7 @@ public class EventFactory
      * @return the <tt>Event</tt> which was created.
      */
     public static Event transportCreated(
-            IceUdpTransportManager transportManager)
+            IceTransport transportManager)
     {
         return
             new Event(
@@ -230,7 +199,7 @@ public class EventFactory
      * @return the <tt>Event</tt> which was created.
      */
     public static Event transportStateChanged(
-            IceUdpTransportManager transportManager,
+            IceTransport transportManager,
             IceProcessingState oldState,
             IceProcessingState newState)
     {
