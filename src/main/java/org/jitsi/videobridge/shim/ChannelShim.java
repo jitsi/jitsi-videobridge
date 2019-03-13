@@ -77,7 +77,7 @@ public class ChannelShim
     /**
      * This channel's endpoint.
      */
-        private final Endpoint endpoint;
+    private final Endpoint endpoint;
 
     /**
      * The bridge's ssrc for this channel
@@ -171,6 +171,7 @@ public class ChannelShim
         {
             expired = true;
             endpoint.removeChannel(this);
+            contentShim.removeChannel(this);
         }
     }
 
@@ -348,5 +349,13 @@ public class ChannelShim
     Endpoint getEndpoint()
     {
         return endpoint;
+    }
+
+    /**
+     * @return the ID of this channel.
+     */
+    String getId()
+    {
+        return id;
     }
 }
