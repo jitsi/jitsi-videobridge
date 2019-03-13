@@ -21,7 +21,6 @@ import org.bouncycastle.crypto.tls.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
-import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi.nlj.*;
@@ -1210,25 +1209,12 @@ public class Endpoint
     }
 
     /**
-     * TODO Brian
+     * Handles an incoming RTCP packet (after it has been passed through the
+     * incoming pipeline and parsed, etc.).
      */
     private void handleIncomingRtcp(PacketInfo packetInfo)
     {
-        // We don't need to copy RTCP packets for each dest like we do with RTP
-        // because each one will only have a single destination
-        // TODO: getEndpointsFast()?
-        getConference().getEndpoints().forEach(endpoint -> {
-            if (packetInfo.getPacket() instanceof RtcpFbPacket)
-            {
-                RtcpFbPacket rtcpPacket = (RtcpFbPacket) packetInfo.getPacket();
-                // TODO route RTCP to Octo too
-                if (endpoint instanceof Endpoint
-                    && endpoint.receivesSsrc(rtcpPacket.getMediaSourceSsrc()))
-                {
-                    ((Endpoint) endpoint).transceiver.sendRtcp(rtcpPacket);
-                }
-            }
-        });
+        getConference().handleIncomingRtcp(packetInfo, this);
     }
 
     /**
