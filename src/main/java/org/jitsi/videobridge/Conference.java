@@ -20,6 +20,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.nlj.*;
 import org.jitsi.rtp.*;
+import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
@@ -35,6 +36,7 @@ import org.osgi.framework.*;
 import java.beans.*;
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.logging.*;
 import java.util.stream.*;
@@ -69,9 +71,22 @@ public class Conference
     private static final Logger classLogger = Logger.getLogger(Conference.class);
 
     /**
-     * The <tt>Endpoint</tt>s participating in this <tt>Conference</tt>.
+     * The endpoints participating in this {@link Conference}. Although it's a
+     * {@link ConcurrentHashMap}, writing to it must be protected by
+     * synchronizing on the map itself, because it must be kept in sync with
+     * {@link #endpointsCache}.
      */
-    private final List<AbstractEndpoint> endpoints = new LinkedList<>();
+    private final Map<String, AbstractEndpoint> endpoints
+            = new ConcurrentHashMap<>();
+
+    /**
+     * A read-only cache of the endpoints in this conference. Note that it
+     * contains only the {@link Endpoint} instances (and not Octo endpoints).
+     * This is because the cache was introduced for performance reasons only
+     * (we iterate over it for each RTP packet) and the Octo endpoints are not
+     * needed.
+     */
+    private List<Endpoint> endpointsCache = Collections.EMPTY_LIST;
 
     /**
      * The {@link EventAdmin} instance (to be) used by this {@code Conference}
@@ -587,42 +602,51 @@ public class Conference
     private AbstractEndpoint getEndpoint(String id, boolean create)
     {
         AbstractEndpoint endpoint;
-        boolean changed;
+        endpoint = endpoints.get(id);
 
-        synchronized (endpoints)
+        if (endpoint == null && create)
         {
-            changed = endpoints.removeIf(AbstractEndpoint::isExpired);
-
-            endpoint
-                = endpoints.stream()
-                        .filter(e -> e.getID().equals(id))
-                        .findFirst().orElse(null);
-
-            if (create && endpoint == null)
+            synchronized (endpoints)
             {
                 endpoint = new Endpoint(id, this);
                 // The propertyChangeListener will weakly reference this
                 // Conference and will unregister itself from the endpoint
                 // sooner or later.
                 endpoint.addPropertyChangeListener(propertyChangeListener);
-                endpoints.add(endpoint);
-                changed = true;
+                endpoints.put(id, endpoint);
 
-                EventAdmin eventAdmin = getEventAdmin();
-                if (eventAdmin != null)
-                {
-                    eventAdmin.sendEvent(
-                            EventFactory.endpointCreated(endpoint));
-                }
+                updateEndpointsCache();
             }
-        }
 
-        if (changed)
-        {
+            EventAdmin eventAdmin = getEventAdmin();
+            if (eventAdmin != null)
+            {
+                eventAdmin.sendEvent(
+                        EventFactory.endpointCreated(endpoint));
+            }
+
             firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
         }
 
         return endpoint;
+    }
+
+
+    /**
+     * Updates {@link #endpointsCache} with the current contents of
+     * {@link #endpoints}.
+     */
+    private void updateEndpointsCache()
+    {
+        ArrayList<Endpoint> endpointsList = new ArrayList<>(endpoints.size());
+        endpoints.values().forEach(e -> {
+            if (e instanceof Endpoint)
+            {
+                endpointsList.add((Endpoint) e);
+            }
+        });
+
+        endpointsCache = Collections.unmodifiableList(endpointsList);
     }
 
     /**
@@ -632,7 +656,7 @@ public class Conference
      */
     public int getEndpointCount()
     {
-        return getEndpoints().size();
+        return endpoints.size();
     }
 
     /**
@@ -644,32 +668,16 @@ public class Conference
      */
     public List<AbstractEndpoint> getEndpoints()
     {
-        boolean changed;
-        List<AbstractEndpoint> copy;
-
-        synchronized (this.endpoints)
-        {
-            changed = this.endpoints.removeIf(AbstractEndpoint::isExpired);
-            copy = new ArrayList<>(this.endpoints);
-        }
-
-        if (changed)
-        {
-            firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
-        }
-
-        return copy;
+        return new ArrayList<>(this.endpoints.values());
     }
 
     /**
-     * Gets a copy of the current list of endpoints.
-     *
-     * TODO we access this on every packet. We should avoid creating an
-     * ArrayList every time.
+     * Gets the list of endpoints which are local to this bridge (as opposed
+     * to being on a remote bridge through Octo).
      */
-    private List<AbstractEndpoint> getEndpointsFast()
+    public List<Endpoint> getLocalEndpoints()
     {
-        return new ArrayList<>(this.endpoints);
+        return new ArrayList<>(endpointsCache);
     }
 
     /**
@@ -733,9 +741,16 @@ public class Conference
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      * which has the specified <tt>id</tt>
      */
-    public AbstractEndpoint getOrCreateEndpoint(String id)
+    public Endpoint getOrCreateEndpoint(String id)
     {
-        return getEndpoint(id, /* create */ true);
+        AbstractEndpoint endpoint = getEndpoint(id, /* create */ true);
+        if (!(endpoint instanceof Endpoint))
+        {
+            throw new IllegalStateException("Endpoint with id " + id +
+                    " should be an Endpoint instance");
+        }
+
+        return (Endpoint) endpoint;
     }
 
     /**
@@ -843,7 +858,11 @@ public class Conference
 
         synchronized (endpoints)
         {
-            removed = endpoints.removeIf(AbstractEndpoint::isExpired);
+            removed = endpoints.remove(endpoint.getID()) != null;
+            if (removed)
+            {
+                updateEndpointsCache();
+            }
         }
 
         if (removed)
@@ -861,7 +880,8 @@ public class Conference
     {
         synchronized (endpoints)
         {
-            endpoints.add(endpoint);
+            endpoints.put(endpoint.getID(), endpoint);
+            updateEndpointsCache();
         }
 
         firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
@@ -923,6 +943,7 @@ public class Conference
                                 .map(AbstractEndpoint::getID)
                                 .collect(Collectors.toList()));
 
+        // TODO: special handling for octo (i.e. also send to tentacle?)
         getEndpoints().forEach(
                 ep -> ep.speechActivityEndpointsChanged(sortedActiveEndpoints));
     }
@@ -1072,7 +1093,7 @@ public class Conference
     @Override
     public boolean shouldExpire()
     {
-        return getEndpoints().size() == 0;
+        return getEndpointCount() == 0;
     }
 
     /**
@@ -1105,24 +1126,22 @@ public class Conference
      */
     public void handleIncomingRtp(PacketInfo packetInfo, AbstractEndpoint source)
     {
-        getEndpointsFast().forEach(endpoint -> {
+        endpointsCache.forEach(endpoint -> {
             if (endpoint == source)
             {
                 return;
             }
 
-            //TODO(brian): we don't use a copy when passing to 'wants', which
-            // makes sense, but it would be nice to be able to enforce a
-            // 'read only' version of the packet here so we can guarantee
-            // nothing is changed in 'wants'
-            if (endpoint instanceof Endpoint
-                    && endpoint.wants(packetInfo, source != null ? source.getID() : null))
+            if (endpoint.wants(
+                    packetInfo,
+                    source != null ? source.getID() : null))
             {
-                //TODO: add a version of packetinfo.clone to do this (use a buffer)?
+                //TODO: add a version of packetinfo.clone to do this (use a
+                // buffer)?
                 Packet packet = ((RtpPacket)packetInfo.getPacket()).cloneWithBackingBuffer(ByteBufferPool.getBuffer(1500));
                 PacketInfo packetInfoCopy = new PacketInfo(packet, packetInfo.getTimeline().clone());
                 packetInfoCopy.setReceivedTime(packetInfo.getReceivedTime());
-                ((Endpoint) endpoint).sendRtp(packetInfoCopy);
+                endpoint.sendRtp(packetInfoCopy);
             }
         });
         if (tentacle != null && tentacle.wants(packetInfo, source))
@@ -1154,6 +1173,27 @@ public class Conference
             tentacle.addPropertyChangeListener(propertyChangeListener);
         }
         return tentacle;
+    }
+
+
+    /**
+     * Handles an RTCP packet coming from a specific endpoint.
+     * @param packetInfo
+     */
+    void handleIncomingRtcp(PacketInfo packetInfo, AbstractEndpoint source)
+    {
+        endpointsCache.forEach(endpoint -> {
+            if (packetInfo.getPacket() instanceof RtcpFbPacket)
+            {
+                RtcpFbPacket rtcpPacket = (RtcpFbPacket) packetInfo.getPacket();
+                if (endpoint.receivesSsrc(rtcpPacket.getMediaSourceSsrc()))
+                {
+                    endpoint.getTransceiver().sendRtcp(rtcpPacket);
+                }
+            }
+        });
+
+        //TODO Octo
     }
 
     /**

@@ -477,7 +477,7 @@ public class ConferenceSpeechActivity
                 // The list of endpoints may have changed, sync our list to make
                 // sure it matches.
                 List<AbstractEndpoint> conferenceEndpointsCopy
-                        = new ArrayList<>(conference.getEndpoints());
+                        = conference.getEndpoints();
                 synchronized (syncRoot)
                 {
                     // Remove any endpoints we have that are no longer in the

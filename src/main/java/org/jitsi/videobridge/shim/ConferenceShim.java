@@ -101,17 +101,12 @@ public class ConferenceShim
         }
     }
 
-    public Collection<AbstractEndpoint> getEndpoints()
-    {
-        return conference.getEndpoints();
-    }
-
-    public void describeChannelBundles(
+    void describeChannelBundles(
             ColibriConferenceIQ iq,
             Set<String> endpointIds)
             throws VideobridgeShim.IqProcessingException
     {
-        for (AbstractEndpoint endpoint : getEndpoints())
+        for (AbstractEndpoint endpoint : conference.getEndpoints())
         {
             String endpointId = endpoint.getID();
             if (endpointIds.contains(endpointId))
@@ -141,7 +136,7 @@ public class ConferenceShim
      */
     void describeEndpoints(ColibriConferenceIQ iq)
     {
-        getEndpoints().forEach(
+        conference.getEndpoints().forEach(
                 en -> iq.addEndpoint(
                         new ColibriConferenceIQ.Endpoint(
                                 en.getID(), en.getStatsId(), en.getDisplayName())));

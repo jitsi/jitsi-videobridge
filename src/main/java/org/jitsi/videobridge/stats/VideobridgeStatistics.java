@@ -552,68 +552,63 @@ public class VideobridgeStatistics
                     videoChannels += contentChannelCount;
                 }
             }
-            for (AbstractEndpoint abstractEndpoint : conference.getEndpoints())
+            for (Endpoint endpoint : conference.getLocalEndpoints())
             {
-                if (abstractEndpoint instanceof Endpoint)
+                TransceiverStats transceiverStats
+                        = endpoint.getTransceiver().getTransceiverStats();
+                IncomingStatisticsSnapshot incomingStats
+                        = transceiverStats.getIncomingStats();
+                bitrateDownloadBps += incomingStats.getBitrate();
+                packetRateDownload += incomingStats.getPacketRate();
+                for (IncomingSsrcStats.Snapshot ssrcStats
+                        : incomingStats.getSsrcStats().values())
                 {
-                    Endpoint endpoint = (Endpoint)abstractEndpoint;
+                    packetsReceived += ssrcStats.getNumRececivedPackets();
 
-                    TransceiverStats transceiverStats
-                            = endpoint.getTransceiver().getTransceiverStats();
-                    IncomingStatisticsSnapshot incomingStats
-                            = transceiverStats.getIncomingStats();
-                    bitrateDownloadBps += incomingStats.getBitrate();
-                    packetRateDownload += incomingStats.getPacketRate();
-                    for (IncomingSsrcStats.Snapshot ssrcStats
-                            : incomingStats.getSsrcStats().values())
+                    packetsReceivedLost += ssrcStats.getCumulativePacketsLost();
+
+                    fractionLostCount++;
+                    fractionLostSum += ssrcStats.getFractionLost() / 256;
+
+                    Double ssrcJitter = ssrcStats.getJitter();
+                    if (ssrcJitter != null && ssrcJitter != 0)
                     {
-                        packetsReceived += ssrcStats.getNumRececivedPackets();
-
-                        packetsReceivedLost += ssrcStats.getCumulativePacketsLost();
-
-                        fractionLostCount++;
-                        fractionLostSum += ssrcStats.getFractionLost() / 256;
-
-                        Double ssrcJitter = ssrcStats.getJitter();
-                        if (ssrcJitter != null && ssrcJitter != 0)
-                        {
-                            // We take the abs because otherwise the
-                            // aggregate makes no sense.
-                            jitterSumMs += Math.abs(ssrcJitter);
-                            jitterCount++;
-                        }
-
+                        // We take the abs because otherwise the
+                        // aggregate makes no sense.
+                        jitterSumMs += Math.abs(ssrcJitter);
+                        jitterCount++;
                     }
 
-                    OutgoingStatisticsSnapshot outgoingStats
-                            = transceiverStats.getOutgoingStats();
-                    bitrateUploadBps += outgoingStats.getBitrate();
-                    packetRateUpload += outgoingStats.getPacketRate();
-
-                    Double endpointRtt
-                            = transceiverStats.getEndpointConnectionStats().getRtt();
-                    if (endpointRtt != null && endpointRtt > 0)
-                    {
-                        rttSumMs += endpointRtt;
-                        rttCount++;
-                    }
-
-                    // Assume we're receiving a video stream from the endpoint
-                    int endpointStreams = 1;
-
-                    // Assume we're sending one video stream to this endpoint
-                    // for each other endpoint in the conference unless there's
-                    // a limit imposed by lastN.
-                    // TODO: can we get the actual numnber of streams that we're
-                    // sending from the bitrate controller?
-                    Integer lastN = endpoint.getLastN();
-                    endpointStreams
-                       += (lastN == null || lastN == -1)
-                           ? (numConferenceEndpoints - 1)
-                           : Math.min(lastN, numConferenceEndpoints - 1);
-
-                   videoStreams += endpointStreams;
                 }
+
+                OutgoingStatisticsSnapshot outgoingStats
+                        = transceiverStats.getOutgoingStats();
+                bitrateUploadBps += outgoingStats.getBitrate();
+                packetRateUpload += outgoingStats.getPacketRate();
+
+                Double endpointRtt
+                        = transceiverStats.getEndpointConnectionStats().getRtt();
+                if (endpointRtt != null && endpointRtt > 0)
+                {
+                    rttSumMs += endpointRtt;
+                    rttCount++;
+                }
+
+                // Assume we're receiving a video stream from the endpoint
+                int endpointStreams = 1;
+
+                // Assume we're sending one video stream to this endpoint
+                // for each other endpoint in the conference unless there's
+                // a limit imposed by lastN.
+                // TODO: can we get the actual numnber of streams that we're
+                // sending from the bitrate controller?
+                Integer lastN = endpoint.getLastN();
+                endpointStreams
+                   += (lastN == null || lastN == -1)
+                       ? (numConferenceEndpoints - 1)
+                       : Math.min(lastN, numConferenceEndpoints - 1);
+
+               videoStreams += endpointStreams;
             }
         }
 
