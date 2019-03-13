@@ -32,7 +32,6 @@ import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtp.*;
-import org.jitsi.rtp.util.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
@@ -160,6 +159,18 @@ public class Endpoint
             = new LinkedList<>();
 
     /**
+     * Whether this endpoint should accept audio packets. We set this according
+     * to whether the endpoint has an audio Colibri channel.
+     */
+    private boolean acceptAudio = false;
+
+    /**
+     * Whether this endpoint should accept video packets. We set this according
+     * to whether the endpoint has a video Colibri channel.
+     */
+    private boolean acceptVideo = false;
+
+    /**
      * Whether or not the bridge should be the peer which opens the data channel
      * (as opposed to letting the far peer/client open it).
      */
@@ -168,7 +179,6 @@ public class Endpoint
     //TODO(brian): align the recurringrunnable stuff with whatever we end up doing with all the other executors
     private static final RecurringRunnableExecutor recurringRunnableExecutor =
             new RecurringRunnableExecutor(Endpoint.class.getSimpleName());
-
 
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
@@ -365,8 +375,14 @@ public class Endpoint
         {
             if (packetInfo.getPacket() instanceof AudioRtpPacket)
             {
-                return true;
+                return acceptAudio;
             }
+            if (packetInfo.getPacket() instanceof VideoRtpPacket
+                && !acceptVideo)
+            {
+                return false;
+            }
+
             RawPacket packet = PacketExtensionsKt.toRawPacket(packetInfo.getPacket());
             return bitrateController.accept(packet);
         }
@@ -1127,6 +1143,15 @@ public class Endpoint
     {
         synchronized (channelShims)
         {
+            switch (channelShim.getMediaType())
+            {
+                case AUDIO:
+                    acceptAudio = true;
+                    break;
+                case VIDEO:
+                    acceptVideo = true;
+                    break;
+            }
             channelShims.add(new WeakReference<>(channelShim));
         }
     }
@@ -1138,7 +1163,18 @@ public class Endpoint
             for (Iterator<WeakReference<ChannelShim>> i = channelShims.iterator(); i.hasNext();)
             {
                 ChannelShim existingChannelShim = i.next().get();
-                if (existingChannelShim != null && existingChannelShim.equals(channelShim)) {
+                if (existingChannelShim != null && existingChannelShim.equals(channelShim))
+                {
+                    // We assume at most 1 channel per media type
+                    switch (channelShim.getMediaType())
+                    {
+                        case AUDIO:
+                            acceptAudio = false;
+                            break;
+                        case VIDEO:
+                            acceptVideo = false;
+                            break;
+                    }
                     i.remove();
                 }
             }
