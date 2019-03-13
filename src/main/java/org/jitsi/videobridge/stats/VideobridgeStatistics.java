@@ -559,7 +559,7 @@ public class VideobridgeStatistics
                     Endpoint endpoint = (Endpoint)abstractEndpoint;
 
                     TransceiverStats transceiverStats
-                            = endpoint.transceiver.getTransceiverStats();
+                            = endpoint.getTransceiver().getTransceiverStats();
                     IncomingStatisticsSnapshot incomingStats
                             = transceiverStats.getIncomingStats();
                     bitrateDownloadBps += incomingStats.getBitrate();

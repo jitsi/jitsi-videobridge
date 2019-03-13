@@ -188,45 +188,6 @@ public class EventFactory
         return new Event(MSG_TRANSPORT_READY_TOPIC, properties);
     }
 
-//    public static Event streamStarted(RtpChannel rtpChannel)
-//    {
-//        return new Event(STREAM_STARTED_TOPIC, makeProperties(rtpChannel));
-//    }
-
-    //TODO(brian): re-add this?
-//    /**
-//     * Creates a new "transport channel added" <tt>Event</tt>, which indicates
-//     * that a COLIBRI channel was added to a Jitsi Videobridge TransportManager.
-//     * @param channel the added COLIBRI channel.
-//     *
-//     * @return the <tt>Event</tt> which was created.
-//     */
-//    public static Event transportChannelAdded(
-//            Channel channel)
-//    {
-//        return
-//            new Event(
-//                    TRANSPORT_CHANNEL_ADDED_TOPIC,
-//                    makeProperties(channel));
-//    }
-
-    //TODO(brian): re-add this?
-//    /**
-//     * Creates a new "transport channel removed" <tt>Event</tt>, which indicates
-//     * that a COLIBRI channel was removed from a Jitsi Videobridge
-//     * TransportManager.
-//     * @param channel the removed COLIBRI channel.
-//     *
-//     * @return the <tt>Event</tt> which was created.
-//     */
-//    public static Event transportChannelRemoved(Channel channel)
-//    {
-//        return
-//            new Event(
-//                    TRANSPORT_CHANNEL_REMOVED_TOPIC,
-//                    makeProperties(channel));
-//    }
-
     /**
      * Creates a new "transport connected" <tt>Event</tt>, which indicates
      * that a Jitsi Videobridge TransportManager has changed its state to

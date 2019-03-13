@@ -150,7 +150,7 @@ public class ContentShim
                 channels.put(sctpConnId, connection);
 
                 // Trigger the creation of the actual new SCTP connection
-                ((Endpoint)endpoint).createSctpConnection();
+                endpoint.createSctpConnection();
 
                 return connection;
             }

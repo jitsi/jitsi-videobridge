@@ -25,7 +25,6 @@ import org.json.simple.*;
 
 import java.beans.*;
 import java.util.*;
-import java.util.concurrent.*;
 
 /**
  * Represents the speech activity of the <tt>Endpoint</tt>s in a
@@ -56,7 +55,8 @@ public class ConferenceSpeechActivity
     public static final String ENDPOINTS_PROPERTY_NAME
         = ConferenceSpeechActivity.class.getName() + ".endpoints";
 
-    private static final Logger classLogger = Logger.getLogger(ConferenceSpeechActivity.class);
+    private static final Logger classLogger
+            = Logger.getLogger(ConferenceSpeechActivity.class);
     /**
      * The <tt>Logger</tt> used by the <tt>ConferenceSpeechActivity</tt> class
      * and its instances to print debug information.
@@ -199,23 +199,11 @@ public class ConferenceSpeechActivity
         this.conference = Objects.requireNonNull(conference, "conference");
         logger = Logger.getLogger(classLogger, conference.getLogger());
 
-        /*
-         * The PropertyChangeListener will weakly reference this instance and
-         * will unregister itself from the conference sooner or later.
-         */
+         // The PropertyChangeListener will weakly reference this instance and
+         // will unregister itself from the conference sooner or later.
         conference.addPropertyChangeListener(propertyChangeListener);
-        activeSpeakerDetector.addActiveSpeakerChangedListener(activeSpeakerChangedListener);
-        //TODO(brian): i don't think we even need this anymore, it looks like the old code
-        // wasn't even handling DOMINANT_SPEAKER_PROPERTY_NAME?
-//        if (activeSpeakerDetector instanceof ActiveSpeakerDetectorImpl)
-//        {
-//            ActiveSpeakerDetectorImpl asdi = (ActiveSpeakerDetectorImpl)activeSpeakerDetector;
-//            if (asdi.getImpl() instanceof DominantSpeakerIdentification)
-//            {
-//                DominantSpeakerIdentification dsi = (DominantSpeakerIdentification)asdi.getImpl();
-//                dsi.addPropertyChangeListener(propertyChangeListener);
-//            }
-//        }
+        activeSpeakerDetector
+                .addActiveSpeakerChangedListener(activeSpeakerChangedListener);
     }
 
     /**
@@ -252,11 +240,14 @@ public class ConferenceSpeechActivity
                 // Move this endpoint to the top of our sorted list
                 if (!endpoints.remove(endpoint))
                 {
-                    logger.warn("Warning, got active speaker notification for unknown endpoint! Ignoring");
+                    logger.warn("Got active speaker notification for an unknown"
+                            + " endpoint! Ignoring");
                     return;
                 }
                 endpoints.add(0, endpoint);
-                postPropertyChange(DOMINANT_ENDPOINT_PROPERTY_NAME, null, null);
+                postPropertyChange(
+                        DOMINANT_ENDPOINT_PROPERTY_NAME,
+                        null, null);
             }
         }
     }
@@ -410,7 +401,8 @@ public class ConferenceSpeechActivity
     {
         if (activeSpeakerDetector instanceof ActiveSpeakerDetectorImpl)
         {
-            ActiveSpeakerDetectorImpl asdi = (ActiveSpeakerDetectorImpl)activeSpeakerDetector;
+            ActiveSpeakerDetectorImpl asdi
+                    = (ActiveSpeakerDetectorImpl)activeSpeakerDetector;
             if (asdi.getImpl() instanceof DominantSpeakerIdentification)
             {
                 return (DominantSpeakerIdentification)asdi.getImpl();
@@ -482,14 +474,21 @@ public class ConferenceSpeechActivity
             {
                 boolean endpointsListChanged = false;
                 boolean dominantSpeakerChanged = false;
-                // The list of endpoints may have changed, sync our list to make sure it matches
-                List<AbstractEndpoint> conferenceEndpointsCopy = new ArrayList<>(conference.getEndpoints());
+                // The list of endpoints may have changed, sync our list to make
+                // sure it matches.
+                List<AbstractEndpoint> conferenceEndpointsCopy
+                        = new ArrayList<>(conference.getEndpoints());
                 synchronized (syncRoot)
                 {
-                    // Remove any endpoints we have that are no longer in the conference
-                    String previousDominantSpeaker = endpoints.isEmpty() ? null : endpoints.get(0).getID();
-                    endpointsListChanged = endpoints.removeIf(ep -> !conferenceEndpointsCopy.contains(ep));
-                    // Add any endpoints from the conf we don't have to the end of our list
+                    // Remove any endpoints we have that are no longer in the
+                    // conference
+                    String previousDominantSpeaker
+                        = endpoints.isEmpty() ? null : endpoints.get(0).getID();
+                    endpointsListChanged
+                        = endpoints.removeIf(
+                                ep -> !conferenceEndpointsCopy.contains(ep));
+                    // Add any endpoints from the conf we don't have to the end
+                    // of our list
                     for (AbstractEndpoint ep : conferenceEndpointsCopy)
                     {
                         if (!endpoints.contains(ep))
@@ -498,25 +497,32 @@ public class ConferenceSpeechActivity
                             endpointsListChanged = true;
                         }
                     }
-                    String newDominantSpeaker = endpoints.isEmpty() ? null : endpoints.get(0).getID();
-                    dominantSpeakerChanged = !Objects.equals(previousDominantSpeaker, newDominantSpeaker);
-                }
-                if (endpointsListChanged)
-                {
-                    logger.info("Endpoint list changed, firing event");
-                    postPropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
+                    String newDominantSpeaker
+                        = endpoints.isEmpty() ? null : endpoints.get(0).getID();
+                    dominantSpeakerChanged
+                        = !Objects.equals(
+                                previousDominantSpeaker, newDominantSpeaker);
                 }
                 if (dominantSpeakerChanged)
                 {
-                    logger.info("Dominant speaker is now ");
-                    postPropertyChange(DOMINANT_ENDPOINT_PROPERTY_NAME, null, null);
+                    // This implies that the list of endpoints changed, too.
+                    postPropertyChange(
+                            DOMINANT_ENDPOINT_PROPERTY_NAME, null, null);
+                }
+                else if (endpointsListChanged)
+                {
+                    postPropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
                 }
             }
         }
     }
 
+    /**
+     * Fires a property thread in one of the {@code IO_POOL} threads.
+     */
     private void postPropertyChange(String property, Object oldValue, Object newValue)
     {
-        TaskPools.IO_POOL.submit(() -> firePropertyChange(property, oldValue, newValue));
+        TaskPools.IO_POOL.submit(
+                () -> firePropertyChange(property, oldValue, newValue));
     }
 }
