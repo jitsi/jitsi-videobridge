@@ -22,7 +22,6 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.videobridge.shim.*;
 import org.osgi.framework.*;
 
-import java.lang.ref.*;
 import java.util.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
@@ -236,8 +235,6 @@ public class EndpointConnectionStatus
         String endpointId = endpoint.getID();
 
         long mostRecentChannelCreated = endpoint.channelShims.stream()
-                .map(WeakReference<ChannelShim>::get)
-                .filter(Objects::nonNull)
                 .mapToLong(ChannelShim::getCreationTimestampMs)
                 .max()
                 .orElse(0);
