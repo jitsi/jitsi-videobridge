@@ -16,60 +16,127 @@
 
 package org.jitsi.videobridge;
 
-import org.eclipse.jetty.util.ConcurrentHashSet;
+import org.eclipse.jetty.util.*;
 import org.jitsi.nlj.rtp.*;
 
 import java.util.*;
 
 /**
- * Process information signaled about encodings (payload types, ssrcs, ssrc associations, etc.)
- * and gather it in a single place where it can be published out to all interested parties.
+ * Process information signaled about encodings (payload types, SSRCs, SSRC
+ * associations, etc.) and gather it in a single place where it can be published
+ * out to all interested parties.
  *
  * The idea is to alleviate the following problem:
- * When a new endpoint joins, it can use the notification of new local encoding information to trigger
- * updating all other endpoints with that new information, but how does this new endpoint learn of
- * this information from all existing endpoints?  Existing endpoints don't currently have a good trigger
- * to notify new endpoints about their encoding information, so this was devised as a single location to
- * handle dispersing this information to all interested parties.
+ * When a new endpoint joins, it can use the notification of new local encoding
+ * information to trigger updating all other endpoints with that new information,
+ * but how does this new endpoint learn of this information from all existing
+ * endpoints?  Existing endpoints don't currently have a good trigger to notify
+ * new endpoints about their encoding information, so this was devised as a
+ * single location to handle dispersing this information to all interested
+ * parties.
+ *
+ * @author Brian Baldino
  */
-public class EncodingsManager {
-    private Map<String, List<SsrcAssociation>> ssrcAssociations = new HashMap<>();
+public class EncodingsManager
+{
+    /**
+     * Maps an endpoint ID to the list of its SSRC associations.
+     */
+    private Map<String, List<SsrcAssociation>> ssrcAssociations
+            = new HashMap<>();
+
+    /**
+     * Set of listeners to be notified of associations.
+     */
     private Set<EncodingsUpdateListener> listeners = new ConcurrentHashSet<>();
 
-    public void addSsrcAssociation(String epId, long primarySsrc, long secondarySsrc, SsrcAssociationType type)
+    /**
+     * Adds an SSRC association for a specific endpoint.
+     *
+     * @param endpointId the ID of the endpoint.
+     * @param primarySsrc the primary SSRC in the SSRC association.
+     * @param secondarySsrc the secondary SSRC in the SSRC association.
+     * @param type the association type.
+     */
+    public void addSsrcAssociation(
+            String endpointId,
+            long primarySsrc,
+            long secondarySsrc,
+            SsrcAssociationType type)
     {
-        List<SsrcAssociation> epSsrcAssociations = ssrcAssociations.computeIfAbsent(epId, k -> new ArrayList<>());
-        epSsrcAssociations.add(new SsrcAssociation(primarySsrc, secondarySsrc, type));
+        List<SsrcAssociation> epSsrcAssociations
+            = ssrcAssociations.computeIfAbsent(
+                    endpointId, k -> new ArrayList<>());
+        epSsrcAssociations.add(
+                new SsrcAssociation(primarySsrc, secondarySsrc, type));
 
-        listeners.forEach(listener -> {
-            listener.onNewSsrcAssociation(epId, primarySsrc, secondarySsrc, type);
-        });
+        listeners.forEach(
+            listener
+                -> listener.onNewSsrcAssociation(
+                        endpointId, primarySsrc, secondarySsrc, type));
     }
 
     /**
-     * Subscribe to future updates and be notified of any existing ssrc associations.
+     * Subscribe to future updates and be notified of any existing SSRC
+     * associations.
      * @param listener
      */
-    public void subscribe(EncodingsUpdateListener listener) {
+    public void subscribe(EncodingsUpdateListener listener)
+    {
         listeners.add(listener);
 
-        ssrcAssociations.forEach((epId, ssrcAssociations) -> {
-            ssrcAssociations.forEach(ssrcAssociation -> {
-                listener.onNewSsrcAssociation(epId, ssrcAssociation.primarySsrc, ssrcAssociation.secondarySsrc, ssrcAssociation.type);
-            });
-        });
+        ssrcAssociations.forEach(
+            (endpointId, ssrcAssociations)
+                -> ssrcAssociations.forEach(ssrcAssociation ->
+                    {
+                        listener.onNewSsrcAssociation(
+                                endpointId,
+                                ssrcAssociation.primarySsrc,
+                                ssrcAssociation.secondarySsrc,
+                                ssrcAssociation.type);
+                    }));
     }
 
-    interface EncodingsUpdateListener {
-        void onNewSsrcAssociation(String epId, long primarySsrc, long secondarySsrc, SsrcAssociationType type);
+    /**
+     * An interface for listening to new associations.
+     */
+    interface EncodingsUpdateListener
+    {
+        void onNewSsrcAssociation(
+                String endpointId,
+                long primarySsrc,
+                long secondarySsrc,
+                SsrcAssociationType type);
     }
 
-    private class SsrcAssociation {
+    /**
+     * Represents an SSRC association.
+     */
+    private class SsrcAssociation
+    {
+        /**
+         * The primary SSRC.
+         */
         private long primarySsrc;
+
+        /**
+         * The secondary SSRC.
+         */
         private long secondarySsrc;
+
+        /**
+         * The association type.
+         */
         private SsrcAssociationType type;
 
-        SsrcAssociation(long primarySsrc, long secondarySsrc, SsrcAssociationType type) {
+        /**
+         * Initializes a new {@link SsrcAssociation} instance.
+         */
+        private SsrcAssociation(
+                long primarySsrc,
+                long secondarySsrc,
+                SsrcAssociationType type)
+        {
             this.primarySsrc = primarySsrc;
             this.secondarySsrc = secondarySsrc;
             this.type = type;

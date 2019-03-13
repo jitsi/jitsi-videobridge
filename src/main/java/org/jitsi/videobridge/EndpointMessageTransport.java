@@ -242,7 +242,8 @@ class EndpointMessageTransport
         JSONObject jsonObject)
     {
         // Find the new pinned endpoint.
-        String newSelectedEndpointID = (String) jsonObject.get("selectedEndpoint");
+        String newSelectedEndpointID
+                = (String) jsonObject.get("selectedEndpoint");
 
         Set<String> newSelectedIDs = Collections.EMPTY_SET;
         if (newSelectedEndpointID != null && !"".equals(newSelectedEndpointID))
@@ -335,7 +336,6 @@ class EndpointMessageTransport
     {
         DataChannel dataChannel = this.dataChannel.get();
         ColibriWebSocket webSocket = this.webSocket;
-        String endpointId = endpoint.getID();
 
         Object dst = null;
         if (webSocketLastActive)
@@ -463,6 +463,10 @@ class EndpointMessageTransport
         onMessage(ws, message);
     }
 
+    /**
+     * Sets the data channel for this endpoint.
+     * @param dataChannel
+     */
     void setDataChannel(DataChannel dataChannel)
     {
         DataChannel prevDataChannel = this.dataChannel.get();
@@ -471,7 +475,8 @@ class EndpointMessageTransport
             this.dataChannel = new WeakReference<>(dataChannel);
             // We install the handler first, otherwise the 'ready' might fire after we check it but before we
             //  install the handler
-            dataChannel.onDataChannelEvents(this::notifyTransportChannelConnected);
+            dataChannel.onDataChannelEvents(
+                    this::notifyTransportChannelConnected);
             if (dataChannel.isReady())
             {
                 notifyTransportChannelConnected();
@@ -480,7 +485,8 @@ class EndpointMessageTransport
         }
         else if (prevDataChannel == dataChannel)
         {
-            //TODO: i think we should be able to ensure this doesn't happen, so throwing for now.  if there's a good
+            //TODO: i think we should be able to ensure this doesn't happen,
+            // so throwing for now.  if there's a good
             // reason for this, we can make this a no-op
             throw new Error("Re-setting the same data channel");
         }

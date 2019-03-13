@@ -312,7 +312,7 @@ public class ChannelShim
         // Like for payload types, we never clear the transceiver's list of RTP
         // header extensions. See the note in #addPayloadTypes.
         rtpHeaderExtensions.forEach(ext ->
-            endpoint.transceiver.addRtpExtension(
+            endpoint.getTransceiver().addRtpExtension(
                     Byte.valueOf(ext.getID()),
                     new RTPExtension(ext.getURI())));
     }

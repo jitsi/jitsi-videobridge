@@ -110,24 +110,48 @@ public class Endpoint
      */
     private SctpManager sctpManager;
 
+    /**
+     * TODO Brian
+     */
     private final SctpHandler sctpHandler = new SctpHandler();
 
-    private final DataChannelHandler dataChannelHandler = new DataChannelHandler();
+    /**
+     * TODO Brian
+     */
+    private DataChannelStack dataChannelStack;
 
-    private CompletableFuture<Boolean> onTransportManagerSet = new CompletableFuture<>();
+    /**
+     * TODO Brian
+     */
+    private final DataChannelHandler dataChannelHandler
+            = new DataChannelHandler();
 
+    /**
+     * The instance which manages the Colibri messaging (over a data channel
+     * or web sockets).
+     */
     private final EndpointMessageTransport messageTransport;
+
+    /**
+     * TODO Brian
+     */
+    private CompletableFuture<Boolean> onTransportManagerSet
+            = new CompletableFuture<>();
 
     /**
      * A count of how many endpoints have 'selected' this endpoint
      */
     private AtomicInteger selectedCount = new AtomicInteger(0);
 
+    /**
+     * The bitrate controller.
+     */
     private final BitrateController bitrateController;
 
+    /**
+     * TODO Brian
+     */
     private final BandwidthProbing bandwidthProbing;
-
-    private DataChannelStack dataChannelStack;
 
     /**
      * This {@link Endpoint}'s transport manager.
@@ -144,10 +168,9 @@ public class Endpoint
     private IOException transportManagerException = null;
 
     /**
-     * Public for now since the channel needs to reach in and grab it
+     * The {@link Transceiver} which handles receiving and sending of (S)RTP.
      */
-    // XXX public
-    public Transceiver transceiver;
+    private Transceiver transceiver;
 
     /**
      * The list of {@link ChannelShim}s associated with this endpoint. This
@@ -174,7 +197,12 @@ public class Endpoint
      */
     private static final boolean OPEN_DATA_LOCALLY = false;
 
-    //TODO(brian): align the recurringrunnable stuff with whatever we end up doing with all the other executors
+    /**
+     * The executor which runs bandwidth probing.
+     *
+     * TODO (brian): align the recurringrunnable stuff with whatever we end up
+     * doing with all the other executors.
+     */
     private static final RecurringRunnableExecutor recurringRunnableExecutor =
             new RecurringRunnableExecutor(Endpoint.class.getSimpleName());
 
@@ -272,6 +300,10 @@ public class Endpoint
         return pinnedEndpoints;
     }
 
+    /**
+     * Sets the list of pinned endpoints for this endpoint.
+     * @param newPinnedEndpoints the set of pinned endpoints.
+     */
     void pinnedEndpointsChanged(Set<String> newPinnedEndpoints)
     {
         // Check if that's different to what we think the pinned endpoints are.
@@ -293,6 +325,10 @@ public class Endpoint
         }
     }
 
+    /**
+     * Sets the list of selected endpoints for this endpoint.
+     * @param newSelectedEndpoints the set of selected endpoints.
+     */
     void selectedEndpointsChanged(Set<String> newSelectedEndpoints)
     {
         // Check if that's different to what we think the pinned endpoints are.
@@ -307,19 +343,24 @@ public class Endpoint
                     + Arrays.toString(selectedEndpoints.toArray()));
             }
 
-            bitrateController.setSelectedEndpointIds(Collections.unmodifiableSet(selectedEndpoints));
+            bitrateController.setSelectedEndpointIds(
+                    Collections.unmodifiableSet(selectedEndpoints));
 
             firePropertyChange(SELECTED_ENDPOINTS_PROPERTY_NAME,
                 oldSelectedEndpoints, selectedEndpoints);
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void propertyChange(PropertyChangeEvent evt)
     {
         if (Conference.ENDPOINTS_PROPERTY_NAME.equals(evt.getPropertyName()))
         {
-            bitrateController.endpointOrderingChanged(getConference().getSpeechActivity().getEndpoints());
+            bitrateController.endpointOrderingChanged(
+                    getConference().getSpeechActivity().getEndpoints());
         }
     }
 
@@ -342,6 +383,9 @@ public class Endpoint
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void setLastN(Integer lastN)
     {
@@ -349,6 +393,9 @@ public class Endpoint
         bitrateController.setLastN(lastN);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void setMaxReceiveFrameHeightPx(int maxReceiveFrameHeightPx)
     {
@@ -357,6 +404,11 @@ public class Endpoint
         bitrateController.constraintsChanged();
     }
 
+    /**
+     * Sets the local SSRC for this endpoint.
+     * @param mediaType
+     * @param ssrc
+     */
     public void setLocalSsrc(MediaType mediaType, long ssrc)
     {
         transceiver.setLocalSsrc(mediaType, ssrc);
@@ -366,6 +418,9 @@ public class Endpoint
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean wants(PacketInfo packetInfo, String sourceEndpointId)
     {
@@ -387,32 +442,44 @@ public class Endpoint
         return false;
     }
 
+    /**
+     * TODO Brian
+     */
     public void sendRtp(PacketInfo packetInfo)
     {
-        //TODO(brian): need to declare this here (not as a member, due to the fact that will be
-        // called from multiple threads).  in the future hopefully we can get rid of the need for
-        // this array
+        //TODO(brian): need to declare this here (not as a member, due to the
+        // fact that will be called from multiple threads).  In the future
+        // hopefully we can get rid of the need for this array
         RawPacket[] packets = new RawPacket[1];
         Packet packet = packetInfo.getPacket();
         if (packet instanceof VideoRtpPacket)
         {
             packets[0] = PacketExtensionsKt.toRawPacket(packet);
-            //TODO(brian): we lose all information in packetinfo here, unfortunately, because
-            // the bitratecontroller can return more than/less than what was passed in (and in
-            // different order) so we can't just reassign a transformed packet back into its
-            // proper packetinfo.  need to change those classes to work with the new packet
-            // types
-            RawPacket[] res = bitrateController.getRTPTransformer().transform(packets);
+            //TODO(brian): we lose all information in PacketInfo here,
+            // unfortunately, because the BitrateController can return more
+            // than/less than what was passed in (and in different order) so we
+            // can't just reassign a transformed packet back into its proper
+            // PacketInfo.  Need to change those classes to work with the new
+            // packet types
+            RawPacket[] res
+                    = bitrateController.getRTPTransformer().transform(packets);
             for (RawPacket pkt : res)
             {
                 if (pkt == null)
                 {
                     continue;
                 }
-                //TODO(brian): we can clean this up once the transformer is moved over
-                ByteBuffer rawPacketBuf = ByteBuffer.wrap(pkt.getBuffer(), pkt.getOffset(), pkt.getBuffer().length);
+                //TODO(brian): we can clean this up once the transformer is
+                // moved over
+                ByteBuffer rawPacketBuf
+                    = ByteBuffer.wrap(
+                        pkt.getBuffer(),
+                        pkt.getOffset(),
+                        pkt.getBuffer().length);
                 rawPacketBuf.limit(pkt.getLength());
-                VideoRtpPacket videoRtpPacket = RtpPacket.Companion.fromBuffer(rawPacketBuf).toOtherRtpPacketType(VideoRtpPacket::new);
+                VideoRtpPacket videoRtpPacket
+                    = RtpPacket.Companion.fromBuffer(rawPacketBuf)
+                        .toOtherRtpPacketType(VideoRtpPacket::new);
                 transceiver.sendRtp(new PacketInfo(videoRtpPacket));
             }
         }
@@ -424,21 +491,21 @@ public class Endpoint
     }
 
     /**
-     * Handle an SRTP packet which has just been received (i.e. not processed by the
-     * incoming pipeline)
+     * Handle an SRTP packet which has just been received (i.e. not processed
+     * by the incoming pipeline)
      * @param srtpPacket
      */
-    public void srtpPacketReceived(PacketInfo srtpPacket)
+    void srtpPacketReceived(PacketInfo srtpPacket)
     {
         transceiver.handleIncomingPacket(srtpPacket);
     }
 
     /**
-     * Handle a DTLS app packet (that is, a packet of some other protocol sent over DTLS)
-     * which has just been received
+     * Handle a DTLS app packet (that is, a packet of some other protocol sent
+     * over DTLS) which has just been received.
      * @param dtlsAppPacket
      */
-    public void dtlsAppPacketReceived(PacketInfo dtlsAppPacket)
+    void dtlsAppPacketReceived(PacketInfo dtlsAppPacket)
     {
         sctpHandler.consume(dtlsAppPacket);
     }
@@ -452,27 +519,41 @@ public class Endpoint
         transceiver.setOutgoingPacketHandler(handler);
     }
 
-    public void setSrtpInformation(int chosenSrtpProtectionProfile, TlsContext tlsContext) {
+    /**
+     * TODO Brian
+     */
+    public void setSrtpInformation(
+            int chosenSrtpProtectionProfile, TlsContext tlsContext)
+    {
         transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsContext);
     }
 
+    /**
+     * Adds a payload type to this endpoint.
+     */
     public void addPayloadType(PayloadType payloadType)
     {
         transceiver.addPayloadType(payloadType);
         bitrateController.addPayloadType(payloadType);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public long getLastActivity()
     {
-        PacketIOActivity packetIOActivity = this.transceiver.getPacketIOActivity();
+        PacketIOActivity packetIOActivity
+                = this.transceiver.getPacketIOActivity();
         return packetIOActivity.getLastOverallActivityTimestampMs();
     }
 
     /**
-     * Previously, an endpoint expired when all of its channels did.  Channels now only exist in their 'shim'
-     * form for backwards compatibility, so to find out whether or not the endpoint expired, we'll check the
-     * activity timestamps from the transceiver and use the largest of the expire times set in the channel shims.
+     * Previously, an endpoint expired when all of its channels did.  Channels
+     * now only exist in their 'shim' form for backwards compatibility, so to
+     * find out whether or not the endpoint expired, we'll check the activity
+     * timestamps from the transceiver and use the largest of the expire times
+     * set in the channel shims.
      */
     @Override
     public boolean shouldExpire()
@@ -608,6 +689,9 @@ public class Endpoint
                 .addAndGet(lossDegradedMs);
     }
 
+    /**
+     * TODO Brian
+     */
     public void createSctpConnection()
     {
         if (logger.isDebugEnabled())
@@ -626,8 +710,8 @@ public class Endpoint
                 }
         );
         sctpHandler.setSctpManager(sctpManager);
-        // NOTE(brian): as far as I know we always act as the 'server' for sctp connections, but if not we can make
-        // which type we use dynamic
+        // NOTE(brian): as far as I know we always act as the 'server' for sctp
+        // connections, but if not we can make which type we use dynamic
         SctpServerSocket socket = sctpManager.createServerSocket();
         socket.eventHandler = new SctpSocket.SctpSocketEventHandler()
         {
@@ -635,18 +719,23 @@ public class Endpoint
             public void onReady()
             {
                 logger.info(logPrefix +
-                        "SCTP connection is ready, creating the Data channel stack");
-                dataChannelStack = new DataChannelStack((data, sid, ppid) -> socket.send(data, true, sid, ppid));
+                    "SCTP connection is ready, creating the Data channel stack");
+                dataChannelStack
+                    = new DataChannelStack(
+                        (data, sid, ppid)
+                                -> socket.send(data, true, sid, ppid));
                 dataChannelStack.onDataChannelStackEvents(dataChannel ->
                 {
-                    logger.info(logPrefix + "Remote side opened a data channel.");
+                    logger.info(
+                            logPrefix + "Remote side opened a data channel.");
                     Endpoint.this.messageTransport.setDataChannel(dataChannel);
                 });
                 dataChannelHandler.setDataChannelStack(dataChannelStack);
                 if (OPEN_DATA_LOCALLY)
                 {
                     logger.info(logPrefix + "Will open the data channel.");
-                    DataChannel dataChannel = dataChannelStack.createDataChannel(
+                    DataChannel dataChannel
+                        = dataChannelStack.createDataChannel(
                             DataChannelProtocolConstants.RELIABLE,
                             0,
                             0,
@@ -673,22 +762,26 @@ public class Endpoint
             DataChannelPacket dcp
                     = new DataChannelPacket(
                             ByteBuffer.wrap(data), sid, (int)ppid);
-            // Post the rest of the task here because the current context is holding a lock inside
-            // the SctpSocket which can cause a deadlock if two endpoints are trying to send
-            // datachannel messages to one another (with stats broadcasting it can happen
-            // often)
-            TaskPools.IO_POOL.execute(() -> dataChannelHandler.consume(new PacketInfo(dcp)));
+            // Post the rest of the task here because the current context is
+            // holding a lock inside the SctpSocket which can cause a deadlock
+            // if two endpoints are trying to send datachannel messages to one
+            // another (with stats broadcasting it can happen often)
+            TaskPools.IO_POOL.execute(
+                    () -> dataChannelHandler.consume(new PacketInfo(dcp)));
         };
         socket.listen();
-        // We don't want to block the calling thread on the onTransportManagerSet future completing
-        // to add the onDtlsHandshakeComplete handler, so we'll asynchronously run the code which
-        // adds the onDtlsHandshakeComplete handler from the IO pool.
+        // We don't want to block the calling thread on the
+        // onTransportManagerSet future completing to add the
+        // onDtlsHandshakeComplete handler, so we'll asynchronously run the
+        // code which adds the onDtlsHandshakeComplete handler from the IO pool.
         onTransportManagerSet.thenRunAsync(() -> {
             transportManager.onDtlsHandshakeComplete(() -> {
-                // We don't want to block the thread calling onDtlsHandshakeComplete so run
-                // the socket acceptance in an IO pool thread
-                //TODO(brian): we should have a common 'notifier'/'publisher' interface that
-                // has notify/notifyAsync logic so we don't have to worry about this everywhere
+                // We don't want to block the thread calling
+                // onDtlsHandshakeComplete so run the socket acceptance in an IO
+                // pool thread
+                //TODO(brian): we should have a common 'notifier'/'publisher'
+                // interface that has notify/notifyAsync logic so we don't have
+                // to worry about this everywhere
                 TaskPools.IO_POOL.submit(() -> {
                     while (!socket.accept())
                     {
@@ -893,14 +986,15 @@ public class Endpoint
     }
 
     /**
-     * A node which can be placed in the pipeline to cache SCTP packets until the SCTPManager
-     * is ready to handle them.
+     * A node which can be placed in the pipeline to cache SCTP packets until
+     * the SCTPManager is ready to handle them.
      */
     private class SctpHandler extends ConsumerNode
     {
         private final Object sctpManagerLock = new Object();
         public SctpManager sctpManager = null;
-        public BlockingQueue<PacketInfo> cachedSctpPackets = new LinkedBlockingQueue<>();
+        public BlockingQueue<PacketInfo> cachedSctpPackets
+                = new LinkedBlockingQueue<>();
         public SctpHandler()
         {
             super("SCTP handler");
@@ -929,9 +1023,9 @@ public class Endpoint
             TaskPools.IO_POOL.submit(() -> {
                 // We grab the lock here so that we can set the SCTP manager and
                 // process any previously-cached packets as an atomic operation.
-                // It also prevents another thread from coming in via {@link #doProcessPackets}
-                // and processing packets at the same time in another thread, which would
-                // be a problem.
+                // It also prevents another thread from coming in via
+                // #doProcessPackets and processing packets at the same time in
+                // another thread, which would be a problem.
                 synchronized (sctpManagerLock)
                 {
                     this.sctpManager = sctpManager;
@@ -943,14 +1037,15 @@ public class Endpoint
     }
 
     /**
-     * A node which can be placed in the pipeline to cache Data channel packets until
-     * the DataChannelStack is ready to handle them.
+     * A node which can be placed in the pipeline to cache Data channel packets
+     * until the DataChannelStack is ready to handle them.
      */
     private class DataChannelHandler extends ConsumerNode
     {
         private final Object dataChannelStackLock = new Object();
         public DataChannelStack dataChannelStack = null;
-        public BlockingQueue<PacketInfo> cachedDataChannelPackets = new LinkedBlockingQueue<>();
+        public BlockingQueue<PacketInfo> cachedDataChannelPackets
+                = new LinkedBlockingQueue<>();
         public DataChannelHandler()
         {
             super("Data channel handler");
@@ -985,16 +1080,19 @@ public class Endpoint
             TaskPools.IO_POOL.submit(() -> {
                 // We grab the lock here so that we can set the SCTP manager and
                 // process any previously-cached packets as an atomic operation.
-                // It also prevents another thread from coming in via {@link #doProcessPackets}
-                // and processing packets at the same time in another thread, which would
-                // be a problem.
+                // It also prevents another thread from coming in via
+                // #doProcessPackets and processing packets at the same time in
+                // another thread, which would be a problem.
                 synchronized (dataChannelStackLock)
                 {
                     this.dataChannelStack = dataChannelStack;
                     cachedDataChannelPackets.forEach(packetInfo -> {
-                        DataChannelPacket dcp = (DataChannelPacket)packetInfo.getPacket();
-                        //TODO(brian): have datachannelstack accept DataChannelPackets?
-                        dataChannelStack.onIncomingDataChannelPacket(dcp.getBuffer(), dcp.sid, dcp.ppid);
+                        DataChannelPacket dcp
+                                = (DataChannelPacket)packetInfo.getPacket();
+                        //TODO(brian): have datachannelstack accept
+                        // DataChannelPackets?
+                        dataChannelStack.onIncomingDataChannelPacket(
+                                dcp.getBuffer(), dcp.sid, dcp.ppid);
                     });
                 }
             });
@@ -1012,15 +1110,26 @@ public class Endpoint
         getTransportManager().describe(channelBundle);
     }
 
+    /**
+     * Requests that the remote end generates a keyframe the streams with
+     * a specific SSRC.
+     * @param ssrc the ssec
+     */
     private void requestKeyframe(long ssrc)
     {
-        AbstractEndpoint ep = getConference().findEndpointByReceiveSSRC(ssrc, MediaType.VIDEO);
-        if (ep instanceof Endpoint)
+        AbstractEndpoint endpoint
+                = getConference().findEndpointByReceiveSSRC(
+                        ssrc, MediaType.VIDEO);
+        if (endpoint instanceof Endpoint)
         {
-            ((Endpoint) ep).transceiver.requestKeyFrame(ssrc);
+            ((Endpoint) endpoint).transceiver.requestKeyFrame(ssrc);
         }
     }
 
+    /**
+     * Sets the media stream tracks.
+     * @param mediaStreamTracks
+     */
     private void setMediaStreamTracks(MediaStreamTrackDesc[] mediaStreamTracks)
     {
         if (transceiver.setMediaStreamTracks(mediaStreamTracks))
@@ -1032,12 +1141,20 @@ public class Endpoint
         }
     }
 
+    /**
+     * Gets the media stream tracks for this endpoint.
+     * @return
+     */
     @Override
     public MediaStreamTrackDesc[] getMediaStreamTracks()
     {
         return transceiver.getMediaStreamTracks();
     }
 
+    /**
+     * Re-creates this endpoint's media stream tracks based on the sources
+     * and source groups that have been signaled.
+     */
     @Override
     public void recreateMediaStreamTracks()
     {
@@ -1092,17 +1209,21 @@ public class Endpoint
         transceiver.addReceiveSsrc(ssrc);
     }
 
+    /**
+     * TODO Brian
+     */
     private void handleIncomingRtcp(PacketInfo packetInfo)
     {
-        // We don't need to copy RTCP packets for each dest like we do with RTP because each one
-        // will only have a single destination
+        // We don't need to copy RTCP packets for each dest like we do with RTP
+        // because each one will only have a single destination
         // TODO: getEndpointsFast()?
         getConference().getEndpoints().forEach(endpoint -> {
             if (packetInfo.getPacket() instanceof RtcpFbPacket)
             {
                 RtcpFbPacket rtcpPacket = (RtcpFbPacket) packetInfo.getPacket();
                 // TODO route RTCP to Octo too
-                if (endpoint instanceof Endpoint && endpoint.receivesSsrc(rtcpPacket.getMediaSourceSsrc()))
+                if (endpoint instanceof Endpoint
+                    && endpoint.receivesSsrc(rtcpPacket.getMediaSourceSsrc()))
                 {
                     ((Endpoint) endpoint).transceiver.sendRtcp(rtcpPacket);
                 }
@@ -1120,6 +1241,9 @@ public class Endpoint
         getConference().handleIncomingRtp(packetInfo, this);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onNewSsrcAssociation(
             String endpointId,
@@ -1130,6 +1254,10 @@ public class Endpoint
         transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, type);
     }
 
+    /**
+     * Adds a channel to this enpoint.
+     * @param channelShim
+     */
     public void addChannel(ChannelShim channelShim)
     {
         synchronized (channelShims)
@@ -1147,6 +1275,10 @@ public class Endpoint
         }
     }
 
+    /**
+     * Removes a specific {@link ChannelShim} from this endpoint.
+     * @param channelShim
+     */
     public void removeChannel(ChannelShim channelShim)
     {
         synchronized (channelShims)
@@ -1169,4 +1301,11 @@ public class Endpoint
         }
     }
 
+    /**
+     * @return this {@link Endpoint}'s transceiver.
+     */
+    public Transceiver getTransceiver()
+    {
+        return transceiver;
+    }
 }

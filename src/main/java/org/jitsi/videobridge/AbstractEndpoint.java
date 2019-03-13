@@ -64,7 +64,9 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     private final Conference conference;
 
-
+    /**
+     * The last-N filter for this endpoint.
+     */
     private final LastNFilter lastNFilter;
 
     /**
@@ -105,6 +107,10 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         conference.addPropertyChangeListener(this);
     }
 
+    /**
+     * Notifies this {@code Endpoint} that the list of {@code Endpoint}s ordered
+     * by speech activity (i.e. the dominant speaker history) has changed.
+     */
     void speechActivityEndpointsChanged(List<String> endpoints)
     {
         if (logger.isDebugEnabled())
@@ -115,11 +121,22 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         lastNFilter.setEndpointsSortedByActivity(endpoints);
     }
 
+    /**
+     * Sets the last-n value for this endpoint.
+     * @param lastN
+     */
     public void setLastN(Integer lastN)
     {
         lastNFilter.setLastNValue(lastN);
     }
 
+    /**
+     * Set the maximum frame height, in pixels, of video streams that can be
+     * forwarded to this participant.
+     *
+     * @param maxFrameHeight the maximum frame height, in pixels, of video
+     * streams that can be forwarded to this participant;
+     */
     public void setMaxReceiveFrameHeightPx(int maxReceiveFrameHeightPx) { }
 
     public Integer getLastN()
@@ -127,11 +144,24 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         return lastNFilter.getLastNValue();
     }
 
-    //TODO(brian): the nice thing about having 'wants' as a pre-check before we forward a packet is that if
-    // 'wants' returns false, we don't have to make a copy of the packet to forward down.  If, instead, we
-    // had a scheme where we pass a packet reference and the egress pipeline copies once it decides the packet should
-    // be accepted (or, even better, a packet is automatically copied on first modification) then we could
-    // avoid this separate call and just have the pipeline
+    /**
+     * Checks whether this {@link Endpoint} wants to receive a specific
+     * packet coming from a specific source endpoint.
+     *
+     * This method is called before the packet is actually forwarded to the
+     * endpoint in order to avoid making a copy (when {@code wants} returns
+     * false).
+     *
+     * If, instead, we had a scheme where we pass a packet reference and the
+     * egress pipeline copies once it decides the packet should be accepted (or,
+     * even better, a packet is automatically copied on first modification) then
+     * we could avoid this separate call and just have the pipeline
+     *
+     * @param packetInfo the packet.
+     * @param sourceEndpointId the ID of the source endpoint.
+     * @return {@code true} if this endpoints wants to receive the packet, and
+     * {@code false} otherwise.
+     */
     public boolean wants(PacketInfo packetInfo, String sourceEndpointId)
     {
         // We always want audio packets

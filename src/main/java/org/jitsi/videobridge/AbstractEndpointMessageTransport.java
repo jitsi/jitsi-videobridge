@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge;
 
-import org.jitsi.nlj.util.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
@@ -23,7 +22,6 @@ import org.json.simple.parser.*;
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 

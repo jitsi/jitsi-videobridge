@@ -236,7 +236,9 @@ public class Conference
 
         speechActivity = new ConferenceSpeechActivity(this);
         speechActivity.addPropertyChangeListener(propertyChangeListener);
-        audioLevelListener = new AudioLevelListenerImpl(speechActivity);
+        audioLevelListener
+            = (sourceSsrc, level)
+                -> speechActivity.levelChanged(sourceSsrc, (int) level);
 
         expireableImpl = new ExpireableImpl(logPrefix, this::expire);
 
@@ -659,7 +661,13 @@ public class Conference
         return copy;
     }
 
-    public List<AbstractEndpoint> getEndpointsFast()
+    /**
+     * Gets a copy of the current list of endpoints.
+     *
+     * TODO we access this on every packet. We should avoid creating an
+     * ArrayList every time.
+     */
+    private List<AbstractEndpoint> getEndpointsFast()
     {
         return new ArrayList<>(this.endpoints);
     }
@@ -905,11 +913,6 @@ public class Conference
      * Notifies this <tt>Conference</tt> that the ordered list of
      * <tt>Endpoint</tt>s of {@link #speechActivity} i.e. the dominant speaker
      * history has changed.
-     * <p>
-     * This instance notifies the video <tt>Channel</tt>s about the change so
-     * that they may update their last-n lists and report to this instance which
-     * <tt>Endpoint</tt>s are to be asked for video keyframes.
-     * </p>
      */
     private void speechActivityEndpointsChanged()
     {
@@ -920,9 +923,8 @@ public class Conference
                                 .map(AbstractEndpoint::getID)
                                 .collect(Collectors.toList()));
 
-        getEndpoints().forEach(ep -> {
-            ep.speechActivityEndpointsChanged(sortedActiveEndpoints);
-        });
+        getEndpoints().forEach(
+                ep -> ep.speechActivityEndpointsChanged(sortedActiveEndpoints));
     }
 
     /**
@@ -1159,11 +1161,6 @@ public class Conference
      */
     public class Statistics
     {
-        /**
-         * The total number of channels.
-         */
-        AtomicInteger totalChannels = new AtomicInteger(0);
-
         /**
          * The total number of bytes received in RTP packets in channels in this
          * conference. Note that this is only updated when channels expire.
