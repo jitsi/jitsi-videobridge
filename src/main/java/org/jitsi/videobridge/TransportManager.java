@@ -30,30 +30,6 @@ import org.jitsi.util.Logger;
 public abstract class TransportManager
 {
     /**
-     * The <tt>Logger</tt> used by the <tt>TransportManager</tt> class and its
-     * instances to print debug information.
-     */
-    private static final Logger logger
-        = Logger.getLogger(TransportManager.class);
-
-    /**
-     * The default value of the minimum port to use for dynamic allocation.
-     */
-    public static final int DEFAULT_MIN_PORT = 10001;
-
-    /**
-     * The default value of the maximum port to use for dynamic allocation.
-     */
-    public static final int DEFAULT_MAX_PORT = 20000;
-
-    /**
-     * The {@link PortTracker} instance used by jitsi-videobridge to manage
-     * dynamic port allocation.
-     */
-    public static final PortTracker portTracker
-        = new PortTracker(DEFAULT_MIN_PORT, DEFAULT_MAX_PORT);
-
-    /**
      * Initializes a new <tt>TransportManager</tt> instance.
      */
     protected TransportManager()
