@@ -96,7 +96,7 @@ class RtxHandler : TransformerNode("RTX handler") {
                     val rtxPt = event.payloadType.pt.toUInt()
                     event.payloadType.parameters["apt"]?.toByte()?.toUInt()?.let {
                         val associatedPt = it
-                        logger.cinfo { "RtxHandler associating RTX payload type $rtxPt with primary $associatedPt" }
+                        logger.cdebug { "Associating RTX payload type $rtxPt with primary $associatedPt" }
                         associatedPayloadTypes[rtxPt] = associatedPt
                     } ?: run {
                         logger.cerror { "Unable to parse RTX associated payload type from event: $event" }
@@ -108,7 +108,7 @@ class RtxHandler : TransformerNode("RTX handler") {
             }
             is SsrcAssociationEvent -> {
                 if (event.type == SsrcAssociationType.RTX) {
-                    logger.cinfo { "RtxHandler associating RTX ssrc ${event.secondarySsrc} with primary ${event.primarySsrc}" }
+                    logger.cdebug { "Associating RTX ssrc ${event.secondarySsrc} with primary ${event.primarySsrc}" }
                     associatedSsrcs[event.secondarySsrc] = event.primarySsrc
                 }
             }

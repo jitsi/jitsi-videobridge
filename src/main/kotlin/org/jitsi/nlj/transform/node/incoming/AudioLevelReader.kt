@@ -21,6 +21,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpExtensionAddedEvent
 import org.jitsi.nlj.RtpExtensionClearEvent
 import org.jitsi.nlj.transform.node.ObserverNode
+import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.rtp.RtpPacket
@@ -55,7 +56,7 @@ class AudioLevelReader : ObserverNode("Audio level reader") {
             is RtpExtensionAddedEvent -> {
                 if (RTPExtension.SSRC_AUDIO_LEVEL_URN.equals(event.rtpExtension.uri.toString())) {
                     audioLevelExtId = event.extensionId.toUInt()
-                    logger.cinfo { "Audio level reader setting extension ID to $audioLevelExtId" }
+                    logger.cdebug { "Setting extension ID to $audioLevelExtId" }
                 }
             }
             is RtpExtensionClearEvent -> audioLevelExtId = null
