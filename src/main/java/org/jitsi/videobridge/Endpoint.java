@@ -782,12 +782,22 @@ public class Endpoint
                 // interface that has notify/notifyAsync logic so we don't have
                 // to worry about this everywhere
                 TaskPools.IO_POOL.submit(() -> {
+                    // FIXME: This runs forever once the socket is closed (
+                    // accept never returns true).
+                    int attempts = 0;
                     while (!socket.accept())
                     {
+                        attempts++;
                         try
                         {
                             Thread.sleep(100);
-                        } catch (InterruptedException e)
+                        }
+                        catch (InterruptedException e)
+                        {
+                            break;
+                        }
+
+                        if (attempts > 100)
                         {
                             break;
                         }
