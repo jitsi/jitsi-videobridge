@@ -20,14 +20,12 @@ import org.ice4j.*;
 import org.ice4j.ice.harvest.*;
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
-import org.jitsi.impl.neomedia.rtp.sendsidebandwidthestimation.*;
 import org.jitsi.impl.neomedia.transform.csrc.*;
 import org.jitsi.impl.neomedia.transform.srtp.*;
 import org.jitsi.meet.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.service.packetlogging.*;
 import org.jitsi.stats.media.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.*;
 
 /**
  * OSGi bundles description for the Jitsi Videobridge.
@@ -156,18 +154,6 @@ public class JvbBundleConfig
         // advertise link-local addresses.
         defaults.put(StackProperties.DISABLE_LINK_LOCAL_ADDRESSES, true_);
 
-        // If DTMF handling is enabled, DTMF packets will be read and swallowed.
-        // We want them forwarded as normal packets.
-        defaults.put(AudioMediaStream.DISABLE_DTMF_HANDLING_PNAME, true_);
-
-        // Enable retransmission requests for video streams.
-        defaults.put(VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME, true_);
-
-        // Disable packet logging.
-        defaults.put(
-                PacketLoggingConfiguration.PACKET_LOGGING_ENABLED_PROPERTY_NAME,
-                false_);
-
         // Configure the receive buffer size for the sockets used for the
         // single-port mode to be 10MB.
         defaults.put(AbstractUdpListener.SO_RCVBUF_PNAME, "10485760");
@@ -180,21 +166,6 @@ public class JvbBundleConfig
 
         // Enable AST RBE by default.
         defaults.put(RemoteBitrateEstimatorWrapper.ENABLE_AST_RBE_PNAME, true_);
-
-        // This causes RTP/RTCP packets received before the DTLS agent is ready
-        // to decrypt them to be dropped. Without it, these packets are passed
-        // on without decryption and this leads to:
-        // 1. Garbage being sent to the endpoints (or at least something they
-        //    cannot decrypt).
-        // 2. Failed attempts to parse encrypted RTCP packets (in a compound
-        //    packet, the headers of all but the first packet are encrypted).
-
-        // This is currently disabled, because it makes DTLS mandatory, and
-        // thus breaks communication with jigasi and jitsi.
-        //defaults.put(
-        //        "org.jitsi.impl.neomedia.transform.dtls.DtlsPacketTransformer"
-        //            + ".dropUnencryptedPkts",
-        //        true_);
 
         // make sure we use the properties files for configuration
         defaults.put(
