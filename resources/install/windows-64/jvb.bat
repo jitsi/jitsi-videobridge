@@ -10,8 +10,6 @@ echo Usage:
 echo %0 [OPTIONS], where options can be:
 echo	--secret=SECRET	sets the shared secret used to authenticate to the XMPP server
 echo    --domain=DOMAIN sets the XMPP domain (default: none)
-echo 	--min-port=MP	sets the min port used for media (default: 10001)
-echo 	--max-port=MP	sets the max port used for media (default: 20000)
 echo    --host=HOST sets the hostname of the XMPP server (default: domain, if domain is set, localhost otherwise)
 echo 	--port=PORT	sets the port of the XMPP server (default: 5275)
 echo    --subdomain=SUBDOMAIN sets the sub-domain used to bind JVB XMPP component (default: jitsi-videobridge)
