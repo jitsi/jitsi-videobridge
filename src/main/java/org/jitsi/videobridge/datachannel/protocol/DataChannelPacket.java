@@ -17,8 +17,8 @@
 package org.jitsi.videobridge.datachannel.protocol;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.rtp2.*;
-import org.jitsi.rtp2.extensions.bytearray.*;
+import org.jitsi.rtp.*;
+import org.jitsi.rtp.extensions.bytearray.*;
 
 import java.nio.*;
 
