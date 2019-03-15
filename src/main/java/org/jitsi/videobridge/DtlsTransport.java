@@ -266,21 +266,21 @@ public class DtlsTransport extends IceTransport
         // enough (it'll only be a bit of the DTLS path) that running it in the
         // IO pool is fine
         TaskPools.IO_POOL.submit(() -> {
-            ByteBuffer bbuf = ByteBufferPool.getBuffer(1500);
-            DatagramPacket p = new DatagramPacket(bbuf.array(), bbuf.arrayOffset(), bbuf.limit());
+            byte[] bbuf = ByteBufferPool.getBuffer(1500);
+            DatagramPacket p = new DatagramPacket(bbuf, 0, 1500);
             while (!closed)
             {
                 try
                 {
                     socket.receive(p);
-                    bbuf.limit(p.getLength());
+//                    bbuf.limit(p.getLength());
 //                    Packet pkt = new UnparsedPacket(bbuf);
-                    Packet pkt = new NewRawPacket(bbuf.array(), bbuf.arrayOffset(), bbuf.limit());
+                    Packet pkt = new NewRawPacket(bbuf, 0, p.getLength());
                     PacketInfo pktInfo = new PacketInfo(pkt);
                     pktInfo.setReceivedTime(System.currentTimeMillis());
                     incomingPipelineRoot.processPacket(pktInfo);
                     bbuf = ByteBufferPool.getBuffer(1500);
-                    p.setData(bbuf.array(), bbuf.arrayOffset(), bbuf.limit());
+                    p.setData(bbuf, 0, 1500);
                 }
                 catch (SocketClosedException e)
                 {
@@ -400,7 +400,7 @@ public class DtlsTransport extends IceTransport
                                 packetInfo.getPacket().getLength()));
 //                    System.out.println("IceDtlsTransportManager#send returning buf " +
 //                            System.identityHashCode(packetInfo.getPacket().getBuffer().array()));
-//                    ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
+                    ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
                 }
                 catch (IOException e)
                 {
