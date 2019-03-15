@@ -18,45 +18,27 @@ package org.jitsi.videobridge.sctp;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.rtp.*;
-import org.jitsi.rtp.extensions.*;
-
-import java.nio.*;
 
 public class SctpPacket extends Packet
 {
-    public final ByteBuffer data;
     public final int sid;
     public final int ssn;
     public final int tsn;
     public final int ppid;
 
-    public SctpPacket(ByteBuffer data, int sid, int ssn, int tsn, int ppid)
+    public SctpPacket(byte[] data, int offset, int length, int sid, int ssn, int tsn, int ppid)
     {
-        this.data = data;
+        super(data, offset, length);
         this.sid = sid;
         this.ssn = ssn;
         this.tsn = tsn;
         this.ppid = ppid;
     }
 
-    @Override
-    public int getSizeBytes()
-    {
-        return data.limit();
-    }
-
-    @Override
-    public void serializeTo(@NotNull ByteBuffer byteBuffer)
-    {
-        data.rewind();
-        byteBuffer.put(data);
-        data.rewind();
-    }
-
     @NotNull
     @Override
     public Packet clone()
     {
-        return new SctpPacket(ByteBufferKt.clone(data), sid, ssn, tsn, ppid);
+        return new SctpPacket(getBuffer().clone(), getOffset(), getLength(), sid, ssn, tsn, ppid);
     }
 }

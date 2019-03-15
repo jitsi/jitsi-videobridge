@@ -16,7 +16,7 @@
 package org.jitsi.videobridge.octo;
 
 import org.ice4j.socket.*;
-import org.jitsi.rtp2.*;
+import org.jitsi.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.util.*;
