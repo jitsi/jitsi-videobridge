@@ -19,42 +19,42 @@ package org.jitsi.videobridge.util;
 import java.nio.*;
 import java.util.concurrent.*;
 
-public class SingleByteBufferPool implements ByteBufferPoolImpl
-{
-    private ArrayBlockingQueue<ByteBuffer> pool =
-            new ArrayBlockingQueue<>(1000, true);
-
-    public SingleByteBufferPool(int initialSize)
-    {
-        for (int i = 0; i < initialSize; ++i)
-        {
-            pool.add(ByteBuffer.allocate(1500));
-        }
-    }
-
-    @Override
-    public ByteBuffer getBuffer(int size)
-    {
-        ByteBuffer buf = pool.poll();
-        if (buf == null)
-        {
-            buf = ByteBuffer.allocate(1500);
-        }
-        buf.limit(size);
-        return buf;
-    }
-
-    @Override
-    public void returnBuffer(ByteBuffer buf)
-    {
-        pool.offer(buf);
-    }
-
-    @Override
-    public String getStats()
-    {
-        StringBuilder sb = new StringBuilder();
-
-        return sb.toString();
-    }
-}
+//public class SingleByteBufferPool implements ByteBufferPoolImpl
+//{
+//    private ArrayBlockingQueue<ByteBuffer> pool =
+//            new ArrayBlockingQueue<>(1000, true);
+//
+//    public SingleByteBufferPool(int initialSize)
+//    {
+//        for (int i = 0; i < initialSize; ++i)
+//        {
+//            pool.add(ByteBuffer.allocate(1500));
+//        }
+//    }
+//
+//    @Override
+//    public ByteBuffer getBuffer(int size)
+//    {
+//        ByteBuffer buf = pool.poll();
+//        if (buf == null)
+//        {
+//            buf = ByteBuffer.allocate(1500);
+//        }
+//        buf.limit(size);
+//        return buf;
+//    }
+//
+//    @Override
+//    public void returnBuffer(ByteBuffer buf)
+//    {
+//        pool.offer(buf);
+//    }
+//
+//    @Override
+//    public String getStats()
+//    {
+//        StringBuilder sb = new StringBuilder();
+//
+//        return sb.toString();
+//    }
+//}

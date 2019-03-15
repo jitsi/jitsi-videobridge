@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.*;
 public class PartitionedByteBufferPool implements ByteBufferPoolImpl
 {
     private static int NUM_PARTITIONS = 8;
-    private List<LinkedBlockingQueue<ByteBuffer>> partitions = new ArrayList<>(NUM_PARTITIONS);
+    private List<LinkedBlockingQueue<byte[]>> partitions = new ArrayList<>(NUM_PARTITIONS);
 
     public PartitionedByteBufferPool(int initialSize)
     {
@@ -35,7 +35,7 @@ public class PartitionedByteBufferPool implements ByteBufferPoolImpl
         partitions.forEach(partition -> {
             for (int i = 0; i < initialSize; ++i)
             {
-                partition.add(ByteBuffer.allocate(1500));
+                partition.add(new byte[1500]);
             }
         });
     }
@@ -48,18 +48,17 @@ public class PartitionedByteBufferPool implements ByteBufferPoolImpl
         return random.nextInt(NUM_PARTITIONS);
     }
 
-    private ByteBuffer doGetBuffer(int requiredSize)
+    private byte[] doGetBuffer(int requiredSize)
     {
         int partition = getPartition();
-        LinkedBlockingQueue<ByteBuffer> pool = partitions.get(partition);
-        ByteBuffer buf = pool.poll();
+        LinkedBlockingQueue<byte[]> pool = partitions.get(partition);
+        byte[] buf = pool.poll();
         if (buf == null) {
-            buf = ByteBuffer.allocate(1500);
+            buf = new byte[1500];
         }
-        buf.limit(requiredSize);
         if (ByteBufferPool.enabledBookkeeping)
         {
-            System.out.println("got buffer " + System.identityHashCode(buf.array()) +
+            System.out.println("got buffer " + System.identityHashCode(buf) +
                     " from thread " + Thread.currentThread().getId() + ", partition " + partition + " now has size " + pool.size());
         }
 
@@ -67,7 +66,7 @@ public class PartitionedByteBufferPool implements ByteBufferPoolImpl
     }
 
     @Override
-    public ByteBuffer getBuffer(int size)
+    public byte[] getBuffer(int size)
     {
         //        System.out.println("got buffer, pool size is now " + pool.size());
 //        StackTraceElement callingFunction = Thread.currentThread().getStackTrace()[2];
@@ -76,21 +75,26 @@ public class PartitionedByteBufferPool implements ByteBufferPoolImpl
     }
 
     @Override
-    public void returnBuffer(ByteBuffer buf)
+    public void returnBuffer(byte[] buf)
     {
 //        StackTraceElement callingFunction = Thread.currentThread().getStackTrace()[2];
 //        System.out.println("Returned array " + System.identityHashCode(buf.array()) + " from " + callingFunction.toString());
 //        System.out.println("Returned array " + System.identityHashCode(buf.array()));
-        if (buf.capacity() == 1500) {
-            buf.limit(buf.capacity());
+        if (buf.length == 1500) {
             int partition = getPartition();
-            LinkedBlockingQueue<ByteBuffer> pool = partitions.get(partition);
+            LinkedBlockingQueue<byte[]> pool = partitions.get(partition);
             pool.offer(buf);
             if (ByteBufferPool.enabledBookkeeping)
             {
-                System.out.println("returned buffer " + System.identityHashCode(buf.array()) +
+                System.out.println("returned buffer " + System.identityHashCode(buf) +
                         " from thread " + Thread.currentThread().getId() + ", partition " + partition +
                         " now has size " + pool.size());
+            }
+        }
+        else {
+            if (ByteBufferPool.enabledBookkeeping)
+            {
+                System.out.println("ignoring returned array of size " + buf.length);
             }
         }
     }

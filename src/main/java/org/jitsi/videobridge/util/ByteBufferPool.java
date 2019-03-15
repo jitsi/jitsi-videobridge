@@ -16,7 +16,6 @@
 
 package org.jitsi.videobridge.util;
 
-import java.nio.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -32,27 +31,25 @@ public class ByteBufferPool
     private static AtomicInteger numBuffersOut = new AtomicInteger(0);
     private static AtomicInteger numBuffersIn = new AtomicInteger(0);
 
-
-    public static ByteBuffer getBuffer(int size)
+    public static byte[] getBuffer(int size)
     {
-        ByteBuffer buf = poolImpl.getBuffer(size);
-        buf.rewind();
+        byte[] buf = poolImpl.getBuffer(size);
         if (enabledBookkeeping)
         {
-            bookkeeping.put(System.identityHashCode(buf.array()), Thread.currentThread().getStackTrace());
+            bookkeeping.put(System.identityHashCode(buf), Thread.currentThread().getStackTrace());
             numBuffersOut.incrementAndGet();
-            System.out.println("Thread " + Thread.currentThread().getId() + " got array " + System.identityHashCode(buf.array()));
+            System.out.println("Thread " + Thread.currentThread().getId() + " got array " + System.identityHashCode(buf));
         }
         return buf;
     }
 
-    public static void returnBuffer(ByteBuffer buf)
+    public static void returnBuffer(byte[] buf)
     {
         poolImpl.returnBuffer(buf);
         if (enabledBookkeeping)
         {
-            System.out.println("Thread " + Thread.currentThread().getId() + " returned array " + System.identityHashCode(buf.array()));
-            Integer arrayId = System.identityHashCode(buf.array());
+            System.out.println("Thread " + Thread.currentThread().getId() + " returned array " + System.identityHashCode(buf));
+            Integer arrayId = System.identityHashCode(buf);
             bookkeeping.remove(arrayId);
             numBuffersIn.incrementAndGet();
         }

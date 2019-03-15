@@ -16,11 +16,9 @@
 
 package org.jitsi.videobridge.util;
 
-import java.nio.*;
-
 public interface ByteBufferPoolImpl
 {
-    ByteBuffer getBuffer(int size);
-    void returnBuffer(ByteBuffer buf);
+    byte[] getBuffer(int size);
+    void returnBuffer(byte[] buf);
     String getStats();
 }

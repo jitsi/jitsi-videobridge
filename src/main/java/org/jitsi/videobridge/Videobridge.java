@@ -208,8 +208,8 @@ public class Videobridge
 
     static
     {
-        BufferPool.Companion.setGetBuffer(ByteBufferPool::getBuffer);
-        BufferPool.Companion.setReturnBuffer(buffer -> {
+        BufferPool.Companion.setGetArray(ByteBufferPool::getBuffer);
+        BufferPool.Companion.setReturnArray(buffer -> {
             ByteBufferPool.returnBuffer(buffer);
             return Unit.INSTANCE;
         });

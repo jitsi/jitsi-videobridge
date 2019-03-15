@@ -1104,7 +1104,7 @@ public class Conference
 //            tentacle.sendRtp(packetInfoCopy, source);
             tentacle.sendRtp(packetInfo.clone(), source);
         }
-//        ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
+        ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
     }
 
     /**
