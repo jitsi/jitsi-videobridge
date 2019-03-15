@@ -74,8 +74,8 @@ public class SctpManager {
         {
             logger.debug("SCTP Socket " + socket.hashCode() + " receiving incoming SCTP data");
         }
-        ByteBuffer packetBuffer = sctpPacket.getPacket().getBuffer();
-        socket.onConnIn(packetBuffer.array(), packetBuffer.arrayOffset(), packetBuffer.limit());
+//        ByteBuffer packetBuffer = sctpPacket.getPacket().getBuffer();
+        socket.onConnIn(sctpPacket.getPacket().getBuffer(), sctpPacket.getPacket().getOffset(), sctpPacket.getPacket().getLength());
     }
 
     /**

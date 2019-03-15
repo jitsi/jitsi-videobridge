@@ -1089,22 +1089,22 @@ public class Conference
                     packetInfo,
                     source != null ? source.getID() : null))
             {
-                //TODO: add a version of packetinfo.clone to do this (use a
-                // buffer)?
-                Packet packet = ((RtpPacket)packetInfo.getPacket()).cloneWithBackingBuffer(ByteBufferPool.getBuffer(1500));
-                PacketInfo packetInfoCopy = new PacketInfo(packet, packetInfo.getTimeline().clone());
-                packetInfoCopy.setReceivedTime(packetInfo.getReceivedTime());
-                endpoint.sendRtp(packetInfoCopy);
+                //TODO: add a version of packetinfo.clone to do this (use a buffer)?
+//                Packet packet = ((RtpPacket)packetInfo.getPacket()).cloneWithBackingBuffer(ByteBufferPool.getBuffer(1500));
+//                PacketInfo packetInfoCopy = new PacketInfo(packetInfo.clone(), packetInfo.getTimeline().clone());
+//                packetInfoCopy.setReceivedTime(packetInfo.getReceivedTime());
+                ((Endpoint) endpoint).sendRtp(packetInfo.clone());
             }
         });
         if (tentacle != null && tentacle.wants(packetInfo, source))
         {
-            Packet packet = ((RtpPacket)packetInfo.getPacket()).cloneWithBackingBuffer(ByteBufferPool.getBuffer(1500));
-            PacketInfo packetInfoCopy = new PacketInfo(packet, packetInfo.getTimeline().clone());
-            packetInfoCopy.setReceivedTime(packetInfo.getReceivedTime());
-            tentacle.sendRtp(packetInfoCopy, source);
+//            Packet packet = ((RtpPacket)packetInfo.getPacket()).cloneWithBackingBuffer(ByteBufferPool.getBuffer(1500));
+//            PacketInfo packetInfoCopy = new PacketInfo(packet, packetInfo.getTimeline().clone());
+//            packetInfoCopy.setReceivedTime(packetInfo.getReceivedTime());
+//            tentacle.sendRtp(packetInfoCopy, source);
+            tentacle.sendRtp(packetInfo.clone(), source);
         }
-        ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
+//        ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
     }
 
     /**

@@ -28,7 +28,7 @@ import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.rtp.*;
+import org.jitsi.rtp2.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.util.*;
 
@@ -58,7 +58,7 @@ public class DtlsTransport extends IceTransport
      */
     private static final Predicate<Packet> DTLS_PREDICATE
         = packet -> {
-                int b = packet.getBuffer().get(0) & 0xFF;
+                int b = packet.getBuffer()[0] & 0xFF;
                 return (20 <= b && b <= 63);
         };
 
@@ -274,7 +274,8 @@ public class DtlsTransport extends IceTransport
                 {
                     socket.receive(p);
                     bbuf.limit(p.getLength());
-                    Packet pkt = new UnparsedPacket(bbuf);
+//                    Packet pkt = new UnparsedPacket(bbuf);
+                    Packet pkt = new NewRawPacket(bbuf.array(), bbuf.arrayOffset(), bbuf.limit());
                     PacketInfo pktInfo = new PacketInfo(pkt);
                     pktInfo.setReceivedTime(System.currentTimeMillis());
                     incomingPipelineRoot.processPacket(pktInfo);
@@ -394,12 +395,12 @@ public class DtlsTransport extends IceTransport
                 {
                     socket.send(
                         new DatagramPacket(
-                                packetInfo.getPacket().getBuffer().array(),
-                                0,
-                                packetInfo.getPacket().getBuffer().limit()));
-//                    System.out.println("DtlsTransport#send returning buf " +
+                                packetInfo.getPacket().getBuffer(),
+                                packetInfo.getPacket().getOffset(),
+                                packetInfo.getPacket().getLength()));
+//                    System.out.println("IceDtlsTransportManager#send returning buf " +
 //                            System.identityHashCode(packetInfo.getPacket().getBuffer().array()));
-                    ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
+//                    ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
                 }
                 catch (IOException e)
                 {

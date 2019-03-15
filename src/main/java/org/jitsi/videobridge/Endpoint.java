@@ -19,18 +19,14 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.bouncycastle.crypto.tls.*;
 import org.jetbrains.annotations.*;
-import org.jitsi.nlj.transform.node.incoming.*;
-import org.jitsi.nlj.transform.node.outgoing.*;
-import org.jitsi.videobridge.xmpp.*;
-import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.rtp.*;
-import org.jitsi.rtp.rtp.*;
+import org.jitsi.rtp2.*;
+import org.jitsi.rtp2.rtcp.rtcpfb.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
@@ -41,6 +37,8 @@ import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.sctp.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.xmpp.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi_modified.sctp4j.*;
 import org.jitsi_modified.service.neomedia.rtp.*;
 
@@ -435,8 +433,9 @@ public class Endpoint
                 return false;
             }
 
-            RawPacket packet = PacketExtensionsKt.toRawPacket(packetInfo.getPacket());
-            return bitrateController.accept(packet);
+//            RawPacket packet = PacketExtensionsKt.toRawPacket(packetInfo.getPacket());
+            RawPacket legacyRawPacket = RawPacketExtensionsKt.toLegacyRawPacket(packetInfo.getPacket());
+            return bitrateController.accept(legacyRawPacket);
         }
         return false;
     }
@@ -446,39 +445,32 @@ public class Endpoint
      */
     public void sendRtp(PacketInfo packetInfo)
     {
-        //TODO(brian): need to declare this here (not as a member, due to the
-        // fact that will be called from multiple threads).  In the future
-        // hopefully we can get rid of the need for this array
-        RawPacket[] packets = new RawPacket[1];
+        //TODO(brian): need to declare this here (not as a member, due to the fact that will be
+        // called from multiple threads).  in the future hopefully we can get rid of the need for
+        // this array
+        org.jitsi.service.neomedia.RawPacket[] packets = new org.jitsi.service.neomedia.RawPacket[1];
         Packet packet = packetInfo.getPacket();
         if (packet instanceof VideoRtpPacket)
         {
-            packets[0] = PacketExtensionsKt.toRawPacket(packet);
-            //TODO(brian): we lose all information in PacketInfo here,
-            // unfortunately, because the BitrateController can return more
-            // than/less than what was passed in (and in different order) so we
-            // can't just reassign a transformed packet back into its proper
-            // PacketInfo.  Need to change those classes to work with the new
-            // packet types
-            RawPacket[] res
-                    = bitrateController.getRTPTransformer().transform(packets);
-            for (RawPacket pkt : res)
+            packets[0] = RawPacketExtensionsKt.toLegacyRawPacket(packet);
+            //TODO(brian): we lose all information in packetinfo here, unfortunately, because
+            // the bitratecontroller can return more than/less than what was passed in (and in
+            // different order) so we can't just reassign a transformed packet back into its
+            // proper packetinfo.  need to change those classes to work with the new packet
+            // types
+            org.jitsi.service.neomedia.RawPacket[] res = bitrateController.getRTPTransformer().transform(packets);
+            for (org.jitsi.service.neomedia.RawPacket legacyRawPacket : res)
             {
-                if (pkt == null)
+                if (legacyRawPacket == null)
                 {
                     continue;
                 }
-                //TODO(brian): we can clean this up once the transformer is
-                // moved over
-                ByteBuffer rawPacketBuf
-                    = ByteBuffer.wrap(
-                        pkt.getBuffer(),
-                        pkt.getOffset(),
-                        pkt.getBuffer().length);
-                rawPacketBuf.limit(pkt.getLength());
-                VideoRtpPacket videoRtpPacket
-                    = RtpPacket.Companion.fromBuffer(rawPacketBuf)
-                        .toOtherRtpPacketType(VideoRtpPacket::new);
+                NewRawPacket rawPacket = RawPacketExtensionsKt.fromLegacyRawPacket(legacyRawPacket);
+                //TODO(brian): we can clean this up once the transformer is moved over
+//                ByteBuffer rawPacketBuf = ByteBuffer.wrap(pkt.getBuffer(), pkt.getOffset(), pkt.getBuffer().length);
+//                rawPacketBuf.limit(pkt.getLength());
+//                VideoRtpPacket videoRtpPacket = RtpPacket.Companion.fromBuffer(rawPacketBuf).toOtherRtpPacketType(VideoRtpPacket::new);
+                VideoRtpPacket videoRtpPacket = rawPacket.toOtherType(VideoRtpPacket::new);
                 transceiver.sendRtp(new PacketInfo(videoRtpPacket));
             }
         }
@@ -700,10 +692,7 @@ public class Endpoint
         // Create the SctpManager and provide it a method for sending SCTP data
         this.sctpManager = new SctpManager(
                 (data, offset, length) -> {
-                    PacketInfo packet =
-                        new PacketInfo(
-                            new UnparsedPacket(
-                                    ByteBuffer.wrap(data, offset, length)));
+                    PacketInfo packet = new PacketInfo(new NewRawPacket(data, offset, length));
                     transportManager.sendDtlsData(packet);
                     return 0;
                 }
@@ -759,14 +748,12 @@ public class Endpoint
         socket.dataCallback = (data, sid, ssn, tsn, ppid, context, flags) -> {
             // We assume all data coming over SCTP will be datachannel data
             DataChannelPacket dcp
-                    = new DataChannelPacket(
-                            ByteBuffer.wrap(data), sid, (int)ppid);
-            // Post the rest of the task here because the current context is
-            // holding a lock inside the SctpSocket which can cause a deadlock
-            // if two endpoints are trying to send datachannel messages to one
-            // another (with stats broadcasting it can happen often)
-            TaskPools.IO_POOL.execute(
-                    () -> dataChannelHandler.consume(new PacketInfo(dcp)));
+                    = new DataChannelPacket(data, 0, data.length, sid, (int)ppid);
+            // Post the rest of the task here because the current context is holding a lock inside
+            // the SctpSocket which can cause a deadlock if two endpoints are trying to send
+            // datachannel messages to one another (with stats broadcasting it can happen
+            // often)
+            TaskPools.IO_POOL.execute(() -> dataChannelHandler.consume(new PacketInfo(dcp)));
         };
         socket.listen();
         // We don't want to block the calling thread on the
@@ -1076,7 +1063,7 @@ public class Endpoint
                         DataChannelPacket dcp
                                 = (DataChannelPacket) packetInfo.getPacket();
                         dataChannelStack.onIncomingDataChannelPacket(
-                                dcp.getBuffer(), dcp.sid, dcp.ppid);
+                                ByteBuffer.wrap(dcp.getBuffer()), dcp.sid, dcp.ppid);
                     }
                 }
             }
@@ -1096,12 +1083,9 @@ public class Endpoint
                 {
                     this.dataChannelStack = dataChannelStack;
                     cachedDataChannelPackets.forEach(packetInfo -> {
-                        DataChannelPacket dcp
-                                = (DataChannelPacket)packetInfo.getPacket();
-                        //TODO(brian): have datachannelstack accept
-                        // DataChannelPackets?
-                        dataChannelStack.onIncomingDataChannelPacket(
-                                dcp.getBuffer(), dcp.sid, dcp.ppid);
+                        DataChannelPacket dcp = (DataChannelPacket)packetInfo.getPacket();
+                        //TODO(brian): have datachannelstack accept DataChannelPackets?
+                        dataChannelStack.onIncomingDataChannelPacket(ByteBuffer.wrap(dcp.getBuffer()), dcp.sid, dcp.ppid);
                     });
                 }
             });

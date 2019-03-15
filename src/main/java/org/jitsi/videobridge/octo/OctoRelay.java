@@ -16,7 +16,7 @@
 package org.jitsi.videobridge.octo;
 
 import org.ice4j.socket.*;
-import org.jitsi.rtp.*;
+import org.jitsi.rtp2.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.util.*;
@@ -262,12 +262,12 @@ public class OctoRelay
             String endpointId)
     {
         // XXX optimize
-        int size = packet.getSizeBytes();
+        int size = packet.getLength();
         DatagramPacket datagramPacket
                 = getPacket(size + OctoPacket.OCTO_HEADER_LENGTH);
         byte[] buf = datagramPacket.getData();
         System.arraycopy(
-                packet.getBuffer().array(), 0,
+                packet.getBuffer(), packet.getOffset(),
                 buf, OctoPacket.OCTO_HEADER_LENGTH,
                 size);
 
