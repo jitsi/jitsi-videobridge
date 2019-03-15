@@ -23,15 +23,13 @@ import org.jitsi.nlj.transform.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.rtp.*;
-import org.jitsi.rtp.rtp.*;
 import org.jitsi.rtp.util.*;
+import org.jitsi.rtp2.*;
+import org.jitsi.rtp2.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
-
-import java.nio.*;
 
 /**
  * Parses and handles incoming RTP/RTCP packets from an Octo source for a
@@ -118,9 +116,9 @@ class OctoTransceiver
     public void handlePacket(byte[] buf, int off, int len)
     {
         // XXX memory management
-        ByteBuffer packetBuf = ByteBuffer.allocate(len);
-        packetBuf.put(ByteBuffer.wrap(buf, off, len)).flip();
-        Packet pkt = new UnparsedPacket(packetBuf);
+//        ByteBuffer packetBuf = ByteBuffer.allocate(len);
+//        packetBuf.put(ByteBuffer.wrap(buf, off, len)).flip();
+        Packet pkt = new NewRawPacket(buf, off, len);
         PacketInfo pktInfo = new PacketInfo(pkt);
         pktInfo.setReceivedTime(System.currentTimeMillis());
         incomingPacketQueue.add(pktInfo);
@@ -181,7 +179,7 @@ class OctoTransceiver
         Node rtpRoot
                 = new PacketParser(
                 "RTP parser",
-                packet -> RtpPacket.Companion.fromBuffer(packet.getBuffer()));
+                packet -> packet.toOtherType(RtpPacket::new));
         rtpRoot.attach(new MediaTypeParser()).attach(audioVideoDemuxer);
 
         DemuxerNode root

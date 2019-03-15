@@ -17,49 +17,27 @@
 package org.jitsi.videobridge.datachannel.protocol;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.rtp.*;
-import org.jitsi.rtp.extensions.*;
+import org.jitsi.rtp2.*;
+import org.jitsi.rtp2.extensions.bytearray.*;
 
 import java.nio.*;
 
 public class DataChannelPacket extends Packet
 {
-    public final ByteBuffer data;
     public final int sid;
     public final int ppid;
 
-    public DataChannelPacket(ByteBuffer data, int sid, int ppid)
+    public DataChannelPacket(byte[] data, int offset, int length, int sid, int ppid)
     {
-        this.data = data;
+        super(data, offset, length);
         this.sid = sid;
         this.ppid = ppid;
-    }
-
-    @Override
-    public int getSizeBytes()
-    {
-        return data.limit();
-    }
-
-    @NotNull
-    @Override
-    public ByteBuffer getBuffer()
-    {
-        return data;
-    }
-
-    @Override
-    public void serializeTo(@NotNull ByteBuffer byteBuffer)
-    {
-        data.rewind();
-        byteBuffer.put(data);
-        data.rewind();
     }
 
     @NotNull
     @Override
     public Packet clone()
     {
-        return new DataChannelPacket(ByteBufferKt.clone(data), sid, ppid);
+        return new DataChannelPacket(getBuffer().clone(), getOffset(), getLength(), sid, ppid);
     }
 }
