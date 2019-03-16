@@ -18,6 +18,7 @@ package org.jitsi.videobridge.cc;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.nlj.format.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.cc.vp8.*;
@@ -196,7 +197,7 @@ public class AdaptiveTrackProjection
         {
             return false;
         }
-        packetCache.cachePacket(rtpPacket);
+        packetCache.cachePacket(RawPacketExtensionsKt.fromLegacyRawPacket(rtpPacket));
 
         // XXX We want to let the context know that the stream has been
         // suspended so that it can raise the needsKeyframe flag and also allow
