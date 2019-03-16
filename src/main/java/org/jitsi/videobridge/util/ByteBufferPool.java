@@ -26,19 +26,39 @@ public class ByteBufferPool
 //    private static ByteBufferPoolImpl poolImpl = new SingleByteBufferPool(100);
 
     private static Map<Integer, StackTraceElement[]> bookkeeping = new ConcurrentHashMap<>();
-    public static final Boolean enabledBookkeeping = false;
+    public static final Boolean ENABLE_BOOKKEEPING = true;
 
     private static AtomicInteger numBuffersOut = new AtomicInteger(0);
     private static AtomicInteger numBuffersIn = new AtomicInteger(0);
 
+    private static long threadId()
+    {
+        return Thread.currentThread().getId();
+    }
+
+    private static StackTraceElement[] getStackTrace()
+    {
+        return Thread.currentThread().getStackTrace();
+    }
+
+    private static String getStackTraceAsString()
+    {
+        StringBuilder sb = new StringBuilder();
+        for (StackTraceElement ste : getStackTrace())
+        {
+            sb.append(ste.toString()).append("\n");
+        }
+        return sb.toString();
+    }
+
     public static byte[] getBuffer(int size)
     {
         byte[] buf = poolImpl.getBuffer(size);
-        if (enabledBookkeeping)
+        if (ENABLE_BOOKKEEPING)
         {
-            bookkeeping.put(System.identityHashCode(buf), Thread.currentThread().getStackTrace());
+            bookkeeping.put(System.identityHashCode(buf), getStackTrace());
             numBuffersOut.incrementAndGet();
-            System.out.println("Thread " + Thread.currentThread().getId() + " got array " + System.identityHashCode(buf));
+            System.out.println("Thread " + threadId() + " got array " + System.identityHashCode(buf));
         }
         return buf;
     }
@@ -46,20 +66,24 @@ public class ByteBufferPool
     public static void returnBuffer(byte[] buf)
     {
         poolImpl.returnBuffer(buf);
-        if (enabledBookkeeping)
+        if (ENABLE_BOOKKEEPING)
         {
-            System.out.println("Thread " + Thread.currentThread().getId() + " returned array " + System.identityHashCode(buf));
+            System.out.println("Thread " + threadId() + " returned array " + System.identityHashCode(buf));
             Integer arrayId = System.identityHashCode(buf);
-            bookkeeping.remove(arrayId);
+            if (bookkeeping.remove(arrayId) == null)
+            {
+                System.out.println("Thread " + threadId() + " returned a buffer we didn't give out from\n" +
+                    getStackTraceAsString());
+            }
             numBuffersIn.incrementAndGet();
         }
     }
 
     public static String getStats() {
         StringBuilder sb = new StringBuilder();
-        sb.append("there are ~" + bookkeeping.size() + " outstanding buffers\n");
-        sb.append("num buffers given out: " + numBuffersOut.get() + "\n");
-        sb.append("num buffers returned: " + numBuffersIn.get() + "\n");
+        sb.append("there are ~").append(bookkeeping.size()).append(" outstanding buffers\n");
+        sb.append("num buffers given out: ").append(numBuffersOut.get()).append("\n");
+        sb.append("num buffers returned: ").append(numBuffersIn.get()).append("\n");
 
         bookkeeping.forEach((arrayId, stacktrace) -> {
             sb.append(arrayId).append(" acquired from:\n");
