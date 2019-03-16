@@ -18,6 +18,7 @@ package org.jitsi.videobridge.cc.vp8;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.impl.neomedia.rtp.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.cc.*;
@@ -320,8 +321,8 @@ public class VP8FrameProjection
             int piggyBackedPacketSequenceNumber
                 = (originalSequenceNumber + i) & RawPacket.SEQUENCE_NUMBER_MASK;
 
-            RawPacket lastPacket = cache.get(
-                vp8FrameSSRC, piggyBackedPacketSequenceNumber);
+            RawPacket lastPacket = RawPacketExtensionsKt.toLegacyRawPacket(cache.get(
+                vp8FrameSSRC, piggyBackedPacketSequenceNumber));
 
             // the call to accept (synchronized) may update the
             // maxSequenceNumber.
