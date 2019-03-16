@@ -16,10 +16,8 @@
 
 package org.jitsi.videobridge.util;
 
-import java.nio.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.*;
 
 public class PartitionedByteBufferPool implements ByteBufferPoolImpl
 {
@@ -52,11 +50,23 @@ public class PartitionedByteBufferPool implements ByteBufferPoolImpl
     {
         int partition = getPartition();
         LinkedBlockingQueue<byte[]> pool = partitions.get(partition);
-        byte[] buf = pool.poll();
-        if (buf == null) {
-            buf = new byte[1500];
+        byte[] buf;
+        int numTries = 0;
+        while (true) {
+            buf = pool.poll();
+            if (buf == null) {
+                buf = new byte[1500];
+                break;
+            } else if (buf.length < requiredSize) {
+                pool.offer(buf);
+                numTries++;
+                if (numTries == 5) {
+                    buf = new byte[1500];
+                    break;
+                }
+            }
         }
-        if (ByteBufferPool.enabledBookkeeping)
+        if (ByteBufferPool.ENABLE_BOOKKEEPING)
         {
             System.out.println("got buffer " + System.identityHashCode(buf) +
                     " from thread " + Thread.currentThread().getId() + ", partition " + partition + " now has size " + pool.size());
@@ -80,22 +90,14 @@ public class PartitionedByteBufferPool implements ByteBufferPoolImpl
 //        StackTraceElement callingFunction = Thread.currentThread().getStackTrace()[2];
 //        System.out.println("Returned array " + System.identityHashCode(buf.array()) + " from " + callingFunction.toString());
 //        System.out.println("Returned array " + System.identityHashCode(buf.array()));
-        if (buf.length == 1500) {
-            int partition = getPartition();
-            LinkedBlockingQueue<byte[]> pool = partitions.get(partition);
-            pool.offer(buf);
-            if (ByteBufferPool.enabledBookkeeping)
-            {
-                System.out.println("returned buffer " + System.identityHashCode(buf) +
-                        " from thread " + Thread.currentThread().getId() + ", partition " + partition +
-                        " now has size " + pool.size());
-            }
-        }
-        else {
-            if (ByteBufferPool.enabledBookkeeping)
-            {
-                System.out.println("ignoring returned array of size " + buf.length);
-            }
+        int partition = getPartition();
+        LinkedBlockingQueue<byte[]> pool = partitions.get(partition);
+        pool.offer(buf);
+        if (ByteBufferPool.ENABLE_BOOKKEEPING)
+        {
+            System.out.println("returned buffer " + System.identityHashCode(buf) +
+                    " from thread " + Thread.currentThread().getId() + ", partition " + partition +
+                    " now has size " + pool.size());
         }
     }
 
