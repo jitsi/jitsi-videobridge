@@ -638,15 +638,21 @@ public class Conference
      */
     private void updateEndpointsCache()
     {
-        ArrayList<Endpoint> endpointsList = new ArrayList<>(endpoints.size());
-        endpoints.values().forEach(e -> {
-            if (e instanceof Endpoint)
+        synchronized (endpoints)
+        {
+            ArrayList<Endpoint>
+                    endpointsList
+                    = new ArrayList<>(endpoints.size());
+            endpoints.values().forEach(e ->
             {
-                endpointsList.add((Endpoint) e);
-            }
-        });
+                if (e instanceof Endpoint)
+                {
+                    endpointsList.add((Endpoint) e);
+                }
+            });
 
-        endpointsCache = Collections.unmodifiableList(endpointsList);
+            endpointsCache = Collections.unmodifiableList(endpointsList);
+        }
     }
 
     /**
@@ -677,7 +683,7 @@ public class Conference
      */
     public List<Endpoint> getLocalEndpoints()
     {
-        return new ArrayList<>(endpointsCache);
+        return endpointsCache;
     }
 
     /**
@@ -741,7 +747,7 @@ public class Conference
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      * which has the specified <tt>id</tt>
      */
-    public Endpoint getOrCreateEndpoint(String id)
+    public Endpoint getOrCreateLocalEndpoint(String id)
     {
         AbstractEndpoint endpoint = getEndpoint(id, /* create */ true);
         if (!(endpoint instanceof Endpoint))
@@ -854,19 +860,9 @@ public class Conference
      */
     void endpointExpired(AbstractEndpoint endpoint)
     {
-        boolean removed;
-
-        synchronized (endpoints)
+        if (endpoints.remove(endpoint.getID()) != null)
         {
-            removed = endpoints.remove(endpoint.getID()) != null;
-            if (removed)
-            {
-                updateEndpointsCache();
-            }
-        }
-
-        if (removed)
-        {
+            updateEndpointsCache();
             firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
         }
     }
