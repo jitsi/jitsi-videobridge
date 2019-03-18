@@ -489,7 +489,7 @@ public class VP8AdaptiveTrackProjectionContext
      */
     @Override
     public RawPacket[] rewriteRtp(
-        @NotNull RawPacket rtpPacket, NewRawPacketCache incomingRawPacketCache)
+        @NotNull RawPacket rtpPacket, RtpPacketCache incomingRawPacketCache)
         throws RewriteException
     {
         VP8FrameProjection vp8FrameProjection

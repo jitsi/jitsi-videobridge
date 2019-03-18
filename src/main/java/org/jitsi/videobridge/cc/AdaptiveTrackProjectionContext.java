@@ -73,7 +73,7 @@ public interface AdaptiveTrackProjectionContext
      * RTP packet that is specified as an argument.
      */
     RawPacket[]
-    rewriteRtp(RawPacket rtpPacket, NewRawPacketCache incomingRawPacketCache)
+    rewriteRtp(RawPacket rtpPacket, RtpPacketCache incomingRawPacketCache)
         throws RewriteException;
 
     /**

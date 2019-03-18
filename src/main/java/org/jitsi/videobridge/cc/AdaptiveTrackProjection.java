@@ -185,7 +185,7 @@ public class AdaptiveTrackProjection
      */
     private final Consumer<Long> keyframeRequester;
 
-    private final NewRawPacketCache packetCache = new NewRawPacketCache(hashCode());
+    private final RtpPacketCache packetCache = new RtpPacketCache(hashCode());
 
     /**
      * Determines whether an RTP packet needs to be accepted or not.
@@ -219,7 +219,7 @@ public class AdaptiveTrackProjection
         {
             logger.warn(
                 "Dropping an RTP packet, no quality index (SSRC=" +
-                    rtpPacket.getSSRCAsLong() + ").");
+                    rtpPacket.getSsrc() + ").");
 
             return false;
         }
