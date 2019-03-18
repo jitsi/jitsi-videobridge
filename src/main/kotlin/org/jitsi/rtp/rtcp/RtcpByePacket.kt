@@ -16,15 +16,16 @@
 
 package org.jitsi.rtp.rtcp
 
-import org.jitsi.rtp.extensions.incrementPosition
+import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
-import org.jitsi.rtp.Packet
-import org.jitsi.rtp.extensions.subBuffer
-import org.jitsi.rtp.util.BufferPool
-import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
+import org.jitsi.rtp.extensions.bytearray.getInt
 
 /**
+ * An [RtcpByePacket] cannot be changed once it has been created, so we
+ * parse the fields once (lazily) and store them.
+ * TODO: technically it COULD be changed, since anyone can change the buffer.
+ * can we enforce immutability?
+ *
  * https://tools.ietf.org/html/rfc3550#section-6.6
  *
  *       0                   1                   2                   3
@@ -40,86 +41,38 @@ import java.nio.charset.StandardCharsets
  *       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 class RtcpByePacket(
-    header: RtcpHeader = RtcpHeader(),
-    // Not including the one in the header
-    private val additionalSsrcs: List<Long> = listOf(),
-    val reason: String? = null,
-    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
-) : RtcpPacket(header.apply { packetType = PT }, backingBuffer) {
-
-    private val dataSize: Int
-        get() {
-            val dataSize = additionalSsrcs.size * 4
-            val reasonSize: Int = reason?.let {
-                val fieldSize = it.toByteArray(StandardCharsets.US_ASCII).size
-                // Plus 1 for the reason length field
-                fieldSize + 1
-            } ?: 0
-            return dataSize + reasonSize
-        }
-
-    override val payloadDataSize: Int
-        get() = dataSize + paddingSize
-
-    private val paddingSize: Int
-        get() {
-            var paddingSize = 0
-            while ((dataSize + paddingSize) % 4 != 0) {
-                paddingSize++
-            }
-            return paddingSize
-        }
-
-    override val hasPadding: Boolean
-        get() = paddingSize > 0
-
-    val ssrcs: List<Long> = listOf(header.senderSsrc) + additionalSsrcs
-
-    override fun serializePayloadDataInto(buf: ByteBuffer) {
-        additionalSsrcs.stream()
-                .map(Long::toInt)
-                .forEach { buf.putInt(it) }
-        reason?.let {
-            val reasonBuf = ByteBuffer.wrap(it.toByteArray(StandardCharsets.US_ASCII))
-            buf.put(reasonBuf.limit().toByte())
-            buf.put(reasonBuf)
-        }
-        addPadding(buf)
+    buffer: ByteArray,
+    offset: Int,
+    length: Int
+) : RtcpPacket(buffer, offset, length) {
+    val ssrcs: List<Long> by lazy {
+        val ssrcStartOffset = RtcpHeader.SIZE_BYTES - 4
+        (0 until reportCount)
+                .map { buffer.getInt(ssrcStartOffset + it * 4) }
+                .map(Int::toPositiveLong)
+                .toList()
     }
 
-    override fun clone(): Packet =
-        RtcpByePacket(header.clone(), additionalSsrcs.toList(), reason?.plus(""))
+    val reason: String? by lazy {
+        val hasReason = run {
+            val packetLengthBytes = length
+            val headerAndSsrcsLengthBytes = RtcpHeader.SIZE_BYTES + (reportCount - 1) * 4
+            headerAndSsrcsLengthBytes < packetLengthBytes
+        }
+        if (hasReason) {
+            val reasonLengthOffset = RtcpHeader.SIZE_BYTES + (ssrcs.size - 1) * 4
+            val reasonLength = buffer.get(reasonLengthOffset).toInt()
+            val reasonStr = String(buffer, reasonLengthOffset + 1, reasonLength)
+            reasonStr
+        } else {
+            null
+        }
+    }
+
+    override fun clone(): RtcpByePacket =
+        RtcpByePacket(buffer.cloneFromPool(), offset, length)
 
     companion object {
         const val PT: Int = 203
-        fun create(buf: ByteBuffer): RtcpByePacket {
-            val bufStartPosition = buf.position()
-            val header = RtcpHeader.fromBuffer(buf)
-            val hasReason = run {
-                val packetLengthBytes = header.lengthBytes
-                val headerAndSsrcsLengthBytes = header.sizeBytes + (header.reportCount - 1) * 4
-                headerAndSsrcsLengthBytes < packetLengthBytes
-            }
-            val ssrcs = (0 until header.reportCount - 1)
-                    .map(buf::getInt)
-                    .map(Int::toPositiveLong)
-                    .toList()
-
-            val reason = if (hasReason) {
-                val reasonLength = buf.get().toInt()
-                val reasonStr = String(buf.array(), buf.position(), reasonLength)
-                buf.incrementPosition(reasonLength)
-                reasonStr
-            } else {
-                null
-            }
-            // We do this here (instead of in RtcpPacket#parse so that we know exactly how
-            // much buffer this packet gets to keep as its backing buffer
-            if (header.hasPadding) {
-                consumePadding(buf)
-            }
-            return RtcpByePacket(header, ssrcs, reason,
-                buf.subBuffer(bufStartPosition, buf.position() - bufStartPosition))
-        }
-   }
+    }
 }

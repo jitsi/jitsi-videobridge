@@ -14,12 +14,26 @@
  * limitations under the License.
  */
 
-package org.jitsi.rtp.rtp
+package org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb
 
-import org.jitsi.rtp.NewRawPacket
+import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 
-open class RtpPacket(
+/**
+ * https://tools.ietf.org/html/rfc4585#section-6.3.1
+ * PLI does not require parameters.  Therefore, the length field MUST be
+ *  2, and there MUST NOT be any Feedback Control Information.
+ */
+class RtcpFbPliPacket(
     buffer: ByteArray,
     offset: Int,
     length: Int
-) : NewRawPacket(buffer, offset, length)
+) : PayloadSpecificRtcpFbPacket(buffer, offset, length) {
+
+    override fun clone(): RtcpFbPliPacket {
+        return RtcpFbPliPacket(buffer.cloneFromPool(), offset, length)
+    }
+
+    companion object {
+        const val FMT = 1
+    }
+}

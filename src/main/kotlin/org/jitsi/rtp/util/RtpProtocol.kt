@@ -15,18 +15,20 @@
  */
 package org.jitsi.rtp.util
 
-import unsigned.toUInt
+import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import java.nio.ByteBuffer
 
+//TODO: should merge this with RtpUtils/RTPUtils
 class RtpProtocol {
     companion object {
-        private fun getPacketType(buf: ByteBuffer): Int = buf.get(1).toUInt()
-        fun isRtp(buf: ByteBuffer): Boolean {
+        private fun getPacketType(buf: ByteArray): Int = buf.get(1).toPositiveInt()
+
+        fun isRtp(buf: ByteArray): Boolean {
             return when (getPacketType(buf)) {
                 in 200..211 -> false
                 else -> true
             }
         }
-        fun isRtcp(buf: ByteBuffer): Boolean = !isRtp(buf)
+        fun isRtcp(buf: ByteArray): Boolean = !isRtp(buf)
     }
 }

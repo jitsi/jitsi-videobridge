@@ -30,3 +30,21 @@ package org.jitsi.rtp.extensions.unsigned
 fun Byte.toPositiveInt(): Int = toInt() and 0xFF
 fun Short.toPositiveInt(): Int = toInt() and 0xFFFF
 fun Int.toPositiveLong(): Long = toLong() and 0xFFFFFFFF
+
+//TODO: i think these should be able to make the above functions obsolete
+fun Number.toPositiveInt(): Int {
+    return when (this) {
+        is Byte -> this.toInt() and 0xFF
+        is Short -> this.toInt() and 0xFFFF
+        else -> this.toInt()
+    }
+}
+
+fun Number.toPositiveLong(): Long {
+    return when (this) {
+        is Byte -> this.toLong() and 0xFF
+        is Short -> this.toLong() and 0xFFFF
+        is Int -> this.toLong() and 0xFFFFFFFF
+        else -> this.toLong()
+    }
+}

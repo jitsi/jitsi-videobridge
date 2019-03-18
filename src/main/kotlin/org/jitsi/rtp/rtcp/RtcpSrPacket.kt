@@ -16,13 +16,12 @@
 
 package org.jitsi.rtp.rtcp
 
+import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
-import org.jitsi.rtp.Packet
-import org.jitsi.rtp.Serializable
-import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.util.BufferPool
-import java.nio.ByteBuffer
-import java.util.Objects
+import org.jitsi.rtp.util.RtpUtils
+import org.jitsi.rtp.extensions.bytearray.putInt
+import org.jitsi.rtp.util.getIntAsLong
 
 /**
  *        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
@@ -39,128 +38,56 @@ import java.util.Objects
  *
  * RTCP SenderInfo block
  */
-class SenderInfo(
-    /**
-     * NTP timestamp: 64 bits
-     *     Indicates the wallclock time (see Section 4) when this report was
-     *     sent so that it may be used in combination with timestamps
-     *     returned in reception reports from other receivers to measure
-     *     round-trip propagation to those receivers.  Receivers should
-     *     expect that the measurement accuracy of the timestamp may be
-     *     limited to far less than the resolution of the NTP timestamp.  The
-     *     measurement uncertainty of the timestamp is not indicated as it
-     *     may not be known.  On a system that has no notion of wallclock
-     *     time but does have some system-specific clock such as "system
-     *     uptime", a sender MAY use that clock as a reference to calculate
-     *     relative NTP timestamps.  It is important to choose a commonly
-     *     used clock so that if separate implementations are used to produce
-     *     the individual streams of a multimedia session, all
-     *     implementations will use the same clock.  Until the year 2036,
-     *     relative and absolute timestamps will differ in the high bit so
-     *     (invalid) comparisons will show a large difference; by then one
-     *     hopes relative timestamps will no longer be needed.  A sender that
-     *     has no notion of wallclock or elapsed time MAY set the NTP
-     *     timestamp to zero.
-     */
-    val ntpTimestamp: Long = -1,
-    /**
-     * RTP timestamp: 32 bits
-     *     Corresponds to the same time as the NTP timestamp (above), but in
-     *     the same units and with the same random offset as the RTP
-     *     timestamps in data packets.  This correspondence may be used for
-     *     intra- and inter-media synchronization for sources whose NTP
-     *     timestamps are synchronized, and may be used by media-independent
-     *     receivers to estimate the nominal RTP clock frequency.  Note that
-     *     in most cases this timestamp will not be equal to the RTP
-     *     timestamp in any adjacent data packet.  Rather, it MUST be
-     *     calculated from the corresponding NTP timestamp using the
-     *     relationship between the RTP timestamp counter and real time as
-     *     maintained by periodically checking the wallclock time at a
-     *     sampling instant.
-     */
-    val rtpTimestamp: Long = -1,
-    /**
-     * sender's packet count: 32 bits
-     *     The total number of RTP data packets transmitted by the sender
-     *     since starting transmission up until the time this SR packet was
-     *     generated.  The count SHOULD be reset if the sender changes its
-     *     SSRC identifier.
-     */
-    val sendersPacketCount: Long = -1,
-    /**
-     * sender's octet count: 32 bits
-     *     The total number of payload octets (i.e., not including header or
-     *     padding) transmitted in RTP data packets by the sender since
-     *     starting transmission up until the time this SR packet was
-     *     generated.  The count SHOULD be reset if the sender changes its
-     *     SSRC identifier.  This field can be used to estimate the average
-     *     payload data rate.
-     */
-    val sendersOctetCount: Long = -1
-) : Serializable(), Cloneable {
-    override val sizeBytes: Int = SIZE_BYTES
-
-    /**
-     * https://tools.ietf.org/html/rfc3550#section-4
-     * In some fields where a more compact representation is
-     * appropriate, only the middle 32 bits are used; that is, the low 16
-     * bits of the integer part and the high 16 bits of the fractional part.
-     * The high 16 bits of the integer part must be determined
-     * independently.
-     */
-    val compactedNtpTimestamp: Long
-        get() = ntpTimestamp.and(0x0000FFFFFFFF0000).shr(16)
-
-    override fun serializeTo(buf: ByteBuffer) {
-        buf.putLong(ntpTimestamp)
-        buf.putInt(rtpTimestamp.toInt())
-        buf.putInt(sendersPacketCount.toInt())
-        buf.putInt(sendersOctetCount.toInt())
-    }
-
-    public override fun clone(): SenderInfo =
-        SenderInfo(ntpTimestamp, rtpTimestamp, sendersPacketCount, sendersOctetCount)
-
-    override fun toString(): String {
-        return with (StringBuffer()) {
-            appendln("ntpTimestamp: $ntpTimestamp")
-            appendln("rtpTimestamp: $rtpTimestamp")
-            appendln("sendersPacketCount: $sendersPacketCount")
-            appendln("sendersOctetCount: $sendersOctetCount")
-
-            toString()
-        }
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other?.javaClass != javaClass) {
-            return false
-        }
-        other as SenderInfo
-        return (ntpTimestamp == other.ntpTimestamp &&
-                compactedNtpTimestamp == other.compactedNtpTimestamp &&
-                rtpTimestamp == other.rtpTimestamp &&
-                sendersPacketCount == other.sendersPacketCount &&
-                sendersOctetCount == other.sendersOctetCount)
-    }
-
-    override fun hashCode(): Int {
-        return Objects.hash(ntpTimestamp, compactedNtpTimestamp, rtpTimestamp, sendersPacketCount, sendersOctetCount)
-    }
-
+class SenderInfoParser {
     companion object {
         const val SIZE_BYTES = 20
-        fun fromBuffer(buf: ByteBuffer): SenderInfo {
-            val ntpTimestamp = buf.getLong()
-            val rtpTimestamp = buf.getInt().toPositiveLong()
-            val sendersPacketCount = buf.getInt().toPositiveLong()
-            val sendersOctetCount = buf.getInt().toPositiveLong()
+        const val NTP_TS_MSW_OFFSET = 0
+        const val NTP_TS_LSW_OFFSET = 4
+        const val RTP_TS_OFFSET = 8
+        const val SENDERS_PACKET_COUNT_OFFSET = 12
+        const val SENDERS_OCTET_COUNT_OFFSET = 16
 
-            return SenderInfo(ntpTimestamp, rtpTimestamp, sendersPacketCount, sendersOctetCount)
-        }
+        fun getNtpTimestampMsw(buf: ByteArray, baseOffset: Int): Long =
+            buf.getIntAsLong(baseOffset + NTP_TS_MSW_OFFSET)
+        fun setNtpTimestampMsw(buf: ByteArray, baseOffset: Int, value: Long) =
+            buf.putInt(baseOffset + NTP_TS_MSW_OFFSET, value.toInt())
+
+        fun getNtpTimestampLsw(buf: ByteArray, baseOffset: Int): Long =
+            buf.getIntAsLong(baseOffset + NTP_TS_LSW_OFFSET)
+        fun setNtpTimestampLsw(buf: ByteArray, baseOffset: Int, value: Long) =
+            buf.putInt(baseOffset + NTP_TS_LSW_OFFSET, value.toInt())
+
+        fun getRtpTimestamp(buf: ByteArray, baseOffset: Int): Long =
+            buf.getIntAsLong(baseOffset + RTP_TS_OFFSET)
+        fun setRtpTimestamp(buf: ByteArray, baseOffset: Int, value: Long) =
+            buf.putInt(baseOffset + RTP_TS_OFFSET, value.toInt())
+
+        fun getSendersPacketCount(buf: ByteArray, baseOffset: Int): Long =
+            buf.getIntAsLong(baseOffset + SENDERS_PACKET_COUNT_OFFSET)
+        fun setSendersPacketCount(buf: ByteArray, baseOffset: Int, value: Long) =
+            buf.putInt(baseOffset + SENDERS_PACKET_COUNT_OFFSET, value.toInt())
+
+        fun getSendersOctetCount(buf: ByteArray, baseOffset: Int): Long =
+            buf.getIntAsLong(baseOffset + SENDERS_OCTET_COUNT_OFFSET)
+        fun setSendersOctetCount(buf: ByteArray, baseOffset: Int, value: Long) =
+            buf.putInt(baseOffset + SENDERS_OCTET_COUNT_OFFSET, value.toInt())
+    }
+}
+
+data class SenderInfoBuilder(
+    var ntpTimestampMsw: Long = -1,
+    var ntpTimestampLsw: Long = -1,
+    var rtpTimestamp: Long = -1,
+    var sendersPacketCount: Long = -1,
+    var sendersOctetCount: Long = -1
+) {
+
+    fun writeTo(buf: ByteArray, offset: Int) {
+        SenderInfoParser.setNtpTimestampMsw(buf, offset, ntpTimestampMsw)
+        SenderInfoParser.setNtpTimestampLsw(buf, offset, ntpTimestampLsw)
+        SenderInfoParser.setRtpTimestamp(buf, offset, rtpTimestamp)
+        SenderInfoParser.setSendersPacketCount(buf, offset, sendersPacketCount)
+        SenderInfoParser.setSendersOctetCount(buf, offset, sendersOctetCount)
     }
 }
 
@@ -203,51 +130,76 @@ class SenderInfo(
  * https://tools.ietf.org/html/rfc3550#section-6.4.1
  */
 class RtcpSrPacket(
-    header: RtcpHeader = RtcpHeader(),
-    val senderInfo: SenderInfo = SenderInfo(),
-    val reportBlocks: List<RtcpReportBlock> = listOf(),
-    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
-) : RtcpPacket(header.apply { packetType = PT; reportCount = reportBlocks.size }, backingBuffer) {
+    buffer: ByteArray,
+    offset: Int,
+    length: Int
+) : RtcpPacket(buffer, offset, length) {
 
-    override val payloadDataSize: Int
-        get() = senderInfo.sizeBytes + (reportBlocks.size * RtcpReportBlock.SIZE_BYTES)
+    val senderInfo: SenderInfo by lazy { SenderInfo() }
 
-    override fun serializePayloadDataInto(buf: ByteBuffer) {
-        senderInfo.serializeTo(buf)
-        reportBlocks.forEach { it.serializeTo(buf) }
+    val reportBlocks: List<RtcpReportBlock> by lazy {
+        (0 until reportCount).map {
+            RtcpReportBlock.fromBuffer(buffer, offset + REPORT_BLOCKS_OFFSET + it * RtcpReportBlock.SIZE_BYTES)
+        }.toList()
     }
 
-    override fun clone(): Packet {
-        val clonedReportBlocks = reportBlocks
-                .map(RtcpReportBlock::clone)
-                .toList()
-        return RtcpSrPacket(header.clone(), senderInfo.clone(), clonedReportBlocks)
+    override fun clone(): RtcpSrPacket {
+        return RtcpSrPacket(buffer.cloneFromPool(), offset, length)
     }
 
-    override fun toString(): String {
-        return with (StringBuffer()) {
-            appendln("SR Packet")
-            appendln(super.toString())
-            appendln(senderInfo.toString())
-            reportBlocks.forEach {
-                appendln(it.toString())
-            }
-            toString()
+    // SenderInfo is defined differently so that we can scope these variables under a the 'senderInfo'
+    // member here.  Is there a better way?
+    inner class SenderInfo {
+        val ntpTimestampMsw: Long = SenderInfoParser.getNtpTimestampMsw(buffer, RtcpHeader.SIZE_BYTES)
+        val ntpTimestampLsw: Long = SenderInfoParser.getNtpTimestampLsw(buffer, RtcpHeader.SIZE_BYTES)
+        val rtpTimestamp: Long = SenderInfoParser.getRtpTimestamp(buffer, RtcpHeader.SIZE_BYTES)
+        val sendersPacketCount: Long = SenderInfoParser.getSendersPacketCount(buffer, RtcpHeader.SIZE_BYTES)
+        val sendersOctetCount: Long = SenderInfoParser.getSendersOctetCount(buffer, RtcpHeader.SIZE_BYTES)
+
+        /**
+         * https://tools.ietf.org/html/rfc3550#section-4
+         * In some fields where a more compact representation is
+         * appropriate, only the middle 32 bits are used; that is, the low 16
+         * bits of the integer part and the high 16 bits of the fractional part.
+         * The high 16 bits of the integer part must be determined
+         * independently.
+         */
+        val compactedNtpTimestamp: Long by lazy {
+            (((ntpTimestampMsw and 0xFFFF) shl 16) or (ntpTimestampLsw ushr 16)).toPositiveLong()
         }
     }
 
     companion object {
-        const val PT: Int = 200
+        const val PT = 200
+        const val SENDER_INFO_OFFSET = RtcpHeader.SIZE_BYTES
+        const val REPORT_BLOCKS_OFFSET = SENDER_INFO_OFFSET + SenderInfoParser.SIZE_BYTES
+    }
+}
 
-        fun fromBuffer(buf: ByteBuffer): RtcpSrPacket {
-            val bufStartPosition = buf.position()
-            val header = RtcpHeader.fromBuffer(buf)
-            val senderInfo = SenderInfo.fromBuffer(buf)
-            val reportBlocks = (0 until header.reportCount)
-                    .map { RtcpReportBlock.fromBuffer(buf) }
-                    .toMutableList()
-            return RtcpSrPacket(header, senderInfo, reportBlocks,
-                buf.subBuffer(bufStartPosition, buf.position() - bufStartPosition))
+data class RtcpSrPacketBuilder(
+    var rtcpHeader: RtcpHeaderBuilder = RtcpHeaderBuilder(),
+    var senderInfo: SenderInfoBuilder = SenderInfoBuilder(),
+    val reportBlocks: MutableList<RtcpReportBlock> = mutableListOf()
+) {
+
+    private val sizeBytes: Int
+        get() = RtcpHeader.SIZE_BYTES + SenderInfoParser.SIZE_BYTES + reportBlocks.size * RtcpReportBlock.SIZE_BYTES
+
+    fun build(): RtcpSrPacket {
+        val buf = BufferPool.getArray(sizeBytes)
+        writeTo(buf, 0)
+        return RtcpSrPacket(buf, 0, sizeBytes)
+    }
+
+    fun writeTo(buf: ByteArray, offset: Int) {
+        rtcpHeader.apply {
+            packetType = RtcpSrPacket.PT
+            reportCount = reportBlocks.size
+            length = RtpUtils.calculateRtcpLengthFieldValue(sizeBytes)
+        }.writeTo(buf, offset)
+        senderInfo.writeTo(buf, offset + RtcpSrPacket.SENDER_INFO_OFFSET)
+        reportBlocks.forEachIndexed { index, reportBlock ->
+            reportBlock.writeTo(buf, offset + RtcpSrPacket.REPORT_BLOCKS_OFFSET + index * RtcpReportBlock.SIZE_BYTES)
         }
     }
 }

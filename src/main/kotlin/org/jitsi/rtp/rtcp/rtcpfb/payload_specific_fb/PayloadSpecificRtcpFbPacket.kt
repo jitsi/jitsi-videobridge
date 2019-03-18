@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 
-package org.jitsi.rtp.rtp
+package org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb
 
-import org.jitsi.rtp.NewRawPacket
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 
-open class RtpPacket(
+abstract class PayloadSpecificRtcpFbPacket(
     buffer: ByteArray,
     offset: Int,
     length: Int
-) : NewRawPacket(buffer, offset, length)
+) : RtcpFbPacket(buffer, offset, length) {
+
+    companion object {
+        const val PT = 206
+    }
+}

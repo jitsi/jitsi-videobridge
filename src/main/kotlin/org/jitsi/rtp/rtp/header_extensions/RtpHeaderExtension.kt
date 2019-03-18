@@ -157,7 +157,7 @@ abstract class RtpHeaderExtension(
      * Subclasses must implement this function and write their data
      * into [buf] starting at [buf]'s current position.
      */
-    protected abstract fun serializeData(buf: ByteBuffer)
+    /*protected*/ abstract fun serializeData(buf: ByteBuffer)
 
     companion object {
         const val MAX_ONE_BYTE_DATA_LENGTH = 0xF

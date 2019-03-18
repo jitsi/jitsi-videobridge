@@ -16,17 +16,15 @@
 
 package org.jitsi.rtp.rtcp
 
-import org.jitsi.rtp.extensions.getBitAsBool
-import org.jitsi.rtp.extensions.getBits
-import org.jitsi.rtp.extensions.incrementPosition
-import org.jitsi.rtp.extensions.putBitAsBoolean
-import org.jitsi.rtp.extensions.putBits
-import org.jitsi.rtp.extensions.subBuffer
-import org.jitsi.rtp.extensions.unsigned.toPositiveInt
-import org.jitsi.rtp.extensions.unsigned.toPositiveLong
-import org.jitsi.rtp.Serializable
-import org.jitsi.rtp.SerializedField
-import java.nio.ByteBuffer
+import org.jitsi.rtp.extensions.bytearray.getBitAsBool
+import org.jitsi.rtp.extensions.bytearray.putBitAsBoolean
+import org.jitsi.rtp.extensions.bytearray.putInt
+import org.jitsi.rtp.extensions.bytearray.putShort
+import org.jitsi.rtp.util.getBitsAsInt
+import org.jitsi.rtp.util.getByteAsInt
+import org.jitsi.rtp.util.getIntAsLong
+import org.jitsi.rtp.util.getShortAsInt
+import org.jitsi.rtp.util.putNumberAsBits
 
 /**
  * Models the RTCP header as defined in https://tools.ietf.org/html/rfc3550#section-6.1
@@ -45,95 +43,68 @@ import java.nio.ByteBuffer
  *   scanning a compound RTCP packet, while counting 32-bit words
  *   avoids a validity check for a multiple of 4.)
  */
-class RtcpHeader(
-    version: Int = 2,
-    hasPadding: Boolean = false,
-    reportCount: Int = -1,
-    packetType: Int = -1,
-    length: Int = -1,
-    senderSsrc: Long = -1
-) : Serializable(), Cloneable {
-    override val sizeBytes: Int = SIZE_BYTES
-
-    // The length field in the RTCP header is given as the number of
-    // 32-bit words - 1, we'll expose the actual length in bytes here
-    val lengthBytes: Int get() = (length + 1) * 4
-
-    var dirty: Boolean = true
-        private set
-
-    var version: Int by SerializedField(version, ::dirty)
-    var hasPadding: Boolean by SerializedField(hasPadding, ::dirty)
-    var reportCount: Int by SerializedField(reportCount, ::dirty)
-    var packetType: Int by SerializedField(packetType, ::dirty)
-    var length: Int by SerializedField(length, ::dirty)
-    var senderSsrc: Long by SerializedField(senderSsrc, ::dirty)
-
-    override fun serializeTo(buf: ByteBuffer) {
-        // Because of the nature of the fields in the RTCP header, it's easier for us
-        // to write the values using absolute positions within the given buffer.  However,
-        // those values assume position 0 of the buffer is where the header should start,
-        // which isn't necessarily the case (and doesn't match the rest of the implementations
-        // of serializeTo), so we create a temporary wrapper around the given buffer whose
-        // position 0 is at buf's current position and then we manually increment
-        // buf's position to after the header data we just wrote
-        val absBuf = buf.subBuffer(buf.position(), SIZE_BYTES)
-        setVersion(absBuf, version)
-        setPadding(absBuf, hasPadding)
-        setReportCount(absBuf, reportCount)
-        setPacketType(absBuf, packetType)
-        setLength(absBuf, length)
-        setSenderSsrc(absBuf, senderSsrc)
-        buf.incrementPosition(SIZE_BYTES)
-    }
-
-    public override fun clone(): RtcpHeader {
-        return RtcpHeader(
-            version,
-            hasPadding,
-            reportCount,
-            packetType,
-            length,
-            senderSsrc
-        )
-    }
-
+class RtcpHeader {
     companion object {
         const val SIZE_BYTES = 8
-        fun fromBuffer(buf: ByteBuffer): RtcpHeader {
-            val version = getVersion(buf)
-            val hasPadding = hasPadding(buf)
-            val reportCount = getReportCount(buf)
-            val packetType = getPacketType(buf)
-            val length = getLength(buf)
-            val senderSsrc = getSenderSsrc(buf)
+        const val VERSION_OFFSET = 0
+        const val PADDING_OFFSET = 0
+        const val REPORT_COUNT_OFFSET = 0
+        const val PACKET_TYPE_OFFSET = 1
+        const val LENGTH_OFFSET = 2
+        const val SENDER_SSRC_OFFSET = 4
+        fun getVersion(buf: ByteArray, headerStartOffset: Int): Int =
+            buf.getBitsAsInt(headerStartOffset + VERSION_OFFSET, 0, 2)
+        fun setVersion(buf: ByteArray, headerStartOffset: Int, version: Int) =
+            buf.putNumberAsBits(headerStartOffset + VERSION_OFFSET, 0, 2, version)
 
-            buf.incrementPosition(SIZE_BYTES)
-            return RtcpHeader(version, hasPadding, reportCount, packetType, length, senderSsrc)
-        }
+        fun hasPadding(buf: ByteArray, headerStartOffset: Int): Boolean =
+            buf.getBitAsBool(headerStartOffset + PADDING_OFFSET, 2)
+        fun setPadding(buf: ByteArray, headerStartOffset: Int, hasPadding: Boolean) =
+            buf.putBitAsBoolean(headerStartOffset + PADDING_OFFSET, 2, hasPadding)
 
-        fun getVersion(buf: ByteBuffer): Int = buf.get(0).getBits(0, 2).toInt()
-        fun setVersion(buf: ByteBuffer, version: Int) = buf.putBits(0, 0, version.toByte(), 2)
+        fun getReportCount(buf: ByteArray, headerStartOffset: Int): Int =
+            buf.getBitsAsInt(headerStartOffset + REPORT_COUNT_OFFSET, 3, 5)
+        fun setReportCount(buf: ByteArray, headerStartOffset: Int, reportCount: Int) =
+            buf.putNumberAsBits(headerStartOffset + REPORT_COUNT_OFFSET, 3, 5, reportCount)
 
-        fun hasPadding(buf: ByteBuffer): Boolean = buf.get(0).getBitAsBool(2)
-        fun setPadding(buf: ByteBuffer, hasPadding: Boolean) = buf.putBitAsBoolean(0, 2, hasPadding)
+        fun getPacketType(buf: ByteArray, headerStartOffset: Int): Int =
+            buf.getByteAsInt(headerStartOffset + PACKET_TYPE_OFFSET)
+        fun setPacketType(buf: ByteArray, headerStartOffset: Int, packetType: Int) =
+            buf.set(headerStartOffset + PACKET_TYPE_OFFSET, packetType.toByte())
 
-        fun getReportCount(buf: ByteBuffer): Int = buf.get(0).getBits(3, 5).toInt()
-        fun setReportCount(buf: ByteBuffer, reportCount: Int) = buf.putBits(0, 3, reportCount.toByte(), 5)
+        fun getLength(buf: ByteArray, headerStartOffset: Int): Int =
+            buf.getShortAsInt(headerStartOffset + LENGTH_OFFSET)
+        fun setLength(buf: ByteArray, headerStartOffset: Int, length: Int) =
+            buf.putShort(headerStartOffset + LENGTH_OFFSET, length.toShort())
 
-        fun getPacketType(buf: ByteBuffer): Int = buf.get(1).toPositiveInt()
-        fun setPacketType(buf: ByteBuffer, packetType: Int) {
-            buf.put(1, packetType.toByte())
-        }
+        fun getSenderSsrc(buf: ByteArray, headerStartOffset: Int): Long =
+            buf.getIntAsLong(headerStartOffset + SENDER_SSRC_OFFSET)
+        fun setSenderSsrc(buf: ByteArray, headerStartOffset: Int, senderSsrc: Long) =
+            buf.putInt(headerStartOffset + SENDER_SSRC_OFFSET, senderSsrc.toInt())
+    }
+}
 
-        fun getLength(buf: ByteBuffer): Int = buf.getShort(2).toPositiveInt()
-        fun setLength(buf: ByteBuffer, length: Int) {
-            buf.putShort(2, length.toShort())
-        }
+data class RtcpHeaderBuilder(
+    var version: Int = 2,
+    var hasPadding: Boolean = false,
+    var reportCount: Int = -1,
+    var packetType: Int = -1,
+    var length: Int = -1,
+    var senderSsrc: Long = 0
+) {
 
-        fun getSenderSsrc(buf: ByteBuffer): Long = buf.getInt(4).toPositiveLong()
-        fun setSenderSsrc(buf: ByteBuffer, senderSsrc: Long) {
-            buf.putInt(4, senderSsrc.toInt())
-        }
+    fun build(): ByteArray {
+        val buf = ByteArray(RtcpHeader.SIZE_BYTES)
+        writeTo(buf, 0)
+        return buf
+    }
+
+    fun writeTo(buf: ByteArray, offset: Int) {
+        RtcpHeader.setVersion(buf, offset, version)
+        RtcpHeader.setPadding(buf, offset, hasPadding)
+        RtcpHeader.setReportCount(buf, offset, reportCount)
+        RtcpHeader.setPacketType(buf, offset, packetType)
+        RtcpHeader.setLength(buf, offset, length)
+        RtcpHeader.setSenderSsrc(buf, offset, senderSsrc)
     }
 }

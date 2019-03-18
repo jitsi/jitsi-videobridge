@@ -16,62 +16,19 @@
 
 package org.jitsi.rtp
 
-import org.jitsi.rtp.extensions.clone
-import org.jitsi.rtp.util.BufferPool
-import org.jitsi.rtp.util.ByteBufferUtils
-import java.nio.ByteBuffer
 import java.util.function.Predicate
 
-abstract class Serializable {
-    abstract val sizeBytes: Int
-
-    /**
-     * Get the contents of this [Serializable] in a [ByteBuffer].
-     * Depending on the implementation, the given buffer may
-     * be newly allocated or an owned buffer that is reused.
-     *
-     * The returned buffer should have its position set to
-     * 0 and its limit at the end of the serialized data.
-     */
-    open fun getBuffer(): ByteBuffer {
-        val b = BufferPool.getBuffer(sizeBytes)
-        serializeTo(b)
-
-        return b.rewind() as ByteBuffer
-    }
-
-    /**
-     * Serialize the contents of this [Serializable] into
-     * the given buffer, starting at its current position.
-     *
-     * After this method returns, [buf]'s position will
-     * be at the end of the data which was just written.
-     */
-    abstract fun serializeTo(buf: ByteBuffer)
-}
-
-abstract class Packet : Serializable(), kotlin.Cloneable {
-    public abstract override fun clone(): Packet
-}
-
-open class UnparsedPacket(
-    private val buf: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER
-) : Packet() {
-
-    override val sizeBytes: Int = buf.limit()
-
-    override fun clone(): Packet = UnparsedPacket(buf.clone())
-
-    //TODO: expose as readonly?
-    override fun getBuffer(): ByteBuffer = buf.duplicate()
-
-    override fun serializeTo(buf: ByteBuffer) {
-        buf.put(getBuffer())
-    }
-}
-
+//TODO move
 typealias PacketPredicate = Predicate<Packet>
 
-class DtlsProtocolPacket(
-    buf: ByteBuffer = ByteBufferUtils.EMPTY_BUFFER
-) : UnparsedPacket(buf)
+abstract class Packet(
+    buffer: ByteArray,
+    offset: Int,
+    length: Int
+) : ByteArrayBuffer(buffer, offset, length), Cloneable {
+
+    fun<OtherType : Packet> toOtherType(otherTypeCreator: (ByteArray, Int, Int) -> OtherType): OtherType =
+        otherTypeCreator(buffer, offset, length);
+
+    public abstract override fun clone(): Packet
+}

@@ -27,5 +27,8 @@ class BufferPool {
     companion object {
         var getBuffer: (Int) -> ByteBuffer = { size -> ByteBuffer.allocate(1500).limit(size) as ByteBuffer }
         var returnBuffer: (ByteBuffer) -> Unit = { }
+
+        var getArray: (Int) -> ByteArray = { size -> ByteArray(size) }
+        var returnArray: (ByteArray) -> Unit = { }
     }
 }

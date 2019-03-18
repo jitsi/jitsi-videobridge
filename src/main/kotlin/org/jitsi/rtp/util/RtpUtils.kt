@@ -15,6 +15,7 @@
  */
 package org.jitsi.rtp.util
 
+//TODO: this and RTPUtils should be merged
 class RtpUtils {
     companion object {
         /**
@@ -56,6 +57,14 @@ class RtpUtils {
                 throw Exception("Invalid RTCP size value")
             }
             return (sizeBytes / 4) - 1
+        }
+
+        fun getNumPaddingBytes(dataSizeBytes: Int): Int {
+            var paddingBytes = 0
+            while (dataSizeBytes + paddingBytes % 4 != 0) {
+                paddingBytes++
+            }
+            return paddingBytes
         }
     }
 }

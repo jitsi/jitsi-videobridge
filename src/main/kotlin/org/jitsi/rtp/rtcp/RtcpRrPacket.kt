@@ -16,9 +16,9 @@
 
 package org.jitsi.rtp.rtcp
 
-import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.util.BufferPool
-import java.nio.ByteBuffer
+import org.jitsi.rtp.util.RtpUtils
 
 /**
  * https://tools.ietf.org/html/rfc3550#section-6.4.2
@@ -50,34 +50,51 @@ import java.nio.ByteBuffer
  *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 class RtcpRrPacket(
-    header: RtcpHeader = RtcpHeader(),
-    val reportBlocks: List<RtcpReportBlock> = listOf(),
-    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
-) : RtcpPacket(header.apply { packetType = PT; reportCount = reportBlocks.size }, backingBuffer) {
-    override val payloadDataSize: Int
-        get() = reportBlocks.size * RtcpReportBlock.SIZE_BYTES
-
-    override fun serializePayloadDataInto(buf: ByteBuffer) {
-        reportBlocks.forEach { it.serializeTo(buf) }
+    buffer: ByteArray,
+    offset: Int,
+    length: Int
+) : RtcpPacket(buffer, offset, length) {
+    val reportBlocks: List<RtcpReportBlock> by lazy {
+        (0 until reportCount).map {
+            RtcpReportBlock.fromBuffer(buffer, offset + REPORT_BLOCKS_OFFSET + it * RtcpReportBlock.SIZE_BYTES)
+        }.toList()
     }
 
-    override fun clone(): RtcpRrPacket {
-        val clonedReportBlocks = reportBlocks
-                .map(RtcpReportBlock::clone)
-                .toList()
-        return RtcpRrPacket(header.clone(), clonedReportBlocks)
-    }
+    override fun clone(): RtcpRrPacket =
+        RtcpRrPacket(buffer.cloneFromPool(), offset, length)
 
     companion object {
-        const val PT: Int = 201
+        const val PT = 201
+        const val REPORT_BLOCKS_OFFSET = 8
+    }
+}
 
-        fun fromBuffer(buf: ByteBuffer): RtcpRrPacket {
-            val bufStartPosition = buf.position()
-            val header = RtcpHeader.fromBuffer(buf)
-            val reportBlocks = (1..header.reportCount)
-                    .map { RtcpReportBlock.fromBuffer(buf) }
-                    .toList()
-            return RtcpRrPacket(header, reportBlocks, buf.subBuffer(bufStartPosition, buf.position() - bufStartPosition))
+data class RtcpRrPacketBuilder(
+    var rtcpHeader: RtcpHeaderBuilder = RtcpHeaderBuilder(),
+    val reportBlocks: MutableList<RtcpReportBlock> = mutableListOf()
+) {
+
+    private fun getLengthValue(): Int =
+        RtpUtils.calculateRtcpLengthFieldValue(sizeBytes)
+
+    private val sizeBytes: Int
+        get() = RtcpHeader.SIZE_BYTES + reportBlocks.size * RtcpReportBlock.SIZE_BYTES
+
+
+    fun build(): RtcpRrPacket {
+        val buf = BufferPool.getArray(sizeBytes)
+        writeTo(buf, 0)
+        return RtcpRrPacket(buf, 0, sizeBytes)
+    }
+
+    fun writeTo(buf: ByteArray, offset: Int) {
+        rtcpHeader.apply {
+            packetType = RtcpRrPacket.PT
+            reportCount = reportBlocks.size
+            length = getLengthValue()
+        }.writeTo(buf, offset)
+        reportBlocks.forEachIndexed { index, reportBlock ->
+            reportBlock.writeTo(buf, offset + RtcpRrPacket.REPORT_BLOCKS_OFFSET + index * RtcpReportBlock.SIZE_BYTES)
         }
     }
 }

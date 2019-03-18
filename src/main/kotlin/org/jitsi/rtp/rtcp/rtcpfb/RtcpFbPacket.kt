@@ -17,12 +17,16 @@
 package org.jitsi.rtp.rtcp.rtcpfb
 
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
-import org.jitsi.rtp.SerializedField
+import org.jitsi.rtp.extensions.bytearray.getInt
+import org.jitsi.rtp.extensions.bytearray.putInt
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.rtp.rtcp.rtcpfb.fci.FeedbackControlInformation
-import org.jitsi.rtp.util.BufferPool
-import java.nio.ByteBuffer
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.PayloadSpecificRtcpFbPacket
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.TransportLayerRtcpFbPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 
 /**
  * https://tools.ietf.org/html/rfc4585#section-6.1
@@ -42,62 +46,44 @@ import java.nio.ByteBuffer
  *    (RC) field of the RTCP header as a FMT field
  */
 abstract class RtcpFbPacket(
-    header: RtcpHeader = RtcpHeader(),
-    mediaSourceSsrc: Long = -1,
-    private val fci: FeedbackControlInformation,
-    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
-) : RtcpPacket(header, backingBuffer) {
-    private var dirty: Boolean = true
+    buffer: ByteArray,
+    offset: Int,
+    length: Int
+) : RtcpPacket(buffer, offset, length) {
 
-    /*
-     * Add 4 to account for the media source SSRC
-     */
-    final override val payloadDataSize: Int
-        get() = 4 + fci.sizeBytes
-
-    var mediaSourceSsrc: Long by SerializedField(mediaSourceSsrc, ::dirty)
-
-    final override fun serializePayloadDataInto(buf: ByteBuffer) {
-        buf.putInt(mediaSourceSsrc.toInt())
-        fci.serializeTo(buf)
-
-        // TCC packet may require padding, so call addPadding here
-        // to add it if needed.  It should be a no-op for packets
-        // which don't need it
-        addPadding(buf)
-    }
+    var mediaSourceSsrc: Long
+        get() = getMediaSourceSsrc(buffer, offset)
+        set(value) = setMediaSourceSsrc(buffer, offset, value)
 
     companion object {
-        val PACKET_TYPES = listOf(TransportLayerFbPacket.PT, PayloadSpecificFbPacket.PT)
-        /**
-         * The RTCP fixed-header size + the media source SSRC size
-         */
-        const val FIXED_HEADER_SIZE = RtcpHeader.SIZE_BYTES + 4
+        val PACKET_TYPES = listOf(TransportLayerRtcpFbPacket.PT, PayloadSpecificRtcpFbPacket.PT)
+        const val MEDIA_SOURCE_SSRC_OFFSET = RtcpHeader.SIZE_BYTES
+        const val HEADER_SIZE = RtcpHeader.SIZE_BYTES + 4
+        const val FCI_OFFSET = HEADER_SIZE + 4
 
-        fun getMediaSourceSsrc(buf: ByteBuffer): Long = buf.int.toPositiveLong()
-        fun setMediaSourceSsrc(buf: ByteBuffer, mediaSourceSsrc: Long) {
-            buf.putInt(mediaSourceSsrc.toInt())
-        }
+        fun getFmt(buf: ByteArray, baseOffset: Int): Int =
+            RtcpHeader.getReportCount(buf, baseOffset)
+        fun getMediaSourceSsrc(buf: ByteArray, baseOffset: Int): Long =
+            buf.getInt(baseOffset + MEDIA_SOURCE_SSRC_OFFSET).toPositiveLong()
+        fun setMediaSourceSsrc(buf: ByteArray, baseOffset: Int, value: Long) =
+            buf.putInt(baseOffset + MEDIA_SOURCE_SSRC_OFFSET, value.toInt())
 
-        fun fromBuffer(buf: ByteBuffer): RtcpFbPacket {
-            val packetType = RtcpHeader.getPacketType(buf)
-            val fmt = RtcpHeader.getReportCount(buf)
+        fun parse(buf: ByteArray, offset: Int, length: Int): RtcpFbPacket {
+            val packetType = RtcpHeader.getPacketType(buf, offset)
+            val fmt = getFmt(buf, offset)
             return when (packetType) {
-                TransportLayerFbPacket.PT -> {
+                TransportLayerRtcpFbPacket.PT -> {
                     when (fmt) {
-                        RtcpFbNackPacket.FMT -> RtcpFbNackPacket.fromBuffer(buf)
-                        RtcpFbTccPacket.FMT -> RtcpFbTccPacket.fromBuffer(buf)
-                        else -> throw Exception("Unrecognized RTCPFB format: pt $packetType, fmt $fmt")
+                        RtcpFbNackPacket.FMT -> RtcpFbNackPacket(buf, offset, length)
+                        RtcpFbTccPacket.FMT -> RtcpFbTccPacket(buf, offset, length)
+                        else -> TODO("unimplemented transport layer rtcp packet fmt $fmt")
                     }
                 }
-                PayloadSpecificFbPacket.PT -> {
+                PayloadSpecificRtcpFbPacket.PT -> {
                     when (fmt) {
-                        RtcpFbPliPacket.FMT -> RtcpFbPliPacket.fromBuffer(buf)
-                        RtcpFbFirPacket.FMT -> RtcpFbFirPacket.fromBuffer(buf)
-                        2 -> TODO("sli")
-                        3 -> TODO("rpsi")
-                        15 -> TODO("afb")
-                        else -> throw Exception("Unrecognized RTCPFB format: pt $packetType, fmt $fmt")
+                        RtcpFbFirPacket.FMT -> RtcpFbFirPacket(buf, offset, length)
+                        RtcpFbPliPacket.FMT -> RtcpFbPliPacket(buf, offset, length)
+                        else -> TODO("unimplemented payload specific rtcp packet fmt $fmt")
                     }
                 }
                 else -> throw Exception("Unrecognized RTCPFB payload type: ${packetType.toString(16)}")

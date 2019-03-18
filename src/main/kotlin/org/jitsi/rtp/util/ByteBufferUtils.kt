@@ -15,67 +15,7 @@
  */
 package org.jitsi.rtp.util
 
-import org.jitsi.rtp.extensions.subBuffer
 import java.nio.ByteBuffer
-
-class ByteBufferUtils {
-    companion object {
-        val EMPTY_BUFFER: ByteBuffer = ByteBuffer.allocate(0)
-        /**
-         * Returns [buf] if it is non-null and its capacity is large enough to hold
-         * [requiredCapacity] bytes.  If not, allocate and return a new ByteBuffer of
-         * size [requiredCapacity].
-         * Note that, in the case of allocating a new buffer, the content of the
-         * original buffer ([buf]) is NOT copied over.
-         */
-        fun ensureCapacity(buf: ByteBuffer?, requiredCapacity: Int): ByteBuffer {
-            val newBuf = if (buf == null || buf.capacity() < requiredCapacity) {
-                println("Had to get new buffer to match capacity: given buffer had capacity " +
-                        "${buf?.capacity()}, needed $requiredCapacity")
-                BufferPool.getBuffer(requiredCapacity)
-            } else {
-                buf
-            }
-            newBuf.rewind()
-            newBuf.limit(requiredCapacity)
-            return newBuf
-        }
-
-        /**
-         * 'Grow' the given buffer, if needed.  This means that, if [buf]'s
-         * capacity is not >= [requiredCapacity], allocate a new buffer of
-         * size [requiredCapacity] and copy all of [buf]'s content into it
-         * (starting at position 0 [buf] and the newly-allocated buffer).
-         *
-         * The returned buffer will have capacity/limit [requiredCapacity]
-         * and be at position 0.
-         */
-        fun growIfNeeded(buf: ByteBuffer, requiredCapacity: Int): ByteBuffer {
-            return if (buf.capacity() < requiredCapacity) {
-                println("Had to get new buffer to grow: given buffer had capacity " +
-                        "${buf.capacity()}, needed $requiredCapacity")
-                val newBuf = BufferPool.getBuffer(requiredCapacity)
-                buf.rewind()
-                newBuf.put(buf)
-
-                newBuf.rewind() as ByteBuffer
-            } else {
-                if (buf.limit() < requiredCapacity) {
-                    buf.limit(requiredCapacity)
-                }
-                buf.rewind() as ByteBuffer
-            }
-        }
-
-        /**
-         * [ByteBuffer.wrap] will set the buffer's current position to the offset, what this
-         * method does is create a sub buffer (via [ByteBuffer.subBuffer]) where the sub buffer's
-         * position 0 is the offset.
-         */
-        fun wrapSubArray(byteArray: ByteArray, offset: Int, length: Int) =
-            ByteBuffer.wrap(byteArray).subBuffer(offset, length)
-    }
-}
 
 //TODO: i think these should only be used for tests.  Move them?
 fun byteBufferOf(vararg elements: Byte): ByteBuffer = ByteBuffer.wrap(byteArrayOf(*elements))
@@ -83,15 +23,4 @@ fun byteBufferOf(vararg elements: Byte): ByteBuffer = ByteBuffer.wrap(byteArrayO
 fun byteBufferOf(vararg elements: Number): ByteBuffer {
     val bytes = elements.map { it.toByte() }.toByteArray()
     return ByteBuffer.wrap(bytes)
-}
-
-/**
- * Create a buffer with capacity [capacity] and data [elements].
- * Limit will be set to the number of given elements
- */
-fun byteBufferOfWithCapacity(capacity: Int, vararg elements: Number): ByteBuffer {
-    val buf = ByteBuffer.allocate(capacity)
-    elements.map { buf.put(it.toByte()) }
-    buf.flip()
-    return buf
 }
