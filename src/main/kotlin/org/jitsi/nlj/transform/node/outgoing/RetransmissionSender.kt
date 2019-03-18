@@ -29,7 +29,7 @@ import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.shiftPaylaodRight
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
-import org.jitsi.rtp.NewRawPacket
+import org.jitsi.rtp.rtp.RtpPacket
 import unsigned.toUInt
 import java.util.concurrent.ConcurrentHashMap
 
@@ -52,14 +52,14 @@ class RetransmissionSender : TransformerNode("Retransmission sender") {
     private var numRetransmittedPackets = 0
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
-        val rtpPacket = packetInfo.packetAs<NewRawPacket>()
+        val rtpPacket = packetInfo.packetAs<RtpPacket>()
         logger.cdebug { "Retransmission sender ${hashCode()} retransmitting packet with original ssrc " +
-                "${rtpPacket.ssrcAsLong}, original sequence number ${rtpPacket.sequenceNumber} and original " +
+                "${rtpPacket.ssrc}, original sequence number ${rtpPacket.sequenceNumber} and original " +
                 "payload type: ${rtpPacket.payloadType}" }
         numRetransmissionsRequested++
-        val rtxSsrc = associatedSsrcs[rtpPacket.ssrcAsLong] ?: run {
+        val rtxSsrc = associatedSsrcs[rtpPacket.ssrc] ?: run {
             logger.cerror { "Retransmission sender ${hashCode()} could not find an associated RTX ssrc for original packet ssrc " +
-                    rtpPacket.ssrcAsLong }
+                    rtpPacket.ssrc }
             return null
         }
         val rtxPt = associatedPayloadTypes[rtpPacket.payloadType.toPositiveInt()] ?: run {
@@ -75,8 +75,8 @@ class RetransmissionSender : TransformerNode("Retransmission sender") {
         rtpPacket.length = rtpPacket.length + 2
         rtpPacket.originalSequenceNumber = rtpPacket.sequenceNumber
 
-        rtpPacket.ssrc = rtxSsrc.toInt()
-        rtpPacket.payloadType = rtxPt.toByte()
+        rtpPacket.ssrc = rtxSsrc
+        rtpPacket.payloadType = rtxPt
         rtpPacket.sequenceNumber = rtxSeqNum
         logger.cdebug { "Retransmission sender ${hashCode()} sending RTX packet with " +
                 "ssrc $rtxSsrc with pt $rtxPt and seqNum $rtxSeqNum" }

@@ -35,7 +35,7 @@ class MediaTypeParser : TransformerNode("Media type parser") {
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        val mediaType = payloadTypes[rtpPacket.payloadType]?.mediaType ?: run {
+        val mediaType = payloadTypes[rtpPacket.payloadType.toByte()]?.mediaType ?: run {
             logger.cdebug { "Unable to find format for payload type ${rtpPacket.payloadType}" }
             return packetInfo
         }
