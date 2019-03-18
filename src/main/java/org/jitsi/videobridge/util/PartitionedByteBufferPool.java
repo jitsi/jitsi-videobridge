@@ -130,7 +130,11 @@ public class PartitionedByteBufferPool implements ByteBufferPoolImpl
                         break;
                     }
                 } else {
-                    numNoAllocationNeeded.incrementAndGet();
+                    if (ByteBufferPool.ENABLE_BOOKKEEPING)
+                    {
+                        numNoAllocationNeeded.incrementAndGet();
+                    }
+                    break;
                 }
             }
             if (ByteBufferPool.ENABLE_BOOKKEEPING)
