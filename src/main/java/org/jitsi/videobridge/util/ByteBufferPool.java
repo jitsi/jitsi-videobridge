@@ -84,6 +84,7 @@ public class ByteBufferPool
         sb.append("there are ~").append(bookkeeping.size()).append(" outstanding buffers\n");
         sb.append("num buffers given out: ").append(numBuffersOut.get()).append("\n");
         sb.append("num buffers returned: ").append(numBuffersIn.get()).append("\n");
+        sb.append(poolImpl.getStats());
 
         bookkeeping.forEach((arrayId, stacktrace) -> {
             sb.append(arrayId).append(" acquired from:\n");
