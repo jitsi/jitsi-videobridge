@@ -30,8 +30,6 @@ import org.pcap4j.packet.namednumber.IpVersion
 import org.pcap4j.packet.namednumber.UdpPort
 import org.pcap4j.util.MacAddress
 import java.net.Inet4Address
-import java.nio.ByteBuffer
-import java.util.Arrays
 import java.util.Random
 
 
@@ -48,16 +46,10 @@ class PcapWriter(
 
     override fun observe(packetInfo: PacketInfo) {
         val udpPayload = UnknownPacket.Builder()
-//        val pktBuf = packetInfo.packet.getBuffer()
         // We can't pass offset/limit values to udpPayload.rawData, so we need to create an array that contains
         // only exactly what we want to write
         val subBuf = ByteArray(packetInfo.packet.length)
         System.arraycopy(packetInfo.packet.buffer, packetInfo.packet.offset, subBuf, 0, packetInfo.packet.length)
-//        val subBuf = ByteBuffer.wrap(
-//            Arrays.copyOfRange(
-//                pktBuf.array(),
-//                pktBuf.arrayOffset(),
-//                pktBuf.arrayOffset() + pktBuf.limit()))
         udpPayload.rawData(subBuf)
         val udp = UdpPacket.Builder()
                 .srcPort(UdpPort(123, "blah"))

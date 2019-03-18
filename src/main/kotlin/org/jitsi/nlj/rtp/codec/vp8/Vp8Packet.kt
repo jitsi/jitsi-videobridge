@@ -21,57 +21,6 @@ import org.jitsi.nlj.codec.vp8.Vp8Utils
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 
-//class Vp8Packet(
-//    header: RtpHeader = RtpHeader(),
-//    backingBuffer: ByteBuffer = BufferPool.getBuffer(1500)
-//) : VideoRtpPacket(header, backingBuffer) {
-//    var temporalLayerIndex: Int = -1
-//    /**
-//     * This is currently used as an overall spatial index, not an in-band spatial quality index a la vp9.  That is,
-//     * this index will correspond to an overall simulcast layer index across multiple simulcast stream.  e.g.
-//     * 180p stream packets will have 0, 360p -> 1, 720p -> 2
-//     */
-//    var spatialLayerIndex: Int = -1
-//
-//    init {
-//        isKeyFrame = Vp8Utils.isKeyFrame(TEMPORARYgetMutablePayload())
-//        if (isKeyFrame) {
-//            spatialLayerIndex = Vp8Utils.getSpatialLayerIndexFromKeyFrame(TEMPORARYgetMutablePayload())
-//        }
-//        temporalLayerIndex = Vp8Utils.getTemporalLayerIdOfFrame(TEMPORARYgetMutablePayload())
-//    }
-//
-//    override fun clone(): Vp8Packet {
-//        val clone = Vp8Packet(header.clone(), cloneBackingBuffer())
-//        clone.temporalLayerIndex = temporalLayerIndex
-//        clone.spatialLayerIndex = spatialLayerIndex
-//        clone.isKeyFrame = isKeyFrame
-//        clone.trackEncodings = trackEncodings
-//
-//        return clone
-//    }
-//
-//    override fun cloneWithBackingBuffer(backingBuffer: ByteBuffer): Vp8Packet {
-//        backingBuffer.put(header.sizeBytes, payload)
-//        backingBuffer.limit(header.sizeBytes + payload.limit())
-//        val clone = Vp8Packet(header.clone(), backingBuffer)
-//        clone.isKeyFrame = isKeyFrame
-//        clone.trackEncodings = trackEncodings
-//        clone.temporalLayerIndex = temporalLayerIndex
-//        clone.spatialLayerIndex = spatialLayerIndex
-//
-//        return clone
-//    }
-//
-//    override fun toString(): String = with (StringBuffer()) {
-//        append(super.toString())
-//        appendln("temporal layer index: $temporalLayerIndex")
-//        appendln("spatial layer index: $spatialLayerIndex")
-//
-//        toString()
-//    }
-//}
-
 class Vp8Packet(
     data: ByteArray,
     offset: Int,
@@ -95,6 +44,7 @@ class Vp8Packet(
     override fun clone(): Vp8Packet {
         val clone = Vp8Packet(buffer.cloneFromPool(), offset, length)
         clone.isKeyframe = isKeyframe
+        clone.trackEncodings = trackEncodings?.copyOf()
         clone.spatialLayerIndex = spatialLayerIndex
         clone.temporalLayerIndex = temporalLayerIndex
 
