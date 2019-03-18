@@ -81,13 +81,13 @@ fun main() {
 
     receiver.rtcpPacketHandler = object : PacketHandler {
         override fun processPacket(packetInfo: PacketInfo) {
-//            sender.sendRtcp(packetInfo.packetAs())
+            sender.sendRtcp(packetInfo.packetAs())
         }
     }
 
     sender.onOutgoingPacket(object : PacketHandler {
         override fun processPacket(packetInfo: PacketInfo) {
-//            BufferPool.returnBuffer(packetInfo.packet.getBuffer())
+            BufferPool.returnBuffer(packetInfo.packet.getBuffer())
         }
     })
 

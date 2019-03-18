@@ -128,10 +128,7 @@ public class SRTCPCryptoContext
      */
     private void computeIv(byte label)
     {
-        for (int i = 0; i < 14; i++)
-        {
-            ivStore[i] = masterSalt[i];
-        }
+        System.arraycopy(masterSalt, 0, ivStore, 0, 14);
         ivStore[7] ^= label;
         ivStore[14] = ivStore[15] = 0;
     }
