@@ -17,7 +17,6 @@ package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
-import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -308,7 +307,7 @@ public class VP8FrameProjection
      * @param cache the cache to pull piggy-backed packets from.
      * @param rtpPacket the RTP packet to project.
      */
-    RawPacket[] rewriteRtp(@NotNull RawPacket rtpPacket, NewRawPacketCache cache)
+    RawPacket[] rewriteRtp(@NotNull RawPacket rtpPacket, RtpPacketCache cache)
     {
         int originalSequenceNumber = rtpPacket.getSequenceNumber();
 

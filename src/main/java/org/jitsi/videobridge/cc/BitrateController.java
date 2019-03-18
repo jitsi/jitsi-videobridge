@@ -425,7 +425,7 @@ public class BitrateController
             return true;
         }
 
-        long ssrc = rtpPacket.getSSRCAsLong();
+        long ssrc = rtpPacket.getSsrc();
         if (ssrc < 0)
         {
             return false;

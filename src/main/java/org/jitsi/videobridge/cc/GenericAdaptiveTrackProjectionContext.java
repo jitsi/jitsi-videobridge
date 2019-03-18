@@ -18,6 +18,7 @@ package org.jitsi.videobridge.cc;
 import net.sf.fmj.media.rtp.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.rtcp.*;
+import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc;
 import org.jitsi.nlj.format.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -318,7 +319,7 @@ class GenericAdaptiveTrackProjectionContext
      */
     @Override
     public RawPacket[] rewriteRtp(
-        @NotNull RawPacket rtpPacket, NewRawPacketCache incomingRawPacketCache)
+        @NotNull RawPacket rtpPacket, RtpPacketCache incomingRawPacketCache)
     {
         int sourceSequenceNumber = rtpPacket.getSequenceNumber();
         int destinationSequenceNumber
