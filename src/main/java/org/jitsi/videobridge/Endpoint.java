@@ -991,7 +991,7 @@ public class Endpoint
     public void setTransportInfo(IceUdpTransportPacketExtension transportInfo)
             throws IOException
     {
-        getTransportManager().start(transportInfo);
+        getTransportManager().startConnectivityEstablishment(transportInfo);
     }
 
     /**

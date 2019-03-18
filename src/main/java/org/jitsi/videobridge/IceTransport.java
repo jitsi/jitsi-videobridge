@@ -421,7 +421,7 @@ public class IceTransport
      * {@inheritDoc}
      * @param transportPacketExtension
      */
-    public void start(
+    public void startConnectivityEstablishment(
             IceUdpTransportPacketExtension transportPacketExtension)
     {
         if (iceAgent.getState().isEstablished())
