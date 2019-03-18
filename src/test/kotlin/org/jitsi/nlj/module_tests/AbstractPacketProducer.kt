@@ -50,21 +50,17 @@ class PcapPacketProducer(
     companion object {
         private fun translateToRawPacket(pktsPacket: Packet): NewRawPacket {
             // We always allocate a buffer with capacity 1500, so the packet has room to 'grow'
-//            val packetBuf = BufferPool.getBuffer(1500)
             val packetBuf = ByteArray(1500)
             return if (pktsPacket.hasProtocol(Protocol.UDP)) {
                 val udpPacket = pktsPacket.getPacket(Protocol.UDP) as UDPPacket
                 System.arraycopy(udpPacket.payload.array, 0, packetBuf, 0, udpPacket.payload.array.size)
                 NewRawPacket(packetBuf, 0, udpPacket.payload.array.size)
-        //                packetBuf.put(udpPacket.payload.array).flip() as ByteBuffer
             } else {
                 // When capturing on the loopback interface, the packets have a null ethernet
                 // frame which messes up the pkts libary's parsing, so instead use a hack to
                 // grab the buffer directly
                 System.arraycopy(pktsPacket.payload.rawArray, 32, packetBuf, 0, pktsPacket.payload.rawArray.size - 32)
                 NewRawPacket(packetBuf, 0, pktsPacket.payload.rawArray.size - 32)
-
-        //                packetBuf.put(pktsPacket.payload.rawArray, 32, pktsPacket.payload.rawArray.size - 32).flip() as ByteBuffer
             }
         }
 

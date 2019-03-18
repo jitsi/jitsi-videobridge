@@ -163,17 +163,11 @@ class RtpReceiverImpl @JvmOverloads constructor(
         rtcpEventNotifier.addRtcpEventListener(rtcpRrGenerator)
 
         inputTreeRoot = pipeline {
-//            node(PacketParser("SRTP protocol parser") { SrtpProtocolPacket(it.getBuffer()) })
             demux("SRTP/SRTCP") {
                 packetPath {
                     name = "SRTP path"
-                    predicate = object : PacketPredicate {
-                        override fun test(t: Packet): Boolean {
-                            return !RTCPUtils.isRtcp(t.buffer, t.offset, t.length)
-                        }
-                    }
+                    predicate = PacketPredicate { !RTCPUtils.isRtcp(it.buffer, it.offset, it.length) }
                     path = pipeline {
-//                        node(PacketParser("SRTP Parser") { SrtpPacket.create(it.getBuffer()) })
                         node(PacketParser("RTP parser") { RtpPacket(it.buffer, it.offset, it.length) })
                         node(payloadTypeFilter)
                         node(tccGenerator)
@@ -183,11 +177,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         demux("Media type") {
                             packetPath {
                                 name = "Audio path"
-                                predicate = object : PacketPredicate {
-                                    override fun test(t: Packet): Boolean {
-                                        return t is AudioRtpPacket
-                                    }
-                                }
+                                predicate = PacketPredicate { it is AudioRtpPacket }
                                 path = pipeline {
                                     node(audioLevelReader)
                                     node(rtpPacketHandlerWrapper)
@@ -195,11 +185,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                             }
                             packetPath {
                                 name = "Video path"
-                                predicate = object : PacketPredicate {
-                                    override fun test(t: Packet): Boolean {
-                                        return t is VideoRtpPacket
-                                    }
-                                }
+                                predicate = PacketPredicate { it is VideoRtpPacket }
                                 path = pipeline {
                                     node(RtxHandler())
                                     node(PaddingTermination())
@@ -215,11 +201,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                 }
                 packetPath {
                     name = "SRTCP path"
-                    predicate = object : PacketPredicate {
-                        override fun test(t: Packet): Boolean {
-                            return RTCPUtils.isRtcp(t.buffer, t.offset, t.length)
-                        }
-                    }
+                    predicate = PacketPredicate { RTCPUtils.isRtcp(it.buffer, it.offset, it.length) }
                     path = pipeline {
                         node(srtcpDecryptWrapper)
                         node(CompoundRtcpSplitterNode())

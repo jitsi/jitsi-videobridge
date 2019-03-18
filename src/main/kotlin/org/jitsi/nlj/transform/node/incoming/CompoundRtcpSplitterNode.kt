@@ -24,8 +24,9 @@ import org.jitsi.rtp.rtcp.CompoundRtcpSplitter
 
 //TODO: this isn't ideal, as we copy each RTCP packet into its own buffer, but forwarding them as a single
 // buffer makes it difficult to know when we're done with the entire buffer (and therefore when it can
-// be returned to the pool).  Maybe instead we should copy only the ones we'll forward in
-// rtcp termination?
+// be returned to the pool).  Instead we could copy only the ones we'll forward in
+// rtcp termination, or, maybe don't even copy then and we can rely on the final handler to return those
+// that are forwarded.
 class CompoundRtcpSplitterNode : MultipleOutputTransformerNode("Compound RTCP splitter") {
     override fun transform(packetInfo: PacketInfo): List<PacketInfo> {
         val splitRtcpPackets = CompoundRtcpSplitter.getAll(packetInfo.packetAs<NewRawPacket>())

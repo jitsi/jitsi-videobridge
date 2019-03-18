@@ -42,7 +42,6 @@ class TccGeneratorNode(
 ) : ObserverNode("TCC generator") {
     private var tccExtensionId: Int? = null
     private var currTccSeqNum: Int = 0
-//    private var currTccBuilder: RtcpFbTccPacket = RtcpFbTccPacket(fci = Tcc(feedbackPacketCount = currTccSeqNum++))
     private var currTccBuilder: RtcpFbTccPacketBuilder = RtcpFbTccPacketBuilder(
         feedbackPacketCount = currTccSeqNum++
     )

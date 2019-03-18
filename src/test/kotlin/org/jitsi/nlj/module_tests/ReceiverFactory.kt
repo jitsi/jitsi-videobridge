@@ -50,9 +50,7 @@ class ReceiverFactory {
                 executor,
                 backgroundExecutor
             )
-            println("setting srtp transformer")
             receiver.setSrtpTransformer(SrtpTransformerFactory.createSrtpTransformer(srtpData))
-            println("setting srtcp transformer")
             receiver.setSrtcpTransformer(SrtpTransformerFactory.createSrtcpTransformer(srtpData))
 
             payloadTypes.forEach {

@@ -78,14 +78,9 @@ class RetransmissionSender : TransformerNode("Retransmission sender") {
         rtpPacket.ssrc = rtxSsrc.toInt()
         rtpPacket.payloadType = rtxPt.toByte()
         rtpPacket.sequenceNumber = rtxSeqNum
-//        val rtxPacket = RtxPacket.fromRtpPacket(rtpPacket)
-//        rtxPacket.header.ssrc = rtxSsrc
-//        rtxPacket.header.payloadType = rtxPt
-//        rtxPacket.header.sequenceNumber = rtxSeqNum
         logger.cdebug { "Retransmission sender ${hashCode()} sending RTX packet with " +
                 "ssrc $rtxSsrc with pt $rtxPt and seqNum $rtxSeqNum" }
 
-//        packetInfo.packet = rtxPacket
         numRetransmittedPackets++
         return packetInfo
     }
