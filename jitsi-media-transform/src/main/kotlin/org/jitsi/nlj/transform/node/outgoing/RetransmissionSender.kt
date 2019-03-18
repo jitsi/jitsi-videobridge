@@ -27,7 +27,7 @@ import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
-import org.jitsi.nlj.util.shiftPaylaodRight
+import org.jitsi.nlj.util.shiftPayloadRight
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpPacket
 import unsigned.toUInt
@@ -71,7 +71,7 @@ class RetransmissionSender : TransformerNode("Retransmission sender") {
         // in the map, get the value and increment it by 1
         val rtxSeqNum = rtxStreamSeqNums.merge(rtxSsrc, 1, Integer::sum)!!
 
-        rtpPacket.shiftPaylaodRight(2)
+        rtpPacket.shiftPayloadRight(2)
         rtpPacket.length = rtpPacket.length + 2
         rtpPacket.originalSequenceNumber = rtpPacket.sequenceNumber
 
