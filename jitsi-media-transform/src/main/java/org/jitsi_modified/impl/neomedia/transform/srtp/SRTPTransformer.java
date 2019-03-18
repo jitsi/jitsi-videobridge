@@ -17,6 +17,7 @@ package org.jitsi_modified.impl.neomedia.transform.srtp;
 
 
 import org.jitsi.rtp.*;
+import org.jitsi.rtp.rtp.*;
 import org.jitsi_modified.impl.neomedia.transform.*;
 
 import java.nio.*;
@@ -192,7 +193,7 @@ public class SRTPTransformer
     @Override
     public Packet reverseTransform(Packet pkt)
     {
-        NewRawPacket rp = (NewRawPacket)pkt;
+        RtpPacket rp = (RtpPacket)pkt;
 //        System.out.println("BRIAN: packet " + pkt.getSSRCAsLong() + " " +
 //                pkt.getSequenceNumber() + " (length: " + pkt.getLength() + " before decrypt: " +
 //                SRTPCryptoContext.toHexArrayDef(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()) +
@@ -203,10 +204,7 @@ public class SRTPTransformer
             return null;
 
         SRTPCryptoContext context
-            = getContext(
-                    rp.getSSRC(),
-                    reverseFactory,
-                    rp.getSequenceNumber());
+            = getContext((int)rp.getSsrc(), reverseFactory, rp.getSequenceNumber());
 
         NewRawPacket res =
             ((context != null) && context.reverseTransformPacket(rp))
@@ -240,9 +238,9 @@ public class SRTPTransformer
     @Override
     public Packet transform(Packet pkt)
     {
-        NewRawPacket rp = (NewRawPacket)pkt;
+        RtpPacket rp = (RtpPacket)pkt;
         SRTPCryptoContext context
-            = getContext(rp.getSSRC(), forwardFactory, 0);
+            = getContext((int)rp.getSsrc(), forwardFactory, 0);
 
         if (context == null)
             return null;

@@ -55,7 +55,7 @@ class PacketCache {
         return packetCaches.computeIfAbsent(ssrc) { _ -> RtpPacketCache(timeout, maxNumElements) }
     }
 
-    fun cachePacket(packet: RtpPacket) = getCache(packet.ssrcAsLong).insert(packet)
+    fun cachePacket(packet: RtpPacket) = getCache(packet.ssrc).insert(packet)
 
     fun getPacket(ssrc: Long, seqNum: Int): RtpPacket? = getCache(ssrc).get(seqNum)
 

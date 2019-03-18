@@ -64,7 +64,7 @@ class TccGeneratorNode(
             rtpPacket.getHeaderExtension(tccExtId.toByte())?.let { ext ->
                 val tccSeqNum = RTPUtils.readUint16AsInt(
                     ext.buffer, ext.offset + 1);
-                addPacket(tccSeqNum, packetInfo.receivedTime, rtpPacket.isPacketMarked)
+                addPacket(tccSeqNum, packetInfo.receivedTime, rtpPacket.isMarked)
             }
 //           rtpPacket.header.getExtensionAs(tccExtId, TccHeaderExtension.Companion::fromUnparsed)?.let { tccExt ->
 //                addPacket(tccExt.tccSeqNum, packetInfo.receivedTime, rtpPacket.header.marker)

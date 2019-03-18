@@ -29,7 +29,7 @@ class PaddingTermination : FilterNode("Padding termination") {
 
     override fun accept(packetInfo: PacketInfo): Boolean {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        val replayContext = replayContexts.computeIfAbsent(rtpPacket.ssrcAsLong) {
+        val replayContext = replayContexts.computeIfAbsent(rtpPacket.ssrc) {
             Collections.newSetFromMap(LRUCache(1500))
         }
 
