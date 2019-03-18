@@ -26,7 +26,7 @@ public class ByteBufferPool
 //    private static ByteBufferPoolImpl poolImpl = new SingleByteBufferPool(100);
 
     private static Map<Integer, StackTraceElement[]> bookkeeping = new ConcurrentHashMap<>();
-    public static final Boolean ENABLE_BOOKKEEPING = true;
+    public static final Boolean ENABLE_BOOKKEEPING = false;
 
     private static AtomicInteger numBuffersOut = new AtomicInteger(0);
     private static AtomicInteger numBuffersIn = new AtomicInteger(0);
