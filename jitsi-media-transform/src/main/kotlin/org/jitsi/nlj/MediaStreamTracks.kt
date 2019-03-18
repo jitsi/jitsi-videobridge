@@ -38,33 +38,23 @@ class MediaStreamTracks {
         }
 
         var cntMatched = 0
-        val mergedTracks = mutableListOf<MediaStreamTrackDesc>()
-
-        for (i in 0..newTracks.size)
-        {
+        val mergedTracks: Array<MediaStreamTrackDesc> = Array(newTracks.size) { i ->
             val newEncoding = newTracks[i].rtpEncodings[0]
-
-            for (j in 0..oldTracks.size)
+            for (j in 0 until oldTracks.size)
             {
                 if (oldTracks[j] != null
                     && oldTracks[j].matches(newEncoding.primarySSRC))
                 {
-                    mergedTracks[i] = oldTracks[j]
                     cntMatched++
                     // TODO: update the old track instance with the
                     // configuration of the new one.
-                    break
+                    oldTracks[j]
                 }
             }
-
-            if (mergedTracks[i] == null)
-            {
-                mergedTracks[i] = newTracks[i]
-            }
+            newTracks[i]
         }
 
-        tracks = mergedTracks.toTypedArray()
-
+        tracks = mergedTracks
         return oldTracks.size != newTracks.size || cntMatched != oldTracks.size
     }
 
