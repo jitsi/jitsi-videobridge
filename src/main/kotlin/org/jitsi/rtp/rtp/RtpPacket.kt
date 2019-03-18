@@ -18,8 +18,82 @@ package org.jitsi.rtp.rtp
 
 import org.jitsi.rtp.NewRawPacket
 
+/**
+ *
+ * https://tools.ietf.org/html/rfc3550#section-5.1
+ *  0                   1                   2                   3
+ *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |V=2|P|X|  CC   |M|     PT      |       sequence number         |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                           timestamp                           |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |           synchronization source (SSRC) identifier            |
+ * +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+ * |            contributing source (CSRC) identifiers             |
+ * |                             ....                              |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |              ...extensions (if present)...                    |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                   payload                                     |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ */
 open class RtpPacket(
     buffer: ByteArray,
     offset: Int,
     length: Int
-) : NewRawPacket(buffer, offset, length)
+) : NewRawPacket(buffer, offset, length) {
+
+    var version: Int
+        get() = RtpHeader.getVersion(buffer, offset)
+        set(value) = RtpHeader.setVersion(buffer, offset, value)
+
+    var hasPadding: Boolean
+        get() = RtpHeader.hasPadding(buffer, offset)
+        set(value) = RtpHeader.setPadding(buffer, offset, value)
+
+    var hasExtensions: Boolean
+        get() = RtpHeader.hasExtensions(buffer, offset)
+        set(value) = RtpHeader.setHasExtensions(buffer, offset, value)
+
+    var csrcCount: Int
+        get() = RtpHeader.getCsrcCount(buffer, offset)
+        set(value) = RtpHeader.setCsrcCount(buffer, offset, value)
+
+    var isMarked: Boolean
+        get() = RtpHeader.getMarker(buffer, offset)
+        set(value) = RtpHeader.setMarker(buffer, offset, value)
+
+    var payloadType: Int
+        get() = RtpHeader.getPayloadType(buffer, offset)
+        set(value) = RtpHeader.setPayloadType(buffer, offset, value)
+
+    var sequenceNumber: Int
+        get() = RtpHeader.getSequenceNumber(buffer, offset)
+        set(value) = RtpHeader.setSequenceNumber(buffer, offset, value)
+
+    var timestamp: Long
+        get() = RtpHeader.getTimestamp(buffer, offset)
+        set(value) = RtpHeader.setTimestamp(buffer, offset, value)
+
+    var ssrc: Long
+        get() = RtpHeader.getSsrc(buffer, offset)
+        set(value) = RtpHeader.setSsrc(buffer, offset, value)
+
+    var csrcs: List<Long>
+        get() = RtpHeader.getCsrcs(buffer, offset)
+        //TODO: this will not grow the buffer
+        set(value) = RtpHeader.setCsrcs(buffer, offset, value)
+
+
+    override fun toString(): String = with (StringBuilder()) {
+        append("RtpPacket: ")
+        append("PT=$payloadType")
+        append(", Ssrc=$ssrc")
+        append(", SeqNum=$sequenceNumber")
+        append(", M=$isMarked")
+        append(", X=$hasExtensions")
+        append(", Ts=$timestamp")
+        toString()
+    }
+}

@@ -109,94 +109,6 @@ public class NewRawPacket
     }
 
     /**
-     * Makes a new RTP {@code NewRawPacket} filled with padding with the specified
-     * parameters. Note that because we're creating a packet filled with
-     * padding, the length must not exceed 12 + 0xFF.
-     *
-     * @param ssrc the SSRC of the RTP packet to make.
-     * @param pt the payload type of the RTP packet to make.
-     * @param seqNum the sequence number of the RTP packet to make.
-     * @param ts the RTP timestamp of the RTP packet to make.
-     * @param len the length of the RTP packet to make.
-     * @return the RTP {@code NewRawPacket} that was created.
-     */
-    public static NewRawPacket makeRTP(
-        long ssrc, int pt, int seqNum, long ts, int len)
-    {
-        byte[] buf = new byte[len];
-
-        NewRawPacket pkt = new NewRawPacket(buf, 0, buf.length);
-
-        pkt.setVersion();
-        pkt.setPayloadType((byte) pt);
-        pkt.setSSRC((int) ssrc);
-        pkt.setTimestamp(ts);
-        pkt.setSequenceNumber(seqNum);
-        pkt.setPaddingSize(len - FIXED_HEADER_SIZE);
-
-        return pkt;
-    }
-
-    /**
-     * Gets the value of the "version" field of an RTP packet.
-     * @return the value of the RTP "version" field.
-     */
-    public static int getVersion(ByteArrayBuffer baf)
-    {
-        if (baf == null)
-        {
-            return -1;
-        }
-
-        return getVersion(baf.getBuffer(), baf.getOffset(), baf.getLength());
-    }
-
-
-    /**
-     * Gets the value of the "version" field of an RTP packet.
-     * @return the value of the RTP "version" field.
-     */
-    public static int getVersion(byte[] buffer, int offset, int length)
-    {
-        return (buffer[offset] & 0xC0) >>> 6;
-    }
-
-    /**
-     * Test whether the RTP Marker bit is set
-     *
-     * @param baf
-     *
-     * @return true if the RTP Marker bit is set, false otherwise.
-     */
-    public static boolean isPacketMarked(ByteArrayBuffer baf)
-    {
-        if (baf == null)
-        {
-            return false;
-        }
-
-        return isPacketMarked(baf.getBuffer(), baf.getOffset(), baf.getLength());
-    }
-
-    /**
-     * Test whether the RTP Marker bit is set
-     *
-     * @param buffer
-     * @param offset
-     * @param length
-     * @return true if the RTP Marker bit is set, false otherwise.
-     */
-    public static boolean isPacketMarked(byte[] buffer, int offset, int length)
-    {
-        if (buffer == null || buffer.length < offset + length || length < 2)
-        {
-            return false;
-        }
-
-        return (buffer[offset + 1] & 0x80) != 0;
-    }
-
-    /**
      * Perform checks on the packet represented by this instance and
      * return <tt>true</tt> if it is found to be invalid. A return value of
      * <tt>false</tt> does not necessarily mean that the packet is valid.
@@ -763,7 +675,8 @@ public class NewRawPacket
      *
      * @return the CSRC count for this <tt>NewRawPacket</tt>.
      */
-    public int getCsrcCount()
+    //TODO: will go away, but header extension code still using it
+    private int getCsrcCount()
     {
         return getCsrcCount(buffer, offset, length);
     }
@@ -776,7 +689,8 @@ public class NewRawPacket
      * @param length
      * @return the CSRC count for this <tt>NewRawPacket</tt>.
      */
-    public static int getCsrcCount(byte[] buffer, int offset, int length)
+    //TODO: will go away, but header extension code still using it
+    private static int getCsrcCount(byte[] buffer, int offset, int length)
     {
         int cc = buffer[offset] & 0x0f;
         if (FIXED_HEADER_SIZE + cc * 4 > length)
@@ -791,7 +705,9 @@ public class NewRawPacket
      * @return  <tt>true</tt> if the extension bit of this packet has been set
      * and <tt>false</tt> otherwise.
      */
-    public boolean getExtensionBit()
+    //TODO: will be replaced by RtpPacket hasExtensions, but the addExtensions
+    // logic still uses it
+    private boolean getExtensionBit()
     {
         return getExtensionBit(buffer, offset, length);
     }
@@ -806,7 +722,7 @@ public class NewRawPacket
      * @return  <tt>true</tt> if the extension bit of this packet has been set
      * and <tt>false</tt> otherwise.
      */
-    public static boolean getExtensionBit(byte[] buffer, int offset, int length)
+    private static boolean getExtensionBit(byte[] buffer, int offset, int length)
     {
         return (buffer[offset] & 0x10) == 0x10;
     }
@@ -1016,15 +932,6 @@ public class NewRawPacket
     }
 
     /**
-     * Gets the value of the "version" field of an RTP packet.
-     * @return the value of the RTP "version" field.
-     */
-    public int getVersion()
-    {
-        return getVersion(buffer, offset, length);
-    }
-
-    /**
      * Get RTP padding size from a RTP packet
      *
      * @return RTP padding size from source RTP packet
@@ -1162,48 +1069,6 @@ public class NewRawPacket
     }
 
     /**
-     * Get RTP payload type from a RTP packet
-     *
-     * @return RTP payload type of source RTP packet
-     */
-    public byte getPayloadType()
-    {
-        return (byte) getPayloadType(buffer, offset, length);
-    }
-
-    /**
-     * Get RTP payload type from a RTP packet
-     *
-     * @return RTP payload type of source RTP packet, or -1 in case of an error.
-     */
-    public static int getPayloadType(byte[] buf, int off, int len)
-    {
-        if (buf == null || buf.length < off + len || len < 2)
-        {
-            return -1;
-        }
-
-        //TODO: i don't think this properly handles PTs with a '1' in the MSB.
-        return (buf[off + 1] & 0x7F);
-    }
-
-    /**
-     * Get RTP payload type from a RTP packet
-     *
-     * @return RTP payload type of source RTP packet, or -1 in case of an error.
-     */
-    public static int getPayloadType(NewRawPacket pkt)
-    {
-        if (pkt == null)
-        {
-            return -1;
-        }
-
-        return getPayloadType(
-                pkt.getBuffer(), pkt.getOffset(), pkt.getLength());
-    }
-
-    /**
      * Get RTCP SSRC from a RTCP packet
      *
      * @return RTP SSRC from source RTP packet
@@ -1221,79 +1086,6 @@ public class NewRawPacket
     public int getRTCPPacketType()
     {
         return 0xff & buffer[offset + 1];
-    }
-
-    /**
-     * Get RTP sequence number from a RTP packet
-     *
-     * @return RTP sequence num from source packet
-     */
-    public int getSequenceNumber()
-    {
-        return getSequenceNumber(buffer, offset, length);
-    }
-
-    /**
-     * Get RTP sequence number from a RTP packet
-     *
-     * @param buffer
-     * @param offset
-     * @param length
-     *
-     * @return RTP sequence num from source packet
-     */
-    public static int getSequenceNumber(byte[] buffer, int offset, int length)
-    {
-        return RTPUtils.readUint16AsInt(buffer, offset + 2);
-    }
-
-
-    /**
-     * Gets the RTP sequence number from a RTP packet.
-     *
-     * @param baf the {@link ByteArrayBuffer} that contains the RTP packet.
-     *
-     * @return the RTP sequence number from a RTP packet.
-     */
-    public static int getSequenceNumber(ByteArrayBuffer baf)
-    {
-        if (baf == null)
-        {
-            return -1;
-        }
-
-        return getSequenceNumber(
-            baf.getBuffer(), baf.getOffset(), baf.getLength());
-    }
-
-    /**
-     * Set sequence number for an RTP buffer
-     *
-     * @param buffer
-     * @param offset
-     * @param seq
-     *
-     */
-    public static void setSequenceNumber(byte[] buffer, int offset, int seq)
-    {
-        RTPUtils.writeShort(buffer, offset + 2, (short) seq);
-    }
-
-
-    /**
-     * Sets the sequence number of an RTP packet.
-     *
-     * @param baf the {@link ByteArrayBuffer} that contains the RTP packet.
-     * @param dstSeqNum the sequence number to set in the RTP packet.
-     */
-    public static void setSequenceNumber(ByteArrayBuffer baf, int dstSeqNum)
-    {
-        if (baf == null)
-        {
-            return;
-        }
-
-        setSequenceNumber(baf.getBuffer(), baf.getOffset(), dstSeqNum);
     }
 
     /**
@@ -1340,92 +1132,6 @@ public class NewRawPacket
     }
 
     /**
-     * Get RTP SSRC from a RTP packet
-     *
-     * @return RTP SSRC from source RTP packet
-     */
-    public int getSSRC()
-    {
-        return getSSRC(buffer, offset, length);
-    }
-
-    /**
-     * Get RTP SSRC from a RTP packet
-     *
-     * @param buffer
-     * @param offset
-     * @param length
-     * @return RTP SSRC from source RTP packet
-     */
-    public static int getSSRC(byte[] buffer, int offset, int length)
-    {
-        return RTPUtils.readInt(buffer, offset + 8);
-    }
-
-    /**
-     * Returns a {@code long} representation of the SSRC of this RTP packet.
-     * @return a {@code long} representation of the SSRC of this RTP packet.
-     */
-    public long getSSRCAsLong()
-    {
-        return getSSRCAsLong(buffer, offset, length);
-    }
-
-    /**
-     * Returns a {@code long} representation of the SSRC of this RTP packet.
-     *
-     * @param buffer
-     * @param offset
-     * @param length
-     * @return a {@code long} representation of the SSRC of this RTP packet.
-     */
-    public static long getSSRCAsLong(byte[] buffer, int offset, int length)
-    {
-        return getSSRC(buffer, offset, length) & 0xffffffffL;
-    }
-
-    /**
-     * Returns the timestamp for this RTP <tt>NewRawPacket</tt>.
-     *
-     * @return the timestamp for this RTP <tt>NewRawPacket</tt>.
-     */
-    public long getTimestamp()
-    {
-        return getTimestamp(buffer, offset, length);
-    }
-
-    /**
-     * Gets the RTP timestamp for an RTP buffer.
-     *
-     * @param buf the <tt>byte</tt> array that holds the RTP packet.
-     * @param off the offset in <tt>buffer</tt> at which the actual RTP data
-     * begins.
-     * @param len the number of <tt>byte</tt>s in <tt>buffer</tt> which
-     * constitute the actual RTP data.
-     * @return the timestamp in the RTP buffer.
-     */
-    public static long getTimestamp(byte[] buf, int off, int len)
-    {
-        return RTPUtils.readUint32AsLong(buf, off + 4);
-    }
-
-    /**
-     * Gets the RTP timestamp for an RTP buffer.
-     *
-     * @param baf the {@link ByteArrayBuffer} that contains the RTP packet.
-     * @return the timestamp in the RTP buffer.
-     */
-    public static long getTimestamp(ByteArrayBuffer baf)
-    {
-        if (baf == null)
-        {
-            return -1;
-        }
-
-        return getTimestamp(baf.getBuffer(), baf.getOffset(), baf.getLength());
-    }
-
-    /**
      * Grows the internal buffer of this {@code NewRawPacket}.
      *
      * This will change the data buffer of this packet but not the length of the
@@ -1464,16 +1170,6 @@ public class NewRawPacket
     public boolean isInvalid()
     {
         return isInvalid(buffer, offset, length);
-    }
-
-    /**
-     * Test whether the RTP Marker bit is set
-     *
-     * @return whether the RTP Marker bit is set
-     */
-    public boolean isPacketMarked()
-    {
-        return isPacketMarked(buffer, offset, length);
     }
 
     /**
@@ -1670,6 +1366,8 @@ public class NewRawPacket
      * @param extBit the flag that indicates whether we are to set or clear
      * the extension bit of this packet.
      */
+    //TODO: will go away (use the one in RtpPacket) but extension stuff here is still
+    // using it
     private void setExtensionBit(boolean extBit)
     {
         if(extBit)
@@ -1700,74 +1398,12 @@ public class NewRawPacket
     }
 
     /**
-     * Sets or resets the marker bit of this packet according to the
-     * <tt>marker</tt> parameter.
-     * @param marker <tt>true</tt> if we are to raise the marker bit and
-     * <tt>false</tt> otherwise.
-     */
-    public void setMarker(boolean marker)
-    {
-        if(marker)
-        {
-             buffer[offset + 1] |= (byte) 0x80;
-        }
-        else
-        {
-            buffer[offset + 1] &= (byte) 0x7F;
-        }
-    }
-
-    /**
      * @param offset the offset to set
      */
     @Override
     public void setOffset(int offset)
     {
         this.offset = offset;
-    }
-
-    /**
-     * Sets the payload type of this packet.
-     *
-     * @param payload the RTP payload type describing the content of this
-     * packet.
-     */
-    public void setPayloadType(byte payload)
-    {
-        //this is supposed to be a 7bit payload so make sure that the leftmost
-        //bit is 0 so that we don't accidentally overwrite the marker.
-        payload &= (byte)0x7F;
-
-        buffer[offset + 1] = (byte)((buffer[offset + 1] & 0x80) | payload);
-    }
-
-    /**
-      * Set the RTP sequence number of an RTP packet
-      * @param seq the sequence number to set (only the least-significant 16bits
-      * are used)
-      */
-    public void setSequenceNumber(int seq)
-    {
-        NewRawPacket.setSequenceNumber(buffer, offset, seq);
-    }
-
-    /**
-     * Set the SSRC of this packet
-     * @param ssrc SSRC to set
-     */
-    public void setSSRC(int ssrc)
-    {
-        writeInt(8, ssrc);
-    }
-
-    /**
-     * Set the timestamp value of the RTP Packet
-     *
-     * @param timestamp : the RTP Timestamp
-     */
-    public void setTimestamp(long timestamp)
-    {
-        setTimestamp(buffer, offset, length, timestamp);
     }
 
     /**
@@ -1854,22 +1490,6 @@ public class NewRawPacket
     }
 
     /**
-     * Sets the RTP version in this RTP packet.
-     *
-     * @return the number of bytes that were written, or -1 in case of an error.
-     */
-    public boolean setVersion()
-    {
-        if (isInvalid())
-        {
-            return false;
-        }
-
-        buffer[offset] |= 0x80;
-        return true;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -1878,14 +1498,8 @@ public class NewRawPacket
         // Note: this will not print meaningful values unless the packet is an
         // RTP packet.
         StringBuilder sb
-            = new StringBuilder("RawPacket[off=").append(offset)
+            = new StringBuilder("NewRawPacket[off=").append(offset)
             .append(", len=").append(length)
-            .append(", PT=").append(getPayloadType())
-            .append(", SSRC=").append(getSSRCAsLong())
-            .append(", seq=").append(getSequenceNumber())
-            .append(", M=").append(isPacketMarked())
-            .append(", X=").append(getExtensionBit())
-            .append(", TS=").append(getTimestamp())
             .append(", hdrLen=").append(getHeaderLength())
             .append(", payloadLen=").append(getPayloadLength())
             .append(", paddingLen=").append(getPaddingSize())
