@@ -18,87 +18,38 @@ package org.jitsi.videobridge.util;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 
 public class PartitionedByteBufferPool implements ByteBufferPoolImpl
 {
     private static int NUM_PARTITIONS = 8;
-    private List<LinkedBlockingQueue<byte[]>> partitions = new ArrayList<>(NUM_PARTITIONS);
+    private static Partition[] partitions = new Partition[NUM_PARTITIONS];
 
     public PartitionedByteBufferPool(int initialSize)
     {
         for (int i = 0; i < NUM_PARTITIONS; ++i)
         {
-            partitions.add(new LinkedBlockingQueue<>());
+            partitions[i] = new Partition(i, initialSize);
         }
-        partitions.forEach(partition -> {
-            for (int i = 0; i < initialSize; ++i)
-            {
-                partition.add(new byte[1500]);
-            }
-        });
     }
 
     private static Random random = new Random();
 
-    private static int getPartition()
+    private static Partition getPartition()
     {
-//        return (int) (Thread.currentThread().getId() % NUM_PARTITIONS);
-        return random.nextInt(NUM_PARTITIONS);
-    }
-
-    private byte[] doGetBuffer(int requiredSize)
-    {
-        int partition = getPartition();
-        LinkedBlockingQueue<byte[]> pool = partitions.get(partition);
-        byte[] buf;
-        int numTries = 0;
-        while (true) {
-            buf = pool.poll();
-            if (buf == null) {
-                buf = new byte[1500];
-                break;
-            } else if (buf.length < requiredSize) {
-                pool.offer(buf);
-                numTries++;
-                if (numTries == 5) {
-                    buf = new byte[1500];
-                    break;
-                }
-            }
-        }
-        if (ByteBufferPool.ENABLE_BOOKKEEPING)
-        {
-            System.out.println("got buffer " + System.identityHashCode(buf) +
-                    " from thread " + Thread.currentThread().getId() + ", partition " + partition + " now has size " + pool.size());
-        }
-
-        return buf;
+        return partitions[random.nextInt(NUM_PARTITIONS)];
     }
 
     @Override
     public byte[] getBuffer(int size)
     {
-        //        System.out.println("got buffer, pool size is now " + pool.size());
-//        StackTraceElement callingFunction = Thread.currentThread().getStackTrace()[2];
-//        System.out.println("Got array " + System.identityHashCode(buf.array()) + " in " + callingFunction.toString());
-        return doGetBuffer(size);
+        return getPartition().getBuffer(size);
     }
 
     @Override
     public void returnBuffer(byte[] buf)
     {
-//        StackTraceElement callingFunction = Thread.currentThread().getStackTrace()[2];
-//        System.out.println("Returned array " + System.identityHashCode(buf.array()) + " from " + callingFunction.toString());
-//        System.out.println("Returned array " + System.identityHashCode(buf.array()));
-        int partition = getPartition();
-        LinkedBlockingQueue<byte[]> pool = partitions.get(partition);
-        pool.offer(buf);
-        if (ByteBufferPool.ENABLE_BOOKKEEPING)
-        {
-            System.out.println("returned buffer " + System.identityHashCode(buf) +
-                    " from thread " + Thread.currentThread().getId() + ", partition " + partition +
-                    " now has size " + pool.size());
-        }
+        getPartition().returnBuffer(buf);
     }
 
     @Override
@@ -106,6 +57,126 @@ public class PartitionedByteBufferPool implements ByteBufferPoolImpl
     {
         StringBuilder sb = new StringBuilder();
 
+        for (Partition p : partitions)
+        {
+            sb.append(p.getStats()).append("\n");
+        }
+
         return sb.toString();
+    }
+
+    private class Partition
+    {
+        private LinkedBlockingQueue<byte[]> pool = new LinkedBlockingQueue<>();
+        private final int id;
+
+        private AtomicInteger numNoAllocationNeeded = new AtomicInteger(0);
+        private AtomicInteger numAllocations = new AtomicInteger(0);
+        // How many times a partition's pool was empty and had to allocate
+        private AtomicInteger numEmptyPoolAllocations = new AtomicInteger(0);
+        // How many times the pool wasn't empty, but a buffer of sufficient size couldn't be fiound
+        private AtomicInteger numWrongSizeAllocations = new AtomicInteger(0);
+        // How many times a buffer has been requested from this partition
+        private AtomicInteger numRequests = new AtomicInteger(0);
+        private AtomicInteger numReturns = new AtomicInteger(0);
+        private long firstRequestTime = -1L;
+        private long firstReturnTime = -1L;
+
+        public Partition(int id, int initialSize)
+        {
+            this.id = id;
+            for (int i = 0; i < initialSize; ++i)
+            {
+                pool.add(new byte[1500]);
+            }
+            System.out.println("Pool " + id + " initial fill done, size is " + pool.size());
+        }
+
+        private byte[] getBuffer(int requiredSize)
+        {
+            if (ByteBufferPool.ENABLE_BOOKKEEPING)
+            {
+                System.out.println("partition " + id + " request number " + (numRequests.get() + 1) +
+                        ", pool has size " + pool.size());
+            }
+            byte[] buf;
+            int numTries = 0;
+            while (true) {
+                buf = pool.poll();
+                if (buf == null) {
+                    buf = new byte[1500];
+                    if (ByteBufferPool.ENABLE_BOOKKEEPING)
+                    {
+                        numEmptyPoolAllocations.incrementAndGet();
+                        numAllocations.incrementAndGet();
+                    }
+                    break;
+                } else if (buf.length < requiredSize) {
+                    if (ByteBufferPool.ENABLE_BOOKKEEPING)
+                    {
+                        System.out.println("Needed buffer of size " + requiredSize + ", got size " + buf.length +
+                                " retrying");
+                    }
+
+                    pool.offer(buf);
+                    numTries++;
+                    if (numTries == 5) {
+                        buf = new byte[1500];
+                        if (ByteBufferPool.ENABLE_BOOKKEEPING)
+                        {
+                            numWrongSizeAllocations.incrementAndGet();
+                            numAllocations.incrementAndGet();
+                        }
+                        break;
+                    }
+                } else {
+                    numNoAllocationNeeded.incrementAndGet();
+                }
+            }
+            if (ByteBufferPool.ENABLE_BOOKKEEPING)
+            {
+                numRequests.incrementAndGet();
+                if (firstRequestTime == -1L)
+                {
+                    firstRequestTime = System.currentTimeMillis();
+                }
+                System.out.println("got buffer " + System.identityHashCode(buf) +
+                        " from thread " + Thread.currentThread().getId() + ", partition " + id + " now has size " + pool.size());
+            }
+            return buf;
+        }
+
+        private void returnBuffer(byte[] buf)
+        {
+            if (ByteBufferPool.ENABLE_BOOKKEEPING)
+            {
+                numReturns.incrementAndGet();
+                if (firstReturnTime == -1L)
+                {
+                    firstReturnTime = System.currentTimeMillis();
+                }
+                System.out.println("returned buffer " + System.identityHashCode(buf) +
+                        " from thread " + Thread.currentThread().getId() + ", partition " + id +
+                        " now has size " + pool.size());
+
+            }
+            pool.offer(buf);
+        }
+
+        public String getStats()
+        {
+            long now = System.currentTimeMillis();
+            return
+            "partition " + id +
+            "\n  num buffer requests: " + numRequests.get() +
+            "\n  buffer request rate: " + (numRequests.get() / ((now - firstRequestTime) / 1000.0)) + " requests/sec" +
+            "\n  num buffer returns: " + numReturns.get() +
+            "\n  buffer return rate: " + (numReturns.get() / ((now - firstReturnTime) / 1000.0)) + " requests/sec" +
+            "\n  num no allocations needed: " + numNoAllocationNeeded.get() +
+            "\n  num buffer allocations: " + numAllocations.get() +
+            "\n    num empty fallback allocations: " + numEmptyPoolAllocations.get() +
+            "\n    num wrong size allocations: " + numWrongSizeAllocations.get() +
+            "\n  current size: " + pool.size();
+        }
     }
 }
