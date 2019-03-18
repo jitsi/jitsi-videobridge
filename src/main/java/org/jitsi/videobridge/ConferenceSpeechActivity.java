@@ -220,10 +220,6 @@ public class ConferenceSpeechActivity
 
         if (conference != null)
         {
-            logger.info(
-                    "BRIAN: The dominant speaker in conference "
-                            + conference.getID() + " is now the SSRC " + ssrc
-                            + ".");
             if (logger.isTraceEnabled())
             {
                 logger.trace(

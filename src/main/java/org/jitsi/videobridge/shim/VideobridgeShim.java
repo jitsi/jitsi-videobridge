@@ -367,7 +367,7 @@ public class VideobridgeShim
             }
 
             Endpoint endpoint
-                    = conference.getOrCreateEndpoint(channelBundleIq.getId());
+                    = conference.getOrCreateLocalEndpoint(channelBundleIq.getId());
             try
             {
                 endpoint.setTransportInfo(transportIq);

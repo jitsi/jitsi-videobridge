@@ -120,7 +120,7 @@ public class ContentShim
             ChannelShim channelShim
                 = new ChannelShim(
                     channelId,
-                    conference.getOrCreateEndpoint(endpointId),
+                    conference.getOrCreateLocalEndpoint(endpointId),
                     localSsrc,
                     this);
             channelShim.getEndpoint().setLocalSsrc(mediaType, localSsrc);
@@ -141,7 +141,7 @@ public class ContentShim
         synchronized (channels)
         {
             Endpoint endpoint
-                    = conference.getOrCreateEndpoint(endpointId);
+                    = conference.getOrCreateLocalEndpoint(endpointId);
             if (endpoint instanceof Endpoint)
             {
                 String sctpConnId = generateUniqueChannelID();
