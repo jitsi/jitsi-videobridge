@@ -32,7 +32,7 @@ class SrtpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTP Encrypt wra
                 it.packet = encryptedPacket.toOtherType(::RtpPacket);
                 outPackets.add(it)
             } ?: run {
-                logger.cerror { "SRTP encryption failed for packet ${it.packetAs<RtpPacket>().ssrcAsLong} ${it.packetAs<RtpPacket>().sequenceNumber}" }
+                logger.cerror { "SRTP encryption failed for packet ${it.packetAs<RtpPacket>().ssrc} ${it.packetAs<RtpPacket>().sequenceNumber}" }
                 numEncryptFailures++
             }
         }

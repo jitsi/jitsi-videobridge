@@ -31,7 +31,7 @@ class SrtpTransformerDecryptNode : AbstractSrtpTransformerNode("SRTP decrypt wra
                 it.packet = decryptedPacket.toOtherType(::RtpPacket)
                 decryptedPackets.add(it)
             } ?: run {
-                logger.cerror { "SRTP decryption failed for packet ${it.packetAs<RtpPacket>().ssrcAsLong} ${it.packetAs<RtpPacket>().sequenceNumber}" }
+                logger.cerror { "SRTP decryption failed for packet ${it.packetAs<RtpPacket>().ssrc} ${it.packetAs<RtpPacket>().sequenceNumber}" }
                 numDecryptFailures++
             }
         }
