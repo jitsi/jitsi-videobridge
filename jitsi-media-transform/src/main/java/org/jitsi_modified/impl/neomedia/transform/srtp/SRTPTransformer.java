@@ -15,10 +15,8 @@
  */
 package org.jitsi_modified.impl.neomedia.transform.srtp;
 
-//import org.jitsi.rtp.*;
-import org.jitsi.rtp.Packet;
-import org.jitsi.rtp.rtp.*;
-import org.jitsi.rtp.srtp.*;
+
+import org.jitsi.rtp.*;
 import org.jitsi_modified.impl.neomedia.transform.*;
 
 import java.nio.*;
@@ -59,6 +57,11 @@ public class SRTPTransformer
         this(factory, factory);
     }
 
+    String filePath = "/tmp/lj_" + System.currentTimeMillis() + ".rtpdump";
+    Path path = Paths.get(filePath);
+    FileChannel fileWriter;
+    ByteBuffer intBuffer = ByteBuffer.allocate(4);
+
     /**
      * Constructs a SRTPTransformer object.
      *
@@ -74,6 +77,21 @@ public class SRTPTransformer
         this.forwardFactory = forwardFactory;
         this.reverseFactory = reverseFactory;
         this.contexts = new HashMap<Integer, SRTPCryptoContext>();
+
+//        try
+//        {
+//            Files.createFile(path);
+//            Set perms = Files.readAttributes(path, PosixFileAttributes.class).permissions();
+//            perms.add(PosixFilePermission.GROUP_WRITE);
+//            perms.add(PosixFilePermission.OTHERS_WRITE);
+//            Files.setPosixFilePermissions(path, perms);
+//            FileOutputStream fos = new FileOutputStream(path.toFile());
+//            fileWriter = fos.getChannel();
+//        } catch (IOException e)
+//        {
+//            System.out.println("BRIAN: error creating packet dump file: " + e.toString());
+//            e.printStackTrace();
+//        }
     }
 
     /**
@@ -168,35 +186,66 @@ public class SRTPTransformer
      * Reverse-transforms a specific packet (i.e. transforms a transformed
      * packet back).
      *
-     * @param packet the transformed packet to be restored
+     * @param pkt the transformed packet to be restored
      * @return the restored packet
      */
     @Override
-    public Packet reverseTransform(Packet packet)
+    public Packet reverseTransform(Packet pkt)
     {
-        SrtpPacket srtpPacket = (SrtpPacket)packet;
+        NewRawPacket rp = (NewRawPacket)pkt;
+//        System.out.println("BRIAN: packet " + pkt.getSSRCAsLong() + " " +
+//                pkt.getSequenceNumber() + " (length: " + pkt.getLength() + " before decrypt: " +
+//                SRTPCryptoContext.toHexArrayDef(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()) +
+//                "\n will get context from factory " + reverseFactory.hashCode());
+        // only accept RTP version 2 (SNOM phones send weird packages when on
+        // hold, ignore them with this check (RTP Version must be equal to 2)
+        if((rp.readByte(0) & 0xC0) != 0x80)
+            return null;
+
         SRTPCryptoContext context
             = getContext(
-                    (int)srtpPacket.getHeader().getSsrc(),
+                    rp.getSSRC(),
                     reverseFactory,
-                    srtpPacket.getHeader().getSequenceNumber());
+                    rp.getSequenceNumber());
 
-        return context == null ? null : context.reverseTransformPacket(srtpPacket);
+        NewRawPacket res =
+            ((context != null) && context.reverseTransformPacket(rp))
+                ? rp
+                : null;
+//        System.out.println("BRIAN: packet " + pkt.getSSRCAsLong() + " " +
+//                pkt.getSequenceNumber() + " (length: " + pkt.getLength() + " after decrypt: " +
+//                SRTPCryptoContext.toHexArrayDef(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()));
+//        if (res != null && res.getPayloadType() == 100) {
+//            intBuffer.putInt(0, res.getLength());
+//            try
+//            {
+//                fileWriter.write(intBuffer);
+//                fileWriter.write(ByteBuffer.wrap(res.getBuffer(), 0, res.getLength()));
+//
+//                intBuffer.rewind();
+//            } catch (IOException e)
+//            {
+//                e.printStackTrace();
+//            }
+//        }
+        return res;
     }
 
     /**
      * Transforms a specific packet.
      *
-     * @param packet the packet to be transformed
+     * @param pkt the packet to be transformed
      * @return the transformed packet
      */
     @Override
-    public Packet transform(Packet packet)
+    public Packet transform(Packet pkt)
     {
-        RtpPacket rtpPacket = (RtpPacket)packet;
+        NewRawPacket rp = (NewRawPacket)pkt;
         SRTPCryptoContext context
-            = getContext((int)rtpPacket.getHeader().getSsrc(), forwardFactory, 0);
+            = getContext(rp.getSSRC(), forwardFactory, 0);
 
-        return context == null ? null : context.transformPacket(rtpPacket);
+        if (context == null)
+            return null;
+        return context.transformPacket(rp) ? pkt : null;
     }
 }

@@ -28,7 +28,7 @@ class PayloadTypeFilterNode : FilterNode("RTP payload type filter") {
     private val acceptedPayloadTypes: MutableSet<Int> = ConcurrentHashMap.newKeySet()
 
     override fun accept(packetInfo: PacketInfo): Boolean {
-        return acceptedPayloadTypes.contains(packetInfo.packetAs<RtpPacket>().header.payloadType)
+        return acceptedPayloadTypes.contains(packetInfo.packetAs<RtpPacket>().payloadType.toPositiveInt())
     }
 
     override fun handleEvent(event: Event) {

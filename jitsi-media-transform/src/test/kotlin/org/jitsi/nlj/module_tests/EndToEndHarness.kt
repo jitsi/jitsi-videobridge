@@ -21,7 +21,6 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.safeShutdown
 import org.jitsi.test_utils.Pcaps
-import java.nio.ByteBuffer
 import java.time.Duration
 import java.util.concurrent.Executors
 
@@ -40,18 +39,18 @@ fun main() {
     val pcap = Pcaps.Incoming.ONE_PARTICIPANT_RTP_RTCP_SIM_RTX
 
     var numBuffersRequested = 0
-    fun getBuffer(size: Int): ByteBuffer {
+    fun getBuffer(size: Int): ByteArray {
         numBuffersRequested++
-        return ByteBuffer.allocate(size)
+        return ByteArray(size)
     }
     var numBuffersReturned = 0
-    fun returnBuffer(buf: ByteBuffer) {
+    fun returnBuffer(buf: ByteArray) {
         numBuffersReturned++
     }
     BufferPool.getBuffer = ::getBuffer
     BufferPool.returnBuffer = ::returnBuffer
-    org.jitsi.rtp.util.BufferPool.getBuffer = ::getBuffer
-    org.jitsi.rtp.util.BufferPool.returnBuffer = ::returnBuffer
+    org.jitsi.rtp.util.BufferPool.getArray = ::getBuffer
+    org.jitsi.rtp.util.BufferPool.returnArray = ::returnBuffer
 
     val producer = PcapPacketProducer(pcap.filePath)
 

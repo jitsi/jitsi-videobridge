@@ -18,23 +18,18 @@ package org.jitsi.nlj.rtcp
 
 import com.nhaarman.mockitokotlin2.spy
 import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.collections.shouldContainInOrder
+import io.kotlintest.matchers.collections.shouldContainExactly
 import io.kotlintest.matchers.collections.shouldHaveSize
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.test_utils.FakeScheduledExecutorService
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbNackPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacket
 
 class StreamPacketRequesterTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val scheduler: FakeScheduledExecutorService = spy()
-
-    private val timeProvider = object : org.jitsi.nlj.util.TimeProvider {
-        var currentTimeMillis: Long = 0
-        override fun currentTimeMillis(): Long = currentTimeMillis
-    }
 
     private val nackPacketsSent = mutableListOf<RtcpPacket>()
     private fun rtcpSender(rtcpPacket: RtcpPacket) {
@@ -67,7 +62,7 @@ class StreamPacketRequesterTest : ShouldSpec() {
                     should("send a nack") {
                         nackPacketsSent.shouldHaveSize(1)
                         val nackPacket = nackPacketsSent.first() as RtcpFbNackPacket
-                        nackPacket.missingSeqNums shouldContainInOrder listOf(2)
+                        nackPacket.missingSeqNums shouldContainExactly listOf(2)
                     }
                 }
             }
@@ -97,14 +92,14 @@ class StreamPacketRequesterTest : ShouldSpec() {
                     scheduler.runOne()
                     nackPacketsSent.shouldHaveSize(1)
                     val nackPacket = nackPacketsSent.first() as RtcpFbNackPacket
-                    nackPacket.missingSeqNums shouldContainInOrder (2..9).toList()
+                    nackPacket.missingSeqNums shouldContainExactly (2..9).toSortedSet()
                 }
                 should("all be nacked 10 times") {
                     repeat(10) { scheduler.runOne() }
                     nackPacketsSent.shouldHaveSize(10)
                     nackPacketsSent.forEach { packet ->
                         packet as RtcpFbNackPacket
-                        packet.missingSeqNums shouldContainInOrder (2..9).toList()
+                        packet.missingSeqNums shouldContainExactly  (2..9).toSortedSet()
                     }
                     scheduler.numPendingJobs() shouldBe 0
                 }

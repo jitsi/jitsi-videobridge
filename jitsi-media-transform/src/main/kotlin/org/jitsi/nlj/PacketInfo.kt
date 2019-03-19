@@ -85,7 +85,7 @@ class PacketInfo @JvmOverloads constructor(
      * Get the contained packet cast to [ExpectedPacketType]
      */
     @Suppress("UNCHECKED_CAST")
-    fun <ExpectedPacketType>packetAs(): ExpectedPacketType {
+    fun <ExpectedPacketType : Packet>packetAs(): ExpectedPacketType {
         return packet as ExpectedPacketType
     }
 

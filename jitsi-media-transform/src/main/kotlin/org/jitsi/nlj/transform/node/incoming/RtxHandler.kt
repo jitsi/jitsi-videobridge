@@ -28,8 +28,9 @@ import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.shiftPayloadLeft
+import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.rtp.rtp.RtxPacket
 import org.jitsi.util.Logger
 import unsigned.toUInt
 import java.util.concurrent.ConcurrentHashMap
@@ -57,33 +58,31 @@ class RtxHandler : TransformerNode("RTX handler") {
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        if (associatedPayloadTypes.containsKey(rtpPacket.header.payloadType)) {
-            val rtxPacket = rtpPacket.toOtherRtpPacketType<RtxPacket>(::RtxPacket)
+        if (associatedPayloadTypes.containsKey(rtpPacket.payloadType.toPositiveInt())) {
 //          logger.cdebug {
 //             "Received RTX packet: ssrc ${rtxPacket.header.ssrc}, seq num: ${rtxPacket.header.sequenceNumber} " +
 //             "rtx payload size: ${rtxPacket.payload.limit()}, padding size: ${rtxPacket.getPaddingSize()} " +
 //             "buffer:\n${rtxPacket.getBuffer().toHex()}" }
-            if (rtxPacket.payload.limit() - rtxPacket.paddingSize < 2) {
+            if (rtpPacket.length - rtpPacket.paddingSize < 2) {
                 logger.cdebug { "RTX packet is padding, ignore" }
                 numPaddingPacketsReceived++
-                //TODO: we can't return the buffer from the parent node, as many things
-                // may return null and that does not necessarily mean we're done with
-                // the packet (e.g. a consumer)
-                BufferPool.returnBuffer(rtxPacket.getBuffer())
+                BufferPool.returnBuffer(rtpPacket.buffer)
                 return null
             }
 
-            val originalSeqNum = rtxPacket.originalSequenceNumber
-            val originalPt = associatedPayloadTypes[rtpPacket.header.payloadType]!!
-            val originalSsrc = associatedSsrcs[rtpPacket.header.ssrc]!!
+            val originalSeqNum = rtpPacket.originalSequenceNumber
+            val originalPt = associatedPayloadTypes[rtpPacket.payloadType.toPositiveInt()]!!
+            val originalSsrc = associatedSsrcs[rtpPacket.ssrcAsLong]!!
 
-            val originalPacket = rtxPacket as RtpPacket
-            originalPacket.header.sequenceNumber = originalSeqNum
-            originalPacket.header.payloadType = originalPt
-            originalPacket.header.ssrc = originalSsrc
+            // Move the payload 2 bytes to the left
+            rtpPacket.shiftPayloadLeft(2)
+            rtpPacket.length = rtpPacket.length - 2
+            rtpPacket.sequenceNumber = originalSeqNum
+            rtpPacket.payloadType = originalPt.toByte()
+            rtpPacket.ssrc = originalSsrc.toInt()
+
             logger.cdebug { "Recovered RTX packet.  Original packet: $originalSsrc $originalSeqNum" }
             numRtxPacketsReceived++
-            packetInfo.packet = originalPacket
             return packetInfo
         } else {
             return packetInfo

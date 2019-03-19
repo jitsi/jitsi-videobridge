@@ -17,6 +17,7 @@
 package org.jitsi.nlj.codec.vp8
 
 import org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer
+import org.jitsi.rtp.NewRawPacket
 import java.nio.ByteBuffer
 
 class Vp8Utils {
@@ -51,8 +52,29 @@ class Vp8Utils {
             }
         }
 
+        fun getSpatialLayerIndexFromKeyFrame(vp8Packet: NewRawPacket): Int {
+            // Copied from VP8QUalityFilter#getSpatialLayerIndexFromKeyframe
+            val payloadDescriptorLen =
+                DePacketizer.VP8PayloadDescriptor.getSize(
+                    vp8Packet.buffer,
+                    vp8Packet.payloadOffset,
+                    vp8Packet.payloadLength)
+            val height = DePacketizer.VP8KeyframeHeader.getHeight(
+                vp8Packet.buffer, vp8Packet.payloadOffset + payloadDescriptorLen + VP8_PAYLOAD_HEADER_LEN)
+            return when {
+                height >= MIN_HD_HEIGHT -> HD_LAYER_ID
+                height >= MIN_SD_HEIGHT -> SD_LAYER_ID
+                height > -1 -> LD_LAYER_ID
+                else -> -1
+            }
+        }
+
         fun getTemporalLayerIdOfFrame(vp8Payload: ByteBuffer) =
                 DePacketizer.VP8PayloadDescriptor.getTemporalLayerIndex(
                         vp8Payload.array(), vp8Payload.arrayOffset(), vp8Payload.limit())
+
+        fun getTemporalLayerIdOfFrame(vp8Packet: NewRawPacket) =
+            DePacketizer.VP8PayloadDescriptor.getTemporalLayerIndex(
+                vp8Packet.buffer, vp8Packet.payloadOffset, vp8Packet.length)
     }
 }

@@ -28,12 +28,12 @@ class PaddingTermination : FilterNode("Padding termination") {
     private var numPaddingPacketsSeen = 0
 
     override fun accept(packetInfo: PacketInfo): Boolean {
-        val rtpPacket: RtpPacket = packetInfo.packetAs()
-        val replayContext = replayContexts.computeIfAbsent(rtpPacket.header.ssrc) {
+        val rtpPacket = packetInfo.packetAs<RtpPacket>()
+        val replayContext = replayContexts.computeIfAbsent(rtpPacket.ssrcAsLong) {
             Collections.newSetFromMap(LRUCache(1500))
         }
 
-        return if (replayContext.add(rtpPacket.header.sequenceNumber)) {
+        return if (replayContext.add(rtpPacket.sequenceNumber)) {
             true
         } else {
             numPaddingPacketsSeen++

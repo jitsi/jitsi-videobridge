@@ -25,23 +25,26 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
-import org.jitsi.rtp.rtcp.rtcpfb.fci.tcc.Tcc
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi.service.neomedia.RTPExtension
+import org.jitsi.util.RTPUtils
 import unsigned.toUInt
 
 /**
  * Extract the TCC sequence numbers from each passing packet and generate
  * a TCC packet to send transmit to the sender.
  */
+//TODO: if, after sending a tcc feedback packet the next sequence number(s) are lost, we need
+// to make sure they get represented as not received
 class TccGeneratorNode(
     private val onTccPacketReady: (RtcpPacket) -> Unit = {}
 ) : ObserverNode("TCC generator") {
     private var tccExtensionId: Int? = null
     private var currTccSeqNum: Int = 0
-    private var currTcc: RtcpFbTccPacket = RtcpFbTccPacket(fci = Tcc(feedbackPacketCount = currTccSeqNum++))
+    private var currTccBuilder: RtcpFbTccPacketBuilder = RtcpFbTccPacketBuilder(
+        feedbackPacketCount = currTccSeqNum++
+    )
     private var lastTccSentTime: Long = 0
     /**
      * Ssrc's we've been told this endpoint will transmit on.  We'll use an
@@ -58,9 +61,14 @@ class TccGeneratorNode(
     override fun observe(packetInfo: PacketInfo) {
         tccExtensionId?.let { tccExtId ->
             val rtpPacket = packetInfo.packetAs<RtpPacket>()
-           rtpPacket.header.getExtensionAs(tccExtId, TccHeaderExtension.Companion::fromUnparsed)?.let { tccExt ->
-                addPacket(tccExt.tccSeqNum, packetInfo.receivedTime, rtpPacket.header.marker)
+            rtpPacket.getHeaderExtension(tccExtId.toByte())?.let { ext ->
+                val tccSeqNum = RTPUtils.readUint16AsInt(
+                    ext.buffer, ext.offset + 1);
+                addPacket(tccSeqNum, packetInfo.receivedTime, rtpPacket.isPacketMarked)
             }
+//           rtpPacket.header.getExtensionAs(tccExtId, TccHeaderExtension.Companion::fromUnparsed)?.let { tccExt ->
+//                addPacket(tccExt.tccSeqNum, packetInfo.receivedTime, rtpPacket.header.marker)
+//            }
         }
     }
 
@@ -79,23 +87,23 @@ class TccGeneratorNode(
     }
 
     private fun addPacket(tccSeqNum: Int, timestamp: Long, isMarked: Boolean) {
-        currTcc.addPacket(tccSeqNum, timestamp)
+        currTccBuilder.addPacket(tccSeqNum, timestamp)
 
         if (isTccReadyToSend(isMarked)) {
             val mediaSsrc = mediaSsrcs.firstOr(-1L)
-            currTcc.mediaSourceSsrc = mediaSsrc
-            onTccPacketReady(currTcc)
+            currTccBuilder.mediaSourceSsrc = mediaSsrc
+            onTccPacketReady(currTccBuilder.build())
             numTccSent++
             lastTccSentTime = System.currentTimeMillis()
             // Create a new TCC instance for the next set of information
-            currTcc = RtcpFbTccPacket(fci = Tcc(feedbackPacketCount = currTccSeqNum++))
+            currTccBuilder = RtcpFbTccPacketBuilder(feedbackPacketCount = currTccSeqNum++)
         }
     }
 
     private fun isTccReadyToSend(currentPacketMarked: Boolean): Boolean {
         val timeSinceLastTcc = if (lastTccSentTime == -1L) 0 else System.currentTimeMillis() - lastTccSentTime
         return timeSinceLastTcc >= 100 ||
-            currTcc.numPackets >= 100 ||
+            currTccBuilder.numPackets >= 100 ||
             ((timeSinceLastTcc >= 20) && currentPacketMarked)
     }
 
