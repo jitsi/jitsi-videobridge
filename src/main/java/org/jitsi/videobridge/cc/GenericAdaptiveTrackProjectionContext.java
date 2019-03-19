@@ -18,8 +18,6 @@ package org.jitsi.videobridge.cc;
 import net.sf.fmj.media.rtp.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.rtcp.*;
-import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc;
 import org.jitsi.nlj.format.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -87,6 +85,16 @@ class GenericAdaptiveTrackProjectionContext
     }
 
     /**
+     * The <tt>Logger</tt> used by the
+     * <tt>GenericAdaptiveTrackProjectionContext</tt> class and its instances to
+     * log debug information.
+     */
+    private static final Logger logger
+        = Logger.getLogger(GenericAdaptiveTrackProjectionContext.class);
+
+    private final long ssrc;
+
+    /**
      * Raised when a track has been resumed (after being suspended).
      */
     private boolean needsKeyframe = true;
@@ -100,6 +108,24 @@ class GenericAdaptiveTrackProjectionContext
      * The maximum sequence number that we have sent.
      */
     private int maxDestinationSequenceNumber;
+
+    /**
+     * The delta to apply to the timestamps of the RTP packets of the source
+     * track.
+     */
+    private long timestampDelta;
+
+    /**
+     * A boolean that indicates whether or not the timestap delta has been
+     * initialized. This is only necessary upon adaptive track projection
+     * context switches.
+     */
+    private boolean timestampDeltaInitialized = false;
+
+    /**
+     * The maximum timestamp that we have sent.
+     */
+    private long maxDestinationTimestamp;
 
     /**
      * The delta to apply to the sequence numbers of the RTP packets of the
@@ -117,22 +143,30 @@ class GenericAdaptiveTrackProjectionContext
      * Keeps track of the number of transmitted bytes. This is used in RTCP SR
      * rewriting.
      */
-    private long transmittedBytes = 0;
+    private long transmittedBytes;
 
     /**
      * Keeps track of the number of transmitted packets. This is used in RTCP SR
      * rewriting.
      */
-    private long transmittedPackets = 0;
+    private long transmittedPackets;
 
     /**
      * Ctor.
      *
      * @param payloadType the media format to expect
+     * @param rtpState the RTP state (i.e. seqnum, timestamp to start with, etc).
      */
-    GenericAdaptiveTrackProjectionContext(PayloadType payloadType)
+    GenericAdaptiveTrackProjectionContext(
+            @NotNull PayloadType payloadType,
+            @NotNull RtpState rtpState)
     {
         this.payloadType = payloadType;
+        this.ssrc = rtpState.ssrc;
+        this.transmittedBytes = rtpState.transmittedBytes;
+        this.transmittedPackets = rtpState.transmittedPackets;
+        this.maxDestinationSequenceNumber = rtpState.maxSequenceNumber;
+        this.maxDestinationTimestamp = rtpState.maxTimestamp;
     }
 
     /**
@@ -173,8 +207,20 @@ class GenericAdaptiveTrackProjectionContext
                 // "delta = destination - source" and in order to find the
                 // destination sequence number we use the equivalent formula
                 // "destination = source + delta".
+                int destinationSequenceNumber
+                    = maxDestinationSequenceNumber + 1;
                 sequenceNumberDelta = RTPUtils.getSequenceNumberDelta(
-                    maxDestinationSequenceNumber + 1, sourceSequenceNumber);
+                    destinationSequenceNumber, sourceSequenceNumber);
+
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("delta ssrc=" + rtpPacket.getSSRCAsLong()
+                        + ",src_sequence=" + sourceSequenceNumber
+                        + ",dst_sequence=" + destinationSequenceNumber
+                        + ",max_sequence=" + maxDestinationSequenceNumber
+                        + ",delta=" + sequenceNumberDelta);
+                }
+
                 accept = true;
             }
             else
@@ -189,18 +235,64 @@ class GenericAdaptiveTrackProjectionContext
 
         if (accept)
         {
+            maybeInitializeTimestampDelta(rtpPacket.getTimestamp());
+
             int destinationSequenceNumber
-                = (sourceSequenceNumber + sequenceNumberDelta)
-                & RawPacket.SEQUENCE_NUMBER_MASK;
+                = computeDestinationSequenceNumber(sourceSequenceNumber);
+
+            long destinationTimestamp
+                = computeDestinationTimestamp(rtpPacket.getTimestamp());
 
             if (RTPUtils.isOlderSequenceNumberThan(
                 maxDestinationSequenceNumber, destinationSequenceNumber))
             {
                 maxDestinationSequenceNumber = destinationSequenceNumber;
             }
+
+            if (RTPUtils.isNewerTimestampThan(
+                destinationSequenceNumber, maxDestinationTimestamp))
+            {
+                maxDestinationTimestamp = destinationTimestamp;
+            }
+
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("accept ssrc=" + rtpPacket.getSSRCAsLong()
+                + ",src_sequence=" + sourceSequenceNumber
+                + ",dst_sequence=" + destinationSequenceNumber
+                + ",max_sequence=" + maxDestinationSequenceNumber);
+            }
+        }
+        else
+        {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("reject ssrc=" + rtpPacket.getSSRCAsLong()
+                    + ",src_sequence=" + sourceSequenceNumber);
+            }
         }
 
         return accept;
+    }
+
+    private void maybeInitializeTimestampDelta(long sourceTimestamp)
+    {
+        if (timestampDeltaInitialized)
+        {
+            return;
+        }
+
+        if (RTPUtils.isNewerTimestampThan(
+            maxDestinationSequenceNumber, sourceTimestamp))
+        {
+            long destinationTimestamp =
+                (maxDestinationTimestamp + 3000) & RawPacket.TIMESTAMP_MASK;
+
+            timestampDelta
+                = RTPUtils.rtpTimestampDiff(destinationTimestamp, sourceTimestamp);
+        }
+
+        timestampDeltaInitialized = true;
     }
 
     /**
@@ -229,12 +321,28 @@ class GenericAdaptiveTrackProjectionContext
     {
         int sourceSequenceNumber = rtpPacket.getSequenceNumber();
         int destinationSequenceNumber
-            = (sourceSequenceNumber + sequenceNumberDelta)
-            & RawPacket.SEQUENCE_NUMBER_MASK;
+            = computeDestinationSequenceNumber(sourceSequenceNumber);
 
         if (sourceSequenceNumber != destinationSequenceNumber)
         {
             rtpPacket.setSequenceNumber(destinationSequenceNumber);
+        }
+
+        long sourceTimestamp = rtpPacket.getTimestamp();
+        long destinationTimestamp
+            = computeDestinationTimestamp(sourceTimestamp);
+
+        if (sourceTimestamp != destinationTimestamp)
+        {
+            rtpPacket.setTimestamp(destinationTimestamp);
+        }
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("rewrite ssrc=" + rtpPacket.getSSRCAsLong()
+                + ",src_sequence=" + sourceSequenceNumber
+                + ",dst_sequence=" + destinationSequenceNumber
+                + ",max_sequence=" + maxDestinationSequenceNumber);
         }
 
         synchronized (transmittedSyncRoot)
@@ -244,6 +352,20 @@ class GenericAdaptiveTrackProjectionContext
         }
 
         return EMPTY_PACKET_ARR;
+    }
+
+    private int computeDestinationSequenceNumber(int sourceSequenceNumber)
+    {
+        return sequenceNumberDelta != 0
+            ? (sourceSequenceNumber + sequenceNumberDelta)
+            & RawPacket.SEQUENCE_NUMBER_MASK : sourceSequenceNumber;
+    }
+
+    private long computeDestinationTimestamp(long sourceTimestamp)
+    {
+        return timestampDelta != 0
+            ? (sourceTimestamp + timestampDelta) & RawPacket.TIMESTAMP_MASK
+            : sourceTimestamp;
     }
 
     /**
@@ -270,5 +392,22 @@ class GenericAdaptiveTrackProjectionContext
         }
 
         return true;
+    }
+
+    @Override
+    public RtpState getRtpState()
+    {
+        synchronized (transmittedSyncRoot)
+        {
+            return new RtpState(
+                transmittedBytes, transmittedPackets,
+                ssrc, maxDestinationSequenceNumber, maxDestinationTimestamp);
+        }
+    }
+
+    @Override
+    public PayloadType getPayloadType()
+    {
+        return payloadType;
     }
 }

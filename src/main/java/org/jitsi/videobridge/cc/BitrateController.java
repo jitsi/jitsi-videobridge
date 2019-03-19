@@ -18,8 +18,10 @@ package org.jitsi.videobridge.cc;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.rtp.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
@@ -416,9 +418,9 @@ public class BitrateController
      * written into the {@link Endpoint} that owns this {@link BitrateController}
      * ; otherwise, <tt>false</tt>
      */
-    public boolean accept(RawPacket pkt)
+    public boolean accept(RawPacket rtpPacket)
     {
-        long ssrc = pkt.getSSRCAsLong();
+        long ssrc = rtpPacket.getSSRCAsLong();
         if (ssrc < 0)
         {
             return false;
@@ -437,7 +439,7 @@ public class BitrateController
 
 //        logger.debug("BitrateController " + hashCode() + " found a projection for " +
 //                "packet with ssrc " + ssrc);
-        return adaptiveTrackProjection.accept(pkt);
+        return adaptiveTrackProjection.accept(rtpPacket);
     }
 
     public static class StatusSnapshot

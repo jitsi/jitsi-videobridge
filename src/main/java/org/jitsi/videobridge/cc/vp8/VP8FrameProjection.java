@@ -97,10 +97,15 @@ public class VP8FrameProjection
      * Ctor.
      *
      * @param ssrc the SSRC of the destination VP8 picture.
+     * @param timestamp The RTP timestamp of the projected frame that this
+     * instance refers to (RFC3550).
+     * @param startingSequenceNumber The starting RTP sequence number of the
+     * projected frame that this instance refers to (RFC3550).
      */
-    VP8FrameProjection(long ssrc)
+    VP8FrameProjection(long ssrc, int startingSequenceNumber, long timestamp)
     {
-        this(null, ssrc, 0, 0, 0, 0, 0);
+        this(null /* vp8Frame */, ssrc, timestamp, startingSequenceNumber,
+            0 /* extendedPictureId */, 0 /* tl0PICIDX */, 0 /* createdMs */);
     }
 
     /**
@@ -164,7 +169,7 @@ public class VP8FrameProjection
             // without having sent a keyframe first.
             if (nextVP8Frame.isKeyframe())
             {
-                isLast = false;
+                close();
                 return new VP8FrameProjection(nextVP8Frame, ssrc, timestamp,
                     startingSequenceNumber, extendedPictureId, tl0PICIDX,
                     nowMs);
@@ -185,14 +190,11 @@ public class VP8FrameProjection
             // We synchronize on the VP8 frame because the max sequence number
             // can be updated from other threads and the isLast field can be
             // read by other threads.
-            synchronized (vp8Frame)
-            {
-                isLast = false;
-                return new VP8FrameProjection(
-                    nextVP8Frame, ssrc, nextTimestamp(nextVP8Frame, nowMs),
-                    nextStartingSequenceNumber(), nextExtendedPictureId(),
-                    nextTL0PICIDX(nextVP8Frame), nowMs);
-            }
+            close();
+            return new VP8FrameProjection(
+                nextVP8Frame, ssrc, nextTimestamp(nextVP8Frame, nowMs),
+                nextStartingSequenceNumber(), nextExtendedPictureId(),
+                nextTL0PICIDX(nextVP8Frame), nowMs);
         }
     }
 
@@ -254,14 +256,34 @@ public class VP8FrameProjection
      */
     private int nextStartingSequenceNumber()
     {
-        int vp8FrameLength = RTPUtils.getSequenceNumberDelta(
-            vp8Frame.getMaxSequenceNumber(),
-            vp8Frame.getStartingSequenceNumber());
+        return (maxSequenceNumber() + 1) & RawPacket.SEQUENCE_NUMBER_MASK;
+    }
 
-        int nextStartingSequenceNumber
-            = startingSequenceNumber + vp8FrameLength + 1;
+    /**
+     * Small utility method that computes and returns the max sequence number of
+     * this frame.
+     *
+     * @return the max sequence number of this frame.
+     */
+    int maxSequenceNumber()
+    {
+        // assert !isLast; otherwise the maxSequenceNumber is not guaranteed to
+        // not change. So, prior to calling this method the caller needs to have
+        // called the close method.
+        if (vp8Frame != null)
+        {
+            int vp8FrameLength = RTPUtils.getSequenceNumberDelta(
+                vp8Frame.getMaxSequenceNumber(),
+                vp8Frame.getStartingSequenceNumber());
 
-        return nextStartingSequenceNumber & RawPacket.SEQUENCE_NUMBER_MASK;
+            int maxSequenceNumber = startingSequenceNumber + vp8FrameLength;
+            return maxSequenceNumber & RawPacket.SEQUENCE_NUMBER_MASK;
+        }
+        else
+        {
+            return (startingSequenceNumber - 1)
+                & RawPacket.SEQUENCE_NUMBER_MASK;
+        }
     }
 
     /**
@@ -489,11 +511,20 @@ public class VP8FrameProjection
     }
 
     /**
-     * @return true if this is the "last" accepted {@link VP8Frame} instance,
-     * false otherwise.
+     * Prevents the max sequence number of this frame to grow any further.
      */
-    boolean isLast()
+    public void close()
     {
-        return isLast;
+        if (vp8Frame != null)
+        {
+            synchronized (vp8Frame)
+            {
+                isLast = false;
+            }
+        }
+        else
+        {
+            isLast = false;
+        }
     }
 }
