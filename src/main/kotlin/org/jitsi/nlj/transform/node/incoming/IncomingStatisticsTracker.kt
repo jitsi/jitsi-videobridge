@@ -25,14 +25,13 @@ import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.RtpUtils.Companion.convertRtpTimestampToMs
-import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.isNewerThan
 import org.jitsi.nlj.util.isNextAfter
 import org.jitsi.nlj.util.numPacketsTo
 import org.jitsi.nlj.util.rolledOverTo
 import org.jitsi.rtp.rtp.RtpPacket
 import toUInt
-import unsigned.toUShort
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 
@@ -85,7 +84,7 @@ class IncomingStatisticsTracker : ObserverNode("Incoming statistics tracker") {
             is RtpPayloadTypeAddedEvent -> {
                 // We don't want to track jitter, etc. for RTX streams
                 if (event.payloadType is RtxPayloadType) {
-                    logger.cinfo { "Statistics tracker ignoring RTX format: ${event.payloadType}" }
+                    logger.cdebug { "Ignoring RTX format: ${event.payloadType}" }
                 } else {
                     payloadTypes[event.payloadType.pt] = event.payloadType
                 }
