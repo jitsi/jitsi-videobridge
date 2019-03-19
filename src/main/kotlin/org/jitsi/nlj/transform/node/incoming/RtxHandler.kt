@@ -72,14 +72,14 @@ class RtxHandler : TransformerNode("RTX handler") {
 
             val originalSeqNum = rtpPacket.originalSequenceNumber
             val originalPt = associatedPayloadTypes[rtpPacket.payloadType.toPositiveInt()]!!
-            val originalSsrc = associatedSsrcs[rtpPacket.ssrcAsLong]!!
+            val originalSsrc = associatedSsrcs[rtpPacket.ssrc]!!
 
             // Move the payload 2 bytes to the left
             rtpPacket.shiftPayloadLeft(2)
             rtpPacket.length = rtpPacket.length - 2
             rtpPacket.sequenceNumber = originalSeqNum
-            rtpPacket.payloadType = originalPt.toByte()
-            rtpPacket.ssrc = originalSsrc.toInt()
+            rtpPacket.payloadType = originalPt
+            rtpPacket.ssrc = originalSsrc
 
             logger.cdebug { "Recovered RTX packet.  Original packet: $originalSsrc $originalSeqNum" }
             numRtxPacketsReceived++

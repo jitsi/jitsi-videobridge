@@ -23,6 +23,6 @@ import org.jitsi.rtp.rtp.RtpPacket
 class RtpPacketTraceNode(val where: String) : ObserverNode("RtpPacketTraceNode@$where") {
     override fun observe(packetInfo: PacketInfo) {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        println("$where: RTP packet ${rtpPacket.ssrcAsLong} ${rtpPacket.sequenceNumber}")
+        println("$where: RTP packet ${rtpPacket.ssrc} ${rtpPacket.sequenceNumber}")
     }
 }

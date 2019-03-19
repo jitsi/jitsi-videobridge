@@ -44,7 +44,7 @@ class AudioLevelReader : ObserverNode("Audio level reader") {
 //            rtpPacket.header.getExtensionAs(audioLevelId, AudioLevelHeaderExtension.Companion::fromUnparsed)?.let {
 //                val level = it.audioLevel
                 if (level != MUTED_LEVEL) {
-                    audioLevelListener?.onLevelReceived(rtpPacket.ssrcAsLong, (127 - level).toPositiveLong())
+                    audioLevelListener?.onLevelReceived(rtpPacket.ssrc, (127 - level).toPositiveLong())
                 }
 //            }
         }

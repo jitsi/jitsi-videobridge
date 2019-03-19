@@ -15,13 +15,17 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.nlj.*
+import org.jitsi.nlj.Event
+import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.RtpPayloadTypeAddedEvent
+import org.jitsi.nlj.RtpPayloadTypeClearEvent
+import org.jitsi.nlj.SetMediaStreamTracksEvent
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.VideoPayloadType
 import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.transform.node.TransformerNode
-import org.jitsi.rtp.NewRawPacket
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 import java.util.concurrent.ConcurrentHashMap
 
@@ -37,9 +41,8 @@ class VideoParser : TransformerNode("Video parser") {
     // does this packet represent the start of a frame?
     // does this packet represent the end of a frame?
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
-        val rtpPacket = packetInfo.packetAs<NewRawPacket>()
-        val pt = rtpPacket.payloadType
-        payloadTypes[pt]?.let { payloadType ->
+        val rtpPacket = packetInfo.packetAs<RtpPacket>()
+        payloadTypes[rtpPacket.payloadType.toByte()]?.let { payloadType ->
             val videoRtpPacket = when (payloadType) {
                 is Vp8PayloadType -> {
                     val vp8Packet = rtpPacket.toOtherType(::Vp8Packet)
@@ -55,7 +58,7 @@ class VideoParser : TransformerNode("Video parser") {
             }
             packetInfo.packet = videoRtpPacket
         } ?: run {
-            logger.error("Unrecognized video payload type $pt, cannot parse video information")
+            logger.error("Unrecognized video payload type ${rtpPacket.payloadType}, cannot parse video information")
         }
         return packetInfo
     }

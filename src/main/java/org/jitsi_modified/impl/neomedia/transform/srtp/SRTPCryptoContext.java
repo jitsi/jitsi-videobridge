@@ -19,6 +19,7 @@ import org.bouncycastle.crypto.params.*;
 import org.jitsi.bccontrib.params.*;
 import org.jitsi.impl.neomedia.transform.srtp.*;
 import org.jitsi.rtp.*;
+import org.jitsi.rtp.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 
@@ -459,9 +460,9 @@ public class SRTPCryptoContext
      *
      * @param pkt the RTP packet to be encrypted/decrypted
      */
-    public void processPacketAESCM(NewRawPacket pkt)
+    public void processPacketAESCM(RtpPacket pkt)
     {
-        int ssrc = pkt.getSSRC();
+        int ssrc = (int)pkt.getSsrc();
         int seqNo = pkt.getSequenceNumber();
         long index = (((long) guessedROC) << 16) | seqNo;
 
@@ -546,7 +547,7 @@ public class SRTPCryptoContext
      * @return <tt>true</tt> if the packet can be accepted; <tt>false</tt> if
      * the packet failed authentication or failed replay check
      */
-    synchronized public boolean reverseTransformPacket(NewRawPacket pkt)
+    synchronized public boolean reverseTransformPacket(RtpPacket pkt)
     {
         if (logger.isDebugEnabled())
         {
@@ -646,7 +647,7 @@ public class SRTPCryptoContext
      *
      * @param pkt the RTP packet that is going to be sent out
      */
-    synchronized public boolean transformPacket(NewRawPacket pkt)
+    synchronized public boolean transformPacket(RtpPacket pkt)
     {
         int seqNo = pkt.getSequenceNumber();
 

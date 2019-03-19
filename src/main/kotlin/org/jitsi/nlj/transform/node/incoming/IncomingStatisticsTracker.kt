@@ -64,9 +64,9 @@ class IncomingStatisticsTracker : ObserverNode("Incoming statistics tracker") {
 
     override fun observe(packetInfo: PacketInfo) {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        payloadTypes[rtpPacket.payloadType]?.let {
-            val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrcAsLong) {
-                IncomingSsrcStats(rtpPacket.ssrcAsLong, rtpPacket.sequenceNumber)
+        payloadTypes[rtpPacket.payloadType.toByte()]?.let {
+            val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrc) {
+                IncomingSsrcStats(rtpPacket.ssrc, rtpPacket.sequenceNumber)
             }
             val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.timestamp.toUInt(), it.clockRate)
             stats.packetReceived(rtpPacket, packetSentTimestamp, packetInfo.receivedTime)
