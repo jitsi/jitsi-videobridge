@@ -18,6 +18,7 @@ package org.jitsi.nlj.util
 
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.NewRawPacket
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.service.neomedia.RawPacket
 
 
@@ -27,6 +28,9 @@ fun Packet.toLegacyRawPacket(): RawPacket =
 fun fromLegacyRawPacket(legacyRawPacket: RawPacket): NewRawPacket =
     NewRawPacket(legacyRawPacket.buffer, legacyRawPacket.offset, legacyRawPacket.length)
 
+fun RawPacket.toRtpPacket(): RtpPacket =
+    RtpPacket(buffer, offset, length)
+
 fun NewRawPacket.shiftPayloadLeft(numBytes: Int) {
     val payloadOffset = payloadOffset
     for (i in payloadOffset until length) {
@@ -34,9 +38,13 @@ fun NewRawPacket.shiftPayloadLeft(numBytes: Int) {
     }
 }
 
-fun NewRawPacket.shiftPaylaodRight(numBytes: Int) {
-    val payloadOffset = payloadOffset
-    for (i in length downTo payloadOffset) {
+fun NewRawPacket.shiftPayloadRight(numBytes: Int) {
+    val originalPayloadOffset = payloadOffset
+    val originalPayloadLength = payloadLength
+    if (payloadOffset + payloadLength + numBytes > length) {
+        grow(numBytes)
+    }
+    for (i in (originalPayloadOffset + originalPayloadLength) downTo originalPayloadOffset) {
         buffer[i + numBytes] = buffer[i]
     }
 }

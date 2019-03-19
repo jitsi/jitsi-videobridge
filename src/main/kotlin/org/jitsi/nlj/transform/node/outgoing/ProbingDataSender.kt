@@ -29,11 +29,11 @@ import org.jitsi.nlj.rtp.PaddingVideoPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.fromLegacyRawPacket
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.NewRawPacket
+import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.service.neomedia.MediaType
-import org.jitsi_modified.impl.neomedia.rtp.NewRawPacketCache
+import org.jitsi_modified.impl.neomedia.rtp.RtpPacketCache
 import java.util.Random
 
 /**
@@ -44,7 +44,7 @@ import java.util.Random
  *
  */
 class ProbingDataSender(
-    private val packetCache: NewRawPacketCache,
+    private val packetCache: RtpPacketCache,
     private val rtxDataSender: PacketHandler,
     private val garbageDataSender: PacketHandler
 ) : EventHandler, NodeStatsProducer {
@@ -97,7 +97,7 @@ class ProbingDataSender(
         // will change before taking its final form.
         val packetsToResend = mutableListOf<PacketInfo>()
         for (i in 0 until 2) {
-            val lastNPacketIter = lastNPackets.iterator();
+            val lastNPacketIter = lastNPackets.iterator()
 
             while (lastNPacketIter.hasNext())
             {
@@ -138,8 +138,8 @@ class ProbingDataSender(
         val numPackets = (numBytes / packetLength) + 1 /* account for the mod */
         for (i in 0 until numPackets) {
             val paddingPacket = PaddingVideoPacket(packetLength)
-            paddingPacket.payloadType = pt.pt
-            paddingPacket.ssrc = senderSsrc.toInt()
+            paddingPacket.payloadType = pt.pt.toPositiveInt()
+            paddingPacket.ssrc = senderSsrc
             paddingPacket.timestamp = currDummyTimestamp
             paddingPacket.sequenceNumber = currDummySeqNum
             garbageDataSender.processPacket(PacketInfo(paddingPacket))

@@ -39,8 +39,8 @@ class OutgoingStatisticsTracker : ObserverNode("Outgoing statistics tracker") {
 
     override fun observe(packetInfo: PacketInfo) {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrcAsLong) {
-            OutgoingSsrcStats(rtpPacket.ssrcAsLong)
+        val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrc) {
+            OutgoingSsrcStats(rtpPacket.ssrc)
         }
         stats.packetSent(rtpPacket.length, rtpPacket.timestamp)
 
