@@ -38,12 +38,12 @@ class Vp8Parser : TransformerNode("Vp8 parser") {
         if (videoRtpPacket is Vp8Packet) {
             // If this was part of a keyframe, it will have already had it set
             if (videoRtpPacket.spatialLayerIndex > -1) {
-                ssrcToSpatialLayerQuality.putIfAbsent(videoRtpPacket.ssrcAsLong, videoRtpPacket.spatialLayerIndex)
+                ssrcToSpatialLayerQuality.putIfAbsent(videoRtpPacket.ssrc, videoRtpPacket.spatialLayerIndex)
             } else {
-                videoRtpPacket.spatialLayerIndex = ssrcToSpatialLayerQuality[videoRtpPacket.ssrcAsLong] ?: -1
+                videoRtpPacket.spatialLayerIndex = ssrcToSpatialLayerQuality[videoRtpPacket.ssrc] ?: -1
             }
             if (videoRtpPacket.isKeyframe) {
-                logger.cdebug { "Received a keyframe for ssrc ${videoRtpPacket.ssrcAsLong} ${videoRtpPacket.sequenceNumber}" }
+                logger.cdebug { "Received a keyframe for ssrc ${videoRtpPacket.ssrc} ${videoRtpPacket.sequenceNumber}" }
                 numKeyframes++
             }
         }

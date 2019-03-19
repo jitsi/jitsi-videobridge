@@ -19,9 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
-import org.jitsi.service.configuration.*;
-import org.jitsi.service.libjitsi.*;
-import org.jitsi.service.neomedia.*;
+import org.jitsi.rtp.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
 
@@ -36,11 +34,11 @@ import java.util.concurrent.atomic.*;
  * @author Boris Grozev
  * @author George Politis
  */
-public class NewRawPacketCache
+public class RtpPacketCache
     implements AutoCloseable
 {
     /**
-     * The <tt>Logger</tt> used by the <tt>NewRawPacketCache</tt> class and
+     * The <tt>Logger</tt> used by the <tt>RtpPacketCache</tt> class and
      * its instances to print debug information.
      */
     private static final Logger logger
@@ -50,19 +48,19 @@ public class NewRawPacketCache
      * Configuration property for number of streams to cache
      */
     public final static String NACK_CACHE_SIZE_STREAMS
-        = "org.jitsi_modified.impl.neomedia.rtp.NewRawPacketCache.CACHE_SIZE_STREAMS";
+        = "org.jitsi_modified.impl.neomedia.rtp.RtpPacketCache.CACHE_SIZE_STREAMS";
 
     /**
      * Configuration property number of packets to cache.
      */
     public final static String NACK_CACHE_SIZE_PACKETS
-        = "org.jitsi_modified.impl.neomedia.rtp.NewRawPacketCache.CACHE_SIZE_PACKETS";
+        = "org.jitsi_modified.impl.neomedia.rtp.RtpPacketCache.CACHE_SIZE_PACKETS";
 
     /**
      * Configuration property for nack cache size in milliseconds.
      */
     public final static String NACK_CACHE_SIZE_MILLIS
-        = "org.jitsi_modified.impl.neomedia.rtp.NewRawPacketCache.CACHE_SIZE_MILLIS";
+        = "org.jitsi_modified.impl.neomedia.rtp.RtpPacketCache.CACHE_SIZE_MILLIS";
 
     private static Configuration defaultConfiguration = new Configuration();
 
@@ -107,9 +105,9 @@ public class NewRawPacketCache
     private final int SSRC_TIMEOUT_MILLIS;
 
     /**
-     * The pool of <tt>NewRawPacket</tt>s which we use to avoid allocation and GC.
+     * The pool of <tt>RtpPacket</tt>s which we use to avoid allocation and GC.
      */
-    private final Queue<NewRawPacket> pool
+    private final Queue<RtpPacket> pool
         = new LinkedBlockingQueue<>(POOL_SIZE);
 
     /**
@@ -180,7 +178,7 @@ public class NewRawPacketCache
      */
     private final int streamId;
 
-    public NewRawPacketCache(int streamId) {
+    public RtpPacketCache(int streamId) {
         this(streamId, null);
     }
 
@@ -189,7 +187,7 @@ public class NewRawPacketCache
      * @param streamId the identifier of the owning stream.
      * @param configOverrides any overridden config values
      */
-    public NewRawPacketCache(int streamId, @Nullable Configuration configOverrides)
+    public RtpPacketCache(int streamId, @Nullable Configuration configOverrides)
     {
         this.streamId = streamId;
         config.merge(configOverrides);
@@ -268,7 +266,7 @@ public class NewRawPacketCache
      * @return the packet with the given SSRC and RTP sequence number from the
      * cache. If no such packet is found, returns <tt>null</tt>.
      */
-    public NewRawPacket get(long ssrc, int seq)
+    public RtpPacket get(long ssrc, int seq)
     {
         Container container = getContainer(ssrc, seq);
         return container == null ? null : container.pkt;
@@ -309,15 +307,15 @@ public class NewRawPacketCache
      * Saves a packet in the cache.
      * @param pkt the packet to save.
      */
-    public void cachePacket(NewRawPacket pkt)
+    public void cachePacket(RtpPacket pkt)
     {
-        Cache cache = getCache(pkt.getSSRCAsLong(), true);
+        Cache cache = getCache(pkt.getSsrc(), true);
 
         if (cache != null)
         {
             if (logger.isTraceEnabled())
             {
-                logger.trace("Caching a packet. SSRC=" + pkt.getSSRCAsLong()
+                logger.trace("Caching a packet. SSRC=" + pkt.getSsrc()
                     + " seq=" + pkt.getSequenceNumber());
             }
             cache.insert(pkt);
@@ -328,17 +326,17 @@ public class NewRawPacketCache
 
 
     /**
-     * Gets an unused <tt>NewRawPacket</tt> with at least <tt>len</tt> bytes of
+     * Gets an unused <tt>RtpPacket</tt> with at least <tt>len</tt> bytes of
      * buffer space.
      * @param len the minimum available length
-     * @return An unused <tt>NewRawPacket</tt> with at least <tt>len</tt> bytes of
+     * @return An unused <tt>RtpPacket</tt> with at least <tt>len</tt> bytes of
      * buffer space.
      */
-    private NewRawPacket getFreePacket(int len)
+    private RtpPacket getFreePacket(int len)
     {
-        NewRawPacket pkt = pool.poll();
+        RtpPacket pkt = pool.poll();
         if (pkt == null)
-            pkt = new NewRawPacket(new byte[len], 0, 0);
+            pkt = new RtpPacket(new byte[len], 0, 0);
 
         if (pkt.getBuffer() == null || pkt.getBuffer().length < len)
             pkt.setBuffer(new byte[len]);
@@ -371,7 +369,7 @@ public class NewRawPacketCache
         {
             if (logger.isDebugEnabled())
             {
-                logger.debug("Cleaning NewRawPacketCache " + hashCode());
+                logger.debug("Cleaning RtpPacketCache " + hashCode());
             }
 
             Iterator<Map.Entry<Long,Cache>> iter
@@ -395,7 +393,7 @@ public class NewRawPacketCache
     }
 
     /**
-     * Returns a {@link Container} and its {@link NewRawPacket} to the list of
+     * Returns a {@link Container} and its {@link RtpPacket} to the list of
      * free containers (and packets).
      * @param container the container to return.
      */
@@ -462,7 +460,7 @@ public class NewRawPacketCache
         /**
          * The underlying container. It maps a packet index (based on its RTP
          * sequence number, in the same way as used in SRTP (RFC3711)) to the
-         * <tt>NewRawPacket</tt> with the packet contents.
+         * <tt>RtpPacket</tt> with the packet contents.
          */
         private TreeMap<Integer, Container> cache = new TreeMap<>();
 
@@ -485,10 +483,10 @@ public class NewRawPacketCache
          * Inserts a packet into this <tt>Cache</tt>.
          * @param pkt the packet to insert.
          */
-        private synchronized void insert(NewRawPacket pkt)
+        private synchronized void insert(RtpPacket pkt)
         {
             int len = pkt.getLength();
-            NewRawPacket cachePacket = getFreePacket(len);
+            RtpPacket cachePacket = getFreePacket(len);
             System.arraycopy(pkt.getBuffer(), pkt.getOffset(),
                 cachePacket.getBuffer(), 0,
                 len);
@@ -578,7 +576,7 @@ public class NewRawPacketCache
                 container == null
                     ? null
                     : new Container(
-                    new NewRawPacket(container.pkt.getBuffer().clone(),
+                    new RtpPacket(container.pkt.getBuffer().clone(),
                         container.pkt.getOffset(),
                         container.pkt.getLength()),
                     container.timeAdded);
@@ -631,7 +629,7 @@ public class NewRawPacketCache
             while (iter.hasNext())
             {
                 Container container = iter.next().getValue();
-                NewRawPacket pkt = container.pkt;
+                RtpPacket pkt = container.pkt;
 
                 if (size > MAX_SIZE_PACKETS)
                 {
@@ -722,9 +720,9 @@ public class NewRawPacketCache
     public class Container
     {
         /**
-         * The {@link NewRawPacket} which this container holds.
+         * The {@link RtpPacket} which this container holds.
          */
-        public NewRawPacket pkt;
+        public RtpPacket pkt;
 
         /**
          * The time (in milliseconds since the epoch) that the packet was
@@ -745,7 +743,7 @@ public class NewRawPacketCache
          * @param pkt the packet to hold.
          * @param timeAdded the time the packet was added.
          */
-        public Container(NewRawPacket pkt, long timeAdded)
+        public Container(RtpPacket pkt, long timeAdded)
         {
             this.pkt = pkt;
             this.timeAdded = timeAdded;
