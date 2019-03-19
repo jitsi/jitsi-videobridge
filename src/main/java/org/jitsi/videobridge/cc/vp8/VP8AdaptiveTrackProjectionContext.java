@@ -22,6 +22,7 @@ import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.utils.*;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 
