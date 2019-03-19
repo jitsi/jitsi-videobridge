@@ -53,17 +53,17 @@ class RetransmissionSender : TransformerNode("Retransmission sender") {
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        logger.cdebug { "Retransmission sender ${hashCode()} retransmitting packet with original ssrc " +
+        logger.cdebug { "${hashCode()} retransmitting packet with original ssrc " +
                 "${rtpPacket.ssrc}, original sequence number ${rtpPacket.sequenceNumber} and original " +
                 "payload type: ${rtpPacket.payloadType}" }
         numRetransmissionsRequested++
         val rtxSsrc = associatedSsrcs[rtpPacket.ssrc] ?: run {
-            logger.cerror { "Retransmission sender ${hashCode()} could not find an associated RTX ssrc for original packet ssrc " +
+            logger.cerror { "${hashCode()} could not find an associated RTX ssrc for original packet ssrc " +
                     rtpPacket.ssrc }
             return null
         }
         val rtxPt = associatedPayloadTypes[rtpPacket.payloadType.toPositiveInt()] ?: run {
-            logger.cerror { "Retransmission sender ${hashCode()} could not find an associated RTX payload type for original payload type " +
+            logger.cerror { "${hashCode()} could not find an associated RTX payload type for original payload type " +
                     rtpPacket.payloadType }
             return null
         }
@@ -78,8 +78,7 @@ class RetransmissionSender : TransformerNode("Retransmission sender") {
         rtpPacket.ssrc = rtxSsrc
         rtpPacket.payloadType = rtxPt
         rtpPacket.sequenceNumber = rtxSeqNum
-        logger.cdebug { "Retransmission sender ${hashCode()} sending RTX packet with " +
-                "ssrc $rtxSsrc with pt $rtxPt and seqNum $rtxSeqNum" }
+        logger.cdebug { "${hashCode()} sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum $rtxSeqNum" }
 
         numRetransmittedPackets++
         return packetInfo
@@ -92,7 +91,7 @@ class RetransmissionSender : TransformerNode("Retransmission sender") {
                     val rtxPt = event.payloadType.pt.toUInt()
                     event.payloadType.parameters["apt"]?.toByte()?.toUInt()?.let {
                         val associatedPt = it
-                        logger.cinfo { "Retransmission sender ${hashCode()} associating RTX payload type " +
+                        logger.cdebug { "${hashCode()} associating RTX payload type " +
                                 "$rtxPt with primary $associatedPt" }
                         associatedPayloadTypes[associatedPt] = rtxPt
                     } ?: run {
@@ -105,7 +104,7 @@ class RetransmissionSender : TransformerNode("Retransmission sender") {
             }
             is SsrcAssociationEvent -> {
                 if (event.type == SsrcAssociationType.RTX) {
-                    logger.cinfo { "Retransmission sender ${hashCode()} associating RTX ssrc " +
+                    logger.cdebug { "${hashCode()} associating RTX ssrc " +
                             "${event.secondarySsrc} with primary ${event.primarySsrc}" }
                     associatedSsrcs[event.primarySsrc] = event.secondarySsrc
                 }

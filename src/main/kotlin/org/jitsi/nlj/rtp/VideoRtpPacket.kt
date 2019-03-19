@@ -17,7 +17,6 @@ package org.jitsi.nlj.rtp
 
 import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
 
 open class VideoRtpPacket(
     data: ByteArray,
