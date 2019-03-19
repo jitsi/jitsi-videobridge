@@ -44,7 +44,8 @@ class Vp8Packet(
     override fun clone(): Vp8Packet {
         val clone = Vp8Packet(buffer.cloneFromPool(), offset, length)
         clone.isKeyframe = isKeyframe
-        clone.trackEncodings = trackEncodings?.copyOf()
+        // TODO can we ask the superclass to clone its own fields?
+        clone.qualityIndex = qualityIndex
         clone.spatialLayerIndex = spatialLayerIndex
         clone.temporalLayerIndex = temporalLayerIndex
 
