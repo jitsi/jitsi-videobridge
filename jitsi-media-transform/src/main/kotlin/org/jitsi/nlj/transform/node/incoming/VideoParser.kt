@@ -43,10 +43,10 @@ class VideoParser : TransformerNode("Video parser") {
             val videoRtpPacket = when (payloadType) {
                 is Vp8PayloadType -> {
                     val vp8Packet = rtpPacket.toOtherType(::Vp8Packet)
-                    for (i in tracks.indices) {
-                        if (tracks[i].matches(vp8Packet.ssrcAsLong)) {
-                            vp8Packet.qualityIndex = i
-                            break
+                    tracks.forEach { track ->
+                        track.findRtpEncodingDesc(vp8Packet)?.let {
+                            vp8Packet.qualityIndex = it.index
+                            return@forEach
                         }
                     }
                     vp8Packet
