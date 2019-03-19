@@ -27,6 +27,8 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.stats.PacketIOActivity
 import org.jitsi.nlj.stats.TransceiverStats
 import org.jitsi.nlj.transform.NodeStatsProducer
+import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.debug.BufferTracePlugin
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.extensions.toHex
@@ -302,7 +304,6 @@ class Transceiver(
         return NodeStatsBlock("Transceiver $id").apply {
             addStat("RTP Receiver", rtpReceiver.getNodeStats())
             addStat("RTP Sender", rtpSender.getNodeStats())
-
         }
     }
 
@@ -325,5 +326,12 @@ class Transceiver(
     fun teardown() {
         rtpReceiver.tearDown()
         rtpSender.tearDown()
+    }
+
+    companion object {
+        init {
+//            Node.plugins.add(BufferTracePlugin)
+//            Node.PLUGINS_ENABLED = true
+        }
     }
 }

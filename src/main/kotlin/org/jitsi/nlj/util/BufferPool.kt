@@ -25,7 +25,7 @@ import java.nio.ByteBuffer
  */
 class BufferPool {
     companion object {
-        var getBuffer: (Int) -> ByteBuffer = { size -> ByteBuffer.allocate(size) }
-        var returnBuffer: (ByteBuffer) -> Unit = { }
+        var getBuffer: (Int) -> ByteArray = { size -> ByteArray(size) }
+        var returnBuffer: (ByteArray) -> Unit = { }
     }
 }

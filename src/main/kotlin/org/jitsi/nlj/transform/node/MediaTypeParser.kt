@@ -25,7 +25,6 @@ import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.service.neomedia.MediaType
-import unsigned.toUByte
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -36,13 +35,13 @@ class MediaTypeParser : TransformerNode("Media type parser") {
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        val mediaType = payloadTypes[rtpPacket.header.payloadType.toUByte()]?.mediaType ?: run {
-            logger.cdebug { "Unable to find format for payload type ${rtpPacket.header.payloadType}" }
+        val mediaType = payloadTypes[rtpPacket.payloadType]?.mediaType ?: run {
+            logger.cdebug { "Unable to find format for payload type ${rtpPacket.payloadType}" }
             return packetInfo
         }
         packetInfo.packet = when (mediaType) {
-            MediaType.AUDIO -> rtpPacket.toOtherRtpPacketType(::AudioRtpPacket)
-            MediaType.VIDEO -> rtpPacket.toOtherRtpPacketType(::VideoRtpPacket)
+            MediaType.AUDIO -> rtpPacket.toOtherType(::AudioRtpPacket)
+            MediaType.VIDEO -> rtpPacket.toOtherType(::VideoRtpPacket)
             else -> throw Exception("Unrecognized media type: '$mediaType'")
         }
         return packetInfo

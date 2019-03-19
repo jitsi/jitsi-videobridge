@@ -14,15 +14,22 @@
  * limitations under the License.
  */
 
-package org.jitsi.nlj.transform.node.debug
+package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.transform.node.ObserverNode
-import org.jitsi.rtp.extensions.toHex
 
-class BufferTraceNode(val where: String) : ObserverNode("RtpPacketTraceNode@$where") {
-    override fun observe(packetInfo: PacketInfo) {
-//        val buf = packetInfo.packet.getBuffer()
-//        println("array trace @$where: ${System.identityHashCode(buf.array())} $buf")
-    }
+/**
+ * A [NodePlugin] can be statically added to [Node] so that it
+ * can function as an observer between every node created.  This
+ * is useful for debugging things like when the backing array of
+ * a packet changes throughout the pipeline.
+ */
+interface NodePlugin {
+    /**
+     * Invoked in between every node in any pipeline.  [context]
+     * gives a sense of when/'where' it is being invoked (e.g.
+     * "after MediaTyperParser") and [packetInfo] is the [PacketInfo]
+     * being passed from one node to the next.
+     */
+    fun observe(context: String, packetInfo: PacketInfo)
 }

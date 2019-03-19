@@ -22,7 +22,7 @@ import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.impl.neomedia.transform.*;
-import org.jitsi.rtp.rtcp.rtcpfb.*;
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
@@ -166,11 +166,13 @@ public class TransportCCEngine
 
     public void tccReceived(RtcpFbTccPacket tccPacket)
     {
-        tccPacket.forEach((tccSeqNum, recvTimestamp) ->
+        tccPacket.forEach(entry ->
         {
+            int tccSeqNum = entry.getKey();
+            long recvTimestamp = entry.getValue();
             if (recvTimestamp == -1)
             {
-                return Unit.INSTANCE;
+                return;
             }
             if (remoteReferenceTimeMs == -1)
             {
@@ -186,7 +188,7 @@ public class TransportCCEngine
 
             if (packetDetail == null)
             {
-                return Unit.INSTANCE;
+                return;
             }
             long delta = recvTimestamp - tccPacket.getReferenceTimeMs();
 //            logger.info("Got tcc for packet " + tccSeqNum + ", the reference time is " + tccPacket.getFci().getReferenceTimeMs() +
@@ -209,7 +211,6 @@ public class TransportCCEngine
             );
 //            logger.info("Latest bitrate estimate for " + tccPacket.getHeader().getSenderSsrc() +
 //                    ": " + bitrateEstimatorAbsSendTime.getLatestEstimate() + "bps");
-            return Unit.INSTANCE;
         });
     }
 

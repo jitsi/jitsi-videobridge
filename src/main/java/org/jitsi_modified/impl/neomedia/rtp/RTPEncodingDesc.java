@@ -323,7 +323,7 @@ public class RTPEncodingDesc
 
     boolean matches(VideoRtpPacket packet)
     {
-        if (!matches(packet.getHeader().getSsrc()))
+        if (!matches(packet.getSSRCAsLong()))
         {
             return false;
         }

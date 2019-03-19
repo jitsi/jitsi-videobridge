@@ -21,7 +21,6 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.AbstractSrtpTransformerNode
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
-import java.nio.ByteBuffer
 
 class SrtcpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTCP Encrypt wrapper") {
     private var numEncryptFailures = 0

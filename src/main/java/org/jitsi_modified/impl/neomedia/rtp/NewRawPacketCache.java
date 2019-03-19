@@ -18,6 +18,7 @@ package org.jitsi_modified.impl.neomedia.rtp;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.nlj.util.*;
+import org.jitsi.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
@@ -106,9 +107,9 @@ public class NewRawPacketCache
     private final int SSRC_TIMEOUT_MILLIS;
 
     /**
-     * The pool of <tt>RawPacket</tt>s which we use to avoid allocation and GC.
+     * The pool of <tt>NewRawPacket</tt>s which we use to avoid allocation and GC.
      */
-    private final Queue<RawPacket> pool
+    private final Queue<NewRawPacket> pool
         = new LinkedBlockingQueue<>(POOL_SIZE);
 
     /**
@@ -267,7 +268,7 @@ public class NewRawPacketCache
      * @return the packet with the given SSRC and RTP sequence number from the
      * cache. If no such packet is found, returns <tt>null</tt>.
      */
-    public RawPacket get(long ssrc, int seq)
+    public NewRawPacket get(long ssrc, int seq)
     {
         Container container = getContainer(ssrc, seq);
         return container == null ? null : container.pkt;
@@ -308,7 +309,7 @@ public class NewRawPacketCache
      * Saves a packet in the cache.
      * @param pkt the packet to save.
      */
-    public void cachePacket(RawPacket pkt)
+    public void cachePacket(NewRawPacket pkt)
     {
         Cache cache = getCache(pkt.getSSRCAsLong(), true);
 
@@ -327,17 +328,17 @@ public class NewRawPacketCache
 
 
     /**
-     * Gets an unused <tt>RawPacket</tt> with at least <tt>len</tt> bytes of
+     * Gets an unused <tt>NewRawPacket</tt> with at least <tt>len</tt> bytes of
      * buffer space.
      * @param len the minimum available length
-     * @return An unused <tt>RawPacket</tt> with at least <tt>len</tt> bytes of
+     * @return An unused <tt>NewRawPacket</tt> with at least <tt>len</tt> bytes of
      * buffer space.
      */
-    private RawPacket getFreePacket(int len)
+    private NewRawPacket getFreePacket(int len)
     {
-        RawPacket pkt = pool.poll();
+        NewRawPacket pkt = pool.poll();
         if (pkt == null)
-            pkt = new RawPacket(new byte[len], 0, 0);
+            pkt = new NewRawPacket(new byte[len], 0, 0);
 
         if (pkt.getBuffer() == null || pkt.getBuffer().length < len)
             pkt.setBuffer(new byte[len]);
@@ -394,7 +395,7 @@ public class NewRawPacketCache
     }
 
     /**
-     * Returns a {@link Container} and its {@link RawPacket} to the list of
+     * Returns a {@link Container} and its {@link NewRawPacket} to the list of
      * free containers (and packets).
      * @param container the container to return.
      */
@@ -461,7 +462,7 @@ public class NewRawPacketCache
         /**
          * The underlying container. It maps a packet index (based on its RTP
          * sequence number, in the same way as used in SRTP (RFC3711)) to the
-         * <tt>RawPacket</tt> with the packet contents.
+         * <tt>NewRawPacket</tt> with the packet contents.
          */
         private TreeMap<Integer, Container> cache = new TreeMap<>();
 
@@ -484,10 +485,10 @@ public class NewRawPacketCache
          * Inserts a packet into this <tt>Cache</tt>.
          * @param pkt the packet to insert.
          */
-        private synchronized void insert(RawPacket pkt)
+        private synchronized void insert(NewRawPacket pkt)
         {
             int len = pkt.getLength();
-            RawPacket cachePacket = getFreePacket(len);
+            NewRawPacket cachePacket = getFreePacket(len);
             System.arraycopy(pkt.getBuffer(), pkt.getOffset(),
                 cachePacket.getBuffer(), 0,
                 len);
@@ -577,7 +578,7 @@ public class NewRawPacketCache
                 container == null
                     ? null
                     : new Container(
-                    new RawPacket(container.pkt.getBuffer().clone(),
+                    new NewRawPacket(container.pkt.getBuffer().clone(),
                         container.pkt.getOffset(),
                         container.pkt.getLength()),
                     container.timeAdded);
@@ -630,7 +631,7 @@ public class NewRawPacketCache
             while (iter.hasNext())
             {
                 Container container = iter.next().getValue();
-                RawPacket pkt = container.pkt;
+                NewRawPacket pkt = container.pkt;
 
                 if (size > MAX_SIZE_PACKETS)
                 {
@@ -721,9 +722,9 @@ public class NewRawPacketCache
     public class Container
     {
         /**
-         * The {@link RawPacket} which this container holds.
+         * The {@link NewRawPacket} which this container holds.
          */
-        public RawPacket pkt;
+        public NewRawPacket pkt;
 
         /**
          * The time (in milliseconds since the epoch) that the packet was
@@ -744,7 +745,7 @@ public class NewRawPacketCache
          * @param pkt the packet to hold.
          * @param timeAdded the time the packet was added.
          */
-        public Container(RawPacket pkt, long timeAdded)
+        public Container(NewRawPacket pkt, long timeAdded)
         {
             this.pkt = pkt;
             this.timeAdded = timeAdded;

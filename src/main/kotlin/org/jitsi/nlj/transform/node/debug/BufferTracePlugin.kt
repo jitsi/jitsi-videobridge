@@ -14,11 +14,18 @@
  * limitations under the License.
  */
 
-package org.jitsi.nlj.rtp
+package org.jitsi.nlj.transform.node.debug
 
-import org.jitsi.nlj.util.BufferPool
+import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.transform.node.NodePlugin
+import org.jitsi.nlj.transform.node.ObserverNode
+import org.jitsi.rtp.extensions.toHex
 
-//TODO: need to set the padding amount at the end of the payload!
-class PaddingVideoPacket(
-    length: Int
-) : VideoRtpPacket(BufferPool.getBuffer(length), 0, length)
+class BufferTracePlugin {
+    companion object : NodePlugin {
+        override fun observe(context: String, packetInfo: PacketInfo) {
+            println("array trace @$context: ${System.identityHashCode(packetInfo.packet.buffer)} " +
+                    "offset ${packetInfo.packet.offset} length ${packetInfo.packet.length}")
+        }
+    }
+}

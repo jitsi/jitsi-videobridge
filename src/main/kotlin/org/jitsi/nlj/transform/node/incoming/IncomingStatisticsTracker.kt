@@ -23,7 +23,6 @@ import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.RtpUtils.Companion.convertRtpTimestampToMs
 import org.jitsi.nlj.util.cinfo
@@ -65,16 +64,16 @@ class IncomingStatisticsTracker : ObserverNode("Incoming statistics tracker") {
 
     override fun observe(packetInfo: PacketInfo) {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        val stats = ssrcStats.computeIfAbsent(rtpPacket.header.ssrc) {
-            IncomingSsrcStats(rtpPacket.header.ssrc, rtpPacket.header.sequenceNumber)
-        }
-        payloadTypes[rtpPacket.header.payloadType.toByte()]?.let {
-            val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.header.timestamp.toUInt(), it.clockRate)
+        payloadTypes[rtpPacket.payloadType]?.let {
+            val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrcAsLong) {
+                IncomingSsrcStats(rtpPacket.ssrcAsLong, rtpPacket.sequenceNumber)
+            }
+            val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.timestamp.toUInt(), it.clockRate)
             stats.packetReceived(rtpPacket, packetSentTimestamp, packetInfo.receivedTime)
         }
 
         val now = System.currentTimeMillis()
-        val bytes = rtpPacket.sizeBytes
+        val bytes = rtpPacket.length
         bitrate.update(bytes, now)
         packetRate.update(1, now)
         bytesReceived += bytes
@@ -283,7 +282,7 @@ class IncomingSsrcStats(
         packetSentTimestampMs: Long,
         packetReceivedTimeMs: Long
     ) {
-        val packetSequenceNumber = packet.header.sequenceNumber
+        val packetSequenceNumber = packet.sequenceNumber
         synchronized(statsLock) {
             numReceivedPackets++
             if (packetSequenceNumber isNewerThan maxSeqNum) {

@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
@@ -25,9 +24,7 @@ import org.jitsi.nlj.format.VideoPayloadType
 import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.transform.node.TransformerNode
-import org.jitsi.rtp.rtp.RtpPacket
-import unsigned.toUByte
-import java.util.ArrayList
+import org.jitsi.rtp.NewRawPacket
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -35,18 +32,17 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class VideoParser : TransformerNode("Video parser") {
     private val payloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
-    private var rtpEncodings: List<RTPEncodingDesc> = ArrayList()
 
     //TODO: things we want to detect here:
     // does this packet belong to a keyframe?
     // does this packet represent the start of a frame?
     // does this packet represent the end of a frame?
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
-        val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        val pt = rtpPacket.header.payloadType.toUByte()
+        val rtpPacket = packetInfo.packetAs<NewRawPacket>()
+        val pt = rtpPacket.payloadType
         payloadTypes[pt]?.let { payloadType ->
             val videoRtpPacket = when (payloadType) {
-                is Vp8PayloadType -> rtpPacket.toOtherRtpPacketType(::Vp8Packet)
+                is Vp8PayloadType -> rtpPacket.toOtherType(::Vp8Packet)
                 else -> rtpPacket
             }
             packetInfo.packet = videoRtpPacket
