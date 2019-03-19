@@ -29,12 +29,12 @@ open class VideoRtpPacket(
      */
     var bitrateSnapshot: Long? = null
     var isKeyframe = false
-    var trackEncodings: Array<RTPEncodingDesc>? = null
+    var qualityIndex = -1
 
     override fun clone(): VideoRtpPacket {
         val clone = VideoRtpPacket(buffer.cloneFromPool(), offset, length)
         clone.isKeyframe = isKeyframe
-        clone.trackEncodings = trackEncodings?.copyOf()
+        clone.qualityIndex = qualityIndex
         return clone
     }
 }
