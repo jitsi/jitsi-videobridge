@@ -179,12 +179,13 @@ class GenericAdaptiveTrackProjectionContext
      * thread) accessing this method at a time.
      *
      * @param rtpPacket the RTP packet to determine whether to accept or not.
+     * @param incomingIndex the quality index of the
      * @param targetIndex the target quality index
      * @return true if the packet should be accepted, false otherwise.
      */
     @Override
     public synchronized boolean
-    accept(@NotNull RawPacket rtpPacket, int targetIndex)
+    accept(@NotNull RawPacket rtpPacket, int incomingIndex, int targetIndex)
     {
         if (targetIndex == RTPEncodingDesc.SUSPENDED_INDEX)
         {

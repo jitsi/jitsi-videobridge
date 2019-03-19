@@ -418,8 +418,13 @@ public class BitrateController
      * written into the {@link Endpoint} that owns this {@link BitrateController}
      * ; otherwise, <tt>false</tt>
      */
-    public boolean accept(RawPacket rtpPacket)
+    public boolean accept(RtpPacket rtpPacket)
     {
+        if (rtpPacket instanceof AudioRtpPacket)
+        {
+            return true;
+        }
+
         long ssrc = rtpPacket.getSSRCAsLong();
         if (ssrc < 0)
         {

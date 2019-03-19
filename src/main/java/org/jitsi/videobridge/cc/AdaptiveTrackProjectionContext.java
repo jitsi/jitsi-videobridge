@@ -46,10 +46,11 @@ public interface AdaptiveTrackProjectionContext
      * Determines whether an RTP packet should be accepted or not.
      *
      * @param rtpPacket the RTP packet to determine whether to accept or not.
+     * @param incomingIndex the quality index of the incoming RTP packet.
      * @param targetIndex the target quality index
      * @return true if the packet should be accepted, false otherwise.
      */
-    boolean accept(RawPacket rtpPacket, int targetIndex);
+    boolean accept(RawPacket rtpPacket, int incomingIndex, int targetIndex);
 
     /**
      * @return true if this stream context needs a keyframe in order to either

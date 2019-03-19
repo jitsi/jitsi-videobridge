@@ -193,22 +193,40 @@ public class AdaptiveTrackProjection
      * @param rtpPacket the RTP packet to determine whether to accept or not.
      * @return true if the packet is accepted, false otherwise.
      */
-    public boolean accept(@NotNull RawPacket rtpPacket)
+    public boolean accept(@NotNull RtpPacket rtpPacket)
     {
-        // RawPacket legacyRawPacket = RawPacketExtensionsKt.toLegacyRawPacket(packetInfo.getPacket());
-        AdaptiveTrackProjectionContext contextCopy = getContext(rtpPacket);
+        if (!(rtpPacket instanceof VideoRtpPacket))
+        {
+            logger.error("Not a video RTP packet. Dropping.");
+            return false;
+        }
+        VideoRtpPacket videoRtpPacket = (VideoRtpPacket) rtpPacket;
+
+        RawPacket legacyRawPacket
+                = RawPacketExtensionsKt.toLegacyRawPacket(rtpPacket);
+        AdaptiveTrackProjectionContext contextCopy = getContext(legacyRawPacket);
         if (contextCopy == null)
         {
             return false;
         }
-        packetCache.cachePacket(RawPacketExtensionsKt.fromLegacyRawPacket(rtpPacket));
+        packetCache.cachePacket(rtpPacket);
 
         // XXX We want to let the context know that the stream has been
         // suspended so that it can raise the needsKeyframe flag and also allow
         // it to compute a sequence number delta when the target becomes > -1.
 
+        if (videoRtpPacket.getQualityIndex() < 0)
+        {
+            logger.warn(
+                "Dropping an RTP packet, no quality index (SSRC=" +
+                    rtpPacket.getSSRCAsLong() + ").");
+
+            return false;
+        }
+
         int targetIndexCopy = targetIndex;
-        boolean accept = contextCopy.accept(rtpPacket, targetIndexCopy);
+        boolean accept = contextCopy.accept(
+            legacyRawPacket, videoRtpPacket.getQualityIndex(), targetIndexCopy);
 
         // We check if the context needs a keyframe regardless of whether or not
         // the packet was accepted.

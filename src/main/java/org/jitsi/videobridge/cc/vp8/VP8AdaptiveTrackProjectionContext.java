@@ -193,12 +193,13 @@ public class VP8AdaptiveTrackProjectionContext
      * method at a time.
      *
      * @param rtpPacket the VP8 packet to decide whether or not to project.
-     * @param targetIndex
+     * @param incomingIndex the quality index of the incoming RTP packet
+     * @param targetIndex the target quality index we want to achieve
      * @return true to project the packet, otherwise false.
      */
     private synchronized
     VP8FrameProjection createVP8FrameProjection(
-        @NotNull RawPacket rtpPacket, int targetIndex)
+        @NotNull RawPacket rtpPacket, int incomingIndex, int targetIndex)
     {
         // Creating a new VP8 projection depends on reading and results in
         // writing of the last VP8 frame, therefore this method needs to be
@@ -238,7 +239,8 @@ public class VP8AdaptiveTrackProjectionContext
         // Lastly, check whether the quality of the frame is something that we
         // want to forward. We don't want to be allocating new objects unless
         // we're interested in the quality of this frame.
-        if (!vp8QualityFilter.acceptFrame(rtpPacket, targetIndex, nowMs))
+        if (!vp8QualityFilter.acceptFrame(
+            rtpPacket, incomingIndex, targetIndex, nowMs))
         {
             return null;
         }
@@ -365,18 +367,21 @@ public class VP8AdaptiveTrackProjectionContext
      * Determines whether a packet should be accepted or not.
      *
      * @param rtpPacket the RTP packet to determine whether to project or not.
-     * @param targetIndex the target index to achieve
+     * @param incomingIndex the quality index of the incoming RTP packet
+     * @param targetIndex the target quality index we want to achieve
      * @return true if the packet should be accepted, false otherwise.
      */
     @Override
-    public boolean accept(@NotNull RawPacket rtpPacket, int targetIndex)
+    public boolean accept(
+        @NotNull RawPacket rtpPacket, int incomingIndex, int targetIndex)
     {
         VP8FrameProjection vp8FrameProjection
             = lookupVP8FrameProjection(rtpPacket);
 
         if (vp8FrameProjection == null)
         {
-            vp8FrameProjection = createVP8FrameProjection(rtpPacket, targetIndex);
+            vp8FrameProjection
+                = createVP8FrameProjection(rtpPacket, incomingIndex, targetIndex);
         }
 
         return vp8FrameProjection != null

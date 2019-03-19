@@ -29,6 +29,7 @@ import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
+import org.jitsi.rtp.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
@@ -435,9 +436,11 @@ public class Endpoint
                 return false;
             }
 
-//            RawPacket packet = PacketExtensionsKt.toRawPacket(packetInfo.getPacket());
-            RawPacket legacyRawPacket = RawPacketExtensionsKt.toLegacyRawPacket(packetInfo.getPacket());
-            return bitrateController.accept(legacyRawPacket);
+            Packet rtpPacket = packetInfo.getPacket();
+            if (rtpPacket instanceof RtpPacket)
+            {
+                return bitrateController.accept((RtpPacket) rtpPacket);
+            }
         }
         return false;
     }

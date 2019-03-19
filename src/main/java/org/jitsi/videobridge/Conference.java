@@ -1093,7 +1093,7 @@ public class Conference
 //                Packet packet = ((RtpPacket)packetInfo.getPacket()).cloneWithBackingBuffer(ByteBufferPool.getBuffer(1500));
 //                PacketInfo packetInfoCopy = new PacketInfo(packetInfo.clone(), packetInfo.getTimeline().clone());
 //                packetInfoCopy.setReceivedTime(packetInfo.getReceivedTime());
-                ((Endpoint) endpoint).sendRtp(packetInfo.clone());
+                endpoint.sendRtp(packetInfo.clone());
             }
         });
         if (tentacle != null && tentacle.wants(packetInfo, source))
