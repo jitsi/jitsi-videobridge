@@ -62,6 +62,9 @@ class NackHandler(
                 numCacheMisses++
             }
         }
+        // TODO reimplement the logic to avoid re-transmitting packets which were
+        // only transmitted recently.
+        // https://github.com/jitsi/libjitsi/blob/master/src/org/jitsi/impl/neomedia/transform/RtxTransformer.java#L450
         nackedPackets.forEach { onNackedPacketsReady.processPacket(PacketInfo(it)) }
     }
 
