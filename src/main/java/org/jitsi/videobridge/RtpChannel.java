@@ -29,7 +29,7 @@ import net.java.sip.communicator.util.*;
 import net.sf.fmj.media.rtp.*;
 import net.sf.fmj.media.rtp.RTPHeader;
 
-import org.ice4j.socket.*;
+import org.jitsi.utils.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
