@@ -58,7 +58,7 @@ public class DtlsTransport extends IceTransport
      */
     private static final Predicate<Packet> DTLS_PREDICATE
         = packet -> {
-                int b = packet.getBuffer()[0] & 0xFF;
+                int b = packet.getBuffer()[packet.getOffset()] & 0xFF;
                 return (20 <= b && b <= 63);
         };
 
