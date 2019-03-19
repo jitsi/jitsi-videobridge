@@ -20,6 +20,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.srtp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.incoming.*;
@@ -507,9 +508,9 @@ public class Endpoint
      * TODO Brian
      */
     public void setSrtpInformation(
-            int chosenSrtpProtectionProfile, TlsContext tlsContext)
+            int chosenSrtpProtectionProfile, TlsRole tlsRole, byte[] keyingMaterial)
     {
-        transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsContext);
+        transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial);
     }
 
     /**
