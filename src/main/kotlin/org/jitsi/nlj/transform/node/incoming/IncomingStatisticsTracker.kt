@@ -15,7 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.ice4j.util.RateStatistics
+import org.jitsi.utils.RateStatistics
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
@@ -32,7 +32,6 @@ import org.jitsi.nlj.util.numPacketsTo
 import org.jitsi.nlj.util.rolledOverTo
 import org.jitsi.rtp.rtp.RtpPacket
 import toUInt
-import unsigned.toUShort
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 
