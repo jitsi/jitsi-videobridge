@@ -26,7 +26,7 @@ import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
  * @author Boris Grozev
  */
 class MediaStreamTracks {
-    var tracks: Array<MediaStreamTrackDesc> = arrayOf()
+    private var tracks: Array<MediaStreamTrackDesc> = arrayOf()
 
     fun setMediaStreamTracks(newTracks: Array<MediaStreamTrackDesc>): Boolean {
         val oldTracks = tracks;
