@@ -424,27 +424,6 @@ public class NewRawPacket
     }
 
     /**
-     * Returns the list of CSRC IDs, currently encapsulated in this packet.
-     *
-     * @return an array containing the list of CSRC IDs, currently encapsulated
-     * in this packet.
-     */
-    public long[] extractCsrcList()
-    {
-        int csrcCount = getCsrcCount();
-        long[] csrcList = new long[csrcCount];
-
-        for (int i = 0, csrcStartIndex = offset + FIXED_HEADER_SIZE;
-                i < csrcCount;
-                i++, csrcStartIndex += 4)
-        {
-            csrcList[i] = readInt(csrcStartIndex);
-        }
-
-        return csrcList;
-    }
-
-    /**
      * Extracts the source audio level reported by the remote party which sent
      * this packet and carried in this packet.
      *
@@ -1226,67 +1205,6 @@ public class NewRawPacket
     {
         this.buffer = buffer;
         headerExtensions = new HeaderExtensions();
-    }
-
-    /**
-     * Replaces the existing CSRC list (even if empty) with <tt>newCsrcList</tt>
-     * and updates the CC (CSRC count) field of this <tt>NewRawPacket</tt>
-     * accordingly.
-     *
-     * @param newCsrcList the list of CSRC identifiers that we'd like to set for
-     * this <tt>NewRawPacket</tt>.
-     */
-    public void setCsrcList(long[] newCsrcList)
-    {
-        int newCsrcCount = newCsrcList.length;
-        byte[] csrcBuff = new byte[newCsrcCount * 4];
-        int csrcOffset = 0;
-
-        for(int i = 0; i < newCsrcList.length; i++)
-        {
-            long csrc = newCsrcList[i];
-
-            RTPUtils.writeInt(csrcBuff, csrcOffset, (int) csrc);
-            csrcOffset += 4;
-        }
-
-        int oldCsrcCount = getCsrcCount();
-
-        byte[] oldBuffer = this.getBuffer();
-
-        //the new buffer needs to be bigger than the new one in order to
-        //accommodate the list of CSRC IDs (unless there were more of them
-        //previously than after setting the new list).
-        byte[] newBuffer
-            = new byte[length + offset + csrcBuff.length - oldCsrcCount*4];
-
-        //copy the part up to the CSRC list
-        System.arraycopy(
-                    oldBuffer, 0, newBuffer, 0, offset + FIXED_HEADER_SIZE);
-
-        //copy the new CSRC list
-        System.arraycopy( csrcBuff, 0, newBuffer,
-                        offset + FIXED_HEADER_SIZE, csrcBuff.length);
-
-        //now copy the payload from the old buff and make sure we don't copy
-        //the CSRC list if there was one in the old packet
-        int payloadOffsetForOldBuff
-            = offset + FIXED_HEADER_SIZE + oldCsrcCount*4;
-
-        int payloadOffsetForNewBuff
-            = offset + FIXED_HEADER_SIZE + newCsrcCount*4;
-
-        System.arraycopy( oldBuffer, payloadOffsetForOldBuff,
-                          newBuffer, payloadOffsetForNewBuff,
-                          length - payloadOffsetForOldBuff);
-
-        //set the new CSRC count
-        newBuffer[offset] = (byte)((newBuffer[offset] & 0xF0)
-                                    | newCsrcCount);
-
-        setBuffer(newBuffer);
-        this.length = payloadOffsetForNewBuff + length
-                - payloadOffsetForOldBuff - offset;
     }
 
     /**
