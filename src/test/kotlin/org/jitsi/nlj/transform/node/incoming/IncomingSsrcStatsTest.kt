@@ -17,11 +17,10 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.plusOrMinus
+import io.kotlintest.matchers.doubles.plusOrMinus
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
 
 private data class StatPacketInfo(
@@ -35,7 +34,8 @@ private data class JitterPacketInfo(
 )
 
 private fun createStatPacketInfo(seqNum: Int, sentTime: Long, receivedTime: Long): StatPacketInfo {
-    val packetInfo = PacketInfo(RtpPacket(RtpHeader(sequenceNumber = seqNum)))
+    val packetInfo = PacketInfo(RtpPacket(ByteArray(50), 0, 0))
+    packetInfo.packetAs<RtpPacket>().sequenceNumber = seqNum
     packetInfo.receivedTime = receivedTime
     return StatPacketInfo(packetInfo, sentTime)
 }
@@ -130,7 +130,7 @@ internal class IncomingSsrcStatsTest : ShouldSpec() {
             )
             val streamStatistics = IncomingSsrcStats(
                     123L,
-                    packetSequence.first().packetInfo.packetAs<RtpPacket>().header.sequenceNumber
+                    packetSequence.first().packetInfo.packetAs<RtpPacket>().sequenceNumber
             )
             packetSequence.forEach {
                 streamStatistics.packetReceived(

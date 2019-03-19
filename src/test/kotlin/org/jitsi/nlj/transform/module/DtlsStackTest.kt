@@ -42,9 +42,8 @@ import org.jitsi.nlj.dtls.DtlsClientStack
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.incoming.DtlsReceiver
 import org.jitsi.nlj.transform.node.outgoing.DtlsSender
-import org.jitsi.rtp.UnparsedPacket
+import org.jitsi.rtp.NewRawPacket
 import java.math.BigInteger
-import java.nio.ByteBuffer
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
@@ -139,6 +138,8 @@ class TlsServerImpl : DefaultTlsServer() {
     }
 }
 
+//TODO: we need to get this working again, it's been broken since we started throwing when
+// checking for remote fingerprints
 // A simple, somewhat hacky test just to verify the handshake can complete and we can send data
 internal class DtlsStackTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -153,15 +154,15 @@ internal class DtlsStackTest : ShouldSpec() {
         val serverProtocol = DTLSServerProtocol(SecureRandom())
 
         serverTransport.sendFunc = { buf, off, len ->
-            receiver.processPacket(PacketInfo(UnparsedPacket(ByteBuffer.wrap(buf, off, len))))
+            receiver.processPacket(PacketInfo(NewRawPacket(buf, off, len)))
         }
         sender.attach(object : ConsumerNode("sender network") {
             override fun consume(packetInfo: PacketInfo) {
                 serverTransport.incomingQueue.add(
                         PacketData(
-                                packetInfo.packet.getBuffer().array(),
-                                packetInfo.packet.getBuffer().arrayOffset(),
-                                packetInfo.packet.getBuffer().limit()))
+                                packetInfo.packet.buffer,
+                                packetInfo.packet.offset,
+                                packetInfo.packet.length))
             }
         })
 
@@ -181,7 +182,7 @@ internal class DtlsStackTest : ShouldSpec() {
 
         dtls.connect()
         val message = "Hello, world"
-        dtls.sendDtlsAppData(PacketInfo(UnparsedPacket(ByteBuffer.wrap(message.toByteArray()))))
+        dtls.sendDtlsAppData(PacketInfo(NewRawPacket(message.toByteArray())))
         receivedDataFuture.get() shouldBe message
 
         serverRunning = false

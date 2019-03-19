@@ -18,11 +18,11 @@ package org.jitsi.nlj.transform.node.incoming
 
 import io.kotlintest.IsolationMode
 import io.kotlintest.should
-import io.kotlintest.shouldBe
+import io.kotlintest.shouldNotBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.resources.srtp_samples.SrtpSample
 import org.jitsi.nlj.srtp.SrtpUtil
-import org.jitsi.nlj.test_utils.matchers.haveSameContentAs
+import org.jitsi.nlj.test_utils.matchers.ByteArrayBuffer.haveSameContentAs
 
 internal class SrtpTransformerDecryptNodeTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -36,10 +36,12 @@ internal class SrtpTransformerDecryptNodeTest : ShouldSpec() {
 
     init {
         "decrypting a packet" {
-            val decryptedPacket = srtpTransformer.reverseTransform(SrtpSample.incomingEncryptedRtpPacket)
+            val decryptedPacket = srtpTransformer.reverseTransform(
+                SrtpSample.incomingEncryptedRtpPacket.clone())
 
             should("decrypt the data correctly") {
-                decryptedPacket.getBuffer() should haveSameContentAs(SrtpSample.expectedDecryptedRtpData)
+                decryptedPacket shouldNotBe null
+                decryptedPacket should haveSameContentAs(SrtpSample.expectedDecryptedRtpPacket)
             }
         }
     }

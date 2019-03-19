@@ -20,11 +20,11 @@ import org.bouncycastle.crypto.tls.DTLSTransport
 import org.bouncycastle.crypto.tls.DatagramTransport
 import org.bouncycastle.crypto.tls.TlsContext
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.rtp.DtlsProtocolPacket
-import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.clone
+import org.jitsi.rtp.NewRawPacket
 import java.nio.ByteBuffer
 import java.time.Duration
 import java.util.concurrent.LinkedBlockingQueue
@@ -135,15 +135,15 @@ abstract class DtlsStack : DatagramTransport {
             if (bytesReceived > 0) {
                 val bufCopy = dtlsAppDataBuf.clone();
                 bufCopy.limit(bytesReceived)
-                outPackets.add(PacketInfo(DtlsProtocolPacket(bufCopy)))
+//                outPackets.add(PacketInfo(DtlsProtocolPacket(bufCopy)))
+                outPackets.add(PacketInfo(NewRawPacket(bufCopy.array(), bufCopy.arrayOffset(), bufCopy.limit())))
             }
         } while (bytesReceived > 0)
         return outPackets
     }
 
     fun sendDtlsAppData(packetInfo: PacketInfo) {
-        val buf = packetInfo.packet.getBuffer()
-        dtlsTransport?.send(buf.array(), buf.arrayOffset(), buf.limit())
+        dtlsTransport?.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
     }
 
     override fun close() {}
@@ -161,9 +161,11 @@ abstract class DtlsStack : DatagramTransport {
     override fun receive(buf: ByteArray, off: Int, length: Int, waitMillis: Int): Int {
         val packetInfo = incomingProtocolData.poll(waitMillis.toLong(), TimeUnit.MILLISECONDS) ?: return -1
         val packet = packetInfo.packet
-        System.arraycopy(packet.getBuffer().array(), 0, buf, off, Math.min(length, packet.sizeBytes))
+        System.arraycopy(packet.buffer, 0, buf, off, Math.min(length, packet.length))
 
-        return packet.sizeBytes
+        BufferPool.returnBuffer(packetInfo.packet.buffer)
+
+        return packet.length
     }
 
     /**
@@ -176,7 +178,7 @@ abstract class DtlsStack : DatagramTransport {
      * in and read them.
      */
     override fun send(buf: ByteArray, off: Int, length: Int) {
-        val packet = PacketInfo(UnparsedPacket(ByteBuffer.wrap(buf, off, length)))
+        val packet = PacketInfo(NewRawPacket(buf, off, length))
         onOutgoingProtocolData(listOf(packet))
     }
 
