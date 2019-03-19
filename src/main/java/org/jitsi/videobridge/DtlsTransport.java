@@ -29,6 +29,7 @@ import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.extensions.*;
+import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.jingle.*;
@@ -67,17 +68,17 @@ public class DtlsTransport extends IceTransport
             = DTLS_PREDICATE.negate();
 
     private final Logger logger;
-    private DtlsClientStack dtlsStack = new DtlsClientStack();
-    private ProtocolReceiver dtlsReceiver = new ProtocolReceiver(dtlsStack);
-    private ProtocolSender dtlsSender = new ProtocolSender(dtlsStack);
+    private final DtlsStack dtlsStack;
+    private final ProtocolReceiver dtlsReceiver;
+    private final ProtocolSender dtlsSender;
     private List<Runnable> dtlsConnectedSubscribers = new ArrayList<>();
     private final PacketInfoQueue outgoingPacketQueue;
     private final Endpoint endpoint;
 
     private SocketSenderNode packetSender = new SocketSenderNode();
-    private Node incomingPipelineRoot = createIncomingPipeline();
-    private Node outgoingDtlsPipelineRoot = createOutgoingDtlsPipeline();
-    private Node outgoingSrtpPipelineRoot = createOutgoingSrtpPipeline();
+    private final Node incomingPipelineRoot;
+    private final Node outgoingDtlsPipelineRoot;
+    private final Node outgoingSrtpPipelineRoot;
     protected boolean dtlsHandshakeComplete = false;
 
     /**
@@ -101,6 +102,24 @@ public class DtlsTransport extends IceTransport
                         getClass().getSimpleName() + "-outgoing-packet-queue",
                         TaskPools.IO_POOL,
                         this::handleOutgoingPacket);
+
+        dtlsStack = new DtlsStack(endpoint.getID());
+        dtlsReceiver = new ProtocolReceiver(dtlsStack);
+        dtlsSender = new ProtocolSender(dtlsStack);
+
+        dtlsStack.onHandshakeComplete((chosenSrtpProfile, tlsRole, keyingMaterial) -> {
+            dtlsHandshakeComplete = true;
+            logger.info(logPrefix +
+                    "DTLS handshake complete. Got SRTP profile " +
+                    chosenSrtpProfile);
+            endpoint.setSrtpInformation(chosenSrtpProfile, tlsRole, keyingMaterial);
+            dtlsConnectedSubscribers.forEach(Runnable::run);
+            return Unit.INSTANCE;
+        });
+
+        incomingPipelineRoot = createIncomingPipeline();
+        outgoingDtlsPipelineRoot = createOutgoingDtlsPipeline();
+        outgoingSrtpPipelineRoot = createOutgoingSrtpPipeline();
     }
 
     /**
@@ -134,6 +153,27 @@ public class DtlsTransport extends IceTransport
                                 + transportPacketExtension.toXML());
             }
         });
+        if (dtlsStack.getRole() == null && !fingerprintExtensions.isEmpty())
+        {
+            String setup = fingerprintExtensions.get(0).getSetup();
+            if (!StringUtils.isNullOrEmpty(setup))
+            {
+                if (setup.equalsIgnoreCase("active"))
+                {
+                    logger.info(logPrefix + "Client is acting as DTLS client, we'll act as server");
+                    dtlsStack.actAsServer();
+                }
+                else if (setup.equalsIgnoreCase("passive"))
+                {
+                    logger.info(logPrefix + "Client is acting as DTLS server, we'll act as client");
+                    dtlsStack.actAsClient();
+                }
+                else
+                {
+                    logger.error(logPrefix + "Client send unrecognized DTLS setup value: " + setup);
+                }
+            }
+        }
 
         // Don't pass an empty list to the stack in order to avoid wiping
         // certificates that were contained in a previous request.
@@ -335,26 +375,15 @@ public class DtlsTransport extends IceTransport
         // to the incoming module chain.
         installIncomingPacketReader(socket);
 
-        dtlsStack.onHandshakeComplete((tlsContext) -> {
-            dtlsHandshakeComplete = true;
-            logger.info(logPrefix +
-                    "DTLS handshake complete. Got SRTP profile " +
-                        dtlsStack.getChosenSrtpProtectionProfile());
-            //TODO: emit this as part of the dtls handshake complete event?
-            endpoint.setSrtpInformation(
-                    dtlsStack.getChosenSrtpProtectionProfile(), tlsContext);
-            dtlsConnectedSubscribers.forEach(Runnable::run);
-            return Unit.INSTANCE;
-        });
-
         packetSender.socket = socket;
         logger.info(logPrefix + "Starting DTLS.");
         TaskPools.IO_POOL.submit(() -> {
             try
             {
-                dtlsStack.connect();
+                logger.info(logPrefix + "Calling dtlsStack.start()");
+                dtlsStack.start();
             }
-            catch (Exception e)
+            catch (Throwable e)
             {
                 logger.error(logPrefix +
                         "Error during DTLS negotiation: " + e.toString() +
