@@ -15,16 +15,14 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.nlj.Event
-import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.RtpPayloadTypeAddedEvent
-import org.jitsi.nlj.RtpPayloadTypeClearEvent
+import org.jitsi.nlj.*
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.VideoPayloadType
 import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.rtp.NewRawPacket
+import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -32,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class VideoParser : TransformerNode("Video parser") {
     private val payloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
+    private var tracks: Array<MediaStreamTrackDesc> = arrayOf()
 
     //TODO: things we want to detect here:
     // does this packet belong to a keyframe?
@@ -42,7 +41,16 @@ class VideoParser : TransformerNode("Video parser") {
         val pt = rtpPacket.payloadType
         payloadTypes[pt]?.let { payloadType ->
             val videoRtpPacket = when (payloadType) {
-                is Vp8PayloadType -> rtpPacket.toOtherType(::Vp8Packet)
+                is Vp8PayloadType -> {
+                    val vp8Packet = rtpPacket.toOtherType(::Vp8Packet)
+                    for (i in tracks.indices) {
+                        if (tracks[i].matches(vp8Packet.ssrcAsLong)) {
+                            vp8Packet.qualityIndex = i
+                            break
+                        }
+                    }
+                    vp8Packet
+                }
                 else -> rtpPacket
             }
             packetInfo.packet = videoRtpPacket
@@ -60,6 +68,9 @@ class VideoParser : TransformerNode("Video parser") {
                 }
             }
             is RtpPayloadTypeClearEvent -> payloadTypes.clear()
+            is SetMediaStreamTracksEvent -> {
+                tracks = event.mediaStreamTrackDescs
+            }
         }
         super.handleEvent(event)
     }
