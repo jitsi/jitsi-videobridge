@@ -115,21 +115,21 @@ class RtpHeader {
         }
 
         fun getSequenceNumber(buf: ByteArray, baseOffset: Int): Int =
-            buf.getShortAsInt(2)
+            buf.getShortAsInt(baseOffset + 2)
         fun setSequenceNumber(buf: ByteArray, baseOffset: Int, sequenceNumber: Int) {
-            buf.putShort(2, sequenceNumber.toShort())
+            buf.putShort(baseOffset + 2, sequenceNumber.toShort())
         }
 
         fun getTimestamp(buf: ByteArray, baseOffset: Int): Long =
-            buf.getIntAsLong(4)
+            buf.getIntAsLong(baseOffset + 4)
         fun setTimestamp(buf: ByteArray, baseOffset: Int, timestamp: Long) {
-            buf.putInt(4, timestamp.toInt())
+            buf.putInt(baseOffset + 4, timestamp.toInt())
         }
 
         fun getSsrc(buf: ByteArray, baseOffset: Int): Long =
-            buf.getIntAsLong(8)
+            buf.getIntAsLong(baseOffset + 8)
         fun setSsrc(buf: ByteArray, baseOffset: Int, ssrc: Long) {
-            buf.putInt(8, ssrc.toInt())
+            buf.putInt(baseOffset + 8, ssrc.toInt())
         }
 
         fun getCsrcs(buf: ByteArray, baseOffset: Int): List<Long> {
