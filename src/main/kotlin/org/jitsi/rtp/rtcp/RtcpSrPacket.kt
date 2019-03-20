@@ -150,11 +150,11 @@ class RtcpSrPacket(
     // SenderInfo is defined differently so that we can scope these variables under a the 'senderInfo'
     // member here.  Is there a better way?
     inner class SenderInfo {
-        val ntpTimestampMsw: Long = SenderInfoParser.getNtpTimestampMsw(buffer, RtcpHeader.SIZE_BYTES)
-        val ntpTimestampLsw: Long = SenderInfoParser.getNtpTimestampLsw(buffer, RtcpHeader.SIZE_BYTES)
-        val rtpTimestamp: Long = SenderInfoParser.getRtpTimestamp(buffer, RtcpHeader.SIZE_BYTES)
-        val sendersPacketCount: Long = SenderInfoParser.getSendersPacketCount(buffer, RtcpHeader.SIZE_BYTES)
-        val sendersOctetCount: Long = SenderInfoParser.getSendersOctetCount(buffer, RtcpHeader.SIZE_BYTES)
+        val ntpTimestampMsw: Long = SenderInfoParser.getNtpTimestampMsw(buffer, offset + SENDER_INFO_OFFSET)
+        val ntpTimestampLsw: Long = SenderInfoParser.getNtpTimestampLsw(buffer, offset + SENDER_INFO_OFFSET)
+        val rtpTimestamp: Long = SenderInfoParser.getRtpTimestamp(buffer, offset + SENDER_INFO_OFFSET)
+        val sendersPacketCount: Long = SenderInfoParser.getSendersPacketCount(buffer, offset + SENDER_INFO_OFFSET)
+        val sendersOctetCount: Long = SenderInfoParser.getSendersOctetCount(buffer, offset + SENDER_INFO_OFFSET)
 
         /**
          * https://tools.ietf.org/html/rfc3550#section-4
