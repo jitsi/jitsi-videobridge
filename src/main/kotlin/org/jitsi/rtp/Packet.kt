@@ -16,6 +16,9 @@
 
 package org.jitsi.rtp
 
+import org.jitsi.rtp.extensions.unsigned.toPositiveInt
+import org.jitsi.rtp.rtcp.RtcpHeader
+import org.jitsi.rtp.rtp.RtpHeader
 import java.util.function.Predicate
 
 //TODO move
@@ -31,4 +34,21 @@ abstract class Packet(
         otherTypeCreator(buffer, offset, length);
 
     public abstract override fun clone(): Packet
+
+    private fun getPacketType(buf: ByteArray, offset: Int): Int = buf.get(offset + 1).toPositiveInt()
+    private val rtcpPacketTypeRange = 200..211
+
+    fun looksLikeRtp(): Boolean {
+        if (length < RtpHeader.FIXED_HEADER_SIZE_BYTES) {
+            return false
+        }
+        return getPacketType(buffer, offset) !in rtcpPacketTypeRange
+    }
+
+    fun looksLikeRtcp(): Boolean {
+        if (length < RtcpHeader.SIZE_BYTES) {
+            return false
+        }
+        return getPacketType(buffer, offset) in rtcpPacketTypeRange
+    }
 }
