@@ -16,6 +16,8 @@
 
 package org.jitsi.rtp.rtp.header_extensions
 
+import org.jitsi.rtp.NewRawPacket
+import org.jitsi.rtp.extensions.bytearray.put3Bytes
 import org.jitsi.rtp.extensions.put3Bytes
 import java.nio.ByteBuffer
 
@@ -44,9 +46,23 @@ class AbsSendTimeHeaderExtension(
     }
 
     companion object {
+        const val DATA_SIZE_BYTES = 3
         /**
          * One billion.
          */
         private const val b = 1_000_000_000
+
+        fun setTime(ext: NewRawPacket.HeaderExtension, timestampNanos: Long) {
+
+        }
+
+        fun setTime(buf: ByteArray, offset: Int, timestampNanos: Long, extType: HeaderExtensionType) {
+            val fraction = ((timestampNanos % b) * (1 shl 18) / b )
+            val seconds = ((timestampNanos / b) % 64); //6 bits only
+
+            val timestamp = ((seconds shl 18) or fraction) and 0x00FFFFFF
+
+            buf.put3Bytes(offset + extType.headerSizeBytes, timestamp.toInt())
+        }
     }
 }
