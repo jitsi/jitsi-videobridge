@@ -20,12 +20,11 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpExtensionAddedEvent
 import org.jitsi.nlj.RtpExtensionClearEvent
+import org.jitsi.nlj.rtp.RtpExtensionType.SSRC_AUDIO_LEVEL
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.service.neomedia.RTPExtension
 import unsigned.toUInt
 
 /**
@@ -54,8 +53,8 @@ class AudioLevelReader : ObserverNode("Audio level reader") {
     override fun handleEvent(event: Event) {
         when (event) {
             is RtpExtensionAddedEvent -> {
-                if (RTPExtension.SSRC_AUDIO_LEVEL_URN.equals(event.rtpExtension.uri.toString())) {
-                    audioLevelExtId = event.extensionId.toUInt()
+                if (event.rtpExtension.type == SSRC_AUDIO_LEVEL) {
+                    audioLevelExtId = event.rtpExtension.id.toUInt()
                     logger.cdebug { "Setting extension ID to $audioLevelExtId" }
                 }
             }
