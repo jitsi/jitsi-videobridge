@@ -20,12 +20,12 @@ import org.jitsi.nlj.format.OpusPayloadType
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.format.Vp8PayloadType
+import org.jitsi.nlj.rtp.RtpExtension
+import org.jitsi.nlj.rtp.RtpExtensionType.*
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.rtp.util.byteBufferOf
-import org.jitsi.service.neomedia.RTPExtension
-import java.net.URI
 
 data class SrtpData(
     var srtpProfileInformation: SrtpProfileInformation,
@@ -39,24 +39,19 @@ data class SourceAssociation(
     var associationType: SsrcAssociationType
 )
 
-data class RtpExtensionInfo(
-    var id: Int,
-    var extension: RTPExtension
-)
-
 data class PcapInformation(
     var filePath: String,
     var srtpData: SrtpData,
     var payloadTypes: List<PayloadType>,
-    var headerExtensions: List<RtpExtensionInfo>,
+    var headerExtensions: List<RtpExtension>,
     var ssrcAssociations: List<SourceAssociation>
 )
 
 val DEFAULT_HEADER_EXTENSIONS = listOf(
-    RtpExtensionInfo(1, RTPExtension(URI(RTPExtension.SSRC_AUDIO_LEVEL_URN))),
-    RtpExtensionInfo(3, RTPExtension(URI(RTPExtension.ABS_SEND_TIME_URN))),
-    RtpExtensionInfo(4, RTPExtension(URI(RTPExtension.RTP_STREAM_ID_URN))),
-    RtpExtensionInfo(5, RTPExtension(URI(RTPExtension.TRANSPORT_CC_URN)))
+    RtpExtension(1, SSRC_AUDIO_LEVEL),
+    RtpExtension(3, ABS_SEND_TIME),
+    RtpExtension(4, RTP_STREAM_ID),
+    RtpExtension(5, TRANSPORT_CC)
 )
 
 object Pcaps {

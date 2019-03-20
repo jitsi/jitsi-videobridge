@@ -19,6 +19,7 @@ import org.bouncycastle.crypto.tls.TlsContext
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.RemoteBitrateObserver
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
+import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
@@ -32,7 +33,6 @@ import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.service.neomedia.MediaType
-import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.util.DiagnosticContext
 import org.jitsi.util.Logger
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
@@ -69,7 +69,7 @@ class Transceiver(
     logLevelDelegate: Logger? = null
 ) : Stoppable, NodeStatsProducer, RemoteBitrateObserver {
     private val logger = getLogger(this.javaClass, logLevelDelegate)
-    private val rtpExtensions = mutableMapOf<Byte, RTPExtension>()
+    private val rtpExtensions = mutableMapOf<Byte, RtpExtension>()
     private val payloadTypes = mutableMapOf<Byte, PayloadType>()
     private val receiveSsrcs = ConcurrentHashMap.newKeySet<Long>()
     val packetIOActivity = PacketIOActivity()
@@ -236,10 +236,10 @@ class Transceiver(
         payloadTypes.clear()
     }
 
-    fun addRtpExtension(extensionId: Byte, rtpExtension: RTPExtension) {
-        logger.cdebug { "Adding RTP extension: $extensionId -> $rtpExtension" }
-        rtpExtensions[extensionId] = rtpExtension
-        val rtpExtensionAddedEvent = RtpExtensionAddedEvent(extensionId, rtpExtension)
+    fun addRtpExtension(rtpExtension: RtpExtension) {
+        logger.cdebug { "Adding RTP extension: $rtpExtension" }
+        rtpExtensions[rtpExtension.id] = rtpExtension
+        val rtpExtensionAddedEvent = RtpExtensionAddedEvent(rtpExtension)
         rtpReceiver.handleEvent(rtpExtensionAddedEvent)
         rtpSender.handleEvent(rtpExtensionAddedEvent)
     }

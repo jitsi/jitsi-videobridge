@@ -19,13 +19,13 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpExtensionAddedEvent
 import org.jitsi.nlj.RtpExtensionClearEvent
+import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.toLegacyRawPacket
 import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionType
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi.rtp.NewRawPacket
-import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import unsigned.toUInt
 import java.nio.ByteBuffer
@@ -55,8 +55,8 @@ class TccSeqNumTagger(
     override fun handleEvent(event: Event) {
         when (event) {
             is RtpExtensionAddedEvent -> {
-                if (RTPExtension.TRANSPORT_CC_URN.equals(event.rtpExtension.uri.toString())) {
-                    tccExtensionId = event.extensionId.toUInt()
+                if (event.rtpExtension.type == TRANSPORT_CC) {
+                    tccExtensionId = event.rtpExtension.id.toUInt()
                     logger.cinfo { "TCC seq num tagger setting extension ID to $tccExtensionId" }
                 }
             }

@@ -23,8 +23,8 @@ import org.jitsi.nlj.RtpReceiverImpl
 import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
+import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.test_utils.RtpExtensionInfo
 import org.jitsi.test_utils.SourceAssociation
 import org.jitsi.test_utils.SrtpData
 import java.util.Random
@@ -38,7 +38,7 @@ class ReceiverFactory {
             backgroundExecutor: ScheduledExecutorService,
             srtpData: SrtpData,
             payloadTypes: List<PayloadType>,
-            headerExtensions: List<RtpExtensionInfo>,
+            headerExtensions: List<RtpExtension>,
             ssrcAssociations: List<SourceAssociation>,
             rtcpSender: (RtcpPacket) -> Unit = {}
             ): RtpReceiver {
@@ -57,7 +57,7 @@ class ReceiverFactory {
                 receiver.handleEvent(RtpPayloadTypeAddedEvent(it))
             }
             headerExtensions.forEach {
-                receiver.handleEvent(RtpExtensionAddedEvent(it.id.toByte(), it.extension))
+                receiver.handleEvent(RtpExtensionAddedEvent(it))
             }
             ssrcAssociations.forEach {
                 receiver.handleEvent(SsrcAssociationEvent(it.primarySsrc, it.secondarySsrc, it.associationType))
