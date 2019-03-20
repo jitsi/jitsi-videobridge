@@ -15,14 +15,12 @@
  */
 package org.jitsi_modified.impl.neomedia.rtp;
 
-import org.ice4j.util.*;
-import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.*;
+import org.jitsi.utils.*;
 
 import java.util.*;
 import java.util.concurrent.atomic.*;
