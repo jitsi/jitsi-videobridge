@@ -79,7 +79,7 @@ public class ChannelShim
     static RtpExtension createRtpExtension(RTPHdrExtPacketExtension ext)
     {
         String uri = ext.getURI().toString();
-        RtpExtensionType type = RtpExtensionType.Companion.createFrom(uri);
+        RtpExtensionType type = RtpExtensionType.Companion.createFromUri(uri);
         if (type == null)
         {
             logger.warn("Ignoring unknown RTP extension type: " + uri);
