@@ -75,6 +75,18 @@ public abstract class ByteArrayBuffer
         this.length = length;
     }
 
+    public void readRegionToBuff(int off, int len, byte[] outBuff)
+    {
+        int startOffset = this.offset + off;
+        if (off < 0 || len <= 0 || startOffset + len > this.buffer.length)
+            return;
+
+        if (outBuff.length < len)
+            return;
+
+        System.arraycopy(this.buffer, startOffset, outBuff, 0, len);
+    }
+
     public String toHex()
     {
         StringBuilder sb = new StringBuilder();

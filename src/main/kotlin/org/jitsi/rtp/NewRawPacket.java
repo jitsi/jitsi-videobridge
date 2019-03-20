@@ -17,6 +17,7 @@ package org.jitsi.rtp;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.rtp.rtcp.*;
+import org.jitsi.rtp.rtp.*;
 import org.jitsi.rtp.util.*;
 
 import java.util.*;
@@ -56,29 +57,6 @@ public class NewRawPacket
      * support 1 byte header extensions
      */
     public static final int HEADER_EXT_HEADER_SIZE = 1;
-
-    /**
-     * The size of the fixed part of the RTP header as defined by RFC 3550.
-     */
-    public static final int FIXED_HEADER_SIZE = 12;
-
-    /**
-     * The bitmask for the RTP sequence number field.
-     */
-    public static final int SEQUENCE_NUMBER_MASK = 0xffff;
-
-    /**
-     * The bitmask for the RTP timestamp field.
-     */
-    public static final long TIMESTAMP_MASK = 0xFFFF_FFFFL;
-
-    /**
-     * The bitmap/flag mask that specifies the set of boolean attributes enabled
-     * for this <tt>NewRawPacket</tt>. The value is the logical sum of all of the
-     * set flags. The possible flags are defined by the <tt>FLAG_XXX</tt>
-     * constants of FMJ's {@link javax.media.Buffer} class.
-     */
-    private int flags;
 
     /**
      * A {@link HeaderExtensions} instance, used to iterate over the RTP header
@@ -192,7 +170,7 @@ public class NewRawPacket
         // We get this early, before we modify the buffer.
         int payloadLength = getPayloadLength();
         boolean extensionBit = getExtensionBit();
-        int extHeaderOffset = FIXED_HEADER_SIZE + 4 * getCsrcCount();
+        int extHeaderOffset = RtpHeader.FIXED_HEADER_SIZE_BYTES + 4 * getCsrcCount();
 
 
         // This is an upper bound on the required length for the packet after
@@ -392,7 +370,7 @@ public class NewRawPacket
         if( !getExtensionBit() || getExtensionLength() == 0)
             return 0;
 
-        int extOffset = offset + FIXED_HEADER_SIZE
+        int extOffset = offset + RtpHeader.FIXED_HEADER_SIZE_BYTES
                 + getCsrcCount()*4 + EXT_HEADER_SIZE;
 
         int extensionEnd = extOffset + getExtensionLength();
@@ -453,69 +431,6 @@ public class NewRawPacket
     }
 
     /**
-     * Get buffer containing the content of this packet
-     *
-     * @return buffer containing the content of this packet
-     */
-    @Override
-    public byte[] getBuffer()
-    {
-        return this.buffer;
-    }
-
-    /**
-     * Returns the CSRC level at the specified index or <tt>defaultValue</tt>
-     * if there was no level at that index.
-     *
-     * @param csrcExtID the ID of the extension that's transporting csrc audio
-     * levels in the session that this <tt>NewRawPacket</tt> belongs to.
-     * @param index the sequence number of the CSRC audio level extension to
-     * return.
-     *
-     * @return the CSRC audio level at the specified index of the csrc audio
-     * level option or <tt>0</tt> if there was no level at that index.
-     */
-    private byte getCsrcAudioLevel(byte csrcExtID, int index, byte defaultValue)
-    {
-        byte level = defaultValue;
-
-        try
-        {
-            if (getExtensionBit() && getExtensionLength() != 0)
-            {
-                int levelsStart = findExtension(csrcExtID);
-
-                if (levelsStart != -1)
-                {
-                    int levelsCount = getLengthForExtension(levelsStart);
-
-                    if (levelsCount < index)
-                    {
-                        //apparently the remote side sent more CSRCs than levels.
-
-                        // ... yeah remote sides do that now and then ...
-                    }
-                    else
-                    {
-                        level = (byte) (0x7F & buffer[levelsStart + index]);
-                    }
-                }
-            }
-        }
-        catch (ArrayIndexOutOfBoundsException e)
-        {
-            // While ideally we should check the bounds everywhere and not
-            // attempt to access the packet's buffer at invalid indexes, there
-            // are too many places where it could inadvertently happen. It's
-            // safer to return the default value than to risk killing a thread
-            // which may not expect this.
-            level = defaultValue;
-        }
-
-        return level;
-    }
-
-    /**
      * Returns the number of CSRC identifiers currently included in this packet.
      *
      * @return the CSRC count for this <tt>NewRawPacket</tt>.
@@ -538,7 +453,7 @@ public class NewRawPacket
     private static int getCsrcCount(byte[] buffer, int offset, int length)
     {
         int cc = buffer[offset] & 0x0f;
-        if (FIXED_HEADER_SIZE + cc * 4 > length)
+        if (RtpHeader.FIXED_HEADER_SIZE_BYTES + cc * 4 > length)
             cc = 0;
         return cc;
     }
@@ -588,7 +503,7 @@ public class NewRawPacket
 
         //the type of the extension header comes right after the RTP header and
         //the CSRC list.
-        int extLenIndex =  offset + FIXED_HEADER_SIZE + getCsrcCount()*4;
+        int extLenIndex =  offset + RtpHeader.FIXED_HEADER_SIZE_BYTES + getCsrcCount()*4;
 
         //0xBEDE means short extension header.
         if (buffer[extLenIndex] == (byte)0xBE
@@ -643,14 +558,14 @@ public class NewRawPacket
 
         // The extension length comes after the RTP header, the CSRC list, and
         // two bytes in the extension header called "defined by profile".
-        int extLenIndex = offset + FIXED_HEADER_SIZE
+        int extLenIndex = offset + RtpHeader.FIXED_HEADER_SIZE_BYTES
             + getCsrcCount(buffer, offset, length) * 4 + 2;
 
         int len
             = ((buffer[extLenIndex] << 8) | (buffer[extLenIndex + 1] & 0xFF))
                 * 4;
 
-        if (len < 0 || len > (length - FIXED_HEADER_SIZE - EXT_HEADER_SIZE -
+        if (len < 0 || len > (length - RtpHeader.FIXED_HEADER_SIZE_BYTES - EXT_HEADER_SIZE -
             getCsrcCount(buffer, offset, length)*4))
         {
             // This is not a valid length. Together with the rest of the
@@ -663,18 +578,6 @@ public class NewRawPacket
     }
 
     /**
-     * Gets the bitmap/flag mask that specifies the set of boolean attributes
-     * enabled for this <tt>NewRawPacket</tt>.
-     *
-     * @return the bitmap/flag mask that specifies the set of boolean attributes
-     * enabled for this <tt>NewRawPacket</tt>
-     */
-    public int getFlags()
-    {
-        return flags;
-    }
-
-    /**
      * Return the define by profile part of the extension header.
      * @return the starting two bytes of extension header.
      */
@@ -684,7 +587,7 @@ public class NewRawPacket
             return 0;
 
         return
-            readUint16AsInt(offset + FIXED_HEADER_SIZE + getCsrcCount() * 4);
+            readUint16AsInt(offset + RtpHeader.FIXED_HEADER_SIZE_BYTES + getCsrcCount() * 4);
     }
 
     /**
@@ -708,7 +611,7 @@ public class NewRawPacket
     public static int getHeaderLength(byte[] buffer, int offset, int length)
     {
         int headerLength
-            = FIXED_HEADER_SIZE + 4 * getCsrcCount(buffer, offset, length);
+            = RtpHeader.FIXED_HEADER_SIZE_BYTES + 4 * getCsrcCount(buffer, offset, length);
 
         // Make sure that the header length doesn't exceed the packet length.
         if (headerLength > length)
@@ -763,17 +666,6 @@ public class NewRawPacket
             return (buffer[contentStart - 1] & 0x0F) + 1;
         else
             return buffer[contentStart - 1];
-    }
-
-    /**
-     * Get the start offset of this packet's data inside storing buffer
-     *
-     * @return start offset of this packet's data inside storing buffer
-     */
-    @Override
-    public int getOffset()
-    {
-        return this.offset;
     }
 
     /**
@@ -941,40 +833,6 @@ public class NewRawPacket
     }
 
     /**
-     * Read a byte from this packet at specified offset
-     *
-     * @param off start offset of the byte
-     * @return byte at offset
-     */
-    public byte readByte(int off)
-    {
-        return buffer[offset + off];
-    }
-
-    /**
-     * Read a integer from this packet at specified offset
-     *
-     * @param off start offset of the integer to be read
-     * @return the integer to be read
-     */
-    public int readInt(int off)
-    {
-        return RTPUtils.readInt(buffer, offset + off);
-    }
-
-    /**
-     * Read a 32-bit unsigned integer from this packet at the specified offset.
-     *
-     * @param off start offset of the integer to be read.
-     * @return the integer to be read
-     */
-    public long readUint32AsLong(int off)
-    {
-        return RTPUtils.readUint32AsLong(buffer, offset + off);
-    }
-
-
-    /**
      * Read a byte region from specified offset with specified length
      *
      * @param off start offset of the region to be read
@@ -992,37 +850,6 @@ public class NewRawPacket
         System.arraycopy(this.buffer, startOffset, region, 0, len);
 
         return region;
-    }
-
-    /**
-     * Read a byte region from specified offset with specified length in given
-     * buffer
-     *
-     * @param off start offset of the region to be read
-     * @param len length of the region to be read
-     * @param outBuff output buffer
-     */
-    public void readRegionToBuff(int off, int len, byte[] outBuff)
-    {
-        int startOffset = this.offset + off;
-        if (off < 0 || len <= 0 || startOffset + len > this.buffer.length)
-            return;
-
-        if (outBuff.length < len)
-            return;
-
-        System.arraycopy(this.buffer, startOffset, outBuff, 0, len);
-    }
-
-    /**
-     * Write a short to this packet at the specified offset.
-     *
-     * @param off
-     * @param val
-     */
-    public void writeShort(int off, short val)
-    {
-        RTPUtils.writeShort(buffer, offset + off, val);
     }
 
     /**
@@ -1084,36 +911,6 @@ public class NewRawPacket
     }
 
     /**
-     * Sets the bitmap/flag mask that specifies the set of boolean attributes
-     * enabled for this <tt>NewRawPacket</tt>.
-     *
-     * @param flags the bitmap/flag mask that specifies the set of boolean
-     * attributes enabled for this <tt>NewRawPacket</tt>
-     */
-    public void setFlags(int flags)
-    {
-        this.flags = flags;
-    }
-
-    /**
-     * @param length the length to set
-     */
-    @Override
-    public void setLength(int length)
-    {
-        this.length = length;
-    }
-
-    /**
-     * @param offset the offset to set
-     */
-    @Override
-    public void setOffset(int offset)
-    {
-        this.offset = offset;
-    }
-
-    /**
      * Shrink the buffer of this packet by specified length
      *
      * @param len length to shrink
@@ -1128,33 +925,6 @@ public class NewRawPacket
             this.length = 0;
     }
 
-    public String toHex()
-    {
-        return RTPUtils.toHexString(buffer, offset, length);
-    }
-
-    /**
-     * Write a byte to this packet at specified offset
-     *
-     * @param off start offset of the byte
-     * @param b byte to write
-     */
-    public void writeByte(int off, byte b)
-    {
-        buffer[offset + off] = b;
-    }
-
-    /**
-     * Set an integer at specified offset in network order.
-     *
-     * @param off Offset into the buffer
-     * @param data The integer to store in the packet
-     */
-    public void writeInt(int off, int data)
-    {
-        RTPUtils.writeInt(buffer, offset + off, data);
-    }
-
     /**
      * Sets the padding length for this RTP packet.
      *
@@ -1163,7 +933,7 @@ public class NewRawPacket
      */
     public boolean setPaddingSize(int len)
     {
-        if (buffer == null || buffer.length < offset + FIXED_HEADER_SIZE + len
+        if (buffer == null || buffer.length < offset + RtpHeader.FIXED_HEADER_SIZE_BYTES + len
             || len < 0 || len > 0xFF)
         {
             return false;
@@ -1300,7 +1070,7 @@ public class NewRawPacket
 
             nextOff
                 = offset
-                        + FIXED_HEADER_SIZE
+                        + RtpHeader.FIXED_HEADER_SIZE_BYTES
                         + getCsrcCount(buffer, offset, length) * 4
                         + EXT_HEADER_SIZE;
             remainingLen = len;
@@ -1675,70 +1445,5 @@ class RTPUtils
     public static boolean isNewerTimestampThan(long a, long b)
     {
         return rtpTimestampDiff(a, b) > 0;
-    }
-
-    /**
-     * Return a string containing the hex string version of the given byte
-     * @param b
-     * @return
-     */
-    private static String toHexString(byte b)
-    {
-
-        StringBuilder hexStringBuilder = new StringBuilder(2);
-
-        hexStringBuilder.append(HEXES[(b & 0xF0) >> 4]);
-        hexStringBuilder.append(HEXES[b & 0x0F]);
-
-        return hexStringBuilder.toString();
-    }
-
-    /**
-     * Return a string containing the hex string version of the given bytes
-     * @param buf
-     * @return
-     */
-    public static String toHexString(byte[] buf)
-    {
-        return toHexString(buf, 0, buf.length);
-    }
-
-    /**
-     * Return a string containing the hex string version of the given byte
-     * @param buf
-     * @param off
-     * @param len
-     * @return
-     */
-    public static String toHexString(byte[] buf, int off, int len)
-    {
-        if (buf == null)
-        {
-            return null;
-        }
-        else
-        {
-            StringBuilder hexStringBuilder
-                    = new StringBuilder(2 * buf.length);
-
-            for (int i = 0; i < len; i++)
-            {
-                if (i % 16 == 0)
-                {
-                    hexStringBuilder.append("\n")
-                            .append(toHexString((byte)i))
-                            .append("  ");
-                }
-                else if (i % 8 == 0)
-                {
-                    hexStringBuilder.append(" ");
-                }
-                byte b = buf[off + i];
-
-                hexStringBuilder.append(toHexString(b));
-                hexStringBuilder.append(" ");
-            }
-            return hexStringBuilder.toString();
-        }
     }
 }
