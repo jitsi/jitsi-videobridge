@@ -16,12 +16,12 @@
 package org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator;
 
 
-import org.ice4j.util.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
+import org.jitsi.utils.*;
 
 import java.util.*;
 
