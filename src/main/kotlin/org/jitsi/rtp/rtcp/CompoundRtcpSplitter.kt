@@ -23,7 +23,7 @@ class CompoundRtcpSplitter {
         // Get all the contained RTCP packets from compoundRtcpPacket.  Each
         // packet will have been given its own buffer.
         fun getAll(compoundRtcpPacket: NewRawPacket): List<RtcpPacket> {
-            var bytesRemaining = compoundRtcpPacket.length - compoundRtcpPacket.offset
+            var bytesRemaining = compoundRtcpPacket.length
             var currOffset = compoundRtcpPacket.offset
             val rtcpPackets = mutableListOf<RtcpPacket>()
             while (bytesRemaining > RtcpHeader.SIZE_BYTES) {
