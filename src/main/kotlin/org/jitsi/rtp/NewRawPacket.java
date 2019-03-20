@@ -1156,26 +1156,6 @@ public class NewRawPacket
     }
 
     /**
-     * Gets the OSN value of an RTX packet.
-     *
-     * @return the OSN value of an RTX packet.
-     */
-    public int getOriginalSequenceNumber()
-    {
-        return RTPUtils.readUint16AsInt(buffer, offset + getHeaderLength());
-    }
-
-    /**
-     * Sets the OSN value of an RTX packet.
-     *
-     * @param sequenceNumber the new OSN value of this RTX packet.
-     */
-    public void setOriginalSequenceNumber(int sequenceNumber)
-    {
-        writeShort(getHeaderLength(), (short) sequenceNumber);
-    }
-
-    /**
      * Sets the padding length for this RTP packet.
      *
      * @param len the padding length.
