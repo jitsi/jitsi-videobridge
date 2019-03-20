@@ -19,8 +19,8 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.osgi.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.*;
@@ -256,9 +256,9 @@ public class OctoTentacle extends PropertyChangeNotifier
      * @param extensionId
      * @param rtpExtension
      */
-    public void addRtpExtension(Byte extensionId, RTPExtension rtpExtension)
+    public void addRtpExtension(RtpExtension rtpExtension)
     {
-        transceiver.addRtpExtension(extensionId, rtpExtension);
+        transceiver.addRtpExtension(rtpExtension);
     }
 
     /**
