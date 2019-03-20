@@ -22,9 +22,12 @@ import java.nio.ByteBuffer
  * All ByteBuffers RTP needs will be acquired via [getBuffer].
  * When we're done with a buffer, we'll pass it to [returnBuffer].  These methods
  * can be overridden so that a user of this library can use a pool for the buffers.
+ *
+ * @author Brian Baldino
  */
 class BufferPool {
     companion object {
+        //TODO(boris): this seems to be only used for rtp header extensions. Do we need to allocate 1500?
         var getBuffer: (Int) -> ByteBuffer = { size -> ByteBuffer.allocate(1500).limit(size) as ByteBuffer }
         var returnBuffer: (ByteBuffer) -> Unit = { }
 

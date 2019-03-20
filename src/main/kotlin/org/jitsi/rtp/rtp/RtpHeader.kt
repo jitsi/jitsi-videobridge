@@ -16,22 +16,6 @@
 
 package org.jitsi.rtp.rtp
 
-/*
- * Copyright @ 2018 - present 8x8, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 import org.jitsi.rtp.extensions.bytearray.putInt
 import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
@@ -62,6 +46,8 @@ import kotlin.experimental.or
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |              ...extensions (if present)...                    |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ * @author Brian Baldino
  */
 class RtpHeader {
     companion object {
@@ -94,9 +80,9 @@ class RtpHeader {
         }
 
         fun getCsrcCount(buf: ByteArray, baseOffset: Int): Int =
-            buf[baseOffset].toInt() and 0xF
+            buf[baseOffset].toInt() and 0x0F
         fun setCsrcCount(buf: ByteArray, baseOffset: Int, csrcCount: Int) {
-            buf[baseOffset] = ((buf[baseOffset].toInt() and 0xF0) or ((csrcCount and 0xF))).toByte()
+            buf[baseOffset] = ((buf[baseOffset].toInt() and 0xF0) or ((csrcCount and 0x0F))).toByte()
         }
 
         fun getMarker(buf: ByteArray, baseOffset: Int): Boolean =

@@ -110,14 +110,14 @@ class RtcpFbNackPacketBuilder(
 /**
  * Return a List of Lists, where sub-list is made up of an ordered list
  * of values pulled from [this], such that the difference between the
- * first element and the lasst element is not mroe than [maxDifference]
+ * first element and the last element is not more than [maxDifference]
  */
 private fun List<Int>.chunkMaxDifference(maxDifference: Int): List<List<Int>> {
     val chunks = mutableListOf<List<Int>>()
     if (this.isEmpty()) {
         return chunks
     }
-    var currentChunk = mutableListOf<Int>(first())
+    var currentChunk = mutableListOf(first())
     chunks.add(currentChunk)
     // Ignore the first value which we already put in the current chunk
     drop(1).forEach {
@@ -149,7 +149,7 @@ private class NackBlock(
         fun getMissingSeqNums(buf: ByteArray, offset: Int): List<Int> {
             val packetId = buf.getShort(offset + 0).toPositiveInt()
             val blp = buf.getShort(offset + 2).toPositiveInt()
-            val missingSeqNums = mutableListOf<Int>(packetId)
+            val missingSeqNums = mutableListOf(packetId)
             for (shiftAmount in 0..15) {
                 if (((blp ushr shiftAmount) and 0x1) == 1) {
                     missingSeqNums.add(packetId + shiftAmount + 1)

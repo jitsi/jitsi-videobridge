@@ -16,8 +16,11 @@
 
 package org.jitsi.rtp;
 
+//TODO documentation
 public abstract class ByteArrayBuffer
 {
+    private static final char[] HEX_CHARS = "0123456789ABCDEF".toCharArray();
+
     byte[] buffer;
 
     int offset;
@@ -50,6 +53,7 @@ public abstract class ByteArrayBuffer
 
     public void setOffset(int offset)
     {
+        //TODO check bounds?
         this.offset = offset;
     }
 
@@ -60,11 +64,13 @@ public abstract class ByteArrayBuffer
 
     public void setLength(int length)
     {
+        //TODO check bounds?
         this.length = length;
     }
 
     public void setOffsetLength(int offset, int length)
     {
+        //TODO check bounds?
         this.offset = offset;
         this.length = length;
     }
@@ -74,13 +80,12 @@ public abstract class ByteArrayBuffer
         return false;
     }
 
-    private static final char[] HEX_CHARS = "0123456789ABCDEF".toCharArray();
     public String toHex()
     {
         StringBuilder sb = new StringBuilder();
         int position = 0;
 
-        for (int i = offset; i < (offset + length); ++i)
+        for (int i = offset; i < (offset + length) && i < buffer.length; ++i)
         {
             int octet = buffer[i];
             int firstIndex = (octet & 0xF0) >> 4;

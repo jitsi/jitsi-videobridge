@@ -20,6 +20,7 @@ import java.nio.ByteBuffer
 
 //TODO: should merge this with RtpUtils/RTPUtils
 class RtpProtocol {
+    //TODO this only works with offset=0. The way we use it in jvb is broken
     companion object {
         private fun getPacketType(buf: ByteArray): Int = buf.get(1).toPositiveInt()
 

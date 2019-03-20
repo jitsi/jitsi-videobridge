@@ -42,6 +42,10 @@ import org.jitsi.rtp.util.putNumberAsBits
  *   zero a valid length and avoids a possible infinite loop in
  *   scanning a compound RTCP packet, while counting 32-bit words
  *   avoids a validity check for a multiple of 4.)
+ *
+ * @author Brian Baldino
+ *
+ * TODO: Use the same utility function in RtpHeader and RtcpHeader
  */
 class RtcpHeader {
     companion object {
@@ -72,6 +76,7 @@ class RtcpHeader {
         fun setPacketType(buf: ByteArray, headerStartOffset: Int, packetType: Int) =
             buf.set(headerStartOffset + PACKET_TYPE_OFFSET, packetType.toByte())
 
+        // TODO document (bytes or words?)
         fun getLength(buf: ByteArray, headerStartOffset: Int): Int =
             buf.getShortAsInt(headerStartOffset + LENGTH_OFFSET)
         fun setLength(buf: ByteArray, headerStartOffset: Int, length: Int) =
