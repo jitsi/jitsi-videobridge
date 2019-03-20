@@ -21,6 +21,7 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.format.RtxPayloadType
+import org.jitsi.nlj.rtp.RtxPacket
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
@@ -70,13 +71,12 @@ class RtxHandler : TransformerNode("RTX handler") {
                 return null
             }
 
-            val originalSeqNum = rtpPacket.originalSequenceNumber
+            val originalSeqNum = RtxPacket.getOriginalSequenceNumber(rtpPacket)
             val originalPt = associatedPayloadTypes[rtpPacket.payloadType.toPositiveInt()]!!
             val originalSsrc = associatedSsrcs[rtpPacket.ssrc]!!
 
             // Move the payload 2 bytes to the left
-            rtpPacket.shiftPayloadLeft(2)
-            rtpPacket.length = rtpPacket.length - 2
+            RtxPacket.removeOriginalSequenceNumber(rtpPacket)
             rtpPacket.sequenceNumber = originalSeqNum
             rtpPacket.payloadType = originalPt
             rtpPacket.ssrc = originalSsrc
