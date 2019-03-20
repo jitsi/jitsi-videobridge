@@ -93,12 +93,8 @@ enum class RtpExtensionType (val uri: String) {
     VIDEO_CONTENT_TYPE("http://www.webrtc.org/experiments/rtp-hdrext/video-content-type");
 
     companion object {
-        fun createFrom(value: String): RtpExtensionType? {
-            return try {
-                RtpExtensionType.valueOf(value.toUpperCase())
-            } catch (e: IllegalArgumentException) {
-                return null
-            }
-        }
+        private val uriMap = RtpExtensionType.values().associateBy(RtpExtensionType::uri)
+        fun createFromUri(uri: String): RtpExtensionType? =
+            uriMap.getOrDefault(uri, null)
     }
 }
