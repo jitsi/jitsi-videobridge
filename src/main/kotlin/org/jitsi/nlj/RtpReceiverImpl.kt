@@ -122,11 +122,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
      */
     private val rtpPacketHandlerWrapper = object : ConsumerNode("RTP packet handler wrapper") {
         override fun consume(packetInfo: PacketInfo) {
-            //TODO: we remove all extensions here because we could otherwise
-            // end up with duplicates.  make sure we're being efficient about space re-use here
-            // (ideally just replace dupes on the outgoing side instead of adding additional.
-            // i don't think it's a problem to forward other extensions all the way through)
-            packetInfo.packetAs<NewRawPacket>().removeExtension()
             rtpPacketHandler?.processPacket(packetInfo)
         }
     }
