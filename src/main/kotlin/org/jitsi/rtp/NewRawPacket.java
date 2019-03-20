@@ -52,6 +52,12 @@ public class NewRawPacket
     public static final int EXT_HEADER_SIZE = 4;
 
     /**
+     * The size of the header for individual extensions.  Currently we only
+     * support 1 byte header extensions
+     */
+    public static final int HEADER_EXT_HEADER_SIZE = 1;
+
+    /**
      * The size of the fixed part of the RTP header as defined by RFC 3550.
      */
     public static final int FIXED_HEADER_SIZE = 12;

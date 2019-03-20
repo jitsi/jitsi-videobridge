@@ -36,38 +36,18 @@ import kotlin.experimental.and
  * |  ID   | len=0 |V| level       |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-class AudioLevelHeaderExtension(
-    id: Int = -1,
-    val containsVoice: Boolean = false,
-    val audioLevel: Int = -1
-) : RtpHeaderExtension(id) {
-    override val dataSizeBytes: Int = 1
-
-    override fun serializeData(buf: ByteBuffer) {
-        // We set the audio level first so we don't overwrite the containsVoice
-        // bit
-        buf.put(buf.position(),(audioLevel and AUDIO_LEVEL_MASK).toByte())
-        buf.putBitAsBoolean(buf.position(), 0, containsVoice)
-    }
-
+class AudioLevelHeaderExtension {
     companion object {
-        const val AUDIO_LEVEL_MASK = 0x7F
+        private const val AUDIO_LEVEL_MASK = 0x7F.toByte()
 
         fun getAudioLevel(ext: NewRawPacket.HeaderExtension): Int =
-            getAudioLevel(ext.buffer, ext.offset, HeaderExtensionType.ONE_BYTE_HEADER_EXT)
+            getAudioLevel(ext.buffer, ext.offset)
 
         /**
          * [offset] into [buf] is the start of this entire extension (not the data section)
          */
-        fun getAudioLevel(buf: ByteArray, offset: Int, extType: HeaderExtensionType): Int =
-            (buf.get(offset + extType.headerSizeBytes) and 0x7F).toPositiveInt()
+        fun getAudioLevel(buf: ByteArray, offset: Int): Int =
+            (buf.get(offset + NewRawPacket.HEADER_EXT_HEADER_SIZE) and AUDIO_LEVEL_MASK).toPositiveInt()
 
-        fun fromUnparsed(unparsedHeaderExtension: UnparsedHeaderExtension): AudioLevelHeaderExtension {
-            val data = unparsedHeaderExtension.data
-            val containsVoice = data.get(0).getBitAsBool(0)
-            val audioLevel = data.get(0).toPositiveInt() and AUDIO_LEVEL_MASK
-
-            return AudioLevelHeaderExtension(unparsedHeaderExtension.id, containsVoice, audioLevel)
-        }
     }
 }

@@ -17,9 +17,7 @@ package org.jitsi.rtp.rtp.header_extensions
 
 import org.jitsi.rtp.NewRawPacket
 import org.jitsi.rtp.extensions.bytearray.putShort
-import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.util.getShortAsInt
-import java.nio.ByteBuffer
 
 /**
  * https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01#section-2.2
@@ -29,36 +27,24 @@ import java.nio.ByteBuffer
  * |  ID   | L=1   |transport-wide sequence number | zero padding  |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-class TccHeaderExtension(
-    id: Int = -1,
-    val tccSeqNum: Int = -1
-) : RtpHeaderExtension(id) {
-    override val dataSizeBytes: Int = 2
-
-    override fun serializeData(buf: ByteBuffer) {
-        buf.putShort(tccSeqNum.toShort())
-    }
+class TccHeaderExtension {
 
     companion object {
         const val DATA_SIZE_BYTES = 2
-        fun fromUnparsed(unparsedHeaderExtension: UnparsedHeaderExtension): TccHeaderExtension {
-            val tccSeqNum = unparsedHeaderExtension.data.getShort().toPositiveInt()
-            return TccHeaderExtension(unparsedHeaderExtension.id, tccSeqNum)
-        }
 
         fun getSequenceNumber(ext: NewRawPacket.HeaderExtension): Int =
-            getSequenceNumber(ext.buffer, ext.offset, HeaderExtensionType.ONE_BYTE_HEADER_EXT)
+            getSequenceNumber(ext.buffer, ext.offset)
         fun setSequenceNumber(ext: NewRawPacket.HeaderExtension, tccSeqNum: Int) {
-            setSequenceNumber(ext.buffer, ext.offset, tccSeqNum, HeaderExtensionType.ONE_BYTE_HEADER_EXT)
+            setSequenceNumber(ext.buffer, ext.offset, tccSeqNum)
         }
 
         /**
          * [offset] into [buf] is the start of this entire extension (not the data section)
          */
-        fun getSequenceNumber(buf: ByteArray, offset: Int, extType: HeaderExtensionType): Int =
-            buf.getShortAsInt(offset + extType.headerSizeBytes)
-        fun setSequenceNumber(buf: ByteArray, offset: Int, seqNum: Int, extType: HeaderExtensionType) {
-            buf.putShort(offset + extType.headerSizeBytes, seqNum.toShort())
+        fun getSequenceNumber(buf: ByteArray, offset: Int): Int =
+            buf.getShortAsInt(offset + NewRawPacket.HEADER_EXT_HEADER_SIZE)
+        fun setSequenceNumber(buf: ByteArray, offset: Int, seqNum: Int) {
+            buf.putShort(offset + NewRawPacket.HEADER_EXT_HEADER_SIZE, seqNum.toShort())
         }
     }
 }
