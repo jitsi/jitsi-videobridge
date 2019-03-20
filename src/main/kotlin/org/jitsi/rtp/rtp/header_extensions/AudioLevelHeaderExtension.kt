@@ -16,20 +16,22 @@
 
 package org.jitsi.rtp.rtp.header_extensions
 
+import org.jitsi.rtp.NewRawPacket
 import org.jitsi.rtp.extensions.getBitAsBool
 import org.jitsi.rtp.extensions.incrementPosition
 import org.jitsi.rtp.extensions.putBitAsBoolean
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import java.nio.ByteBuffer
+import kotlin.experimental.and
 
 /**
  * https://tools.ietf.org/html/rfc6464#section-3
  * TODO: this can be held as either 1 byte or 2 byte. (though webrtc clients
  * appear to all use 1 byte)
  *
- * 0                   1
- * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
+ *  0                   1
+ *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |  ID   | len=0 |V| level       |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -50,6 +52,15 @@ class AudioLevelHeaderExtension(
 
     companion object {
         const val AUDIO_LEVEL_MASK = 0x7F
+
+        fun getAudioLevel(ext: NewRawPacket.HeaderExtension): Int =
+            getAudioLevel(ext.buffer, ext.offset, HeaderExtensionType.ONE_BYTE_HEADER_EXT)
+
+        /**
+         * [offset] into [buf] is the start of this entire extension (not the data section)
+         */
+        fun getAudioLevel(buf: ByteArray, offset: Int, extType: HeaderExtensionType): Int =
+            (buf.get(offset + extType.headerSizeBytes) and 0x7F).toPositiveInt()
 
         fun fromUnparsed(unparsedHeaderExtension: UnparsedHeaderExtension): AudioLevelHeaderExtension {
             val data = unparsedHeaderExtension.data
