@@ -41,6 +41,8 @@ fun Short.isTwoByteHeaderType(): Boolean
         = TWO_BYTE_COOKIE.compareTo(this.toInt() and 0xfff0) == 0
 
 enum class HeaderExtensionType(val value: Int) {
+    // Note that this values are specifically chose to match the header
+    // size in bytes for each type
     ONE_BYTE_HEADER_EXT(1),
     TWO_BYTE_HEADER_EXT(2);
 
@@ -51,6 +53,9 @@ enum class HeaderExtensionType(val value: Int) {
             else -> throw Exception("Invalid header extension type: $value")
         }
     }
+
+    val headerSizeBytes: Int
+        get() = this.value
 
     companion object {
         fun fromDataLength(length: Int): HeaderExtensionType {
