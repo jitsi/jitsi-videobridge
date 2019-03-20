@@ -18,7 +18,7 @@ package org.jitsi.nlj.module_tests
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpSender
 import org.jitsi.nlj.util.safeShutdown
-import org.jitsi.rtp.util.RtpProtocol
+import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.test_utils.Pcaps
@@ -44,7 +44,7 @@ fun main(args: Array<String>) {
     }
 
     producer.subscribe { pkt ->
-        val packet = if (RtpProtocol.isRtp(pkt.buffer)) {
+        val packet = if (pkt.looksLikeRtp()) {
             RtpPacket(pkt.buffer, pkt.offset, pkt.length)
         } else {
             RtcpPacket.parse(pkt.buffer, pkt.offset)
@@ -52,7 +52,7 @@ fun main(args: Array<String>) {
         senders.forEach {
             when (packet) {
                 is RtpPacket -> it.sendPacket(PacketInfo(packet.clone()))
-                is RtcpPacket -> it.sendRtcp(packet.clone() as RtcpPacket)
+                is RtcpPacket -> it.sendRtcp(packet.clone())
             }
         }
     }
