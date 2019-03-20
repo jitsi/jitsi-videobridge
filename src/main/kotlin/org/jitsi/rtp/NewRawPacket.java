@@ -48,11 +48,6 @@ public class NewRawPacket
     extends Packet
 {
     /**
-     * The size of the extension header as defined by RFC 3550.
-     */
-    public static final int EXT_HEADER_SIZE = 4;
-
-    /**
      * The size of the header for individual extensions.  Currently we only
      * support 1 byte header extensions
      */
@@ -179,7 +174,7 @@ public class NewRawPacket
         // bytes due to padding)
         int maxRequiredLength
             = getLength()
-            + (extensionBit ? 0 : EXT_HEADER_SIZE)
+            + (extensionBit ? 0 : RtpHeader.EXT_HEADER_SIZE_BYTES)
             + 1 /* the 1-byte header of the extension element */
             + len
             + 3 /* padding */;
@@ -371,7 +366,7 @@ public class NewRawPacket
             return 0;
 
         int extOffset = offset + RtpHeader.FIXED_HEADER_SIZE_BYTES
-                + getCsrcCount()*4 + EXT_HEADER_SIZE;
+                + getCsrcCount()*4 + RtpHeader.EXT_HEADER_SIZE_BYTES;
 
         int extensionEnd = extOffset + getExtensionLength();
         int extHdrLen = getExtensionHeaderLength();
@@ -565,7 +560,7 @@ public class NewRawPacket
             = ((buffer[extLenIndex] << 8) | (buffer[extLenIndex + 1] & 0xFF))
                 * 4;
 
-        if (len < 0 || len > (length - RtpHeader.FIXED_HEADER_SIZE_BYTES - EXT_HEADER_SIZE -
+        if (len < 0 || len > (length - RtpHeader.FIXED_HEADER_SIZE_BYTES - RtpHeader.EXT_HEADER_SIZE_BYTES -
             getCsrcCount(buffer, offset, length)*4))
         {
             // This is not a valid length. Together with the rest of the
@@ -623,9 +618,9 @@ public class NewRawPacket
         {
             // Make sure that the header length doesn't exceed the packet
             // length.
-            if (headerLength + EXT_HEADER_SIZE <= length)
+            if (headerLength + RtpHeader.EXT_HEADER_SIZE_BYTES <= length)
             {
-                headerLength += EXT_HEADER_SIZE
+                headerLength += RtpHeader.EXT_HEADER_SIZE_BYTES
                     + getExtensionLength(buffer, offset, length);
             }
         }
@@ -848,7 +843,7 @@ public class NewRawPacket
 
         int payloadOffset = offset + getHeaderLength();
 
-        int extHeaderLen = getExtensionLength() + EXT_HEADER_SIZE;
+        int extHeaderLen = getExtensionLength() + RtpHeader.EXT_HEADER_SIZE_BYTES;
 
         System.arraycopy(buffer, payloadOffset,
             buffer, payloadOffset - extHeaderLen, getPayloadLength());
@@ -1047,7 +1042,7 @@ public class NewRawPacket
                 = offset
                         + RtpHeader.FIXED_HEADER_SIZE_BYTES
                         + getCsrcCount(buffer, offset, length) * 4
-                        + EXT_HEADER_SIZE;
+                        + RtpHeader.EXT_HEADER_SIZE_BYTES;
             remainingLen = len;
         }
 

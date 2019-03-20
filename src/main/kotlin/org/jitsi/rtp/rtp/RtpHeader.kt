@@ -53,6 +53,8 @@ class RtpHeader {
     companion object {
         const val FIXED_HEADER_SIZE_BYTES = 12
         const val CSRCS_OFFSET = 12
+        // The size of the RTP Extension header block
+        const val EXT_HEADER_SIZE_BYTES = 4
 
         fun getVersion(buf: ByteArray, baseOffset: Int): Int =
             (buf[baseOffset].toInt() and 0xC0) ushr 6
