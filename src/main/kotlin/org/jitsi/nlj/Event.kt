@@ -16,9 +16,9 @@
 package org.jitsi.nlj
 
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.service.neomedia.MediaType
-import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 
 interface Event
@@ -31,7 +31,7 @@ class RtpPayloadTypeAddedEvent(val payloadType: PayloadType) : Event {
 }
 class RtpPayloadTypeClearEvent : Event
 
-class RtpExtensionAddedEvent(val extensionId: Byte, val rtpExtension: RTPExtension) : Event
+class RtpExtensionAddedEvent(val rtpExtension: RtpExtension) : Event
 class RtpExtensionClearEvent : Event
 
 class ReceiveSsrcAddedEvent(val ssrc: Long) : Event

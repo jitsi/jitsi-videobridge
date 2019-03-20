@@ -24,8 +24,8 @@ import org.jitsi.nlj.SetLocalSsrcEvent
 import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
+import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.service.neomedia.MediaType
-import org.jitsi.test_utils.RtpExtensionInfo
 import org.jitsi.test_utils.SourceAssociation
 import org.jitsi.test_utils.SrtpData
 import java.util.Random
@@ -39,7 +39,7 @@ class SenderFactory {
             backgroundExecutor: ScheduledExecutorService,
             srtpData: SrtpData,
             payloadTypes: List<PayloadType>,
-            headerExtensions: List<RtpExtensionInfo>,
+            headerExtensions: List<RtpExtension>,
             ssrcAssociations: List<SourceAssociation>
         ): RtpSender {
             val sender = RtpSenderImpl(
@@ -56,7 +56,7 @@ class SenderFactory {
                 sender.handleEvent(RtpPayloadTypeAddedEvent(it))
             }
             headerExtensions.forEach {
-                sender.handleEvent(RtpExtensionAddedEvent(it.id.toByte(), it.extension))
+                sender.handleEvent(RtpExtensionAddedEvent(it))
             }
             ssrcAssociations.forEach {
                 sender.handleEvent(SsrcAssociationEvent(it.primarySsrc, it.secondarySsrc, it.associationType))
