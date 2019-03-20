@@ -1013,37 +1013,6 @@ public class NewRawPacket
     }
 
     /**
-     * Set the RTP timestamp for an RTP buffer.
-     *
-     * @param buf the <tt>byte</tt> array that holds the RTP packet.
-     * @param off the offset in <tt>buffer</tt> at which the actual RTP data
-     * begins.
-     * @param len the number of <tt>byte</tt>s in <tt>buffer</tt> which
-     * constitute the actual RTP data.
-     * @param ts the timestamp to set in the RTP buffer.
-     */
-    public static void setTimestamp(byte[] buf, int off, int len, long ts)
-    {
-        RTPUtils.writeInt(buf, off + 4, (int) ts);
-    }
-
-    /**
-     * Sets the RTP timestamp of an RTP packet.
-     *
-     * param baaf the {@link ByteArrayBuffer} that contains the RTP packet.
-     * @param ts the timestamp to set in the RTP packet.
-     */
-    public static void setTimestamp(ByteArrayBuffer baf, long ts)
-    {
-        if (baf == null)
-        {
-            return;
-        }
-
-        setTimestamp(baf.getBuffer(), baf.getOffset(), baf.getLength(), ts);
-    }
-
-    /**
      * Get SRTCP sequence number from a SRTCP packet
      *
      * @param authTagLen authentication tag length
