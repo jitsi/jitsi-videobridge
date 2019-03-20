@@ -186,11 +186,11 @@ class OctoTransceiver
                 = new ExclusivePathDemuxer("RTP/RTCP")
                 .addPacketPath(
                         "RTP",
-                        pkt -> RtpProtocol.Companion.isRtp(pkt.getBuffer()),
+                        Packet::looksLikeRtp,
                         rtpRoot)
                 .addPacketPath(
                         "RTCP",
-                        pkt -> RtpProtocol.Companion.isRtcp(pkt.getBuffer()),
+                        Packet::looksLikeRtcp,
                         new ConsumerNode("OctoRTCPHandler (no-op)")
                         {
                             /**
