@@ -90,6 +90,27 @@ public abstract class ByteArrayBuffer
     }
 
     /**
+     * Append a byte array to the end of the packet. This may change the data
+     * buffer of this packet.
+     *
+     * @param data byte array to append
+     * @param len the number of bytes to append
+     */
+    public void append(byte[] data, int len) {
+        if (data == null || len == 0)  {
+            return;
+        }
+
+        // Ensure the internal buffer is long enough to accommodate data. (The
+        // method grow will re-allocate the internal buffer if it's too short.)
+        grow(len);
+        // Append data.
+        System.arraycopy(data, 0, buffer, length + offset, len);
+        length += len;
+    }
+
+
+    /**
      * Grows the internal buffer of this {@code ByteArrayBuffer}.
      *
      * This will change the data buffer of this packet but not the length of the

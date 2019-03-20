@@ -329,26 +329,6 @@ public class NewRawPacket
     }
 
     /**
-     * Append a byte array to the end of the packet. This may change the data
-     * buffer of this packet.
-     *
-     * @param data byte array to append
-     * @param len the number of bytes to append
-     */
-    public void append(byte[] data, int len) {
-        if (data == null || len == 0)  {
-            return;
-        }
-
-        // Ensure the internal buffer is long enough to accommodate data. (The
-        // method grow will re-allocate the internal buffer if it's too short.)
-        grow(len);
-        // Append data.
-        System.arraycopy(data, 0, buffer, length + offset, len);
-        length += len;
-    }
-
-    /**
      * Returns the index of the element in this packet's buffer where the
      * content of the header with the specified <tt>extensionID</tt> starts.
      *
@@ -812,6 +792,7 @@ public class NewRawPacket
     public void setBuffer(byte[] buffer)
     {
         super.setBuffer(buffer);
+        // TODO: Is this necessary here?
         headerExtensions = new HeaderExtensions();
     }
 
