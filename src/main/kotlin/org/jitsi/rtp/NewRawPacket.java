@@ -803,26 +803,6 @@ public class NewRawPacket
     }
 
     /**
-     * Read a byte region from specified offset with specified length
-     *
-     * @param off start offset of the region to be read
-     * @param len length of the region to be read
-     * @return byte array of [offset, offset + length)
-     */
-    public byte[] readRegion(int off, int len)
-    {
-        int startOffset = this.offset + off;
-        if (off < 0 || len <= 0 || startOffset + len > this.buffer.length)
-            return null;
-
-        byte[] region = new byte[len];
-
-        System.arraycopy(this.buffer, startOffset, region, 0, len);
-
-        return region;
-    }
-
-    /**
      * Read an unsigned short at specified offset as a int
      *
      * @param off start offset of the unsigned short
