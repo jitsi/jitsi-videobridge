@@ -75,11 +75,6 @@ public abstract class ByteArrayBuffer
         this.length = length;
     }
 
-    public boolean isInvalid()
-    {
-        return false;
-    }
-
     public String toHex()
     {
         StringBuilder sb = new StringBuilder();

@@ -16,6 +16,7 @@
 package org.jitsi.rtp;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.util.*;
 
 import java.util.*;
@@ -54,12 +55,6 @@ public class NewRawPacket
      * The size of the fixed part of the RTP header as defined by RFC 3550.
      */
     public static final int FIXED_HEADER_SIZE = 12;
-
-    /**
-     * The minimum size in bytes of a valid RTCP packet. An empty Receiver
-     * Report is 8 bytes long.
-     */
-    private static final int RTCP_MIN_SIZE = 8;
 
     /**
      * The bitmask for the RTP sequence number field.
@@ -106,63 +101,6 @@ public class NewRawPacket
     {
         super(buffer, 0, buffer.length);
         headerExtensions = new HeaderExtensions();
-    }
-
-    /**
-     * Perform checks on the packet represented by this instance and
-     * return <tt>true</tt> if it is found to be invalid. A return value of
-     * <tt>false</tt> does not necessarily mean that the packet is valid.
-     *
-     * @return <tt>true</tt> if the RTP/RTCP packet represented by this
-     * instance is found to be invalid, <tt>false</tt> otherwise.
-     */
-    public static boolean isInvalid(byte[] buffer, int offset, int length)
-    {
-        // RTP packets are at least 12 bytes long, RTCP packets can be 8.
-        if (buffer == null || buffer.length < offset + length
-            || length < RTCP_MIN_SIZE)
-        {
-            return true;
-        }
-
-        int pt = buffer[offset + 1] & 0xff;
-        if (pt < 200 || pt > 211)
-        {
-            // This is an RTP packet.
-            return length < FIXED_HEADER_SIZE;
-        }
-
-        return false;
-    }
-
-    /**
-     * Get RTCP SSRC from a RTCP packet
-     *
-     * @return RTP SSRC from source RTP packet in a {@code long}.
-     */
-    public static long getRTCPSSRC(ByteArrayBuffer baf)
-    {
-        if (baf == null || baf.isInvalid())
-        {
-            return -1;
-        }
-
-        return getRTCPSSRC(baf.getBuffer(), baf.getOffset(), baf.getLength());
-    }
-
-    /**
-     * Get RTCP SSRC from a RTCP packet
-     *
-     * @return RTP SSRC from source RTP packet
-     */
-    public static long getRTCPSSRC(byte[] buf, int off, int len)
-    {
-        if (buf == null || buf.length < off + len || len < 8)
-        {
-            return -1;
-        }
-
-        return RTPUtils.readUint32AsLong(buf, off + 4);
     }
 
     /**
@@ -1072,10 +1010,17 @@ public class NewRawPacket
      * Get RTCP SSRC from a RTCP packet
      *
      * @return RTP SSRC from source RTP packet
+     *
+     * @deprecated Use RtcpPacket
      */
     public long getRTCPSSRC()
     {
-        return getRTCPSSRC(this);
+        if (!looksLikeRtcp())
+        {
+            return -1;
+        }
+
+        return RtcpHeader.Companion.getSenderSsrc(buffer, offset);
     }
 
     /**
@@ -1156,20 +1101,6 @@ public class NewRawPacket
             setBuffer(newBuffer);
             BufferPool.Companion.getReturnArray().invoke(oldBuffer);
         }
-    }
-
-    /**
-     * Perform checks on the packet represented by this instance and
-     * return <tt>true</tt> if it is found to be invalid. A return value of
-     * <tt>false</tt> does not necessarily mean that the packet is valid.
-     *
-     * @return <tt>true</tt> if the RTP/RTCP packet represented by this
-     * instance is found to be invalid, <tt>false</tt> otherwise.
-     */
-    @Override
-    public boolean isInvalid()
-    {
-        return isInvalid(buffer, offset, length);
     }
 
     /**
