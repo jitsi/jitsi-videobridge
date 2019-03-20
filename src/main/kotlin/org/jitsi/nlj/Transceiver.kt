@@ -237,7 +237,7 @@ class Transceiver(
     }
 
     fun addRtpExtension(rtpExtension: RtpExtension) {
-        logger.cdebug { "Adding RTP extension: ${rtpExtension.id} -> ${rtpExtension.type}" }
+        logger.cdebug { "Adding RTP extension: $rtpExtension" }
         rtpExtensions[rtpExtension.id] = rtpExtension
         val rtpExtensionAddedEvent = RtpExtensionAddedEvent(rtpExtension)
         rtpReceiver.handleEvent(rtpExtensionAddedEvent)

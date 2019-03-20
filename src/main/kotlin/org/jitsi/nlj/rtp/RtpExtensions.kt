@@ -20,7 +20,7 @@ package org.jitsi.nlj.rtp
  *
  * @author Boris Grozev
  */
-class RtpExtension(
+data class RtpExtension(
     /**
      * The ID that was signalled.
      */
