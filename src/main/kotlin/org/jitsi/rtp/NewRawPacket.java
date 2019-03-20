@@ -986,33 +986,6 @@ public class NewRawPacket
     }
 
     /**
-     * Get RTCP SSRC from a RTCP packet
-     *
-     * @return RTP SSRC from source RTP packet
-     *
-     * @deprecated Use RtcpPacket
-     */
-    public long getRTCPSSRC()
-    {
-        if (!looksLikeRtcp())
-        {
-            return -1;
-        }
-
-        return RtcpHeader.Companion.getSenderSsrc(buffer, offset);
-    }
-
-    /**
-     * Gets the packet type of this RTCP packet.
-     *
-     * @return the packet type of this RTCP packet.
-     */
-    public int getRTCPPacketType()
-    {
-        return 0xff & buffer[offset + 1];
-    }
-
-    /**
      * Grows the internal buffer of this {@code NewRawPacket}.
      *
      * This will change the data buffer of this packet but not the length of the
