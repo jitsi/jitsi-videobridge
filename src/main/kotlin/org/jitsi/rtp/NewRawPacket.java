@@ -16,7 +16,6 @@
 package org.jitsi.rtp;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.rtp.util.*;
 
@@ -776,33 +775,6 @@ public class NewRawPacket
     }
 
     /**
-     * Grows the internal buffer of this {@code NewRawPacket}.
-     *
-     * This will change the data buffer of this packet but not the length of the
-     * valid data. Use this to grow the internal buffer to avoid buffer
-     * re-allocations when appending data.
-     *
-     * @param howMuch the number of bytes by which this {@code NewRawPacket} is to
-     * grow
-     */
-    public void grow(int howMuch) {
-        if (howMuch < 0)
-            throw new IllegalArgumentException("howMuch");
-
-        int newLength = length + howMuch;
-
-        if (newLength > buffer.length - offset) {
-            byte[] newBuffer = BufferPool.Companion.getGetArray().invoke(newLength);
-
-            System.arraycopy(buffer, offset, newBuffer, 0, length);
-            offset = 0;
-            byte[] oldBuffer = buffer;
-            setBuffer(newBuffer);
-            BufferPool.Companion.getReturnArray().invoke(oldBuffer);
-        }
-    }
-
-    /**
      * Read an unsigned short at specified offset as a int
      *
      * @param off start offset of the unsigned short
@@ -836,9 +808,10 @@ public class NewRawPacket
     /**
      * @param buffer the buffer to set
      */
+    @Override
     public void setBuffer(byte[] buffer)
     {
-        this.buffer = buffer;
+        super.setBuffer(buffer);
         headerExtensions = new HeaderExtensions();
     }
 
@@ -858,21 +831,6 @@ public class NewRawPacket
             buffer[offset] |= 0x10;
         else
             buffer[offset] &= 0xEF;
-    }
-
-    /**
-     * Shrink the buffer of this packet by specified length
-     *
-     * @param len length to shrink
-     */
-    public void shrink(int len)
-    {
-        if (len <= 0)
-            return;
-
-        this.length -= len;
-        if (this.length < 0)
-            this.length = 0;
     }
 
     /**
