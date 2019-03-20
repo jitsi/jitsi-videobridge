@@ -40,6 +40,7 @@ class TccHeaderExtension(
     }
 
     companion object {
+        const val DATA_SIZE_BYTES = 2
         fun fromUnparsed(unparsedHeaderExtension: UnparsedHeaderExtension): TccHeaderExtension {
             val tccSeqNum = unparsedHeaderExtension.data.getShort().toPositiveInt()
             return TccHeaderExtension(unparsedHeaderExtension.id, tccSeqNum)
@@ -47,6 +48,9 @@ class TccHeaderExtension(
 
         fun getSequenceNumber(ext: NewRawPacket.HeaderExtension): Int =
             getSequenceNumber(ext.buffer, ext.offset, HeaderExtensionType.ONE_BYTE_HEADER_EXT)
+        fun setSequenceNumber(ext: NewRawPacket.HeaderExtension, tccSeqNum: Int) {
+            setSequenceNumber(ext.buffer, ext.offset, tccSeqNum, HeaderExtensionType.ONE_BYTE_HEADER_EXT)
+        }
 
         /**
          * [offset] into [buf] is the start of this entire extension (not the data section)
