@@ -21,13 +21,13 @@ import org.jitsi.nlj.ReceiveSsrcAddedEvent
 import org.jitsi.nlj.ReceiveSsrcRemovedEvent
 import org.jitsi.nlj.RtpExtensionAddedEvent
 import org.jitsi.nlj.RtpExtensionClearEvent
+import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.util.RTPUtils
 import unsigned.toUInt
 
@@ -75,8 +75,8 @@ class TccGeneratorNode(
     override fun handleEvent(event: Event) {
         when (event) {
             is RtpExtensionAddedEvent -> {
-                if (RTPExtension.TRANSPORT_CC_URN.equals(event.rtpExtension.uri.toString())) {
-                    tccExtensionId = event.extensionId.toUInt()
+                if (event.rtpExtension.type == TRANSPORT_CC) {
+                    tccExtensionId = event.rtpExtension.id.toUInt()
                     logger.cinfo { "TCC generator setting extension ID to $tccExtensionId" }
                 }
             }
