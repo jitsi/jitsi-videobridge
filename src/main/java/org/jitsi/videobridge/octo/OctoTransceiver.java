@@ -26,7 +26,6 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtp.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
@@ -224,10 +223,10 @@ class OctoTransceiver
      * @param extensionId
      * @param rtpExtension
      */
-    void addRtpExtension(Byte extensionId, RTPExtension rtpExtension)
+    void addRtpExtension(RtpExtension rtpExtension)
     {
         RtpExtensionAddedEvent rtpExtensionAddedEvent
-                = new RtpExtensionAddedEvent(extensionId, rtpExtension);
+                = new RtpExtensionAddedEvent(rtpExtension);
 
         new NodeEventVisitor(rtpExtensionAddedEvent).visit(inputTreeRoot);
     }

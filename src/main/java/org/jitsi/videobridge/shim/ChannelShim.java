@@ -70,6 +70,26 @@ public class ChannelShim
     }
 
     /**
+     * Parses an XML extension element into an {@link RtpExtension}. Returns
+     * {@code null} on failure.
+     *
+     * @param ext the XML extension to parse.
+     * @return the created {@link RtpExtension} or {@code null}.
+     */
+    static RtpExtension createRtpExtension(RTPHdrExtPacketExtension ext)
+    {
+        String uri = ext.getURI().toString();
+        RtpExtensionType type = RtpExtensionType.Companion.createFrom(uri);
+        if (type == null)
+        {
+            logger.warn("Ignoring unknown RTP extension type: " + uri);
+            return null;
+        }
+
+        return new RtpExtension(Byte.valueOf(ext.getID()), type);
+    }
+
+    /**
      * The ID of this channel.
      */
     private final String id;
@@ -312,10 +332,13 @@ public class ChannelShim
     {
         // Like for payload types, we never clear the transceiver's list of RTP
         // header extensions. See the note in #addPayloadTypes.
-        rtpHeaderExtensions.forEach(ext ->
-            endpoint.getTransceiver().addRtpExtension(
-                    Byte.valueOf(ext.getID()),
-                    new RTPExtension(ext.getURI())));
+        rtpHeaderExtensions.forEach(ext -> {
+            RtpExtension rtpExtension = createRtpExtension(ext);
+            if (rtpExtension != null)
+            {
+                endpoint.getTransceiver().addRtpExtension(rtpExtension);
+            }
+        });
     }
 
     /**

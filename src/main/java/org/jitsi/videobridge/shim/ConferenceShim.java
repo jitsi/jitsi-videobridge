@@ -19,6 +19,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.format.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
@@ -219,10 +220,13 @@ public class ConferenceShim
 
         // Like for payload types, we never clear the transceiver's list of RTP
         // header extensions. See the note in #addPayloadTypes.
-        headerExtensions.forEach(ext ->
-              tentacle.addRtpExtension(
-                      Byte.valueOf(ext.getID()),
-                      new RTPExtension(ext.getURI())));
+        headerExtensions.forEach(ext -> {
+                RtpExtension rtpExtension = ChannelShim.createRtpExtension(ext);
+                if (rtpExtension != null)
+                {
+                    tentacle.addRtpExtension(rtpExtension);
+                }
+        });
 
         Map<PayloadTypePacketExtension, MediaType> payloadTypes
                 = new HashMap<>();
