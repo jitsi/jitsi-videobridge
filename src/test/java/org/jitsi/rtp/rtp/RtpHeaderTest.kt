@@ -50,9 +50,11 @@ class RtpHeaderTest : ShouldSpec() {
                 }
             }
             "set" {
-                RtpHeader.setVersion(headerData, 0, 3)
                 should("work correctly") {
+                    RtpHeader.setVersion(headerData, 0, 3)
                     RtpHeader.getVersion(headerData, 0) shouldBe 3
+                    RtpHeader.setVersion(headerData, 0, 0)
+                    RtpHeader.getVersion(headerData, 0) shouldBe 0
                 }
             }
         }

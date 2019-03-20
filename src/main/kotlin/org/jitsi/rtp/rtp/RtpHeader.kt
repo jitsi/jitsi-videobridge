@@ -58,7 +58,7 @@ class RtpHeader {
             (buf[baseOffset].toInt() and 0xC0) ushr 6
 
         fun setVersion(buf: ByteArray, baseOffset: Int, version: Int) {
-            buf[baseOffset] = ((buf[baseOffset].toInt() and 0x3F) or ((version shl 6) and 0xC0)).toByte()
+            buf[baseOffset] = ((buf[baseOffset].toInt() and 0xC0.inv()) or ((version shl 6) and 0xC0)).toByte()
         }
 
         fun hasPadding(buf: ByteArray, baseOffset: Int): Boolean =
