@@ -29,6 +29,7 @@ import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
+import org.jitsi.rtp.extensions.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.util.*;
 
@@ -57,10 +58,7 @@ public class DtlsTransport extends IceTransport
      * https://tools.ietf.org/html/rfc7983#section-7
      */
     private static final Predicate<Packet> DTLS_PREDICATE
-        = packet -> {
-                int b = packet.getBuffer()[packet.getOffset()] & 0xFF;
-                return (20 <= b && b <= 63);
-        };
+        = PacketExtensionsKt::looksLikeDtls;
 
     /**
      * A predicate which is true for all non-DTLS packets. See

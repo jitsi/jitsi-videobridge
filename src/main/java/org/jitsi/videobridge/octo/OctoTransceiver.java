@@ -23,6 +23,7 @@ import org.jitsi.nlj.transform.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.util.*;
+import org.jitsi.rtp.extensions.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtp.*;
@@ -186,11 +187,11 @@ class OctoTransceiver
                 = new ExclusivePathDemuxer("RTP/RTCP")
                 .addPacketPath(
                         "RTP",
-                        Packet::looksLikeRtp,
+                        PacketExtensionsKt::looksLikeRtp,
                         rtpRoot)
                 .addPacketPath(
                         "RTCP",
-                        Packet::looksLikeRtcp,
+                        PacketExtensionsKt::looksLikeRtcp,
                         new ConsumerNode("OctoRTCPHandler (no-op)")
                         {
                             /**
