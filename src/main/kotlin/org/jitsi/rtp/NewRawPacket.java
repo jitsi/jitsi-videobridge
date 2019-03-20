@@ -634,17 +634,6 @@ public class NewRawPacket
     }
 
     /**
-     * Get the length of this packet's data
-     *
-     * @return length of this packet's data
-     */
-    @Override
-    public int getLength()
-    {
-        return length;
-    }
-
-    /**
      * Returns the length of the header extension that is carrying the content
      * starting at <tt>contentStart</tt>. In other words this method checks the
      * size of extension headers in this packet and then either returns the
@@ -697,20 +686,6 @@ public class NewRawPacket
             // XXX It's an 8-bit unsigned number.
             return 0xFF & buf[off + len - 1];
         }
-    }
-
-    /**
-     * Get the RTP payload (bytes) of this RTP packet.
-     *
-     * @return an array of <tt>byte</tt>s which represents the RTP payload of
-     * this RTP packet
-     */
-    public byte[] getPayload()
-    {
-        // FIXME The payload includes the padding at the end. Do we really want
-        // it though? We are currently keeping the implementation as it is for
-        // compatibility with existing code.
-        return readRegion(getHeaderLength(), getPayloadLength());
     }
 
     /**
