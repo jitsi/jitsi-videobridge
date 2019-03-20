@@ -46,7 +46,7 @@ class RtcpByePacket(
     length: Int
 ) : RtcpPacket(buffer, offset, length) {
     val ssrcs: List<Long> by lazy {
-        val ssrcStartOffset = RtcpHeader.SIZE_BYTES - 4
+        val ssrcStartOffset = offset + 4
         (0 until reportCount)
                 .map { buffer.getInt(ssrcStartOffset + it * 4) }
                 .map(Int::toPositiveLong)
@@ -54,13 +54,11 @@ class RtcpByePacket(
     }
 
     val reason: String? by lazy {
-        val hasReason = run {
-            val packetLengthBytes = length
-            val headerAndSsrcsLengthBytes = RtcpHeader.SIZE_BYTES + (reportCount - 1) * 4
-            headerAndSsrcsLengthBytes < packetLengthBytes
-        }
+        val headerAndSsrcsLengthBytes = RtcpHeader.SIZE_BYTES + (reportCount - 1) * 4
+        val hasReason = headerAndSsrcsLengthBytes < length
+
         if (hasReason) {
-            val reasonLengthOffset = RtcpHeader.SIZE_BYTES + (ssrcs.size - 1) * 4
+            val reasonLengthOffset = offset + headerAndSsrcsLengthBytes
             val reasonLength = buffer.get(reasonLengthOffset).toInt()
             val reasonStr = String(buffer, reasonLengthOffset + 1, reasonLength)
             reasonStr
