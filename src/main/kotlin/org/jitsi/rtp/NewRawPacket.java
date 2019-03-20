@@ -1013,18 +1013,6 @@ public class NewRawPacket
     }
 
     /**
-     * Get SRTCP sequence number from a SRTCP packet
-     *
-     * @param authTagLen authentication tag length
-     * @return SRTCP sequence num from source packet
-     */
-    public int getSRTCPIndex(int authTagLen)
-    {
-        int offset = getLength() - (4 + authTagLen);
-        return readInt(offset);
-    }
-
-    /**
      * Grows the internal buffer of this {@code NewRawPacket}.
      *
      * This will change the data buffer of this packet but not the length of the
