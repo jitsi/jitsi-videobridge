@@ -588,9 +588,9 @@ public class SRTPCryptoContext
                 // decrypting. We flag a NewRawPacket with Buffer.FLAG_SILENCE when
                 // we want to ignore its payload. In the context of SRTP, we
                 // want to skip its decrypting.
-                if ((pkt.getFlags()
-                            & (Buffer.FLAG_DISCARD | Buffer.FLAG_SILENCE))
-                        == 0)
+                //if ((pkt.getFlags()
+                //            & (Buffer.FLAG_DISCARD | Buffer.FLAG_SILENCE))
+                //        == 0)
                 {
                     switch (policy.getEncType())
                     {

@@ -200,7 +200,7 @@ public class SRTPTransformer
 //                "\n will get context from factory " + reverseFactory.hashCode());
         // only accept RTP version 2 (SNOM phones send weird packages when on
         // hold, ignore them with this check (RTP Version must be equal to 2)
-        if((rp.readByte(0) & 0xC0) != 0x80)
+        if((rp.getBuffer()[rp.getOffset()] & 0xC0) != 0x80)
             return null;
 
         SRTPCryptoContext context
