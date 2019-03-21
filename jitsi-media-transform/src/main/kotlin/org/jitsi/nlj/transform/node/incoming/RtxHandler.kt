@@ -64,7 +64,7 @@ class RtxHandler : TransformerNode("RTX handler") {
 //             "Received RTX packet: ssrc ${rtxPacket.header.ssrc}, seq num: ${rtxPacket.header.sequenceNumber} " +
 //             "rtx payload size: ${rtxPacket.payload.limit()}, padding size: ${rtxPacket.getPaddingSize()} " +
 //             "buffer:\n${rtxPacket.getBuffer().toHex()}" }
-            if (rtpPacket.length - rtpPacket.paddingSize < 2) {
+            if (rtpPacket.payloadLength - rtpPacket.paddingSize < 2) {
                 logger.cdebug { "RTX packet is padding, ignore" }
                 numPaddingPacketsReceived++
                 BufferPool.returnBuffer(rtpPacket.buffer)
