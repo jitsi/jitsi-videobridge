@@ -30,9 +30,9 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.rtp.NewRawPacket
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
-import org.jitsi.service.neomedia.MediaType
+import org.jitsi.rtp.rtp.RtpHeader
+import org.jitsi.utils.MediaType
 import org.jitsi_modified.impl.neomedia.rtp.RtpPacketCache
 import java.util.Random
 
@@ -134,7 +134,7 @@ class ProbingDataSender(
         val senderSsrc = localVideoSsrc ?: return bytesSent
         //TODO(brian): shouldn't this take into account numBytes? what if it's less than
         // the size of one dummy packet?
-        val packetLength = NewRawPacket.FIXED_HEADER_SIZE + 0xFF
+        val packetLength = RtpHeader.FIXED_HEADER_SIZE_BYTES + 0xFF
         val numPackets = (numBytes / packetLength) + 1 /* account for the mod */
         for (i in 0 until numPackets) {
             val paddingPacket = PaddingVideoPacket(packetLength)

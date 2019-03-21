@@ -32,9 +32,9 @@ import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.service.neomedia.MediaType
 import org.jitsi.util.DiagnosticContext
 import org.jitsi.util.Logger
+import org.jitsi.utils.MediaType
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.BandwidthEstimatorImpl

@@ -24,7 +24,7 @@ import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.service.neomedia.MediaType
+import org.jitsi.utils.MediaType
 import java.util.concurrent.ConcurrentHashMap
 
 /**
