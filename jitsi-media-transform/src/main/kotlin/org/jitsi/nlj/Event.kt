@@ -18,7 +18,7 @@ package org.jitsi.nlj
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
-import org.jitsi.service.neomedia.MediaType
+import org.jitsi.utils.MediaType
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 
 interface Event

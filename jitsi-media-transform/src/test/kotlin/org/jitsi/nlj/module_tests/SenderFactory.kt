@@ -25,9 +25,9 @@ import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
-import org.jitsi.service.neomedia.MediaType
 import org.jitsi.test_utils.SourceAssociation
 import org.jitsi.test_utils.SrtpData
+import org.jitsi.utils.MediaType
 import java.util.Random
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService

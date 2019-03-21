@@ -15,7 +15,7 @@
  */
 package org.jitsi.nlj.format
 
-import org.jitsi.service.neomedia.MediaType
+import org.jitsi.utils.MediaType
 import java.util.concurrent.ConcurrentHashMap
 
 typealias PayloadTypeParams = Map<String, String>
