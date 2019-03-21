@@ -15,11 +15,11 @@
  */
 package org.jitsi.videobridge.cc;
 
-import net.sf.fmj.media.rtp.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc;
 import org.jitsi.nlj.format.*;
+import org.jitsi.rtp.rtcp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
@@ -381,7 +381,7 @@ class GenericAdaptiveTrackProjectionContext
     @Override
     public boolean rewriteRtcp(@NotNull RawPacket rtcpPacket)
     {
-        if (RTCPUtils.getPacketType(rtcpPacket) == RTCPPacket.SR)
+        if (RTCPUtils.getPacketType(rtcpPacket) == RtcpSrPacket.PT)
         {
             synchronized (transmittedSyncRoot)
             {
