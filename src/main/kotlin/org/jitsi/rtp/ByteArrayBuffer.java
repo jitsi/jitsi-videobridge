@@ -16,6 +16,8 @@
 
 package org.jitsi.rtp;
 
+import org.jitsi.rtp.util.*;
+
 //TODO documentation
 public abstract class ByteArrayBuffer
 {
@@ -73,6 +75,91 @@ public abstract class ByteArrayBuffer
         //TODO check bounds?
         this.offset = offset;
         this.length = length;
+    }
+
+    public void readRegionToBuff(int off, int len, byte[] outBuff)
+    {
+        int startOffset = this.offset + off;
+        if (off < 0 || len <= 0 || startOffset + len > this.buffer.length)
+            return;
+
+        if (outBuff.length < len)
+            return;
+
+        System.arraycopy(this.buffer, startOffset, outBuff, 0, len);
+    }
+
+    /**
+     * Append a byte array to the end of the packet. This may change the data
+     * buffer of this packet.
+     *
+     * @param data byte array to append
+     * @param len the number of bytes to append
+     */
+    public void append(byte[] data, int len) {
+        if (data == null || len == 0)  {
+            return;
+        }
+
+        // Ensure the internal buffer is long enough to accommodate data. (The
+        // method grow will re-allocate the internal buffer if it's too short.)
+        grow(len);
+        // Append data.
+        System.arraycopy(data, 0, buffer, length + offset, len);
+        length += len;
+    }
+
+
+    /**
+     * Grows the internal buffer of this {@code ByteArrayBuffer}.
+     *
+     * This will change the data buffer of this packet but not the length of the
+     * valid data. Use this to grow the internal buffer to avoid buffer
+     * re-allocations when appending data.
+     *
+     * @param howMuch the number of bytes by which this {@code NewRawPacket} is to
+     * grow
+     */
+    public void grow(int howMuch) {
+        if (howMuch < 0)
+            throw new IllegalArgumentException("howMuch: " + howMuch);
+
+        int newLength = length + howMuch;
+
+        if (newLength > buffer.length - offset) {
+            byte[] newBuffer = BufferPool.Companion.getGetArray().invoke(newLength);
+
+            System.arraycopy(buffer, offset, newBuffer, 0, length);
+            offset = 0;
+            byte[] oldBuffer = buffer;
+            setBuffer(newBuffer);
+            BufferPool.Companion.getReturnArray().invoke(oldBuffer);
+        }
+    }
+
+    /**
+     * Shrink the buffer of this packet by specified length
+     *
+     * @param len length to shrink
+     */
+    public void shrink(int len)
+    {
+        if (len <= 0)
+            return;
+
+        this.length -= len;
+        if (this.length < 0)
+            this.length = 0;
+    }
+
+
+
+    /**
+     * @param buffer the buffer to set
+     */
+    public void setBuffer(byte[] buffer)
+    {
+        this.buffer = buffer;
     }
 
     public String toHex()
