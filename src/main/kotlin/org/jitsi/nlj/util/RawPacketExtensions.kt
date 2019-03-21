@@ -31,20 +31,14 @@ fun fromLegacyRawPacket(legacyRawPacket: RawPacket): NewRawPacket =
 fun RawPacket.toRtpPacket(): RtpPacket =
     RtpPacket(buffer, offset, length)
 
-fun RtpPacket.shiftPayloadLeft(numBytes: Int) {
-    val payloadOffset = payloadOffset
-    for (i in payloadOffset until length) {
-        buffer[i - numBytes] = buffer[i]
-    }
-}
-
+// Note this does not change 'length'
 fun RtpPacket.shiftPayloadRight(numBytes: Int) {
     val originalPayloadOffset = payloadOffset
     val originalPayloadLength = payloadLength
-    if (payloadOffset + payloadLength + numBytes > length) {
+    // We need to use >= length here to account for the fact that
+    // buffer[length] is out-of-bounds
+    if (payloadOffset + payloadLength + numBytes >= length) {
         grow(numBytes)
     }
-    for (i in (originalPayloadOffset + originalPayloadLength) downTo originalPayloadOffset) {
-        buffer[i + numBytes] = buffer[i]
-    }
+    System.arraycopy(buffer, payloadOffset, buffer, payloadOffset + 2, payloadLength)
 }
