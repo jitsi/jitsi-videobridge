@@ -16,12 +16,12 @@
 
 package org.jitsi.rtp.util
 
-import org.jitsi.rtp.NewRawPacket
+import org.jitsi.rtp.ByteArrayBuffer
 import org.jitsi.rtp.extensions.bytearray.getInt
 
 class SrtpUtils {
     companion object {
-        fun getSrtcpIndex(packet: NewRawPacket, authTagLen: Int): Int =
+        fun getSrtcpIndex(packet: ByteArrayBuffer, authTagLen: Int): Int =
             packet.buffer.getInt(packet.length - (4 + authTagLen))
     }
 }

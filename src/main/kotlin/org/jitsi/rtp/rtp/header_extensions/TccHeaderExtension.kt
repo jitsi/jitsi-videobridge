@@ -15,7 +15,6 @@
  */
 package org.jitsi.rtp.rtp.header_extensions
 
-import org.jitsi.rtp.NewRawPacket
 import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.getShortAsInt
@@ -43,9 +42,9 @@ class TccHeaderExtension {
          * [offset] into [buf] is the start of this entire extension (not the data section)
          */
         fun getSequenceNumber(buf: ByteArray, offset: Int): Int =
-            buf.getShortAsInt(offset + NewRawPacket.HEADER_EXT_HEADER_SIZE)
+            buf.getShortAsInt(offset + RtpPacket.HEADER_EXT_HEADER_SIZE)
         fun setSequenceNumber(buf: ByteArray, offset: Int, seqNum: Int) {
-            buf.putShort(offset + NewRawPacket.HEADER_EXT_HEADER_SIZE, seqNum.toShort())
+            buf.putShort(offset + RtpPacket.HEADER_EXT_HEADER_SIZE, seqNum.toShort())
         }
     }
 }

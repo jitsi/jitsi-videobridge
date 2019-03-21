@@ -16,7 +16,6 @@
 
 package org.jitsi.rtp.rtp.header_extensions
 
-import org.jitsi.rtp.NewRawPacket
 import org.jitsi.rtp.extensions.bytearray.put3Bytes
 import org.jitsi.rtp.rtp.RtpPacket
 
@@ -46,7 +45,7 @@ class AbsSendTimeHeaderExtension {
 
             val timestamp = ((seconds shl 18) or fraction) and 0x00FFFFFF
 
-            buf.put3Bytes(offset + NewRawPacket.HEADER_EXT_HEADER_SIZE, timestamp.toInt())
+            buf.put3Bytes(offset + RtpPacket.HEADER_EXT_HEADER_SIZE, timestamp.toInt())
         }
     }
 }

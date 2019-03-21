@@ -16,14 +16,8 @@
 
 package org.jitsi.rtp.rtp.header_extensions
 
-import org.jitsi.rtp.NewRawPacket
-import org.jitsi.rtp.extensions.getBitAsBool
-import org.jitsi.rtp.extensions.incrementPosition
-import org.jitsi.rtp.extensions.putBitAsBoolean
-import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpPacket
-import java.nio.ByteBuffer
 import kotlin.experimental.and
 
 /**
@@ -48,7 +42,7 @@ class AudioLevelHeaderExtension {
          * [offset] into [buf] is the start of this entire extension (not the data section)
          */
         fun getAudioLevel(buf: ByteArray, offset: Int): Int =
-            (buf.get(offset + NewRawPacket.HEADER_EXT_HEADER_SIZE) and AUDIO_LEVEL_MASK).toPositiveInt()
+            (buf.get(offset + RtpPacket.HEADER_EXT_HEADER_SIZE) and AUDIO_LEVEL_MASK).toPositiveInt()
 
     }
 }

@@ -16,7 +16,7 @@
 
 package org.jitsi.rtp.rtp
 
-import org.jitsi.rtp.NewRawPacket
+import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionHelpers
@@ -48,7 +48,7 @@ open class RtpPacket(
     buffer: ByteArray,
     offset: Int,
     length: Int
-) : NewRawPacket(buffer, offset, length) {
+) : Packet(buffer, offset, length) {
 
     constructor(buffer: ByteArray) : this(buffer, 0, buffer.size)
 
@@ -423,5 +423,13 @@ open class RtpPacket(
                 remainingLength = extLength
             }
         }
+    }
+
+    companion object {
+        /**
+         * The size of the header for individual extensions.  Currently we only
+         * support 1 byte header extensions
+         */
+        const val HEADER_EXT_HEADER_SIZE = 1
     }
 }

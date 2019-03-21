@@ -16,13 +16,13 @@
 
 package org.jitsi.rtp.rtcp
 
-import org.jitsi.rtp.NewRawPacket
+import org.jitsi.rtp.Packet
 
 class CompoundRtcpSplitter {
     companion object {
         // Get all the contained RTCP packets from compoundRtcpPacket.  Each
         // packet will have been given its own buffer.
-        fun getAll(compoundRtcpPacket: NewRawPacket): List<RtcpPacket> {
+        fun getAll(compoundRtcpPacket: Packet): List<RtcpPacket> {
             var bytesRemaining = compoundRtcpPacket.length
             var currOffset = compoundRtcpPacket.offset
             val rtcpPackets = mutableListOf<RtcpPacket>()
