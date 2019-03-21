@@ -15,11 +15,11 @@
  */
 package org.jitsi.videobridge.cc.vp8;
 
-import net.sf.fmj.media.rtp.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.nlj.format.*;
+import org.jitsi.rtp.rtcp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.utils.*;
@@ -407,13 +407,13 @@ public class VP8AdaptiveTrackProjectionContext
             ByteArrayBuffer baf = it.next();
             switch (RTCPUtils.getPacketType(baf))
             {
-            case RTCPPacket.SDES:
+                case RtcpSdesPacket.PT:
                 if (removed)
                 {
                     it.remove();
                 }
                 break;
-            case RTCPPacket.SR:
+            case RtcpSrPacket.PT:
                 VP8FrameProjection
                     lastVP8FrameProjectionCopy = lastVP8FrameProjection;
                 if (lastVP8FrameProjectionCopy.getVP8Frame() == null
@@ -448,7 +448,7 @@ public class VP8AdaptiveTrackProjectionContext
                     }
                 }
                 break;
-            case RTCPPacket.BYE:
+            case RtcpByePacket.PT:
                 // TODO rewrite SSRC.
                 break;
             }
