@@ -38,8 +38,8 @@ class TccSeqNumTagger(
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         tccExtensionId?.let { tccExtId ->
             val rtpPacket = packetInfo.packetAs<RtpPacket>()
-            val ext = rtpPacket.getHeaderExtension(tccExtId.toByte()) ?:
-                rtpPacket.addExtension(tccExtId.toByte(), TccHeaderExtension.DATA_SIZE_BYTES)
+            val ext = rtpPacket.getHeaderExtension(tccExtId) ?:
+                rtpPacket.addHeaderExtension(tccExtId, TccHeaderExtension.DATA_SIZE_BYTES)
             TccHeaderExtension.setSequenceNumber(ext, currTccSeqNum++)
         }
 
