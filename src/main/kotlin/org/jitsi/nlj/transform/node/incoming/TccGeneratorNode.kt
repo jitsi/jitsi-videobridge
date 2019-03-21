@@ -28,7 +28,7 @@ import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.util.RTPUtils
+import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import unsigned.toUInt
 
 /**
@@ -62,13 +62,9 @@ class TccGeneratorNode(
         tccExtensionId?.let { tccExtId ->
             val rtpPacket = packetInfo.packetAs<RtpPacket>()
             rtpPacket.getHeaderExtension(tccExtId.toByte())?.let { ext ->
-                val tccSeqNum = RTPUtils.readUint16AsInt(
-                    ext.buffer, ext.offset + 1);
+                val tccSeqNum = TccHeaderExtension.getSequenceNumber(ext)
                 addPacket(tccSeqNum, packetInfo.receivedTime, rtpPacket.isMarked)
             }
-//           rtpPacket.header.getExtensionAs(tccExtId, TccHeaderExtension.Companion::fromUnparsed)?.let { tccExt ->
-//                addPacket(tccExt.tccSeqNum, packetInfo.receivedTime, rtpPacket.header.marker)
-//            }
         }
     }
 
