@@ -24,7 +24,6 @@ import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.extensions.*;
-import org.jitsi.rtp.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.util.*;

@@ -15,10 +15,10 @@
  */
 package org.jitsi.videobridge.eventadmin.callstats;
 
-import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.stats.*;
 import org.jitsi.stats.media.*;
 import org.jitsi.util.*;
+import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
 
 import java.util.*;
