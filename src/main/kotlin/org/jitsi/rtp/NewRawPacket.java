@@ -81,243 +81,246 @@ public class NewRawPacket
         headerExtensions = new HeaderExtensions();
     }
 
-    /**
-     * Adds the given buffer as a header extension of this packet
-     * according the rules specified in RFC 5285. Note that this method does
-     * not replace extensions so if you add the same buffer twice it would be
-     * added as a separate extension.
-     *
-     * This method MUST NOT be called while iterating over the extensions using
-     * {@link #getHeaderExtensions()}, or while manipulating the state of this
-     * {@link NewRawPacket}.
-     *
-     * @param id the ID with which to add the extension.
-     * @param data the buffer containing the extension data.
-     */
-    public void addExtension(byte id, byte[] data)
-    {
-        addExtension(id, data, data.length);
-    }
-
-    /**
-     * Adds the given buffer as a header extension of this packet
-     * according the rules specified in RFC 5285. Note that this method does
-     * not replace extensions so if you add the same buffer twice it would be
-     * added as a separate extension.
-     *
-     * This method MUST NOT be called while iterating over the extensions using
-     * {@link #getHeaderExtensions()}, or while manipulating the state of this
-     * {@link NewRawPacket}.
-     *
-     * @param id the ID with which to add the extension.
-     * @param data the buffer containing the extension data.
-     * @param len the length of the extension.
-     */
-    public void addExtension(byte id, byte[] data, int len)
-    {
-        if (data == null || len < 1 || len > 16 || data.length < len)
-        {
-            throw new IllegalArgumentException(
-                "id=" + id + " data.length="
-                    + (data == null ? "null" : data.length)
-                    + " len=" + len);
-        }
-
-        HeaderExtension he = addExtension(id, len);
-        System.arraycopy(data, 0,
-                         he.getBuffer(), he.getOffset() + 1,
-                         len);
-    }
-
-    /**
-     * Adds an RTP header extension with a given ID and a given length to this
-     * packet. The contents of the extension are not set to anything, and the
-     * caller of this method is responsible for filling them in.
-     *
-     * This method MUST NOT be called while iterating over the extensions using
-     * {@link #getHeaderExtensions()}, or while manipulating the state of this
-     * {@link NewRawPacket}.
-     *
-     * @param id the ID of the extension to add.
-     * @param len the length in bytes of the extension to add.
-     * @return the header extension which was added.
-     */
-    public HeaderExtension addExtension(byte id, int len)
-    {
-        if (id < 1 || id > 15 || len < 1 || len > 16)
-        {
-            throw new IllegalArgumentException("id=" + id + " len=" + len);
-        }
-
-        // The byte[] of a NewRawPacket has the following structure:
-        // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        // | A: unused | B: hdr + ext | C: payload | D: unused |
-        // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        // And the regions have the following sizes:
-        // A: this.offset
-        // B: this.getHeaderLength()
-        // C: this.getPayloadLength()
-        // D: this.buffer.length - this.length - this.offset
-        // We will try to extend the packet so that it uses A and/or D if
-        // possible, in order to avoid allocating new memory.
-
-        // We get this early, before we modify the buffer.
-        int payloadLength = getPayloadLength();
-        boolean extensionBit = getExtensionBit();
-        int extHeaderOffset = RtpHeader.FIXED_HEADER_SIZE_BYTES + 4 * getCsrcCount();
-
-
-        // This is an upper bound on the required length for the packet after
-        // the addition of the new extension. It is easier to calculate than
-        // the exact number, and is relatively close (it may be off by a few
-        // bytes due to padding)
-        int maxRequiredLength
-            = getLength()
-            + (extensionBit ? 0 : RtpHeader.EXT_HEADER_SIZE_BYTES)
-            + 1 /* the 1-byte header of the extension element */
-            + len
-            + 3 /* padding */;
-
-
-        byte[] newBuffer;
-        int newPayloadOffset;
-        if (buffer.length >= maxRequiredLength)
-        {
-            // We don't need a new buffer.
-            newBuffer = buffer;
-
-            if ( (offset + getHeaderLength()) >=
-                 (maxRequiredLength - getPayloadLength()))
-            {
-                // If region A (see above) is enough to accommodate the new
-                // packet, then keep the payload where it is.
-                newPayloadOffset = getPayloadOffset();
-            }
-            else
-            {
-                // Otherwise, we have to use region D. To do so, move the
-                // payload to the right.
-                newPayloadOffset = buffer.length - payloadLength;
-                System.arraycopy(buffer, getPayloadOffset(),
-                                 buffer, newPayloadOffset,
-                                 payloadLength);
-            }
-        }
-        else
-        {
-            // We need a new buffer. We will place the payload to the very right.
-            newBuffer = BufferPool.Companion.getGetArray().invoke(maxRequiredLength);
-            newPayloadOffset = newBuffer.length - payloadLength;
-            System.arraycopy(buffer, getPayloadOffset(),
-                             newBuffer, newPayloadOffset,
-                             payloadLength);
-        }
-
-        // By now we have the payload in a position which leaves enough space
-        // for the whole new header.
-        // Next, we are going to construct a new header + extensions (including
-        // the one we are adding) at offset 0, and once finished, we will move
-        // them to the correct offset.
-
-
-        int newHeaderLength = extHeaderOffset;
-        // The bytes in the header extensions, excluding the (0xBEDE, length)
-        // field and any padding.
-        int extensionBytes = 0;
-        if (extensionBit)
-        {
-            // (0xBEDE, length)
-            newHeaderLength += 4;
-
-            // We can't find the actual length without an iteration because
-            // of padding. It is safe to iterate, because we have not yet
-            // modified the header (we only might have moved the offset right)
-            HeaderExtensions hes = getHeaderExtensions();
-            while (hes.hasNext())
-            {
-                HeaderExtension he = hes.next();
-                // 1 byte for id/len + data
-                extensionBytes += 1 + he.getExtLength();
-            }
-
-            newHeaderLength += extensionBytes;
-        }
-
-        // Copy the header (and extensions, excluding padding, if there are any)
-        System.arraycopy(buffer, offset,
-                         newBuffer, 0,
-                         newHeaderLength);
-
-        if (!extensionBit)
-        {
-            // If the original packet didn't have any extensions, we need to
-            // add the extension header (RFC 5285):
-            //  0                   1                   2                   3
-            //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-            // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            // |       0xBE    |    0xDE       |           length              |
-            // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            RTPUtils.writeShort(newBuffer, extHeaderOffset, (short) 0xBEDE);
-            // We will set the length field later.
-            newHeaderLength += 4;
-        }
-
-        // Finally we get to add our extension.
-        newBuffer[newHeaderLength++]
-            = (byte) ((id & 0x0f) << 4 | (len - 1) & 0x0f);
-        extensionBytes++;
-
-        // This is where the data of the extension that we add begins. We just
-        // skip 'len' bytes, and let the caller fill them in. We have to go
-        // back one byte, because newHeaderLength already moved.
-        int extensionDataOffset = newHeaderLength - 1;
-        newHeaderLength += len;
-        extensionBytes += len;
-
-        int paddingBytes = (4 - (extensionBytes % 4)) % 4;
-        for (int i = 0; i < paddingBytes; i++)
-        {
-            // Set the padding to 0 (we have to do this because we may be
-            // reusing a buffer).
-            newBuffer[newHeaderLength++] = 0;
-        }
-
-        RTPUtils.writeShort(newBuffer, extHeaderOffset + 2,
-                            (short) ((extensionBytes + paddingBytes) / 4));
-
-        // Now we have the new header, with the added header extension and with
-        // the correct padding, in newBuffer at offset 0. Lets move it to the
-        // correct place (right before the payload).
-        int newOffset = newPayloadOffset - newHeaderLength;
-        if (newOffset != 0)
-        {
-            System.arraycopy(newBuffer, 0,
-                             newBuffer, newOffset,
-                             newHeaderLength);
-        }
-
-        // All that is left to do is update the NewRawPacket state.
-        byte[] oldBuffer = buffer;
-        setBuffer(newBuffer);
-        // Reference comparison to see if we got a new buffer.  If so, return the old one to the pool
-        if (oldBuffer != newBuffer)
-        {
-            BufferPool.Companion.getReturnArray().invoke(oldBuffer);
-        }
-
-        this.offset = newOffset;
-        this.length = newHeaderLength + payloadLength;
-
-        // ... and set the extension bit.
-        setExtensionBit(true);
-
-        // Setup the single HeaderExtension instance of this NewRawPacket and
-        // return it.
-        HeaderExtension he = getHeaderExtensions().headerExtension;
-        he.setOffset( getOffset() + extensionDataOffset);
-        he.setLength(len + 1);
-        return he;
-    }
+//    /**
+//     * Adds the given buffer as a header extension of this packet
+//     * according the rules specified in RFC 5285. Note that this method does
+//     * not replace extensions so if you add the same buffer twice it would be
+//     * added as a separate extension.
+//     *
+//     * This method MUST NOT be called while iterating over the extensions using
+//     * {@link #getHeaderExtensions()}, or while manipulating the state of this
+//     * {@link NewRawPacket}.
+//     *
+//     * @param id the ID with which to add the extension.
+//     * @param data the buffer containing the extension data.
+//     */
+//    @Deprecated
+//    private void addExtension(byte id, byte[] data)
+//    {
+//        addExtension(id, data, data.length);
+//    }
+//
+//    /**
+//     * Adds the given buffer as a header extension of this packet
+//     * according the rules specified in RFC 5285. Note that this method does
+//     * not replace extensions so if you add the same buffer twice it would be
+//     * added as a separate extension.
+//     *
+//     * This method MUST NOT be called while iterating over the extensions using
+//     * {@link #getHeaderExtensions()}, or while manipulating the state of this
+//     * {@link NewRawPacket}.
+//     *
+//     * @param id the ID with which to add the extension.
+//     * @param data the buffer containing the extension data.
+//     * @param len the length of the extension.
+//     */
+//    @Deprecated
+//    private void addExtension(byte id, byte[] data, int len)
+//    {
+//        if (data == null || len < 1 || len > 16 || data.length < len)
+//        {
+//            throw new IllegalArgumentException(
+//                "id=" + id + " data.length="
+//                    + (data == null ? "null" : data.length)
+//                    + " len=" + len);
+//        }
+//
+//        HeaderExtension he = addExtension(id, len);
+//        System.arraycopy(data, 0,
+//                         he.getBuffer(), he.getOffset() + 1,
+//                         len);
+//    }
+//
+//    /**
+//     * Adds an RTP header extension with a given ID and a given length to this
+//     * packet. The contents of the extension are not set to anything, and the
+//     * caller of this method is responsible for filling them in.
+//     *
+//     * This method MUST NOT be called while iterating over the extensions using
+//     * {@link #getHeaderExtensions()}, or while manipulating the state of this
+//     * {@link NewRawPacket}.
+//     *
+//     * @param id the ID of the extension to add.
+//     * @param len the length in bytes of the extension to add.
+//     * @return the header extension which was added.
+//     */
+//    @Deprecated
+//    private HeaderExtension addExtension(byte id, int len)
+//    {
+//        if (id < 1 || id > 15 || len < 1 || len > 16)
+//        {
+//            throw new IllegalArgumentException("id=" + id + " len=" + len);
+//        }
+//
+//        // The byte[] of a NewRawPacket has the following structure:
+//        // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//        // | A: unused | B: hdr + ext | C: payload | D: unused |
+//        // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//        // And the regions have the following sizes:
+//        // A: this.offset
+//        // B: this.getHeaderLength()
+//        // C: this.getPayloadLength()
+//        // D: this.buffer.length - this.length - this.offset
+//        // We will try to extend the packet so that it uses A and/or D if
+//        // possible, in order to avoid allocating new memory.
+//
+//        // We get this early, before we modify the buffer.
+//        int payloadLength = getPayloadLength();
+//        boolean extensionBit = getExtensionBit();
+//        int extHeaderOffset = RtpHeader.FIXED_HEADER_SIZE_BYTES + 4 * getCsrcCount();
+//
+//
+//        // This is an upper bound on the required length for the packet after
+//        // the addition of the new extension. It is easier to calculate than
+//        // the exact number, and is relatively close (it may be off by a few
+//        // bytes due to padding)
+//        int maxRequiredLength
+//            = getLength()
+//            + (extensionBit ? 0 : RtpHeader.EXT_HEADER_SIZE_BYTES)
+//            + 1 /* the 1-byte header of the extension element */
+//            + len
+//            + 3 /* padding */;
+//
+//
+//        byte[] newBuffer;
+//        int newPayloadOffset;
+//        if (buffer.length >= maxRequiredLength)
+//        {
+//            // We don't need a new buffer.
+//            newBuffer = buffer;
+//
+//            if ( (offset + getHeaderLength()) >=
+//                 (maxRequiredLength - getPayloadLength()))
+//            {
+//                // If region A (see above) is enough to accommodate the new
+//                // packet, then keep the payload where it is.
+//                newPayloadOffset = getPayloadOffset();
+//            }
+//            else
+//            {
+//                // Otherwise, we have to use region D. To do so, move the
+//                // payload to the right.
+//                newPayloadOffset = buffer.length - payloadLength;
+//                System.arraycopy(buffer, getPayloadOffset(),
+//                                 buffer, newPayloadOffset,
+//                                 payloadLength);
+//            }
+//        }
+//        else
+//        {
+//            // We need a new buffer. We will place the payload to the very right.
+//            newBuffer = BufferPool.Companion.getGetArray().invoke(maxRequiredLength);
+//            newPayloadOffset = newBuffer.length - payloadLength;
+//            System.arraycopy(buffer, getPayloadOffset(),
+//                             newBuffer, newPayloadOffset,
+//                             payloadLength);
+//        }
+//
+//        // By now we have the payload in a position which leaves enough space
+//        // for the whole new header.
+//        // Next, we are going to construct a new header + extensions (including
+//        // the one we are adding) at offset 0, and once finished, we will move
+//        // them to the correct offset.
+//
+//
+//        int newHeaderLength = extHeaderOffset;
+//        // The bytes in the header extensions, excluding the (0xBEDE, length)
+//        // field and any padding.
+//        int extensionBytes = 0;
+//        if (extensionBit)
+//        {
+//            // (0xBEDE, length)
+//            newHeaderLength += 4;
+//
+//            // We can't find the actual length without an iteration because
+//            // of padding. It is safe to iterate, because we have not yet
+//            // modified the header (we only might have moved the offset right)
+//            HeaderExtensions hes = getHeaderExtensions();
+//            while (hes.hasNext())
+//            {
+//                HeaderExtension he = hes.next();
+//                // 1 byte for id/len + data
+//                extensionBytes += 1 + he.getExtLength();
+//            }
+//
+//            newHeaderLength += extensionBytes;
+//        }
+//
+//        // Copy the header (and extensions, excluding padding, if there are any)
+//        System.arraycopy(buffer, offset,
+//                         newBuffer, 0,
+//                         newHeaderLength);
+//
+//        if (!extensionBit)
+//        {
+//            // If the original packet didn't have any extensions, we need to
+//            // add the extension header (RFC 5285):
+//            //  0                   1                   2                   3
+//            //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//            // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//            // |       0xBE    |    0xDE       |           length              |
+//            // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//            RTPUtils.writeShort(newBuffer, extHeaderOffset, (short) 0xBEDE);
+//            // We will set the length field later.
+//            newHeaderLength += 4;
+//        }
+//
+//        // Finally we get to add our extension.
+//        newBuffer[newHeaderLength++]
+//            = (byte) ((id & 0x0f) << 4 | (len - 1) & 0x0f);
+//        extensionBytes++;
+//
+//        // This is where the data of the extension that we add begins. We just
+//        // skip 'len' bytes, and let the caller fill them in. We have to go
+//        // back one byte, because newHeaderLength already moved.
+//        int extensionDataOffset = newHeaderLength - 1;
+//        newHeaderLength += len;
+//        extensionBytes += len;
+//
+//        int paddingBytes = (4 - (extensionBytes % 4)) % 4;
+//        for (int i = 0; i < paddingBytes; i++)
+//        {
+//            // Set the padding to 0 (we have to do this because we may be
+//            // reusing a buffer).
+//            newBuffer[newHeaderLength++] = 0;
+//        }
+//
+//        RTPUtils.writeShort(newBuffer, extHeaderOffset + 2,
+//                            (short) ((extensionBytes + paddingBytes) / 4));
+//
+//        // Now we have the new header, with the added header extension and with
+//        // the correct padding, in newBuffer at offset 0. Lets move it to the
+//        // correct place (right before the payload).
+//        int newOffset = newPayloadOffset - newHeaderLength;
+//        if (newOffset != 0)
+//        {
+//            System.arraycopy(newBuffer, 0,
+//                             newBuffer, newOffset,
+//                             newHeaderLength);
+//        }
+//
+//        // All that is left to do is update the NewRawPacket state.
+//        byte[] oldBuffer = buffer;
+//        setBuffer(newBuffer);
+//        // Reference comparison to see if we got a new buffer.  If so, return the old one to the pool
+//        if (oldBuffer != newBuffer)
+//        {
+//            BufferPool.Companion.getReturnArray().invoke(oldBuffer);
+//        }
+//
+//        this.offset = newOffset;
+//        this.length = newHeaderLength + payloadLength;
+//
+//        // ... and set the extension bit.
+//        setExtensionBit(true);
+//
+//        // Setup the single HeaderExtension instance of this NewRawPacket and
+//        // return it.
+//        HeaderExtension he = getHeaderExtensions().headerExtension;
+//        he.setOffset( getOffset() + extensionDataOffset);
+//        he.setLength(len + 1);
+//        return he;
+//    }
 
     @NotNull
     @Override
@@ -339,6 +342,7 @@ public class NewRawPacket
      * with the specified <tt>extensionID</tt> or -1 if no such extension was
      * found.
      */
+    @Deprecated
     private int findExtension(int extensionID)
     {
         if( !getExtensionBit() || getExtensionLength() == 0)
@@ -470,6 +474,7 @@ public class NewRawPacket
      * <tt>-1</tt> in case there were no extension headers here or we didn't
      * understand the kind of extension being used.
      */
+    @Deprecated
     private int getExtensionHeaderLength()
     {
         if (!getExtensionBit())
@@ -497,7 +502,8 @@ public class NewRawPacket
      *
      * @return the length of the extensions currently added to this packet.
      */
-    public int getExtensionLength()
+    @Deprecated
+    private int getExtensionLength()
     {
         return getExtensionLength(buffer, offset, length);
     }
@@ -505,7 +511,8 @@ public class NewRawPacket
     /**
      * @return the iterator over this {@link NewRawPacket}'s RTP header extensions.
      */
-    public HeaderExtensions getHeaderExtensions()
+    @Deprecated
+    private HeaderExtensions getHeaderExtensions()
     {
         if (headerExtensions == null)
         {
@@ -523,7 +530,8 @@ public class NewRawPacket
      * @param length
      * @return the length of the extensions currently added to this packet.
      */
-    public static int getExtensionLength(byte[] buffer, int offset, int length)
+    @Deprecated
+    private static int getExtensionLength(byte[] buffer, int offset, int length)
     {
         if (!getExtensionBit(buffer, offset, length))
             return 0;
@@ -555,21 +563,22 @@ public class NewRawPacket
      * Return the define by profile part of the extension header.
      * @return the starting two bytes of extension header.
      */
-    public int getHeaderExtensionType()
-    {
-        if (!getExtensionBit())
-            return 0;
-
-        return
-            readUint16AsInt(offset + RtpHeader.FIXED_HEADER_SIZE_BYTES + getCsrcCount() * 4);
-    }
+//    public int getHeaderExtensionType()
+//    {
+//        if (!getExtensionBit())
+//            return 0;
+//
+//        return
+//            readUint16AsInt(offset + RtpHeader.FIXED_HEADER_SIZE_BYTES + getCsrcCount() * 4);
+//    }
 
     /**
      * Get RTP header length from a RTP packet
      *
      * @return RTP header length from source RTP packet
      */
-    public int getHeaderLength()
+    @Deprecated
+    private int getHeaderLength()
     {
         return getHeaderLength(buffer, offset, length);
     }
@@ -582,6 +591,7 @@ public class NewRawPacket
      * @param length
      * @return RTP header length from source RTP packet
      */
+    @Deprecated
     public static int getHeaderLength(byte[] buffer, int offset, int length)
     {
         int headerLength
@@ -607,29 +617,29 @@ public class NewRawPacket
         return headerLength;
     }
 
-    /**
-     * Returns the length of the header extension that is carrying the content
-     * starting at <tt>contentStart</tt>. In other words this method checks the
-     * size of extension headers in this packet and then either returns the
-     * value of the byte right before <tt>contentStart</tt> or its lower 4 bits.
-     * This is a very basic method so if you are using it - make sure u know
-     * what you are doing.
-     *
-     * @param contentStart the index of the first element of the content of
-     * the extension whose size we are trying to obtain.
-     *
-     * @return the length of the extension carrying the content starting at
-     * <tt>contentStart</tt>.
-     */
-    private int getLengthForExtension(int contentStart)
-    {
-        int hdrLen = getExtensionHeaderLength();
-
-        if( hdrLen == 1 )
-            return (buffer[contentStart - 1] & 0x0F) + 1;
-        else
-            return buffer[contentStart - 1];
-    }
+//    /**
+//     * Returns the length of the header extension that is carrying the content
+//     * starting at <tt>contentStart</tt>. In other words this method checks the
+//     * size of extension headers in this packet and then either returns the
+//     * value of the byte right before <tt>contentStart</tt> or its lower 4 bits.
+//     * This is a very basic method so if you are using it - make sure u know
+//     * what you are doing.
+//     *
+//     * @param contentStart the index of the first element of the content of
+//     * the extension whose size we are trying to obtain.
+//     *
+//     * @return the length of the extension carrying the content starting at
+//     * <tt>contentStart</tt>.
+//     */
+//    private int getLengthForExtension(int contentStart)
+//    {
+//        int hdrLen = getExtensionHeaderLength();
+//
+//        if( hdrLen == 1 )
+//            return (buffer[contentStart - 1] & 0x0F) + 1;
+//        else
+//            return buffer[contentStart - 1];
+//    }
 
     /**
      * Get RTP padding size from a RTP packet
@@ -677,7 +687,7 @@ public class NewRawPacket
      *
      * @return RTP payload length from source RTP packet
      */
-    public int getPayloadLength()
+    private int getPayloadLength()
     {
         return getPayloadLength(buffer, offset, length);
     }
@@ -735,7 +745,7 @@ public class NewRawPacket
      *
      * @return the RTP payload offset of an RTP packet.
      */
-    public int getPayloadOffset()
+    private int getPayloadOffset()
     {
         return getPayloadOffset(buffer, offset, length);
     }
@@ -855,27 +865,28 @@ public class NewRawPacket
         return sb.toString();
     }
 
-    /**
-     * @return the header extension of this {@link NewRawPacket} with the given ID,
-     * or null if the packet doesn't have one.
-     * WARNING: This method should not be used while iterating over the
-     * extensions with {@link #getHeaderExtensions()}, because it uses the same
-     * iterator.
-     * @param id
-     */
-    public HeaderExtension getHeaderExtension(byte id)
-    {
-        HeaderExtensions hes = getHeaderExtensions();
-        while (hes.hasNext())
-        {
-            HeaderExtension he = hes.next();
-            if (he.getExtId() == id)
-            {
-                return he;
-            }
-        }
-        return null;
-    }
+//    /**
+//     * @return the header extension of this {@link NewRawPacket} with the given ID,
+//     * or null if the packet doesn't have one.
+//     * WARNING: This method should not be used while iterating over the
+//     * extensions with {@link #getHeaderExtensions()}, because it uses the same
+//     * iterator.
+//     * @param id
+//     */
+//    @Deprecated
+//    private HeaderExtension getHeaderExtension(byte id)
+//    {
+//        HeaderExtensions hes = getHeaderExtensions();
+//        while (hes.hasNext())
+//        {
+//            HeaderExtension he = hes.next();
+//            if (he.getExtId() == id)
+//            {
+//                return he;
+//            }
+//        }
+//        return null;
+//    }
 
     /**
      * Represents an RTP header extension with the RFC5285 one-byte header:

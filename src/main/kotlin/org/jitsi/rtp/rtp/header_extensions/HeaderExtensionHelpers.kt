@@ -17,6 +17,7 @@
 package org.jitsi.rtp.rtp.header_extensions
 
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
+import org.jitsi.rtp.util.getShortAsInt
 import unsigned.ushr
 import kotlin.experimental.and
 
@@ -25,6 +26,8 @@ class HeaderExtensionHelpers {
         const val MINIMUM_EXT_SIZE_BYTES = 2
         // The size of a one-byte header extension header
         const val EXT_HEADER_SIZE_BYTES = 1
+        // The size of the header extension block header
+        const val TOP_LEVEL_EXT_HEADER_SIZE_BYTES = 4
 
         fun getId(buf: ByteArray, offset: Int): Int =
             ((buf.get(offset) and 0xF0.toByte()) ushr 4).toPositiveInt()
@@ -43,5 +46,18 @@ class HeaderExtensionHelpers {
          */
         fun getDataLengthBytes(buf: ByteArray, offset: Int): Int
             = ((buf.get(offset) and 0x0F.toByte())).toPositiveInt() + 1
+
+
+        /**
+         * Return the length of the entire header extensions block, including
+         * the header, in bytes.
+         *
+         * [offset] points to the start of the header extensions block.  Should
+         * only be called if it's been verified that the header held in [buf]
+         * actually contains extensions
+         */
+        fun getExtensionsTotalLength(buf: ByteArray, offset: Int) =
+            TOP_LEVEL_EXT_HEADER_SIZE_BYTES + buf.getShortAsInt(offset + 2) * 4
+
     }
 }
