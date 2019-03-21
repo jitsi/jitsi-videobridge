@@ -180,6 +180,8 @@ internal class DtlsStackTest : ShouldSpec() {
             }
         }
 
+        //TODO: fix the fingerprint verification and enable this test in pom.xml. Otherwise the exception from
+        // connect() below prevents the rest of the tests from running.
         dtls.connect()
         val message = "Hello, world"
         dtls.sendDtlsAppData(PacketInfo(NewRawPacket(message.toByteArray())))
