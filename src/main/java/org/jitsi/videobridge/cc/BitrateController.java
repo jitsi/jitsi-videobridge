@@ -18,7 +18,6 @@ package org.jitsi.videobridge.cc;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.*;
-import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.rtp.*;
@@ -28,7 +27,6 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
-import org.jitsi_modified.service.neomedia.rtp.*;
 
 import java.util.*;
 import java.util.concurrent.*;

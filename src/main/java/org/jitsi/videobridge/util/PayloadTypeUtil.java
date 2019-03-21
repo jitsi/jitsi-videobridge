@@ -18,7 +18,7 @@ package org.jitsi.videobridge.util;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.format.*;
-import org.jitsi.service.neomedia.*;
+import org.jitsi.utils.*;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
