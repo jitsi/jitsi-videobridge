@@ -22,22 +22,21 @@ import org.jitsi.nlj.RtpExtensionClearEvent
 import org.jitsi.nlj.rtp.RtpExtensionType.ABS_SEND_TIME
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cdebug
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.AbsSendTimeHeaderExtension
-import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionType
-import org.jitsi.rtp.NewRawPacket
 import unsigned.toUInt
-import java.nio.ByteBuffer
 
 class AbsSendTime : TransformerNode("Absolute send time") {
-    private var extensionId: Int = -1
+    private var extensionId: Int? = null
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
-        val absSendTimeExt = AbsSendTimeHeaderExtension(extensionId, System.nanoTime());
-        val extData = ByteArray(absSendTimeExt.sizeBytesAs(HeaderExtensionType.ONE_BYTE_HEADER_EXT) - 1)
-        absSendTimeExt.serializeData(ByteBuffer.wrap(extData))
-//        absSendTimeExt.serializeToAs(HeaderExtensionType.ONE_BYTE_HEADER_EXT, ByteBuffer.wrap(extData))
-//        packetInfo.packetAs<RtpPacket>().header.addExtension(extensionId, absSendTimeExt)
-        packetInfo.packetAs<NewRawPacket>().addExtension(extensionId.toByte(), extData)
+        extensionId?.let { absSendTimeExtId ->
+            val rtpPacket = packetInfo.packetAs<RtpPacket>()
+            val ext = rtpPacket.getHeaderExtension(absSendTimeExtId.toByte()) ?:
+                rtpPacket.addExtension(absSendTimeExtId.toByte(), AbsSendTimeHeaderExtension.DATA_SIZE_BYTES)
+            AbsSendTimeHeaderExtension.setTime(ext, System.nanoTime())
+        }
+
         return packetInfo
     }
 

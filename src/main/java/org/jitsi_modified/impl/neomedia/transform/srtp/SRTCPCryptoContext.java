@@ -19,6 +19,8 @@ import org.bouncycastle.crypto.params.*;
 import org.jitsi.bccontrib.params.*;
 import org.jitsi.impl.neomedia.transform.srtp.*;
 import org.jitsi.rtp.*;
+import org.jitsi.rtp.rtcp.*;
+import org.jitsi.rtp.util.*;
 
 import java.util.*;
 
@@ -209,7 +211,7 @@ public class SRTCPCryptoContext
      */
     public void processPacketAESCM(NewRawPacket pkt, int index)
     {
-        int ssrc = (int) pkt.getRTCPSSRC();
+        int ssrc = (int) RtcpHeader.Companion.getSenderSsrc(pkt.getBuffer(), pkt.getOffset());
 
         /* Compute the CM IV (refer to chapter 4.1.1 in RFC 3711):
         *
@@ -305,7 +307,7 @@ public class SRTCPCryptoContext
     {
         boolean decrypt = false;
         int tagLength = policy.getAuthTagLength();
-        int indexEflag = pkt.getSRTCPIndex(tagLength);
+        int indexEflag = SrtpUtils.Companion.getSrtcpIndex(pkt, tagLength);
 
         if ((indexEflag & 0x80000000) == 0x80000000)
             decrypt = true;

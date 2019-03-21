@@ -147,7 +147,7 @@ public class SRTCPTransformer
             NewRawPacket pkt,
             SRTPContextFactory engine)
     {
-        int ssrc = (int) pkt.getRTCPSSRC();
+        int ssrc = (int) RtcpHeader.Companion.getSenderSsrc(pkt.getBuffer(), pkt.getOffset());
         SRTCPCryptoContext context = null;
 
         synchronized (contexts)
