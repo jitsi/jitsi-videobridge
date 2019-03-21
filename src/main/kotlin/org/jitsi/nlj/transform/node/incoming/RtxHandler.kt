@@ -59,7 +59,8 @@ class RtxHandler : TransformerNode("RTX handler") {
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        if (associatedPayloadTypes.containsKey(rtpPacket.payloadType.toPositiveInt())) {
+        if (associatedPayloadTypes.containsKey(rtpPacket.payloadType.toPositiveInt()) &&
+            associatedSsrcs.containsKey(rtpPacket.ssrc)) {
 //          logger.cdebug {
 //             "Received RTX packet: ssrc ${rtxPacket.header.ssrc}, seq num: ${rtxPacket.header.sequenceNumber} " +
 //             "rtx payload size: ${rtxPacket.payload.limit()}, padding size: ${rtxPacket.getPaddingSize()} " +
