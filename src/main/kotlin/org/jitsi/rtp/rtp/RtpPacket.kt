@@ -56,9 +56,8 @@ open class RtpPacket(
         get() = RtpHeader.hasExtensions(buffer, offset)
         set(value) = RtpHeader.setHasExtensions(buffer, offset, value)
 
-    var csrcCount: Int
+    val csrcCount: Int
         get() = RtpHeader.getCsrcCount(buffer, offset)
-        set(value) = RtpHeader.setCsrcCount(buffer, offset, value)
 
     var isMarked: Boolean
         get() = RtpHeader.getMarker(buffer, offset)
@@ -80,11 +79,8 @@ open class RtpPacket(
         get() = RtpHeader.getSsrc(buffer, offset)
         set(value) = RtpHeader.setSsrc(buffer, offset, value)
 
-    var csrcs: List<Long>
+    val csrcs: List<Long>
         get() = RtpHeader.getCsrcs(buffer, offset)
-        //TODO: this will not grow the buffer
-        set(value) = RtpHeader.setCsrcs(buffer, offset, value)
-
 
     override fun toString(): String = with (StringBuilder()) {
         append("RtpPacket: ")
