@@ -23,12 +23,11 @@ import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.toLegacyRawPacket
-import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionType
-import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi.rtp.NewRawPacket
+import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import unsigned.toUInt
-import java.nio.ByteBuffer
 
 class TccSeqNumTagger(
     private val transportCcEngine: TransportCCEngine? = null
@@ -38,12 +37,10 @@ class TccSeqNumTagger(
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         tccExtensionId?.let { tccExtId ->
-            val ext = TccHeaderExtension(tccExtId, currTccSeqNum++)
-            val extData = ByteArray(ext.sizeBytesAs(HeaderExtensionType.ONE_BYTE_HEADER_EXT) - 1)
-            ext.serializeData(ByteBuffer.wrap(extData))
-//            ext.serializeToAs(HeaderExtensionType.ONE_BYTE_HEADER_EXT, ByteBuffer.wrap(extData))
-            val rtpPacket = packetInfo.packetAs<NewRawPacket>()
-            rtpPacket.addExtension(tccExtId.toByte(), extData)
+            val rtpPacket = packetInfo.packetAs<RtpPacket>()
+            val ext = rtpPacket.getHeaderExtension(tccExtId.toByte()) ?:
+                rtpPacket.addExtension(tccExtId.toByte(), TccHeaderExtension.DATA_SIZE_BYTES)
+            TccHeaderExtension.setSequenceNumber(ext, currTccSeqNum++)
         }
 
         transportCcEngine?.egressEngine?.rtpTransformer?.transform(
