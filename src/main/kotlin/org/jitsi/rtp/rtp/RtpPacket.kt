@@ -17,6 +17,7 @@
 package org.jitsi.rtp.rtp
 
 import org.jitsi.rtp.NewRawPacket
+import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionHelpers
 import org.jitsi.rtp.util.BufferPool
@@ -300,6 +301,9 @@ open class RtpPacket(
             return HeaderExtensionHelpers.getExtensionsTotalLength(
                 buffer, offset + RtpHeader.FIXED_HEADER_SIZE_BYTES + csrcCount * 4)
         }
+
+    override fun clone(): RtpPacket =
+        RtpPacket(buffer.cloneFromPool(), offset, length)
 
     override fun toString(): String = with (StringBuilder()) {
         append("RtpPacket: ")
