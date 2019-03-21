@@ -509,7 +509,7 @@ public class SRTPCryptoContext
      *
      * @param pkt the RTP packet to be encrypted/decrypted
      */
-    public void processPacketAESF8(NewRawPacket pkt)
+    public void processPacketAESF8(RtpPacket pkt)
     {
         // 11 bytes of the RTP header are the 11 bytes of the iv
         // the first byte of the RTP header is not used.
