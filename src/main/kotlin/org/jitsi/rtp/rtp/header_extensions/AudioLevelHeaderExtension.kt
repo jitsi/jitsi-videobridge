@@ -22,6 +22,7 @@ import org.jitsi.rtp.extensions.incrementPosition
 import org.jitsi.rtp.extensions.putBitAsBoolean
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
+import org.jitsi.rtp.rtp.RtpPacket
 import java.nio.ByteBuffer
 import kotlin.experimental.and
 
@@ -40,8 +41,8 @@ class AudioLevelHeaderExtension {
     companion object {
         private const val AUDIO_LEVEL_MASK = 0x7F.toByte()
 
-        fun getAudioLevel(ext: NewRawPacket.HeaderExtension): Int =
-            getAudioLevel(ext.buffer, ext.offset)
+        fun getAudioLevel(ext: RtpPacket.HeaderExtension): Int =
+            getAudioLevel(ext.currExtBuffer, ext.currExtOffset)
 
         /**
          * [offset] into [buf] is the start of this entire extension (not the data section)
