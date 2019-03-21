@@ -65,7 +65,7 @@ class SrtpSample {
             0x6C, 0x6A, 0x11, 0x0D, 0x44, 0x91, 0x33, 0xBE,
             0xE1, 0xD7, 0x0D, 0x41, 0xE4, 0x8B
         )
-        val incomingEncryptedRtpPacket = NewRawPacket(incomingEncryptedRtpData, 0, incomingEncryptedRtpData.size)
+        val incomingEncryptedRtpPacket = RtpPacket(incomingEncryptedRtpData, 0, incomingEncryptedRtpData.size)
 
         val expectedDecryptedRtpPacket = NewRawPacket(org.jitsi.rtp.extensions.bytearray.byteArrayOf(
             0x90, 0xEF, 0x43, 0xD7, 0xCF, 0x6F, 0xDE, 0x8F,
