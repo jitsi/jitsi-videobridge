@@ -20,6 +20,7 @@ import org.jitsi.rtp.NewRawPacket
 import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionHelpers
 import org.jitsi.rtp.util.BufferPool
+import org.jitsi.rtp.util.getByteAsInt
 import kotlin.experimental.or
 
 /**
@@ -99,6 +100,21 @@ open class RtpPacket(
 
     val payloadOffset: Int
         get() = offset + headerLength
+
+    var paddingSize: Int
+        get() {
+            if (!hasPadding) {
+                return 0
+            }
+            // The last octet of the padding contains a count of how many
+            // padding octets should be ignored, including itself.
+            // It's an 8-bit unsigned number.
+            return buffer.getByteAsInt(offset + length - 1)
+        }
+        set(value) {
+            hasPadding = true
+            buffer[offset + length - 1] = value.toByte()
+        }
 
     private val _headerExtensions: HeaderExtensions by lazy { HeaderExtensions() }
     val headerExtensions: HeaderExtensions
