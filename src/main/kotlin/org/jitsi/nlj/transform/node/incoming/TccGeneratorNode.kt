@@ -61,7 +61,7 @@ class TccGeneratorNode(
     override fun observe(packetInfo: PacketInfo) {
         tccExtensionId?.let { tccExtId ->
             val rtpPacket = packetInfo.packetAs<RtpPacket>()
-            rtpPacket.getHeaderExtension(tccExtId.toByte())?.let { ext ->
+            rtpPacket.getHeaderExtension(tccExtId)?.let { ext ->
                 val tccSeqNum = TccHeaderExtension.getSequenceNumber(ext)
                 addPacket(tccSeqNum, packetInfo.receivedTime, rtpPacket.isMarked)
             }
