@@ -66,7 +66,7 @@ class RtxHandler : TransformerNode("RTX handler") {
             if (rtpPacket.payloadLength - rtpPacket.paddingSize < 2) {
                 logger.cdebug { "RTX packet is padding, ignore" }
                 numPaddingPacketsReceived++
-                BufferPool.returnBuffer(rtpPacket.buffer)
+                packetDiscarded(packetInfo)
                 return null
             }
 

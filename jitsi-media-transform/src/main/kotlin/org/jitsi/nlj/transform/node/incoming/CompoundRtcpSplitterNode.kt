@@ -31,8 +31,9 @@ class CompoundRtcpSplitterNode : MultipleOutputTransformerNode("Compound RTCP sp
     override fun transform(packetInfo: PacketInfo): List<PacketInfo> {
         val splitRtcpPackets = CompoundRtcpSplitter.getAll(packetInfo.packetAs<NewRawPacket>())
                 .map { PacketInfo(it, packetInfo.timeline.clone()).apply { receivedTime = packetInfo.receivedTime } }
+
         // We've cloned each of the compound RTCP packets into their own buffer, so we can return the original
-        BufferPool.returnBuffer(packetInfo.packet.buffer)
+        packetDiscarded(packetInfo)
 
         return splitRtcpPackets
     }

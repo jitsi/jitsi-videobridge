@@ -114,7 +114,13 @@ class RtpSenderImpl(
             if (packetInfo.timeline.totalDelay() > Duration.ofMillis(100)) {
                 logger.cerror { "Packet took >100ms to get through bridge:\n${packetInfo.timeline}"}
             }
-            outgoingPacketHandler?.processPacket(packetInfo)
+            // While there's no handler set we're effectively dropping packets, so their buffers
+            // should be returned.
+            outgoingPacketHandler?.let {
+                it.processPacket(packetInfo)
+            } ?:let {
+                packetDiscarded(packetInfo)
+            }
         }
     }
 

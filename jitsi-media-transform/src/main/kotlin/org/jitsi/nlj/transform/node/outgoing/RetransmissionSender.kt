@@ -61,11 +61,13 @@ class RetransmissionSender : TransformerNode("Retransmission sender") {
         val rtxSsrc = associatedSsrcs[rtpPacket.ssrc] ?: run {
             logger.cerror { "${hashCode()} could not find an associated RTX ssrc for original packet ssrc " +
                     rtpPacket.ssrc }
+            packetDiscarded(packetInfo)
             return null
         }
         val rtxPt = associatedPayloadTypes[rtpPacket.payloadType.toPositiveInt()] ?: run {
             logger.cerror { "${hashCode()} could not find an associated RTX payload type for original payload type " +
                     rtpPacket.payloadType }
+            packetDiscarded(packetInfo)
             return null
         }
         // Get a default value of 1 to start if it isn't present in the map.  If it is present
