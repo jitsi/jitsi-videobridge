@@ -83,17 +83,26 @@ class TccGeneratorNode(
     }
 
     private fun addPacket(tccSeqNum: Int, timestamp: Long, isMarked: Boolean) {
-        currTccBuilder.addPacket(tccSeqNum, timestamp)
-
-        if (isTccReadyToSend(isMarked)) {
-            val mediaSsrc = mediaSsrcs.firstOr(-1L)
-            currTccBuilder.mediaSourceSsrc = mediaSsrc
-            onTccPacketReady(currTccBuilder.build())
-            numTccSent++
-            lastTccSentTime = System.currentTimeMillis()
-            // Create a new TCC instance for the next set of information
-            currTccBuilder = RtcpFbTccPacketBuilder(feedbackPacketCount = currTccSeqNum++)
+        if (currTccBuilder.addPacket(tccSeqNum, timestamp)) {
+            if (isTccReadyToSend(isMarked)) {
+                sendTcc()
+            }
+        } else {
+            // This packet won't "fit" into the current TCC packet, so send
+            // the current one and add this packet to the new one
+            sendTcc()
+            currTccBuilder.addPacket(tccSeqNum, timestamp)
         }
+    }
+
+    private fun sendTcc() {
+        val mediaSsrc = mediaSsrcs.firstOr(-1L)
+        currTccBuilder.mediaSourceSsrc = mediaSsrc
+        onTccPacketReady(currTccBuilder.build())
+        numTccSent++
+        lastTccSentTime = System.currentTimeMillis()
+        // Create a new TCC instance for the next set of information
+        currTccBuilder = RtcpFbTccPacketBuilder(feedbackPacketCount = currTccSeqNum++)
     }
 
     private fun isTccReadyToSend(currentPacketMarked: Boolean): Boolean {
