@@ -16,7 +16,6 @@
 
 package org.jitsi.nlj.rtp
 
-import org.jitsi.nlj.util.shiftPayloadLeft
 import org.jitsi.nlj.util.shiftPayloadRight
 import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.rtp.RtpPacket
@@ -42,17 +41,20 @@ class RtxPacket {
             rtxPacket.buffer.getShortAsInt(rtxPacket.offset + rtxPacket.headerLength)
 
         /**
-         * Removes the original sequence number by shifting the payload 2 bytes
-         * to the left and reducing the length of the packet by 2
+         * Removes the original sequence number by shifting the header 2
+         * bytes to the right
          */
         fun removeOriginalSequenceNumber(rtxPacket: RtpPacket) {
-            rtxPacket.shiftPayloadLeft(2)
-            rtxPacket.length = rtxPacket.length - 2
+            // Remove the original sequence number by moving the RTP header 2 bytes to the right
+            System.arraycopy(rtxPacket.buffer, rtxPacket.offset, rtxPacket.buffer, rtxPacket.offset + 2,
+                rtxPacket.headerLength)
+            rtxPacket.offset += 2
+            rtxPacket.length -= 2
         }
 
         fun addOriginalSequenceNumber(rtpPacket: RtpPacket) {
             rtpPacket.shiftPayloadRight(2)
-            rtpPacket.length = rtpPacket.length + 2
+            rtpPacket.length += 2
             rtpPacket.buffer.putShort(rtpPacket.offset + rtpPacket.headerLength, rtpPacket.sequenceNumber.toShort())
         }
     }

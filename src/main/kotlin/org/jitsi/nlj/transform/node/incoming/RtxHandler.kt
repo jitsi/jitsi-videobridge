@@ -28,8 +28,6 @@ import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
-import org.jitsi.nlj.util.cinfo
-import org.jitsi.nlj.util.shiftPayloadLeft
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.util.Logger
@@ -59,12 +57,13 @@ class RtxHandler : TransformerNode("RTX handler") {
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        if (associatedPayloadTypes.containsKey(rtpPacket.payloadType.toPositiveInt())) {
+        if (associatedPayloadTypes.containsKey(rtpPacket.payloadType.toPositiveInt()) &&
+            associatedSsrcs.containsKey(rtpPacket.ssrc)) {
 //          logger.cdebug {
 //             "Received RTX packet: ssrc ${rtxPacket.header.ssrc}, seq num: ${rtxPacket.header.sequenceNumber} " +
 //             "rtx payload size: ${rtxPacket.payload.limit()}, padding size: ${rtxPacket.getPaddingSize()} " +
 //             "buffer:\n${rtxPacket.getBuffer().toHex()}" }
-            if (rtpPacket.length - rtpPacket.paddingSize < 2) {
+            if (rtpPacket.payloadLength - rtpPacket.paddingSize < 2) {
                 logger.cdebug { "RTX packet is padding, ignore" }
                 numPaddingPacketsReceived++
                 BufferPool.returnBuffer(rtpPacket.buffer)
