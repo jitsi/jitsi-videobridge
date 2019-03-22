@@ -19,8 +19,7 @@ import io.pkts.Pcap
 import io.pkts.packet.Packet
 import io.pkts.packet.UDPPacket
 import io.pkts.protocol.Protocol
-import org.jitsi.rtp.NewRawPacket
-import java.nio.ByteBuffer
+import org.jitsi.rtp.UnparsedPacket
 import java.util.concurrent.TimeUnit
 
 
@@ -31,8 +30,7 @@ abstract class AbstractPacketProducer : PacketProducer {
         handlers.add(handler)
     }
 
-    //TODO: i think these should be using rtp.Packet, not NewRawPacket
-    protected fun onPacket(packet: NewRawPacket) {
+    protected fun onPacket(packet: org.jitsi.rtp.Packet) {
         handlers.forEach { it(packet) }
     }
 }
@@ -48,19 +46,19 @@ class PcapPacketProducer(
     var running: Boolean = true
 
     companion object {
-        private fun translateToRawPacket(pktsPacket: Packet): NewRawPacket {
+        private fun translateToUnparsedPacket(pktsPacket: Packet): UnparsedPacket {
             // We always allocate a buffer with capacity 1500, so the packet has room to 'grow'
             val packetBuf = ByteArray(1500)
             return if (pktsPacket.hasProtocol(Protocol.UDP)) {
                 val udpPacket = pktsPacket.getPacket(Protocol.UDP) as UDPPacket
                 System.arraycopy(udpPacket.payload.array, 0, packetBuf, 0, udpPacket.payload.array.size)
-                NewRawPacket(packetBuf, 0, udpPacket.payload.array.size)
+                UnparsedPacket(packetBuf, 0, udpPacket.payload.array.size)
             } else {
                 // When capturing on the loopback interface, the packets have a null ethernet
                 // frame which messes up the pkts libary's parsing, so instead use a hack to
                 // grab the buffer directly
                 System.arraycopy(pktsPacket.payload.rawArray, 32, packetBuf, 0, pktsPacket.payload.rawArray.size - 32)
-                NewRawPacket(packetBuf, 0, pktsPacket.payload.rawArray.size - 32)
+                UnparsedPacket(packetBuf, 0, pktsPacket.payload.rawArray.size - 32)
             }
         }
 
@@ -81,7 +79,7 @@ class PcapPacketProducer(
                     TimeUnit.MICROSECONDS.sleep(expectedSendTime - nowClockTime)
                 }
 
-                val packet = translateToRawPacket(pkt)
+                val packet = translateToUnparsedPacket(pkt)
                 onPacket(packet)
                 true
             }

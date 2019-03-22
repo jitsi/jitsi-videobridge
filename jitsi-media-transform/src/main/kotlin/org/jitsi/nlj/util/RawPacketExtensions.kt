@@ -17,7 +17,7 @@
 package org.jitsi.nlj.util
 
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.NewRawPacket
+import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.service.neomedia.RawPacket
 
@@ -25,8 +25,8 @@ import org.jitsi.service.neomedia.RawPacket
 fun Packet.toLegacyRawPacket(): RawPacket =
     RawPacket(buffer, offset, length)
 
-fun fromLegacyRawPacket(legacyRawPacket: RawPacket): NewRawPacket =
-    NewRawPacket(legacyRawPacket.buffer, legacyRawPacket.offset, legacyRawPacket.length)
+fun fromLegacyRawPacket(legacyRawPacket: RawPacket): UnparsedPacket =
+    UnparsedPacket(legacyRawPacket.buffer, legacyRawPacket.offset, legacyRawPacket.length)
 
 fun RawPacket.toRtpPacket(): RtpPacket =
     RtpPacket(buffer, offset, length)

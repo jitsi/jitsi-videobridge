@@ -42,7 +42,7 @@ import org.jitsi.nlj.dtls.DtlsClientStack
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.incoming.DtlsReceiver
 import org.jitsi.nlj.transform.node.outgoing.DtlsSender
-import org.jitsi.rtp.NewRawPacket
+import org.jitsi.rtp.UnparsedPacket
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.KeyPairGenerator
@@ -154,7 +154,7 @@ internal class DtlsStackTest : ShouldSpec() {
         val serverProtocol = DTLSServerProtocol(SecureRandom())
 
         serverTransport.sendFunc = { buf, off, len ->
-            receiver.processPacket(PacketInfo(NewRawPacket(buf, off, len)))
+            receiver.processPacket(PacketInfo(UnparsedPacket(buf, off, len)))
         }
         sender.attach(object : ConsumerNode("sender network") {
             override fun consume(packetInfo: PacketInfo) {
@@ -184,7 +184,7 @@ internal class DtlsStackTest : ShouldSpec() {
         // connect() below prevents the rest of the tests from running.
         dtls.connect()
         val message = "Hello, world"
-        dtls.sendDtlsAppData(PacketInfo(NewRawPacket(message.toByteArray())))
+        dtls.sendDtlsAppData(PacketInfo(UnparsedPacket(message.toByteArray())))
         receivedDataFuture.get() shouldBe message
 
         serverRunning = false

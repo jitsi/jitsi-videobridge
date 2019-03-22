@@ -19,7 +19,6 @@ package org.jitsi.nlj.transform.node.incoming
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.MultipleOutputTransformerNode
 import org.jitsi.nlj.util.BufferPool
-import org.jitsi.rtp.NewRawPacket
 import org.jitsi.rtp.rtcp.CompoundRtcpSplitter
 
 //TODO: this isn't ideal, as we copy each RTCP packet into its own buffer, but forwarding them as a single
@@ -29,7 +28,7 @@ import org.jitsi.rtp.rtcp.CompoundRtcpSplitter
 // that are forwarded.
 class CompoundRtcpSplitterNode : MultipleOutputTransformerNode("Compound RTCP splitter") {
     override fun transform(packetInfo: PacketInfo): List<PacketInfo> {
-        val splitRtcpPackets = CompoundRtcpSplitter.getAll(packetInfo.packetAs<NewRawPacket>())
+        val splitRtcpPackets = CompoundRtcpSplitter.getAll(packetInfo.packet)
                 .map { PacketInfo(it, packetInfo.timeline.clone()).apply { receivedTime = packetInfo.receivedTime } }
 
         // We've cloned each of the compound RTCP packets into their own buffer, so we can return the original
