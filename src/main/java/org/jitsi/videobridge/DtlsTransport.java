@@ -273,7 +273,7 @@ public class DtlsTransport extends IceTransport
                     socket.receive(p);
 //                    bbuf.limit(p.getLength());
 //                    Packet pkt = new UnparsedPacket(bbuf);
-                    Packet pkt = new NewRawPacket(bbuf, 0, p.getLength());
+                    Packet pkt = new UnparsedPacket(bbuf, 0, p.getLength());
                     PacketInfo pktInfo = new PacketInfo(pkt);
                     pktInfo.setReceivedTime(System.currentTimeMillis());
                     incomingPipelineRoot.processPacket(pktInfo);
