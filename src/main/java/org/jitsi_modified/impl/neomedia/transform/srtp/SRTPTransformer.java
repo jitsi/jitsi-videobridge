@@ -198,10 +198,6 @@ public class SRTPTransformer
 //                pkt.getSequenceNumber() + " (length: " + pkt.getLength() + " before decrypt: " +
 //                SRTPCryptoContext.toHexArrayDef(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()) +
 //                "\n will get context from factory " + reverseFactory.hashCode());
-        // only accept RTP version 2 (SNOM phones send weird packages when on
-        // hold, ignore them with this check (RTP Version must be equal to 2)
-        if((rp.getBuffer()[rp.getOffset()] & 0xC0) != 0x80)
-            return null;
 
         SRTPCryptoContext context
             = getContext((int)rp.getSsrc(), reverseFactory, rp.getSequenceNumber());

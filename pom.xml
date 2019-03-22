@@ -198,7 +198,7 @@
                 <version>2.22.0</version>
                 <configuration>
                     <excludes>
-                        <!-- init() currently throws an exception --!>
+                        <!-- init() currently throws an exception -->
                         <exclude>DtlsStackTest.*</exclude>
                     </excludes>
                 </configuration>
