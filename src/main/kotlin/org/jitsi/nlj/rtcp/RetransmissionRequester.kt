@@ -34,6 +34,8 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 class RetransmissionRequester(
     private val rtcpSender: (RtcpPacket) -> Unit,
@@ -174,18 +176,22 @@ class RetransmissionRequester(
             rtcpSender(nackPacket)
         }
 
-        fun notifyNackSent(timestamp: Instant, nackedSeqNums: Collection<Int>) {
+        private fun notifyNackSent(timestamp: Instant, nackedSeqNums: Collection<Int>) {
             synchronized (requests) {
                 nackedSeqNums.forEach { nackedSeqNum ->
-                    //TODO: it's possible a packet was received before we update this, so support
-                    // it not being in the requests map
-                    val request = requests[nackedSeqNum]!!
-                    request.requested(timestamp)
-                    if (request.numTimesRequested == MAX_REQUESTS) {
-                        logger.cdebug { "$ssrc generated the last NACK for seq num ${request.seqNum}, " +
-                                "time since the first request = ${Duration.between(request.firstRequestTimestamp, timestamp)}" }
+                    // It's possible that in between sending the nack and calling this method the packet
+                    // was received and is no longer in the requests map
+                    requests[nackedSeqNum]?.let { request ->
+                        request.requested(timestamp)
+                        if (request.numTimesRequested == MAX_REQUESTS) {
+                            logger.cdebug { "$ssrc generated the last NACK for seq num ${request.seqNum}, " +
+                                    "time since the first request = ${Duration.between(request.firstRequestTimestamp, timestamp)}" }
 
-                        requests.remove(nackedSeqNum)
+                            requests.remove(nackedSeqNum)
+                        }
+                    } ?: run {
+                        logger.cdebug { "$ssrc packet $nackedSeqNum must have just been received, it was" +
+                                " no longer in the requests map" }
                     }
                 }
                 val nextDueTime = if (requests.isNotEmpty()) timestamp.plus(REQUEST_INTERVAL) else NO_REQUEST_DUE
