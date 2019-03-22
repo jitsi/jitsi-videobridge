@@ -27,6 +27,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
+import static org.jitsi.videobridge.octo.OctoPacket.OCTO_HEADER_LENGTH;
+
 /**
  * Implements a bridge-to-bridge (Octo) relay. This class is responsible for
  * holding the {@link DatagramSocket} which is to be used for bridge-to-bridge
@@ -163,14 +165,15 @@ public class OctoRelay
     @Override
     public void run()
     {
+        DatagramPacket p = new DatagramPacket(new byte[0], 0);
         while (true)
         {
-            DatagramPacket p = getPacket(1500);
+            byte[] buf = ByteBufferPool.getBuffer(1500);
+            p.setData(buf, 0, 1500);
             try
             {
                 socket.receive(p);
-
-                handlePacket(p);
+                handlePacket(p.getData(), p.getOffset(), p.getLength());
             }
             catch (SocketClosedException sce)
             {
@@ -184,23 +187,12 @@ public class OctoRelay
         }
     }
 
-    // XXX cache
-    private DatagramPacket getPacket(int size)
-    {
-        DatagramPacket p = new DatagramPacket(new byte[size], 0, size);
-        return p;
-    }
-
     /**
      * Handles an Octo packet that was received from the socket.
      * @param p the packet.
      */
-    private void handlePacket(DatagramPacket p)
+    private void handlePacket(byte[] buf, int off, int len)
     {
-        byte[] buf = p.getData();
-        int off = p.getOffset();
-        int len = p.getLength();
-
         bytesReceived.addAndGet(len);
         packetsReceived.incrementAndGet();
 
@@ -209,7 +201,7 @@ public class OctoRelay
         {
             logger.warn("Invalid Octo packet, can not read conference ID.");
             packetsDropped.incrementAndGet();
-            // XXX return packet to cache
+            ByteBufferPool.returnBuffer(buf);
             return;
         }
 
@@ -217,9 +209,9 @@ public class OctoRelay
         if (handler == null)
         {
             packetsDropped.incrementAndGet();
+            ByteBufferPool.returnBuffer(buf);
             logger.warn("Received an Octo packet for an unknown conference: "
                     + conferenceId);
-            // XXX return to cache
         }
         else
         {
@@ -261,24 +253,41 @@ public class OctoRelay
             String conferenceId,
             String endpointId)
     {
-        // XXX optimize
-        int size = packet.getLength();
-        DatagramPacket datagramPacket
-                = getPacket(size + OctoPacket.OCTO_HEADER_LENGTH);
-        byte[] buf = datagramPacket.getData();
-        System.arraycopy(
-                packet.getBuffer(), packet.getOffset(),
-                buf, OctoPacket.OCTO_HEADER_LENGTH,
-                size);
+        byte[] buf = packet.getBuffer();
+        int off = packet.getOffset();
+        int len = packet.getLength();
 
+        int lenNeeded = len + OCTO_HEADER_LENGTH;
+        byte[] newBuf;
+        int newOff;
+
+        if (off >= OCTO_HEADER_LENGTH)
+        {
+            newOff = off - OCTO_HEADER_LENGTH;
+            newBuf = buf;
+        }
+        else if (buf.length >= lenNeeded)
+        {
+            System.arraycopy(buf, off, buf, OCTO_HEADER_LENGTH, len);
+            newOff = 0;
+            newBuf = buf;
+        }
+        else
+        {
+            newBuf = ByteBufferPool.getBuffer(lenNeeded);
+            newOff = 0;
+            System.arraycopy(buf, off, newBuf, OCTO_HEADER_LENGTH, len);
+        }
 
         OctoPacket.writeHeaders(
-                buf, 0,
+                newBuf, newOff,
                 true /* source is a relay */,
                 MediaType.VIDEO, // we don't care about the value anymore
                 0 /* simulcast layers info */,
                 conferenceId,
                 endpointId);
+        DatagramPacket datagramPacket
+                = new DatagramPacket(newBuf, newOff, lenNeeded);
 
         for (SocketAddress target : targets)
         {
@@ -293,6 +302,12 @@ public class OctoRelay
             {
                 logger.warn("Failed to send packet ", ioe);
             }
+        }
+
+        ByteBufferPool.returnBuffer(newBuf);
+        if (newBuf != buf)
+        {
+            ByteBufferPool.returnBuffer(buf);
         }
 
     }
