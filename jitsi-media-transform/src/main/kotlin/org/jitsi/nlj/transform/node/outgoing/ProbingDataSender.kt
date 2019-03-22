@@ -88,7 +88,7 @@ class ProbingDataSender(
         val lastNPackets =
                 packetCache.getMany(mediaSsrc, numBytes)
 
-        if (lastNPackets.isEmpty()) {
+        if (lastNPackets == null || lastNPackets.isEmpty()) {
             return bytesSent
         }
 
