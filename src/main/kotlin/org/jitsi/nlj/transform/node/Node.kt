@@ -154,6 +154,8 @@ sealed class StatsKeepingNode(name: String): Node(name) {
     private var numOutputPackets = 0
     private var numInputBytes: Long = 0
 
+    private var numDiscardedPackets = 0
+
     /**
      * The function that all subclasses should implement to do the actual
      * packet processing.  A protected method is used for this so we can
@@ -171,6 +173,7 @@ sealed class StatsKeepingNode(name: String): Node(name) {
         return NodeStatsBlock("Node $name ${hashCode()}").apply {
             addStat("numInputPackets: $numInputPackets")
             addStat("numOutputPackets: $numOutputPackets")
+            addStat("numDiscardedPackets: $numDiscardedPackets")
             addStat("total time spent: ${Duration.ofNanos(totalProcessingDuration).toMillis()} ms")
             addStat("average time spent per packet: ${Duration.ofNanos(totalProcessingDuration / Math.max(numInputPackets, 1)).toNanos()} ns")
             addStat("$numInputBytes bytes over ${Duration.ofNanos(lastPacketTime - firstPacketTime).toMillis()} ms")
@@ -219,6 +222,11 @@ sealed class StatsKeepingNode(name: String): Node(name) {
             it.addEvent(nodeExitString)
         }
     }
+
+    protected fun packetDiscarded(packetInfo: PacketInfo) {
+        numDiscardedPackets++
+        BufferPool.returnBuffer(packetInfo.packet.buffer)
+    }
 }
 
 /**
@@ -252,7 +260,7 @@ abstract class FilterNode(
         return if (accept(packetInfo)) {
             packetInfo
         } else {
-            BufferPool.returnBuffer(packetInfo.packet.getBuffer())
+            packetDiscarded(packetInfo)
             null
         }
     }
@@ -331,7 +339,6 @@ class ConditionalPacketPath() {
 
 abstract class DemuxerNode(name: String) : StatsKeepingNode("$name demuxer") {
     protected var transformPaths: MutableSet<ConditionalPacketPath> = mutableSetOf()
-    protected var packetsDropped: Int = 0
 
     fun addPacketPath(packetPath: ConditionalPacketPath): DemuxerNode {
         transformPaths.add(packetPath)
@@ -377,7 +384,6 @@ abstract class DemuxerNode(name: String) : StatsKeepingNode("$name demuxer") {
         transformPaths.forEach { path ->
             demuxerBlock.addStat("${path.name}: ${path.packetsAccepted}")
         }
-        demuxerBlock.addStat("Dropped: $packetsDropped")
         superStats.addStat(demuxerBlock.name, demuxerBlock)
 
         return superStats
@@ -397,6 +403,6 @@ class ExclusivePathDemuxer(name: String) : DemuxerNode(name) {
                 return
             }
         }
-        packetsDropped++
+        packetDiscarded(packetInfo)
     }
 }

@@ -122,7 +122,13 @@ class RtpReceiverImpl @JvmOverloads constructor(
      */
     private val rtpPacketHandlerWrapper = object : ConsumerNode("RTP packet handler wrapper") {
         override fun consume(packetInfo: PacketInfo) {
-            rtpPacketHandler?.processPacket(packetInfo)
+            rtpPacketHandler?. let {
+                it.processPacket(packetInfo)
+            } ?: let {
+                // While there's no handler set we're effectively dropping packets, so their buffers
+                // should be returned.
+                packetDiscarded(packetInfo)
+            }
         }
     }
 
@@ -133,7 +139,13 @@ class RtpReceiverImpl @JvmOverloads constructor(
      */
     private val rtcpPacketHandlerWrapper = object : ConsumerNode("RTCP packet handler wrapper") {
         override fun consume(packetInfo: PacketInfo) {
-            rtcpPacketHandler?.processPacket(packetInfo)
+            rtcpPacketHandler?. let {
+                it.processPacket(packetInfo)
+            } ?: let {
+                // While there's no handler set we're effectively dropping packets, so their buffers
+                // should be returned.
+                packetDiscarded(packetInfo)
+            }
         }
     }
 

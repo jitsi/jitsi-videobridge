@@ -42,10 +42,6 @@ abstract class AbstractSrtpTransformerNode(name: String) : MultipleOutputTransfo
      */
     abstract fun doTransform(pkts: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo>
 
-    /**
-     * How many packets this node received but had to drop due to not having the SRTP transformer
-     */
-    private var numDroppedPackets = 0
     private var firstPacketReceivedTimestamp = -1L
     private var firstPacketForwardedTimestamp = -1L
     /**
@@ -71,8 +67,9 @@ abstract class AbstractSrtpTransformerNode(name: String) : MultipleOutputTransfo
             numCachedPackets++
             cachedPackets.add(packetInfo)
             while (cachedPackets.size > 1024) {
-                cachedPackets.removeAt(0)
-                numDroppedPackets++
+                cachedPackets.removeAt(0)?.let {
+                    packetDiscarded(it)
+                }
             }
             return emptyList()
         }
@@ -83,7 +80,6 @@ abstract class AbstractSrtpTransformerNode(name: String) : MultipleOutputTransfo
         return NodeStatsBlock(name).apply {
             addAll(parentStats)
             addStat("num cached packets: ${cachedPackets.size}")
-            addStat("num dropped packets before transformer: $numDroppedPackets")
             val timeBetweenReceivedAndForwarded = firstPacketForwardedTimestamp - firstPacketReceivedTimestamp
             addStat("time between first packet received and first forwarded: " +
                     "$timeBetweenReceivedAndForwarded ms")
