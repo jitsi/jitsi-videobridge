@@ -200,7 +200,13 @@ public class SRTCPTransformer
         if(context != null)
         {
             context.transformPacket(pkt);
-            return pkt;
+            // We convert the encrypted RTCP packet to an UnparsedPacket because
+            // we don't want any of the RTCP fields trying to parse the data
+            // (since it's now encrypted)
+            // TODO: better way we can do this?  it's not typically a problem
+            // in the pipeline's usage, but it's a bit of a landmine since by
+            // accessing the packet it can try and parse the fields.
+            return new UnparsedPacket(pkt.getBuffer(), pkt.getOffset(), pkt.getLength());
         }
         else
         {
