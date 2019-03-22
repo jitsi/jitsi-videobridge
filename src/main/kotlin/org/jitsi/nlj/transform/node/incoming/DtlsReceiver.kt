@@ -30,6 +30,7 @@ class DtlsReceiver(
 ) : MultipleOutputTransformerNode("DTLS Receiver") {
     override fun transform(packetInfo: PacketInfo): List<PacketInfo> {
         logger.cdebug { "DTLS receiver processing incoming DTLS packets" }
+        // TODO: we may be leaking packets here (failing to return them to the pool)
         return dtlsStack.processIncomingDtlsPackets(packetInfo)
     }
 }
