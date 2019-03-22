@@ -117,7 +117,7 @@ class OctoTransceiver
         // XXX memory management
 //        ByteBuffer packetBuf = ByteBuffer.allocate(len);
 //        packetBuf.put(ByteBuffer.wrap(buf, off, len)).flip();
-        Packet pkt = new NewRawPacket(buf, off, len);
+        Packet pkt = new UnparsedPacket(buf, off, len);
         PacketInfo pktInfo = new PacketInfo(pkt);
         pktInfo.setReceivedTime(System.currentTimeMillis());
         incomingPacketQueue.add(pktInfo);

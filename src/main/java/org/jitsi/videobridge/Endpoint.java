@@ -469,7 +469,7 @@ public class Endpoint
                 {
                     continue;
                 }
-                NewRawPacket rawPacket = RawPacketExtensionsKt.fromLegacyRawPacket(legacyRawPacket);
+                UnparsedPacket rawPacket = RawPacketExtensionsKt.fromLegacyRawPacket(legacyRawPacket);
                 //TODO(brian): we can clean this up once the transformer is moved over
 //                ByteBuffer rawPacketBuf = ByteBuffer.wrap(pkt.getBuffer(), pkt.getOffset(), pkt.getBuffer().length);
 //                rawPacketBuf.limit(pkt.getLength());
@@ -696,7 +696,7 @@ public class Endpoint
         // Create the SctpManager and provide it a method for sending SCTP data
         this.sctpManager = new SctpManager(
                 (data, offset, length) -> {
-                    PacketInfo packet = new PacketInfo(new NewRawPacket(data, offset, length));
+                    PacketInfo packet = new PacketInfo(new UnparsedPacket(data, offset, length));
                     transportManager.sendDtlsData(packet);
                     return 0;
                 }
