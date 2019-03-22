@@ -16,6 +16,7 @@
 package org.jitsi_modified.impl.neomedia.transform.srtp;
 
 import org.jitsi.rtp.*;
+import org.jitsi.rtp.ByteArrayBuffer;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi_modified.impl.neomedia.transform.*;
@@ -144,7 +145,7 @@ public class SRTCPTransformer
     }
 
     private SRTCPCryptoContext getContext(
-            NewRawPacket pkt,
+            ByteArrayBuffer pkt,
             SRTPContextFactory engine)
     {
         int ssrc = (int) RtcpHeader.Companion.getSenderSsrc(pkt.getBuffer(), pkt.getOffset());
@@ -177,11 +178,10 @@ public class SRTCPTransformer
     @Override
     public Packet reverseTransform(Packet pkt)
     {
-        NewRawPacket rp = (NewRawPacket)pkt;
-        SRTCPCryptoContext context = getContext(rp, reverseFactory);
+        SRTCPCryptoContext context = getContext(pkt, reverseFactory);
 
         return
-            ((context != null) && context.reverseTransformPacket(rp))
+            ((context != null) && context.reverseTransformPacket(pkt))
                 ? pkt
                 : null;
     }
@@ -195,13 +195,12 @@ public class SRTCPTransformer
     @Override
     public Packet transform(Packet pkt)
     {
-        NewRawPacket rp = new NewRawPacket(pkt.getBuffer(), pkt.getOffset(), pkt.getLength());
-        SRTCPCryptoContext context = getContext(rp, forwardFactory);
+        SRTCPCryptoContext context = getContext(pkt, forwardFactory);
 
         if(context != null)
         {
-            context.transformPacket(rp);
-            return rp;
+            context.transformPacket(pkt);
+            return pkt;
         }
         else
         {
