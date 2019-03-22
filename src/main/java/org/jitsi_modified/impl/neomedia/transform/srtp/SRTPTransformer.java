@@ -202,7 +202,7 @@ public class SRTPTransformer
         SRTPCryptoContext context
             = getContext((int)rp.getSsrc(), reverseFactory, rp.getSequenceNumber());
 
-        NewRawPacket res =
+        RtpPacket res =
             ((context != null) && context.reverseTransformPacket(rp))
                 ? rp
                 : null;
