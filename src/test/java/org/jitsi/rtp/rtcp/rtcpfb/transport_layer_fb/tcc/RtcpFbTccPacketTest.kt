@@ -159,13 +159,17 @@ class RtcpFbTccPacketTest : ShouldSpec() {
                 mediaSourceSsrc = 2397376430,
                 feedbackPacketCount = 162
             )
-            rtcpFbTccPacketBuilder.addPacket(6228, 107784064)
-            rtcpFbTccPacketBuilder.addPacket(6227, -1)
+            rtcpFbTccPacketBuilder.addPacket(6228, 107784064) shouldBe true
+            rtcpFbTccPacketBuilder.addPacket(6227, -1) shouldBe true
 
             val packet = rtcpFbTccPacketBuilder.build()
             should("serialize the data correctly") {
                 val x = packet.buffer
                 packet.buffer should haveSameContentAs(tccSvChunkData.array())
+            }
+            "With a delta that's too big" {
+                rtcpFbTccPacketBuilder.addPacket(6229, 107784064 + 10000) shouldBe false
+
             }
         }
     }

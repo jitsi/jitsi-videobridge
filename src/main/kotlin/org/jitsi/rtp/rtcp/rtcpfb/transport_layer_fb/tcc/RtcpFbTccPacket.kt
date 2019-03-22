@@ -264,7 +264,7 @@ class RtcpFbTccPacketBuilder(
             return _sizeBytes
         }
 
-    fun addPacket(tccSeqNum: Int, recvTimestamp: Long) {
+    fun addPacket(tccSeqNum: Int, recvTimestamp: Long): Boolean {
         if (referenceTimeMs == -1L) {
             // Mask out the lower 6 bits, since that precision will be lost
             // when we serialize it and, when calculating the deltas, we need
@@ -273,8 +273,21 @@ class RtcpFbTccPacketBuilder(
             // side).
             referenceTimeMs = recvTimestamp - (recvTimestamp % 64)
         }
+        if (!canAdd(tccSeqNum, recvTimestamp)) {
+            return false
+        }
         sizeNeedsToBeRecalculated = true
         packetInfo[tccSeqNum] = recvTimestamp
+        return true
+    }
+
+    private fun canAdd(seqNum: Int, recvTimestamp: Long): Boolean {
+        if (recvTimestamp == NOT_RECEIVED_TS) {
+            return true
+        }
+        val deltaMs = packetInfo.getDeltaMs(seqNum, recvTimestamp, referenceTimeMs)
+
+        return deltaMs in -8192.0..8191.75
     }
 
     fun build(): RtcpFbTccPacket {
@@ -314,17 +327,30 @@ internal class PacketMap : TreeMap<Int, Long>(RtpUtils.rtpSeqNumComparator), Clo
         }
     }
 
+    /**
+     * Looks up the receive timestamp for [tccSeqNum] and then computes the delta
+     * for the previously received packet (or [referenceTime] if there were no
+     * previously received packets)
+     */
     fun getDeltaMs(tccSeqNum: Int, referenceTime: Long): Double? {
         val timestamp = getOrDefault(tccSeqNum, NOT_RECEIVED_TS)
         if (timestamp == NOT_RECEIVED_TS) {
             return null
         }
+        return getDeltaMs(tccSeqNum, timestamp, referenceTime)
+    }
+
+    /**
+     * Finds the delta between [tccSeqNum] received at [recvTimestamp] and the previously
+     * received packet (by finding the first packet less than [tccSeqNum] which was received)
+     */
+    fun getDeltaMs(tccSeqNum: Int, recvTimestamp: Long, referenceTime: Long): Double {
         // Get the timestamp for the packet just before this one.  If there isn't one, then
         // this is the first packet so the delta is 0.0
         val previousTimestamp = getPreviousReceivedTimestamp(tccSeqNum)
         val deltaMs = when (previousTimestamp) {
-            -1L -> timestamp - referenceTime
-            else -> timestamp - previousTimestamp
+            -1L -> recvTimestamp - referenceTime
+            else -> recvTimestamp - previousTimestamp
         }
 //        println("packet $tccSeqNum has delta $deltaMs (ts $timestamp, prev ts $previousTimestamp)")
         return deltaMs.toDouble()
