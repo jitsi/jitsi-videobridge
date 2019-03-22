@@ -18,7 +18,15 @@ package org.jitsi.nlj.rtp
 
 import org.jitsi.nlj.util.BufferPool
 
-//TODO: need to set the padding amount at the end of the payload!
 class PaddingVideoPacket(
     length: Int
-) : VideoRtpPacket(BufferPool.getBuffer(length), 0, length)
+) : VideoRtpPacket(BufferPool.getBuffer(length), 0, length) {
+    init {
+        // It's possible we the buffer we pulled from the pool already has
+        // data in it, and we won't be overwriting it with anything so clear
+        // out the data
+        buffer.fill(0, offset, length)
+        version = 2
+        paddingSize = payloadLength
+    }
+}
