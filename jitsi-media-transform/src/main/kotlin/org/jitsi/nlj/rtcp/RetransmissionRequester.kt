@@ -177,6 +177,8 @@ class RetransmissionRequester(
         fun notifyNackSent(timestamp: Instant, nackedSeqNums: Collection<Int>) {
             synchronized (requests) {
                 nackedSeqNums.forEach { nackedSeqNum ->
+                    //TODO: it's possible a packet was received before we update this, so support
+                    // it not being in the requests map
                     val request = requests[nackedSeqNum]!!
                     request.requested(timestamp)
                     if (request.numTimesRequested == MAX_REQUESTS) {

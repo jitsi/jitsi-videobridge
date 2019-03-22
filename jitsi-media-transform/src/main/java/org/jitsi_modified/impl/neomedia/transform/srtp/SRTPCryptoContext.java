@@ -509,7 +509,7 @@ public class SRTPCryptoContext
      *
      * @param pkt the RTP packet to be encrypted/decrypted
      */
-    public void processPacketAESF8(NewRawPacket pkt)
+    public void processPacketAESF8(RtpPacket pkt)
     {
         // 11 bytes of the RTP header are the 11 bytes of the iv
         // the first byte of the RTP header is not used.
@@ -583,29 +583,19 @@ public class SRTPCryptoContext
             // Authenticate the packet.
             if (authenticatePacket(pkt))
             {
-                // If a NewRawPacket is flagged with Buffer.FLAG_DISCARD, then it
-                // should have been discarded earlier. Anyway, at least skip its
-                // decrypting. We flag a NewRawPacket with Buffer.FLAG_SILENCE when
-                // we want to ignore its payload. In the context of SRTP, we
-                // want to skip its decrypting.
-                //if ((pkt.getFlags()
-                //            & (Buffer.FLAG_DISCARD | Buffer.FLAG_SILENCE))
-                //        == 0)
+                switch (policy.getEncType())
                 {
-                    switch (policy.getEncType())
-                    {
-                    // Decrypt the packet using Counter Mode encryption.
-                    case SRTPPolicy.AESCM_ENCRYPTION:
-                    case SRTPPolicy.TWOFISH_ENCRYPTION:
-                        processPacketAESCM(pkt);
-                        break;
+                // Decrypt the packet using Counter Mode encryption.
+                case SRTPPolicy.AESCM_ENCRYPTION:
+                case SRTPPolicy.TWOFISH_ENCRYPTION:
+                    processPacketAESCM(pkt);
+                    break;
 
-                    // Decrypt the packet using F8 Mode encryption.
-                    case SRTPPolicy.AESF8_ENCRYPTION:
-                    case SRTPPolicy.TWOFISHF8_ENCRYPTION:
-                        processPacketAESF8(pkt);
-                        break;
-                    }
+                // Decrypt the packet using F8 Mode encryption.
+                case SRTPPolicy.AESF8_ENCRYPTION:
+                case SRTPPolicy.TWOFISHF8_ENCRYPTION:
+                    processPacketAESF8(pkt);
+                    break;
                 }
 
                 // Update the rollover counter and highest sequence number if
