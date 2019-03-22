@@ -85,4 +85,8 @@ abstract class AbstractSrtpTransformerNode(name: String) : MultipleOutputTransfo
                     "$timeBetweenReceivedAndForwarded ms")
         }
     }
+
+    override fun stop() {
+        cachedPackets.forEach { packetDiscarded(it) }
+    }
 }
