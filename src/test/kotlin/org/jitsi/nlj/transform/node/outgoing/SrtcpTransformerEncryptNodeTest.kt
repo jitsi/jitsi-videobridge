@@ -24,7 +24,6 @@ import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.resources.srtp_samples.SrtpSample
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.test_utils.matchers.ByteArrayBuffer.haveSameContentAs
-import org.jitsi.rtp.NewRawPacket
 import org.jitsi.rtp.extensions.bytearray.toHex
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacketBuilder
@@ -44,7 +43,7 @@ internal class SrtcpTransformerEncryptNodeTest : ShouldSpec() {
         "encrypting a packet" {
             "created from a buffer" {
                 val encryptedPacket = srtcpTransformer.transform(
-                    SrtpSample.outgoingUnencryptedRtcpPacket.clone().toOtherType(::NewRawPacket))
+                    SrtpSample.outgoingUnencryptedRtcpPacket.clone())
                 should("encrypt the data correctly") {
                     encryptedPacket shouldNotBe null
                     encryptedPacket should haveSameContentAs(SrtpSample.expectedEncryptedRtcpPacket)

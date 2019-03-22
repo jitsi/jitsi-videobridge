@@ -23,8 +23,8 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
+import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.clone
-import org.jitsi.rtp.NewRawPacket
 import java.nio.ByteBuffer
 import java.time.Duration
 import java.util.concurrent.LinkedBlockingQueue
@@ -136,7 +136,7 @@ abstract class DtlsStack : DatagramTransport {
                 val bufCopy = dtlsAppDataBuf.clone();
                 bufCopy.limit(bytesReceived)
 //                outPackets.add(PacketInfo(DtlsProtocolPacket(bufCopy)))
-                outPackets.add(PacketInfo(NewRawPacket(bufCopy.array(), bufCopy.arrayOffset(), bufCopy.limit())))
+                outPackets.add(PacketInfo(UnparsedPacket(bufCopy.array(), bufCopy.arrayOffset(), bufCopy.limit())))
             }
         } while (bytesReceived > 0)
         return outPackets
@@ -178,7 +178,7 @@ abstract class DtlsStack : DatagramTransport {
      * in and read them.
      */
     override fun send(buf: ByteArray, off: Int, length: Int) {
-        val packet = PacketInfo(NewRawPacket(buf, off, length))
+        val packet = PacketInfo(UnparsedPacket(buf, off, length))
         onOutgoingProtocolData(listOf(packet))
     }
 

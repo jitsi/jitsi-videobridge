@@ -18,7 +18,7 @@ package org.jitsi.nlj.resources.srtp_samples
 
 import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.TlsRole
-import org.jitsi.rtp.NewRawPacket
+import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.byteBufferOf
@@ -67,7 +67,7 @@ class SrtpSample {
         )
         val incomingEncryptedRtpPacket = RtpPacket(incomingEncryptedRtpData, 0, incomingEncryptedRtpData.size)
 
-        val expectedDecryptedRtpPacket = NewRawPacket(org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+        val expectedDecryptedRtpPacket = RtpPacket(org.jitsi.rtp.extensions.bytearray.byteArrayOf(
             0x90, 0xEF, 0x43, 0xD7, 0xCF, 0x6F, 0xDE, 0x8F,
             0x56, 0x29, 0x97, 0x7A, 0xBE, 0xDE, 0x00, 0x01,
             0x10, 0xFF, 0x00, 0x00, 0x78, 0x0B, 0xE4, 0xC1,
@@ -91,9 +91,9 @@ class SrtpSample {
             0x80, 0x00, 0x00, 0x01, 0x3C, 0xB4, 0xC8, 0xE6,
             0xB8, 0x19, 0xFB, 0xEE, 0xCE, 0xA2
         )
-        val incomingEncryptedRtcpPacket = NewRawPacket(incomingEncryptedRtcpData, 0, incomingEncryptedRtcpData.size)
+        val incomingEncryptedRtcpPacket = UnparsedPacket(incomingEncryptedRtcpData, 0, incomingEncryptedRtcpData.size)
 
-        val expectedDecryptedRtcpPacket = NewRawPacket(org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+        val expectedDecryptedRtcpPacket = UnparsedPacket(org.jitsi.rtp.extensions.bytearray.byteArrayOf(
             0x80, 0xC8, 0x00, 0x06, 0x75, 0x6D, 0x56, 0x40,
             0xE0, 0x0E, 0x30, 0x93, 0x24, 0x77, 0x57, 0x4F,
             0xD3, 0x16, 0xD8, 0x0E, 0x00, 0x00, 0x00, 0x16,
@@ -136,7 +136,7 @@ class SrtpSample {
         )
         val outgoingUnencryptedRtcpPacket = RtcpPacket.parse(outgoignUnecryptedRtcpData, 0)
 
-        val expectedEncryptedRtcpPacket = NewRawPacket(org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+        val expectedEncryptedRtcpPacket = UnparsedPacket(org.jitsi.rtp.extensions.bytearray.byteArrayOf(
             0x8F, 0xCD, 0x00, 0x05, 0xE7, 0x46, 0x52, 0x23,
             0x05, 0x67, 0x3D, 0xC0, 0x6C, 0x35, 0xF4, 0x40,
             0xE2, 0x2A, 0x7E, 0xCD, 0x99, 0x06, 0x5D, 0x34,

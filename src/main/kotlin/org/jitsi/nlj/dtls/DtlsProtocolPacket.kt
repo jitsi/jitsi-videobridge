@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2018 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.module_tests
+
+package org.jitsi.nlj.dtls
 
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 
-typealias PacketReceiver = (Packet) -> Unit
+class DtlsProtocolPacket(
+    buf: ByteArray,
+    offset: Int,
+    length: Int
+) : Packet(buf, offset, length) {
 
-interface PacketProducer {
-    fun subscribe(handler: PacketReceiver)
+    override fun clone(): DtlsProtocolPacket =
+        DtlsProtocolPacket(buffer.cloneFromPool(), offset, length)
 }
