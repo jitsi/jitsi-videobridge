@@ -17,6 +17,7 @@ package org.jitsi.rtp.rtp.header_extensions
 
 import org.jitsi.rtp.NewRawPacket
 import org.jitsi.rtp.extensions.bytearray.putShort
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.getShortAsInt
 
 /**
@@ -32,10 +33,10 @@ class TccHeaderExtension {
     companion object {
         const val DATA_SIZE_BYTES = 2
 
-        fun getSequenceNumber(ext: NewRawPacket.HeaderExtension): Int =
-            getSequenceNumber(ext.buffer, ext.offset)
-        fun setSequenceNumber(ext: NewRawPacket.HeaderExtension, tccSeqNum: Int) {
-            setSequenceNumber(ext.buffer, ext.offset, tccSeqNum)
+        fun getSequenceNumber(ext: RtpPacket.HeaderExtension): Int =
+            getSequenceNumber(ext.currExtBuffer, ext.currExtOffset)
+        fun setSequenceNumber(ext: RtpPacket.HeaderExtension, tccSeqNum: Int) {
+            setSequenceNumber(ext.currExtBuffer, ext.currExtOffset, tccSeqNum)
         }
 
         /**

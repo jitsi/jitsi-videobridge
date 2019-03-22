@@ -18,8 +18,7 @@ package org.jitsi.rtp.rtp.header_extensions
 
 import org.jitsi.rtp.NewRawPacket
 import org.jitsi.rtp.extensions.bytearray.put3Bytes
-import org.jitsi.rtp.extensions.put3Bytes
-import java.nio.ByteBuffer
+import org.jitsi.rtp.rtp.RtpPacket
 
 /**
  * https://webrtc.org/experiments/rtp-hdrext/abs-send-time/
@@ -38,8 +37,8 @@ class AbsSendTimeHeaderExtension {
          */
         private const val b = 1_000_000_000
 
-        fun setTime(ext: NewRawPacket.HeaderExtension, timestampNanos: Long) =
-            setTime(ext.buffer, ext.offset, timestampNanos)
+        fun setTime(ext: RtpPacket.HeaderExtension, timestampNanos: Long) =
+            setTime(ext.currExtBuffer, ext.currExtOffset, timestampNanos)
 
         fun setTime(buf: ByteArray, offset: Int, timestampNanos: Long) {
             val fraction = ((timestampNanos % b) * (1 shl 18) / b )

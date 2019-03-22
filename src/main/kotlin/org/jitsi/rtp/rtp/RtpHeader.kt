@@ -19,6 +19,7 @@ package org.jitsi.rtp.rtp
 import org.jitsi.rtp.extensions.bytearray.putInt
 import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
+import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionHelpers
 import org.jitsi.rtp.util.getIntAsLong
 import org.jitsi.rtp.util.getShortAsInt
 import kotlin.experimental.and
@@ -134,6 +135,24 @@ class RtpHeader {
                 buf.putInt(CSRCS_OFFSET + (4 * index), csrc.toInt())
             }
             setCsrcCount(buf, baseOffset, csrcs.size)
+        }
+
+        /**
+         * The length of the entire RTP header, including any extensions, in bytes
+         */
+        fun getTotalLength(buf: ByteArray, baseOffset: Int): Int {
+            val length =
+                FIXED_HEADER_SIZE_BYTES
+                    + getCsrcCount(buf, baseOffset) * 4
+
+            val extLength = if (hasExtensions(buf, baseOffset)) {
+                // Length points to where the ext header would start
+                val extHeaderOffset = length
+                HeaderExtensionHelpers.getExtensionsTotalLength(buf, baseOffset + extHeaderOffset)
+            } else {
+                0
+            }
+            return length + extLength
         }
     }
 }
