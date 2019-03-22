@@ -209,7 +209,7 @@ public class SRTCPCryptoContext
      *
      * @param pkt the RTP packet to be encrypted/decrypted
      */
-    public void processPacketAESCM(NewRawPacket pkt, int index)
+    public void processPacketAESCM(ByteArrayBuffer pkt, int index)
     {
         int ssrc = (int) RtcpHeader.Companion.getSenderSsrc(pkt.getBuffer(), pkt.getOffset());
 
@@ -257,7 +257,7 @@ public class SRTCPCryptoContext
      *
      * @param pkt the RTP packet to be encrypted/decrypted
      */
-    public void processPacketAESF8(NewRawPacket pkt, int index)
+    public void processPacketAESF8(ByteArrayBuffer pkt, int index)
     {
         // 4 bytes of the iv are zero
         // the first byte of the RTP header is not used.
@@ -303,7 +303,7 @@ public class SRTCPCryptoContext
      * @return <tt>true</tt> if the packet can be accepted or <tt>false</tt> if
      * authentication or replay check failed
      */
-    synchronized public boolean reverseTransformPacket(NewRawPacket pkt)
+    synchronized public boolean reverseTransformPacket(ByteArrayBuffer pkt)
     {
         boolean decrypt = false;
         int tagLength = policy.getAuthTagLength();
@@ -380,7 +380,7 @@ public class SRTCPCryptoContext
      *
      * @param pkt the RTP packet that is going to be sent out
      */
-    synchronized public void transformPacket(NewRawPacket pkt)
+    synchronized public void transformPacket(ByteArrayBuffer pkt)
     {
         boolean encrypt = false;
         /* Encrypt the packet using Counter Mode encryption */

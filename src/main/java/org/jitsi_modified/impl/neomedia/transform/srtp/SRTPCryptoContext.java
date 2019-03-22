@@ -19,6 +19,7 @@ import org.bouncycastle.crypto.params.*;
 import org.jitsi.bccontrib.params.*;
 import org.jitsi.impl.neomedia.transform.srtp.*;
 import org.jitsi.rtp.*;
+import org.jitsi.rtp.ByteArrayBuffer;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -223,7 +224,7 @@ public class SRTPCryptoContext
      * performed or <tt>pkt</tt> was successfully authenticated; otherwise,
      * <tt>false</tt>
      */
-    private boolean authenticatePacket(NewRawPacket pkt)
+    private boolean authenticatePacket(ByteArrayBuffer pkt)
     {
         if (policy.getAuthType() != SRTPPolicy.NULL_AUTHENTICATION)
         {
