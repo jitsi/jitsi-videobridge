@@ -30,8 +30,8 @@ import org.jitsi.nlj.transform.node.PacketParser
 import org.jitsi.nlj.transform.node.PayloadTypeFilterNode
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
 import org.jitsi.nlj.transform.node.incoming.CompoundRtcpSplitterNode
-import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
+import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.PaddingTermination
 import org.jitsi.nlj.transform.node.incoming.RetransmissionRequesterNode
 import org.jitsi.nlj.transform.node.incoming.RtcpTermination
@@ -48,8 +48,6 @@ import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.rtp.NewRawPacket
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.PacketPredicate
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtp.RtpPacket
