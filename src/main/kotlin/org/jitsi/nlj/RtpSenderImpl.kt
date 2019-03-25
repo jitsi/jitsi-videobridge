@@ -19,6 +19,7 @@ import org.jitsi.nlj.rtcp.KeyframeRequester
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpSrGenerator
+import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
@@ -173,6 +174,10 @@ class RtpSenderImpl(
         }
 
         probingDataSender = ProbingDataSender(outgoingPacketCache.getPacketCache(), outgoingRtxRoot, absSendTime)
+    }
+
+    override fun onRttUpdate(newRtt: Double) {
+        nackHandler.onRttUpdate(newRtt)
     }
 
     override fun sendPacket(packetInfo: PacketInfo) {
