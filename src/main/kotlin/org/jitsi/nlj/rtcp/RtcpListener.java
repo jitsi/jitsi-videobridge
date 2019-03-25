@@ -26,7 +26,7 @@ import org.jitsi.rtp.rtcp.*;
  * these methods as most listeners care about one but not the other
  */
 public interface RtcpListener {
-    default void onRtcpPacketReceived(PacketInfo packetInfo) {}
+    default void onRtcpPacketReceived(RtcpPacket packet, Long receivedTime) {}
     default void onRtcpPacketSent(RtcpPacket packet) {}
 }
 

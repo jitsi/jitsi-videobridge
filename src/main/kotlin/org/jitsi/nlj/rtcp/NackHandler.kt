@@ -22,6 +22,7 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
+import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi_modified.impl.neomedia.rtp.RtpPacketCache
@@ -42,8 +43,7 @@ class NackHandler(
     private val logger = getLogger(this.javaClass)
     private var currRtt: Double = -1.0
 
-    override fun onRtcpPacketReceived(packetInfo: PacketInfo) {
-        val packet = packetInfo.packet
+    override fun onRtcpPacketReceived(packet: RtcpPacket, receivedTime: Long) {
         if (packet is RtcpFbNackPacket) {
             onNackPacket(packet)
         }

@@ -23,6 +23,7 @@ import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.extensions.bytearray.toHex
 import org.jitsi.rtp.rtcp.RtcpByePacket
+import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSdesPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
@@ -69,7 +70,7 @@ class RtcpTermination(
         }
         //TODO: keep an eye on if anything in here takes a while it could slow the packet pipeline down
         packetReceiveCounts.merge(packetInfo.packet::class.simpleName!!, 1, Int::plus)
-        rtcpEventNotifier.notifyRtcpReceived(packetInfo)
+        rtcpEventNotifier.notifyRtcpReceived(packetInfo.packetAs<RtcpPacket>(), packetInfo.receivedTime)
 
         return accept
     }

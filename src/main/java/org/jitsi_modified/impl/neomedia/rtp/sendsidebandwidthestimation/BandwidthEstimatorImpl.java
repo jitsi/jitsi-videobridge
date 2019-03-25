@@ -184,9 +184,8 @@ public class BandwidthEstimatorImpl
     }
 
     @Override
-    public void onRtcpPacketReceived(@NotNull PacketInfo packetInfo)
+    public void onRtcpPacketReceived(@NotNull RtcpPacket packet, Long receivedTime)
     {
-        Packet packet = packetInfo.getPacket();
         if (packet instanceof RtcpSrPacket ||
                 packet instanceof RtcpRrPacket)
         {

@@ -64,8 +64,7 @@ class RtcpRrGenerator(
         doWork()
     }
 
-    override fun onRtcpPacketReceived(packetInfo: PacketInfo) {
-        val packet = packetInfo.packet
+    override fun onRtcpPacketReceived(packet: RtcpPacket, receivedTime: Long) {
         when (packet) {
             is RtcpSrPacket -> {
                 // Note the time we received an SR so that it can be used when creating RtcpReportBlocks
@@ -73,7 +72,7 @@ class RtcpRrGenerator(
                 // the doWork context thread runs
                 val senderInfo = senderInfos.computeIfAbsent(packet.senderSsrc) { SenderInfo() }
                 senderInfo.lastSrCompactedTimestamp = packet.senderInfo.compactedNtpTimestamp
-                senderInfo.lastSrReceivedTime = packetInfo.receivedTime
+                senderInfo.lastSrReceivedTime = receivedTime
             }
         }
     }
