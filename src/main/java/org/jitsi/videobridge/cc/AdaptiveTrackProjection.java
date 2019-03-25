@@ -231,7 +231,6 @@ public class AdaptiveTrackProjection
         // sufficient to only check for needing a key frame if the packet wasn't
         // accepted. But this wouldn't be enough, as we may be accepting packets
         // of low-quality, while we wish to switch to high-quality.
-//        System.out.println("TEMP: adaptive track projection has targetIndex " + targetIndexCopy);
         if (contextCopy.needsKeyframe()
             && targetIndexCopy > RTPEncodingDesc.SUSPENDED_INDEX)
         {

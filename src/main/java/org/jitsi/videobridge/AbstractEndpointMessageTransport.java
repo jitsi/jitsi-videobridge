@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.util.*;
+import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
@@ -167,15 +168,17 @@ public abstract class AbstractEndpointMessageTransport
      * jitsi messages.
      */
     @SuppressWarnings("unchecked")
-    private void onClientEndpointMessage(
+    protected void onClientEndpointMessage(
         Object src,
         JSONObject jsonObject)
     {
         String to = (String)jsonObject.get("to");
 
         // First insert the "from" to prevent spoofing.
-        jsonObject.put("from", getId(jsonObject.get("from")));
+        String from = getId(jsonObject.get("from"));
+        jsonObject.put("from", from);
         Conference conference = getConference();
+
         if (conference == null || conference.isExpired())
         {
             logger.warn(
@@ -183,13 +186,19 @@ public abstract class AbstractEndpointMessageTransport
             return;
         }
 
-        List<AbstractEndpoint> endpointSubset;
+        AbstractEndpoint sourceEndpoint = conference.getEndpoint(from);
+
+        if (sourceEndpoint == null)
+        {
+            logger.warn("Can not forward message, source endpoint unknown.");
+        }
+
+        List<AbstractEndpoint> targets;
         if ("".equals(to))
         {
             // Broadcast message
-            endpointSubset = new LinkedList<>(conference.getEndpoints());
-            endpointSubset.removeIf(
-                e -> e.getID().equalsIgnoreCase(getId()));
+            targets = new LinkedList<>(conference.getEndpoints());
+            targets.removeIf(e -> e.getID().equalsIgnoreCase(getId()));
         }
         else
         {
@@ -197,35 +206,25 @@ public abstract class AbstractEndpointMessageTransport
             AbstractEndpoint targetEndpoint = conference.getEndpoint(to);
             if (targetEndpoint != null)
             {
-                endpointSubset = Collections.singletonList(targetEndpoint);
+                targets = Collections.singletonList(targetEndpoint);
             }
             else
             {
-                endpointSubset = Collections.emptyList();
                 logger.warn(
                     "Unable to find endpoint " + to
                         + " to send EndpointMessage");
+                return;
             }
         }
 
-        sendMessageToEndpoints(jsonObject.toString(), endpointSubset);
-    }
+        boolean sendToOcto
+            = !(sourceEndpoint instanceof OctoEndpoint)
+              && targets.stream().anyMatch(e -> (e instanceof OctoEndpoint));
 
-    /**
-     * Sends a specific message coming from this endpoint to other endpoints in
-     * the conference.
-     * @param msg the message to send.
-     * @param endpoints the list of endpoints to receive the message.
-     */
-    protected void sendMessageToEndpoints(
-        String msg,
-        List<AbstractEndpoint> endpoints)
-    {
-        Conference conference = getConference();
-        if (conference != null)
-        {
-            conference.sendMessage(msg, endpoints, true);
-        }
+        conference.sendMessage(
+                jsonObject.toString(),
+                targets,
+                sendToOcto);
     }
 
     /**

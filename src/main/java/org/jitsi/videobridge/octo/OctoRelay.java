@@ -23,6 +23,7 @@ import org.jitsi.videobridge.util.*;
 
 import java.io.*;
 import java.net.*;
+import java.nio.charset.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -204,21 +205,47 @@ public class OctoRelay
             ByteBufferPool.returnBuffer(buf);
             return;
         }
+        MediaType mediaType = OctoPacket.readMediaType(buf, off, len);
 
         PacketHandler handler = packetHandlers.get(conferenceId);
         if (handler == null)
         {
-            packetsDropped.incrementAndGet();
-            ByteBufferPool.returnBuffer(buf);
             logger.warn("Received an Octo packet for an unknown conference: "
                     + conferenceId);
+            packetsDropped.incrementAndGet();
+            ByteBufferPool.returnBuffer(buf);
+            return;
         }
-        else
+
+        switch (mediaType)
         {
+        case AUDIO:
+        case VIDEO:
             handler.handlePacket(
-                    buf,
-                    off + OctoPacket.OCTO_HEADER_LENGTH,
-                    len - OctoPacket.OCTO_HEADER_LENGTH);
+                new UnparsedPacket(
+                        buf,
+                        off + OctoPacket.OCTO_HEADER_LENGTH,
+                        len - OctoPacket.OCTO_HEADER_LENGTH));
+            break;
+        case DATA:
+            String msg
+                = new String(
+                        buf,
+                        off + OCTO_HEADER_LENGTH,
+                        len - OCTO_HEADER_LENGTH,
+                        StandardCharsets.UTF_8);
+
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Received a message in an Octo data packet: " + msg);
+            }
+
+            handler.handleMessage(msg);
+            break;
+        default:
+            logger.warn("Wrong media type: " + mediaType);
+            packetsDropped.incrementAndGet();
+            ByteBufferPool.returnBuffer(buf);
         }
     }
 
@@ -253,10 +280,39 @@ public class OctoRelay
             String conferenceId,
             String endpointId)
     {
-        byte[] buf = packet.getBuffer();
-        int off = packet.getOffset();
-        int len = packet.getLength();
+        send(
+                packet.getBuffer(),
+                packet.getOffset(),
+                packet.getLength(),
+                targets,
+                conferenceId,
+                endpointId,
+                MediaType.VIDEO);
+    }
 
+    void sendString(
+            String str,
+            Set<SocketAddress> targets,
+            String conferenceId,
+            String endpointId)
+    {
+        byte[] msgBytes = str.getBytes(StandardCharsets.UTF_8);
+        send(
+                msgBytes, 0, msgBytes.length,
+                targets,
+                conferenceId, endpointId,
+                MediaType.DATA);
+    }
+
+    void send(
+            byte[] buf,
+            int off,
+            int len,
+            Set<SocketAddress> targets,
+            String conferenceId,
+            String endpointId,
+            MediaType mediaType)
+    {
         int lenNeeded = len + OCTO_HEADER_LENGTH;
         byte[] newBuf;
         int newOff;
@@ -282,7 +338,7 @@ public class OctoRelay
         OctoPacket.writeHeaders(
                 newBuf, newOff,
                 true /* source is a relay */,
-                MediaType.VIDEO, // we don't care about the value anymore
+                mediaType,
                 0 /* simulcast layers info */,
                 conferenceId,
                 endpointId);
@@ -336,7 +392,8 @@ public class OctoRelay
      */
     interface PacketHandler
     {
-        void handlePacket(byte[] buf, int off, int len);
+        void handlePacket(Packet packet);
+        void handleMessage(String message);
     }
 
     /**
