@@ -49,6 +49,7 @@ import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.PacketPredicate
+import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.util.Logger
@@ -209,7 +210,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     predicate = PacketPredicate { RTCPUtils.isRtcp(it.buffer, it.offset, it.length) }
                     path = pipeline {
                         node(srtcpDecryptWrapper)
-                        node(CompoundRtcpSplitterNode())
+                        node(PacketParser("Compound RTCP parser") { CompoundRtcpPacket(it.buffer, it.offset, it.length) })
+//                        node(CompoundRtcpSplitterNode())
                         node(rtcpTermination)
                         node(rtcpPacketHandlerWrapper)
                     }
