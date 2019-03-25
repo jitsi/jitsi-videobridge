@@ -112,12 +112,16 @@ class OctoTransceiver
      * @param len the length of the packet
      */
     @Override
-    public void handlePacket(byte[] buf, int off, int len)
+    public void handlePacket(Packet packet)
     {
-        Packet pkt = new UnparsedPacket(buf, off, len);
-        PacketInfo pktInfo = new PacketInfo(pkt);
+        PacketInfo pktInfo = new PacketInfo(packet);
         pktInfo.setReceivedTime(System.currentTimeMillis());
         incomingPacketQueue.add(pktInfo);
+    }
+    @Override
+    public void handleMessage(String message)
+    {
+        tentacle.handleMessage(message);
     }
 
     /**

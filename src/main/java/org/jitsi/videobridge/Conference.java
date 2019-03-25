@@ -337,11 +337,10 @@ public class Conference
             }
         }
 
-//        OctoEndpoints octoEndpoints = this.octoEndpoints;
-//        if (sendToOcto && octoEndpoints != null)
-//        {
-//            octoEndpoints.sendMessage(msg);
-//        }
+        if (sendToOcto && tentacle != null)
+        {
+            tentacle.sendMessage(msg);
+        }
     }
 
     /**

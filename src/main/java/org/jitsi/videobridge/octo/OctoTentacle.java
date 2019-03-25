@@ -21,6 +21,7 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.osgi.*;
+import org.jitsi.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.*;
@@ -223,6 +224,11 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         conference.handleIncomingRtp(packetInfo, null);
     }
 
+    public void handleMessage(String message)
+    {
+        octoEndpoints.messageTransport.onMessage(null /* source */ , message);
+    }
+
     /**
      * Sets the list of remote addresses to send Octo packets to.
      * @param targets the list of addresses.
@@ -235,12 +241,10 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
 
             if (targets.isEmpty())
             {
-                System.err.println("xxx remove Octo handler " + conference.getGid());
                 relay.removeHandler(conference.getGid());
             }
             else
             {
-                System.err.println("xxx register Octo handler "+conference.getGid());
                 relay.addHandler(conference.getGid(), transceiver);
             }
         }
@@ -263,5 +267,14 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
     {
         setRelays(new LinkedList<>());
         octoEndpoints.setEndpoints(Collections.EMPTY_SET);
+    }
+
+    public void sendMessage(String message)
+    {
+        relay.sendString(
+                message,
+                targets,
+                conference.getGid(),
+                null);
     }
 }

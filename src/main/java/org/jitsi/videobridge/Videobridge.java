@@ -645,9 +645,6 @@ public class Videobridge
 
         try
         {
-//            System.out.println("BRIAN: skipping health check");
-//            healthCheck();
-
             return IQ.createResultIQ(healthCheckIQ);
         }
         catch (Exception e)
