@@ -19,9 +19,11 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.FilterNode
+import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.extensions.bytearray.toHex
+import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtcp.RtcpByePacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpRrPacket
@@ -36,43 +38,44 @@ import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 class RtcpTermination(
     private val rtcpEventNotifier: RtcpEventNotifier,
     private val transportCcEngine: TransportCCEngine? = null
-) : FilterNode("RTCP termination") {
+) : TransformerNode("RTCP termination") {
     private var packetReceiveCounts = mutableMapOf<String, Int>()
 
-    override fun accept(packetInfo: PacketInfo): Boolean {
-        var accept = false
+    override fun transform(packetInfo: PacketInfo): PacketInfo? {
+        val compoundRtcp = packetInfo.packetAs<CompoundRtcpPacket>()
+        var forwardedRtcp: RtcpPacket? = null
 
-        val pkt = packetInfo.packet
-        when (pkt) {
-            is RtcpFbTccPacket -> handleTccPacket(pkt)
-            is RtcpFbNackPacket -> {
-                println("Nack received for ${pkt.mediaSourceSsrc} ${pkt.missingSeqNums}")
+        compoundRtcp.packets.forEach { pkt ->
+            when (pkt) {
+                is RtcpFbTccPacket -> handleTccPacket(pkt)
+                is RtcpFbPliPacket, is RtcpFbFirPacket -> {
+                    // We'll let these pass through and be forwarded to the sender who will be
+                    // responsible for translating/aggregating them
+                    // NOTE(brian): this should work fine as long as we can't receive 2 RTCP packets
+                    // we want to forward in the same compound packet.  If we can, then we may need
+                    // to turn this into a MultipleOutputNode
+                    forwardedRtcp = pkt
+                }
+                is RtcpSdesPacket, is RtcpRrPacket, is RtcpSrPacket, is RtcpFbNackPacket, is RtcpByePacket -> {
+                    // Supported, but no special handling here (any special handling will be in
+                    // notifyRtcpReceived below
+                }
+                else -> {
+                    logger.cinfo { "TODO: not yet handling RTCP packet of type ${pkt.javaClass}"}
+                }
             }
-            is RtcpSrPacket -> {
-            }
-            is RtcpRrPacket -> {
-            }
-            is RtcpByePacket -> {
-                logger.cinfo { "BRIAN: got BYE packet:\n$pkt" }
-                //TODO
-            }
-            is RtcpSdesPacket -> {
-            }
-            is RtcpFbPliPacket, is RtcpFbFirPacket -> {
-                // We'll let these pass through and be forwarded to the sender who will be
-                // responsible for translating/aggregating them
-                logger.cdebug { "BRIAN: passing through ${pkt::class} rtcp packet: ${pkt.buffer.toHex()}" }
-                accept = true
-            }
-            else -> {
-                logger.cinfo { "TODO: not yet handling RTCP packet of type ${pkt.javaClass}"}
-            }
+            //TODO: keep an eye on if anything in here takes a while it could slow the packet pipeline down
+            packetReceiveCounts.merge(pkt::class.simpleName!!, 1, Int::plus)
+            rtcpEventNotifier.notifyRtcpReceived(pkt, packetInfo.receivedTime)
         }
-        //TODO: keep an eye on if anything in here takes a while it could slow the packet pipeline down
-        packetReceiveCounts.merge(packetInfo.packet::class.simpleName!!, 1, Int::plus)
-        rtcpEventNotifier.notifyRtcpReceived(packetInfo.packetAs<RtcpPacket>(), packetInfo.receivedTime)
-
-        return accept
+        return if (forwardedRtcp != null) {
+            // Manually cast to RtcpPacket as a workaround for https://youtrack.jetbrains.com/issue/KT-7186
+            packetInfo.packet = forwardedRtcp as RtcpPacket
+            packetInfo
+        } else {
+            packetDiscarded(packetInfo)
+            null
+        }
     }
 
     private fun handleTccPacket(tccPacket: RtcpFbTccPacket) {
