@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.node.outgoing.OutgoingSsrcStats
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
@@ -27,7 +28,8 @@ import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
  * RTCP) but in the sense of a webrtc 'RTCRTPSender' which handles
  * all RTP and RTP control packets.
  */
-abstract class RtpSender : EventHandler, Stoppable,NodeStatsProducer {
+abstract class RtpSender :
+        EventHandler, Stoppable, NodeStatsProducer, EndpointConnectionStats.EndpointConnectionStatsListener {
     var numPacketsSent = 0
     var numBytesSent: Long = 0
     var firstPacketSentTime: Long = -1
