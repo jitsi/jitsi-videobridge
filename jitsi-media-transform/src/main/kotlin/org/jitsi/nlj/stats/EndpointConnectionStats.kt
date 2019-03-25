@@ -59,16 +59,15 @@ class EndpointConnectionStats : RtcpListener {
         return Snapshot(rtt)
     }
 
-    override fun onRtcpPacketReceived(packetInfo: PacketInfo) {
-        val packet = packetInfo.packet
+    override fun onRtcpPacketReceived(packet: RtcpPacket, receivedTime: Long) {
         when (packet) {
             is RtcpSrPacket -> {
                 logger.cdebug { "Received SR packet with ${packet.reportBlocks.size} report blocks" }
-                packet.reportBlocks.forEach { reportBlock -> processReportBlock(packetInfo.receivedTime, reportBlock) }
+                packet.reportBlocks.forEach { reportBlock -> processReportBlock(receivedTime, reportBlock) }
             }
             is RtcpRrPacket -> {
                 logger.cdebug { "Received RR packet with ${packet.reportBlocks.size} report blocks" }
-                packet.reportBlocks.forEach { reportBlock -> processReportBlock(packetInfo.receivedTime, reportBlock) }
+                packet.reportBlocks.forEach { reportBlock -> processReportBlock(receivedTime, reportBlock) }
             }
         }
     }
