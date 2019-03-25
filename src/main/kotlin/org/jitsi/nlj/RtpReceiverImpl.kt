@@ -29,7 +29,6 @@ import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketParser
 import org.jitsi.nlj.transform.node.PayloadTypeFilterNode
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
-import org.jitsi.nlj.transform.node.incoming.CompoundRtcpSplitterNode
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.PaddingTermination
@@ -211,7 +210,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     path = pipeline {
                         node(srtcpDecryptWrapper)
                         node(PacketParser("Compound RTCP parser") { CompoundRtcpPacket(it.buffer, it.offset, it.length) })
-//                        node(CompoundRtcpSplitterNode())
                         node(rtcpTermination)
                         node(rtcpPacketHandlerWrapper)
                     }
