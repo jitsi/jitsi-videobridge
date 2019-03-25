@@ -121,6 +121,8 @@ class Transceiver(
 
         endpointConnectionStats.addListener(bandwidthEstimator)
         rtcpEventNotifier.addRtcpEventListener(bandwidthEstimator)
+
+        endpointConnectionStats.addListener(rtpSender)
     }
 
     override fun onReceiveBitrateChanged(ssrcs: MutableCollection<Long>?, bandwidth: Long) {

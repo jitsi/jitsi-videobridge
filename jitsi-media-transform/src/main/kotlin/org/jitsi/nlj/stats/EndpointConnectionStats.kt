@@ -49,8 +49,6 @@ class EndpointConnectionStats : RtcpListener {
      */
     private var rtt: Double = 0.0
 
-    //TODO(brian): allow adding a listener to be updated when stats change.  We will use this in the future to plumb
-    // things like the RTT into the bandwidth estimation logic
     fun addListener(listener: EndpointConnectionStatsListener) {
         endpointConnectionStatsListeners.add(listener)
     }
