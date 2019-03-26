@@ -19,6 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.nlj.format.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -112,7 +113,7 @@ public class VP8AdaptiveTrackProjectionContext
     /**
      * Ctor.
      *
-     * @param format the VP8 media format.
+     * @param payloadType the VP8 media format.
      * @param rtpState the RTP state to begin with.
      */
     public VP8AdaptiveTrackProjectionContext(
@@ -140,7 +141,7 @@ public class VP8AdaptiveTrackProjectionContext
      * @return an existing VP8 frame projection or null.
      */
     private VP8FrameProjection
-    lookupVP8FrameProjection(@NotNull RawPacket rtpPacket)
+    lookupVP8FrameProjection(@NotNull VideoRtpPacket rtpPacket)
     {
         // Lookup for an existing VP8 frame doesn't need to be synced because
         // we're using a ConcurrentHashMap. At the time of this writing, two
@@ -200,7 +201,7 @@ public class VP8AdaptiveTrackProjectionContext
      */
     private synchronized
     VP8FrameProjection createVP8FrameProjection(
-        @NotNull RawPacket rtpPacket, int incomingIndex, int targetIndex)
+        @NotNull VideoRtpPacket rtpPacket, int incomingIndex, int targetIndex)
     {
         // Creating a new VP8 projection depends on reading and results in
         // writing of the last VP8 frame, therefore this method needs to be
@@ -229,7 +230,7 @@ public class VP8AdaptiveTrackProjectionContext
         if (!DePacketizer.VP8PayloadDescriptor.isStartOfFrame(buf, payloadOff))
         {
             maybeUpdateMaxSequenceNumberOfFrame(
-                rtpPacket.getSSRCAsLong(),
+                rtpPacket.getSsrc(),
                 rtpPacket.getTimestamp(),
                 rtpPacket.getSequenceNumber());
             return null;
@@ -250,7 +251,7 @@ public class VP8AdaptiveTrackProjectionContext
         // going to produce a decodable VP8 packet stream.
         int maxSequenceNumberSeenBeforeFirstPacket
             = getMaxSequenceNumberOfFrame(
-                rtpPacket.getSSRCAsLong(), rtpPacket.getTimestamp());
+                rtpPacket.getSsrc(), rtpPacket.getTimestamp());
 
         VP8FrameProjection nextVP8FrameProjection = lastVP8FrameProjection
             .makeNext(rtpPacket, maxSequenceNumberSeenBeforeFirstPacket, nowMs);
@@ -374,7 +375,7 @@ public class VP8AdaptiveTrackProjectionContext
      */
     @Override
     public boolean accept(
-        @NotNull RawPacket rtpPacket, int incomingIndex, int targetIndex)
+        @NotNull VideoRtpPacket rtpPacket, int incomingIndex, int targetIndex)
     {
         VP8FrameProjection vp8FrameProjection
             = lookupVP8FrameProjection(rtpPacket);
@@ -489,8 +490,8 @@ public class VP8AdaptiveTrackProjectionContext
      * for the RTP packet that is specified as a parameter.
      */
     @Override
-    public RawPacket[] rewriteRtp(
-        @NotNull RawPacket rtpPacket, RtpPacketCache incomingRawPacketCache)
+    public VideoRtpPacket[] rewriteRtp(
+        @NotNull VideoRtpPacket rtpPacket, RtpPacketCache incomingRawPacketCache)
         throws RewriteException
     {
         VP8FrameProjection vp8FrameProjection
@@ -501,7 +502,7 @@ public class VP8AdaptiveTrackProjectionContext
             throw new RewriteException();
         }
 
-        RawPacket[] ret
+        VideoRtpPacket[] ret
             = vp8FrameProjection.rewriteRtp(rtpPacket, incomingRawPacketCache);
 
         synchronized (transmittedSyncRoot)

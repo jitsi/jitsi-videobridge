@@ -19,6 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc;
 import org.jitsi.nlj.format.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -58,7 +59,7 @@ class GenericAdaptiveTrackProjectionContext
      * Checks if the given packet with the given format is part of a key frame.
      */
     private static boolean isKeyframe(
-            @NotNull RawPacket rtpPacket, @NotNull PayloadType payloadType)
+            @NotNull VideoRtpPacket rtpPacket, @NotNull PayloadType payloadType)
     {
         byte[] buf = rtpPacket.getBuffer();
         int payloadOff = rtpPacket.getPayloadOffset(),
@@ -186,7 +187,7 @@ class GenericAdaptiveTrackProjectionContext
      */
     @Override
     public synchronized boolean
-    accept(@NotNull RawPacket rtpPacket, int incomingIndex, int targetIndex)
+    accept(@NotNull VideoRtpPacket rtpPacket, int incomingIndex, int targetIndex)
     {
         if (targetIndex == RTPEncodingDesc.SUSPENDED_INDEX)
         {
@@ -216,7 +217,7 @@ class GenericAdaptiveTrackProjectionContext
 
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug("delta ssrc=" + rtpPacket.getSSRCAsLong()
+                    logger.debug("delta ssrc=" + rtpPacket.getSsrc()
                         + ",src_sequence=" + sourceSequenceNumber
                         + ",dst_sequence=" + destinationSequenceNumber
                         + ",max_sequence=" + maxDestinationSequenceNumber
@@ -259,7 +260,7 @@ class GenericAdaptiveTrackProjectionContext
 
             if (logger.isDebugEnabled())
             {
-                logger.debug("accept ssrc=" + rtpPacket.getSSRCAsLong()
+                logger.debug("accept ssrc=" + rtpPacket.getSsrc()
                 + ",src_sequence=" + sourceSequenceNumber
                 + ",dst_sequence=" + destinationSequenceNumber
                 + ",max_sequence=" + maxDestinationSequenceNumber);
@@ -269,7 +270,7 @@ class GenericAdaptiveTrackProjectionContext
         {
             if (logger.isDebugEnabled())
             {
-                logger.debug("reject ssrc=" + rtpPacket.getSSRCAsLong()
+                logger.debug("reject ssrc=" + rtpPacket.getSsrc()
                     + ",src_sequence=" + sourceSequenceNumber);
             }
         }
@@ -318,8 +319,8 @@ class GenericAdaptiveTrackProjectionContext
      * @return {@link #EMPTY_PACKET_ARR}
      */
     @Override
-    public RawPacket[] rewriteRtp(
-        @NotNull RawPacket rtpPacket, RtpPacketCache incomingRawPacketCache)
+    public VideoRtpPacket[] rewriteRtp(
+        @NotNull VideoRtpPacket rtpPacket, RtpPacketCache incomingRawPacketCache)
     {
         int sourceSequenceNumber = rtpPacket.getSequenceNumber();
         int destinationSequenceNumber
@@ -341,7 +342,7 @@ class GenericAdaptiveTrackProjectionContext
 
         if (logger.isDebugEnabled())
         {
-            logger.debug("rewrite ssrc=" + rtpPacket.getSSRCAsLong()
+            logger.debug("rewrite ssrc=" + rtpPacket.getSsrc()
                 + ",src_sequence=" + sourceSequenceNumber
                 + ",dst_sequence=" + destinationSequenceNumber
                 + ",max_sequence=" + maxDestinationSequenceNumber);

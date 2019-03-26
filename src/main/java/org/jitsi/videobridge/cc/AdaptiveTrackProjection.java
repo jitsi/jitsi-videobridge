@@ -62,7 +62,7 @@ public class AdaptiveTrackProjection
      * An empty {@link RawPacket} array that is used as a return value when no
      * packets need to be piggy-backed.
      */
-    public static final RawPacket[]
+    public static final VideoRtpPacket[]
         EMPTY_PACKET_ARR = AdaptiveTrackProjectionContext.EMPTY_PACKET_ARR;
 
     /**
@@ -200,9 +200,7 @@ public class AdaptiveTrackProjection
         }
         VideoRtpPacket videoRtpPacket = (VideoRtpPacket) rtpPacket;
 
-        RawPacket legacyRawPacket
-                = RawPacketExtensionsKt.toLegacyRawPacket(rtpPacket);
-        AdaptiveTrackProjectionContext contextCopy = getContext(legacyRawPacket);
+        AdaptiveTrackProjectionContext contextCopy = getContext(videoRtpPacket);
         if (contextCopy == null)
         {
             return false;
@@ -224,7 +222,7 @@ public class AdaptiveTrackProjection
 
         int targetIndexCopy = targetIndex;
         boolean accept = contextCopy.accept(
-            legacyRawPacket, videoRtpPacket.getQualityIndex(), targetIndexCopy);
+            videoRtpPacket, videoRtpPacket.getQualityIndex(), targetIndexCopy);
 
         // We check if the context needs a keyframe regardless of whether or not
         // the packet was accepted.
@@ -271,7 +269,7 @@ public class AdaptiveTrackProjection
      * the payload type of the RTP packet that is specified as a parameter.
      */
     private synchronized
-    AdaptiveTrackProjectionContext getContext(@NotNull RawPacket rtpPacket)
+    AdaptiveTrackProjectionContext getContext(@NotNull VideoRtpPacket rtpPacket)
     {
         PayloadType payloadTypeObject;
         int payloadType = rtpPacket.getPayloadType();
@@ -366,7 +364,7 @@ public class AdaptiveTrackProjection
      * @return any piggy-backed packets to include with the packet.
      * XXX unused?
      */
-    RawPacket[] rewriteRtp(@NotNull VideoRtpPacket rtpPacket)
+    VideoRtpPacket[] rewriteRtp(@NotNull VideoRtpPacket rtpPacket)
         throws RewriteException
     {
         AdaptiveTrackProjectionContext contextCopy = context;
@@ -375,7 +373,7 @@ public class AdaptiveTrackProjection
             return EMPTY_PACKET_ARR;
         }
 
-        return contextCopy.rewriteRtp(RawPacketExtensionsKt.toLegacyRawPacket(rtpPacket), packetCache);
+        return contextCopy.rewriteRtp(rtpPacket, packetCache);
     }
 
     /**

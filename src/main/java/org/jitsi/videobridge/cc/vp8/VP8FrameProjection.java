@@ -17,7 +17,7 @@ package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
-import org.jitsi.nlj.util.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.cc.*;
@@ -150,7 +150,7 @@ public class VP8FrameProjection
      * an argument is decodable.
      */
     VP8FrameProjection makeNext(
-        @NotNull RawPacket firstPacketOfFrame,
+        @NotNull VideoRtpPacket firstPacketOfFrame,
         int maxSequenceNumberSeenBeforeFirstPacket,
         long nowMs)
     {
@@ -307,7 +307,7 @@ public class VP8FrameProjection
      * @param cache the cache to pull piggy-backed packets from.
      * @param rtpPacket the RTP packet to project.
      */
-    RawPacket[] rewriteRtp(@NotNull RawPacket rtpPacket, RtpPacketCache cache)
+    VideoRtpPacket[] rewriteRtp(@NotNull VideoRtpPacket rtpPacket, RtpPacketCache cache)
     {
         int originalSequenceNumber = rtpPacket.getSequenceNumber();
 
@@ -326,7 +326,7 @@ public class VP8FrameProjection
         // We piggy-back any re-ordered packets of this frame.
         long vp8FrameSSRC = vp8Frame.getSSRCAsLong();
 
-        List<RawPacket> piggyBackedPackets = new ArrayList<>();
+        List<VideoRtpPacket> piggyBackedPackets = new ArrayList<>();
         int len = RTPUtils.getSequenceNumberDelta(
             piggyBackUntilSequenceNumber, originalSequenceNumber) + 1;
 
@@ -342,8 +342,8 @@ public class VP8FrameProjection
             int piggyBackedPacketSequenceNumber
                 = (originalSequenceNumber + i) & RawPacket.SEQUENCE_NUMBER_MASK;
 
-            RawPacket lastPacket = RawPacketExtensionsKt.toLegacyRawPacket(cache.get(
-                vp8FrameSSRC, piggyBackedPacketSequenceNumber));
+            VideoRtpPacket lastPacket = (VideoRtpPacket)cache.get(
+                vp8FrameSSRC, piggyBackedPacketSequenceNumber);
 
             // the call to accept (synchronized) may update the
             // maxSequenceNumber.
@@ -366,12 +366,12 @@ public class VP8FrameProjection
             {
                 logger.debug("Sending " + piggyBackedPackets.size() + " piggybacked packets");
             }
-            for (RawPacket pktOut : piggyBackedPackets)
+            for (VideoRtpPacket pktOut : piggyBackedPackets)
             {
                 rewriteRtpInternal(pktOut);
             }
 
-            return piggyBackedPackets.toArray(new RawPacket[0]);
+            return piggyBackedPackets.toArray(new VideoRtpPacket[0]);
         }
         else
         {
@@ -384,10 +384,10 @@ public class VP8FrameProjection
      *
      * @param pkt the RTP packet to rewrite.
      */
-    private void rewriteRtpInternal(@NotNull RawPacket pkt)
+    private void rewriteRtpInternal(@NotNull VideoRtpPacket pkt)
     {
         // update ssrc, sequence number, timestamp, pictureId and tl0picidx
-        pkt.setSSRC((int) ssrc);
+        pkt.setSsrc(ssrc);
         pkt.setTimestamp(timestamp);
 
         int sequenceNumberDelta = RTPUtils.getSequenceNumberDelta(
@@ -424,7 +424,7 @@ public class VP8FrameProjection
      * @return true if the packet can be forwarded as part of this
      * {@link VP8FrameProjection}, false otherwise.
      */
-    public boolean accept(@NotNull RawPacket rtpPacket)
+    public boolean accept(@NotNull VideoRtpPacket rtpPacket)
     {
         if (vp8Frame == null || !vp8Frame.matchesFrame(rtpPacket))
         {
@@ -446,7 +446,7 @@ public class VP8FrameProjection
                 if (isGreaterThanMax)
                 {
                     vp8Frame.setMaxSequenceNumber(
-                        sequenceNumber, rtpPacket.isPacketMarked());
+                        sequenceNumber, rtpPacket.isMarked());
                 }
 
                 return true;

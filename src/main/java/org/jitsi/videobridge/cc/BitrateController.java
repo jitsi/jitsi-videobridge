@@ -1133,9 +1133,8 @@ public class BitrateController
         });
     }
 
-    public RawPacket[] transformRtp(@NotNull PacketInfo packetInfo)
+    public VideoRtpPacket[] transformRtp(@NotNull PacketInfo packetInfo)
     {
-        RawPacket pkt = RawPacketExtensionsKt.toLegacyRawPacket(packetInfo.getPacket());
         VideoRtpPacket videoPacket = (VideoRtpPacket)packetInfo.getPacket();
         if (firstMediaMs == -1)
         {
@@ -1153,17 +1152,17 @@ public class BitrateController
 
         try
         {
-            RawPacket[] extras = adaptiveTrackProjection.rewriteRtp(videoPacket);
+            VideoRtpPacket[] extras = adaptiveTrackProjection.rewriteRtp(videoPacket);
             if (extras.length > 0)
             {
-                RawPacket[] allPackets = new RawPacket[extras.length + 1];
-                allPackets[0] = pkt;
+                VideoRtpPacket[] allPackets = new VideoRtpPacket[extras.length + 1];
+                allPackets[0] = videoPacket;
                 System.arraycopy(extras, 0, allPackets, 1, extras.length);
                 return allPackets;
             }
             else
             {
-                return new RawPacket[] {pkt};
+                return new VideoRtpPacket[] {videoPacket};
             }
         }
         catch (RewriteException e)

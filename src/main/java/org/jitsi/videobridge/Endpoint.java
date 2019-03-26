@@ -458,16 +458,13 @@ public class Endpoint
             // different order) so we can't just reassign a transformed packet back into its
             // proper packetinfo.  need to change those classes to work with the new packet
             // types
-            org.jitsi.service.neomedia.RawPacket[] res = bitrateController.transformRtp(packetInfo);
-            for (org.jitsi.service.neomedia.RawPacket legacyRawPacket : res)
+            VideoRtpPacket[] res = bitrateController.transformRtp(packetInfo);
+            for (VideoRtpPacket videoRtpPacket : res)
             {
-                if (legacyRawPacket == null)
+                if (videoRtpPacket == null)
                 {
                     continue;
                 }
-                UnparsedPacket rawPacket = RawPacketExtensionsKt.fromLegacyRawPacket(legacyRawPacket);
-                //TODO(brian): we can clean this up once the transformer is moved over
-                VideoRtpPacket videoRtpPacket = rawPacket.toOtherType(VideoRtpPacket::new);
                 transceiver.sendRtp(new PacketInfo(videoRtpPacket));
             }
         }
