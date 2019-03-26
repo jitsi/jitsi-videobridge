@@ -92,12 +92,6 @@ public class OctoEndpoint
 
     }
 
-    @Override
-    public void sendRtp(PacketInfo packet, String sourceEpId)
-    {
-        throw new Error("Packets should not be sent directly to Octo endpoints!");
-    }
-
     /**
      * {@inheritDoc}
      */

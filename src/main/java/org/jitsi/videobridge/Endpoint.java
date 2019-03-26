@@ -63,7 +63,7 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  * @author George Politis
  */
 public class Endpoint
-    extends AbstractEndpoint
+    extends AbstractEndpoint implements PotentialPacketHandler
 {
     /**
      * The name of the <tt>Endpoint</tt> property <tt>pinnedEndpoint</tt> which
