@@ -366,7 +366,7 @@ public class AdaptiveTrackProjection
      * @return any piggy-backed packets to include with the packet.
      * XXX unused?
      */
-    RawPacket[] rewriteRtp(@NotNull RawPacket rtpPacket)
+    RawPacket[] rewriteRtp(@NotNull VideoRtpPacket rtpPacket)
         throws RewriteException
     {
         AdaptiveTrackProjectionContext contextCopy = context;
@@ -375,7 +375,7 @@ public class AdaptiveTrackProjection
             return EMPTY_PACKET_ARR;
         }
 
-        return contextCopy.rewriteRtp(rtpPacket, packetCache);
+        return contextCopy.rewriteRtp(RawPacketExtensionsKt.toLegacyRawPacket(rtpPacket), packetCache);
     }
 
     /**

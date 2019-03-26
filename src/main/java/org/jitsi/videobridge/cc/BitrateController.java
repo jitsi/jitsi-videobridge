@@ -1136,12 +1136,13 @@ public class BitrateController
     public RawPacket[] transformRtp(@NotNull PacketInfo packetInfo)
     {
         RawPacket pkt = RawPacketExtensionsKt.toLegacyRawPacket(packetInfo.getPacket());
+        VideoRtpPacket videoPacket = (VideoRtpPacket)packetInfo.getPacket();
         if (firstMediaMs == -1)
         {
             firstMediaMs = System.currentTimeMillis();
         }
 
-        long ssrc = pkt.getSSRCAsLong();
+        Long ssrc = videoPacket.getSsrc();
         AdaptiveTrackProjection adaptiveTrackProjection
                 = adaptiveTrackProjectionMap.get(ssrc);
 
@@ -1152,7 +1153,7 @@ public class BitrateController
 
         try
         {
-            RawPacket[] extras = adaptiveTrackProjection.rewriteRtp(pkt);
+            RawPacket[] extras = adaptiveTrackProjection.rewriteRtp(videoPacket);
             if (extras.length > 0)
             {
                 RawPacket[] allPackets = new RawPacket[extras.length + 1];
@@ -1164,7 +1165,6 @@ public class BitrateController
             {
                 return new RawPacket[] {pkt};
             }
-
         }
         catch (RewriteException e)
         {
