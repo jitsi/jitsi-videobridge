@@ -37,7 +37,7 @@ import java.util.*;
  * @author Brian Baldino
  */
 public abstract class AbstractEndpoint extends PropertyChangeNotifier
-    implements EncodingsManager.EncodingsUpdateListener, PropertyChangeListener, PotentialPacketHandler
+    implements EncodingsManager.EncodingsUpdateListener, PropertyChangeListener
 {
     public static final String ENDPOINT_CHANGED_PROPERTY_NAME =
             AbstractEndpoint.class.getName() + ".endpoint_changed";
@@ -162,8 +162,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * @return {@code true} if this endpoints wants to receive the packet, and
      * {@code false} otherwise.
      */
-    @Override
-    public boolean wants(PacketInfo packetInfo, String sourceEndpointId)
+    protected boolean wants(PacketInfo packetInfo, String sourceEndpointId)
     {
         // We always want audio packets
         if (packetInfo.getPacket() instanceof AudioRtpPacket)
