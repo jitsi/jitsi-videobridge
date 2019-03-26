@@ -27,7 +27,6 @@ import net.java.sip.communicator.util.*;
 import org.eclipse.jetty.server.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
@@ -219,7 +218,7 @@ class HandlerImpl
      * The HTTP resource which lists the JSON representation of the
      * <tt>VideobridgeStatistics</tt>s of <tt>Videobridge</tt>.
      */
-    private static final String STATISTICS = "stats";
+    static final String STATISTICS = "stats";
 
     /**
      * The HTTP resource which allows control of {@link ClientConnectionImpl}
@@ -250,6 +249,11 @@ class HandlerImpl
      * {@link #COLIBRI_TARGET} requests.
      */
     private final boolean colibriEnabled;
+
+    /**
+     * The handler for statistics requests, initialized lazily.
+     */
+    private StatisticsRequestHandler statisticsRequestHandler = null;
 
     /**
      * Initializes a new {@code HandlerImpl} instance within a specific
@@ -359,6 +363,23 @@ class HandlerImpl
                     conferenceJSONObject.writeJSONString(response.getWriter());
                 }
             }
+        }
+    }
+
+    /**
+     * Gets the handler for statistics requests.
+     * @return
+     */
+    private StatisticsRequestHandler getStatisticsRequestHandler()
+    {
+        if (statisticsRequestHandler != null)
+        {
+            return statisticsRequestHandler;
+        }
+        else
+        {
+            return statisticsRequestHandler
+                    = new StatisticsRequestHandler(this);
         }
     }
 
@@ -527,65 +548,6 @@ class HandlerImpl
             response.getOutputStream().println(reason);
         }
         response.setStatus(status);
-    }
-
-
-    /**
-     * Gets a JSON representation of the <tt>VideobridgeStatistics</tt> of (the
-     * associated) <tt>Videobridge</tt>.
-     *
-     * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
-     * @throws IOException
-     * @throws ServletException
-     */
-    private void doGetStatisticsJSON(
-            Request baseRequest,
-            HttpServletRequest request,
-            HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
-        BundleContext bundleContext = getBundleContext();
-
-        if (bundleContext != null)
-        {
-            StatsManager statsManager
-                = ServiceUtils.getService(bundleContext, StatsManager.class);
-
-            if (statsManager != null)
-            {
-                Iterator<Statistics> i
-                    = statsManager.getStatistics().iterator();
-                Statistics statistics = null;
-
-                if (i.hasNext())
-                {
-                    statistics = i.next();
-                }
-
-                JSONObject statisticsJSONObject
-                    = JSONSerializer.serializeStatistics(statistics);
-                Writer writer = response.getWriter();
-
-                response.setStatus(HttpServletResponse.SC_OK);
-                if (statisticsJSONObject == null)
-                {
-                    writer.write("null");
-                }
-                else
-                {
-                    statisticsJSONObject.writeJSONString(writer);
-                }
-
-                return;
-            }
-        }
-
-        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
     }
 
     /**
@@ -1059,17 +1021,10 @@ class HandlerImpl
                 }
             }
         }
-        else if (target.equals(STATISTICS))
+        else if (target.startsWith(STATISTICS))
         {
-            if (GET_HTTP_METHOD.equals(request.getMethod()))
-            {
-                // Get the VideobridgeStatistics of Videobridge.
-                doGetStatisticsJSON(baseRequest, request, response);
-            }
-            else
-            {
-                response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
-            }
+            getStatisticsRequestHandler()
+                    .handleStatsRequest(target, request, response);
         }
         else if (target.equals(SHUTDOWN))
         {
