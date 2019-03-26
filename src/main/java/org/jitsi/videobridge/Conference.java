@@ -1077,23 +1077,41 @@ public class Conference
      */
     public void handleIncomingRtp(PacketInfo packetInfo, AbstractEndpoint source)
     {
+        // We want to avoid calling 'clone' for the last receiver of this packet
+        // since it's unnecessary.  To do so, we'll wait before we clone and send
+        // to an interested handler until after we've determined another handler
+        // is also interested in the packet.  We'll give the last handler the
+        // original packet (without cloning).
+        PotentialPacketHandler prevHandler = null;
         String sourceEpId = source != null ? source.getID() : null;
-        endpointsCache.forEach(endpoint -> {
+        for (Endpoint endpoint : endpointsCache)
+        {
             if (endpoint == source)
             {
-                return;
+                continue;
             }
 
             if (endpoint.wants(packetInfo, sourceEpId))
             {
-                endpoint.sendRtp(packetInfo.clone(), sourceEpId);
+                if (prevHandler != null)
+                {
+                    prevHandler.sendRtp(packetInfo.clone(), sourceEpId);
+                }
+                prevHandler = endpoint;
             }
-        });
+        }
         if (tentacle != null && tentacle.wants(packetInfo, sourceEpId))
         {
-            tentacle.sendRtp(packetInfo.clone(), sourceEpId);
+            if (prevHandler != null)
+            {
+                prevHandler.sendRtp(packetInfo.clone(), sourceEpId);
+            }
+            prevHandler = tentacle;
         }
-        ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
+        if (prevHandler != null)
+        {
+            prevHandler.sendRtp(packetInfo, sourceEpId);
+        }
     }
 
     /**
