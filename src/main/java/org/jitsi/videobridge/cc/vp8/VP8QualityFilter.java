@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 
@@ -67,7 +68,7 @@ class VP8QualityFilter
      * The spatial/quality layer id that this instance tries to achieve. Upon
      * receipt of a packet, we check whether externalSpatialLayerIdTarget
      * (that's specified as an argument to the
-     * {@link #acceptFrame(RawPacket, int, long)} method) is set to something
+     * {@link #acceptFrame(VideoRtpPacket, int, long)} method) is set to something
      * different, in which case we set {@link #needsKeyframe} equal to true and
      * update.
      */
@@ -106,7 +107,7 @@ class VP8QualityFilter
      * @return true to accept the VP8 frame, otherwise false.
      */
     synchronized boolean acceptFrame(
-        @NotNull RawPacket firstPacketOfFrame,
+        @NotNull VideoRtpPacket firstPacketOfFrame,
         int incomingIndex,
         int externalTargetIndex, long nowMs)
     {
@@ -157,7 +158,7 @@ class VP8QualityFilter
         int spatialLayerId = getSpatialLayerId(incomingIndex);
         if (DePacketizer.isKeyFrame(buf, payloadOff, payloadLen))
         {
-            logger.debug(hashCode() + " Quality filter got keyframe for stream " + firstPacketOfFrame.getSSRCAsLong());
+            logger.debug(hashCode() + " Quality filter got keyframe for stream " + firstPacketOfFrame.getSsrc());
             return acceptKeyframe(spatialLayerId, nowMs);
         }
         else if (currentSpatialLayerId > SUSPENDED_LAYER_ID)
@@ -222,7 +223,7 @@ class VP8QualityFilter
      * method for specific details).
      */
     private synchronized boolean isPossibleToSwitch(
-        @NotNull RawPacket firstPacketOfFrame, int spatialLayerId)
+        @NotNull VideoRtpPacket firstPacketOfFrame, int spatialLayerId)
     {
         if (spatialLayerId == -1)
         {

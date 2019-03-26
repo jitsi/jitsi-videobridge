@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 
@@ -116,10 +117,10 @@ class VP8Frame
      * that was seen before the arrival of the first packet of this frame. This
      * is useful for piggybacking any mis-ordered packets.
      */
-    VP8Frame(@NotNull RawPacket firstPacketOfFrame,
+    VP8Frame(@NotNull VideoRtpPacket firstPacketOfFrame,
              int maxSequenceNumberSeenBeforeFirstPacket)
     {
-        this.ssrc = firstPacketOfFrame.getSSRCAsLong();
+        this.ssrc = firstPacketOfFrame.getSsrc();
         this.timestamp = firstPacketOfFrame.getTimestamp();
         this.startingSequenceNumber = firstPacketOfFrame.getSequenceNumber();
         this.maxSequenceNumberSeenBeforeFirstPacket
@@ -270,9 +271,9 @@ class VP8Frame
      * is part of the VP8 picture that is represented by this
      * {@link VP8Frame} instance, false otherwise.
      */
-    private boolean matchesSSRC(@NotNull RawPacket pkt)
+    private boolean matchesSSRC(@NotNull VideoRtpPacket pkt)
     {
-        return ssrc == pkt.getSSRCAsLong();
+        return ssrc == pkt.getSsrc();
     }
 
     /**
@@ -282,7 +283,7 @@ class VP8Frame
      * @return true if the specified RTP packet is part of an older frame, false
      * otherwise.
      */
-    boolean matchesOlderFrame(@NotNull RawPacket pkt)
+    boolean matchesOlderFrame(@NotNull VideoRtpPacket pkt)
     {
         if (!matchesSSRC(pkt))
         {
@@ -301,7 +302,7 @@ class VP8Frame
      * @return true if the specified RTP packet is part of this frame, false
      * otherwise.
      */
-    boolean matchesFrame(@NotNull RawPacket pkt)
+    boolean matchesFrame(@NotNull VideoRtpPacket pkt)
     {
         return matchesSSRC(pkt) && timestamp == pkt.getTimestamp();
     }
