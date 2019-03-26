@@ -463,7 +463,7 @@ public class Endpoint
             // different order) so we can't just reassign a transformed packet back into its
             // proper packetinfo.  need to change those classes to work with the new packet
             // types
-            org.jitsi.service.neomedia.RawPacket[] res = bitrateController.getRTPTransformer().transform(packets);
+            org.jitsi.service.neomedia.RawPacket[] res = bitrateController.transformRtp(packets);
             for (org.jitsi.service.neomedia.RawPacket legacyRawPacket : res)
             {
                 if (legacyRawPacket == null)
