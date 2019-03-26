@@ -32,6 +32,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.*;
 
+import static org.jitsi.videobridge.cc.AdaptiveTrackProjection.EMPTY_PACKET_ARR;
+
 /**
  * The {@link BitrateController} is attached to a destination {@link
  * Endpoint} and its purpose is 1st to selectively drop incoming packets
@@ -1129,67 +1131,42 @@ public class BitrateController
         });
     }
 
-    public RawPacket[] transformRtp(RawPacket[] pkts)
+    public RawPacket[] transformRtp(@NotNull RawPacket pkt)
     {
-        if (ArrayUtils.isNullOrEmpty(pkts))
-        {
-            return pkts;
-        }
-
         if (firstMediaMs == -1)
         {
             firstMediaMs = System.currentTimeMillis();
         }
 
-        RawPacket[] extras = null;
-        for (int i = 0; i < pkts.length; i++)
+        long ssrc = pkt.getSSRCAsLong();
+        AdaptiveTrackProjection adaptiveTrackProjection
+                = adaptiveTrackProjectionMap.get(ssrc);
+
+        if (adaptiveTrackProjection == null)
         {
-            if (!RTPPacketPredicate.INSTANCE.test(pkts[i]))
-            {
-                continue;
-            }
-
-            long ssrc = pkts[i].getSSRCAsLong();
-
-            AdaptiveTrackProjection adaptiveTrackProjection
-                    = adaptiveTrackProjectionMap.get(ssrc);
-
-            if (adaptiveTrackProjection == null)
-            {
-                pkts[i] = null;
-                continue;
-            }
-
-            RawPacket[] ret;
-            try
-            {
-                ret = adaptiveTrackProjection.rewriteRtp(pkts[i]);
-            }
-            catch (RewriteException ex)
-            {
-                pkts[i] = null;
-                continue;
-            }
-
-            if (ArrayUtils.isNullOrEmpty(ret))
-            {
-                continue;
-            }
-
-            int extrasLen
-                    = ArrayUtils.isNullOrEmpty(extras) ? 0 : extras.length;
-            RawPacket[] newExtras = new RawPacket[extrasLen + ret.length];
-            System.arraycopy(ret, 0, newExtras, extrasLen, ret.length);
-
-            if (extrasLen > 0)
-            {
-                System.arraycopy(extras, 0, newExtras, 0, extrasLen);
-            }
-
-            extras = newExtras;
+            return EMPTY_PACKET_ARR;
         }
 
-        return ArrayUtils.concat(pkts, extras);
+        try
+        {
+            RawPacket[] extras = adaptiveTrackProjection.rewriteRtp(pkt);
+            if (extras.length > 0)
+            {
+                RawPacket[] allPackets = new RawPacket[extras.length + 1];
+                allPackets[0] = pkt;
+                System.arraycopy(extras, 0, allPackets, 1, extras.length);
+                return allPackets;
+            }
+            else
+            {
+                return new RawPacket[] {pkt};
+            }
+
+        }
+        catch (RewriteException e)
+        {
+            return EMPTY_PACKET_ARR;
+        }
     }
 
 

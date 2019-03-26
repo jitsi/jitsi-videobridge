@@ -450,20 +450,15 @@ public class Endpoint
     @Override
     public void sendRtp(PacketInfo packetInfo, String sourceEpId)
     {
-        //TODO(brian): need to declare this here (not as a member, due to the fact that will be
-        // called from multiple threads).  in the future hopefully we can get rid of the need for
-        // this array
-        org.jitsi.service.neomedia.RawPacket[] packets = new org.jitsi.service.neomedia.RawPacket[1];
         Packet packet = packetInfo.getPacket();
         if (packet instanceof VideoRtpPacket)
         {
-            packets[0] = RawPacketExtensionsKt.toLegacyRawPacket(packet);
             //TODO(brian): we lose all information in packetinfo here, unfortunately, because
             // the bitratecontroller can return more than/less than what was passed in (and in
             // different order) so we can't just reassign a transformed packet back into its
             // proper packetinfo.  need to change those classes to work with the new packet
             // types
-            org.jitsi.service.neomedia.RawPacket[] res = bitrateController.transformRtp(packets);
+            org.jitsi.service.neomedia.RawPacket[] res = bitrateController.transformRtp(RawPacketExtensionsKt.toLegacyRawPacket(packet));
             for (org.jitsi.service.neomedia.RawPacket legacyRawPacket : res)
             {
                 if (legacyRawPacket == null)
@@ -472,9 +467,6 @@ public class Endpoint
                 }
                 UnparsedPacket rawPacket = RawPacketExtensionsKt.fromLegacyRawPacket(legacyRawPacket);
                 //TODO(brian): we can clean this up once the transformer is moved over
-//                ByteBuffer rawPacketBuf = ByteBuffer.wrap(pkt.getBuffer(), pkt.getOffset(), pkt.getBuffer().length);
-//                rawPacketBuf.limit(pkt.getLength());
-//                VideoRtpPacket videoRtpPacket = RtpPacket.Companion.fromBuffer(rawPacketBuf).toOtherRtpPacketType(VideoRtpPacket::new);
                 VideoRtpPacket videoRtpPacket = rawPacket.toOtherType(VideoRtpPacket::new);
                 transceiver.sendRtp(new PacketInfo(videoRtpPacket));
             }
