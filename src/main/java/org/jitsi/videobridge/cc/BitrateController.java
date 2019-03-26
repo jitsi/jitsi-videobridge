@@ -18,8 +18,10 @@ package org.jitsi.videobridge.cc;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
@@ -1131,8 +1133,9 @@ public class BitrateController
         });
     }
 
-    public RawPacket[] transformRtp(@NotNull RawPacket pkt)
+    public RawPacket[] transformRtp(@NotNull PacketInfo packetInfo)
     {
+        RawPacket pkt = RawPacketExtensionsKt.toLegacyRawPacket(packetInfo.getPacket());
         if (firstMediaMs == -1)
         {
             firstMediaMs = System.currentTimeMillis();
