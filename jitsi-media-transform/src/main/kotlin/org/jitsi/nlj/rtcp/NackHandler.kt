@@ -17,6 +17,7 @@ package org.jitsi.nlj.rtcp
 
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.cdebug
@@ -32,12 +33,14 @@ import org.jitsi_modified.impl.neomedia.rtp.RtpPacketCache
 class NackHandler(
     private val packetCache: RtpPacketCache,
     private val onNackedPacketsReady: PacketHandler
-) : NodeStatsProducer, RtcpListener {
+) : NodeStatsProducer, RtcpListener, EndpointConnectionStats.EndpointConnectionStatsListener {
     private var numNacksReceived = 0
     private var numNackedPackets = 0
     private var numRetransmittedPackets = 0
+    private var numPacketsNotResentDueToDelay = 0
     private var numCacheMisses = 0
     private val logger = getLogger(this.javaClass)
+    private var currRtt: Double = -1.0
 
     override fun onRtcpPacketReceived(packetInfo: PacketInfo) {
         val packet = packetInfo.packet
@@ -48,24 +51,35 @@ class NackHandler(
 
     private fun onNackPacket(nackPacket: RtcpFbNackPacket) {
         logger.cdebug { "Nack received for ${nackPacket.mediaSourceSsrc} ${nackPacket.missingSeqNums}" }
+        val now = System.currentTimeMillis()
 
         numNacksReceived++
         val nackedPackets = mutableListOf<RtpPacket>()
         val ssrc = nackPacket.mediaSourceSsrc
         numNackedPackets += nackPacket.missingSeqNums.size
         nackPacket.missingSeqNums.forEach { missingSeqNum ->
-            packetCache.get(ssrc, missingSeqNum)?.let {
-                nackedPackets.add(it as RtpPacket)
-                numRetransmittedPackets++
+            packetCache.getContainer(ssrc, missingSeqNum)?.let { container ->
+                val delay = now - container.timeAdded
+                val shouldResendPacket =
+                    (currRtt == -1.0) ||
+                    (delay >= Math.min(currRtt * .9, currRtt - 5))
+                if (shouldResendPacket) {
+                    nackedPackets.add(container.pkt)
+                    packetCache.updateTimestamp(ssrc, missingSeqNum, now)
+                    numRetransmittedPackets++
+                } else {
+                    numPacketsNotResentDueToDelay++
+                }
             } ?: run {
                 logger.cdebug { "Nack'd packet $ssrc $missingSeqNum wasn't in cache, unable to retransmit" }
                 numCacheMisses++
             }
         }
-        // TODO reimplement the logic to avoid re-transmitting packets which were
-        // only transmitted recently.
-        // https://github.com/jitsi/libjitsi/blob/master/src/org/jitsi/impl/neomedia/transform/RtxTransformer.java#L450
         nackedPackets.forEach { onNackedPacketsReady.processPacket(PacketInfo(it)) }
+    }
+
+    override fun onRttUpdate(newRtt: Double) {
+        currRtt = newRtt
     }
 
     override fun getNodeStats(): NodeStatsBlock {
@@ -73,6 +87,7 @@ class NackHandler(
             addStat( "num nack packets received: $numNackedPackets")
             addStat( "num nacked packets: $numNackedPackets")
             addStat( "num retransmitted packets: $numRetransmittedPackets")
+            addStat( "num packets we didn't retransmit due to having recently resent them: $numPacketsNotResentDueToDelay")
             addStat( "num cache misses: $numCacheMisses")
         }
     }
