@@ -40,7 +40,7 @@ import static org.jitsi.videobridge.AbstractEndpoint.ENDPOINT_CHANGED_PROPERTY_N
  *
  * @author Boris Grozev
  */
-public class OctoTentacle extends PropertyChangeNotifier
+public class OctoTentacle extends PropertyChangeNotifier implements PotentialPacketHandler
 {
     /**
      * The {@link Logger} used by the {@link OctoTentacle} class and its
@@ -112,17 +112,16 @@ public class OctoTentacle extends PropertyChangeNotifier
     }
 
     /**
-     * Sends an RTP/RTCP packet through the relay to the remote Octo targets
-     * @param packetInfo the packet to send.
-     * @param source the endpoint which is the source of the packet.
+     * {@inheritDoc}
      */
-    public void sendRtp(PacketInfo packetInfo, AbstractEndpoint source)
+    @Override
+    public void sendRtp(PacketInfo packetInfo, String sourceEpId)
     {
         relay.sendRtp(
                 packetInfo.getPacket(),
                 targets,
                 conference.getGid(),
-                source.getID());
+                sourceEpId);
     }
 
     /**
@@ -150,18 +149,14 @@ public class OctoTentacle extends PropertyChangeNotifier
     }
 
     /**
-     * Checks whether a specific packet should be accepted for sending via
-     * Octo.
-     * @param packetInfo the packet.
-     * @param source the endpoint which is the source of the packet.
-     * @return {@code true} if the packet is to be accepted, and {@code false}
-     * otherwise.
+     * {@inheritDoc}
      */
-    public boolean wants(PacketInfo packetInfo, AbstractEndpoint source)
+    @Override
+    public boolean wants(PacketInfo packetInfo, String sourceEpId)
     {
         // Cthulhu devours everything (as long as it's not coming from
         // itself, and we have targets).
-        return source != null && !targets.isEmpty();
+        return sourceEpId != null && !targets.isEmpty();
     }
 
     /**

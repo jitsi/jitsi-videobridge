@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.octo;
 
+import org.jitsi.nlj.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi.util.*;
@@ -89,6 +90,12 @@ public class OctoEndpoint
             SsrcAssociationType type)
     {
 
+    }
+
+    @Override
+    public void sendRtp(PacketInfo packet, String sourceEpId)
+    {
+        throw new Error("Packets should not be sent directly to Octo endpoints!");
     }
 
     /**

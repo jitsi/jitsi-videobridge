@@ -1077,30 +1077,21 @@ public class Conference
      */
     public void handleIncomingRtp(PacketInfo packetInfo, AbstractEndpoint source)
     {
+        String sourceEpId = source != null ? source.getID() : null;
         endpointsCache.forEach(endpoint -> {
             if (endpoint == source)
             {
                 return;
             }
 
-            if (endpoint.wants(
-                    packetInfo,
-                    source != null ? source.getID() : null))
+            if (endpoint.wants(packetInfo, sourceEpId))
             {
-                //TODO: add a version of packetinfo.clone to do this (use a buffer)?
-//                Packet packet = ((RtpPacket)packetInfo.getPacket()).cloneWithBackingBuffer(ByteBufferPool.getBuffer(1500));
-//                PacketInfo packetInfoCopy = new PacketInfo(packetInfo.clone(), packetInfo.getTimeline().clone());
-//                packetInfoCopy.setReceivedTime(packetInfo.getReceivedTime());
-                endpoint.sendRtp(packetInfo.clone());
+                endpoint.sendRtp(packetInfo.clone(), sourceEpId);
             }
         });
-        if (tentacle != null && tentacle.wants(packetInfo, source))
+        if (tentacle != null && tentacle.wants(packetInfo, sourceEpId))
         {
-//            Packet packet = ((RtpPacket)packetInfo.getPacket()).cloneWithBackingBuffer(ByteBufferPool.getBuffer(1500));
-//            PacketInfo packetInfoCopy = new PacketInfo(packet, packetInfo.getTimeline().clone());
-//            packetInfoCopy.setReceivedTime(packetInfo.getReceivedTime());
-//            tentacle.sendRtp(packetInfoCopy, source);
-            tentacle.sendRtp(packetInfo.clone(), source);
+            tentacle.sendRtp(packetInfo.clone(), sourceEpId);
         }
         ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
     }
