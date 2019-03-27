@@ -396,8 +396,6 @@ public class DtlsTransport extends IceTransport
                                 packetInfo.getPacket().getBuffer(),
                                 packetInfo.getPacket().getOffset(),
                                 packetInfo.getPacket().getLength()));
-//                    System.out.println("IceDtlsTransportManager#send returning buf " +
-//                            System.identityHashCode(packetInfo.getPacket().getBuffer().array()));
                     ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
                 }
                 catch (IOException e)
