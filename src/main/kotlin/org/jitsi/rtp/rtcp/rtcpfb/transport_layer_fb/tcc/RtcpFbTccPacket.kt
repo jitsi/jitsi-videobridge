@@ -72,9 +72,7 @@ class RtcpFbTccPacket(
     length: Int
 ) : TransportLayerRtcpFbPacket(buffer, offset, length), Iterable<Map.Entry<Int, Long>> {
 
-    private val packetInfo: Map<Int, Long> by lazy {
-        getPacketInfo(buffer, offset)
-    }
+    private val packetInfo: Map<Int, Long> = getPacketInfo(buffer, offset)
 
     val referenceTimeMs: Long = getReferenceTimeMs(buffer, offset)
 

@@ -117,7 +117,7 @@ open class RtpPacket(
             buffer[offset + length - 1] = value.toByte()
         }
 
-    private val _headerExtensions: HeaderExtensions by lazy { HeaderExtensions() }
+    private val _headerExtensions: HeaderExtensions = HeaderExtensions()
     val headerExtensions: HeaderExtensions
         get() {
             _headerExtensions.reset()
@@ -370,7 +370,7 @@ open class RtpPacket(
          */
         private var remainingLength = 0
 
-        val currHeaderExtension: HeaderExtension by lazy { HeaderExtension() }
+        val currHeaderExtension: HeaderExtension = HeaderExtension()
 
         override fun hasNext(): Boolean {
             if (remainingLength <= 0 || nextOffset < 0) {
