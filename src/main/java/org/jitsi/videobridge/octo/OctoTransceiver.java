@@ -93,7 +93,18 @@ class OctoTransceiver
      */
     boolean setMediaStreamTracks(MediaStreamTrackDesc[] tracks)
     {
-        return mediaStreamTracks.setMediaStreamTracks(tracks);
+        boolean changed = mediaStreamTracks.setMediaStreamTracks(tracks);
+
+        if (changed)
+        {
+
+            SetMediaStreamTracksEvent setMediaStreamTracksEvent
+                    = new SetMediaStreamTracksEvent(getMediaStreamTracks());
+
+            new NodeEventVisitor(setMediaStreamTracksEvent).visit(inputTreeRoot);
+        }
+
+        return changed;
     }
 
     /**

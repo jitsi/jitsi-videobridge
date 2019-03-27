@@ -180,9 +180,13 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         List<SourcePacketExtension> allSources = new LinkedList<>(audioSources);
         allSources.addAll(videoSources);
 
+        // Jicofo sends an empty "source" when it wants to clear the sources.
+        // This manifests as a failure to find an 'owner', hence we clear the
+        // nulls here.
         Set<String> endpointIds
                 = allSources.stream()
                     .map(source -> MediaStreamTrackFactory.getOwner(source))
+                    .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
 
         if (octoEndpoints.setEndpoints(endpointIds))
