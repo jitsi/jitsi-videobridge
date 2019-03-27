@@ -16,31 +16,72 @@
 
 package org.jitsi.videobridge.util;
 
+import org.jitsi.util.*;
+import org.json.simple.*;
+
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
+/**
+ * Implements a {@link ByteBufferPoolImpl}.
+ *
+ * @author Brian Baldino
+ * @author Boris Grozev
+ */
 public class ByteBufferPool
 {
-    private static ByteBufferPoolImpl poolImpl = new PartitionedByteBufferPool(100);
-//    private static ByteBufferPoolImpl poolImpl = new SingleByteBufferPool(100);
+    /**
+     * The underlying pool implementation.
+     */
+    private static final PartitionedByteBufferPool poolImpl
+            = new PartitionedByteBufferPool();
 
-    private static Map<Integer, StackTraceElement[]> bookkeeping = new ConcurrentHashMap<>();
+    /**
+     * The {@link Logger}
+     */
+    private static final Logger logger = Logger.getLogger(ByteBufferPool.class);
+
+    /**
+     * TODO Brian
+     */
+    private static final Map<Integer, StackTraceElement[]> bookkeeping
+            = new ConcurrentHashMap<>();
+
+    /**
+     * Whether to enable or disable book keeping.
+     */
     public static final Boolean ENABLE_BOOKKEEPING = false;
 
-    private static AtomicInteger numBuffersOut = new AtomicInteger(0);
-    private static AtomicInteger numBuffersIn = new AtomicInteger(0);
+    /**
+     * Total number of buffers requested.
+     */
+    private static final AtomicInteger numRequests = new AtomicInteger(0);
 
+    /**
+     * Total number of buffers returned.
+     */
+    private static final AtomicInteger numReturns = new AtomicInteger(0);
+
+    /**
+     * Gets the current thread ID.
+     */
     private static long threadId()
     {
         return Thread.currentThread().getId();
     }
 
+    /**
+     * Gets the current stack trace.
+     */
     private static StackTraceElement[] getStackTrace()
     {
         return Thread.currentThread().getStackTrace();
     }
 
+    /**
+     * Gets the current stack trace as a multi-line string.
+     */
     private static String getStackTraceAsString()
     {
         StringBuilder sb = new StringBuilder();
@@ -51,48 +92,67 @@ public class ByteBufferPool
         return sb.toString();
     }
 
+    /**
+     * Returns a buffer from the pool.
+     *
+     * @param size the minimum size.
+     */
     public static byte[] getBuffer(int size)
     {
+        numRequests.incrementAndGet();
         byte[] buf = poolImpl.getBuffer(size);
         if (ENABLE_BOOKKEEPING)
         {
             bookkeeping.put(System.identityHashCode(buf), getStackTrace());
-            numBuffersOut.incrementAndGet();
-            System.out.println("Thread " + threadId() + " got array " + System.identityHashCode(buf));
+            logger.info("Thread " + threadId() + " got array "
+                    + System.identityHashCode(buf));
         }
         return buf;
     }
 
+    /**
+     * Returns a buffer to the pool.
+     * @param buf
+     */
     public static void returnBuffer(byte[] buf)
     {
+        numReturns.incrementAndGet();
         poolImpl.returnBuffer(buf);
+
         if (ENABLE_BOOKKEEPING)
         {
-            System.out.println("Thread " + threadId() + " returned array " + System.identityHashCode(buf));
+            logger.info("Thread " + threadId() + " returned array "
+                    + System.identityHashCode(buf));
             Integer arrayId = System.identityHashCode(buf);
             if (bookkeeping.remove(arrayId) == null)
             {
-                System.out.println("Thread " + threadId() + " returned a buffer we didn't give out from\n" +
-                    getStackTraceAsString());
+                logger.info("Thread " + threadId()
+                        + " returned a buffer we didn't give out from\n"
+                        + getStackTraceAsString());
             }
-            numBuffersIn.incrementAndGet();
         }
     }
 
-    public static String getStats() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("there are ~").append(bookkeeping.size()).append(" outstanding buffers\n");
-        sb.append("num buffers given out: ").append(numBuffersOut.get()).append("\n");
-        sb.append("num buffers returned: ").append(numBuffersIn.get()).append("\n");
-        sb.append(poolImpl.getStats());
+    /**
+     * Gets a JSON representation of the statistics about the pool.
+     */
+    public static JSONObject getStatsJson()
+    {
+        JSONObject stats = new JSONObject();
+        stats.put("outstanding_buffers", bookkeeping.size());
+        stats.put("num_requests", numRequests.get());
+        stats.put("num_returns", numReturns.get());
+        poolImpl.addStats(stats);
 
-        bookkeeping.forEach((arrayId, stacktrace) -> {
-            sb.append(arrayId).append(" acquired from:\n");
-            for (StackTraceElement stackTraceElement : stacktrace)
-            {
-                sb.append(stackTraceElement.toString()).append("\n");
-            }
-        });
-        return sb.toString();
+        return stats;
+    }
+
+    /**
+     * Enables of disables tracking of statistics for the pool.
+     * @param enable whether to enable it or disable it.
+     */
+    public static void enableStatistics(boolean enable)
+    {
+        poolImpl.enableStatistics(enable);
     }
 }

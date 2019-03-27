@@ -469,9 +469,6 @@ public class Conference
                 updateStatisticsOnExpire();
             }
         }
-        if (includeInStatistics) {
-            System.out.println(ByteBufferPool.getStats());
-        }
     }
 
     /**

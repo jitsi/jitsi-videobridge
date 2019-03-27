@@ -114,9 +114,6 @@ class OctoTransceiver
     @Override
     public void handlePacket(byte[] buf, int off, int len)
     {
-        // XXX memory management
-//        ByteBuffer packetBuf = ByteBuffer.allocate(len);
-//        packetBuf.put(ByteBuffer.wrap(buf, off, len)).flip();
         Packet pkt = new UnparsedPacket(buf, off, len);
         PacketInfo pktInfo = new PacketInfo(pkt);
         pktInfo.setReceivedTime(System.currentTimeMillis());
