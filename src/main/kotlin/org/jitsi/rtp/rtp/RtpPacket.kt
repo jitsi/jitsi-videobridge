@@ -145,7 +145,7 @@ open class RtpPacket(
      *
      */
     fun addHeaderExtension(id:  Int, extDataLength: Int): HeaderExtension {
-        if (!(id in 1..15) || !(extDataLength in 1..16)) {
+        if (id !in 1..15 || extDataLength !in 1..16) {
             throw IllegalArgumentException("id=$id len=$extDataLength)")
         }
         // The byte[] of an RtpPacket has the following structure:
@@ -173,7 +173,7 @@ open class RtpPacket(
                 (if (extensionBit) 0 else RtpHeader.EXT_HEADER_SIZE_BYTES) +
                 1 /* the 1-byte header of the extension element */ +
                 extDataLength +
-                3 /* padding */;
+                3 /* padding */
 
         var newPayloadOffset = 0
         var newBuffer: ByteArray
@@ -209,7 +209,7 @@ open class RtpPacket(
         var extensionBytes = 0
         if (hasExtensions) {
             // (0xBEDE, length)
-            newHeaderLength += 4;
+            newHeaderLength += 4
 
             // We can't find the actual length without an iteration because
             // of padding. It is safe to iterate, because we have not yet
@@ -241,7 +241,7 @@ open class RtpPacket(
         }
 
         // Finally we get to add our extension
-        newBuffer.set(newHeaderLength++, ((id and 0x0F) shl 4).toByte() or ((extDataLength - 1) and 0x0F).toByte())
+        newBuffer[newHeaderLength++] = ((id and 0x0F) shl 4).toByte() or ((extDataLength - 1) and 0x0F).toByte()
         extensionBytes++
 
         // This is where the data of the extension that we add begins. We just
@@ -255,7 +255,7 @@ open class RtpPacket(
         repeat(numPaddingBytes) {
             // Set the padding to 0 (we have to do this because we may be
             // reusing a buffer).
-            newBuffer.set(newHeaderLength++, 0)
+            newBuffer[newHeaderLength++] = 0
         }
 
         newBuffer.putShort(extHeaderOffset + 2, ((extensionBytes + numPaddingBytes) / 4).toShort())
@@ -263,13 +263,13 @@ open class RtpPacket(
         // Now we have the new header, with the added header extension and with
         // the correct padding, in newBuffer at offset 0. Lets move it to the
         // correct place (right before the payload).
-        val newOffset = newPayloadOffset - newHeaderLength;
+        val newOffset = newPayloadOffset - newHeaderLength
         if (newOffset != 0) {
             System.arraycopy(newBuffer, 0, newBuffer, newOffset, newHeaderLength)
         }
 
         // All that is left to do is update the NewRawPacket state.
-        val oldBuffer = buffer;
+        val oldBuffer = buffer
         buffer = newBuffer
         // Reference comparison to see if we got a new buffer.  If so, return the old one to the pool
         if (oldBuffer !== newBuffer)
@@ -291,7 +291,7 @@ open class RtpPacket(
     }
 
     /**
-     * Return the toal length of the extensions in this packet, including the extension header
+     * Return the total length of the extensions in this packet, including the extension header
      */
     private val extensionBlockLength: Int
         get() {
