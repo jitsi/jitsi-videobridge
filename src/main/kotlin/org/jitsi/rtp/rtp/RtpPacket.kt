@@ -93,8 +93,8 @@ open class RtpPacket(
     /**
      * The length of the entire RTP header, including any extensions, in bytes
      */
-    val headerLength: Int
-        get() = RtpHeader.getTotalLength(buffer, offset)
+    var headerLength: Int = RtpHeader.getTotalLength(buffer, offset)
+        private set
 
     val payloadLength: Int
         get() = length - headerLength
@@ -286,6 +286,9 @@ open class RtpPacket(
         // return it.
         val newExt = headerExtensions.currHeaderExtension
         newExt.setOffsetLength(offset + extensionDataOffset, extDataLength + 1)
+
+        // Update the header length
+        headerLength = RtpHeader.getTotalLength(buffer, offset)
 
         return newExt
     }
