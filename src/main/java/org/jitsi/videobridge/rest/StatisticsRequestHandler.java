@@ -111,8 +111,7 @@ class StatisticsRequestHandler
             }
             else if (target.equals(STATISTICS + "/" + POOL))
             {
-                // TODO
-                //statsJsonObject = ByteBufferPool.getStatsJson();
+                statsJsonObject = ByteBufferPool.getStatsJson();
             }
             else if (target.equals(STATISTICS + "/" + QUEUE))
             {
@@ -224,7 +223,7 @@ class StatisticsRequestHandler
      */
     private void enablePoolStats(boolean enable)
     {
-        // TODO
+        ByteBufferPool.enableStatistics(enable);
     }
 
     /**
