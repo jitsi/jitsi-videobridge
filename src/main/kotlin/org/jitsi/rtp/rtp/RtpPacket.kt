@@ -176,10 +176,8 @@ open class RtpPacket(
                 3 /* padding */
 
         var newPayloadOffset = 0
-        var newBuffer: ByteArray
-        if (buffer.size >= maxRequiredLength) {
+        val newBuffer = if (buffer.size >= maxRequiredLength) {
             // We don't need a new buffer
-            newBuffer = buffer
             if ((offset + headerLength) >= (maxRequiredLength - currPayloadLength)) {
                 // Region A (see above) is enough to accommodate the new
                 // packet, keep the payload where it is.
@@ -189,11 +187,13 @@ open class RtpPacket(
                 newPayloadOffset = buffer.size - currPayloadLength
                 System.arraycopy(buffer, payloadOffset, buffer, newPayloadOffset, currPayloadLength)
             }
+            buffer
         } else {
             // We need a new buffer. We will place the payload to the very right.
-            newBuffer = BufferPool.getArray(maxRequiredLength)
-            newPayloadOffset = newBuffer.size - currPayloadLength
-            System.arraycopy(buffer, payloadOffset, newBuffer, newPayloadOffset, currPayloadLength)
+            BufferPool.getArray(maxRequiredLength).apply {
+                newPayloadOffset = size - currPayloadLength
+                System.arraycopy(buffer, payloadOffset, this, newPayloadOffset, currPayloadLength)
+            }
         }
 
         // By now we have the payload in a position which leaves enough space
