@@ -253,7 +253,8 @@ class HandlerImpl
     /**
      * The handler for statistics requests, initialized lazily.
      */
-    private StatisticsRequestHandler statisticsRequestHandler = null;
+    private final StatisticsRequestHandler statisticsRequestHandler
+            = new StatisticsRequestHandler(this);
 
     /**
      * Initializes a new {@code HandlerImpl} instance within a specific
@@ -363,23 +364,6 @@ class HandlerImpl
                     conferenceJSONObject.writeJSONString(response.getWriter());
                 }
             }
-        }
-    }
-
-    /**
-     * Gets the handler for statistics requests.
-     * @return
-     */
-    private StatisticsRequestHandler getStatisticsRequestHandler()
-    {
-        if (statisticsRequestHandler != null)
-        {
-            return statisticsRequestHandler;
-        }
-        else
-        {
-            return statisticsRequestHandler
-                    = new StatisticsRequestHandler(this);
         }
     }
 
@@ -1023,8 +1007,8 @@ class HandlerImpl
         }
         else if (target.startsWith(STATISTICS))
         {
-            getStatisticsRequestHandler()
-                    .handleStatsRequest(target, request, response);
+            statisticsRequestHandler.handleStatsRequest(
+                    target, request, response);
         }
         else if (target.equals(SHUTDOWN))
         {

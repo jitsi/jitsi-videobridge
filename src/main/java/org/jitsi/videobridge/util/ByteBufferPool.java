@@ -49,6 +49,11 @@ public class ByteBufferPool
             = new ConcurrentHashMap<>();
 
     /**
+     * Whether to enable keeping track of statistics.
+     */
+    private static boolean enableStatistics = false;
+
+    /**
      * Whether to enable or disable book keeping.
      */
     public static final Boolean ENABLE_BOOKKEEPING = false;
@@ -99,7 +104,11 @@ public class ByteBufferPool
      */
     public static byte[] getBuffer(int size)
     {
-        numRequests.incrementAndGet();
+        if (enableStatistics)
+        {
+            numRequests.incrementAndGet();
+        }
+
         byte[] buf = poolImpl.getBuffer(size);
         if (ENABLE_BOOKKEEPING)
         {
@@ -116,7 +125,10 @@ public class ByteBufferPool
      */
     public static void returnBuffer(byte[] buf)
     {
-        numReturns.incrementAndGet();
+        if (enableStatistics)
+        {
+            numReturns.incrementAndGet();
+        }
         poolImpl.returnBuffer(buf);
 
         if (ENABLE_BOOKKEEPING)
@@ -153,6 +165,7 @@ public class ByteBufferPool
      */
     public static void enableStatistics(boolean enable)
     {
+        enableStatistics = enable;
         poolImpl.enableStatistics(enable);
     }
 }
