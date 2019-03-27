@@ -180,20 +180,20 @@ open class RtpPacket(
         if (buffer.size >= maxRequiredLength) {
             // We don't need a new buffer
             newBuffer = buffer
-            if ((offset + headerLength) >= (maxRequiredLength - payloadLength)) {
+            if ((offset + headerLength) >= (maxRequiredLength - currPayloadLength)) {
                 // Region A (see above) is enough to accommodate the new
                 // packet, keep the payload where it is.
                 newPayloadOffset = payloadOffset
             } else {
                 // We have to use region D, so move the payload all the way to the right
-                newPayloadOffset = buffer.size - payloadLength
-                System.arraycopy(buffer, payloadOffset, buffer, newPayloadOffset, payloadLength)
+                newPayloadOffset = buffer.size - currPayloadLength
+                System.arraycopy(buffer, payloadOffset, buffer, newPayloadOffset, currPayloadLength)
             }
         } else {
             // We need a new buffer. We will place the payload to the very right.
             newBuffer = BufferPool.getArray(maxRequiredLength)
-            newPayloadOffset = newBuffer.size - payloadLength
-            System.arraycopy(buffer, payloadOffset, newBuffer, newPayloadOffset, payloadLength)
+            newPayloadOffset = newBuffer.size - currPayloadLength
+            System.arraycopy(buffer, payloadOffset, newBuffer, newPayloadOffset, currPayloadLength)
         }
 
         // By now we have the payload in a position which leaves enough space
