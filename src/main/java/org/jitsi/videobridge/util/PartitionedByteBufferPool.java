@@ -88,7 +88,7 @@ class PartitionedByteBufferPool
         {
             partitions[i] = new Partition(i, INITIAL_SIZE);
         }
-        logger.info("Initializes a new " + getClass().getSimpleName()
+        logger.info("Initialized a new " + getClass().getSimpleName()
                 + " with " + NUM_PARTITIONS + " partitions.");
     }
 
