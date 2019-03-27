@@ -53,7 +53,7 @@ class PartitionedByteBufferPool
     /**
      * Whether to accept small buffers (<1500) that are returned.
      */
-    private static final boolean ACCEPT_SMALL_BUFFERS = true;
+    private static final boolean ACCEPT_SMALL_BUFFERS = false;
 
     /**
      * The {@link Logger}
