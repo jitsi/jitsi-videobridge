@@ -75,7 +75,7 @@ class OctoTransceiver
         this.tentacle = tentacle;
         inputTreeRoot = createInputTree();
         incomingPacketQueue = new PacketInfoQueue(
-                "octo-tranceiver-q-" + hashCode(),
+                "octo-tranceiver-incoming-packet-queue",
                 TaskPools.CPU_POOL,
                 this::processPacket);
     }

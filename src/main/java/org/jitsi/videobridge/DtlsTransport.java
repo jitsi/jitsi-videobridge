@@ -94,7 +94,7 @@ public class DtlsTransport extends IceTransport
 
         outgoingPacketQueue
                 = new PacketInfoQueue(
-                        "TM-outgoing-" + endpoint.getID(),
+                        getClass().getSimpleName() + "-outgoing-packet-queue",
                         TaskPools.IO_POOL,
                         this::handleOutgoingPacket);
     }
