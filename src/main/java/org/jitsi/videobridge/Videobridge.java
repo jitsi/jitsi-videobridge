@@ -304,8 +304,7 @@ public class Videobridge
         if (logger.isInfoEnabled())
         {
             logger.info("create_conf," + conference.getLogPrefix()
-                        + "logging=" + enableLogging
-                        + "," + getConferenceCountString());
+                        + "logging=" + enableLogging);
         }
 
         return conference;
@@ -1113,110 +1112,6 @@ public class Videobridge
             System.clearProperty(RtxTransformer.DISABLE_NACK_TERMINATION_PNAME);
         }
     }
-
-    /**
-     * Returns an array that contains the total number of conferences (at index
-     * 0), channels (at index 1) and video streams (at index 2).
-     *
-     * The "video streams" count is an estimation of the total number of
-     * video streams received or sent. It may not be exactly accurate, because
-     * we assume, for example, that all endpoints are sending video. It is a
-     * better representation of the level of usage of the bridge than simply
-     * the number of channels, because it takes into account the size of each
-     * conference.
-     *
-     * We return these three together to avoid looping through all conferences
-     * multiple times when all three values are needed.
-     *
-     * @return an array that contains the total number of
-     * conferences (at index 0), channels (at index 1) and video streams (at
-     * index 2).
-     */
-    public int[] getConferenceChannelAndStreamCount()
-    {
-        Conference[] conferences = getConferences();
-        int conferenceCount = 0, channelCount = 0, streamCount = 0;
-
-        if (conferences != null && conferences.length != 0)
-        {
-            for (Conference conference : conferences)
-            {
-                if (conference != null && !conference.isExpired())
-                {
-                    conferenceCount++;
-                    //TODO(brian, boris): for now just assume every endpoint
-                    // streams video and there is no last-n
-                    int epCount = conference.getEndpointCount();
-                    streamCount += epCount * epCount;
-
-//                    for (Content content : conference.getContents())
-//                    {
-//                        if (content != null && !content.isExpired())
-//                        {
-//                            int contentChannelCount = content.getChannelCount();
-//
-//                            channelCount += contentChannelCount;
-//                            if (MediaType.VIDEO.equals(content.getMediaType()))
-//                            {
-//                                streamCount
-//                                    += getContentStreamCount(
-//                                            content,
-//                                            contentChannelCount);
-//                            }
-//                        }
-//                    }
-                }
-            }
-        }
-
-        return new int[]{conferenceCount, channelCount, streamCount};
-    }
-
-    /**
-     * Returns a short string that contains the total number of
-     * conferences/channels/video streams, for the purposes of logging.
-     *
-     * @return a short string that contains the total number of
-     * conferences/channels/video streams, for the purposes of logging.
-     */
-    String getConferenceCountString()
-    {
-        int[] metrics = getConferenceChannelAndStreamCount();
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("conf_count=").append(metrics[0])
-            .append(",ch_count=").append(metrics[1])
-            .append(",v_streams=").append(metrics[2]);
-
-        return sb.toString();
-    }
-
-    /**
-     * Gets the number of video streams for a given <tt>Content</tt>. See the
-     * documentation for {@link #getConferenceCountString()}.
-     *
-     * @param content the content.
-     * @param contentChannelCount the number of channels in the content.
-     * @return  the number of video streams for a given <tt>Content</tt>. See the
-     * documentation for {@link #getConferenceCountString()}.
-     */
-//    private int getContentStreamCount(
-//        Content content,
-//        final int contentChannelCount)
-//    {
-//        return content.getChannels().stream()
-//            .filter(
-//                c -> c != null && !c.isExpired() && c instanceof VideoChannel)
-//            .mapToInt(c ->
-//            {
-//                int lastN = ((VideoChannel) c).getLastN();
-//                int lastNSteams =
-//                    lastN == -1
-//                        ? contentChannelCount - 1
-//                        : Math.min(lastN, contentChannelCount - 1);
-//                return lastNSteams + 1; // assume we're receiving 1 stream
-//            }).sum();
-//    }
 
     /**
      * Basic statistics/metrics about the videobridge like cumulative/total
