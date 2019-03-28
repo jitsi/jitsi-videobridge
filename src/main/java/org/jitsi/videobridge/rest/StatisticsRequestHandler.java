@@ -112,8 +112,7 @@ class StatisticsRequestHandler
             }
             else if (target.equals(STATISTICS + "/" + QUEUE))
             {
-                // TODO
-                //statsJsonObject = QueueStatistics.getStatsJson();
+                statsJsonObject = QueueStatistics.getStatsJson();
             }
             else if (target.equals(STATISTICS + "/" + TRANSIT))
             {
@@ -200,6 +199,7 @@ class StatisticsRequestHandler
      */
     private void enableNodeStats(boolean enable)
     {
+        logger.info("Enabling node stats: " + enable);
         StatsKeepingNode.Companion.setEnableStatistics(enable);
     }
 
@@ -210,7 +210,8 @@ class StatisticsRequestHandler
      */
     private void enableQueueStats(boolean enable)
     {
-        // TODO
+        logger.info("Enabling queue stats: " + enable);
+        PacketQueue.setEnableStatisticsDefault(enable);
     }
 
     /**
@@ -220,6 +221,7 @@ class StatisticsRequestHandler
      */
     private void enablePoolStats(boolean enable)
     {
+        logger.info("Enabling pool stats: " + enable);
         ByteBufferPool.enableStatistics(enable);
     }
 
