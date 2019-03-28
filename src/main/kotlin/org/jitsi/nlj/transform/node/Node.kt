@@ -28,7 +28,9 @@ import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.PacketPredicate
+import org.json.simple.JSONObject
 import java.time.Duration
+import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Predicate
 import kotlin.properties.Delegates
 import kotlin.streams.toList
@@ -146,15 +148,14 @@ sealed class StatsKeepingNode(name: String): Node(name) {
     private var lastPacketTime: Long = -1
 
     /**
-     * Total nanoseconds spent processing packets in this node.
+     * Keeps stats for this [Node]
      */
-    private var totalProcessingDuration: Long = 0
+    private val stats = NodeStats()
 
-    private var numInputPackets = 0
-    private var numOutputPackets = 0
-    private var numInputBytes: Long = 0
-
-    private var numDiscardedPackets = 0
+    /**
+     * Avoid stopping more than once.
+     */
+    private var stopped = false
 
     /**
      * The function that all subclasses should implement to do the actual
@@ -170,29 +171,29 @@ sealed class StatsKeepingNode(name: String): Node(name) {
     }
 
     override fun getNodeStats(): NodeStatsBlock {
-        return NodeStatsBlock("Node $name ${hashCode()}").apply {
-            addStat("numInputPackets: $numInputPackets")
-            addStat("numOutputPackets: $numOutputPackets")
-            addStat("numDiscardedPackets: $numDiscardedPackets")
-            addStat("total time spent: ${Duration.ofNanos(totalProcessingDuration).toMillis()} ms")
-            addStat("average time spent per packet: ${Duration.ofNanos(totalProcessingDuration / Math.max(numInputPackets, 1)).toNanos()} ns")
-            addStat("$numInputBytes bytes over ${Duration.ofNanos(lastPacketTime - firstPacketTime).toMillis()} ms")
-            addStat("throughput: ${getMbps(numInputBytes, Duration.ofNanos(lastPacketTime - firstPacketTime))} mbps")
-            addStat("processing throughput: ${getMbps(numInputBytes, Duration.ofNanos(totalProcessingDuration))} mbps")
-        }
+        val block = NodeStatsBlock("Node $name ${hashCode()}")
+        stats.appendTo(block)
+        block.addStat(
+            "${stats.numInputBytes} bytes over ${Duration.ofNanos(lastPacketTime - firstPacketTime).toMillis()} ms")
+        block.addStat(
+            "throughput: ${getMbps(stats.numInputBytes, Duration.ofNanos(lastPacketTime - firstPacketTime))} mbps")
+
+        return block
     }
 
     private fun onEntry(packetInfo: PacketInfo) {
-        startTime = System.nanoTime()
-        if (firstPacketTime == -1L) {
-            firstPacketTime = startTime
+        if (enableStatistics) {
+            startTime = System.nanoTime()
+            if (firstPacketTime == -1L) {
+                firstPacketTime = startTime
+            }
+
+            stats.numInputPackets++
+            stats.numInputBytes += packetInfo.packet.length
+
+            packetInfo.addEvent(nodeEntryString)
+            lastPacketTime = startTime
         }
-
-        numInputPackets++
-        numInputBytes += packetInfo.packet.length
-
-        packetInfo.addEvent(nodeEntryString)
-        lastPacketTime = startTime
     }
 
     /**
@@ -200,12 +201,15 @@ sealed class StatsKeepingNode(name: String): Node(name) {
      * other nodes, so that [Node] can keep track of its statistics.
      */
     protected fun doneProcessing(packetInfo: PacketInfo?) {
-        val processingDuration = System.nanoTime() - startTime
-        totalProcessingDuration += processingDuration
+        if (enableStatistics) {
+            val processingDuration = System.nanoTime() - startTime
+            stats.totalProcessingDurationNs += processingDuration
+            stats.maxProcessingDurationNs = Math.max(stats.maxProcessingDurationNs, processingDuration)
 
-        packetInfo?.let {
-            numOutputPackets++
-            it.addEvent(nodeExitString)
+            packetInfo?.let {
+                stats.numOutputPackets++
+                it.addEvent(nodeExitString)
+            }
         }
     }
 
@@ -214,18 +218,122 @@ sealed class StatsKeepingNode(name: String): Node(name) {
      * other nodes, so that [Node] can keep track of its statistics.
      */
     protected fun doneProcessing(packetInfos: List<PacketInfo>) {
-        val processingDuration = System.nanoTime() - startTime
-        totalProcessingDuration += processingDuration
+        if (enableStatistics) {
+            val processingDuration = System.nanoTime() - startTime
+            stats.totalProcessingDurationNs += processingDuration
+            stats.maxProcessingDurationNs = Math.max(stats.maxProcessingDurationNs, processingDuration)
 
-        numOutputPackets += packetInfos.size
-        packetInfos.forEach {
-            it.addEvent(nodeExitString)
+            stats.numOutputPackets += packetInfos.size
+            packetInfos.forEach {
+                it.addEvent(nodeExitString)
+            }
         }
     }
 
     protected fun packetDiscarded(packetInfo: PacketInfo) {
-        numDiscardedPackets++
+        stats.numDiscardedPackets++
         BufferPool.returnBuffer(packetInfo.packet.buffer)
+    }
+
+
+    override fun stop() {
+        if (stopped) {
+            return
+        }
+        stopped = true
+
+        if (enableStatistics && stats.numInputPackets > 0) {
+            synchronized(globalStats) {
+                val classStats = globalStats.computeIfAbsent(this::class.toString()) { NodeStats() }
+                classStats.aggregate(stats)
+            }
+        }
+    }
+
+    companion object {
+        /**
+         * Maps a [Node]'s class name to a [NodeStats] object with aggregated stats for all instances of that class.
+         */
+        private val globalStats: MutableMap<String, NodeStats> = ConcurrentHashMap()
+
+        var enableStatistics = true
+
+        /**
+         * Gets the aggregated statistics for all classes as a JSON map.
+         */
+        fun getStatsJson(): JSONObject {
+            val jsonObject = JSONObject()
+            globalStats.forEach { className, stats ->
+                jsonObject[className] = stats.getJson()
+            }
+            return jsonObject
+        }
+    }
+
+    data class NodeStats(
+        /**
+         * Total nanoseconds spent processing packets in this node.
+         */
+        var totalProcessingDurationNs: Long = 0,
+        var numInputPackets: Long = 0,
+        var numOutputPackets: Long = 0,
+        var numInputBytes: Long = 0,
+        var numDiscardedPackets: Long = 0,
+        /**
+         * The longest time it took to process a single packet.
+         */
+        var maxProcessingDurationNs: Long = -1
+    ) {
+        /**
+         * How many class instances have been aggregated
+         */
+        private var numAggregates: Int = 0
+        private val averageProcessingTimePerPacketNs
+            get() = totalProcessingDurationNs / Math.max(numInputPackets, 1)
+        private val processingThroughputMbps
+            get() = getMbps(numInputBytes, Duration.ofNanos(totalProcessingDurationNs))
+        private val totalProcessingDurationMs
+            get() = Duration.ofNanos(totalProcessingDurationNs).toMillis()
+        private val maxProcessingDurationMs: Double
+            get() = maxProcessingDurationNs / 1000_000.0
+
+        fun appendTo(block: NodeStatsBlock) {
+            block.apply {
+                addStat("numInputPackets: $numInputPackets")
+                addStat("numOutputPackets: $numOutputPackets")
+                addStat("numDiscardedPackets: $numDiscardedPackets")
+                addStat("total time spent: $totalProcessingDurationMs} ms")
+                addStat("average time spent per packet: $averageProcessingTimePerPacketNs ns")
+                addStat("processing throughput: $processingThroughputMbps Mbps")
+                addStat("max packet process time: $maxProcessingDurationMs ms")
+            }
+        }
+
+        fun getJson(): JSONObject {
+            val jsonObject = JSONObject()
+            jsonObject["total_processing_duration_ms"] = totalProcessingDurationMs
+            jsonObject["input_packets"] = numInputPackets
+            jsonObject["output_packets"] = numOutputPackets
+            jsonObject["input_bytes"] = numInputBytes
+            jsonObject["discarded_packets"] = numDiscardedPackets
+            jsonObject["max_processing_duration_ms"] = maxProcessingDurationMs
+            jsonObject["average_processing_time_ns"] = averageProcessingTimePerPacketNs
+            jsonObject["processing_throughput_mbps"] = processingThroughputMbps
+            jsonObject["num_aggregates"] = numAggregates
+            return jsonObject
+        }
+
+        fun aggregate(other: NodeStats) {
+            if (other.numInputPackets > 0) {
+                numAggregates++
+                totalProcessingDurationNs += other.totalProcessingDurationNs
+                numInputPackets += other.numInputPackets
+                numOutputPackets += other.numOutputPackets
+                numInputBytes += other.numInputBytes
+                numDiscardedPackets += other.numDiscardedPackets
+                maxProcessingDurationNs = Math.max(maxProcessingDurationNs, other.maxProcessingDurationNs)
+            }
+        }
     }
 }
 
