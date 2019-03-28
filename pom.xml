@@ -166,7 +166,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-utils</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0-20190328.184331-5</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
