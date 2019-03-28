@@ -104,10 +104,7 @@ class StatisticsRequestHandler
             }
             else if (target.equals(STATISTICS + "/" + NODE))
             {
-                // TODO
-                statsJsonObject = new JSONObject();
-                //statsJsonObject.put(
-                //        "node_stats", StatsKeepingNode.Companion.getStatsMap());
+                statsJsonObject = StatsKeepingNode.Companion.getStatsJson();
             }
             else if (target.equals(STATISTICS + "/" + POOL))
             {
@@ -203,7 +200,7 @@ class StatisticsRequestHandler
      */
     private void enableNodeStats(boolean enable)
     {
-        // TODO
+        StatsKeepingNode.Companion.setEnableStatistics(enable);
     }
 
     /**
