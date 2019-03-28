@@ -15,15 +15,12 @@
  */
 package org.jitsi.nlj.util
 
-import java.math.BigDecimal
 import java.time.Duration
 
 class Util {
     companion object {
-        fun getMbps(numBytes: Long, duration: Duration): String {
-            val numBits = BigDecimal(numBytes * 8)
-            val megaBits = (numBits / BigDecimal(1000000.0)).toFloat()
-            return "%.2f".format((megaBits / duration.toMillis()) * Duration.ofSeconds(1).toMillis())
+        fun getMbps(numBytes: Long, duration: Duration): Double {
+            return (numBytes * 8.0) / (duration.toMillis() * 1000)
         }
     }
 }
