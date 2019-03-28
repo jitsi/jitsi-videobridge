@@ -515,15 +515,9 @@ public class Conference
 
         if (logger.isInfoEnabled())
         {
-
-            int[] metrics = videobridge.getConferenceChannelAndStreamCount();
-
             StringBuilder sb = new StringBuilder("expire_conf,");
             sb.append(logPrefix)
                 .append("duration=").append(durationSeconds)
-                .append(",conf_count=").append(metrics[0])
-                .append(",ch_count=").append(metrics[1])
-                .append(",v_streams=").append(metrics[2])
                 .append(",conf_completed=")
                     .append(videobridgeStatistics.totalConferencesCompleted)
                 .append(",has_failed=").append(hasFailed)
