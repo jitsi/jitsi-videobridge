@@ -87,6 +87,7 @@ abstract class AbstractSrtpTransformerNode(name: String) : MultipleOutputTransfo
     }
 
     override fun stop() {
+        super.stop()
         cachedPackets.forEach { packetDiscarded(it) }
     }
 }
