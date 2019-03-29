@@ -15,8 +15,8 @@
  */
 package org.jitsi.videobridge;
 
-import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.utils.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 

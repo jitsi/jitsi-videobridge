@@ -22,6 +22,7 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
+import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
 
 import java.io.*;

@@ -15,8 +15,8 @@
  */
 package org.jitsi.videobridge.octo;
 
-import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.utils.*;
 
 /**
  * A utility class which handles the on-the-wire Octo format. Octo encapsulates
