@@ -29,7 +29,6 @@ import net.java.sip.communicator.util.*;
 import net.sf.fmj.media.rtp.*;
 import net.sf.fmj.media.rtp.RTPHeader;
 
-import org.ice4j.socket.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
@@ -44,6 +43,7 @@ import org.jitsi.service.neomedia.stats.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
+import org.jitsi.utils.*;
 import org.jitsi.videobridge.transform.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jxmpp.jid.*;

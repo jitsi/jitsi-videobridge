@@ -15,8 +15,8 @@
  */
 package org.jitsi.videobridge;
 
-import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.recording.*;
+import org.jitsi.utils.*;
 
 /**
  * An implementation of <tt>RecorderEventHandler</tt> which intercepts

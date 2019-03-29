@@ -16,13 +16,12 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.util.event.*;
+import org.jitsi.utils.*;
 
 import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
-import java.util.stream.*;
 
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
