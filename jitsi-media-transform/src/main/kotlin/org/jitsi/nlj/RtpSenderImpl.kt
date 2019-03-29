@@ -72,7 +72,7 @@ class RtpSenderImpl(
     private val outgoingRtpRoot: Node
     private val outgoingRtxRoot: Node
     private val outgoingRtcpRoot: Node
-    private val incomingPacketQueue = PacketInfoQueue(id, executor, this::processPacket)
+    private val incomingPacketQueue = PacketInfoQueue("rtp-sender-incoming-packet-queue", executor, this::processPacket)
     var numIncomingBytes: Long = 0
     var firstPacketWrittenTime = -1L
     var lastPacketWrittenTime = -1L

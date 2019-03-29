@@ -24,7 +24,7 @@ class PacketInfoQueue(
     id: String,
     executor: ExecutorService,
     handler: (PacketInfo) -> Boolean
-) : PacketQueue<PacketInfo>(100, false, false, id, handler, executor) {
+) : PacketQueue<PacketInfo>(100, false, null, id, handler, executor) {
     override fun getBuffer(packetInfo: PacketInfo): ByteArray {
         TODO()
 //        return packetInfo.packet.getBuffer().array()

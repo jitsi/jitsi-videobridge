@@ -49,7 +49,7 @@ class EventTimeline(
      */
     fun totalDelay(): Duration {
         return referenceTime?.let {
-            return Duration.ofMillis(timeline.last().second - it)
+            return Duration.ofMillis(timeline.last().second)
 
         } ?: Duration.ofMillis(0)
     }
