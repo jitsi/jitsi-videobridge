@@ -170,15 +170,12 @@ sealed class StatsKeepingNode(name: String): Node(name) {
         doProcessPacket(packetInfo)
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        val block = NodeStatsBlock("Node $name ${hashCode()}")
-        stats.appendTo(block)
-        block.addStat(
-            "${stats.numInputBytes} bytes over ${Duration.ofNanos(lastPacketTime - firstPacketTime).toMillis()} ms")
-        block.addStat(
-            "throughput: ${getMbps(stats.numInputBytes, Duration.ofNanos(lastPacketTime - firstPacketTime))} mbps")
-
-        return block
+    override fun getNodeStats() = NodeStatsBlock("Node $name ${hashCode()}").apply {
+        this@StatsKeepingNode.stats.appendTo(this)
+        val numBytes = this@StatsKeepingNode.stats.numInputBytes
+        addStat("$numBytes bytes over ${Duration.ofNanos(lastPacketTime - firstPacketTime).toMillis()} ms")
+        addStat(
+            "throughput: ${getMbps(numBytes, Duration.ofNanos(lastPacketTime - firstPacketTime))} mbps")
     }
 
     private fun onEntry(packetInfo: PacketInfo) {
