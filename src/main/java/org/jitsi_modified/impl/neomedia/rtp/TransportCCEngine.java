@@ -15,7 +15,6 @@
  */
 package org.jitsi_modified.impl.neomedia.rtp;
 
-import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtcp.*;
@@ -27,10 +26,8 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.utils.*;
-import org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator.RemoteBitrateEstimatorAbsSendTime;
 
 import java.util.*;
-import java.lang.Deprecated;
 
 /**
  * Implements transport-cc functionality as a {@link TransformEngine}. The
@@ -167,19 +164,18 @@ public class TransportCCEngine
 
     public void tccReceived(RtcpFbTccPacket tccPacket)
     {
-        tccPacket.forEach(entry ->
+        if (remoteReferenceTimeMs == -1)
         {
-            int tccSeqNum = entry.getKey();
-            long recvTimestamp = entry.getValue();
-            if (recvTimestamp == -1)
-            {
-                return;
-            }
-            if (remoteReferenceTimeMs == -1)
-            {
-                remoteReferenceTimeMs = tccPacket.getReferenceTimeMs();
-                localReferenceTimeMs = System.currentTimeMillis();
-            }
+            remoteReferenceTimeMs = tccPacket.GetBaseTimeUs() / 1000;
+            localReferenceTimeMs = System.currentTimeMillis();
+        }
+        double currArrivalTimestampMs = tccPacket.GetBaseTimeUs() / 1000.0;
+
+        for (ReceivedPacket receivedPacket : tccPacket)
+        {
+            int tccSeqNum = receivedPacket.getSeqNum();
+            double deltaMs = receivedPacket.getDeltaTicks() / 4.0;
+            currArrivalTimestampMs += deltaMs;
 
             PacketDetail packetDetail;
             synchronized (sentPacketsSyncRoot)
@@ -189,30 +185,19 @@ public class TransportCCEngine
 
             if (packetDetail == null)
             {
-                return;
+                continue;
             }
-            long delta = recvTimestamp - tccPacket.getReferenceTimeMs();
-//            logger.info("Got tcc for packet " + tccSeqNum + ", the reference time is " + tccPacket.getFci().getReferenceTimeMs() +
-//                    " and it was received by the far side at " + recvTimestamp + ", meaning it has a delta of " +
-//                            delta + ".  it was originally sent at " +
-//                            packetDetail.packetSendTimeMs + " meaning in that clock it arrived at " +
-//                            (packetDetail.packetSendTimeMs + delta));
-            long arrivalTimeMs = packetDetail.packetSendTimeMs + delta;
 
-//            logger.info("Notifying bitrate estimator of incoming packet info: " +
-//                    "arrival time: " + arrivalTimeMs + ", sendTime24Bits: " + sendTime24bits +
-//                    " packet length: " + packetDetail.packetLength + ", ssrc: " +
-//                    tccPacket.getMediaSourceSsrc());
+            long arrivalTimeMsInLocalClock = (long)currArrivalTimestampMs - remoteReferenceTimeMs + localReferenceTimeMs;
+            long sendTime24bitsInLocalClock = RemoteBitrateEstimatorAbsSendTime.convertMsTo24Bits(packetDetail.packetSendTimeMs);
+
             bitrateEstimatorAbsSendTime.incomingPacketInfo(
-                    arrivalTimeMs,
-//                    sendTime24bits,
-                    packetDetail.packetSendTimeMs,
+                    arrivalTimeMsInLocalClock,
+                    sendTime24bitsInLocalClock,
                     packetDetail.packetLength,
                     tccPacket.getMediaSourceSsrc()
             );
-//            logger.info("Latest bitrate estimate for " + tccPacket.getHeader().getSenderSsrc() +
-//                    ": " + bitrateEstimatorAbsSendTime.getLatestEstimate() + "bps");
-        });
+        }
     }
 
     /**
