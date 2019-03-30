@@ -127,6 +127,7 @@ class Transceiver(
 
     override fun onReceiveBitrateChanged(ssrcs: MutableCollection<Long>?, bandwidth: Long) {
         bandwidthEstimator.updateReceiverEstimate(bandwidth)
+        rtpReceiver.handleEvent(BandwidthEstimationChangedEvent(bandwidth))
     }
 
     fun onBandwidthEstimateChanged(listener: BandwidthEstimator.Listener) {

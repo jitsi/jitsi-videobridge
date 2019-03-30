@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
+import org.jitsi.nlj.BandwidthEstimationChangedEvent
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.ReceiveSsrcAddedEvent
@@ -24,7 +25,10 @@ import org.jitsi.nlj.RtpExtensionClearEvent
 import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
+import org.jitsi.nlj.util.cdebug
+import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
+import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
@@ -32,21 +36,29 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import unsigned.toUInt
 import java.util.TreeMap
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 
 /**
  * Extract the TCC sequence numbers from each passing packet and generate
  * a TCC packet to send transmit to the sender.
  */
 class TccGeneratorNode(
-    private val onTccPacketReady: (RtcpPacket) -> Unit = {}
+    private val onTccPacketReady: (RtcpPacket) -> Unit = {},
+    private val scheduler: ScheduledExecutorService
 ) : ObserverNode("TCC generator") {
     private var tccExtensionId: Int? = null
     private var currTccSeqNum: Int = 0
     private var lastTccSentTime: Long = 0
+    private final val lock = Any()
     // Tcc seq num -> arrival time in ms
     private val packetArrivalTimes = TreeMap<Int, Long>()
     // The first sequence number of the current tcc feedback packet
     private var windowStartSeq: Int = -1
+    private var sendIntervalMs: Long = 0
+    private var running = true
+    private var periodicFeedbacks = false
     /**
      * SSRCs we've been told this endpoint will transmit on.  We'll use an
      * SSRC from this list for the RTCPFB mediaSourceSsrc field in the
@@ -59,14 +71,115 @@ class TccGeneratorNode(
     }
     private var numTccSent: Int = 0
 
+    init {
+        reschedule()
+    }
+
     override fun observe(packetInfo: PacketInfo) {
         tccExtensionId?.let { tccExtId ->
             val rtpPacket = packetInfo.packetAs<RtpPacket>()
             rtpPacket.getHeaderExtension(tccExtId)?.let { ext ->
                 val tccSeqNum = TccHeaderExtension.getSequenceNumber(ext)
-                addPacket(tccSeqNum, packetInfo.receivedTime, rtpPacket.isMarked)
+                synchronized(lock) {
+                    addPacket(tccSeqNum, packetInfo.receivedTime, rtpPacket.isMarked)
+                }
             }
         }
+    }
+
+    //TODO: we don't handle tcc seq num rollover here, but the old code didn't seem to either?
+    private fun addPacket(tccSeqNum: Int, timestamp: Long, isMarked: Boolean) {
+        if (packetArrivalTimes.ceilingKey(windowStartSeq) == null) {
+            // Packets in map are all older than the start of the next tcc feedback packet,
+            // remove them
+            //TODO: chrome does something more advanced. is this good enough?
+            packetArrivalTimes.clear()
+        }
+        if (windowStartSeq == -1) {
+            windowStartSeq = tccSeqNum
+        } else if (tccSeqNum < windowStartSeq) {
+            windowStartSeq = tccSeqNum
+        }
+        packetArrivalTimes.putIfAbsent(tccSeqNum, timestamp)
+        if (!periodicFeedbacks && isTccReadyToSend(isMarked)) {
+            buildAndSendFeedback()
+        }
+    }
+
+    private fun sendPeriodicFeedbacks() {
+        try {
+            synchronized(lock) {
+                logger.cdebug { "${System.identityHashCode(this)} sending periodic feedback at " +
+                        "${ java.lang.System.currentTimeMillis()}, window start seq is $windowStartSeq" }
+                buildAndSendFeedback()
+            }
+        } catch (t: Throwable) {
+            logger.error("Error sending feedback", t)
+        } finally {
+            reschedule()
+        }
+    }
+
+    private fun buildAndSendFeedback() {
+        val tccBuilder = RtcpFbTccPacketBuilder(
+            mediaSourceSsrc = mediaSsrcs.firstOr(-1L),
+            feedbackPacketSeqNum = currTccSeqNum++
+        )
+        // windowStartSeq is the first sequence number to include in the current feedback, but we may not have
+        // received it so the base time shall be the time of the first received packet which will be included
+        // in this feedback
+        val firstEntry = packetArrivalTimes.ceilingEntry(windowStartSeq)
+        if (firstEntry == null) {
+            reschedule()
+            return
+        }
+        tccBuilder.SetBase(windowStartSeq, firstEntry.value * 1000)
+
+        var nextSequenceNumber = windowStartSeq
+        val feedbackBlockPackets = packetArrivalTimes.tailMap(windowStartSeq)
+        feedbackBlockPackets.forEach { (seqNum, timestampMs) ->
+            if (!tccBuilder.AddReceivedPacket(seqNum, timestampMs * 1000)) {
+                return@forEach
+            }
+            nextSequenceNumber = seqNum + 1
+        }
+        sendTcc(tccBuilder.build())
+
+        // The next window will start with the sequence number after the last one we included in the previous
+        // feedback
+        windowStartSeq = nextSequenceNumber
+
+    }
+
+    private fun sendTcc(tccPacket: RtcpFbTccPacket) {
+        onTccPacketReady(tccPacket)
+        numTccSent++
+        lastTccSentTime = System.currentTimeMillis()
+    }
+
+    private fun reschedule() {
+        if (running && periodicFeedbacks) {
+            scheduler.schedule(::sendPeriodicFeedbacks, sendIntervalMs, TimeUnit.MILLISECONDS)
+        }
+    }
+
+    private fun isTccReadyToSend(currentPacketMarked: Boolean): Boolean {
+        val timeSinceLastTcc = if (lastTccSentTime == -1L) 0 else System.currentTimeMillis() - lastTccSentTime
+        return timeSinceLastTcc >= 100 ||
+            ((timeSinceLastTcc >= 20) && currentPacketMarked)
+    }
+
+    private fun onBandwidthChanged(bandwidthBps: Long) {
+        synchronized(lock) {
+            // Let TWCC reports occupy 5% of total bandwidth
+            sendIntervalMs = (.5 + kTwccReportSize * 8.0 * 1000.0 /
+                    (.05 * bandwidthBps).coerceIn(kMinTwccRate, kMaxTwccRate)).toPositiveLong()
+            logger.cdebug { "Bandwidth is now $bandwidthBps, tcc send interval is $sendIntervalMs ms" }
+        }
+    }
+
+    override fun stop() {
+        running = false
     }
 
     override fun handleEvent(event: Event) {
@@ -80,68 +193,8 @@ class TccGeneratorNode(
             is RtpExtensionClearEvent -> tccExtensionId = null
             is ReceiveSsrcAddedEvent -> mediaSsrcs.add(event.ssrc)
             is ReceiveSsrcRemovedEvent -> mediaSsrcs.remove(event.ssrc)
+            is BandwidthEstimationChangedEvent -> onBandwidthChanged(event.bandwidthBps)
         }
-    }
-
-    //TODO: we don't handle tcc seq num rollover here, but the old code didn't seem to either?
-    private fun addPacket(tccSeqNum: Int, timestamp: Long, isMarked: Boolean) {
-        println("${System.identityHashCode(this)}  received seq num $tccSeqNum with recv timestamp $timestamp")
-        if (packetArrivalTimes.ceilingKey(windowStartSeq) == null) {
-            // Packets in map are all older than the start of the next tcc feedback packet,
-            // remove them
-            //TODO: chrome does something more advanced. is this good enough?
-            packetArrivalTimes.clear()
-        }
-        if (windowStartSeq == -1) {
-            windowStartSeq = tccSeqNum
-        } else if (tccSeqNum < windowStartSeq) {
-            windowStartSeq = tccSeqNum
-        }
-        packetArrivalTimes.putIfAbsent(tccSeqNum, timestamp)
-        if (isTccReadyToSend(isMarked)) {
-            sendPeriodicFeedbacks()
-        }
-    }
-
-    private fun sendPeriodicFeedbacks() {
-        val tccBuilder = RtcpFbTccPacketBuilder(
-            mediaSourceSsrc = mediaSsrcs.firstOr(-1L),
-            feedbackPacketSeqNum = currTccSeqNum++
-        )
-        // windowStartSeq is the first sequence number to include in the current feedback, but we may not have
-        // received it so the base time shall be the time of the first received packet which will be included
-        // in this feedback
-        val firstEntry = packetArrivalTimes.ceilingEntry(windowStartSeq)
-        println("${System.identityHashCode(this)}  Creating new tcc.  window start seq is $windowStartSeq, first received packet is " +
-            "${firstEntry.key} received at ${firstEntry.value}")
-        tccBuilder.SetBase(windowStartSeq, firstEntry.value * 1000)
-
-        var nextSequenceNumber = windowStartSeq
-        val feedbackBlockPackets = packetArrivalTimes.tailMap(windowStartSeq)
-        feedbackBlockPackets.forEach { (seqNum, timestampMs) ->
-            println("${System.identityHashCode(this)}  adding seq num $seqNum with recv timestamp $timestampMs")
-            if (!tccBuilder.AddReceivedPacket(seqNum, timestampMs * 1000)) {
-                return@forEach
-            }
-            nextSequenceNumber = seqNum + 1
-        }
-        sendTcc(tccBuilder.build())
-
-        // The next window will start with the sequence number after the last one we included in the previous
-        // feedback
-        windowStartSeq = nextSequenceNumber
-    }
-
-    private fun sendTcc(tccPacket: RtcpFbTccPacket) {
-        onTccPacketReady(tccPacket)
-        numTccSent++
-        lastTccSentTime = System.currentTimeMillis()
-    }
-
-    private fun isTccReadyToSend(currentPacketMarked: Boolean): Boolean {
-        val timeSinceLastTcc = if (lastTccSentTime == -1L) 0 else System.currentTimeMillis() - lastTccSentTime
-        return timeSinceLastTcc >= 100 ||
-            ((timeSinceLastTcc >= 20) && currentPacketMarked)
     }
 
     override fun getNodeStats(): NodeStatsBlock {
@@ -150,5 +203,18 @@ class TccGeneratorNode(
             addAll(parentStats)
             addStat( "num tcc packets sent: $numTccSent")
         }
+    }
+
+    companion object {
+        private const val kMaxSendIntervalMs = 250
+        private const val kMinSendIntervalMs = 50
+        // TwccReportSize = Ipv4(20B) + UDP(8B) + SRTP(10B) +
+        // AverageTwccReport(30B)
+        // TwccReport size at 50ms interval is 24 byte.
+        // TwccReport size at 250ms interval is 36 byte.
+        // AverageTwccReport = (TwccReport(50ms) + TwccReport(250ms)) / 2
+        private const val kTwccReportSize = 20 + 8 + 10 + 30
+        private const val kMinTwccRate = kTwccReportSize * 8.0 * 1000.0 / kMaxSendIntervalMs
+        private const val kMaxTwccRate = kTwccReportSize * 8.0 * 1000.0 / kMinSendIntervalMs
     }
 }
