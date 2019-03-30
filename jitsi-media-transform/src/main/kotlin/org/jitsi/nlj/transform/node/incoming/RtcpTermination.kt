@@ -18,11 +18,8 @@ package org.jitsi.nlj.transform.node.incoming
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.FilterNode
 import org.jitsi.nlj.transform.node.TransformerNode
-import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
-import org.jitsi.rtp.extensions.bytearray.toHex
 import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtcp.RtcpByePacket
 import org.jitsi.rtp.rtcp.RtcpPacket
