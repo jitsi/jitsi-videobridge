@@ -190,7 +190,9 @@ public class OctoRelay
 
     /**
      * Handles an Octo packet that was received from the socket.
-     * @param p the packet.
+     * @param buf the buffer which contains the received data.
+     * @param off the offset where the data starts.
+     * @param len the length
      */
     private void handlePacket(byte[] buf, int off, int len)
     {
@@ -274,6 +276,9 @@ public class OctoRelay
          }
      }
 
+    /**
+     * Sends an RTP packet encapsulated in Octo to the specified targets.
+     */
     void sendRtp(
             Packet packet,
             Set<SocketAddress> targets,
@@ -290,6 +295,9 @@ public class OctoRelay
                 MediaType.VIDEO);
     }
 
+    /**
+     * Sends an string message encapsulated in Octo to the specified targets.
+     */
     void sendString(
             String str,
             Set<SocketAddress> targets,
@@ -304,6 +312,17 @@ public class OctoRelay
                 MediaType.DATA);
     }
 
+    /**
+     * Sends a specific {@code byte[]} encapsulated in Octo to the
+     * specified list of targets.
+     * @param buf the array which holds the data to send.
+     * @param off the offset at which data starts.
+     * @param len the length of the data to send.
+     * @param targets the list of targets to send to.
+     * @param conferenceId the ID of the conference.
+     * @param endpointId the ID of the source endpoint.
+     * @param mediaType the media type.
+     */
     void send(
             byte[] buf,
             int off,
@@ -392,7 +411,16 @@ public class OctoRelay
      */
     interface PacketHandler
     {
+        /**
+         * Handles an RTP or RTCP packet.
+         * @param packet the packet.
+         */
         void handlePacket(Packet packet);
+
+        /**
+         * Handles a string message.
+         * @param message message.
+         */
         void handleMessage(String message);
     }
 

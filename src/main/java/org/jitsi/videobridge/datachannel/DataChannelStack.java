@@ -25,6 +25,10 @@ import java.util.*;
 /**
  * We need the stack to look at all incoming messages so that it can listen for an 'open channel'
  * message from the remote side
+ *
+ * TODO this needs documentation
+ *
+ * @author Brian Baldino
  */
 //TODO: revisit thread safety in here
 //TODO: add an arbitrary ID
@@ -35,16 +39,23 @@ public class DataChannelStack
     private final Logger logger = Logger.getLogger(this.getClass());
     private DataChannelStackEventListener listener;
 
+    /**
+     * Initializes a new {@link DataChannelStack} with a specific sender.
+     * @param dataChannelDataSender the sender.
+     */
     public DataChannelStack(DataChannelDataSender dataChannelDataSender)
     {
         this.dataChannelDataSender = dataChannelDataSender;
     }
 
+    /**
+     * Handles a received packet.
+     */
     public void onIncomingDataChannelPacket(ByteBuffer data, int sid, int ppid)
     {
         if (logger.isDebugEnabled())
         {
-            logger.debug("Data channel stack reveived SCTP message");
+            logger.debug("Data channel stack received SCTP message");
         }
         DataChannelMessage message = DataChannelProtocolMessageParser.parse(data.array(), ppid);
         if (message instanceof OpenChannelMessage)
@@ -78,6 +89,7 @@ public class DataChannelStack
     {
         this.listener = listener;
     }
+
     /**
      * Opens new WebRTC data channel using specified parameters.
      * @param channelType channel type as defined in control protocol description.
@@ -119,21 +131,40 @@ public class DataChannelStack
         }
     }
 
-    //TODO: these 2 feel a bit awkward since they are so similar, but we use a different one for a remote
-    // channel (fired by the stack) and a locally-created channel (fired by the data channel itself).
-    public interface DataChannelStackEventListener {
+    /**
+     * TODO: these 2 feel a bit awkward since they are so similar, but we use
+     * a different one for a remote channel (fired by the stack) and a
+     * locally-created channel (fired by the data channel itself).
+     */
+    public interface DataChannelStackEventListener
+    {
+        /**
+         * The data channel was opened by the remote side.
+         */
         void onDataChannelOpenedRemotely(DataChannel dataChannel);
     }
 
-    public interface DataChannelEventListener {
+    public interface DataChannelEventListener
+    {
+        /**
+         * The data channel was opened.
+         */
         void onDataChannelOpened();
     }
 
-    public interface DataChannelMessageListener {
+    public interface DataChannelMessageListener
+    {
+        /**
+         * A message received.
+         */
         void onDataChannelMessage(DataChannelMessage dataChannelMessage);
     }
 
-    public interface DataChannelDataSender {
+    public interface DataChannelDataSender
+    {
+        /**
+         * Sends a message.
+         */
         int send(ByteBuffer data, int sid, int ppid);
     }
 }

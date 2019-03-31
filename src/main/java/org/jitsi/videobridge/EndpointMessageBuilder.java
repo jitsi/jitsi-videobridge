@@ -200,6 +200,9 @@ public class EndpointMessageBuilder
     }
 
 
+    /**
+     * Returns a JSON array representation of a collection of strings.
+     */
     private static String getJsonString(Collection<String> strings)
     {
         JSONArray array = new JSONArray();

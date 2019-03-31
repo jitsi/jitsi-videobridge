@@ -217,6 +217,9 @@ public class ChannelShim
         endpoint.setLastN(lastN);
     }
 
+    /**
+     * Describes this channel in an IQ.
+     */
     public void describe(ColibriConferenceIQ.ChannelCommon commonIq)
     {
         commonIq.setID(id);

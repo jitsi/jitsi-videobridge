@@ -593,6 +593,9 @@ public class PublicRESTBundleActivator
          */
         private final int targetPort;
 
+        /**
+         * Initializes a new {@link RedirectHandler}.
+         */
         RedirectHandler(String targetProtocol, int targetPort)
         {
             this.targetProtocol = targetProtocol;

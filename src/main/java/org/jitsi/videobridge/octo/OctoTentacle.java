@@ -164,8 +164,9 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      * Sets the list of sources and source groups which describe the RTP streams
      * we expect to receive from remote Octo relays.
      *
-     * @param sources the list of sources.
-     * @param sourceGroups the list of source groups.
+     * @param audioSources the list of audio sources.
+     * @param videoSources the list of video sources.
+     * @param videoSourceGroups the list of source groups for video.
      */
     public void setSources(
             List<SourcePacketExtension> audioSources,
@@ -228,6 +229,10 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         conference.handleIncomingRtp(packetInfo, null);
     }
 
+    /**
+     * Handles a message received from an Octo relay.
+     * @param message
+     */
     public void handleMessage(String message)
     {
         octoEndpoints.messageTransport.onMessage(null /* source */ , message);
@@ -273,6 +278,10 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         octoEndpoints.setEndpoints(Collections.EMPTY_SET);
     }
 
+    /**
+     * Sends a data message throught the Octo relay.
+     * @param message
+     */
     public void sendMessage(String message)
     {
         relay.sendString(

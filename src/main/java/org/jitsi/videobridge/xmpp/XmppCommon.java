@@ -72,11 +72,17 @@ class XmppCommon
         return bundleContext;
     }
 
+    /**
+     * Starts this {@link XmppCommon} in a specific OSGi bundle context.
+     */
     void start(BundleContext bundleContext)
     {
         this.bundleContext = bundleContext;
     }
 
+    /**
+     * Stops this {@link XmppCommon}.
+     */
     void stop(BundleContext bundleContext)
     {
         this.bundleContext = null;
@@ -111,6 +117,9 @@ class XmppCommon
             : null;
     }
 
+    /**
+     * Processes an IQ received from one of the XMPP stacks.
+     */
     IQ handleIQ(IQ requestIQ)
     {
         if (logger.isDebugEnabled() && requestIQ != null)
@@ -163,6 +172,9 @@ class XmppCommon
         return responseIQ;
     }
 
+    /**
+     * Handles an IQ request (of type 'get' or 'set').
+     */
     private IQ handleIQRequest(IQ request)
     {
         // Requests can be categorized in pieces of Videobridge functionality
@@ -250,6 +262,9 @@ class XmppCommon
         return versionResult;
     }
 
+    /**
+     * Handles a response IQ (of type 'result' or 'error').
+     */
     private void handleIQResponse(IQ response)
     {
         Videobridge videobridge = getVideobridge();

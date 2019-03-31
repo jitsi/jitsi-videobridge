@@ -222,6 +222,10 @@ public class EndpointConnectionStatus
         }
     }
 
+    /**
+     * Checks the activity for a specific {@link Endpoint}.
+     * @param abstractEndpoint the endpoint.
+     */
     private void monitorEndpointActivity(AbstractEndpoint abstractEndpoint)
     {
         if (!(abstractEndpoint instanceof Endpoint))
@@ -296,6 +300,14 @@ public class EndpointConnectionStatus
         }
     }
 
+    /**
+     * Sends a Colibri message about the status of an endpoint to a specific
+     * target endpoint or to all endpoints.
+     * @param subjectEndpoint the endpoint which the message concerns
+     * @param isConnected whether the subject endpoint is connected
+     * @param msgReceiver the target endpoint, or {@code null} to broadcast
+     * to all endpoints.
+     */
     private void sendEndpointConnectionStatus(
         Endpoint subjectEndpoint, boolean isConnected, Endpoint msgReceiver)
     {
@@ -328,6 +340,9 @@ public class EndpointConnectionStatus
         }
     }
 
+    /**
+     * Prunes the {@link #inactiveEndpoints} list.
+     */
     private void cleanupExpiredEndpointsStatus()
     {
         inactiveEndpoints.removeIf(e -> {

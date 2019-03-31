@@ -144,6 +144,9 @@ public class PublicClearPortRedirectBundleActivator
          */
         private final int targetPort;
 
+        /**
+         * Initializes a new {@link RedirectHandler} for a specific port.
+         */
         RedirectHandler(int targetPort)
         {
             this.targetPort = targetPort;

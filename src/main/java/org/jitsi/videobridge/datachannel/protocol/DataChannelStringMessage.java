@@ -19,21 +19,36 @@ package org.jitsi.videobridge.datachannel.protocol;
 import java.nio.*;
 import java.nio.charset.*;
 
+/**
+ * @author Brian Baldino
+ */
 public class DataChannelStringMessage extends DataChannelMessage
 {
     public final String data;
 
+    /**
+     * Initializes a new {@link DataChannelStringMessage} instance.
+     * @param data
+     */
     public DataChannelStringMessage(String data)
     {
         this.data = data;
     }
 
+    /**
+     * Parses a {@link DataChannelStringMessage} from a byte array.
+     * @param data
+     * @return
+     */
     public static DataChannelStringMessage parse(byte[] data)
     {
         String stringData = new String(data, StandardCharsets.UTF_8);
         return new DataChannelStringMessage(stringData);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ByteBuffer getBuffer()
     {

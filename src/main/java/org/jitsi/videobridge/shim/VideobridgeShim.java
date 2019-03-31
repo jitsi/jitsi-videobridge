@@ -433,6 +433,10 @@ public class VideobridgeShim
         private final XMPPError.Condition condition;
         private final String errorMessage;
 
+        /**
+         * Initializes a new {@link IqProcessingException} with a specific
+         * condition and error message.
+         */
         public IqProcessingException(
                 XMPPError.Condition condition, String errorMessage)
         {
@@ -440,6 +444,9 @@ public class VideobridgeShim
             this.errorMessage = errorMessage;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public String toString()
         {

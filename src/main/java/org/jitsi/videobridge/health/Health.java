@@ -287,6 +287,10 @@ public class Health
      */
     private boolean hasFailed = false;
 
+    /**
+     * Iniatializes a new {@link Health} instance for a specific
+     * {@link Videobridge}.
+     */
     public Health(Videobridge videobridge, ConfigurationService cfg)
     {
         super(videobridge, PERIOD_DEFAULT, true);

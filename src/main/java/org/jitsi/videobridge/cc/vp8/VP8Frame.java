@@ -175,16 +175,25 @@ class VP8Frame
         return isTL0;
     }
 
+    /**
+     * Gets the SSRC.
+     */
     long getSSRCAsLong()
     {
         return ssrc;
     }
 
+    /**
+     * Gets the timestamp.
+     */
     long getTimestamp()
     {
         return timestamp;
     }
 
+    /**
+     * Gets the max sequence number.
+     */
     int getMaxSequenceNumber()
     {
         return maxSequenceNumber;

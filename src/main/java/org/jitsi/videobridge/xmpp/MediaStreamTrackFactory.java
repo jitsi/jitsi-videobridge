@@ -114,7 +114,8 @@ public class MediaStreamTrackFactory
      */
     private static Map<String, SsrcAssociationType> secondarySsrcTypeMap = null;
 
-    private static synchronized Map<String, SsrcAssociationType> getSecondarySsrcTypeMap()
+    private static synchronized
+        Map<String, SsrcAssociationType> getSecondarySsrcTypeMap()
     {
         if (secondarySsrcTypeMap == null)
         {
@@ -602,6 +603,9 @@ public class MediaStreamTrackFactory
         public long ssrc;
         public String type;
 
+        /**
+         * Initializes a new {@link SecondarySsrc} instance.
+         */
         public SecondarySsrc(long ssrc, String type)
         {
             this.ssrc = ssrc;
@@ -618,11 +622,17 @@ public class MediaStreamTrackFactory
     {
         public List<SecondarySsrc> secondarySsrcs;
 
+        /**
+         * Initializes a new {@link SecondarySsrcs} instance.
+         */
         public SecondarySsrcs(List<SecondarySsrc> secondarySsrcs)
         {
             this.secondarySsrcs = secondarySsrcs;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Iterator<SecondarySsrc> iterator()
         {
@@ -641,31 +651,49 @@ public class MediaStreamTrackFactory
 
         private String owner;
 
+        /**
+         * Initializes a new {@link TrackSsrcs} instance for a single SSRC.
+         */
         private TrackSsrcs(Long ssrc)
         {
             this(Collections.singletonList(ssrc));
         }
 
+        /**
+         * Initializes a new {@link TrackSsrcs} instance for a list of SSRCs.
+         */
         public TrackSsrcs(List<Long> trackSsrcs)
         {
             this.trackSsrcs = trackSsrcs;
         }
 
+        /**
+         * Checks whether this instance contains a specific SSRC.
+         */
         public boolean contains(Long ssrc)
         {
             return trackSsrcs.contains(ssrc);
         }
 
+        /**
+         * @return the number of SSRCs in this instance.
+         */
         public int size()
         {
             return trackSsrcs.size();
         }
 
+        /**
+         * Gets the SSRC at a specific index.
+         */
         public Long get(int index)
         {
             return trackSsrcs.get(index);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Iterator<Long> iterator()
         {

@@ -134,11 +134,14 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * Set the maximum frame height, in pixels, of video streams that can be
      * forwarded to this participant.
      *
-     * @param maxFrameHeight the maximum frame height, in pixels, of video
-     * streams that can be forwarded to this participant;
+     * @param maxReceiveFrameHeightPx the maximum frame height, in pixels, of
+     * video streams that can be forwarded to this participant.
      */
     public void setMaxReceiveFrameHeightPx(int maxReceiveFrameHeightPx) { }
 
+    /**
+     * Gets the LastN value for this endpoint.
+     */
     public Integer getLastN()
     {
         return lastNFilter.getLastNValue();
@@ -197,6 +200,9 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         return null;
     }
 
+    /**
+     * Gets the list of media stream tracks that belong to this endpoint.
+     */
     abstract public MediaStreamTrackDesc[] getMediaStreamTracks();
 
     /**

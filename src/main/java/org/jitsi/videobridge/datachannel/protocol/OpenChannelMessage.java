@@ -19,6 +19,10 @@ package org.jitsi.videobridge.datachannel.protocol;
 import java.nio.*;
 import java.nio.charset.*;
 
+/**
+ * TODO: this needs documentation
+ * @author Brian Baldino
+ */
 public class OpenChannelMessage extends DataChannelProtocolMessage
 {
     public final int channelType;
@@ -27,7 +31,12 @@ public class OpenChannelMessage extends DataChannelProtocolMessage
     public final String label;
     public final String protocol;
 
-    public OpenChannelMessage(int channelType, int priority, long reliability, String label, String protocol)
+    /**
+     * Initializes a new {@link OpenChannelMessage} instance.
+     */
+    public OpenChannelMessage(
+            int channelType, int priority,
+            long reliability, String label, String protocol)
     {
         super(DataChannelProtocolConstants.MSG_TYPE_CHANNEL_OPEN);
         this.channelType = channelType;
@@ -61,9 +70,13 @@ public class OpenChannelMessage extends DataChannelProtocolMessage
             buf.get(protocolBytes, 0, protocolLength);
             protocol = new String(protocolBytes);
         }
-        return new OpenChannelMessage(channelType, priority, reliability, label, protocol);
+        return new OpenChannelMessage(
+                channelType, priority, reliability, label, protocol);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected int getSizeBytes()
     {
@@ -75,6 +88,9 @@ public class OpenChannelMessage extends DataChannelProtocolMessage
         return super.getSizeBytes() + 11 + labelLength + protocolLength;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void serialize(ByteBuffer destination)
     {

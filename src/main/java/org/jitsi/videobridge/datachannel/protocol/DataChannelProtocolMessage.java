@@ -20,6 +20,9 @@ import java.nio.*;
 
 /**
  * https://tools.ietf.org/html/draft-ietf-rtcweb-data-protocol-08#section-5
+ *
+ * TODO: this needs documentation
+ * @author Brian Baldino
  */
 public class DataChannelProtocolMessage extends DataChannelMessage
 {
@@ -32,14 +35,23 @@ public class DataChannelProtocolMessage extends DataChannelMessage
 
     private final int messageType;
 
-    public DataChannelProtocolMessage(int messageType) {
+    /**
+     * Initializes a new {@link DataChannelProtocolMessage} instance.
+     * @param messageType the message type.
+     */
+    public DataChannelProtocolMessage(int messageType)
+    {
         this.messageType = messageType;
     }
 
-    protected int getSizeBytes() {
+    protected int getSizeBytes()
+    {
         return HEADER_SIZE_BYTES;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ByteBuffer getBuffer()
     {

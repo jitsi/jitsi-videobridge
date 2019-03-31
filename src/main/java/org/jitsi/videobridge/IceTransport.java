@@ -180,12 +180,10 @@ public class IceTransport
     /**
      * Initializes a new <tt>IceTransport</tt> instance.
      *
-     * @param conference the <tt>Conference</tt> which created this
-     * <tt>TransportManager</tt>.
+     * @param endpoint the {@link Endpoint} associated with this
+     * {@link IceTransport}.
      * @param controlling {@code true} if the new instance is to serve as a
      * controlling ICE agent and passive DTLS endpoint; otherwise, {@code false}
-     * @param id an identifier of the {@link IceTransport}.
-     * @throws IOException
      */
     IceTransport(Endpoint endpoint, boolean controlling)
         throws IOException
@@ -595,7 +593,7 @@ public class IceTransport
     }
 
     /**
-     * {@inheritDoc}
+     * Describes this {@link IceTransport} in a {@code transport} XML extension.
      */
     protected void describe(IceUdpTransportPacketExtension pe)
     {
@@ -618,6 +616,12 @@ public class IceTransport
         }
     }
 
+    /**
+     * Describes a specific {@link LocalCandidate} in a {@code transport} XML
+     * extension.
+     * @param candidate the candidate.
+     * @param pe the XML extension.
+     */
     private void describe(
             LocalCandidate candidate,
             IceUdpTransportPacketExtension pe)
@@ -666,6 +670,10 @@ public class IceTransport
         pe.addChildExtension(candidatePE);
     }
 
+    /**
+     * Generates an ID for a specific local ICE candidate.
+     * @param candidate the candidate.
+     */
     private String generateCandidateID(LocalCandidate candidate)
     {
         StringBuilder candidateID = new StringBuilder();
@@ -682,6 +690,9 @@ public class IceTransport
         return candidateID.toString();
     }
 
+    /**
+     * Handles a change of the ICE processing of our ICE {@link Agent}.
+     */
     private void iceStateChange(PropertyChangeEvent ev)
     {
         IceProcessingState oldState = (IceProcessingState) ev.getOldValue();

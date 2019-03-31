@@ -278,6 +278,11 @@ class GenericAdaptiveTrackProjectionContext
         return accept;
     }
 
+    /**
+     * Initializes {@link #timestampDelta} if it hasn't been initialized
+     * already.
+     * @param sourceTimestamp
+     */
     private void maybeInitializeTimestampDelta(long sourceTimestamp)
     {
         if (timestampDeltaInitialized)
@@ -357,6 +362,9 @@ class GenericAdaptiveTrackProjectionContext
         return EMPTY_PACKET_ARR;
     }
 
+    /**
+     * TODO
+     */
     private int computeDestinationSequenceNumber(int sourceSequenceNumber)
     {
         return sequenceNumberDelta != 0
@@ -364,6 +372,9 @@ class GenericAdaptiveTrackProjectionContext
             & RawPacket.SEQUENCE_NUMBER_MASK : sourceSequenceNumber;
     }
 
+    /**
+     * TODO
+     */
     private long computeDestinationTimestamp(long sourceTimestamp)
     {
         return timestampDelta != 0

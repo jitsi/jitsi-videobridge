@@ -985,6 +985,10 @@ public class Endpoint
         public SctpManager sctpManager = null;
         public BlockingQueue<PacketInfo> cachedSctpPackets
                 = new LinkedBlockingQueue<>();
+
+        /**
+         * Initializes a new {@link SctpHandler} instance.
+         */
         public SctpHandler()
         {
             super("SCTP handler");
@@ -1006,6 +1010,9 @@ public class Endpoint
             }
         }
 
+        /**
+         * Sets the SCTP manager of this endpoint.
+         */
         public void setSctpManager(SctpManager sctpManager)
         {
             // Submit this to the pool since we wait on the lock and process any
@@ -1036,11 +1043,18 @@ public class Endpoint
         public DataChannelStack dataChannelStack = null;
         public BlockingQueue<PacketInfo> cachedDataChannelPackets
                 = new LinkedBlockingQueue<>();
+
+        /**
+         * Initializes a new {@link DataChannelHandler} instance.
+         */
         public DataChannelHandler()
         {
             super("Data channel handler");
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         protected void consume(PacketInfo packetInfo)
         {
@@ -1063,6 +1077,9 @@ public class Endpoint
             }
         }
 
+        /**
+         * Sets the data channel stack
+         */
         public void setDataChannelStack(DataChannelStack dataChannelStack)
         {
             // Submit this to the pool since we wait on the lock and process any

@@ -118,9 +118,7 @@ class OctoTransceiver
     /**
      * Handles a packet for this conference coming from a remote Octo relay.
      *
-     * @param buf the buffer which contains the packet.
-     * @param off the offset at which data starts
-     * @param len the length of the packet
+     * @param packet the packet.
      */
     @Override
     public void handlePacket(Packet packet)

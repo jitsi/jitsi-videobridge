@@ -39,11 +39,15 @@ public class OctoEndpoint
      */
     private final Set<Long> receiveSsrcs = new HashSet<>();
 
-    private final OctoEndpoints octoEndpoints;
-    OctoEndpoint(Conference conference, String id, OctoEndpoints octoEndpoints)
+    /**
+     * Initializes a new {@link OctoEndpoint} with a specific ID in a specific
+     * conference.
+     * @param conference the conference.
+     * @param id the ID of the endpoint.
+     */
+    OctoEndpoint(Conference conference, String id)
     {
         super(conference, id);
-        this.octoEndpoints = octoEndpoints;
     }
 
     /**

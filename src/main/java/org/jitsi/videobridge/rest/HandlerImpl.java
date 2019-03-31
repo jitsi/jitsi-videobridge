@@ -823,6 +823,9 @@ class HandlerImpl
         }
     }
 
+    /**
+     * Handles a request for a shutdown
+     */
     private void doPostShutdownJSON(Request baseRequest,
                                     HttpServletRequest request,
                                     HttpServletResponse response)

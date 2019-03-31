@@ -25,6 +25,12 @@ import org.jitsi.videobridge.*;
  */
 public class SctpConnectionShim extends ChannelShim
 {
+    /**
+     * Initializes a new {@link SctpConnectionShim}.
+     * @param id the ID of the {@code sctp-connection} element.
+     * @param endpoint the endpoint.
+     * @param contentShim the content to which it belongs.
+     */
     public SctpConnectionShim(
             @NotNull String id,
             @NotNull Endpoint endpoint,

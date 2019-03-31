@@ -18,15 +18,25 @@ package org.jitsi.videobridge.datachannel.protocol;
 
 import java.nio.*;
 
+/**
+ * @author Brian Baldino
+ */
 public class DataChannelBinaryMessage extends DataChannelMessage
 {
     public final byte[] data;
 
+    /**
+     * Initializes a new {@link DataChannelBinaryMessage} from a byte array.
+     * @param data the byte array.
+     */
     public DataChannelBinaryMessage(byte[] data)
     {
         this.data = data;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ByteBuffer getBuffer()
     {

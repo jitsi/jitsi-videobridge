@@ -16,42 +16,55 @@
 
 package org.jitsi.videobridge;
 
-import org.jitsi.nlj.*;
-
 import java.util.*;
 import java.util.stream.*;
 
 /**
- * This class is somewhat a placeholder for now--I'm not sure if this is how we'll end up implementing this.  The idea
- * is to have this class be used by the endpoint and act as the 'first line of defense' when the ep is deciding
- * whether or not it 'wants' a packet (i.e. deciding if a packet that came from some source EP should be forwarded
- * to this ep).  This decision will take place at multiple levels, but lastn is one of them.  This class will store
+ * This class is somewhat a placeholder for now--I'm not sure if this is how
+ * we'll end up implementing this.  The idea is to have this class be used by
+ * the endpoint and act as the 'first line of defense' when the ep is deciding
+ * whether or not it 'wants' a packet (i.e. deciding if a packet that came from
+ * some source EP should be forwarded to this ep).  This decision will take
+ * place at multiple levels, but lastn is one of them.  This class will store
  * the last-n logic that was previously held in videochannel.
  */
 public class LastNFilter
 {
     private final String myEndpointId;
-    public LastNFilter(String myEndpointId)
-    {
-        this.myEndpointId = myEndpointId;
-    }
+
     // Right now both 'null' and '-1' values will 'disable' lastN
     private Integer lastNValue = -1;
     private List<String> endpointsSortedByActivity;
 
+    /**
+     * Initializes a new {@link LastNFilter} instance.
+     */
+    public LastNFilter(String myEndpointId)
+    {
+        this.myEndpointId = myEndpointId;
+    }
+
+    /**
+     * Sets the LastN value.
+     */
     public void setLastNValue(Integer lastNValue)
     {
         this.lastNValue = lastNValue;
     }
 
+    /**
+     * Gets the LastN value.
+     */
     public Integer getLastNValue()
     {
         return lastNValue;
     }
 
-    //TODO: this should be passed as an immutable list (Collections.unmodifiableList(original)).
-    // is there any way we can enforce that?
-    public void setEndpointsSortedByActivity(List<String> endpointsSortedByActivity)
+    /**
+     * Updates the list of conference endpoints (ordered by speech activity).
+     */
+    public void setEndpointsSortedByActivity(
+            List<String> endpointsSortedByActivity)
     {
         this.endpointsSortedByActivity = endpointsSortedByActivity
                 .stream()
@@ -59,6 +72,11 @@ public class LastNFilter
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Checks whether thi {@link LastNFilter} should accept packets from a
+     * specific endpoint.
+     * @param packetSourceEndpointId the ID of the endpoint.
+     */
     public boolean wants(String packetSourceEndpointId)
     {
         return (lastNValue == null ||

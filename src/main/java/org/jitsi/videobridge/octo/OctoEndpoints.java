@@ -55,6 +55,11 @@ import java.util.stream.*;
       */
      private final Logger logger;
 
+     /**
+      * Initializes a new {@link OctoEndpoints} instance for a specific
+      * {@link Conference}.
+      * @param conference the conference.
+      */
      OctoEndpoints(Conference conference)
      {
          this.conference = conference;
@@ -120,8 +125,7 @@ import java.util.stream.*;
       */
      private OctoEndpoint addEndpoint(String id)
      {
-         OctoEndpoint endpoint
-                 = new OctoEndpoint(conference, id, this);
+         OctoEndpoint endpoint = new OctoEndpoint(conference, id);
 
          conference.addEndpoint(endpoint);
 

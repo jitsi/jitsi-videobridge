@@ -336,6 +336,9 @@ public class AdaptiveTrackProjection
         }
     }
 
+    /**
+     * Gets the {@link RtpState}.
+     */
     private RtpState getRtpState()
     {
         if (context == null)
@@ -401,6 +404,9 @@ public class AdaptiveTrackProjection
         return targetSsrc;
     }
 
+    /**
+     * Adds a payload type.
+     */
     public void addPayloadType(PayloadType payloadType)
     {
         logger.info(hashCode() + " TEMP: adaptive track projection " + hashCode() +
