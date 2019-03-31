@@ -18,7 +18,13 @@ package org.jitsi.videobridge.datachannel.protocol;
 
 import java.nio.*;
 
+/**
+ * @author Brian Baldino
+ */
 public abstract class DataChannelMessage
 {
+    /**
+     * Gets the buffer which holds the message.
+     */
     public abstract ByteBuffer getBuffer();
 }

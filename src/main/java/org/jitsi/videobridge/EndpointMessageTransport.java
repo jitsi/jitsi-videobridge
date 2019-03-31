@@ -156,6 +156,12 @@ class EndpointMessageTransport
         }
     }
 
+    /**
+     * Sends a string via a particular {@link DataChannel}.
+     * @param dst the data channel to send through.
+     * @param message the message to send.
+     * @param errorMessage an error message to be logged in case of failure.
+     */
     private void sendMessage(DataChannel dst, String message, String errorMessage)
     {
         dst.sendString(message);

@@ -19,6 +19,9 @@ package org.jitsi.videobridge.sctp;
 import org.jetbrains.annotations.*;
 import org.jitsi.rtp.*;
 
+/**
+ * @author Brian Baldino
+ */
 public class SctpPacket extends Packet
 {
     public final int sid;
@@ -26,7 +29,12 @@ public class SctpPacket extends Packet
     public final int tsn;
     public final int ppid;
 
-    public SctpPacket(byte[] data, int offset, int length, int sid, int ssn, int tsn, int ppid)
+    /**
+     * Initializes a new {@link SctpPacket}.
+     */
+    public SctpPacket(
+            byte[] data, int offset, int length,
+            int sid, int ssn, int tsn, int ppid)
     {
         super(data, offset, length);
         this.sid = sid;
@@ -35,6 +43,9 @@ public class SctpPacket extends Packet
         this.ppid = ppid;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @NotNull
     @Override
     public Packet clone()

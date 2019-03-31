@@ -102,6 +102,12 @@ public class ConferenceShim
         }
     }
 
+    /**
+     * Describes the channel bundles of this conference in a Colibri IQ.
+     * @param iq the IQ to describe in.
+     * @param endpointIds the list of IDs to describe.
+     * @throws VideobridgeShim.IqProcessingException
+     */
     void describeChannelBundles(
             ColibriConferenceIQ iq,
             Set<String> endpointIds)
@@ -143,12 +149,18 @@ public class ConferenceShim
                                 en.getID(), en.getStatsId(), en.getDisplayName())));
     }
 
+    /**
+     * Sets the attributes of this conference to an IQ.
+     */
     public void describeShallow(ColibriConferenceIQ iq)
     {
         iq.setID(conference.getID());
         iq.setName(conference.getName());
     }
 
+    /**
+     * Gets the ID of the conference.
+     */
     public String getId()
     {
         return conference.getID();
@@ -190,10 +202,7 @@ public class ConferenceShim
     }
 
     /**
-     * Processes an Octo channel for this conference.
-     * @param channel the channel that was received.
-     * @param mediaType the channel's media type.
-     * @return
+     * Processes the Octo channels from a Colibri request.
      */
     public void processOctoChannels(
                 @NotNull ColibriConferenceIQ.OctoChannel audioChannel,

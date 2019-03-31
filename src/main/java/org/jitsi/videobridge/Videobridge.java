@@ -142,6 +142,11 @@ public class Videobridge
     public static final String XMPP_API_PNAME
         = "org.jitsi.videobridge." + XMPP_API;
 
+    /**
+     * Gets all {@link Videobridge} instances in a specific bundle context.
+     * @param bundleContext the bundle context
+     * @deprecated We only use a single Videobridge instance.
+     */
     public static Collection<Videobridge> getVideobridges(
             BundleContext bundleContext)
     {
@@ -735,6 +740,10 @@ public class Videobridge
         }
     }
 
+    /**
+     * Handles an XMPP IQ of a response type ('error' or 'result')
+     * @param response the IQ.
+     */
     public void handleIQResponse(org.jivesoftware.smack.packet.IQ response)
     {
         PubSubPublisher.handleIQResponse(response);

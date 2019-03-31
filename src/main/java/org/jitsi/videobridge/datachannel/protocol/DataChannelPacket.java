@@ -22,22 +22,33 @@ import org.jitsi.rtp.extensions.bytearray.*;
 
 import java.nio.*;
 
+/**
+ * @author Brian Baldino
+ */
 public class DataChannelPacket extends Packet
 {
     public final int sid;
     public final int ppid;
 
-    public DataChannelPacket(byte[] data, int offset, int length, int sid, int ppid)
+    /**
+     * Initializes a new {@link DataChannelPacket}.
+     */
+    public DataChannelPacket(
+            byte[] data, int offset, int length, int sid, int ppid)
     {
         super(data, offset, length);
         this.sid = sid;
         this.ppid = ppid;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @NotNull
     @Override
     public Packet clone()
     {
-        return new DataChannelPacket(getBuffer().clone(), getOffset(), getLength(), sid, ppid);
+        return new DataChannelPacket(
+                getBuffer().clone(), getOffset(), getLength(), sid, ppid);
     }
 }

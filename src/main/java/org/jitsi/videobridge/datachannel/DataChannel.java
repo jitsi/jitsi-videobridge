@@ -23,6 +23,11 @@ import org.jitsi_modified.sctp4j.*;
 
 import java.nio.*;
 
+/**
+ * TODO: This needs documentation.
+ *
+ * @author Brian Baldino
+ */
 public class DataChannel
 {
     private final DataChannelStack.DataChannelDataSender dataChannelDataSender;
@@ -39,6 +44,9 @@ public class DataChannel
     private DataChannelStack.DataChannelEventListener eventListener;
     private DataChannelStack.DataChannelMessageListener messageListener;
 
+    /**
+     * Initializes a new {@link DataChannel} instance.
+     */
     public DataChannel(
             DataChannelStack.DataChannelDataSender dataChannelDataSender,
             int channelType, int priority, long reliability, int sid, String label)
@@ -67,21 +75,38 @@ public class DataChannel
         }
     }
 
+    /**
+     * Checks if this data channel is ready.
+     */
     public boolean isReady()
     {
         return ready;
     }
 
-    public void onDataChannelEvents(DataChannelStack.DataChannelEventListener listener)
+    /**
+     * Sets the listener for data channel events.
+     * @param listener
+     */
+    public void onDataChannelEvents(
+            DataChannelStack.DataChannelEventListener listener)
     {
         this.eventListener = listener;
     }
 
-    public void onDataChannelMessage(DataChannelStack.DataChannelMessageListener dataChannelMessageListener)
+    /**
+     * Sets the message listener.
+     */
+    public void onDataChannelMessage(
+            DataChannelStack.DataChannelMessageListener
+                    dataChannelMessageListener)
     {
         this.messageListener = dataChannelMessageListener;
     }
 
+    /**
+     * Handles an incoming message.
+     * @param message
+     */
     public void onIncomingMsg(DataChannelMessage message)
     {
         if (message instanceof OpenChannelAckMessage)
@@ -110,11 +135,18 @@ public class DataChannel
         messageListener.onDataChannelMessage(message);
     }
 
+    /**
+     * Sends date through the sender.
+     */
     protected int sendData(ByteBuffer data, int sid, int ppid)
     {
         return dataChannelDataSender.send(data, sid, ppid);
     }
 
+    /**
+     * Sends a string through this data channel.
+     * @param message the string to send.
+     */
     public void sendString(String message)
     {
         if (logger.isDebugEnabled())

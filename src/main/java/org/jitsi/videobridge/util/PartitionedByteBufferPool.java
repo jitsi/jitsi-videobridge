@@ -94,7 +94,7 @@ class PartitionedByteBufferPool
 
     /**
      * Enables or disables tracking of statistics.
-     * @param enabla whether to enable or disable.
+     * @param enable whether to enable or disable.
      */
     void enableStatistics(boolean enable)
     {

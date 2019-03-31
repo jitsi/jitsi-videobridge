@@ -18,14 +18,26 @@ package org.jitsi.videobridge.datachannel.protocol;
 
 import java.nio.*;
 
+/**
+ * TODO: This needs documentation.
+ *
+ * @author Brian Baldino
+ */
 public class DataChannelProtocolMessageParser
 {
+    /**
+     * Reads the message type from a byte array.
+     * @param data
+     * @return
+     */
     private static int getMessageType(byte[] data)
     {
         return ByteBuffer.wrap(data).get(0) & 0xFF;
     }
 
-    //TODO(brian): change data to be a ByteBuffer
+    /**
+     * TODO(brian): change data to be a ByteBuffer
+     */
     public static DataChannelMessage parse(byte[] data, long ppid)
     {
         if (ppid == DataChannelProtocolConstants.WEBRTC_DCEP_PPID)

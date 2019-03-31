@@ -415,6 +415,9 @@ public class ContentShim
         return true;
     }
 
+    /**
+     * Removes a specific {@link ChannelShim} from this content.
+     */
     void removeChannel(ChannelShim channelShim)
     {
         channels.remove(channelShim.getId());

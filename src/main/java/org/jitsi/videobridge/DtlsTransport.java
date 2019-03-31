@@ -81,6 +81,9 @@ public class DtlsTransport extends IceTransport
     private Node outgoingSrtpPipelineRoot = createOutgoingSrtpPipeline();
     protected boolean dtlsHandshakeComplete = false;
 
+    /**
+     * Initializes a new {@link DtlsTransport} instance for a specific endpoint.
+     */
     public DtlsTransport(Endpoint endpoint)
             throws IOException
     {
@@ -172,6 +175,9 @@ public class DtlsTransport extends IceTransport
         fingerprintPE.setSetup("ACTPASS");
     }
 
+    /**
+     * Called when the DTLS handshake completes.
+     */
     public void onDtlsHandshakeComplete(Runnable handler)
     {
         if (dtlsHandshakeComplete)
@@ -184,6 +190,10 @@ public class DtlsTransport extends IceTransport
         }
     }
 
+    /**
+     * Creates the {@link Node} to handle packets read from the ice4j socket.
+     * @return
+     */
     private Node createIncomingPipeline()
     {
         // do we need a builder if we're using a single node?
@@ -227,6 +237,10 @@ public class DtlsTransport extends IceTransport
         return builder.build();
     }
 
+    /**
+     * Creates the {@link Node} to handle outgoing DTLS packets.
+     * @return
+     */
     private Node createOutgoingDtlsPipeline()
     {
         PipelineBuilder builder = new PipelineBuilder();
@@ -235,6 +249,10 @@ public class DtlsTransport extends IceTransport
         return builder.build();
     }
 
+    /**
+     * Creates the {@link Node} to handle outgoing SRTP packets.
+     * @return
+     */
     private Node createOutgoingSrtpPipeline()
     {
         PipelineBuilder builder = new PipelineBuilder();
@@ -242,11 +260,17 @@ public class DtlsTransport extends IceTransport
         return builder.build();
     }
 
+    /**
+     * Sends a DTLS packet.
+     */
     public void sendDtlsData(PacketInfo packetInfo)
     {
         outgoingDtlsPipelineRoot.processPacket(packetInfo);
     }
 
+    /**
+     * Handles a packet after it has passed through the Transceiver.
+     */
     private boolean handleOutgoingPacket(PacketInfo packetInfo)
     {
         outgoingSrtpPipelineRoot.processPacket(packetInfo);
@@ -375,15 +399,25 @@ public class DtlsTransport extends IceTransport
         }
     }
 
-
+    /**
+     * A terminating {@link Node}, which sends the packets through a
+     * datagram socket.
+     */
     class SocketSenderNode extends ConsumerNode
     {
         public DatagramSocket socket = null;
+
+        /**
+         * Initializes a new {@link SocketSenderNode}.
+         */
         SocketSenderNode()
         {
             super("Socket sender");
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         protected void consume(@NotNull PacketInfo packetInfo)
         {

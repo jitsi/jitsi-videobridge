@@ -118,15 +118,21 @@ package org.jitsi.videobridge.cc;
          this.probingDataSender = probingDataSender;
      }
 
+     /**
+      * Sets the diagnostic context.
+      */
      public void setDiagnosticContext(DiagnosticContext diagnosticContext)
      {
          this.diagnosticContext = diagnosticContext;
      }
 
-     //TODO(brian): there's data we need from bitratecontroller that may be tough to get another way.
-     // for now, i've tried to at least minimize the dependency by creating the #getStatusSnapshot
-     // method inside bitratecontroller that this can use (so it doesn't have to depend on accessing
-     // the track projections
+     /**
+      * TODO(brian): there's data we need from bitratecontroller that may be
+      * tough to get another way. for now, i've tried to at least minimize the
+      * dependency by creating the #getStatusSnapshot method inside
+      * bitratecontroller that this can use (so it doesn't have to depend on
+      * accessing the track projections
+      */
      public void setBitrateController(BitrateController bitrateController)
      {
         this.bitrateController = bitrateController;
@@ -238,6 +244,12 @@ package org.jitsi.videobridge.cc;
 
      public interface ProbingDataSender
      {
+         /**
+          * Sends a specific number of bytes with a specific SSRC (?).
+          * @param mediaSsrc the SSRC
+          * @param numBytes ?
+          * @return ?
+          */
          int sendProbing(long mediaSsrc, int numBytes);
      }
  }

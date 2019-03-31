@@ -380,7 +380,7 @@ public class BitrateController
      * Defines a packet filter that controls which RTP packets to be written
      * into the {@link Endpoint} that owns this {@link BitrateController}.
      *
-     * @param pkt that packet for which to decide to accept
+     * @param rtpPacket that packet for which to decide to accept
      * @return <tt>true</tt> to allow the specified packet to be
      * written into the {@link Endpoint} that owns this {@link BitrateController}
      * ; otherwise, <tt>false</tt>
@@ -414,18 +414,25 @@ public class BitrateController
         return adaptiveTrackProjection.accept(rtpPacket);
     }
 
+    /**
+     * TODO Document
+     */
     public static class StatusSnapshot
     {
         final long currentTargetBps;
         final long currentIdealBps;
         final Collection<Long> activeSsrcs;
 
-        public StatusSnapshot() {
+        public StatusSnapshot()
+        {
             currentTargetBps = -1L;
             currentIdealBps = -1L;
             activeSsrcs = Collections.emptyList();
         }
-        public StatusSnapshot(Long currentTargetBps, Long currentIdealBps, Collection<Long> activeSsrcs)
+        public StatusSnapshot(
+                Long currentTargetBps,
+                Long currentIdealBps,
+                Collection<Long> activeSsrcs)
         {
             this.currentTargetBps = currentTargetBps;
             this.currentIdealBps = currentIdealBps;
@@ -1117,22 +1124,30 @@ public class BitrateController
         this.pinnedEndpointIds = new HashSet<>(pinnedEndpointIds);
     }
 
+    /**
+     * Sets the LastN value.
+     */
     public void setLastN(int lastN)
     {
         this.lastN = lastN;
     }
 
+    /**
+     * Adds a payload type.
+     */
     public void addPayloadType(PayloadType payloadType)
     {
         payloadTypes.put(payloadType.getPt(), payloadType);
         adaptiveTrackProjections.forEach(atp -> {
-            logger.debug("TEMP: bitrate controller adding new payload type mapping " +
-                    payloadType + " to existing adaptive track" +
-                    " projection " + atp.hashCode());
             atp.addPayloadType(payloadType);
         });
     }
 
+    /**
+     * Transforms a video RTP packet.
+     * @param packetInfo
+     * @return
+     */
     public VideoRtpPacket[] transformRtp(@NotNull PacketInfo packetInfo)
     {
         VideoRtpPacket videoPacket = (VideoRtpPacket)packetInfo.getPacket();

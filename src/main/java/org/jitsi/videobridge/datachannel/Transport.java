@@ -18,17 +18,48 @@ package org.jitsi.videobridge.datachannel;
 
 import java.nio.*;
 
+/**
+ * TODO: This needs documentation
+ *
+ * @author Brian Baldino
+ */
 public interface Transport
 {
-    interface DataChannelDataCallback {
+    interface DataChannelDataCallback
+    {
+        /**
+         * A packet was received.
+         */
         void dataChannelPacketReceived(ByteBuffer data, int sid, int ppid);
     }
 
-    interface DataChannelTransportEventHandler {
+    interface DataChannelTransportEventHandler
+    {
+        /**
+         * The transport connected.
+         */
         void transportConnected();
+
+        /**
+         * The transport disconnected.
+         */
         void transportDisconnected();
     }
+
+    /**
+     * Sets the handler for data.
+     * @param dataChannelDataCallback
+     */
     void onData(DataChannelDataCallback dataChannelDataCallback);
+
+    /**
+     * Sends a {@link ByteBuffer}.
+     */
     int send(ByteBuffer data, boolean ordered, int sid, int ppid);
-    void onEvent(DataChannelTransportEventHandler dataChannelTransportEventHandler);
+
+    /**
+     * Sets the handler for events.
+     */
+    void onEvent(
+            DataChannelTransportEventHandler dataChannelTransportEventHandler);
 }

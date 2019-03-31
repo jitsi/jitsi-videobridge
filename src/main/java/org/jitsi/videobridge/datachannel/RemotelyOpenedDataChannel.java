@@ -23,16 +23,30 @@ import java.nio.*;
 
 /**
  * Same as {@link DataChannel} but automatically sends the open channel ack message upon creation
+ *
+ * TODO: This needs documentation
+ *
+ * @author Brian Baldino
  */
 public class RemotelyOpenedDataChannel extends DataChannel
 {
-    public RemotelyOpenedDataChannel(DataChannelStack.DataChannelDataSender dataChannelDataSender, int channelType, int priority, long reliability, int sid, String label)
+    /**
+     * Initializes a new {@link RemotelyOpenedDataChannel} instance.
+     */
+    public RemotelyOpenedDataChannel(
+            DataChannelStack.DataChannelDataSender dataChannelDataSender,
+            int channelType, int priority, long reliability, int sid,
+            String label)
     {
-        super(dataChannelDataSender, channelType, priority, reliability, sid, label);
+        super(dataChannelDataSender, channelType, priority,
+                reliability, sid, label);
         ready = true;
         sendOpenChannelAck();
     }
 
+    /**
+     * Sends an {@link OpenChannelAckMessage} message.
+     */
     protected void sendOpenChannelAck()
     {
         OpenChannelAckMessage openChannelAckMessage = new OpenChannelAckMessage();

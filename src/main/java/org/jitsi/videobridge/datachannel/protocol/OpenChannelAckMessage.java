@@ -16,8 +16,14 @@
 
 package org.jitsi.videobridge.datachannel.protocol;
 
+/**
+ * @author Brian Baldino
+ */
 public class OpenChannelAckMessage extends DataChannelProtocolMessage
 {
+    /**
+     * Initializes a new {@link OpenChannelAckMessage} instance.
+     */
     public OpenChannelAckMessage()
     {
         super(DataChannelProtocolConstants.MSG_TYPE_CHANNEL_ACK);

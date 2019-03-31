@@ -102,6 +102,9 @@ public class EncodingsManager
      */
     interface EncodingsUpdateListener
     {
+        /**
+         * Notify this listener of a new association.
+         */
         void onNewSsrcAssociation(
                 String endpointId,
                 long primarySsrc,
