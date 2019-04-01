@@ -36,6 +36,7 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.RtpUtils.Companion.getSequenceNumberDelta
+import org.jitsi.utils.RateStatistics
 import unsigned.toUInt
 import java.util.TreeMap
 import java.util.concurrent.ScheduledExecutorService
@@ -62,6 +63,7 @@ class TccGeneratorNode(
     private var sendIntervalMs: Long = 0
     private var running = true
     private var periodicFeedbacks = false
+    private val tccFeedbackBitrate = RateStatistics(1000)
     /**
      * SSRCs we've been told this endpoint will transmit on.  We'll use an
      * SSRC from this list for the RTCPFB mediaSourceSsrc field in the
@@ -159,6 +161,7 @@ class TccGeneratorNode(
         onTccPacketReady(tccPacket)
         numTccSent++
         lastTccSentTime = System.currentTimeMillis()
+        tccFeedbackBitrate.update(tccPacket.length, lastTccSentTime)
     }
 
     private fun reschedule() {
@@ -206,6 +209,7 @@ class TccGeneratorNode(
         return NodeStatsBlock(name).apply {
             addAll(parentStats)
             addStat( "num tcc packets sent: $numTccSent")
+            addStat( "tcc feedback bitrate: ${tccFeedbackBitrate.rate}bps")
         }
     }
 
