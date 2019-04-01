@@ -23,10 +23,12 @@ import org.jitsi.nlj.SetMediaStreamTracksEvent
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.VideoPayloadType
 import org.jitsi.nlj.format.Vp8PayloadType
+import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
+import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -46,11 +48,8 @@ class VideoParser : TransformerNode("Video parser") {
             val videoRtpPacket = when (payloadType) {
                 is Vp8PayloadType -> {
                     val vp8Packet = rtpPacket.toOtherType(::Vp8Packet)
-                    tracks.forEach { track ->
-                        track.findRtpEncodingDesc(vp8Packet)?.let {
-                            vp8Packet.qualityIndex = it.index
-                            return@forEach
-                        }
+                    findRtpEncodingDesc(vp8Packet)?.let {
+                        vp8Packet.qualityIndex = it.index
                     }
                     vp8Packet
                 }
@@ -61,6 +60,15 @@ class VideoParser : TransformerNode("Video parser") {
             logger.error("Unrecognized video payload type ${rtpPacket.payloadType}, cannot parse video information")
         }
         return packetInfo
+    }
+
+    private fun findRtpEncodingDesc(packet: VideoRtpPacket): RTPEncodingDesc? {
+        for (track in tracks) {
+            track.findRtpEncodingDesc(packet)?.let {
+                return it
+            }
+        }
+        return null
     }
 
     override fun handleEvent(event: Event) {

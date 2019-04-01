@@ -23,6 +23,7 @@ import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.cdebug
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
+import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
 
 /**
  * When deciding what can be forwarded, we want to know the bitrate of a stream so we can fill the receiver's
@@ -35,13 +36,20 @@ class VideoBitrateCalculator : ObserverNode("Video bitrate calculator") {
 
     override fun observe(packetInfo: PacketInfo) {
         val videoRtpPacket: VideoRtpPacket = packetInfo.packet as VideoRtpPacket
-        mediaStreamTrackDescs.forEach {
-            it.findRtpEncodingDesc(videoRtpPacket)?.let { encoding ->
-                val now = System.currentTimeMillis()
-                encoding.update(videoRtpPacket.length, now)
-                videoRtpPacket.bitrateSnapshot = encoding.getLastStableBitrateBps(now)
+        findRtpEncodingDesc(videoRtpPacket)?.let {
+            val now = System.currentTimeMillis()
+            it.update(videoRtpPacket.length, now)
+            videoRtpPacket.bitrateSnapshot = it.getLastStableBitrateBps(now)
+        }
+    }
+
+    private fun findRtpEncodingDesc(packet: VideoRtpPacket): RTPEncodingDesc? {
+        for (track in mediaStreamTrackDescs) {
+            track.findRtpEncodingDesc(packet)?.let {
+                return it
             }
         }
+        return null
     }
 
     override fun handleEvent(event: Event) {
