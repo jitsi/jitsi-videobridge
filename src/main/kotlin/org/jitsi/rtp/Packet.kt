@@ -27,9 +27,8 @@ abstract class Packet(
     length: Int
 ) : ByteArrayBuffer(buffer, offset, length), Cloneable {
 
-    fun<OtherType : Packet> toOtherType(otherTypeCreator: (ByteArray, Int, Int) -> OtherType): OtherType =
+    inline fun<OtherType : Packet> toOtherType(otherTypeCreator: (ByteArray, Int, Int) -> OtherType): OtherType =
         otherTypeCreator(buffer, offset, length)
 
     public abstract override fun clone(): Packet
-
 }

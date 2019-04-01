@@ -23,11 +23,11 @@ public abstract class ByteArrayBuffer
 {
     private static final char[] HEX_CHARS = "0123456789ABCDEF".toCharArray();
 
-    byte[] buffer;
+    public byte[] buffer;
 
-    int offset;
+    public int offset;
 
-    int length;
+    public int length;
 
     public ByteArrayBuffer(byte[] buffer, int offset, int length)
     {
