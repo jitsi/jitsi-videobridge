@@ -27,12 +27,15 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.isOlderThan
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
+import org.jitsi.rtp.util.RtpUtils
+import org.jitsi.rtp.util.RtpUtils.Companion.getSequenceNumberDelta
 import unsigned.toUInt
 import java.util.TreeMap
 import java.util.concurrent.ScheduledExecutorService
@@ -51,7 +54,9 @@ class TccGeneratorNode(
     private var lastTccSentTime: Long = 0
     private final val lock = Any()
     // Tcc seq num -> arrival time in ms
-    private val packetArrivalTimes = TreeMap<Int, Long>()
+    private val packetArrivalTimes = TreeMap<Int, Long>(object : Comparator<Int> {
+        override fun compare(o1: Int, o2: Int): Int = RtpUtils.getSequenceNumberDelta(o1, o2)
+    })
     // The first sequence number of the current tcc feedback packet
     private var windowStartSeq: Int = -1
     private var sendIntervalMs: Long = 0
@@ -83,9 +88,8 @@ class TccGeneratorNode(
         }
     }
 
-    //TODO: we don't handle tcc seq num rollover here, but the old code didn't seem to either?
     private fun addPacket(tccSeqNum: Int, timestamp: Long, isMarked: Boolean) {
-        val feedback = synchronized(lock) {
+        synchronized(lock) {
             if (packetArrivalTimes.ceilingKey(windowStartSeq) == null) {
                 // Packets in map are all older than the start of the next tcc feedback packet,
                 // remove them
@@ -94,17 +98,14 @@ class TccGeneratorNode(
             }
             if (windowStartSeq == -1) {
                 windowStartSeq = tccSeqNum
-            } else if (tccSeqNum < windowStartSeq) {
+            } else if (tccSeqNum isOlderThan windowStartSeq) {
                 windowStartSeq = tccSeqNum
             }
             packetArrivalTimes.putIfAbsent(tccSeqNum, timestamp)
             if (!periodicFeedbacks && isTccReadyToSend(isMarked)) {
-                buildFeedback()
-            } else {
-                null
+                buildFeedback()?.let { sendTcc(it) }
             }
         }
-        feedback?.let { sendTcc(it) }
     }
 
     private fun sendPeriodicFeedbacks() {
@@ -139,11 +140,11 @@ class TccGeneratorNode(
 
             var nextSequenceNumber = windowStartSeq
             val feedbackBlockPackets = packetArrivalTimes.tailMap(windowStartSeq)
-            feedbackBlockPackets.forEach { (seqNum, timestampMs) ->
+            for ((seqNum, timestampMs) in feedbackBlockPackets) {
                 if (!tccBuilder.AddReceivedPacket(seqNum, timestampMs * 1000)) {
-                    return@forEach
+                    break
                 }
-                nextSequenceNumber = seqNum + 1
+                nextSequenceNumber = (seqNum + 1) and 0xFFFF
             }
 
             // The next window will start with the sequence number after the last one we included in the previous
