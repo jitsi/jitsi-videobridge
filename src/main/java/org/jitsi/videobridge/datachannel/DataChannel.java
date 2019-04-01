@@ -24,7 +24,7 @@ import org.jitsi_modified.sctp4j.*;
 import java.nio.*;
 
 /**
- * TODO: This needs documentation.
+ * Models a WebRTC Data Channel
  *
  * @author Brian Baldino
  */
@@ -136,7 +136,7 @@ public class DataChannel
     }
 
     /**
-     * Sends date through the sender.
+     * Sends data through the sender.
      */
     protected int sendData(ByteBuffer data, int sid, int ppid)
     {

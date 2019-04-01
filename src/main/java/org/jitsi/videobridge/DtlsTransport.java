@@ -83,6 +83,8 @@ public class DtlsTransport extends IceTransport
 
     /**
      * Initializes a new {@link DtlsTransport} instance for a specific endpoint.
+     * @param endpoint the endpoint with which this {@link DtlsTransport} is
+     *                 associated.
      */
     public DtlsTransport(Endpoint endpoint)
             throws IOException
@@ -176,7 +178,11 @@ public class DtlsTransport extends IceTransport
     }
 
     /**
-     * Called when the DTLS handshake completes.
+     * Installs a handler to be executed when the DTLS handshake
+     * is completed (or immediately if the DTLS handshake has
+     * already completed).  Multiple handlers can be installed
+     * and will be run in the order they are added.
+     * @param handler the handler to be executed
      */
     public void onDtlsHandshakeComplete(Runnable handler)
     {
@@ -191,8 +197,8 @@ public class DtlsTransport extends IceTransport
     }
 
     /**
-     * Creates the {@link Node} to handle packets read from the ice4j socket.
-     * @return
+     * Creates the packet pipeline to handle packets read from the ice4j socket.
+     * @return the root {@link Node} of the created pipeline
      */
     private Node createIncomingPipeline()
     {
@@ -238,8 +244,8 @@ public class DtlsTransport extends IceTransport
     }
 
     /**
-     * Creates the {@link Node} to handle outgoing DTLS packets.
-     * @return
+     * Creates the packet pipeline to handle outgoing DTLS packets.
+     * @return the root {@link Node} of the outgoing DTLS pipeline.
      */
     private Node createOutgoingDtlsPipeline()
     {
@@ -250,8 +256,8 @@ public class DtlsTransport extends IceTransport
     }
 
     /**
-     * Creates the {@link Node} to handle outgoing SRTP packets.
-     * @return
+     * Creates the packet pipeline to handle outgoing SRTP packets.
+     * @return the root {@link Node} of the outgoing SRTP pipeline.
      */
     private Node createOutgoingSrtpPipeline()
     {
@@ -261,7 +267,7 @@ public class DtlsTransport extends IceTransport
     }
 
     /**
-     * Sends a DTLS packet.
+     * Sends a DTLS packet through the outgoing DTLS pipeline.
      */
     public void sendDtlsData(PacketInfo packetInfo)
     {

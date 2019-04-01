@@ -245,10 +245,10 @@ package org.jitsi.videobridge.cc;
      public interface ProbingDataSender
      {
          /**
-          * Sends a specific number of bytes with a specific SSRC (?).
+          * Sends a specific number of bytes with a specific SSRC.
           * @param mediaSsrc the SSRC
-          * @param numBytes ?
-          * @return ?
+          * @param numBytes the number of probing bytes we want to send
+          * @return the number of bytes of probing data actually sent
           */
          int sendProbing(long mediaSsrc, int numBytes);
      }

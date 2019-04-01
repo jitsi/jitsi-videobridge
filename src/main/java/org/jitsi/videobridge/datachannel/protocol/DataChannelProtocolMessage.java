@@ -20,8 +20,9 @@ import java.nio.*;
 
 /**
  * https://tools.ietf.org/html/draft-ietf-rtcweb-data-protocol-08#section-5
+ * Base class for Data Channel 'protocol' messages; that is, messages
+ * used in Data Channel setup.
  *
- * TODO: this needs documentation
  * @author Brian Baldino
  */
 public class DataChannelProtocolMessage extends DataChannelMessage

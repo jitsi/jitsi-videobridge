@@ -19,7 +19,7 @@ package org.jitsi.videobridge.datachannel.protocol;
 import java.nio.*;
 
 /**
- * TODO: This needs documentation.
+ * Parses Data Channel protocol messages
  *
  * @author Brian Baldino
  */

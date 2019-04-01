@@ -26,7 +26,8 @@ import java.util.*;
  * We need the stack to look at all incoming messages so that it can listen for an 'open channel'
  * message from the remote side
  *
- * TODO this needs documentation
+ * Handles DataChannel negotiation and the routing of all Data Channel messages
+ * to specific {@link DataChannel} instances.
  *
  * @author Brian Baldino
  */
