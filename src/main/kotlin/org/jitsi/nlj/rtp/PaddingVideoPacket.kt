@@ -17,6 +17,7 @@
 package org.jitsi.nlj.rtp
 
 import org.jitsi.nlj.util.BufferPool
+import org.jitsi.rtp.rtp.RtpHeader
 
 class PaddingVideoPacket(
     length: Int
@@ -27,6 +28,9 @@ class PaddingVideoPacket(
         // out the data
         buffer.fill(0, offset, length)
         version = 2
+        // Recalculate the header length now that we've zero'd everything out
+        // and set the fields
+        headerLength = RtpHeader.getTotalLength(buffer, offset)
         paddingSize = payloadLength
     }
 }
