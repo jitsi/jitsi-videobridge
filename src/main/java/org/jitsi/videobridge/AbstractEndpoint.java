@@ -140,7 +140,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public void setMaxReceiveFrameHeightPx(int maxReceiveFrameHeightPx) { }
 
     /**
-     * Gets the LastN value for this endpoint.
+     * Gets the LastN value for this endpoint (how many endpoints this
+     * receiver is willing to receive video for).
      */
     public Integer getLastN()
     {

@@ -24,8 +24,6 @@ import java.nio.*;
 /**
  * Same as {@link DataChannel} but automatically sends the open channel ack message upon creation
  *
- * TODO: This needs documentation
- *
  * @author Brian Baldino
  */
 public class RemotelyOpenedDataChannel extends DataChannel
