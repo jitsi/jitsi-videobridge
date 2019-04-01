@@ -176,7 +176,7 @@ open class RtpPacket(
                 3 /* padding */
 
         var newPayloadOffset = 0
-        val newBuffer = if (buffer.size >= maxRequiredLength) {
+        val newBuffer = if (buffer.size >= (maxRequiredLength + BYTES_TO_LEAVE_AT_END_OF_PACKET)) {
             // We don't need a new buffer
             if ((offset + headerLength) >= (maxRequiredLength - currPayloadLength)) {
                 // Region A (see above) is enough to accommodate the new
@@ -184,14 +184,15 @@ open class RtpPacket(
                 newPayloadOffset = payloadOffset
             } else {
                 // We have to use region D, so move the payload all the way to the right
-                newPayloadOffset = buffer.size - currPayloadLength
+                newPayloadOffset = buffer.size - currPayloadLength - BYTES_TO_LEAVE_AT_END_OF_PACKET
                 System.arraycopy(buffer, payloadOffset, buffer, newPayloadOffset, currPayloadLength)
             }
             buffer
         } else {
-            // We need a new buffer. We will place the payload to the very right.
-            BufferPool.getArray(maxRequiredLength).apply {
-                newPayloadOffset = size - currPayloadLength
+            // We need a new buffer. We will place the payload almost to the end
+            // (leaving room for an SRTP tag)
+            BufferPool.getArray(maxRequiredLength + BYTES_TO_LEAVE_AT_END_OF_PACKET).apply {
+                newPayloadOffset = size - currPayloadLength - BYTES_TO_LEAVE_AT_END_OF_PACKET
                 System.arraycopy(buffer, payloadOffset, this, newPayloadOffset, currPayloadLength)
             }
         }
@@ -434,5 +435,15 @@ open class RtpPacket(
          * support 1 byte header extensions
          */
         const val HEADER_EXT_HEADER_SIZE = 1
+
+        /**
+         * In some cases when we add a header extension, it's easier to shift
+         * the payload to the end to make room for the (unknown) amount of bytes
+         * in the new header extension.  Doing this means we have to grow the
+         * buffer every time to add the SRTP auth tag.  This value determines
+         * how many bytes away from the end of the buffer we'll shift in that
+         * scenario in order to leave room.
+         */
+        const val BYTES_TO_LEAVE_AT_END_OF_PACKET = 20
     }
 }
