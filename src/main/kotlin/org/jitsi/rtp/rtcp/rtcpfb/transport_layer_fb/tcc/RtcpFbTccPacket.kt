@@ -256,24 +256,34 @@ class RtcpFbTccPacket(
     length: Int
 ) : TransportLayerRtcpFbPacket(buffer, offset, length), Iterable<ReceivedPacket> {
 
-    // All but last encoded packet chunks.
-    private val encoded_chunks_ = mutableListOf<Chunk>()
-    // The current chunk we're 'filling out' as packets
-    // are received
-    private var last_chunk_ = LastChunk()
-    private val base_seq_no_: Int
-    private var num_seq_no_: Int = 0
-    private val packets_ = mutableListOf<ReceivedPacket>()
-    private var last_timestamp_us_: Long = 0
-    // The reference time, in ticks.
-    private var base_time_ticks_: Long = -1
+    /**
+     * Because much of time this packet is one that we built (not one
+     * that came in from the network) we don't care about re-parsing all
+     * of these fields.  To avoid doing this work, we put them in this
+     * data class and make its initialization lazy: they'll only be parsed
+     * if we access them (which we do for packets that are received from
+     * the network but not for ones we send out).
+     */
+    private data class TccMemberData(
+        val base_seq_no_: Int,
+        var base_time_ticks_: Long,
+        val encoded_chunks_: MutableList<Chunk>,
+        var last_chunk_: LastChunk,
+        var num_seq_no_: Int,
+        var last_timestamp_us_: Long,
+        val packets_: MutableList<ReceivedPacket>
+    )
 
-    val feedbackSeqNum: Int = getFeedbackPacketCount(buffer, offset)
-
-    init {
-        base_seq_no_ = getBaseSeqNum(buffer, offset)
+    private val data: TccMemberData by lazy(LazyThreadSafetyMode.NONE) {
+        val base_seq_no_ = getBaseSeqNum(buffer, offset)
         val status_count = getPacketStatusCount(buffer, offset)
-        base_time_ticks_ = getReferenceTimeTicks(buffer, offset)
+        val encoded_chunks_ = mutableListOf<Chunk>()
+        val last_chunk_ = LastChunk()
+        var num_seq_no_: Int = 0
+        var last_timestamp_us_: Long = 0
+        val packets_ = mutableListOf<ReceivedPacket>()
+
+        val base_time_ticks_ = getReferenceTimeTicks(buffer, offset)
         val delta_sizes = mutableListOf<Int>()
         var index = offset + PACKET_CHUNKS_OFFSET
         val end_index = offset + length
@@ -333,7 +343,41 @@ class RtcpFbTccPacket(
                 ++seq_no
             }
         }
+        TccMemberData(base_seq_no_, base_time_ticks_, encoded_chunks_, last_chunk_, num_seq_no_, last_timestamp_us_, packets_)
     }
+
+    // All but last encoded packet chunks.
+    private val encoded_chunks_: MutableList<Chunk>
+        get() = data.encoded_chunks_
+    // The current chunk we're 'filling out' as packets
+    // are received
+    private var last_chunk_: LastChunk
+        get() = data.last_chunk_
+        set(value) {
+            data.last_chunk_ = value
+        }
+    private val base_seq_no_: Int
+        get() = data.base_seq_no_
+    private var num_seq_no_: Int
+        get() = data.num_seq_no_
+        set(value) {
+            data.num_seq_no_ = value
+        }
+    private val packets_: MutableList<ReceivedPacket>
+        get() = data.packets_
+    private var last_timestamp_us_: Long
+        get() = data.last_timestamp_us_
+        set(value) {
+            data.last_timestamp_us_ = value
+        }
+    // The reference time, in ticks.
+    private var base_time_ticks_: Long
+        get() = data.base_time_ticks_
+        set(value) {
+            data.base_time_ticks_ = value
+        }
+
+    val feedbackSeqNum: Int = getFeedbackPacketCount(buffer, offset)
 
     fun GetBaseTimeUs(): Long =
         base_time_ticks_ * kBaseScaleFactor
