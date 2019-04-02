@@ -38,6 +38,12 @@ public class MediaStreamTrackDesc
     private final RTPEncodingDesc[] rtpEncodings;
 
     /**
+     * Allow the lookup of an encoding by the SSRC of a received packet.  Note
+     * that multiple SSRCs in this map may point to the same encoding.
+     */
+    private final Map<Long, RTPEncodingDesc> encodingsBySsrc = new HashMap<>();
+
+    /**
      * A string which identifies the owner of this track (e.g. the endpoint
      * which is the sender of the track).
      */
@@ -67,6 +73,14 @@ public class MediaStreamTrackDesc
     {
         this.rtpEncodings = rtpEncodings;
         this.owner = owner;
+    }
+
+    public void updateEncodingCache()
+    {
+        for (RTPEncodingDesc encoding : this.rtpEncodings)
+        {
+            encodingsBySsrc.put(encoding.getPrimarySSRC(), encoding);
+        }
     }
 
     /**
@@ -125,6 +139,11 @@ public class MediaStreamTrackDesc
         if (ArrayUtils.isNullOrEmpty(rtpEncodings))
         {
             return null;
+        }
+        RTPEncodingDesc desc = encodingsBySsrc.get(videoRtpPacket.getSsrc());
+        if (desc != null)
+        {
+            return desc;
         }
         return Arrays.stream(rtpEncodings)
                 .filter(encoding -> encoding.matches(videoRtpPacket))
