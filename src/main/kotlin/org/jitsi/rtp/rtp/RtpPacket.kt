@@ -94,7 +94,7 @@ open class RtpPacket(
      * The length of the entire RTP header, including any extensions, in bytes
      */
     var headerLength: Int = RtpHeader.getTotalLength(buffer, offset)
-        private set
+        protected set
 
     val payloadLength: Int
         get() = length - headerLength

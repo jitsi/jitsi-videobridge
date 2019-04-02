@@ -49,6 +49,9 @@ class RtpUtils {
                 }
             }
         }
+        fun getPaddedLengthValue(unpaddedSizeBytes: Int): Int {
+            return calculateRtcpLengthFieldValue(unpaddedSizeBytes + getNumPaddingBytes(unpaddedSizeBytes))
+        }
         /**
          * [sizeBytes] MUST including padding (i.e. it should be 32-bit word aligned)
          */
@@ -61,10 +64,37 @@ class RtpUtils {
 
         fun getNumPaddingBytes(dataSizeBytes: Int): Int {
             var paddingBytes = 0
-            while (dataSizeBytes + paddingBytes % 4 != 0) {
+            while ((dataSizeBytes + paddingBytes) % 4 != 0) {
                 paddingBytes++
             }
             return paddingBytes
         }
+        /**
+         * Returns the delta between two RTP sequence numbers, taking into account
+         * rollover.  This will return the 'shortest' delta between the two
+         * sequence numbers in the form of the number you'd add to b to get a. e.g.:
+         * getSequenceNumberDelta(1, 10) -> -9 (10 + -9 = 1)
+         * getSequenceNumberDelta(1, 65530) -> 7 (65530 + 7 = 1)
+         * @return the delta between two RTP sequence numbers (modulo 2^16).
+         */
+        fun getSequenceNumberDelta(a: Int, b: Int): Int
+        {
+            val diff = a - b;
+            return when {
+                diff < -(1 shl 15) -> diff + (1 shl 16)
+                diff > (1 shl 15) -> diff - (1 shl 16)
+                else -> diff
+            }
+        }
     }
 }
+
+/**
+ * Returns true if the RTP sequence number represented by [this] represents a more recent RTP packet than the one
+ * represented by [otherSeqNum]
+ */
+infix fun Int.isNewerThan(otherSeqNum: Int): Boolean =
+    RtpUtils.getSequenceNumberDelta(this, otherSeqNum) > 0
+
+infix fun Int.isOlderThan(otherSeqNum: Int): Boolean =
+    RtpUtils.getSequenceNumberDelta(this, otherSeqNum) < 0

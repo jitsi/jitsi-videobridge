@@ -88,6 +88,9 @@
                 </executions>
                 <configuration>
                     <jvmTarget>1.8</jvmTarget>
+                    <args>
+                        <arg>-XXLanguage:+InlineClasses</arg>
+                    </args>
                 </configuration>
             </plugin>
             <plugin>

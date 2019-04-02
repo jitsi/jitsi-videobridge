@@ -16,6 +16,8 @@
 
 package org.jitsi.rtp.extensions.unsigned
 
+import kotlin.experimental.and
+
 /**
  * Many times fields in packets are defined as unsigned.  Since
  * we don't have unsigned types (and attempts at using Kotlin's
@@ -32,6 +34,12 @@ fun Short.toPositiveInt(): Int = toInt() and 0xFFFF
 fun Int.toPositiveLong(): Long = toLong() and 0xFFFFFFFF
 
 //TODO: i think these should be able to make the above functions obsolete
+fun Number.toPositiveShort(): Short {
+    return when (this) {
+        is Byte -> this.toShort() and 0xFF
+        else -> this.toShort()
+    }
+}
 fun Number.toPositiveInt(): Int {
     return when (this) {
         is Byte -> this.toInt() and 0xFF
