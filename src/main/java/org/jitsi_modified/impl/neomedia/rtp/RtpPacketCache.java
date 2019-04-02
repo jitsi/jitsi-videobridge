@@ -62,6 +62,8 @@ public class RtpPacketCache
     public final static String NACK_CACHE_SIZE_MILLIS
         = "org.jitsi_modified.impl.neomedia.rtp.RtpPacketCache.CACHE_SIZE_MILLIS";
 
+    private static final int BUFFER_SIZE = 1500 + RtpPacket.BYTES_TO_LEAVE_AT_END_OF_PACKET;
+
     private static Configuration defaultConfiguration = new Configuration();
 
     static {
@@ -336,10 +338,10 @@ public class RtpPacketCache
     {
         RtpPacket pkt = pool.poll();
         if (pkt == null)
-            pkt = new RtpPacket(new byte[len], 0, 0);
+            pkt = new RtpPacket(new byte[BUFFER_SIZE], 0, 0);
 
         if (pkt.getBuffer() == null || pkt.getBuffer().length < len)
-            pkt.setBuffer(new byte[len]);
+            pkt.setBuffer(new byte[BUFFER_SIZE]);
         pkt.setOffset(0);
         pkt.setLength(0);
 
