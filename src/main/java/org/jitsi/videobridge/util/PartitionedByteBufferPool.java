@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.util;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.rtp.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.utils.*;
 import org.json.simple.*;
@@ -48,7 +49,7 @@ class PartitionedByteBufferPool
     /**
      * The size of buffers to allocate.
      */
-    private static final int DEFAULT_BUFFER_SIZE = 1500;
+    private static final int DEFAULT_BUFFER_SIZE = 1500 + RtpPacket.BYTES_TO_LEAVE_AT_END_OF_PACKET;
 
     /**
      * Whether to accept small buffers (<1500) that are returned.
