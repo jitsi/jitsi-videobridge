@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2018 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.dtls.DtlsStack
+import org.jitsi.nlj.protocol.ProtocolStack
 import org.jitsi.nlj.transform.node.MultipleOutputTransformerNode
-import org.jitsi.nlj.util.cdebug
 
-/**
- * [DtlsReceiverNode] bridges a chain of modules to a DTLS's transport
- * (used by the bouncycastle stack).  Receives incoming DTLS data, passes it
- * to the DTLS stack and forwards any DTLS app packets
- */
-class DtlsReceiver(
-        private val dtlsStack: DtlsStack
-) : MultipleOutputTransformerNode("DTLS Receiver") {
+class ProtocolReceiver @JvmOverloads constructor(
+    private val stack: ProtocolStack,
+    name: String = stack::class.toString()
+) : MultipleOutputTransformerNode(name) {
+
     override fun transform(packetInfo: PacketInfo): List<PacketInfo> {
-        logger.cdebug { "DTLS receiver processing incoming DTLS packets" }
-        // TODO: we may be leaking packets here (failing to return them to the pool)
-        return dtlsStack.processIncomingDtlsPackets(packetInfo)
+        return stack.processIncomingProtocolData(packetInfo)
     }
 }

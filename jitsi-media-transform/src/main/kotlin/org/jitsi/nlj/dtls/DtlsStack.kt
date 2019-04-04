@@ -20,6 +20,7 @@ import org.bouncycastle.crypto.tls.DTLSTransport
 import org.bouncycastle.crypto.tls.DatagramTransport
 import org.bouncycastle.crypto.tls.TlsContext
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.protocol.ProtocolStack
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
@@ -56,7 +57,7 @@ import java.util.concurrent.TimeUnit
  *  dtlsStack.sendDtlsAppData(dtlsAppPacket)
  *
  */
-abstract class DtlsStack : DatagramTransport {
+abstract class DtlsStack : ProtocolStack, DatagramTransport {
     companion object {
         /**
          * Because generating the certificate can be expensive, we generate a single
@@ -104,7 +105,11 @@ abstract class DtlsStack : DatagramTransport {
      */
     private val incomingProtocolData = LinkedBlockingQueue<PacketInfo>()
     // TODO convert to single packet?
-    var onOutgoingProtocolData: (List<PacketInfo>) -> Unit = {}
+    private var onOutgoingProtocolData: (List<PacketInfo>) -> Unit = {}
+
+    override fun onOutgoingProtocolData(handler: (List<PacketInfo>) -> Unit) {
+        onOutgoingProtocolData = handler
+    }
 
     /**
      * The negotiated DTLS transport.  This is used to read and write DTLS app data.
@@ -121,12 +126,7 @@ abstract class DtlsStack : DatagramTransport {
     }
     protected var handshakeCompleteHandler: (TlsContext) -> Unit = {}
 
-    /**
-     * Process incoming DTLS packets from the network by passing them into the stack.  All received DTLS packets should
-     * be sent to the stack via this method.  Returns any DTLS app packets which were processed by the stack as part
-     * of this call.
-     */
-    fun processIncomingDtlsPackets(packetInfo: PacketInfo): List<PacketInfo> {
+    override fun processIncomingProtocolData(packetInfo: PacketInfo): List<PacketInfo> {
         incomingProtocolData.add(packetInfo)
         var bytesReceived: Int
         val outPackets = mutableListOf<PacketInfo>()
@@ -142,7 +142,7 @@ abstract class DtlsStack : DatagramTransport {
         return outPackets
     }
 
-    fun sendDtlsAppData(packetInfo: PacketInfo) {
+    override fun sendApplicationData(packetInfo: PacketInfo) {
         dtlsTransport?.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
     }
 
