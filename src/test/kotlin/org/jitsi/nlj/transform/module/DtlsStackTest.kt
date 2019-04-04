@@ -40,8 +40,8 @@ import org.bouncycastle.operator.bc.BcRSAContentSignerBuilder
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.dtls.DtlsClientStack
 import org.jitsi.nlj.transform.node.ConsumerNode
-import org.jitsi.nlj.transform.node.incoming.DtlsReceiver
-import org.jitsi.nlj.transform.node.outgoing.DtlsSender
+import org.jitsi.nlj.transform.node.incoming.ProtocolReceiver
+import org.jitsi.nlj.transform.node.outgoing.ProtocolSender
 import org.jitsi.rtp.UnparsedPacket
 import java.math.BigInteger
 import java.security.KeyPair
@@ -146,8 +146,8 @@ internal class DtlsStackTest : ShouldSpec() {
 
     init {
         val dtls = DtlsClientStack()
-        val receiver = DtlsReceiver(dtls)
-        val sender = DtlsSender(dtls)
+        val receiver = ProtocolReceiver(dtls)
+        val sender = ProtocolSender(dtls)
 
         val serverTransport = FakeTransport()
         val dtlsServer = TlsServerImpl()
@@ -184,7 +184,7 @@ internal class DtlsStackTest : ShouldSpec() {
         // connect() below prevents the rest of the tests from running.
         dtls.connect()
         val message = "Hello, world"
-        dtls.sendDtlsAppData(PacketInfo(UnparsedPacket(message.toByteArray())))
+        dtls.sendApplicationData(PacketInfo(UnparsedPacket(message.toByteArray())))
         receivedDataFuture.get() shouldBe message
 
         serverRunning = false
