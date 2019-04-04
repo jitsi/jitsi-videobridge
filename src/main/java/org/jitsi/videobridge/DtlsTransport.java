@@ -69,8 +69,8 @@ public class DtlsTransport extends IceTransport
 
     private final Logger logger;
     private DtlsClientStack dtlsStack = new DtlsClientStack();
-    private DtlsReceiver dtlsReceiver = new DtlsReceiver(dtlsStack);
-    private DtlsSender dtlsSender = new DtlsSender(dtlsStack);
+    private ProtocolReceiver dtlsReceiver = new ProtocolReceiver(dtlsStack);
+    private ProtocolSender dtlsSender = new ProtocolSender(dtlsStack);
     private List<Runnable> dtlsConnectedSubscribers = new ArrayList<>();
     private final PacketInfoQueue outgoingPacketQueue;
     private final Endpoint endpoint;
