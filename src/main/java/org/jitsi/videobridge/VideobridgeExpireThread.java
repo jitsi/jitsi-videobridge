@@ -20,9 +20,8 @@ import java.util.concurrent.*;
 
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.util.*;
-import org.jitsi.util.concurrent.*;
-import org.jitsi.videobridge.util.*;
+import org.jitsi.utils.concurrent.*;
+import org.jitsi.utils.logging.*;
 import org.osgi.framework.*;
 
 /**

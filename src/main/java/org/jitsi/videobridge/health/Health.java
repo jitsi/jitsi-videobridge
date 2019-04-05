@@ -19,8 +19,8 @@ import java.util.*;
 
 import org.ice4j.ice.harvest.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.util.Logger;
-import org.jitsi.util.concurrent.*;
+import org.jitsi.utils.logging.Logger;
+import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.xmpp.*;

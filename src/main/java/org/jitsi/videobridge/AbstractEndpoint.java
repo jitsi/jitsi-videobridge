@@ -16,7 +16,7 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.util.event.*;
+import org.jitsi.utils.event.*;
 import org.jitsi.utils.*;
 
 import java.io.*;

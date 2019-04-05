@@ -18,7 +18,7 @@ package org.jitsi.videobridge;
 import java.io.*;
 import java.util.*;
 
-import org.jitsi.util.*;
+import org.jitsi.utils.logging.*;
 import org.json.simple.*;
 
 /**

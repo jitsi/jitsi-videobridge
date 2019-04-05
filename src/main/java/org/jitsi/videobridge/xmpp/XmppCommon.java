@@ -41,8 +41,8 @@ class XmppCommon
      * The {@link Logger} used by the {@link XmppCommon} class and its
      * instances for logging output.
      */
-    private static final org.jitsi.util.Logger logger
-        =  org.jitsi.util.Logger.getLogger(XmppCommon.class);
+    private static final org.jitsi.utils.logging.Logger logger
+        =  org.jitsi.utils.logging.Logger.getLogger(XmppCommon.class);
 
     static final String[] FEATURES
         = new String[]

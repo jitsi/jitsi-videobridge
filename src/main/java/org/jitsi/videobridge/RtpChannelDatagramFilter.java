@@ -20,6 +20,7 @@ import java.net.*;
 import org.ice4j.socket.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.utils.logging.Logger;
 
 /**
  * Filters RTP or RTCP packet for a specific <tt>RtpChannel</tt>.

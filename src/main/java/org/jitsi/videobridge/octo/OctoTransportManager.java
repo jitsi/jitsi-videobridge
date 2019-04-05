@@ -20,8 +20,7 @@ import net.java.sip.communicator.util.*;
 import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.util.*;
-import org.jitsi.util.Logger;
+import org.jitsi.utils.logging.Logger;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
 
