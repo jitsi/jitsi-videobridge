@@ -20,6 +20,7 @@ import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.utils.logging.Logger;
 import org.jitsi.videobridge.cc.*;
 
 import java.util.*;

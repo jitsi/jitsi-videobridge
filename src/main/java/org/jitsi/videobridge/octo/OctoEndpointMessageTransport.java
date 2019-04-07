@@ -15,7 +15,7 @@
  */
 package org.jitsi.videobridge.octo;
 
-import org.jitsi.util.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.*;
 import org.json.simple.*;
 

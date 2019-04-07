@@ -21,6 +21,7 @@ import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.utils.*;
+import org.jitsi.utils.logging.Logger;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.xmpp.*;
 

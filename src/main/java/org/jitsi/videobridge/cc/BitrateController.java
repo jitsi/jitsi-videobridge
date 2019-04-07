@@ -23,8 +23,9 @@ import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.rtp.*;
-import org.jitsi.util.*;
 import org.jitsi.utils.*;
+import org.jitsi.utils.logging.*;
+import org.jitsi.utils.ArrayUtils;
 import org.jitsi.videobridge.*;
 
 import java.util.*;

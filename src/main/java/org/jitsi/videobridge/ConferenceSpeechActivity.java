@@ -20,12 +20,11 @@ import java.lang.ref.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-import org.jitsi.impl.neomedia.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.event.*;
-import org.jitsi.util.*;
 import org.jitsi.utils.*;
-import org.jitsi.util.event.*;
+import org.jitsi.utils.concurrent.*;
+import org.jitsi.utils.dsi.*;
+import org.jitsi.utils.event.*;
+import org.jitsi.utils.logging.Logger;
 import org.json.simple.*;
 
 /**
@@ -154,12 +153,6 @@ public class ConferenceSpeechActivity
         = ConferenceSpeechActivity.this::activeSpeakerChanged;
 
     /**
-     * The <tt>ActiveSpeakerDetector</tt> which detects/identifies the
-     * active/dominant speaker in {@link #conference}. 
-     */
-    private ActiveSpeakerDetector activeSpeakerDetector;
-
-    /**
      * The <tt>Object</tt> which synchronizes the access to
      * {@link #activeSpeakerDetector}. 
      */
@@ -188,8 +181,8 @@ public class ConferenceSpeechActivity
     private boolean dominantEndpointChanged = false;
 
     /**
-     * The <tt>DominantSpeakerIdentification</tt> instance, if any, employed by
-     * {@link #activeSpeakerDetector}.
+     * The <tt>DominantSpeakerIdentification</tt> instance which
+     * detects/identifies the active/dominant speaker in {@link #conference}.
      */
     private DominantSpeakerIdentification dominantSpeakerIdentification;
 
@@ -424,36 +417,20 @@ public class ConferenceSpeechActivity
      */
     private ActiveSpeakerDetector getActiveSpeakerDetector()
     {
-        ActiveSpeakerDetector activeSpeakerDetector;
+        DominantSpeakerIdentification dominantSpeakerIdentification;
         boolean addActiveSpeakerChangedListener = false;
 
         synchronized (activeSpeakerDetectorSyncRoot)
         {
-            activeSpeakerDetector = this.activeSpeakerDetector;
-            if (activeSpeakerDetector == null)
+            dominantSpeakerIdentification = this.dominantSpeakerIdentification;
+            if (dominantSpeakerIdentification == null)
             {
-                ActiveSpeakerDetectorImpl asdi
-                    = new ActiveSpeakerDetectorImpl();
+                DominantSpeakerIdentification dsi
+                    = new DominantSpeakerIdentification();
 
-                this.activeSpeakerDetector = activeSpeakerDetector = asdi;
                 addActiveSpeakerChangedListener = true;
-
-                /*
-                 * Find the DominantSpeakerIdentification instance employed by
-                 * activeSpeakerDetector, if possible, in order to enable
-                 * additional functionality (e.g. debugging).
-                 */
-                ActiveSpeakerDetector impl = asdi.getImpl();
-
-                if (impl instanceof DominantSpeakerIdentification)
-                {
-                    dominantSpeakerIdentification
-                        = (DominantSpeakerIdentification) impl;
-                }
-                else
-                {
-                    dominantSpeakerIdentification = null;
-                }
+                this.dominantSpeakerIdentification
+                        = dominantSpeakerIdentification = dsi;
             }
         }
 
@@ -467,21 +444,15 @@ public class ConferenceSpeechActivity
 
             if (conference != null)
             {
-                activeSpeakerDetector.addActiveSpeakerChangedListener(
+                dominantSpeakerIdentification.addActiveSpeakerChangedListener(
                         activeSpeakerChangedListener);
 
-                DominantSpeakerIdentification dominantSpeakerIdentification
-                    = this.dominantSpeakerIdentification;
-
-                if (dominantSpeakerIdentification != null)
-                {
-                    dominantSpeakerIdentification.addPropertyChangeListener(
+                dominantSpeakerIdentification.addPropertyChangeListener(
                             propertyChangeListener);
-                }
             }
         }
 
-        return activeSpeakerDetector;
+        return dominantSpeakerIdentification;
     }
 
     /**
@@ -505,20 +476,13 @@ public class ConferenceSpeechActivity
              * for the purposes of completeness, not because it is strictly
              * necessary.
              */
-            ActiveSpeakerDetector activeSpeakerDetector
-                = this.activeSpeakerDetector;
-
-            if (activeSpeakerDetector != null)
-            {
-                activeSpeakerDetector.removeActiveSpeakerChangedListener(
-                        activeSpeakerChangedListener);
-            }
-
             DominantSpeakerIdentification dominantSpeakerIdentification
                 = this.dominantSpeakerIdentification;
 
             if (dominantSpeakerIdentification != null)
             {
+                dominantSpeakerIdentification.removeActiveSpeakerChangedListener(
+                        activeSpeakerChangedListener);
                 dominantSpeakerIdentification.removePropertyChangeListener(
                         propertyChangeListener);
             }

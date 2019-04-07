@@ -23,6 +23,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
+import org.jitsi.utils.logging.Logger;
 
 /**
  * A generic implementation of an adaptive track projection context that can be

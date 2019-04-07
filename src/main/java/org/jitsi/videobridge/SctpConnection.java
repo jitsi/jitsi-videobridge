@@ -34,8 +34,9 @@ import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.packetlogging.*;
 import org.jitsi.util.*;
-import org.jitsi.util.Logger; // Disambiguation.
 import org.jitsi.utils.*;
+import org.jitsi.utils.concurrent.ExecutorUtils;
+import org.jitsi.utils.logging.Logger; // Disambiguation.
 
 /**
  * Class is a transport layer for WebRTC data channels. It consists of SCTP

@@ -18,7 +18,7 @@ package org.jitsi.videobridge.cc.vp8;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.logging.*;
 
 /**
  * This class is responsible for dropping VP8 simulcast/svc packets based on
