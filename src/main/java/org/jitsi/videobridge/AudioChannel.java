@@ -17,8 +17,8 @@ package org.jitsi.videobridge;
 
 import java.util.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.jingle.*;
 
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;

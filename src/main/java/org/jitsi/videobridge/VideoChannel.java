@@ -19,8 +19,8 @@ import java.beans.*;
 import java.io.*;
 import java.util.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.jingle.*;
 
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;

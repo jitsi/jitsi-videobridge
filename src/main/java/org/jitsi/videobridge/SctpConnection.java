@@ -23,7 +23,7 @@ import java.util.concurrent.*;
 import java.util.function.*;
 import java.util.logging.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import org.jitsi.xmpp.extensions.jingle.*;
 
 import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;

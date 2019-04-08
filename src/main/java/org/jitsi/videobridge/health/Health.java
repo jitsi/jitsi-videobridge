@@ -25,8 +25,8 @@ import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.xmpp.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.jingle.*;
 
 /**
  * Checks the health of {@link Videobridge}.
@@ -114,7 +114,7 @@ public class Health
      * {@code Videobridge} to check the health (status) of
      * @throws Exception if an error occurs while checking the health (status)
      * of the {@code videobridge} associated with {@code conference} or the
-     * check determines that the {@code Videobridge} is not healthy 
+     * check determines that the {@code Videobridge} is not healthy
      */
     private static void check(Conference conference)
         throws Exception
@@ -207,7 +207,7 @@ public class Health
      * of
      * @throws Exception if an error occurs while checking the health (status)
      * of {@code videobridge} or the check determines that {@code videobridge}
-     * is not healthy 
+     * is not healthy
      */
     private static void doCheck(Videobridge videobridge)
         throws Exception

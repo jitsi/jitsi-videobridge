@@ -28,8 +28,8 @@ import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.jingle.*;
 
 /**
  * Represents channel in the terms of Jitsi Videobridge.
