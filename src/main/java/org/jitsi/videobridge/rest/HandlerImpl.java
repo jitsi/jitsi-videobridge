@@ -21,7 +21,7 @@ import java.util.*;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.colibri.*;
 import net.java.sip.communicator.util.*;
 
 import org.eclipse.jetty.server.*;

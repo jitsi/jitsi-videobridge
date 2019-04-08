@@ -15,7 +15,7 @@
  */
 package org.jitsi.videobridge.octo;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import org.jitsi.xmpp.extensions.jingle.*;
 import net.java.sip.communicator.util.*;
 import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.transform.*;

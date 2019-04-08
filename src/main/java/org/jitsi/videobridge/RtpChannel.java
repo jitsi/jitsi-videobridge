@@ -22,9 +22,9 @@ import java.util.*;
 
 import javax.media.rtp.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import net.java.sip.communicator.impl.protocol.jabber.jinglesdp.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.jingle.*;
+import net.java.sip.communicator.impl.protocol.jabber.jinglesdp.JingleUtils;
 import net.java.sip.communicator.util.*;
 import net.sf.fmj.media.rtp.*;
 import net.sf.fmj.media.rtp.RTPHeader;
@@ -698,7 +698,10 @@ public class RtpChannel
 
         super.describe(iq);
 
-        iq.setDirection(stream.getDirection());
+        iq.setDirection(
+            stream.getDirection() != null ?
+                stream.getDirection().toString()
+                : null);
 
         iq.setLastN(null);
 

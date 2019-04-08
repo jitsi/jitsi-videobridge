@@ -16,7 +16,7 @@
     <assembly.skipAssembly>true</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
     <jetty.version>9.2.10.v20150310</jetty.version>
-    <jitsi-desktop.version>2.13.2bc6ccf</jitsi-desktop.version>
+    <jitsi-desktop.version>2.13.ca86bac</jitsi-desktop.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <slf4j.version>1.7.7</slf4j.version>
     <smack.version>4.2.4-47d17fc</smack.version>
@@ -165,6 +165,11 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>libjitsi</artifactId>
       <version>1.0-20190405.175243-382</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>jitsi-xmpp-extensions</artifactId>
+      <version>1.0-20190404.082724-1</version>
     </dependency>
 
     <dependency>

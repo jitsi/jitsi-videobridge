@@ -21,9 +21,9 @@ import java.net.*;
 import java.util.*;
 import java.util.logging.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.jingle.*;
+import org.jitsi.xmpp.extensions.jingle.CandidateType;
 import net.java.sip.communicator.service.protocol.*;
 import net.java.sip.communicator.util.*;
 
@@ -1270,7 +1270,7 @@ public class IceUdpTransportManager
 
         if (transport == Transport.TCP || transport == Transport.SSLTCP)
         {
-            candidatePE.setTcpType(candidate.getTcpType());
+            candidatePE.setTcpType(candidate.getTcpType().toString());
         }
 
         candidatePE.setType(

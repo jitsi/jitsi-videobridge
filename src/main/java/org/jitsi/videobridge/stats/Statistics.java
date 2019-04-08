@@ -18,7 +18,7 @@ package org.jitsi.videobridge.stats;
 import java.util.*;
 import java.util.concurrent.locks.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.colibri.*;
 
 /**
  * Abstract class that defines common interface for a collection of statistics.

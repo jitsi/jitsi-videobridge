@@ -20,10 +20,11 @@ import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.regex.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.health.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import org.jitsi.service.neomedia.*;
+import org.jitsi.xmpp.extensions.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.health.*;
+import org.jitsi.xmpp.extensions.jingle.*;
 import net.java.sip.communicator.service.shutdown.*;
 import net.java.sip.communicator.util.*;
 
@@ -949,7 +950,8 @@ public class Videobridge
                 channel.setRtpHeaderExtensions(
                         channelIQ.getRtpHeaderExtensions());
 
-                channel.setDirection(channelIQ.getDirection());
+                channel.setDirection(
+                    MediaDirection.parseString(channelIQ.getDirection()));
 
                 channel.setRtpEncodingParameters(
                     channelIQ.getSources(), channelIQ.getSourceGroups());
