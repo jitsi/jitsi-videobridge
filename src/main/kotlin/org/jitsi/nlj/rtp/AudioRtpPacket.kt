@@ -24,7 +24,5 @@ class AudioRtpPacket(
     length: Int
 ) : RtpPacket(data, offset, length) {
 
-    override fun clone(): AudioRtpPacket {
-        return AudioRtpPacket(buffer.cloneFromPool(), offset, length)
-    }
+    override fun clone(): AudioRtpPacket = AudioRtpPacket(cloneBuffer(), offset, length)
 }

@@ -25,6 +25,5 @@ class DtlsProtocolPacket(
     length: Int
 ) : Packet(buf, offset, length) {
 
-    override fun clone(): DtlsProtocolPacket =
-        DtlsProtocolPacket(buffer.cloneFromPool(), offset, length)
+    override fun clone(): DtlsProtocolPacket = DtlsProtocolPacket(cloneBuffer(), offset, length)
 }

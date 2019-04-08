@@ -36,9 +36,7 @@ internal class ExclusivePathDemuxerTest : ShouldSpec() {
     }
 
     private class DummyRtcpPacket : RtcpPacket(ByteArray(50), 0, 50) {
-        override fun clone(): DummyRtcpPacket {
-            return DummyRtcpPacket()
-        }
+        override fun clone(): DummyRtcpPacket = DummyRtcpPacket()
     }
 
     private val rtpPath = ConditionalPacketPath()
