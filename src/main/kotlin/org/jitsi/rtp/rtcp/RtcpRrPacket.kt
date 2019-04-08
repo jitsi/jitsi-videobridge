@@ -60,10 +60,7 @@ class RtcpRrPacket(
         }.toList()
     }
 
-    // TODO: clone from pool copies all 1500 bytes. Should we optimize to only copy the bytes that we need (which for
-    // an RTCP packet are likely few)
-    override fun clone(): RtcpRrPacket =
-        RtcpRrPacket(buffer.cloneFromPool(), offset, length)
+    override fun clone(): RtcpRrPacket = RtcpRrPacket(cloneBuffer(), offset, length)
 
     companion object {
         const val PT = 201

@@ -26,6 +26,5 @@ class UnparsedPacket(
 
     constructor(buffer: ByteArray) : this(buffer, 0, buffer.size)
 
-    override fun clone(): UnparsedPacket =
-        UnparsedPacket(buffer.cloneFromPool(), offset, length)
+    override fun clone(): UnparsedPacket = UnparsedPacket(cloneBuffer(), offset, length)
 }

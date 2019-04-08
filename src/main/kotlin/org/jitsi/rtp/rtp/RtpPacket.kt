@@ -305,8 +305,7 @@ open class RtpPacket(
                 buffer, offset + RtpHeader.FIXED_HEADER_SIZE_BYTES + csrcCount * 4)
         }
 
-    override fun clone(): RtpPacket =
-        RtpPacket(buffer.cloneFromPool(), offset, length)
+    override fun clone(): RtpPacket = RtpPacket(cloneBuffer(), offset, length)
 
     override fun toString(): String = with(StringBuilder()) {
         append("RtpPacket: ")

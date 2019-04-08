@@ -67,8 +67,7 @@ class RtcpByePacket(
         }
     }
 
-    override fun clone(): RtcpByePacket =
-        RtcpByePacket(buffer.cloneFromPool(), offset, length)
+    override fun clone(): RtcpByePacket = RtcpByePacket(cloneBuffer(), offset, length)
 
     companion object {
         const val PT: Int = 203

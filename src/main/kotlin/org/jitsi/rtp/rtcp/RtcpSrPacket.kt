@@ -143,9 +143,7 @@ class RtcpSrPacket(
         }.toList()
     }
 
-    override fun clone(): RtcpSrPacket {
-        return RtcpSrPacket(buffer.cloneFromPool(), offset, length)
-    }
+    override fun clone(): RtcpSrPacket = RtcpSrPacket(cloneBuffer(), offset, length)
 
     // SenderInfo is defined differently so that we can scope these variables under a the 'senderInfo'
     // member here.  Is there a better way?
