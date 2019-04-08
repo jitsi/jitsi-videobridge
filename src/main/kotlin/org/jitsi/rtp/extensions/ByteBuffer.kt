@@ -30,7 +30,7 @@ import java.nio.ByteBuffer
  */
 fun ByteBuffer.clone(): ByteBuffer {
     val startPosition = this.position()
-    val clone = BufferPool.getBuffer(this.capacity())
+    val clone = ByteBuffer.wrap(BufferPool.getArray(this.capacity()))
     this.rewind()
     clone.put(this)
     this.position(startPosition)
@@ -164,21 +164,6 @@ fun ByteBuffer.put(index: Int, buf: ByteBuffer): ByteBuffer {
     return this
 }
 
-fun ByteBuffer.incrementPosition(value: Int) {
-    position(position() + value)
-}
-fun ByteBuffer.decrementPosition(value: Int) {
-    position(position() - value)
-}
-
-// Caller must check that capacity is large enough first
-fun ByteBuffer.increaseLimitBy(value: Int) {
-    limit(limit() + value)
-}
-fun ByteBuffer.decreaseLimitBy(value: Int) {
-    limit(limit() - value)
-}
-
 /**
  * Shifts the data from [startPos] to [endPos] [numBytes] to the right.
  * Note that this method may increase the given buffer's limit, up to
@@ -217,7 +202,8 @@ fun ByteBuffer.compareToFromBeginning(other: ByteBuffer): Int {
  * plus [other]
  */
 operator fun ByteBuffer.plus(other: ByteBuffer): ByteBuffer {
-    val newBuf = BufferPool.getBuffer(limit() + other.limit())
+    val newBuf = ByteBuffer.wrap(BufferPool.getArray(limit() + other.limit()))
+    newBuf.rewind()
     newBuf.put(duplicate().rewind() as ByteBuffer)
     newBuf.put(other.duplicate().rewind() as ByteBuffer)
     newBuf.flip()
