@@ -15,16 +15,16 @@
  */
 package org.jitsi.videobridge.shim;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.util.*;
-import org.jitsi.utils.*;
+import org.jitsi.utils.MediaType;
+import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.util.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.jingle.*;
 
 import java.util.*;
 
@@ -108,7 +108,7 @@ public class ChannelShim
     /**
      * This channel's direction.
      */
-    private MediaDirection direction = MediaDirection.SENDRECV;
+    private String direction = "sendrecv";
 
     /**
      * The sources that were signaled for this channel.
@@ -349,7 +349,7 @@ public class ChannelShim
      * Sets the direction of this channel.
      * @param direction the direction to set.
      */
-    public void setDirection(MediaDirection direction)
+    public void setDirection(String direction)
     {
         this.direction = direction;
     }

@@ -16,7 +16,6 @@
 package org.jitsi.videobridge;
 
 import kotlin.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.ice4j.socket.*;
@@ -30,12 +29,12 @@ import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.extensions.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.util.*;
+import org.jitsi.xmpp.extensions.jingle.*;
 
 import java.io.*;
 import java.net.*;
-import java.nio.*;
 import java.util.*;
 import java.util.function.*;
 

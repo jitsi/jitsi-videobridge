@@ -17,8 +17,8 @@ package org.jitsi.videobridge.health;
 
 import org.ice4j.ice.harvest.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.util.*;
-import org.jitsi.util.concurrent.*;
+import org.jitsi.utils.concurrent.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.transport.*;
 import org.jitsi.videobridge.xmpp.*;

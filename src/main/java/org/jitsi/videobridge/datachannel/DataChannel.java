@@ -17,9 +17,8 @@
 package org.jitsi.videobridge.datachannel;
 
 import org.jitsi.rtp.extensions.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
-import org.jitsi_modified.sctp4j.*;
 
 import java.nio.*;
 

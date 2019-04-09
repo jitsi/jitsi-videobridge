@@ -20,7 +20,7 @@ import java.lang.reflect.*;
 
 import org.hyperic.sigar.*;
 import org.hyperic.sigar.cmd.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.logging.*;
 
 /**
  * Implements retrieving statistics from OS such as total physical memory size

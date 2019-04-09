@@ -17,8 +17,8 @@ package org.jitsi.videobridge.cc;
 
  import org.jitsi.service.configuration.*;
  import org.jitsi.service.libjitsi.*;
- import org.jitsi.util.*;
- import org.jitsi.util.concurrent.*;
+ import org.jitsi.utils.concurrent.*;
+ import org.jitsi.utils.logging.*;
  import org.jitsi_modified.service.neomedia.rtp.*;
 
  import java.util.*;

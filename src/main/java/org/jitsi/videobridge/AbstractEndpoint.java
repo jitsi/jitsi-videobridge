@@ -15,11 +15,11 @@
  */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.util.*;
-import org.jitsi.util.event.*;
+import org.jitsi.utils.event.*;
+import org.jitsi.utils.logging.*;
+import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 
 import java.beans.*;

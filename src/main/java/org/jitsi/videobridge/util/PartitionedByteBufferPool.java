@@ -18,8 +18,8 @@ package org.jitsi.videobridge.util;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.rtp.rtp.*;
-import org.jitsi.util.*;
-import org.jitsi.utils.*;
+import org.jitsi.utils.logging.*;
+import org.jitsi.utils.stats.*;
 import org.json.simple.*;
 
 import java.util.*;

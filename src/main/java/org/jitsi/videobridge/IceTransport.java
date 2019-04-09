@@ -19,20 +19,19 @@ import java.beans.*;
 import java.io.*;
 import java.util.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
-
 import net.java.sip.communicator.util.*;
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.util.*;
-import org.jitsi.util.Logger;
+import org.jitsi.utils.logging.DiagnosticContext;
+import org.jitsi.utils.logging.Logger;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.transport.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.jingle.*;
+import org.jitsi.xmpp.extensions.jingle.CandidateType;
 import org.osgi.framework.*;
 
 /**
@@ -648,7 +647,7 @@ public class IceTransport
 
         if (transport == Transport.TCP || transport == Transport.SSLTCP)
         {
-            candidatePE.setTcpType(candidate.getTcpType());
+            candidatePE.setTcpType(candidate.getTcpType().toString());
         }
 
         candidatePE.setType(

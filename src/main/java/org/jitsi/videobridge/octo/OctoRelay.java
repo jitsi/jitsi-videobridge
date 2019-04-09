@@ -17,8 +17,8 @@ package org.jitsi.videobridge.octo;
 
 import org.ice4j.socket.*;
 import org.jitsi.rtp.*;
-import org.jitsi.util.*;
 import org.jitsi.utils.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.util.*;
 
 import java.io.*;

@@ -15,12 +15,10 @@
  */
 package org.jitsi.videobridge;
 
-import org.jitsi.impl.neomedia.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.event.*;
-import org.jitsi.util.*;
-import org.jitsi.util.event.*;
 import org.jitsi.utils.*;
+import org.jitsi.utils.dsi.*;
+import org.jitsi.utils.event.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 
@@ -141,18 +139,18 @@ public class ConferenceSpeechActivity
 
     /**
      * The <tt>ActiveSpeakerChangedListener</tt> which listens to
-     * {@link #activeSpeakerDetector} about changes in the active/dominant
-     * speaker in this multipoint conference.
+     * {@link #dominantSpeakerIdentification} about changes in the
+     * active/dominant speaker in this multipoint conference.
      */
     private final ActiveSpeakerChangedListener activeSpeakerChangedListener
         = ConferenceSpeechActivity.this::activeSpeakerChanged;
 
     /**
-     * The <tt>ActiveSpeakerDetector</tt> which detects/identifies the
-     * active/dominant speaker in {@link #conference}.
+     * The <tt>DominantSpeakerIdentification</tt> instance which
+     * detects/identifies the active/dominant speaker in {@link #conference}.
      */
-    private final ActiveSpeakerDetector activeSpeakerDetector =
-            new ActiveSpeakerDetectorImpl();
+    private final DominantSpeakerIdentification dominantSpeakerIdentification
+            = new DominantSpeakerIdentification();
 
     /**
      * The <tt>Conference</tt> for which this instance represents the speech
@@ -203,7 +201,7 @@ public class ConferenceSpeechActivity
          // The PropertyChangeListener will weakly reference this instance and
          // will unregister itself from the conference sooner or later.
         conference.addPropertyChangeListener(propertyChangeListener);
-        activeSpeakerDetector
+        dominantSpeakerIdentification
                 .addActiveSpeakerChangedListener(activeSpeakerChangedListener);
     }
 
@@ -260,7 +258,7 @@ public class ConferenceSpeechActivity
     public JSONObject doGetDominantSpeakerIdentificationJSON()
     {
         DominantSpeakerIdentification dominantSpeakerIdentification
-            = getDominantSpeakerIdentification();
+            = this.dominantSpeakerIdentification;
         JSONObject jsonObject;
 
         if (dominantSpeakerIdentification == null)
@@ -347,25 +345,15 @@ public class ConferenceSpeechActivity
         {
             this.conference = conference = null;
 
-            /*
-             * The Conference has expired so there is no point to listen to
-             * ActiveSpeakerDetector. Remove the activeSpeakerChangedListener
-             * for the purposes of completeness, not because it is strictly
-             * necessary.
-             */
-            ActiveSpeakerDetector activeSpeakerDetector
-                = this.activeSpeakerDetector;
-
-            activeSpeakerDetector.removeActiveSpeakerChangedListener(
-                    activeSpeakerChangedListener);
-
             DominantSpeakerIdentification dominantSpeakerIdentification
-                = getDominantSpeakerIdentification();
+                = this.dominantSpeakerIdentification;
 
             if (dominantSpeakerIdentification != null)
             {
                 dominantSpeakerIdentification.removePropertyChangeListener(
                         propertyChangeListener);
+                dominantSpeakerIdentification.removeActiveSpeakerChangedListener(
+                        activeSpeakerChangedListener);
             }
         }
 
@@ -385,27 +373,6 @@ public class ConferenceSpeechActivity
         {
             return endpoints.isEmpty() ? null : endpoints.get(0);
         }
-    }
-
-    /**
-     * Gets the <tt>DominantSpeakerIdentification</tt> instance, if any,
-     * employed by {@link #activeSpeakerDetector}.
-     *
-     * @return the <tt>DominantSpeakerIdentification</tt> instance, if any,
-     * employed by <tt>activeSpeakerDetector</tt>
-     */
-    private DominantSpeakerIdentification getDominantSpeakerIdentification()
-    {
-        if (activeSpeakerDetector instanceof ActiveSpeakerDetectorImpl)
-        {
-            ActiveSpeakerDetectorImpl asdi
-                    = (ActiveSpeakerDetectorImpl)activeSpeakerDetector;
-            if (asdi.getImpl() instanceof DominantSpeakerIdentification)
-            {
-                return (DominantSpeakerIdentification)asdi.getImpl();
-            }
-        }
-        return null;
     }
 
     /**
@@ -441,7 +408,7 @@ public class ConferenceSpeechActivity
      */
     public void levelChanged(long ssrc, int level)
     {
-        activeSpeakerDetector.levelChanged(ssrc, level);
+        dominantSpeakerIdentification.levelChanged(ssrc, level);
     }
 
     /**

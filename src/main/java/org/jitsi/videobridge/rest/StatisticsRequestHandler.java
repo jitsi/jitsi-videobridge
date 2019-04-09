@@ -19,6 +19,7 @@ import net.java.sip.communicator.util.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.rest.*;
 import org.jitsi.utils.*;
+import org.jitsi.utils.stats.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;

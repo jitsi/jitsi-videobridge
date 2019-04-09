@@ -16,11 +16,11 @@
 
 package org.jitsi.videobridge.xmpp;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.easymock.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.junit.*;
 import org.junit.runner.*;
