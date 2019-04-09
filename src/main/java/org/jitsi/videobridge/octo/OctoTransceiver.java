@@ -26,7 +26,7 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.extensions.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtp.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 

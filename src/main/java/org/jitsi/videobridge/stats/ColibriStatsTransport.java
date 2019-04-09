@@ -17,11 +17,11 @@ package org.jitsi.videobridge.stats;
 
 import java.util.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.util.*;
 
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 import org.jxmpp.jid.*;
 import org.osgi.framework.*;

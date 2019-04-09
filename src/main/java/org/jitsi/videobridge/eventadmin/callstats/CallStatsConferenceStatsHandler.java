@@ -20,8 +20,8 @@ import java.util.concurrent.*;
 
 import org.jitsi.eventadmin.*;
 import org.jitsi.stats.media.*;
-import org.jitsi.util.*;
-import org.jitsi.util.concurrent.*;
+import org.jitsi.utils.concurrent.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.*;
 
 /**

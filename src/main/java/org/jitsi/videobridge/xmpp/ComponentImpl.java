@@ -17,7 +17,6 @@ package org.jitsi.videobridge.xmpp;
 
 import java.util.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.util.*;
 
 import org.jitsi.meet.*;
@@ -50,8 +49,8 @@ public class ComponentImpl
      * The {@link Logger} used by the {@link ComponentImpl} class and its
      * instances for logging output.
      */
-    private static final org.jitsi.util.Logger logger
-            =  org.jitsi.util.Logger.getLogger(ComponentImpl.class);
+    private static final org.jitsi.utils.logging.Logger logger
+            =  org.jitsi.utils.logging.Logger.getLogger(ComponentImpl.class);
 
     /**
      * The (default) description of <tt>ComponentImpl</tt> instances.

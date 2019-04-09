@@ -17,13 +17,12 @@ package org.jitsi.videobridge.rest;
 
 import java.util.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-
 import org.jetbrains.annotations.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.stats.*;
+import org.jitsi.xmpp.extensions.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.jingle.*;
 import org.json.simple.*;
 
 /**
@@ -226,7 +225,7 @@ final class JSONSerializer
         }
         else
         {
-            MediaDirection direction = channel.getDirection();
+            String direction = channel.getDirection();
             Integer lastN = channel.getLastN();
             List<PayloadTypePacketExtension> payloadTypes
                 = channel.getPayloadTypes();
@@ -250,7 +249,7 @@ final class JSONSerializer
                  */
                 jsonObject.put(
                         ColibriConferenceIQ.Channel.DIRECTION_ATTR_NAME,
-                        direction.toString());
+                        direction);
             }
             // lastN
             if (lastN != null)

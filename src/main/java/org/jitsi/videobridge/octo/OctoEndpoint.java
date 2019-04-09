@@ -15,10 +15,9 @@
  */
 package org.jitsi.videobridge.octo;
 
-import org.jitsi.nlj.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
 
 import java.beans.*;

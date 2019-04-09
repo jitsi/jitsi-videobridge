@@ -18,7 +18,7 @@ package org.jitsi.videobridge.transport;
 
 import org.ice4j.ice.harvest.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.logging.*;
 
 import java.io.*;
 import java.util.*;

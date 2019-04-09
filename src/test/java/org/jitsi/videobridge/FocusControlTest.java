@@ -15,10 +15,10 @@
  */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.health.*;
 import net.java.sip.communicator.util.*;
 
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.health.*;
 import org.jivesoftware.smack.packet.*;
 import org.junit.*;
 import org.junit.Test;
@@ -68,8 +68,9 @@ public class FocusControlTest
         osgiHandler.stop();
     }
 
-    private static void expectResult(ColibriConferenceIQ confIq,
-                                     int processingOptions)
+    private static void expectResult(
+            ColibriConferenceIQ confIq,
+            int processingOptions)
         throws Exception
     {
         IQ respIq = bridge.handleColibriConferenceIQ(confIq, processingOptions);

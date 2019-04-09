@@ -16,17 +16,14 @@
 package org.jitsi.videobridge.cc;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.impl.neomedia.*;
-import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 

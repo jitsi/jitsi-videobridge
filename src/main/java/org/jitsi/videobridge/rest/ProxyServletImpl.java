@@ -60,16 +60,18 @@ public class ProxyServletImpl
      * the request path, removes it (because such behavior is incorrect). 
      */
     @Override
-    protected URI rewriteURI(HttpServletRequest request)
+    protected String rewriteTarget(HttpServletRequest request)
     {
-        URI rewrittenURI = super.rewriteURI(request);
+        String rewrittenURIStr = super.rewriteTarget(request);
 
-        if (proxyTo != null)
+        if (proxyTo != null && rewrittenURIStr != null)
         {
             String requestPath = request.getRequestURI();
 
             if (requestPath != null && !requestPath.endsWith("/"))
             {
+                URI rewrittenURI
+                        = URI.create(rewrittenURIStr).normalize();
                 String rewrittenPath = rewrittenURI.getPath();
                 int len;
 
@@ -93,8 +95,9 @@ public class ProxyServletImpl
                     {
                     }
                 }
+                rewrittenURIStr = rewrittenURI.toString();
             }
         }
-        return rewrittenURI;
+        return rewrittenURIStr;
     }
 }

@@ -4,11 +4,7 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <parent>
-    <groupId>org.jitsi</groupId>
-    <artifactId>jitsi-universe</artifactId>
-    <version>1.0-20160405.235512-16</version>
-  </parent>
+  <groupId>org.jitsi</groupId>
 
   <artifactId>jitsi-videobridge</artifactId>
   <version>1.1-SNAPSHOT</version>
@@ -20,8 +16,12 @@
   <properties>
     <assembly.skipAssembly>true</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
-    <jitsi-desktop.version>2.13.f6042d3</jitsi-desktop.version>
-    <smack.version>4.2.2-b1c107f</smack.version>
+    <jetty.version>9.4.15.v20190215</jetty.version>
+    <jitsi-desktop.version>2.13.b5f2aa0</jitsi-desktop.version>
+    <kotlin.version>1.2.41</kotlin.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <slf4j.version>1.7.26</slf4j.version>
+    <smack.version>4.2.4-47d17fc</smack.version>
   </properties>
 
   <dependencyManagement>
@@ -33,19 +33,17 @@
     <dependency>
       <groupId>com.googlecode.json-simple</groupId>
       <artifactId>json-simple</artifactId>
+      <version>1.1.1</version>
     </dependency>
     <dependency>
       <groupId>dom4j</groupId>
       <artifactId>dom4j</artifactId>
+      <version>1.6.1</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-rewrite</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.jitsi</groupId>
-      <artifactId>sctp</artifactId>
-      <version>1.0-20190319.172750-1</version>
+      <version>${jetty.version}</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
@@ -60,6 +58,7 @@
     <dependency>
       <groupId>org.fusesource</groupId>
       <artifactId>sigar</artifactId>
+      <version>1.6.4</version>
     </dependency>
     <dependency>
       <groupId>org.igniterealtime</groupId>
@@ -77,6 +76,12 @@
       <version>2.0.1</version>
     </dependency>
     <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+      <version>15.0</version>
+    </dependency>
+    <!-- org.jitsi -->
+    <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-media-transform</artifactId>
       <version>1.0-SNAPSHOT</version>
@@ -87,25 +92,24 @@
       <version>1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
-      <groupId>org.jetbrains</groupId>
-      <artifactId>annotations</artifactId>
-      <version>15.0</version>
+      <groupId>org.jitsi</groupId>
+      <artifactId>sctp</artifactId>
+      <version>1.0-20190319.172750-1</version>
     </dependency>
-    <!-- org.jitsi -->
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>ice4j</artifactId>
-      <version>2.0.0-20181213.100259-20</version>
+      <version>2.0.0-20190327.160542-32</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco</artifactId>
-      <version>1.1-20180821.201527-7</version>
+      <version>1.1-20190409.112040-14</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-android-osgi</artifactId>
-      <version>1.0-20180322.162617-2</version>
+      <version>1.0-20190327.160432-3</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -151,7 +155,12 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-stats</artifactId>
-      <version>1.0-20180523.024051-5</version>
+      <version>1.0-20190407.140545-7</version>
+    </dependency>
+     <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>jitsi-xmpp-extensions</artifactId>
+      <version>1.0-20190408.170703-2</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -166,21 +175,28 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-utils</artifactId>
-      <version>1.0-20190328.184331-5</version>
+      <version>1.0-20190401.122850-7</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>libjitsi</artifactId>
-      <version>2.0-SNAPSHOT</version>
+      <version>1.0-20190409.131256-383</version>
     </dependency>
 
     <dependency>
       <groupId>org.osgi</groupId>
       <artifactId>org.osgi.core</artifactId>
+      <version>4.3.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-jdk14</artifactId>
+      <version>${slf4j.version}</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -195,24 +211,26 @@
     <dependency>
       <groupId>xpp3</groupId>
       <artifactId>xpp3</artifactId>
+      <version>1.1.4c</version>
     </dependency>
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
       <artifactId>kotlin-runtime</artifactId>
-      <version>1.2.41</version>
+      <version>${kotlin.version}</version>
       <scope>compile</scope>
     </dependency>
 
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
       <artifactId>kotlin-stdlib</artifactId>
-      <version>1.2.41</version>
+      <version>${kotlin.version}</version>
       <scope>compile</scope>
     </dependency>
     <!-- runtime -->
     <dependency>
       <groupId>rusv</groupId>
       <artifactId>agafua-syslog</artifactId>
+      <version>0.4</version>
       <scope>runtime</scope>
     </dependency>
     <!-- test -->
@@ -247,6 +265,7 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <version>4.11</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

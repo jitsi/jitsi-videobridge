@@ -23,6 +23,7 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 
 /**

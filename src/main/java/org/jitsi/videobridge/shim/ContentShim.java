@@ -15,9 +15,9 @@
  */
 package org.jitsi.videobridge.shim;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 
 import java.util.*;

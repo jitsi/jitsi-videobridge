@@ -23,13 +23,13 @@ import org.eclipse.jetty.servlets.*;
 import org.eclipse.jetty.util.resource.*;
 import org.jitsi.rest.*;
 import org.jitsi.util.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.rest.ssi.*;
 import org.osgi.framework.*;
 
 import javax.servlet.*;
 import javax.servlet.http.*;
 import java.io.*;
-import java.net.*;
 import java.util.*;
 
 /**
@@ -42,6 +42,13 @@ import java.util.*;
 public class PublicRESTBundleActivator
     extends AbstractJettyBundleActivator
 {
+    /**
+     * The logger instance used by this
+     * {@link PublicClearPortRedirectBundleActivator}.
+     */
+    private static final Logger logger
+            = Logger.getLogger(PublicRESTBundleActivator.class);
+
     /**
      * The prefix of the property names for the Jetty instance managed by
      * this {@link AbstractJettyBundleActivator}.
@@ -361,11 +368,9 @@ public class PublicRESTBundleActivator
                  *
                  * @param path the path to check
                  * @return the resource to server.
-                 * @throws MalformedURLException
                  */
                 @Override
                 public Resource getResource(String path)
-                    throws MalformedURLException
                 {
                     String property
                         = JETTY_RESOURCE_HANDLER_ALIAS_PREFIX + "." + path;
@@ -375,7 +380,16 @@ public class PublicRESTBundleActivator
                             JETTY_PROPERTY_PREFIX + property,
                             null);
 
-                    return (value == null) ? null : Resource.newResource(value);
+                    try
+                    {
+                        return (value == null)
+                                ? null : Resource.newResource(value);
+                    }
+                    catch (IOException ioe)
+                    {
+                        logger.info("Error constructing resource.", ioe);
+                        return null;
+                    }
                 }
             };
     }

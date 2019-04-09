@@ -15,8 +15,6 @@
  */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.bouncycastle.crypto.tls.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
@@ -26,11 +24,10 @@ import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
-import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtp.*;
-import org.jitsi.util.*;
-import org.jitsi.util.concurrent.*;
+import org.jitsi.utils.concurrent.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
@@ -40,6 +37,8 @@ import org.jitsi.videobridge.sctp.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi_modified.sctp4j.*;
 import org.jitsi_modified.service.neomedia.rtp.*;
