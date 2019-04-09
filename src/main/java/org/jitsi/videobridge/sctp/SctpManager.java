@@ -16,11 +16,9 @@
 
 package org.jitsi.videobridge.sctp;
 
-import net.java.sip.communicator.util.*;
 import org.jitsi.nlj.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi_modified.sctp4j.*;
-
-import java.nio.ByteBuffer;
 
 /**
  * Manages the SCTP connection and handles incoming and outgoing SCTP packets.

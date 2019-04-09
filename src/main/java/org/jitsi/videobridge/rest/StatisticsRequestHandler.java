@@ -15,10 +15,11 @@
  */
 package org.jitsi.videobridge.rest;
 
-import net.java.sip.communicator.util.*;
 import org.jitsi.nlj.transform.node.*;
+import org.jitsi.osgi.*;
 import org.jitsi.rest.*;
 import org.jitsi.utils.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.utils.stats.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
@@ -258,7 +259,7 @@ class StatisticsRequestHandler
         if (bundleContext != null)
         {
             StatsManager statsManager
-                    = ServiceUtils.getService(bundleContext, StatsManager.class);
+                = ServiceUtils2.getService(bundleContext, StatsManager.class);
 
             if (statsManager != null)
             {

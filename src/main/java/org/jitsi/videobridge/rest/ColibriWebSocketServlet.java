@@ -15,9 +15,10 @@
  */
 package org.jitsi.videobridge.rest;
 
-import net.java.sip.communicator.util.*;
 import org.eclipse.jetty.websocket.servlet.*;
+import org.jitsi.osgi.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.utils.logging.*;
 import org.osgi.framework.*;
 
 import java.io.*;
@@ -112,9 +113,7 @@ class ColibriWebSocketServlet
         }
 
         path
-            = path.substring(
-            ColibriWebSocketService.COLIBRI_WS_PATH.length(),
-            path.length());
+            = path.substring(ColibriWebSocketService.COLIBRI_WS_PATH.length());
         String[] ids = path.split("/");
         if (ids.length < 3)
         {
@@ -209,6 +208,6 @@ class ColibriWebSocketServlet
      */
     Videobridge getVideobridge()
     {
-       return ServiceUtils.getService(bundleContext, Videobridge.class);
+       return ServiceUtils2.getService(bundleContext, Videobridge.class);
     }
 }

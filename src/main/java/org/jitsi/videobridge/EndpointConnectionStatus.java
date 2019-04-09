@@ -206,19 +206,16 @@ public class EndpointConnectionStatus
         BundleContext bundleContext = this.bundleContext;
         if (bundleContext != null)
         {
-            Collection<Videobridge> jvbs
-                = Videobridge.getVideobridges(bundleContext);
-            for (Videobridge videobridge : jvbs)
-            {
-                cleanupExpiredEndpointsStatus();
+            Videobridge videobridge
+                = ServiceUtils2.getService(bundleContext, Videobridge.class);
+            cleanupExpiredEndpointsStatus();
 
-                Conference[] conferences = videobridge.getConferences();
-                Arrays.stream(conferences)
-                    .forEachOrdered(
-                        conference ->
-                            conference.getEndpoints()
-                                .forEach(this::monitorEndpointActivity));
-            }
+            Conference[] conferences = videobridge.getConferences();
+            Arrays.stream(conferences)
+                .forEachOrdered(
+                    conference ->
+                        conference.getEndpoints()
+                            .forEach(this::monitorEndpointActivity));
         }
     }
 

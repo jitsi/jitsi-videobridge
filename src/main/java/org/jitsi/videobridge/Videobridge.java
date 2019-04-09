@@ -16,15 +16,14 @@
 package org.jitsi.videobridge;
 
 import kotlin.*;
-import net.java.sip.communicator.service.shutdown.*;
-import net.java.sip.communicator.util.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.osgi.*;
-import org.jitsi.rtp.util.BufferPool;
+import org.jitsi.rtp.util.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging.Logger;
 import org.jitsi.videobridge.health.*;
@@ -142,17 +141,6 @@ public class Videobridge
         = "org.jitsi.videobridge." + XMPP_API;
 
     /**
-     * Gets all {@link Videobridge} instances in a specific bundle context.
-     * @param bundleContext the bundle context
-     * @deprecated We only use a single Videobridge instance.
-     */
-    public static Collection<Videobridge> getVideobridges(
-            BundleContext bundleContext)
-    {
-        return ServiceUtils2.getServices(bundleContext, Videobridge.class);
-    }
-
-    /**
      * The pattern used to filter entities that are allowed to operate
      * the videobridge.
      */
@@ -203,6 +191,12 @@ public class Videobridge
      * health checks on this videobridge.
      */
     private Health health;
+
+    /**
+     * The function to run when the bridge is to shut down. Defined here
+     * because it needs to be replaced for testing.
+     */
+    private Runnable shutdownRunnable = () -> System.exit(0);
 
     /**
      * The shim which handles Colibri-related logic for this
@@ -787,13 +781,8 @@ public class Videobridge
         {
             if (conferences.isEmpty())
             {
-                ShutdownService shutdownService
-                    = ServiceUtils.getService(
-                            bundleContext,
-                            ShutdownService.class);
-
                 logger.info("Videobridge is shutting down NOW");
-                shutdownService.beginShutdown();
+                shutdownRunnable.run();
             }
         }
     }
@@ -961,8 +950,6 @@ public class Videobridge
      *
      * @param bundleContext the {@code BundleContext} in which this
      * {@code Videobridge} is to start
-     * @param cfg the {@code ConfigurationService} registered in
-     * {@code bundleContext}. Explicitly provided for the sake of performance.
      */
     private void startIce4j(
             BundleContext bundleContext,
@@ -1064,8 +1051,6 @@ public class Videobridge
      *
      * @param bundleContext the {@code BundleContext} in which this
      * {@code Videobridge} is to start
-     * @param cfg the {@code ConfigurationService} registered in
-     * {@code bundleContext}. Explicitly provided for the sake of performance.
      */
     private void stopIce4j(
         BundleContext bundleContext,
@@ -1115,6 +1100,18 @@ public class Videobridge
             }
 
             System.clearProperty(RtxTransformer.DISABLE_NACK_TERMINATION_PNAME);
+        }
+    }
+
+    /**
+     * Sets the runnable to run when the bridge shuts down.
+     * @param shutdownRunnable
+     */
+    public void setShutdownRunnable(Runnable shutdownRunnable)
+    {
+        if (shutdownRunnable != null)
+        {
+            this.shutdownRunnable = shutdownRunnable;
         }
     }
 

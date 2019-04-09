@@ -15,9 +15,10 @@
  */
 package org.jitsi.videobridge.rest;
 
-import net.java.sip.communicator.util.*;
 import org.eclipse.jetty.servlet.*;
+import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.videobridge.*;
 import org.osgi.framework.*;
 
 /**
@@ -83,7 +84,7 @@ public class ColibriWebSocketService
         BundleContext bundleContext, boolean tls)
     {
         ConfigurationService cfg
-            = ServiceUtils.getService(bundleContext, ConfigurationService.class);
+            = ServiceUtils2.getService(bundleContext, ConfigurationService.class);
 
         String baseUrl = null;
         String serverId = null;
@@ -160,7 +161,7 @@ public class ColibriWebSocketService
         ServletHolder holder = null;
 
         ConfigurationService cfg
-            = ServiceUtils.getService(bundleContext, ConfigurationService.class);
+            = ServiceUtils2.getService(bundleContext, ConfigurationService.class);
         if (baseUrl != null &&
             (cfg == null || !cfg.getBoolean(DISABLE_PNAME, false)))
         {

@@ -21,12 +21,11 @@ import java.util.*;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
-import net.java.sip.communicator.util.*;
-
 import org.eclipse.jetty.server.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;

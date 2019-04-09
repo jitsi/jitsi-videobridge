@@ -15,11 +15,12 @@
  */
 package org.jitsi.videobridge.eventadmin.callstats;
 
-import net.java.sip.communicator.util.*;
 import org.jitsi.eventadmin.*;
+import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.stats.media.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.stats.*;
 import org.osgi.framework.*;
 
@@ -120,7 +121,7 @@ public class Activator
         switch (ev.getType())
         {
         case ServiceEvent.REGISTERED:
-            ConfigurationService cfg = ServiceUtils.getService(
+            ConfigurationService cfg = ServiceUtils2.getService(
                 bundleContext, ConfigurationService.class);
             String bridgeId = ConfigUtils.getString(
                 cfg,

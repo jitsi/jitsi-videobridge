@@ -20,10 +20,10 @@ import java.text.*;
 import java.util.*;
 import java.util.concurrent.locks.*;
 
-import net.java.sip.communicator.util.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
+import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
@@ -398,7 +398,7 @@ public class VideobridgeStatistics
             = StatsManagerBundleActivator.getBundleContext();
 
         ConfigurationService cfg
-            = ServiceUtils.getService(bundleContext, ConfigurationService.class);
+            = ServiceUtils2.getService(bundleContext, ConfigurationService.class);
         if (cfg != null)
         {
             region = cfg.getString(REGION_PNAME, region);
@@ -487,11 +487,11 @@ public class VideobridgeStatistics
         BundleContext bundleContext
                 = StatsManagerBundleActivator.getBundleContext();
         OctoRelayService relayService
-                = ServiceUtils.getService(bundleContext, OctoRelayService.class);
+                = ServiceUtils2.getService(bundleContext, OctoRelayService.class);
         OctoRelay octoRelay
                 = relayService == null ? null : relayService.getRelay();
         Videobridge videobridge
-                = ServiceUtils.getService(bundleContext, Videobridge.class);
+                = ServiceUtils2.getService(bundleContext, Videobridge.class);
         Videobridge.Statistics jvbStats = videobridge.getStatistics();
 
         // TODO switch from channel counts to endpoint counts

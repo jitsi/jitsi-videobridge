@@ -15,10 +15,11 @@
  */
 package org.jitsi.videobridge.stats;
 
-import net.java.sip.communicator.util.*;
-import net.java.sip.communicator.util.Logger;
+import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
+import org.jitsi.utils.logging.*;
+import org.jitsi.videobridge.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
 import org.jxmpp.stringprep.*;
@@ -278,13 +279,16 @@ public class StatsManagerBundleActivator
         throws Exception
     {
         ConfigurationService cfg
-            = ServiceUtils.getService(
+            = ServiceUtils2.getService(
                     bundleContext,
                     ConfigurationService.class);
         boolean enable = false;
 
         if (cfg != null)
+        {
             enable = cfg.getBoolean(ENABLE_STATISTICS_PNAME, enable);
+        }
+
         if (enable)
         {
             StatsManagerBundleActivator.bundleContext = bundleContext;

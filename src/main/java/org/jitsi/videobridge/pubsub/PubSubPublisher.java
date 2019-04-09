@@ -18,10 +18,9 @@ package org.jitsi.videobridge.pubsub;
 import java.util.*;
 import java.util.concurrent.*;
 
-import net.java.sip.communicator.util.*;
-
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.utils.logging.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.packet.id.*;
 import org.jivesoftware.smackx.pubsub.*;

@@ -17,8 +17,6 @@ package org.jitsi.videobridge.xmpp;
 
 import java.util.*;
 
-import net.java.sip.communicator.util.*;
-
 import org.jitsi.meet.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
@@ -427,7 +425,7 @@ public class ComponentImpl
         // Schedule ping task
         // note: the task if stopped automatically on component shutdown
         ConfigurationService config
-            = ServiceUtils.getService(
+            = ServiceUtils2.getService(
                     bundleContext, ConfigurationService.class);
 
         loadConfig(config, "org.jitsi.videobridge");
