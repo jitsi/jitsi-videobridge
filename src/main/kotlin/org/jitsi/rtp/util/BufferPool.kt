@@ -17,6 +17,8 @@
 package org.jitsi.rtp.util
 
 /**
+ * All [ByteArray]s that the library needs for packets will be acquired via [getArray].
+ *
  * When we're done with a buffer, we'll pass it to [returnArray].  These methods
  * can be overridden so that a user of this library can use a pool for the buffers.
  *

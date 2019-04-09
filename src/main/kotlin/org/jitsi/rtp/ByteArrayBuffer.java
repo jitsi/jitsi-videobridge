@@ -160,7 +160,7 @@ public abstract class ByteArrayBuffer
     protected byte[] cloneBuffer()
     {
         byte[] clone = BufferPool.Companion.getGetArray().invoke(buffer.length);
-        System.arraycopy(buffer, 0, clone, offset, length);
+        System.arraycopy(buffer, offset, clone, offset, length);
         return clone;
     }
 
