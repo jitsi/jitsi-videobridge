@@ -115,7 +115,7 @@ class LastChunk {
     // Appends content of the Lastchunk to |deltas|.
     fun AppendTo(deltas: MutableList<DeltaSize>) {
         if (all_same_) {
-            repeat (size_) {
+            repeat(size_) {
                 deltas.add(delta_sizes_[0])
             }
         } else {
@@ -125,7 +125,7 @@ class LastChunk {
         }
     }
 
-    //private:
+    // private:
 
     /**
      *
@@ -218,7 +218,7 @@ class LastChunk {
     private var size_: Int = 0
     private var all_same_: Boolean = true
     private var has_large_delta_: Boolean = false
-    private val delta_sizes_ = Array<DeltaSize>(kMaxVectorCapacity) {0}
+    private val delta_sizes_ = Array<DeltaSize>(kMaxVectorCapacity) { 0 }
 
     companion object {
         private const val kMaxRunLengthCapacity = 0x1FFF

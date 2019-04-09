@@ -18,7 +18,6 @@ package org.jitsi.rtp.util
 
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
-import org.jitsi.rtp.extensions.toHex
 
 internal class RightToLeftByteBufferTest : ShouldSpec() {
     init {

@@ -64,19 +64,19 @@ internal class RtcpSrPacketTest : ShouldSpec() {
     ).build()
 
     val srPacketData = byteBufferOf(
-        //V=2,P=false,RC=0,PT=200,L=6(28 bytes)
+        // V=2,P=false,RC=0,PT=200,L=6(28 bytes)
         0x80, 0xc8, 0x00, 0x06,
-        //Sender SSRC: 1829790331
+        // Sender SSRC: 1829790331
         0x6d, 0x10, 0x62, 0x7b,
-        //Timestamp, MSW: 3761595357
+        // Timestamp, MSW: 3761595357
         0xe0, 0x35, 0x63, 0xdd,
-        //Timestamp, LSW: 17218523
+        // Timestamp, LSW: 17218523
         0x01, 0x06, 0xbb, 0xdb,
-        //RTP timestamp: 3960153838
+        // RTP timestamp: 3960153838
         0xec, 0x0b, 0x26, 0xee,
-        //Sender's packet count: 72
+        // Sender's packet count: 72
         0x00, 0x00, 0x00, 0x48,
-        //Sender's octet count: 76643
+        // Sender's octet count: 76643
         0x00, 0x01, 0x2b, 0x63
     )
 
@@ -112,7 +112,7 @@ internal class RtcpSrPacketTest : ShouldSpec() {
 //                    srPacket.senderInfo.sendersPacketCount shouldBe expectedSenderInfo.sendersPacketCount
 //                    srPacket.senderInfo.sendersOctetCount shouldBe expectedSenderInfo.sendersOctetCount
 //                    srPacket.reportBlocks should haveSize(2)
-                    //TODO: verify report block parse
+                    // TODO: verify report block parse
 //                    srPacket.reportBlocks[0] shouldBe reportBlock1
 //                    srPacket.reportBlocks[1] shouldBe reportBlock2
                 }

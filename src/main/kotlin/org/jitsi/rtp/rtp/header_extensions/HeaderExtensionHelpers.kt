@@ -44,9 +44,8 @@ class HeaderExtensionHelpers {
          * starts at [offset].  The data field contains the amount of bytes of
          * data minus 1, so we add to get the real length.
          */
-        fun getDataLengthBytes(buf: ByteArray, offset: Int): Int
-            = ((buf.get(offset) and 0x0F.toByte())).toPositiveInt() + 1
-
+        fun getDataLengthBytes(buf: ByteArray, offset: Int): Int =
+            ((buf.get(offset) and 0x0F.toByte())).toPositiveInt() + 1
 
         /**
          * Return the length of the entire header extensions block, including
@@ -58,6 +57,5 @@ class HeaderExtensionHelpers {
          */
         fun getExtensionsTotalLength(buf: ByteArray, offset: Int) =
             TOP_LEVEL_EXT_HEADER_SIZE_BYTES + buf.getShortAsInt(offset + 2) * 4
-
     }
 }

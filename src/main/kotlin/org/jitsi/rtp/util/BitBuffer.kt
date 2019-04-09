@@ -106,7 +106,6 @@ class BitBuffer(private val buf: ByteBuffer) {
      */
     fun rewindBits(numBitsToRewind: Int) {
         currBitPos = Math.max(currBitPos - numBitsToRewind, 0)
-
     }
 
     /**

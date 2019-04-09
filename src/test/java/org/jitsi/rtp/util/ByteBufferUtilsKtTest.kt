@@ -18,10 +18,7 @@ package org.jitsi.rtp.util
 
 import io.kotlintest.IsolationMode
 import io.kotlintest.shouldBe
-import io.kotlintest.shouldThrow
 import io.kotlintest.specs.ShouldSpec
-import org.junit.jupiter.api.Assertions.*
-import java.lang.ClassCastException
 
 internal class ByteBufferUtilsKtTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf

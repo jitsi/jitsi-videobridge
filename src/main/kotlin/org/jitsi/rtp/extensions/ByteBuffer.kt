@@ -35,7 +35,7 @@ fun ByteBuffer.clone(): ByteBuffer {
     clone.put(this)
     this.position(startPosition)
     clone.flip()
-    //TODO(brian): handle if this was a readonly buffer
+    // TODO(brian): handle if this was a readonly buffer
     return clone
 }
 
@@ -61,7 +61,6 @@ fun ByteBuffer.put3Bytes(index: Int, value: Int) {
     this.put(index + 1, ((value and 0x0000FF00) ushr 8).toByte())
     this.put(index + 2, (value and 0x000000FF).toByte())
 }
-
 
 /**
  * Reads the next 3 bytes into the right-most
@@ -111,7 +110,7 @@ private val HEX_CHARS = "0123456789ABCDEF".toCharArray()
  * should probably be printed as:
  * data: 01 000A0064 0064007B 00000000
  */
-fun ByteBuffer.toHex() : String {
+fun ByteBuffer.toHex(): String {
     val result = StringBuffer()
 
     val prevPosition = position()
@@ -197,7 +196,6 @@ fun ByteBuffer.shiftDataRight(startPos: Int, endPos: Int, numBytes: Int) {
         put(index + numBytes, get(index))
     }
 }
-
 
 fun ByteBuffer.shiftDataLeft(startPos: Int, endPos: Int, numBytes: Int) {
     for (index in startPos..endPos) {

@@ -18,7 +18,7 @@ package org.jitsi.rtp
 
 import java.util.function.Predicate
 
-//TODO move
+// TODO move
 typealias PacketPredicate = Predicate<Packet>
 
 abstract class Packet(
@@ -27,7 +27,7 @@ abstract class Packet(
     length: Int
 ) : ByteArrayBuffer(buffer, offset, length), Cloneable {
 
-    inline fun<OtherType : Packet> toOtherType(otherTypeCreator: (ByteArray, Int, Int) -> OtherType): OtherType =
+    inline fun <OtherType : Packet> toOtherType(otherTypeCreator: (ByteArray, Int, Int) -> OtherType): OtherType =
         otherTypeCreator(buffer, offset, length)
 
     public abstract override fun clone(): Packet

@@ -88,4 +88,3 @@ fun Byte.getBits(bitStartPos: Int, numBits: Int): Byte {
     }
     return result.toByte()
 }
-

@@ -43,9 +43,8 @@ inline class RtpSequenceNumber(val value: Int) : Comparable<RtpSequenceNumber> {
     }
 }
 
-
 // Copied mostly from IntProgression.
-//NOTE(brian): technically this should probably inherit from ClosedRange, but
+// NOTE(brian): technically this should probably inherit from ClosedRange, but
 // the inheritance causes issues with boxing and the inline types.  See
 // https://youtrack.jetbrains.com/issue/KT-30716 and the bug linked there.
 class RtpSequenceNumberProgression(
@@ -82,8 +81,7 @@ class RtpSequenceNumberProgressionIterator(
         if (value == finalElement) {
             if (!hasNext) throw kotlin.NoSuchElementException()
             hasNext = false
-        }
-        else {
+        } else {
             next += step
         }
         return value

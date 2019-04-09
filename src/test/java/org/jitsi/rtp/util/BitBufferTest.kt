@@ -32,8 +32,8 @@ internal class BitBufferTest : ShouldSpec() {
     init {
         "getBits" {
             val buffer = ByteBuffer.wrap(byteArrayOf(
-                0xFF.toByte(),  0x01,           0x02,           0x03,
-                0x04,           0x05,           0x06,           0x06
+                0xFF.toByte(), 0x01, 0x02, 0x03,
+                0x04, 0x05, 0x06, 0x06
             ))
             val bitBuffer = BitBuffer(buffer)
             should("not advance to the next byte until its time") {
@@ -68,7 +68,7 @@ internal class BitBufferTest : ShouldSpec() {
         }
         "putBits" {
             val buffer = ByteBuffer.wrap(byteArrayOf(
-                0x00,   0x00,   0x00, 0x00
+                0x00, 0x00, 0x00, 0x00
             ))
             val bitBuffer = BitBuffer(buffer)
             "in a single byte" {

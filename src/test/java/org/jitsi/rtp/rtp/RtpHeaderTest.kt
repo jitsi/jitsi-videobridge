@@ -21,15 +21,15 @@ import io.kotlintest.matchers.collections.shouldContainInOrder
 import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.shouldBe
 
-//TODO: sets shouldn't change any other field
+// TODO: sets shouldn't change any other field
 class RtpHeaderTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 //    override fun isolationMode(): IsolationMode? = IsolationMode.SingleInstance
 
     private val headerData = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
-        //V=2,P=false,X=true,CC=2,M=false,PT=100,SeqNum=16535
+        // V=2,P=false,X=true,CC=2,M=false,PT=100,SeqNum=16535
         0x92, 0x64, 0x40, 0x97,
-        //Timestamp: 3899068446
+        // Timestamp: 3899068446
         0xe8, 0x67, 0x10, 0x1e,
         // SSRC: 2828806853
         0xa8, 0x9c, 0x2a, 0xc5,
@@ -93,7 +93,6 @@ class RtpHeaderTest : ShouldSpec() {
                 should("work correctly") {
                     RtpHeader.getCsrcCount(headerData, 0) shouldBe 2
                 }
-
             }
             "set" {
                 should("work correctly") {
@@ -150,7 +149,6 @@ class RtpHeaderTest : ShouldSpec() {
                 should("work correctly") {
                     RtpHeader.getTimestamp(headerData, 0) shouldBe 3899068446L
                 }
-
             }
             "set" {
                 should("work correctly") {
@@ -182,9 +180,7 @@ class RtpHeaderTest : ShouldSpec() {
                 should("work correctly") {
                     RtpHeader.setCsrcs(headerData, 0, listOf<Long>(2468, 1357))
                     RtpHeader.getCsrcs(headerData, 0) shouldContainInOrder(listOf<Long>(2468, 1357))
-
                 }
-
             }
         }
     }

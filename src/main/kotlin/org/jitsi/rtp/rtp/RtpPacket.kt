@@ -144,7 +144,7 @@ open class RtpPacket(
      * {@link NewRawPacket}.
      *
      */
-    fun addHeaderExtension(id:  Int, extDataLength: Int): HeaderExtension {
+    fun addHeaderExtension(id: Int, extDataLength: Int): HeaderExtension {
         if (id !in 1..15 || extDataLength !in 1..16) {
             throw IllegalArgumentException("id=$id len=$extDataLength)")
         }
@@ -273,8 +273,7 @@ open class RtpPacket(
         val oldBuffer = buffer
         buffer = newBuffer
         // Reference comparison to see if we got a new buffer.  If so, return the old one to the pool
-        if (oldBuffer !== newBuffer)
-        {
+        if (oldBuffer !== newBuffer) {
             BufferPool.returnArray(oldBuffer)
         }
         offset = newOffset
@@ -309,7 +308,7 @@ open class RtpPacket(
     override fun clone(): RtpPacket =
         RtpPacket(buffer.cloneFromPool(), offset, length)
 
-    override fun toString(): String = with (StringBuilder()) {
+    override fun toString(): String = with(StringBuilder()) {
         append("RtpPacket: ")
         append("PT=$payloadType")
         append(", Ssrc=$ssrc")
@@ -394,7 +393,6 @@ open class RtpPacket(
 
             return currHeaderExtension
         }
-
 
         /**
          * Return the entire length (including the header), in bytes, of the 'next' RTP extension

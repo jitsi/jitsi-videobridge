@@ -91,7 +91,6 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                         buf.get3Bytes() shouldBe 42.toInt()
                     }
                 }
-
             }
             "putBits" {
                 should("write the bits into the buffer correctly") {
@@ -122,7 +121,7 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                         originalBuf.capacity() shouldBe 100
                     }
                     should("represent the correct spot in the original buffer") {
-                        repeat (subBuf.limit()) { subBuf.put(it, 0x42) }
+                        repeat(subBuf.limit()) { subBuf.put(it, 0x42) }
 
                         (0..9).forEach { originalBuf.get(it) shouldBe 0x00.toByte() }
                         (10..39).forEach { originalBuf.get(it) shouldBe 0x42.toByte() }
@@ -133,7 +132,7 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                     originalBuf.position(10)
                     val subBuf = originalBuf.subBuffer(5, 10)
                     should("represent the correct spot in the original buffer") {
-                        repeat (subBuf.limit()) { subBuf.put(it, 0x42) }
+                        repeat(subBuf.limit()) { subBuf.put(it, 0x42) }
 
                         (0..4).forEach { originalBuf.get(it) shouldBe 0x00.toByte() }
                         (5..14).forEach { originalBuf.get(it) shouldBe 0x42.toByte() }
@@ -156,7 +155,7 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                         originalBuf.capacity() shouldBe 100
                     }
                     should("represent the correct spot in the original buffer") {
-                        repeat (subBuf.limit()) { subBuf.put(it, 0x42) }
+                        repeat(subBuf.limit()) { subBuf.put(it, 0x42) }
 
                         (0..9).forEach { originalBuf.get(it) shouldBe 0x00.toByte() }
                         (10..99).forEach { originalBuf.get(it) shouldBe 0x42.toByte() }
@@ -166,7 +165,7 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                     originalBuf.position(10)
                     val subBuf = originalBuf.subBuffer(5)
                     should("represent the correct spot in the original buffer") {
-                        repeat (subBuf.limit()) { subBuf.put(it, 0x42) }
+                        repeat(subBuf.limit()) { subBuf.put(it, 0x42) }
 
                         (0..4).forEach { originalBuf.get(it) shouldBe 0x00.toByte() }
                         (5..99).forEach { originalBuf.get(it) shouldBe 0x42.toByte() }

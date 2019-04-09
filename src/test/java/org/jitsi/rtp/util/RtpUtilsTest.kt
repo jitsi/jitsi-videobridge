@@ -39,13 +39,13 @@ class RtpUtilsTest : ShouldSpec() {
         }
         "isNewerThan" {
             should("work correctly") {
-               forall(
-                   row(2, 1, true),
-                   row(2, 65530, true),
-                   row(2, 4, false)
-               ) { a, b, expected ->
-                   a isNewerThan b shouldBe expected
-               }
+                forall(
+                    row(2, 1, true),
+                    row(2, 65530, true),
+                    row(2, 4, false)
+                ) { a, b, expected ->
+                    a isNewerThan b shouldBe expected
+                }
             }
         }
         "isOlderThan" {
@@ -55,7 +55,7 @@ class RtpUtilsTest : ShouldSpec() {
                     row(2, 65530, false),
                     row(2, 4, true)
                 ) { a, b, expected ->
-                    a isOlderThan  b shouldBe expected
+                    a isOlderThan b shouldBe expected
                 }
             }
         }

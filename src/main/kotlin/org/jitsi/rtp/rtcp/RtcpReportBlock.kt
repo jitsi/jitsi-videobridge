@@ -121,12 +121,12 @@ class RtcpReportBlock(
             buffer.getIntAsLong(offset + EXTENDED_HIGHEST_SEQ_NUM_OFFSET)
         fun setExtendedHighestSeqNum(buf: ByteArray, baseOffset: Int, value: Long) =
             buf.putInt(baseOffset + EXTENDED_HIGHEST_SEQ_NUM_OFFSET, value.toInt())
-        
+
         fun getInterarrivalJitter(buffer: ByteArray, offset: Int): Long =
             buffer.getIntAsLong(offset + INTERARRIVAL_JITTER_OFFSET)
         fun setInterarrivalJitter(buf: ByteArray, baseOffset: Int, value: Long) =
             buf.putInt(baseOffset + INTERARRIVAL_JITTER_OFFSET, value.toInt())
-        
+
         fun getLastSrTimestamp(buffer: ByteArray, offset: Int): Long =
             buffer.getIntAsLong(offset + LAST_SR_TIMESTAMP_OFFSET)
         fun setLastSrTimestamp(buf: ByteArray, baseOffset: Int, value: Long) =

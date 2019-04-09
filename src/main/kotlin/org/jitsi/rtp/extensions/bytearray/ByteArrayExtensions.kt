@@ -33,7 +33,6 @@ fun ByteArray.putBits(byteIndex: Int, destBitPos: Int, src: Byte, numBits: Int) 
     set(byteIndex, byte)
 }
 
-
 fun ByteArray.getBitAsBool(byteOffset: Int, bitOffset: Int): Boolean =
     get(byteOffset).getBitAsBool(bitOffset)
 
@@ -140,7 +139,7 @@ private val HEX_CHARS = "0123456789ABCDEF".toCharArray()
  * Print the entire contents of the [ByteArray] as hex
  * digits
  */
-fun ByteArray.toHex(offset: Int = 0, length: Int = (size - offset)) : String {
+fun ByteArray.toHex(offset: Int = 0, length: Int = (size - offset)): String {
     val result = StringBuffer()
     var position = 0
 

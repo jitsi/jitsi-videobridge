@@ -33,7 +33,7 @@ fun Byte.toPositiveInt(): Int = toInt() and 0xFF
 fun Short.toPositiveInt(): Int = toInt() and 0xFFFF
 fun Int.toPositiveLong(): Long = toLong() and 0xFFFFFFFF
 
-//TODO: i think these should be able to make the above functions obsolete
+// TODO: i think these should be able to make the above functions obsolete
 fun Number.toPositiveShort(): Short {
     return when (this) {
         is Byte -> this.toShort() and 0xFF

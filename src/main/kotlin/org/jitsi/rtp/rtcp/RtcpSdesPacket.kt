@@ -218,4 +218,3 @@ class CnameSdesItem(
 
     override fun toString(): String = "CNAME: $cname"
 }
-

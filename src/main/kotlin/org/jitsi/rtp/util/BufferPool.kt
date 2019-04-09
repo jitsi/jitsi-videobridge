@@ -27,7 +27,7 @@ import java.nio.ByteBuffer
  */
 class BufferPool {
     companion object {
-        //TODO(boris): this seems to be only used for rtp header extensions. Do we need to allocate 1500?
+        // TODO(boris): this seems to be only used for rtp header extensions. Do we need to allocate 1500?
         var getBuffer: (Int) -> ByteBuffer = { size -> ByteBuffer.allocate(1500).limit(size) as ByteBuffer }
         var returnBuffer: (ByteBuffer) -> Unit = { }
 

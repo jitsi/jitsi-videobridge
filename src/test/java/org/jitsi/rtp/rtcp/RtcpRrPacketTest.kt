@@ -56,7 +56,7 @@ internal class RtcpRrPacketTest : ShouldSpec() {
 
     val rrPacketBuffer = ByteBuffer.wrap(rrPacket.buffer, rrPacket.offset, rrPacket.length)
 
-    //TODO: write expected buf (copy from below?) and verify serialization
+    // TODO: write expected buf (copy from below?) and verify serialization
 
     init {
 //         Header + 2 ReportBlocks

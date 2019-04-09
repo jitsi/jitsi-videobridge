@@ -17,7 +17,7 @@ package org.jitsi.rtp.util
 
 import java.nio.ByteBuffer
 
-//TODO: i think these should only be used for tests.  Move them?
+// TODO: i think these should only be used for tests.  Move them?
 fun byteBufferOf(vararg elements: Byte): ByteBuffer = ByteBuffer.wrap(byteArrayOf(*elements))
 
 fun byteBufferOf(vararg elements: Number): ByteBuffer {

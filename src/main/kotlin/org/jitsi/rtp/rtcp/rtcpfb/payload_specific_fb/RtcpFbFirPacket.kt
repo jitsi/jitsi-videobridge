@@ -57,7 +57,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
  * A FIR message MAY contain requests to multiple media senders, using
  * one FCI entry per target media sender.
  */
-//TODO: support multiple FIR blocks
+// TODO: support multiple FIR blocks
 class RtcpFbFirPacket(
     buffer: ByteArray,
     offset: Int,
@@ -87,7 +87,7 @@ class RtcpFbFirPacket(
             buf.getInt(baseOffset + MEDIA_SENDER_SSRC_OFFSET).toPositiveLong()
         fun setMediaSenderSsrc(buf: ByteArray, baseOffset: Int, value: Long) =
             buf.putInt(baseOffset + MEDIA_SENDER_SSRC_OFFSET, value.toInt())
-        
+
         fun getSeqNum(buf: ByteArray, baseOffset: Int): Int =
             buf.get(baseOffset + SEQ_NUM_OFFSET).toPositiveInt()
         fun setSeqNum(buf: ByteArray, baseOffset: Int, value: Int) =
@@ -95,7 +95,7 @@ class RtcpFbFirPacket(
     }
 }
 
-//TODO: we need an RtcpFbHeader so that we can fill out the mediaSourceSsrc for FB packets
+// TODO: we need an RtcpFbHeader so that we can fill out the mediaSourceSsrc for FB packets
 class RtcpFbFirPacketBuilder(
     val rtcpHeader: RtcpHeaderBuilder = RtcpHeaderBuilder(),
     var mediaSenderSsrc: Long = -1,
@@ -118,5 +118,4 @@ class RtcpFbFirPacketBuilder(
         RtcpFbFirPacket.setMediaSenderSsrc(buf, offset, mediaSenderSsrc)
         RtcpFbFirPacket.setSeqNum(buf, offset, firCommandSeqNum)
     }
-
 }

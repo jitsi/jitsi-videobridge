@@ -86,7 +86,6 @@ class RtcpFbNackPacketBuilder(
     private val sizeBytes: Int =
         RtcpFbPacket.HEADER_SIZE + nackBlocks.size * NackBlock.SIZE_BYTES
 
-
     fun build(): RtcpFbNackPacket {
         val buf = BufferPool.getArray(sizeBytes)
         writeTo(buf, 0)

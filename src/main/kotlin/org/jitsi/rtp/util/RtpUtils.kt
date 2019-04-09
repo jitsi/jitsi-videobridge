@@ -15,7 +15,7 @@
  */
 package org.jitsi.rtp.util
 
-//TODO: this and RTPUtils should be merged
+// TODO: this and RTPUtils should be merged
 class RtpUtils {
     companion object {
         /**
@@ -40,7 +40,7 @@ class RtpUtils {
                         -1
                     }
                 }
-                else -> { //a < b
+                else -> { // a < b
                     if (b - a < 0x10000) {
                         -1
                     } else {
@@ -79,7 +79,7 @@ class RtpUtils {
          */
         fun getSequenceNumberDelta(a: Int, b: Int): Int
         {
-            val diff = a - b;
+            val diff = a - b
             return when {
                 diff < -(1 shl 15) -> diff + (1 shl 16)
                 diff > (1 shl 15) -> diff - (1 shl 16)

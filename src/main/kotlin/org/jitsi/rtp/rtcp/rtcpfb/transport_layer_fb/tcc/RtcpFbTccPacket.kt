@@ -161,7 +161,7 @@ class RtcpFbTccPacketBuilder(
     }
 
     fun writeTo(buf: ByteArray, offset: Int) {
-        //NOTE: padding is held 'internally' in the TCC FCI, so we don't set
+        // NOTE: padding is held 'internally' in the TCC FCI, so we don't set
         // the padding bit on the header
         val paddingBytes = RtpUtils.getNumPaddingBytes(size_bytes_)
         rtcpHeader.apply {
@@ -204,7 +204,6 @@ class RtcpFbTccPacketBuilder(
         num_seq_no_ = 0
         size_bytes_ = kTransportFeedbackHeaderSizeBytes
     }
-
 }
 
 /**

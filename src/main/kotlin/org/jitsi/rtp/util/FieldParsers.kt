@@ -24,7 +24,7 @@ import org.jitsi.rtp.extensions.bytearray.getInt
 import org.jitsi.rtp.extensions.bytearray.getShort
 import org.jitsi.rtp.extensions.bytearray.putBits
 
-//TODO: could do some kind of 'Offset' inline class? or 'field' which described the offset
+// TODO: could do some kind of 'Offset' inline class? or 'field' which described the offset
 // and size?
 
 fun ByteArray.getBitsAsInt(byteOffset: Int, bitOffset: Int, numBits: Int): Int =
@@ -44,4 +44,3 @@ fun ByteArray.get3BytesAsInt(offset: Int): Int =
 
 fun ByteArray.getIntAsLong(offset: Int): Long =
     getInt(offset).toPositiveLong()
-

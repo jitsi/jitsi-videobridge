@@ -43,6 +43,5 @@ class AudioLevelHeaderExtension {
          */
         fun getAudioLevel(buf: ByteArray, offset: Int): Int =
             (buf.get(offset + RtpPacket.HEADER_EXT_HEADER_SIZE) and AUDIO_LEVEL_MASK).toPositiveInt()
-
     }
 }

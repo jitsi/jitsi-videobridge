@@ -26,15 +26,15 @@ import org.jitsi.rtp.util.byteBufferOf
 class RtcpFbTccPacketTest : ShouldSpec() {
     fun Int.toTicks(): Short = (this * 4).toShort()
     private val tccRleData = byteBufferOf(
-        //V=2,P=false,FMT=15,PT=205,L=7(32 bytes)
+        // V=2,P=false,FMT=15,PT=205,L=7(32 bytes)
         0x8f, 0xcd, 0x00, 0x07,
-        //Sender SSRC = 839852602
+        // Sender SSRC = 839852602
         0x32, 0x0f, 0x22, 0x3a,
-        //Media source SSRC = 2397376430
+        // Media source SSRC = 2397376430
         0x8e, 0xe5, 0x0f, 0xae,
         // Base seq num = 1969, packet status count = 9
         0x07, 0xb1, 0x00, 0x09,
-        //Reference Time: 1683633 = 107752512ms, feedback packet count = 87
+        // Reference Time: 1683633 = 107752512ms, feedback packet count = 87
         0x19, 0xb0, 0xb1, 0x57,
         // Chunks
         // RLE, small delta, length = 9
@@ -60,17 +60,17 @@ class RtcpFbTccPacketTest : ShouldSpec() {
 
     // This also has a negative delta
     private val tccMixedChunkTypeData = byteBufferOf(
-        //V=2,P=false,FMT=15,PT=205,L=9(40 bytes)
+        // V=2,P=false,FMT=15,PT=205,L=9(40 bytes)
         0x8f, 0xcd, 0x00, 0x09,
-        //Sender SSRC = 839852602
+        // Sender SSRC = 839852602
         0x32, 0x0f, 0x22, 0x3a,
-        //Media source SSRC = 2397376430
+        // Media source SSRC = 2397376430
         0x8e, 0xe5, 0x0f, 0xae,
-        //Base seq num = 5376, packet status count = 12
+        // Base seq num = 5376, packet status count = 12
         0x15, 0x00, 0x00, 0x0c,
-        //Reference Time: 1684065 = 107780160ms, feedback packet count = 88
+        // Reference Time: 1684065 = 107780160ms, feedback packet count = 88
         0x19, 0xb2, 0x61, 0x58,
-        //Chunks
+        // Chunks
         // RLE: small delta, length = 9
         0x20, 0x09,
         // SV, 2 bit symbols: LD, SD, SD
@@ -103,15 +103,15 @@ class RtcpFbTccPacketTest : ShouldSpec() {
     )
 
     private val tccSvChunkData = byteBufferOf(
-        //V=2,P=false,FMT=15,PT=205,length=5(24 bytes)
+        // V=2,P=false,FMT=15,PT=205,length=5(24 bytes)
         0x8f, 0xcd, 0x00, 0x05,
-        //Sender SSRC: 839852602
+        // Sender SSRC: 839852602
         0x32, 0x0f, 0x22, 0x3a,
-        //Media source SSRC: 2397376430
+        // Media source SSRC: 2397376430
         0x8e, 0xe5, 0x0f, 0xae,
-        //Base seq num = 6227, packet status count = 2
+        // Base seq num = 6227, packet status count = 2
         0x18, 0x53, 0x00, 0x02,
-        //Reference Time: 1684126 (107784064ms), feedback packet count = 162
+        // Reference Time: 1684126 (107784064ms), feedback packet count = 162
         0x19, 0xb2, 0x9e, 0xa2,
         // Chunks
         // SV chunk, 2 bit symbols: NR, SD
