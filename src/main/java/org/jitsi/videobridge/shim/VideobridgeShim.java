@@ -217,6 +217,10 @@ public class VideobridgeShim
     public IQ handleColibriConferenceIQ(
             ColibriConferenceIQ conferenceIQ, int options)
     {
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Got ColibriConferenceIq:\n" + conferenceIQ.toXML());
+        }
         Jid focus = conferenceIQ.getFrom();
 
         if (!videobridge.accept(focus, options))
