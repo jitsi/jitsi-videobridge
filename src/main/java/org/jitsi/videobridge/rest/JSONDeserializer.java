@@ -19,7 +19,6 @@ import java.lang.reflect.*;
 import java.net.*;
 import java.util.*;
 
-import org.jitsi.service.neomedia.*;
 import org.jitsi.utils.*;
 import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;

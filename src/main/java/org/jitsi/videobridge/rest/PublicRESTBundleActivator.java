@@ -47,7 +47,7 @@ public class PublicRESTBundleActivator
      * {@link PublicClearPortRedirectBundleActivator}.
      */
     private static final Logger logger
-            = Logger.getLogger(PublicRESTBundleActivator.class);
+        = Logger.getLogger(PublicRESTBundleActivator.class);
 
     /**
      * The prefix of the property names for the Jetty instance managed by
@@ -383,11 +383,11 @@ public class PublicRESTBundleActivator
                     try
                     {
                         return (value == null)
-                                ? null : Resource.newResource(value);
+                            ? null : Resource.newResource(value);
                     }
-                    catch (IOException ioe)
+                    catch(IOException e)
                     {
-                        logger.info("Error constructing resource.", ioe);
+                        logger.info("Error constructing resource.", e);
                         return null;
                     }
                 }

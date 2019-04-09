@@ -57,7 +57,7 @@ public class ProxyServletImpl
      * {@inheritDoc}
      *
      * If Jetty's transparent {@code ProxyServlet} introduces a / at the end of
-     * the request path, removes it (because such behavior is incorrect). 
+     * the request path, removes it (because such behavior is incorrect).
      */
     @Override
     protected String rewriteTarget(HttpServletRequest request)
@@ -71,7 +71,7 @@ public class ProxyServletImpl
             if (requestPath != null && !requestPath.endsWith("/"))
             {
                 URI rewrittenURI
-                        = URI.create(rewrittenURIStr).normalize();
+                    = URI.create(rewrittenURIStr).normalize();
                 String rewrittenPath = rewrittenURI.getPath();
                 int len;
 

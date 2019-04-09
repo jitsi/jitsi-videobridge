@@ -18,7 +18,6 @@ package org.jitsi.videobridge.rest;
 import java.util.*;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -167,7 +166,7 @@ final class JSONSerializer
             /*
              * The JSON.simple library that is in use at the time of this
              * writing will fail to encode Enum values as JSON strings so
-             * convert the Enum value to a Java String. 
+             * convert the Enum value to a Java String.
              */
             if (value instanceof Enum)
                 value = value.toString();
@@ -245,7 +244,7 @@ final class JSONSerializer
                 /*
                  * The JSON.simple library that is in use at the time of this
                  * writing will fail to encode Enum values as JSON strings so
-                 * convert the Enum value to a Java String. 
+                 * convert the Enum value to a Java String.
                  */
                 jsonObject.put(
                         ColibriConferenceIQ.Channel.DIRECTION_ATTR_NAME,
@@ -278,7 +277,7 @@ final class JSONSerializer
                 /*
                  * The JSON.simple library that is in use at the time of this
                  * writing will fail to encode Enum values as JSON strings so
-                 * convert the Enum value to a Java String. 
+                 * convert the Enum value to a Java String.
                  */
                 jsonObject.put(
                         ColibriConferenceIQ.Channel
