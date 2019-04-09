@@ -16,8 +16,7 @@
 package org.jitsi_modified.impl.neomedia.transform;
 
 import org.jitsi.rtp.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.logging.*;
 
 import java.util.concurrent.atomic.*;
 import java.util.function.*;

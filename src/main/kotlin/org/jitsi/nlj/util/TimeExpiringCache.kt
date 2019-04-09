@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.util
 
+import org.jitsi.utils.TimeProvider
 import java.time.Duration
 import java.util.TreeMap
 
@@ -41,7 +42,7 @@ class TimeExpiringCache<IndexType, DataType>(
      * The maximum amount of elements we'll allow in the cache
      */
     private val maxNumElements: Int,
-    private val timeProvider: TimeProvider = SystemTimeProvider()
+    private val timeProvider: TimeProvider = TimeProvider()
 ) {
     private val cache: TreeMap<IndexType, Container<DataType>> = TreeMap()
 

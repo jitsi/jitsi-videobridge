@@ -36,7 +36,7 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.RtpUtils.Companion.getSequenceNumberDelta
-import org.jitsi.utils.RateStatistics
+import org.jitsi.utils.stats.RateStatistics
 import unsigned.toUInt
 import java.util.TreeMap
 import java.util.concurrent.ScheduledExecutorService
