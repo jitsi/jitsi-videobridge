@@ -17,10 +17,9 @@ package org.jitsi.videobridge.stats;
 
 import java.util.*;
 
-import net.java.sip.communicator.util.*;
-
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.utils.logging.*;
 import org.jivesoftware.smack.packet.*;
 import org.jxmpp.jid.*;
 import org.osgi.framework.*;

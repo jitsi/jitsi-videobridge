@@ -15,9 +15,9 @@
  */
 package org.jitsi.videobridge.stats;
 
-import net.java.sip.communicator.util.*;
-
+import org.jitsi.osgi.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.utils.logging.*;
 
 /**
  * Implements a {@link StatsTransport} which publishes via Presence in an XMPP
@@ -42,7 +42,7 @@ public class MucStatsTransport
      */
     private ClientConnectionImpl getUserConnectionBundleActivator()
     {
-        return ServiceUtils.getService(
+        return ServiceUtils2.getService(
             getBundleContext(), ClientConnectionImpl.class);
     }
 

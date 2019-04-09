@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.xmpp;
 
-import net.java.sip.communicator.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -66,7 +65,7 @@ public class ClientConnectionImpl
     public void start(BundleContext bundleContext)
     {
         ConfigurationService config
-            = ServiceUtils.getService(
+            = ServiceUtils2.getService(
                 bundleContext, ConfigurationService.class);
         if (config == null)
         {

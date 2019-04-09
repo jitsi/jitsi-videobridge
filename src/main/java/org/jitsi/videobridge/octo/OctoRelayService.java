@@ -15,8 +15,11 @@
  */
 package org.jitsi.videobridge.octo;
 
-import net.java.sip.communicator.util.*;
+import org.jitsi.nlj.util.*;
+import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.utils.logging.*;
+import org.jitsi.videobridge.*;
 import org.osgi.framework.*;
 
 import java.net.*;
@@ -63,12 +66,6 @@ public class OctoRelayService
     private OctoRelay relay;
 
     /**
-     * The {@code ConfigurationService} which looks up values of configuration
-     * properties.
-     */
-    private ConfigurationService cfg;
-
-    /**
      * @return the {@link OctoRelay} managed by this
      * {@link OctoRelayService}.
      */
@@ -83,15 +80,15 @@ public class OctoRelayService
     @Override
     public void start(BundleContext bundleContext)
     {
-        cfg
-            = ServiceUtils.getService(
+        ConfigurationService cfg
+            = ServiceUtils2.getService(
                     bundleContext, ConfigurationService.class);
 
         String address = cfg.getString(ADDRESS_PNAME, null);
         String publicAddress = cfg.getString(PUBLIC_ADDRESS_PNAME, address);
         int port = cfg.getInt(PORT_PNAME, -1);
 
-        if (address != null && NetworkUtils.isValidPortNumber(port))
+        if (address != null && (1024 <= port && port <= 0xffff))
         {
             try
             {

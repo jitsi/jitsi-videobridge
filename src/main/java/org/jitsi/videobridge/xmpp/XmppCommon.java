@@ -15,8 +15,6 @@
  */
 package org.jitsi.videobridge.xmpp;
 
-import net.java.sip.communicator.impl.protocol.jabber.*;
-import net.java.sip.communicator.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.version.*;
 import org.jitsi.videobridge.*;
@@ -49,8 +47,8 @@ class XmppCommon
         {
             ColibriConferenceIQ.NAMESPACE,
             HealthCheckIQ.NAMESPACE,
-            ProtocolProviderServiceJabberImpl.URN_XMPP_JINGLE_DTLS_SRTP,
-            ProtocolProviderServiceJabberImpl.URN_XMPP_JINGLE_ICE_UDP_1,
+            "urn:xmpp:jingle:apps:dtls:0",
+            "urn:xmpp:jingle:transports:ice-udp:1",
             Version.NAMESPACE
     };
 

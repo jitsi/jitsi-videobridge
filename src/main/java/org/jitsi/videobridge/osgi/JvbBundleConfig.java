@@ -52,26 +52,7 @@ public class JvbBundleConfig
             "org/jitsi/service/libjitsi/LibJitsiActivator"
         },
         {
-            "net/java/sip/communicator/util/UtilActivator",
-            "net/java/sip/communicator/impl/fileaccess/FileAccessActivator"
-        },
-        {
-            "net/java/sip/communicator/impl/configuration/ConfigurationActivator"
-        },
-        {
-            "net/java/sip/communicator/impl/resources/ResourceManagementActivator"
-        },
-        {
-            "net/java/sip/communicator/impl/netaddr/NetaddrActivator"
-        },
-        {
-            "net/java/sip/communicator/impl/packetlogging/PacketLoggingActivator"
-        },
-        {
-            "net/java/sip/communicator/service/gui/internal/GuiServiceActivator"
-        },
-        {
-            "net/java/sip/communicator/service/protocol/media/ProtocolMediaActivator"
+            "org/jitsi/videobridge/osgi/ConfigurationActivator"
         },
         {
             "org/jitsi/videobridge/eventadmin/callstats/Activator"
@@ -87,7 +68,6 @@ public class JvbBundleConfig
             "org/jitsi/videobridge/rest/PublicRESTBundleActivator",
             "org/jitsi/videobridge/rest/PublicClearPortRedirectBundleActivator",
             "org/jitsi/videobridge/stats/StatsManagerBundleActivator",
-            "org/jitsi/videobridge/EndpointConnectionStatus"
         },
         {
             "org/jitsi/videobridge/VideobridgeBundleActivator"
@@ -97,6 +77,9 @@ public class JvbBundleConfig
         },
         {
             "org/jitsi/videobridge/octo/OctoRelayService"
+        },
+        {
+            "org/jitsi/videobridge/EndpointConnectionStatus"
         }
     };
 
