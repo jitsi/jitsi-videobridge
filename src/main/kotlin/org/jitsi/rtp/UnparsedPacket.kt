@@ -16,8 +16,6 @@
 
 package org.jitsi.rtp
 
-import org.jitsi.rtp.extensions.bytearray.cloneFromPool
-
 class UnparsedPacket(
     buffer: ByteArray,
     offset: Int,

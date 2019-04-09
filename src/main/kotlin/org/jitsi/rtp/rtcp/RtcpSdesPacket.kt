@@ -19,7 +19,6 @@ package org.jitsi.rtp.rtcp
 import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.extensions.bytearray.ByteArrayUtils
-import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.extensions.bytearray.toHex
 import org.jitsi.rtp.util.getByteAsInt
 import org.jitsi.rtp.util.getIntAsLong

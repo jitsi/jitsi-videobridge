@@ -16,8 +16,6 @@
 
 package org.jitsi.rtp.rtcp
 
-import org.jitsi.rtp.extensions.bytearray.cloneFromPool
-
 class CompoundRtcpPacket(
     buffer: ByteArray,
     offset: Int,

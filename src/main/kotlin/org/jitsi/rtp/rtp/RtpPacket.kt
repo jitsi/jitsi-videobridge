@@ -17,7 +17,6 @@
 package org.jitsi.rtp.rtp
 
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionHelpers
 import org.jitsi.rtp.util.BufferPool

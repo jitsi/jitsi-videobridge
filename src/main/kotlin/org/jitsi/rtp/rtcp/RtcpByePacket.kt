@@ -16,7 +16,6 @@
 
 package org.jitsi.rtp.rtcp
 
-import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.extensions.bytearray.getInt
 
