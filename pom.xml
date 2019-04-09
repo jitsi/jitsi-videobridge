@@ -70,11 +70,6 @@
       <version>${smack.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.igniterealtime.smack</groupId>
-      <artifactId>smack-java7</artifactId>
-      <version>${smack.version}</version>
-    </dependency>
-    <dependency>
       <groupId>org.igniterealtime.whack</groupId>
       <artifactId>core</artifactId>
       <version>2.0.1</version>
@@ -108,7 +103,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco</artifactId>
-      <version>1.1-SNAPSHOT</version>
+      <version>1.1-20190409.112040-14</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
