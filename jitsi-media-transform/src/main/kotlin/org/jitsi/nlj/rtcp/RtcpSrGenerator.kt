@@ -24,7 +24,7 @@ import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacketBuilder
 import org.jitsi.rtp.rtcp.SenderInfoBuilder
-import org.jitsi.util.TimeUtils
+import org.jitsi.utils.TimeUtils
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 

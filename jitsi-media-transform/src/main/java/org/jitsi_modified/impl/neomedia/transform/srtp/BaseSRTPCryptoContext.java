@@ -18,10 +18,15 @@ package org.jitsi_modified.impl.neomedia.transform.srtp;
 import org.bouncycastle.crypto.*;
 import org.bouncycastle.crypto.engines.*;
 import org.jitsi.bccontrib.macs.*;
-import org.jitsi.impl.neomedia.transform.srtp.*;
-import org.jitsi.rtp.*;
+import org.jitsi.impl.neomedia.transform.srtp.SRTPPolicy;
+import org.jitsi.impl.neomedia.transform.srtp.SRTPCipherCTR;
+import org.jitsi.impl.neomedia.transform.srtp.SRTPCipherF8;
+import org.jitsi.impl.neomedia.transform.srtp.SRTPCipherCTROpenSSL;
+import org.jitsi.impl.neomedia.transform.srtp.SRTPCipherCTRJava;
+import org.jitsi.impl.neomedia.transform.srtp.AES;
+import org.jitsi.impl.neomedia.transform.srtp.HMACSHA1;
+import org.jitsi.impl.neomedia.transform.srtp.OpenSSLWrapperLoader;
 import org.jitsi.rtp.ByteArrayBuffer;
-import org.jitsi.service.neomedia.*;
 
 import java.util.*;
 

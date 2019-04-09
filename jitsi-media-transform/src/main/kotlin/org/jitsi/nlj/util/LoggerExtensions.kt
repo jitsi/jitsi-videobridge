@@ -15,9 +15,8 @@
  */
 package org.jitsi.nlj.util
 
-import org.jitsi.util.Logger
+import org.jitsi.utils.logging.Logger
 import kotlin.reflect.KClass
-import kotlin.reflect.full.companionObject
 
 // Logger already has functions 'info', 'debug', etc. which take in Object, so we can't
 // override those.  The 'c' in these methods stands for 'conditional' as the given

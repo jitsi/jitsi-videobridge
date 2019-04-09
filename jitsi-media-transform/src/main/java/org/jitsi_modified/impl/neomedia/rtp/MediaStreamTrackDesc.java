@@ -16,7 +16,7 @@
 package org.jitsi_modified.impl.neomedia.rtp;
 
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.*;
 
 import java.util.*;
 

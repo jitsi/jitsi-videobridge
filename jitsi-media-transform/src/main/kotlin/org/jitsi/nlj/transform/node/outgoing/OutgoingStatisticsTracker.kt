@@ -15,7 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.outgoing
 
-import org.jitsi.utils.RateStatistics
+import org.jitsi.utils.stats.RateStatistics
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.rtp.rtp.RtpPacket

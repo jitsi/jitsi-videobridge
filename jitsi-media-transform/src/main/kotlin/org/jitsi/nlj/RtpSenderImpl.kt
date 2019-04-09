@@ -19,7 +19,6 @@ import org.jitsi.nlj.rtcp.KeyframeRequester
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpSrGenerator
-import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
@@ -43,7 +42,7 @@ import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.util.Logger
+import org.jitsi.utils.logging.Logger
 import org.jitsi.utils.MediaType
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
