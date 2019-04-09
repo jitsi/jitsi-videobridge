@@ -15,7 +15,7 @@
  */
 package org.jitsi_modified.impl.neomedia.transform.srtp;
 
-import org.jitsi.impl.neomedia.transform.srtp.*;
+import org.jitsi.impl.neomedia.transform.srtp.SRTPPolicy;
 
 /**
  * The <tt>SRTPContextFactory</tt> creates the initial crypto contexts for RTP

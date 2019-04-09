@@ -15,7 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.utils.RateStatistics
+import org.jitsi.utils.stats.RateStatistics
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent

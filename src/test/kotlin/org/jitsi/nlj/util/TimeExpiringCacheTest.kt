@@ -28,7 +28,7 @@ internal class TimeExpiringCacheTest : ShouldSpec() {
 
     data class Dummy(val num: Int)
 
-    private val timeProvider = object : org.jitsi.nlj.util.TimeProvider {
+    private val timeProvider = object : org.jitsi.utils.TimeProvider() {
         var currentTimeMillis: Long = 0
         override fun currentTimeMillis(): Long = currentTimeMillis
     }
