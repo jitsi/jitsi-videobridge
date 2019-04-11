@@ -40,6 +40,10 @@ inline fun <reified Expected> Iterable<*>.forEachIf(action: (Expected) -> Unit) 
     }
 }
 
+infix fun Int.floorMod(other: Int): Int {
+    return Math.floorMod(this, other)
+}
+
 inline fun getStackTrace(): String = with (StringBuffer()) {
     for (ste in Thread.currentThread().stackTrace) {
         appendln(ste.toString())
