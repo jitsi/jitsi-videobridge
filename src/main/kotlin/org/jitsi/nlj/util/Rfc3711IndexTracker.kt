@@ -23,14 +23,24 @@ class Rfc3711IndexTracker {
 
     /**
      * return the index (as defined by RFC3711 at https://tools.ietf.org/html/rfc3711#section-3.3.1)
-     * for the given seqNum.
+     * for the given seqNum, updating our ROC if we roll over.
      * NOTE that this method must be called for all 'received' sequence numbers so that it may keep
      * its rollover counter accurate
      */
     fun update(seqNum: Int): Int {
+        return getIndex(seqNum, true)
+    }
+
+    /**
+     * return the index (as defined by RFC3711 at https://tools.ietf.org/html/rfc3711#section-3.3.1)
+     * for the given [seqNum]. If [updateRoc] is [true] and we've rolled over, updates our ROC.
+     */
+    private fun getIndex(seqNum: Int, updateRoc: Boolean): Int {
         if (highestSeqNumReceived == -1)
         {
-            highestSeqNumReceived = seqNum
+            if (updateRoc) {
+                highestSeqNumReceived = seqNum
+            }
             return seqNum
         }
 
@@ -44,11 +54,24 @@ class Rfc3711IndexTracker {
                 // the highestSeqNumReceived and return the new roc
                 // to be used for v
                 highestSeqNumReceived = seqNum
-                ++roc
+
+                if (updateRoc) {
+                    ++roc
+                } else {
+                    roc + 1
+                }
             }
             else -> roc
         }
 
         return 0x1_0000 * v + seqNum
+    }
+
+    /**
+     * Interprets an RTP sequence number in the context of the highest sequence number received. Returns the index
+     * which corresponds to the packet, but does not update the ROC.
+     */
+    fun interpret(seqNum: Int): Int {
+        return getIndex(seqNum, false)
     }
 }
