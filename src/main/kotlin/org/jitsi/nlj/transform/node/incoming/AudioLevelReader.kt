@@ -25,7 +25,6 @@ import org.jitsi.nlj.rtp.RtpExtensionType.SSRC_AUDIO_LEVEL
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
-import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.AudioLevelHeaderExtension
 import unsigned.toUInt
 
@@ -48,7 +47,7 @@ class AudioLevelReader : ObserverNode("Audio level reader") {
                 if (level != MUTED_LEVEL) {
                     audioLevelListener?.onLevelReceived(audioRtpPacket.ssrc, (127 - level).toPositiveLong())
                 } else {
-                    packetInfo.silence = true
+                    packetInfo.shouldDiscard = true
                 }
             }
         }

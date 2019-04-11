@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform.node.incoming;
+package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
@@ -25,7 +25,7 @@ import org.jitsi.rtp.rtcp.RtcpSrPacket
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Discards RTP packets which contains silence, masking their loss in the RTP sequence numbers and timestamps of RTP
+ * Discards RTP packets which contains shouldDiscard, masking their loss in the RTP sequence numbers and timestamps of RTP
  * packets, as well as the RTP timestamp in RTCP SR packets.
  */
 class SilenceDiscarder {
@@ -38,10 +38,10 @@ class SilenceDiscarder {
             val packet = packetInfo.packet
             if (packet is AudioRtpPacket) {
                 rewriters.computeIfAbsent(packet.ssrc) { ResumableStreamRewriter() }
-                        .rewriteRtp(!packetInfo.silence, packet)
+                        .rewriteRtp(!packetInfo.shouldDiscard, packet)
             }
 
-            return if (packetInfo.silence) {
+            return if (packetInfo.shouldDiscard) {
                 packetDiscarded(packetInfo)
                 null
             } else {
@@ -56,10 +56,11 @@ class SilenceDiscarder {
             when (packet) {
                 is RtcpSrPacket -> rewriters[packet.senderSsrc]?.rewriteRtcpSr(packet)
                 is CompoundRtcpPacket -> packet.packets.forEachIf<RtcpSrPacket> {
-                    rewriters[packet.senderSsrc]?.rewriteRtcpSr(it) }
+                    rewriters[packet.senderSsrc]?.rewriteRtcpSr(it)
+                }
             }
 
-            return if (packetInfo.silence) null else packetInfo
+            return packetInfo
         }
     }
 }
