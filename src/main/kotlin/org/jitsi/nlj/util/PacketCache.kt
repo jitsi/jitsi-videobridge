@@ -18,7 +18,6 @@ package org.jitsi.nlj.util
 
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.utils.TimeProvider
 import java.util.concurrent.ConcurrentHashMap
 
 /**

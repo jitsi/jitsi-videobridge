@@ -34,6 +34,7 @@ import org.jitsi.nlj.transform.node.incoming.PaddingTermination
 import org.jitsi.nlj.transform.node.incoming.RetransmissionRequesterNode
 import org.jitsi.nlj.transform.node.incoming.RtcpTermination
 import org.jitsi.nlj.transform.node.incoming.RtxHandler
+import org.jitsi.nlj.transform.node.incoming.SilenceDiscarder
 import org.jitsi.nlj.transform.node.incoming.SrtcpTransformerDecryptNode
 import org.jitsi.nlj.transform.node.incoming.SrtpTransformerDecryptNode
 import org.jitsi.nlj.transform.node.incoming.TccGeneratorNode
@@ -88,6 +89,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val srtcpDecryptWrapper = SrtcpTransformerDecryptNode()
     private val tccGenerator = TccGeneratorNode(rtcpSender, backgroundExecutor)
     private val audioLevelReader = AudioLevelReader()
+    private val silenceDiscarder = SilenceDiscarder()
     private val statsTracker = IncomingStatisticsTracker()
     private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statsTracker)
     private val rtcpTermination = RtcpTermination(rtcpEventNotifier, transportCcEngine)
@@ -181,6 +183,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 name = "Audio path"
                                 predicate = PacketPredicate { it is AudioRtpPacket }
                                 path = pipeline {
+                                    node(silenceDiscarder.rtpNode)
                                     node(rtpPacketHandlerWrapper)
                                 }
                             }
@@ -206,6 +209,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     path = pipeline {
                         node(srtcpDecryptWrapper)
                         node(PacketParser("Compound RTCP parser") { CompoundRtcpPacket(it.buffer, it.offset, it.length) })
+                        node(silenceDiscarder.rtcpNode)
                         node(rtcpTermination)
                         node(rtcpPacketHandlerWrapper)
                     }
