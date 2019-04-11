@@ -17,6 +17,11 @@
 package org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb
 
 import org.jitsi.rtp.extensions.bytearray.cloneFromPool
+import org.jitsi.rtp.extensions.bytearray.putInt
+import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
+import org.jitsi.rtp.util.BufferPool
+import org.jitsi.rtp.util.RtpUtils
 
 /**
  * https://tools.ietf.org/html/rfc4585#section-6.3.1
@@ -35,5 +40,33 @@ class RtcpFbPliPacket(
 
     companion object {
         const val FMT = 1
+        const val SIZE_BYTES = RtcpFbPacket.HEADER_SIZE + 4
+
+        const val MEDIA_SENDER_SSRC_OFFSET = RtcpFbPacket.HEADER_SIZE
+
+        fun setMediaSenderSsrc(buf: ByteArray, baseOffset: Int, value: Long) =
+                buf.putInt(baseOffset + MEDIA_SENDER_SSRC_OFFSET, value.toInt())
+    }
+}
+
+class RtcpFbPliPacketBuilder(
+        val rtcpHeader: RtcpHeaderBuilder = RtcpHeaderBuilder(),
+        var mediaSenderSsrc: Long = -1
+) {
+
+    fun build(): RtcpFbPliPacket {
+        val buf = BufferPool.getArray(RtcpFbPliPacket.SIZE_BYTES)
+        writeTo(buf, 0)
+        return RtcpFbPliPacket(buf, 0, RtcpFbPliPacket.SIZE_BYTES)
+    }
+
+    fun writeTo(buf: ByteArray, offset: Int) {
+        rtcpHeader.apply {
+            packetType = PayloadSpecificRtcpFbPacket.PT
+            reportCount = RtcpFbPliPacket.FMT
+            length = RtpUtils.calculateRtcpLengthFieldValue(RtcpFbPliPacket.SIZE_BYTES)
+        }
+        rtcpHeader.writeTo(buf, offset)
+        RtcpFbPliPacket.setMediaSenderSsrc(buf, offset, mediaSenderSsrc)
     }
 }
