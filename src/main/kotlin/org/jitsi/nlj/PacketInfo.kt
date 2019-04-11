@@ -81,6 +81,12 @@ class PacketInfo @JvmOverloads constructor(
      * was an incoming packet and not one created by jvb itself).
      */
     var receivedTime: Long = -1L
+
+    /**
+     * Whether this packet has been recognized to contain only silence.
+     */
+    var silence: Boolean = false
+
     /**
      * Get the contained packet cast to [ExpectedPacketType]
      */
