@@ -57,7 +57,7 @@ val DEFAULT_HEADER_EXTENSIONS = listOf(
 object Pcaps {
     object Incoming {
         val ONE_PARTICIPANT_RTP_RTCP_SIM_RTX = PcapInformation(
-            filePath = "/Users/bbaldino/work/nlj/src/main/resources/pcaps/1_incoming_participant_rtp_rtcp_sim_rtx.pcap",
+            filePath = javaClass.classLoader.getResource("pcaps/1_incoming_participant_rtp_rtcp_sim_rtx.pcap").path,
             srtpData = SrtpData(
                 srtpProfileInformation = SrtpProfileInformation(cipherKeyLength=16, cipherSaltLength=14, cipherName=1, authFunctionName=1, authKeyLength=20, rtcpAuthTagLength=10, rtpAuthTagLength=10),
                 keyingMaterial = byteBufferOf(
@@ -92,7 +92,7 @@ object Pcaps {
             )
         )
         val ONE_PARTICIPANT_RTP_RTCP = PcapInformation(
-            filePath = "/Users/bbaldino/new_pipeline_captures/capture_1_incoming_participant_1_rtp_and_rtcp.pcap",
+            filePath = javaClass.classLoader.getResource("pcaps/capture_1_incoming_participant_1_rtp_and_rtcp.pcap").path,
             srtpData = SrtpData(
                 srtpProfileInformation = SrtpProfileInformation(
                     cipherKeyLength = 16,
@@ -132,7 +132,7 @@ object Pcaps {
     }
     object Outgoing {
         val ONE_PARITICPANT_RTP_AND_RTCP_DECRYPTED = PcapInformation(
-            filePath = "/Users/bbaldino/work/nlj/src/main/resources/pcaps/capture_1_incoming_participant_1_rtp_and_rtcp_decrypted_2.pcap",
+            filePath = javaClass.classLoader.getResource("pcaps/capture_1_incoming_participant_1_rtp_and_rtcp_decrypted_2.pcap").path,
             srtpData = SrtpData(
                 srtpProfileInformation = SrtpProfileInformation(
                     cipherKeyLength = 16,
