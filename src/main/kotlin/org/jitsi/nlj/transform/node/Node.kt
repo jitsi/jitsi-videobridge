@@ -299,7 +299,7 @@ sealed class StatsKeepingNode(name: String): Node(name) {
                 addStat("numInputPackets: $numInputPackets")
                 addStat("numOutputPackets: $numOutputPackets")
                 addStat("numDiscardedPackets: $numDiscardedPackets")
-                addStat("total time spent: $totalProcessingDurationMs} ms")
+                addStat("total time spent: $totalProcessingDurationMs ms")
                 addStat("average time spent per packet: $averageProcessingTimePerPacketNs ns")
                 addStat("processing throughput: $processingThroughputMbps Mbps")
                 addStat("max packet process time: $maxProcessingDurationMs ms")

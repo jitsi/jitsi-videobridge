@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.rtp
 
-import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.rtp.RtpPacket
 
 class AudioRtpPacket(
