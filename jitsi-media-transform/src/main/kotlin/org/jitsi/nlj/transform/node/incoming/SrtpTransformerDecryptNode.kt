@@ -24,14 +24,15 @@ import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
 
 class SrtpTransformerDecryptNode : AbstractSrtpTransformerNode("SRTP decrypt wrapper") {
     private var numDecryptFailures = 0
-    override fun doTransform(pkts: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo> {
+    override fun doTransform(packetInfos: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo> {
         val decryptedPackets = mutableListOf<PacketInfo>()
-        pkts.forEach {
-            transformer.reverseTransform(it.packet)?.let { decryptedPacket ->
-                it.packet = decryptedPacket.toOtherType(::RtpPacket)
-                decryptedPackets.add(it)
+        packetInfos.forEach { packetInfo ->
+            transformer.reverseTransform(packetInfo.packet)?.let { decryptedPacket ->
+                packetInfo.packet = decryptedPacket
+                decryptedPackets.add(packetInfo)
             } ?: run {
-                logger.cerror { "SRTP decryption failed for packet ${it.packetAs<RtpPacket>().ssrc} ${it.packetAs<RtpPacket>().sequenceNumber}" }
+                logger.cerror {
+                    "SRTP decryption failed for packet ${packetInfo.packetAs<RtpPacket>().ssrc} ${packetInfo.packetAs<RtpPacket>().sequenceNumber}" }
                 numDecryptFailures++
             }
         }
