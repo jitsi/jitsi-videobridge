@@ -28,12 +28,12 @@ import org.jitsi.nlj.format.VideoPayloadType
 import org.jitsi.nlj.rtp.PaddingVideoPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
+import org.jitsi.nlj.util.PacketCache
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.utils.MediaType
-import org.jitsi_modified.impl.neomedia.rtp.RtpPacketCache
 import java.util.Random
 
 /**
@@ -44,7 +44,7 @@ import java.util.Random
  *
  */
 class ProbingDataSender(
-    private val packetCache: RtpPacketCache,
+    private val packetCache: PacketCache,
     private val rtxDataSender: PacketHandler,
     private val garbageDataSender: PacketHandler
 ) : EventHandler, NodeStatsProducer {
@@ -102,7 +102,7 @@ class ProbingDataSender(
             while (lastNPacketIter.hasNext())
             {
                 val packet = lastNPacketIter.next()
-                val packetLen = packet.pkt.length
+                val packetLen = packet.length
                 if (bytesSent + packetLen > numBytes) {
                     // We don't have enough 'room' to send this packet; we're done
                     break
@@ -112,7 +112,7 @@ class ProbingDataSender(
                 // encapsulating packets as RTX (with the proper ssrc and payload type) so we
                 // just need to find the packets to retransmit and forward them to the next node
                 //TODO(brian): do we need to clone it here?
-                packetsToResend.add(PacketInfo(packet.pkt.clone()))
+                packetsToResend.add(PacketInfo(packet.clone()))
             }
         }
         //TODO(brian): we're in a thread context mess here.  we'll be sending these out from the bandwidthprobing

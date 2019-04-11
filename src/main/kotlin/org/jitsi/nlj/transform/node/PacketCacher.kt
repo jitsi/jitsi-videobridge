@@ -16,15 +16,19 @@
 package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi_modified.impl.neomedia.rtp.RtpPacketCache
+import org.jitsi.nlj.util.PacketCache
 
 class PacketCacher : ObserverNode("Packet cache") {
-    private val packetCache = RtpPacketCache(0)
+    private val packetCache = PacketCache()
 
     override fun observe(packetInfo: PacketInfo) {
-        packetCache.cachePacket(packetInfo.packetAs<RtpPacket>())
+        packetCache.insert(packetInfo.packetAs())
     }
 
-    fun getPacketCache(): RtpPacketCache = packetCache
+    override fun stop() {
+        packetCache.stop()
+        super.stop()
+    }
+
+    fun getPacketCache(): PacketCache = packetCache
 }

@@ -16,85 +16,114 @@
 
 package org.jitsi.nlj.util
 
+import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.rtp.rtp.RtpPacket
-import java.time.Duration
+import org.jitsi.utils.TimeProvider
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Creates a packet cache for packets by SSRC
  */
-class PacketCache {
+class PacketCache(
     /**
-     * Packets added to the cache more than [timeout] ago might be
-     * cleared from the cache on insertion.
-     *
-     * FIXME(gp) the cache size should be adaptive based on the RTT.
+     * A function which dictates which packets to cache.
      */
-    private val timeout: Duration
-
-    private val maxNumElements: Int
-
+    val packetPredicate: (RtpPacket) -> Boolean = { it is VideoRtpPacket }
+) {
+    /**
+     * The max number of packets to cache per SSRC.
+     */
+    private val size: Int
     private val packetCaches: MutableMap<Long, RtpPacketCache> = ConcurrentHashMap()
+    private var stopped = false
 
     companion object {
-        val NACK_CACHE_SIZE_MILLIS: String = "${PacketCache::class.java}.CACHE_SIZE_MILLIS"
-        val NACK_CACHE_SIZE_PACKETS: String = "${PacketCache::class.java}.CACHE_SIZE_PACKETS"
+        val SIZE_PACKETS: String = "${PacketCache::class.java}.SIZE_PACKETS"
         private val defaultConfiguration = Configuration()
+
         init {
-            defaultConfiguration[NACK_CACHE_SIZE_MILLIS] = 1000
-            defaultConfiguration[NACK_CACHE_SIZE_PACKETS] = 500
+            defaultConfiguration[SIZE_PACKETS] = 500
         }
     }
 
     init {
-        timeout = Duration.ofMillis(defaultConfiguration.getInt(NACK_CACHE_SIZE_MILLIS).toLong())
-        maxNumElements = defaultConfiguration.getInt(NACK_CACHE_SIZE_PACKETS)
+        size = defaultConfiguration.getInt(SIZE_PACKETS)
     }
 
     private fun getCache(ssrc: Long): RtpPacketCache {
-        return packetCaches.computeIfAbsent(ssrc) { _ -> RtpPacketCache(timeout, maxNumElements) }
+        return packetCaches.computeIfAbsent(ssrc) { RtpPacketCache(size) }
     }
 
-    fun cachePacket(packet: RtpPacket) = getCache(packet.ssrc).insert(packet)
+    /**
+     * Stores a copy of the given packet in the cache.
+     */
+    fun insert(packet: RtpPacket) =
+        !stopped && packetPredicate(packet) && getCache(packet.ssrc).insert(packet)
 
-    fun getPacket(ssrc: Long, seqNum: Int): RtpPacket? = getCache(ssrc).get(seqNum)
+    /**
+     * Gets a copy of the packet in the cache with the given SSRC and sequence number, if the cache contains it.
+     * The instance is wrapped in a [ArrayCache.Container].
+     */
+    fun get(ssrc: Long, seqNum: Int): ArrayCache<RtpPacket>.Container? = getCache(ssrc).get(seqNum)
 
+    /**
+     * Gets copies of the latest packets in the cache. Tries to get at least [numBytes] bytes total.
+     */
     fun getMany(ssrc: Long, numBytes: Int): Set<RtpPacket> = getCache(ssrc).getMany(numBytes)
 
     /**
-     * A cache of packets which maps their RFC3711 index to the packet itself.
-     * Each insertion, all packets (in order of index) up to the first one
-     * which is newer than [timeout] are pruned from the cache.
+     * Updates the timestamp of a packet in the cache (if it is in the cache). This is used when we re-transmit a
+     * packet in order to update the timestamp without re-adding the packet to the cache (which is expensive).
      */
-    private class RtpPacketCache(
-        timeout: Duration,
-        maxNumElements: Int
-    ) {
-        private val cache = TimeExpiringCache<Int, RtpPacket>(timeout, maxNumElements)
-        private val rfc3711IndexTracker = Rfc3711IndexTracker()
+    fun updateTimestamp(ssrc: Long, seqNum: Int, timeAdded: Long) = getCache(ssrc).updateTimestamp(seqNum, timeAdded)
 
-        fun insert(packet: RtpPacket) {
-            val index = rfc3711IndexTracker.update(packet.sequenceNumber)
-            cache.insert(index, packet)
+    fun stop() {
+        stopped = true
+        packetCaches.forEach { _, cache -> cache.flush() }
+    }
+}
+
+/**
+ * Implements a cache for RTP packets.
+ */
+class RtpPacketCache(size: Int) : ArrayCache<RtpPacket>(size, RtpPacket::clone) {
+
+    private val rfc3711IndexTracker = Rfc3711IndexTracker()
+
+    override fun discardItem(item: RtpPacket) {
+        BufferPool.returnBuffer(item.buffer)
+    }
+
+    /**
+     * Gets a packet with a given RTP sequence number from the cache.
+     */
+    fun get(sequenceNumber: Int): Container? {
+        // Note that we use [interpret] because we don't want the ROC to get out of sync because of funny requests
+        // (NACKs)
+        val index = rfc3711IndexTracker.interpret(sequenceNumber)
+        return super.getContainer(index)
+    }
+
+    fun insert(rtpPacket: RtpPacket): Boolean {
+        val index = rfc3711IndexTracker.update(rtpPacket.sequenceNumber)
+        return super.insertItem(rtpPacket, index)
+    }
+
+    fun updateTimestamp(seqNum: Int, timeAdded: Long) {
+        val index = rfc3711IndexTracker.interpret(seqNum)
+        super.updateTimeAdded(index, timeAdded)
+    }
+
+    fun getMany(numBytes: Int): Set<RtpPacket> {
+        var bytesRemaining = numBytes
+        val packets = mutableSetOf<RtpPacket>()
+
+        forEachDescending {
+            packets.add(it)
+            bytesRemaining -= it.length
+            bytesRemaining > 0
         }
 
-        fun get(seqNum: Int): RtpPacket? {
-            // We don't know to which ROC value this sequence number belongs, so we'll try
-            // to find it first using the current ROC value, but if that fails we'll try
-            // again to use the previous one, just in case we've rolled over recently
-            return cache.get(seqNum + rfc3711IndexTracker.roc * 0x1_0000) ?:
-                cache.get(seqNum + rfc3711IndexTracker.roc - 1 * 0x1_0000)
-        }
-
-        fun getMany(numBytes: Int): Set<RtpPacket> {
-            var bytesRemaining = numBytes
-            val packets = mutableSetOf<RtpPacket>()
-            cache.forEachDescending { pkt ->
-                packets.add(pkt)
-                bytesRemaining -= pkt.length
-                bytesRemaining > 0
-            }
-            return packets
-        }
+        return packets
     }
 }
