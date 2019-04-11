@@ -117,7 +117,7 @@ open class RtpPacket(
         }
 
     private val _headerExtensions: HeaderExtensions = HeaderExtensions()
-    val headerExtensions: HeaderExtensions
+    private val headerExtensions: HeaderExtensions
         get() {
             _headerExtensions.reset()
             return _headerExtensions
