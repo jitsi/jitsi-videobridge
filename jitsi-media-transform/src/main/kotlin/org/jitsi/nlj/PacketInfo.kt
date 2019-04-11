@@ -83,9 +83,9 @@ class PacketInfo @JvmOverloads constructor(
     var receivedTime: Long = -1L
 
     /**
-     * Whether this packet has been recognized to contain only silence.
+     * Whether this packet has been recognized to contain only shouldDiscard.
      */
-    var silence: Boolean = false
+    var shouldDiscard: Boolean = false
 
     /**
      * Get the contained packet cast to [ExpectedPacketType]
