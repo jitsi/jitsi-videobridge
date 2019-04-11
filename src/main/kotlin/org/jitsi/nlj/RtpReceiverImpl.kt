@@ -24,10 +24,9 @@ import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
 import org.jitsi.nlj.transform.node.ConsumerNode
-import org.jitsi.nlj.transform.node.MediaTypeParser
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketParser
-import org.jitsi.nlj.transform.node.PayloadTypeFilterNode
+import org.jitsi.nlj.transform.node.RtpParser
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
@@ -50,7 +49,6 @@ import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.PacketPredicate
 import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.util.RTCPUtils
 import org.jitsi.utils.logging.Logger
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
@@ -89,7 +87,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val srtpDecryptWrapper = SrtpTransformerDecryptNode()
     private val srtcpDecryptWrapper = SrtcpTransformerDecryptNode()
     private val tccGenerator = TccGeneratorNode(rtcpSender, backgroundExecutor)
-    private val payloadTypeFilter = PayloadTypeFilterNode()
     private val audioLevelReader = AudioLevelReader()
     private val statsTracker = IncomingStatisticsTracker()
     private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statsTracker)
@@ -174,18 +171,16 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     name = "SRTP path"
                     predicate = PacketPredicate { !RTCPUtils.isRtcp(it.buffer, it.offset, it.length) }
                     path = pipeline {
-                        node(PacketParser("RTP parser") { RtpPacket(it.buffer, it.offset, it.length) })
-                        node(payloadTypeFilter)
+                        node(RtpParser())
                         node(tccGenerator)
+                        node(audioLevelReader)
                         node(srtpDecryptWrapper)
-                        node(MediaTypeParser())
                         node(statsTracker)
                         demux("Media type") {
                             packetPath {
                                 name = "Audio path"
                                 predicate = PacketPredicate { it is AudioRtpPacket }
                                 path = pipeline {
-                                    node(audioLevelReader)
                                     node(rtpPacketHandlerWrapper)
                                 }
                             }
