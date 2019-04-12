@@ -20,6 +20,7 @@ import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.util.PacketCache;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -484,7 +485,7 @@ public class VP8AdaptiveTrackProjectionContext
      * Rewrites the RTP packet that is specified as an argument.
      *
      * @param rtpPacket the RTP packet to rewrite.
-     * @param incomingRawPacketCache the packet cache to pull piggy-backed
+     * @param incomingPacketCache the packet cache to pull piggy-backed
      * packets from. Null is permissible, but in that case no packets will be
      * piggy backed.
      * @return any RTP packets to piggy-bac
@@ -493,7 +494,7 @@ public class VP8AdaptiveTrackProjectionContext
      */
     @Override
     public VideoRtpPacket[] rewriteRtp(
-        @NotNull VideoRtpPacket rtpPacket, RtpPacketCache incomingRawPacketCache)
+        @NotNull VideoRtpPacket rtpPacket, PacketCache incomingPacketCache)
         throws RewriteException
     {
         VP8FrameProjection vp8FrameProjection
@@ -505,7 +506,7 @@ public class VP8AdaptiveTrackProjectionContext
         }
 
         VideoRtpPacket[] ret
-            = vp8FrameProjection.rewriteRtp(rtpPacket, incomingRawPacketCache);
+            = vp8FrameProjection.rewriteRtp(rtpPacket, incomingPacketCache);
 
         synchronized (transmittedSyncRoot)
         {
