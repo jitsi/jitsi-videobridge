@@ -19,11 +19,11 @@ import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.util.PacketCache;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.cc.vp8.*;
-import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc;
 import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc;
 
@@ -182,7 +182,7 @@ public class AdaptiveTrackProjection
      */
     private final Consumer<Long> keyframeRequester;
 
-    private final RtpPacketCache packetCache = new RtpPacketCache(hashCode());
+    private final PacketCache packetCache = new PacketCache(packet -> packet instanceof VideoRtpPacket);
 
     /**
      * Determines whether an RTP packet needs to be accepted or not.
@@ -204,7 +204,7 @@ public class AdaptiveTrackProjection
         {
             return false;
         }
-        packetCache.cachePacket(rtpPacket);
+        packetCache.insert(rtpPacket);
 
         // XXX We want to let the context know that the stream has been
         // suspended so that it can raise the needsKeyframe flag and also allow

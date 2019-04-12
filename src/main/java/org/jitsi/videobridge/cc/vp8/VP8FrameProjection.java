@@ -18,11 +18,12 @@ package org.jitsi.videobridge.cc.vp8;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.util.ArrayCache;
+import org.jitsi.nlj.util.PacketCache;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.utils.logging.Logger;
 import org.jitsi.videobridge.cc.*;
-import org.jitsi_modified.impl.neomedia.rtp.*;
 
 import java.util.*;
 
@@ -308,7 +309,7 @@ public class VP8FrameProjection
      * @param cache the cache to pull piggy-backed packets from.
      * @param rtpPacket the RTP packet to project.
      */
-    VideoRtpPacket[] rewriteRtp(@NotNull VideoRtpPacket rtpPacket, RtpPacketCache cache)
+    VideoRtpPacket[] rewriteRtp(@NotNull VideoRtpPacket rtpPacket, PacketCache cache)
     {
         int originalSequenceNumber = rtpPacket.getSequenceNumber();
 
@@ -343,8 +344,8 @@ public class VP8FrameProjection
             int piggyBackedPacketSequenceNumber
                 = (originalSequenceNumber + i) & RawPacket.SEQUENCE_NUMBER_MASK;
 
-            VideoRtpPacket lastPacket = (VideoRtpPacket)cache.get(
-                vp8FrameSSRC, piggyBackedPacketSequenceNumber);
+            ArrayCache.Container container = cache.get(vp8FrameSSRC, piggyBackedPacketSequenceNumber);
+            VideoRtpPacket lastPacket = container == null ? null : (VideoRtpPacket) container.getItem();
 
             // the call to accept (synchronized) may update the
             // maxSequenceNumber.

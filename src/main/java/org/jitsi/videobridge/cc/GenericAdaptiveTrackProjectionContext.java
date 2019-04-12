@@ -20,11 +20,11 @@ import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.util.PacketCache;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.utils.logging.*;
-import org.jitsi_modified.impl.neomedia.rtp.*;
 
 /**
  * A generic implementation of an adaptive track projection context that can be
@@ -319,14 +319,14 @@ class GenericAdaptiveTrackProjectionContext
      * source track transparent at the RTP level.
      *
      * @param rtpPacket the RTP packet to rewrite.
-     * @param incomingRawPacketCache the packet cache to pull piggy-backed
+     * @param incomingPacketCache the packet cache to pull piggy-backed
      * packets from. It can be left null because piggybacking is not
      * implemented.
      * @return {@link #EMPTY_PACKET_ARR}
      */
     @Override
     public VideoRtpPacket[] rewriteRtp(
-        @NotNull VideoRtpPacket rtpPacket, RtpPacketCache incomingRawPacketCache)
+        @NotNull VideoRtpPacket rtpPacket, PacketCache incomingPacketCache)
     {
         int sourceSequenceNumber = rtpPacket.getSequenceNumber();
         int destinationSequenceNumber
