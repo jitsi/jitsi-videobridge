@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj
 
-import org.bouncycastle.crypto.tls.TlsContext
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.RemoteBitrateObserver
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
@@ -278,23 +277,13 @@ class Transceiver(
                 "profile info:\n$srtpProfileInfo\n" +
                 "keyingMaterial:\n${keyingMaterial.toHex()}\n" +
                 "tls role: $tlsRole" }
-        val srtpTransformer = SrtpUtil.initializeTransformer(
+        val srtpTransformers = SrtpUtil.initializeTransformer(
             srtpProfileInfo,
             keyingMaterial,
-            tlsRole,
-            false
-        )
-        val srtcpTransformer = SrtpUtil.initializeTransformer(
-            srtpProfileInfo,
-            keyingMaterial,
-            tlsRole,
-            true
-        )
+            tlsRole)
 
-        rtpReceiver.setSrtpTransformer(srtpTransformer)
-        rtpReceiver.setSrtcpTransformer(srtcpTransformer)
-        rtpSender.setSrtpTransformer(srtpTransformer)
-        rtpSender.setSrtcpTransformer(srtcpTransformer)
+        rtpReceiver.setSrtpTransformers(srtpTransformers)
+        rtpSender.setSrtpTransformers(srtpTransformers)
     }
 
     /**

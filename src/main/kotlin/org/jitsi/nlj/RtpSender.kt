@@ -15,13 +15,11 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.transform.NodeStatsProducer
-import org.jitsi.nlj.transform.node.outgoing.OutgoingSsrcStats
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
-
 
 /**
  * Not an 'RtpSender' in the sense that it sends only RTP (and not
@@ -38,8 +36,7 @@ abstract class RtpSender :
     abstract fun sendRtcp(rtcpPacket: RtcpPacket)
     abstract fun sendProbing(mediaSsrc: Long, numBytes: Int): Int
     abstract fun onOutgoingPacket(handler: PacketHandler)
-    abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)
-    abstract fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer)
+    abstract fun setSrtpTransformers(srtpTransformers: SrtpTransformers)
     abstract fun getStreamStats(): OutgoingStatisticsSnapshot
     abstract fun requestKeyframe(mediaSsrc: Long)
     abstract fun tearDown()

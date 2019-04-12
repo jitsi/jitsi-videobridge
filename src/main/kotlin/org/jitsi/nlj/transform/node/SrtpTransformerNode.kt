@@ -16,20 +16,16 @@
 package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.srtp.AbstractSrtpTransformer
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
+import org.jitsi.rtp.rtp.RtpPacket
 
-abstract class AbstractSrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
+class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
     /**
-     * The [SinglePacketTransformer] instance to use for srtp transform/reverseTransforms.
-     * Note that this is private on purpose: subclasses should use the transformer given to
-     * them in [doTransform] (which will never be null, whereas this may be null).
+     * The function to use to use protect or unprotect a single SRT(C)P packet.
      */
-    private var transformer: SinglePacketTransformer? = null
+    var transformer: AbstractSrtpTransformer<*>? = null
 
-    fun setTransformer(t: SinglePacketTransformer?) {
-        transformer = t
-    }
     /**
      * We'll cache all packets that come through before [transformer]
      * gets set so that we don't lose any packets at the beginning
@@ -40,7 +36,22 @@ abstract class AbstractSrtpTransformerNode(name: String) : MultipleOutputTransfo
     /**
      * The function which subclasses should implement to do the actual srtp/srtcp encryption/decryption
      */
-    abstract fun doTransform(pkts: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo>
+    private fun doTransform(packetInfos: List<PacketInfo>): List<PacketInfo> {
+        val transformedPackets = mutableListOf<PacketInfo>()
+        // TODO can we avoid copying between the lists since most of the time it's a single packet?
+        packetInfos.forEach { packetInfo ->
+            val res = transformer?.transform(packetInfo) ?: false
+
+            if (res) {
+                transformedPackets.add(packetInfo)
+            } else {
+                with (packetInfo.packetAs<RtpPacket>()) {
+                    logger.warn("SRTP transform failed for packet $ssrc $sequenceNumber")
+                }
+            }
+        }
+        return transformedPackets
+    }
 
     private var firstPacketReceivedTimestamp = -1L
     private var firstPacketForwardedTimestamp = -1L
@@ -59,9 +70,11 @@ abstract class AbstractSrtpTransformerNode(name: String) : MultipleOutputTransfo
                 firstPacketForwardedTimestamp = System.currentTimeMillis()
             }
             val outPackets = mutableListOf<PacketInfo>()
-            outPackets.addAll(doTransform(cachedPackets, it))
-            cachedPackets.clear()
-            outPackets.addAll(doTransform(listOf(packetInfo), it))
+            if (!cachedPackets.isEmpty()) {
+                outPackets.addAll(doTransform(cachedPackets))
+                cachedPackets.clear()
+            }
+            outPackets.addAll(doTransform(listOf(packetInfo)))
             return outPackets
         } ?: run {
             numCachedPackets++
@@ -89,5 +102,6 @@ abstract class AbstractSrtpTransformerNode(name: String) : MultipleOutputTransfo
     override fun stop() {
         super.stop()
         cachedPackets.forEach { packetDiscarded(it) }
+        transformer?.close()
     }
 }

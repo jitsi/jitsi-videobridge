@@ -16,27 +16,17 @@
 
 package org.jitsi.nlj.module_tests
 
+import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.test_utils.SrtpData
-import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
 
 class SrtpTransformerFactory {
     companion object {
-        fun createSrtpTransformer(srtpData: SrtpData): SinglePacketTransformer {
+        fun createSrtpTransformers(srtpData: SrtpData): SrtpTransformers {
             return SrtpUtil.initializeTransformer(
                 srtpData.srtpProfileInformation,
                 srtpData.keyingMaterial,
-                srtpData.tlsRole,
-                false
-            )
-        }
-
-        fun createSrtcpTransformer(srtpData: SrtpData): SinglePacketTransformer {
-            return SrtpUtil.initializeTransformer(
-                srtpData.srtpProfileInformation,
-                srtpData.keyingMaterial,
-                srtpData.tlsRole,
-                true
+                srtpData.tlsRole
             )
         }
     }

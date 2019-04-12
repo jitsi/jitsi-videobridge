@@ -19,6 +19,7 @@ import org.jitsi.nlj.rtcp.KeyframeRequester
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpSrGenerator
+import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
@@ -26,14 +27,13 @@ import org.jitsi.nlj.transform.NodeTeardownVisitor
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketCacher
+import org.jitsi.nlj.transform.node.SrtpTransformerNode
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
 import org.jitsi.nlj.transform.node.outgoing.ProbingDataSender
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
 import org.jitsi.nlj.transform.node.outgoing.SentRtcpStats
-import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
-import org.jitsi.nlj.transform.node.outgoing.SrtpTransformerEncryptNode
 import org.jitsi.nlj.transform.node.outgoing.TccSeqNumTagger
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.PacketInfoQueue
@@ -45,7 +45,6 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.logging.Logger
 import org.jitsi.utils.MediaType
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
-import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
@@ -90,8 +89,8 @@ class RtpSenderImpl(
     private var numQueueReads: Long = 0
     private var numTimesQueueEmpty: Long = 0
 
-    private val srtpEncryptWrapper = SrtpTransformerEncryptNode()
-    private val srtcpEncryptWrapper = SrtcpTransformerEncryptNode()
+    private val srtpEncryptWrapper = SrtpTransformerNode("SRTP encrypt")
+    private val srtcpEncryptWrapper = SrtpTransformerNode("SRTCP encrypt")
     private val outgoingPacketCache = PacketCacher()
     private val absSendTime = AbsSendTime()
     private val statTracker = OutgoingStatisticsTracker()
@@ -201,12 +200,9 @@ class RtpSenderImpl(
         outgoingPacketHandler = handler
     }
 
-    override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {
-        srtpEncryptWrapper.setTransformer(srtpTransformer)
-    }
-
-    override fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer) {
-        srtcpEncryptWrapper.setTransformer(srtcpTransformer)
+    override fun setSrtpTransformers(srtpTransformers: SrtpTransformers) {
+        srtpEncryptWrapper.transformer = srtpTransformers.srtpEncryptTransformer
+        srtcpEncryptWrapper.transformer = srtpTransformers.srtcpEncryptTransformer
     }
 
     override fun requestKeyframe(mediaSsrc: Long) {
