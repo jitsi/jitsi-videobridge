@@ -54,7 +54,7 @@ import java.util.*;
  * @author Bing SU (nova.su@gmail.com)
  * @author Lyubomir Marinov
  */
-class BaseSRTPCryptoContext
+public class BaseSRTPCryptoContext
 {
     /**
      * The replay check windows size.

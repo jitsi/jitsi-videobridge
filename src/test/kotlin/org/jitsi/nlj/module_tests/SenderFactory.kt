@@ -49,8 +49,7 @@ class SenderFactory {
                 executor,
                 backgroundExecutor
             )
-            sender.setSrtpTransformer(SrtpTransformerFactory.createSrtpTransformer(srtpData))
-            sender.setSrtcpTransformer(SrtpTransformerFactory.createSrtcpTransformer(srtpData))
+            sender.setSrtpTransformers(SrtpTransformerFactory.createSrtpTransformers(srtpData))
 
             payloadTypes.forEach {
                 sender.handleEvent(RtpPayloadTypeAddedEvent(it))

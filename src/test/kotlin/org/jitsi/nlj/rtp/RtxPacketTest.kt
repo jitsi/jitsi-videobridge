@@ -22,6 +22,7 @@ import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.shouldBe
 import org.jitsi.nlj.test_utils.matchers.haveSameContentAs
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.service.libjitsi.LibJitsi
 import java.nio.ByteBuffer
 
 class RtxPacketTest : ShouldSpec() {

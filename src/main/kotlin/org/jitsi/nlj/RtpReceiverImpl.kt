@@ -19,6 +19,7 @@ import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpRrGenerator
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
@@ -27,6 +28,7 @@ import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketParser
 import org.jitsi.nlj.transform.node.RtpParser
+import org.jitsi.nlj.transform.node.SrtpTransformerNode
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
@@ -35,8 +37,6 @@ import org.jitsi.nlj.transform.node.incoming.RetransmissionRequesterNode
 import org.jitsi.nlj.transform.node.incoming.RtcpTermination
 import org.jitsi.nlj.transform.node.incoming.RtxHandler
 import org.jitsi.nlj.transform.node.incoming.SilenceDiscarder
-import org.jitsi.nlj.transform.node.incoming.SrtcpTransformerDecryptNode
-import org.jitsi.nlj.transform.node.incoming.SrtpTransformerDecryptNode
 import org.jitsi.nlj.transform.node.incoming.TccGeneratorNode
 import org.jitsi.nlj.transform.node.incoming.VideoBitrateCalculator
 import org.jitsi.nlj.transform.node.incoming.VideoParser
@@ -53,7 +53,6 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.util.RTCPUtils
 import org.jitsi.utils.logging.Logger
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
-import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
@@ -85,8 +84,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val inputTreeRoot: Node
     private val incomingPacketQueue
             = PacketInfoQueue("rtp-receiver-incoming-packet-queue", executor, this::handleIncomingPacket)
-    private val srtpDecryptWrapper = SrtpTransformerDecryptNode()
-    private val srtcpDecryptWrapper = SrtcpTransformerDecryptNode()
+    private val srtpDecryptWrapper = SrtpTransformerNode("SRTP Decrypt node")
+    private val srtcpDecryptWrapper = SrtpTransformerNode("SRTCP Decrypt node")
     private val tccGenerator = TccGeneratorNode(rtcpSender, backgroundExecutor)
     private val audioLevelReader = AudioLevelReader()
     private val silenceDiscarder = SilenceDiscarder()
@@ -271,12 +270,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
         lastPacketWrittenTime = System.currentTimeMillis()
     }
 
-    override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {
-        srtpDecryptWrapper.setTransformer(srtpTransformer)
-    }
-
-    override fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer) {
-        srtcpDecryptWrapper.setTransformer(srtcpTransformer)
+    override fun setSrtpTransformers(srtpTransformers: SrtpTransformers) {
+        srtpDecryptWrapper.transformer = srtpTransformers.srtpDecryptTransformer
+        srtcpDecryptWrapper.transformer = srtpTransformers.srtcpDecryptTransformer
     }
 
     override fun handleEvent(event: Event) {

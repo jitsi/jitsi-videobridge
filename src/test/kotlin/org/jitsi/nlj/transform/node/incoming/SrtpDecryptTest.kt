@@ -18,30 +18,46 @@ package org.jitsi.nlj.transform.node.incoming
 
 import io.kotlintest.IsolationMode
 import io.kotlintest.should
+import io.kotlintest.shouldBe
 import io.kotlintest.shouldNotBe
 import io.kotlintest.specs.ShouldSpec
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.srtp_samples.SrtpSample
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.test_utils.matchers.ByteArrayBuffer.haveSameContentAs
+import org.jitsi.service.libjitsi.LibJitsi
 
-internal class SrtcpTransformerDecryptNodeTest : ShouldSpec() {
+internal class SrtpDecryptTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-    private val srtcpTransformer = SrtpUtil.initializeTransformer(
+    private val srtpTransformers = SrtpUtil.initializeTransformer(
             SrtpSample.srtpProfileInformation,
             SrtpSample.keyingMaterial.array(),
-            SrtpSample.tlsRole,
-            true
-    )
+            SrtpSample.tlsRole)
 
     init {
-        "decrypting a packet" {
-            val decryptedPacket = srtcpTransformer.reverseTransform(
-                SrtpSample.incomingEncryptedRtcpPacket.clone())
+        // We need to start libjitsi so that the openssl lib gets loaded.
+        LibJitsi.start()
+        "decrypting an RTCP packet" {
+            val packetInfo = PacketInfo(SrtpSample.incomingEncryptedRtcpPacket.clone())
+            srtpTransformers.srtcpDecryptTransformer.transform(packetInfo) shouldBe true
+            val decryptedPacket = packetInfo.packet
+
 
             should("decrypt the data correctly") {
                 decryptedPacket shouldNotBe null
                 decryptedPacket should haveSameContentAs(SrtpSample.expectedDecryptedRtcpPacket)
+            }
+        }
+
+        "decrypting an RTP packet" {
+            val packetInfo = PacketInfo(SrtpSample.incomingEncryptedRtpPacket.clone())
+            srtpTransformers.srtpDecryptTransformer.transform(packetInfo) shouldBe true
+
+            val decryptedPacket = packetInfo.packet
+            should("decrypt the data correctly") {
+                decryptedPacket shouldNotBe null
+                decryptedPacket should haveSameContentAs(SrtpSample.expectedDecryptedRtpPacket)
             }
         }
     }

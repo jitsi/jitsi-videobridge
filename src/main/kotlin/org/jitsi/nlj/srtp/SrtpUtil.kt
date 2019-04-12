@@ -21,10 +21,7 @@ import org.bouncycastle.crypto.tls.TlsClientContext
 import org.bouncycastle.crypto.tls.TlsContext
 import org.bouncycastle.crypto.tls.TlsServerContext
 import org.jitsi.impl.neomedia.transform.srtp.SRTPPolicy
-import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
-import org.jitsi_modified.impl.neomedia.transform.srtp.SRTCPTransformer
 import org.jitsi_modified.impl.neomedia.transform.srtp.SRTPContextFactory
-import org.jitsi_modified.impl.neomedia.transform.srtp.SRTPTransformer
 
 enum class TlsRole {
     CLIENT,
@@ -104,9 +101,8 @@ class SrtpUtil {
         fun initializeTransformer(
             srtpProfileInformation: SrtpProfileInformation,
             keyingMaterial: ByteArray,
-            tlsRole: TlsRole,
-            isRtcp: Boolean
-        ): SinglePacketTransformer {
+            tlsRole: TlsRole
+        ): SrtpTransformers {
             val clientWriteSrtpMasterKey = ByteArray(srtpProfileInformation.cipherKeyLength)
             val serverWriteSrtpMasterKey = ByteArray(srtpProfileInformation.cipherKeyLength)
             val clientWriterSrtpMasterSalt = ByteArray(srtpProfileInformation.cipherSaltLength)
@@ -173,11 +169,11 @@ class SrtpUtil {
                 }
             }
 
-            return if (isRtcp) {
-                SRTCPTransformer(forwardSrtpContextFactory, reverseSrtpContextFactory)
-            } else {
-                SRTPTransformer(forwardSrtpContextFactory, reverseSrtpContextFactory)
-            }
-        }
+            return SrtpTransformers(
+                SrtpDecryptTransformer(reverseSrtpContextFactory),
+                SrtpEncryptTransformer(forwardSrtpContextFactory),
+                SrtcpDecryptTransformer(reverseSrtpContextFactory),
+                SrtcpEncryptTransformer(forwardSrtpContextFactory))
+       }
     }
 }
