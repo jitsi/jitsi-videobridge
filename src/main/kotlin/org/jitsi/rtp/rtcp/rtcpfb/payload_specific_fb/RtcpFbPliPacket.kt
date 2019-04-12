@@ -21,7 +21,6 @@ import org.jitsi.rtp.extensions.bytearray.getInt
 import org.jitsi.rtp.extensions.bytearray.putInt
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
-import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.RtpUtils
 
