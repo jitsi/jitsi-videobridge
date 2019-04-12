@@ -18,10 +18,18 @@ package org.jitsi.nlj.rtcp
 
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.RtpPayloadTypeAddedEvent
+import org.jitsi.nlj.format.VideoPayloadType
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.ObserverNode
+import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cdebug
+import org.jitsi.rtp.rtcp.CompoundRtcpPacket
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacketBuilder
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacketBuilder
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.min
 
 /**
  * [KeyframeRequester] handles a few things around keyframes:
@@ -31,39 +39,127 @@ import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacketBuilder
  * on what the client supports
  * 3) Aggregation.  This class will pace outgoing requests such that we don't spam the sender
  */
-class KeyframeRequester : ObserverNode("Keyframe Requester") {
+class KeyframeRequester : TransformerNode("Keyframe Requester") {
+
+    companion object {
+        private const val DEFAULT_WAIT_INTERVAL_MS = 100
+    }
+
+    var waitIntervalMs = DEFAULT_WAIT_INTERVAL_MS
+
+    override fun transform(packetInfo: PacketInfo): PacketInfo? {
+        val packet = packetInfo.packet
+        val pliOrFir = when {
+            packet is CompoundRtcpPacket -> {
+                packet.packets.first { it is RtcpFbPliPacket || it is RtcpFbFirPacket }
+            }
+            packet is RtcpFbFirPacket -> packet
+            packet is RtcpFbPliPacket -> packet
+            else -> null
+        } ?: return null
+
+        var forward = true
+        when {
+            pliOrFir is RtcpFbPliPacket -> {
+                when {
+                    hasPliSupport -> {
+                        // Forward PLI
+                        forward = canSendKeyframeRequest(pliOrFir.mediaSenderSsrc, System.currentTimeMillis())
+                    }
+                    hasFirSupport -> {
+                        // Translate to FIR
+                        requestKeyframe(pliOrFir.mediaSenderSsrc)
+                        forward = false
+                    }
+                    else -> {
+                        // Can't do anything
+                        forward = false
+                    }
+                }
+            }
+            pliOrFir is RtcpFbFirPacket -> {
+                when {
+                    hasPliSupport -> {
+                        // Translate to PLI
+                        requestKeyframe(pliOrFir.mediaSenderSsrc)
+                        forward = false
+                    }
+                    hasFirSupport -> {
+                        // Forward FIR
+                        forward = canSendKeyframeRequest(pliOrFir.mediaSenderSsrc, System.currentTimeMillis())
+                        if (forward) {
+                            pliOrFir.seqNum = firCommandSequenceNumber.incrementAndGet()
+                        }
+                    }
+                    else -> {
+                        // Can't do anything
+                        forward = false
+                    }
+                }
+            }
+        }
+
+        return if (forward) packetInfo else null
+    }
+
     // Map a SSRC to the timestamp (in ms) of when we last requested a keyframe for it
     private val keyframeRequests = mutableMapOf<Long, Long>()
-    private var firCommandSequenceNumber: Int = 0
+    private val firCommandSequenceNumber: AtomicInteger = AtomicInteger(0)
+    private val keyframeRequestsSyncRoot = Any()
+
     // Stats
     private var numKeyframesRequestedByBridge: Int = 0
     private var numKeyframeRequestsDropped: Int = 0
 
-    override fun observe(packetInfo: PacketInfo) {
-        //TODO: translation
-        //TODO: aggregation
-    }
+    private var hasPliSupport: Boolean = false
+    private var hasFirSupport: Boolean = true
 
-    fun requestKeyframe(mediaSsrc: Long) {
-        //TODO(brian): for now hardcode to send an FIR
-        val now = System.currentTimeMillis()
-        if (now - keyframeRequests.getOrDefault(mediaSsrc, 0) < 100) {
-            logger.cdebug { "Sent a keyframe request less than 100ms ago for $mediaSsrc, ignoring request" }
-            numKeyframeRequestsDropped++
-        } else {
-            keyframeRequests[mediaSsrc] = now
-            val firPacket = RtcpFbFirPacketBuilder(
-                mediaSenderSsrc = mediaSsrc,
-                firCommandSeqNum = firCommandSequenceNumber++
-            ).build()
-            logger.cdebug { "Keyframe requester requesting keyframe with FIR for $mediaSsrc" }
-            numKeyframesRequestedByBridge++
-            processPacket(PacketInfo(firPacket))
+    private fun canSendKeyframeRequest(mediaSsrc: Long, nowMs: Long): Boolean {
+        synchronized (keyframeRequestsSyncRoot) {
+            return if (nowMs - keyframeRequests.getOrDefault(mediaSsrc, 0) < waitIntervalMs) {
+                logger.cdebug { "Sent a keyframe request less than ${waitIntervalMs}ms ago for $mediaSsrc, " +
+                        "ignoring request" }
+                numKeyframeRequestsDropped++
+                false
+            } else {
+                keyframeRequests[mediaSsrc] = nowMs
+                logger.cdebug { "Keyframe requester requesting keyframe with FIR for $mediaSsrc" }
+                numKeyframesRequestedByBridge++
+                true
+            }
         }
     }
 
+    fun requestKeyframe(mediaSsrc: Long) {
+        if (!canSendKeyframeRequest(mediaSsrc, System.currentTimeMillis())) {
+            return
+        }
+
+        val pkt = if (hasPliSupport) RtcpFbPliPacketBuilder(
+                mediaSenderSsrc = mediaSsrc
+        ).build() else RtcpFbFirPacketBuilder(
+                mediaSenderSsrc = mediaSsrc,
+                firCommandSeqNum = firCommandSequenceNumber.incrementAndGet()
+        ).build()
+
+        next(PacketInfo(pkt))
+    }
+
     override fun handleEvent(event: Event) {
-        //TODO: rtcpfb events so we can tell what is supported (pli, fir)
+        when (event) {
+            is RtpPayloadTypeAddedEvent -> {
+                when (event.payloadType) {
+                    is VideoPayloadType -> {
+                        // Support for FIR and PLI is declared per-payload type, but currently
+                        // our code which requests FIR and PLI is not payload-type aware. So
+                        // until this changes we will just check if any of the PTs supports
+                        // FIR and PLI.
+                        hasPliSupport = event.payloadType.rtcpFeedbackSet.contains("nack pli")
+                        hasFirSupport = event.payloadType.rtcpFeedbackSet.contains("ccm fir")
+                    }
+                }
+            }
+        }
     }
 
     override fun getNodeStats(): NodeStatsBlock {
@@ -73,5 +169,10 @@ class KeyframeRequester : ObserverNode("Keyframe Requester") {
             addStat("num keyframes requested by the bridge: $numKeyframesRequestedByBridge")
             addStat("num keyframes dropped due to throttling: $numKeyframeRequestsDropped")
         }
+    }
+
+    fun onRttUpdate(newRtt: Double) {
+        // avg(rtt) + stddev(rtt) would be more accurate than rtt + 10.
+        waitIntervalMs = min(DEFAULT_WAIT_INTERVAL_MS, newRtt.toInt() + 10)
     }
 }

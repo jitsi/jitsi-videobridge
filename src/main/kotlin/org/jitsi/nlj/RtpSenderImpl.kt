@@ -151,7 +151,6 @@ class RtpSenderImpl(
         nackHandler = NackHandler(outgoingPacketCache.getPacketCache(), outgoingRtxRoot)
         rtcpEventNotifier.addRtcpEventListener(nackHandler)
 
-        //TODO: aggregate/translate PLI/FIR/etc in the egress RTCP pipeline
         //TODO: are we setting outgoing rtcp sequence numbers correctly? just add a simple node here to rewrite them
         outgoingRtcpRoot = pipeline {
             node(keyframeRequester)
@@ -177,6 +176,7 @@ class RtpSenderImpl(
 
     override fun onRttUpdate(newRtt: Double) {
         nackHandler.onRttUpdate(newRtt)
+        keyframeRequester.onRttUpdate(newRtt)
     }
 
     override fun sendPacket(packetInfo: PacketInfo) {
