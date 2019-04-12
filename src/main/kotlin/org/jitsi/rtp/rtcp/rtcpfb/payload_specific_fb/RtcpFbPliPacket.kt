@@ -17,7 +17,9 @@
 package org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb
 
 import org.jitsi.rtp.extensions.bytearray.cloneFromPool
+import org.jitsi.rtp.extensions.bytearray.getInt
 import org.jitsi.rtp.extensions.bytearray.putInt
+import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.util.BufferPool
@@ -38,12 +40,18 @@ class RtcpFbPliPacket(
         return RtcpFbPliPacket(buffer.cloneFromPool(), offset, length)
     }
 
+    var mediaSenderSsrc: Long
+        get() = getMediaSenderSsrc(buffer, offset)
+        set(value) = setMediaSenderSsrc(buffer, offset, value)
+
     companion object {
         const val FMT = 1
-        const val SIZE_BYTES = RtcpFbPacket.HEADER_SIZE + 4
+        const val SIZE_BYTES = HEADER_SIZE + 4
 
-        const val MEDIA_SENDER_SSRC_OFFSET = RtcpFbPacket.HEADER_SIZE
+        const val MEDIA_SENDER_SSRC_OFFSET = HEADER_SIZE
 
+        fun getMediaSenderSsrc(buf: ByteArray, baseOffset: Int): Long =
+                buf.getInt(baseOffset + MEDIA_SENDER_SSRC_OFFSET).toPositiveLong()
         fun setMediaSenderSsrc(buf: ByteArray, baseOffset: Int, value: Long) =
                 buf.putInt(baseOffset + MEDIA_SENDER_SSRC_OFFSET, value.toInt())
     }
