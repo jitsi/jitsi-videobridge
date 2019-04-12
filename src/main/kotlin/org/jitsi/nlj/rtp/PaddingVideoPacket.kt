@@ -19,18 +19,33 @@ package org.jitsi.nlj.rtp
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.rtp.rtp.RtpHeader
 
-class PaddingVideoPacket(
+class PaddingVideoPacket private constructor(
+    buffer: ByteArray,
+    offset: Int,
     length: Int
-) : VideoRtpPacket(BufferPool.getBuffer(length), 0, length) {
-    init {
-        // It's possible we the buffer we pulled from the pool already has
-        // data in it, and we won't be overwriting it with anything so clear
-        // out the data
-        buffer.fill(0, offset, length)
-        version = 2
-        // Recalculate the header length now that we've zero'd everything out
-        // and set the fields
-        headerLength = RtpHeader.getTotalLength(buffer, offset)
-        paddingSize = payloadLength
+) : VideoRtpPacket(buffer, offset, length) {
+
+    companion object {
+        /**
+         * Creating a PaddingVideoPacket by directly grabbing a buffer in its
+         * ctor is problematic because we cannot clear the buffer we retrieve
+         * before calling the parent class' constructor.  Because the buffer
+         * may contain invalid data, any attempts to parse it by parent class(es)
+         * could fail, so we use a helper here instead
+         */
+        fun create(length: Int): PaddingVideoPacket {
+            val buf = BufferPool.getBuffer(length)
+            // It's possible we the buffer we pulled from the pool already has
+            // data in it, and we won't be overwriting it with anything so clear
+            // out the data
+            buf.fill(0, 0, length)
+
+            return PaddingVideoPacket(buf, 0, length).apply {
+                // Recalculate the header length now that we've zero'd everything out
+                // and set the fields
+                headerLength = RtpHeader.getTotalLength(buffer, offset)
+                paddingSize = payloadLength
+            }
+        }
     }
 }

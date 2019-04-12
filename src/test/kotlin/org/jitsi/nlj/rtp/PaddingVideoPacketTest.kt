@@ -35,7 +35,7 @@ class PaddingVideoPacketTest : ShouldSpec() {
                         0x23, 0x9F, 0xCA, 0x3D
                     ) + ByteArray(1484) { 0 }
                 }
-                val paddingPacket = PaddingVideoPacket(267)
+                val paddingPacket = PaddingVideoPacket.create(267)
                 should("have the right header length") {
                     paddingPacket.headerLength shouldBe 12
                 }
