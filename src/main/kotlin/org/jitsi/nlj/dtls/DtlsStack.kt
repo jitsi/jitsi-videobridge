@@ -20,8 +20,8 @@ import org.bouncycastle.tls.DTLSTransport
 import org.bouncycastle.tls.DatagramTransport
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.protocol.ProtocolStack
-import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.srtp.TlsRole
+import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.UnparsedPacket
