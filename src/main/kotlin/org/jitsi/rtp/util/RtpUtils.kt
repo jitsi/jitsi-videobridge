@@ -86,6 +86,21 @@ class RtpUtils {
                 else -> diff
             }
         }
+
+        /**
+         * Returns the difference between two RTP timestamps.
+         * @return the difference between two RTP timestamps.
+         */
+        fun getTimestampDiff(a: Long, b: Long): Long {
+            var diff = a - b
+            if (diff < -0x8000_0000L) {
+                diff += 0x1_0000_0000L
+            } else if (diff > 0x8000_0000L) {
+                diff -= 0x1_0000_0000L
+            }
+
+            return diff
+        }
     }
 }
 
@@ -101,3 +116,9 @@ infix fun Int.isNewerThan(otherSeqNum: Int): Boolean =
 
 infix fun Int.isOlderThan(otherSeqNum: Int): Boolean =
     RtpUtils.getSequenceNumberDelta(this, otherSeqNum) < 0
+
+infix fun Long.isNewerTimestampThan(otherTimestamp: Long): Boolean =
+    RtpUtils.getTimestampDiff(this, otherTimestamp) > 0
+
+infix fun Long.isOlderTimestampThan(otherTimestamp: Long): Boolean =
+    RtpUtils.getTimestampDiff(this, otherTimestamp) < 0
