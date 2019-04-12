@@ -39,6 +39,21 @@ class RtpPacketTest : ShouldSpec() {
         0x10, 0xff, 0x00, 0x00
     )
 
+    val rtpHeaderWithExtensionsPaddingBetween = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+        // V=2,P=false,X=true,CC=0,M=false,PT=111,SeqNum=5807
+        0x90, 0x6f, 0x16, 0xaf,
+        // Timestamp: 1710483662
+        0x65, 0xf3, 0xe8, 0xce,
+        // SSRC: 839852602
+        0x32, 0x0f, 0x22, 0x3a,
+        // BEDE, length=2
+        0xbe, 0xde, 0x00, 0x02,
+        // ExtId=1,Length=1(2 bytes),Data=FF,Padding
+        0x11, 0xff, 0xff, 0x00,
+        // ExtId=2,Length=0(1 byte),Data=FF,Padding
+        0x20, 0xff, 0x00, 0x00
+    )
+
     val rtpHeaderWithNoExtensions = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
         // V=2,P=false,X=false,CC=0,M=false,PT=111,SeqNum=5807
         0x80, 0x6f, 0x16, 0xaf,
@@ -81,6 +96,21 @@ class RtpPacketTest : ShouldSpec() {
                 ext.currExtBuffer.getByteAsInt(ext.currExtOffset + 1) shouldBe 0xFF.toPositiveInt()
 
                 rtpPacket.payloadLength shouldBe dummyRtpPayload.size
+            }
+        }
+        "An RTP packet with header extensions with padding between them" {
+            val packet = RtpPacket(rtpHeaderWithExtensionsPaddingBetween + dummyRtpPayload)
+            should("be parsed correctly") {
+                val ext1 = packet.getHeaderExtension(1)
+                ext1 shouldNotBe null
+
+                val ext2 = packet.getHeaderExtension(2)
+                ext2 shouldNotBe null
+                ext2 as RtpPacket.HeaderExtension
+                ext2.id shouldBe 2
+                ext2.dataLengthBytes shouldBe 1
+                // The offset is the start of the ext, add 1 to move past the header to get the data
+                ext2.currExtBuffer.getByteAsInt(ext2.currExtOffset + 1) shouldBe 0xFF.toPositiveInt()
             }
         }
         "Adding a new RTP header extension" {
