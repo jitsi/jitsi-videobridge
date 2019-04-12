@@ -20,8 +20,8 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.utils.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Utilities to deserialize {@link PayloadTypePacketExtension} into a
@@ -49,6 +49,19 @@ public class PayloadTypeUtil
             parameters.put(parameter.getName(), parameter.getValue());
         }
 
+        Set<String> rtcpFeedbackSet = new CopyOnWriteArraySet<>();
+        for (RtcpFbPacketExtension rtcpExtension : ext.getRtcpFeedbackTypeList())
+        {
+            String feedbackType = rtcpExtension.getFeedbackType();
+            String feedbackSubtype = rtcpExtension.getFeedbackSubtype();
+            if (feedbackSubtype != null && !feedbackSubtype.equals(""))
+            {
+                feedbackType += " " + feedbackSubtype;
+            }
+
+            rtcpFeedbackSet.add(feedbackType);
+        }
+
         byte id = (byte)ext.getID();
         PayloadTypeEncoding encoding
                 = PayloadTypeEncoding.Companion.createFrom(ext.getName());
@@ -56,15 +69,15 @@ public class PayloadTypeUtil
 
         if (PayloadTypeEncoding.VP8 == encoding)
         {
-            return new Vp8PayloadType(id, parameters);
+            return new Vp8PayloadType(id, parameters, rtcpFeedbackSet);
         }
         else if (PayloadTypeEncoding.H264 == encoding)
         {
-            return new H264PayloadType(id, parameters);
+            return new H264PayloadType(id, parameters, rtcpFeedbackSet);
         }
         else if (PayloadTypeEncoding.VP9 == encoding)
         {
-            return new Vp9PayloadType(id, parameters);
+            return new Vp9PayloadType(id, parameters, rtcpFeedbackSet);
         }
         else if (PayloadTypeEncoding.RTX == encoding)
         {
