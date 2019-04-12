@@ -21,6 +21,7 @@ import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionHelpers
 import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.getByteAsInt
+import org.jitsi.rtp.util.isPadding
 import kotlin.experimental.or
 
 /**
@@ -374,6 +375,11 @@ open class RtpPacket(
         val currHeaderExtension: HeaderExtension = HeaderExtension()
 
         override fun hasNext(): Boolean {
+            // Consume any padding
+            while (remainingLength > 0 && buffer.get(nextOffset).isPadding()) {
+                nextOffset++
+                remainingLength--
+            }
             if (remainingLength <= 0 || nextOffset < 0) {
                 return false
             }

@@ -89,6 +89,9 @@ class RtpUtils {
     }
 }
 
+fun Int.isPadding(): Boolean = this.toByte().isPadding()
+fun Byte.isPadding(): Boolean = this == 0x00.toByte()
+
 /**
  * Returns true if the RTP sequence number represented by [this] represents a more recent RTP packet than the one
  * represented by [otherSeqNum]
