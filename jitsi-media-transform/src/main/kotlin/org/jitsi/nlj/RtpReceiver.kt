@@ -15,10 +15,9 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
-import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
-import org.jitsi_modified.impl.neomedia.transform.SinglePacketTransformer
 
 abstract class RtpReceiver :
     PacketHandler, EventHandler, NodeStatsProducer, Stoppable {
@@ -42,14 +41,9 @@ abstract class RtpReceiver :
     abstract fun enqueuePacket(p: PacketInfo)
 
     /**
-     * Set the SRTP transformer to be used for RTP decryption
+     * Set the SRTP transformers to be used for RTP/RTCP encryption and decryption
      */
-    abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)
-
-    /**
-     * Set the SRTCP transformer to be used for RTCP decryption
-     */
-    abstract fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer)
+    abstract fun setSrtpTransformers(srtpTransformers: SrtpTransformers)
 
     abstract fun setAudioLevelListener(audioLevelListener: AudioLevelListener)
 

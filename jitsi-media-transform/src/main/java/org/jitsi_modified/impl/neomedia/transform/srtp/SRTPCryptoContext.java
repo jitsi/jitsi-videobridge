@@ -547,7 +547,7 @@ public class SRTPCryptoContext
      * @return <tt>true</tt> if the packet can be accepted; <tt>false</tt> if
      * the packet failed authentication or failed replay check
      */
-    synchronized public boolean reverseTransformPacket(RtpPacket pkt)
+    synchronized public boolean reverseTransformPacket(RtpPacket pkt, boolean skipDecryption)
     {
         if (logger.isDebugEnabled())
         {
@@ -583,19 +583,22 @@ public class SRTPCryptoContext
             // Authenticate the packet.
             if (authenticatePacket(pkt))
             {
-                switch (policy.getEncType())
+                if (!skipDecryption)
                 {
-                // Decrypt the packet using Counter Mode encryption.
-                case SRTPPolicy.AESCM_ENCRYPTION:
-                case SRTPPolicy.TWOFISH_ENCRYPTION:
-                    processPacketAESCM(pkt);
-                    break;
+                    switch (policy.getEncType())
+                    {
+                    // Decrypt the packet using Counter Mode encryption.
+                    case SRTPPolicy.AESCM_ENCRYPTION:
+                    case SRTPPolicy.TWOFISH_ENCRYPTION:
+                        processPacketAESCM(pkt);
+                        break;
 
-                // Decrypt the packet using F8 Mode encryption.
-                case SRTPPolicy.AESF8_ENCRYPTION:
-                case SRTPPolicy.TWOFISHF8_ENCRYPTION:
-                    processPacketAESF8(pkt);
-                    break;
+                    // Decrypt the packet using F8 Mode encryption.
+                    case SRTPPolicy.AESF8_ENCRYPTION:
+                    case SRTPPolicy.TWOFISHF8_ENCRYPTION:
+                        processPacketAESF8(pkt);
+                        break;
+                    }
                 }
 
                 // Update the rollover counter and highest sequence number if
