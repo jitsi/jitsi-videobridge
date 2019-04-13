@@ -18,9 +18,9 @@ package org.jitsi_modified.impl.neomedia.transform.srtp;
 import org.bouncycastle.crypto.params.*;
 import org.jitsi.bccontrib.params.*;
 import org.jitsi.impl.neomedia.transform.srtp.SRTPPolicy;
-import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.util.*;
+import org.jitsi.utils.ByteArrayBuffer;
 
 import java.util.*;
 

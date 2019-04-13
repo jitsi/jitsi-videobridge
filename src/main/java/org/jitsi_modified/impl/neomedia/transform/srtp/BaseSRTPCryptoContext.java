@@ -26,7 +26,7 @@ import org.jitsi.impl.neomedia.transform.srtp.SRTPCipherCTRJava;
 import org.jitsi.impl.neomedia.transform.srtp.AES;
 import org.jitsi.impl.neomedia.transform.srtp.HMACSHA1;
 import org.jitsi.impl.neomedia.transform.srtp.OpenSSLWrapperLoader;
-import org.jitsi.rtp.ByteArrayBuffer;
+import org.jitsi.utils.ByteArrayBuffer;
 
 import java.util.*;
 
