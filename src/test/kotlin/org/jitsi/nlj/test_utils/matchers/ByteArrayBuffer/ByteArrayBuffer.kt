@@ -18,7 +18,8 @@ package org.jitsi.nlj.test_utils.matchers.ByteArrayBuffer
 
 import io.kotlintest.Matcher
 import io.kotlintest.Result
-import org.jitsi.rtp.ByteArrayBuffer
+import org.jitsi.rtp.extensions.toHex
+import org.jitsi.utils.ByteArrayBuffer
 
 fun haveSameContentAs(expected: ByteArrayBuffer) = object : Matcher<ByteArrayBuffer> {
     override fun test(value: ByteArrayBuffer): Result {
