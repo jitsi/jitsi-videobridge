@@ -21,10 +21,10 @@ import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.logging.Logger
-import org.jitsi_modified.impl.neomedia.transform.srtp.BaseSRTPCryptoContext
-import org.jitsi_modified.impl.neomedia.transform.srtp.SRTCPCryptoContext
-import org.jitsi_modified.impl.neomedia.transform.srtp.SRTPContextFactory
-import org.jitsi_modified.impl.neomedia.transform.srtp.SRTPCryptoContext
+import org.jitsi.impl.neomedia.transform.srtp.BaseSRTPCryptoContext
+import org.jitsi.impl.neomedia.transform.srtp.SRTCPCryptoContext
+import org.jitsi.impl.neomedia.transform.srtp.SRTPContextFactory
+import org.jitsi.impl.neomedia.transform.srtp.SRTPCryptoContext
 import java.util.concurrent.ConcurrentHashMap
 
 /**
