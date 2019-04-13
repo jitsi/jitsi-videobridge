@@ -20,7 +20,7 @@ import org.jitsi.bccontrib.params.*;
 
 import org.jitsi.impl.neomedia.transform.srtp.SRTPPolicy;
 
-import org.jitsi.rtp.ByteArrayBuffer;
+import org.jitsi.utils.ByteArrayBuffer;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.logging.*;
 
