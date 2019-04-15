@@ -149,9 +149,15 @@ class RtcpSrPacket(
     inner class SenderInfo {
         val ntpTimestampMsw: Long = SenderInfoParser.getNtpTimestampMsw(buffer, offset + SENDER_INFO_OFFSET)
         val ntpTimestampLsw: Long = SenderInfoParser.getNtpTimestampLsw(buffer, offset + SENDER_INFO_OFFSET)
-        val rtpTimestamp: Long = SenderInfoParser.getRtpTimestamp(buffer, offset + SENDER_INFO_OFFSET)
-        val sendersPacketCount: Long = SenderInfoParser.getSendersPacketCount(buffer, offset + SENDER_INFO_OFFSET)
-        val sendersOctetCount: Long = SenderInfoParser.getSendersOctetCount(buffer, offset + SENDER_INFO_OFFSET)
+        var rtpTimestamp: Long
+            get() = SenderInfoParser.getRtpTimestamp(buffer, offset + SENDER_INFO_OFFSET)
+            set(value) = SenderInfoParser.setRtpTimestamp(buffer, offset + SENDER_INFO_OFFSET, value)
+        var sendersPacketCount: Long
+            get() = SenderInfoParser.getSendersPacketCount(buffer, offset + SENDER_INFO_OFFSET)
+            set(value) = SenderInfoParser.setSendersPacketCount(buffer, offset + SENDER_INFO_OFFSET, value)
+        var sendersOctetCount: Long
+            get() = SenderInfoParser.getSendersOctetCount(buffer, offset + SENDER_INFO_OFFSET)
+            set(value) = SenderInfoParser.setSendersOctetCount(buffer, offset + SENDER_INFO_OFFSET, value)
 
         /**
          * https://tools.ietf.org/html/rfc3550#section-4
