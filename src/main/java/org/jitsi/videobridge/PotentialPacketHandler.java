@@ -30,9 +30,16 @@ public interface PotentialPacketHandler
     boolean wants(PacketInfo packet, String sourceEpId);
 
     /**
-     * Send the given 'packet' (which came from 'source')
+     * Send the given rtp 'packet' (which came from 'source')
      * @param packet the RTP packet
      * @param sourceEpId the ID of the endpoint from which the RTP packet came
      */
     void sendRtp(PacketInfo packet, String sourceEpId);
+
+    /**
+     * Send the given rtcp 'packet' (which came from 'source')
+     * @param packetInfo the rtcp packet
+     * @param sourceEpId the ID of the endpoint from which the RTP packet came
+     */
+    void sendRtcp(PacketInfo packetInfo, String sourceEpId);
 }

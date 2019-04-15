@@ -19,6 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
@@ -409,6 +410,19 @@ public class BitrateController
 //        logger.debug("BitrateController " + hashCode() + " found a projection for " +
 //                "packet with ssrc " + ssrc);
         return adaptiveTrackProjection.accept(rtpPacket);
+    }
+
+    public boolean transformRtcp(RtcpSrPacket rtcpSrPacket)
+    {
+        long ssrc = rtcpSrPacket.getSenderSsrc();
+        if (ssrc < 0)
+        {
+            return false;
+        }
+
+        AdaptiveTrackProjection adaptiveTrackProjection = adaptiveTrackProjectionMap.get(ssrc);
+
+        return adaptiveTrackProjection != null && adaptiveTrackProjection.rewriteRtcp(rtcpSrPacket);
     }
 
     /**
