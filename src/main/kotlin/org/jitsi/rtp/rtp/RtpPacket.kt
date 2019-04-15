@@ -224,9 +224,12 @@ open class RtpPacket(
 
         // Copy the header (and extensions, excluding padding, if there are any) to
         // the very beginning of the buffer
-        System.arraycopy(buffer, offset,
-            newBuffer, 0,
-            newHeaderLength)
+        if (buffer != newBuffer || offset != 0) {
+            System.arraycopy(
+                buffer, offset,
+                newBuffer, 0,
+                newHeaderLength)
+        }
 
         if (!extensionBit) {
             // If the original packet didn't have any extensions, we need to
