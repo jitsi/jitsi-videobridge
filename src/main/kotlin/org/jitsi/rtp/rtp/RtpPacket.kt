@@ -208,7 +208,7 @@ open class RtpPacket(
         // The bytes in the header extensions, excluding the (0xBEDE, length)
         // field and any padding.
         var extensionBytes = 0
-        if (hasExtensions) {
+        if (extensionBit) {
             // (0xBEDE, length)
             newHeaderLength += 4
 
@@ -228,7 +228,7 @@ open class RtpPacket(
             newBuffer, 0,
             newHeaderLength)
 
-        if (!hasExtensions) {
+        if (!extensionBit) {
             // If the original packet didn't have any extensions, we need to
             // add the extension header (RFC 5285):
             //  0                   1                   2                   3
