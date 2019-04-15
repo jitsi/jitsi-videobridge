@@ -19,15 +19,18 @@ package org.jitsi.nlj.rtcp
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
+import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.format.VideoPayloadType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.rtp.rtcp.CompoundRtcpPacket
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacketBuilder
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacketBuilder
+import java.lang.IllegalStateException
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.min
 
@@ -49,54 +52,31 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val packet = packetInfo.packet
-        val pliOrFir = when {
-            packet is CompoundRtcpPacket -> {
-                packet.packets.first { it is RtcpFbPliPacket || it is RtcpFbFirPacket }
+        val pliOrFir = when (packet) {
+            is CompoundRtcpPacket -> {
+                packet.packets.first { it is RtcpFbPliPacket || it is RtcpFbFirPacket } as? RtcpFbPacket
             }
-            packet is RtcpFbFirPacket -> packet
-            packet is RtcpFbPliPacket -> packet
+            is RtcpFbFirPacket -> packet
+            is RtcpFbPliPacket -> packet
             else -> null
-        } ?: return null
+        } ?: return packetInfo
 
-        var forward = true
-        when {
-            pliOrFir is RtcpFbPliPacket -> {
-                when {
-                    hasPliSupport -> {
-                        // Forward PLI
-                        forward = canSendKeyframeRequest(pliOrFir.mediaSenderSsrc, System.currentTimeMillis())
-                    }
-                    hasFirSupport -> {
-                        // Translate to FIR
-                        requestKeyframe(pliOrFir.mediaSenderSsrc)
-                        forward = false
-                    }
-                    else -> {
-                        // Can't do anything
-                        forward = false
-                    }
-                }
-            }
-            pliOrFir is RtcpFbFirPacket -> {
-                when {
-                    hasPliSupport -> {
-                        // Translate to PLI
-                        requestKeyframe(pliOrFir.mediaSenderSsrc)
-                        forward = false
-                    }
-                    hasFirSupport -> {
-                        // Forward FIR
-                        forward = canSendKeyframeRequest(pliOrFir.mediaSenderSsrc, System.currentTimeMillis())
-                        if (forward) {
-                            pliOrFir.seqNum = firCommandSequenceNumber.incrementAndGet()
-                        }
-                    }
-                    else -> {
-                        // Can't do anything
-                        forward = false
-                    }
-                }
-            }
+        val now = System.currentTimeMillis()
+        val canSend = canSendKeyframeRequest(pliOrFir.mediaSourceSsrc, now)
+        val forward = when (pliOrFir) {
+            is RtcpFbPliPacket -> canSend && hasPliSupport
+            // When both are supported, we favor generating a PLI rather than forwarding a FIR
+            is RtcpFbFirPacket -> canSend && hasFirSupport && !hasPliSupport
+            else -> throw IllegalStateException("pliOrFir is neither pli nor fir?")
+        }
+
+        if (forward && pliOrFir is RtcpFbFirPacket) {
+            // When we forward a FIR we need to update the seq num.
+            pliOrFir.seqNum = firCommandSequenceNumber.incrementAndGet()
+        }
+
+        if (!forward && canSend) {
+            requestKeyframe(pliOrFir.mediaSourceSsrc, now)
         }
 
         return if (forward) packetInfo else null
@@ -114,7 +94,13 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
     private var hasPliSupport: Boolean = false
     private var hasFirSupport: Boolean = true
 
+    /**
+     * Returns 'true' when at least one method is supported, AND we haven't sent a request very recently.
+     */
     private fun canSendKeyframeRequest(mediaSsrc: Long, nowMs: Long): Boolean {
+        if (!hasPliSupport && !hasFirSupport) {
+            return false
+        }
         synchronized (keyframeRequestsSyncRoot) {
             return if (nowMs - keyframeRequests.getOrDefault(mediaSsrc, 0) < waitIntervalMs) {
                 logger.cdebug { "Sent a keyframe request less than ${waitIntervalMs}ms ago for $mediaSsrc, " +
@@ -130,17 +116,22 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
         }
     }
 
-    fun requestKeyframe(mediaSsrc: Long) {
-        if (!canSendKeyframeRequest(mediaSsrc, System.currentTimeMillis())) {
+    fun requestKeyframe(mediaSsrc: Long, now: Long = System.currentTimeMillis()) {
+        if (!canSendKeyframeRequest(mediaSsrc, now)) {
             return
         }
 
-        val pkt = if (hasPliSupport) RtcpFbPliPacketBuilder(
-                mediaSenderSsrc = mediaSsrc
-        ).build() else RtcpFbFirPacketBuilder(
+        val pkt = when {
+            hasPliSupport -> RtcpFbPliPacketBuilder(mediaSenderSsrc = mediaSsrc).build()
+            hasFirSupport -> RtcpFbFirPacketBuilder(
                 mediaSenderSsrc = mediaSsrc,
                 firCommandSeqNum = firCommandSequenceNumber.incrementAndGet()
-        ).build()
+            ).build()
+            else -> {
+                logger.warn("Can not send neither PLI nor FIR")
+                return
+            }
+        }
 
         next(PacketInfo(pkt))
     }
@@ -153,11 +144,16 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
                         // Support for FIR and PLI is declared per-payload type, but currently
                         // our code which requests FIR and PLI is not payload-type aware. So
                         // until this changes we will just check if any of the PTs supports
-                        // FIR and PLI.
-                        hasPliSupport = event.payloadType.rtcpFeedbackSet.contains("nack pli")
-                        hasFirSupport = event.payloadType.rtcpFeedbackSet.contains("ccm fir")
+                        // FIR and PLI. This means that we effectively always assume support for FIR.
+                        hasPliSupport = hasPliSupport || event.payloadType.rtcpFeedbackSet.contains("nack pli")
+                        hasFirSupport = hasFirSupport || event.payloadType.rtcpFeedbackSet.contains("ccm fir")
                     }
                 }
+            }
+            is RtpPayloadTypeClearEvent -> {
+                // Reset to the defaults.
+                hasPliSupport = false
+                hasFirSupport = true
             }
         }
     }
