@@ -18,7 +18,6 @@ package org.jitsi.nlj
 import org.jitsi.nlj.rtcp.KeyframeRequester
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
-import org.jitsi.nlj.rtcp.RtcpSrGenerator
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeEventVisitor
@@ -96,16 +95,7 @@ class RtpSenderImpl(
     private val statTracker = OutgoingStatisticsTracker()
     private val keyframeRequester = KeyframeRequester()
     private val probingDataSender: ProbingDataSender
-    /**
-     * The SR generator runs on its own in the background.  It will access the outgoing stats via the given
-     * [OutgoingStatisticsTracker] to grab a snapshot of the current state for filling out an SR and sending it
-     * via the given RTCP sender.
-     */
-    private val rtcpSrGenerator = RtcpSrGenerator(
-            backgroundExecutor,
-            { rtcpPacket -> sendRtcp(rtcpPacket) },
-            statTracker
-    )
+
     private val nackHandler: NackHandler
 
     private val outputPipelineTerminationNode = object : ConsumerNode("Output pipeline termination node") {
@@ -260,7 +250,6 @@ class RtpSenderImpl(
 
     override fun stop() {
         running = false
-        rtcpSrGenerator.running = false
         incomingPacketQueue.close()
     }
 

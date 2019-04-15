@@ -53,7 +53,7 @@ class RtcpTermination(
                     // to turn this into a MultipleOutputNode
                     forwardedRtcp = pkt
                 }
-                is RtcpSdesPacket, is RtcpRrPacket, is RtcpSrPacket, is RtcpFbNackPacket, is RtcpByePacket -> {
+                is RtcpSdesPacket, is RtcpRrPacket, is RtcpFbNackPacket, is RtcpByePacket -> {
                     // Supported, but no special handling here (any special handling will be in
                     // notifyRtcpReceived below
                 }
