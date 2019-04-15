@@ -18,6 +18,7 @@ package org.jitsi.videobridge.cc;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.PacketCache;
+import org.jitsi.rtp.rtcp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
 
@@ -80,11 +81,11 @@ public interface AdaptiveTrackProjectionContext
     /**
      * Rewrites the RTCP packet that is specified as an argument.
      *
-     * @param rtcpPacket the RTCP packet to transform.
+     * @param rtcpSrPacket the RTCP packet to transform.
      * @return true if the RTCP packet is accepted, false otherwise, in which
      * case it needs to be dropped.
      */
-    boolean rewriteRtcp(RawPacket rtcpPacket);
+    boolean rewriteRtcp(RtcpSrPacket rtcpSrPacket);
 
     /**
      * @return the RTP state that describes the max sequence number, max

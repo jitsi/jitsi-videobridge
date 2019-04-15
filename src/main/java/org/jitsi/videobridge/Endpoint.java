@@ -26,6 +26,7 @@ import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.rtp.*;
+import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
@@ -472,6 +473,16 @@ public class Endpoint
         {
             // By default just add it to the sender's queue
             transceiver.sendRtp(packetInfo);
+        }
+    }
+
+    @Override
+    public void sendRtcp(PacketInfo packetInfo, String sourceEpId)
+    {
+        Packet packet = packetInfo.getPacket();
+        if (packet instanceof RtcpSrPacket)
+        {
+            bitrateController.transformRtcp((RtcpSrPacket) packet);
         }
     }
 

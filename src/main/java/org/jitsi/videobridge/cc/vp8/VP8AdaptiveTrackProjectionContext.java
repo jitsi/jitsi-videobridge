@@ -396,69 +396,42 @@ public class VP8AdaptiveTrackProjectionContext
     /**
      * Rewrites the RTCP packet that is specified as an argument.
      *
-     * @param rtcpPacket the RTCP packet to transform.
+     * @param rtcpSrPacket the RTCP packet to transform.
      * @return true if the RTCP packet is accepted, false otherwise, in which
      * case it needs to be dropped.
      */
     @Override
-    public boolean rewriteRtcp(@NotNull RawPacket rtcpPacket)
+    public boolean rewriteRtcp(@NotNull RtcpSrPacket rtcpSrPacket)
     {
-        // Drop SRs from other streams.
-        boolean removed = false;
-        RTCPIterator it = new RTCPIterator(rtcpPacket);
-        while (it.hasNext())
+        VP8FrameProjection lastVP8FrameProjectionCopy = lastVP8FrameProjection;
+        if (lastVP8FrameProjectionCopy.getVP8Frame() == null
+            || rtcpSrPacket.getSenderSsrc() != lastVP8FrameProjectionCopy.getSSRC())
         {
-            ByteArrayBuffer baf = it.next();
-            switch (RTCPUtils.getPacketType(baf))
-            {
-                case RtcpSdesPacket.PT:
-                if (removed)
-                {
-                    it.remove();
-                }
-                break;
-            case RtcpSrPacket.PT:
-                VP8FrameProjection
-                    lastVP8FrameProjectionCopy = lastVP8FrameProjection;
-                if (lastVP8FrameProjectionCopy.getVP8Frame() == null
-                    || RawPacket.getRTCPSSRC(baf)
-                    != lastVP8FrameProjectionCopy.getSSRC())
-                {
-                    // SRs from other streams get axed.
-                    removed = true;
-                    it.remove();
-                }
-                else
-                {
-                    long srcTs = RTCPSenderInfoUtils.getTimestamp(baf);
-                    long delta = RTPUtils.rtpTimestampDiff(
-                        lastVP8FrameProjectionCopy.getTimestamp(),
-                        lastVP8FrameProjectionCopy.getVP8Frame().getTimestamp());
-
-                    long dstTs = RTPUtils.as32Bits(srcTs + delta);
-
-                    if (srcTs != dstTs)
-                    {
-                        RTCPSenderInfoUtils.setTimestamp(baf, (int) dstTs);
-                    }
-
-                    // Rewrite packet/octet count.
-                    synchronized (transmittedSyncRoot)
-                    {
-                        RTCPSenderInfoUtils
-                            .setOctetCount(baf, (int) transmittedBytes);
-                        RTCPSenderInfoUtils
-                            .setPacketCount(baf, (int) transmittedPackets);
-                    }
-                }
-                break;
-            case RtcpByePacket.PT:
-                // TODO rewrite SSRC.
-                break;
-            }
+            return false;
         }
+        else
+        {
+            long srcTs = rtcpSrPacket.getSenderInfo().getRtpTimestamp();
+            long delta = RTPUtils.rtpTimestampDiff(
+                lastVP8FrameProjectionCopy.getTimestamp(),
+                lastVP8FrameProjectionCopy.getVP8Frame().getTimestamp());
 
-        return rtcpPacket.getLength() > 0;
+            long dstTs = RTPUtils.as32Bits(srcTs + delta);
+
+            if (srcTs != dstTs)
+            {
+                rtcpSrPacket.getSenderInfo().setRtpTimestamp(dstTs);
+            }
+
+            // Rewrite packet/octet count.
+            synchronized (transmittedSyncRoot)
+            {
+                rtcpSrPacket.getSenderInfo().setSendersOctetCount(transmittedBytes);
+                rtcpSrPacket.getSenderInfo().setSendersPacketCount(transmittedPackets);
+            }
+
+            return true;
+        }
     }
 
     @Override

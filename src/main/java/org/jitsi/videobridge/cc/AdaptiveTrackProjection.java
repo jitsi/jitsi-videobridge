@@ -20,6 +20,7 @@ import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.PacketCache;
+import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.utils.logging.*;
@@ -380,11 +381,11 @@ public class AdaptiveTrackProjection
     /**
      * Rewrites an RTCP packet.
      *
-     * @param rtcpPacket the RTCP packet to rewrite.
+     * @param rtcpSrPacket the RTCP SR packet to rewrite.
      * @return true to let the RTCP packet through, false to drop.
      * XXX unused???
      */
-    public boolean rewriteRtcp(@NotNull RawPacket rtcpPacket)
+    public boolean rewriteRtcp(@NotNull RtcpSrPacket rtcpSrPacket)
     {
         AdaptiveTrackProjectionContext contextCopy = context;
         if (contextCopy == null)
@@ -392,7 +393,7 @@ public class AdaptiveTrackProjection
             return true;
         }
 
-        return contextCopy.rewriteRtcp(rtcpPacket);
+        return contextCopy.rewriteRtcp(rtcpSrPacket);
     }
 
     /**
