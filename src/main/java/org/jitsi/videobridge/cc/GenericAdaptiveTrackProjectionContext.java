@@ -388,22 +388,17 @@ class GenericAdaptiveTrackProjectionContext
      * a parameter is an SR, then this method updates the transmitted bytes and
      * transmitted packets of that first SR.
      *
-     * @param rtcpPacket the compound RTCP packet to rewrite.
+     * @param rtcpSrPacket the compound RTCP packet to rewrite.
      * @return true.
      */
     @Override
-    public boolean rewriteRtcp(@NotNull RawPacket rtcpPacket)
+    public boolean rewriteRtcp(@NotNull RtcpSrPacket rtcpSrPacket)
     {
-        if (RTCPUtils.getPacketType(rtcpPacket) == RtcpSrPacket.PT)
+        synchronized (transmittedSyncRoot)
         {
-            synchronized (transmittedSyncRoot)
-            {
-                // Rewrite packet/octet count.
-                RTCPSenderInfoUtils
-                    .setOctetCount(rtcpPacket, (int) transmittedBytes);
-                RTCPSenderInfoUtils
-                    .setPacketCount(rtcpPacket, (int) transmittedPackets);
-            }
+            // Rewrite packet/octet count.
+            rtcpSrPacket.getSenderInfo().setSendersOctetCount(transmittedBytes);
+            rtcpSrPacket.getSenderInfo().setSendersPacketCount(transmittedPackets);
         }
 
         return true;
