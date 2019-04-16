@@ -21,7 +21,7 @@ import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.rtp.RtpExtension
-import org.jitsi.nlj.rtp.RtpExtensionType.*
+import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.TlsRole
@@ -48,10 +48,10 @@ data class PcapInformation(
 )
 
 val DEFAULT_HEADER_EXTENSIONS = listOf(
-    RtpExtension(1, SSRC_AUDIO_LEVEL),
-    RtpExtension(3, ABS_SEND_TIME),
-    RtpExtension(4, RTP_STREAM_ID),
-    RtpExtension(5, TRANSPORT_CC)
+    RtpExtension(1, RtpExtensionType.SSRC_AUDIO_LEVEL),
+    RtpExtension(3, RtpExtensionType.ABS_SEND_TIME),
+    RtpExtension(4, RtpExtensionType.RTP_STREAM_ID),
+    RtpExtension(5, RtpExtensionType.TRANSPORT_CC)
 )
 
 object Pcaps {

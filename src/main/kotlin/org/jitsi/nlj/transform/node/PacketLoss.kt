@@ -17,7 +17,7 @@ package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
-import java.util.*
+import java.util.Random
 
 /**
  * Randomly drops packets at a rate of [lossRate].
