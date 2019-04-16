@@ -27,8 +27,6 @@ class RtpExtensionTypeTest : ShouldSpec() {
                 RtpExtensionType.createFromUri(RtpExtensionType.TRANSPORT_CC.uri) shouldBe
                     RtpExtensionType.TRANSPORT_CC
             }
-
         }
     }
-
 }

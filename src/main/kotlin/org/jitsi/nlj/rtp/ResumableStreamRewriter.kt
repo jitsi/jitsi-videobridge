@@ -91,10 +91,9 @@ class ResumableStreamRewriter {
         val newTimestamp = (timestamp - timestampDelta) and 0xffffffffL
 
         // TODO: what's the right way to do this?
-        //rtcpPacket.senderInfo.rtpTimestamp = newTimestamp
+        // rtcpPacket.senderInfo.rtpTimestamp = newTimestamp
         rtcpPacket.buffer.putInt(rtcpPacket.offset + 16, newTimestamp.toInt())
     }
-
 
     /**
      * Rewrites the sequence number passed as a parameter, hiding any gaps
@@ -115,9 +114,7 @@ class ResumableStreamRewriter {
             }
 
             return newSequenceNumber
-        }
-        else
-        {
+        } else {
             // update the sequence number delta (if needed)
             if (highestSequenceNumberSent != -1) {
                 val newDelta = (sequenceNumber - highestSequenceNumberSent) and 0xffff

@@ -38,7 +38,7 @@ class VideoParser : TransformerNode("Video parser") {
     private val payloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
     private var tracks: Array<MediaStreamTrackDesc> = arrayOf()
 
-    //TODO: things we want to detect here:
+    // TODO: things we want to detect here:
     // does this packet belong to a keyframe?
     // does this packet represent the start of a frame?
     // does this packet represent the end of a frame?

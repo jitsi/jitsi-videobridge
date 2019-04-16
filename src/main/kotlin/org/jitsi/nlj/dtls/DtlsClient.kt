@@ -35,8 +35,8 @@ class DtlsClient(
     private val logger = getLogger(this.javaClass)
     private val logPrefix = "[$id]"
 
-    private val tlsClient: TlsClientImpl
-            = TlsClientImpl(verifyAndValidateRemoteCertificate)
+    private val tlsClient: TlsClientImpl =
+            TlsClientImpl(verifyAndValidateRemoteCertificate)
 
     override fun start(): DTLSTransport = connect()
 
@@ -47,7 +47,7 @@ class DtlsClient(
                 handshakeCompleteHandler(tlsClient.chosenSrtpProtectionProfile, TlsRole.CLIENT, tlsClient.srtpKeyingMaterial)
             }
         } catch (e: Exception) {
-            logger.cerror{ "$logPrefix Error during DTLS connection: $e" }
+            logger.cerror { "$logPrefix Error during DTLS connection: $e" }
             throw e
         }
     }

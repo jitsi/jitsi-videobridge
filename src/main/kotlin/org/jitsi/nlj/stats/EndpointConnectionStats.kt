@@ -16,7 +16,6 @@
 
 package org.jitsi.nlj.stats
 
-import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
@@ -54,7 +53,7 @@ class EndpointConnectionStats : RtcpListener {
     }
 
     fun getSnapshot(): Snapshot {
-        //NOTE(brian): right now we only track a single stat, so synchronization isn't necessary.  If we add more
+        // NOTE(brian): right now we only track a single stat, so synchronization isn't necessary.  If we add more
         // stats and it's appropriate they be 'snapshotted' together at the same time, we'll need to add a lock here
         return Snapshot(rtt)
     }
@@ -96,7 +95,7 @@ class EndpointConnectionStats : RtcpListener {
         } else {
             logger.cdebug { "Report block for ssrc ${reportBlock.ssrc} didn't have SR data: " +
                     "lastSrTimestamp was ${reportBlock.lastSrTimestamp}, " +
-                    "delaySinceLastSr was ${reportBlock.delaySinceLastSr}"}
+                    "delaySinceLastSr was ${reportBlock.delaySinceLastSr}" }
         }
     }
 }

@@ -99,8 +99,7 @@ class ProbingDataSender(
         for (i in 0 until 2) {
             val lastNPacketIter = lastNPackets.iterator()
 
-            while (lastNPacketIter.hasNext())
-            {
+            while (lastNPacketIter.hasNext()) {
                 val packet = lastNPacketIter.next()
                 val packetLen = packet.length
                 if (bytesSent + packetLen > numBytes) {
@@ -111,11 +110,11 @@ class ProbingDataSender(
                 // The node after this one will be the RetransmissionSender, which handles
                 // encapsulating packets as RTX (with the proper ssrc and payload type) so we
                 // just need to find the packets to retransmit and forward them to the next node
-                //TODO(brian): do we need to clone it here?
+                // TODO(brian): do we need to clone it here?
                 packetsToResend.add(PacketInfo(packet.clone()))
             }
         }
-        //TODO(brian): we're in a thread context mess here.  we'll be sending these out from the bandwidthprobing
+        // TODO(brian): we're in a thread context mess here.  we'll be sending these out from the bandwidthprobing
         // context (or whoever calls this) which i don't think we want.  Need look at getting all the pipeline
         // work posted to one thread so we don't have to worry about concurrency nightmares
         if (packetsToResend.isNotEmpty()) {
@@ -132,7 +131,7 @@ class ProbingDataSender(
         var bytesSent = 0
         val pt = videoPayloadTypes.firstOrNull() ?: return bytesSent
         val senderSsrc = localVideoSsrc ?: return bytesSent
-        //TODO(brian): shouldn't this take into account numBytes? what if it's less than
+        // TODO(brian): shouldn't this take into account numBytes? what if it's less than
         // the size of one dummy packet?
         val packetLength = RtpHeader.FIXED_HEADER_SIZE_BYTES + 0xFF
         val numPackets = (numBytes / packetLength) + 1 /* account for the mod */
@@ -153,10 +152,10 @@ class ProbingDataSender(
     }
 
     override fun handleEvent(event: Event) {
-        when(event) {
+        when (event) {
             is RtpPayloadTypeAddedEvent -> {
                 if (event.payloadType is RtxPayloadType) {
-                    logger.cdebug { "RTX payload type signaled, enabling RTX probing"}
+                    logger.cdebug { "RTX payload type signaled, enabling RTX probing" }
                     rtxSupported = true
                 } else if (event.payloadType is VideoPayloadType) {
                     videoPayloadTypes.add(event.payloadType)
@@ -177,8 +176,8 @@ class ProbingDataSender(
 
     override fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("Probing data sender").apply {
-            addStat( "num bytes of probing data sent as RTX: $numProbingBytesSentRtx")
-            addStat( "num bytes of probing data sent as dummy: $numProbingBytesSentDummyData")
+            addStat("num bytes of probing data sent as RTX: $numProbingBytesSentRtx")
+            addStat("num bytes of probing data sent as dummy: $numProbingBytesSentDummyData")
         }
     }
 }

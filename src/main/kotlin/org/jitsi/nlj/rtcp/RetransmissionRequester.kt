@@ -34,8 +34,6 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.contracts.ExperimentalContracts
-import kotlin.contracts.contract
 
 class RetransmissionRequester(
     private val rtcpSender: (RtcpPacket) -> Unit,
@@ -49,7 +47,7 @@ class RetransmissionRequester(
     private val streamPacketRequesters: MutableMap<Long, StreamPacketRequester> = HashMap()
 
     fun packetReceived(ssrc: Long, seqNum: Int) {
-        val streamPacketRequester = synchronized (streamPacketRequesters) {
+        val streamPacketRequester = synchronized(streamPacketRequesters) {
             streamPacketRequesters.computeIfAbsent(ssrc) { key ->
                 StreamPacketRequester(key, scheduler, clock, rtcpSender)
             }
@@ -58,7 +56,7 @@ class RetransmissionRequester(
     }
 
     fun stop() {
-        synchronized (streamPacketRequesters) {
+        synchronized(streamPacketRequesters) {
             streamPacketRequesters.values.forEach(StreamPacketRequester::stop)
             streamPacketRequesters.clear()
         }
@@ -89,7 +87,7 @@ class RetransmissionRequester(
                 highestReceivedSeqNum = seqNum
                 return
             }
-            synchronized (requests) {
+            synchronized(requests) {
                 when {
                     seqNum isOlderThan highestReceivedSeqNum -> {
                         logger.cdebug { "$ssrc packet $seqNum was received, currently missing ${getMissingSeqNums()}" }
@@ -133,17 +131,17 @@ class RetransmissionRequester(
 
         fun stop() {
             running.set(false)
-            synchronized (taskHandleLock) {
+            synchronized(taskHandleLock) {
                 currentTaskHandle?.cancel(false)
             }
-            synchronized (requests) {
+            synchronized(requests) {
                 requests.clear()
             }
         }
 
         private fun updateWorkDueTime(newWorkDueTs: Instant) {
             logger.cdebug { "$ssrc updating next work due time to $newWorkDueTs" }
-            synchronized (taskHandleLock) {
+            synchronized(taskHandleLock) {
                 if (!running.get()) {
                     logger.cdebug { "$ssrc is stopped, not rescheduling task" }
                 }
@@ -153,7 +151,7 @@ class RetransmissionRequester(
                         currentTaskHandle?.cancel(false)
                     }
                     else -> {
-                        //TODO(brian): only re-schedule if the change is larger than X ms?
+                        // TODO(brian): only re-schedule if the change is larger than X ms?
                         // The work is now due either sooner or later than we previously thought, so
                         // re-schedule the task
                         currentTaskHandle?.cancel(false)
@@ -177,7 +175,7 @@ class RetransmissionRequester(
         }
 
         private fun notifyNackSent(timestamp: Instant, nackedSeqNums: Collection<Int>) {
-            synchronized (requests) {
+            synchronized(requests) {
                 nackedSeqNums.forEach { nackedSeqNum ->
                     // It's possible that in between sending the nack and calling this method the packet
                     // was received and is no longer in the requests map
@@ -200,7 +198,7 @@ class RetransmissionRequester(
             }
         }
 
-        private fun getMissingSeqNums(): SortedSet<Int> = synchronized (requests) { requests.keys.toSortedSet() }
+        private fun getMissingSeqNums(): SortedSet<Int> = synchronized(requests) { requests.keys.toSortedSet() }
     }
 
     /**

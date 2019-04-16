@@ -44,7 +44,6 @@ import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.extensions.toHex
 import java.nio.ByteBuffer
-import java.security.PrivateKey
 import java.util.Hashtable
 import java.util.Vector
 
@@ -66,7 +65,7 @@ class TlsServerImpl(
      */
     lateinit var srtpKeyingMaterial: ByteArray
 
-    //TODO: leave all these...choose which one to respond with
+    // TODO: leave all these...choose which one to respond with
     // based on the client usesrtp extension
     private val srtpProtectionProfiles = intArrayOf(
         SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_80
@@ -77,13 +76,13 @@ class TlsServerImpl(
 
     override fun getSessionToResume(sessionID: ByteArray?): TlsSession? {
         return session
-        //TODO: do we need to map multiple sessions (per sessionID?)
+        // TODO: do we need to map multiple sessions (per sessionID?)
 //        return super.getSessionToResume(sessionID)
     }
 
     override fun getServerExtensions(): Hashtable<*, *> {
-        val extensions = super.getServerExtensions() ?:
-            Hashtable<Int, ByteArray>()
+        val extensions = super.getServerExtensions()
+            ?: Hashtable<Int, ByteArray>()
         return extensions.also {
             if (TlsSRTPUtils.getUseSRTPExtension(it) == null) {
                 TlsSRTPUtils.addUseSRTPExtension(
@@ -175,7 +174,6 @@ class TlsServerImpl(
                     it
                 )
             }
-
         } else {
             srtpKeyingMaterial = context.exportKeyingMaterial(
                 ExporterLabel.dtls_srtp,

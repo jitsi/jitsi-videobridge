@@ -32,7 +32,7 @@ import java.util.concurrent.LinkedBlockingQueue
  * NOTE: we don't technically care about the ByteBuffer instance itself, but
  * the backing byte array.
  */
-//TODO: turn this into a real test (as well as the rest) and tag them as 'slow'
+// TODO: turn this into a real test (as well as the rest) and tag them as 'slow'
 fun main() {
     val pcap = Pcaps.Incoming.ONE_PARTICIPANT_RTP_RTCP_SIM_RTX
 
@@ -70,7 +70,6 @@ fun main() {
             verifyArray(System.identityHashCode(packetInfo.packet.buffer))
         }
     }
-
 
     producer.subscribe { pkt ->
         sentArrays.offer(System.identityHashCode(pkt.buffer))

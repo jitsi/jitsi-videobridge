@@ -45,7 +45,7 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
             if (res) {
                 transformedPackets.add(packetInfo)
             } else {
-                with (packetInfo.packetAs<RtpPacket>()) {
+                with(packetInfo.packetAs<RtpPacket>()) {
                     logger.warn("SRTP transform failed for packet $ssrc $sequenceNumber")
                 }
             }

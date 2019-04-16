@@ -21,4 +21,3 @@ interface PacketHandler {
      */
     fun processPacket(packetInfo: PacketInfo)
 }
-

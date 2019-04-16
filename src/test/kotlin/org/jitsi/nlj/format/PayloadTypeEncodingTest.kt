@@ -37,7 +37,6 @@ internal class PayloadTypeEncodingTest : ShouldSpec() {
                 encoding shouldBe encoding2
                 encoding shouldBe encoding3
                 encoding2 shouldBe encoding3
-
             }
             should("return OTHER in the invalid case") {
                 PayloadTypeEncoding.createFrom("blah") shouldBe PayloadTypeEncoding.OTHER

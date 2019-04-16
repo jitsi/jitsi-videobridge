@@ -23,13 +23,13 @@ import java.nio.ByteBuffer
 class Vp8Utils {
     companion object {
         private const val VP8_PAYLOAD_HEADER_LEN = 3
-        //TODO(brian): should move these elsewhere probably
+        // TODO(brian): should move these elsewhere probably
         private const val MIN_HD_HEIGHT = 540
         private const val MIN_SD_HEIGHT = 360
         private const val HD_LAYER_ID = 2
         private const val SD_LAYER_ID = 1
         private const val LD_LAYER_ID = 0
-        private const val SUSPENDED_LAYER_ID = -1;
+        private const val SUSPENDED_LAYER_ID = -1
 
         fun isKeyFrame(vp8Payload: ByteBuffer): Boolean =
                 DePacketizer.isKeyFrame(vp8Payload.array(), vp8Payload.arrayOffset(), vp8Payload.limit())

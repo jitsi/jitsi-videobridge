@@ -55,7 +55,7 @@ abstract class PayloadType(
      */
     val rtcpFeedbackSet: RtcpFeedbackSet = CopyOnWriteArraySet()) {
 
-    override fun toString(): String = with (StringBuffer()) {
+    override fun toString(): String = with(StringBuffer()) {
         append(pt).append(" -> ").append(encoding).append(" (").append(clockRate).append("): ").append(parameters)
 
         toString()
@@ -86,37 +86,37 @@ enum class PayloadTypeEncoding {
         }
     }
 
-    override fun toString(): String = with (StringBuffer()) {
+    override fun toString(): String = with(StringBuffer()) {
         append(super.toString())
-        unknownVal?.let { append(" (").append(it).append(")")}
+        unknownVal?.let { append(" (").append(it).append(")") }
         toString()
     }
 }
 
 abstract class VideoPayloadType(
-        pt: Byte,
-        encoding: PayloadTypeEncoding,
-        clockRate: Int = 90000,
-        parameters: PayloadTypeParams = ConcurrentHashMap(),
-        rtcpFeedbackSet: RtcpFeedbackSet = CopyOnWriteArraySet()
+    pt: Byte,
+    encoding: PayloadTypeEncoding,
+    clockRate: Int = 90000,
+    parameters: PayloadTypeParams = ConcurrentHashMap(),
+    rtcpFeedbackSet: RtcpFeedbackSet = CopyOnWriteArraySet()
 ) : PayloadType(pt, encoding, MediaType.VIDEO, clockRate, parameters, rtcpFeedbackSet)
 
 class Vp8PayloadType(
-        pt: Byte,
-        parameters: PayloadTypeParams = ConcurrentHashMap(),
-        rtcpFeedbackSet: RtcpFeedbackSet = CopyOnWriteArraySet()
+    pt: Byte,
+    parameters: PayloadTypeParams = ConcurrentHashMap(),
+    rtcpFeedbackSet: RtcpFeedbackSet = CopyOnWriteArraySet()
 ) : VideoPayloadType(pt, PayloadTypeEncoding.VP8, parameters = parameters, rtcpFeedbackSet = rtcpFeedbackSet)
 
 class Vp9PayloadType(
-        pt: Byte,
-        parameters: PayloadTypeParams = ConcurrentHashMap(),
-        rtcpFeedbackSet: RtcpFeedbackSet = CopyOnWriteArraySet()
+    pt: Byte,
+    parameters: PayloadTypeParams = ConcurrentHashMap(),
+    rtcpFeedbackSet: RtcpFeedbackSet = CopyOnWriteArraySet()
 ) : VideoPayloadType(pt, PayloadTypeEncoding.VP9, parameters = parameters, rtcpFeedbackSet = rtcpFeedbackSet)
 
 class H264PayloadType(
-        pt: Byte,
-        parameters: PayloadTypeParams = ConcurrentHashMap(),
-        rtcpFeedbackSet: RtcpFeedbackSet = CopyOnWriteArraySet()
+    pt: Byte,
+    parameters: PayloadTypeParams = ConcurrentHashMap(),
+    rtcpFeedbackSet: RtcpFeedbackSet = CopyOnWriteArraySet()
 ) : VideoPayloadType(pt, PayloadTypeEncoding.H264, parameters = parameters, rtcpFeedbackSet = rtcpFeedbackSet)
 
 class RtxPayloadType(

@@ -32,8 +32,8 @@ class AbsSendTime : TransformerNode("Absolute send time") {
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         extensionId?.let { absSendTimeExtId ->
             val rtpPacket = packetInfo.packetAs<RtpPacket>()
-            val ext = rtpPacket.getHeaderExtension(absSendTimeExtId) ?:
-                rtpPacket.addHeaderExtension(absSendTimeExtId, AbsSendTimeHeaderExtension.DATA_SIZE_BYTES)
+            val ext = rtpPacket.getHeaderExtension(absSendTimeExtId)
+                ?: rtpPacket.addHeaderExtension(absSendTimeExtId, AbsSendTimeHeaderExtension.DATA_SIZE_BYTES)
             AbsSendTimeHeaderExtension.setTime(ext, System.nanoTime())
         }
 

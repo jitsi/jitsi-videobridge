@@ -28,14 +28,15 @@ data class RtpExtension(
     /**
      * The type.
      */
-    val type: RtpExtensionType)
+    val type: RtpExtensionType
+)
 
 /**
  * Represents an RTP header extension type.
  *
  * @author Boris Grozev
  */
-enum class RtpExtensionType (val uri: String) {
+enum class RtpExtensionType(val uri: String) {
     /**
      * The URN identifying the RTP extension that allows mixers to send to
      * conference participants the audio levels of all contributing sources.

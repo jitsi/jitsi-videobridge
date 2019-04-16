@@ -48,7 +48,7 @@ class RtcpSrGenerator(
                 val senderInfo = SenderInfoBuilder(
                     ntpTimestampMsw = TimeUtils.getMsw(RtpUtils.millisToNtpTimestamp(now)),
                     ntpTimestampLsw = TimeUtils.getLsw(RtpUtils.millisToNtpTimestamp(now)),
-                    //TODO: from what I can tell, the old code didn't generate an RTP timestamp to map to the current
+                    // TODO: from what I can tell, the old code didn't generate an RTP timestamp to map to the current
                     // ntp timestamp, and instead used the most recent rtp timestamp we'd seen
                     rtpTimestamp = statsSnapshot.mostRecentRtpTimestamp,
                     sendersPacketCount = statsSnapshot.packetCount.toPositiveLong(),

@@ -67,4 +67,3 @@ fun main(args: Array<String>) {
 
     receivers.forEach { println(it.getNodeStats().prettyPrint()) }
 }
-

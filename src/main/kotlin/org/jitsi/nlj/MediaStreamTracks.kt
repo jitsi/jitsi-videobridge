@@ -29,22 +29,19 @@ class MediaStreamTracks {
     private var tracks: Array<MediaStreamTrackDesc> = arrayOf()
 
     fun setMediaStreamTracks(newTracks: Array<MediaStreamTrackDesc>): Boolean {
-        val oldTracks = tracks;
+        val oldTracks = tracks
 
-        if (oldTracks.isEmpty() || newTracks.isEmpty())
-        {
-            tracks = newTracks;
-            return oldTracks.size != newTracks.size;
+        if (oldTracks.isEmpty() || newTracks.isEmpty()) {
+            tracks = newTracks
+            return oldTracks.size != newTracks.size
         }
 
         var cntMatched = 0
         val mergedTracks: Array<MediaStreamTrackDesc> = Array(newTracks.size) { i ->
             val newEncoding = newTracks[i].rtpEncodings[0]
-            for (j in 0 until oldTracks.size)
-            {
-                if (oldTracks[j] != null
-                    && oldTracks[j].matches(newEncoding.primarySSRC))
-                {
+            for (j in 0 until oldTracks.size) {
+                if (oldTracks[j] != null &&
+                    oldTracks[j].matches(newEncoding.primarySSRC)) {
                     cntMatched++
                     // TODO: update the old track instance with the
                     // configuration of the new one.

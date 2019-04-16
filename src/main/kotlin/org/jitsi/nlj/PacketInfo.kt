@@ -50,12 +50,11 @@ class EventTimeline(
     fun totalDelay(): Duration {
         return referenceTime?.let {
             return Duration.ofMillis(timeline.last().second)
-
         } ?: Duration.ofMillis(0)
     }
 
     override fun toString(): String {
-        return with (StringBuffer()) {
+        return with(StringBuffer()) {
             appendln("Reference time: ${referenceTime}ms")
             timeline.forEach {
                 appendln(it.toString())
@@ -63,7 +62,6 @@ class EventTimeline(
             toString()
         }
     }
-
 }
 
 /**
@@ -91,7 +89,7 @@ class PacketInfo @JvmOverloads constructor(
      * Get the contained packet cast to [ExpectedPacketType]
      */
     @Suppress("UNCHECKED_CAST")
-    fun <ExpectedPacketType : Packet>packetAs(): ExpectedPacketType {
+    fun <ExpectedPacketType : Packet> packetAs(): ExpectedPacketType {
         return packet as ExpectedPacketType
     }
 
@@ -118,7 +116,7 @@ class PacketInfo @JvmOverloads constructor(
     }
 
     companion object {
-        //TODO: we could make this a public var to allow changing this at runtime
+        // TODO: we could make this a public var to allow changing this at runtime
         private const val ENABLE_TIMELINE = false
     }
 }
@@ -132,5 +130,5 @@ class PacketInfo @JvmOverloads constructor(
  */
 @Suppress("UNCHECKED_CAST")
 inline fun <ExpectedPacketType> Iterable<PacketInfo>.forEachAs(action: (PacketInfo, ExpectedPacketType) -> Unit) {
-    for (element in this) action (element, element.packet as ExpectedPacketType)
+    for (element in this) action(element, element.packet as ExpectedPacketType)
 }

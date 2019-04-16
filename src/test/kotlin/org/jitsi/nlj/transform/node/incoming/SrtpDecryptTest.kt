@@ -43,7 +43,6 @@ internal class SrtpDecryptTest : ShouldSpec() {
             srtpTransformers.srtcpDecryptTransformer.transform(packetInfo) shouldBe true
             val decryptedPacket = packetInfo.packet
 
-
             should("decrypt the data correctly") {
                 decryptedPacket shouldNotBe null
                 decryptedPacket should haveSameContentAs(SrtpSample.expectedDecryptedRtcpPacket)

@@ -101,7 +101,6 @@ class DtlsTest : ShouldSpec() {
             debug("Server accepted connection")
         }
 
-
         debug("Client connecting")
         dtlsClient.start()
         debug("Client connected, sending message")
