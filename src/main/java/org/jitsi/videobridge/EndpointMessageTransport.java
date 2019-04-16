@@ -301,7 +301,7 @@ class EndpointMessageTransport
         {
             DataChannelStringMessage dataChannelStringMessage =
                     (DataChannelStringMessage)dataChannelMessage;
-            onMessage(null, dataChannelStringMessage.data);
+            onMessage(dataChannel.get(), dataChannelStringMessage.data);
         }
     }
 
