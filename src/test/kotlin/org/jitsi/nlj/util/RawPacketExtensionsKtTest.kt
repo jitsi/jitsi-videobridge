@@ -37,11 +37,11 @@ class RawPacketExtensionsKtTest : ShouldSpec() {
 
     val buf = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
         // Dummy header data
-        //V=2,P=false,X=false,CC=0,M=false,PT=111,SeqNum=5807
+        // V=2,P=false,X=false,CC=0,M=false,PT=111,SeqNum=5807
         0x80, 0x6f, 0x16, 0xaf,
-        //Timestamp: 1710483662
+        // Timestamp: 1710483662
         0x65, 0xf3, 0xe8, 0xce,
-        //SSRC: 839852602
+        // SSRC: 839852602
         0x32, 0x0f, 0x22, 0x3a
     ) + payload
     val rtpPacket = RtpPacket(buf)

@@ -32,7 +32,6 @@ import org.pcap4j.util.MacAddress
 import java.net.Inet4Address
 import java.util.Random
 
-
 class PcapWriter(
     filePath: String = "/tmp/${Random().nextLong()}.pcap}"
 ) : ObserverNode("PCAP writer") {

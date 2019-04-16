@@ -154,7 +154,7 @@ class IncomingSsrcStats(
     private val ssrc: Long,
     private var baseSeqNum: Int
 ) {
-    //TODO: for now we'll synchronize access to all the stats so we can create a consistent snapshot when it's
+    // TODO: for now we'll synchronize access to all the stats so we can create a consistent snapshot when it's
     // requested from another context.  it'd be great to be able to avoid this (coroutines make it easy to switch
     // contexts and could be a nice option here in the future).  another option would be doing the RR generation
     // in the same context as where we receive packets: this would work fine as long as that sort of interval is
@@ -167,7 +167,7 @@ class IncomingSsrcStats(
     private var maxSeqNum: Int = baseSeqNum
     private var seqNumCycles: Int = 0
     private val numExpectedPackets: Int
-        get()  = calculateExpectedPacketCount(0, baseSeqNum, seqNumCycles, maxSeqNum)
+        get() = calculateExpectedPacketCount(0, baseSeqNum, seqNumCycles, maxSeqNum)
     private var cumulativePacketsLost: Int = 0
     private var outOfOrderPacketCount: Int = 0
     private var jitter: Double = 0.0
@@ -252,7 +252,7 @@ class IncomingSsrcStats(
     }
 
     fun getSnapshot(): Snapshot {
-        synchronized (statsLock) {
+        synchronized(statsLock) {
             return Snapshot(numReceivedPackets, maxSeqNum, seqNumCycles, numExpectedPackets,
                     cumulativePacketsLost, jitter)
         }
@@ -288,7 +288,7 @@ class IncomingSsrcStats(
                 if (packetSequenceNumber isNextAfter maxSeqNum) {
                     if (probation > 0) {
                         probation--
-                        //TODO: do we want to 'reset' the sequence after the probation period is finished?
+                        // TODO: do we want to 'reset' the sequence after the probation period is finished?
                     }
                 } else if (maxSeqNum numPacketsTo packetSequenceNumber in 0..MAX_DROPOUT) {
                     // In order with a gap, but gap is within acceptable range
@@ -296,7 +296,7 @@ class IncomingSsrcStats(
                     maybeResetProbation()
                 } else {
                     // Very large jump
-                    //TODO
+                    // TODO
                 }
                 if (maxSeqNum rolledOverTo packetSequenceNumber) {
                     seqNumCycles++
@@ -311,7 +311,7 @@ class IncomingSsrcStats(
                     cumulativePacketsLost--
                 } else {
                     // Older packet which is too old to be counted as out-of-order
-                    //TODO
+                    // TODO
                 }
                 outOfOrderPacketCount++
                 maybeResetProbation()

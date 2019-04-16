@@ -46,14 +46,14 @@ fun Logger.cerror(msg: () -> String) {
 // Logger helpers below taken from https://stackoverflow.com/a/34462577
 
 // Return logger for Java class, if companion object fix the name
-fun <T: Any> getLogger(forClass: Class<T>): Logger {
+fun <T : Any> getLogger(forClass: Class<T>): Logger {
     return Logger.getLogger(forClass.name)
 }
 
 /**
  * Create a new logger which delegates its level to another logger
  */
-fun <T: Any> getLogger(forClass: Class<T>, levelDelegate: Logger?): Logger {
+fun <T : Any> getLogger(forClass: Class<T>, levelDelegate: Logger?): Logger {
     return if (levelDelegate != null) {
         getLogger(getLogger(forClass), levelDelegate)
     } else {
@@ -68,14 +68,14 @@ fun getLogger(loggerDelegate: Logger, levelDelegate: Logger?): Logger {
     return if (levelDelegate != null) {
         Logger.getLogger(loggerDelegate, levelDelegate)
     } else {
-        //TODO(brian): not sure if this makes sense: if no level delegate was passed, just use the logger
+        // TODO(brian): not sure if this makes sense: if no level delegate was passed, just use the logger
         // delegate as the level delegate?  There's no helper to use a logger delegate but not a level delegate
         Logger.getLogger(loggerDelegate, loggerDelegate)
     }
 }
 
 // Return logger for Kotlin class
-fun <T: Any> logger(forClass: KClass<T>): Logger {
+fun <T : Any> logger(forClass: KClass<T>): Logger {
     return getLogger(forClass.java)
 }
 

@@ -59,7 +59,7 @@ object Pcaps {
         val ONE_PARTICIPANT_RTP_RTCP_SIM_RTX = PcapInformation(
             filePath = javaClass.classLoader.getResource("pcaps/1_incoming_participant_rtp_rtcp_sim_rtx.pcap").path,
             srtpData = SrtpData(
-                srtpProfileInformation = SrtpProfileInformation(cipherKeyLength=16, cipherSaltLength=14, cipherName=1, authFunctionName=1, authKeyLength=20, rtcpAuthTagLength=10, rtpAuthTagLength=10),
+                srtpProfileInformation = SrtpProfileInformation(cipherKeyLength = 16, cipherSaltLength = 14, cipherName = 1, authFunctionName = 1, authKeyLength = 20, rtcpAuthTagLength = 10, rtpAuthTagLength = 10),
                 keyingMaterial = byteBufferOf(
                     0x70, 0xD5, 0x56, 0xB1,
                     0xC5, 0xB3, 0xC7, 0x7E,

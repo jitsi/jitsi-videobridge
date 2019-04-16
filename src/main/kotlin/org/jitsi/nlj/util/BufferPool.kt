@@ -16,8 +16,6 @@
 
 package org.jitsi.nlj.util
 
-import java.nio.ByteBuffer
-
 /**
  * All ByteBuffers JMT needs in the pipeline will be acquired via [getBuffer].
  * When we're done with a buffer, we'll pass it to [returnBuffer].  These methods

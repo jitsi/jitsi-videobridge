@@ -36,8 +36,7 @@ class Rfc3711IndexTracker {
      * for the given [seqNum]. If [updateRoc] is [true] and we've rolled over, updates our ROC.
      */
     private fun getIndex(seqNum: Int, updateRoc: Boolean): Int {
-        if (highestSeqNumReceived == -1)
-        {
+        if (highestSeqNumReceived == -1) {
             if (updateRoc) {
                 highestSeqNumReceived = seqNum
             }

@@ -70,7 +70,7 @@ class TccGeneratorNode(
      * TCC packets we generate
      */
     private var mediaSsrcs: MutableSet<Long> = mutableSetOf()
-    private fun <T>MutableSet<T>.firstOr(defaultValue: T): T {
+    private fun <T> MutableSet<T>.firstOr(defaultValue: T): T {
         val iter = iterator()
         return if (iter.hasNext()) iter.next() else defaultValue
     }
@@ -95,7 +95,7 @@ class TccGeneratorNode(
             if (packetArrivalTimes.ceilingKey(windowStartSeq) == null) {
                 // Packets in map are all older than the start of the next tcc feedback packet,
                 // remove them
-                //TODO: chrome does something more advanced. is this good enough?
+                // TODO: chrome does something more advanced. is this good enough?
                 packetArrivalTimes.clear()
             }
             if (windowStartSeq == -1) {
@@ -208,8 +208,8 @@ class TccGeneratorNode(
         val parentStats = super.getNodeStats()
         return NodeStatsBlock(name).apply {
             addAll(parentStats)
-            addStat( "num tcc packets sent: $numTccSent")
-            addStat( "tcc feedback bitrate: ${tccFeedbackBitrate.rate}bps")
+            addStat("num tcc packets sent: $numTccSent")
+            addStat("tcc feedback bitrate: ${tccFeedbackBitrate.rate}bps")
         }
     }
 

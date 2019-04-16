@@ -60,7 +60,7 @@ open class ArrayCache<T>(
      */
     fun insertItem(item: T, index: Int): Boolean =
         if (synchronize) {
-            synchronized (syncRoot) {
+            synchronized(syncRoot) {
                 doInsert(item, index)
             }
         } else {
@@ -106,7 +106,7 @@ open class ArrayCache<T>(
      */
     fun getContainer(index: Int): Container? {
         val result = when {
-            synchronize -> synchronized (syncRoot) {
+            synchronize -> synchronized(syncRoot) {
                 doGet(index)
             }
             else -> doGet(index)
@@ -201,7 +201,7 @@ open class ArrayCache<T>(
 
     private fun doFlush() {
         for (container in cache) {
-            with (container) {
+            with(container) {
                 index = -1
                 item?.let { discardItem(it) }
                 item = null
@@ -220,6 +220,4 @@ open class ArrayCache<T>(
             return Container(item?.let { cloneItem(it) }, index, timeAdded)
         }
     }
-
 }
-

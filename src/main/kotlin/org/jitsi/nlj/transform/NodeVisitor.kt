@@ -39,7 +39,7 @@ abstract class NodeVisitor {
      * we should do for 'visit' as well)
      */
     open fun reverseVisit(node: Node) {
-        //NOTE(brian): although we're doing a reverse visit here, we still visit the nodes
+        // NOTE(brian): although we're doing a reverse visit here, we still visit the nodes
         // in 'forward' order by going up through all the parents first and then calling
         // doWork on our way back 'down', as it's usually more useful to do things like
         // view the stats in the 'normal' order and just use the 'reverse' visit as a

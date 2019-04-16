@@ -27,14 +27,14 @@ class SentRtcpStats : ObserverNode("Sent RTCP stats") {
 
     override fun observe(packetInfo: PacketInfo) {
         val rtcpPacket: RtcpPacket = packetInfo.packetAs()
-        sentRtcpCounts[rtcpPacket::class] = (sentRtcpCounts[rtcpPacket::class] ?: 0 ) + 1
+        sentRtcpCounts[rtcpPacket::class] = (sentRtcpCounts[rtcpPacket::class] ?: 0) + 1
     }
 
     override fun getNodeStats(): NodeStatsBlock {
         val parentStats = super.getNodeStats()
         return NodeStatsBlock(name).apply {
             addAll(parentStats)
-            sentRtcpCounts.forEach {(rtcpType, count) ->
+            sentRtcpCounts.forEach { (rtcpType, count) ->
                 addStat("num $rtcpType packets tx: $count")
             }
         }

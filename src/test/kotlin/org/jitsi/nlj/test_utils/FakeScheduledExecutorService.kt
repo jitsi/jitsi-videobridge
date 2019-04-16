@@ -117,7 +117,7 @@ internal class RecurringJob(command: Runnable, nextRunTime: Instant, val period:
     Job(command, nextRunTime) {
 
     fun updateNextRuntime() {
-        //TODO: this behavior is correct for scheduledAtFixedRate, but wrong for scheduleWithFixedDelay, so
+        // TODO: this behavior is correct for scheduledAtFixedRate, but wrong for scheduleWithFixedDelay, so
         // when we want to support both we'll have to change the way this is calculated
         nextRunTime += period
     }

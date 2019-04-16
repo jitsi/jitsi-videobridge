@@ -20,4 +20,3 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 interface NodeStatsProducer {
     fun getNodeStats(): NodeStatsBlock
 }
-

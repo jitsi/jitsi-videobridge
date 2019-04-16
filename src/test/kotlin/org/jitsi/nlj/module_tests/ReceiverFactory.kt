@@ -41,7 +41,7 @@ class ReceiverFactory {
             headerExtensions: List<RtpExtension>,
             ssrcAssociations: List<SourceAssociation>,
             rtcpSender: (RtcpPacket) -> Unit = {}
-            ): RtpReceiver {
+        ): RtpReceiver {
             val receiver = RtpReceiverImpl(
                 Random().nextLong().toString(),
                 rtcpSender,

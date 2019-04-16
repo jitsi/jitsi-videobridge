@@ -86,11 +86,11 @@ class NackHandler(
 
     override fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("Nack handler").apply {
-            addStat( "num nack packets received: $numNackedPackets")
-            addStat( "num nacked packets: $numNackedPackets")
-            addStat( "num retransmitted packets: $numRetransmittedPackets")
-            addStat( "num packets we didn't retransmit due to having recently resent them: $numPacketsNotResentDueToDelay")
-            addStat( "num cache misses: $numCacheMisses")
+            addStat("num nack packets received: $numNackedPackets")
+            addStat("num nacked packets: $numNackedPackets")
+            addStat("num retransmitted packets: $numRetransmittedPackets")
+            addStat("num packets we didn't retransmit due to having recently resent them: $numPacketsNotResentDueToDelay")
+            addStat("num cache misses: $numCacheMisses")
         }
     }
 }

@@ -17,7 +17,6 @@
 package org.jitsi.nlj.dtls
 
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 
 class DtlsProtocolPacket(
     buf: ByteArray,

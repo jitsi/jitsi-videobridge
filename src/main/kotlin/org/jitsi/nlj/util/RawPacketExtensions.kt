@@ -21,7 +21,6 @@ import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.service.neomedia.RawPacket
 
-
 fun Packet.toLegacyRawPacket(): RawPacket =
     RawPacket(buffer, offset, length)
 

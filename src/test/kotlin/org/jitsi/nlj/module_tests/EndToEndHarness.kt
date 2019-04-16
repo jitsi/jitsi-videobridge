@@ -69,7 +69,7 @@ fun main() {
     val receiver = ReceiverFactory.createReceiver(
         executor, backgroundExecutor, pcap.srtpData,
         pcap.payloadTypes, pcap.headerExtensions, pcap.ssrcAssociations,
-        { rtcpPacket -> sender.sendRtcp(rtcpPacket)})
+        { rtcpPacket -> sender.sendRtcp(rtcpPacket) })
 
     producer.subscribe { pkt ->
         val packetInfo = PacketInfo(pkt)
@@ -94,7 +94,6 @@ fun main() {
             BufferPool.returnBuffer(packetInfo.packet.getBuffer())
         }
     })
-
 
     producer.run()
 

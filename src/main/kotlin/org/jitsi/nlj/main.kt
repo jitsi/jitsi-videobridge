@@ -15,9 +15,7 @@
  */
 package org.jitsi.nlj
 
-
 fun main(args: Array<String>) {
-
 
     /*
     val pg = PacketGenerator()
@@ -55,5 +53,4 @@ fun main(args: Array<String>) {
         }
     }
     */
-
 }

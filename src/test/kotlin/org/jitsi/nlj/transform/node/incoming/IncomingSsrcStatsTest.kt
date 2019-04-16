@@ -58,7 +58,7 @@ private val JitterPacketInfos = listOf(
     createJitterPacketInfo(8, 160, 170, 1.4802),
     createJitterPacketInfo(9, 180, 191, 1.4501),
     createJitterPacketInfo(10, 200, 210, 1.4220),
-    createJitterPacketInfo(11, 220, 229, 	1.3956),
+    createJitterPacketInfo(11, 220, 229, 1.3956),
     createJitterPacketInfo(12, 240, 250, 1.3709),
     createJitterPacketInfo(13, 260, 271, 1.3477)
 )

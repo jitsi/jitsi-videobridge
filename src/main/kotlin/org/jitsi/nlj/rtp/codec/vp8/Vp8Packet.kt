@@ -51,5 +51,4 @@ class Vp8Packet(
 
         return clone
     }
-
 }

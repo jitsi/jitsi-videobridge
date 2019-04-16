@@ -54,5 +54,4 @@ class MediaTypeParser : TransformerNode("Media type parser") {
         }
         super.handleEvent(event)
     }
-
 }

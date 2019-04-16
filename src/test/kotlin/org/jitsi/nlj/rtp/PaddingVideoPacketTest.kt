@@ -19,7 +19,6 @@ package org.jitsi.nlj.rtp
 import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.shouldBe
 import org.jitsi.nlj.util.BufferPool
-import java.util.Random
 
 class PaddingVideoPacketTest : ShouldSpec() {
 
