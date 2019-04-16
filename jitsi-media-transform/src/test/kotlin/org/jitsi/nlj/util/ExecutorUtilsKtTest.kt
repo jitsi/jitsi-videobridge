@@ -21,7 +21,6 @@ import io.kotlintest.shouldThrow
 import io.kotlintest.specs.ShouldSpec
 import java.time.Duration
 import java.util.concurrent.Executors
-import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.LinkedBlockingQueue
 
 internal class ExecutorUtilsKtTest : ShouldSpec() {
@@ -42,7 +41,6 @@ internal class ExecutorUtilsKtTest : ShouldSpec() {
 
                 // This should not throw
                 executor.safeShutdown(Duration.ofSeconds(1))
-
             }
             "with an uninterruptable task" {
                 val queue = LinkedBlockingQueue<Int>()

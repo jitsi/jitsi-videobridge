@@ -58,10 +58,10 @@ class RtcpTermination(
                     // notifyRtcpReceived below
                 }
                 else -> {
-                    logger.cinfo { "TODO: not yet handling RTCP packet of type ${pkt.javaClass}"}
+                    logger.cinfo { "TODO: not yet handling RTCP packet of type ${pkt.javaClass}" }
                 }
             }
-            //TODO: keep an eye on if anything in here takes a while it could slow the packet pipeline down
+            // TODO: keep an eye on if anything in here takes a while it could slow the packet pipeline down
             packetReceiveCounts.merge(pkt::class.simpleName!!, 1, Int::plus)
             rtcpEventNotifier.notifyRtcpReceived(pkt, packetInfo.receivedTime)
         }
@@ -83,7 +83,7 @@ class RtcpTermination(
         val parentStats = super.getNodeStats()
         return NodeStatsBlock(name).apply {
             addAll(parentStats)
-            packetReceiveCounts.forEach {type, count ->
+            packetReceiveCounts.forEach { type, count ->
                 addStat("num $type rx: $count")
             }
         }

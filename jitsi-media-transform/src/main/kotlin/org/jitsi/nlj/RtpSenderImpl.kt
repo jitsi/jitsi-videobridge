@@ -50,21 +50,21 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 
 class RtpSenderImpl(
-        val id: String,
-        transportCcEngine: TransportCCEngine? = null,
-        private val rtcpEventNotifier: RtcpEventNotifier,
-        /**
-         * The executor this class will use for its primary work (i.e. critical path
-         * packet processing).  This [RtpSender] will execute a blocking queue read
-         * on this executor.
-         */
-        val executor: ExecutorService,
-        /**
-         * A [ScheduledExecutorService] which can be used for less important
-         * background tasks, or tasks that need to execute at some fixed delay/rate
-         */
-        val backgroundExecutor: ScheduledExecutorService,
-        logLevelDelegate: Logger? = null
+    val id: String,
+    transportCcEngine: TransportCCEngine? = null,
+    private val rtcpEventNotifier: RtcpEventNotifier,
+    /**
+     * The executor this class will use for its primary work (i.e. critical path
+     * packet processing).  This [RtpSender] will execute a blocking queue read
+     * on this executor.
+     */
+    val executor: ExecutorService,
+    /**
+     * A [ScheduledExecutorService] which can be used for less important
+     * background tasks, or tasks that need to execute at some fixed delay/rate
+     */
+    val backgroundExecutor: ScheduledExecutorService,
+    logLevelDelegate: Logger? = null
 ) : RtpSender() {
     protected val logger = getLogger(classLogger, logLevelDelegate)
     private val outgoingRtpRoot: Node
@@ -77,7 +77,7 @@ class RtpSenderImpl(
     var running = true
     private var localVideoSsrc: Long? = null
     private var localAudioSsrc: Long? = null
-    //TODO(brian): this is changed to a handler instead of a queue because we want to use
+    // TODO(brian): this is changed to a handler instead of a queue because we want to use
     // a PacketQueue, and the handler for a PacketQueue must be set at the time of creation.
     // since we want the handler to be another entity (something in jvb) we just use
     // a generic handler here and then the bridge can put it into its PacketQueue and have
@@ -111,13 +111,13 @@ class RtpSenderImpl(
     private val outputPipelineTerminationNode = object : ConsumerNode("Output pipeline termination node") {
         override fun consume(packetInfo: PacketInfo) {
             if (packetInfo.timeline.totalDelay() > Duration.ofMillis(100)) {
-                logger.cerror { "Packet took >100ms to get through bridge:\n${packetInfo.timeline}"}
+                logger.cerror { "Packet took >100ms to get through bridge:\n${packetInfo.timeline}" }
             }
             // While there's no handler set we're effectively dropping packets, so their buffers
             // should be returned.
             outgoingPacketHandler?.let {
                 it.processPacket(packetInfo)
-            } ?:let {
+            } ?: let {
                 packetDiscarded(packetInfo)
             }
         }
@@ -150,11 +150,11 @@ class RtpSenderImpl(
         nackHandler = NackHandler(outgoingPacketCache.getPacketCache(), outgoingRtxRoot)
         rtcpEventNotifier.addRtcpEventListener(nackHandler)
 
-        //TODO: are we setting outgoing rtcp sequence numbers correctly? just add a simple node here to rewrite them
+        // TODO: are we setting outgoing rtcp sequence numbers correctly? just add a simple node here to rewrite them
         outgoingRtcpRoot = pipeline {
             node(keyframeRequester)
             node(SentRtcpStats())
-            //TODO(brian): not sure this is a great idea.  it works as a catch-call but can also be error-prone
+            // TODO(brian): not sure this is a great idea.  it works as a catch-call but can also be error-prone
             // (i found i was accidentally clobbering the sender ssrc for SRs which caused issues).  I think
             // it'd be better to notify everything creating RTCP the bridge SSRCs and then everything should be
             // responsible for setting it themselves
@@ -190,7 +190,7 @@ class RtpSenderImpl(
 
     override fun sendRtcp(rtcpPacket: RtcpPacket) {
         rtcpEventNotifier.notifyRtcpSent(rtcpPacket)
-        //TODO: do we want to allow for PacketInfo to be passed in to sendRtcp?
+        // TODO: do we want to allow for PacketInfo to be passed in to sendRtcp?
         outgoingRtcpRoot.processPacket(PacketInfo(rtcpPacket))
     }
 

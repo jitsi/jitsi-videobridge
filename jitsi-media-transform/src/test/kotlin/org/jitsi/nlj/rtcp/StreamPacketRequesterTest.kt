@@ -71,14 +71,14 @@ class StreamPacketRequesterTest : ShouldSpec() {
             streamPacketRequester.packetReceived(1)
             streamPacketRequester.packetReceived(3)
             should("be resent 10 times") {
-                repeat (10) { scheduler.runOne() }
+                repeat(10) { scheduler.runOne() }
                 nackPacketsSent.shouldHaveSize(10)
                 // It shouldn't reschedule the job after the 10th time
                 scheduler.numPendingJobs() shouldBe 0
             }
             should("not be sent after the packet has been received") {
                 // Have it send a few nacks
-                repeat (3) { scheduler.runOne() }
+                repeat(3) { scheduler.runOne() }
                 // Now have the missing packet come in
                 streamPacketRequester.packetReceived(2)
                 scheduler.numPendingJobs() shouldBe 0
@@ -99,7 +99,7 @@ class StreamPacketRequesterTest : ShouldSpec() {
                     nackPacketsSent.shouldHaveSize(10)
                     nackPacketsSent.forEach { packet ->
                         packet as RtcpFbNackPacket
-                        packet.missingSeqNums shouldContainExactly  (2..9).toSortedSet()
+                        packet.missingSeqNums shouldContainExactly (2..9).toSortedSet()
                     }
                     scheduler.numPendingJobs() shouldBe 0
                 }
@@ -107,11 +107,11 @@ class StreamPacketRequesterTest : ShouldSpec() {
             "spread out over time" {
                 streamPacketRequester.packetReceived(1)
                 streamPacketRequester.packetReceived(3)
-                repeat (5) { scheduler.runOne() }
+                repeat(5) { scheduler.runOne() }
                 streamPacketRequester.packetReceived(5)
-                repeat (5) { scheduler.runOne() }
+                repeat(5) { scheduler.runOne() }
                 streamPacketRequester.packetReceived(7)
-                repeat (10) { scheduler.runOne() }
+                repeat(10) { scheduler.runOne() }
 
                 should("all be nacked 10 times each over time") {
                     for (missingSeqNum in listOf(2, 4, 6)) {

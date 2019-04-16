@@ -100,7 +100,7 @@ class OutgoingSsrcStats(
     // End variables protected by statsLock
 
     fun packetSent(packetSizeOctets: Int, rtpTimestamp: Long) {
-        synchronized (statsLock) {
+        synchronized(statsLock) {
             packetCount++
             octetCount += packetSizeOctets
             mostRecentRtpTimestamp = rtpTimestamp
@@ -108,7 +108,7 @@ class OutgoingSsrcStats(
     }
 
     fun getSnapshot(): Snapshot {
-        synchronized (statsLock) {
+        synchronized(statsLock) {
             return Snapshot(packetCount, octetCount, mostRecentRtpTimestamp)
         }
     }

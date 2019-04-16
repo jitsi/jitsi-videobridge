@@ -101,7 +101,7 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
         if (!hasPliSupport && !hasFirSupport) {
             return false
         }
-        synchronized (keyframeRequestsSyncRoot) {
+        synchronized(keyframeRequestsSyncRoot) {
             return if (nowMs - keyframeRequests.getOrDefault(mediaSsrc, 0) < waitIntervalMs) {
                 logger.cdebug { "Sent a keyframe request less than ${waitIntervalMs}ms ago for $mediaSsrc, " +
                         "ignoring request" }

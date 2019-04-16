@@ -113,12 +113,11 @@ class TlsClientImpl(
         }
         clientExtensions.put(ExtensionType.renegotiation_info, byteArrayOf(0))
 
-
         return clientExtensions
     }
 
     override fun processServerExtensions(serverExtensions: Hashtable<*, *>?) {
-        //TODO: a few cases we should be throwing alerts for in here.  see old TlsClientImpl
+        // TODO: a few cases we should be throwing alerts for in here.  see old TlsClientImpl
         val useSRTPData = TlsSRTPUtils.getUseSRTPExtension(serverExtensions)
         val protectionProfiles = useSRTPData.protectionProfiles
         chosenSrtpProtectionProfile = DtlsUtils.chooseSrtpProtectionProfile(srtpProtectionProfiles, protectionProfiles)

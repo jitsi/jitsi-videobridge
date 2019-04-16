@@ -21,8 +21,7 @@ import org.jitsi.nlj.util.appendLnIndent
 class NodeStatsBlock(val name: String) {
     val stats = mutableMapOf<String, Any?>()
 
-    fun addStat(name: String, value: Any)
-    {
+    fun addStat(name: String, value: Any) {
         stats[name] = value
     }
 
@@ -38,7 +37,7 @@ class NodeStatsBlock(val name: String) {
     }
 
     fun prettyPrint(indentLevel: Int = 0): String {
-        return with (StringBuffer()) {
+        return with(StringBuffer()) {
             appendLnIndent(indentLevel, name)
             stats.forEach { statName, statValue ->
                 when (statValue) {

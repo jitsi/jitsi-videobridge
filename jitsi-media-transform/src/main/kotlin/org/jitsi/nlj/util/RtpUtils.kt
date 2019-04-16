@@ -18,7 +18,6 @@ package org.jitsi.nlj.util
 import org.jitsi.util.RTPUtils
 import org.jitsi.utils.TimeUtils
 
-
 /**
  * Returns true if getting to [otherSeqNum] from the current sequence number involves wrapping around
  */
@@ -74,8 +73,7 @@ class RtpUtils {
                 currSeqNum = (currSeqNum + 1) % 0x1_0000
                 if (currSeqNum == newerSeqNum) {
                     null
-                }
-                else {
+                } else {
                     currSeqNum
                 }
             }

@@ -82,8 +82,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val logger = getLogger(classLogger, logLevelDelegate)
     private var running: Boolean = true
     private val inputTreeRoot: Node
-    private val incomingPacketQueue
-            = PacketInfoQueue("rtp-receiver-incoming-packet-queue", executor, this::handleIncomingPacket)
+    private val incomingPacketQueue =
+            PacketInfoQueue("rtp-receiver-incoming-packet-queue", executor, this::handleIncomingPacket)
     private val srtpDecryptWrapper = SrtpTransformerNode("SRTP Decrypt node")
     private val srtcpDecryptWrapper = SrtpTransformerNode("SRTCP Decrypt node")
     private val tccGenerator = TccGeneratorNode(rtcpSender, backgroundExecutor)
@@ -249,7 +249,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("RTP receiver $id").apply {
-            addStat( "Received $packetsReceived packets ($bytesReceived bytes) in " + "${lastPacketWrittenTime - firstPacketWrittenTime}ms " + "(${getMbps(bytesReceived, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
+            addStat("Received $packetsReceived packets ($bytesReceived bytes) in " + "${lastPacketWrittenTime - firstPacketWrittenTime}ms " + "(${getMbps(bytesReceived, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
             addStat("Processed $packetsProcessed " + "(${(packetsProcessed / (packetsReceived.toDouble())) * 100}%) ($bytesProcessed bytes) in " + "${lastPacketProcessedTime - firstPacketProcessedTime}ms " + "(${getMbps(bytesProcessed, Duration.ofMillis(lastPacketProcessedTime - firstPacketProcessedTime))} mbps)")
             val queueReadTotal = lastQueueReadTime - firstQueueReadTime
             addStat("Read from queue at a rate of " + "${numQueueReads / (Duration.ofMillis(queueReadTotal).seconds.toDouble())} times per second")

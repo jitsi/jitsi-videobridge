@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.rtcp
 
-import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.IncomingSsrcStats
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -68,7 +67,7 @@ class RtcpRrGenerator(
         when (packet) {
             is RtcpSrPacket -> {
                 // Note the time we received an SR so that it can be used when creating RtcpReportBlocks
-                //TODO: we have a concurrency issue here: we could be halfway through updating the senderinfo when
+                // TODO: we have a concurrency issue here: we could be halfway through updating the senderinfo when
                 // the doWork context thread runs
                 val senderInfo = senderInfos.computeIfAbsent(packet.senderSsrc) { SenderInfo() }
                 senderInfo.lastSrCompactedTimestamp = packet.senderInfo.compactedNtpTimestamp
@@ -105,5 +104,4 @@ class RtcpRrGenerator(
             backgroundExecutor.schedule(this::doWork, 1, TimeUnit.SECONDS)
         }
     }
-
 }

@@ -43,7 +43,8 @@ import kotlin.streams.toList
  * 3) Propagating [visit] calls
  *
  */
-abstract class Node(var name: String
+abstract class Node(
+    var name: String
 ) : PacketHandler, EventHandler, NodeStatsProducer, Stoppable {
 
     private var nextNode: Node? = null
@@ -75,7 +76,6 @@ abstract class Node(var name: String
         nextNode?.removeParent(this)
         nextNode = null
     }
-
 
     fun addParent(newParent: Node) {
         inputNodes.add(newParent)
@@ -131,7 +131,7 @@ abstract class Node(var name: String
  * packet to any children. The intention is for this class to not be subclassed directly, except from classes defined
  * in this file (but making it 'private' doesn't seem possible).
  */
-sealed class StatsKeepingNode(name: String): Node(name) {
+sealed class StatsKeepingNode(name: String) : Node(name) {
     /**
      * The time at which processing of the currently processed packet started (in nanos).
      */
@@ -231,7 +231,6 @@ sealed class StatsKeepingNode(name: String): Node(name) {
         stats.numDiscardedPackets++
         BufferPool.returnBuffer(packetInfo.packet.buffer)
     }
-
 
     override fun stop() {
         if (stopped) {
@@ -375,7 +374,7 @@ typealias PacketInfoPredicate = Predicate<PacketInfo>
 abstract class PredicateFilterNode(
     name: String,
     val predicate: PacketInfoPredicate
-): FilterNode(name) {
+) : FilterNode(name) {
     override fun accept(packetInfo: PacketInfo): Boolean {
         return predicate.test(packetInfo)
     }
@@ -437,7 +436,7 @@ class ConditionalPacketPath() {
     var path: Node by Delegates.notNull()
     var packetsAccepted: Int = 0
 
-    constructor(name: String): this() {
+    constructor(name: String) : this() {
         this.name = name
     }
 }
@@ -465,7 +464,7 @@ abstract class DemuxerNode(name: String) : StatsKeepingNode("$name demuxer") {
     }
 
     fun removePacketPaths() {
-        //TODO: concurrency issues here
+        // TODO: concurrency issues here
         transformPaths.forEach { it.path.removeParent(this) }
         transformPaths.clear()
     }

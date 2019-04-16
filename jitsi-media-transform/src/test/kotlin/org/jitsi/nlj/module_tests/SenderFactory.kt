@@ -65,7 +65,6 @@ class SenderFactory {
             sender.handleEvent(SetLocalSsrcEvent(MediaType.VIDEO, 123))
             sender.handleEvent(SetLocalSsrcEvent(MediaType.AUDIO, 456))
 
-
             return sender
         }
     }

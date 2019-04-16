@@ -84,7 +84,7 @@ class Transceiver(
 
     private var mediaStreamTracks = MediaStreamTracks()
 
-    //NOTE(brian): there were a number of classes in the old code that used this.  I believe it was previously
+    // NOTE(brian): there were a number of classes in the old code that used this.  I believe it was previously
     // held in the VideoChannel.  We'll create one here and pass it where it's needed.
     val diagnosticContext = DiagnosticContext()
 
@@ -134,7 +134,7 @@ class Transceiver(
         bandwidthEstimator.addListener(listener)
     }
 
-    //TODO(brian): we expose this because the bitratecontroller in jvb needs access to it but it just uses it
+    // TODO(brian): we expose this because the bitratecontroller in jvb needs access to it but it just uses it
     // to get the latest estimate, maybe we can give it that information another way without having to expose this
     // (a getLatestAvailableBandwidthEstimate method on transceiver? or something else?  the whole bandwidth estimation
     // flow (abs send time -> transport cc engine -> bandwidthestimator -> sendsidebwe) feels a bit jumpy
@@ -190,7 +190,7 @@ class Transceiver(
         logger.cdebug { "${hashCode()} adding receive ssrc $ssrc" }
         receiveSsrcs.add(ssrc)
         rtpReceiver.handleEvent(ReceiveSsrcAddedEvent(ssrc))
-        //TODO: fire events to rtp sender as well
+        // TODO: fire events to rtp sender as well
     }
 
     fun removeReceiveSsrc(ssrc: Long) {
@@ -217,7 +217,7 @@ class Transceiver(
         return ret
     }
 
-    //TODO(brian): we should only expose an immutable version of this, but Array doesn't have that.  Go in
+    // TODO(brian): we should only expose an immutable version of this, but Array doesn't have that.  Go in
     // and change all the storage of the media stream tracks to use a list
     fun getMediaStreamTracks(): Array<MediaStreamTrackDesc> = mediaStreamTracks.getMediaStreamTracks()
 
@@ -249,7 +249,7 @@ class Transceiver(
 
     fun clearRtpExtensions() {
         logger.cinfo { "Clearing all RTP extensions" }
-        //TODO: ignoring this for now, since we'll have conflicts from each channel calling it
+        // TODO: ignoring this for now, since we'll have conflicts from each channel calling it
 //        val rtpExtensionClearEvent = RtpExtensionClearEvent()
 //        rtpReceiver.handleEvent(rtpExtensionClearEvent)
 //        rtpSender.handleEvent(rtpExtensionClearEvent)
@@ -264,7 +264,7 @@ class Transceiver(
     // TODO(brian): we may want to handle local and remote ssrc associations differently, as different parts of the
     // code care about one or the other, but currently there is no issue treating them the same.
     fun addSsrcAssociation(primarySsrc: Long, secondarySsrc: Long, type: SsrcAssociationType) {
-        logger.cdebug { "Adding SSRC association: $primarySsrc <-> $secondarySsrc ($type)"}
+        logger.cdebug { "Adding SSRC association: $primarySsrc <-> $secondarySsrc ($type)" }
         val ssrcAssociationEvent = SsrcAssociationEvent(primarySsrc, secondarySsrc, type)
         rtpReceiver.handleEvent(ssrcAssociationEvent)
         rtpSender.handleEvent(ssrcAssociationEvent)

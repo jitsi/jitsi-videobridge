@@ -55,7 +55,6 @@ class BurstPacketLoss(
     private var inBurst = false
     private var currentBurstPacketsDropped = 0
 
-
     override fun accept(packetInfo: PacketInfo): Boolean {
         packetsSeen++
         if (packetsSeen % burstInterval == 0) {
@@ -73,5 +72,4 @@ class BurstPacketLoss(
             true
         }
     }
-
 }

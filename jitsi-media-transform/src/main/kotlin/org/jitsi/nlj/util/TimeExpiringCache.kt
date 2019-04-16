@@ -48,14 +48,14 @@ class TimeExpiringCache<IndexType, DataType>(
 
     fun insert(index: IndexType, data: DataType) {
         val container = Container(data, timeProvider.currentTimeMillis())
-        synchronized (cache) {
+        synchronized(cache) {
             cache[index] = container
             clean(timeProvider.currentTimeMillis() - dataTimeout.toMillis())
         }
     }
 
     fun get(index: IndexType): DataType? {
-        synchronized (cache) {
+        synchronized(cache) {
             val container = cache.getOrDefault(index, null) ?: return null
             return container.data
         }
@@ -79,7 +79,7 @@ class TimeExpiringCache<IndexType, DataType>(
     }
 
     private fun clean(expirationTimestamp: Long) {
-        synchronized (cache) {
+        synchronized(cache) {
             val iter = cache.entries.iterator()
             while (iter.hasNext()) {
                 val (_, container) = iter.next()

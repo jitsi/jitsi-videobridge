@@ -61,7 +61,7 @@ class DtlsUtils {
             val localFingerprintHashFunction = x509certificate.getHashFunction()
             val localFingerprint = x509certificate.getFingerprint(localFingerprintHashFunction)
 
-            val certificate =  org.bouncycastle.tls.Certificate(
+            val certificate = org.bouncycastle.tls.Certificate(
                 arrayOf(BcTlsCertificate(BC_TLS_CRYPTO, x509certificate))
             )
             return CertificateInfo(keyPair, certificate, localFingerprintHashFunction, localFingerprint, System.currentTimeMillis())
@@ -137,8 +137,9 @@ class DtlsUtils {
          * @throws [DtlsException] if [certificateInfo] fails validation
          */
         fun verifyAndValidateCertificate(
-                certificateInfo: org.bouncycastle.tls.Certificate,
-                remoteFingerprints: Map<String, String>) {
+            certificateInfo: org.bouncycastle.tls.Certificate,
+            remoteFingerprints: Map<String, String>
+        ) {
 
             if (certificateInfo.certificateList.isEmpty()) {
                 throw DtlsException("No remote fingerprints.")
@@ -161,7 +162,8 @@ class DtlsUtils {
          */
         private fun verifyAndValidateCertificate(
             certificate: org.bouncycastle.asn1.x509.Certificate,
-            remoteFingerprints: Map<String, String>) {
+            remoteFingerprints: Map<String, String>
+        ) {
             // RFC 4572 "Connection-Oriented Media Transport over the Transport
             // Layer Security (TLS) Protocol in the Session Description Protocol
             // (SDP)" defines that "[a] certificate fingerprint MUST be computed
@@ -295,7 +297,6 @@ class DtlsUtils {
 
             if (seedPos != seedLength) {
                 throw IllegalStateException("error in calculation of seed for export")
-
             }
 
             return TlsUtils.PRF(context, masterSecret, asciiLabel, seed, length).extract()
