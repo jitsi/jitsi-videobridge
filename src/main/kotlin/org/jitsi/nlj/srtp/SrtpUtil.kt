@@ -173,7 +173,8 @@ class SrtpUtil {
                 SrtpDecryptTransformer(reverseSrtpContextFactory),
                 SrtpEncryptTransformer(forwardSrtpContextFactory),
                 SrtcpDecryptTransformer(reverseSrtpContextFactory),
-                SrtcpEncryptTransformer(forwardSrtpContextFactory))
-       }
+                SrtcpEncryptTransformer(forwardSrtpContextFactory)
+            )
+        }
     }
 }
