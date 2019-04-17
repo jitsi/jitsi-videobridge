@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge;
 
-import org.bouncycastle.crypto.tls.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -27,6 +26,7 @@ import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.*;
+import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
@@ -435,6 +435,16 @@ public class Endpoint
             {
                 return false;
             }
+            else if (packetInfo.getPacket() instanceof RtcpFbPacket)
+            {
+                RtcpFbPacket rtcpPacket = (RtcpFbPacket) packetInfo.getPacket();
+                return receivesSsrc(rtcpPacket.getMediaSourceSsrc());
+            }
+            else if (packetInfo.getPacket() instanceof RtcpSrPacket)
+            {
+                // TODO(george) we're only interested in the ntp/rtp timestamp association, so only accept srs from the main ssrc
+                return true;
+            }
 
             Packet rtpPacket = packetInfo.getPacket();
             if (rtpPacket instanceof RtpPacket)
@@ -482,7 +492,13 @@ public class Endpoint
         Packet packet = packetInfo.getPacket();
         if (packet instanceof RtcpSrPacket)
         {
-            bitrateController.transformRtcp((RtcpSrPacket) packet);
+            RtcpSrPacket rtcpSrPacket = (RtcpSrPacket) packet;
+            if (bitrateController.transformRtcp(rtcpSrPacket))
+            {
+                logger.info("relaying an sr from ssrc=" + rtcpSrPacket.getSenderSsrc()
+                    + ", timestamp=" + rtcpSrPacket.getSenderInfo().getRtpTimestamp());
+                transceiver.sendRtcp(rtcpSrPacket);
+            }
         }
     }
 

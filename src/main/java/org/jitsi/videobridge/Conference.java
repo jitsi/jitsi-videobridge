@@ -1132,15 +1132,10 @@ public class Conference
      */
     void handleIncomingRtcp(PacketInfo packetInfo, AbstractEndpoint source)
     {
+        String sourceEpId = source != null ? source.getID() : null;
         endpointsCache.forEach(endpoint -> {
-            if (packetInfo.getPacket() instanceof RtcpFbPacket)
-            {
-                RtcpFbPacket rtcpPacket = (RtcpFbPacket) packetInfo.getPacket();
-                if (endpoint.receivesSsrc(rtcpPacket.getMediaSourceSsrc()))
-                {
-                    endpoint.getTransceiver().sendRtcp(rtcpPacket);
-                }
-            }
+            if (endpoint.wants(packetInfo, sourceEpId))
+                endpoint.sendRtcp(packetInfo.clone(), sourceEpId);
         });
 
         //TODO Octo
