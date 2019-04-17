@@ -53,6 +53,7 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.util.RTCPUtils
 import org.jitsi.utils.logging.Logger
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
+import java.lang.Double.max
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
@@ -247,15 +248,27 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun processPacket(packetInfo: PacketInfo) = inputTreeRoot.processPacket(packetInfo)
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return NodeStatsBlock("RTP receiver $id").apply {
-            addStat("Received $packetsReceived packets ($bytesReceived bytes) in " + "${lastPacketWrittenTime - firstPacketWrittenTime}ms " + "(${getMbps(bytesReceived, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
-            addStat("Processed $packetsProcessed " + "(${(packetsProcessed / (packetsReceived.toDouble())) * 100}%) ($bytesProcessed bytes) in " + "${lastPacketProcessedTime - firstPacketProcessedTime}ms " + "(${getMbps(bytesProcessed, Duration.ofMillis(lastPacketProcessedTime - firstPacketProcessedTime))} mbps)")
-            val queueReadTotal = lastQueueReadTime - firstQueueReadTime
-            addStat("Read from queue at a rate of " + "${numQueueReads / (Duration.ofMillis(queueReadTotal).seconds.toDouble())} times per second")
-            addStat("The queue was empty $numTimesQueueEmpty out of $numQueueReads times")
-            NodeStatsVisitor(this).visit(inputTreeRoot)
-        }
+    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("RTP receiver $id").apply {
+        addNumber("received_packets", packetsReceived)
+        addNumber("received_bytes", bytesReceived)
+        val duration = Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime)
+        addNumber("received_bitrate_mbps", getMbps(bytesReceived, duration))
+        addNumber("received_duration_seconds", duration.seconds)
+
+        addNumber("processed_packets", packetsProcessed)
+        addNumber("processed_packets_percent", 100 * (packetsProcessed / max(1.0, packetsReceived.toDouble())))
+        addNumber("processed_bytes_mbps", bytesProcessed)
+        val processingDuration = Duration.ofMillis(lastPacketProcessedTime - firstPacketProcessedTime)
+        addNumber("processed_bitrate", getMbps(bytesProcessed, processingDuration))
+        addNumber("processed_duration_seconds", processingDuration.seconds)
+        val queueReadTotal = lastQueueReadTime - firstQueueReadTime
+        addNumber("average_queue_reads_per_second",
+                numQueueReads / (Duration.ofMillis(queueReadTotal).seconds.toDouble()))
+        addNumber("num_queue_reads", numQueueReads)
+        addNumber("num_times_queue_empty", numTimesQueueEmpty)
+
+        addString("running", running.toString())
+        NodeStatsVisitor(this).visit(inputTreeRoot)
     }
 
     override fun enqueuePacket(p: PacketInfo) {

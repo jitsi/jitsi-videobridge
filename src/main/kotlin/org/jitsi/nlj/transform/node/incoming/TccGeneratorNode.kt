@@ -35,7 +35,6 @@ import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi.rtp.util.RtpUtils
-import org.jitsi.rtp.util.RtpUtils.Companion.getSequenceNumberDelta
 import org.jitsi.utils.stats.RateStatistics
 import unsigned.toUInt
 import java.util.TreeMap
@@ -205,11 +204,9 @@ class TccGeneratorNode(
     }
 
     override fun getNodeStats(): NodeStatsBlock {
-        val parentStats = super.getNodeStats()
-        return NodeStatsBlock(name).apply {
-            addAll(parentStats)
-            addStat("num tcc packets sent: $numTccSent")
-            addStat("tcc feedback bitrate: ${tccFeedbackBitrate.rate}bps")
+        return super.getNodeStats().apply {
+            addNumber("num_tcc_packets_sent", numTccSent)
+            addNumber("tcc_feedback_bitrate_bps", tccFeedbackBitrate.rate)
         }
     }
 

@@ -53,7 +53,7 @@ abstract class NodeVisitor {
 class NodeStatsVisitor(val nodeStatsBlock: NodeStatsBlock) : NodeVisitor() {
     override fun doWork(node: Node) {
         val block = node.getNodeStats()
-        nodeStatsBlock.addStat(block.name, block)
+        nodeStatsBlock.addBlock(block)
     }
 }
 

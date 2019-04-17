@@ -89,13 +89,10 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
     }
 
     override fun getNodeStats(): NodeStatsBlock {
-        val parentStats = super.getNodeStats()
-        return NodeStatsBlock(name).apply {
-            addAll(parentStats)
-            addStat("num cached packets: ${cachedPackets.size}")
+        return super.getNodeStats().apply {
+            addNumber("num_cached_packets", cachedPackets.size)
             val timeBetweenReceivedAndForwarded = firstPacketForwardedTimestamp - firstPacketReceivedTimestamp
-            addStat("time between first packet received and first forwarded: " +
-                    "$timeBetweenReceivedAndForwarded ms")
+            addNumber("time_initial_hold_ms", timeBetweenReceivedAndForwarded)
         }
     }
 

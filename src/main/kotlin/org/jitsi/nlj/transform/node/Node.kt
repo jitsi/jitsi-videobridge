@@ -173,9 +173,11 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
     override fun getNodeStats() = NodeStatsBlock("Node $name ${hashCode()}").apply {
         this@StatsKeepingNode.stats.appendTo(this)
         val numBytes = this@StatsKeepingNode.stats.numInputBytes
-        addStat("$numBytes bytes over ${Duration.ofNanos(lastPacketTime - firstPacketTime).toMillis()} ms")
-        addStat(
-            "throughput: ${getMbps(numBytes, Duration.ofNanos(lastPacketTime - firstPacketTime))} mbps")
+
+        val duration = Duration.ofNanos(lastPacketTime - firstPacketTime)
+        addNumber("num_input_bytes", numBytes)
+        addNumber("duration_ms", duration.toMillis())
+        addNumber("throughput_mbps", getMbps(numBytes, duration))
     }
 
     private fun onEntry(packetInfo: PacketInfo) {
@@ -240,8 +242,8 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
 
         if (enableStatistics && stats.numInputPackets > 0) {
             synchronized(globalStats) {
-                val classStats = globalStats.computeIfAbsent(this::class.toString()) { NodeStats() }
-                classStats.aggregate(stats)
+                val classStats = globalStats.computeIfAbsent(name) { NodeStatsBlock(name) }
+                classStats.aggregate(getNodeStats())
             }
         }
     }
@@ -250,7 +252,7 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
         /**
          * Maps a [Node]'s class name to a [NodeStats] object with aggregated stats for all instances of that class.
          */
-        private val globalStats: MutableMap<String, NodeStats> = ConcurrentHashMap()
+        private val globalStats: MutableMap<String, NodeStatsBlock> = ConcurrentHashMap()
 
         var enableStatistics = true
 
@@ -260,12 +262,15 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
         fun getStatsJson(): JSONObject {
             val jsonObject = JSONObject()
             globalStats.forEach { className, stats ->
-                jsonObject[className] = stats.getJson()
+                jsonObject[className] = stats.toJson()
             }
             return jsonObject
         }
     }
 
+    /**
+     * This just holds the stats kept by [StatsKeepingNode] itself.
+     */
     data class NodeStats(
         /**
          * Total nanoseconds spent processing packets in this node.
@@ -280,10 +285,6 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
          */
         var maxProcessingDurationNs: Long = -1
     ) {
-        /**
-         * How many class instances have been aggregated
-         */
-        private var numAggregates: Int = 0
         private val averageProcessingTimePerPacketNs
             get() = totalProcessingDurationNs / Math.max(numInputPackets, 1)
         private val processingThroughputMbps
@@ -295,39 +296,13 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
 
         fun appendTo(block: NodeStatsBlock) {
             block.apply {
-                addStat("numInputPackets: $numInputPackets")
-                addStat("numOutputPackets: $numOutputPackets")
-                addStat("numDiscardedPackets: $numDiscardedPackets")
-                addStat("total time spent: $totalProcessingDurationMs ms")
-                addStat("average time spent per packet: $averageProcessingTimePerPacketNs ns")
-                addStat("processing throughput: $processingThroughputMbps Mbps")
-                addStat("max packet process time: $maxProcessingDurationMs ms")
-            }
-        }
-
-        fun getJson(): JSONObject {
-            val jsonObject = JSONObject()
-            jsonObject["total_processing_duration_ms"] = totalProcessingDurationMs
-            jsonObject["input_packets"] = numInputPackets
-            jsonObject["output_packets"] = numOutputPackets
-            jsonObject["input_bytes"] = numInputBytes
-            jsonObject["discarded_packets"] = numDiscardedPackets
-            jsonObject["max_processing_duration_ms"] = maxProcessingDurationMs
-            jsonObject["average_processing_time_ns"] = averageProcessingTimePerPacketNs
-            jsonObject["processing_throughput_mbps"] = processingThroughputMbps
-            jsonObject["num_aggregates"] = numAggregates
-            return jsonObject
-        }
-
-        fun aggregate(other: NodeStats) {
-            if (other.numInputPackets > 0) {
-                numAggregates++
-                totalProcessingDurationNs += other.totalProcessingDurationNs
-                numInputPackets += other.numInputPackets
-                numOutputPackets += other.numOutputPackets
-                numInputBytes += other.numInputBytes
-                numDiscardedPackets += other.numDiscardedPackets
-                maxProcessingDurationNs = Math.max(maxProcessingDurationNs, other.maxProcessingDurationNs)
+                addNumber("num_input_packets", numInputPackets)
+                addNumber("num_output_packets", numOutputPackets)
+                addNumber("num_discarded_packets", numDiscardedPackets)
+                addNumber("total_time_spent_ms", totalProcessingDurationMs)
+                addNumber("average_time_spent_per_packet_ns", averageProcessingTimePerPacketNs)
+                addNumber("processing_throughput_mbps", processingThroughputMbps)
+                addNumber("max_packet_process_time", maxProcessingDurationMs)
             }
         }
     }
@@ -484,12 +459,9 @@ abstract class DemuxerNode(name: String) : StatsKeepingNode("$name demuxer") {
     override fun getNodeStats(): NodeStatsBlock {
         val superStats = super.getNodeStats()
 
-        val demuxerBlock = NodeStatsBlock("Path packet counts:")
         transformPaths.forEach { path ->
-            demuxerBlock.addStat("${path.name}: ${path.packetsAccepted}")
+            superStats.addNumber("packets_accepted_${path.name}", path.packetsAccepted)
         }
-        superStats.addStat(demuxerBlock.name, demuxerBlock)
-
         return superStats
     }
 }
