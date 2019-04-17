@@ -159,11 +159,9 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
     }
 
     override fun getNodeStats(): NodeStatsBlock {
-        val parentStats = super.getNodeStats()
-        return NodeStatsBlock(name).apply {
-            addAll(parentStats)
-            addStat("num keyframes requested by the bridge: $numKeyframesRequestedByBridge")
-            addStat("num keyframes dropped due to throttling: $numKeyframeRequestsDropped")
+        return super.getNodeStats().apply {
+            addNumber("num_keyframes_requested_by_the_bridge", numKeyframesRequestedByBridge)
+            addNumber("num_keyframes_dropped_due_to_throttling", numKeyframeRequestsDropped)
         }
     }
 

@@ -166,7 +166,7 @@ class ProbingDataSender(
                 videoPayloadTypes.clear()
             }
             is SetLocalSsrcEvent -> {
-                if (MediaType.VIDEO.equals(event.mediaType)) {
+                if (MediaType.VIDEO == event.mediaType) {
                     logger.cdebug { "Setting video ssrc to ${event.ssrc}" }
                     localVideoSsrc = event.ssrc
                 }
@@ -176,8 +176,8 @@ class ProbingDataSender(
 
     override fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("Probing data sender").apply {
-            addStat("num bytes of probing data sent as RTX: $numProbingBytesSentRtx")
-            addStat("num bytes of probing data sent as dummy: $numProbingBytesSentDummyData")
+            addNumber("num_bytes_of_probing_data_sent_as_rtx", numProbingBytesSentRtx)
+            addNumber("num_bytes_of_probing_data_sent_as_dummy", numProbingBytesSentDummyData)
         }
     }
 }

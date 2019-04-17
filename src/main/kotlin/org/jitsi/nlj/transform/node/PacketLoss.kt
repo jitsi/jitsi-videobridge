@@ -17,6 +17,7 @@ package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
+import java.lang.Double.max
 import java.util.Random
 
 /**
@@ -37,11 +38,9 @@ class PacketLoss(private val lossRate: Double) : FilterNode("Packet loss") {
     }
 
     override fun getNodeStats(): NodeStatsBlock {
-        val parentStats = super.getNodeStats()
-        return NodeStatsBlock(name).apply {
-            addAll(parentStats)
-            addStat("configured drop rate: $lossRate, actual drop " +
-                    "rate: ${packetsDropped / packetsSeen.toDouble()}")
+        return super.getNodeStats().apply {
+            addNumber("configured_drop_rate", lossRate)
+            addNumber("actual_drop_rate", packetsDropped / max(1.0, packetsSeen.toDouble()))
         }
     }
 }

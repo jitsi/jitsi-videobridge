@@ -95,13 +95,11 @@ class IncomingStatisticsTracker : ObserverNode("Incoming statistics tracker") {
     }
 
     override fun getNodeStats(): NodeStatsBlock {
-        val parentStats = super.getNodeStats()
-        return NodeStatsBlock(name).apply {
-            addAll(parentStats)
+        return super.getNodeStats().apply {
             val stats = getSnapshot()
             stats.ssrcStats.forEach { ssrc, streamStats ->
-                addStat("source: $ssrc")
-                addStat(streamStats.toString())
+                addNumber("source_ssrc", ssrc)
+                addString("stream_stats", streamStats.toString())
             }
         }
     }

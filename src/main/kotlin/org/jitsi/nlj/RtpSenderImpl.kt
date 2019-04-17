@@ -232,20 +232,29 @@ class RtpSenderImpl(
         probingDataSender.handleEvent(event)
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        val bitRateMbps = getMbps(numBytesSent, Duration.ofMillis(lastPacketSentTime - firstPacketSentTime))
-        return NodeStatsBlock("RTP sender $id").apply {
-            addStat("$numIncomingBytes incoming bytes in ${lastPacketWrittenTime - firstPacketWrittenTime} (${getMbps(numIncomingBytes, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
-            addStat("Sent $numPacketsSent packets in ${lastPacketSentTime - firstPacketSentTime} ms")
-            addStat("Sent $numBytesSent bytes in ${lastPacketSentTime - firstPacketSentTime} ms ($bitRateMbps mbps)")
-            val queueReadTotal = lastQueueReadTime - firstQueueReadTime
-            addStat("Read from queue at a rate of " +
-                    "${numQueueReads / (Duration.ofMillis(queueReadTotal).seconds.toDouble())} times per second")
-            addStat("The queue was empty $numTimesQueueEmpty out of $numQueueReads times")
-            addStat("Nack handler", nackHandler.getNodeStats())
-            addStat("Probing data sender", probingDataSender.getNodeStats())
-            NodeStatsVisitor(this).reverseVisit(outputPipelineTerminationNode)
-        }
+    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("RTP sender $id").apply {
+        val duration = Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime)
+        addNumber("incoming_bytes", numIncomingBytes)
+        addNumber("incoming_duration_seconds", duration.seconds)
+        addNumber("incoming_bitrate_mbps", getMbps(numIncomingBytes, duration))
+
+        val sentDuration = Duration.ofMillis(lastPacketSentTime - firstPacketSentTime)
+        addNumber("sent_packets", numPacketsSent)
+        addNumber("sent_duration_seconds", duration.seconds)
+        addNumber("sent_bytes", numBytesSent)
+        addNumber("sent_bitrate_mbps", getMbps(numBytesSent, sentDuration))
+
+        val queueReadDuration = Duration.ofMillis(lastQueueReadTime - firstQueueReadTime)
+        addNumber("queue_average_reads_per_second", numQueueReads / queueReadDuration.seconds.toDouble())
+        addNumber("num_times_queue_empty", numTimesQueueEmpty)
+        addNumber("num_queue_reads", numQueueReads)
+        addBlock(nackHandler.getNodeStats())
+        addBlock(probingDataSender.getNodeStats())
+        NodeStatsVisitor(this).reverseVisit(outputPipelineTerminationNode)
+
+        addString("running", running.toString())
+        addString("localVideoSsrc", localVideoSsrc?.toString() ?: "null")
+        addString("localAudioSsrc", localAudioSsrc?.toString() ?: "null")
     }
 
     override fun stop() {
