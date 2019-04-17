@@ -84,13 +84,11 @@ class NackHandler(
         currRtt = newRtt
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return NodeStatsBlock("Nack handler").apply {
-            addStat("num nack packets received: $numNackedPackets")
-            addStat("num nacked packets: $numNackedPackets")
-            addStat("num retransmitted packets: $numRetransmittedPackets")
-            addStat("num packets we didn't retransmit due to having recently resent them: $numPacketsNotResentDueToDelay")
-            addStat("num cache misses: $numCacheMisses")
-        }
+    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("Nack handler").apply {
+        addNumber("num_nack_packets_received", numNackedPackets)
+        addNumber("num_nacked_packets", numNackedPackets)
+        addNumber("num_retransmitted_packets", numRetransmittedPackets)
+        addNumber("num_packets_not_retransmitted", numPacketsNotResentDueToDelay)
+        addNumber("num_cache_misses", numCacheMisses)
     }
 }

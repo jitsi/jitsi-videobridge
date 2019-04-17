@@ -115,11 +115,9 @@ class RtxHandler : TransformerNode("RTX handler") {
     }
 
     override fun getNodeStats(): NodeStatsBlock {
-        val parentStats = super.getNodeStats()
-        return NodeStatsBlock(name).apply {
-            addAll(parentStats)
-            addStat("num rtx packets received: $numRtxPacketsReceived")
-            addStat("num padding packets received: $numPaddingPacketsReceived")
+        return super.getNodeStats().apply {
+            addNumber("num_rtx_packets_received", numRtxPacketsReceived)
+            addNumber("num_padding_packets_received", numPaddingPacketsReceived)
         }
     }
 }

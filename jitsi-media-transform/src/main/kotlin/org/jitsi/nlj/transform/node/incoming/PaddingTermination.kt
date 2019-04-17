@@ -42,10 +42,8 @@ class PaddingTermination : FilterNode("Padding termination") {
     }
 
     override fun getNodeStats(): NodeStatsBlock {
-        val parentStats = super.getNodeStats()
-        return NodeStatsBlock(name).apply {
-            addAll(parentStats)
-            addStat("num padding packets seen: $numPaddingPacketsSeen")
+        return super.getNodeStats().apply {
+            addNumber("num_padding_packets_seen", numPaddingPacketsSeen)
         }
     }
 }

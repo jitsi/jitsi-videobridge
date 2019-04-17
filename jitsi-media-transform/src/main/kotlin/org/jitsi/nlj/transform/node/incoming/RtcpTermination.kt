@@ -88,11 +88,9 @@ class RtcpTermination(
     }
 
     override fun getNodeStats(): NodeStatsBlock {
-        val parentStats = super.getNodeStats()
-        return NodeStatsBlock(name).apply {
-            addAll(parentStats)
+        return super.getNodeStats().apply {
             packetReceiveCounts.forEach { type, count ->
-                addStat("num $type rx: $count")
+                addNumber("num_${type}_rx", count)
             }
         }
     }

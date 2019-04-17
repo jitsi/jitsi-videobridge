@@ -20,7 +20,8 @@ import java.time.Duration
 class Util {
     companion object {
         fun getMbps(numBytes: Long, duration: Duration): Double {
-            return (numBytes * 8.0) / (duration.toMillis() * 1000)
+            val mbps = (numBytes * 8.0) / (duration.toMillis() * 1000)
+            return if (mbps == Double.NaN) -1.0 else mbps
         }
     }
 }

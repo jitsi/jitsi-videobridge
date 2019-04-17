@@ -52,10 +52,8 @@ class Vp8Parser : TransformerNode("Vp8 parser") {
     }
 
     override fun getNodeStats(): NodeStatsBlock {
-        val parentStats = super.getNodeStats()
-        return NodeStatsBlock(name).apply {
-            addAll(parentStats)
-            addStat("num keyframes: $numKeyframes")
+        return super.getNodeStats().apply {
+            addNumber("num_keyframes", numKeyframes)
         }
     }
 }

@@ -113,11 +113,9 @@ class RetransmissionSender : TransformerNode("Retransmission sender") {
     }
 
     override fun getNodeStats(): NodeStatsBlock {
-        val parentStats = super.getNodeStats()
-        return NodeStatsBlock(name).apply {
-            addAll(parentStats)
-            addStat("num retransmissions requested: $numRetransmissionsRequested")
-            addStat("num retransmissions sent: $numRetransmittedPackets")
+        return super.getNodeStats().apply {
+            addNumber("num_retransmissions_requested", numRetransmissionsRequested)
+            addNumber("num_retransmissions_sent", numRetransmittedPackets)
         }
     }
 }
