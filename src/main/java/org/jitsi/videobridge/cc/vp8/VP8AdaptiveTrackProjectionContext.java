@@ -407,29 +407,27 @@ public class VP8AdaptiveTrackProjectionContext
         {
             return false;
         }
-        else
+
+        long srcTs = rtcpSrPacket.getSenderInfo().getRtpTimestamp();
+        long delta = RTPUtils.rtpTimestampDiff(
+            lastVP8FrameProjectionCopy.getTimestamp(),
+            lastVP8FrameProjectionCopy.getVP8Frame().getTimestamp());
+
+        long dstTs = RTPUtils.as32Bits(srcTs + delta);
+
+        if (srcTs != dstTs)
         {
-            long srcTs = rtcpSrPacket.getSenderInfo().getRtpTimestamp();
-            long delta = RTPUtils.rtpTimestampDiff(
-                lastVP8FrameProjectionCopy.getTimestamp(),
-                lastVP8FrameProjectionCopy.getVP8Frame().getTimestamp());
-
-            long dstTs = RTPUtils.as32Bits(srcTs + delta);
-
-            if (srcTs != dstTs)
-            {
-                rtcpSrPacket.getSenderInfo().setRtpTimestamp(dstTs);
-            }
-
-            // Rewrite packet/octet count.
-            synchronized (transmittedSyncRoot)
-            {
-                rtcpSrPacket.getSenderInfo().setSendersOctetCount(transmittedBytes);
-                rtcpSrPacket.getSenderInfo().setSendersPacketCount(transmittedPackets);
-            }
-
-            return true;
+            rtcpSrPacket.getSenderInfo().setRtpTimestamp(dstTs);
         }
+
+        // Rewrite packet/octet count.
+        synchronized (transmittedSyncRoot)
+        {
+            rtcpSrPacket.getSenderInfo().setSendersOctetCount(transmittedBytes);
+            rtcpSrPacket.getSenderInfo().setSendersPacketCount(transmittedPackets);
+        }
+
+        return true;
     }
 
     @Override
