@@ -245,10 +245,9 @@ public class Endpoint
                     }
                 });
         bitrateController = new BitrateController(
-                getID(),
+                this,
                 conference.getLogger(),
-                transceiver.getDiagnosticContext(),
-                this::requestKeyframe);
+                transceiver.getDiagnosticContext());
 
         messageTransport = new EndpointMessageTransport(this);
 
@@ -989,6 +988,42 @@ public class Endpoint
     }
 
     /**
+     * Sends a message to this {@link Endpoint} in order to notify it that the list/set of {@code lastN} has changed.
+     *
+     * @param forwardedEndpoints the collection of forwarded endpoints.
+     * @param endpointsEnteringLastN the <tt>Endpoint</tt>s which are entering
+     * the list of <tt>Endpoint</tt>s defined by <tt>lastN</tt>
+     * @param conferenceEndpoints the collection of all endpoints in the
+     * conference.
+     */
+    public void sendLastNEndpointsChangeEvent(
+        Collection<String> forwardedEndpoints,
+        Collection<String> endpointsEnteringLastN,
+        Collection<String> conferenceEndpoints)
+    {
+        // We want endpointsEnteringLastN to always to reported. Consequently,
+        // we will pretend that all lastNEndpoints are entering if no explicit
+        // endpointsEnteringLastN is specified.
+        // XXX do we really want that?
+        if (endpointsEnteringLastN == null)
+        {
+            endpointsEnteringLastN = forwardedEndpoints;
+        }
+
+        String msg = createLastNEndpointsChangeEvent(
+            forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints);
+
+        try
+        {
+            sendMessage(msg);
+        }
+        catch (IOException e)
+        {
+            logger.error("Failed to send message on data channel.", e);
+        }
+    }
+
+    /**
      * Sets the remote transport information (ICE candidates, DTLS fingerprints).
      *
      * @param transportInfo the XML extension which contains the remote
@@ -1146,7 +1181,7 @@ public class Endpoint
      * a specific SSRC.
      * @param ssrc the ssec
      */
-    private void requestKeyframe(long ssrc)
+    public void requestKeyframe(long ssrc)
     {
         AbstractEndpoint endpoint
                 = getConference().findEndpointByReceiveSSRC(
