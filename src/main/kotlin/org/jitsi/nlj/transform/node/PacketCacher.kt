@@ -16,6 +16,7 @@
 package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.util.PacketCache
 
 class PacketCacher : ObserverNode("Packet cache") {
@@ -31,4 +32,10 @@ class PacketCacher : ObserverNode("Packet cache") {
     }
 
     fun getPacketCache(): PacketCache = packetCache
+
+    override fun getNodeStats(): NodeStatsBlock {
+        return super.getNodeStats().apply {
+            addBlock(packetCache.getNodeStats())
+        }
+    }
 }

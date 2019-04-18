@@ -38,6 +38,13 @@ class NodeStatsBlock(val name: String) {
     }
 
     /**
+     * Adds a stat with a boolean value.
+     */
+    fun addBoolean(name: String, value: Boolean) {
+        doAddStat(name, value)
+    }
+
+    /**
      * Adds another [NodeStatsBlock] as a child.
      */
     fun addBlock(otherBlock: NodeStatsBlock) {
