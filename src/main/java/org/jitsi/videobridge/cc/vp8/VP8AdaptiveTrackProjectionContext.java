@@ -21,6 +21,7 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.PacketCache;
 import org.jitsi.rtp.rtcp.*;
+import org.jitsi.rtp.util.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.utils.*;
@@ -409,11 +410,11 @@ public class VP8AdaptiveTrackProjectionContext
         }
 
         long srcTs = rtcpSrPacket.getSenderInfo().getRtpTimestamp();
-        long delta = RTPUtils.rtpTimestampDiff(
+        long delta = RtpUtils.Companion.getTimestampDiff(
             lastVP8FrameProjectionCopy.getTimestamp(),
             lastVP8FrameProjectionCopy.getVP8Frame().getTimestamp());
 
-        long dstTs = RTPUtils.as32Bits(srcTs + delta);
+        long dstTs = (srcTs + delta) & 0xFFFF_FFFFL;
 
         if (srcTs != dstTs)
         {
