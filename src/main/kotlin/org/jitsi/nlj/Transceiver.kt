@@ -291,18 +291,16 @@ class Transceiver(
      */
     override fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("Transceiver $id").apply {
-            val rtpExtensionsBlock = NodeStatsBlock("rtpExtensions")
-            rtpExtensions.forEach {
-                rtpExtensionsBlock.addString(it.key.toString(), it.value.type.toString())
-            }
-            addBlock(rtpExtensionsBlock)
-
-            val payloadTypesBlock = NodeStatsBlock("payloadTypes")
-            payloadTypes.forEach {
-                payloadTypesBlock.addString(it.key.toString(), it.value.toString())
-            }
-            addBlock(payloadTypesBlock)
-
+            addBlock(NodeStatsBlock("rtpExtensions").apply {
+                rtpExtensions.forEach {
+                    addString(it.key.toString(), it.value.type.toString())
+                }
+            })
+            addBlock(NodeStatsBlock("payloadTypes").apply {
+                payloadTypes.forEach {
+                    addString(it.key.toString(), it.value.toString())
+                }
+            })
             addString("receiveSsrcs", receiveSsrcs.toString())
             addBlock(mediaStreamTracks.getNodeStats())
             addString("endpointConnectionStats", endpointConnectionStats.getSnapshot().toString())
