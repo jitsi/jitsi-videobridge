@@ -162,7 +162,7 @@ public class BitrateController
      * The default value of the bandwidth change threshold above which we react
      * with a new bandwidth allocation.
      */
-    private static int BWE_CHANGE_THRESHOLD_PCT_DEFAULT = 15;
+    private static final int BWE_CHANGE_THRESHOLD_PCT_DEFAULT = 15;
 
     /**
      * The ConfigurationService to get config values from.
@@ -310,17 +310,14 @@ public class BitrateController
     /**
      * The last-n value for the endpoint to which this {@link BitrateController} belongs
      */
-    int lastN = -1;
+    private int lastN = -1;
 
     /**
      * The ID of the endpoint to which this {@link BitrateController} belongs
      */
-    private final String destinationEndpointId;
+    private final Endpoint destinationEndpoint;
 
     private final DiagnosticContext diagnosticContext;
-
-    private final Consumer<Long> keyframeRequester;
-
 
     //TODO(brian): throwing this here temporarily because it's needed and it used to be pulled from the Stream.
     // this was really an approximation for determining whether or not adaptivity/probing is supported, so we should
@@ -332,18 +329,15 @@ public class BitrateController
     /**
      * Initializes a new {@link BitrateController} instance which is to
      * belong to a particular {@link Endpoint}.
-     *
      */
     public BitrateController(
-            String destinationEndpointId,
+            Endpoint destinationEndpoint,
             Logger logLevelDelegate,
-            @NotNull DiagnosticContext diagnosticContext,
-            Consumer<Long> keyframeRequester)
+            @NotNull DiagnosticContext diagnosticContext)
     {
-        this.destinationEndpointId = destinationEndpointId;
+        this.destinationEndpoint = destinationEndpoint;
         this.logger = Logger.getLogger(classLogger, logLevelDelegate);
         this.diagnosticContext = diagnosticContext;
-        this.keyframeRequester = keyframeRequester;
 
         ConfigurationService cfg = LibJitsi.getConfigurationService();
 
@@ -539,7 +533,7 @@ public class BitrateController
     {
         if (logger.isDebugEnabled())
         {
-            logger.debug(destinationEndpointId + " bandwidth has changed, updating");
+            logger.debug(destinationEndpoint.getID() + " bandwidth has changed, updating");
         }
 
         if (!isLargerThanBweThreshold(lastBwe, newBandwidthBps))
@@ -571,7 +565,7 @@ public class BitrateController
     {
         if (logger.isDebugEnabled())
         {
-            logger.debug(destinationEndpointId + " endpoint ordering has changed, updating");
+            logger.debug(destinationEndpoint.getID() + " endpoint ordering has changed, updating");
         }
         update(conferenceEndpoints, getAvailableBandwidth());
     }
@@ -584,7 +578,7 @@ public class BitrateController
     {
         if (logger.isDebugEnabled())
         {
-            logger.debug(destinationEndpointId + " constraints have changed, updating");
+            logger.debug(destinationEndpoint.getID() + " constraints have changed, updating");
         }
         // Neither the endpoints list nor the available bandwidth has changed, so we
         // just use the most recent values of each to drive a new update to take
@@ -739,11 +733,11 @@ public class BitrateController
 
         if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
         {
-            //TODO(brian): i think this is just for adaptive-lastn.  need to bring this back
-//            dest.sendLastNEndpointsChangeEvent(
-//                newForwardedEndpointIds,
-//                endpointsEnteringLastNIds,
-//                conferenceEndpointIds);
+            // TODO(george) bring back sending this message on message transport connect
+            destinationEndpoint.sendLastNEndpointsChangeEvent(
+                newForwardedEndpointIds,
+                endpointsEnteringLastNIds,
+                conferenceEndpointIds);
         }
 
         this.forwardedEndpointIds = newForwardedEndpointIds;
@@ -785,7 +779,7 @@ public class BitrateController
             }
 
             adaptiveTrackProjection = new AdaptiveTrackProjection(
-                trackBitrateAllocation.track, keyframeRequester);
+                trackBitrateAllocation.track, destinationEndpoint::requestKeyframe);
             for (PayloadType payloadType : payloadTypes.values())
             {
                 logger.debug("TEMP: BitrateController adding existing payload type " +
@@ -979,7 +973,7 @@ public class BitrateController
         {
             AbstractEndpoint sourceEndpoint = it.next();
             if (sourceEndpoint.isExpired()
-                    || sourceEndpoint.getID().equals(destinationEndpointId)
+                    || sourceEndpoint.getID().equals(destinationEndpoint.getID())
                     || !selectedEndpointIds.contains(sourceEndpoint.getID()))
             {
                 continue;
@@ -1018,7 +1012,7 @@ public class BitrateController
             {
                 AbstractEndpoint sourceEndpoint = it.next();
                 if (sourceEndpoint.isExpired()
-                    || sourceEndpoint.getID().equals(destinationEndpointId)
+                    || sourceEndpoint.getID().equals(destinationEndpoint.getID())
                     || !pinnedEndpointIds.contains(sourceEndpoint.getID()))
                 {
                     continue;
@@ -1057,7 +1051,7 @@ public class BitrateController
             for (AbstractEndpoint sourceEndpoint : conferenceEndpoints)
             {
                 if (sourceEndpoint.isExpired()
-                    || sourceEndpoint.getID().equals(destinationEndpointId))
+                    || sourceEndpoint.getID().equals(destinationEndpoint.getID()))
                 {
                     logger.debug("TEMP: BitrateController " + hashCode() + " ep " +
                             sourceEndpoint.getID() + " is self or expired");
