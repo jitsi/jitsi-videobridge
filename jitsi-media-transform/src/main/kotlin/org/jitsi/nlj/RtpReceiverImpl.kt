@@ -161,7 +161,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private var firstQueueReadTime: Long = -1
     private var lastQueueReadTime: Long = -1
     private var numQueueReads: Long = 0
-    private var numTimesQueueEmpty: Long = 0
 
     init {
         logger.cinfo { "Receiver ${this.hashCode()} using executor ${executor.hashCode()}" }
@@ -265,7 +264,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
         addNumber("average_queue_reads_per_second",
                 numQueueReads / (Duration.ofMillis(queueReadTotal).seconds.toDouble()))
         addNumber("num_queue_reads", numQueueReads)
-        addNumber("num_times_queue_empty", numTimesQueueEmpty)
 
         addString("running", running.toString())
         NodeStatsVisitor(this).visit(inputTreeRoot)

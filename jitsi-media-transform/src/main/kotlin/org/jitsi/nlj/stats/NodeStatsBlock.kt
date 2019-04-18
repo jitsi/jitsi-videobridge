@@ -84,13 +84,9 @@ class NodeStatsBlock(val name: String) {
      * Promotes integer values to [Long] and floating point values to [Double]. Returns a
      * [Long], [Double], or null.
      */
-    private fun promote(n: Any): Number? = when (n) {
-        is Byte -> n.toLong()
-        is Short -> n.toLong()
-        is Int -> n.toLong()
-        is Long -> n
-        is Float -> n.toDouble()
-        is Double -> n
+    private fun promote(n: Number): Number? = when (n) {
+        is Byte, is Short, is Int, is Long -> n.toLong()
+        is Float, is Double -> n.toDouble()
         else -> null
     }
 
@@ -105,10 +101,6 @@ class NodeStatsBlock(val name: String) {
                     is Any -> {
                         // statValue is Any, so we know it's non-null
                         appendLnIndent(indentLevel + 2, "$statName: $statValue")
-                    }
-                    else -> {
-                        // statValue is null, just print statName
-                        appendLnIndent(indentLevel + 2, statName)
                     }
                 }
             }
@@ -132,6 +124,6 @@ class NodeStatsBlock(val name: String) {
         /**
          * The stat name that we use to could the number of other block aggregated in this one.
          */
-        private val AGGREGATES = "_aggregates"
+        private const val AGGREGATES = "_aggregates"
     }
 }

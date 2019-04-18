@@ -86,7 +86,6 @@ class RtpSenderImpl(
     private var firstQueueReadTime: Long = -1
     private var lastQueueReadTime: Long = -1
     private var numQueueReads: Long = 0
-    private var numTimesQueueEmpty: Long = 0
 
     private val srtpEncryptWrapper = SrtpTransformerNode("SRTP encrypt")
     private val srtcpEncryptWrapper = SrtpTransformerNode("SRTCP encrypt")
@@ -246,7 +245,6 @@ class RtpSenderImpl(
 
         val queueReadDuration = Duration.ofMillis(lastQueueReadTime - firstQueueReadTime)
         addNumber("queue_average_reads_per_second", numQueueReads / queueReadDuration.seconds.toDouble())
-        addNumber("num_times_queue_empty", numTimesQueueEmpty)
         addNumber("num_queue_reads", numQueueReads)
         addBlock(nackHandler.getNodeStats())
         addBlock(probingDataSender.getNodeStats())
