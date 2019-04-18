@@ -63,6 +63,15 @@ class NodeEventVisitor(val event: Event) : NodeVisitor() {
     }
 }
 
+/**
+ * Produces a set of all notes in the tree.
+ */
+class NodeSetVisitor(val nodeSet: MutableSet<Node> = mutableSetOf()) : NodeVisitor() {
+    override fun doWork(node: Node) {
+        nodeSet.add(node)
+    }
+}
+
 class NodeTeardownVisitor : NodeVisitor() {
     override fun doWork(node: Node) {
         node.stop()
