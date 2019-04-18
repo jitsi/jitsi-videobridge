@@ -16,7 +16,11 @@
 
 package org.jitsi.nlj
 
+import org.jitsi.nlj.rtp.SsrcAssociationType
+import org.jitsi.nlj.stats.NodeStatsBlock
+import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
+import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
 
 /**
  * Maintains an array of [MediaStreamTrackDesc]. The set method preserves the existing tracks that match one of the new
@@ -25,7 +29,7 @@ import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
  *
  * @author Boris Grozev
  */
-class MediaStreamTracks {
+class MediaStreamTracks : NodeStatsProducer {
     private var tracks: Array<MediaStreamTrackDesc> = arrayOf()
 
     fun setMediaStreamTracks(newTracks: Array<MediaStreamTrackDesc>): Boolean {
@@ -56,4 +60,27 @@ class MediaStreamTracks {
     }
 
     fun getMediaStreamTracks(): Array<MediaStreamTrackDesc> = tracks
+
+    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("MediaStreamTracks").apply {
+        tracks.forEachIndexed { i, track ->
+            val trackBlock = NodeStatsBlock("track_$i")
+            trackBlock.addString("owner", track.owner)
+            track.rtpEncodings.forEach { trackBlock.addBlock(it.getNodeStats()) }
+            addBlock(trackBlock)
+        }
+    }
+}
+
+/**
+ * Extracts a [NodeStatsBlock] from an [RTPEncodingDesc]. This is here temporarily, once we make [RTPEncodingDesc]
+ * a native class of JMT it should go away.
+ */
+fun RTPEncodingDesc.getNodeStats() = NodeStatsBlock(primarySSRC.toString()).apply {
+    addNumber("frameRate", frameRate)
+    addNumber("height", height)
+    addNumber("index", index)
+    addNumber("last_state_bitrate_bps", getLastStableBitrateBps(System.currentTimeMillis()))
+    addBoolean("is_received", isReceived)
+    addNumber("rtx_ssrc", getSecondarySsrc(SsrcAssociationType.RTX))
+    addNumber("fec_ssrc", getSecondarySsrc(SsrcAssociationType.FEC))
 }

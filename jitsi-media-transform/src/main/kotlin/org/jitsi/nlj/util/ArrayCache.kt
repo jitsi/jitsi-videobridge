@@ -16,6 +16,8 @@
 
 package org.jitsi.nlj.util
 
+import org.jitsi.nlj.stats.NodeStatsBlock
+import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.utils.TimeProvider
 import java.lang.Integer.max
 import java.util.concurrent.atomic.AtomicInteger
@@ -33,7 +35,7 @@ open class ArrayCache<T>(
      * The function to use to clone items. The cache always saves copies of the items that are inserted.
      */
     private val timeProvider: TimeProvider = TimeProvider()
-) {
+) : NodeStatsProducer {
     private val cache: Array<Container> = Array(size) { Container() }
     protected val syncRoot = Any()
     /**
@@ -209,6 +211,14 @@ open class ArrayCache<T>(
             }
         }
         head = -1
+    }
+
+    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("ArrayCache").apply {
+        addNumber("size", size)
+        addNumber("numInserts", numInserts)
+        addNumber("numOldInserts", numOldInserts)
+        addNumber("numHits", numHits)
+        addNumber("numMisses", numMisses)
     }
 
     inner class Container(

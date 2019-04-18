@@ -90,7 +90,7 @@ class Transceiver(
 
     private val transportCcEngine = TransportCCEngine(diagnosticContext, this)
 
-    private val bandwidthEstimator: BandwidthEstimator = BandwidthEstimatorImpl(diagnosticContext)
+    private val bandwidthEstimator: BandwidthEstimatorImpl = BandwidthEstimatorImpl(diagnosticContext)
 
     private val rtpSender: RtpSender = RtpSenderImpl(
             id,
@@ -304,8 +304,9 @@ class Transceiver(
             addBlock(payloadTypesBlock)
 
             addString("receiveSsrcs", receiveSsrcs.toString())
-            // addBlock("mediaStreamTracks", mediaStreamTracks.getDebugState())
+            addBlock(mediaStreamTracks.getNodeStats())
             addString("endpointConnectionStats", endpointConnectionStats.getSnapshot().toString())
+            addBlock(bandwidthEstimator.getNodeStats())
             addBlock(rtpReceiver.getNodeStats())
             addBlock(rtpSender.getNodeStats())
         }
@@ -338,4 +339,18 @@ class Transceiver(
 //            Node.PLUGINS_ENABLED = true
         }
     }
+}
+
+/**
+ * Extracts a [NodeStatsBlock] from a [BandwidthEstimatorImpl]. This is here temporarily, once we figure out
+ * what to do with [BandwidthEstimator] it should go away or move.
+ */
+fun BandwidthEstimatorImpl.getNodeStats(): NodeStatsBlock = NodeStatsBlock("BandwidthEstimator").apply {
+    addNumber("latestREMB", latestREMB)
+    addNumber("latestEstimate", latestEstimate)
+    addNumber("latestFractionLoss", latestFractionLoss)
+    val bweStats: BandwidthEstimator.Statistics = statistics
+    addNumber("lossDegradedMs", bweStats.lossDegradedMs)
+    addNumber("lossFreeMs", bweStats.lossFreeMs)
+    addNumber("lossLimitedMs", bweStats.lossLimitedMs)
 }
