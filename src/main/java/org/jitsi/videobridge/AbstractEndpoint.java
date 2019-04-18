@@ -327,15 +327,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     }
 
     /**
-     * @return the {@link Set} of pinned endpoints, represented as a set of
-     * endpoint IDs.
-     */
-    public Set<String> getPinnedEndpoints()
-    {
-        return Collections.EMPTY_SET;
-    }
-
-    /**
      * Sends a specific {@link String} {@code msg} to the remote end of this
      * endpoint.
      *
