@@ -32,6 +32,7 @@ import org.jitsi.videobridge.transport.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jingle.CandidateType;
+import org.json.simple.*;
 import org.osgi.framework.*;
 
 /**
@@ -767,5 +768,21 @@ public class IceTransport
         }
 
         describe(pe);
+    }
+
+    /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
+     */
+    public JSONObject getDebugState()
+    {
+        JSONObject debugState = new JSONObject();
+        debugState.put("useComponentSocket", useComponentSocket);
+        debugState.put("keepAliveStrategy", keepAliveStrategy.toString());
+        debugState.put("closed", closed);
+        debugState.put("iceConnected", iceConnected);
+        debugState.put("controlling", controlling);
+        debugState.put("iceFailed", iceFailed);
+        return debugState;
     }
 }

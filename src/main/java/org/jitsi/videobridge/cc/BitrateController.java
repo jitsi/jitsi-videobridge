@@ -27,6 +27,7 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
+import org.json.simple.*;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -416,6 +417,24 @@ public class BitrateController
         AdaptiveTrackProjection adaptiveTrackProjection = adaptiveTrackProjectionMap.get(ssrc);
 
         return adaptiveTrackProjection != null && adaptiveTrackProjection.rewriteRtcp(rtcpSrPacket);
+    }
+
+    /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
+     */
+    public JSONObject getDebugState()
+    {
+        JSONObject debugState = new JSONObject();
+        debugState.put("forwardedEndpoints", forwardedEndpointIds.toString());
+        debugState.put("trustBwe", trustBwe);
+        debugState.put("lastBwe", lastBwe);
+        debugState.put("maxRxFrameHeightPx", maxRxFrameHeightPx);
+        debugState.put("selectedEndpointIds", selectedEndpointIds.toString());
+        debugState.put("pinnedEndpointIds", pinnedEndpointIds.toString());
+        debugState.put("lastN", lastN);
+        debugState.put("supportsRtx", supportsRtx);
+        return debugState;
     }
 
     /**

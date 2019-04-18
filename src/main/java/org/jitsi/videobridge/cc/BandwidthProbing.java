@@ -20,6 +20,7 @@ package org.jitsi.videobridge.cc;
  import org.jitsi.utils.concurrent.*;
  import org.jitsi.utils.logging.*;
  import org.jitsi_modified.service.neomedia.rtp.*;
+ import org.json.simple.*;
 
  import java.util.*;
 
@@ -240,6 +241,23 @@ package org.jitsi.videobridge.cc;
      private long getSenderSSRC()
      {
          return senderSsrc == null ? -1 : senderSsrc;
+     }
+
+     /**
+      * Gets a JSON representation of the parts of this object's state that
+      * are deemed useful for debugging.
+      */
+     public JSONObject getDebugState()
+     {
+         JSONObject debugState = new JSONObject();
+         debugState.put("vp8PT", vp8PT);
+         debugState.put("seqNum", seqNum);
+         debugState.put("ts", ts);
+         debugState.put("enabled", enabled);
+         debugState.put("senderSsrc", senderSsrc);
+         debugState.put("latestBwe", latestBwe);
+
+         return debugState;
      }
 
      public interface ProbingDataSender

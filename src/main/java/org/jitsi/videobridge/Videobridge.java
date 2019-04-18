@@ -23,7 +23,6 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.osgi.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.service.libjitsi.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging.Logger;
 import org.jitsi.videobridge.health.*;
@@ -41,6 +40,7 @@ import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.jivesoftware.smackx.pubsub.*;
 import org.jivesoftware.smackx.pubsub.provider.*;
+import org.json.simple.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
 import org.osgi.framework.*;
@@ -1113,6 +1113,65 @@ public class Videobridge
         {
             this.shutdownRunnable = shutdownRunnable;
         }
+    }
+
+    /**
+     * Creates a JSON for debug purposes. If a specific {@code conferenceId}
+     * is requested, the result will include all of the state of the conference
+     * considered useful for debugging (note that this is a LOT of data).
+     * Otherwise (if {@code conferenceId} is {@code null}), the result includes
+     * a shallow list of the active conferences and their endpoints.
+     *
+     * @param conferenceId the ID of a specific conference to include. If not
+     * specified, a shallow list of all conferences will be returned.
+     * @param endpointId the ID of a specific endpoint in {@code conferenceId}
+     * to include. If not specified, all of the conference's endpoints will be
+     * included.
+     */
+    public JSONObject getDebugState(String conferenceId, String endpointId)
+    {
+        JSONObject debugState = new JSONObject();
+        debugState.put("shutdownInProgress", shutdownInProgress);
+        debugState.put("time", System.currentTimeMillis());
+
+        String health = "OK";
+        try
+        {
+            healthCheck();
+        }
+        catch (Exception e)
+        {
+            health = e.getMessage();
+        }
+        debugState.put("health", health);
+
+        JSONObject conferences = new JSONObject();
+        debugState.put("conferences", conferences);
+        if (StringUtils.isNullOrEmpty(conferenceId))
+        {
+            for (Conference conference : getConferences())
+            {
+                conferences.put(
+                        conference.getID(),
+                        conference.getDebugState(false, null));
+            }
+        }
+        else
+        {
+            // Using getConference will 'touch' it and prevent it from expiring
+            Conference conference;
+            synchronized (conferences)
+            {
+                conference = this.conferences.get(conferenceId);
+            }
+
+            conferences.put(
+                    conferenceId,
+                    conference == null
+                            ? "null" : conference.getDebugState(true, endpointId));
+        }
+
+        return debugState;
     }
 
     /**

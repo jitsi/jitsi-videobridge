@@ -22,6 +22,7 @@ import org.ice4j.socket.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.dtls.*;
+import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.incoming.*;
@@ -33,6 +34,7 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.jingle.*;
+import org.json.simple.*;
 
 import java.io.*;
 import java.net.*;
@@ -75,7 +77,7 @@ public class DtlsTransport extends IceTransport
     private final PacketInfoQueue outgoingPacketQueue;
     private final Endpoint endpoint;
 
-    private SocketSenderNode packetSender = new SocketSenderNode();
+    private final SocketSenderNode packetSender = new SocketSenderNode();
     private final Node incomingPipelineRoot;
     private final Node outgoingDtlsPipelineRoot;
     private final Node outgoingSrtpPipelineRoot;
@@ -431,6 +433,48 @@ public class DtlsTransport extends IceTransport
         {
             stats.totalIceSucceededTcp.incrementAndGet();
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public JSONObject getDebugState()
+    {
+        JSONObject debugState = super.getDebugState();
+        //debugState.put("dtlsStack", dtlsStack.getDebugState());
+        //debugState.put("dtlsReceiver"
+        //debugState.put("dtlsSender"
+
+        debugState.put(
+                "outgoingPacketQueue",
+                outgoingPacketQueue.getDebugState());
+        debugState.put("packetSender", packetSender.getNodeStats().toJson());
+
+        NodeSetVisitor nodeSetVisitor = new NodeSetVisitor();
+        nodeSetVisitor.visit(incomingPipelineRoot);
+
+        JSONObject incomingPipelineState = new JSONObject();
+        debugState.put("incomingPipelineRoot", incomingPipelineState);
+        for (Node node : nodeSetVisitor.getNodeSet())
+        {
+            NodeStatsBlock block = node.getNodeStats();
+            incomingPipelineState.put(block.getName(), block.toJson());
+        }
+
+        nodeSetVisitor = new NodeSetVisitor();
+        nodeSetVisitor.reverseVisit(outgoingDtlsPipelineRoot);
+        nodeSetVisitor.reverseVisit(outgoingSrtpPipelineRoot);
+
+        JSONObject outgoingPipelineState = new JSONObject();
+        debugState.put("outgoingPipeline", outgoingPipelineState);
+        for (Node node : nodeSetVisitor.getNodeSet())
+        {
+            NodeStatsBlock block = node.getNodeStats();
+            outgoingPipelineState.put(block.getName(), block.toJson());
+        }
+
+        return debugState;
     }
 
     /**
