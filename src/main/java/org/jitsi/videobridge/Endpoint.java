@@ -425,32 +425,43 @@ public class Endpoint
     {
         if (super.wants(packetInfo, sourceEndpointId))
         {
-            if (packetInfo.getPacket() instanceof AudioRtpPacket)
-            {
-                return acceptAudio;
-            }
-            if (packetInfo.getPacket() instanceof VideoRtpPacket
-                && !acceptVideo)
-            {
-                return false;
-            }
-            else if (packetInfo.getPacket() instanceof RtcpFbPacket)
-            {
-                RtcpFbPacket rtcpPacket = (RtcpFbPacket) packetInfo.getPacket();
-                return receivesSsrc(rtcpPacket.getMediaSourceSsrc());
-            }
-            else if (packetInfo.getPacket() instanceof RtcpSrPacket)
-            {
-                // TODO(george) we're only interested in the ntp/rtp timestamp association, so only accept srs from the main ssrc
-                return true;
-            }
+            Packet packet = packetInfo.getPacket();
 
-            Packet rtpPacket = packetInfo.getPacket();
-            if (rtpPacket instanceof RtpPacket)
+            if (packet instanceof RtpPacket)
             {
-                return bitrateController.accept((RtpPacket) rtpPacket);
+                if (packet instanceof AudioRtpPacket)
+                {
+                    return acceptAudio;
+                }
+                if (packet instanceof VideoRtpPacket
+                    && !acceptVideo)
+                {
+                    return false;
+                }
+
+                return bitrateController.accept((RtpPacket) packet);
+            }
+            else if (packet instanceof RtcpPacket)
+            {
+                if (packet instanceof RtcpFbPacket)
+                {
+                    RtcpFbPacket rtcpPacket = (RtcpFbPacket) packet;
+                    return receivesSsrc(rtcpPacket.getMediaSourceSsrc());
+                }
+                else if (packet instanceof RtcpSrPacket)
+                {
+                    // TODO(george) we're only interested in the ntp/rtp timestamp association, so only accept srs from the main ssrc
+                    return true;
+                }
+                else
+                {
+                    logger.debug("Dropping an unhandled rtcp packet.");
+                    return false;
+                }
             }
         }
+
+        logger.debug("Dropping a non rtp/rtcp packet.");
         return false;
     }
 
