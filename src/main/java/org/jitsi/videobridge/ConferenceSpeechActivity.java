@@ -489,4 +489,23 @@ public class ConferenceSpeechActivity
         TaskPools.IO_POOL.submit(
                 () -> firePropertyChange(property, oldValue, newValue));
     }
+
+    /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
+     */
+    public JSONObject getDebugState()
+    {
+        JSONObject debugState = new JSONObject();
+
+        AbstractEndpoint dominantEndpoint = getDominantEndpoint();
+        debugState.put(
+                "dominantEndpoint",
+                dominantEndpoint == null ? null : dominantEndpoint.getID());
+        debugState.put(
+                "dominantSpeakerIdentification",
+                dominantSpeakerIdentification.doGetJSON());
+
+        return debugState;
+    }
 }

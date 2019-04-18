@@ -26,6 +26,7 @@ import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
+import org.json.simple.*;
 import org.osgi.framework.*;
 
 import java.net.*;
@@ -278,7 +279,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
     }
 
     /**
-     * Sends a data message throught the Octo relay.
+     * Sends a data message through the Octo relay.
      * @param message
      */
     public void sendMessage(String message)
@@ -288,5 +289,20 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
                 targets,
                 conference.getGid(),
                 null);
+    }
+
+    /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
+     */
+    public JSONObject getDebugState()
+    {
+        JSONObject debugState = new JSONObject();
+        debugState.put("octoEndpoints", octoEndpoints.getDebugState());
+        debugState.put("transceiver", transceiver.getDebugState());
+        debugState.put("relay", relay.getDebugState());
+        debugState.put("targets", targets.toString());
+
+        return debugState;
     }
 }

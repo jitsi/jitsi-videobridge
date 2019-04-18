@@ -20,6 +20,7 @@ import org.jitsi.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.util.*;
+import org.json.simple.*;
 
 import java.io.*;
 import java.net.*;
@@ -462,5 +463,24 @@ public class OctoRelay
     public long getPacketsDropped()
     {
         return packetsDropped.get();
+    }
+
+    /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
+     */
+    public JSONObject getDebugState()
+    {
+        JSONObject debugState = new JSONObject();
+        debugState.put("relayId", relayId);
+        debugState.put("publicAddress", publicAddress);
+        debugState.put("port", port);
+        debugState.put("bytesReceived", bytesReceived.get());
+        debugState.put("bytesSent", bytesSent.get());
+        debugState.put("packetsReceived", packetsReceived.get());
+        debugState.put("packetsSent", packetsSent.get());
+        debugState.put("packetsDropped", packetsDropped.get());
+
+        return debugState;
     }
 }

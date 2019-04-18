@@ -29,6 +29,7 @@ import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
+import org.json.simple.*;
 
 /**
  * Parses and handles incoming RTP/RTCP packets from an Octo source for a
@@ -239,5 +240,26 @@ class OctoTransceiver
                 = new RtpExtensionAddedEvent(rtpExtension);
 
         new NodeEventVisitor(rtpExtensionAddedEvent).visit(inputTreeRoot);
+    }
+
+    /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
+     */
+    JSONObject getDebugState()
+    {
+
+        JSONObject debugState = new JSONObject();
+        NodeSetVisitor nodeSetVisitor = new NodeSetVisitor();
+        nodeSetVisitor.visit(inputTreeRoot);
+
+        nodeSetVisitor.getNodeSet().forEach(
+                node -> debugState.put(
+                        node.getName(),
+                        node.getNodeStats().toJson()));
+
+        debugState.put("incomingPacketQueue", incomingPacketQueue.getDebugState());
+        debugState.put("mediaStreamTracks", mediaStreamTracks.getNodeStats().toJson());
+        return debugState;
     }
 }

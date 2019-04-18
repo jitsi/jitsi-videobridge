@@ -27,6 +27,7 @@ import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
+import org.json.simple.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
 import org.osgi.framework.*;
@@ -1147,6 +1148,51 @@ public class Conference
     }
 
     /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
+     *
+     * @param full if specified the result will include more details and will
+     * include the debug state of the endpoint(s). Otherwise just the IDs and
+     * names of the conference and endpoints are included.
+     * @param endpointId the ID of the endpoint to include. If set to
+     * {@code null}, all endpoints will be included.
+     */
+    public JSONObject getDebugState(boolean full, String endpointId)
+    {
+        JSONObject debugState = new JSONObject();
+        debugState.put("id", id);
+        debugState.put("name", name.toString());
+
+        if (full)
+        {
+            debugState.put("gid", gid);
+            debugState.put("expired", expired);
+            debugState.put("creationTime", creationTime);
+            debugState.put("lastActivity", lastActivityTime);
+            debugState.put("speechActivity", speechActivity.getDebugState());
+            debugState.put("includeInStatistics", includeInStatistics);
+            debugState.put("statistics", statistics.getJson());
+            //debugState.put("encodingsManager", encodingsManager.getDebugState());
+            OctoTentacle tentacle = this.tentacle;
+            debugState.put(
+                    "tentacle",
+                    tentacle == null ? null : tentacle.getDebugState());
+        }
+
+        JSONObject endpoints = new JSONObject();
+        debugState.put("endpoints", endpoints);
+        for (Endpoint e : endpointsCache)
+        {
+            if (endpointId == null || endpointId.equals(e.getID()))
+            {
+                endpoints.put(e.getID(),
+                        full ? e.getDebugState() : e.getStatsId());
+            }
+        }
+        return debugState;
+    }
+
+    /**
      * Holds conference statistics.
      */
     public class Statistics
@@ -1185,5 +1231,20 @@ public class Conference
          * successfully.
          */
         boolean hasIceSucceededEndpoint = false;
+
+        /**
+         * Gets a snapshot of this object's state as JSON.
+         */
+        private JSONObject getJson()
+        {
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("total_bytes_received", totalBytesReceived.get());
+            jsonObject.put("total_bytes_sent", totalBytesSent.get());
+            jsonObject.put("total_packets_received", totalPacketsReceived.get());
+            jsonObject.put("total_packets_sent", totalPacketsSent.get());
+            jsonObject.put("has_failed_endpoint", hasIceFailedEndpoint);
+            jsonObject.put("has_succeeded_endpoint", hasIceSucceededEndpoint);
+            return jsonObject;
+        }
     }
 }

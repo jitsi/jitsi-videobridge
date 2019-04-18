@@ -17,6 +17,7 @@ package org.jitsi.videobridge.octo;
 
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.*;
+import org.json.simple.*;
 
 import java.util.*;
 import java.util.stream.*;
@@ -139,5 +140,16 @@ import java.util.stream.*;
      private void sendMessage(String msg)
      {
          logger.warn("Can not send a message, no channels.");
+     }
+
+     /**
+      * Gets a JSON representation of the parts of this object's state that
+      * are deemed useful for debugging.
+      */
+     JSONObject getDebugState()
+     {
+         JSONObject debugState = new JSONObject();
+         debugState.put("ids", octoEndpointIds.toString());
+         return debugState;
      }
  }

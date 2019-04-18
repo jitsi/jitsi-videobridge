@@ -21,6 +21,7 @@ import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
+import org.json.simple.*;
 
 import java.beans.*;
 import java.io.*;
@@ -379,5 +380,19 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public void describe(ColibriConferenceIQ.ChannelBundle channelBundle)
             throws IOException
     {
+    }
+
+    /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
+     */
+    public JSONObject getDebugState()
+    {
+        JSONObject debugState = new JSONObject();
+        debugState.put("displayName", displayName);
+        debugState.put("expired", expired);
+        debugState.put("statsId", statsId);
+
+        return debugState;
     }
 }

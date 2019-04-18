@@ -43,7 +43,8 @@ class StatisticsRequestHandler
     /**
      * The logger instance used by {@link StatisticsRequestHandler}.
      */
-    private static final Logger logger = Logger.getLogger(HandlerImpl.class);
+    private static final Logger logger
+            = Logger.getLogger(StatisticsRequestHandler.class);
 
     /**
      * The {@link HandlerImpl}.

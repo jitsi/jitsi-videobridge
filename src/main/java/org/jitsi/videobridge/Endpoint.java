@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge;
 
-import org.bouncycastle.crypto.tls.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -43,6 +42,7 @@ import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi_modified.sctp4j.*;
 import org.jitsi_modified.service.neomedia.rtp.*;
+import org.json.simple.*;
 
 import java.beans.*;
 import java.io.*;
@@ -169,7 +169,7 @@ public class Endpoint
     /**
      * The {@link Transceiver} which handles receiving and sending of (S)RTP.
      */
-    private Transceiver transceiver;
+    private final Transceiver transceiver;
 
     /**
      * The list of {@link ChannelShim}s associated with this endpoint. This
@@ -597,7 +597,7 @@ public class Endpoint
         {
             updateStatsOnExpire();
             this.transceiver.stop();
-            if (logger.isDebugEnabled())
+            if (logger.isDebugEnabled() && getConference().includeInStatistics())
             {
                 logger.debug(transceiver.getNodeStats().prettyPrint(0));
             }
@@ -617,8 +617,7 @@ public class Endpoint
         }
         catch (Exception e)
         {
-            logger.error(logPrefix +
-                    "Exception while expiring: " + e.toString());
+            logger.error(logPrefix + "Exception while expiring: ", e);
         }
         bandwidthProbing.enabled = false;
         recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing);
@@ -1298,5 +1297,31 @@ public class Endpoint
     public Transceiver getTransceiver()
     {
         return transceiver;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public JSONObject getDebugState()
+    {
+        JSONObject debugState = super.getDebugState();
+
+        debugState.put("selectedEndpoints", selectedEndpoints.toString());
+        debugState.put("pinnedEndpoints", pinnedEndpoints.toString());
+        debugState.put("selectedCount", selectedCount.get());
+        //debugState.put("sctpManager", sctpManager.getDebugState());
+        //debugState.put("messageTransport", messageTransport.getDebugState());
+        debugState.put("bitrateController", bitrateController.getDebugState());
+        debugState.put("bandwidthProbing", bandwidthProbing.getDebugState());
+        DtlsTransport transportManager = this.transportManager;
+        debugState.put(
+                "transportManager",
+                transportManager == null ? null : transportManager.getDebugState());
+        debugState.put("transceiver", transceiver.getNodeStats().toJson());
+        debugState.put("acceptAudio", acceptAudio);
+        debugState.put("acceptVideo", acceptVideo);
+
+        return debugState;
     }
 }
