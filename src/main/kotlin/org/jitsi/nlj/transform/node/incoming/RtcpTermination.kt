@@ -19,6 +19,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
+import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -68,7 +69,7 @@ class RtcpTermination(
 
             if (pkt is RtcpSrPacket) {
                 // NOTE(george) effectively eliminates any report blocks as we don't want to relay those
-                logger.cinfo { "saw an sr from ssrc=${pkt.senderSsrc}, timestamp=${pkt.senderInfo.rtpTimestamp}"}
+                logger.cdebug { "saw an sr from ssrc=${pkt.senderSsrc}, timestamp=${pkt.senderInfo.rtpTimestamp}"}
                 pkt.length = SenderInfoParser.SIZE_BYTES
             }
         }
