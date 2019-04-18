@@ -1115,7 +1115,11 @@ public class BitrateController
      */
     public void setSelectedEndpointIds(Set<String> selectedEndpointIds)
     {
-        this.selectedEndpointIds = new HashSet<>(selectedEndpointIds);
+        if (!this.selectedEndpointIds.equals(selectedEndpointIds))
+        {
+            this.selectedEndpointIds = new HashSet<>(selectedEndpointIds);
+            update(lastEndpointOrdering, getAvailableBandwidth());
+        }
     }
 
     /**
@@ -1126,7 +1130,11 @@ public class BitrateController
      */
     public void setPinnedEndpointIds(Set<String> pinnedEndpointIds)
     {
-        this.pinnedEndpointIds = new HashSet<>(pinnedEndpointIds);
+        if (!this.pinnedEndpointIds.equals(pinnedEndpointIds))
+        {
+            this.pinnedEndpointIds = new HashSet<>(pinnedEndpointIds);
+            update(lastEndpointOrdering, getAvailableBandwidth());
+        }
     }
 
     /**

@@ -290,16 +290,6 @@ public class Endpoint
     }
 
     /**
-     * @return the {@link Set} of pinned endpoints, represented as a set of
-     * endpoint IDs.
-     */
-    @Override
-    public Set<String> getPinnedEndpoints()
-    {
-        return pinnedEndpoints;
-    }
-
-    /**
      * Sets the list of pinned endpoints for this endpoint.
      * @param newPinnedEndpoints the set of pinned endpoints.
      */
