@@ -17,6 +17,8 @@
 package org.jitsi.nlj.util
 
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.stats.NodeStatsBlock
+import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.rtp.rtp.RtpPacket
 import java.util.concurrent.ConcurrentHashMap
 
@@ -28,7 +30,7 @@ class PacketCache(
      * A function which dictates which packets to cache.
      */
     val packetPredicate: (RtpPacket) -> Boolean = { it is VideoRtpPacket }
-) {
+) : NodeStatsProducer {
     /**
      * The max number of packets to cache per SSRC.
      */
@@ -79,6 +81,12 @@ class PacketCache(
     fun stop() {
         stopped = true
         packetCaches.forEach { _, cache -> cache.flush() }
+    }
+
+    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("PacketCache").apply {
+        packetCaches.values.forEach {
+            aggregate(it.getNodeStats())
+        }
     }
 }
 
