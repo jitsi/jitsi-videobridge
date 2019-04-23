@@ -36,7 +36,8 @@ import org.jitsi.nlj.transform.node.outgoing.SentRtcpStats
 import org.jitsi.nlj.transform.node.outgoing.TccSeqNumTagger
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.PacketInfoQueue
-import org.jitsi.nlj.util.Util.Companion.getMbps
+import org.jitsi.nlj.util.addMbps
+import org.jitsi.nlj.util.addRatio
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
@@ -232,20 +233,25 @@ class RtpSenderImpl(
     }
 
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("RTP sender $id").apply {
-        val duration = Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime)
-        addNumber("incoming_bytes", numIncomingBytes)
-        addNumber("incoming_duration_seconds", duration.seconds)
-        addNumber("incoming_bitrate_mbps", getMbps(numIncomingBytes, duration))
+        val incomingBytesKey = "incoming_bytes"
+        val incomingDurationMsKey = "incoming_duration_ms"
+        addNumber(incomingBytesKey, numIncomingBytes)
+        addNumber(incomingDurationMsKey, lastPacketWrittenTime - firstPacketWrittenTime)
+        addMbps("incoming_bitrate_mbps", incomingBytesKey, incomingDurationMsKey)
 
-        val sentDuration = Duration.ofMillis(lastPacketSentTime - firstPacketSentTime)
+        val sentBytesKey = "sent_bytes"
+        val sentDurationMsKey = "sent_duration_ms"
         addNumber("sent_packets", numPacketsSent)
-        addNumber("sent_duration_seconds", duration.seconds)
-        addNumber("sent_bytes", numBytesSent)
-        addNumber("sent_bitrate_mbps", getMbps(numBytesSent, sentDuration))
+        addNumber(sentDurationMsKey, lastPacketSentTime - firstPacketSentTime)
+        addNumber(sentBytesKey, numBytesSent)
+        addMbps("sent_bitrate_mbps", sentBytesKey, sentDurationMsKey)
 
-        val queueReadDuration = Duration.ofMillis(lastQueueReadTime - firstQueueReadTime)
-        addNumber("queue_average_reads_per_second", numQueueReads / queueReadDuration.seconds.toDouble())
-        addNumber("num_queue_reads", numQueueReads)
+        val queueNumReadsKey = "queue_num_reads"
+        val queueReadDurationSKey = "queue_read_duration_s"
+        addNumber(queueNumReadsKey, numQueueReads)
+        addNumber(queueReadDurationSKey, (lastQueueReadTime - firstQueueReadTime).toDouble() / 1000)
+        addRatio("queue_average_reads_per_second", queueNumReadsKey, queueReadDurationSKey)
+
         addBlock(nackHandler.getNodeStats())
         addBlock(probingDataSender.getNodeStats())
         NodeStatsVisitor(this).reverseVisit(outputPipelineTerminationNode)

@@ -20,40 +20,69 @@ import org.jitsi.nlj.util.appendLnIndent
 import org.json.simple.JSONObject
 
 class NodeStatsBlock(val name: String) {
-    val stats = mutableMapOf<String, Any>()
+    private val stats = mutableMapOf<String, Any>()
+    /**
+     * Holds stats that are computed based on other values in the map (to e.g. calculate the
+     * ratio of two values). Restricted to [Number] because this makes it easier to implement and
+     * we don't need other values right now.
+     */
+    private val compoundStats = mutableMapOf<String, (NodeStatsBlock) -> Number>()
 
     /**
      * Adds a stat with a number value. Integral values are promoted to [Long], while floating point values are
      * promoted to [Double].
      */
     fun addNumber(name: String, value: Number) {
-        promote(value)?.let { doAddStat(name, it) }
+        promote(value)?.let { stats[name] = it }
     }
 
     /**
      * Adds a stat with a string value.
      */
     fun addString(name: String, value: String) {
-        doAddStat(name, value)
+        stats[name] = value
     }
 
     /**
      * Adds a stat with a boolean value.
      */
     fun addBoolean(name: String, value: Boolean) {
-        doAddStat(name, value)
+        stats[name] = value
     }
 
     /**
      * Adds another [NodeStatsBlock] as a child.
      */
     fun addBlock(otherBlock: NodeStatsBlock) {
-        doAddStat(otherBlock.name, otherBlock)
+        stats[otherBlock.name] = otherBlock
     }
 
-    private fun doAddStat(name: String, value: Any) {
-        stats[name] = value
+    /**
+     * Adds a named value to this [NodeStatsBlock] which is derived from other values in the block.
+     * The value will be calculated (by invoking the given function) when it is needed (e.g. in [getValue] or
+     * when exporting this block to another format (printing or JSON).
+     */
+    fun addCompoundValue(name: String, compoundValue: (NodeStatsBlock) -> Number) {
+        compoundStats[name] = compoundValue
     }
+
+    fun getValue(name: String): Any? = when {
+        stats.containsKey(name) -> stats[name]
+        compoundStats.containsKey(name) -> compoundStats[name]?.invoke(this)
+        else -> null
+    }
+
+    /**
+     * Gets the value of a stat with a given name, if this [NodeStatsBlock] has it and it is a [Number].
+     * Otherwise returns 'null'.
+     */
+    fun getNumber(name: String): Number? = when {
+        stats[name] is Number -> stats[name] as Number
+        compoundStats.containsKey(name) -> compoundStats[name]?.invoke(this)
+        else -> null
+    }
+
+    fun getNumberOrDefault(name: String, default: Number): Number = getNumber(name) ?: default
 
     /**
      * Aggregates another block into this one. That is, takes any stats with number values from the
@@ -63,7 +92,7 @@ class NodeStatsBlock(val name: String) {
         otherBlock.stats.forEach { name, value ->
             val existingValue = stats[name]
             // We only aggregate numbers, and we "only" handle Long and Double because we've already
-            // promoted them when adding.
+            // promoted them when adding. For other value types, we override with the new one.
             when {
                 existingValue == null && (value is Long || value is Double)
                     -> stats[name] = value
@@ -75,7 +104,11 @@ class NodeStatsBlock(val name: String) {
                     -> stats[name] = existingValue + value
                 existingValue is Double && value is Long
                     -> stats[name] = existingValue + value
+                else -> stats[name] = value
             }
+        }
+        otherBlock.compoundStats.forEach { name, function ->
+            addCompoundValue(name, function)
         }
         stats[AGGREGATES] = (stats.getOrDefault(AGGREGATES, 0L) as Long) + 1
     }
@@ -104,6 +137,10 @@ class NodeStatsBlock(val name: String) {
                     }
                 }
             }
+            compoundStats.forEach { statName, function ->
+                val statValue = function.invoke(this@NodeStatsBlock)
+                appendLnIndent(indentLevel + 2, "$statName: $statValue}")
+            }
             toString()
         }
     }
@@ -117,6 +154,9 @@ class NodeStatsBlock(val name: String) {
                 is NodeStatsBlock -> put(name, value.toJson())
                 else -> put(name, value)
             }
+        }
+        compoundStats.forEach { name, function ->
+            put(name, function.invoke(this@NodeStatsBlock))
         }
     }
 
