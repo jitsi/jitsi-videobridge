@@ -1055,17 +1055,13 @@ public class Conference
     }
 
     /**
-     * Handles an RTP packet coming from a specific endpoint. The packet has
-     * already passed through the incoming chain and been parsed. We use
-     * {@code null} for the {@code source} to indicate that the packet comes
-     * from another bridge via Octo.
+     * Broadcasts the packet to all endpoints and tentacles that want it.
      *
      * @param packetInfo the packet
      * @param source the source endpoint, or {@code null} to indicate that the
      * packet comes from another bridge via Octo.
-     *
      */
-    public void handleIncomingRtp(PacketInfo packetInfo, AbstractEndpoint source)
+    private void sendOut(PacketInfo packetInfo, AbstractEndpoint source)
     {
         // We want to avoid calling 'clone' for the last receiver of this packet
         // since it's unnecessary.  To do so, we'll wait before we clone and send
@@ -1105,6 +1101,22 @@ public class Conference
     }
 
     /**
+     * Handles an RTP packet coming from a specific endpoint. The packet has
+     * already passed through the incoming chain and been parsed. We use
+     * {@code null} for the {@code source} to indicate that the packet comes
+     * from another bridge via Octo.
+     *
+     * @param packetInfo the packet
+     * @param source the source endpoint, or {@code null} to indicate that the
+     * packet comes from another bridge via Octo.
+     *
+     */
+    public void handleIncomingRtp(PacketInfo packetInfo, AbstractEndpoint source)
+    {
+        sendOut(packetInfo, source);
+    }
+
+    /**
      * Gets the audio level listener.
      */
     public AudioLevelListener getAudioLevelListener()
@@ -1132,13 +1144,7 @@ public class Conference
      */
     void handleIncomingRtcp(PacketInfo packetInfo, AbstractEndpoint source)
     {
-        String sourceEpId = source != null ? source.getID() : null;
-        endpointsCache.forEach(endpoint -> {
-            if (endpoint.wants(packetInfo, sourceEpId))
-                endpoint.send(packetInfo.clone(), sourceEpId);
-        });
-
-        //TODO Octo
+        sendOut(packetInfo, source);
     }
 
     /**
