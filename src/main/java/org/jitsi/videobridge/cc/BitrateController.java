@@ -30,7 +30,6 @@ import org.jitsi_modified.impl.neomedia.rtp.*;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.function.*;
 
 import static org.jitsi.videobridge.cc.AdaptiveTrackProjection.EMPTY_PACKET_ARR;
 
