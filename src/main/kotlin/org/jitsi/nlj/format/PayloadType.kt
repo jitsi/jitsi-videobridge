@@ -53,7 +53,8 @@ abstract class PayloadType(
     /**
      * The rtcp feedback messages associated with the payload type (e.g. nack, nack pli, transport-cc, goog-remb, ccm fir, etc).
      */
-    val rtcpFeedbackSet: RtcpFeedbackSet = CopyOnWriteArraySet()) {
+    val rtcpFeedbackSet: RtcpFeedbackSet = CopyOnWriteArraySet()
+) {
 
     override fun toString(): String = with(StringBuffer()) {
         append(pt).append(" -> ").append(encoding).append(" (").append(clockRate).append("): ").append(parameters)

@@ -69,7 +69,7 @@ class RtcpTermination(
 
             if (pkt is RtcpSrPacket) {
                 // NOTE(george) effectively eliminates any report blocks as we don't want to relay those
-                logger.cdebug { "saw an sr from ssrc=${pkt.senderSsrc}, timestamp=${pkt.senderInfo.rtpTimestamp}"}
+                logger.cdebug { "saw an sr from ssrc=${pkt.senderSsrc}, timestamp=${pkt.senderInfo.rtpTimestamp}" }
                 pkt.length = SenderInfoParser.SIZE_BYTES
             }
         }
