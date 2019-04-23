@@ -30,7 +30,6 @@ import org.jitsi_modified.impl.neomedia.rtp.*;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.function.*;
 
 import static org.jitsi.videobridge.cc.AdaptiveTrackProjection.EMPTY_PACKET_ARR;
 
@@ -1258,11 +1257,6 @@ public class BitrateController
         private final int targetSSRC;
 
         /**
-         * Maximum frame height, in pixels, for any video stream forwarded to this receiver
-         */
-        private final int maxFrameHeight;
-
-        /**
          * The first {@link MediaStreamTrackDesc} of the {@link Endpoint} that
          * this instance pertains to.
          */
@@ -1321,7 +1315,6 @@ public class BitrateController
             this.selected = selected;
             this.fitsInLastN = fitsInLastN;
             this.track = track;
-            this.maxFrameHeight = maxFrameHeight;
 
             RTPEncodingDesc[] encodings;
             if (track == null)

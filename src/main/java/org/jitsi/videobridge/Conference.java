@@ -20,6 +20,7 @@ import org.jitsi.eventadmin.*;
 import org.jitsi.nlj.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging.*;
