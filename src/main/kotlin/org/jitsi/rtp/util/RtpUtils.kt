@@ -77,8 +77,7 @@ class RtpUtils {
          * getSequenceNumberDelta(1, 65530) -> 7 (65530 + 7 = 1)
          * @return the delta between two RTP sequence numbers (modulo 2^16).
          */
-        fun getSequenceNumberDelta(a: Int, b: Int): Int
-        {
+        fun getSequenceNumberDelta(a: Int, b: Int): Int {
             val diff = a - b
             return when {
                 diff < -(1 shl 15) -> diff + (1 shl 16)
