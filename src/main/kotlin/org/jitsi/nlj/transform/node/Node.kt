@@ -24,7 +24,8 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.NodeVisitor
 import org.jitsi.nlj.util.BufferPool
-import org.jitsi.nlj.util.Util.Companion.getMbps
+import org.jitsi.nlj.util.addMbps
+import org.jitsi.nlj.util.addRatio
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.PacketPredicate
@@ -177,7 +178,7 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
         val duration = Duration.ofNanos(lastPacketTime - firstPacketTime)
         addNumber("num_input_bytes", numBytes)
         addNumber("duration_ms", duration.toMillis())
-        addNumber("throughput_mbps", getMbps(numBytes, duration))
+        addMbps("throughput_mbps", "num_input_bytes", "duration_ms")
     }
 
     private fun onEntry(packetInfo: PacketInfo) {
@@ -285,10 +286,6 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
          */
         var maxProcessingDurationNs: Long = -1
     ) {
-        private val averageProcessingTimePerPacketNs
-            get() = totalProcessingDurationNs / Math.max(numInputPackets, 1)
-        private val processingThroughputMbps
-            get() = getMbps(numInputBytes, Duration.ofNanos(totalProcessingDurationNs))
         private val totalProcessingDurationMs
             get() = Duration.ofNanos(totalProcessingDurationNs).toMillis()
         private val maxProcessingDurationMs: Double
@@ -299,10 +296,13 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
                 addNumber("num_input_packets", numInputPackets)
                 addNumber("num_output_packets", numOutputPackets)
                 addNumber("num_discarded_packets", numDiscardedPackets)
-                addNumber("total_time_spent_ms", totalProcessingDurationMs)
-                addNumber("average_time_spent_per_packet_ns", averageProcessingTimePerPacketNs)
-                addNumber("processing_throughput_mbps", processingThroughputMbps)
-                addNumber("max_packet_process_time", maxProcessingDurationMs)
+                addNumber("total_time_spent_ns", totalProcessingDurationNs)
+                addCompoundValue("total_time_spent_ms") {
+                    Duration.ofNanos(it.getNumberOrDefault("total_time_spent_ns", 0).toLong()).toMillis()
+                }
+                addRatio("average_time_per_packet_ns", "total_time_spent_ns", "num_input_packets")
+                addMbps("processing_throughput_mbps", "num_input_bytes", "total_time_spent_ms")
+                addNumber("max_packet_process_time_ms", maxProcessingDurationMs)
             }
         }
     }

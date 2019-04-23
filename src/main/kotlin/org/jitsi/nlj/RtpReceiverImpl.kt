@@ -44,7 +44,8 @@ import org.jitsi.nlj.transform.node.incoming.Vp8Parser
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.PacketInfoQueue
-import org.jitsi.nlj.util.Util.Companion.getMbps
+import org.jitsi.nlj.util.addMbps
+import org.jitsi.nlj.util.addRatio
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.PacketPredicate
@@ -54,8 +55,6 @@ import org.jitsi.util.RTCPUtils
 import org.jitsi.utils.logging.Logger
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.lang.Double.max
-import java.time.Duration
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 
 class RtpReceiverImpl @JvmOverloads constructor(
@@ -248,22 +247,27 @@ class RtpReceiverImpl @JvmOverloads constructor(
     override fun processPacket(packetInfo: PacketInfo) = inputTreeRoot.processPacket(packetInfo)
 
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("RTP receiver $id").apply {
-        addNumber("received_packets", packetsReceived)
-        addNumber("received_bytes", bytesReceived)
-        val duration = Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime)
-        addNumber("received_bitrate_mbps", getMbps(bytesReceived, duration))
-        addNumber("received_duration_seconds", duration.seconds)
+        val receivedBytesKey = "received_bytes"
+        val receivedDurationMsKey = "received_duration_ms"
 
+        addNumber("received_packets", packetsReceived)
+        addNumber(receivedBytesKey, bytesReceived)
+        addNumber(receivedDurationMsKey, lastPacketWrittenTime - firstPacketProcessedTime)
+        addMbps("received_bitrate_mbps", receivedBytesKey, receivedDurationMsKey)
+
+        val processedBytesKey = "processed_bytes"
+        val processingDurationMsKey = "processing_duration_ms"
         addNumber("processed_packets", packetsProcessed)
         addNumber("processed_packets_percent", 100 * (packetsProcessed / max(1.0, packetsReceived.toDouble())))
-        addNumber("processed_bytes_mbps", bytesProcessed)
-        val processingDuration = Duration.ofMillis(lastPacketProcessedTime - firstPacketProcessedTime)
-        addNumber("processed_bitrate", getMbps(bytesProcessed, processingDuration))
-        addNumber("processed_duration_seconds", processingDuration.seconds)
-        val queueReadTotal = lastQueueReadTime - firstQueueReadTime
-        addNumber("average_queue_reads_per_second",
-                numQueueReads / (Duration.ofMillis(queueReadTotal).seconds.toDouble()))
-        addNumber("num_queue_reads", numQueueReads)
+        addNumber(processedBytesKey, bytesProcessed)
+        addNumber(processingDurationMsKey, lastPacketProcessedTime - firstPacketProcessedTime)
+        addMbps("processed_bitrate", processedBytesKey, processingDurationMsKey)
+
+        val queueNumReadsKey = "queue_num_reads"
+        val queueReadDurationSKey = "queue_read_duration_s"
+        addNumber(queueNumReadsKey, numQueueReads)
+        addNumber(queueReadDurationSKey, (lastQueueReadTime - firstQueueReadTime).toDouble() / 1000)
+        addRatio("queue_average_reads_per_second", queueNumReadsKey, queueReadDurationSKey)
 
         addString("running", running.toString())
         NodeStatsVisitor(this).visit(inputTreeRoot)
