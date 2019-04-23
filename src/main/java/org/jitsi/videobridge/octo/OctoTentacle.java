@@ -19,6 +19,8 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.osgi.*;
+import org.jitsi.rtp.*;
+import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.*;
@@ -115,18 +117,18 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      * {@inheritDoc}
      */
     @Override
-    public void sendRtp(PacketInfo packetInfo, String sourceEpId)
+    public void send(PacketInfo packetInfo, String sourceEpId)
     {
-        relay.sendRtp(
-                packetInfo.getPacket(),
+        Packet packet = packetInfo.getPacket();
+        if (packet instanceof RtpPacket)
+        {
+            relay.sendRtp(
+                packet,
                 targets,
                 conference.getGid(),
                 sourceEpId);
-    }
+        }
 
-    @Override
-    public void sendRtcp(PacketInfo packet, String sourceEpId)
-    {
         // TODO relay rtcp srs
     }
 

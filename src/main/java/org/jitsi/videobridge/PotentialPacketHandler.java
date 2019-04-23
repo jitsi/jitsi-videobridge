@@ -22,24 +22,17 @@ public interface PotentialPacketHandler
 {
     /**
      * Checks whether or not this PotentialPacketHandler is interested
-     * in the RTP packet 'packet' from 'source'
-     * @param packet the RTP packet
-     * @param sourceEpId the ID of the endpoint from which the RTP packet came
+     * in the RTP/RTCP packet 'packet' from 'source'
+     * @param packet the RTP/RTCP packet
+     * @param sourceEpId the ID of the endpoint from which the RTP/RTCP packet came
      * @return true if this handler wants the given packet, false otherwise
      */
     boolean wants(PacketInfo packet, String sourceEpId);
 
     /**
-     * Send the given rtp 'packet' (which came from 'source')
-     * @param packet the RTP packet
-     * @param sourceEpId the ID of the endpoint from which the RTP packet came
+     * Send the given RTP/RTCP 'packet' (which came from 'source')
+     * @param packet the RTP/RTCP packet
+     * @param sourceEpId the ID of the endpoint from which the RTP/RTCP packet came
      */
-    void sendRtp(PacketInfo packet, String sourceEpId);
-
-    /**
-     * Send the given rtcp 'packet' (which came from 'source')
-     * @param packetInfo the rtcp packet
-     * @param sourceEpId the ID of the endpoint from which the RTP packet came
-     */
-    void sendRtcp(PacketInfo packetInfo, String sourceEpId);
+    void send(PacketInfo packet, String sourceEpId);
 }
