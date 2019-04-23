@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import org.jetbrains.annotations.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.nlj.*;
+import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
@@ -1144,7 +1145,24 @@ public class Conference
      */
     void handleIncomingRtcp(PacketInfo packetInfo, AbstractEndpoint source)
     {
-        sendOut(packetInfo, source);
+        Packet packet = packetInfo.getPacket();
+        if (packet instanceof RtcpFbPliPacket || packet instanceof RtcpFbFirPacket)
+        {
+            RtcpFbPacket rtcpFbPacket = (RtcpFbPacket) packet;
+
+            // XXX we could make this faster with a map
+            AbstractEndpoint endpoint
+                = findEndpointByReceiveSSRC(rtcpFbPacket.getMediaSourceSsrc(), MediaType.VIDEO);
+
+            if (endpoint instanceof Endpoint)
+            {
+                ((Endpoint) endpoint).send(packetInfo, source.getID());
+            }
+
+            // TODO Octo
+        }
+        else
+            sendOut(packetInfo, source);
     }
 
     /**

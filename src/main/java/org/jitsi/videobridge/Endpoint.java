@@ -433,12 +433,7 @@ public class Endpoint
             }
             else if (packet instanceof RtcpPacket)
             {
-                if (packet instanceof RtcpFbPacket)
-                {
-                    RtcpFbPacket rtcpPacket = (RtcpFbPacket) packet;
-                    return receivesSsrc(rtcpPacket.getMediaSourceSsrc());
-                }
-                else if (packet instanceof RtcpSrPacket)
+                if (packet instanceof RtcpSrPacket)
                 {
                     // TODO(george) we're only interested in the ntp/rtp timestamp association, so only accept srs from the main ssrc
                     return true;
