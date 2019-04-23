@@ -1181,7 +1181,7 @@ public class Conference
     {
         JSONObject debugState = new JSONObject();
         debugState.put("id", id);
-        debugState.put("name", name.toString());
+        debugState.put("name", name == null ? null : name.toString());
 
         if (full)
         {
