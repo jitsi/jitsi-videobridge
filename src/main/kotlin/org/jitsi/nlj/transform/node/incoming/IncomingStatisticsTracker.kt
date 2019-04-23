@@ -98,7 +98,7 @@ class IncomingStatisticsTracker : ObserverNode("Incoming statistics tracker") {
         return super.getNodeStats().apply {
             val stats = getSnapshot()
             stats.ssrcStats.forEach { ssrc, streamStats ->
-                addNumber("source_ssrc", ssrc)
+                addString("source_ssrc", ssrc.toString())
                 addString("stream_stats", streamStats.toString())
             }
         }

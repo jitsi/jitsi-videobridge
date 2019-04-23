@@ -219,6 +219,8 @@ open class ArrayCache<T>(
         addNumber("numOldInserts", numOldInserts)
         addNumber("numHits", numHits)
         addNumber("numMisses", numMisses)
+        addNumber("numRequests", numHits + numMisses)
+        addRatio("hitRate", "numHits", "numRequests", 1)
     }
 
     inner class Container(
