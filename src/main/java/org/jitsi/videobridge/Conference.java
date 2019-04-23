@@ -1085,7 +1085,7 @@ public class Conference
             {
                 if (prevHandler != null)
                 {
-                    prevHandler.sendRtp(packetInfo.clone(), sourceEpId);
+                    prevHandler.send(packetInfo.clone(), sourceEpId);
                 }
                 prevHandler = endpoint;
             }
@@ -1094,13 +1094,13 @@ public class Conference
         {
             if (prevHandler != null)
             {
-                prevHandler.sendRtp(packetInfo.clone(), sourceEpId);
+                prevHandler.send(packetInfo.clone(), sourceEpId);
             }
             prevHandler = tentacle;
         }
         if (prevHandler != null)
         {
-            prevHandler.sendRtp(packetInfo, sourceEpId);
+            prevHandler.send(packetInfo, sourceEpId);
         }
     }
 
@@ -1135,7 +1135,7 @@ public class Conference
         String sourceEpId = source != null ? source.getID() : null;
         endpointsCache.forEach(endpoint -> {
             if (endpoint.wants(packetInfo, sourceEpId))
-                endpoint.sendRtcp(packetInfo.clone(), sourceEpId);
+                endpoint.send(packetInfo.clone(), sourceEpId);
         });
 
         //TODO Octo

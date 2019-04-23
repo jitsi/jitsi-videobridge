@@ -459,38 +459,35 @@ public class Endpoint
      * TODO Brian
      */
     @Override
-    public void sendRtp(PacketInfo packetInfo, String sourceEpId)
+    public void send(PacketInfo packetInfo, String sourceEpId)
     {
         Packet packet = packetInfo.getPacket();
-        if (packet instanceof VideoRtpPacket)
+        if (packet instanceof RtpPacket)
         {
-            //TODO(brian): we lose all information in packetinfo here, unfortunately, because
-            // the bitratecontroller can return more than/less than what was passed in (and in
-            // different order) so we can't just reassign a transformed packet back into its
-            // proper packetinfo.  need to change those classes to work with the new packet
-            // types
-            VideoRtpPacket[] res = bitrateController.transformRtp(packetInfo);
-            for (VideoRtpPacket videoRtpPacket : res)
+            if (packet instanceof VideoRtpPacket)
             {
-                if (videoRtpPacket == null)
+                //TODO(brian): we lose all information in packetinfo here, unfortunately, because
+                // the bitratecontroller can return more than/less than what was passed in (and in
+                // different order) so we can't just reassign a transformed packet back into its
+                // proper packetinfo.  need to change those classes to work with the new packet
+                // types
+                VideoRtpPacket[] res = bitrateController.transformRtp(packetInfo);
+                for (VideoRtpPacket videoRtpPacket : res)
                 {
-                    continue;
+                    if (videoRtpPacket == null)
+                    {
+                        continue;
+                    }
+                    transceiver.sendRtp(new PacketInfo(videoRtpPacket));
                 }
-                transceiver.sendRtp(new PacketInfo(videoRtpPacket));
+            }
+            else
+            {
+                // By default just add it to the sender's queue
+                transceiver.sendRtp(packetInfo);
             }
         }
-        else
-        {
-            // By default just add it to the sender's queue
-            transceiver.sendRtp(packetInfo);
-        }
-    }
-
-    @Override
-    public void sendRtcp(PacketInfo packetInfo, String sourceEpId)
-    {
-        Packet packet = packetInfo.getPacket();
-        if (packet instanceof RtcpSrPacket)
+        else if (packet instanceof RtcpSrPacket)
         {
             RtcpSrPacket rtcpSrPacket = (RtcpSrPacket) packet;
             if (bitrateController.transformRtcp(rtcpSrPacket))
