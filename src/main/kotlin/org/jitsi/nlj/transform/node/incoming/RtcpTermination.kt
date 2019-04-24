@@ -27,6 +27,7 @@ import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.RtcpSdesPacket
 import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpByePacket
+import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.SenderInfoParser
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
@@ -70,7 +71,10 @@ class RtcpTermination(
             if (pkt is RtcpSrPacket) {
                 // NOTE(george) effectively eliminates any report blocks as we don't want to relay those
                 logger.cdebug { "saw an sr from ssrc=${pkt.senderSsrc}, timestamp=${pkt.senderInfo.rtpTimestamp}" }
-                pkt.length = SenderInfoParser.SIZE_BYTES
+                val lengthBytes = RtcpHeader.SIZE_BYTES + SenderInfoParser.SIZE_BYTES
+                pkt.length = lengthBytes
+                // We can do this because we've already parsed the compound packet and we are discarding it anyway
+                pkt.lengthField = (lengthBytes / 4) - 1
             }
         }
         return if (forwardedRtcp != null) {
