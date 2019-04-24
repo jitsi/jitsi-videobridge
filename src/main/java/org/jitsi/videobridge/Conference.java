@@ -266,8 +266,8 @@ public class Conference
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
         }
 
-        // We listen to our own events so we have a centralized place to handle certain
-        // things (e.g. anytime the endpoints list changes)
+        // We listen to our own events so we have a centralized place to handle
+        // certain things (e.g. anytime the endpoints list changes)
         addPropertyChangeListener(propertyChangeListener);
 
         touch();
@@ -818,14 +818,16 @@ public class Conference
         {
             speechActivityPropertyChange(ev);
         }
-        else if (Endpoint.SELECTED_ENDPOINTS_PROPERTY_NAME.equals(ev.getPropertyName()))
+        else if (Endpoint.SELECTED_ENDPOINTS_PROPERTY_NAME
+                .equals(ev.getPropertyName()))
         {
             Set<String> oldSelectedEndpoints = (Set<String>)ev.getOldValue();
             Set<String> newSelectedEndpoints = (Set<String>)ev.getNewValue();
             // Any endpoints in the oldSelectedEndpoints list which AREN'T
             // in the newSelectedEndpoints list should have their count decremented
             oldSelectedEndpoints.stream()
-                .filter(oldSelectedEp -> !newSelectedEndpoints.contains(oldSelectedEp))
+                .filter(
+                    oldSelectedEp -> !newSelectedEndpoints.contains(oldSelectedEp))
                 .map(this::getEndpoint)
                 .filter(Objects::nonNull)
                 .forEach(AbstractEndpoint::decrementSelectedCount);
@@ -833,12 +835,14 @@ public class Conference
             // Any endpoints in the newSelectedEndpoints list which AREN'T
             // in the oldSelectedEndpoints list should have their count incremented
             newSelectedEndpoints.stream()
-                .filter(newSelectedEp -> !oldSelectedEndpoints.contains(newSelectedEp))
+                .filter(
+                    newSelectedEp -> !oldSelectedEndpoints.contains(newSelectedEp))
                 .map(this::getEndpoint)
                 .filter(Objects::nonNull)
                 .forEach(AbstractEndpoint::incrementSelectedCount);
         }
-        else if (AbstractEndpoint.ENDPOINT_CHANGED_PROPERTY_NAME.equals(ev.getPropertyName()))
+        else if (AbstractEndpoint.ENDPOINT_CHANGED_PROPERTY_NAME
+                .equals(ev.getPropertyName()))
         {
             firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
         }
@@ -885,7 +889,8 @@ public class Conference
     {
         if (!isExpired())
         {
-            AbstractEndpoint dominantSpeaker = speechActivity.getDominantEndpoint();
+            AbstractEndpoint dominantSpeaker
+                    = speechActivity.getDominantEndpoint();
 
             if (dominantSpeaker != null)
             {
@@ -1114,7 +1119,8 @@ public class Conference
      * packet comes from another bridge via Octo.
      *
      */
-    public void handleIncomingRtp(PacketInfo packetInfo, AbstractEndpoint source)
+    public void handleIncomingRtp(
+            PacketInfo packetInfo, AbstractEndpoint source)
     {
         sendOut(packetInfo, source);
     }
@@ -1148,13 +1154,16 @@ public class Conference
     void handleIncomingRtcp(PacketInfo packetInfo, AbstractEndpoint source)
     {
         Packet packet = packetInfo.getPacket();
-        if (packet instanceof RtcpFbPliPacket || packet instanceof RtcpFbFirPacket)
+        if (packet instanceof RtcpFbPliPacket
+                || packet instanceof RtcpFbFirPacket)
         {
             RtcpFbPacket rtcpFbPacket = (RtcpFbPacket) packet;
 
             // XXX we could make this faster with a map
             AbstractEndpoint endpoint
-                = findEndpointByReceiveSSRC(rtcpFbPacket.getMediaSourceSsrc(), MediaType.VIDEO);
+                = findEndpointByReceiveSSRC(
+                    rtcpFbPacket.getMediaSourceSsrc(),
+                    MediaType.VIDEO);
 
             if (endpoint instanceof Endpoint)
             {

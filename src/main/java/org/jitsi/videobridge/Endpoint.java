@@ -26,7 +26,6 @@ import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.*;
-import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
@@ -436,7 +435,9 @@ public class Endpoint
             {
                 if (packet instanceof RtcpSrPacket)
                 {
-                    // TODO(george) we're only interested in the ntp/rtp timestamp association, so only accept srs from the main ssrc
+                    // TODO(george) we're only interested in the ntp/rtp
+                    // timestamp association, so only accept srs from the main
+                    // ssrc
                     return true;
                 }
                 else
@@ -462,11 +463,12 @@ public class Endpoint
         {
             if (packet instanceof VideoRtpPacket)
             {
-                //TODO(brian): we lose all information in packetinfo here, unfortunately, because
-                // the bitratecontroller can return more than/less than what was passed in (and in
-                // different order) so we can't just reassign a transformed packet back into its
-                // proper packetinfo.  need to change those classes to work with the new packet
-                // types
+                //TODO(brian): we lose all information in PacketInfo here,
+                // unfortunately, because the BitrateController can return more
+                // than/less than what was passed in (and in different order) so
+                // we can't just reassign a transformed packet back into its
+                // proper PacketInfo. Need to change those classes to work with
+                // the new packet types
                 VideoRtpPacket[] res = bitrateController.transformRtp(packetInfo);
                 for (VideoRtpPacket videoRtpPacket : res)
                 {
@@ -488,8 +490,14 @@ public class Endpoint
             RtcpSrPacket rtcpSrPacket = (RtcpSrPacket) packet;
             if (bitrateController.transformRtcp(rtcpSrPacket))
             {
-                logger.info("relaying an sr from ssrc=" + rtcpSrPacket.getSenderSsrc()
-                    + ", timestamp=" + rtcpSrPacket.getSenderInfo().getRtpTimestamp());
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug(
+                        "relaying an sr from ssrc="
+                            + rtcpSrPacket.getSenderSsrc()
+                            + ", timestamp="
+                            + rtcpSrPacket.getSenderInfo().getRtpTimestamp());
+                }
                 transceiver.sendRtcp(rtcpSrPacket);
             }
         }
@@ -528,9 +536,12 @@ public class Endpoint
      * TODO Brian
      */
     public void setSrtpInformation(
-            int chosenSrtpProtectionProfile, TlsRole tlsRole, byte[] keyingMaterial)
+            int chosenSrtpProtectionProfile,
+            TlsRole tlsRole,
+            byte[] keyingMaterial)
     {
-        transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial);
+        transceiver.setSrtpInformation(
+                chosenSrtpProtectionProfile, tlsRole, keyingMaterial);
     }
 
     /**
@@ -705,7 +716,8 @@ public class Endpoint
         // Create the SctpManager and provide it a method for sending SCTP data
         this.sctpManager = new SctpManager(
                 (data, offset, length) -> {
-                    PacketInfo packet = new PacketInfo(new UnparsedPacket(data, offset, length));
+                    PacketInfo packet
+                        = new PacketInfo(new UnparsedPacket(data, offset, length));
                     transportManager.sendDtlsData(packet);
                     return 0;
                 }
@@ -762,11 +774,12 @@ public class Endpoint
             // We assume all data coming over SCTP will be datachannel data
             DataChannelPacket dcp
                     = new DataChannelPacket(data, 0, data.length, sid, (int)ppid);
-            // Post the rest of the task here because the current context is holding a lock inside
-            // the SctpSocket which can cause a deadlock if two endpoints are trying to send
-            // datachannel messages to one another (with stats broadcasting it can happen
-            // often)
-            TaskPools.IO_POOL.execute(() -> dataChannelHandler.consume(new PacketInfo(dcp)));
+            // Post the rest of the task here because the current context is
+            // holding a lock inside the SctpSocket which can cause a deadlock
+            // if two endpoints are trying to send datachannel messages to one
+            // another (with stats broadcasting it can happen often)
+            TaskPools.IO_POOL.execute(
+                    () -> dataChannelHandler.consume(new PacketInfo(dcp)));
         };
         socket.listen();
         // We don't want to block the calling thread on the
@@ -981,7 +994,8 @@ public class Endpoint
     }
 
     /**
-     * Sends a message to this {@link Endpoint} in order to notify it that the list/set of {@code lastN} has changed.
+     * Sends a message to this {@link Endpoint} in order to notify it that the
+     * list/set of {@code lastN} has changed.
      *
      * @param forwardedEndpoints the collection of forwarded endpoints.
      * @param endpointsEnteringLastN the <tt>Endpoint</tt>s which are entering
@@ -1124,9 +1138,9 @@ public class Endpoint
                     else
                     {
                         DataChannelPacket dcp
-                                = (DataChannelPacket) packetInfo.getPacket();
+                            = (DataChannelPacket) packetInfo.getPacket();
                         dataChannelStack.onIncomingDataChannelPacket(
-                                ByteBuffer.wrap(dcp.getBuffer()), dcp.sid, dcp.ppid);
+                            ByteBuffer.wrap(dcp.getBuffer()), dcp.sid, dcp.ppid);
                     }
                 }
             }
@@ -1149,9 +1163,12 @@ public class Endpoint
                 {
                     this.dataChannelStack = dataChannelStack;
                     cachedDataChannelPackets.forEach(packetInfo -> {
-                        DataChannelPacket dcp = (DataChannelPacket)packetInfo.getPacket();
-                        //TODO(brian): have datachannelstack accept DataChannelPackets?
-                        dataChannelStack.onIncomingDataChannelPacket(ByteBuffer.wrap(dcp.getBuffer()), dcp.sid, dcp.ppid);
+                        DataChannelPacket dcp
+                                = (DataChannelPacket)packetInfo.getPacket();
+                        //TODO(brian): have datachannelstack accept
+                        // DataChannelPackets?
+                        dataChannelStack.onIncomingDataChannelPacket(
+                            ByteBuffer.wrap(dcp.getBuffer()), dcp.sid, dcp.ppid);
                     });
                 }
             });
@@ -1372,8 +1389,8 @@ public class Endpoint
         debugState.put("bandwidthProbing", bandwidthProbing.getDebugState());
         DtlsTransport transportManager = this.transportManager;
         debugState.put(
-                "transportManager",
-                transportManager == null ? null : transportManager.getDebugState());
+            "transportManager",
+            transportManager == null ? null : transportManager.getDebugState());
         debugState.put("transceiver", transceiver.getNodeStats().toJson());
         debugState.put("acceptAudio", acceptAudio);
         debugState.put("acceptVideo", acceptVideo);
