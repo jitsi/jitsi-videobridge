@@ -390,7 +390,6 @@ public class Endpoint
     {
         super.setMaxReceiveFrameHeightPx(maxReceiveFrameHeightPx);
         bitrateController.setMaxRxFrameHeightPx(maxReceiveFrameHeightPx);
-        bitrateController.constraintsChanged();
     }
 
     /**
