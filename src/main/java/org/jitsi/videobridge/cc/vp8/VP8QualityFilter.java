@@ -163,7 +163,7 @@ class VP8QualityFilter
         }
         else if (currentSpatialLayerId > SUSPENDED_LAYER_ID)
         {
-            if (!isInSwitchingPhase(nowMs) && isPossibleToSwitch(spatialLayerId))
+            if (isOutOfSwitchingPhase(nowMs) && isPossibleToSwitch(spatialLayerId))
             {
                 needsKeyframe = true;
             }
@@ -210,10 +210,10 @@ class VP8QualityFilter
      * @param nowMs the current time (in millis)
      * @return true if we're in layer switching phase, false otherwise.
      */
-    private synchronized boolean isInSwitchingPhase(long nowMs)
+    private synchronized boolean isOutOfSwitchingPhase(long nowMs)
     {
         long deltaMs = nowMs - mostRecentKeyframeGroupArrivalTimeMs;
-        return deltaMs <= MIN_KEY_FRAME_WAIT_MS;
+        return deltaMs > MIN_KEY_FRAME_WAIT_MS;
     }
 
     /**
@@ -282,7 +282,7 @@ class VP8QualityFilter
         // whether we'll be able to achieve the internalSpatialLayerIdTarget.
         needsKeyframe = false;
 
-        if (!isInSwitchingPhase(nowMs))
+        if (isOutOfSwitchingPhase(nowMs))
         {
             // During the switching phase we always project the first
             // keyframe because it may very well be the only one that we
