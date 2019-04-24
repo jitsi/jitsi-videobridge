@@ -28,18 +28,18 @@ import java.util.concurrent.ConcurrentHashMap
  * Discards RTP packets which contains shouldDiscard, masking their loss in the RTP sequence numbers and timestamps of RTP
  * packets, as well as the RTP timestamp in RTCP SR packets.
  */
-class SilenceDiscarder {
+class SilenceDiscarder(
+    private val rewriteTimestamps: Boolean = false
+) {
     val rewriters: MutableMap<Long, ResumableStreamRewriter> = ConcurrentHashMap()
     val rtpNode = RtpTransformer()
     val rtcpNode = RtcpTransformer()
 
     inner class RtpTransformer : TransformerNode("Silence discarder RTP") {
         override fun transform(packetInfo: PacketInfo): PacketInfo? {
-            val packet = packetInfo.packet
-            if (packet is AudioRtpPacket) {
-                rewriters.computeIfAbsent(packet.ssrc) { ResumableStreamRewriter() }
-                        .rewriteRtp(!packetInfo.shouldDiscard, packet)
-            }
+            val packet = packetInfo.packet as? AudioRtpPacket ?: return packetInfo
+            rewriters.computeIfAbsent(packet.ssrc) { ResumableStreamRewriter(rewriteTimestamps) }
+                .rewriteRtp(!packetInfo.shouldDiscard, packet)
 
             return if (packetInfo.shouldDiscard) {
                 packetDiscarded(packetInfo)
@@ -52,6 +52,8 @@ class SilenceDiscarder {
 
     inner class RtcpTransformer : TransformerNode("Silence discarder RTCP") {
         override fun transform(packetInfo: PacketInfo): PacketInfo? {
+            if (!rewriteTimestamps) { return packetInfo }
+
             val packet = packetInfo.packet
             when (packet) {
                 is RtcpSrPacket -> rewriters[packet.senderSsrc]?.rewriteRtcpSr(packet)

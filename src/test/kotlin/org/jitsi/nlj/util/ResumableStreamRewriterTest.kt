@@ -24,7 +24,7 @@ import org.jitsi.nlj.rtp.ResumableStreamRewriter
 internal class ResumableStreamRewriterTest : ShouldSpec() {
     init {
         var ret: Int
-        val snr = ResumableStreamRewriter()
+        val snr = ResumableStreamRewriter(false)
 
         "Initial state" {
             snr.seqnumDelta shouldBe 0
