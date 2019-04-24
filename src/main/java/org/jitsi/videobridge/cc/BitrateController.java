@@ -211,7 +211,8 @@ public class BitrateController
                 ENABLE_ONSTAGE_VIDEO_SUSPEND_DEFAULT)
         : ENABLE_ONSTAGE_VIDEO_SUSPEND_DEFAULT;
 
-    private static final Logger classLogger = Logger.getLogger(BitrateController.class);
+    private static final Logger classLogger
+            = Logger.getLogger(BitrateController.class);
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -286,7 +287,8 @@ public class BitrateController
     /**
      * The current padding parameters list for {@link Endpoint}.
      */
-    private List<AdaptiveTrackProjection> adaptiveTrackProjections = Collections.emptyList();
+    private List<AdaptiveTrackProjection> adaptiveTrackProjections
+            = Collections.emptyList();
 
     /**
      * The maximum frame height, in pixels, the endpoint with which this
@@ -296,19 +298,20 @@ public class BitrateController
     private int maxRxFrameHeightPx = -1;
 
     /**
-     * The IDs of the endpoints which have been selected by the endpoint to which this
-     * {@link BitrateController} belongs
+     * The IDs of the endpoints which have been selected by the endpoint to
+     * which this {@link BitrateController} belongs.
      */
     private Set<String> selectedEndpointIds = Collections.emptySet();
 
     /**
-     * The IDs of the endpoints which have been pinned by the endpoint to which this
-     * {@link BitrateController} belongs
+     * The IDs of the endpoints which have been pinned by the endpoint to which
+     * this {@link BitrateController} belongs.
      */
     private Set<String> pinnedEndpointIds = Collections.emptySet();
 
     /**
-     * The last-n value for the endpoint to which this {@link BitrateController} belongs
+     * The last-n value for the endpoint to which this {@link BitrateController}
+     * belongs
      */
     private int lastN = -1;
 
@@ -319,8 +322,9 @@ public class BitrateController
 
     private final DiagnosticContext diagnosticContext;
 
-    //TODO(brian): throwing this here temporarily because it's needed and it used to be pulled from the Stream.
-    // this was really an approximation for determining whether or not adaptivity/probing is supported, so we should
+    //TODO(brian): throwing this here temporarily because it's needed and it
+    // used to be pulled from the Stream. This was really an approximation for
+    // determining whether or not adaptivity/probing is supported, so we should
     // just detect that and set something appropriately in BitrateController
     private final boolean supportsRtx = true;
 
@@ -401,22 +405,18 @@ public class BitrateController
             return false;
         }
 
-//        logger.debug("BitrateController " + hashCode() + " found a projection for " +
-//                "packet with ssrc " + ssrc);
         return adaptiveTrackProjection.accept(rtpPacket);
     }
 
     public boolean transformRtcp(RtcpSrPacket rtcpSrPacket)
     {
         long ssrc = rtcpSrPacket.getSenderSsrc();
-        if (ssrc < 0)
-        {
-            return false;
-        }
 
-        AdaptiveTrackProjection adaptiveTrackProjection = adaptiveTrackProjectionMap.get(ssrc);
+        AdaptiveTrackProjection adaptiveTrackProjection
+                = adaptiveTrackProjectionMap.get(ssrc);
 
-        return adaptiveTrackProjection != null && adaptiveTrackProjection.rewriteRtcp(rtcpSrPacket);
+        return adaptiveTrackProjection != null
+                && adaptiveTrackProjection.rewriteRtcp(rtcpSrPacket);
     }
 
     /**
@@ -472,13 +472,15 @@ public class BitrateController
      */
     public StatusSnapshot getStatusSnapshot()
     {
-        if (adaptiveTrackProjections == null || adaptiveTrackProjections.isEmpty())
+        if (adaptiveTrackProjections == null
+            || adaptiveTrackProjections.isEmpty())
         {
             return new StatusSnapshot();
         }
         List<Long> activeSsrcs = new ArrayList<>();
         long totalTargetBps = 0, totalIdealBps = 0;
-        for (AdaptiveTrackProjection adaptiveTrackProjection : adaptiveTrackProjections)
+        for (AdaptiveTrackProjection adaptiveTrackProjection
+                : adaptiveTrackProjections)
         {
             MediaStreamTrackDesc sourceTrack
                     = adaptiveTrackProjection.getSource();
@@ -543,21 +545,24 @@ public class BitrateController
     }
 
     /**
-     * Called when the estimated banwidth for the endpoint to which this BitrateController belongs
-     * has changed (which may therefore result in a different set of streams being forwarded)
+     * Called when the estimated bandwidth for the endpoint to which this
+     * BitrateController belongs has changed (which may therefore result in a
+     * different set of streams being forwarded)
      * @param newBandwidthBps the newly estimated bandwidth in bps
      */
     public void bandwidthChanged(long newBandwidthBps)
     {
         if (logger.isDebugEnabled())
         {
-            logger.debug(destinationEndpoint.getID() + " bandwidth has changed, updating");
+            logger.debug(
+                destinationEndpoint.getID() + " bandwidth has changed, updating");
         }
 
         if (!isLargerThanBweThreshold(lastBwe, newBandwidthBps))
         {
-            logger.debug("New bandwidth (" + newBandwidthBps  + ") is not signifcantly " +
-                    "changed from previous estimate (" + lastBwe + "), ignoring");
+            logger.debug("New bandwidth (" + newBandwidthBps
+                + ") is not significantly " +
+                "changed from previous estimate (" + lastBwe + "), ignoring");
             // If this is a "negligible" change in the bandwidth estimation
             // wrt the last bandwidth estimation that we reacted to, then
             // do not update the bitrate allocation. The goal is to limit
@@ -570,37 +575,43 @@ public class BitrateController
     }
 
     /**
-     * Called when the ordering of endpoints has changed in some way.  This could be due to an
-     * endpoint joining or leaving, a new dominant speaker, or a change in which endpoints are
-     * selected
-     * @param conferenceEndpoints the endpoints of the conference sorted in dominant speaker
-     *                            order (NOTE this does NOT take into account orderings specific
-     *                            to this particular endpoint, e.g. selected or pinned, though
-     *                            this method SHOULD be invoked when those things change; they
-     *                            will be taken into account in this flow)
+     * Called when the ordering of endpoints has changed in some way. This could
+     * be due to an endpoint joining or leaving, a new dominant speaker, or a
+     * change in which endpoints are selected.
+     *
+     * @param conferenceEndpoints the endpoints of the conference sorted in
+     * dominant speaker order (NOTE this does NOT take into account orderings
+     * specific to this particular endpoint, e.g. selected or pinned, though
+     * this method SHOULD be invoked when those things change; they will be
+     * taken into account in this flow)
      */
     public void endpointOrderingChanged(List<AbstractEndpoint> conferenceEndpoints)
     {
         if (logger.isDebugEnabled())
         {
-            logger.debug(destinationEndpoint.getID() + " endpoint ordering has changed, updating");
+            logger.debug(
+                destinationEndpoint.getID()
+                        + " endpoint ordering has changed, updating");
         }
         update(conferenceEndpoints, getAvailableBandwidth());
     }
 
     /**
-     * Called to signal constraints on the endpoint to which this BitrateController
-     * belongs have changed, so we should recalculate which streams we're forwarding.
+     * Called to signal constraints on the endpoint to which this
+     * BitrateController belongs have changed, so we should recalculate which
+     * streams we're forwarding.
      */
     public void constraintsChanged()
     {
         if (logger.isDebugEnabled())
         {
-            logger.debug(destinationEndpoint.getID() + " constraints have changed, updating");
+            logger.debug(
+                destinationEndpoint.getID()
+                        + " constraints have changed, updating");
         }
-        // Neither the endpoints list nor the available bandwidth has changed, so we
-        // just use the most recent values of each to drive a new update to take
-        // the constraint changes into account
+        // Neither the endpoints list nor the available bandwidth has changed,
+        // so we just use the most recent values of each to drive a new update
+        // to take the constraint changes into account
         update(lastEndpointOrdering, getAvailableBandwidth());
     }
 
@@ -617,13 +628,11 @@ public class BitrateController
      * {@link ConferenceSpeechActivity}.
      * @param bweBps the current bandwidth estimation (in bps)
      */
-    private synchronized void update(List<AbstractEndpoint> conferenceEndpoints, long bweBps)
+    private synchronized void update(
+            List<AbstractEndpoint> conferenceEndpoints, long bweBps)
     {
         lastEndpointOrdering = conferenceEndpoints;
         lastBwe = bweBps;
-
-        logger.debug("TEMP: BitrateController " + hashCode() + " updating. " +
-                "bwebps is " + bweBps);
 
         // Create a copy as we may modify the list in the prioritize method.
         conferenceEndpoints = new ArrayList<>(conferenceEndpoints);
@@ -631,8 +640,6 @@ public class BitrateController
         // Compute the bitrate allocation.
         TrackBitrateAllocation[]
             trackBitrateAllocations = allocate(bweBps, conferenceEndpoints);
-        logger.debug("TEMP: BitrateController#update got " + trackBitrateAllocations.length +
-                " track allocations");
 
         // Update the the controllers based on the allocation and send a
         // notification to the client the set of forwarded endpoints has
@@ -649,7 +656,8 @@ public class BitrateController
 
         long nowMs = System.currentTimeMillis();
 
-        List<AdaptiveTrackProjection> adaptiveTrackProjections = new ArrayList<>();
+        List<AdaptiveTrackProjection> adaptiveTrackProjections
+                = new ArrayList<>();
         if (!ArrayUtils.isNullOrEmpty(trackBitrateAllocations))
         {
             for (TrackBitrateAllocation
@@ -659,8 +667,6 @@ public class BitrateController
 
                 int trackTargetIdx = trackBitrateAllocation.getTargetIndex(),
                     trackIdealIdx = trackBitrateAllocation.getIdealIndex();
-                logger.debug("TEMP: BitrateController " + hashCode() + " looking at" +
-                        " track allocation with target index " + trackTargetIdx);
 
                 // Review this.
                 AdaptiveTrackProjection adaptiveTrackProjection
@@ -751,7 +757,8 @@ public class BitrateController
 
         if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
         {
-            // TODO(george) bring back sending this message on message transport connect
+            // TODO(george) bring back sending this message on message transport
+            //  connect
             destinationEndpoint.sendLastNEndpointsChangeEvent(
                 newForwardedEndpointIds,
                 endpointsEnteringLastNIds,
@@ -796,12 +803,12 @@ public class BitrateController
                 return adaptiveTrackProjection;
             }
 
-            adaptiveTrackProjection = new AdaptiveTrackProjection(
-                trackBitrateAllocation.track, destinationEndpoint::requestKeyframe);
+            adaptiveTrackProjection
+                = new AdaptiveTrackProjection(
+                    trackBitrateAllocation.track,
+                    destinationEndpoint::requestKeyframe);
             for (PayloadType payloadType : payloadTypes.values())
             {
-                logger.debug("TEMP: BitrateController adding existing payload type " +
-                        "mapping " + payloadType + " to new adaptive track projection " + adaptiveTrackProjection.hashCode());
                 adaptiveTrackProjection.addPayloadType(payloadType);
             }
 
@@ -851,12 +858,8 @@ public class BitrateController
         {
             sb.append(ep.getID()).append(" ");
         }
-        logger.debug("TEMP: BitrateController " + hashCode() + " allocating with " +
-                "bandwidth " + maxBandwidth + " and endpoints " + sb.toString());
-        TrackBitrateAllocation[]
-            trackBitrateAllocations = prioritize(conferenceEndpoints);
-        logger.debug("BitrateController " + hashCode() + " prioritized " + trackBitrateAllocations.length +
-                " allocations");
+        TrackBitrateAllocation[] trackBitrateAllocations
+                = prioritize(conferenceEndpoints);
 
         if (ArrayUtils.isNullOrEmpty(trackBitrateAllocations))
         {
@@ -870,8 +873,6 @@ public class BitrateController
         int[] newRatedTargetIndicies = new int[trackBitrateAllocations.length];
         Arrays.fill(newRatedTargetIndicies, -1);
 
-        logger.debug("TEMP: BitrateController " + hashCode() + " oldMaxBandwidth = " + oldMaxBandwidth +
-                ", maxBandwidth = " + maxBandwidth);
         while (oldMaxBandwidth != maxBandwidth)
         {
             oldMaxBandwidth = maxBandwidth;
@@ -884,8 +885,6 @@ public class BitrateController
                 TrackBitrateAllocation trackBitrateAllocation
                     = trackBitrateAllocations[i];
 
-                logger.debug("TEMP: BitrateController " + hashCode() + " track allocation fits in last n? " +
-                        trackBitrateAllocation.fitsInLastN);
                 if (!trackBitrateAllocation.fitsInLastN)
                 {
                     // participants that are not forwarded are sunk in the
@@ -895,8 +894,6 @@ public class BitrateController
                     break;
                 }
 
-                logger.debug("TEMP: BitrateController " + hashCode() + " track allocation target bitrate: " +
-                        trackBitrateAllocation.getTargetBitrate());
                 maxBandwidth += trackBitrateAllocation.getTargetBitrate();
                 trackBitrateAllocation.improve(maxBandwidth);
                 maxBandwidth -= trackBitrateAllocation.getTargetBitrate();
@@ -961,8 +958,7 @@ public class BitrateController
         {
             sb.append(ep.getID()).append(" ");
         }
-        logger.debug("TEMP: BitrateController " + hashCode() + " prioritizing " +
-                "endpoints " + sb.toString());
+
         // Init.
         List<TrackBitrateAllocation> trackBitrateAllocations
             = new ArrayList<>();
@@ -980,8 +976,6 @@ public class BitrateController
             adjustedLastN = Math.min(lastN, conferenceEndpoints.size() - 1);
         }
 
-        logger.debug("TEMP: BitrateController " + hashCode() + " prioritizing " +
-                "using last n " + adjustedLastN);
         int endpointPriority = 0;
 
         // First, bubble-up the selected endpoints (whoever's on-stage needs to
@@ -1019,8 +1013,6 @@ public class BitrateController
 
             it.remove();
         }
-        logger.debug("TEMP: BitrateController " + hashCode() + " prioritizing " +
-                "after selected endpoints have " + trackBitrateAllocations.size() + " allocations");
 
         // Then, bubble-up the pinned endpoints.
         if (!pinnedEndpointIds.isEmpty())
@@ -1058,10 +1050,6 @@ public class BitrateController
                 it.remove();
             }
         }
-        logger.debug("TEMP: BitrateController " + hashCode() + " prioritizing " +
-                "after pinned endpoints have " + trackBitrateAllocations.size() + " allocations");
-        logger.debug("TEMP: BitrateController " + hashCode() + " prioritizing " +
-                "have " + conferenceEndpoints.size() + " left");
 
         // Finally, deal with any remaining endpoints.
         if (!conferenceEndpoints.isEmpty())
@@ -1071,8 +1059,6 @@ public class BitrateController
                 if (sourceEndpoint.isExpired()
                     || sourceEndpoint.getID().equals(destinationEndpoint.getID()))
                 {
-                    logger.debug("TEMP: BitrateController " + hashCode() + " ep " +
-                            sourceEndpoint.getID() + " is self or expired");
                     continue;
                 }
 
@@ -1120,16 +1106,15 @@ public class BitrateController
      */
     public void setMaxRxFrameHeightPx(int maxRxFrameHeightPx)
     {
-        logger.info("BitrateController " + hashCode() + " setting max receive frame height to " +
-                + maxRxFrameHeightPx + "px");
         this.maxRxFrameHeightPx = maxRxFrameHeightPx;
     }
 
     /**
      * Set the endpoint IDs the endpoint to which this
      * {@link BitrateController} belongs has selected
+     *
      * @param selectedEndpointIds the endpoint IDs the endpoint to which this
-     *                            {@link BitrateController} belongs has selected
+     * {@link BitrateController} belongs has selected
      */
     public void setSelectedEndpointIds(Set<String> selectedEndpointIds)
     {
@@ -1198,10 +1183,12 @@ public class BitrateController
 
         try
         {
-            VideoRtpPacket[] extras = adaptiveTrackProjection.rewriteRtp(videoPacket);
+            VideoRtpPacket[] extras
+                    = adaptiveTrackProjection.rewriteRtp(videoPacket);
             if (extras.length > 0)
             {
-                VideoRtpPacket[] allPackets = new VideoRtpPacket[extras.length + 1];
+                VideoRtpPacket[] allPackets
+                        = new VideoRtpPacket[extras.length + 1];
                 allPackets[0] = videoPacket;
                 System.arraycopy(extras, 0, allPackets, 1, extras.length);
                 return allPackets;
@@ -1382,8 +1369,10 @@ public class BitrateController
                     if (encoding.getHeight() < ONSTAGE_PREFERRED_HEIGHT
                         || encoding.getFrameRate() >= ONSTAGE_PREFERRED_FRAME_RATE)
                     {
-                        ratesList.add(new RateSnapshot(
-                            encoding.getLastStableBitrateBps(System.currentTimeMillis()), encoding));
+                        ratesList.add(
+                            new RateSnapshot(
+                                encoding.getLastStableBitrateBps(
+                                        System.currentTimeMillis()), encoding));
                     }
 
                     if (encoding.getHeight() <= ONSTAGE_PREFERRED_HEIGHT)
@@ -1396,7 +1385,8 @@ public class BitrateController
                     // For the thumbnails, we consider all temporal layers of
                     // the low resolution stream.
                     ratesList.add(new RateSnapshot(
-                        encoding.getLastStableBitrateBps(System.currentTimeMillis()), encoding));
+                        encoding.getLastStableBitrateBps(
+                                System.currentTimeMillis()), encoding));
                 }
             }
 
