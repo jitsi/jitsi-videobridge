@@ -163,8 +163,7 @@ class VP8QualityFilter
         }
         else if (currentSpatialLayerId > SUSPENDED_LAYER_ID)
         {
-            if (!isInSwitchingPhase(nowMs)
-                && isPossibleToSwitch(firstPacketOfFrame, spatialLayerId))
+            if (!isInSwitchingPhase(nowMs) && isPossibleToSwitch(spatialLayerId))
             {
                 needsKeyframe = true;
             }
@@ -218,12 +217,10 @@ class VP8QualityFilter
     }
 
     /**
-     * @param firstPacketOfFrame the first packet of a frame.
      * @return true if it looks like we can re-scale (see implementation of
      * method for specific details).
      */
-    private synchronized boolean isPossibleToSwitch(
-        @NotNull VideoRtpPacket firstPacketOfFrame, int spatialLayerId)
+    private synchronized boolean isPossibleToSwitch(int spatialLayerId)
     {
         if (spatialLayerId == -1)
         {
