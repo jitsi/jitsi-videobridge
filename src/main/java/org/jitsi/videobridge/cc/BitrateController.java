@@ -1118,12 +1118,17 @@ public class BitrateController
      */
     public void setMaxRxFrameHeightPx(int maxRxFrameHeightPx)
     {
-        logger.info("BitrateController " + hashCode() + " setting max receive frame height to " +
-                + maxRxFrameHeightPx + "px");
         if (this.maxRxFrameHeightPx != maxRxFrameHeightPx)
         {
             this.maxRxFrameHeightPx = maxRxFrameHeightPx;
-            this.constraintsChanged();
+
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(destinationEndpoint.getID() + " setting max receive frame height to " +
+                        + maxRxFrameHeightPx + "px, updating");
+            }
+
+            update();
         }
     }
 
@@ -1163,7 +1168,16 @@ public class BitrateController
      */
     public void setLastN(int lastN)
     {
-        this.lastN = lastN;
+        if (this.lastN != lastN) {
+            this.lastN = lastN;
+
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(destinationEndpoint.getID() + " lastN has changed, updating");
+            }
+
+            update();
+        }
     }
 
     /**
