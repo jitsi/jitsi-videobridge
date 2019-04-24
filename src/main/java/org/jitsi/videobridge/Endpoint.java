@@ -341,16 +341,13 @@ public class Endpoint
     }
 
     /**
-     * {@inheritDoc}
+     * Notifies this {@code Endpoint} that the list of {@code Endpoint}s ordered
+     * by speech activity (i.e. the dominant speaker history) has changed.
      */
-    @Override
-    public void propertyChange(PropertyChangeEvent evt)
+    void speechActivityEndpointsChanged(List<String> endpoints)
     {
-        if (Conference.ENDPOINTS_PROPERTY_NAME.equals(evt.getPropertyName()))
-        {
-            bitrateController.endpointOrderingChanged(
-                    getConference().getSpeechActivity().getEndpoints());
-        }
+        super.speechActivityEndpointsChanged(endpoints);
+        bitrateController.endpointOrderingChanged(endpoints);
     }
 
     /**
