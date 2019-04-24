@@ -32,7 +32,9 @@ import org.jitsi.rtp.util.isNewerTimestampThan
  * @author George Politis
  * @author Boris Grozev
  */
-class ResumableStreamRewriter {
+class ResumableStreamRewriter(
+    private val rewriteTimestamps: Boolean
+) {
     /**
      * The sequence number delta between what's been accepted and what's been
      * received, mod 2^16.
@@ -65,16 +67,17 @@ class ResumableStreamRewriter {
     fun rewriteRtp(accept: Boolean, rtpPacket: RtpPacket) {
         val sequenceNumber = rtpPacket.sequenceNumber
         val newSequenceNumber = rewriteSequenceNumber(accept, sequenceNumber)
-
-        val timestamp = rtpPacket.timestamp
-        val newTimestamp = rewriteTimestamp(accept, timestamp)
-
         if (sequenceNumber != newSequenceNumber) {
             rtpPacket.sequenceNumber = newSequenceNumber
         }
 
-        if (timestamp != newTimestamp) {
-            rtpPacket.timestamp = newTimestamp
+        if (rewriteTimestamps) {
+            val timestamp = rtpPacket.timestamp
+            val newTimestamp = rewriteTimestamp(accept, timestamp)
+
+            if (timestamp != newTimestamp) {
+                rtpPacket.timestamp = newTimestamp
+            }
         }
     }
 
@@ -83,7 +86,7 @@ class ResumableStreamRewriter {
      *
      */
     fun rewriteRtcpSr(rtcpPacket: RtcpSrPacket) {
-        if (timestampDelta == 0L) {
+        if (!rewriteTimestamps || timestampDelta == 0L) {
             return
         }
 
