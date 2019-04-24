@@ -165,6 +165,14 @@ class VP8QualityFilter
         {
             if (isOutOfSwitchingPhase(nowMs) && isPossibleToSwitch(spatialLayerId))
             {
+                // XXX(george) i've noticed some "rogue" base layer keyframes
+                // that trigger this. what happens is the client sends a base
+                // layer key frame, the bridge switches to that layer because
+                // for all it knows it may be the only keyframe sent by the
+                // client engine. then the bridge notices that packets from the
+                // higher quality streams are flowing and execution ends-up
+                // here. it is a mystery why the engine is "leaking" base layer
+                // key frames
                 needsKeyframe = true;
             }
 
