@@ -40,6 +40,11 @@ class RtcpTermination(
     private val transportCcEngine: TransportCCEngine? = null
 ) : TransformerNode("RTCP termination") {
     private var packetReceiveCounts = mutableMapOf<String, Int>()
+    /**
+     * Number of packets we failed to forward because a compound packet contained more than one
+     * packet we wanted to forward. Ideally this shouldn't happen.
+     */
+    private var numFailedToForward = 0
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val compoundRtcp = packetInfo.packetAs<CompoundRtcpPacket>()
@@ -47,13 +52,18 @@ class RtcpTermination(
 
         compoundRtcp.packets.forEach { pkt ->
             when (pkt) {
-                is RtcpFbTccPacket -> handleTccPacket(pkt)
+                is RtcpFbTccPacket -> transportCcEngine?.tccReceived(pkt)
                 is RtcpFbPliPacket, is RtcpFbFirPacket, is RtcpSrPacket -> {
                     // We'll let these pass through and be forwarded to the sender who will be
                     // responsible for translating/aggregating them
                     // NOTE(brian): this should work fine as long as we can't receive 2 RTCP packets
                     // we want to forward in the same compound packet.  If we can, then we may need
                     // to turn this into a MultipleOutputNode
+                    forwardedRtcp?.let {
+                        logger.cinfo { "Failed to forward a packet of type ${forwardedRtcp!!::class.simpleName} " +
+                            ". Replaced by ${pkt::class.simpleName}." }
+                        numFailedToForward++
+                    }
                     forwardedRtcp = pkt
                 }
                 is RtcpSdesPacket, is RtcpRrPacket, is RtcpFbNackPacket, is RtcpByePacket -> {
@@ -87,15 +97,12 @@ class RtcpTermination(
         }
     }
 
-    private fun handleTccPacket(tccPacket: RtcpFbTccPacket) {
-        transportCcEngine?.tccReceived(tccPacket)
-    }
-
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
             packetReceiveCounts.forEach { type, count ->
                 addNumber("num_${type}_rx", count)
             }
+            addNumber("num_failed_to_forward", numFailedToForward)
         }
     }
 }
