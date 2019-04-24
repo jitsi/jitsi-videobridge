@@ -45,7 +45,6 @@ import org.jitsi_modified.sctp4j.*;
 import org.jitsi_modified.service.neomedia.rtp.*;
 import org.json.simple.*;
 
-import java.beans.*;
 import java.io.*;
 import java.nio.*;
 import java.time.*;
