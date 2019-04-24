@@ -80,12 +80,6 @@ public class OctoEndpoint
     }
 
     @Override
-    public void propertyChange(PropertyChangeEvent evt)
-    {
-
-    }
-
-    @Override
     public void onNewSsrcAssociation(
             String epId,
             long primarySsrc,
