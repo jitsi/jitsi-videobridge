@@ -797,7 +797,7 @@ public class BitrateController
      * Utility method that looks-up or creates the adaptive track projection of
      * a track.
      *
-     * @param trackBitrateAllocation
+     * @param trackBitrateAllocation the track bitrate allocation
      * @return the adaptive track projection for the track bitrate allocation
      * that is specified as an argument.
      */
@@ -1108,8 +1108,7 @@ public class BitrateController
             }
         }
 
-        return trackBitrateAllocations.toArray(
-            new TrackBitrateAllocation[trackBitrateAllocations.size()]);
+        return trackBitrateAllocations.toArray(new TrackBitrateAllocation[0]);
     }
 
     /**
@@ -1173,15 +1172,13 @@ public class BitrateController
     public void addPayloadType(PayloadType payloadType)
     {
         payloadTypes.put(payloadType.getPt(), payloadType);
-        adaptiveTrackProjections.forEach(atp -> {
-            atp.addPayloadType(payloadType);
-        });
+        adaptiveTrackProjections.forEach(atp -> atp.addPayloadType(payloadType));
     }
 
     /**
      * Transforms a video RTP packet.
-     * @param packetInfo
-     * @return
+     * @param packetInfo the video rtp packet
+     * @return the transformed video rtp packet and any packets that need to be piggy backed
      */
     public VideoRtpPacket[] transformRtp(@NotNull PacketInfo packetInfo)
     {
@@ -1424,7 +1421,7 @@ public class BitrateController
             }
 
             this.ratedPreferredIdx = ratedPreferredIdx;
-            ratedIndices = ratesList.toArray(new RateSnapshot[ratesList.size()]);
+            ratedIndices = ratesList.toArray(new RateSnapshot[0]);
             // TODO Determining the rated ideal index needs some work.
             // The ideal rated quality is constrained by the viewport of the
             // endpoint. For example, on a mobile device we should probably not
