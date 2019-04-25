@@ -98,6 +98,13 @@ class RtpReceiverImpl @JvmOverloads constructor(
         private val classLogger: Logger = Logger.getLogger(this::class.java)
         private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP receiver incoming queue"
         private const val PACKET_QUEUE_EXIT_EVENT = "Exited RTP receiver incoming queue"
+
+        private const val RECEIVED_BYTES = "received_bytes"
+        private const val RECEIVED_DURATION_MS = "received_duration_ms"
+        private const val PROCESSED_BYTES = "processed_bytes"
+        private const val PROCESSING_DURATION_MS = "processing_duration_ms"
+        private const val QUEUE_NUM_READS = "queue_num_reads"
+        private const val QUEUE_READ_DURATION_S = "queue_read_duration_s"
     }
 
     /**
@@ -248,27 +255,20 @@ class RtpReceiverImpl @JvmOverloads constructor(
     override fun processPacket(packetInfo: PacketInfo) = inputTreeRoot.processPacket(packetInfo)
 
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("RTP receiver $id").apply {
-        val receivedBytesKey = "received_bytes"
-        val receivedDurationMsKey = "received_duration_ms"
-
         addNumber("received_packets", packetsReceived)
-        addNumber(receivedBytesKey, bytesReceived)
-        addNumber(receivedDurationMsKey, lastPacketWrittenTime - firstPacketProcessedTime)
-        addMbps("received_bitrate_mbps", receivedBytesKey, receivedDurationMsKey)
+        addNumber(RECEIVED_BYTES, bytesReceived)
+        addNumber(RECEIVED_DURATION_MS, lastPacketWrittenTime - firstPacketProcessedTime)
+        addMbps("received_bitrate_mbps", RECEIVED_BYTES, RECEIVED_DURATION_MS)
 
-        val processedBytesKey = "processed_bytes"
-        val processingDurationMsKey = "processing_duration_ms"
         addNumber("processed_packets", packetsProcessed)
         addNumber("processed_packets_percent", 100 * (packetsProcessed / max(1.0, packetsReceived.toDouble())))
-        addNumber(processedBytesKey, bytesProcessed)
-        addNumber(processingDurationMsKey, lastPacketProcessedTime - firstPacketProcessedTime)
-        addMbps("processed_bitrate", processedBytesKey, processingDurationMsKey)
+        addNumber(PROCESSED_BYTES, bytesProcessed)
+        addNumber(PROCESSING_DURATION_MS, lastPacketProcessedTime - firstPacketProcessedTime)
+        addMbps("processed_bitrate", PROCESSED_BYTES, PROCESSING_DURATION_MS)
 
-        val queueNumReadsKey = "queue_num_reads"
-        val queueReadDurationSKey = "queue_read_duration_s"
-        addNumber(queueNumReadsKey, numQueueReads)
-        addNumber(queueReadDurationSKey, (lastQueueReadTime - firstQueueReadTime).toDouble() / 1000)
-        addRatio("queue_average_reads_per_second", queueNumReadsKey, queueReadDurationSKey)
+        addNumber(QUEUE_NUM_READS, numQueueReads)
+        addNumber(QUEUE_READ_DURATION_S, (lastQueueReadTime - firstQueueReadTime).toDouble() / 1000)
+        addRatio("queue_average_reads_per_second", QUEUE_NUM_READS, QUEUE_READ_DURATION_S)
 
         addString("running", running.toString())
         NodeStatsVisitor(this).visit(inputTreeRoot)
