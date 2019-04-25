@@ -117,6 +117,14 @@ class RtpSenderImpl(
         private val classLogger: Logger = Logger.getLogger(this::class.java)
         private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP sender incoming queue"
         private const val PACKET_QUEUE_EXIT_EVENT = "Exited RTP sender incoming queue"
+
+        // Constants for the [NodeStatsBlock] stat names
+        private const val INCOMING_BYTES = "incoming_bytes"
+        private const val INCOMING_DURATION_MS = "incoming_duration_ms"
+        private const val SENT_BYTES = "sent_bytes"
+        private const val SENT_DURATION_MS = "sent_duration_ms"
+        private const val QUEUE_NUM_READS = "queue_num_reads"
+        private const val QUEUE_READ_DURATION_S = "queue_read_duration_s"
     }
 
     init {
@@ -233,24 +241,18 @@ class RtpSenderImpl(
     }
 
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("RTP sender $id").apply {
-        val incomingBytesKey = "incoming_bytes"
-        val incomingDurationMsKey = "incoming_duration_ms"
-        addNumber(incomingBytesKey, numIncomingBytes)
-        addNumber(incomingDurationMsKey, lastPacketWrittenTime - firstPacketWrittenTime)
-        addMbps("incoming_bitrate_mbps", incomingBytesKey, incomingDurationMsKey)
+        addNumber(INCOMING_BYTES, numIncomingBytes)
+        addNumber(INCOMING_DURATION_MS, lastPacketWrittenTime - firstPacketWrittenTime)
+        addMbps("incoming_bitrate_mbps", INCOMING_BYTES, INCOMING_BYTES)
 
-        val sentBytesKey = "sent_bytes"
-        val sentDurationMsKey = "sent_duration_ms"
         addNumber("sent_packets", numPacketsSent)
-        addNumber(sentDurationMsKey, lastPacketSentTime - firstPacketSentTime)
-        addNumber(sentBytesKey, numBytesSent)
-        addMbps("sent_bitrate_mbps", sentBytesKey, sentDurationMsKey)
+        addNumber(SENT_DURATION_MS, lastPacketSentTime - firstPacketSentTime)
+        addNumber(SENT_BYTES, numBytesSent)
+        addMbps("sent_bitrate_mbps", SENT_BYTES, SENT_DURATION_MS)
 
-        val queueNumReadsKey = "queue_num_reads"
-        val queueReadDurationSKey = "queue_read_duration_s"
-        addNumber(queueNumReadsKey, numQueueReads)
-        addNumber(queueReadDurationSKey, (lastQueueReadTime - firstQueueReadTime).toDouble() / 1000)
-        addRatio("queue_average_reads_per_second", queueNumReadsKey, queueReadDurationSKey)
+        addNumber(QUEUE_NUM_READS, numQueueReads)
+        addNumber(QUEUE_READ_DURATION_S, (lastQueueReadTime - firstQueueReadTime).toDouble() / 1000)
+        addRatio("queue_average_reads_per_second", QUEUE_NUM_READS, QUEUE_READ_DURATION_S)
 
         addBlock(nackHandler.getNodeStats())
         addBlock(probingDataSender.getNodeStats())
