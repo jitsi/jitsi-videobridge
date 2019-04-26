@@ -54,7 +54,6 @@ class RtxPacket {
         fun addOriginalSequenceNumber(rtpPacket: RtpPacket) = rtpPacket.apply {
             // TODO: possible optimization to try to shift the header left instead
             shiftPayloadRight(2)
-            length += 2
             buffer.putShort(offset + headerLength, sequenceNumber.toShort())
         }
     }
