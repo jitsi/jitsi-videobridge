@@ -30,14 +30,18 @@ fun fromLegacyRawPacket(legacyRawPacket: RawPacket): UnparsedPacket =
 fun RawPacket.toRtpPacket(): RtpPacket =
     RtpPacket(buffer, offset, length)
 
-// Note this does not change 'length'
+/**
+ * Shifts the payload byte 'numBytes' to the right, increasing the length of the packet by 'numBytes'
+ * and growing (i.e. re-allocating) the underlying buffer if necessary.
+ */
 fun RtpPacket.shiftPayloadRight(numBytes: Int) {
-    val originalPayloadOffset = payloadOffset
-    val originalPayloadLength = payloadLength
-    // We need to use >= length here to account for the fact that
-    // buffer[length] is out-of-bounds
-    if (payloadOffset + payloadLength + numBytes >= length) {
-        grow(numBytes)
-    }
+    // Make sure we have enough space.
+    // TODO: if grow() needs to allocate a new buffer, we end up copying the payload twice, which can be avoided.
+    // We expect that most of the time we have enough space and grow() doesn't need to do anything, but this should
+    // be verified and optimized if it doesn't hold.
+    grow(numBytes)
+
+    val payloadOffset = payloadOffset
     System.arraycopy(buffer, payloadOffset, buffer, payloadOffset + 2, payloadLength)
+    length += 2
 }
