@@ -50,9 +50,9 @@ class RtcpTermination(
         val compoundRtcp = packetInfo.packetAs<CompoundRtcpPacket>()
         var forwardedRtcp: RtcpPacket? = null
 
-        compoundRtcp.packets.forEach { pkt ->
-            when (pkt) {
-                is RtcpFbTccPacket -> transportCcEngine?.tccReceived(pkt)
+        compoundRtcp.packets.forEach { rtcpPacket ->
+            when (rtcpPacket) {
+                is RtcpFbTccPacket -> transportCcEngine?.tccReceived(rtcpPacket)
                 is RtcpFbPliPacket, is RtcpFbFirPacket, is RtcpSrPacket -> {
                     // We'll let these pass through and be forwarded to the sender who will be
                     // responsible for translating/aggregating them
@@ -61,30 +61,30 @@ class RtcpTermination(
                     // to turn this into a MultipleOutputNode
                     forwardedRtcp?.let {
                         logger.cinfo { "Failed to forward a packet of type ${forwardedRtcp!!::class.simpleName} " +
-                            ". Replaced by ${pkt::class.simpleName}." }
+                            ". Replaced by ${rtcpPacket::class.simpleName}." }
                         numFailedToForward++
                     }
-                    forwardedRtcp = pkt
+                    forwardedRtcp = rtcpPacket
                 }
                 is RtcpSdesPacket, is RtcpRrPacket, is RtcpFbNackPacket, is RtcpByePacket -> {
                     // Supported, but no special handling here (any special handling will be in
                     // notifyRtcpReceived below
                 }
                 else -> {
-                    logger.cinfo { "TODO: not yet handling RTCP packet of type ${pkt.javaClass}" }
+                    logger.cinfo { "TODO: not yet handling RTCP packet of type ${rtcpPacket.javaClass}" }
                 }
             }
             // TODO: keep an eye on if anything in here takes a while it could slow the packet pipeline down
-            packetReceiveCounts.merge(pkt::class.simpleName!!, 1, Int::plus)
-            rtcpEventNotifier.notifyRtcpReceived(pkt, packetInfo.receivedTime)
+            packetReceiveCounts.merge(rtcpPacket::class.simpleName!!, 1, Int::plus)
+            rtcpEventNotifier.notifyRtcpReceived(rtcpPacket, packetInfo.receivedTime)
 
-            if (pkt is RtcpSrPacket) {
+            if (rtcpPacket is RtcpSrPacket) {
                 // NOTE(george) effectively eliminates any report blocks as we don't want to relay those
-                logger.cdebug { "saw an sr from ssrc=${pkt.senderSsrc}, timestamp=${pkt.senderInfo.rtpTimestamp}" }
+                logger.cdebug { "saw an sr from ssrc=${rtcpPacket.senderSsrc}, timestamp=${rtcpPacket.senderInfo.rtpTimestamp}" }
                 val lengthBytes = RtcpHeader.SIZE_BYTES + SenderInfoParser.SIZE_BYTES
-                pkt.length = lengthBytes
+                rtcpPacket.length = lengthBytes
                 // We can do this because we've already parsed the compound packet and we are discarding it anyway
-                pkt.lengthField = (lengthBytes / 4) - 1
+                rtcpPacket.lengthField = (lengthBytes / 4) - 1
             }
         }
         return if (forwardedRtcp != null) {
