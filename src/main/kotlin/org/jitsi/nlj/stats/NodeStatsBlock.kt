@@ -131,7 +131,7 @@ class NodeStatsBlock(val name: String) {
                     is NodeStatsBlock -> {
                         appendln(statValue.prettyPrint(indentLevel + 2))
                     }
-                    is Any -> {
+                    else -> {
                         // statValue is Any, so we know it's non-null
                         appendLnIndent(indentLevel + 2, "$statName: $statValue")
                     }
