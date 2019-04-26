@@ -16,12 +16,9 @@
 package org.jitsi_modified.impl.neomedia.rtp;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.impl.neomedia.rtcp.*;
-import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
@@ -38,12 +35,8 @@ import java.util.*;
  * @author Julian Chukwu
  * @author George Politis
  *
- * NOTE(brian): this class needs a run through: it doesn't do as much as it used to, be was ported mostly as-is
- * for now to reduce the amount of work to get the bridge working again.  Once the dust has settled we should
- * revisit this and clean it up.
  */
 public class TransportCCEngine
-    extends RTCPPacketListenerAdapter
     implements RemoteBitrateObserver,
                CallStatsObserver
 {
@@ -113,7 +106,9 @@ public class TransportCCEngine
      *
      * @param diagnosticContext the {@link DiagnosticContext} of this instance.
      */
-    public TransportCCEngine(@NotNull DiagnosticContext diagnosticContext, RemoteBitrateObserver remoteBitrateObserver)
+    public TransportCCEngine(
+            @NotNull DiagnosticContext diagnosticContext,
+            RemoteBitrateObserver remoteBitrateObserver)
     {
         this.diagnosticContext = diagnosticContext;
         this.remoteBitrateObserver = remoteBitrateObserver;
@@ -169,8 +164,12 @@ public class TransportCCEngine
                 continue;
             }
 
-            long arrivalTimeMsInLocalClock = (long)currArrivalTimestampMs - remoteReferenceTimeMs + localReferenceTimeMs;
-            long sendTime24bitsInLocalClock = RemoteBitrateEstimatorAbsSendTime.convertMsTo24Bits(packetDetail.packetSendTimeMs);
+            long arrivalTimeMsInLocalClock
+                    = (long) currArrivalTimestampMs - remoteReferenceTimeMs
+                        + localReferenceTimeMs;
+            long sendTime24bitsInLocalClock
+                    = RemoteBitrateEstimatorAbsSendTime
+                        .convertMsTo24Bits(packetDetail.packetSendTimeMs);
 
             bitrateEstimatorAbsSendTime.incomingPacketInfo(
                     arrivalTimeMsInLocalClock,
@@ -181,77 +180,14 @@ public class TransportCCEngine
         }
     }
 
-    /**
-     * Handles an incoming RTCP transport-cc feedback packet.
-     *
-     * @param tccPacket the received TCC packet.
-     */
-    @Override
-    @Deprecated
-    public void tccReceived(RTCPTCCPacket tccPacket)
+    public void mediaPacketSent(int tccSeqNum, int length)
     {
-        RTCPTCCPacket.PacketMap packetMap = tccPacket.getPackets();
-        long previousArrivalTimeMs = -1;
-        for (Map.Entry<Integer, Long> entry : packetMap.entrySet())
+        synchronized (sentPacketsSyncRoot)
         {
-            long arrivalTime250Us = entry.getValue();
-            if (arrivalTime250Us == -1)
-            {
-                continue;
-            }
-
-            if (remoteReferenceTimeMs == -1)
-            {
-                remoteReferenceTimeMs = RTCPTCCPacket.getReferenceTime250us(
-                        new ByteArrayBufferImpl(
-                            tccPacket.fci, 0, tccPacket.fci.length)) / 4;
-
-                localReferenceTimeMs = System.currentTimeMillis();
-            }
-
-            PacketDetail packetDetail;
-            synchronized (sentPacketsSyncRoot)
-            {
-                packetDetail = sentPacketDetails.remove(entry.getKey());
-            }
-
-            if (packetDetail == null)
-            {
-                continue;
-            }
-
-            long arrivalTimeMs = arrivalTime250Us / 4
-                - remoteReferenceTimeMs + localReferenceTimeMs;
-
-            if (timeSeriesLogger.isTraceEnabled())
-            {
-                if (previousArrivalTimeMs != -1)
-                {
-                    long diff_ms = arrivalTimeMs - previousArrivalTimeMs;
-                    timeSeriesLogger.trace(diagnosticContext
-                            .makeTimeSeriesPoint("ingress_tcc_ack")
-                            .addField("seq", entry.getKey())
-                            .addField("arrival_time_ms", arrivalTimeMs)
-                            .addField("diff_ms", diff_ms));
-                }
-                else
-                {
-                    timeSeriesLogger.trace(diagnosticContext
-                            .makeTimeSeriesPoint("ingress_tcc_ack")
-                            .addField("seq", entry.getKey())
-                            .addField("arrival_time_ms", arrivalTimeMs));
-                }
-            }
-
-            previousArrivalTimeMs = arrivalTimeMs;
-            long sendTime24bits = RemoteBitrateEstimatorAbsSendTime
-                .convertMsTo24Bits(packetDetail.packetSendTimeMs);
-
-            bitrateEstimatorAbsSendTime.incomingPacketInfo(
-                arrivalTimeMs,
-                sendTime24bits,
-                packetDetail.packetLength,
-                tccPacket.getSourceSSRC());
+            long now = System.currentTimeMillis();
+            sentPacketDetails.put(
+                    tccSeqNum,
+                    new PacketDetail(length, now));
         }
     }
 
@@ -270,17 +206,6 @@ public class TransportCCEngine
         {
             packetLength = length;
             packetSendTimeMs = time;
-        }
-    }
-
-    public void mediaPacketSent(int tccSeqNum, int length)
-    {
-        synchronized (sentPacketsSyncRoot)
-        {
-            long now = System.currentTimeMillis();
-            sentPacketDetails.put(
-                    tccSeqNum,
-                    new PacketDetail(length, now));
         }
     }
 }
