@@ -28,6 +28,7 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.LRUCache;
 import org.jitsi.utils.logging.Logger;
 import org.jitsi.videobridge.cc.*;
+import org.json.simple.*;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -494,5 +495,27 @@ public class VP8AdaptiveTrackProjectionContext
         }
 
         return ret;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public JSONObject getDebugState()
+    {
+        JSONObject debugState = new JSONObject();
+        debugState.put(
+                "class",
+                VP8AdaptiveTrackProjectionContext.class.getSimpleName());
+
+        debugState.put(
+                "vp8FrameProjectionMapSize",
+                vp8FrameProjectionMap.size());
+        debugState.put("vp8QualityFilter", vp8QualityFilter.getDebugState());
+        debugState.put("transmittedBytes", transmittedBytes);
+        debugState.put("transmittedPackets", transmittedPackets);
+        debugState.put("payloadType", payloadType.toString());
+
+        return debugState;
     }
 }

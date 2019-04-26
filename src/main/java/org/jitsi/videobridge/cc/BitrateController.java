@@ -434,6 +434,17 @@ public class BitrateController
         debugState.put("pinnedEndpointIds", pinnedEndpointIds.toString());
         debugState.put("lastN", lastN);
         debugState.put("supportsRtx", supportsRtx);
+        JSONObject adaptiveTrackProjectionsJson = new JSONObject();
+        for (Map.Entry<Long, AdaptiveTrackProjection> entry
+                : adaptiveTrackProjectionMap.entrySet())
+        {
+            adaptiveTrackProjectionsJson.put(
+                    entry.getKey(),
+                    entry.getValue().getDebugState());
+        }
+        debugState.put(
+                "adaptiveTrackProjectionMap",
+                adaptiveTrackProjectionsJson);
         return debugState;
     }
 

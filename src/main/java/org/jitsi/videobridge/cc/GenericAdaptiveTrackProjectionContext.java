@@ -24,6 +24,7 @@ import org.jitsi.rtp.rtcp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.utils.logging.*;
+import org.json.simple.*;
 
 /**
  * A generic implementation of an adaptive track projection context that can be
@@ -418,5 +419,21 @@ class GenericAdaptiveTrackProjectionContext
     public PayloadType getPayloadType()
     {
         return payloadType;
+    }
+
+    /**
+     * {@inheritDoc}
+     * @return
+     */
+    @Override
+    public JSONObject getDebugState()
+    {
+        JSONObject debugState = new JSONObject();
+        debugState.put(
+                "class",
+                GenericAdaptiveTrackProjectionContext.class.getSimpleName());
+        debugState.put("TODO", "export more state (or refactor)");
+
+        return debugState;
     }
 }
