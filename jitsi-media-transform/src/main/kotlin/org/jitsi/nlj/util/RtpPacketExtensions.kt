@@ -16,12 +16,7 @@
 
 package org.jitsi.nlj.util
 
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.service.neomedia.RawPacket
-
-fun Packet.toLegacyRawPacket(): RawPacket =
-    RawPacket(buffer, offset, length)
 
 /**
  * Shifts the payload byte 'numBytes' to the right, increasing the length of the packet by 'numBytes'

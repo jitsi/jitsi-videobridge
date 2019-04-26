@@ -26,7 +26,7 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.byteBufferOf
 import java.nio.ByteBuffer
 
-class RawPacketExtensionsKtTest : ShouldSpec() {
+class RtpPacketExtensionsKtTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     val payload = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
