@@ -18,10 +18,10 @@ package org.jitsi.nlj.rtp
 import org.jitsi.rtp.rtp.RtpPacket
 
 open class VideoRtpPacket(
-    data: ByteArray,
+    buffer: ByteArray,
     offset: Int,
     length: Int
-) : RtpPacket(data, offset, length) {
+) : RtpPacket(buffer, offset, length) {
     /**
      * The estimated bitrate of the encoding to which this packet belongs
      */
