@@ -19,6 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.logging.*;
+import org.json.simple.*;
 
 /**
  * This class is responsible for dropping VP8 simulcast/svc packets based on
@@ -377,5 +378,25 @@ class VP8QualityFilter
     private static int getSpatialLayerId(int index)
     {
         return index > -1 ? index / 3 : -1;
+    }
+
+    /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
+     */
+    public JSONObject getDebugState()
+    {
+        JSONObject debugState = new JSONObject();
+        debugState.put(
+                "mostRecentKeyframeGroupArrivalTimeMs",
+                mostRecentKeyframeGroupArrivalTimeMs);
+        debugState.put("needsKeyframe", needsKeyframe);
+        debugState.put(
+                "internalSpatialLayerIdTarget",
+                internalSpatialLayerIdTarget);
+        debugState.put("currentSpatialLayerId", currentSpatialLayerId);
+
+
+        return debugState;
     }
 }

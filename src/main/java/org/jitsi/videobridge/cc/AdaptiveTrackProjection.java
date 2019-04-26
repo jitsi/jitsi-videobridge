@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
+import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.PacketCache;
@@ -27,6 +28,7 @@ import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.cc.vp8.*;
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc;
 import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc;
+import org.json.simple.*;
 
 import java.lang.ref.*;
 import java.util.*;
@@ -383,7 +385,6 @@ public class AdaptiveTrackProjection
      *
      * @param rtcpSrPacket the RTCP SR packet to rewrite.
      * @return true to let the RTCP packet through, false to drop.
-     * XXX unused???
      */
     public boolean rewriteRtcp(@NotNull RtcpSrPacket rtcpSrPacket)
     {
@@ -412,5 +413,42 @@ public class AdaptiveTrackProjection
         logger.info(hashCode() + " TEMP: adaptive track projection " + hashCode() +
                 " adding payload type mapping " + payloadType);
         payloadTypes.put(payloadType.getPt(), payloadType);
+    }
+
+    /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
+     */
+    public JSONObject getDebugState()
+    {
+        JSONObject debugState = new JSONObject();
+        MediaStreamTrackDesc source = weakSource.get();
+        if (source == null)
+        {
+            debugState.put("source", null);
+        }
+        else
+        {
+            JSONObject sourceJson = new JSONObject();
+            sourceJson.put("owner", source.getOwner());
+            for (RTPEncodingDesc encodingDesc : source.getRTPEncodings())
+            {
+                sourceJson.put(
+                        encodingDesc.getPrimarySSRC(),
+                        MediaStreamTracksKt.getNodeStats(encodingDesc).toJson());
+            }
+            debugState.put("source", sourceJson);
+        }
+
+        debugState.put("targetSsrc", targetSsrc);
+        debugState.put(
+                "context",
+                context == null ? null : context.getDebugState());
+        debugState.put("contextPayloadType", contextPayloadType);
+        debugState.put("idealIndex", idealIndex);
+        debugState.put("targetIndex", targetIndex);
+        debugState.put("packetCache", packetCache.getNodeStats().toJson());
+
+        return debugState;
     }
 }

@@ -21,6 +21,7 @@ import org.jitsi.nlj.util.PacketCache;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
+import org.json.simple.*;
 
 /**
  * Implementations of this interface are responsible for projecting a specific
@@ -98,4 +99,10 @@ public interface AdaptiveTrackProjectionContext
      * processes.
      */
     PayloadType getPayloadType();
+
+    /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
+     */
+    JSONObject getDebugState();
 }
