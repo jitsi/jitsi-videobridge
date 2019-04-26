@@ -18,10 +18,10 @@ package org.jitsi.nlj.rtp
 import org.jitsi.rtp.rtp.RtpPacket
 
 class AudioRtpPacket(
-    data: ByteArray,
+    buffer: ByteArray,
     offset: Int,
     length: Int
-) : RtpPacket(data, offset, length) {
+) : RtpPacket(buffer, offset, length) {
 
     override fun clone(): AudioRtpPacket = AudioRtpPacket(cloneBuffer(), offset, length)
 }

@@ -207,7 +207,7 @@ class RtpSenderImpl(
         keyframeRequester.requestKeyframe(mediaSsrc)
     }
 
-    private fun processPacket(packet: PacketInfo): Boolean {
+    private fun processPacket(packetInfo: PacketInfo): Boolean {
         if (running) {
             val now = System.currentTimeMillis()
             if (firstQueueReadTime == -1L) {
@@ -215,8 +215,8 @@ class RtpSenderImpl(
             }
             numQueueReads++
             lastQueueReadTime = now
-            packet.addEvent(PACKET_QUEUE_EXIT_EVENT)
-            outgoingRtpRoot.processPacket(packet)
+            packetInfo.addEvent(PACKET_QUEUE_EXIT_EVENT)
+            outgoingRtpRoot.processPacket(packetInfo)
             return true
         }
         return false
