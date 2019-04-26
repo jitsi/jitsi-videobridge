@@ -19,6 +19,7 @@ package org.jitsi.nlj.rtp
 import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.shouldBe
 import org.jitsi.nlj.util.BufferPool
+import org.jitsi.rtp.rtp.RtpHeader
 
 class PaddingVideoPacketTest : ShouldSpec() {
 
@@ -28,7 +29,7 @@ class PaddingVideoPacketTest : ShouldSpec() {
                 BufferPool.getBuffer = { size ->
                     // A buffer with bogus CSRC count and header ext length values
                     org.jitsi.rtp.extensions.bytearray.byteArrayOf(
-                        0xB7, 0xF8, 0x04, 0x54,
+                        0xF7, 0xF8, 0x04, 0x54,
                         0x47, 0x35, 0x08, 0x10,
                         0x25, 0xA2, 0x71, 0x9C,
                         0x23, 0x9F, 0xCA, 0x3D
@@ -46,6 +47,9 @@ class PaddingVideoPacketTest : ShouldSpec() {
                 }
                 should("have the padding value set") {
                     paddingPacket.paddingSize shouldBe paddingPacket.payloadLength
+                }
+                should("have the version set") {
+                    paddingPacket.version shouldBe RtpHeader.VERSION
                 }
             }
         }
