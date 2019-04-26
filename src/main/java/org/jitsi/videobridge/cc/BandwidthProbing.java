@@ -80,11 +80,6 @@ package org.jitsi.videobridge.cc;
          cfg != null && cfg.getBoolean(DISABLE_RTX_PROBING_PNAME, false);
 
      /**
-      * The VP8 payload type to use when probing with the SSRC of the bridge.
-      */
-     private int vp8PT = -1;
-
-     /**
       * The sequence number to use if probing with the JVB's SSRC.
       */
      private int seqNum = new Random().nextInt(0xFFFF);
@@ -250,7 +245,6 @@ package org.jitsi.videobridge.cc;
      public JSONObject getDebugState()
      {
          JSONObject debugState = new JSONObject();
-         debugState.put("vp8PT", vp8PT);
          debugState.put("seqNum", seqNum);
          debugState.put("ts", ts);
          debugState.put("enabled", enabled);
