@@ -50,7 +50,6 @@ class RawPacketExtensionsKtTest : ShouldSpec() {
         "shiftPayloadRight" {
             "when the buffer doesn't have any room" {
                 rtpPacket.shiftPayloadRight(2)
-                rtpPacket.length += 2
                 should("shift things correctly") {
                     // Header should be the same
                     rtpPacket.version shouldBe 2
