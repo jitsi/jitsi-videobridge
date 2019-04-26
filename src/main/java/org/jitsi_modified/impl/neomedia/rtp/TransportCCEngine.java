@@ -16,7 +16,6 @@
 package org.jitsi_modified.impl.neomedia.rtp;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
@@ -24,7 +23,6 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.rtp.*;
-import org.jitsi.util.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
 
@@ -69,24 +67,6 @@ public class TransportCCEngine
      */
     private static final TimeSeriesLogger timeSeriesLogger
         = TimeSeriesLogger.getTimeSeriesLogger(TransportCCEngine.class);
-
-    /**
-     * The engine which handles outgoing RTP packets for this instance. It
-     * adds transport-wide sequence numbers to outgoing RTP packets.
-     */
-    private final EgressEngine egressEngine = new EgressEngine();
-
-    /**
-     * The ID of the transport-cc RTP header extension, or -1 if one is not
-     * configured.
-     */
-    private int extensionId = -1;
-
-    /**
-     * The list of {@link MediaStream} that are using this
-     * {@link TransportCCEngine}.
-     */
-    private final List<MediaStream> mediaStreams = new LinkedList<>();
 
     /**
      * Used to synchronize access to {@link #sentPacketDetails}.
@@ -276,14 +256,6 @@ public class TransportCCEngine
     }
 
     /**
-     * Gets the engine which handles outgoing RTP packets for this instance.
-     */
-    public TransformEngine getEgressEngine()
-    {
-        return egressEngine;
-    }
-
-    /**
      * {@link PacketDetail} is an object that holds the
      * length(size) of the packet in {@link #packetLength}
      * and the time stamps of the outgoing packet
@@ -301,70 +273,14 @@ public class TransportCCEngine
         }
     }
 
-    /**
-     * Handles outgoing RTP packets for this {@link TransportCCEngine}.
-     * //TODO(brian): we still send outgoing packets through this in tccseqnumtagger, but we don't actually need
-     * this class anymore, we can change things to have tccseqnumtagger call the transportccengine method directly
-     * (instead of going through this EgressEngine)
-     */
-    public class EgressEngine
-            extends SinglePacketTransformerAdapter
-            implements TransformEngine
+    public void mediaPacketSent(int tccSeqNum, int length)
     {
-        /**
-         * Ctor.
-         */
-        private EgressEngine()
+        synchronized (sentPacketsSyncRoot)
         {
-            super(RTPPacketPredicate.INSTANCE);
-        }
-
-        /**
-         * {@inheritDoc}
-         * <p></p>
-         * If the transport-cc extension is configured, update the
-         * transport-wide sequence number (adding a new extension if one doesn't
-         * exist already).
-         */
-        @Override
-        public RawPacket transform(RawPacket pkt)
-        {
-            //TODO(brian): plumb through the extension ID instead of hard-coding it
-            RawPacket.HeaderExtension ext
-                    = pkt.getHeaderExtension((byte) 5);
-            if (ext == null)
-            {
-                return pkt;
-            }
-            int seq = RTPUtils.readUint16AsInt(
-                    ext.getBuffer(), ext.getOffset() + 1);
-
-            synchronized (sentPacketsSyncRoot)
-            {
-                long now = System.currentTimeMillis();
-                sentPacketDetails.put(seq, new PacketDetail(
-                            pkt.getLength(),
-                            now));
-            }
-            return pkt;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public PacketTransformer getRTPTransformer()
-        {
-            return this;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public PacketTransformer getRTCPTransformer()
-        {
-            return null;
+            long now = System.currentTimeMillis();
+            sentPacketDetails.put(
+                    tccSeqNum,
+                    new PacketDetail(length, now));
         }
     }
 }

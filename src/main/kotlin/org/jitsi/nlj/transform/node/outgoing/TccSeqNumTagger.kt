@@ -22,7 +22,6 @@ import org.jitsi.nlj.RtpExtensionClearEvent
 import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cinfo
-import org.jitsi.nlj.util.toLegacyRawPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
@@ -39,11 +38,11 @@ class TccSeqNumTagger(
             val rtpPacket = packetInfo.packetAs<RtpPacket>()
             val ext = rtpPacket.getHeaderExtension(tccExtId)
                 ?: rtpPacket.addHeaderExtension(tccExtId, TccHeaderExtension.DATA_SIZE_BYTES)
-            TccHeaderExtension.setSequenceNumber(ext, currTccSeqNum++)
-        }
 
-        transportCcEngine?.egressEngine?.rtpTransformer?.transform(
-            Array(1) { packetInfo.packet.toLegacyRawPacket() })
+            TccHeaderExtension.setSequenceNumber(ext, currTccSeqNum)
+            transportCcEngine?.mediaPacketSent(currTccSeqNum, rtpPacket.length)
+            currTccSeqNum++
+        }
 
         return packetInfo
     }
