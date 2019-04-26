@@ -43,6 +43,7 @@ class PaddingVideoPacket private constructor(
             return PaddingVideoPacket(buf, 0, length).apply {
                 // Recalculate the header length now that we've zero'd everything out
                 // and set the fields
+                version = RtpHeader.VERSION
                 headerLength = RtpHeader.getTotalLength(buffer, offset)
                 paddingSize = payloadLength
             }
