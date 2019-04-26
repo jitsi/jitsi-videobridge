@@ -211,6 +211,19 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
                 it.addEvent(nodeExitString)
             }
         }
+
+        if (PacketInfo.ENABLE_PAYLOAD_VERIFICATION &&
+            packetInfo != null &&
+            packetInfo.payloadVerification != null) {
+
+            val expected = packetInfo.payloadVerification
+            val actual = packetInfo.packet.payloadVerification
+            if (expected != actual) {
+                logger.warn("Payload unexpectedly modified! Expected: $expected, actual: $actual")
+                stats.numPayloadVerificationFailures++
+                packetInfo.resetPayloadAuthString()
+            }
+        }
     }
 
     /**
@@ -284,10 +297,12 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
         /**
          * The longest time it took to process a single packet.
          */
-        var maxProcessingDurationNs: Long = -1
+        var maxProcessingDurationNs: Long = -1,
+        /**
+         * Number of time this node unexpectedly modified the payload of a packet.
+         */
+        var numPayloadVerificationFailures: Long = 0
     ) {
-        private val totalProcessingDurationMs
-            get() = Duration.ofNanos(totalProcessingDurationNs).toMillis()
         private val maxProcessingDurationMs: Double
             get() = maxProcessingDurationNs / 1000_000.0
 
@@ -303,6 +318,7 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
                 addRatio("average_time_per_packet_ns", "total_time_spent_ns", "num_input_packets")
                 addMbps("processing_throughput_mbps", "num_input_bytes", "total_time_spent_ms")
                 addNumber("max_packet_process_time_ms", maxProcessingDurationMs)
+                addNumber("num_payload_verification_failures", numPayloadVerificationFailures)
             }
         }
     }
