@@ -80,7 +80,7 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
             numCachedPackets++
             cachedPackets.add(packetInfo)
             while (cachedPackets.size > 1024) {
-                cachedPackets.removeAt(0)?.let {
+                cachedPackets.removeAt(0).let {
                     packetDiscarded(it)
                 }
             }

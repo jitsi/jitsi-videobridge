@@ -86,7 +86,7 @@ abstract class AbstractSrtpTransformer<CryptoContextType : BaseSRTPCryptoContext
     }
 
     companion object {
-        val logger: Logger = Logger.getLogger(this.javaClass)
+        val logger: Logger = Logger.getLogger(this::class.java)
     }
 }
 

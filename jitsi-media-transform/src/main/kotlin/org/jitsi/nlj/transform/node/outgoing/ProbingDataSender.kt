@@ -85,10 +85,9 @@ class ProbingDataSender(
      */
     private fun sendRedundantDataOverRtx(mediaSsrc: Long, numBytes: Int): Int {
         var bytesSent = 0
-        val lastNPackets =
-                packetCache.getMany(mediaSsrc, numBytes)
+        val lastNPackets = packetCache.getMany(mediaSsrc, numBytes)
 
-        if (lastNPackets == null || lastNPackets.isEmpty()) {
+        if (lastNPackets.isEmpty()) {
             return bytesSent
         }
 
