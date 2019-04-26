@@ -22,6 +22,7 @@ import org.jitsi.videobridge.*;
 
 import java.beans.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.*;
 
 /**
@@ -36,7 +37,7 @@ public class OctoEndpoint
     /**
      * The SSRCs that this endpoint has.
      */
-    private final Set<Long> receiveSsrcs = new HashSet<>();
+    private final Map<Long, MediaType> receiveSsrcs = new ConcurrentHashMap<>();
 
     /**
      * Initializes a new {@link OctoEndpoint} with a specific ID in a specific
@@ -95,16 +96,16 @@ public class OctoEndpoint
     @Override
     public boolean receivesSsrc(long ssrc)
     {
-        return receiveSsrcs.contains(ssrc);
+        return receiveSsrcs.containsKey(ssrc);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void addReceiveSsrc(long ssrc)
+    public void addReceiveSsrc(long ssrc, MediaType mediaType)
     {
-        receiveSsrcs.add(ssrc);
+        receiveSsrcs.put(ssrc, mediaType);
     }
 
 }

@@ -254,7 +254,7 @@ public class ChannelShim
         this.sources = sources;
         sources.stream()
             .map(source -> source.getSSRC())
-            .forEach(endpoint::addReceiveSsrc);
+            .forEach(ssrc -> endpoint.addReceiveSsrc(ssrc, getMediaType()));
     }
 
     /**

@@ -17,6 +17,7 @@ package org.jitsi.videobridge;
 
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -190,7 +191,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * Adds an SSRC to this endpoint.
      * @param ssrc
      */
-    public abstract void addReceiveSsrc(long ssrc);
+    public abstract void addReceiveSsrc(long ssrc, MediaType mediaType);
 
     /**
      * @return the {@link AbstractEndpointMessageTransport} associated with

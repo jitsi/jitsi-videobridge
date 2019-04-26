@@ -1277,13 +1277,13 @@ public class Endpoint
      * {@inheritDoc}
      */
     @Override
-    public void addReceiveSsrc(long ssrc)
+    public void addReceiveSsrc(long ssrc, MediaType mediaType)
     {
         if (logger.isDebugEnabled())
         {
             logger.debug(logPrefix + "Adding receive ssrc " + ssrc);
         }
-        transceiver.addReceiveSsrc(ssrc);
+        transceiver.addReceiveSsrc(ssrc, mediaType);
     }
 
     /**
