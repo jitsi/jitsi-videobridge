@@ -20,6 +20,7 @@ import org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer
 import org.jitsi.nlj.codec.vp8.Vp8Utils
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.rtp.extensions.bytearray.cloneFromPool
+import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
 
 class Vp8Packet(
     data: ByteArray,
@@ -40,6 +41,19 @@ class Vp8Packet(
         }
         temporalLayerIndex = Vp8Utils.getTemporalLayerIdOfFrame(this)
     }
+
+    /**
+     * For [Vp8Packet] the payload excludes the VP8 Payload Descriptor.
+     */
+    override val payloadVerification: String
+        get() {
+            val rtpPayloadLength = payloadLength
+            val rtpPayloadOffset = payloadOffset
+            val vp8pdSize = DePacketizer.VP8PayloadDescriptor.getSize(buffer, payloadOffset, rtpPayloadLength)
+            val vp8PayloadLength = rtpPayloadLength - vp8pdSize
+            val hashCode = buffer.hashCodeOfSegment(payloadOffset + vp8pdSize, rtpPayloadOffset + rtpPayloadLength)
+            return "type=Vp8Packet len=$vp8PayloadLength hashCode=$hashCode"
+        }
 
     override fun clone(): Vp8Packet {
         val clone = Vp8Packet(buffer.cloneFromPool(), offset, length)
