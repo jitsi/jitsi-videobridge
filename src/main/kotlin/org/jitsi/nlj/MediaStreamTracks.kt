@@ -44,8 +44,7 @@ class MediaStreamTracks : NodeStatsProducer {
         val mergedTracks: Array<MediaStreamTrackDesc> = Array(newTracks.size) { i ->
             val newEncoding = newTracks[i].rtpEncodings[0]
             for (j in 0 until oldTracks.size) {
-                if (oldTracks[j] != null &&
-                    oldTracks[j].matches(newEncoding.primarySSRC)) {
+                if (oldTracks[j].matches(newEncoding.primarySSRC)) {
                     cntMatched++
                     // TODO: update the old track instance with the
                     // configuration of the new one.
@@ -79,7 +78,7 @@ fun RTPEncodingDesc.getNodeStats() = NodeStatsBlock(primarySSRC.toString()).appl
     addNumber("frameRate", frameRate)
     addNumber("height", height)
     addNumber("index", index)
-    addNumber("last_state_bitrate_bps", getLastStableBitrateBps(System.currentTimeMillis()))
+    addNumber("last_stable_bitrate_bps", getLastStableBitrateBps(System.currentTimeMillis()))
     addBoolean("is_received", isReceived)
     addNumber("rtx_ssrc", getSecondarySsrc(SsrcAssociationType.RTX))
     addNumber("fec_ssrc", getSecondarySsrc(SsrcAssociationType.FEC))
