@@ -80,6 +80,9 @@ public class DebugRequestHandler
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
                 return;
             }
+
+            response.setStatus(HttpServletResponse.SC_OK);
+            return;
         }
 
         if (!"GET".equals(request.getMethod()))
