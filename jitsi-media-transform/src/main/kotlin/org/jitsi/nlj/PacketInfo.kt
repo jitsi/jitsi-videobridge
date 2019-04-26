@@ -86,6 +86,21 @@ class PacketInfo @JvmOverloads constructor(
     var shouldDiscard: Boolean = false
 
     /**
+     * The payload verification string for the packet, or 'null' if payload verification is disabled. Calculating the
+     * it is expensive, thus we only do it when the flag is enabled.
+     */
+    var payloadVerification = if (ENABLE_PAYLOAD_VERIFICATION) packet.payloadVerification else null
+
+    /**
+     * Re-calculates the expected payload verification string. This should be called any time that the code
+     * intentionally modifies the packet in a way that could change the verification string (for example, re-creates
+     * it with a new type (parsing), or intentionally modifies the payload (SRTP)).
+     */
+    fun resetPayloadAuthString() {
+        payloadVerification = if (ENABLE_PAYLOAD_VERIFICATION) packet.payloadVerification else null
+    }
+
+    /**
      * Get the contained packet cast to [ExpectedPacketType]
      */
     @Suppress("UNCHECKED_CAST")
@@ -106,6 +121,7 @@ class PacketInfo @JvmOverloads constructor(
             PacketInfo(packet.clone(), timeline)
         }
         clone.receivedTime = receivedTime
+        clone.payloadVerification = payloadVerification
         return clone
     }
 
@@ -118,6 +134,11 @@ class PacketInfo @JvmOverloads constructor(
     companion object {
         // TODO: we could make this a public var to allow changing this at runtime
         private const val ENABLE_TIMELINE = false
+
+        /**
+         * If this is enabled all [Node]s will verify that the payload didn't unexpectedly change. This is expensive.
+         */
+        var ENABLE_PAYLOAD_VERIFICATION = false
     }
 }
 

@@ -81,6 +81,7 @@ class RtxHandler : TransformerNode("RTX handler") {
 
             logger.cdebug { "Recovered RTX packet.  Original packet: $originalSsrc $originalSeqNum" }
             numRtxPacketsReceived++
+            packetInfo.resetPayloadAuthString()
             return packetInfo
         } else {
             return packetInfo

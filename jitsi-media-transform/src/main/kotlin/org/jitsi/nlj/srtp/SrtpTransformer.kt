@@ -163,18 +163,21 @@ class SrtcpEncryptTransformer(contextFactory: SRTPContextFactory) : SrtcpTransfo
 class SrtpDecryptTransformer(contextFactory: SRTPContextFactory) : SrtpTransformer(contextFactory) {
     override fun transform(packetInfo: PacketInfo, context: SRTPCryptoContext): Boolean {
         // For silence packets we update the ROC (if authentication passes), but don't decrypt
-        return context.reverseTransformPacket(packetInfo.packetAs(), packetInfo.shouldDiscard)
+        return context.reverseTransformPacket(packetInfo.packetAs(), packetInfo.shouldDiscard).apply {
+            packetInfo.resetPayloadAuthString()
+        }
     }
 }
 
 /**
  * A transformer which encrypts RTP packets (producing SRTP packets).
- *
- * TODO: should we do the same as [SrtcpEncryptTransformer] and change the type to [UnparsedPacket]?
  */
 class SrtpEncryptTransformer(contextFactory: SRTPContextFactory) : SrtpTransformer(contextFactory) {
     override fun transform(packetInfo: PacketInfo, context: SRTPCryptoContext): Boolean {
-        return context.transformPacket(packetInfo.packetAs())
+        return context.transformPacket(packetInfo.packetAs()).apply {
+            packetInfo.packet = packetInfo.packet.toOtherType(::UnparsedPacket)
+            packetInfo.resetPayloadAuthString()
+        }
     }
 }
 
