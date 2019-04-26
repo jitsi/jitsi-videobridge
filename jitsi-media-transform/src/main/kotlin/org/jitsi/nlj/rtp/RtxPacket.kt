@@ -44,18 +44,18 @@ class RtxPacket {
          * Removes the original sequence number by shifting the header 2
          * bytes to the right
          */
-        fun removeOriginalSequenceNumber(rtxPacket: RtpPacket) {
+        fun removeOriginalSequenceNumber(rtxPacket: RtpPacket) = rtxPacket.apply {
             // Remove the original sequence number by moving the RTP header 2 bytes to the right
-            System.arraycopy(rtxPacket.buffer, rtxPacket.offset, rtxPacket.buffer, rtxPacket.offset + 2,
-                rtxPacket.headerLength)
-            rtxPacket.offset += 2
-            rtxPacket.length -= 2
+            System.arraycopy(buffer, offset, buffer, offset + 2, headerLength)
+            offset += 2
+            length -= 2
         }
 
-        fun addOriginalSequenceNumber(rtpPacket: RtpPacket) {
-            rtpPacket.shiftPayloadRight(2)
-            rtpPacket.length += 2
-            rtpPacket.buffer.putShort(rtpPacket.offset + rtpPacket.headerLength, rtpPacket.sequenceNumber.toShort())
+        fun addOriginalSequenceNumber(rtpPacket: RtpPacket) = rtpPacket.apply {
+            // TODO: possible optimization to try to shift the header left instead
+            shiftPayloadRight(2)
+            length += 2
+            buffer.putShort(offset + headerLength, sequenceNumber.toShort())
         }
     }
 }
