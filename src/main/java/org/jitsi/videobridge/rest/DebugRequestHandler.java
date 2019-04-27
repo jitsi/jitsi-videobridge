@@ -1,5 +1,6 @@
 package org.jitsi.videobridge.rest;
 
+import org.jitsi.nlj.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.*;
@@ -74,6 +75,16 @@ public class DebugRequestHandler
             {
                 logger.info("Disabling the debug REST interface.");
                 enabled = false;
+            }
+            else if (target.equals(DEBUG + "/enable-payload-verification"))
+            {
+                logger.info("Enabling payload verification.");
+                PacketInfo.Companion.setENABLE_PAYLOAD_VERIFICATION(true);
+            }
+            else if (target.equals(DEBUG + "/disable-payload-verification"))
+            {
+                logger.info("Disabling payload verification.");
+                PacketInfo.Companion.setENABLE_PAYLOAD_VERIFICATION(false);
             }
             else
             {
