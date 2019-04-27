@@ -122,11 +122,11 @@ class OctoTransceiver
      * @param packet the packet.
      */
     @Override
-    public void handlePacket(Packet packet)
+    public void handlePacket(Packet packet, String sourceEndpointId)
     {
-        PacketInfo pktInfo = new PacketInfo(packet);
-        pktInfo.setReceivedTime(System.currentTimeMillis());
-        incomingPacketQueue.add(pktInfo);
+        PacketInfo packetInfo = new PacketInfo(packet);
+        packetInfo.setReceivedTime(System.currentTimeMillis());
+        incomingPacketQueue.add(packetInfo);
     }
     @Override
     public void handleMessage(String message)

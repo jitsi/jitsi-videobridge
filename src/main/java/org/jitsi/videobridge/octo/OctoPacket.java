@@ -169,7 +169,7 @@ class OctoPacket
      * @param len the length of the buffer.
      * @return the endpoint ID from the given Octo header.
      */
-    private static String readEndpointId(byte[] buf, int off, int len)
+    static String readEndpointId(byte[] buf, int off, int len)
     {
         assertMinLen(buf, off, len);
 
