@@ -1196,6 +1196,20 @@ public class BitrateController
         {
             VideoRtpPacket[] extras
                     = adaptiveTrackProjection.rewriteRtp(videoPacket);
+
+            // The rewriteRtp operation must not modify the VP8 payload.
+            if (PacketInfo.Companion.getENABLE_PAYLOAD_VERIFICATION())
+            {
+                String expected = packetInfo.getPayloadVerification();
+                String actual = videoPacket.getPayloadVerification();
+                if (!"".equals(expected) && !expected.equals(actual))
+                {
+                    logger.warn(
+                        "Payload unexpectedly modified! Expected: " + expected
+                            + ", actual: " + actual);
+                }
+            }
+
             if (extras.length > 0)
             {
                 VideoRtpPacket[] allPackets
