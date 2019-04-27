@@ -208,7 +208,6 @@ public class OctoRelay
             ByteBufferPool.returnBuffer(buf);
             return;
         }
-        MediaType mediaType = OctoPacket.readMediaType(buf, off, len);
 
         PacketHandler handler = packetHandlers.get(conferenceId);
         if (handler == null)
@@ -220,6 +219,9 @@ public class OctoRelay
             return;
         }
 
+        MediaType mediaType = OctoPacket.readMediaType(buf, off, len);
+        String sourceEndpointId = OctoPacket.readEndpointId(buf, off, len);
+
         switch (mediaType)
         {
         case AUDIO:
@@ -228,7 +230,8 @@ public class OctoRelay
                 new UnparsedPacket(
                         buf,
                         off + OctoPacket.OCTO_HEADER_LENGTH,
-                        len - OctoPacket.OCTO_HEADER_LENGTH));
+                        len - OctoPacket.OCTO_HEADER_LENGTH),
+                sourceEndpointId);
             break;
         case DATA:
             String msg
@@ -415,8 +418,10 @@ public class OctoRelay
         /**
          * Handles an RTP or RTCP packet.
          * @param packet the packet.
+         * @param sourceEndpointId the ID of the endpoint which is the original
+         * sender of the packet.
          */
-        void handlePacket(Packet packet);
+        void handlePacket(Packet packet, String sourceEndpointId);
 
         /**
          * Handles a string message.
