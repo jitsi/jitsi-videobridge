@@ -89,7 +89,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val srtcpDecryptWrapper = SrtpTransformerNode("SRTCP Decrypt node")
     private val tccGenerator = TccGeneratorNode(rtcpSender, backgroundExecutor)
     private val audioLevelReader = AudioLevelReader()
-    private val silenceDiscarder = SilenceDiscarder()
+    private val silenceDiscarder = SilenceDiscarder(true)
     private val statsTracker = IncomingStatisticsTracker()
     private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statsTracker)
     private val rtcpTermination = RtcpTermination(rtcpEventNotifier, transportCcEngine)
