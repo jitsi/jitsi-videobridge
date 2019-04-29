@@ -20,7 +20,7 @@ import org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer
 import org.jitsi.nlj.codec.vp8.Vp8Utils
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.rtp.extensions.bytearray.cloneFromPool
-import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
+import org.jitsi.rtp.extensions.bytearray.toHex
 
 class Vp8Packet(
     data: ByteArray,
@@ -49,10 +49,10 @@ class Vp8Packet(
         get() {
             val rtpPayloadLength = payloadLength
             val rtpPayloadOffset = payloadOffset
-            val vp8pdSize = DePacketizer.VP8PayloadDescriptor.getSize(buffer, payloadOffset, rtpPayloadLength)
+            val vp8pdSize = DePacketizer.VP8PayloadDescriptor.getSize(buffer, rtpPayloadOffset, rtpPayloadLength)
             val vp8PayloadLength = rtpPayloadLength - vp8pdSize
-            val hashCode = buffer.hashCodeOfSegment(payloadOffset + vp8pdSize, rtpPayloadOffset + rtpPayloadLength)
-            return "type=Vp8Packet len=$vp8PayloadLength hashCode=$hashCode"
+            val payload = buffer.toHex(rtpPayloadOffset + vp8pdSize, vp8PayloadLength)
+            return "type=Vp8Packet len=$vp8PayloadLength payload=$payload"
         }
 
     override fun clone(): Vp8Packet {
