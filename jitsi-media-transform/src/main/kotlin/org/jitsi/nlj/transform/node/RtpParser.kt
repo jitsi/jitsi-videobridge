@@ -45,7 +45,7 @@ class RtpParser : TransformerNode("RTP Parser") {
             else -> throw Exception("Unrecognized media type: '${payloadType.mediaType}'")
         }
 
-        packetInfo.resetPayloadAuthString()
+        packetInfo.resetPayloadVerification()
         return packetInfo
     }
 
