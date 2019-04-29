@@ -23,6 +23,7 @@ import org.jitsi.nlj.Stoppable
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.NodeVisitor
+import org.jitsi.nlj.transform.node.debug.PayloadVerificationPlugin
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.addMbps
 import org.jitsi.nlj.util.addRatio
@@ -103,7 +104,7 @@ abstract class Node(
 
     protected fun next(packetInfo: PacketInfo) {
         if (PLUGINS_ENABLED) {
-            plugins.forEach { it.observe("after $name: ", packetInfo) }
+            plugins.forEach { it.observe(this, packetInfo) }
         }
         nextNode?.processPacket(packetInfo)
     }
@@ -111,7 +112,7 @@ abstract class Node(
     protected fun next(packetInfos: List<PacketInfo>) {
         packetInfos.forEach { packetInfo ->
             if (PLUGINS_ENABLED) {
-                plugins.forEach { it.observe("[${Thread.currentThread().id}] after $name: ", packetInfo) }
+                plugins.forEach { it.observe(this, packetInfo) }
             }
             nextNode?.processPacket(packetInfo)
         }
@@ -121,7 +122,19 @@ abstract class Node(
         var PLUGINS_ENABLED = false
         // 'Plugins' are observers which, when enabled, will be passed every packet that passes through
         // every node
-        val plugins: MutableList<NodePlugin> = mutableListOf()
+        val plugins: MutableSet<NodePlugin> = mutableSetOf()
+
+        fun enablePayloadVerification(enable: Boolean) {
+            if (enable) {
+                PLUGINS_ENABLED = true
+                plugins.add(PayloadVerificationPlugin)
+                PacketInfo.ENABLE_PAYLOAD_VERIFICATION = true
+            } else {
+                plugins.remove(PayloadVerificationPlugin)
+                PLUGINS_ENABLED = plugins.isNotEmpty()
+                PacketInfo.ENABLE_PAYLOAD_VERIFICATION = false
+            }
+        }
     }
 }
 
@@ -211,19 +224,6 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
                 it.addEvent(nodeExitString)
             }
         }
-
-        if (PacketInfo.ENABLE_PAYLOAD_VERIFICATION &&
-            packetInfo != null &&
-            packetInfo.payloadVerification != null) {
-
-            val expected = packetInfo.payloadVerification
-            val actual = packetInfo.packet.payloadVerification
-            if (expected != actual) {
-                logger.warn("Payload unexpectedly modified! Expected: $expected, actual: $actual")
-                stats.numPayloadVerificationFailures++
-                packetInfo.resetPayloadVerification()
-            }
-        }
     }
 
     /**
@@ -278,6 +278,7 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
             globalStats.forEach { className, stats ->
                 jsonObject[className] = stats.toJson()
             }
+            jsonObject["num_payload_verification_failures"] = PayloadVerificationPlugin.numFailures.get()
             return jsonObject
         }
     }
@@ -297,11 +298,7 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
         /**
          * The longest time it took to process a single packet.
          */
-        var maxProcessingDurationNs: Long = -1,
-        /**
-         * Number of time this node unexpectedly modified the payload of a packet.
-         */
-        var numPayloadVerificationFailures: Long = 0
+        var maxProcessingDurationNs: Long = -1
     ) {
         private val maxProcessingDurationMs: Double
             get() = maxProcessingDurationNs / 1000_000.0
@@ -318,7 +315,6 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
                 addRatio("average_time_per_packet_ns", "total_time_spent_ns", "num_input_packets")
                 addMbps("processing_throughput_mbps", "num_input_bytes", "total_time_spent_ms")
                 addNumber("max_packet_process_time_ms", maxProcessingDurationMs)
-                addNumber("num_payload_verification_failures", numPayloadVerificationFailures)
             }
         }
     }

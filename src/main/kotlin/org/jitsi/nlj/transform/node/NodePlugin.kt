@@ -26,10 +26,9 @@ import org.jitsi.nlj.PacketInfo
  */
 interface NodePlugin {
     /**
-     * Invoked in between every node in any pipeline.  [context]
-     * gives a sense of when/'where' it is being invoked (e.g.
-     * "after MediaTyperParser") and [packetInfo] is the [PacketInfo]
-     * being passed from one node to the next.
+     * Invoked in between every node in any pipeline.
+     * [after] is the [Node] which just processed the packet.
+     * [packetInfo] is the [PacketInfo] being passed from one node to the next.
      */
-    fun observe(context: String, packetInfo: PacketInfo)
+    fun observe(after: Node, packetInfo: PacketInfo)
 }

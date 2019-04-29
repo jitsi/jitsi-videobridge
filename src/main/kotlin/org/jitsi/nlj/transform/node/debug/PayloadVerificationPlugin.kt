@@ -19,12 +19,32 @@ package org.jitsi.nlj.transform.node.debug
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.NodePlugin
+import org.jitsi.nlj.util.getLogger
+import java.util.concurrent.atomic.AtomicInteger
 
-class BufferTracePlugin {
+/**
+ * Verifies that the payload verification string of the packet hasn't changed.
+ *
+ * @author Boris Grozev
+ */
+class PayloadVerificationPlugin {
     companion object : NodePlugin {
+        private val logger = getLogger(this.javaClass)
+
+        val numFailures = AtomicInteger()
+
         override fun observe(after: Node, packetInfo: PacketInfo) {
-            println("array trace @${after.name}: ${System.identityHashCode(packetInfo.packet.buffer)} " +
-                    "offset ${packetInfo.packet.offset} length ${packetInfo.packet.length}")
+            if (PacketInfo.ENABLE_PAYLOAD_VERIFICATION &&
+                packetInfo.payloadVerification != null) {
+
+                val expected = packetInfo.payloadVerification
+                val actual = packetInfo.packet.payloadVerification
+                if (expected != actual) {
+                    logger.warn("Payload unexpectedly modified by ${after.name}! Expected: $expected, actual: $actual")
+                    numFailures.incrementAndGet()
+                    packetInfo.resetPayloadVerification()
+                }
+            }
         }
     }
 }
