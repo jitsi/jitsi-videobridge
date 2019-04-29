@@ -345,25 +345,45 @@ public class VP8AdaptiveTrackProjectionContext
     @Override
     public boolean needsKeyframe()
     {
+        boolean loggerIsDebugEnabled = logger.isDebugEnabled();
+
         if (vp8QualityFilter.needsKeyframe())
         {
-            logger.debug(hashCode() + " TEMP: quality filter " + vp8QualityFilter.hashCode() + " says vp8 track needs keyframe");
+            if (loggerIsDebugEnabled)
+            {
+                logger.debug(hashCode() + " quality filter "
+                    + vp8QualityFilter.hashCode()
+                    + " says vp8 track needs keyframe");
+            }
+
             return true;
         }
 
         VP8Frame lastVP8Frame = lastVP8FrameProjection.getVP8Frame();
         if (lastVP8Frame == null)
         {
-            logger.debug(hashCode() + "TEMP: track projection last frame is null, needs keyframe");
+            if (loggerIsDebugEnabled)
+            {
+                logger.debug(hashCode()
+                    + " track projection last frame is null, needs keyframe");
+            }
         }
         else if (lastVP8Frame.needsKeyframe())
         {
-            logger.debug(hashCode() + "TEMP: last vp8 frame says we need keyframe");
+            if (loggerIsDebugEnabled)
+            {
+                logger.debug(hashCode()
+                    + " last vp8 frame says we need keyframe");
+            }
         }
         boolean result = lastVP8Frame == null || lastVP8Frame.needsKeyframe();
         if (result)
         {
-            logger.debug(hashCode() + "TEMP: vp8 track projection does need keyframe");
+            if (loggerIsDebugEnabled)
+            {
+                logger.debug(hashCode()
+                    + " vp8 track projection does need keyframe");
+            }
         }
         return result;
     }
