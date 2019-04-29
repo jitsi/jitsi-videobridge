@@ -83,12 +83,12 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-media-transform</artifactId>
-      <version>1.0-20190424.131532-15</version>
+      <version>1.0-20190429.141032-17</version>
     </dependency>
     <dependency>
       <groupId>org.jitsi</groupId>
       <artifactId>rtp</artifactId>
-      <version>1.0-20190424.125933-29</version>
+      <version>1.0-20190429.140616-31</version>
     </dependency>
     <dependency>
       <groupId>org.jitsi</groupId>
