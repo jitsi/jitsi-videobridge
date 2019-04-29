@@ -18,6 +18,7 @@ package org.jitsi.rtp.rtp
 
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.bytearray.putShort
+import org.jitsi.rtp.extensions.bytearray.toHex
 import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionHelpers
 import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.getByteAsInt
@@ -123,6 +124,12 @@ open class RtpPacket(
             _headerExtensions.reset()
             return _headerExtensions
         }
+
+    /**
+     * For [RtpPacket] the payload is everything after the RTP Header.
+     */
+    override val payloadVerification: String
+        get() = "type=RtpPacket len=$payloadLength payload=${buffer.toHex(payloadOffset, payloadLength)}"
 
     fun getHeaderExtension(extensionId: Int): HeaderExtension? {
         headerExtensions.forEach { ext ->

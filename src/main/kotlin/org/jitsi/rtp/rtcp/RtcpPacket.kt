@@ -68,6 +68,11 @@ abstract class RtcpPacket(
 
     val packetLength: Int = (lengthField + 1) * 4
 
+    /**
+     * Effectively disable the payload verification for RTCP packets, since in practice we change them very often
+     */
+    override val payloadVerification = "rtcp"
+
     abstract override fun clone(): RtcpPacket
 
     companion object {

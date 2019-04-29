@@ -149,74 +149,74 @@ class RtpPacketTest : ShouldSpec() {
 
                         rtpPacket should haveSamePayload(rtpPacketWithExtensions)
                     }
-                    "in a buffer that has room to the right" {
-                        val buf = ByteArray(rtpPacketWithExtensions.length + 100)
-                        System.arraycopy(
-                            rtpPacketWithExtensions.buffer,
-                            0,
-                            buf,
-                            0,
-                            rtpPacketWithExtensions.length
-                        )
-                        val rtpPacket = RtpPacket(buf, 0, rtpPacketWithExtensions.length)
-                        val newExt = rtpPacket.addHeaderExtension(3, 2)
-                        newExt.currExtBuffer.putShort(newExt.currExtOffset + 1, 0xDEAD.toShort())
-                        should("update the packet correctly") {
-                            rtpPacket should haveSameFixedHeader(rtpPacketWithExtensions)
+                }
+                "in a buffer that has room to the right" {
+                    val buf = ByteArray(rtpPacketWithExtensions.length + 100)
+                    System.arraycopy(
+                        rtpPacketWithExtensions.buffer,
+                        0,
+                        buf,
+                        0,
+                        rtpPacketWithExtensions.length
+                    )
+                    val rtpPacket = RtpPacket(buf, 0, rtpPacketWithExtensions.length)
+                    val newExt = rtpPacket.addHeaderExtension(3, 2)
+                    newExt.currExtBuffer.putShort(newExt.currExtOffset + 1, 0xDEAD.toShort())
+                    should("update the packet correctly") {
+                        rtpPacket should haveSameFixedHeader(rtpPacketWithExtensions)
 
-                            val ext = rtpPacket.getHeaderExtension(1)
-                            ext shouldNotBe null
-                            ext as RtpPacket.HeaderExtension
-                            ext.id shouldBe 1
-                            ext.dataLengthBytes shouldBe 1
-                            // The offset is the start of the ext, add 1 to move past the header to get the data
-                            ext.currExtBuffer.getByteAsInt(ext.currExtOffset + 1) shouldBe 0xFF.toPositiveInt()
+                        val ext = rtpPacket.getHeaderExtension(1)
+                        ext shouldNotBe null
+                        ext as RtpPacket.HeaderExtension
+                        ext.id shouldBe 1
+                        ext.dataLengthBytes shouldBe 1
+                        // The offset is the start of the ext, add 1 to move past the header to get the data
+                        ext.currExtBuffer.getByteAsInt(ext.currExtOffset + 1) shouldBe 0xFF.toPositiveInt()
 
-                            val ext2 = rtpPacket.getHeaderExtension(3)
-                            ext2 shouldNotBe null
-                            ext2 as RtpPacket.HeaderExtension
-                            ext2.id shouldBe 3
-                            ext2.dataLengthBytes shouldBe 2
-                            // The offset is the start of the ext, add 1 to move past the header to get the data
-                            ext2.currExtBuffer.getShort(ext.currExtOffset + 1) shouldBe 0xDEAD.toShort()
+                        val ext2 = rtpPacket.getHeaderExtension(3)
+                        ext2 shouldNotBe null
+                        ext2 as RtpPacket.HeaderExtension
+                        ext2.id shouldBe 3
+                        ext2.dataLengthBytes shouldBe 2
+                        // The offset is the start of the ext, add 1 to move past the header to get the data
+                        ext2.currExtBuffer.getShort(ext.currExtOffset + 1) shouldBe 0xDEAD.toShort()
 
-                            rtpPacket should haveSamePayload(rtpPacketWithExtensions)
-                        }
+                        rtpPacket should haveSamePayload(rtpPacketWithExtensions)
                     }
-                    "in a buffer that has room to the left" {
-                        val spaceOnTheLeft = 8 // this is what we often have with Octo.
-                        val buf = ByteArray(rtpPacketWithExtensions.length + spaceOnTheLeft + 20)
-                        System.arraycopy(
-                            rtpPacketWithExtensions.buffer,
-                            0,
-                            buf,
-                            spaceOnTheLeft,
-                            rtpPacketWithExtensions.length
-                        )
-                        val rtpPacket = RtpPacket(buf, spaceOnTheLeft, rtpPacketWithExtensions.length)
-                        val newExt = rtpPacket.addHeaderExtension(3, 2)
-                        newExt.currExtBuffer.putShort(newExt.currExtOffset + 1, 0xDEAD.toShort())
-                        should("update the packet correctly") {
-                            rtpPacket should haveSameFixedHeader(rtpPacketWithExtensions)
+                }
+                "in a buffer that has room to the left" {
+                    val spaceOnTheLeft = 8 // this is what we often have with Octo.
+                    val buf = ByteArray(rtpPacketWithExtensions.length + spaceOnTheLeft + 20)
+                    System.arraycopy(
+                        rtpPacketWithExtensions.buffer,
+                        0,
+                        buf,
+                        spaceOnTheLeft,
+                        rtpPacketWithExtensions.length
+                    )
+                    val rtpPacket = RtpPacket(buf, spaceOnTheLeft, rtpPacketWithExtensions.length)
+                    val newExt = rtpPacket.addHeaderExtension(3, 2)
+                    newExt.currExtBuffer.putShort(newExt.currExtOffset + 1, 0xDEAD.toShort())
+                    should("update the packet correctly") {
+                        rtpPacket should haveSameFixedHeader(rtpPacketWithExtensions)
 
-                            val ext = rtpPacket.getHeaderExtension(1)
-                            ext shouldNotBe null
-                            ext as RtpPacket.HeaderExtension
-                            ext.id shouldBe 1
-                            ext.dataLengthBytes shouldBe 1
-                            // The offset is the start of the ext, add 1 to move past the header to get the data
-                            ext.currExtBuffer.getByteAsInt(ext.currExtOffset + 1) shouldBe 0xFF.toPositiveInt()
+                        val ext = rtpPacket.getHeaderExtension(1)
+                        ext shouldNotBe null
+                        ext as RtpPacket.HeaderExtension
+                        ext.id shouldBe 1
+                        ext.dataLengthBytes shouldBe 1
+                        // The offset is the start of the ext, add 1 to move past the header to get the data
+                        ext.currExtBuffer.getByteAsInt(ext.currExtOffset + 1) shouldBe 0xFF.toPositiveInt()
 
-                            val ext2 = rtpPacket.getHeaderExtension(3)
-                            ext2 shouldNotBe null
-                            ext2 as RtpPacket.HeaderExtension
-                            ext2.id shouldBe 3
-                            ext2.dataLengthBytes shouldBe 2
-                            // The offset is the start of the ext, add 1 to move past the header to get the data
-                            ext2.currExtBuffer.getShort(ext.currExtOffset + 1) shouldBe 0xDEAD.toShort()
+                        val ext2 = rtpPacket.getHeaderExtension(3)
+                        ext2 shouldNotBe null
+                        ext2 as RtpPacket.HeaderExtension
+                        ext2.id shouldBe 3
+                        ext2.dataLengthBytes shouldBe 2
+                        // The offset is the start of the ext, add 1 to move past the header to get the data
+                        ext2.currExtBuffer.getShort(ext.currExtOffset + 1) shouldBe 0xDEAD.toShort()
 
-                            rtpPacket should haveSamePayload(rtpPacketWithExtensions)
-                        }
+                        rtpPacket should haveSamePayload(rtpPacketWithExtensions)
                     }
                 }
             }
