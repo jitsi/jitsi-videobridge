@@ -134,6 +134,7 @@ abstract class SrtcpTransformer(contextFactory: SRTPContextFactory) : AbstractSr
 class SrtcpDecryptTransformer(contextFactory: SRTPContextFactory) : SrtcpTransformer(contextFactory) {
     override fun transform(packetInfo: PacketInfo, context: SRTCPCryptoContext): Boolean {
         context.reverseTransformPacket(packetInfo.packet)
+        packetInfo.resetPayloadVerification()
         return true
     }
 }
@@ -152,6 +153,7 @@ class SrtcpEncryptTransformer(contextFactory: SRTPContextFactory) : SrtcpTransfo
         // in the pipeline's usage, but it's a bit of a landmine since by
         // accessing the packet it can try and parse the fields.
         packetInfo.packet = packetInfo.packet.toOtherType(::UnparsedPacket)
+        packetInfo.resetPayloadVerification()
         return true
     }
 }
