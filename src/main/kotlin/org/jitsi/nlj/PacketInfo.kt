@@ -96,7 +96,7 @@ class PacketInfo @JvmOverloads constructor(
      * intentionally modifies the packet in a way that could change the verification string (for example, re-creates
      * it with a new type (parsing), or intentionally modifies the payload (SRTP)).
      */
-    fun resetPayloadAuthString() {
+    fun resetPayloadVerification() {
         payloadVerification = if (ENABLE_PAYLOAD_VERIFICATION) packet.payloadVerification else null
     }
 
