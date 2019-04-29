@@ -164,7 +164,7 @@ class SrtpDecryptTransformer(contextFactory: SRTPContextFactory) : SrtpTransform
     override fun transform(packetInfo: PacketInfo, context: SRTPCryptoContext): Boolean {
         // For silence packets we update the ROC (if authentication passes), but don't decrypt
         return context.reverseTransformPacket(packetInfo.packetAs(), packetInfo.shouldDiscard).apply {
-            packetInfo.resetPayloadAuthString()
+            packetInfo.resetPayloadVerification()
         }
     }
 }
@@ -176,7 +176,7 @@ class SrtpEncryptTransformer(contextFactory: SRTPContextFactory) : SrtpTransform
     override fun transform(packetInfo: PacketInfo, context: SRTPCryptoContext): Boolean {
         return context.transformPacket(packetInfo.packetAs()).apply {
             packetInfo.packet = packetInfo.packet.toOtherType(::UnparsedPacket)
-            packetInfo.resetPayloadAuthString()
+            packetInfo.resetPayloadVerification()
         }
     }
 }

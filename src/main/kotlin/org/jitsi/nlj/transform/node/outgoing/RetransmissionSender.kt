@@ -80,7 +80,7 @@ class RetransmissionSender : TransformerNode("Retransmission sender") {
         logger.cdebug { "${hashCode()} sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum $rtxSeqNum" }
 
         numRetransmittedPackets++
-        packetInfo.resetPayloadAuthString()
+        packetInfo.resetPayloadVerification()
         return packetInfo
     }
 

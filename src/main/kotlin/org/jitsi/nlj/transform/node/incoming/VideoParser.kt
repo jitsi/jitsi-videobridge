@@ -56,7 +56,7 @@ class VideoParser : TransformerNode("Video parser") {
                 else -> rtpPacket
             }
             packetInfo.packet = videoRtpPacket
-            packetInfo.resetPayloadAuthString()
+            packetInfo.resetPayloadVerification()
         } ?: run {
             logger.error("Unrecognized video payload type ${rtpPacket.payloadType}, cannot parse video information")
         }

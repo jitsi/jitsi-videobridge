@@ -221,7 +221,7 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
             if (expected != actual) {
                 logger.warn("Payload unexpectedly modified! Expected: $expected, actual: $actual")
                 stats.numPayloadVerificationFailures++
-                packetInfo.resetPayloadAuthString()
+                packetInfo.resetPayloadVerification()
             }
         }
     }
