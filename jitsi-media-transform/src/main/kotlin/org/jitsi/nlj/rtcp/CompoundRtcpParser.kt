@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2019 Atlassian Pty Ltd
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,15 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform.node
 
-import org.jitsi.nlj.PacketInfo
-import org.jitsi.rtp.Packet
+package org.jitsi.nlj.rtcp
 
-open class PacketParser(name: String, private val action: (Packet) -> Packet) : TransformerNode(name) {
-    override fun transform(packetInfo: PacketInfo): PacketInfo? {
-        packetInfo.packet = action(packetInfo.packet)
-        packetInfo.resetPayloadVerification()
-        return packetInfo
-    }
-}
+import org.jitsi.nlj.transform.node.PacketParser
+import org.jitsi.rtp.rtcp.CompoundRtcpPacket
+
+class CompoundRtcpParser : PacketParser("Compound RTCP parser", {
+    CompoundRtcpPacket(it.buffer, it.offset, it.length) })
