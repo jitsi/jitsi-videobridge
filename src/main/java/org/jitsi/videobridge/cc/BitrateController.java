@@ -1182,6 +1182,14 @@ public class BitrateController
     }
 
     /**
+     * Gets the LastN value.
+     */
+    public int getLastN()
+    {
+        return lastN;
+    }
+
+    /**
      * Adds a payload type.
      */
     public void addPayloadType(PayloadType payloadType)

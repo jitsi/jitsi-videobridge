@@ -380,8 +380,15 @@ public class Endpoint
     @Override
     public void setLastN(Integer lastN)
     {
-        super.setLastN(lastN);
         bitrateController.setLastN(lastN);
+    }
+
+    /**
+     * Gets the LastN value for this endpoint.
+     */
+    public int getLastN()
+    {
+        return bitrateController.getLastN();
     }
 
     /**
@@ -414,11 +421,6 @@ public class Endpoint
     @Override
     public boolean wants(PacketInfo packetInfo, String source)
     {
-        if (!super.wants(packetInfo, source))
-        {
-            return false;
-        }
-
         Packet packet = packetInfo.getPacket();
 
         if (packet instanceof RtpPacket)
