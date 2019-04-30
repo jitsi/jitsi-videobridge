@@ -20,6 +20,7 @@ import org.jitsi.videobridge.*;
 import org.json.simple.*;
 
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.*;
 
 /**
@@ -42,7 +43,15 @@ import java.util.stream.*;
       */
      private Conference conference;
 
-     private Set<String> octoEndpointIds = new HashSet<>();
+     Set<String> octoEndpointIds = new HashSet<>();
+
+     /**
+      * Maps an SSRC to the ID of the Octo endpoint to which it belongs.
+      *
+      * This is not meant as a permanent solution.
+      */
+     Map<Long, String> ssrcToEndpointId = new ConcurrentHashMap<>();
+
      /**
       * The {@link OctoEndpointMessageTransport} used to parse and handle
       * incoming data messages from Octo.
@@ -126,7 +135,7 @@ import java.util.stream.*;
       */
      private OctoEndpoint addEndpoint(String id)
      {
-         OctoEndpoint endpoint = new OctoEndpoint(conference, id);
+         OctoEndpoint endpoint = new OctoEndpoint(conference, id, this);
 
          conference.addEndpoint(endpoint);
 

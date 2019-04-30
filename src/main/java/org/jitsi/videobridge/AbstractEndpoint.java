@@ -188,6 +188,11 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public abstract boolean receivesSsrc(long ssrc);
 
     /**
+     * Gets the media type of an SSRC which belongs to this endpoint.
+     */
+    public abstract MediaType getMediaType(long ssrc);
+
+    /**
      * Adds an SSRC to this endpoint.
      * @param ssrc
      */

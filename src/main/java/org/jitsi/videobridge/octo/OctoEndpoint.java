@@ -40,14 +40,22 @@ public class OctoEndpoint
     private final Map<Long, MediaType> receiveSsrcs = new ConcurrentHashMap<>();
 
     /**
+     * The {@link OctoEndpoints} instance which manages all the Octo endpoints
+     * for the associated conference.
+     */
+    private final OctoEndpoints octoEndpoints;
+
+    /**
      * Initializes a new {@link OctoEndpoint} with a specific ID in a specific
      * conference.
      * @param conference the conference.
      * @param id the ID of the endpoint.
      */
-    OctoEndpoint(Conference conference, String id)
+    OctoEndpoint(Conference conference, String id, OctoEndpoints octoEndpoints)
     {
         super(conference, id);
+
+        this.octoEndpoints = octoEndpoints;
     }
 
     /**
@@ -99,6 +107,12 @@ public class OctoEndpoint
         return receiveSsrcs.containsKey(ssrc);
     }
 
+    @Override
+    public MediaType getMediaType(long ssrc)
+    {
+        return receiveSsrcs.get(ssrc);
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -106,6 +120,7 @@ public class OctoEndpoint
     public void addReceiveSsrc(long ssrc, MediaType mediaType)
     {
         receiveSsrcs.put(ssrc, mediaType);
+        octoEndpoints.ssrcToEndpointId.put(ssrc, getID());
     }
 
 }

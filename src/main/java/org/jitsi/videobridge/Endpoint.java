@@ -412,52 +412,56 @@ public class Endpoint
      * {@inheritDoc}
      */
     @Override
-    public boolean wants(PacketInfo packetInfo, String sourceEndpointId)
+    public boolean wants(PacketInfo packetInfo, String source)
     {
-        if (super.wants(packetInfo, sourceEndpointId))
+        if (!super.wants(packetInfo, source))
         {
-            Packet packet = packetInfo.getPacket();
+            return false;
+        }
 
-            if (packet instanceof RtpPacket)
+        Packet packet = packetInfo.getPacket();
+
+        if (packet instanceof RtpPacket)
+        {
+            if (packet instanceof AudioRtpPacket)
             {
-                if (packet instanceof AudioRtpPacket)
-                {
-                    return acceptAudio;
-                }
-                if (packet instanceof VideoRtpPacket
-                    && !acceptVideo)
-                {
-                    return false;
-                }
-
-                return bitrateController.accept((RtpPacket) packet);
+                return acceptAudio;
             }
-            else if (packet instanceof RtcpPacket)
+            if (packet instanceof VideoRtpPacket && !acceptVideo)
             {
-                if (packet instanceof RtcpSrPacket)
-                {
-                    // TODO(george) we're only interested in the ntp/rtp
-                    // timestamp association, so only accept srs from the main
-                    // ssrc
-                    return true;
-                }
-                else
-                {
-                    logger.debug("Dropping an unhandled rtcp packet.");
-                    return false;
-                }
+                return false;
+            }
+
+            return bitrateController.accept((RtpPacket) packet);
+        }
+        else if (packet instanceof RtcpPacket)
+        {
+            if (packet instanceof RtcpSrPacket)
+            {
+                // TODO(george) we're only interested in the ntp/rtp
+                // timestamp association, so only accept srs from the main
+                // ssrc
+                return true;
+            }
+            else
+            {
+                logger.warn("Dropping an unhandled rtcp packet.");
+                return false;
             }
         }
 
-        logger.debug("Dropping a non rtp/rtcp packet.");
+        logger.warn("Dropping a non rtp/rtcp packet.");
         return false;
     }
 
     /**
-     * TODO Brian
+     * Sends an RTP or RTCP packet to this endpoint. The packet will be passed
+     * through the send pipeline first.
+     *
+     * @
      */
     @Override
-    public void send(PacketInfo packetInfo, String sourceEpId)
+    public void send(PacketInfo packetInfo, String source)
     {
         Packet packet = packetInfo.getPacket();
         if (packet instanceof RtpPacket)
@@ -489,16 +493,30 @@ public class Endpoint
         else if (packet instanceof RtcpSrPacket)
         {
             RtcpSrPacket rtcpSrPacket = (RtcpSrPacket) packet;
-            if (bitrateController.transformRtcp(rtcpSrPacket))
+            AbstractEndpoint sourceEndpoint = getConference().getEndpoint(source);
+            MediaType mediaType
+                    = sourceEndpoint == null
+                        ? null : sourceEndpoint
+                            .getMediaType(rtcpSrPacket.getSenderSsrc());
+
+            boolean accept =
+                    mediaType == MediaType.AUDIO ||
+                    (mediaType == MediaType.VIDEO &&
+                            bitrateController.transformRtcp(rtcpSrPacket));
+
+            if (logger.isDebugEnabled())
             {
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug(
-                        "relaying an sr from ssrc="
-                            + rtcpSrPacket.getSenderSsrc()
-                            + ", timestamp="
-                            + rtcpSrPacket.getSenderInfo().getRtpTimestamp());
-                }
+                logger.debug(
+                    logPrefix
+                    + "sr from ssrc=" + rtcpSrPacket.getSenderSsrc()
+                    + ", timestamp="
+                            + rtcpSrPacket.getSenderInfo().getRtpTimestamp()
+                    + ", accept=" + accept
+                    + ", mediaType=" + mediaType);
+            }
+
+            if (accept)
+            {
                 transceiver.sendRtcp(rtcpSrPacket);
             }
         }
@@ -1196,7 +1214,7 @@ public class Endpoint
     {
         AbstractEndpoint endpoint
                 = getConference().findEndpointByReceiveSSRC(
-                        ssrc, MediaType.VIDEO);
+                        ssrc);
         if (endpoint instanceof Endpoint)
         {
             ((Endpoint) endpoint).transceiver.requestKeyFrame(ssrc);
@@ -1292,7 +1310,7 @@ public class Endpoint
      */
     private void handleIncomingRtcp(PacketInfo packetInfo)
     {
-        getConference().handleIncomingRtcp(packetInfo, this);
+        getConference().handleIncomingRtcp(packetInfo, getID());
     }
 
     /**
@@ -1302,7 +1320,7 @@ public class Endpoint
      */
     protected void handleIncomingRtp(PacketInfo packetInfo)
     {
-        getConference().handleIncomingRtp(packetInfo, this);
+        getConference().handleIncomingRtp(packetInfo, getID());
     }
 
     /**
@@ -1397,5 +1415,11 @@ public class Endpoint
         debugState.put("acceptVideo", acceptVideo);
 
         return debugState;
+    }
+
+    @Override
+    public MediaType getMediaType(long ssrc)
+    {
+        return transceiver.getReceiveSsrcMediaType(ssrc);
     }
 }

@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.octo;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
@@ -119,7 +120,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      * {@inheritDoc}
      */
     @Override
-    public void send(PacketInfo packetInfo, String sourceEpId)
+    public void send(PacketInfo packetInfo, String source)
     {
         Packet packet = packetInfo.getPacket();
         if (packet instanceof RtpPacket)
@@ -128,7 +129,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
                 packet,
                 targets,
                 conference.getGid(),
-                sourceEpId);
+                source);
         }
 
         // TODO relay rtcp srs
@@ -162,11 +163,13 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      * {@inheritDoc}
      */
     @Override
-    public boolean wants(PacketInfo packetInfo, String sourceEpId)
+    public boolean wants(PacketInfo packetInfo, String source)
     {
         // Cthulhu devours everything (as long as it's not coming from
         // itself, and we have targets).
-        return sourceEpId != null && !targets.isEmpty();
+        return source != null &&
+                !octoEndpoints.octoEndpointIds.contains(source) &&
+                !targets.isEmpty();
     }
 
     /**
@@ -237,6 +240,9 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      */
     void handleIncomingRtp(PacketInfo packetInfo)
     {
+        // Note that we do not look up the source endpoint for RTP packets
+        // because we don't need to (to same some CPU cycles).
+        // We use the special value 'null' to indicate that the source is Octo.
         conference.handleIncomingRtp(packetInfo, null);
     }
 

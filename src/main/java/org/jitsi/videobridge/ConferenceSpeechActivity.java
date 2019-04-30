@@ -128,7 +128,7 @@ public class ConferenceSpeechActivity
         if (ssrc != -1)
         {
             AbstractEndpoint endpoint
-                = conference.findEndpointByReceiveSSRC(ssrc, MediaType.AUDIO);
+                = conference.findEndpointByReceiveSSRC(ssrc);
 
             if (endpoint != null)
             {
@@ -228,7 +228,7 @@ public class ConferenceSpeechActivity
             }
 
             AbstractEndpoint endpoint
-                = conference.findEndpointByReceiveSSRC(ssrc, MediaType.AUDIO);
+                = conference.findEndpointByReceiveSSRC(ssrc);
 
             synchronized (syncRoot)
             {
