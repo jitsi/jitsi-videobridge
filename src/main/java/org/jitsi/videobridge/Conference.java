@@ -1124,7 +1124,7 @@ public class Conference
             RtcpFbPacket rtcpFbPacket = (RtcpFbPacket) packet;
 
             // XXX we could make this faster with a map
-            AbstractEndpoint endpoint
+            AbstractEndpoint target
                 = findEndpointByReceiveSSRC(
                     rtcpFbPacket.getMediaSourceSsrc());
 
@@ -1133,14 +1133,13 @@ public class Conference
             // send a packet to a specific Octo endpoint (the usual case it to
             // broadcast, in which case we only want to use one pph and the).
             PotentialPacketHandler pph = null;
-            if (endpoint instanceof Endpoint)
+            if (target instanceof Endpoint)
             {
-                pph = (Endpoint) endpoint;
+                pph = (Endpoint) target;
             }
-            else if (endpoint != null && tentacle != null)
+            else if (target != null && tentacle != null)
             {
-                // Only forward requests to Octo when they come from a local
-                // endpoint.
+                // Don't forward packets coming from Octo back to Octo
                 if (getEndpoint(source) instanceof Endpoint)
                 {
                     pph = tentacle;
