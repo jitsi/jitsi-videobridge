@@ -464,6 +464,7 @@ public class Conference
                 logger.debug(logPrefix + "Expiring endpoints.");
             }
             getEndpoints().forEach(AbstractEndpoint::expire);
+            speechActivity.expire();
 
             if (includeInStatistics)
             {
@@ -614,10 +615,16 @@ public class Conference
                         EventFactory.endpointCreated(endpoint));
             }
 
-            firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
+            endpointsChanged();
         }
 
         return endpoint;
+    }
+
+    private void endpointsChanged()
+    {
+        speechActivity.endpointsChanged();
+        firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
     }
 
 
@@ -842,7 +849,7 @@ public class Conference
         else if (AbstractEndpoint.ENDPOINT_CHANGED_PROPERTY_NAME
                 .equals(ev.getPropertyName()))
         {
-            firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
+            endpointsChanged();
         }
     }
 
@@ -856,7 +863,7 @@ public class Conference
         if (endpoints.remove(endpoint.getID()) != null)
         {
             updateEndpointsCache();
-            firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
+            endpointsChanged();
         }
     }
 
@@ -873,7 +880,7 @@ public class Conference
             updateEndpointsCache();
         }
 
-        firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
+        endpointsChanged();
     }
 
     /**
