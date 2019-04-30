@@ -2,7 +2,7 @@
 
 PLR=${PLR:-'0.1'}
 DELAY=${DELAY:-100}
-BW=${BW:-'10Mbit/s'}
+BW=${BW:-'1Mbit/s'}
 PORT=${PORT:-10000}
 EGRESS_PIPE=1
 INGRESS_PIPE=2
