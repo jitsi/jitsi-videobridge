@@ -66,6 +66,7 @@ class Transceiver(
      * background tasks, or tasks that need to execute at some fixed delay/rate
      */
     private val backgroundExecutor: ScheduledExecutorService,
+    private val diagnosticContext: DiagnosticContext,
     logLevelDelegate: Logger? = null
 ) : Stoppable, NodeStatsProducer, RemoteBitrateObserver {
     private val logger = getLogger(this.javaClass, logLevelDelegate)
@@ -83,10 +84,6 @@ class Transceiver(
     private val rtcpEventNotifier = RtcpEventNotifier()
 
     private var mediaStreamTracks = MediaStreamTracks()
-
-    // NOTE(brian): there were a number of classes in the old code that used this.  I believe it was previously
-    // held in the VideoChannel.  We'll create one here and pass it where it's needed.
-    val diagnosticContext = DiagnosticContext()
 
     private val transportCcEngine = TransportCCEngine(diagnosticContext, this)
 
