@@ -44,10 +44,16 @@ public class VP8FrameProjection
     private static final Logger
         logger = Logger.getLogger(VP8FrameProjection.class);
 
+    /**
+     * The time series logger for this instance.
+     */
     private static final TimeSeriesLogger timeSeriesLogger
         = TimeSeriesLogger.getTimeSeriesLogger(VP8FrameProjection.class);
 
-    private final DiagnosticContext diagnosticContext = new DiagnosticContext();
+    /**
+     * The diagnostic context for this instance.
+     */
+    private final DiagnosticContext diagnosticContext;
 
     /**
      * The time (in millis) to wait before considering that this frame is fully
@@ -108,10 +114,13 @@ public class VP8FrameProjection
      * @param startingSequenceNumber The starting RTP sequence number of the
      * projected frame that this instance refers to (RFC3550).
      */
-    VP8FrameProjection(long ssrc, int startingSequenceNumber, long timestamp)
+    VP8FrameProjection(
+        @NotNull DiagnosticContext diagnosticContext,
+        long ssrc, int startingSequenceNumber, long timestamp)
     {
-        this(null /* vp8Frame */, ssrc, timestamp, startingSequenceNumber,
-            0 /* extendedPictureId */, 0 /* tl0PICIDX */, 0 /* createdMs */);
+        this(diagnosticContext, null /* vp8Frame */, ssrc, timestamp,
+            startingSequenceNumber, 0 /* extendedPictureId */,
+            0 /* tl0PICIDX */, 0 /* createdMs */);
     }
 
     /**
@@ -130,10 +139,12 @@ public class VP8FrameProjection
      * instance refers to (RFC7741).
      */
     private VP8FrameProjection(
+        @NotNull DiagnosticContext diagnosticContext,
         VP8Frame vp8Frame,
         long ssrc, long timestamp, int startingSequenceNumber,
         int extendedPictureId, int tl0PICIDX, long createdMs)
     {
+        this.diagnosticContext = diagnosticContext;
         this.ssrc = ssrc;
         this.timestamp = timestamp;
         this.startingSequenceNumber = startingSequenceNumber;
@@ -176,7 +187,8 @@ public class VP8FrameProjection
             if (nextVP8Frame.isKeyframe())
             {
                 close();
-                return new VP8FrameProjection(nextVP8Frame, ssrc, timestamp,
+                return new VP8FrameProjection(diagnosticContext,
+                    nextVP8Frame, ssrc, timestamp,
                     startingSequenceNumber, extendedPictureId, tl0PICIDX,
                     nowMs);
             }
@@ -197,7 +209,7 @@ public class VP8FrameProjection
             // can be updated from other threads and the isLast field can be
             // read by other threads.
             close();
-            return new VP8FrameProjection(
+            return new VP8FrameProjection(diagnosticContext,
                 nextVP8Frame, ssrc, nextTimestamp(nextVP8Frame, nowMs),
                 nextStartingSequenceNumber(), nextExtendedPictureId(),
                 nextTL0PICIDX(nextVP8Frame), nowMs);
