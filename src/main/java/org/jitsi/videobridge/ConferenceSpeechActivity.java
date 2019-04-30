@@ -22,6 +22,7 @@ import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 
 import java.util.*;
+import java.util.stream.*;
 
 /**
  * Represents the speech activity of the <tt>Endpoint</tt>s in a
@@ -343,6 +344,17 @@ public class ConferenceSpeechActivity
         {
             //TODO(brian): make a copy?
             return endpoints;
+        }
+    }
+
+    public List<String> getEndpointIds()
+    {
+
+        synchronized (syncRoot)
+        {
+           return endpoints.stream()
+                .map(AbstractEndpoint::getID)
+                .collect(Collectors.toList());
         }
     }
 

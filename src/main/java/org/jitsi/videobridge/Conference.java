@@ -40,6 +40,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.logging.*;
+import java.util.stream.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
@@ -55,14 +56,6 @@ public class Conference
      extends PropertyChangeNotifier
      implements PropertyChangeListener, Expireable
 {
-    /**
-     * The name of the <tt>Conference</tt> property <tt>endpoints</tt> which
-     * lists the <tt>Endpoint</tt>s participating in/contributing to the
-     * <tt>Conference</tt>.
-     */
-    public static final String ENDPOINTS_PROPERTY_NAME
-        = Conference.class.getName() + ".endpoints";
-
     /**
      * The {@link Logger} used by the {@link Conference} class to print debug
      * information. Note that {@link Conference} instances should use {@link
@@ -637,9 +630,14 @@ public class Conference
      */
     public void endpointTracksChanged(AbstractEndpoint endpoint)
     {
-        firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
+        List<String> endpoints = speechActivity.getEndpointIds();
+        endpointsCache.forEach((e) -> {
+            if (e != endpoint)
+            {
+                e.speechActivityEndpointsChanged(endpoints);
+            }
+        });
     }
-
 
     /**
      * Updates {@link #endpointsCache} with the current contents of
@@ -935,7 +933,9 @@ public class Conference
      */
     void speechActivityEndpointsChanged()
     {
-        firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
+        List<String> endpoints = speechActivity.getEndpointIds();
+        endpointsCache.forEach(
+                e ->  e.speechActivityEndpointsChanged(endpoints));
     }
 
     /**
