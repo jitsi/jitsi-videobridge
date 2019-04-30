@@ -20,7 +20,6 @@ import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
 
-import java.beans.*;
 import java.util.*;
 import java.util.stream.*;
 
