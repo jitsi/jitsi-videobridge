@@ -25,7 +25,6 @@ import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.utils.logging.DiagnosticContext;
 import org.jitsi.utils.logging.Logger;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.transport.*;
@@ -97,11 +96,6 @@ public class IceTransport
      * Whether this <tt>TransportManager</tt> has been closed.
      */
     protected boolean closed = false;
-
-    /**
-     * The {@link DiagnosticContext} of this diagnostic instance provider.
-     */
-    private final DiagnosticContext diagnosticContext = new DiagnosticContext();
 
     /**
      * The ICE {@link Agent}.
@@ -194,10 +188,6 @@ public class IceTransport
         this.conferenceId = conference.getID();
         this.controlling = controlling;
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
-
-        // Setup the diagnostic context.
-        conference.appendDiagnosticInformation(diagnosticContext);
-        diagnosticContext.put("transport", hashCode());
 
         // We've seen some instances where the configuration service is not
         // yet initialized. These are now fixed, but just in case this happens

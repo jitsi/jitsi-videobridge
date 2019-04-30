@@ -26,7 +26,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.LRUCache;
-import org.jitsi.utils.logging.Logger;
+import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.cc.*;
 import org.json.simple.*;
 
@@ -81,6 +81,11 @@ public class VP8AdaptiveTrackProjectionContext
     private final VP8QualityFilter vp8QualityFilter = new VP8QualityFilter();
 
     /**
+     * The diagnostic context of this instance.
+     */
+    private final DiagnosticContext diagnosticContext;
+
+    /**
      * The "last" {@link VP8FrameProjection} that this instance has accepted.
      * In this context, last here means with the "highest extended picture id"
      * and not, for example, the last one received by the bridge.
@@ -120,8 +125,11 @@ public class VP8AdaptiveTrackProjectionContext
      * @param rtpState the RTP state to begin with.
      */
     public VP8AdaptiveTrackProjectionContext(
-            @NotNull PayloadType payloadType, @NotNull RtpState rtpState)
+            @NotNull DiagnosticContext diagnosticContext,
+            @NotNull PayloadType payloadType,
+            @NotNull RtpState rtpState)
     {
+        this.diagnosticContext = diagnosticContext;
         this.payloadType = payloadType;
 
         // Compute the starting sequence number and the timestamp of the initial
@@ -132,7 +140,7 @@ public class VP8AdaptiveTrackProjectionContext
         long timestamp =
             (rtpState.maxTimestamp + 3000) & RawPacket.TIMESTAMP_MASK;
 
-        lastVP8FrameProjection = new VP8FrameProjection(
+        lastVP8FrameProjection = new VP8FrameProjection(diagnosticContext,
             rtpState.ssrc, startingSequenceNumber, timestamp);
     }
 

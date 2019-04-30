@@ -84,6 +84,8 @@ public class AdaptiveTrackProjection
      */
     private final long targetSsrc;
 
+    private final DiagnosticContext diagnosticContext;
+
     /**
      * The payload specific track projection context that's responsible for
      * rewriting the packets of a projected track.
@@ -126,10 +128,14 @@ public class AdaptiveTrackProjection
      * @param source the {@link MediaStreamTrackDesc} that owns the packets
      * that this instance filters.
      */
-    AdaptiveTrackProjection(@NotNull MediaStreamTrackDesc source, Consumer<Long> keyframeRequester)
+    AdaptiveTrackProjection(
+        @NotNull DiagnosticContext diagnosticContext,
+        @NotNull MediaStreamTrackDesc source,
+        Consumer<Long> keyframeRequester)
     {
         weakSource = new WeakReference<>(source);
         targetSsrc = source.getRTPEncodings()[0].getPrimarySSRC();
+        this.diagnosticContext = diagnosticContext;
         this.keyframeRequester = keyframeRequester;
     }
 
@@ -312,7 +318,8 @@ public class AdaptiveTrackProjection
                 && !(context instanceof VP8AdaptiveTrackProjectionContext))
             {
                 // context switch
-                context = new VP8AdaptiveTrackProjectionContext(payloadTypeObject, getRtpState());
+                context = new VP8AdaptiveTrackProjectionContext(
+                    diagnosticContext, payloadTypeObject, getRtpState());
                 contextPayloadType = payloadType;
             }
             else if (!hasTemporalLayerIndex

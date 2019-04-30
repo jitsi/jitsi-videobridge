@@ -143,6 +143,11 @@ public class Endpoint
     private AtomicInteger selectedCount = new AtomicInteger(0);
 
     /**
+     * The diagnostic context of this instance.
+     */
+    private final DiagnosticContext diagnosticContext = new DiagnosticContext();
+
+    /**
      * The bitrate controller.
      */
     private final BitrateController bitrateController;
@@ -224,6 +229,7 @@ public class Endpoint
                 TaskPools.CPU_POOL,
                 TaskPools.CPU_POOL,
                 TaskPools.SCHEDULED_POOL,
+                diagnosticContext,
                 logger);
         transceiver.setIncomingRtpHandler(
                 new ConsumerNode("RTP receiver chain handler")
@@ -246,15 +252,15 @@ public class Endpoint
         bitrateController = new BitrateController(
                 this,
                 conference.getLogger(),
-                transceiver.getDiagnosticContext());
+                diagnosticContext);
 
         messageTransport = new EndpointMessageTransport(this);
 
+        conference.appendDiagnosticInformation(diagnosticContext);
+        diagnosticContext.put("endpoint_id", id);
         bandwidthProbing
-            = new BandwidthProbing((mediaSsrc, numBytes) ->
-                    Endpoint.this.transceiver.sendProbing(mediaSsrc, numBytes));
-        bandwidthProbing.setDiagnosticContext(
-                transceiver.getDiagnosticContext());
+            = new BandwidthProbing(Endpoint.this.transceiver::sendProbing);
+        bandwidthProbing.setDiagnosticContext(diagnosticContext);
         bandwidthProbing.setBitrateController(bitrateController);
         transceiver.setAudioLevelListener(conference.getAudioLevelListener());
         transceiver.onBandwidthEstimateChanged(newValueBps ->
