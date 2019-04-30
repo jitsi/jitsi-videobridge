@@ -16,7 +16,7 @@
 
 package org.jitsi.rtp
 
-import org.jitsi.rtp.extensions.bytearray.toHex
+import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
 import java.util.function.Predicate
 
 // TODO move
@@ -41,5 +41,5 @@ abstract class Packet(
      * Different subclasses of [Packet] will have different notions of "payload", and they need to
      */
     open val payloadVerification: String
-        get() = "len=$length payload=${buffer.toHex(offset, length)}"
+        get() = "len=$length hashCode=${buffer.hashCodeOfSegment(offset, offset + length)}"
 }

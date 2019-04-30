@@ -160,6 +160,17 @@ fun ByteArray.toHex(offset: Int = 0, length: Int = (size - offset)): String {
     return result.toString()
 }
 
+/**
+ * Returns the hash code of the segment of this [ByteArray] starting at 'start' and ending in 'end' (exclusive).
+ */
+fun ByteArray.hashCodeOfSegment(start: Int, end: Int): Int {
+    var result = 1
+    for (i in start.coerceIn(0, size) until end.coerceIn(0, size)) {
+        result = 31 * result + this[i]
+    }
+    return result
+}
+
 class ByteArrayUtils {
     companion object {
         val emptyByteArray = BufferPool.getArray(0)
