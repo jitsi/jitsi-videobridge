@@ -351,7 +351,6 @@ public class Endpoint
      */
     void speechActivityEndpointsChanged(List<String> endpoints)
     {
-        super.speechActivityEndpointsChanged(endpoints);
         bitrateController.endpointOrderingChanged(endpoints);
     }
 
