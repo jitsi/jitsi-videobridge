@@ -15,15 +15,12 @@
  */
 package org.jitsi.videobridge;
 
-import org.jitsi.nlj.*;
-import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
-import java.beans.*;
 import java.io.*;
 import java.util.*;
 
@@ -66,11 +63,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     private final Conference conference;
 
     /**
-     * The last-N filter for this endpoint.
-     */
-    private final LastNFilter lastNFilter;
-
-    /**
      * The (human readable) display name of this <tt>Endpoint</tt>.
      */
     private String displayName;
@@ -104,21 +96,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
             = "[id=" + id + " conference=" + conference.getID() + "] ";
         logger = Logger.getLogger(classLogger, conference.getLogger());
         this.id = Objects.requireNonNull(id, "id");
-        this.lastNFilter = new LastNFilter(id);
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that the list of {@code Endpoint}s ordered
-     * by speech activity (i.e. the dominant speaker history) has changed.
-     */
-    void speechActivityEndpointsChanged(List<String> endpoints)
-    {
-        if (logger.isDebugEnabled())
-        {
-            logger.debug(logPrefix +
-                    "Got notified about active endpoints: " + endpoints);
-        }
-        lastNFilter.setEndpointsSortedByActivity(endpoints);
     }
 
     /**
@@ -127,7 +104,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     public void setLastN(Integer lastN)
     {
-        lastNFilter.setLastNValue(lastN);
     }
 
     /**
@@ -138,46 +114,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * video streams that can be forwarded to this participant.
      */
     public void setMaxReceiveFrameHeightPx(int maxReceiveFrameHeightPx) { }
-
-    /**
-     * Gets the LastN value for this endpoint (how many endpoints this
-     * receiver is willing to receive video for).
-     */
-    public Integer getLastN()
-    {
-        return lastNFilter.getLastNValue();
-    }
-
-    /**
-     * Checks whether this {@link Endpoint} wants to receive a specific
-     * packet coming from a specific source endpoint.
-     *
-     * This method is called before the packet is actually forwarded to the
-     * endpoint in order to avoid making a copy (when {@code wants} returns
-     * false).
-     *
-     * If, instead, we had a scheme where we pass a packet reference and the
-     * egress pipeline copies once it decides the packet should be accepted (or,
-     * even better, a packet is automatically copied on first modification) then
-     * we could avoid this separate call and just have the pipeline
-     *
-     * @param packetInfo the packet.
-     * @param sourceEndpointId the ID of the source endpoint.
-     * @return {@code true} if this endpoints wants to receive the packet, and
-     * {@code false} otherwise.
-     */
-    protected boolean wants(PacketInfo packetInfo, String sourceEndpointId)
-    {
-        // We always want audio packets
-        if (packetInfo.getPacket() instanceof AudioRtpPacket)
-        {
-            return true;
-        }
-        // Video packets require more checks:
-        // First check if this endpoint fits in lastN
-        //TODO(brian): this doesn't take into account adaptive-last-n
-        return lastNFilter.wants(sourceEndpointId);
-    }
 
     /**
      * Checks whether a specific SSRC belongs to this endpoint.

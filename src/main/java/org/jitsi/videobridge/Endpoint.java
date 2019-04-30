@@ -351,7 +351,6 @@ public class Endpoint
      */
     void speechActivityEndpointsChanged(List<String> endpoints)
     {
-        super.speechActivityEndpointsChanged(endpoints);
         bitrateController.endpointOrderingChanged(endpoints);
     }
 
@@ -380,8 +379,15 @@ public class Endpoint
     @Override
     public void setLastN(Integer lastN)
     {
-        super.setLastN(lastN);
         bitrateController.setLastN(lastN);
+    }
+
+    /**
+     * Gets the LastN value for this endpoint.
+     */
+    public int getLastN()
+    {
+        return bitrateController.getLastN();
     }
 
     /**
@@ -414,42 +420,42 @@ public class Endpoint
     @Override
     public boolean wants(PacketInfo packetInfo, String sourceEndpointId)
     {
-        if (super.wants(packetInfo, sourceEndpointId))
+        Packet packet = packetInfo.getPacket();
+
+        if (packet instanceof RtpPacket)
         {
-            Packet packet = packetInfo.getPacket();
-
-            if (packet instanceof RtpPacket)
+            if (packet instanceof VideoRtpPacket && !acceptVideo)
             {
-                if (packet instanceof AudioRtpPacket)
-                {
-                    return acceptAudio;
-                }
-                if (packet instanceof VideoRtpPacket
-                    && !acceptVideo)
-                {
-                    return false;
-                }
-
-                return bitrateController.accept((RtpPacket) packet);
+                return false;
             }
-            else if (packet instanceof RtcpPacket)
+            if (packet instanceof AudioRtpPacket)
             {
-                if (packet instanceof RtcpSrPacket)
-                {
-                    // TODO(george) we're only interested in the ntp/rtp
-                    // timestamp association, so only accept srs from the main
-                    // ssrc
-                    return true;
-                }
-                else
-                {
-                    logger.debug("Dropping an unhandled rtcp packet.");
-                    return false;
-                }
+                return acceptAudio;
+            }
+
+            return bitrateController.accept((RtpPacket) packet);
+        }
+        else if (packet instanceof RtcpPacket)
+        {
+            if (packet instanceof RtcpSrPacket)
+            {
+                // TODO(george) we're only interested in the ntp/rtp
+                // timestamp association, so only accept srs from the main
+                // ssrc
+                return true;
+            }
+            else
+            {
+                logger.warn(logPrefix
+                    + "Dropping an unhandled rtcp packet"
+                    + (packet == null ? "null" : packet.getClass().getSimpleName()));
+                return false;
             }
         }
 
-        logger.debug("Dropping a non rtp/rtcp packet.");
+        logger.warn(logPrefix
+            + "Dropping a non rtp/rtcp packet."
+            + (packet == null ? "null" : packet.getClass().getSimpleName()));
         return false;
     }
 
