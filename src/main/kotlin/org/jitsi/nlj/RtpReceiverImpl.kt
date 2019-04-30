@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.rtcp.CompoundRtcpParser
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpRrGenerator
 import org.jitsi.nlj.rtp.AudioRtpPacket
@@ -26,7 +27,6 @@ import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.transform.node.PacketParser
 import org.jitsi.nlj.transform.node.RtpParser
 import org.jitsi.nlj.transform.node.SrtpTransformerNode
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
@@ -49,7 +49,6 @@ import org.jitsi.nlj.util.addRatio
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.PacketPredicate
-import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.util.RTCPUtils
 import org.jitsi.utils.logging.Logger
@@ -221,7 +220,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     predicate = PacketPredicate { RTCPUtils.isRtcp(it.buffer, it.offset, it.length) }
                     path = pipeline {
                         node(srtcpDecryptWrapper)
-                        node(PacketParser("Compound RTCP parser") { CompoundRtcpPacket(it.buffer, it.offset, it.length) })
+                        node(CompoundRtcpParser())
                         node(silenceDiscarder.rtcpNode)
                         node(rtcpTermination)
                         node(rtcpPacketHandlerWrapper)
