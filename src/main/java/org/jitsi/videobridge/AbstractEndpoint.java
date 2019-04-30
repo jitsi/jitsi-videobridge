@@ -38,8 +38,6 @@ import java.util.*;
 public abstract class AbstractEndpoint extends PropertyChangeNotifier
     implements EncodingsManager.EncodingsUpdateListener
 {
-    public static final String ENDPOINT_CHANGED_PROPERTY_NAME =
-            AbstractEndpoint.class.getName() + ".endpoint_changed";
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt>.

@@ -1231,10 +1231,7 @@ public class Endpoint
     {
         if (transceiver.setMediaStreamTracks(mediaStreamTracks))
         {
-            firePropertyChange(
-                    ENDPOINT_CHANGED_PROPERTY_NAME,
-                    null,
-                    null);
+            getConference().endpointTracksChanged(this);
         }
     }
 

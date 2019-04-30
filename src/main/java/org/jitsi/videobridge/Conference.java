@@ -39,7 +39,6 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.logging.*;
-import java.util.stream.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
@@ -250,7 +249,6 @@ public class Conference
         lastKnownFocus = focus;
 
         speechActivity = new ConferenceSpeechActivity(this);
-        speechActivity.addPropertyChangeListener(propertyChangeListener);
         audioLevelListener
             = (sourceSsrc, level)
                 -> speechActivity.levelChanged(sourceSsrc, (int) level);
@@ -405,7 +403,7 @@ public class Conference
      * speaker switch event in this multipoint conference and there is now a new
      * dominant speaker.
      */
-    private void dominantSpeakerChanged()
+    void dominantSpeakerChanged()
     {
         AbstractEndpoint dominantSpeaker = speechActivity.getDominantEndpoint();
 
@@ -621,9 +619,22 @@ public class Conference
         return endpoint;
     }
 
+    /**
+     * An endpoint was added or removed.
+     */
     private void endpointsChanged()
     {
         speechActivity.endpointsChanged();
+    }
+
+    /**
+     * The media stream tracks of one of the endpoints in this conference
+     * changed.
+     *
+     * @param endpoint the endpoint, or {@code null} if it was an Octo endpoint.
+     */
+    public void endpointTracksChanged(AbstractEndpoint endpoint)
+    {
         firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
     }
 
@@ -819,10 +830,6 @@ public class Conference
                         propertyChangeListener);
             }
         }
-        else if (source == speechActivity)
-        {
-            speechActivityPropertyChange(ev);
-        }
         else if (Endpoint.SELECTED_ENDPOINTS_PROPERTY_NAME
                 .equals(ev.getPropertyName()))
         {
@@ -845,11 +852,6 @@ public class Conference
                 .map(this::getEndpoint)
                 .filter(Objects::nonNull)
                 .forEach(AbstractEndpoint::incrementSelectedCount);
-        }
-        else if (AbstractEndpoint.ENDPOINT_CHANGED_PROPERTY_NAME
-                .equals(ev.getPropertyName()))
-        {
-            endpointsChanged();
         }
     }
 
@@ -927,25 +929,11 @@ public class Conference
     }
 
     /**
-     * Notifies this instance that there was a change in the value of a property
-     * of {@link #speechActivity}.
-     *
-     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the source of
-     * the event/notification, the name of the property and the old and new
-     * values of that property
+     * Notifies this instance that the list of ordered endpoints has changed
      */
-    private void speechActivityPropertyChange(PropertyChangeEvent ev)
+    void speechActivityEndpointsChanged()
     {
-        String propertyName = ev.getPropertyName();
-
-        if (ConferenceSpeechActivity.DOMINANT_ENDPOINT_PROPERTY_NAME.equals(
-                propertyName))
-        {
-            // The dominant speaker in this Conference has changed. We will
-            // likely want to notify the Endpoints participating in this
-            // Conference.
-            dominantSpeakerChanged();
-        }
+        firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
     }
 
     /**

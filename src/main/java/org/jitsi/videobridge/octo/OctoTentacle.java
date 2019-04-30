@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.octo;
 
-import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
@@ -36,8 +35,6 @@ import org.osgi.framework.*;
 import java.net.*;
 import java.util.*;
 import java.util.stream.*;
-
-import static org.jitsi.videobridge.AbstractEndpoint.ENDPOINT_CHANGED_PROPERTY_NAME;
 
 /**
  * The single class in the octo package which serves as a link between a
@@ -204,10 +201,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
 
         if (octoEndpoints.setEndpoints(endpointIds))
         {
-            firePropertyChange(
-                ENDPOINT_CHANGED_PROPERTY_NAME,
-                null,
-                null);
+            conference.endpointTracksChanged(null);
         }
 
         allSources.forEach(source ->
