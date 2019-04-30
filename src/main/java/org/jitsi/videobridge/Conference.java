@@ -929,25 +929,6 @@ public class Conference
     }
 
     /**
-     * Notifies this <tt>Conference</tt> that the ordered list of
-     * <tt>Endpoint</tt>s of {@link #speechActivity} i.e. the dominant speaker
-     * history has changed.
-     */
-    private void speechActivityEndpointsChanged()
-    {
-        List<String> sortedActiveEndpoints =
-                Collections.unmodifiableList(
-                        speechActivity.getEndpoints()
-                                .stream()
-                                .map(AbstractEndpoint::getID)
-                                .collect(Collectors.toList()));
-
-        // TODO: special handling for octo (i.e. also send to tentacle?)
-        getEndpoints().forEach(
-                ep -> ep.speechActivityEndpointsChanged(sortedActiveEndpoints));
-    }
-
-    /**
      * Notifies this instance that there was a change in the value of a property
      * of {@link #speechActivity}.
      *
@@ -966,12 +947,6 @@ public class Conference
             // likely want to notify the Endpoints participating in this
             // Conference.
             dominantSpeakerChanged();
-            speechActivityEndpointsChanged();
-        }
-        else if (ConferenceSpeechActivity.ENDPOINTS_PROPERTY_NAME.equals(
-                propertyName))
-        {
-            speechActivityEndpointsChanged();
         }
     }
 
