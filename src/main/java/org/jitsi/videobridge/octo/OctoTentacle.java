@@ -20,6 +20,7 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.osgi.*;
 import org.jitsi.rtp.*;
+import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
@@ -238,6 +239,35 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         // because we don't need to (to same some CPU cycles).
         // We use the special value 'null' to indicate that the source is Octo.
         conference.handleIncomingRtp(packetInfo, null);
+    }
+
+    void handleIncomingRtcp(PacketInfo packetInfo)
+    {
+        // For RTCP it is necessary to set the source!
+        Packet packet = packetInfo.getPacket();
+        if (!(packet instanceof CompoundRtcpPacket))
+        {
+            throw new RuntimeException("Unexpected packet type "
+                    + (packet == null ? "null" : packet.getClass()));
+        }
+
+        String source = null;
+        for (RtcpPacket rtcpPacket : ((CompoundRtcpPacket) packet).getPackets())
+        {
+            source = octoEndpoints.ssrcToEndpointId.get(rtcpPacket.getSenderSsrc());
+            if (source != null)
+            {
+                break;
+            }
+        }
+
+        if (source == null)
+        {
+            logger.warn("Dropping RTCP packet from an unknown source.");
+            return;
+        }
+
+        conference.handleIncomingRtcp(packetInfo, source);
     }
 
     /**

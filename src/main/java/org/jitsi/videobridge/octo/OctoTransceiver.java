@@ -18,6 +18,7 @@ package org.jitsi.videobridge.octo;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
+import org.jitsi.nlj.rtcp.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.transform.*;
 import org.jitsi.nlj.transform.node.*;
@@ -156,7 +157,7 @@ class OctoTransceiver
     {
         // TODO: we need a better scheme for creating these in Java. Luckily
         // the tree for Octo is not very complex.
-        Node terminationNode = new ConsumerNode("Octo termination node")
+        Node rtpTerminationNode = new ConsumerNode("Octo RTP termination node")
         {
             @NotNull
             @Override
@@ -165,15 +166,24 @@ class OctoTransceiver
                 tentacle.handleIncomingRtp(packetInfo);
             }
         };
+        Node rtcpTerminationNode = new ConsumerNode("Octo RTCP termination node")
+        {
+            @NotNull
+            @Override
+            protected void consume(@NotNull PacketInfo packetInfo)
+            {
+                tentacle.handleIncomingRtcp(packetInfo);
+            }
+        };
 
         Node videoRoot = new VideoParser();
-        videoRoot.attach(new Vp8Parser()).attach(terminationNode);
+        videoRoot.attach(new Vp8Parser()).attach(rtpTerminationNode);
 
         AudioLevelReader audioLevelReader = new AudioLevelReader();
         audioLevelReader.setAudioLevelListener(tentacle.getAudioLevelListener());
 
         Node audioRoot = audioLevelReader;
-        audioRoot.attach(terminationNode);
+        audioRoot.attach(rtpTerminationNode);
 
         DemuxerNode audioVideoDemuxer
                 = new ExclusivePathDemuxer("Audio/Video")
@@ -192,8 +202,10 @@ class OctoTransceiver
                 packet -> packet.toOtherType(RtpPacket::new));
         rtpRoot.attach(new MediaTypeParser()).attach(audioVideoDemuxer);
 
+        Node rtcpParser = new CompoundRtcpParser();
+        rtcpParser.attach(rtcpTerminationNode);
         DemuxerNode root
-                = new ExclusivePathDemuxer("RTP/RTCP")
+            = new ExclusivePathDemuxer("RTP/RTCP")
                 .addPacketPath(
                         "RTP",
                         PacketExtensionsKt::looksLikeRtp,
@@ -201,18 +213,7 @@ class OctoTransceiver
                 .addPacketPath(
                         "RTCP",
                         PacketExtensionsKt::looksLikeRtcp,
-                        new ConsumerNode("OctoRTCPHandler (no-op)")
-                        {
-                            /**
-                             * Are we going to need this in the future?
-                             */
-                            @NotNull
-                            @Override
-                            protected void consume(PacketInfo packetInfo)
-                            {
-                                logger.info("Ignoring an RTCP packet ");
-                            }
-                        });
+                        rtcpParser);
 
         return root;
     }

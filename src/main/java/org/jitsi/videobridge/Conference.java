@@ -1115,7 +1115,7 @@ public class Conference
      * Handles an RTCP packet coming from a specific endpoint.
      * @param packetInfo
      */
-    void handleIncomingRtcp(PacketInfo packetInfo, @NotNull String source)
+    public void handleIncomingRtcp(PacketInfo packetInfo, @NotNull String source)
     {
         Packet packet = packetInfo.getPacket();
         if (packet instanceof RtcpFbPliPacket
