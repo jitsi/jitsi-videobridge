@@ -18,6 +18,7 @@ package org.jitsi.nlj
 import org.jitsi.nlj.rtcp.KeyframeRequester
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
+import org.jitsi.nlj.rtcp.RtcpSrUpdater
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeEventVisitor
@@ -93,6 +94,7 @@ class RtpSenderImpl(
     private val outgoingPacketCache = PacketCacher()
     private val absSendTime = AbsSendTime()
     private val statTracker = OutgoingStatisticsTracker()
+    private val rtcpSrUpdater = RtcpSrUpdater(statTracker)
     private val keyframeRequester = KeyframeRequester()
     private val probingDataSender: ProbingDataSender
 
@@ -164,6 +166,7 @@ class RtpSenderImpl(
                 }
                 packetInfo
             }
+            node(rtcpSrUpdater)
             node(srtcpEncryptWrapper)
             node(outputPipelineTerminationNode)
         }
