@@ -64,6 +64,10 @@ class OutgoingStatisticsTracker : ObserverNode("Outgoing statistics tracker") {
             }.toMap()
         )
     }
+
+    fun getSsrcSnapshot(ssrc: Long): OutgoingSsrcStats.Snapshot? {
+        return ssrcStats[ssrc]?.getSnapshot()
+    }
 }
 
 class OutgoingStatisticsSnapshot(
