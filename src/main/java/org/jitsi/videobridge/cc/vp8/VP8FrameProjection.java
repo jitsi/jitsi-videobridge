@@ -22,7 +22,7 @@ import org.jitsi.nlj.util.ArrayCache;
 import org.jitsi.nlj.util.PacketCache;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
-import org.jitsi.utils.logging.Logger;
+import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.cc.*;
 
 import java.util.*;
@@ -43,6 +43,11 @@ public class VP8FrameProjection
      */
     private static final Logger
         logger = Logger.getLogger(VP8FrameProjection.class);
+
+    private static final TimeSeriesLogger timeSeriesLogger
+        = TimeSeriesLogger.getTimeSeriesLogger(VP8FrameProjection.class);
+
+    private final DiagnosticContext diagnosticContext = new DiagnosticContext();
 
     /**
      * The time (in millis) to wait before considering that this frame is fully
@@ -413,6 +418,17 @@ public class VP8FrameProjection
             buf, payloadOff, payloadLen, extendedPictureId))
         {
             logger.warn("Failed to set the picture id of a VP8 packet.");
+        }
+
+        if (timeSeriesLogger.isTraceEnabled())
+        {
+            timeSeriesLogger.trace(diagnosticContext
+                    .makeTimeSeriesPoint("rtp_vp8_rewrite")
+                    .addField("rtp.ssrc", ssrc)
+                    .addField("rtp.timestamp", timestamp)
+                    .addField("rtp.seq", sequenceNumber)
+                    .addField("vp8.pictureid", extendedPictureId)
+                    .addField("vp8.tl0picidx", tl0PICIDX));
         }
     }
 
