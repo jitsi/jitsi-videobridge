@@ -189,7 +189,7 @@ class RtpSenderImpl(
     override fun sendRtcp(rtcpPacket: RtcpPacket) {
         rtcpEventNotifier.notifyRtcpSent(rtcpPacket)
         // TODO: do we want to allow for PacketInfo to be passed in to sendRtcp?
-        outgoingRtcpRoot.processPacket(PacketInfo(rtcpPacket))
+        sendPacket(PacketInfo(rtcpPacket))
     }
 
     override fun sendProbing(mediaSsrc: Long, numBytes: Int): Int = probingDataSender.sendProbing(mediaSsrc, numBytes)
@@ -216,7 +216,12 @@ class RtpSenderImpl(
             numQueueReads++
             lastQueueReadTime = now
             packetInfo.addEvent(PACKET_QUEUE_EXIT_EVENT)
-            outgoingRtpRoot.processPacket(packetInfo)
+
+            val root = when (packetInfo.packet) {
+                is RtcpPacket -> outgoingRtcpRoot
+                else -> outgoingRtpRoot
+            }
+            root.processPacket(packetInfo)
             return true
         }
         return false
