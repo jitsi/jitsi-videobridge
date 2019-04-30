@@ -21,7 +21,6 @@ import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 
-import java.beans.*;
 import java.util.*;
 
 /**
@@ -34,24 +33,7 @@ import java.util.*;
  * @author Lyubomir Marinov
  */
 public class ConferenceSpeechActivity
-    extends PropertyChangeNotifier
 {
-    /**
-     * The name of the <tt>ConferenceSpeechActivity</tt> property
-     * <tt>dominantEndpoint</tt> which identifies the dominant speaker in a
-     * multipoint conference.
-     */
-    public static final String DOMINANT_ENDPOINT_PROPERTY_NAME
-        = ConferenceSpeechActivity.class.getName() + ".dominantEndpoint";
-
-    /**
-     * The name of the <tt>ConferenceSpeechActivity</tt> property
-     * <tt>endpoints</tt> which lists the <tt>Endpoint</tt>s
-     * participating in/contributing to a <tt>Conference</tt>.
-     */
-    public static final String ENDPOINTS_PROPERTY_NAME
-        = ConferenceSpeechActivity.class.getName() + ".endpoints";
-
     private static final Logger classLogger
             = Logger.getLogger(ConferenceSpeechActivity.class);
     /**
@@ -223,9 +205,14 @@ public class ConferenceSpeechActivity
                     return;
                 }
                 endpoints.add(0, endpoint);
-                postPropertyChange(
-                        DOMINANT_ENDPOINT_PROPERTY_NAME,
-                        null, null);
+
+                TaskPools.IO_POOL.submit(() ->
+                {
+                    if (conference != null)
+                    {
+                        conference.dominantSpeakerChanged();
+                    }
+                });
             }
         }
     }
@@ -416,25 +403,22 @@ public class ConferenceSpeechActivity
                 = !Objects.equals(previousDominantSpeaker, newDominantSpeaker);
         }
 
-        if (dominantSpeakerChanged)
+        if (dominantSpeakerChanged || endpointsListChanged)
         {
-            // This implies that the list of endpoints changed, too.
-            postPropertyChange(
-                    DOMINANT_ENDPOINT_PROPERTY_NAME, null, null);
-        }
-        else if (endpointsListChanged)
-        {
-            postPropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
-        }
-    }
+            final boolean finalDominantSpeakerChanged = dominantSpeakerChanged;
+            final boolean finalEndpointsChanged = endpointsListChanged;
+            TaskPools.IO_POOL.submit(() -> {
+                if (finalDominantSpeakerChanged)
+                {
+                    conference.dominantSpeakerChanged();
+                }
+                if (finalEndpointsChanged)
+                {
+                    conference.speechActivityEndpointsChanged();
+                }
 
-    /**
-     * Fires a property thread in one of the {@code IO_POOL} threads.
-     */
-    private void postPropertyChange(String property, Object oldValue, Object newValue)
-    {
-        TaskPools.IO_POOL.submit(
-                () -> firePropertyChange(property, oldValue, newValue));
+            });
+        }
     }
 
     /**
