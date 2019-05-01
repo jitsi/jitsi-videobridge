@@ -51,35 +51,40 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
     var waitIntervalMs = DEFAULT_WAIT_INTERVAL_MS
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
-        val packet = packetInfo.packet
-        val pliOrFir = when (packet) {
-            is CompoundRtcpPacket -> {
-                packet.packets.first { it is RtcpFbPliPacket || it is RtcpFbFirPacket } as? RtcpFbPacket
+        val packet = packetInfo.packet.apply {
+            when (this) {
+                is CompoundRtcpPacket -> {
+                    packets.first { it is RtcpFbPliPacket || it is RtcpFbFirPacket } as RtcpFbPacket
+                }
+                is RtcpFbFirPacket -> this
+                is RtcpFbPliPacket -> this
+                else -> return@transform packetInfo
             }
-            is RtcpFbFirPacket -> packet
-            is RtcpFbPliPacket -> packet
-            else -> null
-        } ?: return packetInfo
+        }
 
         val now = System.currentTimeMillis()
-        val sourceSsrc = when (pliOrFir) {
-            // PLIs use the generic "media source SSRC" field
-            is RtcpFbPacket -> pliOrFir.mediaSourceSsrc
-            // FIRs contain 0 for "media source SSRC" and use a field in the FCI instead.
-            is RtcpFbFirPacket -> pliOrFir.mediaSenderSsrc
-            else -> throw IllegalStateException("pliOrFir is neither pli nor fir?")
-        }
-        val canSend = canSendKeyframeRequest(sourceSsrc, now)
-        val forward = when (pliOrFir) {
-            is RtcpFbPliPacket -> canSend && hasPliSupport
-            // When both are supported, we favor generating a PLI rather than forwarding a FIR
-            is RtcpFbFirPacket -> canSend && hasFirSupport && !hasPliSupport
-            else -> throw IllegalStateException("pliOrFir is neither pli nor fir?")
-        }
-
-        if (forward && pliOrFir is RtcpFbFirPacket) {
-            // When we forward a FIR we need to update the seq num.
-            pliOrFir.seqNum = firCommandSequenceNumber.incrementAndGet()
+        var sourceSsrc: Long
+        var canSend: Boolean
+        var forward: Boolean
+        when (packet) {
+            is RtcpFbPliPacket -> {
+                sourceSsrc = packet.mediaSourceSsrc
+                canSend = canSendKeyframeRequest(sourceSsrc, now)
+                forward = canSend && hasPliSupport
+            }
+            is RtcpFbFirPacket ->
+            {
+                sourceSsrc = packet.mediaSenderSsrc
+                canSend = canSendKeyframeRequest(sourceSsrc, now)
+                // When both are supported, we favor generating a PLI rather than forwarding a FIR
+                forward = canSend && hasFirSupport && !hasPliSupport
+                if (forward) {
+                    // When we forward a FIR we need to update the seq num.
+                    packet.seqNum = firCommandSequenceNumber.incrementAndGet()
+                }
+            }
+            // This is now possible, but the compiler doesn't know it.
+            else -> throw IllegalStateException("Packet is neither PLI nor FIR")
         }
 
         if (!forward && canSend) {
