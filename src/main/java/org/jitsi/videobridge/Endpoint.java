@@ -437,17 +437,19 @@ public class Endpoint
         }
         else if (packet instanceof RtcpPacket)
         {
-            if (packet instanceof RtcpSrPacket ||
-                packet instanceof RtcpFbPliPacket ||
-                packet instanceof RtcpFbFirPacket)
+            if (packet instanceof RtcpSrPacket)
             {
                 // TODO: For SRs we're only interested in the ntp/rtp timestamp
                 //  association, so we could only accept srs from the main ssrc
-
-                // For PLI/FIR we assume that we are only given PLIs/FIRs
-                // destined for this endpoint. This is because Conference has
-                // to find the target endpoint (this endpoint) anyway, and we
-                // would essentially be performing the same check twice.
+                return bitrateController.accept((RtcpSrPacket) packet);
+            }
+            else if (packet instanceof RtcpFbPliPacket ||
+                     packet instanceof RtcpFbFirPacket)
+            {
+                // We assume that we are only given PLIs/FIRs destined for this
+                // endpoint. This is because Conference has to find the target
+                // endpoint (this endpoint) anyway, and we would essentially be
+                // performing the same check twice.
                 return true;
             }
             else
@@ -504,10 +506,8 @@ public class Endpoint
             if (packet instanceof RtcpSrPacket)
             {
                 RtcpSrPacket rtcpSrPacket = (RtcpSrPacket) packet;
-                if (!bitrateController.transformRtcp(rtcpSrPacket))
-                {
-                    return;
-                }
+                // Allow the BC to update the timestamp.
+                bitrateController.transformRtcp(rtcpSrPacket);
 
                 if (logger.isDebugEnabled())
                 {
