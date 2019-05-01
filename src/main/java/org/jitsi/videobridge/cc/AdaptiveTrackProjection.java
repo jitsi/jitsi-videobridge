@@ -61,11 +61,10 @@ public class AdaptiveTrackProjection
         = Logger.getLogger(AdaptiveTrackProjection.class);
 
     /**
-     * An empty {@link RawPacket} array that is used as a return value when no
-     * packets need to be piggy-backed.
+     * An empty array that is used as a return value when no packets need to be
+     * piggy-backed.
      */
-    public static final VideoRtpPacket[]
-        EMPTY_PACKET_ARR = AdaptiveTrackProjectionContext.EMPTY_PACKET_ARR;
+    public static final VideoRtpPacket[] EMPTY_PACKET_ARR = new VideoRtpPacket[0];
 
     /**
      * A {@link WeakReference} to the {@link MediaStreamTrackDesc} that owns

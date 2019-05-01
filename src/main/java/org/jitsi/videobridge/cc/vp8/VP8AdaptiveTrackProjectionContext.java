@@ -19,6 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.nlj.util.PacketCache;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.util.*;
@@ -471,6 +472,12 @@ public class VP8AdaptiveTrackProjectionContext
         @NotNull VideoRtpPacket rtpPacket, PacketCache incomingPacketCache)
         throws RewriteException
     {
+        if (!(rtpPacket instanceof Vp8Packet))
+        {
+            logger.info("Got a non-VP8 packet.");
+            return null;
+        }
+
         VP8FrameProjection vp8FrameProjection
             = lookupVP8FrameProjection(rtpPacket);
         if (vp8FrameProjection == null)
@@ -479,8 +486,8 @@ public class VP8AdaptiveTrackProjectionContext
             throw new RewriteException();
         }
 
-        VideoRtpPacket[] ret
-            = vp8FrameProjection.rewriteRtp(rtpPacket, incomingPacketCache);
+        Vp8Packet[] ret
+            = vp8FrameProjection.rewriteRtp((Vp8Packet) rtpPacket, incomingPacketCache);
 
         return ret;
     }

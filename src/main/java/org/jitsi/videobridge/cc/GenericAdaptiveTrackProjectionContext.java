@@ -57,6 +57,12 @@ class GenericAdaptiveTrackProjectionContext
     implements AdaptiveTrackProjectionContext
 {
     /**
+     * An empty array that is used as a return value when no packets need to be
+     * piggy-backed.
+     */
+    private static final VideoRtpPacket[] EMPTY_PACKET_ARR = new VideoRtpPacket[0];
+
+    /**
      * Checks if the given packet with the given format is part of a key frame.
      */
     private static boolean isKeyframe(
