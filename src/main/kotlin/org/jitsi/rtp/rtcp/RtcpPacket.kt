@@ -86,6 +86,7 @@ abstract class RtcpPacket(
                 RtcpSrPacket.PT -> RtcpSrPacket(buf, offset, packetLengthBytes)
                 RtcpSdesPacket.PT -> RtcpSdesPacket(buf, offset, packetLengthBytes)
                 in RtcpFbPacket.PACKET_TYPES -> RtcpFbPacket.parse(buf, offset, packetLengthBytes)
+                RtcpXrPacket.PT -> RtcpXrPacket(buf, offset, packetLengthBytes)
                 else -> TODO("unimplemented rtcp type $packetType")
             }
         }
