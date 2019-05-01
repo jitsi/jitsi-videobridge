@@ -131,6 +131,9 @@ abstract class SrtcpTransformer(contextFactory: SRTPContextFactory) : AbstractSr
     }
 
     override fun getContext(packetInfo: PacketInfo): SRTCPCryptoContext? {
+        // Contrary to RTP packets, RTCP packets do not get parsed before they are
+        // decrypted. So (if this is a decrypting transformer) we are working with
+        // an UnparsedPacket here and need to read the SSRC manually.
         val senderSsrc = RtcpHeader.getSenderSsrc(packetInfo.packet.getBuffer(), packetInfo.packet.getOffset())
         return getContext(senderSsrc, 0)
     }
