@@ -20,7 +20,6 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.rtcp.*;
-import org.jitsi.rtp.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.utils.*;
@@ -375,7 +374,7 @@ public class BitrateController
      * Defines a packet filter that controls which RTP packets to be written
      * into the {@link Endpoint} that owns this {@link BitrateController}.
      *
-     * @param videoRtpPacket that packet for which to decide to accept
+     * @param videoRtpPacket that packet for which to decide whether to accept
      * @return <tt>true</tt> to allow the specified packet to be
      * written into the {@link Endpoint} that owns this {@link BitrateController}
      * ; otherwise, <tt>false</tt>
@@ -397,6 +396,40 @@ public class BitrateController
 
         return adaptiveTrackProjection.accept(videoRtpPacket);
     }
+
+    /**
+     * Defines a packet filter that controls which RTCP Sender Report
+     * packets to be written into the {@link Endpoint} that owns this
+     * {@link BitrateController}.
+     * </p>
+     * Filters out packets that match one of the streams that this
+     * {@code BitrateController} manages, but don't match the target SSRC.
+     * Allows packets for streams not managed by this {@link BitrateController}.
+     *
+     * @param rtcpSrPacket that packet for which to decide whether to accept
+     * @return <tt>true</tt> to allow the specified packet to be
+     * written into the {@link Endpoint} that owns this {@link BitrateController}
+     * ; otherwise, <tt>false</tt>
+     */
+    public boolean accept(RtcpSrPacket rtcpSrPacket)
+    {
+        long ssrc = rtcpSrPacket.getSenderSsrc();
+
+        AdaptiveTrackProjection adaptiveTrackProjection
+                = adaptiveTrackProjectionMap.get(ssrc);
+
+        if (adaptiveTrackProjection == null)
+        {
+            // This is probably for an audio stream. In any case, if it's for a
+            // stream which we are not forwarding it will be stripped off at
+            // a later stage (in RtcpSrUpdater).
+            return true;
+        }
+
+        // We only accept SRs for the SSRC that we're forwarding with.
+        return ssrc == adaptiveTrackProjection.getTargetSsrc();
+    }
+
 
     public boolean transformRtcp(RtcpSrPacket rtcpSrPacket)
     {
@@ -494,7 +527,7 @@ public class BitrateController
                     adaptiveTrackProjection.getTargetIndex());
             if (targetBps > 0)
             {
-                long ssrc = adaptiveTrackProjection.getSSRC();
+                long ssrc = adaptiveTrackProjection.getTargetSsrc();
                 if (ssrc > -1)
                 {
                     activeSsrcs.add(ssrc);
@@ -829,12 +862,13 @@ public class BitrateController
             // Route all encodings to the specified bitrate controller.
             for (RTPEncodingDesc rtpEncoding : rtpEncodings)
             {
-                logger.debug("TEMP: adding a new track projection for ssrc" +
-                        rtpEncoding.getPrimarySSRC());
                 adaptiveTrackProjectionMap.put(
                     rtpEncoding.getPrimarySSRC(),
                     adaptiveTrackProjection);
 
+                // TODO: RTX packets should never reach here (they get de-RTXed
+                // in the receiver chain). Do we still need this mapping?
+                // Perhaps we need it in order to block SR for the RTX streams?
                 long rtxSsrc
                     = rtpEncoding.getSecondarySsrc(SsrcAssociationType.RTX);
 

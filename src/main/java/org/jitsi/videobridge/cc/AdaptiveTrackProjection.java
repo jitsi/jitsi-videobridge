@@ -399,7 +399,7 @@ public class AdaptiveTrackProjection
     /**
      * @return the SSRC of the track projection.
      */
-    public long getSSRC()
+    public long getTargetSsrc()
     {
         return targetSsrc;
     }
@@ -409,8 +409,6 @@ public class AdaptiveTrackProjection
      */
     public void addPayloadType(PayloadType payloadType)
     {
-        logger.info(hashCode() + " TEMP: adaptive track projection " + hashCode() +
-                " adding payload type mapping " + payloadType);
         payloadTypes.put(payloadType.getPt(), payloadType);
     }
 
