@@ -78,10 +78,11 @@ class RtcpFbFirPacket(
 
     companion object {
         const val FMT = 4
+        // TODO: support multiple FCI?
         const val SIZE_BYTES = RtcpFbPacket.HEADER_SIZE + 8
 
-        const val MEDIA_SENDER_SSRC_OFFSET = RtcpFbPacket.HEADER_SIZE
-        const val SEQ_NUM_OFFSET = RtcpFbPacket.HEADER_SIZE + 4
+        const val MEDIA_SENDER_SSRC_OFFSET = RtcpFbPacket.FCI_OFFSET
+        const val SEQ_NUM_OFFSET = MEDIA_SENDER_SSRC_OFFSET + 4
 
         fun getMediaSenderSsrc(buf: ByteArray, baseOffset: Int): Long =
             buf.getInt(baseOffset + MEDIA_SENDER_SSRC_OFFSET).toPositiveLong()
@@ -115,6 +116,7 @@ class RtcpFbFirPacketBuilder(
             length = RtpUtils.calculateRtcpLengthFieldValue(RtcpFbFirPacket.SIZE_BYTES)
         }
         rtcpHeader.writeTo(buf, offset)
+        RtcpFbPacket.setMediaSourceSsrc(buf, offset, 0) // SHALL be 0
         RtcpFbFirPacket.setMediaSenderSsrc(buf, offset, mediaSenderSsrc)
         RtcpFbFirPacket.setSeqNum(buf, offset, firCommandSeqNum)
     }

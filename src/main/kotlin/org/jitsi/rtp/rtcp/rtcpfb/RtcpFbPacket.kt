@@ -59,7 +59,7 @@ abstract class RtcpFbPacket(
         val PACKET_TYPES = listOf(TransportLayerRtcpFbPacket.PT, PayloadSpecificRtcpFbPacket.PT)
         const val MEDIA_SOURCE_SSRC_OFFSET = RtcpHeader.SIZE_BYTES
         const val HEADER_SIZE = RtcpHeader.SIZE_BYTES + 4
-        const val FCI_OFFSET = HEADER_SIZE + 4
+        const val FCI_OFFSET = HEADER_SIZE
 
         fun getFmt(buf: ByteArray, baseOffset: Int): Int =
             RtcpHeader.getReportCount(buf, baseOffset)
