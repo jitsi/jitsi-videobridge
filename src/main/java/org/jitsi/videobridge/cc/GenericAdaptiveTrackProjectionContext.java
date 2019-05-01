@@ -137,24 +137,6 @@ class GenericAdaptiveTrackProjectionContext
     private int sequenceNumberDelta;
 
     /**
-     * The synchronization root of {@link #transmittedBytes} and
-     * {@link #transmittedPackets}.
-     */
-    private final Object transmittedSyncRoot = new Object();
-
-    /**
-     * Keeps track of the number of transmitted bytes. This is used in RTCP SR
-     * rewriting.
-     */
-    private long transmittedBytes;
-
-    /**
-     * Keeps track of the number of transmitted packets. This is used in RTCP SR
-     * rewriting.
-     */
-    private long transmittedPackets;
-
-    /**
      * Ctor.
      *
      * @param payloadType the media format to expect
@@ -166,8 +148,6 @@ class GenericAdaptiveTrackProjectionContext
     {
         this.payloadType = payloadType;
         this.ssrc = rtpState.ssrc;
-        this.transmittedBytes = rtpState.transmittedBytes;
-        this.transmittedPackets = rtpState.transmittedPackets;
         this.maxDestinationSequenceNumber = rtpState.maxSequenceNumber;
         this.maxDestinationTimestamp = rtpState.maxTimestamp;
     }
@@ -354,12 +334,6 @@ class GenericAdaptiveTrackProjectionContext
                 + ",max_sequence=" + maxDestinationSequenceNumber);
         }
 
-        synchronized (transmittedSyncRoot)
-        {
-            transmittedBytes += rtpPacket.getLength();
-            transmittedPackets++;
-        }
-
         return EMPTY_PACKET_ARR;
     }
 
@@ -394,25 +368,14 @@ class GenericAdaptiveTrackProjectionContext
     @Override
     public boolean rewriteRtcp(@NotNull RtcpSrPacket rtcpSrPacket)
     {
-        synchronized (transmittedSyncRoot)
-        {
-            // Rewrite packet/octet count.
-            rtcpSrPacket.getSenderInfo().setSendersOctetCount(transmittedBytes);
-            rtcpSrPacket.getSenderInfo().setSendersPacketCount(transmittedPackets);
-        }
-
         return true;
     }
 
     @Override
     public RtpState getRtpState()
     {
-        synchronized (transmittedSyncRoot)
-        {
-            return new RtpState(
-                transmittedBytes, transmittedPackets,
+        return new RtpState(
                 ssrc, maxDestinationSequenceNumber, maxDestinationTimestamp);
-        }
     }
 
     @Override

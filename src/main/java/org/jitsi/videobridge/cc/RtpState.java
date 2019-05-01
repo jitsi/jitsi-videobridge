@@ -39,29 +39,13 @@ public class RtpState
     public final int maxSequenceNumber;
 
     /**
-     * The number of transmitted bytes so far.
-     */
-    public final long transmittedBytes;
-
-    /**
-     * The number of transmitted packets so far.
-     */
-    public final long transmittedPackets;
-
-    /**
-     *
-     * @param transmittedBytes the number of transmitted bytes so far.
-     * @param transmittedPackets the number of transmitted packets so far.
      * @param ssrc the SSRC of the RTP stream that this information pertains to.
      * @param maxSequenceNumber the highest sent sequence number.
      * @param maxTimestamp the highest sent RTP timestamp.
      */
-    public RtpState(long transmittedBytes, long transmittedPackets,
-                    long ssrc, int maxSequenceNumber, long maxTimestamp)
+    public RtpState(long ssrc, int maxSequenceNumber, long maxTimestamp)
     {
         this.ssrc = ssrc;
-        this.transmittedBytes = transmittedBytes;
-        this.transmittedPackets = transmittedPackets;
         this.maxSequenceNumber = maxSequenceNumber;
         this.maxTimestamp = maxTimestamp;
     }
