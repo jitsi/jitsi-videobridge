@@ -18,7 +18,6 @@ package org.jitsi.nlj.transform.node
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.srtp.AbstractSrtpTransformer
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.rtp.rtp.RtpPacket
 
 class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
     /**
@@ -34,7 +33,7 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
     private var cachedPackets = mutableListOf<PacketInfo>()
 
     /**
-     * The function which subclasses should implement to do the actual srtp/srtcp encryption/decryption
+     * Transforms a list of packets using [#transformer]
      */
     private fun doTransform(packetInfos: List<PacketInfo>): List<PacketInfo> {
         val transformedPackets = mutableListOf<PacketInfo>()
@@ -45,9 +44,7 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
             if (res) {
                 transformedPackets.add(packetInfo)
             } else {
-                with(packetInfo.packetAs<RtpPacket>()) {
-                    logger.warn("SRTP transform failed for packet $ssrc $sequenceNumber")
-                }
+                logger.warn("SRTP transform failed")
             }
         }
         return transformedPackets
