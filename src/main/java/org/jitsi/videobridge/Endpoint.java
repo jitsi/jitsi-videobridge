@@ -421,20 +421,19 @@ public class Endpoint
     @Override
     public boolean wants(PacketInfo packetInfo)
     {
-        Packet packet = packetInfo.getPacket();
+        Packet packet = Objects.requireNonNull(packetInfo.getPacket(), "packet");
 
         if (packet instanceof RtpPacket)
         {
-            if (packet instanceof VideoRtpPacket && !acceptVideo)
+            if (packet instanceof VideoRtpPacket)
             {
-                return false;
+                return acceptVideo
+                        && bitrateController.accept((VideoRtpPacket) packet);
             }
             if (packet instanceof AudioRtpPacket)
             {
                 return acceptAudio;
             }
-
-            return bitrateController.accept((RtpPacket) packet);
         }
         else if (packet instanceof RtcpPacket)
         {
@@ -454,15 +453,15 @@ public class Endpoint
             else
             {
                 logger.warn(logPrefix
-                    + "Dropping an unhandled rtcp packet"
-                    + (packet == null ? "null" : packet.getClass().getSimpleName()));
+                    + "Ignoring an rtcp packet of type"
+                    + packet.getClass().getSimpleName());
                 return false;
             }
         }
 
         logger.warn(logPrefix
-            + "Dropping a non rtp/rtcp packet."
-            + (packet == null ? "null" : packet.getClass().getSimpleName()));
+            + "Ignoring an unknown packet type:"
+            + packet.getClass().getSimpleName());
         return false;
     }
 
