@@ -19,6 +19,8 @@ package org.jitsi.nlj.rtp.codec.vp8
 import org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer
 import org.jitsi.nlj.codec.vp8.Vp8Utils
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.util.cwarn
+import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
 
 class Vp8Packet(
@@ -26,6 +28,26 @@ class Vp8Packet(
     offset: Int,
     length: Int
 ) : VideoRtpPacket(data, offset, length) {
+    private val logger = getLogger(this.javaClass)
+
+    var TL0PICIDX: Int
+            get() = DePacketizer.VP8PayloadDescriptor.getTL0PICIDX(buffer, payloadOffset, payloadLength)
+            set(value) {
+                if (!DePacketizer.VP8PayloadDescriptor.setTL0PICIDX(
+                        buffer, payloadOffset, payloadLength, value)) {
+                    logger.cwarn { "Failed to set the TL0PICIDX of a VP8 packet." }
+                }
+            }
+
+    var pictureId: Int
+        get() = DePacketizer.VP8PayloadDescriptor.getPictureId(buffer, payloadOffset)
+        set(value) {
+            if (!DePacketizer.VP8PayloadDescriptor.setExtendedPictureId(
+                            buffer, payloadOffset, payloadLength, value)) {
+                logger.cwarn { "Failed to set the picture id of a VP8 packet." }
+            }
+        }
+
     var temporalLayerIndex: Int = -1
     /**
      * This is currently used as an overall spatial index, not an in-band spatial quality index a la vp9.  That is,
