@@ -18,6 +18,10 @@ package org.jitsi.nlj.rtcp
 
 import org.jitsi.nlj.transform.node.PacketParser
 import org.jitsi.rtp.rtcp.CompoundRtcpPacket
+import org.jitsi.rtp.rtcp.RtcpPacket
 
 class CompoundRtcpParser : PacketParser("Compound RTCP parser", {
     CompoundRtcpPacket(it.buffer, it.offset, it.length) })
+
+class SingleRtcpParser : PacketParser("Single RTCP parser", {
+    RtcpPacket.parse(it.buffer, it.offset) })
