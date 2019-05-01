@@ -70,7 +70,7 @@ class EventTimeline(
  * (as it is parsed into different types), the wrapping [PacketInfo] stays consistent
  * and allows for metadata to be passed along with a packet.
  */
-class PacketInfo @JvmOverloads constructor(
+open class PacketInfo @JvmOverloads constructor(
     var packet: Packet,
     val timeline: EventTimeline = EventTimeline()
 ) {
