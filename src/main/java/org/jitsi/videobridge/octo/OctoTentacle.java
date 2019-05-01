@@ -20,6 +20,7 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.osgi.*;
 import org.jitsi.rtp.*;
+import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging.*;
@@ -116,19 +117,17 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      * {@inheritDoc}
      */
     @Override
-    public void send(PacketInfo packetInfo, String sourceEpId)
+    public void send(PacketInfo packetInfo)
     {
         Packet packet = packetInfo.getPacket();
-        if (packet instanceof RtpPacket)
+        if (packet != null)
         {
-            relay.sendRtp(
+            relay.sendPacket(
                 packet,
                 targets,
                 conference.getGid(),
-                sourceEpId);
+                packetInfo.getEndpointId());
         }
-
-        // TODO relay rtcp srs
     }
 
     /**
@@ -159,11 +158,11 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      * {@inheritDoc}
      */
     @Override
-    public boolean wants(PacketInfo packetInfo, String sourceEpId)
+    public boolean wants(PacketInfo packetInfo)
     {
         // Cthulhu devours everything (as long as it's not coming from
         // itself, and we have targets).
-        return sourceEpId != null && !targets.isEmpty();
+        return !(packetInfo instanceof OctoPacketInfo) && !targets.isEmpty();
     }
 
     /**
@@ -229,7 +228,12 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      */
     void handleIncomingRtp(PacketInfo packetInfo)
     {
-        conference.handleIncomingRtp(packetInfo, null);
+        conference.handleIncomingRtp(packetInfo);
+    }
+
+    void handleIncomingRtcp(PacketInfo packetInfo)
+    {
+        conference.handleIncomingRtcp(packetInfo);
     }
 
     /**

@@ -283,7 +283,7 @@ public class OctoRelay
     /**
      * Sends an RTP packet encapsulated in Octo to the specified targets.
      */
-    void sendRtp(
+    void sendPacket(
             Packet packet,
             Set<SocketAddress> targets,
             String conferenceId,
@@ -295,7 +295,7 @@ public class OctoRelay
                 packet.getLength(),
                 targets,
                 conferenceId,
-                endpointId,
+                endpointId == null ? "ffffffff" : endpointId,
                 MediaType.VIDEO);
     }
 

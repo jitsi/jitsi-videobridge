@@ -16,7 +16,6 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.utils.dsi.*;
-import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
@@ -109,7 +108,7 @@ public class ConferenceSpeechActivity
         if (ssrc != -1)
         {
             AbstractEndpoint endpoint
-                = conference.findEndpointByReceiveSSRC(ssrc, MediaType.AUDIO);
+                = conference.findEndpointByReceiveSSRC(ssrc);
 
             if (endpoint != null)
             {
@@ -194,7 +193,7 @@ public class ConferenceSpeechActivity
             }
 
             AbstractEndpoint endpoint
-                = conference.findEndpointByReceiveSSRC(ssrc, MediaType.AUDIO);
+                = conference.findEndpointByReceiveSSRC(ssrc);
 
             synchronized (syncRoot)
             {

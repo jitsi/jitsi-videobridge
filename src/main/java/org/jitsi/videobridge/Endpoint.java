@@ -26,6 +26,7 @@ import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.*;
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
@@ -418,7 +419,7 @@ public class Endpoint
      * {@inheritDoc}
      */
     @Override
-    public boolean wants(PacketInfo packetInfo, String sourceEndpointId)
+    public boolean wants(PacketInfo packetInfo)
     {
         Packet packet = packetInfo.getPacket();
 
@@ -437,11 +438,17 @@ public class Endpoint
         }
         else if (packet instanceof RtcpPacket)
         {
-            if (packet instanceof RtcpSrPacket)
+            if (packet instanceof RtcpSrPacket ||
+                packet instanceof RtcpFbPliPacket ||
+                packet instanceof RtcpFbFirPacket)
             {
-                // TODO(george) we're only interested in the ntp/rtp
-                // timestamp association, so only accept srs from the main
-                // ssrc
+                // TODO: For SRs we're only interested in the ntp/rtp timestamp
+                //  association, so we could only accept srs from the main ssrc
+
+                // For PLI/FIR we assume that we are only given PLIs/FIRs
+                // destined for this endpoint. This is because Conference has
+                // to find the target endpoint (this endpoint) anyway, and we
+                // would essentially be performing the same check twice.
                 return true;
             }
             else
@@ -463,7 +470,7 @@ public class Endpoint
      * TODO Brian
      */
     @Override
-    public void send(PacketInfo packetInfo, String sourceEpId)
+    public void send(PacketInfo packetInfo)
     {
         Packet packet = packetInfo.getPacket();
         if (packet instanceof RtpPacket)
@@ -1214,8 +1221,7 @@ public class Endpoint
     public void requestKeyframe(long ssrc)
     {
         AbstractEndpoint endpoint
-                = getConference().findEndpointByReceiveSSRC(
-                        ssrc, MediaType.VIDEO);
+                = getConference().findEndpointByReceiveSSRC(ssrc);
         if (endpoint instanceof Endpoint)
         {
             ((Endpoint) endpoint).transceiver.requestKeyFrame(ssrc);
@@ -1308,7 +1314,7 @@ public class Endpoint
      */
     private void handleIncomingRtcp(PacketInfo packetInfo)
     {
-        getConference().handleIncomingRtcp(packetInfo, this);
+        getConference().handleIncomingRtcp(packetInfo);
     }
 
     /**
@@ -1318,7 +1324,8 @@ public class Endpoint
      */
     protected void handleIncomingRtp(PacketInfo packetInfo)
     {
-        getConference().handleIncomingRtp(packetInfo, this);
+        packetInfo.setEndpointId(getID());
+        getConference().handleIncomingRtp(packetInfo);
     }
 
     /**
