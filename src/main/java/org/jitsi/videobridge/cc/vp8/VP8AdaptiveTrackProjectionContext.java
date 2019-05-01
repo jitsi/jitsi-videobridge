@@ -93,23 +93,6 @@ public class VP8AdaptiveTrackProjectionContext
     private VP8FrameProjection lastVP8FrameProjection;
 
     /**
-     *
-     */
-    private final Object transmittedSyncRoot = new Object();
-
-    /**
-     * Keeps track of the number of transmitted bytes. This is used in RTCP SR
-     * rewriting.
-     */
-    private long transmittedBytes = 0;
-
-    /**
-     * Keeps track of the number of transmitted packets. This is used in RTCP SR
-     * rewriting.
-     */
-    private long transmittedPackets = 0;
-
-    /**
      * The VP8 media format. No essential functionality relies on this field,
      * it's only used as a cache of the {@link PayloadType} instance for VP8 in
      * case we have to do a context switch (see {@link AdaptiveTrackProjection}),
@@ -450,13 +433,6 @@ public class VP8AdaptiveTrackProjectionContext
             rtcpSrPacket.getSenderInfo().setRtpTimestamp(dstTs);
         }
 
-        // Rewrite packet/octet count.
-        synchronized (transmittedSyncRoot)
-        {
-            rtcpSrPacket.getSenderInfo().setSendersOctetCount(transmittedBytes);
-            rtcpSrPacket.getSenderInfo().setSendersPacketCount(transmittedPackets);
-        }
-
         return true;
     }
 
@@ -468,7 +444,7 @@ public class VP8AdaptiveTrackProjectionContext
             lastVP8FrameProjection.close();
         }
 
-        return new RtpState(transmittedBytes, transmittedPackets,
+        return new RtpState(
             lastVP8FrameProjection.getSSRC(),
             lastVP8FrameProjection.maxSequenceNumber(),
             lastVP8FrameProjection.getTimestamp());
@@ -507,21 +483,6 @@ public class VP8AdaptiveTrackProjectionContext
         VideoRtpPacket[] ret
             = vp8FrameProjection.rewriteRtp(rtpPacket, incomingPacketCache);
 
-        synchronized (transmittedSyncRoot)
-        {
-            transmittedBytes += rtpPacket.getLength();
-            transmittedPackets++;
-
-            if (!ArrayUtils.isNullOrEmpty(ret))
-            {
-                for (int i = 0; i < ret.length; i++)
-                {
-                    transmittedBytes += ret[i].getLength();
-                    transmittedPackets += 1;
-                }
-            }
-        }
-
         return ret;
     }
 
@@ -540,8 +501,6 @@ public class VP8AdaptiveTrackProjectionContext
                 "vp8FrameProjectionMapSize",
                 vp8FrameProjectionMap.size());
         debugState.put("vp8QualityFilter", vp8QualityFilter.getDebugState());
-        debugState.put("transmittedBytes", transmittedBytes);
-        debugState.put("transmittedPackets", transmittedPackets);
         debugState.put("payloadType", payloadType.toString());
 
         return debugState;

@@ -346,9 +346,9 @@ public class AdaptiveTrackProjection
         {
             MediaStreamTrackDesc track = getSource();
             long ssrc = track.getRTPEncodings()[0].getPrimarySSRC();
+            // TODO If '1' are the starting seq number and timestamp, should
+            // we use random values?
             return new RtpState(
-                0 /* transmittedBytes */,
-                0 /* transmittedPackets */,
                 ssrc,
                 1 /* maxSequenceNumber */,
                 1 /* maxTimestamp */) ;
