@@ -62,7 +62,14 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
         } ?: return packetInfo
 
         val now = System.currentTimeMillis()
-        val canSend = canSendKeyframeRequest(pliOrFir.mediaSourceSsrc, now)
+        val sourceSsrc = when (pliOrFir) {
+            // PLIs use the generic "media source SSRC" field
+            is RtcpFbPacket -> pliOrFir.mediaSourceSsrc
+            // FIRs contain 0 for "media source SSRC" and use a field in the FCI instead.
+            is RtcpFbFirPacket -> pliOrFir.mediaSenderSsrc
+            else -> throw IllegalStateException("pliOrFir is neither pli nor fir?")
+        }
+        val canSend = canSendKeyframeRequest(sourceSsrc, now)
         val forward = when (pliOrFir) {
             is RtcpFbPliPacket -> canSend && hasPliSupport
             // When both are supported, we favor generating a PLI rather than forwarding a FIR
@@ -76,7 +83,7 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
         }
 
         if (!forward && canSend) {
-            requestKeyframe(pliOrFir.mediaSourceSsrc, now)
+            requestKeyframe(sourceSsrc, now)
         }
 
         return if (forward) packetInfo else null
@@ -122,7 +129,7 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
         }
 
         val pkt = when {
-            hasPliSupport -> RtcpFbPliPacketBuilder(mediaSenderSsrc = mediaSsrc).build()
+            hasPliSupport -> RtcpFbPliPacketBuilder(mediaSourceSsrc = mediaSsrc).build()
             hasFirSupport -> RtcpFbFirPacketBuilder(
                 mediaSenderSsrc = mediaSsrc,
                 firCommandSeqNum = firCommandSequenceNumber.incrementAndGet()
