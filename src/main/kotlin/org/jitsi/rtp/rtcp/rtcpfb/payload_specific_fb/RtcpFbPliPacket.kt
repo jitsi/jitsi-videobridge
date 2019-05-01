@@ -17,15 +17,26 @@
 package org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb
 
 import org.jitsi.rtp.extensions.bytearray.cloneFromPool
-import org.jitsi.rtp.extensions.bytearray.getInt
-import org.jitsi.rtp.extensions.bytearray.putInt
-import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.RtpUtils
 
 /**
  * https://tools.ietf.org/html/rfc4585#section-6.3.1
+ *
+ *  0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |V=2|P|   FMT   |       PT      |          length               |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                  SSRC of packet sender                        |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                  SSRC of media source                         |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * :            Feedback Control Information (FCI)                 :
+ * :                                                               :
+ *
  * PLI does not require parameters.  Therefore, the length field MUST be
  *  2, and there MUST NOT be any Feedback Control Information.
  */
@@ -39,26 +50,15 @@ class RtcpFbPliPacket(
         return RtcpFbPliPacket(buffer.cloneFromPool(), offset, length)
     }
 
-    var mediaSenderSsrc: Long
-        get() = getMediaSenderSsrc(buffer, offset)
-        set(value) = setMediaSenderSsrc(buffer, offset, value)
-
     companion object {
         const val FMT = 1
-        const val SIZE_BYTES = HEADER_SIZE + 4
-
-        const val MEDIA_SENDER_SSRC_OFFSET = HEADER_SIZE
-
-        fun getMediaSenderSsrc(buf: ByteArray, baseOffset: Int): Long =
-                buf.getInt(baseOffset + MEDIA_SENDER_SSRC_OFFSET).toPositiveLong()
-        fun setMediaSenderSsrc(buf: ByteArray, baseOffset: Int, value: Long) =
-                buf.putInt(baseOffset + MEDIA_SENDER_SSRC_OFFSET, value.toInt())
+        const val SIZE_BYTES = RtcpFbPacket.HEADER_SIZE
     }
 }
 
 class RtcpFbPliPacketBuilder(
     val rtcpHeader: RtcpHeaderBuilder = RtcpHeaderBuilder(),
-    var mediaSenderSsrc: Long = -1
+    var mediaSourceSsrc: Long = -1
 ) {
 
     fun build(): RtcpFbPliPacket {
@@ -74,6 +74,6 @@ class RtcpFbPliPacketBuilder(
             length = RtpUtils.calculateRtcpLengthFieldValue(RtcpFbPliPacket.SIZE_BYTES)
         }
         rtcpHeader.writeTo(buf, offset)
-        RtcpFbPliPacket.setMediaSenderSsrc(buf, offset, mediaSenderSsrc)
+        RtcpFbPacket.setMediaSourceSsrc(buf, offset, mediaSourceSsrc)
     }
 }
