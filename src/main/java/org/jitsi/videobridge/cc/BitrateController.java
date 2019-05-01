@@ -375,23 +375,14 @@ public class BitrateController
      * Defines a packet filter that controls which RTP packets to be written
      * into the {@link Endpoint} that owns this {@link BitrateController}.
      *
-     * @param rtpPacket that packet for which to decide to accept
+     * @param videoRtpPacket that packet for which to decide to accept
      * @return <tt>true</tt> to allow the specified packet to be
      * written into the {@link Endpoint} that owns this {@link BitrateController}
      * ; otherwise, <tt>false</tt>
      */
-    public boolean accept(RtpPacket rtpPacket)
+    public boolean accept(@NotNull VideoRtpPacket videoRtpPacket)
     {
-        if (rtpPacket instanceof AudioRtpPacket)
-        {
-            return true;
-        }
-
-        long ssrc = rtpPacket.getSsrc();
-        if (ssrc < 0)
-        {
-            return false;
-        }
+        long ssrc = videoRtpPacket.getSsrc();
 
         AdaptiveTrackProjection adaptiveTrackProjection
             = adaptiveTrackProjectionMap.get(ssrc);
@@ -404,7 +395,7 @@ public class BitrateController
             return false;
         }
 
-        return adaptiveTrackProjection.accept(rtpPacket);
+        return adaptiveTrackProjection.accept(videoRtpPacket);
     }
 
     public boolean transformRtcp(RtcpSrPacket rtcpSrPacket)

@@ -191,7 +191,8 @@ public class AdaptiveTrackProjection
      */
     private final Consumer<Long> keyframeRequester;
 
-    private final PacketCache packetCache = new PacketCache(packet -> packet instanceof VideoRtpPacket);
+    private final PacketCache packetCache
+            = new PacketCache(packet -> packet instanceof VideoRtpPacket);
 
     /**
      * Determines whether an RTP packet needs to be accepted or not.
@@ -199,21 +200,14 @@ public class AdaptiveTrackProjection
      * @param rtpPacket the RTP packet to determine whether to accept or not.
      * @return true if the packet is accepted, false otherwise.
      */
-    public boolean accept(@NotNull RtpPacket rtpPacket)
+    public boolean accept(@NotNull VideoRtpPacket videoRtpPacket)
     {
-        if (!(rtpPacket instanceof VideoRtpPacket))
-        {
-            logger.error("Not a video RTP packet. Dropping.");
-            return false;
-        }
-        VideoRtpPacket videoRtpPacket = (VideoRtpPacket) rtpPacket;
-
         AdaptiveTrackProjectionContext contextCopy = getContext(videoRtpPacket);
         if (contextCopy == null)
         {
             return false;
         }
-        packetCache.insert(rtpPacket);
+        packetCache.insert(videoRtpPacket);
 
         // XXX We want to let the context know that the stream has been
         // suspended so that it can raise the needsKeyframe flag and also allow
@@ -223,7 +217,7 @@ public class AdaptiveTrackProjection
         {
             logger.warn(
                 "Dropping an RTP packet, no quality index (SSRC=" +
-                    rtpPacket.getSsrc() + ").");
+                    videoRtpPacket.getSsrc() + ").");
 
             return false;
         }
@@ -242,15 +236,13 @@ public class AdaptiveTrackProjection
         if (contextCopy.needsKeyframe()
             && targetIndexCopy > RTPEncodingDesc.SUSPENDED_INDEX)
         {
-            logger.debug(hashCode() + " TEMP: adaptive track projection " + targetSsrc + "(" +
-                            contextCopy.hashCode() + ") needs keyframe, " +
-                    "target index = " + targetIndexCopy);
             MediaStreamTrackDesc source = getSource();
             if (source != null)
             {
-                //NOTE(brian): using a Consumer for keyframe requester makes this call look a little
-                // confusing (invoking it with 'accept') but that's how the interface is defined
-                // and it's the only built-in single argument functional interface.  In the future
+                //NOTE(brian): using a Consumer for keyframe requester makes
+                // this call look a little confusing (invoking it with 'accept')
+                // but that's how the interface is defined and it's the only
+                // built-in single argument functional interface.  In the future
                 // we can make our own interface here to clean it up a bit
                 keyframeRequester.accept(targetSsrc);
             }
