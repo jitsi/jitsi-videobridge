@@ -86,6 +86,11 @@ class PacketInfo @JvmOverloads constructor(
     var shouldDiscard: Boolean = false
 
     /**
+     * The ID of the endpoint associated with this packet (i.e. the source endpoint).
+     */
+    var endpointId: String? = null
+
+    /**
      * The payload verification string for the packet, or 'null' if payload verification is disabled. Calculating the
      * it is expensive, thus we only do it when the flag is enabled.
      */
