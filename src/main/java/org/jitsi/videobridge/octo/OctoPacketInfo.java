@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2019-Present 8x8, Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.jitsi.videobridge.octo;
 
-package org.jitsi.videobridge;
-
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
+import org.jitsi.rtp.*;
 
-public interface PotentialPacketHandler
+/**
+ * Currently we only use this to recognize packets coming from Octo.
+ */
+public class OctoPacketInfo extends PacketInfo
 {
-    /**
-     * Checks whether or not this PotentialPacketHandler is interested
-     * in the RTP/RTCP packet 'packet' from 'source'
-     * @param packet the RTP/RTCP packet
-     * @return true if this handler wants the given packet, false otherwise
-     */
-    boolean wants(PacketInfo packet);
-
-    /**
-     * Send the given RTP/RTCP 'packet' (which came from 'source')
-     * @param packet the RTP/RTCP packet
-     */
-    void send(PacketInfo packet);
+    public OctoPacketInfo(@NotNull Packet packet)
+    {
+        super(packet);
+    }
 }

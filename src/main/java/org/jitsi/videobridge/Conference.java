@@ -527,14 +527,11 @@ public class Conference
      *
      * @param receiveSSRC the SSRC of an RTP stream received by this
      * <tt>Conference</tt> whose sending <tt>Endpoint</tt> is to be found
-     * @param mediaType the <tt>MediaType</tt> of the RTP stream identified by
-     * the specified <tt>ssrc</tt>
      * @return <tt>Endpoint</tt> of this <tt>Conference</tt> which sends an RTP
      * stream with the specified <tt>ssrc</tt> and with the specified
      * <tt>mediaType</tt>; otherwise, <tt>null</tt>
      */
-    AbstractEndpoint findEndpointByReceiveSSRC(
-        long receiveSSRC, MediaType mediaType)
+    AbstractEndpoint findEndpointByReceiveSSRC(long receiveSSRC)
     {
         return getEndpoints().stream()
                 .filter(ep -> ep.receivesSsrc(receiveSSRC))
@@ -1036,45 +1033,43 @@ public class Conference
      * Broadcasts the packet to all endpoints and tentacles that want it.
      *
      * @param packetInfo the packet
-     * @param source the source endpoint, or {@code null} to indicate that the
-     * packet comes from another bridge via Octo.
      */
-    private void sendOut(PacketInfo packetInfo, AbstractEndpoint source)
+    private void sendOut(PacketInfo packetInfo)
     {
+        String sourceEndpointId = packetInfo.getEndpointId();
         // We want to avoid calling 'clone' for the last receiver of this packet
         // since it's unnecessary.  To do so, we'll wait before we clone and send
         // to an interested handler until after we've determined another handler
         // is also interested in the packet.  We'll give the last handler the
         // original packet (without cloning).
         PotentialPacketHandler prevHandler = null;
-        String sourceEpId = source != null ? source.getID() : null;
         for (Endpoint endpoint : endpointsCache)
         {
-            if (endpoint == source)
+            if (endpoint.getID().equals(sourceEndpointId))
             {
                 continue;
             }
 
-            if (endpoint.wants(packetInfo, sourceEpId))
+            if (endpoint.wants(packetInfo))
             {
                 if (prevHandler != null)
                 {
-                    prevHandler.send(packetInfo.clone(), sourceEpId);
+                    prevHandler.send(packetInfo.clone());
                 }
                 prevHandler = endpoint;
             }
         }
-        if (tentacle != null && tentacle.wants(packetInfo, sourceEpId))
+        if (tentacle != null && tentacle.wants(packetInfo))
         {
             if (prevHandler != null)
             {
-                prevHandler.send(packetInfo.clone(), sourceEpId);
+                prevHandler.send(packetInfo.clone());
             }
             prevHandler = tentacle;
         }
         if (prevHandler != null)
         {
-            prevHandler.send(packetInfo, sourceEpId);
+            prevHandler.send(packetInfo);
         }
     }
 
@@ -1089,10 +1084,9 @@ public class Conference
      * packet comes from another bridge via Octo.
      *
      */
-    public void handleIncomingRtp(
-            PacketInfo packetInfo, AbstractEndpoint source)
+    public void handleIncomingRtp(PacketInfo packetInfo)
     {
-        sendOut(packetInfo, source);
+        sendOut(packetInfo);
     }
 
     /**
@@ -1121,7 +1115,7 @@ public class Conference
      * Handles an RTCP packet coming from a specific endpoint.
      * @param packetInfo
      */
-    void handleIncomingRtcp(PacketInfo packetInfo, AbstractEndpoint source)
+    public void handleIncomingRtcp(PacketInfo packetInfo)
     {
         Packet packet = packetInfo.getPacket();
         if (packet instanceof RtcpFbPliPacket
@@ -1130,20 +1124,31 @@ public class Conference
             RtcpFbPacket rtcpFbPacket = (RtcpFbPacket) packet;
 
             // XXX we could make this faster with a map
-            AbstractEndpoint endpoint
-                = findEndpointByReceiveSSRC(
-                    rtcpFbPacket.getMediaSourceSsrc(),
-                    MediaType.VIDEO);
+            AbstractEndpoint targetEndpoint
+                = findEndpointByReceiveSSRC(rtcpFbPacket.getMediaSourceSsrc());
 
-            if (endpoint instanceof Endpoint)
+            PotentialPacketHandler pph = null;
+            if (targetEndpoint instanceof Endpoint)
             {
-                ((Endpoint) endpoint).send(packetInfo, source.getID());
+                pph = (Endpoint) targetEndpoint;
+            }
+            else if (targetEndpoint instanceof OctoEndpoint)
+            {
+                pph = tentacle;
             }
 
-            // TODO Octo
+            // This is not a redundant check. With Octo and 3 or more bridges,
+            // some PLI or FIR will come from Octo but the target endpoint will
+            // also be Octo. We need to filter these out.
+            if (pph != null && pph.wants(packetInfo))
+            {
+                pph.send(packetInfo);
+            }
         }
         else
-            sendOut(packetInfo, source);
+        {
+            sendOut(packetInfo);
+        }
     }
 
     /**
