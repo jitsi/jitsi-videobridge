@@ -38,6 +38,10 @@ abstract class AbstractSrtpTransformer<CryptoContextType : BaseSRTPCryptoContext
      */
     private val contexts: MutableMap<Long, CryptoContextType> = ConcurrentHashMap()
 
+    companion object {
+        val logger: Logger = Logger.getLogger(this::class.java)
+    }
+
     fun close() {
         synchronized(contexts) {
             contextFactory.close()
@@ -84,16 +88,16 @@ abstract class AbstractSrtpTransformer<CryptoContextType : BaseSRTPCryptoContext
 
         return transform(packetInfo, context)
     }
-
-    companion object {
-        val logger: Logger = Logger.getLogger(this::class.java)
-    }
 }
 
 /**
  * Implements methods common for the two SRTP transformer implementations.
  */
 abstract class SrtpTransformer(contextFactory: SRTPContextFactory) : AbstractSrtpTransformer<SRTPCryptoContext>(contextFactory) {
+    companion object {
+        val logger: Logger = Logger.getLogger(this::class.java)
+    }
+
     override fun deriveContext(ssrc: Long, index: Long): SRTPCryptoContext? {
         val defaultContext = contextFactory.defaultContext ?: return null
         val context = defaultContext.deriveContext(ssrc.toInt(), 0, 0)
@@ -115,6 +119,10 @@ abstract class SrtpTransformer(contextFactory: SRTPContextFactory) : AbstractSrt
  * Implements methods common for the two SRTP transformer implementations.
  */
 abstract class SrtcpTransformer(contextFactory: SRTPContextFactory) : AbstractSrtpTransformer<SRTCPCryptoContext>(contextFactory) {
+    companion object {
+        val logger: Logger = Logger.getLogger(this::class.java)
+    }
+
     override fun deriveContext(ssrc: Long, index: Long): SRTCPCryptoContext? {
         val defaultContext = contextFactory.defaultContextControl ?: return null
         val context = defaultContext.deriveContext(ssrc.toInt())
@@ -132,6 +140,10 @@ abstract class SrtcpTransformer(contextFactory: SRTPContextFactory) : AbstractSr
  * A transformer which decrypts SRTCP packets.
  */
 class SrtcpDecryptTransformer(contextFactory: SRTPContextFactory) : SrtcpTransformer(contextFactory) {
+    companion object {
+        val logger: Logger = Logger.getLogger(this::class.java)
+    }
+
     override fun transform(packetInfo: PacketInfo, context: SRTCPCryptoContext): Boolean {
         context.reverseTransformPacket(packetInfo.packet)
         packetInfo.resetPayloadVerification()
@@ -144,6 +156,10 @@ class SrtcpDecryptTransformer(contextFactory: SRTPContextFactory) : SrtcpTransfo
  * this one replaces the [Packet].
  */
 class SrtcpEncryptTransformer(contextFactory: SRTPContextFactory) : SrtcpTransformer(contextFactory) {
+    companion object {
+        val logger: Logger = Logger.getLogger(this::class.java)
+    }
+
     override fun transform(packetInfo: PacketInfo, context: SRTCPCryptoContext): Boolean {
         context.transformPacket(packetInfo.packet)
         // We convert the encrypted RTCP packet to an UnparsedPacket because
@@ -163,6 +179,10 @@ class SrtcpEncryptTransformer(contextFactory: SRTPContextFactory) : SrtcpTransfo
  * [RtpPacket].
  */
 class SrtpDecryptTransformer(contextFactory: SRTPContextFactory) : SrtpTransformer(contextFactory) {
+    companion object {
+        val logger: Logger = Logger.getLogger(this::class.java)
+    }
+
     override fun transform(packetInfo: PacketInfo, context: SRTPCryptoContext): Boolean {
         // For silence packets we update the ROC (if authentication passes), but don't decrypt
         return context.reverseTransformPacket(packetInfo.packetAs(), packetInfo.shouldDiscard).apply {
@@ -175,6 +195,10 @@ class SrtpDecryptTransformer(contextFactory: SRTPContextFactory) : SrtpTransform
  * A transformer which encrypts RTP packets (producing SRTP packets).
  */
 class SrtpEncryptTransformer(contextFactory: SRTPContextFactory) : SrtpTransformer(contextFactory) {
+    companion object {
+        val logger: Logger = Logger.getLogger(this::class.java)
+    }
+
     override fun transform(packetInfo: PacketInfo, context: SRTPCryptoContext): Boolean {
         return context.transformPacket(packetInfo.packetAs()).apply {
             packetInfo.packet = packetInfo.packet.toOtherType(::UnparsedPacket)
