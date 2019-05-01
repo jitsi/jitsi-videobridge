@@ -486,11 +486,17 @@ public class Endpoint
                 transceiver.sendRtp(packetInfo);
             }
         }
-        else if (packet instanceof RtcpSrPacket)
+        else if (packet instanceof RtcpPacket)
         {
-            RtcpSrPacket rtcpSrPacket = (RtcpSrPacket) packet;
-            if (bitrateController.transformRtcp(rtcpSrPacket))
+            RtcpPacket rtcpPacket;
+            if (packet instanceof RtcpSrPacket)
             {
+                RtcpSrPacket rtcpSrPacket = (RtcpSrPacket) packet;
+                if (!bitrateController.transformRtcp(rtcpSrPacket))
+                {
+                    return;
+                }
+
                 if (logger.isDebugEnabled())
                 {
                     logger.debug(
@@ -499,8 +505,15 @@ public class Endpoint
                             + ", timestamp="
                             + rtcpSrPacket.getSenderInfo().getRtpTimestamp());
                 }
-                transceiver.sendRtcp(rtcpSrPacket);
+
+                rtcpPacket = rtcpSrPacket;
             }
+            else
+            {
+                rtcpPacket = (RtcpPacket) packet;
+            }
+
+            transceiver.sendRtcp(rtcpPacket);
         }
     }
 
