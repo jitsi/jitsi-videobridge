@@ -798,12 +798,9 @@ public class BitrateController
     {
         synchronized (adaptiveTrackProjectionMap)
         {
-            int ssrc = trackBitrateAllocation.targetSSRC;
-            logger.debug("TEMP: looking up or creating a track projection " +
-                    "for ssrc " + (ssrc & 0xFFFF_FFFFL));
-
             AdaptiveTrackProjection adaptiveTrackProjection
-                = adaptiveTrackProjectionMap.get(ssrc & 0xFFFF_FFFFL);
+                = adaptiveTrackProjectionMap.get(
+                        trackBitrateAllocation.targetSSRC);
 
             if (adaptiveTrackProjection != null
                 || trackBitrateAllocation.track == null)
@@ -1304,7 +1301,7 @@ public class BitrateController
         /**
          * Helper field that keeps the SSRC of the target stream.
          */
-        private final int targetSSRC;
+        private final long targetSSRC;
 
         /**
          * The first {@link MediaStreamTrackDesc} of the {@link Endpoint} that
@@ -1382,7 +1379,7 @@ public class BitrateController
                 }
                 else
                 {
-                    this.targetSSRC = (int) encodings[0].getPrimarySSRC();
+                    this.targetSSRC = encodings[0].getPrimarySSRC();
                 }
             }
 
