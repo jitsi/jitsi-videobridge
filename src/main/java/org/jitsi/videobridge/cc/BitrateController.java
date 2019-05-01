@@ -31,8 +31,6 @@ import org.json.simple.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-import static org.jitsi.videobridge.cc.AdaptiveTrackProjection.EMPTY_PACKET_ARR;
-
 /**
  * The {@link BitrateController} is attached to a destination {@link
  * Endpoint} and its purpose is 1st to selectively drop incoming packets
@@ -1267,6 +1265,7 @@ public class BitrateController
         }
         catch (RewriteException e)
         {
+            logger.warn("Failed to rewrite a packet.", e);
             return null;
         }
     }

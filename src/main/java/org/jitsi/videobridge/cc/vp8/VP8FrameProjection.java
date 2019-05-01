@@ -18,12 +18,12 @@ package org.jitsi.videobridge.cc.vp8;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.nlj.util.ArrayCache;
 import org.jitsi.nlj.util.PacketCache;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.utils.logging.*;
-import org.jitsi.videobridge.cc.*;
 
 import java.util.*;
 
@@ -49,6 +49,11 @@ public class VP8FrameProjection
      */
     private static final TimeSeriesLogger timeSeriesLogger
         = TimeSeriesLogger.getTimeSeriesLogger(VP8FrameProjection.class);
+
+    /**
+     * An empty packet array.
+     */
+    private static final Vp8Packet[] EMPTY_PACKET_ARR = new Vp8Packet[0];
 
     /**
      * The diagnostic context for this instance.
@@ -326,7 +331,7 @@ public class VP8FrameProjection
      * @param cache the cache to pull piggy-backed packets from.
      * @param rtpPacket the RTP packet to project.
      */
-    VideoRtpPacket[] rewriteRtp(@NotNull VideoRtpPacket rtpPacket, PacketCache cache)
+    Vp8Packet[] rewriteRtp(@NotNull Vp8Packet rtpPacket, PacketCache cache)
     {
         int originalSequenceNumber = rtpPacket.getSequenceNumber();
 
@@ -339,13 +344,13 @@ public class VP8FrameProjection
             || originalSequenceNumber != vp8Frame.getStartingSequenceNumber()
             || cache == null)
         {
-            return AdaptiveTrackProjection.EMPTY_PACKET_ARR;
+            return EMPTY_PACKET_ARR;
         }
 
         // We piggy-back any re-ordered packets of this frame.
         long vp8FrameSSRC = vp8Frame.getSSRCAsLong();
 
-        List<VideoRtpPacket> piggyBackedPackets = new ArrayList<>();
+        List<Vp8Packet> piggyBackedPackets = new ArrayList<>();
         int len = RTPUtils.getSequenceNumberDelta(
             piggyBackUntilSequenceNumber, originalSequenceNumber) + 1;
 
@@ -362,7 +367,7 @@ public class VP8FrameProjection
                 = (originalSequenceNumber + i) & RawPacket.SEQUENCE_NUMBER_MASK;
 
             ArrayCache.Container container = cache.get(vp8FrameSSRC, piggyBackedPacketSequenceNumber);
-            VideoRtpPacket lastPacket = container == null ? null : (VideoRtpPacket) container.getItem();
+            Vp8Packet lastPacket = container == null ? null : (Vp8Packet) container.getItem();
 
             // the call to accept (synchronized) may update the
             // maxSequenceNumber.
@@ -385,16 +390,16 @@ public class VP8FrameProjection
             {
                 logger.debug("Sending " + piggyBackedPackets.size() + " piggybacked packets");
             }
-            for (VideoRtpPacket pktOut : piggyBackedPackets)
+            for (Vp8Packet pktOut : piggyBackedPackets)
             {
                 rewriteRtpInternal(pktOut);
             }
 
-            return piggyBackedPackets.toArray(new VideoRtpPacket[0]);
+            return piggyBackedPackets.toArray(new Vp8Packet[0]);
         }
         else
         {
-            return AdaptiveTrackProjection.EMPTY_PACKET_ARR;
+            return EMPTY_PACKET_ARR;
         }
     }
 
@@ -403,7 +408,7 @@ public class VP8FrameProjection
      *
      * @param pkt the RTP packet to rewrite.
      */
-    private void rewriteRtpInternal(@NotNull VideoRtpPacket pkt)
+    private void rewriteRtpInternal(@NotNull Vp8Packet pkt)
     {
         // update ssrc, sequence number, timestamp, pictureId and tl0picidx
         pkt.setSsrc(ssrc);
