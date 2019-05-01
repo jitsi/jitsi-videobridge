@@ -35,16 +35,11 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
     /**
      * Transforms a list of packets using [#transformer]
      */
-    private fun doTransform(packetInfos: List<PacketInfo>): List<PacketInfo> {
+    private fun transformList(packetInfos: List<PacketInfo>): List<PacketInfo> {
         val transformedPackets = mutableListOf<PacketInfo>()
-        // TODO can we avoid copying between the lists since most of the time it's a single packet?
         packetInfos.forEach { packetInfo ->
-            val res = transformer?.transform(packetInfo) ?: false
-
-            if (res) {
+            if (transformer?.transform(packetInfo) == true) {
                 transformedPackets.add(packetInfo)
-            } else {
-                logger.warn("SRTP transform failed")
             }
         }
         return transformedPackets
@@ -66,12 +61,15 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
             if (firstPacketForwardedTimestamp == -1L) {
                 firstPacketForwardedTimestamp = System.currentTimeMillis()
             }
-            val outPackets = mutableListOf<PacketInfo>()
+            val outPackets: List<PacketInfo>
             if (!cachedPackets.isEmpty()) {
-                outPackets.addAll(doTransform(cachedPackets))
+                cachedPackets.add(packetInfo)
+                outPackets = transformList(cachedPackets)
                 cachedPackets.clear()
+            } else {
+                outPackets = if (transformer!!.transform(packetInfo))
+                    listOf(packetInfo) else emptyList()
             }
-            outPackets.addAll(doTransform(listOf(packetInfo)))
             return outPackets
         } ?: run {
             numCachedPackets++
