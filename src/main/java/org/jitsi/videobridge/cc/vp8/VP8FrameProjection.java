@@ -421,21 +421,8 @@ public class VP8FrameProjection
             startingSequenceNumber, sequenceNumberDelta);
         pkt.setSequenceNumber(sequenceNumber);
 
-        byte[] buf = pkt.getBuffer();
-        int payloadOff = pkt.getPayloadOffset()
-            , payloadLen = pkt.getPayloadLength();
-
-        if (!DePacketizer.VP8PayloadDescriptor.setTL0PICIDX(
-            buf, payloadOff, payloadLen, tl0PICIDX))
-        {
-            logger.warn("Failed to set the TL0PICIDX of a VP8 packet.");
-        }
-
-        if (!DePacketizer.VP8PayloadDescriptor.setExtendedPictureId(
-            buf, payloadOff, payloadLen, extendedPictureId))
-        {
-            logger.warn("Failed to set the picture id of a VP8 packet.");
-        }
+        pkt.setTL0PICIDX(tl0PICIDX);
+        pkt.setPictureId(extendedPictureId);
 
         if (timeSeriesLogger.isTraceEnabled())
         {
