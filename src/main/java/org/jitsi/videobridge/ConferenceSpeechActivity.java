@@ -309,6 +309,7 @@ public class ConferenceSpeechActivity
                                 activeSpeakerChangedListener);
             }
             this.conference = null;
+            this.dominantSpeakerIdentification = null;
         }
     }
 
