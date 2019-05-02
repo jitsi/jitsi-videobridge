@@ -34,8 +34,6 @@ import org.jitsi.rtp.util.RtpUtils
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                  SSRC of media source                         |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * :            Feedback Control Information (FCI)                 :
- * :                                                               :
  *
  * PLI does not require parameters.  Therefore, the length field MUST be
  *  2, and there MUST NOT be any Feedback Control Information.
