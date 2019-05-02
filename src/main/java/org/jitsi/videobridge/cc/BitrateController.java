@@ -638,25 +638,6 @@ public class BitrateController
     }
 
     /**
-     * Called to signal constraints on the endpoint to which this
-     * BitrateController belongs have changed, so we should recalculate which
-     * streams we're forwarding.
-     */
-    private void constraintsChanged()
-    {
-        if (logger.isDebugEnabled())
-        {
-            logger.debug(
-                destinationEndpoint.getID()
-                        + " constraints have changed, updating");
-        }
-        // Neither the endpoints list nor the available bandwidth has changed,
-        // so we just use the most recent values of each to drive a new update
-        // to take the constraint changes into account
-        update();
-    }
-
-    /**
      * Computes a new bitrate allocation for every endpoint in the conference,
      * and updates the state of this instance so that bitrate allocation is
      * eventually met.
