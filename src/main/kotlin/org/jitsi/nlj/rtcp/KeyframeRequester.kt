@@ -48,7 +48,18 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
         private const val DEFAULT_WAIT_INTERVAL_MS = 100
     }
 
-    var waitIntervalMs = DEFAULT_WAIT_INTERVAL_MS
+    // Map a SSRC to the timestamp (in ms) of when we last requested a keyframe for it
+    private val keyframeRequests = mutableMapOf<Long, Long>()
+    private val firCommandSequenceNumber: AtomicInteger = AtomicInteger(0)
+    private val keyframeRequestsSyncRoot = Any()
+
+    // Stats
+    private var numKeyframesRequestedByBridge: Int = 0
+    private var numKeyframeRequestsDropped: Int = 0
+
+    private var hasPliSupport: Boolean = false
+    private var hasFirSupport: Boolean = true
+    private var waitIntervalMs = DEFAULT_WAIT_INTERVAL_MS
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val packet = packetInfo.packet.apply {
@@ -93,18 +104,6 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
 
         return if (forward) packetInfo else null
     }
-
-    // Map a SSRC to the timestamp (in ms) of when we last requested a keyframe for it
-    private val keyframeRequests = mutableMapOf<Long, Long>()
-    private val firCommandSequenceNumber: AtomicInteger = AtomicInteger(0)
-    private val keyframeRequestsSyncRoot = Any()
-
-    // Stats
-    private var numKeyframesRequestedByBridge: Int = 0
-    private var numKeyframeRequestsDropped: Int = 0
-
-    private var hasPliSupport: Boolean = false
-    private var hasFirSupport: Boolean = true
 
     /**
      * Returns 'true' when at least one method is supported, AND we haven't sent a request very recently.
