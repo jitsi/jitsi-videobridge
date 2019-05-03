@@ -54,8 +54,20 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
     private val keyframeRequestsSyncRoot = Any()
 
     // Stats
-    private var numKeyframesRequestedByBridge: Int = 0
-    private var numKeyframeRequestsDropped: Int = 0
+
+    // Number of PLI/FIRs received and forwarded to the endpoint.
+    private var numPlisForwarded: Int = 0
+    private var numFirsForwarded: Int = 0
+    // Number of PLI/FIRs received but dropped due to throttling.
+    private var numPlisDropped: Int = 0
+    private var numFirsDropped: Int = 0
+    // Number of PLI/FIRs generated as a result of an API request or due to translation between PLI/FIR.
+    private var numPlisGenerated: Int = 0
+    private var numFirsGenerated: Int = 0
+    // Number of calls to requestKeyframe
+    private var numApiRequests: Int = 0
+    // Number of calls to requestKeyframe ignored due to throttling
+    private var numApiRequestsDropped: Int = 0
 
     private var hasPliSupport: Boolean = false
     private var hasFirSupport: Boolean = true
@@ -82,6 +94,8 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
                 sourceSsrc = packet.mediaSourceSsrc
                 canSend = canSendKeyframeRequest(sourceSsrc, now)
                 forward = canSend && hasPliSupport
+                if (forward) numPlisForwarded++
+                if (!canSend) numPlisDropped++
             }
             is RtcpFbFirPacket ->
             {
@@ -92,14 +106,16 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
                 if (forward) {
                     // When we forward a FIR we need to update the seq num.
                     packet.seqNum = firCommandSequenceNumber.incrementAndGet()
+                    numFirsForwarded++
                 }
+                if (!canSend) numFirsDropped++
             }
             // This is now possible, but the compiler doesn't know it.
             else -> throw IllegalStateException("Packet is neither PLI nor FIR")
         }
 
         if (!forward && canSend) {
-            requestKeyframe(sourceSsrc, now)
+            doRequestKeyframe(sourceSsrc)
         }
 
         return if (forward) packetInfo else null
@@ -116,28 +132,36 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
             return if (nowMs - keyframeRequests.getOrDefault(mediaSsrc, 0) < waitIntervalMs) {
                 logger.cdebug { "Sent a keyframe request less than ${waitIntervalMs}ms ago for $mediaSsrc, " +
                         "ignoring request" }
-                numKeyframeRequestsDropped++
                 false
             } else {
                 keyframeRequests[mediaSsrc] = nowMs
                 logger.cdebug { "Keyframe requester requesting keyframe with FIR for $mediaSsrc" }
-                numKeyframesRequestedByBridge++
                 true
             }
         }
     }
 
     fun requestKeyframe(mediaSsrc: Long, now: Long = System.currentTimeMillis()) {
+        numApiRequests++
         if (!canSendKeyframeRequest(mediaSsrc, now)) {
+            numApiRequestsDropped
             return
         }
+    }
 
+    private fun doRequestKeyframe(mediaSsrc: Long) {
         val pkt = when {
-            hasPliSupport -> RtcpFbPliPacketBuilder(mediaSourceSsrc = mediaSsrc).build()
-            hasFirSupport -> RtcpFbFirPacketBuilder(
-                mediaSenderSsrc = mediaSsrc,
-                firCommandSeqNum = firCommandSequenceNumber.incrementAndGet()
-            ).build()
+            hasPliSupport -> {
+                numPlisGenerated++
+                RtcpFbPliPacketBuilder(mediaSourceSsrc = mediaSsrc).build()
+            }
+            hasFirSupport -> {
+                numFirsGenerated
+                RtcpFbFirPacketBuilder(
+                    mediaSenderSsrc = mediaSsrc,
+                    firCommandSeqNum = firCommandSequenceNumber.incrementAndGet()
+                ).build()
+            }
             else -> {
                 logger.warn("Can not send neither PLI nor FIR")
                 return
@@ -171,8 +195,17 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
 
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
-            addNumber("num_keyframes_requested_by_the_bridge", numKeyframesRequestedByBridge)
-            addNumber("num_keyframes_dropped_due_to_throttling", numKeyframeRequestsDropped)
+            addBoolean("hasPliSupport", hasPliSupport)
+            addBoolean("hasFirSupport", hasFirSupport)
+            addString("waitIntervalMs", waitIntervalMs.toString()) // use string to prevent aggregation
+            addNumber("numApiRequests", numApiRequests)
+            addNumber("numApiRequestsDropped", numApiRequestsDropped)
+            addNumber("numFirsDropped", numFirsDropped)
+            addNumber("numFirsGenerated", numFirsGenerated)
+            addNumber("numFirsForwarded", numFirsForwarded)
+            addNumber("numPlisDropped", numPlisDropped)
+            addNumber("numPlisGenerated", numPlisGenerated)
+            addNumber("numPlisForwarded", numPlisForwarded)
         }
     }
 
