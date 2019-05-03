@@ -18,7 +18,6 @@ package org.jitsi.nlj.rtcp
 
 import org.jitsi.nlj.util.RtpUtils
 import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.cwarn
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.nlj.util.isNextAfter
@@ -102,7 +101,7 @@ class RetransmissionRequester(
                         highestReceivedSeqNum = seqNum
                     }
                     highestReceivedSeqNum numPacketsTo seqNum < maxMissingSeqNums -> {
-                        logger.cinfo {
+                        logger.cdebug {
                             "$ssrc missing packet detected! Just received " +
                                     "$seqNum, last received was $highestReceivedSeqNum"
                         }
