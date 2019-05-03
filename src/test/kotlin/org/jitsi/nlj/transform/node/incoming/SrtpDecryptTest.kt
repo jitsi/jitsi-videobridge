@@ -30,14 +30,15 @@ import org.jitsi.service.libjitsi.LibJitsi
 internal class SrtpDecryptTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-    private val srtpTransformers = SrtpUtil.initializeTransformer(
+    init {
+        // We need to start libjitsi so that the openssl lib gets loaded.
+        LibJitsi.start()
+
+        val srtpTransformers = SrtpUtil.initializeTransformer(
             SrtpSample.srtpProfileInformation,
             SrtpSample.keyingMaterial.array(),
             SrtpSample.tlsRole)
 
-    init {
-        // We need to start libjitsi so that the openssl lib gets loaded.
-        LibJitsi.start()
         "decrypting an RTCP packet" {
             val packetInfo = PacketInfo(SrtpSample.incomingEncryptedRtcpPacket.clone())
             srtpTransformers.srtcpDecryptTransformer.transform(packetInfo) shouldBe true
