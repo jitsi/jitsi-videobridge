@@ -20,6 +20,7 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
+import org.jitsi.nlj.SetLocalSsrcEvent
 import org.jitsi.nlj.format.VideoPayloadType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
@@ -30,6 +31,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacketBuilder
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacketBuilder
+import org.jitsi.utils.MediaType
 import java.lang.IllegalStateException
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.min
@@ -52,6 +54,7 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
     private val keyframeRequests = mutableMapOf<Long, Long>()
     private val firCommandSequenceNumber: AtomicInteger = AtomicInteger(0)
     private val keyframeRequestsSyncRoot = Any()
+    private var localSsrc: Long? = null
 
     // Stats
 
@@ -106,6 +109,8 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
                 if (forward) {
                     // When we forward a FIR we need to update the seq num.
                     packet.seqNum = firCommandSequenceNumber.incrementAndGet()
+                    // We manage the seq num space, so we should use the same SSRC
+                    localSsrc?.let { packet.mediaSenderSsrc = it }
                     numFirsForwarded++
                 }
                 if (!canSend) numFirsDropped++
@@ -189,6 +194,11 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
                 // Reset to the defaults.
                 hasPliSupport = false
                 hasFirSupport = true
+            }
+            is SetLocalSsrcEvent -> {
+                if (event.mediaType == MediaType.VIDEO) {
+                    localSsrc = event.ssrc
+                }
             }
         }
     }
