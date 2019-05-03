@@ -39,8 +39,8 @@ import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.addMbps
 import org.jitsi.nlj.util.addRatio
+import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
-import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.logging.Logger
@@ -130,7 +130,7 @@ class RtpSenderImpl(
     }
 
     init {
-        logger.cinfo { "Sender $id using executor ${executor.hashCode()}" }
+        logger.cdebug { "Sender $id using executor ${executor.hashCode()}" }
 
         outgoingRtpRoot = pipeline {
             node(outgoingPacketCache)

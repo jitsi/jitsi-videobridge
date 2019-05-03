@@ -21,7 +21,7 @@ import org.jitsi.nlj.RtpExtensionAddedEvent
 import org.jitsi.nlj.RtpExtensionClearEvent
 import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.transform.node.TransformerNode
-import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.cdebug
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
@@ -52,7 +52,7 @@ class TccSeqNumTagger(
             is RtpExtensionAddedEvent -> {
                 if (event.rtpExtension.type == TRANSPORT_CC) {
                     tccExtensionId = event.rtpExtension.id.toUInt()
-                    logger.cinfo { "TCC seq num tagger setting extension ID to $tccExtensionId" }
+                    logger.cdebug { "TCC seq num tagger setting extension ID to $tccExtensionId" }
                 }
             }
             is RtpExtensionClearEvent -> tccExtensionId = null

@@ -46,7 +46,7 @@ import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.addMbps
 import org.jitsi.nlj.util.addRatio
-import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.PacketPredicate
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -169,7 +169,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private var numQueueReads: Long = 0
 
     init {
-        logger.cinfo { "Receiver ${this.hashCode()} using executor ${executor.hashCode()}" }
+        logger.cdebug { "Receiver ${this.hashCode()} using executor ${executor.hashCode()}" }
         rtcpEventNotifier.addRtcpEventListener(rtcpRrGenerator)
 
         inputTreeRoot = pipeline {
