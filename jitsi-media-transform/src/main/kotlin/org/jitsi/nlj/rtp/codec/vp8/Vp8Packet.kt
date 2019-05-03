@@ -19,7 +19,6 @@ package org.jitsi.nlj.rtp.codec.vp8
 import org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer
 import org.jitsi.nlj.codec.vp8.Vp8Utils
 import org.jitsi.nlj.rtp.VideoRtpPacket
-import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
 
 class Vp8Packet(
@@ -56,7 +55,7 @@ class Vp8Packet(
         }
 
     override fun clone(): Vp8Packet {
-        val clone = Vp8Packet(buffer.cloneFromPool(), offset, length)
+        val clone = Vp8Packet(cloneBuffer(), offset, length)
         clone.isKeyframe = isKeyframe
         // TODO can we ask the superclass to clone its own fields?
         clone.qualityIndex = qualityIndex
