@@ -19,7 +19,6 @@ import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
-import org.jitsi.rtp.rtcp.RtcpPacket
 
 /**
  * Not an 'RtpSender' in the sense that it sends only RTP (and not
@@ -33,7 +32,6 @@ abstract class RtpSender :
     var firstPacketSentTime: Long = -1
     var lastPacketSentTime: Long = -1
     abstract fun sendPacket(packetInfo: PacketInfo)
-    abstract fun sendRtcp(rtcpPacket: RtcpPacket)
     abstract fun sendProbing(mediaSsrc: Long, numBytes: Int): Int
     abstract fun onOutgoingPacket(handler: PacketHandler)
     abstract fun setSrtpTransformers(srtpTransformers: SrtpTransformers)

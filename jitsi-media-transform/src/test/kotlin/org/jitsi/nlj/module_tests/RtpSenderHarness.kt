@@ -44,17 +44,11 @@ fun main(args: Array<String>) {
     }
 
     producer.subscribe { pkt ->
-        val packet = if (pkt.looksLikeRtp()) {
-            RtpPacket(pkt.buffer, pkt.offset, pkt.length)
-        } else {
-            RtcpPacket.parse(pkt.buffer, pkt.offset)
+        val packetInfo = when {
+            pkt.looksLikeRtp() -> PacketInfo(RtpPacket(pkt.buffer, pkt.offset, pkt.length))
+            else -> PacketInfo(RtcpPacket.parse(pkt.buffer, pkt.offset))
         }
-        senders.forEach {
-            when (packet) {
-                is RtpPacket -> it.sendPacket(PacketInfo(packet.clone()))
-                is RtcpPacket -> it.sendRtcp(packet.clone())
-            }
-        }
+        senders.forEach { it.sendPacket(packetInfo.clone()) }
     }
 
     val time = measureTimeMillis {
