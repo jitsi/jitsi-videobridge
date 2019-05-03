@@ -69,7 +69,7 @@ fun main() {
     val receiver = ReceiverFactory.createReceiver(
         executor, backgroundExecutor, pcap.srtpData,
         pcap.payloadTypes, pcap.headerExtensions, pcap.ssrcAssociations,
-        { rtcpPacket -> sender.sendRtcp(rtcpPacket) })
+        { rtcpPacket -> sender.sendPacket(PacketInfo(rtcpPacket)) })
 
     producer.subscribe { pkt ->
         val packetInfo = PacketInfo(pkt)
@@ -85,7 +85,7 @@ fun main() {
 
     receiver.rtcpPacketHandler = object : PacketHandler {
         override fun processPacket(packetInfo: PacketInfo) {
-            sender.sendRtcp(packetInfo.packetAs())
+            sender.sendPacket(packetInfo)
         }
     }
 

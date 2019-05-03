@@ -30,7 +30,6 @@ import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.Logger
 import org.jitsi.utils.MediaType
@@ -100,7 +99,7 @@ class Transceiver(
         RtpReceiverImpl(
             id,
             { rtcpPacket ->
-                rtpSender.sendRtcp(rtcpPacket)
+                rtpSender.sendPacket(PacketInfo(rtcpPacket))
             },
             transportCcEngine,
             rtcpEventNotifier,
@@ -146,12 +145,10 @@ class Transceiver(
      * Send packets to the endpoint this transceiver is associated with by
      * passing them out the sender's outgoing pipeline
      */
-    fun sendRtp(packetInfo: PacketInfo) {
+    fun sendPacket(packetInfo: PacketInfo) {
         packetIOActivity.lastPacketSentTimestampMs = System.currentTimeMillis()
         rtpSender.sendPacket(packetInfo)
     }
-
-    fun sendRtcp(rtcpPacket: RtcpPacket) = rtpSender.sendRtcp(rtcpPacket)
 
     fun sendProbing(mediaSsrc: Long, numBytes: Int): Int = rtpSender.sendProbing(mediaSsrc, numBytes)
 
