@@ -26,7 +26,6 @@ import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.isOlderThan
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -193,7 +192,7 @@ class TccGeneratorNode(
             is RtpExtensionAddedEvent -> {
                 if (event.rtpExtension.type == TRANSPORT_CC) {
                     tccExtensionId = event.rtpExtension.id.toUInt()
-                    logger.cinfo { "TCC generator setting extension ID to $tccExtensionId" }
+                    logger.cdebug { "TCC generator setting extension ID to $tccExtensionId" }
                 }
             }
             is RtpExtensionClearEvent -> tccExtensionId = null

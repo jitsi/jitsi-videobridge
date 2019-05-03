@@ -30,7 +30,6 @@ import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.rtp.extensions.bytearray.toHex
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.Logger
@@ -111,9 +110,6 @@ class Transceiver(
         )
 
     init {
-        logger.cinfo { "Transceiver ${this.hashCode()} using receiver executor ${receiverExecutor.hashCode()} " +
-                "and sender executor ${senderExecutor.hashCode()}" }
-
         rtcpEventNotifier.addRtcpEventListener(endpointConnectionStats)
 
         endpointConnectionStats.addListener(bandwidthEstimator)
@@ -270,9 +266,8 @@ class Transceiver(
     fun setSrtpInformation(chosenSrtpProtectionProfile: Int, tlsRole: TlsRole, keyingMaterial: ByteArray) {
         val srtpProfileInfo =
             SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(chosenSrtpProtectionProfile)
-        logger.cinfo { "Transceiver $id creating transformers with:\n" +
+        logger.cdebug { "Transceiver $id creating transformers with:\n" +
                 "profile info:\n$srtpProfileInfo\n" +
-                "keyingMaterial:\n${keyingMaterial.toHex()}\n" +
                 "tls role: $tlsRole" }
         val srtpTransformers = SrtpUtil.initializeTransformer(
             srtpProfileInfo,
