@@ -65,7 +65,7 @@ public class SRTPCryptoContext
      * The indicator which determines whether protection against replay attacks
      * is to be activated. The default value is <tt>true</tt>.
      */
-    private static boolean checkReplay = true;
+    private static boolean checkReplay = false;
 
     /**
      * The <tt>Logger</tt> used by the <tt>SRTPCryptoContext</tt> class and its
