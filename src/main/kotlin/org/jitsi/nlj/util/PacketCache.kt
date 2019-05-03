@@ -43,7 +43,7 @@ class PacketCache(
         private val defaultConfiguration = Configuration()
 
         init {
-            defaultConfiguration[SIZE_PACKETS] = 500
+            defaultConfiguration[SIZE_PACKETS] = 2500
         }
     }
 
