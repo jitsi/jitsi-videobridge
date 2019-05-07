@@ -149,7 +149,7 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
     fun requestKeyframe(mediaSsrc: Long, now: Long = System.currentTimeMillis()) {
         numApiRequests++
         if (!canSendKeyframeRequest(mediaSsrc, now)) {
-            numApiRequestsDropped
+            numApiRequestsDropped++
             return
         }
     }
@@ -161,7 +161,7 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
                 RtcpFbPliPacketBuilder(mediaSourceSsrc = mediaSsrc).build()
             }
             hasFirSupport -> {
-                numFirsGenerated
+                numFirsGenerated++
                 RtcpFbFirPacketBuilder(
                     mediaSenderSsrc = mediaSsrc,
                     firCommandSeqNum = firCommandSequenceNumber.incrementAndGet()
