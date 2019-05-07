@@ -232,22 +232,13 @@ public class Endpoint
                 TaskPools.SCHEDULED_POOL,
                 diagnosticContext,
                 logger);
-        transceiver.setIncomingRtpHandler(
-                new ConsumerNode("RTP receiver chain handler")
+        transceiver.setIncomingPacketHandler(
+                new ConsumerNode("receiver chain handler")
                 {
                     @Override
                     protected void consume(@NotNull PacketInfo packetInfo)
                     {
-                        handleIncomingRtp(packetInfo);
-                    }
-                });
-        transceiver.setIncomingRtcpHandler(
-                new ConsumerNode("RTCP receiver chain handler")
-                {
-                    @Override
-                    public void consume(@NotNull PacketInfo packetInfo)
-                    {
-                        handleIncomingRtcp(packetInfo);
+                        handleIncomingPacket(packetInfo);
                     }
                 });
         bitrateController = new BitrateController(
@@ -1291,23 +1282,14 @@ public class Endpoint
     }
 
     /**
-     * Handles an incoming RTCP packet (after it has been passed through the
-     * incoming pipeline and parsed, etc.).
-     */
-    private void handleIncomingRtcp(PacketInfo packetInfo)
-    {
-        getConference().handleIncomingRtcp(packetInfo);
-    }
-
-    /**
      * Handle incoming RTP packets which have been fully processed by the
      * transceiver's incoming pipeline.
      * @param packetInfo the packet.
      */
-    protected void handleIncomingRtp(PacketInfo packetInfo)
+    private void handleIncomingPacket(PacketInfo packetInfo)
     {
         packetInfo.setEndpointId(getID());
-        getConference().handleIncomingRtp(packetInfo);
+        getConference().handleIncomingPacket(packetInfo);
     }
 
     /**

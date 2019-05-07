@@ -226,14 +226,9 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      * been parsed and handled by our {@link #transceiver}.
      * @param packetInfo the packet to handle.
      */
-    void handleIncomingRtp(PacketInfo packetInfo)
+    void handleIncomingPacket(PacketInfo packetInfo)
     {
-        conference.handleIncomingRtp(packetInfo);
-    }
-
-    void handleIncomingRtcp(PacketInfo packetInfo)
-    {
-        conference.handleIncomingRtcp(packetInfo);
+        conference.handleIncomingPacket(packetInfo);
     }
 
     /**

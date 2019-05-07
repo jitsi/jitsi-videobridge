@@ -21,6 +21,7 @@ import org.jitsi.nlj.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
+import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging.*;
@@ -1074,22 +1075,6 @@ public class Conference
     }
 
     /**
-     * Handles an RTP packet coming from a specific endpoint. The packet has
-     * already passed through the incoming chain and been parsed. We use
-     * {@code null} for the {@code source} to indicate that the packet comes
-     * from another bridge via Octo.
-     *
-     * @param packetInfo the packet
-     * @param source the source endpoint, or {@code null} to indicate that the
-     * packet comes from another bridge via Octo.
-     *
-     */
-    public void handleIncomingRtp(PacketInfo packetInfo)
-    {
-        sendOut(packetInfo);
-    }
-
-    /**
      * Gets the audio level listener.
      */
     public AudioLevelListener getAudioLevelListener()
@@ -1112,13 +1097,19 @@ public class Conference
 
 
     /**
-     * Handles an RTCP packet coming from a specific endpoint.
+     * Handles an RTP/RTCP packet coming from a specific endpoint.
      * @param packetInfo
      */
-    public void handleIncomingRtcp(PacketInfo packetInfo)
+    public void handleIncomingPacket(PacketInfo packetInfo)
     {
         Packet packet = packetInfo.getPacket();
-        if (packet instanceof RtcpFbPliPacket
+        if (packet instanceof RtpPacket)
+        {
+            // This is identical to the default 'else' below, but it defined
+            // because the vast majority of packet will follow this path.
+            sendOut(packetInfo);
+        }
+        else if (packet instanceof RtcpFbPliPacket
                 || packet instanceof RtcpFbFirPacket)
         {
             RtcpFbPacket rtcpFbPacket = (RtcpFbPacket) packet;
