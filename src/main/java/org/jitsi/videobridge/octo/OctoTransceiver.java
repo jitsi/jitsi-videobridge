@@ -157,33 +157,24 @@ class OctoTransceiver
     {
         // TODO: we need a better scheme for creating these in Java. Luckily
         // the tree for Octo is not very complex.
-        Node rtpTerminationNode = new ConsumerNode("Octo RTP termination node")
+        Node terminationNode = new ConsumerNode("Octo termination node")
         {
             @NotNull
             @Override
             protected void consume(@NotNull PacketInfo packetInfo)
             {
-                tentacle.handleIncomingRtp(packetInfo);
-            }
-        };
-        Node rtcpTerminationNode = new ConsumerNode("Octo RTCP termination node")
-        {
-            @NotNull
-            @Override
-            protected void consume(@NotNull PacketInfo packetInfo)
-            {
-                tentacle.handleIncomingRtcp(packetInfo);
+                tentacle.handleIncomingPacket(packetInfo);
             }
         };
 
         Node videoRoot = new VideoParser();
-        videoRoot.attach(new Vp8Parser()).attach(rtpTerminationNode);
+        videoRoot.attach(new Vp8Parser()).attach(terminationNode);
 
         AudioLevelReader audioLevelReader = new AudioLevelReader();
         audioLevelReader.setAudioLevelListener(tentacle.getAudioLevelListener());
 
         Node audioRoot = audioLevelReader;
-        audioRoot.attach(rtpTerminationNode);
+        audioRoot.attach(terminationNode);
 
         DemuxerNode audioVideoDemuxer
                 = new ExclusivePathDemuxer("Audio/Video")
@@ -201,7 +192,7 @@ class OctoTransceiver
 
         // We currently only have single RTCP packets in Octo.
         Node rtcpRoot = new SingleRtcpParser();
-        rtcpRoot.attach(rtcpTerminationNode);
+        rtcpRoot.attach(terminationNode);
         DemuxerNode root
             = new ExclusivePathDemuxer("RTP/RTCP")
                 .addPacketPath(
