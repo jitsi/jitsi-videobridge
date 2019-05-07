@@ -1223,7 +1223,10 @@ public class BitrateController
     /**
      * Transforms a video RTP packet.
      * @param packetInfo the video rtp packet
-     * @return the transformed video rtp packet and any packets that need to be piggy backed
+     * @return
+     * {@null} to indicate that the given packet is not accepted and should
+     * be dropped. Otherwise, an array of extra packets to be sent, in addition
+     * to the input packet, which was transformed in place.
      */
     public VideoRtpPacket[] transformRtp(@NotNull PacketInfo packetInfo)
     {
@@ -1239,7 +1242,7 @@ public class BitrateController
 
         if (adaptiveTrackProjection == null)
         {
-            return EMPTY_PACKET_ARR;
+            return null;
         }
 
         try
@@ -1260,22 +1263,11 @@ public class BitrateController
                 }
             }
 
-            if (extras.length > 0)
-            {
-                VideoRtpPacket[] allPackets
-                        = new VideoRtpPacket[extras.length + 1];
-                allPackets[0] = videoPacket;
-                System.arraycopy(extras, 0, allPackets, 1, extras.length);
-                return allPackets;
-            }
-            else
-            {
-                return new VideoRtpPacket[] {videoPacket};
-            }
+            return extras;
         }
         catch (RewriteException e)
         {
-            return EMPTY_PACKET_ARR;
+            return null;
         }
     }
 

@@ -473,13 +473,21 @@ public class Endpoint
             // we can't just reassign a transformed packet back into its
             // proper PacketInfo. Need to change those classes to work with
             // the new packet types
-            VideoRtpPacket[] res = bitrateController.transformRtp(packetInfo);
-            for (VideoRtpPacket videoRtpPacket : res)
+            VideoRtpPacket[] extras = bitrateController.transformRtp(packetInfo);
+            if (extras == null)
             {
-                if (videoRtpPacket == null)
-                {
-                    continue;
-                }
+                logger.warn(
+                    "Dropping a packet which was supposed to be accepted:"
+                        + packet);
+                return;
+            }
+
+            // The original packet was transformed in place.
+            // TODO: should we send this *after* the extras?
+            transceiver.sendPacket(packetInfo);
+
+            for (VideoRtpPacket videoRtpPacket : extras)
+            {
                 transceiver.sendPacket(new PacketInfo(videoRtpPacket));
             }
             return;
