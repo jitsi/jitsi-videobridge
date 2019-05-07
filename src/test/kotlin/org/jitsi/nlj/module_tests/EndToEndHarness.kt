@@ -77,13 +77,7 @@ fun main() {
         receiver.enqueuePacket(packetInfo)
     }
 
-    receiver.rtpPacketHandler = object : PacketHandler {
-        override fun processPacket(packetInfo: PacketInfo) {
-            sender.sendPacket(packetInfo)
-        }
-    }
-
-    receiver.rtcpPacketHandler = object : PacketHandler {
+    receiver.packetHandler = object : PacketHandler {
         override fun processPacket(packetInfo: PacketInfo) {
             sender.sendPacket(packetInfo)
         }

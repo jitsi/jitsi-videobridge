@@ -157,8 +157,8 @@ class Transceiver(
      * Set a handler to be invoked when incoming RTP packets have finished
      * being processed.
      */
-    fun setIncomingRtpHandler(rtpHandler: PacketHandler) {
-        rtpReceiver.rtpPacketHandler = rtpHandler
+    fun setIncomingPacketHandler(rtpHandler: PacketHandler) {
+        rtpReceiver.packetHandler = rtpHandler
     }
 
     /**
@@ -167,14 +167,6 @@ class Transceiver(
      */
     fun setOutgoingPacketHandler(outgoingPacketHandler: PacketHandler) {
         rtpSender.onOutgoingPacket(outgoingPacketHandler)
-    }
-
-    /**
-     * Set a handler to be invoked when incoming RTCP packets (which have not
-     * bee terminated) have finished being processed.
-     */
-    fun setIncomingRtcpHandler(rtcpHandler: PacketHandler) {
-        rtpReceiver.rtcpPacketHandler = rtcpHandler
     }
 
     fun addReceiveSsrc(ssrc: Long) {
