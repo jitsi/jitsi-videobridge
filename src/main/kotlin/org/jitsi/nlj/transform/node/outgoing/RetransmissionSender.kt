@@ -56,10 +56,12 @@ class RetransmissionSender : TransformerNode("Retransmission sender") {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
         numRetransmissionsRequested++
         var rtxRetransmission = false
-        val rtxSsrc = associatedSsrcs[rtpPacket.ssrc]
-        if (rtxSsrc != null) {
-            val rtxPt = associatedPayloadTypes[rtpPacket.payloadType.toPositiveInt()]
-            if (rtxPt != null) {
+        val rtxPt = associatedPayloadTypes[rtpPacket.payloadType.toPositiveInt()]
+        // note(george) this instance gets notified about both remote/local ssrcs (see Transeiver.addSsrcAssociation)
+        // so, in the case of firefox, we end up having rtx (associated) ssrcs but no rtx (associated) payload type.
+        if (rtxPt != null) {
+            val rtxSsrc = associatedSsrcs[rtpPacket.ssrc]
+            if (rtxSsrc != null) {
                 // Get a default value of 1 to start if it isn't present in the map.  If it is present
                 // in the map, get the value and increment it by 1
                 val rtxSeqNum = rtxStreamSeqNums.merge(rtxSsrc, 1, Integer::sum)!!
