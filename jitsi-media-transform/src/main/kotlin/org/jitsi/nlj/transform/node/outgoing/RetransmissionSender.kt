@@ -27,6 +27,7 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
+import org.jitsi.nlj.util.cwarn
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpPacket
 import unsigned.toUInt
@@ -48,39 +49,48 @@ class RetransmissionSender : TransformerNode("Retransmission sender") {
     private val rtxStreamSeqNums: MutableMap<Long, Int> = mutableMapOf()
 
     private var numRetransmissionsRequested = 0
-    private var numRetransmittedPackets = 0
+    private var numRetransmittedRtxPackets = 0
+    private var numRetransmittedPlainPackets = 0
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        logger.cdebug { "${hashCode()} retransmitting packet with original ssrc " +
-                "${rtpPacket.ssrc}, original sequence number ${rtpPacket.sequenceNumber} and original " +
-                "payload type: ${rtpPacket.payloadType}" }
         numRetransmissionsRequested++
-        val rtxSsrc = associatedSsrcs[rtpPacket.ssrc] ?: run {
-            logger.cerror { "${hashCode()} could not find an associated RTX ssrc for original packet ssrc " +
-                    rtpPacket.ssrc }
-            packetDiscarded(packetInfo)
-            return null
+        var rtxRetransmission = false
+        val rtxSsrc = associatedSsrcs[rtpPacket.ssrc]
+        if (rtxSsrc != null) {
+            val rtxPt = associatedPayloadTypes[rtpPacket.payloadType.toPositiveInt()]
+            if (rtxPt != null) {
+                // Get a default value of 1 to start if it isn't present in the map.  If it is present
+                // in the map, get the value and increment it by 1
+                val rtxSeqNum = rtxStreamSeqNums.merge(rtxSsrc, 1, Integer::sum)!!
+
+                RtxPacket.addOriginalSequenceNumber(rtpPacket)
+
+                rtpPacket.ssrc = rtxSsrc
+                rtpPacket.payloadType = rtxPt
+                rtpPacket.sequenceNumber = rtxSeqNum
+                logger.cdebug { "${hashCode()} sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum " +
+                        "$rtxSeqNum with original ssrc ${rtpPacket.ssrc}, original sequence number " +
+                        "${rtpPacket.sequenceNumber} and original payload type: ${rtpPacket.payloadType}" }
+                packetInfo.resetPayloadVerification()
+                numRetransmittedRtxPackets++
+                rtxRetransmission = true
+            } else {
+                logger.cwarn {
+                    "${hashCode()} could not find an associated RTX payload type for original payload type " +
+                            rtpPacket.payloadType
+                }
+            }
         }
-        val rtxPt = associatedPayloadTypes[rtpPacket.payloadType.toPositiveInt()] ?: run {
-            logger.cerror { "${hashCode()} could not find an associated RTX payload type for original payload type " +
-                    rtpPacket.payloadType }
-            packetDiscarded(packetInfo)
-            return null
+
+        if (!rtxRetransmission) {
+            logger.cdebug { "${hashCode()} plain retransmission packet with original ssrc " +
+                    "${rtpPacket.ssrc}, original sequence number ${rtpPacket.sequenceNumber} and original " +
+                    "payload type: ${rtpPacket.payloadType}" }
+
+            numRetransmittedPlainPackets++
         }
-        // Get a default value of 1 to start if it isn't present in the map.  If it is present
-        // in the map, get the value and increment it by 1
-        val rtxSeqNum = rtxStreamSeqNums.merge(rtxSsrc, 1, Integer::sum)!!
 
-        RtxPacket.addOriginalSequenceNumber(rtpPacket)
-
-        rtpPacket.ssrc = rtxSsrc
-        rtpPacket.payloadType = rtxPt
-        rtpPacket.sequenceNumber = rtxSeqNum
-        logger.cdebug { "${hashCode()} sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum $rtxSeqNum" }
-
-        numRetransmittedPackets++
-        packetInfo.resetPayloadVerification()
         return packetInfo
     }
 
@@ -116,7 +126,8 @@ class RetransmissionSender : TransformerNode("Retransmission sender") {
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
             addNumber("num_retransmissions_requested", numRetransmissionsRequested)
-            addNumber("num_retransmissions_sent", numRetransmittedPackets)
+            addNumber("num_retransmissions_rtx_sent", numRetransmittedRtxPackets)
+            addNumber("num_retransmissions_plain_sent", numRetransmittedPlainPackets)
         }
     }
 }
