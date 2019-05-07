@@ -27,7 +27,6 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
-import org.jitsi.nlj.util.cwarn
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpPacket
 import unsigned.toUInt
@@ -71,17 +70,14 @@ class RetransmissionSender : TransformerNode("Retransmission sender") {
                 rtpPacket.ssrc = rtxSsrc
                 rtpPacket.payloadType = rtxPt
                 rtpPacket.sequenceNumber = rtxSeqNum
-                logger.cdebug { "${hashCode()} sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum " +
-                        "$rtxSeqNum with original ssrc ${rtpPacket.ssrc}, original sequence number " +
-                        "${rtpPacket.sequenceNumber} and original payload type: ${rtpPacket.payloadType}" }
+                logger.cdebug {
+                    "${hashCode()} sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum " +
+                            "$rtxSeqNum with original ssrc ${rtpPacket.ssrc}, original sequence number " +
+                            "${rtpPacket.sequenceNumber} and original payload type: ${rtpPacket.payloadType}"
+                }
                 packetInfo.resetPayloadVerification()
                 numRetransmittedRtxPackets++
                 rtxRetransmission = true
-            } else {
-                logger.cwarn {
-                    "${hashCode()} could not find an associated RTX payload type for original payload type " +
-                            rtpPacket.payloadType
-                }
             }
         }
 
