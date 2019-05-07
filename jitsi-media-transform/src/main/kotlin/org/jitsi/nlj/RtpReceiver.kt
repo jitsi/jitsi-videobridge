@@ -22,19 +22,11 @@ import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 abstract class RtpReceiver :
     PacketHandler, EventHandler, NodeStatsProducer, Stoppable {
     /**
-     * The handler which will be invoked for each RTP packet received
+     * The handler which will be invoked for each RTP/RTCP packet received
      * by this receiver (after it has gone through the receiver's
      * input chain).
      */
-    abstract var rtpPacketHandler: PacketHandler?
-    /**
-     * The handler which will be invoked for each RTCP packet received
-     * by this receiver (after it has gone through the receiver's
-     * input chain).  Most RTCP is terminated, however some messages
-     * (like PLI & FIR) will be forwarded through so they can be
-     * routed to their intended receipient.
-     */
-    abstract var rtcpPacketHandler: PacketHandler?
+    abstract var packetHandler: PacketHandler?
     /**
      * Enqueue an incoming packet to be processed
      */
