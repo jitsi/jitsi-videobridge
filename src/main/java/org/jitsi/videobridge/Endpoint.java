@@ -474,59 +474,42 @@ public class Endpoint
     public void send(PacketInfo packetInfo)
     {
         Packet packet = packetInfo.getPacket();
-        if (packet instanceof RtpPacket)
+        if (packet instanceof VideoRtpPacket)
         {
-            if (packet instanceof VideoRtpPacket)
+            //TODO(brian): we lose all information in PacketInfo here,
+            // unfortunately, because the BitrateController can return more
+            // than/less than what was passed in (and in different order) so
+            // we can't just reassign a transformed packet back into its
+            // proper PacketInfo. Need to change those classes to work with
+            // the new packet types
+            VideoRtpPacket[] res = bitrateController.transformRtp(packetInfo);
+            for (VideoRtpPacket videoRtpPacket : res)
             {
-                //TODO(brian): we lose all information in PacketInfo here,
-                // unfortunately, because the BitrateController can return more
-                // than/less than what was passed in (and in different order) so
-                // we can't just reassign a transformed packet back into its
-                // proper PacketInfo. Need to change those classes to work with
-                // the new packet types
-                VideoRtpPacket[] res = bitrateController.transformRtp(packetInfo);
-                for (VideoRtpPacket videoRtpPacket : res)
+                if (videoRtpPacket == null)
                 {
-                    if (videoRtpPacket == null)
-                    {
-                        continue;
-                    }
-                    transceiver.sendRtp(new PacketInfo(videoRtpPacket));
+                    continue;
                 }
+                transceiver.sendPacket(new PacketInfo(videoRtpPacket));
             }
-            else
+            return;
+        }
+        else if (packet instanceof RtcpSrPacket)
+        {
+            // Allow the BC to update the timestamp (in place).
+            RtcpSrPacket rtcpSrPacket = (RtcpSrPacket) packet;
+            bitrateController.transformRtcp(rtcpSrPacket);
+
+            if (logger.isDebugEnabled())
             {
-                // By default just add it to the sender's queue
-                transceiver.sendRtp(packetInfo);
+                logger.debug(
+                    "relaying an sr from ssrc="
+                        + rtcpSrPacket.getSenderSsrc()
+                        + ", timestamp="
+                        + rtcpSrPacket.getSenderInfo().getRtpTimestamp());
             }
         }
-        else if (packet instanceof RtcpPacket)
-        {
-            RtcpPacket rtcpPacket;
-            if (packet instanceof RtcpSrPacket)
-            {
-                RtcpSrPacket rtcpSrPacket = (RtcpSrPacket) packet;
-                // Allow the BC to update the timestamp.
-                bitrateController.transformRtcp(rtcpSrPacket);
 
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug(
-                        "relaying an sr from ssrc="
-                            + rtcpSrPacket.getSenderSsrc()
-                            + ", timestamp="
-                            + rtcpSrPacket.getSenderInfo().getRtpTimestamp());
-                }
-
-                rtcpPacket = rtcpSrPacket;
-            }
-            else
-            {
-                rtcpPacket = (RtcpPacket) packet;
-            }
-
-            transceiver.sendRtcp(rtcpPacket);
-        }
+        transceiver.sendPacket(packetInfo);
     }
 
     /**
