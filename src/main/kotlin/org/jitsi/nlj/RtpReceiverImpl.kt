@@ -111,39 +111,16 @@ class RtpReceiverImpl @JvmOverloads constructor(
      * it through the entire receive pipeline.  Some external entity should
      * assign it to a [PacketHandler] with appropriate logic.
      */
-    override var rtpPacketHandler: PacketHandler? = null
-    /**
-     * [rtcpPacketHandler] will be invoked with RTCP packets that were not
-     * terminated and should be further routed (e.g. RTCPFB packets).
-     * Some external entity should assign it to a [PacketHandler] with appropriate logic.
-     */
-    override var rtcpPacketHandler: PacketHandler? = null
+    override var packetHandler: PacketHandler? = null
 
     /**
      * The [rtpPacketHandler] can be re-assigned at any time, but it should maintain
      * its place in the receive pipeline.  To support both keeping it in the same
      * place and allowing it to be re-assigned, we wrap it with this.
      */
-    private val rtpPacketHandlerWrapper = object : ConsumerNode("RTP packet handler wrapper") {
+    private val packetHandlerWrapper = object : ConsumerNode("Packet handler wrapper") {
         override fun consume(packetInfo: PacketInfo) {
-            rtpPacketHandler?. let {
-                it.processPacket(packetInfo)
-            } ?: let {
-                // While there's no handler set we're effectively dropping packets, so their buffers
-                // should be returned.
-                packetDiscarded(packetInfo)
-            }
-        }
-    }
-
-    /**
-     * The [rtcpPacketHandler] can be re-assigned at any time, but it should maintain
-     * its place in the receive pipeline.  To support both keeping it in the same
-     * place and allowing it to be re-assigned, we wrap it with this.
-     */
-    private val rtcpPacketHandlerWrapper = object : ConsumerNode("RTCP packet handler wrapper") {
-        override fun consume(packetInfo: PacketInfo) {
-            rtcpPacketHandler?. let {
+            packetHandler?. let {
                 it.processPacket(packetInfo)
             } ?: let {
                 // While there's no handler set we're effectively dropping packets, so their buffers
@@ -196,7 +173,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 predicate = PacketPredicate { it is AudioRtpPacket }
                                 path = pipeline {
                                     node(silenceDiscarder.rtpNode)
-                                    node(rtpPacketHandlerWrapper)
+                                    node(packetHandlerWrapper)
                                 }
                             }
                             packetPath {
@@ -209,7 +186,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                     node(Vp8Parser())
                                     node(VideoBitrateCalculator())
                                     node(RetransmissionRequesterNode(rtcpSender, backgroundExecutor))
-                                    node(rtpPacketHandlerWrapper)
+                                    node(packetHandlerWrapper)
                                 }
                             }
                         }
@@ -223,7 +200,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(CompoundRtcpParser())
                         node(silenceDiscarder.rtcpNode)
                         node(rtcpTermination)
-                        node(rtcpPacketHandlerWrapper)
+                        node(packetHandlerWrapper)
                     }
                 }
             }

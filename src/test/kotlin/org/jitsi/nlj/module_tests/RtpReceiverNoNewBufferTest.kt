@@ -59,13 +59,7 @@ fun main() {
         }
     }
 
-    receiver.rtpPacketHandler = object : PacketHandler {
-        override fun processPacket(packetInfo: PacketInfo) {
-            verifyArray(System.identityHashCode(packetInfo.packet.buffer))
-        }
-    }
-
-    receiver.rtcpPacketHandler = object : PacketHandler {
+    receiver.packetHandler = object : PacketHandler {
         override fun processPacket(packetInfo: PacketInfo) {
             verifyArray(System.identityHashCode(packetInfo.packet.buffer))
         }
