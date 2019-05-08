@@ -57,14 +57,14 @@ import java.util.concurrent.ScheduledExecutorService
  */
 class Transceiver(
     private val id: String,
-    private val receiverExecutor: ExecutorService,
-    private val senderExecutor: ExecutorService,
+    receiverExecutor: ExecutorService,
+    senderExecutor: ExecutorService,
     /**
      * A [ScheduledExecutorService] which can be used for less important
      * background tasks, or tasks that need to execute at some fixed delay/rate
      */
-    private val backgroundExecutor: ScheduledExecutorService,
-    private val diagnosticContext: DiagnosticContext,
+    backgroundExecutor: ScheduledExecutorService,
+    diagnosticContext: DiagnosticContext,
     logLevelDelegate: Logger? = null
 ) : Stoppable, NodeStatsProducer, RemoteBitrateObserver {
     private val logger = getLogger(this.javaClass, logLevelDelegate)
