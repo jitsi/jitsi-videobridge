@@ -54,41 +54,43 @@ class RetransmissionSender : TransformerNode("Retransmission sender") {
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
         numRetransmissionsRequested++
-        var rtxRetransmission = false
-        val rtxPt = associatedPayloadTypes[rtpPacket.payloadType.toPositiveInt()]
         // note(george) this instance gets notified about both remote/local ssrcs (see Transeiver.addSsrcAssociation)
         // so, in the case of firefox, we end up having rtx (associated) ssrcs but no rtx (associated) payload type.
-        if (rtxPt != null) {
-            val rtxSsrc = associatedSsrcs[rtpPacket.ssrc]
-            if (rtxSsrc != null) {
-                // Get a default value of 1 to start if it isn't present in the map.  If it is present
-                // in the map, get the value and increment it by 1
-                val rtxSeqNum = rtxStreamSeqNums.merge(rtxSsrc, 1, Integer::sum)!!
+        val rtxPt = associatedPayloadTypes[rtpPacket.payloadType.toPositiveInt()] ?: return retransmitPlain(packetInfo)
+        val rtxSsrc = associatedSsrcs[rtpPacket.ssrc] ?: return retransmitPlain(packetInfo)
 
-                RtxPacket.addOriginalSequenceNumber(rtpPacket)
+        return retransmitRtx(packetInfo, rtxPt, rtxSsrc)
+    }
 
-                rtpPacket.ssrc = rtxSsrc
-                rtpPacket.payloadType = rtxPt
-                rtpPacket.sequenceNumber = rtxSeqNum
-                logger.cdebug {
-                    "${hashCode()} sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum " +
-                            "$rtxSeqNum with original ssrc ${rtpPacket.ssrc}, original sequence number " +
-                            "${rtpPacket.sequenceNumber} and original payload type: ${rtpPacket.payloadType}"
-                }
-                packetInfo.resetPayloadVerification()
-                numRetransmittedRtxPackets++
-                rtxRetransmission = true
-            }
+    private fun retransmitRtx(packetInfo: PacketInfo, rtxPt: Int, rtxSsrc: Long): PacketInfo {
+        // Get a default value of 1 to start if it isn't present in the map.  If it is present
+        // in the map, get the value and increment it by 1
+        val rtxSeqNum = rtxStreamSeqNums.merge(rtxSsrc, 1, Integer::sum)!!
+        val rtpPacket = packetInfo.packetAs<RtpPacket>()
+        logger.cdebug {
+            "${hashCode()} sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum " +
+                    "$rtxSeqNum with original ssrc ${rtpPacket.ssrc}, original sequence number " +
+                    "${rtpPacket.sequenceNumber} and original payload type: ${rtpPacket.payloadType}"
         }
+        RtxPacket.addOriginalSequenceNumber(rtpPacket)
+        rtpPacket.ssrc = rtxSsrc
+        rtpPacket.payloadType = rtxPt
+        rtpPacket.sequenceNumber = rtxSeqNum
 
-        if (!rtxRetransmission) {
-            logger.cdebug { "${hashCode()} plain retransmission packet with original ssrc " +
-                    "${rtpPacket.ssrc}, original sequence number ${rtpPacket.sequenceNumber} and original " +
-                    "payload type: ${rtpPacket.payloadType}" }
+        packetInfo.resetPayloadVerification()
+        numRetransmittedRtxPackets++
 
-            numRetransmittedPlainPackets++
-        }
+        return packetInfo
+    }
 
+    private fun retransmitPlain(packetInfo: PacketInfo): PacketInfo {
+        val rtpPacket = packetInfo.packetAs<RtpPacket>()
+        logger.cdebug { "${hashCode()} plain retransmission packet with original ssrc " +
+                "${rtpPacket.ssrc}, original sequence number ${rtpPacket.sequenceNumber} and original " +
+                "payload type: ${rtpPacket.payloadType}" }
+
+        numRetransmittedPlainPackets++
+        // No work needed
         return packetInfo
     }
 
