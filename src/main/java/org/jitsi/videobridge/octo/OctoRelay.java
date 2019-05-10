@@ -19,6 +19,7 @@ import org.ice4j.socket.*;
 import org.jitsi.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
+import org.jitsi.utils.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 
@@ -97,6 +98,16 @@ public class OctoRelay
      * Packets dropped (failure to parse, or wrong conference ID).
      */
     private AtomicLong packetsDropped = new AtomicLong();
+
+    /**
+     * The average send bitrate in the last 1 second.
+     */
+    private RateStatistics sendBitrate = new RateStatistics(1000);
+
+    /**
+     * The average receive bitrate in the last 1 second.
+     */
+    private RateStatistics receiveBitrate = new RateStatistics(1000);
 
     /**
      * Maps a conference ID (as contained in Octo packets) to a packet handler.
@@ -199,6 +210,7 @@ public class OctoRelay
     {
         bytesReceived.addAndGet(len);
         packetsReceived.incrementAndGet();
+        receiveBitrate.update(len, System.currentTimeMillis());
 
         String conferenceId = OctoPacket.readConferenceId(buf, off, len);
         if (conferenceId == null)
@@ -336,7 +348,7 @@ public class OctoRelay
             String endpointId,
             MediaType mediaType)
     {
-        int lenNeeded = len + OCTO_HEADER_LENGTH;
+        int octoPacketLength = len + OCTO_HEADER_LENGTH;
         byte[] newBuf;
         int newOff;
 
@@ -345,7 +357,7 @@ public class OctoRelay
             newOff = off - OCTO_HEADER_LENGTH;
             newBuf = buf;
         }
-        else if (buf.length >= lenNeeded)
+        else if (buf.length >= octoPacketLength)
         {
             System.arraycopy(buf, off, buf, OCTO_HEADER_LENGTH, len);
             newOff = 0;
@@ -353,7 +365,7 @@ public class OctoRelay
         }
         else
         {
-            newBuf = ByteBufferPool.getBuffer(lenNeeded);
+            newBuf = ByteBufferPool.getBuffer(octoPacketLength);
             newOff = 0;
             System.arraycopy(buf, off, newBuf, OCTO_HEADER_LENGTH, len);
         }
@@ -366,15 +378,16 @@ public class OctoRelay
                 conferenceId,
                 endpointId);
         DatagramPacket datagramPacket
-                = new DatagramPacket(newBuf, newOff, lenNeeded);
+                = new DatagramPacket(newBuf, newOff, octoPacketLength);
 
         for (SocketAddress target : targets)
         {
             datagramPacket.setSocketAddress(target);
             try
             {
-                bytesSent.addAndGet(datagramPacket.getLength());
+                bytesSent.addAndGet(octoPacketLength);
                 packetsSent.incrementAndGet();
+                sendBitrate.update(octoPacketLength, System.currentTimeMillis());
                 socket.send(datagramPacket);
             }
             catch (IOException ioe)
@@ -468,6 +481,22 @@ public class OctoRelay
     public long getPacketsDropped()
     {
         return packetsDropped.get();
+    }
+
+    /**
+     * @return the send bitrate in bits per second
+     */
+    public long getSendBitrate()
+    {
+        return sendBitrate.getRate();
+    }
+
+    /**
+     * @return the receive bitrate in bits per second
+     */
+    public long getReceiveBitrate()
+    {
+        return receiveBitrate.getRate();
     }
 
     /**

@@ -329,6 +329,16 @@ public class VideobridgeStatistics
         = "total_packets_dropped_octo";
 
     /**
+     * The name of the stat for the Octo send bitrate in Kbps.
+     */
+    private static final String OCTO_SEND_BITRATE = "octo_send_bitrate";
+
+    /**
+     * The name of the stat for the Octo receive bitrate in Kbps.
+     */
+    private static final String OCTO_RECEIVE_BITRATE = "octo_receive_bitrate";
+
+    /**
      * The name of used memory statistic. Its runtime type is {@code Integer}.
      */
     public static final String USED_MEMORY = "used_memory";
@@ -757,6 +767,14 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     TOTAL_PACKETS_DROPPED_OCTO,
                     octoRelay == null ? 0 : octoRelay.getPacketsDropped());
+            unlockedSetStat(
+                    OCTO_RECEIVE_BITRATE,
+                    octoRelay == null
+                            ? 0 : (octoRelay.getReceiveBitrate() + 500) / 1000);
+            unlockedSetStat(
+                    OCTO_SEND_BITRATE,
+                    octoRelay == null
+                            ? 0 : (octoRelay.getSendBitrate() + 500) / 1000);
 
             unlockedSetStat(TIMESTAMP, timestamp);
             if (octoRelay != null)
