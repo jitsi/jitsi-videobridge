@@ -34,6 +34,8 @@ import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.logging.TimeSeriesLogger
 import java.util.Random
 
 /**
@@ -46,9 +48,11 @@ import java.util.Random
 class ProbingDataSender(
     private val packetCache: PacketCache,
     private val rtxDataSender: PacketHandler,
-    private val garbageDataSender: PacketHandler
+    private val garbageDataSender: PacketHandler,
+    private val diagnosticContext: DiagnosticContext
 ) : EventHandler, NodeStatsProducer {
 
+    private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(this.javaClass)
     private val logger = getLogger(this.javaClass)
 
     private var rtxSupported = false
@@ -66,13 +70,21 @@ class ProbingDataSender(
             val rtxBytesSent = sendRedundantDataOverRtx(mediaSsrc, numBytes)
             numProbingBytesSentRtx += rtxBytesSent
             totalBytesSent += rtxBytesSent
-            logger.cdebug { "Sent $rtxBytesSent bytes of probing data over RTX" }
+            if (timeSeriesLogger.isTraceEnabled()) {
+                timeSeriesLogger.trace(diagnosticContext
+                        .makeTimeSeriesPoint("rtx_probing_bytes")
+                        .addField("bytes", rtxBytesSent))
+            }
         }
         if (totalBytesSent < numBytes) {
             val dummyBytesSent = sendDummyData(numBytes - totalBytesSent)
             numProbingBytesSentDummyData += dummyBytesSent
             totalBytesSent += dummyBytesSent
-            logger.cdebug { "Sent $dummyBytesSent bytes of probing data sent as dummy data" }
+            if (timeSeriesLogger.isTraceEnabled()) {
+                timeSeriesLogger.trace(diagnosticContext
+                        .makeTimeSeriesPoint("dummy_probing_bytes")
+                        .addField("bytes", dummyBytesSent))
+            }
         }
 
         return totalBytesSent
