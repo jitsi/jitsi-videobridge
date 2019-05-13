@@ -318,11 +318,15 @@ public class BitrateController
 
     private final DiagnosticContext diagnosticContext;
 
-    //TODO(brian): throwing this here temporarily because it's needed and it
-    // used to be pulled from the Stream. This was really an approximation for
-    // determining whether or not adaptivity/probing is supported, so we should
-    // just detect that and set something appropriately in BitrateController
-    private final boolean supportsRtx = true;
+    // NOTE(george): this flag acts as an approximation for determining whether
+    // or not adaptivity/probing is supported. Eventually we need to scrap this
+    // and implement something cleaner, i.e. disable adaptivity if the endpoint
+    // hasn't signaled `goog-remb` nor `transport-cc`.
+    //
+    // Unfortunately the channel iq from jicofo lists `goog-remb` and
+    // `transport-cc` support, even tho the jingle from firefox doesn't (which
+    // is the main use case for wanting to disable adaptivity).
+    private boolean supportsRtx = false;
 
     private final Map<Byte, PayloadType> payloadTypes = new HashMap<>();
 
@@ -1163,6 +1167,14 @@ public class BitrateController
             this.pinnedEndpointIds = new HashSet<>(pinnedEndpointIds);
             update();
         }
+    }
+
+    /**
+     * @param supportsRtx true if the endpoint supports RTX, otherwise false.
+     */
+    public void setSupportsRtx(boolean supportsRtx)
+    {
+        this.supportsRtx = supportsRtx;
     }
 
     /**
