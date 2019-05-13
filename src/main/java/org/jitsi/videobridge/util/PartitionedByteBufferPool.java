@@ -260,7 +260,7 @@ class PartitionedByteBufferPool
             byte[] buf = pool.poll();
             if (buf == null)
             {
-                buf = new byte[DEFAULT_BUFFER_SIZE];
+                buf = new byte[Math.max(DEFAULT_BUFFER_SIZE, requiredSize)];
                 if (enableStatistics)
                 {
                     numEmptyPoolAllocations.incrementAndGet();
@@ -291,7 +291,7 @@ class PartitionedByteBufferPool
                     numSmallBuffersDiscarded.incrementAndGet();
                 }
 
-                buf = new byte[Math.min(DEFAULT_BUFFER_SIZE, requiredSize)];
+                buf = new byte[Math.max(DEFAULT_BUFFER_SIZE, requiredSize)];
                 if (enableStatistics)
                 {
                     numWrongSizeAllocations.incrementAndGet();
