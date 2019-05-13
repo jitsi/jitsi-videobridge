@@ -218,12 +218,12 @@ class DtlsStack(
         private var certificateInfo: CertificateInfo = DtlsUtils.generateCertificateInfo()
         private val syncRoot: Any = Any()
         fun getCertificateInfo(): CertificateInfo {
-            synchronized(DtlsStack.syncRoot) {
+            synchronized(syncRoot) {
                 val expirationPeriodMs = Duration.ofDays(1).toMillis()
-                if (DtlsStack.certificateInfo.creationTimestampMs + expirationPeriodMs < System.currentTimeMillis()) {
-                    DtlsStack.certificateInfo = DtlsUtils.generateCertificateInfo()
+                if (certificateInfo.creationTimestampMs + expirationPeriodMs < System.currentTimeMillis()) {
+                    certificateInfo = DtlsUtils.generateCertificateInfo()
                 }
-                return DtlsStack.certificateInfo
+                return certificateInfo
             }
         }
     }
