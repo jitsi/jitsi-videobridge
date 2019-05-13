@@ -28,6 +28,7 @@ import org.jitsi.nlj.util.getLogger
 class DtlsServer(
     id: String,
     private val datagramTransport: DatagramTransport,
+    certificateInfo: CertificateInfo,
     private val handshakeCompleteHandler: (Int, TlsRole, ByteArray) -> Unit = { _, _, _ -> },
     verifyAndValidateRemoteCertificate: (Certificate?) -> Unit = {},
     private val dtlsServerProtocol: DTLSServerProtocol = DTLSServerProtocol()
@@ -35,7 +36,7 @@ class DtlsServer(
     private val logger = getLogger(this.javaClass)
     private val logPrefix = "[$id]"
 
-    private val tlsServer: TlsServerImpl = TlsServerImpl(verifyAndValidateRemoteCertificate)
+    private val tlsServer: TlsServerImpl = TlsServerImpl(certificateInfo, verifyAndValidateRemoteCertificate)
 
     override fun start(): DTLSTransport = accept()
 

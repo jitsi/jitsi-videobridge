@@ -48,6 +48,7 @@ import java.util.Hashtable
 import java.util.Vector
 
 class TlsServerImpl(
+    private val certificateInfo: CertificateInfo,
     /**
      * The function to call when the client certificateInfo is available.
      */
@@ -57,8 +58,6 @@ class TlsServerImpl(
     private val logger = getLogger(this.javaClass)
 
     private var session: TlsSession? = null
-
-    private val certificateInfo = DtlsStack.getCertificateInfo()
 
     /**
      * Only set after a handshake has completed
