@@ -28,8 +28,6 @@ class Vp8Packet(
     offset: Int,
     length: Int
 ) : VideoRtpPacket(data, offset, length) {
-    private val logger = getLogger(this.javaClass)
-
     var TL0PICIDX: Int
             get() = DePacketizer.VP8PayloadDescriptor.getTL0PICIDX(buffer, payloadOffset, payloadLength)
             set(value) {
@@ -85,5 +83,9 @@ class Vp8Packet(
         clone.temporalLayerIndex = temporalLayerIndex
 
         return clone
+    }
+
+    companion object {
+        private val logger = getLogger(this.javaClass)
     }
 }
