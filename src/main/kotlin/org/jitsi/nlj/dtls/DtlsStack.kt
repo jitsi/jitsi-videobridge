@@ -71,7 +71,13 @@ class DtlsStack(
      * The certificate info for this particular [DtlsStack] instance. We save it in a local val because the global one
      * might be refreshed.
      */
-    val certificateInfo = DtlsStack.certificateInfo
+    private val certificateInfo = DtlsStack.certificateInfo
+
+    val localFingerprintHashFunction: String
+        get() = certificateInfo.localFingerprintHashFunction
+
+    val localFingerprint: String
+        get() = certificateInfo.localFingerprint
 
     /**
      * The remote fingerprints sent to us over the signaling path.
