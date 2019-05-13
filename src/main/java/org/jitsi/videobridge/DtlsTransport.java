@@ -342,8 +342,6 @@ public class DtlsTransport extends IceTransport
                 try
                 {
                     socket.receive(p);
-//                    bbuf.limit(p.getLength());
-//                    Packet pkt = new UnparsedPacket(bbuf);
                     Packet pkt = new UnparsedPacket(bbuf, 0, p.getLength());
                     PacketInfo pktInfo = new PacketInfo(pkt);
                     pktInfo.setReceivedTime(System.currentTimeMillis());
@@ -382,7 +380,6 @@ public class DtlsTransport extends IceTransport
         TaskPools.IO_POOL.submit(() -> {
             try
             {
-                logger.info(logPrefix + "Calling dtlsStack.start()");
                 dtlsStack.start();
             }
             catch (Throwable e)
