@@ -846,21 +846,7 @@ public class BitrateController
             for (RTPEncodingDesc rtpEncoding : rtpEncodings)
             {
                 adaptiveTrackProjectionMap.put(
-                    rtpEncoding.getPrimarySSRC(),
-                    adaptiveTrackProjection);
-
-                // TODO: RTX packets should never reach here (they get de-RTXed
-                // in the receiver chain). Do we still need this mapping?
-                // Perhaps we need it in order to block SR for the RTX streams?
-                long rtxSsrc
-                    = rtpEncoding.getSecondarySsrc(SsrcAssociationType.RTX);
-
-                if (rtxSsrc != -1)
-                {
-                    adaptiveTrackProjectionMap.put(
-                        rtxSsrc, adaptiveTrackProjection);
-                }
-
+                    rtpEncoding.getPrimarySSRC(), adaptiveTrackProjection);
             }
 
             return adaptiveTrackProjection;
