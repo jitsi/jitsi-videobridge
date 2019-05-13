@@ -496,7 +496,18 @@ public class Endpoint
         {
             // Allow the BC to update the timestamp (in place).
             RtcpSrPacket rtcpSrPacket = (RtcpSrPacket) packet;
-            bitrateController.transformRtcp(rtcpSrPacket);
+            if (!bitrateController.transformRtcp(rtcpSrPacket))
+            {
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug(
+                        "dropping an sr from ssrc="
+                            + rtcpSrPacket.getSenderSsrc()
+                            + ", timestamp="
+                            + rtcpSrPacket.getSenderInfo().getRtpTimestamp());
+                }
+                return;
+            }
 
             if (logger.isDebugEnabled())
             {
