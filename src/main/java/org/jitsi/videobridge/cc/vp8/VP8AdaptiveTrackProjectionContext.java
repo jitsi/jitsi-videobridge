@@ -24,7 +24,6 @@ import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
-import org.jitsi.utils.*;
 import org.jitsi.utils.LRUCache;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.cc.*;

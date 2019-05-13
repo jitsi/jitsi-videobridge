@@ -335,8 +335,9 @@ class EndpointMessageTransport
      * last one to have received data will be returned. Otherwise, {@code null}
      * will be returned.
      */
-    //TODO(brian): seems like it'd be nice to have the websocket and datachannel share a common parent class (or, at
-    // least, have a class that is returned here and provides a common API but can wrap either a websocket or
+    //TODO(brian): seems like it'd be nice to have the websocket and datachannel
+    // share a common parent class (or, at least, have a class that is returned
+    // here and provides a common API but can wrap either a websocket or
     // datachannel)
     private Object getActiveTransportChannel()
     {
@@ -356,11 +357,6 @@ class EndpointMessageTransport
             if (dataChannel != null && dataChannel.isReady())
             {
                 dst = dataChannel;
-            }
-            else
-            {
-                logger.info(endpoint.logPrefix +
-                    "SCTP connection not ready yet.");
             }
         }
 
