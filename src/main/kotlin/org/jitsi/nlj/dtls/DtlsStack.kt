@@ -21,6 +21,8 @@ import org.bouncycastle.tls.DatagramTransport
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.protocol.ProtocolStack
 import org.jitsi.nlj.srtp.TlsRole
+import org.jitsi.nlj.stats.NodeStatsBlock
+import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
@@ -60,7 +62,7 @@ import java.util.concurrent.TimeUnit
  */
 class DtlsStack(
     val id: String
-) : ProtocolStack, DatagramTransport {
+) : ProtocolStack, DatagramTransport, NodeStatsProducer {
     private val logger = getLogger(this.javaClass)
     private val logPrefix = "[$id]"
     private val roleSet = CompletableFuture<Unit>()
@@ -207,6 +209,16 @@ class DtlsStack(
     override fun send(buf: ByteArray, off: Int, length: Int) {
         val packet = PacketInfo(UnparsedPacket(buf, off, length))
         onOutgoingProtocolData(listOf(packet))
+    }
+
+    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("DtlsStack").apply {
+        addBlock(NodeStatsBlock("localFingerprint").apply {
+            addString(certificateInfo.localFingerprintHashFunction, certificateInfo.localFingerprint)
+        })
+        addBlock(NodeStatsBlock("remoteFingerprints").apply {
+            remoteFingerprints.forEach { (hash, fp) -> addString(hash, fp) }
+        })
+        addString("role", (role?.javaClass ?: "null").toString())
     }
 
     companion object {
