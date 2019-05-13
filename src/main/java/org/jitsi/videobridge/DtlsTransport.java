@@ -212,8 +212,8 @@ public class DtlsTransport extends IceTransport
             fingerprintPE = new DtlsFingerprintPacketExtension();
             pe.addChildExtension(fingerprintPE);
         }
-        fingerprintPE.setFingerprint(dtlsStack.getCertificateInfo().getLocalFingerprint());
-        fingerprintPE.setHash(dtlsStack.getCertificateInfo().getLocalFingerprintHashFunction());
+        fingerprintPE.setFingerprint(dtlsStack.getLocalFingerprint());
+        fingerprintPE.setHash(dtlsStack.getLocalFingerprintHashFunction());
 
         // TODO: don't we only support ACTIVE right now?
         fingerprintPE.setSetup("ACTPASS");
