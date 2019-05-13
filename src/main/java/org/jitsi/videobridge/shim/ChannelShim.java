@@ -266,8 +266,16 @@ public class ChannelShim
         if (sourceGroups != null)
         {
             sourceGroups.forEach(sourceGroup -> {
-                long primarySsrc = sourceGroup.getSources().get(0).getSSRC();
-                long secondarySsrc = sourceGroup.getSources().get(1).getSSRC();
+                List<SourcePacketExtension> sources = sourceGroup.getSources();
+                if (sources.size() < 2)
+                {
+                    logger.warn(
+                        "Ignoring source group with <2 sources: "
+                                + sourceGroup.toXML());
+                    return;
+                }
+                long primarySsrc = sources.get(0).getSSRC();
+                long secondarySsrc = sources.get(1).getSSRC();
 
                 SsrcAssociationType ssrcAssociationType
                         = getAssociationType(sourceGroup.getSemantics());
