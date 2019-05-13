@@ -158,22 +158,23 @@ public class DtlsTransport extends IceTransport
         if (dtlsStack.getRole() == null && !fingerprintExtensions.isEmpty())
         {
             String setup = fingerprintExtensions.get(0).getSetup();
-            if (!StringUtils.isNullOrEmpty(setup))
+            if ("active".equalsIgnoreCase(setup))
             {
-                if (setup.equalsIgnoreCase("active"))
-                {
-                    logger.info(logPrefix + "Client is acting as DTLS client, we'll act as server");
-                    dtlsStack.actAsServer();
-                }
-                else if (setup.equalsIgnoreCase("passive"))
-                {
-                    logger.info(logPrefix + "Client is acting as DTLS server, we'll act as client");
-                    dtlsStack.actAsClient();
-                }
-                else
-                {
-                    logger.error(logPrefix + "Client send unrecognized DTLS setup value: " + setup);
-                }
+                logger.info(logPrefix +
+                    "The remote side is acting as DTLS client, we'll act as server");
+                dtlsStack.actAsServer();
+            }
+            else if ("passive".equalsIgnoreCase(setup))
+            {
+                logger.info(logPrefix +
+                    "The remote side is acting as DTLS server, we'll act as client");
+                dtlsStack.actAsClient();
+            }
+            else if (!StringUtils.isNullOrEmpty(setup))
+            {
+                logger.error(logPrefix +
+                    "The remote side sent an unrecognized DTLS setup value: " +
+                        setup);
             }
         }
 
@@ -211,8 +212,8 @@ public class DtlsTransport extends IceTransport
             fingerprintPE = new DtlsFingerprintPacketExtension();
             pe.addChildExtension(fingerprintPE);
         }
-        fingerprintPE.setFingerprint(dtlsStack.getLocalFingerprint());
-        fingerprintPE.setHash(dtlsStack.getLocalFingerprintHashFunction());
+        fingerprintPE.setFingerprint(dtlsStack.getCertificateInfo().getLocalFingerprint());
+        fingerprintPE.setHash(dtlsStack.getCertificateInfo().getLocalFingerprintHashFunction());
 
         // TODO: don't we only support ACTIVE right now?
         fingerprintPE.setSetup("ACTPASS");
@@ -380,6 +381,11 @@ public class DtlsTransport extends IceTransport
         TaskPools.IO_POOL.submit(() -> {
             try
             {
+                if (dtlsStack.getRole() == null)
+                {
+                    logger.warn(logPrefix +
+                            "Starting the DTLS stack before it knows its role");
+                }
                 dtlsStack.start();
             }
             catch (Throwable e)
@@ -404,7 +410,7 @@ public class DtlsTransport extends IceTransport
     }
 
     /**
-     * Bumps the conters of the number of time ICE succeeded in the
+     * Bumps the counters of the number of time ICE succeeded in the
      * {@link Videobridge} statistics.
      */
     private void updateIceConnectedStats()
@@ -439,7 +445,7 @@ public class DtlsTransport extends IceTransport
     public JSONObject getDebugState()
     {
         JSONObject debugState = super.getDebugState();
-        //debugState.put("dtlsStack", dtlsStack.getDebugState());
+        debugState.put("dtlsStack", dtlsStack.getNodeStats().toJson());
         //debugState.put("dtlsReceiver"
         //debugState.put("dtlsSender"
 
