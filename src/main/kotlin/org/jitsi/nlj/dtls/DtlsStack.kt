@@ -65,11 +65,11 @@ class DtlsStack(
     private val logPrefix = "[$id]"
     private val roleSet = CompletableFuture<Unit>()
 
-    val localFingerprint: String
-        get() = DtlsStack.getCertificateInfo().localFingerprint
-
-    val localFingerprintHashFunction: String
-        get() = DtlsStack.getCertificateInfo().localFingerprintHashFunction
+    /**
+     * The certificate info for this particular [DtlsStack] instance. We save it in a local val because the global one
+     * might be refreshed.
+     */
+    val certificateInfo = DtlsStack.certificateInfo
 
     /**
      * The remote fingerprints sent to us over the signaling path.
@@ -128,12 +128,12 @@ class DtlsStack(
     }
 
     fun actAsServer() {
-        role = DtlsServer(id, this, handshakeCompleteHandler, this::verifyAndValidateRemoteCertificate)
+        role = DtlsServer(id, this, certificateInfo, handshakeCompleteHandler, this::verifyAndValidateRemoteCertificate)
         roleSet.complete(Unit)
     }
 
     fun actAsClient() {
-        role = DtlsClient(id, this, handshakeCompleteHandler, this::verifyAndValidateRemoteCertificate)
+        role = DtlsClient(id, this, certificateInfo, handshakeCompleteHandler, this::verifyAndValidateRemoteCertificate)
         roleSet.complete(Unit)
     }
 
@@ -215,16 +215,14 @@ class DtlsStack(
          * one to be used everywhere which expires in 24 hours (when we'll generate
          * another one).
          */
-        private var certificateInfo: CertificateInfo = DtlsUtils.generateCertificateInfo()
         private val syncRoot: Any = Any()
-        fun getCertificateInfo(): CertificateInfo {
-            synchronized(syncRoot) {
+        private var certificateInfo: CertificateInfo = DtlsUtils.generateCertificateInfo()
+            get() = synchronized(syncRoot) {
                 val expirationPeriodMs = Duration.ofDays(1).toMillis()
-                if (certificateInfo.creationTimestampMs + expirationPeriodMs < System.currentTimeMillis()) {
-                    certificateInfo = DtlsUtils.generateCertificateInfo()
+                if (field.creationTimestampMs + expirationPeriodMs < System.currentTimeMillis()) {
+                    Thread { field = DtlsUtils.generateCertificateInfo() }.start()
                 }
-                return certificateInfo
+                return field
             }
-        }
     }
 }

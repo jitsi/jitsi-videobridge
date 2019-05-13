@@ -50,6 +50,7 @@ import java.util.Hashtable
  * Implementation of [DefaultTlsClient].
  */
 class TlsClientImpl(
+    private val certificateInfo: CertificateInfo,
     /**
      * The function to call when the server certificateInfo is available.
      */
@@ -57,8 +58,6 @@ class TlsClientImpl(
 ) : DefaultTlsClient(BC_TLS_CRYPTO) {
 
     private val logger = getLogger(this.javaClass)
-
-    private val certificateInfo = DtlsStack.getCertificateInfo()
 
     private var session: TlsSession? = null
 
