@@ -534,6 +534,12 @@ class SendSideBandwidthEstimation
     @Override
     public synchronized void updateReceiverEstimate(long bandwidth)
     {
+        if (timeSeriesLogger.isTraceEnabled())
+        {
+            timeSeriesLogger.trace(diagnosticContext
+                .makeTimeSeriesPoint("bwe_incoming")
+                .addField("bitrate_bps", bandwidth));
+        }
         bwe_incoming_ = bandwidth;
         setBitrate(capBitrateToThresholds(bitrate_));
     }

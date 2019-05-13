@@ -45,6 +45,7 @@ import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.logging.Logger
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
 import java.util.concurrent.ExecutorService
@@ -65,7 +66,8 @@ class RtpSenderImpl(
      * background tasks, or tasks that need to execute at some fixed delay/rate
      */
     val backgroundExecutor: ScheduledExecutorService,
-    logLevelDelegate: Logger? = null
+    logLevelDelegate: Logger? = null,
+    diagnosticContext: DiagnosticContext = DiagnosticContext()
 ) : RtpSender() {
     protected val logger = getLogger(classLogger, logLevelDelegate)
     private val outgoingRtpRoot: Node
@@ -171,7 +173,9 @@ class RtpSenderImpl(
             node(outputPipelineTerminationNode)
         }
 
-        probingDataSender = ProbingDataSender(outgoingPacketCache.getPacketCache(), outgoingRtxRoot, absSendTime)
+        probingDataSender = ProbingDataSender(
+                outgoingPacketCache.getPacketCache(),
+                outgoingRtxRoot, absSendTime, diagnosticContext)
     }
 
     override fun onRttUpdate(newRtt: Double) {
