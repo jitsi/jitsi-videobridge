@@ -161,7 +161,7 @@ class RtpSenderImpl(
             // it'd be better to notify everything creating RTCP the bridge SSRCs and then everything should be
             // responsible for setting it themselves
             simpleNode("RTCP sender ssrc setter") { packetInfo ->
-                val senderSsrc = localVideoSsrc ?: return@simpleNode null
+                val senderSsrc = localVideoSsrc ?: return@simpleNode packetInfo
                 val rtcpPacket = packetInfo.packetAs<RtcpPacket>()
                 if (rtcpPacket.senderSsrc == 0L) {
                     rtcpPacket.senderSsrc = senderSsrc
