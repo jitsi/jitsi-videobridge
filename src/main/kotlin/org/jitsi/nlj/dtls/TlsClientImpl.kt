@@ -38,6 +38,7 @@ import org.bouncycastle.tls.crypto.TlsCryptoParameters
 import org.bouncycastle.tls.crypto.impl.bc.BcDefaultTlsCredentialedSigner
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto
 import org.jitsi.nlj.srtp.SrtpUtil
+import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
@@ -133,14 +134,19 @@ class TlsClientImpl(
     override fun notifyHandshakeComplete() {
         super.notifyHandshakeComplete()
         context.resumableSession?.let { newSession ->
-            val newSessionIdHex = ByteBuffer.wrap(newSession.sessionID).toHex()
 
             session?.let { existingSession ->
                 if (existingSession.sessionID?.contentEquals(newSession.sessionID) == true) {
-                    logger.cinfo { "Resumed DTLS session $newSessionIdHex" }
+                    logger.cdebug {
+                        val newSessionIdHex = ByteBuffer.wrap(newSession.sessionID).toHex()
+                        "Resumed DTLS session $newSessionIdHex"
+                    }
                 }
             } ?: run {
-                logger.cinfo { "Established DTLS session $newSessionIdHex" }
+                logger.cdebug {
+                    val newSessionIdHex = ByteBuffer.wrap(newSession.sessionID).toHex()
+                    "Established DTLS session $newSessionIdHex"
+                }
                 this.session = newSession
             }
         }
