@@ -735,8 +735,8 @@ public class BitrateController
                             .addField("oversending",
                                 trackBitrateAllocation.oversending)
                             .addField("preferred_idx",
-                                trackBitrateAllocation.ratedPreferredIdx)
-                            .addField("endpoint_id",
+                                trackBitrateAllocation.getPreferredIndex())
+                            .addField("remote_endpoint_id",
                                 trackBitrateAllocation.endpointID)
                             .addField("ideal_bps", trackIdealBps));
                     }
@@ -1535,6 +1535,15 @@ public class BitrateController
             // quality.
             return ratedTargetIdx != -1
                 ? ratedIndices[ratedTargetIdx].encoding.getIndex() : -1;
+        }
+
+
+        int getPreferredIndex()
+        {
+            // figures out the quality of the encoding of the target rated
+            // quality.
+            return ratedPreferredIdx != -1
+                ? ratedIndices[ratedPreferredIdx].encoding.getIndex() : -1;
         }
 
         /**
