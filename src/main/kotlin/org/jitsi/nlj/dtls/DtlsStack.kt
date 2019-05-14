@@ -238,6 +238,7 @@ class DtlsStack(
             get() = synchronized(syncRoot) {
                 val expirationPeriodMs = Duration.ofDays(1).toMillis()
                 if (field.creationTimestampMs + expirationPeriodMs < System.currentTimeMillis()) {
+                    // TODO: avoid creating our own thread
                     Thread { field = DtlsUtils.generateCertificateInfo() }.start()
                 }
                 return field
