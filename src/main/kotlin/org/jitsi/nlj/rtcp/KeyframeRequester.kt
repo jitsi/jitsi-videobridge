@@ -152,6 +152,8 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
             numApiRequestsDropped++
             return
         }
+
+        doRequestKeyframe(mediaSsrc)
     }
 
     private fun doRequestKeyframe(mediaSsrc: Long) {
