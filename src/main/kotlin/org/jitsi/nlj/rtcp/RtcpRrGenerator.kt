@@ -81,7 +81,7 @@ class RtcpRrGenerator(
             val streamStats = incomingStatisticsTracker.getSnapshot()
             val now = System.currentTimeMillis()
             val reportBlocks = mutableListOf<RtcpReportBlock>()
-            streamStats.ssrcStats.forEach { ssrc, statsSnapshot ->
+            streamStats.ssrcStats.forEach { (ssrc, statsSnapshot) ->
                 val senderInfo = senderInfos.computeIfAbsent(ssrc) {
                     SenderInfo()
                 }
