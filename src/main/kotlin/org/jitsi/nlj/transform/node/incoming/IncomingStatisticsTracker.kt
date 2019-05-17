@@ -344,7 +344,7 @@ class IncomingSsrcStats(
      * TODO: these really need to be documented!
      */
     data class Snapshot(
-        val numRececivedPackets: Int = 0,
+        val numReceivedPackets: Int = 0,
         val maxSeqNum: Int = 0,
         val seqNumCycles: Int = 0,
         val numExpectedPackets: Int = 0,
@@ -353,7 +353,7 @@ class IncomingSsrcStats(
     ) {
         fun computeFractionLost(previousSnapshot: Snapshot): Int {
             val numExpectedPacketsInterval = numExpectedPackets - previousSnapshot.numExpectedPackets
-            val numReceivedPacketsInterval = numRececivedPackets - previousSnapshot.numRececivedPackets
+            val numReceivedPacketsInterval = numReceivedPackets - previousSnapshot.numReceivedPackets
 
             val nextNumLostPacketsInterval = numExpectedPacketsInterval - numReceivedPacketsInterval
             return if (numExpectedPacketsInterval == 0 || nextNumLostPacketsInterval <= 0)
