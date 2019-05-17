@@ -85,14 +85,16 @@ class RtcpRrGenerator(
                 val senderInfo = senderInfos.computeIfAbsent(ssrc) {
                     SenderInfo()
                 }
-                val statsDelta = statsSnapshot.getDelta(senderInfo.statsSnapshot)
+                val fractionLost = statsSnapshot.computeFractionLost(senderInfo.statsSnapshot)
+                senderInfo.statsSnapshot = statsSnapshot
+
                 reportBlocks.add(RtcpReportBlock(
                     ssrc,
-                    statsDelta.fractionLost,
-                    statsDelta.cumulativePacketsLost,
-                    statsDelta.seqNumCycles,
-                    statsDelta.maxSeqNum,
-                    statsDelta.jitter.toLong(),
+                    fractionLost,
+                    statsSnapshot.cumulativePacketsLost,
+                    statsSnapshot.seqNumCycles,
+                    statsSnapshot.maxSeqNum,
+                    statsSnapshot.jitter.toLong(),
                     senderInfo.lastSrCompactedTimestamp,
                     senderInfo.getDelaySinceLastSr(now)
                 ))

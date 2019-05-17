@@ -351,18 +351,15 @@ class IncomingSsrcStats(
         val cumulativePacketsLost: Int = 0,
         val jitter: Double = 0.0
     ) {
-        val fractionLost: Int
-            get() = (cumulativePacketsLost / numExpectedPackets) * 256
+        fun computeFractionLost(previousSnapshot: Snapshot): Int {
+            val numExpectedPacketsInterval = numExpectedPackets - previousSnapshot.numExpectedPackets
+            val numReceivedPacketsInterval = numRececivedPackets - previousSnapshot.numRececivedPackets
 
-        fun getDelta(previousSnapshot: Snapshot): Snapshot {
-            return Snapshot(
-                numRececivedPackets - previousSnapshot.numRececivedPackets,
-                maxSeqNum,
-                seqNumCycles,
-                numExpectedPackets - previousSnapshot.numExpectedPackets,
-                cumulativePacketsLost - previousSnapshot.cumulativePacketsLost,
-                jitter
-            )
+            val nextNumLostPacketsInterval = numExpectedPacketsInterval - numReceivedPacketsInterval
+            return if (numExpectedPacketsInterval == 0 || nextNumLostPacketsInterval <= 0)
+                0
+            else
+                (nextNumLostPacketsInterval shl 8) / numExpectedPacketsInterval
         }
     }
 }
