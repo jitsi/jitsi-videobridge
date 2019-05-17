@@ -359,7 +359,7 @@ class IncomingSsrcStats(
             return if (numExpectedPacketsInterval == 0 || numLostPacketsInterval <= 0)
                 0
             else
-                (numLostPacketsInterval shl 8) / numExpectedPacketsInterval
+                (((numLostPacketsInterval shl 8) / numExpectedPacketsInterval.toDouble())).toInt()
         }
     }
 }
