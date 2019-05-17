@@ -355,11 +355,11 @@ class IncomingSsrcStats(
             val numExpectedPacketsInterval = numExpectedPackets - previousSnapshot.numExpectedPackets
             val numReceivedPacketsInterval = numReceivedPackets - previousSnapshot.numReceivedPackets
 
-            val nextNumLostPacketsInterval = numExpectedPacketsInterval - numReceivedPacketsInterval
-            return if (numExpectedPacketsInterval == 0 || nextNumLostPacketsInterval <= 0)
+            val numLostPacketsInterval = numExpectedPacketsInterval - numReceivedPacketsInterval
+            return if (numExpectedPacketsInterval == 0 || numLostPacketsInterval <= 0)
                 0
             else
-                (nextNumLostPacketsInterval shl 8) / numExpectedPacketsInterval
+                (numLostPacketsInterval shl 8) / numExpectedPacketsInterval
         }
     }
 }
