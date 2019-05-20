@@ -196,7 +196,7 @@ class DtlsStack(
     override fun receive(buf: ByteArray, off: Int, length: Int, waitMillis: Int): Int {
         val packetInfo = incomingProtocolData.poll(waitMillis.toLong(), TimeUnit.MILLISECONDS) ?: return -1
         val packet = packetInfo.packet
-        System.arraycopy(packet.buffer, 0, buf, off, Math.min(length, packet.length))
+        System.arraycopy(packet.buffer, packet.offset, buf, off, packet.length)
 
         BufferPool.returnBuffer(packetInfo.packet.buffer)
 
