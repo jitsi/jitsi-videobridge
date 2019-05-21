@@ -573,12 +573,13 @@ public class VideobridgeStatistics
                 for (IncomingSsrcStats.Snapshot ssrcStats
                         : incomingStats.getSsrcStats().values())
                 {
-                    packetsReceived += ssrcStats.getNumRececivedPackets();
+                    packetsReceived += ssrcStats.getNumReceivedPackets();
 
                     packetsReceivedLost += ssrcStats.getCumulativePacketsLost();
 
                     fractionLostCount++;
-                    fractionLostSum += ssrcStats.getFractionLost() / 256;
+                    // note(george) average instead of sum?
+                    //fractionLostSum += ssrcStats.computeFractionLost() / 256;
 
                     Double ssrcJitter = ssrcStats.getJitter();
                     if (ssrcJitter != null && ssrcJitter != 0)
