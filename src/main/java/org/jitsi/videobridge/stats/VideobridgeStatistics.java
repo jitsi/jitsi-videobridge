@@ -578,8 +578,12 @@ public class VideobridgeStatistics
                     packetsReceivedLost += ssrcStats.getCumulativePacketsLost();
 
                     fractionLostCount++;
-                    // note(george) average instead of sum?
-                    //fractionLostSum += ssrcStats.computeFractionLost() / 256;
+                    // note(george) this computes the fraction of lost packets
+                    // since beginning of reception, which is different from the
+                    // rfc 3550 sense.
+                    double fractionLost = ssrcStats.getCumulativePacketsLost()
+                        / (double) ssrcStats.getNumReceivedPackets();
+                    fractionLostSum += fractionLost;
 
                     Double ssrcJitter = ssrcStats.getJitter();
                     if (ssrcJitter != null && ssrcJitter != 0)
