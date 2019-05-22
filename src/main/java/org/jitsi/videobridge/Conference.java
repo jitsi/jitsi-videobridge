@@ -1068,9 +1068,15 @@ public class Conference
             }
             prevHandler = tentacle;
         }
+
         if (prevHandler != null)
         {
             prevHandler.send(packetInfo);
+        }
+        else
+        {
+            // No one wanted the packet, so the buffer is now free!
+            ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
         }
     }
 
