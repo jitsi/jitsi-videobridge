@@ -1452,7 +1452,7 @@ public class BitrateController
          * @param maxBps the maximum bitrate (in bps) that the target subjective
          * quality can have.
          */
-        void improve(long maxBps)
+        private void improve(long maxBps)
         {
             if (ratedIndices.length == 0)
             {
@@ -1494,7 +1494,7 @@ public class BitrateController
          *
          * @return the target bitrate (in bps) for this endpoint allocation.
          */
-        long getTargetBitrate()
+        private long getTargetBitrate()
         {
             return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx].bps : 0;
         }
@@ -1504,7 +1504,7 @@ public class BitrateController
          *
          * @return the ideal bitrate (in bps) for this endpoint allocation.
          */
-        long getIdealBitrate()
+        private long getIdealBitrate()
         {
             return ratedIndices.length != 0
                 ? ratedIndices[ratedIndices.length - 1].bps : 0L;
@@ -1515,7 +1515,7 @@ public class BitrateController
          *
          * @return the target quality for this track.
          */
-        int getTargetIndex()
+        private int getTargetIndex()
         {
             // figures out the quality of the encoding of the target rated
             // quality.
@@ -1524,7 +1524,7 @@ public class BitrateController
         }
 
 
-        int getPreferredIndex()
+        private int getPreferredIndex()
         {
             // figures out the quality of the encoding of the target rated
             // quality.
@@ -1537,7 +1537,7 @@ public class BitrateController
          *
          * @return the ideal quality for this track.
          */
-        int getIdealIndex()
+        private int getIdealIndex()
         {
             // figures out the quality of the encoding of the ideal rated
             // quality.
