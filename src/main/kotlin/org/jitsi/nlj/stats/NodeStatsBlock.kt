@@ -89,7 +89,7 @@ class NodeStatsBlock(val name: String) {
      * other block and updates the current block with the sum of the current and other value.
      */
     fun aggregate(otherBlock: NodeStatsBlock) {
-        otherBlock.stats.forEach { name, value ->
+        otherBlock.stats.forEach { (name, value) ->
             val existingValue = stats[name]
             // We only aggregate numbers, and we "only" handle Long and Double because we've already
             // promoted them when adding. For other value types, we override with the new one.
@@ -107,7 +107,7 @@ class NodeStatsBlock(val name: String) {
                 else -> stats[name] = value
             }
         }
-        otherBlock.compoundStats.forEach { name, function ->
+        otherBlock.compoundStats.forEach { (name, function) ->
             addCompoundValue(name, function)
         }
         stats[AGGREGATES] = (stats.getOrDefault(AGGREGATES, 0L) as Long) + 1
@@ -126,7 +126,7 @@ class NodeStatsBlock(val name: String) {
     fun prettyPrint(indentLevel: Int = 0): String {
         return with(StringBuffer()) {
             appendLnIndent(indentLevel, name)
-            stats.forEach { statName, statValue ->
+            stats.forEach { (statName, statValue) ->
                 when (statValue) {
                     is NodeStatsBlock -> {
                         appendln(statValue.prettyPrint(indentLevel + 2))
@@ -137,7 +137,7 @@ class NodeStatsBlock(val name: String) {
                     }
                 }
             }
-            compoundStats.forEach { statName, function ->
+            compoundStats.forEach { (statName, function) ->
                 val statValue = function.invoke(this@NodeStatsBlock)
                 appendLnIndent(indentLevel + 2, "$statName: $statValue")
             }
@@ -149,13 +149,13 @@ class NodeStatsBlock(val name: String) {
      * Returns a JSON representation of this [NodeStatsBlock].
      */
     fun toJson(): JSONObject = JSONObject().apply {
-        stats.forEach { name, value ->
+        stats.forEach { (name, value) ->
             when (value) {
                 is NodeStatsBlock -> put(name, value.toJson())
                 else -> put(name, value)
             }
         }
-        compoundStats.forEach { name, function ->
+        compoundStats.forEach { (name, function) ->
             put(name, function.invoke(this@NodeStatsBlock))
         }
     }
