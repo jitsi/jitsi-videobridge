@@ -109,11 +109,7 @@ class RtpSenderImpl(
             }
             // While there's no handler set we're effectively dropping packets, so their buffers
             // should be returned.
-            outgoingPacketHandler?.let {
-                it.processPacket(packetInfo)
-            } ?: let {
-                packetDiscarded(packetInfo)
-            }
+            outgoingPacketHandler?.processPacket(packetInfo) ?: packetDiscarded(packetInfo)
         }
     }
 
