@@ -139,7 +139,7 @@ class NodeStatsBlock(val name: String) {
             }
             compoundStats.forEach { statName, function ->
                 val statValue = function.invoke(this@NodeStatsBlock)
-                appendLnIndent(indentLevel + 2, "$statName: $statValue}")
+                appendLnIndent(indentLevel + 2, "$statName: $statValue")
             }
             toString()
         }
