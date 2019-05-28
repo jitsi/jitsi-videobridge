@@ -22,25 +22,25 @@ import kotlin.reflect.KClass
 // override those.  The 'c' in these methods stands for 'conditional' as the given
 // function is only executed if that log level is enabled.
 
-fun Logger.cinfo(msg: () -> String) {
+inline fun Logger.cinfo(msg: () -> String) {
     if (isInfoEnabled) {
         this.info(msg())
     }
 }
 
-fun Logger.cdebug(msg: () -> String) {
+inline fun Logger.cdebug(msg: () -> String) {
     if (isDebugEnabled) {
         this.debug(msg())
     }
 }
 
-fun Logger.cwarn(msg: () -> String) {
+inline fun Logger.cwarn(msg: () -> String) {
     if (isWarnEnabled) {
         this.warn(msg())
     }
 }
 
-fun Logger.cerror(msg: () -> String) {
+inline fun Logger.cerror(msg: () -> String) {
     this.error(msg())
 }
 // Logger helpers below taken from https://stackoverflow.com/a/34462577
