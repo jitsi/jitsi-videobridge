@@ -38,16 +38,16 @@ import java.util.concurrent.TimeUnit
  * Represents a single instance of a DTLS stack for a given connection.  This class also acts as the [DatagramTransport]
  * used by the underlying DTLS library in order to send and receive DTLS packets.  Users of this class need to handle
  * passing incoming DTLS packets into the stack, as well as handling packets the stack wants to send out.  The passing
- * of incoming packets is done via calling [processIncomingDtlsPackets].  The handling of outgoing packets is done by
- * assigning a handler to the [onOutgoingProtocolData] member.  Incoming packets may be either control packets
+ * of incoming packets is done via calling [DtlsStack.processIncomingProtocolData].  The handling of outgoing packets is done by
+ * assigning a handler to the [DtlsStack.onOutgoingProtocolData] member.  Incoming packets may be either control packets
  * (terminated by the stack itself) or app packets which have been sent over DTLS (SCTP packets, for example).  After
- * passing incoming packets to the stack via [processIncomingDtlsPackets], any app packets ready for further processing
- * will be returned.  Outgoing packets can be sent via [sendDtlsAppData].
+ * passing incoming packets to the stack via [DtlsStack.processIncomingProtocolData], any app packets ready for further processing
+ * will be returned.  Outgoing packets can be sent via [DtlsStack.sendApplicationData].
  *
  * An example of passing incoming DTLS packets through the stack:
  *
  *  --> Recv 'dtlsPacket' from the network and pass it into the stack:
- *  val appPackets = dtlsStack.processIncomingDtlsPackets(listOf(dtlsPacket))
+ *  val appPackets = dtlsStack.processIncomingProtocolData(listOf(dtlsPacket))
  *  if (appPackets.isNotEmpty()) {
  *    // Process the app packets
  *  }
@@ -57,7 +57,7 @@ import java.util.concurrent.TimeUnit
  *    // Work to send the packets out
  *  }
  *  val dtlsAppPacket = ...
- *  dtlsStack.sendDtlsAppData(dtlsAppPacket)
+ *  dtlsStack.sendApplicationData(dtlsAppPacket)
  *
  */
 class DtlsStack(
@@ -96,7 +96,7 @@ class DtlsStack(
     }
 
     /**
-     * Incoming DTLS packets received from the network are stored here via [processIncomingDtlsPackets].  They are read
+     * Incoming DTLS packets received from the network are stored here via [processIncomingProtocolData].  They are read
      * by the underlying DTLS library via the [receive] method, which the library calls to receive incoming data.
      */
     private val incomingProtocolData = LinkedBlockingQueue<PacketInfo>()
