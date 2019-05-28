@@ -393,8 +393,8 @@ public class VideobridgeStatistics
 
         // Is it necessary to set initial values for all of these?
         unlockedSetStat(AUDIOCHANNELS, 0);
-        unlockedSetStat(BITRATE_DOWNLOAD, 0d);
-        unlockedSetStat(BITRATE_UPLOAD, 0d);
+        unlockedSetStat(BITRATE_DOWNLOAD, 0);
+        unlockedSetStat(BITRATE_UPLOAD, 0);
         unlockedSetStat(CONFERENCES, 0);
         unlockedSetStat(CPU_USAGE, 0d);
         unlockedSetStat(NUMBEROFPARTICIPANTS, 0);
@@ -716,10 +716,10 @@ public class VideobridgeStatistics
         {
             unlockedSetStat(
                     BITRATE_DOWNLOAD,
-                    bitrateDownloadBps / 1000 /* kbps */);
+                    (bitrateDownloadBps + 500) / 1000 /* kbps */);
             unlockedSetStat(
                     BITRATE_UPLOAD,
-                    bitrateUploadBps / 1000 /* kbps */);
+                    (bitrateUploadBps + 500) / 1000 /* kbps */);
             unlockedSetStat(PACKET_RATE_DOWNLOAD, packetRateDownload);
             unlockedSetStat(PACKET_RATE_UPLOAD, packetRateUpload);
             // Keep for backward compatibility
