@@ -484,7 +484,7 @@ abstract class DemuxerNode(name: String) : StatsKeepingNode("$name demuxer") {
 class ExclusivePathDemuxer(name: String) : DemuxerNode(name) {
     override fun doProcessPacket(packetInfo: PacketInfo) {
         transformPaths.forEach { conditionalPath ->
-            if (conditionalPath.predicate.test(packetInfo.packetAs<Packet>())) {
+            if (conditionalPath.predicate.test(packetInfo.packet)) {
                 doneProcessing(packetInfo)
                 conditionalPath.packetsAccepted++
                 conditionalPath.path.processPacket(packetInfo)
