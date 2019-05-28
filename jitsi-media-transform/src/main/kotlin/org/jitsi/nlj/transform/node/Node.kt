@@ -28,7 +28,6 @@ import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.addMbps
 import org.jitsi.nlj.util.addRatio
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.PacketPredicate
 import org.json.simple.JSONObject
 import java.time.Duration
