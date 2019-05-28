@@ -103,7 +103,8 @@ public class BandwidthEstimatorImpl
         {
             Long ssrc = reportBlock.getSsrc();
             Long extSeqNum = reportBlock.getExtendedHighestSeqNum();
-            Long lastEHSN = ssrc_to_last_received_extended_high_seq_num_.computeIfAbsent(ssrc, key -> extSeqNum);
+            Long lastEHSN = ssrc_to_last_received_extended_high_seq_num_.getOrDefault(ssrc, extSeqNum);
+            ssrc_to_last_received_extended_high_seq_num_.put(ssrc, lastEHSN);
 
             if (lastEHSN >= extSeqNum)
             {
