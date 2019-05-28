@@ -275,7 +275,7 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
          */
         fun getStatsJson(): JSONObject {
             val jsonObject = JSONObject()
-            globalStats.forEach { className, stats ->
+            globalStats.forEach { (className, stats) ->
                 jsonObject[className] = stats.toJson()
             }
             jsonObject["num_payload_verification_failures"] = PayloadVerificationPlugin.numFailures.get()
