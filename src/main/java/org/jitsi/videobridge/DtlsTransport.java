@@ -183,6 +183,18 @@ public class DtlsTransport extends IceTransport
         if (!remoteFingerprints.isEmpty())
         {
             dtlsStack.setRemoteFingerprints(remoteFingerprints);
+
+            String hash = remoteFingerprints.entrySet().iterator().next().getKey();
+            if (dtlsStack.getRole() == null
+                && hash != null && hash.equalsIgnoreCase("sha-1"))
+            {
+                // hack(george) Jigasi sends a sha-1 dtls fingerprint without a
+                // setup attribute and it assumes a server role for the bridge.
+
+                logger.info(logPrefix +
+                    "Assume that the remote side is Jigasi, we'll act as server");
+                dtlsStack.actAsServer();
+            }
         }
 
         super.startConnectivityEstablishment(transportPacketExtension);
