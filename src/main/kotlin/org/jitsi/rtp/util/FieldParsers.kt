@@ -27,8 +27,8 @@ import org.jitsi.rtp.extensions.bytearray.putBits
 // TODO: could do some kind of 'Offset' inline class? or 'field' which described the offset
 // and size?
 
-fun ByteArray.getBitsAsInt(byteOffset: Int, bitOffset: Int, numBits: Int): Int =
-    get(byteOffset).getBits(bitOffset, numBits).toPositiveInt()
+fun ByteArray.getBitsAsInt(byteOffset: Int, bitStartPos: Int, numBits: Int): Int =
+    get(byteOffset).getBits(bitStartPos, numBits).toPositiveInt()
 
 fun ByteArray.putNumberAsBits(byteOffset: Int, bitOffset: Int, numBits: Int, value: Number) {
     putBits(byteOffset, bitOffset, value.toByte(), numBits)
