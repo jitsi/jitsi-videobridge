@@ -114,19 +114,15 @@ class RtpReceiverImpl @JvmOverloads constructor(
     override var packetHandler: PacketHandler? = null
 
     /**
-     * The [rtpPacketHandler] can be re-assigned at any time, but it should maintain
+     * The [packetHandler] can be re-assigned at any time, but it should maintain
      * its place in the receive pipeline.  To support both keeping it in the same
      * place and allowing it to be re-assigned, we wrap it with this.
      */
     private val packetHandlerWrapper = object : ConsumerNode("Packet handler wrapper") {
         override fun consume(packetInfo: PacketInfo) {
-            packetHandler?. let {
-                it.processPacket(packetInfo)
-            } ?: let {
-                // While there's no handler set we're effectively dropping packets, so their buffers
-                // should be returned.
-                packetDiscarded(packetInfo)
-            }
+            // When there's no handler set we're effectively dropping packets, so their buffers
+            // should be returned.
+            packetHandler?.processPacket(packetInfo) ?: packetDiscarded(packetInfo)
         }
     }
 
