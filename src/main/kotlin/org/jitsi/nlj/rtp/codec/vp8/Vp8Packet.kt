@@ -75,7 +75,10 @@ class Vp8Packet(
         }
 
     override fun clone(): Vp8Packet {
-        val clone = Vp8Packet(cloneBuffer(), offset, length)
+        val clone = Vp8Packet(
+            cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
+            BYTES_TO_LEAVE_AT_START_OF_PACKET,
+            length)
         clone.isKeyframe = isKeyframe
         // TODO can we ask the superclass to clone its own fields?
         clone.qualityIndex = qualityIndex
