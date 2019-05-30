@@ -15,7 +15,9 @@
  */
 package org.jitsi.nlj.util
 
+import org.jitsi.rtp.Packet
 import java.time.Duration
+import java.util.function.Predicate
 
 class Util {
     companion object {
@@ -51,3 +53,5 @@ inline fun getStackTrace(): String = with(StringBuffer()) {
     }
     toString()
 }
+
+typealias PacketPredicate = Predicate<Packet>
