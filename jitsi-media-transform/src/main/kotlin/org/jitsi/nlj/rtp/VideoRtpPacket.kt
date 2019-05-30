@@ -30,7 +30,10 @@ open class VideoRtpPacket(
     var qualityIndex = -1
 
     override fun clone(): VideoRtpPacket {
-        val clone = VideoRtpPacket(cloneBuffer(), offset, length)
+        val clone = VideoRtpPacket(
+            cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
+            BYTES_TO_LEAVE_AT_START_OF_PACKET,
+            length)
         clone.isKeyframe = isKeyframe
         clone.qualityIndex = qualityIndex
         return clone
