@@ -25,6 +25,10 @@ class PaddingVideoPacket private constructor(
     length: Int
 ) : VideoRtpPacket(buffer, offset, length) {
 
+    override fun clone(): PaddingVideoPacket {
+        throw NotImplementedError("clone() not supported for padding packets.")
+    }
+
     companion object {
         /**
          * Creating a PaddingVideoPacket by directly grabbing a buffer in its
