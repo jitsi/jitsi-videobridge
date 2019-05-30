@@ -47,7 +47,7 @@ class RtcpFbPliPacket(
 
     companion object {
         const val FMT = 1
-        const val SIZE_BYTES = RtcpFbPacket.HEADER_SIZE
+        const val SIZE_BYTES = HEADER_SIZE
     }
 }
 

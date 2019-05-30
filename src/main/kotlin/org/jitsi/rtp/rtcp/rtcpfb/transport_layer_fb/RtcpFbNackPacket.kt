@@ -50,7 +50,7 @@ class RtcpFbNackPacket(
 ) : TransportLayerRtcpFbPacket(buffer, offset, length) {
 
     private val numNackBlocks: Int =
-        (packetLength - RtcpFbPacket.HEADER_SIZE) / NackBlock.SIZE_BYTES
+        (packetLength - HEADER_SIZE) / NackBlock.SIZE_BYTES
 
     val missingSeqNums: SortedSet<Int> by lazy {
         (0 until numNackBlocks)
@@ -65,7 +65,7 @@ class RtcpFbNackPacket(
 
     companion object {
         const val FMT = 1
-        const val NACK_BLOCK_OFFSET = RtcpFbPacket.HEADER_SIZE
+        const val NACK_BLOCK_OFFSET = HEADER_SIZE
     }
 }
 

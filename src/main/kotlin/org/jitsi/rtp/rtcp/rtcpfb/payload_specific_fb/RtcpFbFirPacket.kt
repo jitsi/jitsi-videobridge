@@ -76,9 +76,9 @@ class RtcpFbFirPacket(
     companion object {
         const val FMT = 4
         // TODO: support multiple FCI?
-        const val SIZE_BYTES = RtcpFbPacket.HEADER_SIZE + 8
+        const val SIZE_BYTES = HEADER_SIZE + 8
 
-        const val MEDIA_SENDER_SSRC_OFFSET = RtcpFbPacket.FCI_OFFSET
+        const val MEDIA_SENDER_SSRC_OFFSET = FCI_OFFSET
         const val SEQ_NUM_OFFSET = MEDIA_SENDER_SSRC_OFFSET + 4
 
         fun getMediaSenderSsrc(buf: ByteArray, baseOffset: Int): Long =
