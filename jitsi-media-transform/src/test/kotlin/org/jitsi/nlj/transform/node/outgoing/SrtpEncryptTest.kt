@@ -35,14 +35,15 @@ import org.jitsi.service.libjitsi.LibJitsi
 internal class SrtpEncryptTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-    private val srtpTransformers = SrtpUtil.initializeTransformer(
-        SrtpSample.srtpProfileInformation,
-        SrtpSample.keyingMaterial.array(),
-        SrtpSample.tlsRole)
-
     init {
         // We need to start libjitsi so that the openssl lib gets loaded.
         LibJitsi.start()
+
+        val srtpTransformers = SrtpUtil.initializeTransformer(
+            SrtpSample.srtpProfileInformation,
+            SrtpSample.keyingMaterial.array(),
+            SrtpSample.tlsRole)
+
         "encrypting an RTCP packet" {
             "created from a buffer" {
                 val packetInfo = PacketInfo(SrtpSample.outgoingUnencryptedRtcpPacket.clone())
