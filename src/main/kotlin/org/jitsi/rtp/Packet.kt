@@ -18,10 +18,6 @@ package org.jitsi.rtp
 
 import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
 import org.jitsi.rtp.util.BufferPool
-import java.util.function.Predicate
-
-// TODO move
-typealias PacketPredicate = Predicate<Packet>
 
 abstract class Packet(
     buffer: ByteArray,
