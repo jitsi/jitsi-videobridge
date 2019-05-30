@@ -20,7 +20,7 @@ import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 
 abstract class RtpReceiver :
-    PacketHandler, EventHandler, NodeStatsProducer, Stoppable {
+    StatsKeepingPacketHandler(), EventHandler, NodeStatsProducer, Stoppable {
     /**
      * The handler which will be invoked for each RTP/RTCP packet received
      * by this receiver (after it has gone through the receiver's
