@@ -16,7 +16,6 @@
 
 package org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb
 
-import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.util.BufferPool
@@ -44,9 +43,7 @@ class RtcpFbPliPacket(
     length: Int
 ) : PayloadSpecificRtcpFbPacket(buffer, offset, length) {
 
-    override fun clone(): RtcpFbPliPacket {
-        return RtcpFbPliPacket(buffer.cloneFromPool(), offset, length)
-    }
+    override fun clone(): RtcpFbPliPacket = RtcpFbPliPacket(cloneBuffer(0), 0, length)
 
     companion object {
         const val FMT = 1

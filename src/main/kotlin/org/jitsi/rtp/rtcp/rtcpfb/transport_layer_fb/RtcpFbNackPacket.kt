@@ -16,7 +16,6 @@
 
 package org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb
 
-import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.RtpUtils
@@ -62,9 +61,7 @@ class RtcpFbNackPacket(
                 .toSortedSet()
     }
 
-    override fun clone(): RtcpFbNackPacket {
-        return RtcpFbNackPacket(buffer.cloneFromPool(), offset, length)
-    }
+    override fun clone(): RtcpFbNackPacket = RtcpFbNackPacket(cloneBuffer(0), 0, length)
 
     companion object {
         const val FMT = 1

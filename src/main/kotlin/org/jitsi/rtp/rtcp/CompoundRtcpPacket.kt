@@ -35,5 +35,5 @@ class CompoundRtcpPacket(
         rtcpPackets
     }
 
-    override fun clone(): RtcpPacket = CompoundRtcpPacket(cloneBuffer(), offset, length)
+    override fun clone(): RtcpPacket = CompoundRtcpPacket(cloneBuffer(0), 0, length)
 }

@@ -17,6 +17,7 @@
 package org.jitsi.rtp
 
 import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
+import org.jitsi.rtp.util.BufferPool
 import java.util.function.Predicate
 
 // TODO move
@@ -42,4 +43,28 @@ abstract class Packet(
      */
     open val payloadVerification: String
         get() = "len=$length hashCode=${buffer.hashCodeOfSegment(offset, offset + length)}"
+
+    /**
+     * Creates a clone of this [Packet]'s buffer. Allocates a new buffer which is large enough to contain the data of
+     * the packet plus additional [BYTES_TO_LEAVE_AT_END_OF_PACKET] bytes at the end and optionally
+     * [bytesToLeaveAtStart] bytes at the start.
+     *
+     * @param bytesToLeaveAtStart How many bytes to leave at the start of the buffer. This is effectively the offset of
+     * the new packet.
+     */
+    protected fun cloneBuffer(bytesToLeaveAtStart: Int): ByteArray =
+        BufferPool.getArray(bytesToLeaveAtStart + length + BYTES_TO_LEAVE_AT_END_OF_PACKET).apply {
+            System.arraycopy(
+                buffer, offset,
+                this, bytesToLeaveAtStart,
+                length)
+        }
+
+    companion object {
+        /**
+         * How much space to leave in the end of a new packet. Having space in the buffer after the payload allows us to
+         * implement adding the SRT(C)P auth tag efficiently (without having to allocate a new buffer).
+         */
+        const val BYTES_TO_LEAVE_AT_END_OF_PACKET = 20
+    }
 }

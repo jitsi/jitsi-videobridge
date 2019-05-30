@@ -16,7 +16,6 @@
 
 package org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc
 
-import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.extensions.bytearray.put3Bytes
 import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
@@ -383,8 +382,7 @@ class RtcpFbTccPacket(
 
     override fun iterator(): Iterator<ReceivedPacket> = packets_.iterator()
 
-    override fun clone(): RtcpFbTccPacket =
-        RtcpFbTccPacket(buffer.cloneFromPool(), offset, length)
+    override fun clone(): RtcpFbTccPacket = RtcpFbTccPacket(cloneBuffer(0), 0, length)
 
     companion object {
         const val FMT = 15

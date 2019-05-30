@@ -36,7 +36,7 @@ class RtcpXrPacket(
     offset: Int,
     length: Int
 ) : RtcpPacket(buffer, offset, length) {
-    override fun clone(): RtcpXrPacket = RtcpXrPacket(cloneBuffer(), offset, length)
+    override fun clone(): RtcpXrPacket = RtcpXrPacket(cloneBuffer(0), 0, length)
 
     companion object {
         const val PT: Int = 207

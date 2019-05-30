@@ -16,6 +16,8 @@
 
 package org.jitsi.rtp
 
+import org.jitsi.rtp.rtp.RtpPacket
+
 class UnparsedPacket(
     buffer: ByteArray,
     offset: Int,
@@ -24,5 +26,13 @@ class UnparsedPacket(
 
     constructor(buffer: ByteArray) : this(buffer, 0, buffer.size)
 
-    override fun clone(): UnparsedPacket = UnparsedPacket(cloneBuffer(), offset, length)
+    /**
+     * Note that we leave the same space at the start as for RTP packets, because an [UnparsedPacket]'s buffer
+     * might be used directly to create an [RtpPacket].
+     */
+    override fun clone(): UnparsedPacket =
+        UnparsedPacket(
+            cloneBuffer(RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET),
+            RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
+            length)
 }

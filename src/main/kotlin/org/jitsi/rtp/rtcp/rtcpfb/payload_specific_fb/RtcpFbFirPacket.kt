@@ -16,7 +16,6 @@
 
 package org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb
 
-import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.util.BufferPool
@@ -64,9 +63,7 @@ class RtcpFbFirPacket(
     length: Int
 ) : PayloadSpecificRtcpFbPacket(buffer, offset, length) {
 
-    override fun clone(): RtcpFbFirPacket {
-        return RtcpFbFirPacket(buffer.cloneFromPool(), offset, length)
-    }
+    override fun clone(): RtcpFbFirPacket = RtcpFbFirPacket(cloneBuffer(0), 0, length)
 
     var mediaSenderSsrc: Long
         get() = getMediaSenderSsrc(buffer, offset)

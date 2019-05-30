@@ -315,7 +315,11 @@ open class RtpPacket(
                 buffer, offset + RtpHeader.FIXED_HEADER_SIZE_BYTES + csrcCount * 4)
         }
 
-    override fun clone(): RtpPacket = RtpPacket(cloneBuffer(), offset, length)
+    override fun clone(): RtpPacket =
+        RtpPacket(
+            cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
+            BYTES_TO_LEAVE_AT_START_OF_PACKET,
+            length)
 
     override fun toString(): String = with(StringBuilder()) {
         append("RtpPacket: ")
@@ -449,13 +453,10 @@ open class RtpPacket(
         const val HEADER_EXT_HEADER_SIZE = 1
 
         /**
-         * In some cases when we add a header extension, it's easier to shift
-         * the payload to the end to make room for the (unknown) amount of bytes
-         * in the new header extension.  Doing this means we have to grow the
-         * buffer every time to add the SRTP auth tag.  This value determines
-         * how many bytes away from the end of the buffer we'll shift in that
-         * scenario in order to leave room.
+         * How much space to leave in the beginning of new RTP packets. Having space in the beginning allows us to
+         * implement adding RTP header extensions efficiently (by keeping the RTP payload in place and shifting the
+         * header left).
          */
-        const val BYTES_TO_LEAVE_AT_END_OF_PACKET = 20
+        const val BYTES_TO_LEAVE_AT_START_OF_PACKET = 10
     }
 }

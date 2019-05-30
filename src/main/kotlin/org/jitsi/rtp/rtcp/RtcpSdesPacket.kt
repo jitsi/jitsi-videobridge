@@ -54,7 +54,7 @@ class RtcpSdesPacket(
         getSdesChunks(buffer, offset, length)
     }
 
-    override fun clone(): RtcpPacket = RtcpSdesPacket(cloneBuffer(), offset, length)
+    override fun clone(): RtcpPacket = RtcpSdesPacket(cloneBuffer(0), 0, length)
 
     companion object {
         const val PT = 202
