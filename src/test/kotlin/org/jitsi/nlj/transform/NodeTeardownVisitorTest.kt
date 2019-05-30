@@ -20,7 +20,7 @@ import io.kotlintest.IsolationMode
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.ConsumerNode
-import org.jitsi.rtp.PacketPredicate
+import org.jitsi.nlj.util.PacketPredicate
 
 internal class NodeTeardownVisitorTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf

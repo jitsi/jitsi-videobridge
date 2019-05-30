@@ -44,11 +44,11 @@ import org.jitsi.nlj.transform.node.incoming.Vp8Parser
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.PacketInfoQueue
+import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.addMbps
 import org.jitsi.nlj.util.addRatio
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.rtp.PacketPredicate
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.util.RTCPUtils
 import org.jitsi.utils.logging.Logger

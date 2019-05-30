@@ -25,10 +25,10 @@ import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.NodeVisitor
 import org.jitsi.nlj.transform.node.debug.PayloadVerificationPlugin
 import org.jitsi.nlj.util.BufferPool
+import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.addMbps
 import org.jitsi.nlj.util.addRatio
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.rtp.PacketPredicate
 import org.json.simple.JSONObject
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
