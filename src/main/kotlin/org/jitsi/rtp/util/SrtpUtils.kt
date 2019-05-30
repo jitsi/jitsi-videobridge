@@ -22,6 +22,6 @@ import org.jitsi.rtp.extensions.bytearray.getInt
 class SrtpUtils {
     companion object {
         fun getSrtcpIndex(packet: ByteArrayBuffer, authTagLen: Int): Int =
-            packet.buffer.getInt(packet.length - (4 + authTagLen))
+            packet.buffer.getInt(packet.offset + packet.length - (4 + authTagLen))
     }
 }
