@@ -26,8 +26,8 @@ fun haveSameContentAs(expected: ByteArrayBuffer) = object : Matcher<ByteArrayBuf
         if (expected.length != value.length) {
             matches = false
         } else {
-            for (i in (expected.offset until expected.length)) {
-                if (value.buffer[i] != expected.buffer[i]) {
+            for (i in (0 until expected.length)) {
+                if (value.buffer[value.offset + i] != expected.buffer[expected.offset + i]) {
                     matches = false
                     break
                 }
