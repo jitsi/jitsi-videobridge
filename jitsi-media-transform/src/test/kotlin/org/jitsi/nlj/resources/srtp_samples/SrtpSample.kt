@@ -128,6 +128,8 @@ class SrtpSample {
             0x32, 0x11, 0xD6, 0x70, 0x13, 0x81
         )
 
+        val expectedEncryptedRtpPacket = RtpPacket(expectedEncryptedRtpData, 0, expectedEncryptedRtpData.size)
+
         // RTCP -> SRTCP
         private val outgoignUnecryptedRtcpData = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
             0x8F, 0xCD, 0x00, 0x05, 0xE7, 0x46, 0x52, 0x23,

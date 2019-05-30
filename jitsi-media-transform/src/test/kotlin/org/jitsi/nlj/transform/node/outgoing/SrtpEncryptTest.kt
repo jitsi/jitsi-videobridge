@@ -78,7 +78,7 @@ internal class SrtpEncryptTest : ShouldSpec() {
 
             val encryptedPacket = packetInfo.packet
             should("encrypt the data correctly") {
-                encryptedPacket.buffer should haveSameContentAs(SrtpSample.expectedEncryptedRtpData)
+                encryptedPacket should haveSameContentAs(SrtpSample.expectedEncryptedRtpPacket)
             }
         }
     }
