@@ -100,7 +100,7 @@ class Transceiver(
         RtpReceiverImpl(
             id,
             { rtcpPacket ->
-                rtpSender.sendPacket(PacketInfo(rtcpPacket))
+                rtpSender.processPacket(PacketInfo(rtcpPacket))
             },
             transportCcEngine,
             rtcpEventNotifier,
@@ -148,7 +148,7 @@ class Transceiver(
      */
     fun sendPacket(packetInfo: PacketInfo) {
         packetIOActivity.lastPacketSentTimestampMs = System.currentTimeMillis()
-        rtpSender.sendPacket(packetInfo)
+        rtpSender.processPacket(packetInfo)
     }
 
     fun sendProbing(mediaSsrc: Long, numBytes: Int): Int = rtpSender.sendProbing(mediaSsrc, numBytes)
