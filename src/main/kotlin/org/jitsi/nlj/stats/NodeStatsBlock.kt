@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.stats
 
+import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.nlj.util.appendLnIndent
 import org.json.simple.JSONObject
 
@@ -148,7 +149,7 @@ class NodeStatsBlock(val name: String) {
     /**
      * Returns a JSON representation of this [NodeStatsBlock].
      */
-    fun toJson(): JSONObject = JSONObject().apply {
+    fun toJson(): JSONObject = OrderedJsonObject().apply {
         stats.forEach { (name, value) ->
             when (value) {
                 is NodeStatsBlock -> put(name, value.toJson())
