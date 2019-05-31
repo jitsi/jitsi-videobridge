@@ -32,6 +32,7 @@ import org.jitsi.rtp.*;
 import org.jitsi.rtp.extensions.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
+import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.json.simple.*;
@@ -69,6 +70,12 @@ public class DtlsTransport extends IceTransport
     private static final Predicate<Packet> NON_DTLS_PREDICATE
             = DTLS_PREDICATE.negate();
 
+    /**
+     * Count the number of dropped packets and exceptions.
+     */
+    static final CountingErrorHandler queueErrorCounter
+            = new CountingErrorHandler();
+
     private final Logger logger;
     private final DtlsStack dtlsStack;
     private final ProtocolReceiver dtlsReceiver;
@@ -103,7 +110,9 @@ public class DtlsTransport extends IceTransport
                 = new PacketInfoQueue(
                         getClass().getSimpleName() + "-outgoing-packet-queue",
                         TaskPools.IO_POOL,
-                        this::handleOutgoingPacket);
+                        this::handleOutgoingPacket,
+                        1024);
+        outgoingPacketQueue.setErrorHandler(queueErrorCounter);
 
         dtlsStack = new DtlsStack(endpoint.getID());
         dtlsReceiver = new ProtocolReceiver(dtlsStack);
@@ -496,7 +505,7 @@ public class DtlsTransport extends IceTransport
      * A terminating {@link Node}, which sends the packets through a
      * datagram socket.
      */
-    class SocketSenderNode extends ConsumerNode
+    private class SocketSenderNode extends ConsumerNode
     {
         public DatagramSocket socket = null;
 
