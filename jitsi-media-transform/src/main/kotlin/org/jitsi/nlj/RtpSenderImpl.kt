@@ -29,23 +29,22 @@ import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketCacher
 import org.jitsi.nlj.transform.node.SrtpTransformerNode
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
-import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
+import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.transform.node.outgoing.ProbingDataSender
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
 import org.jitsi.nlj.transform.node.outgoing.SentRtcpStats
 import org.jitsi.nlj.transform.node.outgoing.TccSeqNumTagger
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.PacketInfoQueue
-import org.jitsi.nlj.util.addMbps
 import org.jitsi.nlj.util.addRatio
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.utils.logging.Logger
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.logging.Logger
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
 import java.util.concurrent.ExecutorService
@@ -73,10 +72,7 @@ class RtpSenderImpl(
     private val outgoingRtpRoot: Node
     private val outgoingRtxRoot: Node
     private val outgoingRtcpRoot: Node
-    private val incomingPacketQueue = PacketInfoQueue("rtp-sender-incoming-packet-queue", executor, this::processPacket)
-    var numIncomingBytes: Long = 0
-    var firstPacketWrittenTime = -1L
-    var lastPacketWrittenTime = -1L
+    private val incomingPacketQueue = PacketInfoQueue("rtp-sender-incoming-packet-queue", executor, this::handlePacket)
     var running = true
     private var localVideoSsrc: Long? = null
     private var localAudioSsrc: Long? = null
@@ -179,18 +175,16 @@ class RtpSenderImpl(
         keyframeRequester.onRttUpdate(newRtt)
     }
 
-    override fun sendPacket(packetInfo: PacketInfo) {
+    /**
+     * Insert packets into the incoming packet queue
+     */
+    override fun doProcessPacket(packetInfo: PacketInfo) {
         val packet = packetInfo.packet
         if (packet is RtcpPacket) {
             rtcpEventNotifier.notifyRtcpSent(packet)
         }
-        numIncomingBytes += packet.length
         packetInfo.addEvent(PACKET_QUEUE_ENTRY_EVENT)
         incomingPacketQueue.add(packetInfo)
-        if (firstPacketWrittenTime == -1L) {
-            firstPacketWrittenTime = System.currentTimeMillis()
-        }
-        lastPacketWrittenTime = System.currentTimeMillis()
     }
 
     override fun sendProbing(mediaSsrc: Long, numBytes: Int): Int = probingDataSender.sendProbing(mediaSsrc, numBytes)
@@ -208,7 +202,11 @@ class RtpSenderImpl(
         keyframeRequester.requestKeyframe(mediaSsrc)
     }
 
-    private fun processPacket(packetInfo: PacketInfo): Boolean {
+    /**
+     * Handles packets that have gone through the incoming queue and sends them
+     * through the sender pipeline
+     */
+    private fun handlePacket(packetInfo: PacketInfo): Boolean {
         if (running) {
             val now = System.currentTimeMillis()
             if (firstQueueReadTime == -1L) {
@@ -247,15 +245,7 @@ class RtpSenderImpl(
     }
 
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("RTP sender $id").apply {
-        addNumber(INCOMING_BYTES, numIncomingBytes)
-        addNumber(INCOMING_DURATION_MS, lastPacketWrittenTime - firstPacketWrittenTime)
-        addMbps("incoming_bitrate_mbps", INCOMING_BYTES, INCOMING_BYTES)
-
-        addNumber("sent_packets", numPacketsSent)
-        addNumber(SENT_DURATION_MS, lastPacketSentTime - firstPacketSentTime)
-        addNumber(SENT_BYTES, numBytesSent)
-        addMbps("sent_bitrate_mbps", SENT_BYTES, SENT_DURATION_MS)
-
+        addBlock(super.getNodeStats())
         addNumber(QUEUE_NUM_READS, numQueueReads)
         addNumber(QUEUE_READ_DURATION_S, (lastQueueReadTime - firstQueueReadTime).toDouble() / 1000)
         addRatio("queue_average_reads_per_second", QUEUE_NUM_READS, QUEUE_READ_DURATION_S)
