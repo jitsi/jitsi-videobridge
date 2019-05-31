@@ -733,6 +733,8 @@ public class MediaStreamTrackFactory
         assert(encodings.length <= numEncodings);
         System.arraycopy(encodings, 0, rtpEncodings, 0, encodings.length);
 
+        track.updateEncodingCache();
+
         return track;
     }
 }
