@@ -48,7 +48,7 @@ fun main(args: Array<String>) {
             pkt.looksLikeRtp() -> PacketInfo(RtpPacket(pkt.buffer, pkt.offset, pkt.length))
             else -> PacketInfo(RtcpPacket.parse(pkt.buffer, pkt.offset))
         }
-        senders.forEach { it.sendPacket(packetInfo.clone()) }
+        senders.forEach { it.processPacket(packetInfo.clone()) }
     }
 
     val time = measureTimeMillis {

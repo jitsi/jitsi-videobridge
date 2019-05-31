@@ -26,12 +26,12 @@ import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
  * all RTP and RTP control packets.
  */
 abstract class RtpSender :
-        EventHandler, Stoppable, NodeStatsProducer, EndpointConnectionStats.EndpointConnectionStatsListener {
-    var numPacketsSent = 0
-    var numBytesSent: Long = 0
-    var firstPacketSentTime: Long = -1
-    var lastPacketSentTime: Long = -1
-    abstract fun sendPacket(packetInfo: PacketInfo)
+    StatsKeepingPacketHandler(),
+    EventHandler,
+    Stoppable,
+    NodeStatsProducer,
+    EndpointConnectionStats.EndpointConnectionStatsListener {
+
     abstract fun sendProbing(mediaSsrc: Long, numBytes: Int): Int
     abstract fun onOutgoingPacket(handler: PacketHandler)
     abstract fun setSrtpTransformers(srtpTransformers: SrtpTransformers)
