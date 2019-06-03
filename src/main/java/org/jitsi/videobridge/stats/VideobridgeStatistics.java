@@ -42,12 +42,6 @@ public class VideobridgeStatistics
     extends Statistics
 {
     /**
-     * The name of the number of audio channels statistic. Its runtime type is
-     * {@code Integer}.
-     */
-    public static final String AUDIO_CHANNELS = "audiochannels";
-
-    /**
      * The name of the bit rate statistic for download.
      */
     public static final String BITRATE_DOWNLOAD = "bit_rate_download";
@@ -159,20 +153,6 @@ public class VideobridgeStatistics
      * The name of total memory statistic. Its runtime type is {@code Integer}.
      */
     public static final String TOTAL_MEMORY = "total_memory";
-
-    /**
-     * The name of the total number of channels without any payload (RTP/RTCP)
-     * traffic.
-     */
-    private static final String TOTAL_NO_PAYLOAD_CHANNELS
-        = "total_no_payload_channels";
-
-    /**
-     * The name of the total number of channels where the transport failed to
-     * be established.
-     */
-    private static final String TOTAL_NO_TRANSPORT_CHANNELS
-        = "total_no_transport_channels";
 
     /**
      * The name of the total number of conferences where all channels failed
@@ -344,12 +324,6 @@ public class VideobridgeStatistics
     public static final String USED_MEMORY = "used_memory";
 
     /**
-     * The name of the number of video channels statistic. Its runtime type is
-     * {@code Integer}.
-     */
-    public static final String VIDEO_CHANNELS = "videochannels";
-
-    /**
      * The name of the number of video streams statistic. Its runtime type is
      * {@code Integer}.
      */
@@ -415,7 +389,6 @@ public class VideobridgeStatistics
         }
 
         // Is it necessary to set initial values for all of these?
-        unlockedSetStat(AUDIO_CHANNELS, 0);
         unlockedSetStat(BITRATE_DOWNLOAD, 0d);
         unlockedSetStat(BITRATE_UPLOAD, 0d);
         unlockedSetStat(CONFERENCES, 0);
@@ -425,7 +398,6 @@ public class VideobridgeStatistics
         unlockedSetStat(RTP_LOSS, 0d);
         unlockedSetStat(TOTAL_MEMORY, 0);
         unlockedSetStat(USED_MEMORY, 0);
-        unlockedSetStat(VIDEO_CHANNELS, 0);
         unlockedSetStat(VIDEO_STREAMS, 0);
         unlockedSetStat(LOSS_RATE_DOWNLOAD, 0d);
         unlockedSetStat(LOSS_RATE_UPLOAD, 0d);
@@ -504,8 +476,6 @@ public class VideobridgeStatistics
                 = ServiceUtils2.getService(bundleContext, Videobridge.class);
         Videobridge.Statistics jvbStats = videobridge.getStatistics();
 
-        // TODO switch from channel counts to endpoint counts
-        int audioChannels = 0, videoChannels = 0; // TODO verify
         int conferences = 0;
         int endpoints = 0;
         int videoStreams = 0; // TODO
@@ -549,19 +519,6 @@ public class VideobridgeStatistics
 
             endpoints += numConferenceEndpoints;
 
-            for (ContentShim contentShim : conferenceShim.getContents())
-            {
-                int contentChannelCount = contentShim.getChannelCount();
-                MediaType mediaType = contentShim.getMediaType();
-                if (MediaType.AUDIO.equals(mediaType))
-                {
-                    audioChannels += contentChannelCount;
-                }
-                else if (MediaType.VIDEO.equals(mediaType))
-                {
-                    videoChannels += contentChannelCount;
-                }
-            }
             for (Endpoint endpoint : conference.getLocalEndpoints())
             {
                 TransceiverStats transceiverStats
@@ -693,7 +650,6 @@ public class VideobridgeStatistics
             // TODO seems broken (I see values of > 11 seconds)
             unlockedSetStat(JITTER_AGGREGATE, jitterAggregate);
             unlockedSetStat(RTT_AGGREGATE, rttAggregate);
-            unlockedSetStat(AUDIO_CHANNELS, audioChannels);
             unlockedSetStat(
                     TOTAL_FAILED_CONFERENCES,
                     jvbStats.totalFailedConferences.get());
@@ -731,7 +687,6 @@ public class VideobridgeStatistics
             unlockedSetStat(TOTAL_PARTICIPANTS, jvbStats.totalEndpoints.get());
             unlockedSetStat(CONFERENCES, conferences);
             unlockedSetStat(PARTICIPANTS, endpoints);
-            unlockedSetStat(VIDEO_CHANNELS, videoChannels);
             unlockedSetStat(VIDEO_STREAMS, videoStreams);
             unlockedSetStat(LARGEST_CONFERENCE, largestConferenceSize);
             unlockedSetStat(CONFERENCE_SIZES, conferenceSizesJson);
