@@ -78,7 +78,7 @@ fun RTPEncodingDesc.getNodeStats() = NodeStatsBlock(primarySSRC.toString()).appl
     addNumber("frameRate", frameRate)
     addNumber("height", height)
     addNumber("index", index)
-    addNumber("last_stable_bitrate_bps", getLastStableBitrateBps(System.currentTimeMillis()))
+    addNumber("bitrate_bps", getBitrateBps(System.currentTimeMillis()))
     addBoolean("is_received", isReceived)
     addNumber("rtx_ssrc", getSecondarySsrc(SsrcAssociationType.RTX))
     addNumber("fec_ssrc", getSecondarySsrc(SsrcAssociationType.FEC))
