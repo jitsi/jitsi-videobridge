@@ -16,37 +16,32 @@
 
 package org.jitsi.nlj.util
 
-import org.jitsi.utils.PacketQueue
+import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.nlj.PacketInfo
 import java.util.concurrent.ExecutorService
 
+/**
+ * A [PacketInfo] queue. We do not want to use the copy functionality, which is why the related
+ * methods always throw.
+ */
 class PacketInfoQueue(
     id: String,
     executor: ExecutorService,
-    handler: (PacketInfo) -> Boolean
-) : PacketQueue<PacketInfo>(100, false, null, id, handler, executor) {
-    override fun getBuffer(packetInfo: PacketInfo): ByteArray {
-        TODO()
-//        return packetInfo.packet.getBuffer().array()
-    }
+    handler: (PacketInfo) -> Boolean,
+    capacity: Int = 1024
+) : PacketQueue<PacketInfo>(capacity, false, null, id, handler, executor) {
+    override fun getBuffer(packetInfo: PacketInfo): ByteArray =
+        throw NotImplementedError("copy=true is not supported")
 
-    override fun createPacket(p0: ByteArray?, p1: Int, p2: Int, p3: Any?): PacketInfo {
-        TODO()
-//        return PacketInfo(UnparsedPacket(ByteBuffer.allocate(0)))
-    }
+    override fun createPacket(p0: ByteArray?, p1: Int, p2: Int, p3: Any?): PacketInfo =
+        throw NotImplementedError("copy=true is not supported")
 
-    override fun getContext(p0: PacketInfo?): Any? {
-        TODO()
-//        return null
-    }
+    override fun getContext(p0: PacketInfo?): Any? =
+        throw NotImplementedError("copy=true is not supported")
 
-    override fun getLength(p0: PacketInfo): Int {
-        TODO()
-//        return p0.packet.getBuffer().limit()
-    }
+    override fun getLength(p0: PacketInfo): Int =
+        throw NotImplementedError("copy=true is not supported")
 
-    override fun getOffset(p0: PacketInfo?): Int {
-        TODO()
-//        return 0
-    }
+    override fun getOffset(p0: PacketInfo?): Int =
+        throw NotImplementedError("copy=true is not supported")
 }

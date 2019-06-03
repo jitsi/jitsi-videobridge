@@ -50,6 +50,7 @@ import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.util.RTCPUtils
 import org.jitsi.utils.logging.Logger
+import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
@@ -92,6 +93,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     companion object {
         private val classLogger: Logger = Logger.getLogger(this::class.java)
+        val queueErrorCounter = CountingErrorHandler()
+
         private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP receiver incoming queue"
         private const val PACKET_QUEUE_EXIT_EVENT = "Exited RTP receiver incoming queue"
     }
@@ -119,6 +122,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
     init {
         logger.cdebug { "Receiver ${this.hashCode()} using executor ${executor.hashCode()}" }
         rtcpEventNotifier.addRtcpEventListener(rtcpRrGenerator)
+
+        incomingPacketQueue.setErrorHandler(queueErrorCounter)
 
         inputTreeRoot = pipeline {
             demux("SRTP/SRTCP") {
