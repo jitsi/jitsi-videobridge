@@ -1439,7 +1439,8 @@ public class BitrateController
             if (timeSeriesLogger.isTraceEnabled())
             {
                 DiagnosticContext.TimeSeriesPoint ratesTimeSeriesPoint
-                    = diagnosticContext.makeTimeSeriesPoint("rates");
+                    = diagnosticContext.makeTimeSeriesPoint("rates")
+                    .addField("remote_endpoint_id", endpointID);
                 for (RateSnapshot rateSnapshot : ratesList) {
                     ratesTimeSeriesPoint.addField(
                         Integer.toString(rateSnapshot.encoding.getIndex()),

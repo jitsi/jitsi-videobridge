@@ -118,6 +118,13 @@ def rates_plot(args):
         if len(endpoints) > 1:
             raise Exception('Which endpoint to plot? {}'.format(endpoints))
 
+    if args.remote_endpoint:
+        df = df[df['remote_endpoint_id'] == args.remote_endpoint]
+    else:
+        remote_endpoints = df['remote_endpoint_id'].unique()
+        if len(remote_endpoints) > 1:
+            raise Exception('Which remote endpoint to plot? {}'.format(remote_endpoints))
+
     import matplotlib.pyplot as plt
     df.plot('time', ['0', '1', '2', '3', '4', '5', '6', '7', '8'], grid=True)
     plt.show()
@@ -128,6 +135,7 @@ def setup_rates_subparser(parser):
 
     parser_plot = subparsers.add_parser('plot')
     parser_plot.add_argument('--endpoint')
+    parser_plot.add_argument('--remote-endpoint')
     parser_plot.set_defaults(func=rates_plot)
 
 
