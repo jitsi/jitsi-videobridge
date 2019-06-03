@@ -30,6 +30,7 @@ import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.extensions.*;
+import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.queue.*;
@@ -357,19 +358,38 @@ public class DtlsTransport extends IceTransport
         // enough (it'll only be a bit of the DTLS path) that running it in the
         // IO pool is fine
         TaskPools.IO_POOL.submit(() -> {
-            byte[] bbuf = ByteBufferPool.getBuffer(1500);
-            DatagramPacket p = new DatagramPacket(bbuf, 0, 1500);
+
+            // We need this buffer to be 1500 bytes because we don't know how
+            // big the received packet will be. But we don't want to allocate
+            // large buffers for all packets.
+            byte[] receiveBuf = new byte[1500];
+            DatagramPacket p = new DatagramPacket(receiveBuf, 0, 1500);
+
             while (!closed)
             {
                 try
                 {
                     socket.receive(p);
-                    Packet pkt = new UnparsedPacket(bbuf, 0, p.getLength());
+                    int len = p.getLength();
+                    byte[] buf
+                        = ByteBufferPool.getBuffer(
+                                len +
+                                RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET +
+                                RtpPacket.BYTES_TO_LEAVE_AT_END_OF_PACKET);
+                    System.arraycopy(
+                            receiveBuf, p.getOffset(),
+                            buf, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
+                            len);
+                    Packet pkt
+                        = new UnparsedPacket(
+                                buf,
+                                RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
+                                len);
                     PacketInfo pktInfo = new PacketInfo(pkt);
                     pktInfo.setReceivedTime(System.currentTimeMillis());
                     incomingPipelineRoot.processPacket(pktInfo);
-                    bbuf = ByteBufferPool.getBuffer(1500);
-                    p.setData(bbuf, 0, 1500);
+
+                    p.setData(receiveBuf, 0, receiveBuf.length);
                 }
                 catch (SocketClosedException e)
                 {
