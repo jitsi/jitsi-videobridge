@@ -15,10 +15,10 @@
  */
 package org.jitsi_modified.impl.neomedia.rtp;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.utils.*;
-import org.jitsi.utils.logging.*;
 import org.jitsi.utils.stats.*;
 
 import java.util.*;
@@ -38,13 +38,6 @@ public class RTPEncodingDesc
     public static final int SUSPENDED_INDEX = -1;
 
     /**
-     * The {@link Logger} used by the {@link RTPEncodingDesc class to print
-     * debug information.
-     */
-    private static final Logger logger
-        = Logger.getLogger(RTPEncodingDesc.class);
-
-    /**
      * A value used to designate the absence of height information.
      */
     private final static int NO_HEIGHT = -1;
@@ -60,21 +53,6 @@ public class RTPEncodingDesc
      * TODO maybe make this configurable.
      */
     private static final int AVERAGE_BITRATE_WINDOW_MS = 5000;
-
-    /**
-     * The number of incoming frames to keep track of.
-     */
-    private static final int FRAMES_HISTORY_SZ = 60;
-
-     /**
-      * The maximum time interval (in millis) an encoding can be considered
-      * active without new frames. This value corresponds to 4fps + 50 millis
-      * to compensate for network noise. If the network is clogged and we don't
-      * get a new frame within 300 millis, and if the encoding is being
-      * received, then we will ask for a new key frame (this is done in the
-      * JVB in SimulcastController).
-      */
-    private static final int SUSPENSION_THRESHOLD_MS = 300;
 
     /**
      * The primary SSRC for this layering/encoding.
@@ -202,19 +180,52 @@ public class RTPEncodingDesc
         }
     }
 
-    public void addSecondarySsrc(long ssrc, SsrcAssociationType type)
+    /**
+     * @return the "id" of this encoding. This is a server-side id and should
+     * not be confused with any encoding id defined in the client (such us the
+     * rid). This server-side id is used in the encodings lookup table that is
+     * maintained in {@link MediaStreamTrackDesc}.
+     */
+    public long getEncodingId()
     {
-        secondarySsrcs.put(ssrc, type);
+        long encodingId = primarySSRC;
+        if (tid > -1)
+        {
+            encodingId |= (long) tid << 32;
+        }
+
+        return encodingId;
     }
 
     /**
-     * Gets the last stable bitrate (in bps) for this instance.
-     *
-     * @return The last stable bitrate (in bps) for this instance.
+     * @param videoRtpPacket the video packet
+     * @return gets the server-side encoding id (see
+     * {@link #getEncodingId(VideoRtpPacket)}) of a video packet.
      */
-    public long getLastStableBitrateBps(long nowMs)
+    public static long getEncodingId(@NotNull VideoRtpPacket videoRtpPacket)
     {
-        return rateStatistics.getRate(nowMs);
+        long encodingId = videoRtpPacket.getSsrc();
+        if (videoRtpPacket instanceof Vp8Packet)
+        {
+            // note(george) we've observed that a client may announce but not
+            // send simulcast (it is not clear atm who's to blame for this
+            // "bug", chrome or our client code). In any case, when this happens
+            // we "pretend" that the encoding of the packet is the base temporal
+            // layer of the rtp stream (ssrc) of the packet.
+            int tid = ((Vp8Packet) videoRtpPacket).getTemporalLayerIndex();
+            if (tid < 0)
+            {
+                tid = 0;
+            }
+            encodingId |= (long) tid << 32;
+        }
+
+        return encodingId;
+    }
+
+    public void addSecondarySsrc(long ssrc, SsrcAssociationType type)
+    {
+        secondarySsrcs.put(ssrc, type);
     }
 
     /**
@@ -260,16 +271,6 @@ public class RTPEncodingDesc
     }
 
     /**
-     * Gets the {@link MediaStreamTrackDesc} that this instance belongs to.
-     *
-     * @return the {@link MediaStreamTrackDesc} that this instance belongs to.
-     */
-    public MediaStreamTrackDesc getMediaStreamTrack()
-    {
-        return track;
-    }
-
-    /**
      * Gets the subjective quality index of this instance.
      *
      * @return the subjective quality index of this instance.
@@ -279,56 +280,17 @@ public class RTPEncodingDesc
         return idx;
     }
 
-    /**
-     * Returns a boolean that indicates whether or not this
-     * {@link RTPEncodingDesc depends on the subjective quality index that is
-     * passed as an argument.
-     *
-     * @param idx the index of this instance in the track encodings array.
-     * @return true if this {@link RTPEncodingDesc depends on the subjective
-     * quality index that is passed as an argument, false otherwise.
-     */
-    public boolean requires(int idx)
-    {
-        if (idx < 0)
-        {
-            return false;
-        }
-
-        if (idx == this.idx)
-        {
-            return true;
-        }
-
-
-        boolean requires = false;
-
-        if (!ArrayUtils.isNullOrEmpty(dependencyEncodings))
-        {
-            for (RTPEncodingDesc enc : dependencyEncodings)
-            {
-                if (enc.requires(idx))
-                {
-                    requires = true;
-                    break;
-                }
-            }
-        }
-
-        return requires;
-    }
-
     boolean matches(VideoRtpPacket packet)
     {
         if (!matches(packet.getSsrc()))
         {
             return false;
         }
-        if (tid == -1 && sid == -1)
+        else if (tid == -1 && sid == -1)
         {
             return true;
         }
-        if (packet instanceof Vp8Packet)
+        else if (packet instanceof Vp8Packet)
         {
             Vp8Packet vp8Packet = (Vp8Packet)packet;
             // NOTE(brian): the spatial layer index of an encoding is only currently used for in-band spatial
@@ -337,8 +299,8 @@ public class RTPEncodingDesc
             // check that here (note, though, that the spatial layer index in a packet is currently set as of
             // the time of this writing and is from the perspective of a logical spatial index, i.e. the lowest sim
             // stream (180p) has spatial index 0, 360p has 1, 720p has 2.
-            return tid == vp8Packet.getTemporalLayerIndex();
-
+            int vp8PacketTid = vp8Packet.getTemporalLayerIndex();
+            return (tid == vp8PacketTid) || (vp8PacketTid == -1 && tid == 0);
         }
         else
         {
@@ -366,7 +328,7 @@ public class RTPEncodingDesc
      * @param packetSizeBytes
      * @param nowMs
      */
-    public void update(int packetSizeBytes, long nowMs)
+    public void updateBitrate(int packetSizeBytes, long nowMs)
     {
         // Update rate stats (this should run after padding termination).
         rateStatistics.update(packetSizeBytes , nowMs);
@@ -380,7 +342,7 @@ public class RTPEncodingDesc
      * @return the cumulative bitrate (in bps) of this {@link RTPEncodingDesc
      * and its dependencies.
      */
-    private long getBitrateBps(long nowMs)
+    public long getBitrateBps(long nowMs)
     {
         RTPEncodingDesc[] encodings = track.getRTPEncodings();
         if (ArrayUtils.isNullOrEmpty(encodings))

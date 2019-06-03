@@ -38,8 +38,7 @@ class VideoBitrateCalculator : ObserverNode("Video bitrate calculator") {
         val videoRtpPacket: VideoRtpPacket = packetInfo.packet as VideoRtpPacket
         findRtpEncodingDesc(videoRtpPacket)?.let {
             val now = System.currentTimeMillis()
-            it.update(videoRtpPacket.length, now)
-            videoRtpPacket.bitrateSnapshot = it.getLastStableBitrateBps(now)
+            it.updateBitrate(videoRtpPacket.length, now)
         }
     }
 

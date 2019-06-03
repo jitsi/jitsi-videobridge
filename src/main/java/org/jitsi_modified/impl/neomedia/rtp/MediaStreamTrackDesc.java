@@ -16,6 +16,7 @@
 package org.jitsi_modified.impl.neomedia.rtp;
 
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.utils.*;
 
 import java.util.*;
@@ -38,10 +39,9 @@ public class MediaStreamTrackDesc
     private final RTPEncodingDesc[] rtpEncodings;
 
     /**
-     * Allow the lookup of an encoding by the SSRC of a received packet.  Note
-     * that multiple SSRCs in this map may point to the same encoding.
+     * Allow the lookup of an encoding by the encoding id of a received packet.
      */
-    private final Map<Long, RTPEncodingDesc> encodingsBySsrc = new HashMap<>();
+    private final Map<Long, RTPEncodingDesc> encodingsById = new HashMap<>();
 
     /**
      * A string which identifies the owner of this track (e.g. the endpoint
@@ -79,7 +79,7 @@ public class MediaStreamTrackDesc
     {
         for (RTPEncodingDesc encoding : this.rtpEncodings)
         {
-            encodingsBySsrc.put(encoding.getPrimarySSRC(), encoding);
+            encodingsById.put(encoding.getEncodingId(), encoding);
         }
     }
 
@@ -111,7 +111,7 @@ public class MediaStreamTrackDesc
      * @return the last "stable" bitrate (bps) of the encoding at the specified
      * index.
      */
-    public long getBps(int idx)
+    public long getBitrateBps(long nowMs, int idx)
     {
         if (ArrayUtils.isNullOrEmpty(rtpEncodings))
         {
@@ -120,10 +120,9 @@ public class MediaStreamTrackDesc
 
         if (idx > -1)
         {
-            long nowMs = System.currentTimeMillis();
             for (int i = idx; i > -1; i--)
             {
-                long bps = rtpEncodings[i].getLastStableBitrateBps(nowMs);
+                long bps = rtpEncodings[i].getBitrateBps(nowMs);
                 if (bps > 0)
                 {
                     return bps;
@@ -140,11 +139,14 @@ public class MediaStreamTrackDesc
         {
             return null;
         }
-        RTPEncodingDesc desc = encodingsBySsrc.get(videoRtpPacket.getSsrc());
+
+        long encodingId = RTPEncodingDesc.getEncodingId(videoRtpPacket);
+        RTPEncodingDesc desc = encodingsById.get(encodingId);
         if (desc != null)
         {
             return desc;
         }
+
         return Arrays.stream(rtpEncodings)
                 .filter(encoding -> encoding.matches(videoRtpPacket))
                 .findFirst()
