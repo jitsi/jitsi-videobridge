@@ -49,11 +49,9 @@ class Rfc3711IndexTracker {
                 roc - 1
             }
             highestSeqNumReceived rolledOverTo seqNum -> {
-                // We've rolled over, so update the roc value and
-                // the highestSeqNumReceived and return the new roc
-                // to be used for v
-                highestSeqNumReceived = seqNum
-
+                // We've rolled over, so update the roc in place if updateRoc
+                // is set, otherwise return the right value (our current roc
+                // + 1)
                 if (updateRoc) {
                     ++roc
                 } else {
@@ -61,6 +59,10 @@ class Rfc3711IndexTracker {
                 }
             }
             else -> roc
+        }
+
+        if (updateRoc && (seqNum isNewerThan highestSeqNumReceived)) {
+            highestSeqNumReceived = seqNum
         }
 
         return 0x1_0000 * v + seqNum
