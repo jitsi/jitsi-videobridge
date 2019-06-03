@@ -17,6 +17,7 @@
 package org.jitsi.nlj.util
 
 import io.kotlintest.IsolationMode
+import io.kotlintest.matchers.numerics.shouldBeGreaterThan
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 
@@ -53,6 +54,14 @@ internal class Rfc3711IndexTrackerTest : ShouldSpec() {
                     should("return the proper index") {
                         oldIndex shouldBe oldIndex
                     }
+                }
+            }
+        }
+        "a series of sequence numbers" {
+            should("never return a negative index") {
+                var seqNum = 22134
+                repeat(35537) {
+                    indexTracker.update(seqNum++) shouldBeGreaterThan 0
                 }
             }
         }
