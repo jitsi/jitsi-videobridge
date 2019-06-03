@@ -515,6 +515,7 @@ public class BitrateController
         }
         List<Long> activeSsrcs = new ArrayList<>();
         long totalTargetBps = 0, totalIdealBps = 0;
+        long nowMs = System.currentTimeMillis();
         for (AdaptiveTrackProjection adaptiveTrackProjection
                 : adaptiveTrackProjections)
         {
@@ -525,7 +526,7 @@ public class BitrateController
                 continue;
             }
 
-            long targetBps = sourceTrack.getBps(
+            long targetBps = sourceTrack.getBitrateBps(nowMs,
                     adaptiveTrackProjection.getTargetIndex());
             if (targetBps > 0)
             {
@@ -537,7 +538,7 @@ public class BitrateController
             }
 
             totalTargetBps += targetBps;
-            totalIdealBps += sourceTrack.getBps(
+            totalIdealBps += sourceTrack.getBitrateBps(nowMs,
                     adaptiveTrackProjection.getIdealIndex());
         }
         return new StatusSnapshot(totalTargetBps, totalIdealBps, activeSsrcs);
@@ -1394,6 +1395,7 @@ public class BitrateController
                 return;
             }
 
+            long nowMs = System.currentTimeMillis();
             List<RateSnapshot> ratesList = new ArrayList<>();
             // Initialize the list of flows that we will consider for sending
             // for this track. For example, for the on-stage participant we
@@ -1409,15 +1411,15 @@ public class BitrateController
                 }
                 if (selected)
                 {
-                    // For the selected participant we favor resolution over
-                    // frame rate.
+                    // For the selected participant we favor frame rate over
+                    // resolution. Basically what we want for the on-stage
+                    // participant is 180p7.5fps, 180p15fps, 180p30fps,
+                    // 360p30fps and 720p30fps.
                     if (encoding.getHeight() < ONSTAGE_PREFERRED_HEIGHT
                         || encoding.getFrameRate() >= ONSTAGE_PREFERRED_FRAME_RATE)
                     {
-                        ratesList.add(
-                            new RateSnapshot(
-                                encoding.getLastStableBitrateBps(
-                                        System.currentTimeMillis()), encoding));
+                        ratesList.add(new RateSnapshot(
+                            encoding.getBitrateBps(nowMs), encoding));
                     }
 
                     if (encoding.getHeight() <= ONSTAGE_PREFERRED_HEIGHT)
@@ -1430,9 +1432,21 @@ public class BitrateController
                     // For the thumbnails, we consider all temporal layers of
                     // the low resolution stream.
                     ratesList.add(new RateSnapshot(
-                        encoding.getLastStableBitrateBps(
-                                System.currentTimeMillis()), encoding));
+                        encoding.getBitrateBps(nowMs), encoding));
                 }
+            }
+
+            if (timeSeriesLogger.isTraceEnabled())
+            {
+                DiagnosticContext.TimeSeriesPoint ratesTimeSeriesPoint
+                    = diagnosticContext.makeTimeSeriesPoint("rates")
+                    .addField("remote_endpoint_id", endpointID);
+                for (RateSnapshot rateSnapshot : ratesList) {
+                    ratesTimeSeriesPoint.addField(
+                        Integer.toString(rateSnapshot.encoding.getIndex()),
+                        rateSnapshot.bps);
+                }
+                timeSeriesLogger.trace(ratesTimeSeriesPoint);
             }
 
             this.ratedPreferredIdx = ratedPreferredIdx;
@@ -1523,7 +1537,11 @@ public class BitrateController
                 ? ratedIndices[ratedTargetIdx].encoding.getIndex() : -1;
         }
 
-
+        /**
+         * Gets the preferred quality for this track.
+         *
+         * @return the preferred quality for this track.
+         */
         private int getPreferredIndex()
         {
             // figures out the quality of the encoding of the target rated
