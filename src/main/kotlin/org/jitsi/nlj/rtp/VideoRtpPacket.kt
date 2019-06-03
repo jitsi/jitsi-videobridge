@@ -22,10 +22,6 @@ open class VideoRtpPacket(
     offset: Int,
     length: Int
 ) : RtpPacket(buffer, offset, length) {
-    /**
-     * The estimated bitrate of the encoding to which this packet belongs
-     */
-    var bitrateSnapshot: Long? = null
     var isKeyframe = false
     var qualityIndex = -1
 
