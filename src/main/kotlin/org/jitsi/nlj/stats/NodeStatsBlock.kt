@@ -59,6 +59,13 @@ class NodeStatsBlock(val name: String) {
     }
 
     /**
+     * Adds a block with a given name from a JSON object.
+     */
+    fun addJson(name: String, json: JSONObject) {
+        addBlock(fromJson(name, json))
+    }
+
+    /**
      * Adds a named value to this [NodeStatsBlock] which is derived from other values in the block.
      * The value will be calculated (by invoking the given function) when it is needed (e.g. in [getValue] or
      * when exporting this block to another format (printing or JSON).
@@ -166,5 +173,14 @@ class NodeStatsBlock(val name: String) {
          * The stat name that we use to could the number of other block aggregated in this one.
          */
         private const val AGGREGATES = "_aggregates"
+
+        /**
+         * Creates a [NodeStatsBlock] from a JSON object. It's shallow and uses only strings.
+         */
+        fun fromJson(name: String, json: JSONObject): NodeStatsBlock = NodeStatsBlock(name).apply {
+            json.keys.forEach {
+                addString(it!!.toString(), json[it].toString())
+            }
+        }
     }
 }

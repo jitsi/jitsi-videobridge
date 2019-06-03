@@ -37,13 +37,13 @@ import org.jitsi.nlj.transform.node.outgoing.SentRtcpStats
 import org.jitsi.nlj.transform.node.outgoing.TccSeqNumTagger
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.PacketInfoQueue
-import org.jitsi.nlj.util.addRatio
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.utils.logging.Logger
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
@@ -83,10 +83,6 @@ class RtpSenderImpl(
     // its handler (likely in another thread) grab the packet and send it out
     private var outgoingPacketHandler: PacketHandler? = null
 
-    private var firstQueueReadTime: Long = -1
-    private var lastQueueReadTime: Long = -1
-    private var numQueueReads: Long = 0
-
     private val srtpEncryptWrapper = SrtpTransformerNode("SRTP encrypt")
     private val srtcpEncryptWrapper = SrtpTransformerNode("SRTCP encrypt")
     private val outgoingPacketCache = PacketCacher()
@@ -111,20 +107,16 @@ class RtpSenderImpl(
 
     companion object {
         private val classLogger: Logger = Logger.getLogger(this::class.java)
+        val queueErrorCounter = CountingErrorHandler()
+
         private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP sender incoming queue"
         private const val PACKET_QUEUE_EXIT_EVENT = "Exited RTP sender incoming queue"
-
-        // Constants for the [NodeStatsBlock] stat names
-        private const val INCOMING_BYTES = "incoming_bytes"
-        private const val INCOMING_DURATION_MS = "incoming_duration_ms"
-        private const val SENT_BYTES = "sent_bytes"
-        private const val SENT_DURATION_MS = "sent_duration_ms"
-        private const val QUEUE_NUM_READS = "queue_num_reads"
-        private const val QUEUE_READ_DURATION_S = "queue_read_duration_s"
     }
 
     init {
         logger.cdebug { "Sender $id using executor ${executor.hashCode()}" }
+
+        incomingPacketQueue.setErrorHandler(queueErrorCounter)
 
         outgoingRtpRoot = pipeline {
             node(outgoingPacketCache)
@@ -208,12 +200,6 @@ class RtpSenderImpl(
      */
     private fun handlePacket(packetInfo: PacketInfo): Boolean {
         if (running) {
-            val now = System.currentTimeMillis()
-            if (firstQueueReadTime == -1L) {
-                firstQueueReadTime = now
-            }
-            numQueueReads++
-            lastQueueReadTime = now
             packetInfo.addEvent(PACKET_QUEUE_EXIT_EVENT)
 
             val root = when (packetInfo.packet) {
@@ -245,13 +231,9 @@ class RtpSenderImpl(
     }
 
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("RTP sender $id").apply {
-        addBlock(super.getNodeStats())
-        addNumber(QUEUE_NUM_READS, numQueueReads)
-        addNumber(QUEUE_READ_DURATION_S, (lastQueueReadTime - firstQueueReadTime).toDouble() / 1000)
-        addRatio("queue_average_reads_per_second", QUEUE_NUM_READS, QUEUE_READ_DURATION_S)
-
         addBlock(nackHandler.getNodeStats())
         addBlock(probingDataSender.getNodeStats())
+        addJson("packetQueue", incomingPacketQueue.debugState)
         NodeStatsVisitor(this).reverseVisit(outputPipelineTerminationNode)
 
         addString("running", running.toString())
