@@ -324,6 +324,12 @@ public class VideobridgeStatistics
     public static final String USED_MEMORY = "used_memory";
 
     /**
+     * The name of the number of video channels statistic. Its runtime type is
+     * {@code Integer}. We only use this for callstats.
+     */
+    public static final String VIDEO_CHANNELS = "videochannels";
+
+    /**
      * The name of the number of video streams statistic. Its runtime type is
      * {@code Integer}.
      */
@@ -398,6 +404,7 @@ public class VideobridgeStatistics
         unlockedSetStat(RTP_LOSS, 0d);
         unlockedSetStat(TOTAL_MEMORY, 0);
         unlockedSetStat(USED_MEMORY, 0);
+        unlockedSetStat(VIDEO_CHANNELS, 0);
         unlockedSetStat(VIDEO_STREAMS, 0);
         unlockedSetStat(LOSS_RATE_DOWNLOAD, 0d);
         unlockedSetStat(LOSS_RATE_UPLOAD, 0d);
@@ -476,6 +483,7 @@ public class VideobridgeStatistics
                 = ServiceUtils2.getService(bundleContext, Videobridge.class);
         Videobridge.Statistics jvbStats = videobridge.getStatistics();
 
+        int videoChannels = 0;
         int conferences = 0;
         int endpoints = 0;
         int videoStreams = 0; // TODO
@@ -519,6 +527,13 @@ public class VideobridgeStatistics
 
             endpoints += numConferenceEndpoints;
 
+            for (ContentShim contentShim : conferenceShim.getContents())
+            {
+                if (MediaType.VIDEO.equals(contentShim.getMediaType()))
+                {
+                    videoChannels += contentShim.getChannelCount();
+                }
+            }
             for (Endpoint endpoint : conference.getLocalEndpoints())
             {
                 TransceiverStats transceiverStats
@@ -687,6 +702,7 @@ public class VideobridgeStatistics
             unlockedSetStat(TOTAL_PARTICIPANTS, jvbStats.totalEndpoints.get());
             unlockedSetStat(CONFERENCES, conferences);
             unlockedSetStat(PARTICIPANTS, endpoints);
+            unlockedSetStat(VIDEO_CHANNELS, videoChannels);
             unlockedSetStat(VIDEO_STREAMS, videoStreams);
             unlockedSetStat(LARGEST_CONFERENCE, largestConferenceSize);
             unlockedSetStat(CONFERENCE_SIZES, conferenceSizesJson);

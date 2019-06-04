@@ -199,7 +199,7 @@ public class CallStatsIOTransport
             long measurementInterval)
     {
         bsib.audioFabricCount(
-                s.getStatAsInt(VideobridgeStatistics.AUDIO_CHANNELS));
+                s.getStatAsInt(VideobridgeStatistics.PARTICIPANTS));
         bsib.avgIntervalJitter(
             s.getStatAsInt(VideobridgeStatistics.JITTER_AGGREGATE));
         bsib.avgIntervalRtt(
