@@ -44,12 +44,7 @@ class PartitionedByteBufferPool
     /**
      * How many buffers to pre-allocate in each partition.
      */
-    private static final int INITIAL_SIZE = 100;
-
-    /**
-     * The size of buffers to allocate.
-     */
-    private static final int DEFAULT_BUFFER_SIZE = 1500 + RtpPacket.BYTES_TO_LEAVE_AT_END_OF_PACKET;
+    private static final int INITIAL_SIZE = 10;
 
     /**
      * Whether to accept small buffers (<1500) that are returned.
@@ -79,12 +74,15 @@ class PartitionedByteBufferPool
      */
     private boolean enableStatistics = false;
 
+    private final int defaultSize;
+
     /**
      * Initializes a new {@link PartitionedByteBufferPool} instance with
      * a given initial size for each partition.
      */
-    PartitionedByteBufferPool()
+    PartitionedByteBufferPool(int defaultSize)
     {
+        this.defaultSize = defaultSize;
         for (int i = 0; i < NUM_PARTITIONS; ++i)
         {
             partitions[i] = new Partition(i, INITIAL_SIZE);
@@ -130,14 +128,32 @@ class PartitionedByteBufferPool
      * Adds statistics for this pool to the given JSON object.
      * @param stats the JSON object to add stats to.
      */
-    void addStats(JSONObject stats)
+    JSONObject getStats()
     {
+        JSONObject stats = new JSONObject();
+        stats.put("default_size", defaultSize);
         JSONArray partitionStats = new JSONArray();
         for (Partition p : partitions)
         {
             partitionStats.add(p.getStatsJson());
         }
         stats.put("partitions", partitionStats);
+        return stats;
+    }
+
+    /**
+     * Gets the total number of times a new byte[] was allocated.
+     * @return
+     */
+    long getNumAllocations()
+    {
+        long allocations = 0;
+        for (int i = 0; i < NUM_PARTITIONS; i++)
+        {
+            allocations += partitions[i].numAllocations.get();
+        }
+
+        return allocations;
     }
 
     /**
@@ -228,7 +244,7 @@ class PartitionedByteBufferPool
             this.id = id;
             for (int i = 0; i < initialSize; ++i)
             {
-                pool.add(new byte[DEFAULT_BUFFER_SIZE]);
+                pool.add(new byte[defaultSize]);
             }
         }
 
@@ -251,7 +267,7 @@ class PartitionedByteBufferPool
             {
                 numRequests.incrementAndGet();
                 requestRate.update(1, System.currentTimeMillis());
-                if (requiredSize > DEFAULT_BUFFER_SIZE)
+                if (requiredSize > defaultSize)
                 {
                     numLargeRequests.incrementAndGet();
                 }
@@ -260,11 +276,11 @@ class PartitionedByteBufferPool
             byte[] buf = pool.poll();
             if (buf == null)
             {
-                buf = new byte[Math.max(DEFAULT_BUFFER_SIZE, requiredSize)];
+                buf = new byte[Math.max(defaultSize, requiredSize)];
+                numAllocations.incrementAndGet();
                 if (enableStatistics)
                 {
                     numEmptyPoolAllocations.incrementAndGet();
-                    numAllocations.incrementAndGet();
                 }
             }
             else if (buf.length < requiredSize)
@@ -282,7 +298,7 @@ class PartitionedByteBufferPool
                 // the buffer to be too small in practice, we'll throw it away.
                 // This makes sure that if someone returns a small buffer (in
                 // the practical sense) it will not get stuck in the pool.
-                if (buf.length >= DEFAULT_BUFFER_SIZE)
+                if (buf.length >= defaultSize)
                 {
                     pool.offer(buf);
                 }
@@ -291,11 +307,11 @@ class PartitionedByteBufferPool
                     numSmallBuffersDiscarded.incrementAndGet();
                 }
 
-                buf = new byte[Math.max(DEFAULT_BUFFER_SIZE, requiredSize)];
+                buf = new byte[Math.max(defaultSize, requiredSize)];
+                numAllocations.incrementAndGet();
                 if (enableStatistics)
                 {
                     numWrongSizeAllocations.incrementAndGet();
-                    numAllocations.incrementAndGet();
                 }
             }
             else if (enableStatistics)
@@ -332,7 +348,7 @@ class PartitionedByteBufferPool
                 returnRate.update(1, System.currentTimeMillis());
             }
 
-            if (buf.length < DEFAULT_BUFFER_SIZE)
+            if (buf.length < defaultSize)
             {
                 numSmallReturns.incrementAndGet();
                 if (ACCEPT_SMALL_BUFFERS)

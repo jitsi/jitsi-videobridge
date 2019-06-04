@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.util;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging.*;
 import org.json.simple.*;
 
@@ -32,10 +33,31 @@ import java.util.concurrent.atomic.*;
 public class ByteBufferPool
 {
     /**
-     * The underlying pool implementation.
+     * The pool of buffers is segmented by size to make the overall memory
+     * footprint smaller.
+     * These thresholds were chosen to minimize the used memory for a trace of
+     * requests from a test conference. Using finer segmentation (4 thresholds)
+     * results in only a marginal improvement.
      */
-    private static final PartitionedByteBufferPool poolImpl
-            = new PartitionedByteBufferPool();
+    private static int T1 = 220;
+    private static int T2 = 775;
+    private static int T3 = 1240;
+
+    /**
+     * The pool of buffers with size <= T1
+     */
+    private static final PartitionedByteBufferPool pool1
+            = new PartitionedByteBufferPool(T1);
+    /**
+     * The pool of buffers with size in (T1, T2]
+     */
+    private static final PartitionedByteBufferPool pool2
+            = new PartitionedByteBufferPool(T2);
+    /**
+     * The pool of buffers with size in (T2, T3]
+     */
+    private static final PartitionedByteBufferPool pool3
+            = new PartitionedByteBufferPool(T3);
 
     /**
      * The {@link Logger}
@@ -62,6 +84,12 @@ public class ByteBufferPool
      * Total number of buffers requested.
      */
     private static final AtomicInteger numRequests = new AtomicInteger(0);
+
+    /**
+     * The number of requests which were larger than our threshold and were
+     * allocated from java instead.
+     */
+    private static final AtomicInteger numLargeRequests = new AtomicInteger(0);
 
     /**
      * Total number of buffers returned.
@@ -109,7 +137,25 @@ public class ByteBufferPool
             numRequests.incrementAndGet();
         }
 
-        byte[] buf = poolImpl.getBuffer(size);
+        byte[] buf;
+        if (size <= T1)
+        {
+            buf = pool1.getBuffer(size);
+        }
+        else if (size < T2)
+        {
+            buf = pool2.getBuffer(size);
+        }
+        else if (size < T3)
+        {
+            buf = pool3.getBuffer(size);
+        }
+        else
+        {
+            buf = new byte[size];
+            numLargeRequests.incrementAndGet();
+        }
+
         if (ENABLE_BOOKKEEPING)
         {
             bookkeeping.put(System.identityHashCode(buf), getStackTrace());
@@ -123,13 +169,31 @@ public class ByteBufferPool
      * Returns a buffer to the pool.
      * @param buf
      */
-    public static void returnBuffer(byte[] buf)
+    public static void returnBuffer(@NotNull byte[] buf)
     {
         if (enableStatistics)
         {
             numReturns.incrementAndGet();
         }
-        poolImpl.returnBuffer(buf);
+
+        int len = buf.length;
+        if (len <= T1)
+        {
+            pool1.returnBuffer(buf);
+        }
+        else if (len <= T2)
+        {
+            pool2.returnBuffer(buf);
+        }
+        else if (len < 2000)
+        {
+            pool3.returnBuffer(buf);
+        }
+        else
+        {
+            logger.warn(
+                "Received a suspiciously large buffer (size = " + len + ")");
+        }
 
         if (ENABLE_BOOKKEEPING)
         {
@@ -153,8 +217,21 @@ public class ByteBufferPool
         JSONObject stats = new JSONObject();
         stats.put("outstanding_buffers", bookkeeping.size());
         stats.put("num_requests", numRequests.get());
+        stats.put("num_large_requests", numLargeRequests.get());
         stats.put("num_returns", numReturns.get());
-        poolImpl.addStats(stats);
+        if (enableStatistics)
+        {
+            stats.put("pool1", pool1.getStats());
+            stats.put("pool2", pool2.getStats());
+            stats.put("pool3", pool3.getStats());
+        }
+
+        long allAllocations = numLargeRequests.get() + pool1.getNumAllocations()
+                + pool2.getNumAllocations() + pool3.getNumAllocations();
+
+        stats.put(
+                "allocation_percent",
+                (100.0 * allAllocations) / numRequests.get());
 
         return stats;
     }
@@ -166,6 +243,8 @@ public class ByteBufferPool
     public static void enableStatistics(boolean enable)
     {
         enableStatistics = enable;
-        poolImpl.enableStatistics(enable);
+        pool1.enableStatistics(enable);
+        pool2.enableStatistics(enable);
+        pool3.enableStatistics(enable);
     }
 }
