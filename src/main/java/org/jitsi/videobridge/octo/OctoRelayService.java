@@ -34,7 +34,7 @@ public class OctoRelayService
      * instances to print debug information.
      */
     private static final Logger logger
-        = Logger.getLogger(OctoRelay.class);
+        = Logger.getLogger(OctoRelayService.class);
 
     /**
      * The name of the configuration property which controls the address on
@@ -100,8 +100,6 @@ public class OctoRelayService
                 bundleContext
                     .registerService(OctoRelayService.class.getName(), this,
                                      null);
-                logger.info("Initialized an Octo relay with address "
-                                + address + ":" + port);
             }
             catch (UnknownHostException | SocketException e)
             {
