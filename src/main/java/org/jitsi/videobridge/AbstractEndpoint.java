@@ -267,6 +267,14 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public abstract void sendMessage(String msg)
         throws IOException;
 
+
+    /**
+     * Requests a keyframe from this endpoint for the specified media SSRC.
+     *
+     * @param mediaSsrc the media SSRC to request a keyframe from.
+     */
+    public abstract void requestKeyframe(long mediaSsrc);
+
     /**
      * Notify this endpoint that another endpoint has set it
      * as a 'selected' endpoint, meaning its HD stream has another

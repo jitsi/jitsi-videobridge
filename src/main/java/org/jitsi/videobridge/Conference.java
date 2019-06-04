@@ -374,6 +374,21 @@ public class Conference
     }
 
     /**
+     * Requests a keyframe from the endpoint with the specified id, if the
+     * endpoint is found in the conference.
+     *
+     * @param endpointID the id of the endpoint to request a keyframe from.
+     */
+    public void requestKeyframe(String endpointID, long mediaSsrc)
+    {
+        AbstractEndpoint remoteEndpoint = getEndpoint(endpointID);
+
+        if (remoteEndpoint != null)
+        {
+            remoteEndpoint.requestKeyframe(mediaSsrc);
+        }
+    }
+    /**
      * Sets the values of the properties of a specific
      * <tt>ColibriConferenceIQ</tt> to the values of the respective
      * properties of this instance. Thus, the specified <tt>iq</tt> may be

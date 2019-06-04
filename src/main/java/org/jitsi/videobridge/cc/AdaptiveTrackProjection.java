@@ -130,7 +130,7 @@ public class AdaptiveTrackProjection
     AdaptiveTrackProjection(
         @NotNull DiagnosticContext diagnosticContext,
         @NotNull MediaStreamTrackDesc source,
-        Consumer<Long> keyframeRequester)
+        Runnable keyframeRequester)
     {
         weakSource = new WeakReference<>(source);
         targetSsrc = source.getRTPEncodings()[0].getPrimarySSRC();
@@ -188,7 +188,7 @@ public class AdaptiveTrackProjection
     /**
      * The callback we'll invoke when we want to request a keyframe for a stream.
      */
-    private final Consumer<Long> keyframeRequester;
+    private final Runnable keyframeRequester;
 
     private final PacketCache packetCache
             = new PacketCache(packet -> packet instanceof VideoRtpPacket);
@@ -196,7 +196,8 @@ public class AdaptiveTrackProjection
     /**
      * Determines whether an RTP packet needs to be accepted or not.
      *
-     * @param rtpPacket the RTP packet to determine whether to accept or not.
+     * @param videoRtpPacket the video RTP packet to determine whether to accept
+     * or not.
      * @return true if the packet is accepted, false otherwise.
      */
     public boolean accept(@NotNull VideoRtpPacket videoRtpPacket)
@@ -243,7 +244,7 @@ public class AdaptiveTrackProjection
                 // but that's how the interface is defined and it's the only
                 // built-in single argument functional interface.  In the future
                 // we can make our own interface here to clean it up a bit
-                keyframeRequester.accept(targetSsrc);
+                keyframeRequester.run();
             }
         }
 
