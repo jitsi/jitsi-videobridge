@@ -486,21 +486,21 @@ public class VideobridgeStatistics
         int videoChannels = 0;
         int conferences = 0;
         int endpoints = 0;
-        int videoStreams = 0; // TODO
+        int videoStreams = 0;
         double fractionLostSum = 0d; // TODO verify
-        int fractionLostCount = 0;  // TODO verify
+        int fractionLostCount = 0;
         long packetsReceived = 0; // TODO verify (Transceiver)
         long packetsReceivedLost = 0; // TODO verify
-        long bitrateDownloadBps = 0; // TODO verify (Transceiver)
-        long bitrateUploadBps = 0; // TODO
-        int packetRateUpload = 0; // TODO
-        int packetRateDownload = 0; // TODO verify
+        long bitrateDownloadBps = 0;
+        long bitrateUploadBps = 0;
+        int packetRateUpload = 0;
+        int packetRateDownload = 0;
 
         // Average jitter and RTT across MediaStreams which report a valid value.
         double jitterSumMs = 0; // TODO verify
-        int jitterCount = 0; // TODO verify
+        int jitterCount = 0;
         long rttSumMs = 0; // TODO verify (Transceiver)
-        long rttCount = 0; // TODO verify
+        long rttCount = 0;
         int largestConferenceSize = 0;
         int[] conferenceSizes = new int[CONFERENCE_SIZE_BUCKETS];
 
@@ -587,8 +587,6 @@ public class VideobridgeStatistics
                 // Assume we're sending one video stream to this endpoint
                 // for each other endpoint in the conference unless there's
                 // a limit imposed by lastN.
-                // TODO: can we get the actual numnber of streams that we're
-                // sending from the bitrate controller?
                 Integer lastN = endpoint.getLastN();
                 endpointStreams
                    += (lastN == null || lastN == -1)
