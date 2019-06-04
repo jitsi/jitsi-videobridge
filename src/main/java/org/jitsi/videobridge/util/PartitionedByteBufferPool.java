@@ -17,7 +17,6 @@
 package org.jitsi.videobridge.util;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.stats.*;
 import org.json.simple.*;
@@ -74,15 +73,15 @@ class PartitionedByteBufferPool
      */
     private boolean enableStatistics = false;
 
-    private final int defaultSize;
+    private final int defaultBufferSize;
 
     /**
      * Initializes a new {@link PartitionedByteBufferPool} instance with
      * a given initial size for each partition.
      */
-    PartitionedByteBufferPool(int defaultSize)
+    PartitionedByteBufferPool(int defaultBufferSize)
     {
-        this.defaultSize = defaultSize;
+        this.defaultBufferSize = defaultBufferSize;
         for (int i = 0; i < NUM_PARTITIONS; ++i)
         {
             partitions[i] = new Partition(i, INITIAL_SIZE);
@@ -131,7 +130,7 @@ class PartitionedByteBufferPool
     JSONObject getStats()
     {
         JSONObject stats = new JSONObject();
-        stats.put("default_size", defaultSize);
+        stats.put("default_size", defaultBufferSize);
         JSONArray partitionStats = new JSONArray();
         for (Partition p : partitions)
         {
@@ -244,7 +243,7 @@ class PartitionedByteBufferPool
             this.id = id;
             for (int i = 0; i < initialSize; ++i)
             {
-                pool.add(new byte[defaultSize]);
+                pool.add(new byte[defaultBufferSize]);
             }
         }
 
@@ -267,7 +266,7 @@ class PartitionedByteBufferPool
             {
                 numRequests.incrementAndGet();
                 requestRate.update(1, System.currentTimeMillis());
-                if (requiredSize > defaultSize)
+                if (requiredSize > defaultBufferSize)
                 {
                     numLargeRequests.incrementAndGet();
                 }
@@ -276,7 +275,7 @@ class PartitionedByteBufferPool
             byte[] buf = pool.poll();
             if (buf == null)
             {
-                buf = new byte[Math.max(defaultSize, requiredSize)];
+                buf = new byte[Math.max(defaultBufferSize, requiredSize)];
                 numAllocations.incrementAndGet();
                 if (enableStatistics)
                 {
@@ -298,7 +297,7 @@ class PartitionedByteBufferPool
                 // the buffer to be too small in practice, we'll throw it away.
                 // This makes sure that if someone returns a small buffer (in
                 // the practical sense) it will not get stuck in the pool.
-                if (buf.length >= defaultSize)
+                if (buf.length >= defaultBufferSize)
                 {
                     pool.offer(buf);
                 }
@@ -307,7 +306,7 @@ class PartitionedByteBufferPool
                     numSmallBuffersDiscarded.incrementAndGet();
                 }
 
-                buf = new byte[Math.max(defaultSize, requiredSize)];
+                buf = new byte[Math.max(defaultBufferSize, requiredSize)];
                 numAllocations.incrementAndGet();
                 if (enableStatistics)
                 {
@@ -348,7 +347,7 @@ class PartitionedByteBufferPool
                 returnRate.update(1, System.currentTimeMillis());
             }
 
-            if (buf.length < defaultSize)
+            if (buf.length < defaultBufferSize)
             {
                 numSmallReturns.incrementAndGet();
                 if (ACCEPT_SMALL_BUFFERS)
