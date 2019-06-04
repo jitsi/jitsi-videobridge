@@ -88,7 +88,7 @@
     <dependency>
       <groupId>org.jitsi</groupId>
       <artifactId>rtp</artifactId>
-      <version>1.0-20190502.112614-33</version>
+      <version>1.0-20190603.215125-36</version>
     </dependency>
     <dependency>
       <groupId>org.jitsi</groupId>
