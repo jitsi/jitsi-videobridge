@@ -17,6 +17,7 @@ package org.jitsi.videobridge.octo;
 
 import org.ice4j.socket.*;
 import org.jitsi.rtp.*;
+import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.stats.*;
@@ -178,10 +179,10 @@ public class OctoRelay
     @Override
     public void run()
     {
-        DatagramPacket p = new DatagramPacket(new byte[0], 0);
+        byte[] buf = ByteBufferPool.getBuffer(1500);
+        DatagramPacket p = new DatagramPacket(buf, 0, 1500);
         while (true)
         {
-            byte[] buf = ByteBufferPool.getBuffer(1500);
             p.setData(buf, 0, 1500);
             try
             {
@@ -217,7 +218,6 @@ public class OctoRelay
         {
             logger.warn("Invalid Octo packet, can not read conference ID.");
             packetsDropped.incrementAndGet();
-            ByteBufferPool.returnBuffer(buf);
             return;
         }
 
@@ -227,7 +227,6 @@ public class OctoRelay
             logger.warn("Received an Octo packet for an unknown conference: "
                     + conferenceId);
             packetsDropped.incrementAndGet();
-            ByteBufferPool.returnBuffer(buf);
             return;
         }
 
@@ -238,11 +237,21 @@ public class OctoRelay
         {
         case AUDIO:
         case VIDEO:
+            int rtpLen = len - OCTO_HEADER_LENGTH;
+            byte[] bufCopy
+                = ByteBufferPool.getBuffer(
+                        rtpLen +
+                            RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET +
+                            RtpPacket.BYTES_TO_LEAVE_AT_END_OF_PACKET);
+            System.arraycopy(
+                    buf, off + OCTO_HEADER_LENGTH,
+                    bufCopy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
+                    rtpLen);
             handler.handlePacket(
                 new UnparsedPacket(
-                        buf,
-                        off + OctoPacket.OCTO_HEADER_LENGTH,
-                        len - OctoPacket.OCTO_HEADER_LENGTH),
+                        bufCopy,
+                        RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
+                        rtpLen),
                 sourceEndpointId);
             break;
         case DATA:
@@ -263,7 +272,6 @@ public class OctoRelay
         default:
             logger.warn("Wrong media type: " + mediaType);
             packetsDropped.incrementAndGet();
-            ByteBufferPool.returnBuffer(buf);
         }
     }
 
