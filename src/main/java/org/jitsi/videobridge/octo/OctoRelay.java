@@ -38,6 +38,11 @@ public class OctoRelay
         = Logger.getLogger(OctoRelay.class);
 
     /**
+     * The receive buffer size to set of the socket.
+     */
+    private static final int SO_RCVBUF = 10 * 1024 * 1024;
+
+    /**
      * The socket used to send and receive Octo packets.
      */
     private MultiplexingDatagramSocket socket;
@@ -64,9 +69,14 @@ public class OctoRelay
     public OctoRelay(String address, int port)
         throws UnknownHostException, SocketException
     {
-        DatagramSocket s
-            = new DatagramSocket(
-                    new InetSocketAddress(InetAddress.getByName(address), port));
+        InetSocketAddress addr
+                = new InetSocketAddress(InetAddress.getByName(address), port);
+        DatagramSocket s = new DatagramSocket(addr);
+        s.setReceiveBufferSize(SO_RCVBUF);
+        logger.info("Initialized OctoRelay with address " + addr +
+                ". Receive buffer size " + s.getReceiveBufferSize() +
+                " (asked for " + SO_RCVBUF + ").");
+
         socket = new MultiplexingDatagramSocket(s, true /* persistent */);
         this.port = port;
         String id = address + ":" + port;
