@@ -69,7 +69,6 @@ public class OctoEndpoint
         {
             tentacle.requestKeyframe(mediaSsrc);
         }
-
     }
 
     @Override

@@ -387,6 +387,11 @@ public class Conference
         {
             remoteEndpoint.requestKeyframe(mediaSsrc);
         }
+        else if (logger.isDebugEnabled())
+        {
+            logger.debug(
+                "Cannot request keyframe because the endpoint was not found.");
+        }
     }
     /**
      * Sets the values of the properties of a specific
