@@ -362,7 +362,7 @@ public class DtlsTransport extends IceTransport
             // We need this buffer to be 1500 bytes because we don't know how
             // big the received packet will be. But we don't want to allocate
             // large buffers for all packets.
-            byte[] receiveBuf = new byte[1500];
+            byte[] receiveBuf = ByteBufferPool.getBuffer(1500);
             DatagramPacket p = new DatagramPacket(receiveBuf, 0, 1500);
 
             while (!closed)

@@ -142,11 +142,11 @@ public class ByteBufferPool
         {
             buf = pool1.getBuffer(size);
         }
-        else if (size < T2)
+        else if (size <= T2)
         {
             buf = pool2.getBuffer(size);
         }
-        else if (size < T3)
+        else if (size <= T3)
         {
             buf = pool3.getBuffer(size);
         }
