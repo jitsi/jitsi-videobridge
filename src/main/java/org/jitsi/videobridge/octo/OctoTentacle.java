@@ -110,7 +110,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
                 protected void consume(@NotNull PacketInfo packetInfo)
                 {
                     relay.sendPacket(packetInfo.getPacket(), targets,
-                        conference.getGid(), null);
+                        conference.getGid(), packetInfo.getEndpointId());
                 }
             });
         }
