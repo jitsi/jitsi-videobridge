@@ -20,12 +20,15 @@ import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.nlj.*;
 import org.jitsi.osgi.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging.Logger;
+import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.health.*;
+import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
@@ -1172,6 +1175,42 @@ public class Videobridge
         }
 
         return debugState;
+    }
+
+    /**
+     * Gets statistics for the different {@code PacketQueue}s that this bridge
+     * uses.
+     * TODO: is there a better place for this?
+     */
+    public JSONObject getQueueStats()
+    {
+        JSONObject queueStats = new JSONObject();
+
+        queueStats.put(
+                "dtls_send_queue",
+                getJsonFromQueueErrorHandler(DtlsTransport.queueErrorCounter));
+        queueStats.put(
+                "octo_receive_queue",
+                getJsonFromQueueErrorHandler(OctoTransceiver.queueErrorCounter));
+        queueStats.put(
+                "rtp_receiver_queue",
+                getJsonFromQueueErrorHandler(
+                        RtpReceiverImpl.Companion.getQueueErrorCounter()));
+        queueStats.put(
+                "rtp_sender_queue",
+                getJsonFromQueueErrorHandler(
+                        RtpSenderImpl.Companion.getQueueErrorCounter()));
+
+        return queueStats;
+    }
+
+    private JSONObject getJsonFromQueueErrorHandler(
+            CountingErrorHandler countingErrorHandler)
+    {
+        JSONObject json = new JSONObject();
+        json.put("dropped_packets", countingErrorHandler.getNumPacketsDropped());
+        json.put("exceptions", countingErrorHandler.getNumExceptions());
+        return json;
     }
 
     /**

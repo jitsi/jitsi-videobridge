@@ -27,6 +27,7 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.extensions.*;
 import org.jitsi.rtp.*;
 import org.jitsi.utils.logging.*;
+import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
@@ -37,7 +38,7 @@ import org.json.simple.*;
  *
  * @author Boris Grozev
  */
-class OctoTransceiver
+public class OctoTransceiver
         implements OctoRelay.PacketHandler
 {
     /**
@@ -45,6 +46,12 @@ class OctoTransceiver
      * debug information.
      */
     private static final Logger logger = Logger.getLogger(OctoTransceiver.class);
+
+    /**
+     * Count the number of dropped packets and exceptions.
+     */
+    public static final CountingErrorHandler queueErrorCounter
+            = new CountingErrorHandler();
 
     /**
      * The owning tentacle.
@@ -78,7 +85,9 @@ class OctoTransceiver
         incomingPacketQueue = new PacketInfoQueue(
                 "octo-tranceiver-incoming-packet-queue",
                 TaskPools.CPU_POOL,
-                this::processPacket);
+                this::processPacket,
+                1024);
+        incomingPacketQueue.setErrorHandler(queueErrorCounter);
     }
 
     /**

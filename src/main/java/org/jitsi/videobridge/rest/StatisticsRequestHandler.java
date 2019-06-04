@@ -18,9 +18,8 @@ package org.jitsi.videobridge.rest;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.osgi.*;
 import org.jitsi.rest.*;
-import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
-import org.jitsi.utils.stats.*;
+import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
@@ -115,7 +114,7 @@ class StatisticsRequestHandler
             }
             else if (target.equals(STATISTICS + "/" + QUEUE))
             {
-                statsJsonObject = QueueStatistics.getStatsJson();
+                statsJsonObject = handlerImpl.getVideobridge().getQueueStats();
             }
             else if (target.equals(STATISTICS + "/" + TRANSIT))
             {
