@@ -146,6 +146,7 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
         }
     }
 
+    @JvmOverloads
     fun requestKeyframe(mediaSsrc: Long, now: Long = System.currentTimeMillis()) {
         numApiRequests++
         if (!canSendKeyframeRequest(mediaSsrc, now)) {
