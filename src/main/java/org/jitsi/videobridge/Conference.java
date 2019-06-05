@@ -1151,7 +1151,15 @@ public class Conference
             // This is not a redundant check. With Octo and 3 or more bridges,
             // some PLI or FIR will come from Octo but the target endpoint will
             // also be Octo. We need to filter these out.
-            if (pph != null && pph.wants(packetInfo))
+            if (pph == null)
+            {
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Dropping FIR/PLI for media ssrc "
+                        + rtcpFbPacket.getMediaSourceSsrc());
+                }
+            }
+            else if (pph.wants(packetInfo))
             {
                 pph.send(packetInfo);
             }
