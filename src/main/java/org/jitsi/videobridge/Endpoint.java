@@ -407,11 +407,33 @@ public class Endpoint
     }
 
     /**
+     * Checks if this endpoint's transport manager is connected.
+     * @return
+     */
+    private boolean isTransportConnected()
+    {
+        try
+        {
+            return getTransportManager().isConnected();
+        }
+        catch (IOException ioe)
+        {
+            logger.warn("Could not get transport manager: ", ioe);
+            return false;
+        }
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
     public boolean wants(PacketInfo packetInfo)
     {
+        if (!isTransportConnected())
+        {
+            return false;
+        }
+
         Packet packet = Objects.requireNonNull(packetInfo.getPacket(), "packet");
 
         if (packet instanceof RtpPacket)
