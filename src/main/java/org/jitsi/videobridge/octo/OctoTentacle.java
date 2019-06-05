@@ -15,9 +15,13 @@
  */
 package org.jitsi.videobridge.octo;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
+import org.jitsi.nlj.rtcp.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.stats.*;
+import org.jitsi.nlj.transform.node.*;
 import org.jitsi.osgi.*;
 import org.jitsi.rtp.*;
 import org.jitsi.utils.event.*;
@@ -71,6 +75,13 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
     private final OctoRelay relay;
 
     /**
+     * The instance that will request keyframes on behalf of this tentable. Note
+     * that we don't have bridge-to-bridge rtt measurements atm so we use a
+     * default value of 100ms.
+     */
+    private final KeyframeRequester keyframeRequester;
+
+    /**
      * The list of remote Octo targets.
      */
     private Set<SocketAddress> targets
@@ -91,7 +102,26 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
             = bundleContext == null ? null :
                 ServiceUtils2.getService(bundleContext, OctoRelayService.class);
 
-        relay = octoRelayService == null ? null : octoRelayService.getRelay();
+
+        if (octoRelayService != null)
+        {
+            relay = octoRelayService.getRelay();
+            keyframeRequester = new KeyframeRequester();
+            keyframeRequester.attach(new ConsumerNode("octo keyframe relay node")
+            {
+                @Override
+                protected void consume(@NotNull PacketInfo packetInfo)
+                {
+                    relay.sendPacket(packetInfo.getPacket(), targets,
+                        conference.getGid(), packetInfo.getEndpointId());
+                }
+            });
+        }
+        else
+        {
+            relay = null;
+            keyframeRequester = null;
+        }
     }
 
     /**
@@ -304,5 +334,17 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         debugState.put("targets", targets.toString());
 
         return debugState;
+    }
+
+    public void requestKeyframe(long mediaSsrc)
+    {
+        if (keyframeRequester != null)
+        {
+            keyframeRequester.requestKeyframe(mediaSsrc);
+        }
+        else
+        {
+            logger.warn("Failed to request a keyframe from a foreign endpoint.");
+        }
     }
 }

@@ -1199,19 +1199,11 @@ public class Endpoint
         getTransportManager().describe(channelBundle);
     }
 
-    /**
-     * Requests that the remote end generates a keyframe the streams with
-     * a specific SSRC.
-     * @param ssrc the ssec
-     */
-    public void requestKeyframe(long ssrc)
+
+    @Override
+    public void requestKeyframe(long mediaSsrc)
     {
-        AbstractEndpoint endpoint
-                = getConference().findEndpointByReceiveSSRC(ssrc);
-        if (endpoint instanceof Endpoint)
-        {
-            ((Endpoint) endpoint).transceiver.requestKeyFrame(ssrc);
-        }
+        transceiver.requestKeyFrame(mediaSsrc);
     }
 
     /**

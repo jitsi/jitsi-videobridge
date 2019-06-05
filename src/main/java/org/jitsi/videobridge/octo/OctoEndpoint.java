@@ -61,6 +61,17 @@ public class OctoEndpoint
     }
 
     @Override
+    public void requestKeyframe(long mediaSsrc)
+    {
+        // just making sure the tentacle hasn't expired
+        OctoTentacle tentacle = getConference().getTentacle();
+        if (tentacle != null)
+        {
+            tentacle.requestKeyframe(mediaSsrc);
+        }
+    }
+
+    @Override
     public boolean shouldExpire()
     {
         return ArrayUtils.isNullOrEmpty(getMediaStreamTracks());

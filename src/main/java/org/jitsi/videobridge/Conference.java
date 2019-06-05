@@ -374,6 +374,26 @@ public class Conference
     }
 
     /**
+     * Requests a keyframe from the endpoint with the specified id, if the
+     * endpoint is found in the conference.
+     *
+     * @param endpointID the id of the endpoint to request a keyframe from.
+     */
+    public void requestKeyframe(String endpointID, long mediaSsrc)
+    {
+        AbstractEndpoint remoteEndpoint = getEndpoint(endpointID);
+
+        if (remoteEndpoint != null)
+        {
+            remoteEndpoint.requestKeyframe(mediaSsrc);
+        }
+        else if (logger.isDebugEnabled())
+        {
+            logger.debug(
+                "Cannot request keyframe because the endpoint was not found.");
+        }
+    }
+    /**
      * Sets the values of the properties of a specific
      * <tt>ColibriConferenceIQ</tt> to the values of the respective
      * properties of this instance. Thus, the specified <tt>iq</tt> may be
@@ -1118,11 +1138,13 @@ public class Conference
         else if (packet instanceof RtcpFbPliPacket
                 || packet instanceof RtcpFbFirPacket)
         {
-            RtcpFbPacket rtcpFbPacket = (RtcpFbPacket) packet;
+            long mediaSsrc = (packet instanceof RtcpFbPliPacket)
+                ? ((RtcpFbPliPacket) packet).getMediaSourceSsrc()
+                : ((RtcpFbFirPacket) packet).getMediaSenderSsrc();
 
             // XXX we could make this faster with a map
             AbstractEndpoint targetEndpoint
-                = findEndpointByReceiveSSRC(rtcpFbPacket.getMediaSourceSsrc());
+                = findEndpointByReceiveSSRC(mediaSsrc);
 
             PotentialPacketHandler pph = null;
             if (targetEndpoint instanceof Endpoint)
@@ -1137,7 +1159,14 @@ public class Conference
             // This is not a redundant check. With Octo and 3 or more bridges,
             // some PLI or FIR will come from Octo but the target endpoint will
             // also be Octo. We need to filter these out.
-            if (pph != null && pph.wants(packetInfo))
+            if (pph == null)
+            {
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Dropping FIR/PLI for media ssrc " + mediaSsrc);
+                }
+            }
+            else if (pph.wants(packetInfo))
             {
                 pph.send(packetInfo);
             }

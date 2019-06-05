@@ -836,8 +836,11 @@ public class BitrateController
             adaptiveTrackProjection
                 = new AdaptiveTrackProjection(
                     diagnosticContext,
-                    trackBitrateAllocation.track,
-                    destinationEndpoint::requestKeyframe);
+                    trackBitrateAllocation.track, () ->
+                        destinationEndpoint.getConference().requestKeyframe(
+                            trackBitrateAllocation.endpointID,
+                            trackBitrateAllocation.targetSSRC));
+
             for (PayloadType payloadType : payloadTypes.values())
             {
                 adaptiveTrackProjection.addPayloadType(payloadType);
