@@ -27,8 +27,6 @@ import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.UnparsedPacket
-import org.jitsi.rtp.extensions.clone
-import java.nio.ByteBuffer
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.LinkedBlockingQueue
@@ -123,7 +121,7 @@ class DtlsStack(
     /**
      * A buffer we'll use to receive data from [dtlsTransport].
      */
-    private val dtlsAppDataBuf = ByteBuffer.allocate(1500)
+    private val dtlsAppDataBuf = BufferPool.getBuffer(1500)
 
     /**
      * Install a handler to be invoked when the DTLS handshake is finished.
@@ -156,11 +154,11 @@ class DtlsStack(
         var bytesReceived: Int
         val outPackets = mutableListOf<PacketInfo>()
         do {
-            bytesReceived = dtlsTransport?.receive(dtlsAppDataBuf.array(), 0, 1500, 1) ?: -1
+            bytesReceived = dtlsTransport?.receive(dtlsAppDataBuf, 0, 1500, 1) ?: -1
             if (bytesReceived > 0) {
-                val bufCopy = dtlsAppDataBuf.clone()
-                bufCopy.limit(bytesReceived)
-                outPackets.add(PacketInfo(DtlsProtocolPacket(bufCopy.array(), 0, bytesReceived)))
+                val bufCopy = BufferPool.getBuffer(bytesReceived)
+                System.arraycopy(dtlsAppDataBuf, 0, bufCopy, 0, bytesReceived)
+                outPackets.add(PacketInfo(DtlsProtocolPacket(bufCopy, 0, bytesReceived)))
             }
         } while (bytesReceived > 0)
         return outPackets
