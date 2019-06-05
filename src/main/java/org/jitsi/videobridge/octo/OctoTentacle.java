@@ -76,6 +76,11 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      */
     private final OctoRelay relay;
 
+    /**
+     * The instance that will request keyframes on behalf of this tentable. Note
+     * that we don't have bridge-to-bridge rtt measurements atm so we use a
+     * default value of 100ms.
+     */
     private final KeyframeRequester keyframeRequester;
 
     /**
