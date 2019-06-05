@@ -239,11 +239,6 @@ public class AdaptiveTrackProjection
             MediaStreamTrackDesc source = getSource();
             if (source != null)
             {
-                //NOTE(brian): using a Consumer for keyframe requester makes
-                // this call look a little confusing (invoking it with 'accept')
-                // but that's how the interface is defined and it's the only
-                // built-in single argument functional interface.  In the future
-                // we can make our own interface here to clean it up a bit
                 keyframeRequester.run();
             }
         }
