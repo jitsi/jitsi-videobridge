@@ -44,7 +44,7 @@ import kotlin.streams.toList
  * 3) Propagating [visit] calls
  *
  */
-abstract class Node(
+sealed class Node(
     var name: String
 ) : PacketHandler, EventHandler, NodeStatsProducer, Stoppable {
 
