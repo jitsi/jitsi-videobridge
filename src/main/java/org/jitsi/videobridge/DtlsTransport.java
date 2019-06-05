@@ -89,7 +89,7 @@ public class DtlsTransport extends IceTransport
     private final Node incomingPipelineRoot;
     private final Node outgoingDtlsPipelineRoot;
     private final Node outgoingSrtpPipelineRoot;
-    protected boolean dtlsHandshakeComplete = false;
+    private boolean dtlsHandshakeComplete = false;
 
     /**
      * Initializes a new {@link DtlsTransport} instance for a specific endpoint.
@@ -210,12 +210,16 @@ public class DtlsTransport extends IceTransport
         super.startConnectivityEstablishment(transportPacketExtension);
     }
 
+    /**
+     * Returns {@code true} if this {@link DtlsTransport} is connected. It is
+     * considered connected if the underlying ICE connection has been
+     * established and the DTLS session has been established.
+     * @return
+     */
     @Override
     public boolean isConnected()
     {
-        // TODO: do we consider this TM connected when ICE completes, or when
-        // ICE and DTLS both complete?
-        return super.isConnected();
+        return super.isConnected() && dtlsHandshakeComplete;
     }
 
     /**
