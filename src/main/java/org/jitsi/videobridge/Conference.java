@@ -1132,11 +1132,13 @@ public class Conference
         else if (packet instanceof RtcpFbPliPacket
                 || packet instanceof RtcpFbFirPacket)
         {
-            RtcpFbPacket rtcpFbPacket = (RtcpFbPacket) packet;
+            long mediaSsrc = (packet instanceof RtcpFbPliPacket)
+                ? ((RtcpFbPliPacket) packet).getMediaSourceSsrc()
+                : ((RtcpFbFirPacket) packet).getMediaSenderSsrc();
 
             // XXX we could make this faster with a map
             AbstractEndpoint targetEndpoint
-                = findEndpointByReceiveSSRC(rtcpFbPacket.getMediaSourceSsrc());
+                = findEndpointByReceiveSSRC(mediaSsrc);
 
             PotentialPacketHandler pph = null;
             if (targetEndpoint instanceof Endpoint)
@@ -1155,8 +1157,7 @@ public class Conference
             {
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug("Dropping FIR/PLI for media ssrc "
-                        + rtcpFbPacket.getMediaSourceSsrc());
+                    logger.debug("Dropping FIR/PLI for media ssrc " + mediaSsrc);
                 }
             }
             else if (pph.wants(packetInfo))
