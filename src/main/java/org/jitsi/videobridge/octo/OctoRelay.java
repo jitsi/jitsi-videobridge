@@ -360,6 +360,13 @@ public class OctoRelay
         byte[] newBuf;
         int newOff;
 
+        // Not all packets come from a valid endpoint (e.g. some packets
+        // originate from the bridge). Use a default value for them.
+        if (endpointId == null)
+        {
+            endpointId = "ffffffff";
+        }
+
         if (off >= OCTO_HEADER_LENGTH)
         {
             newOff = off - OCTO_HEADER_LENGTH;
