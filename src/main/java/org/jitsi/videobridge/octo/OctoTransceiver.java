@@ -177,7 +177,9 @@ public class OctoTransceiver
         };
 
         Node videoRoot = new VideoParser();
-        videoRoot.attach(new Vp8Parser()).attach(terminationNode);
+        videoRoot.attach(new Vp8Parser())
+            .attach(new VideoBitrateCalculator())
+            .attach(terminationNode);
 
         AudioLevelReader audioLevelReader = new AudioLevelReader();
         audioLevelReader.setAudioLevelListener(tentacle.getAudioLevelListener());
