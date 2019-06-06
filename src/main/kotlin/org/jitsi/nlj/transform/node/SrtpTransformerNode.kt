@@ -57,7 +57,7 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
         if (firstPacketReceivedTimestamp == -1L) {
             firstPacketReceivedTimestamp = System.currentTimeMillis()
         }
-        transformer?.let {
+        transformer?.let { transformer ->
             if (firstPacketForwardedTimestamp == -1L) {
                 firstPacketForwardedTimestamp = System.currentTimeMillis()
             }
@@ -67,7 +67,7 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
                 outPackets = transformList(cachedPackets)
                 cachedPackets.clear()
             } else {
-                outPackets = if (transformer!!.transform(packetInfo))
+                outPackets = if (transformer.transform(packetInfo))
                     listOf(packetInfo) else emptyList()
             }
             return outPackets
