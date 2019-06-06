@@ -156,7 +156,7 @@ class NodeStatsBlock(val name: String) {
     /**
      * Returns a JSON representation of this [NodeStatsBlock].
      */
-    fun toJson(): JSONObject = OrderedJsonObject().apply {
+    fun toJson(): OrderedJsonObject = OrderedJsonObject().apply {
         stats.forEach { (name, value) ->
             when (value) {
                 is NodeStatsBlock -> put(name, value.toJson())
