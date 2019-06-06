@@ -874,11 +874,6 @@ public class BitrateController
     private TrackBitrateAllocation[] allocate(
         long maxBandwidth, List<AbstractEndpoint> conferenceEndpoints)
     {
-        StringBuilder sb = new StringBuilder();
-        for (AbstractEndpoint ep : conferenceEndpoints)
-        {
-            sb.append(ep.getID()).append(" ");
-        }
         TrackBitrateAllocation[] trackBitrateAllocations
                 = prioritize(conferenceEndpoints);
 
