@@ -16,18 +16,22 @@
 
 package org.jitsi.nlj.util
 
+import org.json.simple.JSONAware
 import org.json.simple.JSONObject
+import org.json.simple.JSONStreamAware
+import java.io.Writer
 
 /**
  * Functions just like [JSONObject], but preserves the order
- * in which keys were added when serializing to a JSON string
- * (which is useful for things like stats where we want to group
- * similar values and preserve the pipeline stats order).
+ * in which keys were added (which is useful for things like
+ * stats where we want to group similar values and preserve
+ * the pipeline stats order).
  */
-class OrderedJsonObject : JSONObject() {
-    private val data = LinkedHashMap<Any, Any>()
+class OrderedJsonObject :
+    MutableMap<Any, Any> by LinkedHashMap(),
+    JSONAware,
+    JSONStreamAware {
 
-    override fun put(key: Any?, value: Any?): Any? = data.put(key!!, value!!)
-
-    override fun toJSONString(): String = toJSONString(data)
+    override fun toJSONString(): String = JSONObject.toJSONString(this)
+    override fun writeJSONString(writer: Writer) = JSONObject.writeJSONString(this, writer)
 }
