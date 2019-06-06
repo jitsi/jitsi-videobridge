@@ -62,21 +62,23 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
                 firstPacketForwardedTimestamp = System.currentTimeMillis()
             }
             val outPackets: List<PacketInfo>
-            if (!cachedPackets.isEmpty()) {
-                cachedPackets.add(packetInfo)
-                outPackets = transformList(cachedPackets)
-                cachedPackets.clear()
-            } else {
-                outPackets = if (transformer.transform(packetInfo))
-                    listOf(packetInfo) else emptyList()
+            synchronized(cachedPackets) {
+                if (cachedPackets.isNotEmpty()) {
+                    cachedPackets.add(packetInfo)
+                    outPackets = transformList(cachedPackets)
+                    cachedPackets.clear()
+                } else {
+                    outPackets = if (transformer.transform(packetInfo))
+                        listOf(packetInfo) else emptyList()
+                }
             }
             return outPackets
         } ?: run {
             numCachedPackets++
-            cachedPackets.add(packetInfo)
-            while (cachedPackets.size > 1024) {
-                cachedPackets.removeAt(0).let {
-                    packetDiscarded(it)
+            synchronized(cachedPackets) {
+                cachedPackets.add(packetInfo)
+                while (cachedPackets.size > 1024) {
+                    packetDiscarded(cachedPackets.removeAt(0))
                 }
             }
             return emptyList()
@@ -93,7 +95,10 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
 
     override fun stop() {
         super.stop()
-        cachedPackets.forEach { packetDiscarded(it) }
+        synchronized(cachedPackets) {
+            cachedPackets.forEach { packetDiscarded(it) }
+            cachedPackets.clear()
+        }
         transformer?.close()
     }
 }
