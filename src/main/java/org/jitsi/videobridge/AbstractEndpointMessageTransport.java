@@ -190,7 +190,11 @@ public abstract class AbstractEndpointMessageTransport
 
         if (sourceEndpoint == null)
         {
-            logger.warn("Can not forward message, source endpoint unknown.");
+            logger.warn("Can not forward message, source endpoint not found.");
+            // The source endpoint might have expired. If it was an Octo
+            // endpoint and we forward the message, we may mistakenly forward
+            // it back through Octo and cause a loop.
+            return;
         }
 
         List<AbstractEndpoint> targets;
