@@ -1156,14 +1156,6 @@ public class BitrateController
     }
 
     /**
-     * @param supportsRtx true if the endpoint supports RTX, otherwise false.
-     */
-    public void setSupportsRtx(boolean supportsRtx)
-    {
-        this.supportsRtx = supportsRtx;
-    }
-
-    /**
      * Sets the LastN value.
      */
     public void setLastN(int lastN)
@@ -1195,6 +1187,11 @@ public class BitrateController
     {
         payloadTypes.put(payloadType.getPt(), payloadType);
         adaptiveTrackProjections.forEach(atp -> atp.addPayloadType(payloadType));
+
+        if (payloadType.getEncoding() == PayloadTypeEncoding.RTX)
+        {
+            supportsRtx = true;
+        }
     }
 
     /**
