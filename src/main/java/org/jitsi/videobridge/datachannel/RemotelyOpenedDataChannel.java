@@ -17,7 +17,6 @@
 package org.jitsi.videobridge.datachannel;
 
 import org.jitsi.videobridge.datachannel.protocol.*;
-import org.jitsi_modified.sctp4j.*;
 
 import java.nio.*;
 

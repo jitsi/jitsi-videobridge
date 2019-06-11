@@ -18,7 +18,6 @@ package org.jitsi.videobridge.cc.vp8;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 
 /**
@@ -269,15 +268,15 @@ class VP8Frame
     }
 
     /**
-     * Determines whether the {@link RawPacket} that is specified as an argument
-     * is part of the VP8 picture that is represented by this
+     * Determines whether the {@link VideoRtpPacket} that is specified as an
+     * argument is part of the VP8 picture that is represented by this
      * {@link VP8Frame} instance.
      *
-     * @param pkt the {@link RawPacket} instance to check whether it's part of
-     * the VP8 picture that is represented by this {@link VP8Frame}
+     * @param pkt the {@link VideoRtpPacket} instance to check whether it's part
+     * of the VP8 picture that is represented by this {@link VP8Frame}
      * instance.
-     * @return true if the {@link RawPacket} that is specified as an argument
-     * is part of the VP8 picture that is represented by this
+     * @return true if the {@link VideoRtpPacket} that is specified as an
+     * argument is part of the VP8 picture that is represented by this
      * {@link VP8Frame} instance, false otherwise.
      */
     private boolean matchesSSRC(@NotNull VideoRtpPacket pkt)

@@ -19,10 +19,8 @@ import org.jetbrains.annotations.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.nlj.*;
 import org.jitsi.rtp.*;
-import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
-import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging.Logger;
@@ -41,7 +39,6 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.logging.*;
-import java.util.stream.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 

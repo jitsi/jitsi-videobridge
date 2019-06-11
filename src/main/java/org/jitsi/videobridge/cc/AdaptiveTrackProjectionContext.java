@@ -19,8 +19,6 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.PacketCache;
 import org.jitsi.rtp.rtcp.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.format.*;
 import org.json.simple.*;
 
 /**
@@ -91,7 +89,7 @@ public interface AdaptiveTrackProjectionContext
     RtpState getRtpState();
 
     /**
-     * @return the {@link MediaFormat} of the RTP packets that this context
+     * @return the {@link PayloadType} of the RTP packets that this context
      * processes.
      */
     PayloadType getPayloadType();

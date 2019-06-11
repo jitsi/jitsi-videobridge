@@ -23,7 +23,6 @@ import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.nlj.util.PacketCache;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.util.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.utils.LRUCache;
 import org.jitsi.utils.logging.*;
@@ -96,8 +95,7 @@ public class VP8AdaptiveTrackProjectionContext
      * The VP8 media format. No essential functionality relies on this field,
      * it's only used as a cache of the {@link PayloadType} instance for VP8 in
      * case we have to do a context switch (see {@link AdaptiveTrackProjection}),
-     * in order to avoid having to resolve the format from the
-     * {@link MediaStream#getDynamicRTPPayloadType(String)} which is a hot path.
+     * in order to avoid having to resolve the format.
      */
     private final PayloadType payloadType;
 
@@ -118,10 +116,10 @@ public class VP8AdaptiveTrackProjectionContext
         // Compute the starting sequence number and the timestamp of the initial
         // frame based on the RTP state.
         int startingSequenceNumber =
-            (rtpState.maxSequenceNumber + 1) & RawPacket.SEQUENCE_NUMBER_MASK;
+            (rtpState.maxSequenceNumber + 1) & 0xffff;
 
         long timestamp =
-            (rtpState.maxTimestamp + 3000) & RawPacket.TIMESTAMP_MASK;
+            (rtpState.maxTimestamp + 3000) & 0xffff_ffffL;
 
         lastVP8FrameProjection = new VP8FrameProjection(diagnosticContext,
             rtpState.ssrc, startingSequenceNumber, timestamp);

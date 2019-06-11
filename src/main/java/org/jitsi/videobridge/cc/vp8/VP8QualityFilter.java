@@ -158,7 +158,12 @@ class VP8QualityFilter
         int spatialLayerId = getSpatialLayerId(incomingIndex);
         if (DePacketizer.isKeyFrame(buf, payloadOff, payloadLen))
         {
-            logger.debug(hashCode() + " Quality filter got keyframe for stream " + firstPacketOfFrame.getSsrc());
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(
+                        hashCode() + " Quality filter got keyframe for stream "
+                                + firstPacketOfFrame.getSsrc());
+            }
             return acceptKeyframe(spatialLayerId, nowMs);
         }
         else if (currentSpatialLayerId > SUSPENDED_LAYER_ID)
@@ -282,7 +287,8 @@ class VP8QualityFilter
         if (logger.isDebugEnabled())
         {
             logger.debug(
-                hashCode() + " Received a keyframe of spatial layer: " + spatialLayerIdOfKeyframe);
+                hashCode() + " Received a keyframe of spatial layer: "
+                        + spatialLayerIdOfKeyframe);
 
         }
 
