@@ -179,7 +179,7 @@ package org.jitsi.videobridge.cc;
          if (timeSeriesLogger.isTraceEnabled() && diagnosticContext != null)
          {
              timeSeriesLogger.trace(diagnosticContext
-                     .makeTimeSeriesPoint("out_padding")
+                     .makeTimeSeriesPoint("sent_padding")
                      .addField("padding_bps", paddingBps)
                      .addField("total_ideal_bps", bitrateControllerStatus.currentIdealBps)
                      .addField("total_target_bps", bitrateControllerStatus.currentTargetBps)
