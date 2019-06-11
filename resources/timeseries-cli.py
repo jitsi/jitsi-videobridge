@@ -44,27 +44,24 @@ def vp8_verify(df):
     pass
 
 
-def plot(args):
-    df = read_json(args.infile)
-
-    # make sure we're plotting a single endpoint.
-    endpoints = df['endpoint_id'].unique()
-    if len(endpoints) > 1:
-        raise Exception('grep one {}'.format(endpoints))
+def plot_endpoint(df, series, endpoint_id, remote_endpoint_id):
+    df = df[df['endpoint_id'] == endpoint_id]
+    if remote_endpoint_id:
+        df = df[df['remote_endpoint_id'] == remote_endpoint_id]
 
     fig = plt.figure()
+    fig.suptitle('Endpoint: {}'.format(endpoint_id))
     ax_bitrate = fig.subplots(1, sharex=True)
     ax_bitrate.set_xlabel('time')
     ax_bitrate.set_ylabel('bitrate (bps)')
 
-    series = df['series'].unique()
     if 'calculated_rate' in series:
         df_rates = df['series' == 'calculated_rate']
 
         # make sure we're plotting a single remote endpoint.
         remote_endpoints = df_rates['remote_endpoint_id'].unique()
         if len(remote_endpoints) > 1:
-            raise Exception('multiple remote endpoints found {}'.format(remote_endpoints))
+            raise Exception('specify a --remote-endpoint {}'.format(remote_endpoints))
 
         for i in range(9):
             encoding_quality = str(i)
@@ -75,11 +72,15 @@ def plot(args):
 
     if 'sent_padding' in series:
         df_padding = df[df['series'] == 'sent_padding']
-        ax_bitrate.step(df_padding['time'], df_padding['padding_bps'], label='padding')
+        ax_bitrate.plot(
+            df_padding['time'],
+            df_padding['padding_bps'] + df_padding['total_target_bps'],
+            label='target + padding', marker='^',
+            markersize = 1, linestyle='None')
 
     if 'new_bandwidth' in series:
         df_bwe = df[df['series'] == 'new_bandwidth']
-        ax_bitrate.step(df_bwe['time'], df_bwe['bitrate'], label='bwe')
+        ax_bitrate.step(df_bwe['time'], df_bwe['bitrate_bps'], label='bwe')
 
     if 'did_update' in series:
         df_update = df[df['series'] == 'did_update']
@@ -89,6 +90,17 @@ def plot(args):
     # todo include rtt and packet loss
 
     ax_bitrate.legend()
+
+
+def plot(args):
+    df = read_json(args.infile)
+    if args.endpoint_id:
+        plot_endpoint(df, args.series, args.endpoint_id, args.remote_endpoint_id)
+    else:
+        # plot all the endpoints!
+        for endpoint_id in df['endpoint_id'].unique():
+            plot_endpoint(df, args.series, endpoint_id, args.remote_endpoint_id)
+
     plt.show()
 
 
@@ -100,6 +112,11 @@ if "__main__" == __name__:
     parser_show = subparsers.add_parser('show')
     parser_show.set_defaults(func=show)
     parser_plot = subparsers.add_parser('plot')
+    parser_plot.add_argument('--series', nargs='+', choices=[
+        'did_update', 'new_bandwidth', 'sent_padding', 'calculated_rate'],
+                             default='did_update new_bandwidth sent_padding')
+    parser_plot.add_argument('--endpoint-id')
+    parser_plot.add_argument('--remote-endpoint-id')
     parser_plot.set_defaults(func=plot)
 
     args = parser.parse_args()
