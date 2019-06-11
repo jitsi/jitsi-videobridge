@@ -275,7 +275,7 @@ public class BitrateController
     /**
      * The list of endpoints ids ordered by activity.
      */
-    private List<String> sortedEndpointIds;
+    private List<String> sortedEndpointIds = Collections.EMPTY_LIST;
 
     /**
      * The main result of the bitrate allocation algorithm computation.
