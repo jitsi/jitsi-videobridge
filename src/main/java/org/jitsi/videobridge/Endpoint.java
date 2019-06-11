@@ -1087,11 +1087,6 @@ public class Endpoint
         getTransportManager().startConnectivityEstablishment(transportInfo);
     }
 
-    public void setSupportsRTX(boolean supportsRTX)
-    {
-        bitrateController.setSupportsRtx(supportsRTX);
-    }
-
     /**
      * A node which can be placed in the pipeline to cache SCTP packets until
      * the SCTPManager is ready to handle them.
