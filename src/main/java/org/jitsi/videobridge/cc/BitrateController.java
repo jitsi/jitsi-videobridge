@@ -588,10 +588,11 @@ public class BitrateController
      */
     public void bandwidthChanged(long newBandwidthBps)
     {
-        if (logger.isDebugEnabled())
+        if (timeSeriesLogger.isTraceEnabled())
         {
-            logger.debug(
-                destinationEndpoint.getID() + " bandwidth has changed, updating");
+            timeSeriesLogger.trace(diagnosticContext
+                .makeTimeSeriesPoint("new_bandwidth")
+                .addField("bitrate_bps", newBandwidthBps));
         }
 
         if (!isLargerThanBweThreshold(lastBwe, newBandwidthBps))
@@ -776,7 +777,7 @@ public class BitrateController
         if (enableVideoQualityTracing)
         {
             timeSeriesLogger.trace(diagnosticContext
-                    .makeTimeSeriesPoint("video_quality", nowMs)
+                    .makeTimeSeriesPoint("did_update", nowMs)
                     .addField("total_target_idx", totalTargetIdx)
                     .addField("total_ideal_idx", totalIdealIdx)
                     .addField("available_bps", bweBps)
@@ -1437,7 +1438,7 @@ public class BitrateController
             if (timeSeriesLogger.isTraceEnabled())
             {
                 DiagnosticContext.TimeSeriesPoint ratesTimeSeriesPoint
-                    = diagnosticContext.makeTimeSeriesPoint("rates")
+                    = diagnosticContext.makeTimeSeriesPoint("calculated_rates")
                     .addField("remote_endpoint_id", endpointID);
                 for (RateSnapshot rateSnapshot : ratesList) {
                     ratesTimeSeriesPoint.addField(

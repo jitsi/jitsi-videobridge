@@ -2,29 +2,24 @@
 
 import argparse
 import pandas as pd
-import sys
-
-pd.set_option('display.max_columns', None)
-pd.set_option('display.max_rows', None)
-pd.set_option('display.width', None)
+import matplotlib.pyplot as plt
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
 
 
-def read_json(fname, convert_dates=['time']):
-    df = pd.read_json(fname, lines=True, convert_dates=convert_dates, date_unit='ms')
+def read_json(fname):
+    df = pd.read_json(fname, lines=True, convert_dates=['time'], date_unit='ms')
     return df
 
 
 def show(args):
-    df = read_json(args.infile, convert_dates=False)
+    df = read_json(args.infile)
     print('series: {}'.format(df['series'].unique()))
     print('conferences: {}'.format(df['conf_name'].unique()))
     print('endpoints: {}'.format(df['endpoint_id'].unique()))
-    print('ssrcs: {}'.format(df['rtp.ssrc'].unique()))
 
 
-def vp8_inspect(args):
-    df = read_json(args.infile, convert_dates=False)
-    df = df[df['series'] == 'rtp_vp8_rewrite']
+def vp8_inspect(df):
     if args.ssrc:
         df = df[df['rtp.ssrc'] == args.ssrc]
     if args.endpoint:
@@ -38,6 +33,7 @@ def vp8_inspect(args):
     df['vp8.timestamp_delta'] = df['rtp.timestamp'] - df['rtp.timestamp'].shift(1)
     print(df)
 
+
 def vp8_verify(df):
     # tl0picidx monotonically increases
     # if the timestamp changes, then the pictureid changes
@@ -48,110 +44,51 @@ def vp8_verify(df):
     pass
 
 
-def probing_show(args):
-    df = read_json(args.infile, convert_dates=False)
-    df = df[df['series'] == 'out_padding']
-    print('endpoints: {}'.format(df['endpoint_id'].unique()))
-
-
-def probing_plot(args):
+def plot(args):
     df = read_json(args.infile)
-    df = df[df['series'] == 'out_padding']
 
-    if args.endpoint:
-        df = df[df['endpoint_id'] == args.endpoint]
-    else:
-        endpoints = df['endpoint_id'].unique()
-        if len(endpoints) > 1:
-            raise Exception('Which endpoint to plot? {}'.format(endpoints))
+    # make sure we're plotting a single endpoint.
+    endpoints = df['endpoint_id'].unique()
+    if len(endpoints) > 1:
+        raise Exception('grep one {}'.format(endpoints))
 
-    import matplotlib.pyplot as plt
-    df.plot('time', ['padding_bps',
-                     'bwe_bps',
-                     'total_ideal_bps',
-                     #'needed_bps',
-                     #'max_padding_bps',
-                     'total_target_bps'])
-    plt.show()
+    fig = plt.figure()
+    ax_bitrate = fig.subplots(1, sharex=True)
+    ax_bitrate.set_xlabel('time')
+    ax_bitrate.set_ylabel('bitrate (bps)')
 
+    series = df['series'].unique()
+    if 'calculated_rate' in series:
+        df_rates = df['series' == 'calculated_rate']
 
-def setup_probing_subparser(parser):
-    subparsers = parser.add_subparsers()
-
-    parser_show = subparsers.add_parser('show')
-    parser_show.set_defaults(func=probing_show)
-    
-    parser_plot = subparsers.add_parser('plot')
-    parser_plot.add_argument('--endpoint')
-    parser_plot.set_defaults(func=probing_plot)
-
-
-def setup_vp8_subparser(parser):
-    subparsers = parser.add_subparsers()
-    
-    parser_inspect = subparsers.add_parser('inspect')
-    parser_inspect.add_argument('--conference')
-    parser_inspect.add_argument('--endpoint')
-    parser_inspect.add_argument('--ssrc', type=int)
-    parser_inspect.set_defaults(func=vp8_inspect)
-
-
-def setup_bwe_subparser(parser):
-    subparsers = parser.add_subparsers()
-
-    parser_plot = subparsers.add_parser('plot')
-    parser_plot.add_argument('--endpoint')
-    parser_plot.set_defaults(func=bwe_plot)
-
-
-def rates_plot(args):
-    df = read_json(args.infile)
-    df = df[df['series'] == 'rates']
-    for i in range(9):
-        if not str(i) in df.columns:
-            df[str(i)] = 0
-
-    if args.endpoint:
-        df = df[df['endpoint_id'] == args.endpoint]
-    else:
-        endpoints = df['endpoint_id'].unique()
-        if len(endpoints) > 1:
-            raise Exception('Which endpoint to plot? {}'.format(endpoints))
-
-    if args.remote_endpoint:
-        df = df[df['remote_endpoint_id'] == args.remote_endpoint]
-    else:
-        remote_endpoints = df['remote_endpoint_id'].unique()
+        # make sure we're plotting a single remote endpoint.
+        remote_endpoints = df_rates['remote_endpoint_id'].unique()
         if len(remote_endpoints) > 1:
-            raise Exception('Which remote endpoint to plot? {}'.format(remote_endpoints))
+            raise Exception('multiple remote endpoints found {}'.format(remote_endpoints))
 
-    import matplotlib.pyplot as plt
-    df.plot('time', ['0', '1', '2', '3', '4', '5', '6', '7', '8'], grid=True)
-    plt.show()
+        for i in range(9):
+            encoding_quality = str(i)
+            if encoding_quality in df_rates.columns:
+                ax_bitrate.plot(df_rates['time'],
+                                df_rates[encoding_quality],
+                                label=encoding_quality)
 
+    if 'sent_padding' in series:
+        df_padding = df[df['series'] == 'sent_padding']
+        ax_bitrate.step(df_padding['time'], df_padding['padding_bps'], label='padding')
 
-def setup_rates_subparser(parser):
-    subparsers = parser.add_subparsers()
+    if 'new_bandwidth' in series:
+        df_bwe = df[df['series'] == 'new_bandwidth']
+        ax_bitrate.step(df_bwe['time'], df_bwe['bitrate'], label='bwe')
 
-    parser_plot = subparsers.add_parser('plot')
-    parser_plot.add_argument('--endpoint')
-    parser_plot.add_argument('--remote-endpoint')
-    parser_plot.set_defaults(func=rates_plot)
+    if 'did_update' in series:
+        df_update = df[df['series'] == 'did_update']
+        ax_bitrate.step(df_update['time'], df_update['total_target_bps'], label='target')
+        ax_bitrate.step(df_update['time'], df_update['total_ideal_bps'], label='ideal')
 
+    # todo include rtt and packet loss
 
-def bwe_plot(args):
-    df = read_json(args.infile)
-    df = df[df['series'] == 'bwe_incoming']
-    
-    if args.endpoint:
-        df = df[df['endpoint_id'] == args.endpoint]
-    else:
-        endpoints = df['endpoint_id'].unique()
-        if len(endpoints) > 1:
-            raise Exception('Which endpoint to plot? {}'.format(endpoints))
-
-    import matplotlib.pyplot as plt
-    df.plot('time', ['bitrate_bps'], style='.-')
+    ax_bitrate.legend()
     plt.show()
 
 
@@ -159,14 +96,11 @@ if "__main__" == __name__:
     parser = argparse.ArgumentParser()
     parser.add_argument('infile', type=argparse.FileType('r'))
     subparsers = parser.add_subparsers()
-
-    setup_vp8_subparser(subparsers.add_parser('vp8'))
-    setup_probing_subparser(subparsers.add_parser('probing'))
-    setup_bwe_subparser(subparsers.add_parser('bwe'))
-    setup_rates_subparser(subparsers.add_parser('rates'))
     
     parser_show = subparsers.add_parser('show')
     parser_show.set_defaults(func=show)
+    parser_plot = subparsers.add_parser('plot')
+    parser_plot.set_defaults(func=plot)
 
     args = parser.parse_args()
     args.func(args)
