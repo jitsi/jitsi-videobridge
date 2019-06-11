@@ -208,14 +208,11 @@ public class BitrateController
                 ENABLE_ONSTAGE_VIDEO_SUSPEND_DEFAULT)
         : ENABLE_ONSTAGE_VIDEO_SUSPEND_DEFAULT;
 
-    private static final Logger classLogger
-            = Logger.getLogger(BitrateController.class);
-
     /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
-    private final Logger logger;
+    private final Logger logger = Logger.getLogger(BitrateController.class);
 
     /**
      * The {@link TimeSeriesLogger} to be used by this instance to print time
@@ -336,11 +333,9 @@ public class BitrateController
      */
     public BitrateController(
             Endpoint destinationEndpoint,
-            Logger logLevelDelegate,
             @NotNull DiagnosticContext diagnosticContext)
     {
         this.destinationEndpoint = destinationEndpoint;
-        this.logger = Logger.getLogger(classLogger, logLevelDelegate);
         this.diagnosticContext = diagnosticContext;
 
         ConfigurationService cfg = LibJitsi.getConfigurationService();

@@ -263,22 +263,26 @@ public class Conference
     }
 
     /**
-     * Appends the conference name and the conference creation time to the
-     * {@link DiagnosticContext} that is passed as a parameter.
+     * Creates a new diagnostic context instance that includes the conference
+     * name and the conference creation time.
      *
-     * @param diagnosticContext the {@link DiagnosticContext} to append the
-     * diagnostic information to.
+     * @return the new {@link DiagnosticContext} instance.
      */
-    public void appendDiagnosticInformation(DiagnosticContext diagnosticContext)
+    public DiagnosticContext newDiagnosticContext()
     {
-        Objects.requireNonNull(diagnosticContext);
+
 
         if (name != null)
         {
+            DiagnosticContext diagnosticContext = new DiagnosticContext();
             diagnosticContext.put("conf_name", name.toString());
+            diagnosticContext.put("conf_creation_time_ms", creationTime);
+            return diagnosticContext;
         }
-
-        diagnosticContext.put("conf_creation_time_ms", creationTime);
+        else
+        {
+            return new NoOpDiagnosticContext();
+        }
     }
 
     /**
@@ -1284,6 +1288,46 @@ public class Conference
             jsonObject.put("has_failed_endpoint", hasIceFailedEndpoint);
             jsonObject.put("has_succeeded_endpoint", hasIceSucceededEndpoint);
             return jsonObject;
+        }
+    }
+
+    /**
+     * This is a no-op diagnostic context (one that will record nothing) meant
+     * to disable logging of time-series for health checks.
+     */
+    static class NoOpDiagnosticContext
+        extends DiagnosticContext
+    {
+        @Override
+        public TimeSeriesPoint makeTimeSeriesPoint(String timeSeriesName, long tsMs)
+        {
+            return new NoOpTimeSeriesPoint();
+        }
+
+        @Override
+        public Object put(@NotNull String key, @NotNull Object value)
+        {
+            return null;
+        }
+    }
+
+    static class NoOpTimeSeriesPoint
+        extends DiagnosticContext.TimeSeriesPoint
+    {
+        public NoOpTimeSeriesPoint()
+        {
+            this(null);
+        }
+
+        public NoOpTimeSeriesPoint(Map<String, Object> m)
+        {
+            super(m);
+        }
+
+        @Override
+        public Object put(String key, Object value)
+        {
+            return null;
         }
     }
 }
