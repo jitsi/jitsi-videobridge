@@ -146,7 +146,7 @@ public class Endpoint
     /**
      * The diagnostic context of this instance.
      */
-    private final DiagnosticContext diagnosticContext = new DiagnosticContext();
+    private final DiagnosticContext diagnosticContext;
 
     /**
      * The bitrate controller.
@@ -229,6 +229,7 @@ public class Endpoint
         super(conference, id);
 
         logger = Logger.getLogger(classLogger, conference.getLogger());
+        diagnosticContext = conference.newDiagnosticContext();
         transceiver
                 = new Transceiver(
                 id,
@@ -246,14 +247,10 @@ public class Endpoint
                         handleIncomingPacket(packetInfo);
                     }
                 });
-        bitrateController = new BitrateController(
-                this,
-                conference.getLogger(),
-                diagnosticContext);
+        bitrateController = new BitrateController(this, diagnosticContext);
 
         messageTransport = new EndpointMessageTransport(this);
 
-        conference.appendDiagnosticInformation(diagnosticContext);
         diagnosticContext.put("endpoint_id", id);
         bandwidthProbing
             = new BandwidthProbing(Endpoint.this.transceiver::sendProbing);
