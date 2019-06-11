@@ -775,6 +775,18 @@ public class Conference
     public Endpoint getOrCreateLocalEndpoint(String id)
     {
         AbstractEndpoint endpoint = getEndpoint(id, /* create */ true);
+        if (endpoint instanceof OctoEndpoint)
+        {
+            // It is possible that an Endpoint was migrated from another bridge
+            // in the conference to this one, and the sources lists (which
+            // implicitly signal the Octo endpoints in the conference) haven't
+            // been updated yet. We'll force the Octo endpoint to expire and
+            // we'll continue with the creation of a new local Endpoint for the
+            // participant.
+            endpoint.expire();
+            endpoint = getEndpoint(id, /* create */ true);
+        }
+
         if (!(endpoint instanceof Endpoint))
         {
             throw new IllegalStateException("Endpoint with id " + id +

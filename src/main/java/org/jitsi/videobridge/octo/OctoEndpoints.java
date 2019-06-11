@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.octo;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.*;
 import org.json.simple.*;
@@ -113,9 +114,18 @@ import java.util.stream.*;
          });
 
 
-         octoEndpointIds = Collections.unmodifiableSet(endpointIds);
+         octoEndpointIds = new HashSet<>(endpointIds);
 
          return !toCreate.isEmpty() || !toExpire.isEmpty();
+     }
+
+     /**
+      * Notifies this instance that one of its {@link OctoEndpoint}s expired.
+      * @param endpoint
+      */
+     void endpointExpired(@NotNull OctoEndpoint endpoint)
+     {
+        octoEndpointIds.remove(endpoint.getID());
      }
 
      /**
@@ -126,7 +136,7 @@ import java.util.stream.*;
       */
      private OctoEndpoint addEndpoint(String id)
      {
-         OctoEndpoint endpoint = new OctoEndpoint(conference, id);
+         OctoEndpoint endpoint = new OctoEndpoint(conference, id, this);
 
          conference.addEndpoint(endpoint);
 
