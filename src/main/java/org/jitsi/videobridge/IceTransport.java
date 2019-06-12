@@ -90,7 +90,7 @@ public class IceTransport
      * Default to keeping alive the selected pair and any TCP pairs.
      */
     private static KeepAliveStrategy keepAliveStrategy
-            = KeepAliveStrategy.SELECTED_AND_TCP;
+            = KeepAliveStrategy.SELECTED_ONLY;
 
     /**
      * Whether this <tt>TransportManager</tt> has been closed.
