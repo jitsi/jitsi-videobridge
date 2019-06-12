@@ -275,7 +275,7 @@ public class BitrateController
     /**
      * The list of endpoints ids ordered by activity.
      */
-    private List<String> sortedEndpointIds = Collections.EMPTY_LIST;
+    private List<String> sortedEndpointIds;
 
     /**
      * The main result of the bitrate allocation algorithm computation.
@@ -658,8 +658,15 @@ public class BitrateController
         long bweBps = getAvailableBandwidth(nowMs);
 
         // Create a copy as we may modify the list in the prioritize method.
-        List<AbstractEndpoint> sortedEndpoints = new ArrayList<>(sortedEndpointIds.size());
-        for (String endpointId : sortedEndpointIds)
+        List<String> sortedEndpointIdsCopy = sortedEndpointIds;
+        if (sortedEndpointIdsCopy == null || sortedEndpointIdsCopy.isEmpty())
+        {
+            return;
+        }
+
+        List<AbstractEndpoint> sortedEndpoints
+            = new ArrayList<>(sortedEndpointIdsCopy.size());
+        for (String endpointId : sortedEndpointIdsCopy)
         {
             AbstractEndpoint abstractEndpoint = destinationEndpoint.getConference().getEndpoint(endpointId);
             if (abstractEndpoint != null)
