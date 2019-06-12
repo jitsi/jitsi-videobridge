@@ -70,22 +70,34 @@ def plot_endpoint(df, series, endpoint_id, remote_endpoint_id):
                                 df_rates[encoding_quality],
                                 label=encoding_quality)
 
-    if 'sent_padding' in series:
+    df_series = df['series'].unique()
+    if 'sent_padding' in series and 'sent_padding' in df_series:
         df_padding = df[df['series'] == 'sent_padding']
         ax_bitrate.plot(
             df_padding['time'],
             df_padding['padding_bps'] + df_padding['total_target_bps'],
-            label='target + padding', marker='^',
-            markersize = 1, linestyle='None')
+            label='target + padding',
+            marker='^',
+            markersize=4,
+            linestyle='None')
 
-    if 'new_bandwidth' in series:
+    if 'new_bandwidth' in series and 'new_bandwidth' in df_series:
         df_bwe = df[df['series'] == 'new_bandwidth']
-        ax_bitrate.step(df_bwe['time'], df_bwe['bitrate_bps'], label='bwe')
+        ax_bitrate.plot(df_bwe['time'],
+                        df_bwe['bitrate_bps'],
+                        label='estimate',
+                        drawstyle='steps-post')
 
-    if 'did_update' in series:
+    if 'did_update' in series and 'did_update' in df_series:
         df_update = df[df['series'] == 'did_update']
-        ax_bitrate.step(df_update['time'], df_update['total_target_bps'], label='target')
-        ax_bitrate.step(df_update['time'], df_update['total_ideal_bps'], label='ideal')
+        ax_bitrate.plot(df_update['time'],
+                        df_update['total_target_bps'],
+                        label='target',
+                        drawstyle='steps-post')
+        ax_bitrate.plot(df_update['time'],
+                        df_update['total_ideal_bps'],
+                        label='ideal',
+                        drawstyle='steps-post')
 
     # todo include rtt and packet loss
 
