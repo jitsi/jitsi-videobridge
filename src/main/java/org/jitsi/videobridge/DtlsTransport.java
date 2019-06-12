@@ -160,7 +160,7 @@ public class DtlsTransport extends IceTransport
             }
             else
             {
-                logger.warn(logPrefix +
+                logger.info(logPrefix +
                         "Ignoring empty DtlsFingerprint extension: "
                                 + transportPacketExtension.toXML());
             }
