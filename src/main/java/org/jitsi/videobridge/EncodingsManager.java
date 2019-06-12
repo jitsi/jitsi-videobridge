@@ -16,10 +16,10 @@
 
 package org.jitsi.videobridge;
 
-import org.eclipse.jetty.util.*;
 import org.jitsi.nlj.rtp.*;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Process information signaled about encodings (payload types, SSRCs, SSRC
@@ -43,12 +43,13 @@ public class EncodingsManager
      * Maps an endpoint ID to the list of its SSRC associations.
      */
     private Map<String, List<SsrcAssociation>> ssrcAssociations
-            = new HashMap<>();
+            = new ConcurrentHashMap<>();
 
     /**
      * Set of listeners to be notified of associations.
      */
-    private Set<EncodingsUpdateListener> listeners = new ConcurrentHashSet<>();
+    private Set<EncodingsUpdateListener> listeners
+        = ConcurrentHashMap.newKeySet();
 
     /**
      * Adds an SSRC association for a specific endpoint.
