@@ -18,7 +18,6 @@ package org.jitsi.videobridge.shim;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.utils.MediaType;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.*;

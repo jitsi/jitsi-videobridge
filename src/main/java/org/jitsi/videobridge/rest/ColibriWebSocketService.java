@@ -18,7 +18,6 @@ package org.jitsi.videobridge.rest;
 import org.eclipse.jetty.servlet.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.videobridge.*;
 import org.osgi.framework.*;
 
 /**

@@ -1,6 +1,5 @@
 package org.jitsi.videobridge.rest;
 
-import org.jitsi.nlj.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.logging.*;

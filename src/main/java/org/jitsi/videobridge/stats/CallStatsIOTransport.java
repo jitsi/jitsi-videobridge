@@ -19,7 +19,6 @@ import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.stats.media.*;
 import org.jitsi.util.*;
-import org.jitsi.videobridge.*;
 import org.osgi.framework.*;
 
 /**

@@ -22,8 +22,6 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.PacketCache;
 import org.jitsi.rtp.rtcp.*;
-import org.jitsi.rtp.rtp.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.cc.vp8.*;
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc;
@@ -32,7 +30,6 @@ import org.json.simple.*;
 
 import java.lang.ref.*;
 import java.util.*;
-import java.util.function.*;
 
 /**
  * Filters the packets coming from a specific {@link MediaStreamTrackDesc}

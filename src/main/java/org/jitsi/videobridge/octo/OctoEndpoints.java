@@ -20,7 +20,6 @@ import org.jitsi.videobridge.*;
 import org.json.simple.*;
 
 import java.util.*;
-import java.util.stream.*;
 
 /**
  * Manages the list of remote/foreign/Octo endpoints for a specific
@@ -43,6 +42,7 @@ import java.util.stream.*;
      private Conference conference;
 
      private Set<String> octoEndpointIds = new HashSet<>();
+
      /**
       * The {@link OctoEndpointMessageTransport} used to parse and handle
       * incoming data messages from Octo.
@@ -74,21 +74,6 @@ import java.util.stream.*;
      Conference getConference()
      {
          return conference;
-     }
-
-     /**
-      * Gets the list of all Octo endpoints from the associated
-      * {@link Conference}. That is returns all conference endpoints which are
-      * instances of {@link OctoEndpoint}.
-      * @return the list of all {@link OctoEndpoint}s in the conference.
-      */
-     private List<OctoEndpoint> getOctoEndpoints()
-     {
-         return
-             conference.getEndpoints().stream()
-                 .filter(e -> e instanceof OctoEndpoint)
-                 .map(e -> (OctoEndpoint) e)
-                 .collect(Collectors.toList());
      }
 
      /**
@@ -131,15 +116,6 @@ import java.util.stream.*;
          conference.addEndpoint(endpoint);
 
          return endpoint;
-     }
-
-     /**
-      * Sends a message through the Octo channel.
-      * @param msg the message to send.
-      */
-     private void sendMessage(String msg)
-     {
-         logger.warn("Can not send a message, no channels.");
      }
 
      /**

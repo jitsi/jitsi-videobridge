@@ -15,11 +15,9 @@
  */
 package org.jitsi.videobridge.octo;
 
-import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.utils.logging.*;
-import org.jitsi.videobridge.*;
 import org.osgi.framework.*;
 
 import java.net.*;

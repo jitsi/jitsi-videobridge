@@ -18,9 +18,6 @@ package org.jitsi.videobridge.datachannel.protocol;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.rtp.*;
-import org.jitsi.rtp.extensions.bytearray.*;
-
-import java.nio.*;
 
 /**
  * @author Brian Baldino

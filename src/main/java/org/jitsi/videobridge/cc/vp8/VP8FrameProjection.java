@@ -21,7 +21,6 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.nlj.util.ArrayCache;
 import org.jitsi.nlj.util.PacketCache;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.utils.logging.*;
 
@@ -54,6 +53,16 @@ public class VP8FrameProjection
      * An empty packet array.
      */
     private static final Vp8Packet[] EMPTY_PACKET_ARR = new Vp8Packet[0];
+
+    /**
+     * The bitmask for the RTP sequence number field.
+     */
+    private static final int SEQUENCE_NUMBER_MASK = 0xffff;
+
+    /**
+     * The bitmask for the RTP timestamp field.
+     */
+    private static final long TIMESTAMP_MASK = 0xffff_ffffl;
 
     /**
      * The diagnostic context for this instance.
@@ -266,7 +275,7 @@ public class VP8FrameProjection
         }
 
         long nextTimestamp = timestamp + delta;
-        return nextTimestamp & RawPacket.TIMESTAMP_MASK;
+        return nextTimestamp & TIMESTAMP_MASK;
     }
 
     /**
@@ -279,7 +288,7 @@ public class VP8FrameProjection
      */
     private int nextStartingSequenceNumber()
     {
-        return (maxSequenceNumber() + 1) & RawPacket.SEQUENCE_NUMBER_MASK;
+        return (maxSequenceNumber() + 1) & SEQUENCE_NUMBER_MASK;
     }
 
     /**
@@ -300,12 +309,11 @@ public class VP8FrameProjection
                 vp8Frame.getStartingSequenceNumber());
 
             int maxSequenceNumber = startingSequenceNumber + vp8FrameLength;
-            return maxSequenceNumber & RawPacket.SEQUENCE_NUMBER_MASK;
+            return maxSequenceNumber & SEQUENCE_NUMBER_MASK;
         }
         else
         {
-            return (startingSequenceNumber - 1)
-                & RawPacket.SEQUENCE_NUMBER_MASK;
+            return (startingSequenceNumber - 1) & SEQUENCE_NUMBER_MASK;
         }
     }
 
@@ -364,10 +372,12 @@ public class VP8FrameProjection
         for (int i = 0; i < len; i++)
         {
             int piggyBackedPacketSequenceNumber
-                = (originalSequenceNumber + i) & RawPacket.SEQUENCE_NUMBER_MASK;
+                = (originalSequenceNumber + i) & SEQUENCE_NUMBER_MASK;
 
-            ArrayCache.Container container = cache.get(vp8FrameSSRC, piggyBackedPacketSequenceNumber);
-            Vp8Packet lastPacket = container == null ? null : (Vp8Packet) container.getItem();
+            ArrayCache.Container container
+                    = cache.get(vp8FrameSSRC, piggyBackedPacketSequenceNumber);
+            Vp8Packet lastPacket
+                    = container == null ? null : (Vp8Packet) container.getItem();
 
             // the call to accept (synchronized) may update the
             // maxSequenceNumber.
@@ -388,7 +398,8 @@ public class VP8FrameProjection
         {
             if (logger.isDebugEnabled())
             {
-                logger.debug("Sending " + piggyBackedPackets.size() + " piggybacked packets");
+                logger.debug("Sending " + piggyBackedPackets.size()
+                        + " piggybacked packets");
             }
             for (Vp8Packet pktOut : piggyBackedPackets)
             {
@@ -442,7 +453,7 @@ public class VP8FrameProjection
      * of the incoming packet and whether or not the {@link VP8FrameProjection}
      * instance is the "last" {@link VP8FrameProjection} or not.
      *
-     * @param rtpPacket the {@link RawPacket} that will be examined .
+     * @param rtpPacket the {@link VideoRtpPacket} that will be examined .
      * @return true if the packet can be forwarded as part of this
      * {@link VP8FrameProjection}, false otherwise.
      */
