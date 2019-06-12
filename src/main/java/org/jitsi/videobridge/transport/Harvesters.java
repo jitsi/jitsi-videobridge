@@ -161,7 +161,7 @@ public class Harvesters
                 healthy = singlePortHarvesters != null;
             }
 
-            if (!cfg.getBoolean(DISABLE_TCP_HARVESTER, false))
+            if (!cfg.getBoolean(DISABLE_TCP_HARVESTER, false) && false)
             {
                 int port = cfg.getInt(TCP_HARVESTER_PORT, -1);
                 boolean fallback = false;
