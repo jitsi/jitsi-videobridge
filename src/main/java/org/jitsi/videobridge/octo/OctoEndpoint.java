@@ -38,14 +38,21 @@ public class OctoEndpoint
     private final Set<Long> receiveSsrcs = new HashSet<>();
 
     /**
+     * The {@link OctoEndpoints} instance for the conference.
+     */
+    private final OctoEndpoints octoEndpoints;
+
+    /**
      * Initializes a new {@link OctoEndpoint} with a specific ID in a specific
      * conference.
      * @param conference the conference.
      * @param id the ID of the endpoint.
      */
-    OctoEndpoint(Conference conference, String id)
+    OctoEndpoint(Conference conference, String id, OctoEndpoints octoEndpoints)
     {
         super(conference, id);
+
+        this.octoEndpoints = octoEndpoints;
     }
 
     /**
@@ -115,6 +122,21 @@ public class OctoEndpoint
     public void addReceiveSsrc(long ssrc)
     {
         receiveSsrcs.add(ssrc);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void expire()
+    {
+        if (super.isExpired())
+        {
+            return;
+        }
+
+        octoEndpoints.endpointExpired(this);
+        super.expire();
     }
 
 }
