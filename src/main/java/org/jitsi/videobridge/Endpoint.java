@@ -173,6 +173,11 @@ public class Endpoint
     private IOException transportManagerException = null;
 
     /**
+     * Synchronizes access to {@link #transportManager}.
+     */
+    private final Object transportManagerSyncRoot = new Object();
+
+    /**
      * The {@link Transceiver} which handles receiving and sending of (S)RTP.
      */
     private final Transceiver transceiver;
@@ -999,28 +1004,36 @@ public class Endpoint
     public DtlsTransport getTransportManager()
         throws IOException
     {
-        if (transportManager != null)
+        boolean transportManagerCreated = false;
+        synchronized (transportManagerSyncRoot)
         {
-            return transportManager;
-        }
-        else if (transportManagerException != null)
-        {
-            // We've already tried and failed to initialize the TM.
-            throw transportManagerException;
-        }
-        else
-        {
-            try
+            if (transportManager == null)
             {
-                transportManager = new DtlsTransport(this);
-                onTransportManagerSet.complete(true);
-                return transportManager;
-            }
-            catch (IOException ioe)
-            {
-                throw transportManagerException = ioe;
+                if (transportManagerException != null)
+                {
+                    // We've already tried and failed to initialize the TM.
+                    throw transportManagerException;
+                }
+                else
+                {
+                    try
+                    {
+                        transportManager = new DtlsTransport(this);
+                        transportManagerCreated = true;
+                    }
+                    catch (IOException ioe)
+                    {
+                        throw transportManagerException = ioe;
+                    }
+                }
             }
         }
+
+        if (transportManagerCreated)
+        {
+            onTransportManagerSet.complete(true);
+        }
+        return transportManager;
     }
 
     /**
