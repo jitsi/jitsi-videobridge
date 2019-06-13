@@ -1,6 +1,7 @@
 package org.jitsi.videobridge.rest;
 
 import org.jitsi.nlj.transform.node.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.*;
@@ -111,7 +112,6 @@ public class DebugRequestHandler
 
         // The format is:
         // /debug[/conferenceId[/endpointId]]
-        JSONObject json;
         String conferenceId;
         String endpointId = null;
         if (target.equals(DEBUG))
@@ -137,7 +137,8 @@ public class DebugRequestHandler
         logger.warn(
             "Executing a debug request! conferenceId="
                     + conferenceId + " endpointId=" + endpointId);
-        json = getVideobridge().getDebugState(conferenceId, endpointId);
+
+        OrderedJsonObject json = getVideobridge().getDebugState(conferenceId, endpointId);
 
         response.setStatus(HttpServletResponse.SC_OK);
         json.writeJSONString(response.getWriter());
