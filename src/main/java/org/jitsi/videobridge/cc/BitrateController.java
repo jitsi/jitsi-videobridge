@@ -218,7 +218,7 @@ public class BitrateController
      * The {@link TimeSeriesLogger} to be used by this instance to print time
      * series.
      */
-    private final TimeSeriesLogger timeSeriesLogger
+    private static final TimeSeriesLogger timeSeriesLogger
         = TimeSeriesLogger.getTimeSeriesLogger(BitrateController.class);
 
     /**
