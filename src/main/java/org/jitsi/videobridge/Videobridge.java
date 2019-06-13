@@ -21,6 +21,8 @@ import org.ice4j.stack.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.nlj.*;
+import org.jitsi.nlj.stats.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.service.configuration.*;
@@ -209,8 +211,8 @@ public class Videobridge
 
     static
     {
-        BufferPool.Companion.setGetArray(ByteBufferPool::getBuffer);
-        BufferPool.Companion.setReturnArray(buffer -> {
+        org.jitsi.rtp.util.BufferPool.Companion.setGetArray(ByteBufferPool::getBuffer);
+        org.jitsi.rtp.util.BufferPool.Companion.setReturnArray(buffer -> {
             ByteBufferPool.returnBuffer(buffer);
             return Unit.INSTANCE;
         });
@@ -1131,9 +1133,9 @@ public class Videobridge
      * to include. If not specified, all of the conference's endpoints will be
      * included.
      */
-    public JSONObject getDebugState(String conferenceId, String endpointId)
+    public OrderedJsonObject getDebugState(String conferenceId, String endpointId)
     {
-        JSONObject debugState = new JSONObject();
+        OrderedJsonObject debugState = new OrderedJsonObject();
         debugState.put("shutdownInProgress", shutdownInProgress);
         debugState.put("time", System.currentTimeMillis());
 
@@ -1147,6 +1149,7 @@ public class Videobridge
             health = e.getMessage();
         }
         debugState.put("health", health);
+        debugState.put("e2e_packet_delay", JsonStats.toJson(DtlsTransport.packetDelayStats));
 
         JSONObject conferences = new JSONObject();
         debugState.put("conferences", conferences);

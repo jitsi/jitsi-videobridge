@@ -71,6 +71,8 @@ public class DtlsTransport extends IceTransport
     private static final Predicate<Packet> NON_DTLS_PREDICATE
             = DTLS_PREDICATE.negate();
 
+    static final PacketDelayStats packetDelayStats = new PacketDelayStats();
+
     /**
      * Count the number of dropped packets and exceptions.
      */
@@ -547,6 +549,7 @@ public class DtlsTransport extends IceTransport
         @Override
         protected void consume(@NotNull PacketInfo packetInfo)
         {
+            packetDelayStats.addPacket(packetInfo);
             if (socket != null)
             {
                 try
