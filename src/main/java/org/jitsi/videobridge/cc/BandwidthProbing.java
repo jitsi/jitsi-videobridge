@@ -213,11 +213,6 @@ package org.jitsi.videobridge.cc;
                  }
              }
          }
-
-         //TODO(brian): if we still need this, it needs to be passed into JMT to the probingdatasender
-//         if (!DISABLE_RTX_PROBING)
-//         {
-//         }
      }
 
      @Override
