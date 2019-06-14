@@ -87,8 +87,10 @@ class RtpSenderImpl(
     private val srtcpEncryptWrapper = SrtpTransformerNode("SRTCP encrypt")
     private val outgoingPacketCache = PacketCacher()
     private val absSendTime = AbsSendTime()
-    private val statTracker = OutgoingStatisticsTracker()
-    private val rtcpSrUpdater = RtcpSrUpdater(statTracker)
+    // TODO: route RTCP packets through the stats tracker too, so we can include them in the bitrate calculation.
+    // TODO: calculate the sending bitrate post-SRT(C)P
+    private val statsTracker = OutgoingStatisticsTracker()
+    private val rtcpSrUpdater = RtcpSrUpdater(statsTracker)
     private val keyframeRequester = KeyframeRequester()
     private val probingDataSender: ProbingDataSender
 
@@ -121,7 +123,7 @@ class RtpSenderImpl(
         outgoingRtpRoot = pipeline {
             node(outgoingPacketCache)
             node(absSendTime)
-            node(statTracker)
+            node(statsTracker)
             node(TccSeqNumTagger(transportCcEngine))
             node(srtpEncryptWrapper)
             node(outputPipelineTerminationNode)
@@ -214,7 +216,7 @@ class RtpSenderImpl(
     }
 
     override fun getStreamStats(): OutgoingStatisticsSnapshot {
-        return statTracker.getSnapshot()
+        return statsTracker.getSnapshot()
     }
 
     override fun handleEvent(event: Event) {

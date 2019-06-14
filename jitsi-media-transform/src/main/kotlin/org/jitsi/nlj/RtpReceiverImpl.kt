@@ -85,6 +85,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val tccGenerator = TccGeneratorNode(rtcpSender, backgroundExecutor)
     private val audioLevelReader = AudioLevelReader()
     private val silenceDiscarder = SilenceDiscarder(true)
+    // TODO: route RTCP packets through the stats tracket too, so we can include them in the bitrate calculation.
     private val statsTracker = IncomingStatisticsTracker()
     private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statsTracker)
     private val rtcpTermination = RtcpTermination(rtcpEventNotifier)
