@@ -33,6 +33,7 @@ import org.jitsi.nlj.util.getLogger
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.Logger
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.concurrent.RecurringRunnableExecutor
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.BandwidthEstimatorImpl
@@ -116,6 +117,7 @@ class Transceiver(
         rtcpEventNotifier.addRtcpEventListener(bandwidthEstimator)
 
         endpointConnectionStats.addListener(rtpSender)
+        bandwidthEstimatorExecutor.registerRecurringRunnable(bandwidthEstimator)
     }
 
     override fun onReceiveBitrateChanged(ssrcs: MutableCollection<Long>?, bandwidth: Long) {
@@ -300,6 +302,7 @@ class Transceiver(
     override fun stop() {
         rtpReceiver.stop()
         rtpSender.stop()
+        bandwidthEstimatorExecutor.deRegisterRecurringRunnable(bandwidthEstimator)
     }
 
     fun teardown() {
@@ -308,6 +311,11 @@ class Transceiver(
     }
 
     companion object {
+        /**
+         * The executor which will periodically run the bandwidth estimators.
+         */
+        private val bandwidthEstimatorExecutor = RecurringRunnableExecutor("BandwidthEstimator")
+
         init {
 //            Node.plugins.add(BufferTracePlugin)
 //            Node.PLUGINS_ENABLED = true
