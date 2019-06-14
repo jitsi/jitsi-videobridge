@@ -16,7 +16,6 @@
 
 package org.jitsi.nlj.rtcp;
 
-import org.jitsi.nlj.*;
 import org.jitsi.rtp.rtcp.*;
 
 /**
@@ -26,7 +25,7 @@ import org.jitsi.rtp.rtcp.*;
  * these methods as most listeners care about one but not the other
  */
 public interface RtcpListener {
-    default void onRtcpPacketReceived(RtcpPacket packet, Long receivedTime) {}
+    default void onRtcpPacketReceived(RtcpPacket packet, long receivedTime) {}
     default void onRtcpPacketSent(RtcpPacket packet) {}
 }
 
