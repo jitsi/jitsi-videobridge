@@ -63,7 +63,7 @@ class RtcpRrGenerator(
         doWork()
     }
 
-    override fun onRtcpPacketReceived(packet: RtcpPacket, receivedTime: Long) {
+    override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Long) {
         when (packet) {
             is RtcpSrPacket -> {
                 // Note the time we received an SR so that it can be used when creating RtcpReportBlocks

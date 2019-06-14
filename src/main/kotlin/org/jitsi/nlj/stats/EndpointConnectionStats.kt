@@ -58,7 +58,7 @@ class EndpointConnectionStats : RtcpListener {
         return Snapshot(rtt)
     }
 
-    override fun onRtcpPacketReceived(packet: RtcpPacket, receivedTime: Long) {
+    override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Long) {
         when (packet) {
             is RtcpSrPacket -> {
                 logger.cdebug { "Received SR packet with ${packet.reportBlocks.size} report blocks" }
@@ -71,7 +71,7 @@ class EndpointConnectionStats : RtcpListener {
         }
     }
 
-    override fun onRtcpPacketSent(packet: RtcpPacket) {
+    override fun rtcpPacketSent(packet: RtcpPacket) {
         when (packet) {
             is RtcpSrPacket -> {
                 logger.cdebug { "Tracking sent SR packet with compacted timestamp ${packet.senderInfo.compactedNtpTimestamp}" }
