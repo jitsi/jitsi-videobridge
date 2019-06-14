@@ -66,7 +66,9 @@ sealed class Node(
      */
     open fun attach(node: Node): Node {
         // Remove ourselves as an input from the node we're currently connected to
-        nextNode?.removeParent(this)
+        if (nextNode != null) {
+            throw Exception("Attempt to replace a Node's child. If this is intentional, use detachNext first.")
+        }
         nextNode = node
         node.addParent(this)
 
@@ -397,7 +399,8 @@ abstract class ConsumerNode(
 
     // Consumer nodes shouldn't have children, because they don't forward
     // any packets anyway.
-    override fun attach(node: Node): Node = throw Exception()
+    override fun attach(node: Node): Node =
+        throw Exception("ConsumerNode must be a terminal and should not have child nodes attached.")
 }
 
 /**
@@ -432,11 +435,9 @@ abstract class DemuxerNode(name: String) : StatsKeepingNode("$name demuxer") {
 
     fun addPacketPath(packetPath: ConditionalPacketPath): DemuxerNode {
         transformPaths.add(packetPath)
-        // DemuxerNode never uses the plain 'next' call since it doesn't have a single 'next'
-        // node (it has multiple downstream paths), but we want to make sure the paths correctly
-        // see this Demuxer in their 'inputNodes' so that we can traverse the reverse tree
-        // correctly, so we call attach here to get the inputNodes wired correctly.
-        super.attach(packetPath.path)
+        // We want to make sure the paths correctly see this Demuxer in their 'inputNodes' so that we can traverse the
+        // reverse tree correctly.
+        packetPath.path.addParent(this)
 
         return this
     }
