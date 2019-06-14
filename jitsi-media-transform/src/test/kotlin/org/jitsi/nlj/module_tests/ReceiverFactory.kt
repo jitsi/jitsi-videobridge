@@ -45,7 +45,6 @@ class ReceiverFactory {
             val receiver = RtpReceiverImpl(
                 Random().nextLong().toString(),
                 rtcpSender,
-                null,
                 RtcpEventNotifier(),
                 executor,
                 backgroundExecutor

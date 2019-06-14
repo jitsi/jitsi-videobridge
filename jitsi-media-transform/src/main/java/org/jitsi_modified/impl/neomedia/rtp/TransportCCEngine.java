@@ -18,6 +18,9 @@ package org.jitsi_modified.impl.neomedia.rtp;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.nlj.rtcp.*;
+import org.jitsi.rtp.rtcp.*;
+import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.utils.*;
@@ -37,8 +40,7 @@ import java.util.*;
  *
  */
 public class TransportCCEngine
-    implements RemoteBitrateObserver,
-               CallStatsObserver
+    implements RemoteBitrateObserver, CallStatsObserver, RtcpListener
 {
     /**
      * The maximum number of received packets and their timestamps to save.
@@ -138,7 +140,16 @@ public class TransportCCEngine
         remoteBitrateObserver.onReceiveBitrateChanged(ssrcs, bitrate);
     }
 
-    public void tccReceived(RtcpFbTccPacket tccPacket)
+    @Override
+    public void onRtcpPacketReceived(RtcpPacket rtcpPacket, long receivedTime)
+    {
+        if (rtcpPacket instanceof RtcpFbTccPacket)
+        {
+            tccReceived((RtcpFbTccPacket) rtcpPacket);
+        }
+    }
+
+    private void tccReceived(RtcpFbTccPacket tccPacket)
     {
         if (remoteReferenceTimeMs == -1)
         {

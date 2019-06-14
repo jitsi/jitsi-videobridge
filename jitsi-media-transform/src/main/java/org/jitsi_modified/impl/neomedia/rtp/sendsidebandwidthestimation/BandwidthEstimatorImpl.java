@@ -16,6 +16,7 @@
 package org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.rtp.rtcp.*;
 
 import org.jitsi.service.configuration.*;
@@ -38,7 +39,7 @@ import java.util.concurrent.*;
  * @author George Politis
  */
 public class BandwidthEstimatorImpl
-    implements BandwidthEstimator, RecurringRunnable
+    implements BandwidthEstimator, RecurringRunnable, RemoteBitrateObserver
 {
     /**
      * The system property name of the initial value of the estimation, in bits
@@ -237,5 +238,20 @@ public class BandwidthEstimatorImpl
             lastUpdateTime = System.currentTimeMillis();
             sendSideBandwidthEstimation.updateEstimate(lastUpdateTime);
         }
+    }
+
+    /**
+     * This is hooked up to the
+     * {@link org.jitsi.service.neomedia.rtp.RemoteBitrateEstimator} in
+     * {@link org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine}, which
+     * performs the delay-based estimation (also referred to as
+     * "receiver estimate").
+     *
+     */
+    @Override
+    public void onReceiveBitrateChanged(
+            Collection<Long> ssrcs, long delayBasedEstimateBps)
+    {
+        updateReceiverEstimate(delayBasedEstimateBps);
     }
 }
