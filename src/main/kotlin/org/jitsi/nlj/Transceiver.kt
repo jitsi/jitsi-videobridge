@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.RemoteBitrateObserver
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
@@ -67,7 +66,7 @@ class Transceiver(
     backgroundExecutor: ScheduledExecutorService,
     diagnosticContext: DiagnosticContext,
     logLevelDelegate: Logger? = null
-) : Stoppable, NodeStatsProducer, RemoteBitrateObserver {
+) : Stoppable, NodeStatsProducer {
     private val logger = getLogger(this.javaClass, logLevelDelegate)
     private val rtpExtensions = mutableMapOf<Byte, RtpExtension>()
     private val payloadTypes = mutableMapOf<Byte, PayloadType>()
@@ -84,9 +83,9 @@ class Transceiver(
 
     private var mediaStreamTracks = MediaStreamTracks()
 
-    private val transportCcEngine = TransportCCEngine(diagnosticContext, this)
-
     private val bandwidthEstimator: BandwidthEstimatorImpl = BandwidthEstimatorImpl(diagnosticContext)
+
+    private val transportCcEngine = TransportCCEngine(diagnosticContext, bandwidthEstimator)
 
     private val rtpSender: RtpSender = RtpSenderImpl(
             id,
@@ -103,7 +102,6 @@ class Transceiver(
             { rtcpPacket ->
                 rtpSender.processPacket(PacketInfo(rtcpPacket))
             },
-            transportCcEngine,
             rtcpEventNotifier,
             receiverExecutor,
             backgroundExecutor,
@@ -115,14 +113,10 @@ class Transceiver(
 
         endpointConnectionStats.addListener(bandwidthEstimator)
         rtcpEventNotifier.addRtcpEventListener(bandwidthEstimator)
+        rtcpEventNotifier.addRtcpEventListener(transportCcEngine)
 
         endpointConnectionStats.addListener(rtpSender)
         bandwidthEstimatorExecutor.registerRecurringRunnable(bandwidthEstimator)
-    }
-
-    override fun onReceiveBitrateChanged(ssrcs: MutableCollection<Long>?, bandwidth: Long) {
-        bandwidthEstimator.updateReceiverEstimate(bandwidth)
-        rtpReceiver.handleEvent(BandwidthEstimationChangedEvent(bandwidth))
     }
 
     fun onBandwidthEstimateChanged(listener: BandwidthEstimator.Listener) {
