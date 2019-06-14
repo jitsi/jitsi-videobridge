@@ -51,7 +51,6 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.util.RTCPUtils
 import org.jitsi.utils.logging.Logger
 import org.jitsi.utils.queue.CountingErrorHandler
-import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 
@@ -62,7 +61,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
      * participant it's receiving data from (NACK packets, for example)
      */
     private val rtcpSender: (RtcpPacket) -> Unit = {},
-    transportCcEngine: TransportCCEngine? = null,
     private val rtcpEventNotifier: RtcpEventNotifier,
     /**
      * The executor this class will use for its primary work (i.e. critical path
@@ -89,7 +87,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val silenceDiscarder = SilenceDiscarder(true)
     private val statsTracker = IncomingStatisticsTracker()
     private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statsTracker)
-    private val rtcpTermination = RtcpTermination(rtcpEventNotifier, transportCcEngine)
+    private val rtcpTermination = RtcpTermination(rtcpEventNotifier)
 
     companion object {
         private val classLogger: Logger = Logger.getLogger(this::class.java)
