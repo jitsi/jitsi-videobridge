@@ -51,11 +51,10 @@ class TccGeneratorNode(
     private var tccExtensionId: Int? = null
     private var currTccSeqNum: Int = 0
     private var lastTccSentTime: Long = 0
-    private final val lock = Any()
+    private val lock = Any()
     // Tcc seq num -> arrival time in ms
-    private val packetArrivalTimes = TreeMap<Int, Long>(object : Comparator<Int> {
-        override fun compare(o1: Int, o2: Int): Int = RtpUtils.getSequenceNumberDelta(o1, o2)
-    })
+    private val packetArrivalTimes =
+        TreeMap<Int, Long>(Comparator<Int> { o1, o2 -> RtpUtils.getSequenceNumberDelta(o1, o2) })
     // The first sequence number of the current tcc feedback packet
     private var windowStartSeq: Int = -1
     private var sendIntervalMs: Long = 0
@@ -68,10 +67,6 @@ class TccGeneratorNode(
      * TCC packets we generate
      */
     private var mediaSsrcs: MutableSet<Long> = mutableSetOf()
-    private fun <T> MutableSet<T>.firstOr(defaultValue: T): T {
-        val iter = iterator()
-        return if (iter.hasNext()) iter.next() else defaultValue
-    }
     private var numTccSent: Int = 0
 
     init {
@@ -111,7 +106,7 @@ class TccGeneratorNode(
     private fun sendPeriodicFeedbacks() {
         try {
             logger.cdebug { "${System.identityHashCode(this)} sending periodic feedback at " +
-                    "${ java.lang.System.currentTimeMillis()}, window start seq is $windowStartSeq" }
+                    "${System.currentTimeMillis()}, window start seq is $windowStartSeq" }
             buildFeedback()?.let {
                 sendTcc(it)
             }
@@ -124,7 +119,7 @@ class TccGeneratorNode(
 
     private fun buildFeedback(): RtcpFbTccPacket? {
         val tccBuilder = RtcpFbTccPacketBuilder(
-            mediaSourceSsrc = mediaSsrcs.firstOr(-1L),
+            mediaSourceSsrc = mediaSsrcs.firstOrNull() ?: -1L,
             feedbackPacketSeqNum = currTccSeqNum++
         )
         synchronized(lock) {
