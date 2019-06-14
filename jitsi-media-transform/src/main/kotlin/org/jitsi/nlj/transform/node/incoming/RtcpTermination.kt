@@ -51,8 +51,8 @@ class RtcpTermination(
         compoundRtcp.packets.forEach { rtcpPacket ->
             when (rtcpPacket) {
                 is RtcpFbPliPacket, is RtcpFbFirPacket, is RtcpSrPacket -> {
-                    // We'll let these pass through and be forwarded to the sender who will be
-                    // responsible for translating/aggregating them
+                    // We'll let these pass through and be forwarded to the conference (where they will be
+                    // routed to the other endpoint(s))
                     // NOTE(brian): this should work fine as long as we can't receive 2 RTCP packets
                     // we want to forward in the same compound packet.  If we can, then we may need
                     // to turn this into a MultipleOutputNode
