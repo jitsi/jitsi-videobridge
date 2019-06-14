@@ -32,10 +32,10 @@ class RtcpEventNotifier {
     }
 
     fun notifyRtcpReceived(packet: RtcpPacket, receivedTime: Long) {
-        rtcpListeners.forEach { it.onRtcpPacketReceived(packet, receivedTime) }
+        rtcpListeners.forEach { it.rtcpPacketReceived(packet, receivedTime) }
     }
 
     fun notifyRtcpSent(rtcpPacket: RtcpPacket) {
-        rtcpListeners.forEach { it.onRtcpPacketSent(rtcpPacket) }
+        rtcpListeners.forEach { it.rtcpPacketSent(rtcpPacket) }
     }
 }
