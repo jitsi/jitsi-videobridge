@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.nlj.BandwidthEstimationChangedEvent
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.ReceiveSsrcAddedEvent
@@ -46,7 +45,8 @@ import java.util.concurrent.TimeUnit
  */
 class TccGeneratorNode(
     private val onTccPacketReady: (RtcpPacket) -> Unit = {},
-    private val scheduler: ScheduledExecutorService
+    private val scheduler: ScheduledExecutorService,
+    private val getSendBitrate: () -> Long
 ) : ObserverNode("TCC generator") {
     private var tccExtensionId: Int? = null
     private var currTccSeqNum: Int = 0
@@ -153,6 +153,7 @@ class TccGeneratorNode(
     private fun sendTcc(tccPacket: RtcpFbTccPacket) {
         onTccPacketReady(tccPacket)
         numTccSent++
+        recalculateSendInterval(getSendBitrate())
         lastTccSentTime = System.currentTimeMillis()
         tccFeedbackBitrate.update(tccPacket.length, lastTccSentTime)
     }
@@ -169,12 +170,13 @@ class TccGeneratorNode(
             ((timeSinceLastTcc >= 20) && currentPacketMarked)
     }
 
-    private fun onBandwidthChanged(bandwidthBps: Long) {
+    private fun recalculateSendInterval(sendBitrateBps: Long) {
         synchronized(lock) {
-            // Let TWCC reports occupy 5% of total bandwidth
+            // Let TWCC reports occupy 5% of the total sending bitrate. See
+            // https://cs.chromium.org/chromium/src/third_party/webrtc/modules/congestion_controller/include/receive_side_congestion_controller.h?type=cs&g=0&l=52
             sendIntervalMs = (.5 + kTwccReportSize * 8.0 * 1000.0 /
-                    (.05 * bandwidthBps).coerceIn(kMinTwccRate, kMaxTwccRate)).toPositiveLong()
-            logger.cdebug { "Bandwidth is now $bandwidthBps, tcc send interval is $sendIntervalMs ms" }
+                    (.05 * sendBitrateBps).coerceIn(kMinTwccRate, kMaxTwccRate)).toPositiveLong()
+            logger.cdebug { "Send bitrate is now $sendBitrateBps, tcc send interval is $sendIntervalMs ms" }
         }
     }
 
@@ -193,7 +195,6 @@ class TccGeneratorNode(
             is RtpExtensionClearEvent -> tccExtensionId = null
             is ReceiveSsrcAddedEvent -> mediaSsrcs.add(event.ssrc)
             is ReceiveSsrcRemovedEvent -> mediaSsrcs.remove(event.ssrc)
-            is BandwidthEstimationChangedEvent -> onBandwidthChanged(event.bandwidthBps)
         }
     }
 

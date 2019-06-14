@@ -105,6 +105,7 @@ class Transceiver(
             rtcpEventNotifier,
             receiverExecutor,
             backgroundExecutor,
+            { rtpSender.getCombinedStreamStats().bitrate },
             logLevelDelegate
         )
 
