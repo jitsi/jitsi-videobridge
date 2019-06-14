@@ -17,6 +17,7 @@ package org.jitsi.nlj
 
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.EndpointConnectionStats
+import org.jitsi.nlj.stats.PacketStreamStats
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
 
@@ -36,6 +37,7 @@ abstract class RtpSender :
     abstract fun onOutgoingPacket(handler: PacketHandler)
     abstract fun setSrtpTransformers(srtpTransformers: SrtpTransformers)
     abstract fun getStreamStats(): OutgoingStatisticsSnapshot
+    abstract fun getCombinedStreamStats(): PacketStreamStats.Snapshot
     abstract fun requestKeyframe(mediaSsrc: Long)
     abstract fun tearDown()
 }

@@ -73,6 +73,10 @@ class RtpReceiverImpl @JvmOverloads constructor(
      * background tasks, or tasks that need to execute at some fixed delay/rate
      */
     private val backgroundExecutor: ScheduledExecutorService,
+    /**
+     * Returns the current sending bitrate in bps.
+     */
+    getSendBitrate: () -> Long,
     logLevelDelegate: Logger? = null
 ) : RtpReceiver() {
     private val logger = getLogger(classLogger, logLevelDelegate)
@@ -82,7 +86,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
             PacketInfoQueue("rtp-receiver-incoming-packet-queue", executor, this::handleIncomingPacket)
     private val srtpDecryptWrapper = SrtpTransformerNode("SRTP Decrypt node")
     private val srtcpDecryptWrapper = SrtpTransformerNode("SRTCP Decrypt node")
-    private val tccGenerator = TccGeneratorNode(rtcpSender, backgroundExecutor)
+    private val tccGenerator = TccGeneratorNode(rtcpSender, backgroundExecutor, getSendBitrate)
     private val audioLevelReader = AudioLevelReader()
     private val silenceDiscarder = SilenceDiscarder(true)
     // TODO: route RTCP packets through the stats tracket too, so we can include them in the bitrate calculation.
