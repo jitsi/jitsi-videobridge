@@ -29,7 +29,6 @@ import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketCacher
 import org.jitsi.nlj.transform.node.SrtpTransformerNode
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
-import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.transform.node.outgoing.ProbingDataSender
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
@@ -215,9 +214,9 @@ class RtpSenderImpl(
         return false
     }
 
-    override fun getStreamStats(): OutgoingStatisticsSnapshot {
-        return statsTracker.getSnapshot()
-    }
+    override fun getStreamStats() = statsTracker.getSnapshot()
+
+    override fun getCombinedStreamStats() = statsTracker.getCombinedStatsSnapshot()
 
     override fun handleEvent(event: Event) {
         when (event) {
