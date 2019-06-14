@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.utils.stats.RateStatistics
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
@@ -23,6 +22,7 @@ import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.stats.NodeStatsBlock
+import org.jitsi.nlj.stats.PacketStreamStats
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.RtpUtils.Companion.convertRtpTimestampToMs
 import org.jitsi.nlj.util.cdebug
@@ -32,51 +32,28 @@ import org.jitsi.nlj.util.numPacketsTo
 import org.jitsi.nlj.util.rolledOverTo
 import org.jitsi.rtp.rtp.RtpPacket
 import toUInt
-import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Track various statistics about received RTP streams to be used in SR/RR report blocks
  */
 class IncomingStatisticsTracker : ObserverNode("Incoming statistics tracker") {
+    private val combinedStats = PacketStreamStats()
     private val ssrcStats: MutableMap<Long, IncomingSsrcStats> = ConcurrentHashMap()
     private val payloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
 
-    /**
-     * The bitrate in bits per seconds (for all RTP streams).
-     */
-    private val bitrate = RateStatistics(Duration.ofSeconds(1).toMillis().toUInt())
-    /**
-     * The packet rate in packets per second (for all RTP streams).
-     */
-    private val packetRate = RateStatistics(Duration.ofSeconds(1).toMillis().toUInt(), 1000f)
-
-    /**
-     * Total number of bytes received in RTP packets.
-     */
-    private var bytesReceived: Long = 0
-
-    /**
-     * Total number of RTP packets received.
-     */
-    private var packetsReceived: Long = 0
-
     override fun observe(packetInfo: PacketInfo) {
-        val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        payloadTypes[rtpPacket.payloadType.toByte()]?.let {
-            val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrc) {
-                IncomingSsrcStats(rtpPacket.ssrc, rtpPacket.sequenceNumber)
-            }
-            val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.timestamp.toUInt(), it.clockRate)
-            stats.packetReceived(rtpPacket, packetSentTimestamp, packetInfo.receivedTime)
-        }
+        combinedStats.update(packetInfo.packet.length)
 
-        val now = System.currentTimeMillis()
-        val bytes = rtpPacket.length
-        bitrate.update(bytes, now)
-        packetRate.update(1, now)
-        bytesReceived += bytes
-        packetsReceived++
+        (packetInfo.packet as? RtpPacket)?.let { rtpPacket ->
+            payloadTypes[rtpPacket.payloadType.toByte()]?.let {
+                val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrc) {
+                    IncomingSsrcStats(rtpPacket.ssrc, rtpPacket.sequenceNumber)
+                }
+                val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.timestamp.toUInt(), it.clockRate)
+                stats.packetReceived(rtpPacket, packetSentTimestamp, packetInfo.receivedTime)
+            }
+        }
     }
 
     override fun handleEvent(event: Event) {
@@ -97,7 +74,7 @@ class IncomingStatisticsTracker : ObserverNode("Incoming statistics tracker") {
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
             val stats = getSnapshot()
-            stats.ssrcStats.forEach { ssrc, streamStats ->
+            stats.ssrcStats.forEach { (ssrc, streamStats) ->
                 addString("source_ssrc", ssrc.toString())
                 addString("stream_stats", streamStats.toString())
             }
@@ -105,12 +82,8 @@ class IncomingStatisticsTracker : ObserverNode("Incoming statistics tracker") {
     }
 
     fun getSnapshot(): IncomingStatisticsSnapshot {
-        val now = System.currentTimeMillis()
         return IncomingStatisticsSnapshot(
-            bitrate.getRate(now),
-            packetRate.getRate(now),
-            bytesReceived,
-            packetsReceived,
+            combinedStats.snapshot(),
             ssrcStats.map { (ssrc, stats) ->
                 Pair(ssrc, stats.getSnapshot())
             }.toMap()
@@ -119,23 +92,7 @@ class IncomingStatisticsTracker : ObserverNode("Incoming statistics tracker") {
 }
 
 class IncomingStatisticsSnapshot(
-    /**
-     * Bitrate in bits per second.
-     */
-    val bitrate: Long,
-    /**
-     * Packet rate in packets per second.
-     */
-    val packetRate: Long,
-    /**
-     * Total number of bytes received in RTP packets.
-     */
-    val bytesReceived: Long,
-
-    /**
-     * Total number of RTP packets received.
-     */
-    val packetsReceived: Long,
+    val combinedStats: PacketStreamStats.Snapshot,
     /**
      * Per-ssrc stats.
      */

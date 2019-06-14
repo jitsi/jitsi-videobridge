@@ -15,55 +15,46 @@
  */
 package org.jitsi.nlj.transform.node.outgoing
 
-import org.jitsi.utils.stats.RateStatistics
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.stats.PacketStreamStats
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.rtp.rtp.RtpPacket
-import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 
 class OutgoingStatisticsTracker : ObserverNode("Outgoing statistics tracker") {
+    /**
+     * Per-SSRC statistics
+     */
     private val ssrcStats: MutableMap<Long, OutgoingSsrcStats> = ConcurrentHashMap()
-
     /**
-     * The bitrate in bits per seconds.
+     * The stats for all of the SSRCs combined.
      */
-    private val bitrate = RateStatistics(Duration.ofSeconds(1).toMillis().toInt())
-    /**
-     * The packet rate in packets per second.
-     */
-    private val packetRate = RateStatistics(Duration.ofSeconds(1).toMillis().toInt(), 1000f)
-
-    private var bytesSent: Long = 0
-    private var packetsSent: Long = 0
+    private val combinedStats = PacketStreamStats()
 
     override fun observe(packetInfo: PacketInfo) {
-        val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrc) {
-            OutgoingSsrcStats(rtpPacket.ssrc)
-        }
-        stats.packetSent(rtpPacket.length, rtpPacket.timestamp)
+        combinedStats.update(packetInfo.packet.length)
 
-        val now = System.currentTimeMillis()
-        val bytes = rtpPacket.length
-        bitrate.update(bytes, now)
-        packetRate.update(1, now)
-        bytesSent += bytes
-        packetsSent++
+        (packetInfo.packet as? RtpPacket) ?.let { rtpPacket ->
+            val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrc) {
+                OutgoingSsrcStats(rtpPacket.ssrc)
+            }
+            stats.packetSent(rtpPacket.length, rtpPacket.timestamp)
+        }
     }
 
     fun getSnapshot(): OutgoingStatisticsSnapshot {
-        val now = System.currentTimeMillis()
         return OutgoingStatisticsSnapshot(
-            bitrate.getRate(now),
-            packetRate.getRate(now),
-            bytesSent,
-            packetsSent,
+            combinedStats.snapshot(),
             ssrcStats.map { (ssrc, stats) ->
                 Pair(ssrc, stats.getSnapshot())
             }.toMap()
         )
     }
+
+    /**
+     * Gets the combined stats (i.e. overall stats for sent packets).
+     */
+    fun getCombinedStatsSnapshot() = combinedStats.snapshot()
 
     fun getSsrcSnapshot(ssrc: Long): OutgoingSsrcStats.Snapshot? {
         return ssrcStats[ssrc]?.getSnapshot()
@@ -71,26 +62,11 @@ class OutgoingStatisticsTracker : ObserverNode("Outgoing statistics tracker") {
 }
 
 class OutgoingStatisticsSnapshot(
-    /**
-     * Bitrate in bits per second.
-     */
-    val bitrate: Long,
-    /**
-     * Packet rate in packets per second.
-     */
-    val packetRate: Long,
-    /**
-     * Number of bytes sent in RTP packets.
-     */
-    val bytesSent: Long,
-    /**
-     * Number of RTP packets sent.
-     */
-    val packetsSent: Long,
+    val combinedStats: PacketStreamStats.Snapshot,
     /**
      * Per-ssrc stats.
      */
-    val ssrcStats: Map<Long, OutgoingSsrcStats.Snapshot>
+    val ssrcStats: Map<Long, OutgoingSsrcStats.Snapshot>?
 )
 
 class OutgoingSsrcStats(
