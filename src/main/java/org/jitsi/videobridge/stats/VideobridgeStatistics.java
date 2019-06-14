@@ -540,8 +540,8 @@ public class VideobridgeStatistics
                         = endpoint.getTransceiver().getTransceiverStats();
                 IncomingStatisticsSnapshot incomingStats
                         = transceiverStats.getIncomingStats();
-                bitrateDownloadBps += incomingStats.getBitrate();
-                packetRateDownload += incomingStats.getPacketRate();
+                bitrateDownloadBps += incomingStats.getCombinedStats().getBitrate();
+                packetRateDownload += incomingStats.getCombinedStats().getPacketRate();
                 for (IncomingSsrcStats.Snapshot ssrcStats
                         : incomingStats.getSsrcStats().values())
                 {
@@ -568,14 +568,14 @@ public class VideobridgeStatistics
 
                 }
 
-                OutgoingStatisticsSnapshot outgoingStats
-                        = transceiverStats.getOutgoingStats();
+                PacketStreamStats.Snapshot outgoingStats
+                        = transceiverStats.getOutgoingStats().getCombinedStats();
                 bitrateUploadBps += outgoingStats.getBitrate();
                 packetRateUpload += outgoingStats.getPacketRate();
 
                 Double endpointRtt
                         = transceiverStats.getEndpointConnectionStats().getRtt();
-                if (endpointRtt != null && endpointRtt > 0)
+                if (endpointRtt > 0)
                 {
                     rttSumMs += endpointRtt;
                     rttCount++;
@@ -589,8 +589,8 @@ public class VideobridgeStatistics
                 // a limit imposed by lastN.
                 Integer lastN = endpoint.getLastN();
                 endpointStreams
-                   += (lastN == null || lastN == -1)
-                       ? (numConferenceEndpoints - 1)
+                   += lastN == -1
+                       ? numConferenceEndpoints - 1
                        : Math.min(lastN, numConferenceEndpoints - 1);
 
                videoStreams += endpointStreams;
