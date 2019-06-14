@@ -127,12 +127,6 @@ class Transceiver(
         bandwidthEstimator.addListener(listener)
     }
 
-    // TODO(brian): we expose this because the bitratecontroller in jvb needs access to it but it just uses it
-    // to get the latest estimate, maybe we can give it that information another way without having to expose this
-    // (a getLatestAvailableBandwidthEstimate method on transceiver? or something else?  the whole bandwidth estimation
-    // flow (abs send time -> transport cc engine -> bandwidthestimator -> sendsidebwe) feels a bit jumpy
-    fun getBandwidthEstimator(): BandwidthEstimator = bandwidthEstimator
-
     /**
      * Handle an incoming [PacketInfo] (that is, a packet received by the endpoint
      * this transceiver is associated with) to be processed by the receiver pipeline.
