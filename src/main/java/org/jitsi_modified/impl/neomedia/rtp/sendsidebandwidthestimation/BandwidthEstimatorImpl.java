@@ -101,9 +101,9 @@ public class BandwidthEstimatorImpl
         long fraction_lost_aggregate = 0;
         for (RtcpReportBlock reportBlock : reportBlocks)
         {
-            Long ssrc = reportBlock.getSsrc();
-            Long extSeqNum = reportBlock.getExtendedHighestSeqNum();
-            Long lastEHSN = ssrc_to_last_received_extended_high_seq_num_.getOrDefault(ssrc, extSeqNum);
+            long ssrc = reportBlock.getSsrc();
+            long extSeqNum = reportBlock.getExtendedHighestSeqNum();
+            long lastEHSN = ssrc_to_last_received_extended_high_seq_num_.getOrDefault(ssrc, extSeqNum);
             ssrc_to_last_received_extended_high_seq_num_.put(ssrc, lastEHSN);
 
             if (lastEHSN >= extSeqNum)
@@ -184,7 +184,7 @@ public class BandwidthEstimatorImpl
     }
 
     @Override
-    public void onRtcpPacketReceived(@NotNull RtcpPacket packet, Long receivedTime)
+    public void onRtcpPacketReceived(@NotNull RtcpPacket packet, long receivedTime)
     {
         if (packet instanceof RtcpSrPacket ||
                 packet instanceof RtcpRrPacket)
