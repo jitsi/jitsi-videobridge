@@ -52,7 +52,7 @@ import java.util.concurrent.ScheduledExecutorService
 
 class RtpSenderImpl(
     val id: String,
-    transportCcEngine: TransportCCEngine? = null,
+    val transportCcEngine: TransportCCEngine? = null,
     private val rtcpEventNotifier: RtcpEventNotifier,
     /**
      * The executor this class will use for its primary work (i.e. critical path
@@ -165,6 +165,7 @@ class RtpSenderImpl(
     override fun onRttUpdate(newRtt: Double) {
         nackHandler.onRttUpdate(newRtt)
         keyframeRequester.onRttUpdate(newRtt)
+        transportCcEngine?.onRttUpdate(newRtt.toLong(), -1)
     }
 
     /**
