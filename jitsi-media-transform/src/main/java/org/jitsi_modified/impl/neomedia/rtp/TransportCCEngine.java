@@ -186,7 +186,7 @@ public class TransportCCEngine
         {
             long now = System.currentTimeMillis();
             sentPacketDetails.put(
-                    tccSeqNum,
+                    tccSeqNum & 0xFFFF,
                     new PacketDetail(length, now));
         }
     }
