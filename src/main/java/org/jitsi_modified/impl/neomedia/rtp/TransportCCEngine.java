@@ -161,6 +161,7 @@ public class TransportCCEngine
 
             if (packetDetail == null)
             {
+                logger.warn("Couldn't find packet detail for " + tccSeqNum + ".");
                 continue;
             }
 
