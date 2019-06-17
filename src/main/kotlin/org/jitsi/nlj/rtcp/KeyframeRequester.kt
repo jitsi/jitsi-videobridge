@@ -140,7 +140,7 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
                 false
             } else {
                 keyframeRequests[mediaSsrc] = nowMs
-                logger.cdebug { "Keyframe requester requesting keyframe with FIR for $mediaSsrc" }
+                logger.cdebug { "Keyframe requester requesting keyframe for $mediaSsrc" }
                 true
             }
         }
