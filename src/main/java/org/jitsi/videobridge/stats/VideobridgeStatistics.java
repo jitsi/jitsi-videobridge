@@ -540,8 +540,10 @@ public class VideobridgeStatistics
                         = endpoint.getTransceiver().getTransceiverStats();
                 IncomingStatisticsSnapshot incomingStats
                         = transceiverStats.getIncomingStats();
-                bitrateDownloadBps += incomingStats.getCombinedStats().getBitrate();
-                packetRateDownload += incomingStats.getCombinedStats().getPacketRate();
+                PacketStreamStats.Snapshot incomingPacketStreamStats
+                        = transceiverStats.getIncomingPacketStreamStats();
+                bitrateDownloadBps += incomingPacketStreamStats.getBitrate();
+                packetRateDownload += incomingPacketStreamStats.getPacketRate();
                 for (IncomingSsrcStats.Snapshot ssrcStats
                         : incomingStats.getSsrcStats().values())
                 {
@@ -557,8 +559,8 @@ public class VideobridgeStatistics
                         / (double) ssrcStats.getNumReceivedPackets();
                     fractionLostSum += fractionLost;
 
-                    Double ssrcJitter = ssrcStats.getJitter();
-                    if (ssrcJitter != null && ssrcJitter != 0)
+                    double ssrcJitter = ssrcStats.getJitter();
+                    if (ssrcJitter != 0)
                     {
                         // We take the abs because otherwise the
                         // aggregate makes no sense.
@@ -569,7 +571,7 @@ public class VideobridgeStatistics
                 }
 
                 PacketStreamStats.Snapshot outgoingStats
-                        = transceiverStats.getOutgoingStats().getCombinedStats();
+                        = transceiverStats.getOutgoingPacketStreamStats();
                 bitrateUploadBps += outgoingStats.getBitrate();
                 packetRateUpload += outgoingStats.getPacketRate();
 

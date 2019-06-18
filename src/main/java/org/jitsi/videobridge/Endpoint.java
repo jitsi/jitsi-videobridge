@@ -706,9 +706,9 @@ public class Endpoint
         Conference.Statistics conferenceStats = getConference().getStatistics();
         TransceiverStats transceiverStats = transceiver.getTransceiverStats();
         PacketStreamStats.Snapshot incomingStats
-                = transceiverStats.getIncomingStats().getCombinedStats();
+                = transceiverStats.getIncomingPacketStreamStats();
         PacketStreamStats.Snapshot outgoingStats
-                = transceiverStats.getOutgoingStats().getCombinedStats();
+                = transceiverStats.getOutgoingPacketStreamStats();
         BandwidthEstimator.Statistics bweStats
                 = transceiverStats.getBandwidthEstimatorStats();
 
