@@ -23,6 +23,8 @@ import org.jitsi_modified.service.neomedia.rtp.BandwidthEstimator
 data class TransceiverStats(
     val endpointConnectionStats: EndpointConnectionStats.Snapshot,
     val incomingStats: IncomingStatisticsSnapshot,
+    val incomingPacketStreamStats: PacketStreamStats.Snapshot,
     val outgoingStats: OutgoingStatisticsSnapshot,
+    val outgoingPacketStreamStats: PacketStreamStats.Snapshot,
     val bandwidthEstimatorStats: BandwidthEstimator.Statistics
 )
