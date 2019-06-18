@@ -27,10 +27,10 @@ import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.PacketStreamStatsNode
 import org.jitsi.nlj.transform.node.RtpParser
 import org.jitsi.nlj.transform.node.SrtpTransformerNode
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
-import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.PaddingTermination
 import org.jitsi.nlj.transform.node.incoming.RetransmissionRequesterNode
@@ -91,6 +91,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val silenceDiscarder = SilenceDiscarder(true)
     // TODO: route RTCP packets through the stats tracket too, so we can include them in the bitrate calculation.
     private val statsTracker = IncomingStatisticsTracker()
+    private val packetStreamStats = PacketStreamStatsNode()
     private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statsTracker)
     private val rtcpTermination = RtcpTermination(rtcpEventNotifier)
 
@@ -129,6 +130,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
         incomingPacketQueue.setErrorHandler(queueErrorCounter)
 
         inputTreeRoot = pipeline {
+            node(packetStreamStats)
             demux("SRTP/SRTCP") {
                 packetPath {
                     name = "SRTP path"
@@ -222,9 +224,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
         audioLevelReader.audioLevelListener = audioLevelListener
     }
 
-    override fun getStreamStats(): IncomingStatisticsSnapshot {
-        return statsTracker.getSnapshot()
-    }
+    override fun getStreamStats() = statsTracker.getSnapshot()
+
+    override fun getPacketStreamStats() = packetStreamStats.snapshot()
 
     override fun stop() {
         running = false

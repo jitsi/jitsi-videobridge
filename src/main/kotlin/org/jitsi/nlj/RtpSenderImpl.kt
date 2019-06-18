@@ -27,6 +27,7 @@ import org.jitsi.nlj.transform.NodeTeardownVisitor
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketCacher
+import org.jitsi.nlj.transform.node.PacketStreamStatsNode
 import org.jitsi.nlj.transform.node.SrtpTransformerNode
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
@@ -89,6 +90,7 @@ class RtpSenderImpl(
     // TODO: route RTCP packets through the stats tracker too, so we can include them in the bitrate calculation.
     // TODO: calculate the sending bitrate post-SRT(C)P
     private val statsTracker = OutgoingStatisticsTracker()
+    private val packetStreamStats = PacketStreamStatsNode()
     private val rtcpSrUpdater = RtcpSrUpdater(statsTracker)
     private val keyframeRequester = KeyframeRequester()
     private val probingDataSender: ProbingDataSender
@@ -125,6 +127,7 @@ class RtpSenderImpl(
             node(statsTracker)
             node(TccSeqNumTagger(transportCcEngine))
             node(srtpEncryptWrapper)
+            node(packetStreamStats.createNewNode())
             node(outputPipelineTerminationNode)
         }
 
@@ -155,6 +158,7 @@ class RtpSenderImpl(
             }
             node(rtcpSrUpdater)
             node(srtcpEncryptWrapper)
+            node(packetStreamStats.createNewNode())
             node(outputPipelineTerminationNode)
         }
 
@@ -216,7 +220,7 @@ class RtpSenderImpl(
 
     override fun getStreamStats() = statsTracker.getSnapshot()
 
-    override fun getCombinedStreamStats() = statsTracker.getCombinedStatsSnapshot()
+    override fun getPacketStreamStats() = packetStreamStats.snapshot()
 
     override fun handleEvent(event: Event) {
         when (event) {

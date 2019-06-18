@@ -105,7 +105,7 @@ class Transceiver(
             rtcpEventNotifier,
             receiverExecutor,
             backgroundExecutor,
-            { rtpSender.getCombinedStreamStats().bitrate },
+            { rtpSender.getPacketStreamStats().bitrate },
             logLevelDelegate
         )
 
@@ -290,7 +290,9 @@ class Transceiver(
         return TransceiverStats(
             endpointConnectionStats.getSnapshot(),
             rtpReceiver.getStreamStats(),
+            rtpReceiver.getPacketStreamStats(),
             rtpSender.getStreamStats(),
+            rtpSender.getPacketStreamStats(),
             bandwidthEstimator.statistics)
     }
 
