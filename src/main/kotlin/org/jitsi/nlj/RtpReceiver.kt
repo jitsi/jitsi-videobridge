@@ -16,6 +16,7 @@
 package org.jitsi.nlj
 
 import org.jitsi.nlj.srtp.SrtpTransformers
+import org.jitsi.nlj.stats.PacketStreamStats
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 
@@ -40,6 +41,8 @@ abstract class RtpReceiver :
     abstract fun setAudioLevelListener(audioLevelListener: AudioLevelListener)
 
     abstract fun getStreamStats(): IncomingStatisticsSnapshot
+
+    abstract fun getPacketStreamStats(): PacketStreamStats.Snapshot
 
     abstract fun tearDown()
 }

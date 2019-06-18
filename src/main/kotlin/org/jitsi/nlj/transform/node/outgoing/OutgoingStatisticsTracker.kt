@@ -16,7 +16,6 @@
 package org.jitsi.nlj.transform.node.outgoing
 
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.stats.PacketStreamStats
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.rtp.rtp.RtpPacket
 import java.util.concurrent.ConcurrentHashMap
@@ -26,35 +25,23 @@ class OutgoingStatisticsTracker : ObserverNode("Outgoing statistics tracker") {
      * Per-SSRC statistics
      */
     private val ssrcStats: MutableMap<Long, OutgoingSsrcStats> = ConcurrentHashMap()
-    /**
-     * The stats for all of the SSRCs combined.
-     */
-    private val combinedStats = PacketStreamStats()
 
     override fun observe(packetInfo: PacketInfo) {
-        combinedStats.update(packetInfo.packet.length)
+        val rtpPacket = packetInfo.packetAs<RtpPacket>()
 
-        (packetInfo.packet as? RtpPacket) ?.let { rtpPacket ->
-            val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrc) {
-                OutgoingSsrcStats(rtpPacket.ssrc)
-            }
-            stats.packetSent(rtpPacket.length, rtpPacket.timestamp)
+        val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrc) {
+            OutgoingSsrcStats(rtpPacket.ssrc)
         }
+        stats.packetSent(rtpPacket.length, rtpPacket.timestamp)
     }
 
     fun getSnapshot(): OutgoingStatisticsSnapshot {
         return OutgoingStatisticsSnapshot(
-            combinedStats.snapshot(),
             ssrcStats.map { (ssrc, stats) ->
                 Pair(ssrc, stats.getSnapshot())
             }.toMap()
         )
     }
-
-    /**
-     * Gets the combined stats (i.e. overall stats for sent packets).
-     */
-    fun getCombinedStatsSnapshot() = combinedStats.snapshot()
 
     fun getSsrcSnapshot(ssrc: Long): OutgoingSsrcStats.Snapshot? {
         return ssrcStats[ssrc]?.getSnapshot()
@@ -62,11 +49,10 @@ class OutgoingStatisticsTracker : ObserverNode("Outgoing statistics tracker") {
 }
 
 class OutgoingStatisticsSnapshot(
-    val combinedStats: PacketStreamStats.Snapshot,
     /**
      * Per-ssrc stats.
      */
-    val ssrcStats: Map<Long, OutgoingSsrcStats.Snapshot>?
+    val ssrcStats: Map<Long, OutgoingSsrcStats.Snapshot>
 )
 
 class OutgoingSsrcStats(
