@@ -38,15 +38,13 @@ import org.jitsi.nlj.transform.node.outgoing.TccSeqNumTagger
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging.DiagnosticContext
-import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.utils.logging.Logger
+import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
-import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 
@@ -97,21 +95,10 @@ class RtpSenderImpl(
 
     private val outputPipelineTerminationNode = object : ConsumerNode("Output pipeline termination node") {
         override fun consume(packetInfo: PacketInfo) {
-            if (packetInfo.timeline.totalDelay() > Duration.ofMillis(100)) {
-                logger.cerror { "Packet took >100ms to get through bridge:\n${packetInfo.timeline}" }
-            }
             // While there's no handler set we're effectively dropping packets, so their buffers
             // should be returned.
             outgoingPacketHandler?.processPacket(packetInfo) ?: packetDiscarded(packetInfo)
         }
-    }
-
-    companion object {
-        private val classLogger: Logger = Logger.getLogger(this::class.java)
-        val queueErrorCounter = CountingErrorHandler()
-
-        private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP sender incoming queue"
-        private const val PACKET_QUEUE_EXIT_EVENT = "Exited RTP sender incoming queue"
     }
 
     init {
@@ -252,5 +239,13 @@ class RtpSenderImpl(
 
     override fun tearDown() {
         NodeTeardownVisitor().reverseVisit(outputPipelineTerminationNode)
+    }
+
+    companion object {
+        private val classLogger: Logger = Logger.getLogger(this::class.java)
+        val queueErrorCounter = CountingErrorHandler()
+
+        private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP sender incoming queue"
+        private const val PACKET_QUEUE_EXIT_EVENT = "Exited RTP sender incoming queue"
     }
 }
