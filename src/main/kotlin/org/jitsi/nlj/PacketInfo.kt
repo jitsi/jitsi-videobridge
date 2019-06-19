@@ -46,18 +46,23 @@ class EventTimeline(
 
     /**
      * Return the total time between this packet's first event and last event
+     * or -1 if there is no reference time
      */
     fun totalDelay(): Duration {
         return referenceTime?.let {
             return Duration.ofMillis(timeline.last().second)
-        } ?: Duration.ofMillis(0)
+        } ?: Duration.ofMillis(-1)
     }
 
     override fun toString(): String {
         return with(StringBuffer()) {
-            appendln("Reference time: ${referenceTime}ms")
-            timeline.forEach {
-                appendln(it.toString())
+            referenceTime?.let {
+                appendln("Reference time: ${referenceTime}ms")
+                timeline.forEach {
+                    appendln(it.toString())
+                }
+            } ?: run {
+                appendln("[No timeline]")
             }
             toString()
         }
