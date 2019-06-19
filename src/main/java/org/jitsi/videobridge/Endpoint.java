@@ -702,21 +702,21 @@ public class Endpoint
     {
         Conference.Statistics conferenceStats = getConference().getStatistics();
         TransceiverStats transceiverStats = transceiver.getTransceiverStats();
-        IncomingStatisticsSnapshot incomingStats
-                = transceiverStats.getIncomingStats();
-        OutgoingStatisticsSnapshot outgoingStats
-                = transceiverStats.getOutgoingStats();
+        PacketStreamStats.Snapshot incomingStats
+                = transceiverStats.getIncomingPacketStreamStats();
+        PacketStreamStats.Snapshot outgoingStats
+                = transceiverStats.getOutgoingPacketStreamStats();
         BandwidthEstimator.Statistics bweStats
                 = transceiverStats.getBandwidthEstimatorStats();
 
         conferenceStats.totalBytesReceived.addAndGet(
-                incomingStats.getBytesReceived());
+                incomingStats.getBytes());
         conferenceStats.totalPacketsReceived.addAndGet(
-                incomingStats.getPacketsReceived());
+                incomingStats.getPackets());
         conferenceStats.totalBytesSent.addAndGet(
-                outgoingStats.getBytesSent());
+                outgoingStats.getBytes());
         conferenceStats.totalPacketsSent.addAndGet(
-                outgoingStats.getPacketsSent());
+                outgoingStats.getPackets());
 
         bweStats.update(System.currentTimeMillis());
 
