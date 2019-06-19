@@ -99,7 +99,7 @@ class StatisticsRequestHandler
     {
         if ("GET".equals(request.getMethod()))
         {
-            JSONObject statsJsonObject = new JSONObject();
+            JSONStreamAware statsJsonObject;
             if (target.equals(STATISTICS))
             {
                 statsJsonObject = doGetStatisticsJSON();
@@ -118,8 +118,7 @@ class StatisticsRequestHandler
             }
             else if (target.equals(STATISTICS + "/" + TRANSIT))
             {
-                // TODO
-                //statsJsonObject = TransitTime.getStatsJson();
+                statsJsonObject = PacketTransitTime.getStatsJson();
             }
             else
             {
