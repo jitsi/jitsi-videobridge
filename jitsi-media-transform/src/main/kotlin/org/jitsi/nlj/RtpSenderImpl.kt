@@ -87,8 +87,6 @@ class RtpSenderImpl(
     private val srtcpEncryptWrapper = SrtpTransformerNode("SRTCP encrypt")
     private val outgoingPacketCache = PacketCacher()
     private val absSendTime = AbsSendTime()
-    // TODO: route RTCP packets through the stats tracker too, so we can include them in the bitrate calculation.
-    // TODO: calculate the sending bitrate post-SRT(C)P
     private val statsTracker = OutgoingStatisticsTracker()
     private val packetStreamStats = PacketStreamStatsNode()
     private val rtcpSrUpdater = RtcpSrUpdater(statsTracker)
