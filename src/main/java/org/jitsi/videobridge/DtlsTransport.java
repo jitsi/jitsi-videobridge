@@ -73,7 +73,10 @@ public class DtlsTransport extends IceTransport
             = DTLS_PREDICATE.negate();
 
     public static final PacketDelayStats packetDelayStats = new PacketDelayStats();
-    private final BridgeJitterStats bridgeJitterStats = new BridgeJitterStats();
+    /**
+     * An average of all of the individual bridge jitter values calculated by the
+     * {@link DtlsTransport#bridgeJitterStats} instance variables below
+     */
     public static final DoubleAverage overallAverageBridgeJitter = new DoubleAverage("overall_bridge_jitter");
 
     /**
@@ -95,6 +98,14 @@ public class DtlsTransport extends IceTransport
     private final Node outgoingDtlsPipelineRoot;
     private final Node outgoingSrtpPipelineRoot;
     private boolean dtlsHandshakeComplete = false;
+    /**
+     * Measures the jitter introduced by the bridge itself (i.e. jitter calculated between
+     * packets based on the time they were received by the bridge and the time they
+     * are sent).  This jitter value is calculated independently, per packet, by every
+     * individual {@link DtlsTransport} and their jitter values are averaged together
+     * in this static member.
+     */
+    private final BridgeJitterStats bridgeJitterStats = new BridgeJitterStats();
 
     /**
      * Initializes a new {@link DtlsTransport} instance for a specific endpoint.
