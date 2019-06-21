@@ -72,6 +72,7 @@ public class DtlsTransport extends IceTransport
             = DTLS_PREDICATE.negate();
 
     public static final PacketDelayStats packetDelayStats = new PacketDelayStats();
+    private final BridgeJitterStats bridgeJitterStats = new BridgeJitterStats();
 
     /**
      * Count the number of dropped packets and exceptions.
@@ -492,6 +493,7 @@ public class DtlsTransport extends IceTransport
     public JSONObject getDebugState()
     {
         JSONObject debugState = super.getDebugState();
+        debugState.put("bridge_jitter", bridgeJitterStats.getJitter());
         debugState.put("dtlsStack", dtlsStack.getNodeStats().toJson());
         //debugState.put("dtlsReceiver"
         //debugState.put("dtlsSender"
@@ -550,6 +552,7 @@ public class DtlsTransport extends IceTransport
         protected void consume(@NotNull PacketInfo packetInfo)
         {
             packetDelayStats.addPacket(packetInfo);
+            bridgeJitterStats.packetSent(packetInfo);
             if (socket != null)
             {
                 try
