@@ -34,6 +34,7 @@ import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.queue.*;
+import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.json.simple.*;
@@ -73,6 +74,7 @@ public class DtlsTransport extends IceTransport
 
     public static final PacketDelayStats packetDelayStats = new PacketDelayStats();
     private final BridgeJitterStats bridgeJitterStats = new BridgeJitterStats();
+    public static final DoubleAverage overallAverageBridgeJitter = new DoubleAverage("overall_bridge_jitter");
 
     /**
      * Count the number of dropped packets and exceptions.
@@ -553,6 +555,7 @@ public class DtlsTransport extends IceTransport
         {
             packetDelayStats.addPacket(packetInfo);
             bridgeJitterStats.packetSent(packetInfo);
+            overallAverageBridgeJitter.addValue(bridgeJitterStats.getJitter());
             if (socket != null)
             {
                 try

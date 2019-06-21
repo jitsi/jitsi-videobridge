@@ -1150,6 +1150,7 @@ public class Videobridge
         }
         debugState.put("health", health);
         debugState.put("e2e_packet_delay", JsonStats.toJson(DtlsTransport.packetDelayStats));
+        debugState.put(DtlsTransport.overallAverageBridgeJitter.name, DtlsTransport.overallAverageBridgeJitter.get());
 
         JSONObject conferences = new JSONObject();
         debugState.put("conferences", conferences);
