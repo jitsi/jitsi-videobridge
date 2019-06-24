@@ -21,6 +21,7 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.RtxPayloadType
+import org.jitsi.nlj.stats.JitterStats
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.RtpUtils.Companion.convertRtpTimestampToMs
@@ -118,18 +119,10 @@ class IncomingSsrcStats(
         get() = calculateExpectedPacketCount(0, baseSeqNum, seqNumCycles, maxSeqNum)
     private var cumulativePacketsLost: Int = 0
     private var outOfOrderPacketCount: Int = 0
-    private var jitter: Double = 0.0
+    private val jitterStats = JitterStats()
     private var numReceivedPackets: Int = 0
     // End variables protected by statsLock
 
-    /**
-     * The timestamp of the previously received packet, converted to a millisecond timestamp based on the received
-     * RTP timestamp and the clock rate for that stream.
-     * 'previously received packet' here is as defined by the order in which the packets were received by this code,
-     * which may be different than the order according to sequence number.
-     */
-    private var previousPacketSentTimestamp: Long = -1
-    private var previousPacketReceivedTimestamp: Long = -1
     private var probation: Int = INITIAL_MIN_SEQUENTIAL
 
     companion object {
@@ -165,44 +158,12 @@ class IncomingSsrcStats(
 
             return maxExtended - baseExtended + 1
         }
-
-        fun calculateJitter(
-            currentJitter: Double,
-            previousPacketSentTimestamp: Long,
-            previousPacketReceivedTimestamp: Long,
-            currentPacketSentTimestamp: Long,
-            currentPacketReceivedTimestamp: Long
-        ): Double {
-            /**
-             * If Si is the RTP timestamp from packet i, and Ri is the time of
-             * arrival in RTP timestamp units for packet i, then for two packets
-             * i and j, D may be expressed as
-             *
-             * D(i,j) = (Rj - Ri) - (Sj - Si) = (Rj - Sj) - (Ri - Si)
-             */
-            // TODO(boris) take wraps into account
-            val delta = (previousPacketReceivedTimestamp - previousPacketSentTimestamp) -
-                    (currentPacketReceivedTimestamp - currentPacketSentTimestamp)
-
-            /**
-             * The interarrival jitter SHOULD be calculated continuously as each
-             * data packet i is received from source SSRC_n, using this
-             * difference D for that packet and the previous packet i-1 in order
-             * of arrival (not necessarily in sequence), according to the formula
-             *
-             * J(i) = J(i-1) + (|D(i-1,i)| - J(i-1))/16
-             *
-             * Whenever a reception report is issued, the current value of J is
-             * sampled.
-             */
-            return currentJitter + (Math.abs(delta) - currentJitter) / 16.0
-        }
     }
 
     fun getSnapshot(): Snapshot {
         synchronized(statsLock) {
             return Snapshot(numReceivedPackets, maxSeqNum, seqNumCycles, numExpectedPackets,
-                    cumulativePacketsLost, jitter)
+                    cumulativePacketsLost, jitterStats.jitter)
         }
     }
 
@@ -265,15 +226,10 @@ class IncomingSsrcStats(
                 maybeResetProbation()
             }
 
-            jitter = calculateJitter(
-                jitter,
-                previousPacketSentTimestamp,
-                previousPacketReceivedTimestamp,
+            jitterStats.addPacket(
                 packetSentTimestampMs,
                 packetReceivedTimeMs
             )
-            previousPacketSentTimestamp = packetSentTimestampMs
-            previousPacketReceivedTimestamp = packetReceivedTimeMs
         }
     }
 

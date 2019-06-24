@@ -17,7 +17,6 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.doubles.plusOrMinus
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
@@ -67,25 +66,6 @@ internal class IncomingSsrcStatsTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
-        "Jitter" {
-            should("update correctly") {
-                // Handled separately since we want to verify the jitter at each
-                // step along the way
-                var jitter = 0.0
-                var previousJitterPacketInfo = initialJitterPacketInfo
-                JitterPacketInfos.forEach {
-                    jitter = IncomingSsrcStats.calculateJitter(
-                        jitter,
-                        previousJitterPacketInfo.statPacketInfo.sentTimeMs,
-                        previousJitterPacketInfo.statPacketInfo.packetInfo.receivedTime,
-                        it.statPacketInfo.sentTimeMs,
-                        it.statPacketInfo.packetInfo.receivedTime
-                    )
-                    jitter shouldBe (it.expectedJitter plusOrMinus .001)
-                    previousJitterPacketInfo = it
-                }
-            }
-        }
         "Expected packet count" {
             should("Handle cases with no rollover") {
                 IncomingSsrcStats.calculateExpectedPacketCount(
