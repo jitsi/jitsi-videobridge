@@ -1314,7 +1314,7 @@ public class Endpoint
     {
         if (logger.isDebugEnabled())
         {
-            logger.debug(logPrefix + "Adding receive ssrc " + ssrc);
+            logger.debug(logPrefix + "Adding receive ssrc " + ssrc + "(" + mediaType + ")");
         }
         transceiver.addReceiveSsrc(ssrc, mediaType);
     }
