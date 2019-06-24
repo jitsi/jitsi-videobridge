@@ -16,18 +16,25 @@
 
 package org.jitsi.videobridge.stats;
 
-import org.jitsi.nlj.stats.*;
-import org.jitsi.nlj.util.*;
-import org.jitsi.videobridge.*;
+import java.util.concurrent.atomic.*;
 
-public class PacketTransitTime
+public class DoubleAverage
 {
-    public static OrderedJsonObject getStatsJson()
+    private final DoubleAdder total = new DoubleAdder();
+    private final LongAdder count = new LongAdder();
+    public final String name;
+
+    public DoubleAverage(String name)
     {
-        OrderedJsonObject stats = new OrderedJsonObject();
+        this.name = name;
+    }
 
-        stats.put("e2e_packet_delay", JsonStats.toJson(DtlsTransport.packetDelayStats));
+    public void addValue(double value) {
+        total.add(value);
+        count.increment();
+    }
 
-        return stats;
+    public double get() {
+        return total.sum() / (double)count.sum();
     }
 }

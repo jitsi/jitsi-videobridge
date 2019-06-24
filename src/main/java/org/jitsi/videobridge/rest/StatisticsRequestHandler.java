@@ -118,7 +118,7 @@ class StatisticsRequestHandler
             }
             else if (target.equals(STATISTICS + "/" + TRANSIT))
             {
-                statsJsonObject = PacketTransitTime.getStatsJson();
+                statsJsonObject = PacketTransitStats.getStatsJson();
             }
             else
             {

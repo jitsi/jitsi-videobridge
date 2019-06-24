@@ -34,6 +34,7 @@ import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.queue.*;
+import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.json.simple.*;
@@ -72,6 +73,11 @@ public class DtlsTransport extends IceTransport
             = DTLS_PREDICATE.negate();
 
     public static final PacketDelayStats packetDelayStats = new PacketDelayStats();
+    /**
+     * An average of all of the individual bridge jitter values calculated by the
+     * {@link DtlsTransport#bridgeJitterStats} instance variables below
+     */
+    public static final DoubleAverage overallAverageBridgeJitter = new DoubleAverage("overall_bridge_jitter");
 
     /**
      * Count the number of dropped packets and exceptions.
@@ -92,6 +98,14 @@ public class DtlsTransport extends IceTransport
     private final Node outgoingDtlsPipelineRoot;
     private final Node outgoingSrtpPipelineRoot;
     private boolean dtlsHandshakeComplete = false;
+    /**
+     * Measures the jitter introduced by the bridge itself (i.e. jitter calculated between
+     * packets based on the time they were received by the bridge and the time they
+     * are sent).  This jitter value is calculated independently, per packet, by every
+     * individual {@link DtlsTransport} and their jitter values are averaged together
+     * in this static member.
+     */
+    private final BridgeJitterStats bridgeJitterStats = new BridgeJitterStats();
 
     /**
      * Initializes a new {@link DtlsTransport} instance for a specific endpoint.
@@ -492,6 +506,7 @@ public class DtlsTransport extends IceTransport
     public JSONObject getDebugState()
     {
         JSONObject debugState = super.getDebugState();
+        debugState.put("bridge_jitter", bridgeJitterStats.getJitter());
         debugState.put("dtlsStack", dtlsStack.getNodeStats().toJson());
         //debugState.put("dtlsReceiver"
         //debugState.put("dtlsSender"
@@ -550,6 +565,8 @@ public class DtlsTransport extends IceTransport
         protected void consume(@NotNull PacketInfo packetInfo)
         {
             packetDelayStats.addPacket(packetInfo);
+            bridgeJitterStats.packetSent(packetInfo);
+            overallAverageBridgeJitter.addValue(bridgeJitterStats.getJitter());
             if (socket != null)
             {
                 try
