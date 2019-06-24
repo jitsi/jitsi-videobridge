@@ -479,6 +479,11 @@ public class Conference
             }
             getEndpoints().forEach(AbstractEndpoint::expire);
             speechActivity.expire();
+            if (tentacle != null)
+            {
+                tentacle.expire();
+                tentacle = null;
+            }
 
             if (includeInStatistics)
             {
