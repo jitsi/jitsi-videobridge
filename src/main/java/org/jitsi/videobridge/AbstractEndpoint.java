@@ -277,6 +277,15 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public abstract void requestKeyframe(long mediaSsrc);
 
     /**
+     * Requests a keyframe from this endpoint on the first video SSRC
+     * it finds.  Being able to request a  keyframe without passing a specific
+     * SSRC is useful for things like requesting a pre-emptive keyframes when a new
+     * active speaker is detected (where it isn't convenient to try and look up
+     * a particular SSRC).
+     */
+    public abstract void requestKeyframe();
+
+    /**
      * Notify this endpoint that another endpoint has set it
      * as a 'selected' endpoint, meaning its HD stream has another
      * consumer.

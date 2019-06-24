@@ -435,6 +435,7 @@ public class Conference
             broadcastMessage(
                     createDominantSpeakerEndpointChangeEvent(
                         dominantSpeaker.getID()));
+            dominantSpeaker.requestKeyframe();
         }
     }
 
