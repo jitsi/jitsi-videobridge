@@ -115,7 +115,7 @@ public class VideobridgeShim
                     channelIq.getRtpHeaderExtensions());
 
             List<SourcePacketExtension> channelSources = channelIq.getSources();
-            channelShim.setSources(channelSources);
+            channelShim.setSources(channelSources, contentShim.getMediaType());
             channelShim.setSourceGroups(channelIq.getSourceGroups());
 
             // We only create tracks for video right now, because we don't have

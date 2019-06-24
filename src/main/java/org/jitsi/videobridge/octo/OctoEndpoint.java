@@ -35,7 +35,7 @@ public class OctoEndpoint
     /**
      * The SSRCs that this endpoint has.
      */
-    private final Set<Long> receiveSsrcs = new HashSet<>();
+    private final HashMap<Long, MediaType> receiveSsrcs = new HashMap<>();
 
     /**
      * The {@link OctoEndpoints} instance for the conference.
@@ -112,16 +112,16 @@ public class OctoEndpoint
     @Override
     public boolean receivesSsrc(long ssrc)
     {
-        return receiveSsrcs.contains(ssrc);
+        return receiveSsrcs.containsKey(ssrc);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void addReceiveSsrc(long ssrc)
+    public void addReceiveSsrc(long ssrc, MediaType mediaType)
     {
-        receiveSsrcs.add(ssrc);
+        receiveSsrcs.put(ssrc, mediaType);
     }
 
     /**

@@ -23,6 +23,7 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.osgi.*;
 import org.jitsi.rtp.*;
+import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.*;
@@ -218,7 +219,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         // nulls here.
         Set<String> endpointIds
                 = allSources.stream()
-                    .map(source -> MediaStreamTrackFactory.getOwner(source))
+                    .map(MediaStreamTrackFactory::getOwner)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
 
@@ -244,7 +245,14 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
                 return;
             }
 
-            endpoint.addReceiveSsrc(source.getSSRC());
+            if (audioSources.contains(source))
+            {
+                endpoint.addReceiveSsrc(source.getSSRC(), MediaType.AUDIO);
+            }
+            else
+            {
+                endpoint.addReceiveSsrc(source.getSSRC(), MediaType.VIDEO);
+            }
         });
     }
 
