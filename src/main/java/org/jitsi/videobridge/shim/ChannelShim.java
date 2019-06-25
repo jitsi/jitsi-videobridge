@@ -248,12 +248,12 @@ public class ChannelShim
     /**
      * Sets the list of sources signaled for this channel.
      */
-    public void setSources(@NotNull List<SourcePacketExtension> sources, MediaType mediaType)
+    public void setSources(@NotNull List<SourcePacketExtension> sources)
     {
         this.sources = sources;
         sources.stream()
             .map(SourcePacketExtension::getSSRC)
-            .forEach((ssrc) -> endpoint.addReceiveSsrc(ssrc, mediaType));
+            .forEach((ssrc) -> endpoint.addReceiveSsrc(ssrc, contentShim.getMediaType()));
     }
 
     /**
