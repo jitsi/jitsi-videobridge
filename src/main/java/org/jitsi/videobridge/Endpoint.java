@@ -1340,7 +1340,7 @@ public class Endpoint
             long secondarySsrc,
             SsrcAssociationType type)
     {
-        transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, type);
+        transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, type, endpointId.equalsIgnoreCase(getID()));
     }
 
     /**
