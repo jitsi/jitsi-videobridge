@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import org.jetbrains.annotations.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.nlj.*;
+import org.jitsi.nlj.stats.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
@@ -435,8 +436,48 @@ public class Conference
             broadcastMessage(
                     createDominantSpeakerEndpointChangeEvent(
                         dominantSpeaker.getID()));
-            dominantSpeaker.requestKeyframe();
+            if (getEndpointCount() >= 3)
+            {
+                double senderRtt = getRtt(dominantSpeaker);
+                double maxReceiverRtt = getMaxReceiverRtt(dominantSpeaker.getID());
+                // We add an additional 10ms delay to reduce the risk of the keyframe arriving
+                // too early
+                double keyframeDelay = maxReceiverRtt + senderRtt + 10;
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Scheduling keyframe request from " + dominantSpeaker.getID() + " after a delay" +
+                            "of " + keyframeDelay + "ms");
+                }
+                TaskPools.SCHEDULED_POOL.schedule((Runnable) dominantSpeaker::requestKeyframe, (long)keyframeDelay, TimeUnit.MILLISECONDS);
+            }
         }
+    }
+
+    private double getRtt(AbstractEndpoint endpoint)
+    {
+        if (endpoint instanceof Endpoint)
+        {
+            Endpoint localDominantSpeaker = (Endpoint)endpoint;
+            return localDominantSpeaker.getTransceiver().getTransceiverStats().getEndpointConnectionStats().getRtt();
+        }
+        else
+        {
+            // Octo endpoint
+            return 100;
+        }
+    }
+
+    private double getMaxReceiverRtt(String excludedEndpointId)
+    {
+        return endpointsCache.stream()
+                .filter(ep -> !ep.getID().equalsIgnoreCase(excludedEndpointId))
+                .map(Endpoint::getTransceiver)
+                .map(Transceiver::getTransceiverStats)
+                .map(TransceiverStats::getEndpointConnectionStats)
+                .map(EndpointConnectionStats.Snapshot::getRtt)
+                .mapToDouble(Double::valueOf)
+                .max()
+                .orElse(0);
     }
 
     /**
