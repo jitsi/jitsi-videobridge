@@ -458,7 +458,7 @@ public class Conference
         if (endpoint instanceof Endpoint)
         {
             Endpoint localDominantSpeaker = (Endpoint)endpoint;
-            return localDominantSpeaker.getTransceiver().getTransceiverStats().getEndpointConnectionStats().getRtt();
+            return localDominantSpeaker.getRtt();
         }
         else
         {
@@ -471,10 +471,7 @@ public class Conference
     {
         return endpointsCache.stream()
                 .filter(ep -> !ep.getID().equalsIgnoreCase(excludedEndpointId))
-                .map(Endpoint::getTransceiver)
-                .map(Transceiver::getTransceiverStats)
-                .map(TransceiverStats::getEndpointConnectionStats)
-                .map(EndpointConnectionStats.Snapshot::getRtt)
+                .map(Endpoint::getRtt)
                 .mapToDouble(Double::valueOf)
                 .max()
                 .orElse(0);

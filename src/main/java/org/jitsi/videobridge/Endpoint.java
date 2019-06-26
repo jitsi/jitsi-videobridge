@@ -408,6 +408,11 @@ public class Endpoint
         }
     }
 
+    public double getRtt()
+    {
+        return getTransceiver().getTransceiverStats().getEndpointConnectionStats().getRtt();
+    }
+
     /**
      * Checks if this endpoint's transport manager is connected.
      * @return
