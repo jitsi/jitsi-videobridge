@@ -1230,7 +1230,7 @@ public class Endpoint
     @Override
     public void requestKeyframe(long mediaSsrc)
     {
-        transceiver.requestKeyFrame();
+        requestKeyframe();
     }
 
     @Override
