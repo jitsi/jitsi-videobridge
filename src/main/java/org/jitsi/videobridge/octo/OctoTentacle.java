@@ -279,7 +279,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
 
             if (targets.isEmpty())
             {
-                relay.removeHandler(conference.getGid());
+                relay.removeHandler(conference.getGid(), transceiver);
             }
             else
             {
