@@ -75,6 +75,47 @@ public class VideobridgeShim
     }
 
     /**
+     * Checks if a {@link ColibriConferenceIQ.Channel} refers to an Octo
+     * channel.
+     *
+     * Some requests do not explicitly set the 'type' attribute to 'octo',
+     * resulting in the element being parsed as a regular
+     * {@link ColibriConferenceIQ.Channel}. To cover this case we check if the
+     * ID is one of the IDs we use for Octo.
+     *
+     * @param channel the channel to check
+     * @return {@code true} if the Channel is an Octo channel.
+     */
+    private static boolean isOctoChannel(ColibriConferenceIQ.Channel channel)
+    {
+        if (channel instanceof ColibriConferenceIQ.OctoChannel)
+        {
+            return true;
+        }
+
+        if (channel != null)
+        {
+            String id = channel.getID();
+            return id != null &&
+                    (id.equals(getOctoChannelId(MediaType.AUDIO))
+                    || id.equals(getOctoChannelId(MediaType.VIDEO)));
+        }
+
+        return false;
+    }
+
+    /**
+     * Gets the channel ID we will use for the Octo channel with a given media
+     * type.
+     * @param mediaType
+     * @return
+     */
+    private static String getOctoChannelId(MediaType mediaType)
+    {
+        return "octo-" + mediaType;
+    }
+
+    /**
      * Processes a list of {@code Channel} elements in a specific
      * {@link ContentShim}.
      *
@@ -95,7 +136,7 @@ public class VideobridgeShim
         for (ColibriConferenceIQ.Channel channelIq : channelIqs)
         {
             // Octo channels are handled separately.
-            if (channelIq instanceof ColibriConferenceIQ.OctoChannel)
+            if (isOctoChannel(channelIq))
             {
                 continue;
             }
@@ -274,8 +315,8 @@ public class VideobridgeShim
         responseConferenceIQ.setGracefulShutdown(
                 videobridge.isShutdownInProgress());
 
-        ColibriConferenceIQ.OctoChannel octoAudioChannel = null;
-        ColibriConferenceIQ.OctoChannel octoVideoChannel = null;
+        ColibriConferenceIQ.Channel octoAudioChannel = null;
+        ColibriConferenceIQ.Channel octoVideoChannel = null;
 
         for (ColibriConferenceIQ.Content contentIQ : conferenceIQ.getContents())
         {
@@ -312,7 +353,7 @@ public class VideobridgeShim
             }
 
             // We want to handle the two Octo channels together.
-            ColibriConferenceIQ.OctoChannel octoChannel
+            ColibriConferenceIQ.Channel octoChannel
                     = findOctoChannel(contentIQ);
             if (octoChannel != null)
             {
@@ -327,7 +368,7 @@ public class VideobridgeShim
 
                 ColibriConferenceIQ.OctoChannel octoChannelResponse
                         = new ColibriConferenceIQ.OctoChannel();
-                octoChannelResponse.setID("octo-" + contentType);
+                octoChannelResponse.setID(getOctoChannelId(contentType));
                 responseContentIQ.addChannel(octoChannelResponse);
             }
 
@@ -418,18 +459,13 @@ public class VideobridgeShim
     /**
      * Gets the first {@code OctoChannel} in the given content, or null.
      */
-    private static ColibriConferenceIQ.OctoChannel findOctoChannel(
+    private static ColibriConferenceIQ.Channel findOctoChannel(
             ColibriConferenceIQ.Content content)
     {
-        for (ColibriConferenceIQ.Channel channel : content.getChannels())
-        {
-            if (channel instanceof ColibriConferenceIQ.OctoChannel)
-            {
-                return (ColibriConferenceIQ.OctoChannel) channel;
-            }
-        }
-
-        return null;
+        return
+                content.getChannels().stream()
+                        .filter(c -> isOctoChannel(c))
+                        .findAny().orElse(null);
     }
 
     static class IqProcessingException extends Exception
