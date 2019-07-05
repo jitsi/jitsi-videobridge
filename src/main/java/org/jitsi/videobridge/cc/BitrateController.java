@@ -586,8 +586,8 @@ public class BitrateController
         if (timeSeriesLogger.isTraceEnabled())
         {
             timeSeriesLogger.trace(diagnosticContext
-                .makeTimeSeriesPoint("new_bandwidth")
-                .addField("bitrate_bps", newBandwidthBps));
+                .makeTimeSeriesPoint("new_bwe")
+                .addField("bwe_bps", newBandwidthBps));
         }
 
         if (!isLargerThanBweThreshold(lastBwe, newBandwidthBps))
@@ -782,7 +782,7 @@ public class BitrateController
                     .makeTimeSeriesPoint("did_update", nowMs)
                     .addField("total_target_idx", totalTargetIdx)
                     .addField("total_ideal_idx", totalIdealIdx)
-                    .addField("available_bps", bweBps)
+                    .addField("bwe_bps", bweBps)
                     .addField("total_target_bps", totalTargetBps)
                     .addField("total_ideal_bps", totalIdealBps));
         }
