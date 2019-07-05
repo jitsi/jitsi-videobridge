@@ -9,6 +9,7 @@ register_matplotlib_converters()
 
 def read_json(fname):
     df = pd.read_json(fname, lines=True, convert_dates=['time'], date_unit='ms')
+    df['conference_id'] = df['conf_name'] + df['conf_creation_time_ms'].astype(str)
     return df
 
 
@@ -81,8 +82,8 @@ def plot_endpoint(df, series, endpoint_id, remote_endpoint_id):
             markersize=4,
             linestyle='None')
 
-    if 'new_bandwidth' in series and 'new_bandwidth' in df_series:
-        df_bwe = df[df['series'] == 'new_bandwidth']
+    if 'new_bwe' in series and 'new_bwe' in df_series:
+        df_bwe = df[df['series'] == 'new_bwe']
         ax_bitrate.plot(df_bwe['time'],
                         df_bwe['bitrate_bps'],
                         label='estimate',
@@ -118,14 +119,62 @@ def plot_endpoint(df, series, endpoint_id, remote_endpoint_id):
 
 def plot(args):
     df = read_json(args.infile)
-    if args.endpoint_id:
-        plot_endpoint(df, args.series, args.endpoint_id, args.remote_endpoint_id)
-    else:
-        # plot all the endpoints!
-        for endpoint_id in df['endpoint_id'].unique():
-            plot_endpoint(df, args.series, endpoint_id, args.remote_endpoint_id)
+
+    endpoint_ids = [args.endpoint_id] if args.endpoint_id else df['endpoint_id'].unique()
+
+    for endpoint_id in endpoint_ids:
+        plot_endpoint(df, args.series, endpoint_id, args.remote_endpoint_id)
 
     plt.show()
+
+
+def check_endpoint(df, endpoint_id):
+
+    # if a property is violated (for example property 3):
+    #     zgrep 7d2b7ecf data/4/series.json.gz| grep did_update | jq '. | select(.bwe_bps >= .total_ideal_bps) | select(.total_target_idx < .total_ideal_idx)' | less -S
+
+    df_update = df[df['series'] == 'did_update']
+    if not len(df_update):
+        return
+
+    # property 1: check if ideal <= estimate => target == ideal
+    mask_1 = df_update['bwe_bps'] >= df_update['total_ideal_bps']
+    mask_2 = df_update['total_target_idx'] < df_update['total_ideal_idx']
+    mask_3 = df_update['total_ideal_bps'] != 0
+    mask_4 = df_update['total_target_bps'] != 0
+    assert not len(df_update[mask_1 & mask_2 & mask_3 & mask_4]), '{} is not sending as much as it should.'.format(endpoint_id)
+
+    # property 2: check that the target never exceeds the ideal
+    mask_5 = (df_update['total_ideal_bps'] - df_update['total_target_bps']) < 0
+    assert not len(df_update[mask_5]), '{} has a target bitrate that exceeds the ideal bitrate.'.format(endpoint_id)
+
+    # property 3: make sure that we are calculating bitrate for encodings
+    # disabled for now as it's a legitimate case, being video muted, for example
+    #mask_6 = df_update['total_ideal_bps'] > 0
+    #assert len(df_update[mask_6]), '{} never computed an ideal bitrate.'.format(endpoint_id)
+
+    #mask_7 = df_update['total_target_bps'] > 0
+    #assert len(df_update[mask_7]), '{} never computed a target bitrate.'.format(endpoint_id)
+
+    # property 4: check that the target never exceeds the estimate
+    # disabled for now as can happen and still be correct because we never suspend the on-stage participant
+    # mask_8 = (df_update['bwe_bps'] - df_update['total_target_bps']) < 0
+    # assert not len(df_update[mask_8]), '{} has a target bitrate that exceeds the bandwidth estimation.'.format(endpoint_id)
+
+
+def check_conference(df, conference_id):
+    endpoint_ids = [args.endpoint_id] if args.endpoint_id else df['endpoint_id'].unique()
+
+    for endpoint_id in endpoint_ids:
+        check_endpoint(df[df['endpoint_id'] == endpoint_id], endpoint_id)
+
+
+def check(args):
+    df = read_json(args.infile)
+    conference_ids = [args.conference_id] if args.conference_id else df['conference_id'].unique()
+
+    for conference_id in conference_ids:
+        check_conference(df[df['conference_id'] == conference_id], conference_id)
 
 
 if "__main__" == __name__:
@@ -135,14 +184,20 @@ if "__main__" == __name__:
     
     parser_show = subparsers.add_parser('show')
     parser_show.set_defaults(func=show)
+
     parser_plot = subparsers.add_parser('plot')
     parser_plot.add_argument(
         '--series', nargs='+', choices=[
-        'did_update', 'new_bandwidth', 'sent_padding', 'calculated_rate'],
-        default='did_update new_bandwidth sent_padding in_pkt')
+        'did_update', 'new_bwe', 'sent_padding', 'calculated_rate'],
+        default='did_update new_bwe sent_padding in_pkt')
     parser_plot.add_argument('--endpoint-id')
     parser_plot.add_argument('--remote-endpoint-id')
     parser_plot.set_defaults(func=plot)
+
+    parser_check = subparsers.add_parser('check')
+    parser_check.add_argument('--endpoint-id')
+    parser_check.add_argument('--conference-id')
+    parser_check.set_defaults(func=check)
 
     args = parser.parse_args()
     args.func(args)
