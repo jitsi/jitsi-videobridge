@@ -1,4 +1,4 @@
-The REST API allows querying Videobridge whether it deems itself in a healthy state (i.e. the application is operational and the functionality it provides should perform as expected) at the time of the query or not. Videorbidge will run an internal test in response to the request to determine its current health status.
+The REST API allows querying Videobridge whether it deems itself in a healthy state (i.e. the application is operational and the functionality it provides should perform as expected) at the time of the query or not. Videobridge will run an internal test in response to the request to determine its current health status.
 
 <table>
   <tr>
