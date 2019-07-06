@@ -456,9 +456,9 @@ public class OctoRelay
         synchronized (packetHandlers)
         {
             // If the Colibri conference for this GID was re-created, and the
-            // original and the original Conference object is expired after a
-            // new packet handler was registered, the new packet handler should
-            // not be removed (as this would break the new conference).
+            // original Conference object is expired after a new packet handler
+            // was registered, the new packet handler should not be removed (as
+            // this would break the new conference).
             PacketHandler existingHandler = packetHandlers.get(conferenceId);
             if (handler == existingHandler)
             {
