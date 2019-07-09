@@ -533,6 +533,11 @@ public class BitrateController
             }
 
             totalTargetBps += targetBps;
+            // the sum of the bitrates (in bps) of the encodings that are the
+            // closest to the ideal and has a bitrate. this is similar to how
+            // we compute the ideal bitrate bellow in
+            // {@link TrackBitrateAllocation#idealBitrate} and the logic should
+            // be extracted in a utility method somehow.
             totalIdealBps += sourceTrack.getBitrateBps(nowMs,
                     adaptiveTrackProjection.getIdealIndex());
         }
@@ -668,7 +673,8 @@ public class BitrateController
             = new ArrayList<>(sortedEndpointIdsCopy.size());
         for (String endpointId : sortedEndpointIdsCopy)
         {
-            AbstractEndpoint abstractEndpoint = destinationEndpoint.getConference().getEndpoint(endpointId);
+            AbstractEndpoint abstractEndpoint
+                 = destinationEndpoint.getConference().getEndpoint(endpointId);
             if (abstractEndpoint != null)
             {
                 sortedEndpoints.add(abstractEndpoint);
@@ -1346,6 +1352,13 @@ public class BitrateController
         private boolean oversending = false;
 
         /**
+         * the bitrate (in bps) of the encoding that is the closest to the ideal
+         * and has a bitrate, or 0 if there are no encodings with a bitrate (for
+         * example, the endpoint is video muted).
+         */
+        private final long idealBitrate;
+
+        /**
          * Ctor.
          *
          * @param endpoint the {@link Endpoint} that this bitrate allocation
@@ -1389,6 +1402,7 @@ public class BitrateController
             if (targetSSRC == -1 || !fitsInLastN)
             {
                 ratedPreferredIdx = -1;
+                idealBitrate = 0;
                 ratedIndices = EMPTY_RATE_SNAPSHOT_ARRAY;
                 return;
             }
@@ -1401,6 +1415,7 @@ public class BitrateController
             // 180p@7.5fps while for the thumbnails we consider 180p@30fps,
             // 180p@15fps and 180p@7.5fps
             int ratedPreferredIdx = 0;
+            long idealBps = 0;
             for (RTPEncodingDesc encoding : encodings)
             {
                 if (maxFrameHeight >= 0 && encoding.getHeight() > maxFrameHeight)
@@ -1416,8 +1431,13 @@ public class BitrateController
                     if (encoding.getHeight() < ONSTAGE_PREFERRED_HEIGHT
                         || encoding.getFrameRate() >= ONSTAGE_PREFERRED_FRAME_RATE)
                     {
-                        ratesList.add(new RateSnapshot(
-                            encoding.getBitrateBps(nowMs), encoding));
+                        long encodingBitrateBps = encoding.getBitrateBps(nowMs);
+                        if (encodingBitrateBps > 0)
+                        {
+                            idealBps = encodingBitrateBps;
+                        }
+                        ratesList.add(
+                            new RateSnapshot(encodingBitrateBps, encoding));
                     }
 
                     if (encoding.getHeight() <= ONSTAGE_PREFERRED_HEIGHT)
@@ -1429,10 +1449,17 @@ public class BitrateController
                 {
                     // For the thumbnails, we consider all temporal layers of
                     // the low resolution stream.
-                    ratesList.add(new RateSnapshot(
-                        encoding.getBitrateBps(nowMs), encoding));
+                    long encodingBitrateBps = encoding.getBitrateBps(nowMs);
+                    if (encodingBitrateBps > 0)
+                    {
+                        idealBps = encodingBitrateBps;
+                    }
+                    ratesList.add(
+                        new RateSnapshot(encodingBitrateBps, encoding));
                 }
             }
+
+            this.idealBitrate = idealBps;
 
             if (timeSeriesLogger.isTraceEnabled())
             {
@@ -1479,7 +1506,7 @@ public class BitrateController
                     oversending = ratedIndices[0].bps > maxBps;
                 }
 
-                // Boost on stage participant to 360p.
+                // Boost on stage participant to 360p, if there's enough bw.
                 for (int i = ratedTargetIdx + 1; i < ratedIndices.length; i++)
                 {
                     if (i > ratedPreferredIdx || maxBps < ratedIndices[i].bps)
@@ -1499,6 +1526,29 @@ public class BitrateController
                     ratedTargetIdx++;
                 }
             }
+
+            if (ratedTargetIdx > -1)
+            {
+                // if there's a better subjective quality with the same or less
+                // bitrate than the current target quality, make it the target.
+                // i.e. set the target to the next best available quality with
+                // the least possible bitrate.
+                //
+                // For example, if 1080p@15fps is configured as a better
+                // subjective quality than 720p@30fps (i.e. it sits on a higher
+                // index in the ratedIndices array) and the bitrate that we
+                // measure for the 1080p stream is less than the bitrate that we
+                // measure for the 720p stream, then we "jump over" the 720p
+                // stream and immediately select the 1080p stream.
+                for (int i = ratedTargetIdx + 1; i < ratedIndices.length; i++)
+                {
+                    if (ratedIndices[i].bps > 0
+                        && ratedIndices[i].bps <= ratedIndices[ratedTargetIdx].bps)
+                    {
+                        ratedTargetIdx = i;
+                    }
+                }
+            }
         }
 
         /**
@@ -1512,14 +1562,13 @@ public class BitrateController
         }
 
         /**
-         * Gets the ideal bitrate (in bps) for this endpoint allocation.
-         *
-         * @return the ideal bitrate (in bps) for this endpoint allocation.
+         * @return the bitrate (in bps) of the encoding that is the closest to
+         * the ideal and has a bitrate, or 0 if there are no encodings with a
+         * bitrate (for example, the endpoint is video muted).
          */
         private long getIdealBitrate()
         {
-            return ratedIndices.length != 0
-                ? ratedIndices[ratedIndices.length - 1].bps : 0L;
+            return idealBitrate;
         }
 
         /**
