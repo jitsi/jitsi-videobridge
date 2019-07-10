@@ -205,8 +205,8 @@ public class ConferenceShim
      * Processes the Octo channels from a Colibri request.
      */
     public void processOctoChannels(
-                @NotNull ColibriConferenceIQ.OctoChannel audioChannel,
-                @NotNull ColibriConferenceIQ.OctoChannel videoChannel)
+                @NotNull ColibriConferenceIQ.Channel audioChannel,
+                @NotNull ColibriConferenceIQ.Channel videoChannel)
     {
         OctoTentacle tentacle = conference.getTentacle();
 
@@ -216,10 +216,16 @@ public class ConferenceShim
         {
             tentacle.expire();
         }
-        else
+        else if (audioChannel instanceof ColibriConferenceIQ.OctoChannel
+            && videoChannel instanceof ColibriConferenceIQ.OctoChannel)
         {
-            Set<String> relays = new HashSet<>(audioChannel.getRelays());
-            relays.addAll(videoChannel.getRelays());
+            ColibriConferenceIQ.OctoChannel audioOctoChannel
+                    = (ColibriConferenceIQ.OctoChannel) audioChannel;
+            ColibriConferenceIQ.OctoChannel videoOctoChannel
+                    = (ColibriConferenceIQ.OctoChannel) videoChannel;
+
+            Set<String> relays = new HashSet<>(audioOctoChannel.getRelays());
+            relays.addAll(videoOctoChannel.getRelays());
             tentacle.setRelays(relays);
         }
 

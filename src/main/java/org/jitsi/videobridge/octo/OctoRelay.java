@@ -436,16 +436,35 @@ public class OctoRelay
      */
     void addHandler(String conferenceId, PacketHandler handler)
     {
-        packetHandlers.put(conferenceId, handler);
+        synchronized (packetHandlers)
+        {
+            if (packetHandlers.containsKey(conferenceId))
+            {
+                logger.warn("Replacing an existing packet handler for gid="
+                        + conferenceId);
+            }
+            packetHandlers.put(conferenceId, handler);
+        }
     }
 
     /**
-     * Removes the {@link PacketHandler} for a particular {@code conderenceId}
+     * Removes the {@link PacketHandler} for a particular {@code conferenceId}
      * @param conferenceId the conference ID.
      */
-    void removeHandler(String conferenceId)
+    void removeHandler(String conferenceId, PacketHandler handler)
     {
-        packetHandlers.remove(conferenceId);
+        synchronized (packetHandlers)
+        {
+            // If the Colibri conference for this GID was re-created, and the
+            // original Conference object is expired after a new packet handler
+            // was registered, the new packet handler should not be removed (as
+            // this would break the new conference).
+            PacketHandler existingHandler = packetHandlers.get(conferenceId);
+            if (handler == existingHandler)
+            {
+                packetHandlers.remove(conferenceId);
+            }
+        }
     }
 
     /**
