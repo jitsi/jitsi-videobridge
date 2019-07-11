@@ -22,6 +22,8 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SetLocalSsrcEvent
 import org.jitsi.nlj.format.VideoPayloadType
+import org.jitsi.nlj.format.supportsFir
+import org.jitsi.nlj.format.supportsPli
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cdebug
@@ -32,7 +34,6 @@ import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacketBuilder
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacketBuilder
 import org.jitsi.utils.MediaType
-import java.lang.IllegalStateException
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.min
 
@@ -188,8 +189,8 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
                         // our code which requests FIR and PLI is not payload-type aware. So
                         // until this changes we will just check if any of the PTs supports
                         // FIR and PLI. This means that we effectively always assume support for FIR.
-                        hasPliSupport = hasPliSupport || event.payloadType.rtcpFeedbackSet.contains("nack pli")
-                        hasFirSupport = hasFirSupport || event.payloadType.rtcpFeedbackSet.contains("ccm fir")
+                        hasPliSupport = hasPliSupport || event.payloadType.rtcpFeedbackSet.supportsPli()
+                        hasFirSupport = hasFirSupport || event.payloadType.rtcpFeedbackSet.supportsFir()
                     }
                 }
             }
