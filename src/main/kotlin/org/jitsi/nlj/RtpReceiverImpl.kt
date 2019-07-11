@@ -45,6 +45,7 @@ import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.PacketPredicate
+import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -77,6 +78,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
      * Returns the current sending bitrate in bps.
      */
     getSendBitrate: () -> Long,
+    streamInformationStore: StreamInformationStore,
     logLevelDelegate: Logger? = null
 ) : RtpReceiver() {
     private val logger = getLogger(classLogger, logLevelDelegate)
@@ -87,7 +89,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val srtpDecryptWrapper = SrtpTransformerNode("SRTP Decrypt node")
     private val srtcpDecryptWrapper = SrtpTransformerNode("SRTCP Decrypt node")
     private val tccGenerator = TccGeneratorNode(rtcpSender, backgroundExecutor, getSendBitrate)
-    private val audioLevelReader = AudioLevelReader()
+    private val audioLevelReader = AudioLevelReader(streamInformationStore)
     private val silenceDiscarder = SilenceDiscarder(true)
     private val statsTracker = IncomingStatisticsTracker()
     private val packetStreamStats = PacketStreamStatsNode()

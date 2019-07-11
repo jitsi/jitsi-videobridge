@@ -26,13 +26,14 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.stats.PacketIOActivity
 import org.jitsi.nlj.stats.TransceiverStats
 import org.jitsi.nlj.transform.NodeStatsProducer
+import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.utils.logging.DiagnosticContext
-import org.jitsi.utils.logging.Logger
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.concurrent.RecurringRunnableExecutor
+import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.logging.Logger
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.BandwidthEstimatorImpl
@@ -68,11 +69,11 @@ class Transceiver(
     logLevelDelegate: Logger? = null
 ) : Stoppable, NodeStatsProducer {
     private val logger = getLogger(this.javaClass, logLevelDelegate)
-    private val rtpExtensions = mutableMapOf<Byte, RtpExtension>()
     private val payloadTypes = mutableMapOf<Byte, PayloadType>()
     private val receiveSsrcs = ConcurrentHashMap.newKeySet<Long>()
     val packetIOActivity = PacketIOActivity()
     private val endpointConnectionStats = EndpointConnectionStats()
+    private val streamInformationStore = StreamInformationStoreImpl()
     /**
      * A central place to subscribe to be notified on the reception or transmission of RTCP packets for
      * this transceiver.  This is intended to be used by internal entities: mainly logic for things like generating
@@ -93,6 +94,7 @@ class Transceiver(
             rtcpEventNotifier,
             senderExecutor,
             backgroundExecutor,
+            streamInformationStore,
             logLevelDelegate,
             diagnosticContext
     )
@@ -106,6 +108,7 @@ class Transceiver(
             receiverExecutor,
             backgroundExecutor,
             { rtpSender.getPacketStreamStats().bitrate },
+            streamInformationStore,
             logLevelDelegate
         )
 
@@ -215,10 +218,7 @@ class Transceiver(
 
     fun addRtpExtension(rtpExtension: RtpExtension) {
         logger.cdebug { "Adding RTP extension: $rtpExtension" }
-        rtpExtensions[rtpExtension.id] = rtpExtension
-        val rtpExtensionAddedEvent = RtpExtensionAddedEvent(rtpExtension)
-        rtpReceiver.handleEvent(rtpExtensionAddedEvent)
-        rtpSender.handleEvent(rtpExtensionAddedEvent)
+        streamInformationStore.addRtpExtensionMapping(rtpExtension)
     }
 
     fun clearRtpExtensions() {
@@ -265,8 +265,8 @@ class Transceiver(
     override fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("Transceiver $id").apply {
             addBlock(NodeStatsBlock("rtpExtensions").apply {
-                rtpExtensions.forEach {
-                    addString(it.key.toString(), it.value.type.toString())
+                streamInformationStore.rtpExtensions.forEach {
+                    addString(it.id.toString(), it.type.toString())
                 }
             })
             addBlock(NodeStatsBlock("payloadTypes").apply {

@@ -22,6 +22,9 @@ import java.util.concurrent.CopyOnWriteArraySet
 typealias PayloadTypeParams = Map<String, String>
 
 typealias RtcpFeedbackSet = Set<String>
+
+fun RtcpFeedbackSet.supportsPli(): Boolean = this.contains("nack pli")
+fun RtcpFeedbackSet.supportsFir(): Boolean = this.contains("ccm fir")
 /**
  * Represents an RTP payload type.
  *

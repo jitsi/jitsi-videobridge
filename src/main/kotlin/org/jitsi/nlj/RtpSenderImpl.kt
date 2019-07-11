@@ -37,6 +37,7 @@ import org.jitsi.nlj.transform.node.outgoing.SentRtcpStats
 import org.jitsi.nlj.transform.node.outgoing.TccSeqNumTagger
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.PacketInfoQueue
+import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -63,6 +64,7 @@ class RtpSenderImpl(
      * background tasks, or tasks that need to execute at some fixed delay/rate
      */
     val backgroundExecutor: ScheduledExecutorService,
+    private val streamInformationStore: StreamInformationStore,
     logLevelDelegate: Logger? = null,
     diagnosticContext: DiagnosticContext = DiagnosticContext()
 ) : RtpSender() {
@@ -84,7 +86,7 @@ class RtpSenderImpl(
     private val srtpEncryptWrapper = SrtpTransformerNode("SRTP encrypt")
     private val srtcpEncryptWrapper = SrtpTransformerNode("SRTCP encrypt")
     private val outgoingPacketCache = PacketCacher()
-    private val absSendTime = AbsSendTime()
+    private val absSendTime = AbsSendTime(streamInformationStore)
     private val statsTracker = OutgoingStatisticsTracker()
     private val packetStreamStats = PacketStreamStatsNode()
     private val rtcpSrUpdater = RtcpSrUpdater(statsTracker)
@@ -110,7 +112,7 @@ class RtpSenderImpl(
             node(outgoingPacketCache)
             node(absSendTime)
             node(statsTracker)
-            node(TccSeqNumTagger(transportCcEngine))
+            node(TccSeqNumTagger(transportCcEngine, streamInformationStore))
             node(srtpEncryptWrapper)
             node(packetStreamStats.createNewNode())
             node(outputPipelineTerminationNode)
