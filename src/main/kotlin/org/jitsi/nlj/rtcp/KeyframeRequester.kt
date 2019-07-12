@@ -18,14 +18,11 @@ package org.jitsi.nlj.rtcp
 
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.RtpPayloadTypeAddedEvent
-import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SetLocalSsrcEvent
-import org.jitsi.nlj.format.VideoPayloadType
-import org.jitsi.nlj.format.supportsFir
 import org.jitsi.nlj.format.supportsPli
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
+import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
@@ -45,10 +42,18 @@ import kotlin.math.min
  * on what the client supports
  * 3) Aggregation.  This class will pace outgoing requests such that we don't spam the sender
  */
-class KeyframeRequester : TransformerNode("Keyframe Requester") {
+class KeyframeRequester(
+    streamInformationStore: StreamInformationStore
+) : TransformerNode("Keyframe Requester") {
 
-    companion object {
-        private const val DEFAULT_WAIT_INTERVAL_MS = 100
+    init {
+        streamInformationStore.onRtpPayloadTypesChanged { currentPayloadTypes ->
+            // Support for FIR and PLI is declared per-payload type, but currently
+            // our code which requests FIR and PLI is not payload-type aware. So
+            // until this changes we will just check if any of the PTs supports
+            // FIR and PLI. This means that we effectively always assume support for FIR.
+            hasPliSupport = currentPayloadTypes.values.find { it.rtcpFeedbackSet.supportsPli() } != null
+        }
     }
 
     // Map a SSRC to the timestamp (in ms) of when we last requested a keyframe for it
@@ -56,6 +61,10 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
     private val firCommandSequenceNumber: AtomicInteger = AtomicInteger(0)
     private val keyframeRequestsSyncRoot = Any()
     private var localSsrc: Long? = null
+    private var hasPliSupport: Boolean = false
+    // See the comment in the constructor as for why this value is set to true and never changes
+    private val hasFirSupport: Boolean = true
+    private var waitIntervalMs = DEFAULT_WAIT_INTERVAL_MS
 
     // Stats
 
@@ -72,10 +81,6 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
     private var numApiRequests: Int = 0
     // Number of calls to requestKeyframe ignored due to throttling
     private var numApiRequestsDropped: Int = 0
-
-    private var hasPliSupport: Boolean = false
-    private var hasFirSupport: Boolean = true
-    private var waitIntervalMs = DEFAULT_WAIT_INTERVAL_MS
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val packet = packetInfo.packet.apply {
@@ -182,23 +187,6 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
 
     override fun handleEvent(event: Event) {
         when (event) {
-            is RtpPayloadTypeAddedEvent -> {
-                when (event.payloadType) {
-                    is VideoPayloadType -> {
-                        // Support for FIR and PLI is declared per-payload type, but currently
-                        // our code which requests FIR and PLI is not payload-type aware. So
-                        // until this changes we will just check if any of the PTs supports
-                        // FIR and PLI. This means that we effectively always assume support for FIR.
-                        hasPliSupport = hasPliSupport || event.payloadType.rtcpFeedbackSet.supportsPli()
-                        hasFirSupport = hasFirSupport || event.payloadType.rtcpFeedbackSet.supportsFir()
-                    }
-                }
-            }
-            is RtpPayloadTypeClearEvent -> {
-                // Reset to the defaults.
-                hasPliSupport = false
-                hasFirSupport = true
-            }
             is SetLocalSsrcEvent -> {
                 if (event.mediaType == MediaType.VIDEO) {
                     localSsrc = event.ssrc
@@ -226,5 +214,9 @@ class KeyframeRequester : TransformerNode("Keyframe Requester") {
     fun onRttUpdate(newRtt: Double) {
         // avg(rtt) + stddev(rtt) would be more accurate than rtt + 10.
         waitIntervalMs = min(DEFAULT_WAIT_INTERVAL_MS, newRtt.toInt() + 10)
+    }
+
+    companion object {
+        private const val DEFAULT_WAIT_INTERVAL_MS = 100
     }
 }

@@ -17,20 +17,18 @@ package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.RtpPayloadTypeAddedEvent
-import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.rtp.RtxPacket
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
+import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.logging.Logger
-import unsigned.toUInt
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -38,7 +36,9 @@ import java.util.concurrent.ConcurrentHashMap
  * look like their original packets.
  * https://tools.ietf.org/html/rfc4588
  */
-class RtxHandler : TransformerNode("RTX handler") {
+class RtxHandler(
+    streamInformationStore: StreamInformationStore
+) : TransformerNode("RTX handler") {
     private var numPaddingPacketsReceived = 0
     private var numRtxPacketsReceived = 0
     /**
@@ -50,8 +50,24 @@ class RtxHandler : TransformerNode("RTX handler") {
      */
     private val associatedSsrcs: ConcurrentHashMap<Long, Long> = ConcurrentHashMap()
 
-    companion object {
-        val logger: Logger = Logger.getLogger(this::class.java)
+    init {
+        streamInformationStore.onRtpPayloadTypesChanged { currentPayloadTypes ->
+            if (currentPayloadTypes.isEmpty()) {
+                associatedPayloadTypes.clear()
+            } else {
+                currentPayloadTypes.values.filterIsInstance<RtxPayloadType>()
+                    .map { rtxPayloadType ->
+                        rtxPayloadType.associatedPayloadType?.let { associatedPayloadType ->
+                            associatedPayloadTypes[rtxPayloadType.pt.toInt()] = associatedPayloadType
+                            logger.cdebug { "Associating RTX payload type ${rtxPayloadType.pt.toInt()} " +
+                                "with primary $associatedPayloadType" }
+                        } ?: run {
+                            logger.cerror { "Unable to parse RTX associated payload type from payload " +
+                                "type $rtxPayloadType" }
+                        }
+                    }
+            }
+        }
     }
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
@@ -90,21 +106,6 @@ class RtxHandler : TransformerNode("RTX handler") {
 
     override fun handleEvent(event: Event) {
         when (event) {
-            is RtpPayloadTypeAddedEvent -> {
-                if (event.payloadType is RtxPayloadType) {
-                    val rtxPt = event.payloadType.pt.toUInt()
-                    event.payloadType.parameters["apt"]?.toByte()?.toUInt()?.let {
-                        val associatedPt = it
-                        logger.cdebug { "Associating RTX payload type $rtxPt with primary $associatedPt" }
-                        associatedPayloadTypes[rtxPt] = associatedPt
-                    } ?: run {
-                        logger.cerror { "Unable to parse RTX associated payload type from event: $event" }
-                    }
-                }
-            }
-            is RtpPayloadTypeClearEvent -> {
-                associatedPayloadTypes.clear()
-            }
             is SsrcAssociationEvent -> {
                 if (event.type == SsrcAssociationType.RTX) {
                     logger.cdebug { "Associating RTX ssrc ${event.secondarySsrc} with primary ${event.primarySsrc}" }
@@ -119,6 +120,11 @@ class RtxHandler : TransformerNode("RTX handler") {
         return super.getNodeStats().apply {
             addNumber("num_rtx_packets_received", numRtxPacketsReceived)
             addNumber("num_padding_packets_received", numPaddingPacketsReceived)
+            addString("rtx_payload_type_associations", associatedPayloadTypes.toString())
         }
+    }
+
+    companion object {
+        val logger: Logger = Logger.getLogger(this::class.java)
     }
 }

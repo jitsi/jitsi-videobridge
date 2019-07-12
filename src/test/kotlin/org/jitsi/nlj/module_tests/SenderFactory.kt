@@ -16,7 +16,6 @@
 
 package org.jitsi.nlj.module_tests
 
-import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpSender
 import org.jitsi.nlj.RtpSenderImpl
 import org.jitsi.nlj.SetLocalSsrcEvent
@@ -54,7 +53,7 @@ class SenderFactory {
             sender.setSrtpTransformers(SrtpTransformerFactory.createSrtpTransformers(srtpData))
 
             payloadTypes.forEach {
-                sender.handleEvent(RtpPayloadTypeAddedEvent(it))
+                streamInformationStore.addRtpPayloadType(it)
             }
             headerExtensions.forEach {
                 streamInformationStore.addRtpExtensionMapping(it)

@@ -69,7 +69,6 @@ class Transceiver(
     logLevelDelegate: Logger? = null
 ) : Stoppable, NodeStatsProducer {
     private val logger = getLogger(this.javaClass, logLevelDelegate)
-    private val payloadTypes = mutableMapOf<Byte, PayloadType>()
     private val receiveSsrcs = ConcurrentHashMap.newKeySet<Long>()
     val packetIOActivity = PacketIOActivity()
     private val endpointConnectionStats = EndpointConnectionStats()
@@ -201,19 +200,13 @@ class Transceiver(
     fun requestKeyFrame(mediaSsrc: Long) = rtpSender.requestKeyframe(mediaSsrc)
 
     fun addPayloadType(payloadType: PayloadType) {
-        payloadTypes[payloadType.pt] = payloadType
         logger.cdebug { "Payload type added: $payloadType" }
-        val rtpPayloadTypeAddedEvent = RtpPayloadTypeAddedEvent(payloadType)
-        rtpReceiver.handleEvent(rtpPayloadTypeAddedEvent)
-        rtpSender.handleEvent(rtpPayloadTypeAddedEvent)
+        streamInformationStore.addRtpPayloadType(payloadType)
     }
 
     fun clearPayloadTypes() {
         logger.cinfo { "All payload types being cleared" }
-        val rtpPayloadTypeClearEvent = RtpPayloadTypeClearEvent()
-        rtpReceiver.handleEvent(rtpPayloadTypeClearEvent)
-        rtpSender.handleEvent(rtpPayloadTypeClearEvent)
-        payloadTypes.clear()
+        streamInformationStore.clearRtpPayloadTypes()
     }
 
     fun addRtpExtension(rtpExtension: RtpExtension) {
@@ -270,7 +263,7 @@ class Transceiver(
                 }
             })
             addBlock(NodeStatsBlock("payloadTypes").apply {
-                payloadTypes.forEach {
+                streamInformationStore.rtpPayloadTypes.forEach {
                     addString(it.key.toString(), it.value.toString())
                 }
             })

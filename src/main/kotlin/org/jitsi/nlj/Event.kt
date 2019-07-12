@@ -15,20 +15,11 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.utils.MediaType
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 
 interface Event
-
-class RtpPayloadTypeAddedEvent(val payloadType: PayloadType) : Event {
-    override fun toString(): String = with(StringBuffer()) {
-        append(payloadType.toString())
-        toString()
-    }
-}
-class RtpPayloadTypeClearEvent : Event
 
 class ReceiveSsrcAddedEvent(val ssrc: Long) : Event
 class ReceiveSsrcRemovedEvent(val ssrc: Long) : Event

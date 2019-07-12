@@ -15,17 +15,13 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.RtpPayloadTypeAddedEvent
-import org.jitsi.nlj.RtpPayloadTypeClearEvent
-import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.stats.JitterStats
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.RtpUtils.Companion.convertRtpTimestampToMs
-import org.jitsi.nlj.util.cdebug
+import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.isNewerThan
 import org.jitsi.nlj.util.isNextAfter
 import org.jitsi.nlj.util.numPacketsTo
@@ -37,42 +33,30 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Track various statistics about received RTP streams to be used in SR/RR report blocks
  */
-class IncomingStatisticsTracker : ObserverNode("Incoming statistics tracker") {
+class IncomingStatisticsTracker(
+    private val streamInformationStore: StreamInformationStore
+) : ObserverNode("Incoming statistics tracker") {
     private val ssrcStats: MutableMap<Long, IncomingSsrcStats> = ConcurrentHashMap()
-    private val payloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
 
     override fun observe(packetInfo: PacketInfo) {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        payloadTypes[rtpPacket.payloadType.toByte()]?.let {
-            val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrc) {
-                IncomingSsrcStats(rtpPacket.ssrc, rtpPacket.sequenceNumber)
-            }
-            val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.timestamp.toUInt(), it.clockRate)
-            stats.packetReceived(rtpPacket, packetSentTimestamp, packetInfo.receivedTime)
-        }
-    }
-
-    override fun handleEvent(event: Event) {
-        when (event) {
-            is RtpPayloadTypeAddedEvent -> {
-                // We don't want to track jitter, etc. for RTX streams
-                if (event.payloadType is RtxPayloadType) {
-                    logger.cdebug { "Ignoring RTX format: ${event.payloadType}" }
-                } else {
-                    payloadTypes[event.payloadType.pt] = event.payloadType
+        streamInformationStore.rtpPayloadTypes[rtpPacket.payloadType.toByte()]?.let {
+            // We don't want to track jitter, etc. for RTX streams
+            if (it !is RtxPayloadType) {
+                val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrc) {
+                    IncomingSsrcStats(rtpPacket.ssrc, rtpPacket.sequenceNumber)
                 }
+                val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.timestamp.toUInt(), it.clockRate)
+                stats.packetReceived(rtpPacket, packetSentTimestamp, packetInfo.receivedTime)
             }
-            is RtpPayloadTypeClearEvent -> payloadTypes.clear()
         }
-        super.handleEvent(event)
     }
 
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
             val stats = getSnapshot()
             stats.ssrcStats.forEach { (ssrc, streamStats) ->
-                addString("source_ssrc", ssrc.toString())
-                addString("stream_stats", streamStats.toString())
+                addString(ssrc.toString(), streamStats.toString())
             }
         }
     }
