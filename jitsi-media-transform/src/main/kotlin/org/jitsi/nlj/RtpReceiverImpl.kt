@@ -91,7 +91,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val tccGenerator = TccGeneratorNode(rtcpSender, backgroundExecutor, getSendBitrate)
     private val audioLevelReader = AudioLevelReader(streamInformationStore)
     private val silenceDiscarder = SilenceDiscarder(true)
-    private val statsTracker = IncomingStatisticsTracker()
+    private val statsTracker = IncomingStatisticsTracker(streamInformationStore)
     private val packetStreamStats = PacketStreamStatsNode()
     private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statsTracker)
     private val rtcpTermination = RtcpTermination(rtcpEventNotifier)
@@ -137,7 +137,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     name = "SRTP path"
                     predicate = PacketPredicate { !RTCPUtils.isRtcp(it.buffer, it.offset, it.length) }
                     path = pipeline {
-                        node(RtpParser())
+                        node(RtpParser(streamInformationStore))
                         node(tccGenerator)
                         // TODO: temporarily putting the audioLevelReader node here such that we can determine whether
                         // or not a packet should be discarded before doing SRTP. audioLevelReader has been moved here
@@ -162,9 +162,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 name = "Video path"
                                 predicate = PacketPredicate { it is VideoRtpPacket }
                                 path = pipeline {
-                                    node(RtxHandler())
+                                    node(RtxHandler(streamInformationStore))
                                     node(PaddingTermination())
-                                    node(VideoParser())
+                                    node(VideoParser(streamInformationStore))
                                     node(Vp8Parser())
                                     node(VideoBitrateCalculator())
                                     node(RetransmissionRequesterNode(rtcpSender, backgroundExecutor))
