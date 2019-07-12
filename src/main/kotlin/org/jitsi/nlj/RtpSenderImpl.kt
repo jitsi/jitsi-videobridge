@@ -90,7 +90,7 @@ class RtpSenderImpl(
     private val statsTracker = OutgoingStatisticsTracker()
     private val packetStreamStats = PacketStreamStatsNode()
     private val rtcpSrUpdater = RtcpSrUpdater(statsTracker)
-    private val keyframeRequester = KeyframeRequester()
+    private val keyframeRequester = KeyframeRequester(streamInformationStore)
     private val probingDataSender: ProbingDataSender
 
     private val nackHandler: NackHandler
@@ -119,7 +119,7 @@ class RtpSenderImpl(
         }
 
         outgoingRtxRoot = pipeline {
-            node(RetransmissionSender())
+            node(RetransmissionSender(streamInformationStore))
             // We want RTX packets to hook into the main RTP pipeline starting at AbsSendTime
             node(absSendTime)
         }
@@ -150,8 +150,9 @@ class RtpSenderImpl(
         }
 
         probingDataSender = ProbingDataSender(
-                outgoingPacketCache.getPacketCache(),
-                outgoingRtxRoot, absSendTime, diagnosticContext)
+            outgoingPacketCache.getPacketCache(), outgoingRtxRoot, absSendTime, diagnosticContext,
+            streamInformationStore
+        )
     }
 
     override fun onRttUpdate(newRtt: Double) {

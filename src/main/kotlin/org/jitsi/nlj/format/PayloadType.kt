@@ -126,7 +126,10 @@ class H264PayloadType(
 class RtxPayloadType(
     pt: Byte,
     parameters: PayloadTypeParams = ConcurrentHashMap()
-) : VideoPayloadType(pt, PayloadTypeEncoding.RTX, parameters = parameters)
+) : VideoPayloadType(pt, PayloadTypeEncoding.RTX, parameters = parameters) {
+    val associatedPayloadType: Int?
+        get() = parameters["apt"]?.toInt()
+}
 
 abstract class AudioPayloadType(
     pt: Byte,

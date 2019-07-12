@@ -16,8 +16,11 @@
 
 package org.jitsi.nlj.util
 
+import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * A handler installed on a specific [RtpExtensionType] to be notified
@@ -25,6 +28,8 @@ import org.jitsi.nlj.rtp.RtpExtensionType
  * extension mapping has been removed
  */
 typealias RtpExtensionHandler = (Int?) -> Unit
+
+typealias RtpPayloadTypesChangedHandler = (Map<Byte, PayloadType>) -> Unit
 
 /**
  * [StreamInformationStore] maintains various information about streams, including:
@@ -37,15 +42,26 @@ interface StreamInformationStore {
     fun addRtpExtensionMapping(rtpExtension: RtpExtension)
     fun clearRtpExtensions()
     fun onRtpExtensionMapping(rtpExtensionType: RtpExtensionType, handler: RtpExtensionHandler)
+
+    val rtpPayloadTypes: Map<Byte, PayloadType>
+    fun addRtpPayloadType(payloadType: PayloadType)
+    fun clearRtpPayloadTypes()
+    fun onRtpPayloadTypesChanged(handler: RtpPayloadTypesChangedHandler)
 }
 
 class StreamInformationStoreImpl : StreamInformationStore {
     private val extensionsLock = Any()
     private val extensionHandlers =
         mutableMapOf<RtpExtensionType, MutableList<RtpExtensionHandler>>()
-    private val _rtpExtensions = mutableListOf<RtpExtension>()
+    private val _rtpExtensions: MutableList<RtpExtension> = CopyOnWriteArrayList()
     override val rtpExtensions: List<RtpExtension>
         get() = _rtpExtensions
+
+    private val payloadTypesLock = Any()
+    private val payloadTypeHandlers = mutableListOf<RtpPayloadTypesChangedHandler>()
+    private val _rtpPayloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
+    override val rtpPayloadTypes: Map<Byte, PayloadType>
+        get() = _rtpPayloadTypes
 
     override fun addRtpExtensionMapping(rtpExtension: RtpExtension) {
         synchronized(extensionsLock) {
@@ -65,6 +81,27 @@ class StreamInformationStoreImpl : StreamInformationStore {
         synchronized(extensionsLock) {
             extensionHandlers.getOrPut(rtpExtensionType, { mutableListOf() }).add(handler)
             _rtpExtensions.find { it.type == rtpExtensionType }?.let { handler(it.id.toInt()) }
+        }
+    }
+
+    override fun addRtpPayloadType(payloadType: PayloadType) {
+        synchronized(payloadTypesLock) {
+            _rtpPayloadTypes[payloadType.pt] = payloadType
+            payloadTypeHandlers.forEach { it(_rtpPayloadTypes) }
+        }
+    }
+
+    override fun clearRtpPayloadTypes() {
+        synchronized(payloadTypesLock) {
+            _rtpPayloadTypes.clear()
+            payloadTypeHandlers.forEach { it(_rtpPayloadTypes) }
+        }
+    }
+
+    override fun onRtpPayloadTypesChanged(handler: RtpPayloadTypesChangedHandler) {
+        synchronized(payloadTypesLock) {
+            payloadTypeHandlers.add(handler)
+            handler(_rtpPayloadTypes)
         }
     }
 }

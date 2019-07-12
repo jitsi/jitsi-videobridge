@@ -20,8 +20,6 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.EventHandler
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.RtpPayloadTypeAddedEvent
-import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SetLocalSsrcEvent
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.format.VideoPayloadType
@@ -29,6 +27,7 @@ import org.jitsi.nlj.rtp.PaddingVideoPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.PacketCache
+import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
@@ -49,7 +48,8 @@ class ProbingDataSender(
     private val packetCache: PacketCache,
     private val rtxDataSender: PacketHandler,
     private val garbageDataSender: PacketHandler,
-    private val diagnosticContext: DiagnosticContext
+    private val diagnosticContext: DiagnosticContext,
+    streamInformationStore: StreamInformationStore
 ) : EventHandler, NodeStatsProducer {
 
     private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(this.javaClass)
@@ -62,6 +62,25 @@ class ProbingDataSender(
     // Stats
     private var numProbingBytesSentRtx: Int = 0
     private var numProbingBytesSentDummyData: Int = 0
+
+    init {
+        streamInformationStore.onRtpPayloadTypesChanged { currentRtpPayloadTypes ->
+            if (currentRtpPayloadTypes.isEmpty()) {
+                videoPayloadTypes.clear()
+                rtxSupported = false
+            } else {
+                currentRtpPayloadTypes.values.forEach { pt ->
+                    if (!rtxSupported && pt is RtxPayloadType) {
+                        rtxSupported = true
+                        logger.cdebug { "RTX payload type signaled, enabling RTX probing" }
+                    }
+                    if (pt is VideoPayloadType) {
+                        videoPayloadTypes.add(pt)
+                    }
+                }
+            }
+        }
+    }
 
     fun sendProbing(mediaSsrc: Long, numBytes: Int): Int {
         var totalBytesSent = 0
@@ -164,18 +183,6 @@ class ProbingDataSender(
 
     override fun handleEvent(event: Event) {
         when (event) {
-            is RtpPayloadTypeAddedEvent -> {
-                if (event.payloadType is RtxPayloadType) {
-                    logger.cdebug { "RTX payload type signaled, enabling RTX probing" }
-                    rtxSupported = true
-                } else if (event.payloadType is VideoPayloadType) {
-                    videoPayloadTypes.add(event.payloadType)
-                }
-            }
-            is RtpPayloadTypeClearEvent -> {
-                rtxSupported = false
-                videoPayloadTypes.clear()
-            }
             is SetLocalSsrcEvent -> {
                 if (MediaType.VIDEO == event.mediaType) {
                     logger.cdebug { "Setting video ssrc to ${event.ssrc}" }

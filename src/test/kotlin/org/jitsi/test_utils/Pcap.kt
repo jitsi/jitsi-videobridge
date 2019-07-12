@@ -81,7 +81,7 @@ object Pcaps {
             ),
             payloadTypes = listOf(
                 RtxPayloadType(96, parameters = mapOf("apt" to "100")),
-                Vp8PayloadType(100),
+                Vp8PayloadType(100, rtcpFeedbackSet = setOf("nack pli", "ccm fir")),
                 OpusPayloadType(111)
             ),
             headerExtensions = DEFAULT_HEADER_EXTENSIONS,
