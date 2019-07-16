@@ -174,7 +174,7 @@ class OctoPacket
         assertMinLen(buf, off, len);
 
         long eid = RTPUtils.readUint32AsLong(buf, off + 4);
-        return String.format("%8h", eid).replace(' ', '0');
+        return String.format("%08x", eid);
     }
 
     /**
