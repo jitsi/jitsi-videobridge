@@ -399,7 +399,7 @@ public class BitrateController
         {
             logger.warn(
                 "Dropping an RTP packet, because the SSRC has not " +
-                    "been signaled:" + ssrc);
+                    "been signaled " + pkt);
             return false;
         }
 
@@ -677,6 +677,9 @@ public class BitrateController
 
             adaptiveTrackProjection = new AdaptiveTrackProjection(
                 trackBitrateAllocation.track);
+
+            logger.info(
+                "new track projection for " + trackBitrateAllocation.track);
 
             // Route all encodings to the specified bitrate controller.
             for (RTPEncodingDesc rtpEncoding : rtpEncodings)

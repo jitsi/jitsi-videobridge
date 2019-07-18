@@ -400,13 +400,19 @@ public class VP8FrameProjection
         if (!DePacketizer.VP8PayloadDescriptor.setTL0PICIDX(
             buf, payloadOff, payloadLen, tl0PICIDX))
         {
-            logger.warn("Failed to set the TL0PICIDX of a VP8 packet.");
+            logger.warn("Failed to set the TL0PICIDX of a VP8 packet "
+                + pkt + ", "
+                + DePacketizer.VP8PayloadDescriptor.toString(
+                    buf, payloadOff, payloadLen));
         }
 
         if (!DePacketizer.VP8PayloadDescriptor.setExtendedPictureId(
             buf, payloadOff, payloadLen, extendedPictureId))
         {
-            logger.warn("Failed to set the picture id of a VP8 packet.");
+            logger.warn("Failed to set the picture id of a VP8 packet "
+                + pkt + ", "
+                + DePacketizer.VP8PayloadDescriptor.toString(
+                    buf, payloadOff, payloadLen));
         }
     }
 

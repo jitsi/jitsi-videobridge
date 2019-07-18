@@ -191,7 +191,7 @@ public class AdaptiveTrackProjection
         {
             logger.warn(
                 "Dropping an RTP packet, because the SSRC has not " +
-                    "been signaled:" + rtpPacket.getSSRCAsLong());
+                    "been signaled " + rtpPacket);
 
             return false;
         }

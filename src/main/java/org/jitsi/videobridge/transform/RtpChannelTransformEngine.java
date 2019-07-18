@@ -15,13 +15,17 @@
  */
 package org.jitsi.videobridge.transform;
 
+import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.impl.neomedia.transform.delay.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.cc.*;
 
 import java.util.*;
+
+import static org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer.isKeyFrame;
 
 /**
  * Implements a <tt>TransformEngine</tt> for a specific <tt>RtpChannel</tt>.
@@ -92,6 +96,45 @@ public class RtpChannelTransformEngine
     }
 
     /**
+     * A packet details logging transform engine that logs packet details of
+     * incoming keyframes.
+     */
+    class PacketDetailsObserver
+        extends SinglePacketTransformerAdapter
+        implements TransformEngine
+    {
+        @Override
+        public PacketTransformer getRTPTransformer()
+        {
+            return this;
+        }
+
+        @Override
+        public PacketTransformer getRTCPTransformer()
+        {
+            return null;
+        }
+
+        @Override
+        public RawPacket reverseTransform(RawPacket pkt)
+        {
+            if (pkt == null || !classLogger.isDebugEnabled() || !isKeyFrame(
+                pkt.getBuffer(),
+                pkt.getPayloadOffset(),
+                pkt.getPayloadLength()))
+            {
+                return pkt;
+            }
+
+            classLogger.debug(new StringBuilder()
+                .append("Observed an incoming keyframe ").append(
+                    ((MediaStreamImpl) channel.getStream()).packetToString(pkt)));
+
+            return pkt;
+        }
+    }
+
+    /**
      * Initializes the transformers used by this instance and returns them as
      * an array.
      */
@@ -119,6 +162,8 @@ public class RtpChannelTransformEngine
 
             redFilter = new REDFilterTransformEngine(RED_PAYLOAD_TYPE);
             transformerList.add(redFilter);
+
+            transformerList.add(new PacketDetailsObserver());
         }
         else
         {
