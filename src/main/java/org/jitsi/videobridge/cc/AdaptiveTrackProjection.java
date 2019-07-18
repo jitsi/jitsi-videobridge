@@ -189,9 +189,22 @@ public class AdaptiveTrackProjection
 
         if (encoding == null)
         {
-            logger.warn(
-                "Dropping an RTP packet, because the SSRC has not " +
-                    "been signaled " + rtpPacket);
+            MediaStreamTrackDesc sourceTrack = getSource();
+            if (sourceTrack != null)
+            {
+                logger.warn(
+                    "Dropping an RTP packet, because the SSRC has not " +
+                        "been signaled " +
+                        sourceTrack
+                            .getMediaStreamTrackReceiver()
+                            .getStream().packetToString(rtpPacket));
+            }
+            else
+            {
+                logger.warn(
+                    "Dropping an RTP packet. Source track is null and the SSRC " +
+                        "has not been signaled " + rtpPacket);
+            }
 
             return false;
         }

@@ -399,7 +399,8 @@ public class BitrateController
         {
             logger.warn(
                 "Dropping an RTP packet, because the SSRC has not " +
-                    "been signaled " + pkt);
+                    "been signaled " +
+                    ((MediaStreamImpl) dest.getStream()).packetToString(pkt));
             return false;
         }
 
