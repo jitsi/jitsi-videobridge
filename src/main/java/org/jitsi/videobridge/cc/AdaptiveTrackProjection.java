@@ -215,6 +215,19 @@ public class AdaptiveTrackProjection
             logger.warn(
                 "Dropping an RTP packet, no quality index (SSRC=" +
                     videoRtpPacket.getSsrc() + ").");
+            MediaStreamTrackDesc sourceTrack = getSource();
+            if (sourceTrack != null)
+            {
+                logger.warn(
+                    "Dropping an RTP packet, because the SSRC has not " +
+                        "been signaled " + sourceTrack + ", " + videoRtpPacket);
+            }
+            else
+            {
+                logger.warn(
+                    "Dropping an RTP packet. Source track is null and the SSRC " +
+                        "has not been signaled " + videoRtpPacket);
+            }
 
             return false;
         }
