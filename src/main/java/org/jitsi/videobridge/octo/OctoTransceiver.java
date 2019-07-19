@@ -73,6 +73,9 @@ public class OctoTransceiver
      */
     private final MediaStreamTracks mediaStreamTracks = new MediaStreamTracks();
 
+    private final StreamInformationStore streamInformationStore
+            = new StreamInformationStoreImpl();
+
     /**
      * Initializes a new {@link OctoTransceiver} instance.
      *
@@ -176,12 +179,13 @@ public class OctoTransceiver
             }
         };
 
-        Node videoRoot = new VideoParser();
+        Node videoRoot = new VideoParser(streamInformationStore);
         videoRoot.attach(new Vp8Parser())
             .attach(new VideoBitrateCalculator())
             .attach(terminationNode);
 
-        AudioLevelReader audioLevelReader = new AudioLevelReader();
+        AudioLevelReader audioLevelReader
+                = new AudioLevelReader(streamInformationStore);
         audioLevelReader.setAudioLevelListener(tentacle.getAudioLevelListener());
 
         Node audioRoot = audioLevelReader;
@@ -198,7 +202,7 @@ public class OctoTransceiver
                         pkt -> pkt instanceof AudioRtpPacket,
                         audioRoot);
 
-        Node rtpRoot = new RtpParser();
+        Node rtpRoot = new RtpParser(streamInformationStore);
         rtpRoot.attach(audioVideoDemuxer);
 
         // We currently only have single RTCP packets in Octo.
@@ -225,9 +229,12 @@ public class OctoTransceiver
      */
     void addPayloadType(PayloadType payloadType)
     {
-        RtpPayloadTypeAddedEvent event
-                = new RtpPayloadTypeAddedEvent(payloadType);
-        new NodeEventVisitor(event).visit(inputTreeRoot);
+        streamInformationStore.addRtpPayloadType(payloadType);
+    }
+
+    StreamInformationStore getStreamInformationStore()
+    {
+        return streamInformationStore;
     }
 
     /**
@@ -237,10 +244,7 @@ public class OctoTransceiver
      */
     void addRtpExtension(RtpExtension rtpExtension)
     {
-        RtpExtensionAddedEvent rtpExtensionAddedEvent
-                = new RtpExtensionAddedEvent(rtpExtension);
-
-        new NodeEventVisitor(rtpExtensionAddedEvent).visit(inputTreeRoot);
+        streamInformationStore.addRtpExtensionMapping(rtpExtension);
     }
 
     /**
