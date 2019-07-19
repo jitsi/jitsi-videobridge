@@ -356,7 +356,7 @@ public class BitrateController
      * @return true if the bandwidth has changed above the configured threshold,
      * false otherwise.
      */
-    private static boolean isLargerThanBweThreshold(
+    private static boolean changeIsLargerThanThreshold(
         long previousBwe, long currentBwe)
     {
         if (previousBwe == -1 || currentBwe == -1)
@@ -613,7 +613,7 @@ public class BitrateController
                 .addField("bwe_bps", newBandwidthBps));
         }
 
-        if (!isLargerThanBweThreshold(lastBwe, newBandwidthBps))
+        if (!changeIsLargerThanThreshold(lastBwe, newBandwidthBps))
         {
             logger.debug("New bandwidth (" + newBandwidthBps
                 + ") is not significantly " +
