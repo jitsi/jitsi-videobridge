@@ -159,7 +159,7 @@ public class BitrateController
      * The default value of the bandwidth change threshold above which we react
      * with a new bandwidth allocation.
      */
-    private static final int BWE_CHANGE_THRESHOLD_PCT_DEFAULT = 15;
+    private static final int BWE_CHANGE_THRESHOLD_PCT_DEFAULT = -15;
 
     /**
      * The ConfigurationService to get config values from.
@@ -363,8 +363,8 @@ public class BitrateController
         {
             return true;
         }
-        return Math.abs(previousBwe - currentBwe)
-            >= previousBwe * BWE_CHANGE_THRESHOLD_PCT / 100;
+        return previousBwe - currentBwe
+            < previousBwe * BWE_CHANGE_THRESHOLD_PCT / 100;
     }
 
     /**
@@ -605,13 +605,14 @@ public class BitrateController
             // do not update the bitrate allocation. The goal is to limit
             // the resolution changes due to bandwidth estimation changes,
             // as often resolution changes can negatively impact user
-            // experience.
+            // experience, at the risk of clogging the receiver pipe.
         }
         else
         {
             if (logger.isDebugEnabled())
             {
-                logger.debug(destinationEndpoint.getID() + " bandwidth has changed, updating");
+                logger.debug(destinationEndpoint.getID() +
+                        " bandwidth has changed, updating");
             }
 
             lastBwe = newBandwidthBps;
