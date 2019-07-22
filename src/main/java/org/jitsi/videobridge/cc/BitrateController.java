@@ -855,6 +855,12 @@ public class BitrateController
                 adaptiveTrackProjection.addPayloadType(payloadType);
             }
 
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(
+                    "new track projection for " + trackBitrateAllocation.track);
+            }
+
             // Route all encodings to the specified bitrate controller.
             for (RTPEncodingDesc rtpEncoding : rtpEncodings)
             {
