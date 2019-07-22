@@ -205,7 +205,7 @@ public class BandwidthProbing
             DiagnosticContext diagnosticContext
                 = videoStreamImpl.getDiagnosticContext();
             timeSeriesLogger.trace(diagnosticContext
-                    .makeTimeSeriesPoint("out_padding")
+                    .makeTimeSeriesPoint("sent_padding")
                     .addField("padding_bps", paddingBps)
                     .addField("total_ideal_bps", totalIdealBps)
                     .addField("total_target_bps", totalTargetBps)

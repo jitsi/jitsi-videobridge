@@ -418,6 +418,14 @@ public class BitrateController
      */
     public void update(long bweBps)
     {
+        if (timeSeriesLogger.isTraceEnabled())
+        {
+            VideoMediaStreamImpl destStream
+                = (VideoMediaStreamImpl) dest.getStream();
+            timeSeriesLogger.trace(destStream.getDiagnosticContext()
+                    .makeTimeSeriesPoint("new_bwe")
+                    .addField("bwe_bps", bweBps));
+        }
         update(null, bweBps);
     }
 
@@ -579,7 +587,7 @@ public class BitrateController
                                 trackBitrateAllocation.oversending)
                             .addField("preferred_idx",
                                 trackBitrateAllocation.ratedPreferredIdx)
-                            .addField("endpoint_id",
+                            .addField("remote_endpoint_id",
                                 trackBitrateAllocation.endpointID)
                             .addField("ideal_bps", trackIdealBps));
                     }
@@ -620,10 +628,10 @@ public class BitrateController
             DiagnosticContext diagnosticContext
                 = destStream.getDiagnosticContext();
             timeSeriesLogger.trace(diagnosticContext
-                    .makeTimeSeriesPoint("video_quality", nowMs)
+                    .makeTimeSeriesPoint("did_update", nowMs)
                     .addField("total_target_idx", totalTargetIdx)
                     .addField("total_ideal_idx", totalIdealIdx)
-                    .addField("available_bps", bweBps)
+                    .addField("bwe_bps", bweBps)
                     .addField("total_target_bps", totalTargetBps)
                     .addField("total_ideal_bps", totalIdealBps));
         }
