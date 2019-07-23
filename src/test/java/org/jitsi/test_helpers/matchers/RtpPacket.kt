@@ -17,9 +17,10 @@ package org.jitsi.test_helpers.matchers
 
 import io.kotlintest.Matcher
 import io.kotlintest.Result
-import org.jitsi.rtp.ByteArrayBuffer
+import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.utils.ByteArrayBuffer
 
 fun RtpPacket.getPayload(): ByteArrayBuffer {
     return RtpPacket(buffer, payloadOffset, payloadLength)

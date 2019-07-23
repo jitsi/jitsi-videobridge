@@ -17,7 +17,8 @@ package org.jitsi.test_helpers.matchers
 
 import io.kotlintest.Matcher
 import io.kotlintest.Result
-import org.jitsi.rtp.ByteArrayBuffer
+import org.jitsi.rtp.extensions.toHex
+import org.jitsi.utils.ByteArrayBuffer
 
 fun ByteArrayBuffer.hasSameContentAs(other: ByteArrayBuffer): Boolean {
     if (other.length != length) {

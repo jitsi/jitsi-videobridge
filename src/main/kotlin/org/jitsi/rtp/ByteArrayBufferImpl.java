@@ -17,11 +17,12 @@
 package org.jitsi.rtp;
 
 import org.jitsi.rtp.util.*;
+import org.jitsi.utils.*;
 
 //TODO documentation
-public abstract class ByteArrayBuffer
+public abstract class ByteArrayBufferImpl
+    implements ByteArrayBuffer
 {
-    private static final char[] HEX_CHARS = "0123456789ABCDEF".toCharArray();
 
     public byte[] buffer;
 
@@ -29,14 +30,14 @@ public abstract class ByteArrayBuffer
 
     public int length;
 
-    public ByteArrayBuffer(byte[] buffer, int offset, int length)
+    public ByteArrayBufferImpl(byte[] buffer, int offset, int length)
     {
         this.buffer = buffer;
         this.offset = offset;
         this.length = length;
     }
 
-    public ByteArrayBuffer()
+    public ByteArrayBufferImpl()
     {
         this.buffer = new byte[0];
         this.offset = 0;
@@ -111,7 +112,7 @@ public abstract class ByteArrayBuffer
 
 
     /**
-     * Grows the internal buffer of this {@code ByteArrayBuffer}.
+     * Grows the internal buffer of this {@code ByteArrayBufferImpl}.
      *
      * This will change the data buffer of this packet but not the length of the
      * valid data. Use this to grow the internal buffer to avoid buffer
@@ -152,8 +153,6 @@ public abstract class ByteArrayBuffer
             this.length = 0;
     }
 
-
-
     /**
      * @param buffer the buffer to set
      */
@@ -162,26 +161,9 @@ public abstract class ByteArrayBuffer
         this.buffer = buffer;
     }
 
-    public String toHex()
+    @Override
+    public boolean isInvalid()
     {
-        StringBuilder sb = new StringBuilder();
-        int position = 0;
-
-        for (int i = offset; i < (offset + length) && i < buffer.length; ++i)
-        {
-            int octet = buffer[i];
-            int firstIndex = (octet & 0xF0) >> 4;
-            int secondIndex = octet & 0x0F;
-            sb.append(HEX_CHARS[firstIndex]);
-            sb.append(HEX_CHARS[secondIndex]);
-            if ((position + 1) % 16 == 0) {
-                sb.append("\n");
-            } else if ((position + 1) % 4 == 0) {
-                sb.append(" ");
-            }
-            position++;
-        }
-
-        return sb.toString();
+        return false;
     }
 }

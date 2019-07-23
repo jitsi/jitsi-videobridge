@@ -16,7 +16,7 @@
 
 package org.jitsi.rtp.util
 
-import org.jitsi.rtp.ByteArrayBuffer
+import org.jitsi.utils.ByteArrayBuffer
 import org.jitsi.rtp.extensions.bytearray.getInt
 
 class SrtpUtils {

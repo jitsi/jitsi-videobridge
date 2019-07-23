@@ -23,7 +23,7 @@ abstract class Packet(
     buffer: ByteArray,
     offset: Int,
     length: Int
-) : ByteArrayBuffer(buffer, offset, length), Cloneable {
+) : ByteArrayBufferImpl(buffer, offset, length), Cloneable {
 
     inline fun <OtherType : Packet> toOtherType(otherTypeCreator: (ByteArray, Int, Int) -> OtherType): OtherType =
         otherTypeCreator(buffer, offset, length)
