@@ -28,6 +28,7 @@ import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.cc.vp8.*;
 
 import java.lang.ref.*;
+import java.util.*;
 
 /**
  * Filters the packets coming from a specific {@link MediaStreamTrackDesc}
@@ -192,18 +193,23 @@ public class AdaptiveTrackProjection
             MediaStreamTrackDesc sourceTrack = getSource();
             if (sourceTrack != null)
             {
+                MediaStreamTrackReceiver mediaStreamTrackReceiver
+                    = sourceTrack.getMediaStreamTrackReceiver();
+
                 logger.warn(
-                    "Dropping an RTP packet, because the SSRC has not " +
-                        "been signaled " +
-                        sourceTrack
-                            .getMediaStreamTrackReceiver()
-                            .getStream().packetToString(rtpPacket));
+                    "Dropping an RTP packet, because egress was unable " +
+                        "to find an encoding for raw packet " +
+                        mediaStreamTrackReceiver
+                            .getStream().packetToString(rtpPacket)
+                        + ". Ingress is aware of these tracks: "
+                        + Arrays.toString(
+                            mediaStreamTrackReceiver.getMediaStreamTracks()));
             }
             else
             {
                 logger.warn(
-                    "Dropping an RTP packet. Source track is null and the SSRC " +
-                        "has not been signaled " + rtpPacket);
+                    "Dropping an RTP packet, because egress was unable " +
+                        "to find an encoding for raw packet " + rtpPacket);
             }
 
             return false;
