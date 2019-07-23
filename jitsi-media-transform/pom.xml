@@ -91,12 +91,6 @@
             <version>2.1.0</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>io.pkts</groupId>
-            <artifactId>pkts-core</artifactId>
-            <version>3.0.3</version>
-            <scope>compile</scope>
-        </dependency>
     </dependencies>
 
     <build>
