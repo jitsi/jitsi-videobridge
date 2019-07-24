@@ -8,6 +8,7 @@ Standards-Version: 3.9.3
 Homepage: https://jitsi.org/videobridge
 
 Package: jitsi-videobridge2
+Replaces: jitsi-videobridge (<= 1200-1)
 Architecture: any
 Pre-Depends: openjdk-8-jre-headless | openjdk-11-jre-headless
 Depends: ${misc:Depends}, procps
