@@ -159,7 +159,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-utils</artifactId>
-      <version>1.0-20190401.122850-7</version>
+      <version>1.0-20190723.110846-12</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
