@@ -212,23 +212,11 @@ public class AdaptiveTrackProjection
 
         if (videoRtpPacket.getQualityIndex() < 0)
         {
-            logger.warn(
-                "Dropping an RTP packet, no quality index (SSRC=" +
-                    videoRtpPacket.getSsrc() + ").");
             MediaStreamTrackDesc sourceTrack = getSource();
-            if (sourceTrack != null)
-            {
-                logger.warn(
-                    "Dropping an RTP packet, because the SSRC has not " +
-                        "been signaled " + sourceTrack + ", " + videoRtpPacket);
-            }
-            else
-            {
-                logger.warn(
-                    "Dropping an RTP packet. Source track is null and the SSRC " +
-                        "has not been signaled " + videoRtpPacket);
-            }
-
+            logger.warn(
+                "Dropping an RTP packet, because egress was unable to find " +
+                "an associated encoding. sourceTrack=" + sourceTrack +
+                ", rtpPacket=" + videoRtpPacket);
             return false;
         }
 
