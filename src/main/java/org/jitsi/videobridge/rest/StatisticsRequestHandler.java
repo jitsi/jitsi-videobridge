@@ -276,8 +276,17 @@ class StatisticsRequestHandler
                 return statsJsonObjets != null
                         ? statsJsonObjets : new JSONObject();
             }
+            else
+            {
+                logger.warn(
+                    "No StatsManager, statistics not enabled in the config?");
+            }
         }
-        logger.warn("No bundle context, can not get statistics.");
-        return null;
+        else
+        {
+            logger.warn("No bundle context, can not get statistics.");
+        }
+
+        return new JSONObject();
     }
 }
