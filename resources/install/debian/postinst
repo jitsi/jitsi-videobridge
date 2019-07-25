@@ -152,6 +152,12 @@ case "$1" in
         # OpenVZ containers do not typically allow permission to modify the
         # kernel with sysctl config values.
         sysctl --system || true
+
+        # Make sure the service is enabled, on upgrade from old to new bridge
+        # we see the service as masked (probably as we are breaking the old package)
+        if [ -d /run/systemd/system ]; then
+            systemctl enable jitsi-videobridge
+        fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
