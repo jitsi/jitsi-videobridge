@@ -22,3 +22,4 @@ ExecStartPost=/bin/bash -c "echo $MAINPID > /var/run/jitsi-videobridge/jitsi-vid
 [Install]
 WantedBy=multi-user.target
 Alias=jvb.service
+Alias=jitsi-videobridge.service
