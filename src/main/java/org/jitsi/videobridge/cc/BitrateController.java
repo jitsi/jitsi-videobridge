@@ -356,15 +356,33 @@ public class BitrateController
      * @return true if the bandwidth has changed above the configured threshold,
      * false otherwise.
      */
-    private static boolean isLargerThanBweThreshold(
+    private static boolean changeIsLargerThanThreshold(
         long previousBwe, long currentBwe)
     {
         if (previousBwe == -1 || currentBwe == -1)
         {
             return true;
         }
-        return Math.abs(previousBwe - currentBwe)
-            >= previousBwe * BWE_CHANGE_THRESHOLD_PCT / 100;
+
+        long deltaBwe = currentBwe - previousBwe;
+
+        // if the bwe has increased, we should act upon it, otherwise
+        // we may end up in this broken situation: Suppose that the target
+        // bitrate is 2.5Mbps, and that the last bitrate allocation was
+        // performed with a 2.4Mbps bandwidth esitmate.  The bridge keeps
+        // probing and, suppose that, eventually the bandwidth estimate reaches
+        // 2.6Mbps, which is plenty to accomodate the target bitrat; but the
+        // minimum bandwidth estimate that would trigger a new bitrate
+        // allocation is 2.4Mbps + 2.4Mbps * 15% = 2.76Mbps.
+        //
+        // if, on the other hand, the bwe has decreased, we require a 15%
+        // (configurable) drop at last in order to update the bitrate
+        // allocation. This is an ugly hack to prevent too many resolution/UI
+        // changes in case the bridge produces too low bandwdith estimate, at
+        // the risk of clogging the receiver's pipe.
+
+        return deltaBwe > 0
+            ||  deltaBwe < -1 * previousBwe * BWE_CHANGE_THRESHOLD_PCT / 100;
     }
 
     /**
@@ -595,7 +613,7 @@ public class BitrateController
                 .addField("bwe_bps", newBandwidthBps));
         }
 
-        if (!isLargerThanBweThreshold(lastBwe, newBandwidthBps))
+        if (!changeIsLargerThanThreshold(lastBwe, newBandwidthBps))
         {
             logger.debug("New bandwidth (" + newBandwidthBps
                 + ") is not significantly " +
@@ -605,13 +623,14 @@ public class BitrateController
             // do not update the bitrate allocation. The goal is to limit
             // the resolution changes due to bandwidth estimation changes,
             // as often resolution changes can negatively impact user
-            // experience.
+            // experience, at the risk of clogging the receiver pipe.
         }
         else
         {
             if (logger.isDebugEnabled())
             {
-                logger.debug(destinationEndpoint.getID() + " bandwidth has changed, updating");
+                logger.debug(destinationEndpoint.getID() +
+                        " bandwidth has changed, updating");
             }
 
             lastBwe = newBandwidthBps;
