@@ -154,9 +154,9 @@ case "$1" in
         sysctl --system || true
 
         # Make sure the service is enabled, on upgrade from old to new bridge
-        # we see the service as masked (probably as we are breaking the old package)
+        # we see the service as masked (failing to stop on remove)
         if [ -d /run/systemd/system ]; then
-            systemctl enable jitsi-videobridge
+            systemctl unmask jitsi-videobridge
         fi
     ;;
 
