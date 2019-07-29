@@ -23,7 +23,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>rtp</artifactId>
-            <version>1.0-20190723.115603-38</version>
+            <version>1.0-0-gfde2add</version>
         </dependency>
         <dependency>
             <groupId>org.jitsi</groupId>
