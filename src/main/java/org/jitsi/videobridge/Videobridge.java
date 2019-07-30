@@ -24,17 +24,18 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
-import org.jitsi.rtp.util.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging.Logger;
 import org.jitsi.utils.queue.*;
+import org.jitsi.utils.version.Version;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.transport.*;
+import org.jitsi.videobridge.version.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -1215,6 +1216,14 @@ public class Videobridge
         json.put("dropped_packets", countingErrorHandler.getNumPacketsDropped());
         json.put("exceptions", countingErrorHandler.getNumExceptions());
         return json;
+    }
+
+    /**
+     * Gets the version of the jitsi-videobridge application.
+     */
+    public Version getVersion()
+    {
+        return CurrentVersionImpl.VERSION;
     }
 
     /**
