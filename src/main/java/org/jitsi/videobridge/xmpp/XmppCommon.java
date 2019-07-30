@@ -16,7 +16,7 @@
 package org.jitsi.videobridge.xmpp;
 
 import org.jitsi.osgi.*;
-import org.jitsi.service.version.*;
+import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.health.*;
@@ -234,8 +234,8 @@ class XmppCommon
                 XMPPError.getBuilder(XMPPError.Condition.service_unavailable));
         }
 
-        org.jitsi.service.version.Version
-            currentVersion = versionService.getCurrentVersion();
+        org.jitsi.utils.version.Version currentVersion
+                = versionService.getCurrentVersion();
 
         if (currentVersion == null)
         {

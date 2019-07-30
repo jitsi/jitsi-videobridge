@@ -178,7 +178,7 @@ public class CallStatsIOTransport
         bundleContext.addServiceListener(serviceListener);
 
         StatsServiceFactory.getInstance().createStatsService(
-            bundleContext, appId, appSecret, keyId, keyPath, bridgeId);
+            bundleContext, appId, appSecret, keyId, keyPath, bridgeId, false);
     }
 
     /**

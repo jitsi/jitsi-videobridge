@@ -16,7 +16,7 @@
     <assembly.skipAssembly>true</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
     <jetty.version>9.4.15.v20190215</jetty.version>
-    <jitsi-desktop.version>2.13.b5f2aa0</jitsi-desktop.version>
+    <jitsi-desktop.version>2.13.cb5485e</jitsi-desktop.version>
     <kotlin.version>1.2.41</kotlin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <slf4j.version>1.7.26</slf4j.version>
@@ -83,12 +83,12 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-media-transform</artifactId>
-      <version>1.0-20190724.135047-44</version>
+      <version>1.0-0-ge00b3bb</version>
     </dependency>
     <dependency>
       <groupId>org.jitsi</groupId>
       <artifactId>rtp</artifactId>
-      <version>1.0-20190723.115603-38</version>
+      <version>1.0-0-gfde2add</version>
     </dependency>
     <dependency>
       <groupId>org.jitsi</groupId>
@@ -103,7 +103,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco</artifactId>
-      <version>1.1-20190509.130302-15</version>
+      <version>1.1-1-ge7184ab</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -114,22 +114,22 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-stats</artifactId>
-      <version>1.0-20190407.140545-7</version>
+      <version>1.0-1-g944da7a</version>
     </dependency>
      <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-xmpp-extensions</artifactId>
-      <version>1.0-20190409.181735-3</version>
+      <version>1.0-0-gf132d05</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-utils</artifactId>
-      <version>1.0-20190723.110846-12</version>
+      <version>1.0-1-gaca0e20</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>libjitsi</artifactId>
-      <version>1.0-20190724.114721-390</version>
+      <version>1.0-0-gb3296cf</version>
     </dependency>
 
     <dependency>
