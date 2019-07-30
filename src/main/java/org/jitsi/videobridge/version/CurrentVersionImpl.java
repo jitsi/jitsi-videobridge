@@ -58,7 +58,7 @@ public class CurrentVersionImpl
     /**
      * The currently running version.
      */
-    static final Version VERSION
+    public static final Version VERSION
         = new VersionImpl(
                 "JVB",
                 VERSION_MAJOR,

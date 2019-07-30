@@ -22,9 +22,9 @@ import java.util.concurrent.locks.*;
 
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
-import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.utils.version.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.octo.*;
@@ -344,6 +344,11 @@ public class VideobridgeStatistics
      * The name of the "region" statistic.
      */
     public static final String REGION = "region";
+
+    /**
+     * The name of the "version" statistic.
+     */
+    public static final String VERSION = "version";
 
     /**
      * The currently configured region.
@@ -761,6 +766,7 @@ public class VideobridgeStatistics
             {
                 unlockedSetStat(REGION, region);
             }
+            unlockedSetStat(VERSION, videobridge.getVersion().toString());
         }
         finally
         {
