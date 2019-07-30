@@ -77,7 +77,14 @@ public class OctoRelay
                 ". Receive buffer size " + s.getReceiveBufferSize() +
                 " (asked for " + SO_RCVBUF + ").");
 
-        socket = new MultiplexingDatagramSocket(s, true /* persistent */);
+        socket = new MultiplexingDatagramSocket(s, true /* persistent */)
+        {
+            @Override
+            public void setReceiveBufferSize(int size)
+            {
+                // We want to keep the buffer size to the one we set above.
+            }
+        };
         this.port = port;
         String id = address + ":" + port;
         setRelayId(id);
