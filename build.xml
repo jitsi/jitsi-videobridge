@@ -200,10 +200,50 @@
 
     <!-- Jitsi Videobridge Version -->
     <target name="version">
+        <!-- extracts major version -->
+        <loadresource property="version.major">
+            <propertyresource name="label"/>
+            <filterchain>
+                <tokenfilter>
+                    <filetokenizer/>
+                    <replaceregex pattern="\..*\-.*" replace="" />
+                </tokenfilter>
+            </filterchain>
+        </loadresource>
+        <!-- extracts minor version -->
+        <loadresource property="version.minor">
+            <propertyresource name="label"/>
+            <filterchain>
+                <tokenfilter>
+                    <filetokenizer/>
+                    <replaceregex pattern="\d*\." replace="" />
+                    <replaceregex pattern="-\d*" replace="" />
+                </tokenfilter>
+            </filterchain>
+        </loadresource>
+        <!-- extracts build id -->
+        <loadresource property="version.buildid">
+            <propertyresource name="label"/>
+            <filterchain>
+                <tokenfilter>
+                    <filetokenizer/>
+                    <replaceregex pattern=".*\-" replace="" />
+                </tokenfilter>
+            </filterchain>
+        </loadresource>
+
         <!-- set the build id according to the cruisecontrol property -->
         <replaceregexp file="${src}/org/jitsi/videobridge/version/CurrentVersionImpl.java"
+                       match="VERSION_MAJOR = (.+)"
+                       replace="VERSION_MAJOR = ${version.major};"
+                       byline="true"/>
+        <replaceregexp file="${src}/org/jitsi/videobridge/version/CurrentVersionImpl.java"
+                       match="VERSION_MINOR = (.+)"
+                       replace="VERSION_MINOR = ${version.minor};"
+                       byline="true"/>
+        <replaceregexp file="${src}/org/jitsi/videobridge/version/CurrentVersionImpl.java"
                  match="NIGHTLY_BUILD_ID = (.+)"
-                 replace="NIGHTLY_BUILD_ID = &quot;${label}&quot;;"
+                 replace="NIGHTLY_BUILD_ID = &quot;${version.buildid}&quot;;"
                  byline="true"/>
     </target>
 
