@@ -227,24 +227,25 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
             conference.endpointTracksChanged(null);
         }
 
-        allSources.forEach(source ->
+        endpointIds.forEach(endpointId ->
         {
-            String owner = MediaStreamTrackFactory.getOwner(source);
-            if (owner == null)
-            {
-                logger.warn("Source has no owner. Can not add receive SSRC.");
-                return;
-            }
+            Set<Long> endpointSsrcs =
+                allSources.stream()
+                    .filter(source -> endpointId.equals(
+                            MediaStreamTrackFactory.getOwner(source)))
+                    .filter(Objects::nonNull)
+                    .map(SourcePacketExtension::getSSRC)
+                    .collect(Collectors.toSet());
 
-            AbstractEndpoint endpoint = conference.getEndpoint(owner);
-            if (endpoint == null)
+            AbstractEndpoint endpoint = conference.getEndpoint(endpointId);
+            if (endpoint instanceof OctoEndpoint)
             {
-                logger.warn(
-                    "No endpoint for a source's owner. Can not add receive SSRC.");
-                return;
+                ((OctoEndpoint) endpoint).setReceiveSsrcs(endpointSsrcs);
             }
-
-            endpoint.addReceiveSsrc(source.getSSRC());
+            else
+            {
+                logger.warn("No OctoEndpoint for SSRCs");
+            }
         });
     }
 

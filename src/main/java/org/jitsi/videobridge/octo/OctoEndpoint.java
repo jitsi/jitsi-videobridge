@@ -35,7 +35,7 @@ public class OctoEndpoint
     /**
      * The SSRCs that this endpoint has.
      */
-    private final Set<Long> receiveSsrcs = new HashSet<>();
+    private Set<Long> receiveSsrcs = new HashSet<>();
 
     /**
      * The {@link OctoEndpoints} instance for the conference.
@@ -81,7 +81,7 @@ public class OctoEndpoint
     @Override
     public boolean shouldExpire()
     {
-        return ArrayUtils.isNullOrEmpty(getMediaStreamTracks());
+        return receiveSsrcs.isEmpty();
     }
 
     /**
@@ -121,7 +121,7 @@ public class OctoEndpoint
     @Override
     public void addReceiveSsrc(long ssrc)
     {
-        receiveSsrcs.add(ssrc);
+        // This is controlled through setReceiveSsrcs.
     }
 
     /**
@@ -139,4 +139,11 @@ public class OctoEndpoint
         super.expire();
     }
 
+    /**
+     * Sets the set SSRCs we expect to receive from this endpoint.
+     */
+    void setReceiveSsrcs(Set<Long> ssrcs)
+    {
+        receiveSsrcs = new HashSet<>(ssrcs);
+    }
 }
