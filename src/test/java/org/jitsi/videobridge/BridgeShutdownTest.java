@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.jitsi.meet.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.packet.IQ;
@@ -78,10 +79,12 @@ public class BridgeShutdownTest
     public void testShutdown()
         throws Exception
     {
-        TestShutdownRunnable testShutdownRunnable
-            = new TestShutdownRunnable();
+        TestShutdownService testShutdownService
+            = new TestShutdownService();
 
-        bridge.setShutdownRunnable(testShutdownRunnable);
+        bridge.getBundleContext().registerService(
+                ShutdownService.class,
+                testShutdownService, null);
 
         Jid focusJid = JidCreate.from("focusJid");
 
@@ -169,7 +172,7 @@ public class BridgeShutdownTest
         assertTrue(
             "The bridge should trigger a shutdown after last conference is "
                 + "expired",
-            testShutdownRunnable.shutdownStarted);
+            testShutdownService.shutdownStarted);
     }
 
     private void validateErrorResponse(IQ respIqRaw)
@@ -204,13 +207,12 @@ public class BridgeShutdownTest
                 ColibriConferenceIQ.GracefulShutdown.NAMESPACE));
     }
 
-    class TestShutdownRunnable
-        implements Runnable
+    class TestShutdownService implements ShutdownService
     {
         boolean shutdownStarted = false;
 
         @Override
-        public void run()
+        public void beginShutdown()
         {
             shutdownStarted = true;
         }
