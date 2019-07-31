@@ -20,6 +20,7 @@ import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.meet.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.util.*;
@@ -197,12 +198,6 @@ public class Videobridge
      * health checks on this videobridge.
      */
     private Health health;
-
-    /**
-     * The function to run when the bridge is to shut down. Defined here
-     * because it needs to be replaced for testing.
-     */
-    private Runnable shutdownRunnable = () -> System.exit(0);
 
     /**
      * The shim which handles Colibri-related logic for this
@@ -788,7 +783,14 @@ public class Videobridge
             if (conferences.isEmpty())
             {
                 logger.info("Videobridge is shutting down NOW");
-                shutdownRunnable.run();
+                ShutdownService shutdownService
+                        = ServiceUtils2.getService(
+                            bundleContext,
+                            ShutdownService.class);
+                if (shutdownService != null)
+                {
+                    shutdownService.beginShutdown();
+                }
             }
         }
     }
@@ -1106,18 +1108,6 @@ public class Videobridge
             }
 
             System.clearProperty(RtxTransformer.DISABLE_NACK_TERMINATION_PNAME);
-        }
-    }
-
-    /**
-     * Sets the runnable to run when the bridge shuts down.
-     * @param shutdownRunnable
-     */
-    public void setShutdownRunnable(Runnable shutdownRunnable)
-    {
-        if (shutdownRunnable != null)
-        {
-            this.shutdownRunnable = shutdownRunnable;
         }
     }
 
