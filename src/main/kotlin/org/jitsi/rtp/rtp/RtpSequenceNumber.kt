@@ -23,8 +23,22 @@ import org.jitsi.rtp.util.RtpUtils
  * an Int but takes rollover into account for all operations.
  */
 inline class RtpSequenceNumber(val value: Int) : Comparable<RtpSequenceNumber> {
-    operator fun inc(): RtpSequenceNumber = plus(1)
-    operator fun dec(): RtpSequenceNumber = minus(1)
+    // These are intentionally not implemented, because using them as operators leads to inconsistent results. The
+    // following code:
+    // var n1 = RtpSequenceNumber(65535)
+    // var n2 = RtpSequenceNumber(65535)
+    // ++n1
+    // n2++
+    // System.err.println("n1=$n1, n2=$n2")
+    //
+    // Produces this result:
+    // n1=RtpSequenceNumber(value=65536) n2=RtpSequenceNumber(value=0)
+    //
+    // Using "+= 1" yields the expected result. Note that if the same code above is in a "should" block, the result is
+    // different (as expected). So if/when this is brought back, it should be tested outside a regular "should" block!
+    //
+    // operator fun inc(): RtpSequenceNumber = plus(1)
+    // operator fun dec(): RtpSequenceNumber = minus(1)
 
     operator fun plus(num: Int): RtpSequenceNumber = RtpSequenceNumber((value + num) and 0xFFFF)
     operator fun plus(seqNum: RtpSequenceNumber): RtpSequenceNumber =

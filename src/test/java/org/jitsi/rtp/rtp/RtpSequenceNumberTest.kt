@@ -27,9 +27,9 @@ class RtpSequenceNumberTest : ShouldSpec() {
     init {
         "rollover" {
             var num = RtpSequenceNumber(65535)
-            "via increment" {
+            "via add-and-assign" {
                 should("work correctly") {
-                    num++
+                    num += 1
                     num shouldBe RtpSequenceNumber(0)
                 }
             }
@@ -41,9 +41,9 @@ class RtpSequenceNumberTest : ShouldSpec() {
         }
         "reverse rollover" {
             var num = RtpSequenceNumber(0)
-            "via decrement" {
+            "via subtract-and-assign" {
                 should("work correctly") {
-                    num--
+                    num -= 1
                     num shouldBe RtpSequenceNumber(65535)
                 }
             }

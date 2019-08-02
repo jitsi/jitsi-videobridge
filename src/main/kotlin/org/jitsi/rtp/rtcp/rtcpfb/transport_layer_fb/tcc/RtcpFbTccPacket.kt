@@ -110,7 +110,7 @@ class RtcpFbTccPacketBuilder(
             while (next_seq_no != sequence_number) {
                 if (!AddDeltaSize(0))
                     return false
-                next_seq_no++
+                next_seq_no += 1
             }
         }
         val delta_size = if (delta >= 0 && delta <= 0xff) 1 else 2
