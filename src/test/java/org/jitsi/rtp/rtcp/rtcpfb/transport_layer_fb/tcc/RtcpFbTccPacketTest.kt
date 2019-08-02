@@ -32,30 +32,34 @@ class RtcpFbTccPacketTest : ShouldSpec() {
         0x32, 0x0f, 0x22, 0x3a,
         // Media source SSRC = 2397376430
         0x8e, 0xe5, 0x0f, 0xae,
-        // Base seq num = 1969, packet status count = 9
-        0x07, 0xb1, 0x00, 0x09,
+        // Base seq num = 0xfffa, packet status count = 9
+        0xff, 0xfa, 0x00, 0x09,
         // Reference Time: 1683633 = 107752512ms, feedback packet count = 87
         0x19, 0xb0, 0xb1, 0x57,
         // Chunks
         // RLE, small delta, length = 9
         0x20, 0x09,
-        // Deltas (9): 54, 0, 6, 5, 6, 5, 6, 5, 6
+        // Deltas (9), one byte each
         0xd8, 0x00,
         0x18, 0x14, 0x18, 0x14,
         0x18, 0x14, 0x18,
         //  Recv delta padding
         0x00
     )
+
+    /**
+     * These correspond to the Deltas section above.
+     */
     val expectedTccRlePacketInfo = mapOf<Int, Short> (
-        1969 to 54.toTicks(),
-        1970 to 0.toTicks(),
-        1971 to 6.toTicks(),
-        1972 to 5.toTicks(),
-        1973 to 6.toTicks(),
-        1974 to 5.toTicks(),
-        1975 to 6.toTicks(),
-        1976 to 5.toTicks(),
-        1977 to 6.toTicks()
+        0xfffa to 0xd8,
+        0xfffb to 0x00,
+        0xfffc to 0x18,
+        0xfffd to 0x14,
+        0xfffe to 0x18,
+        0xffff to 0x14,
+        0x0000 to 0x18,
+        0x0001 to 0x14,
+        0x0002 to 0x18
     )
 
     // This also has a negative delta

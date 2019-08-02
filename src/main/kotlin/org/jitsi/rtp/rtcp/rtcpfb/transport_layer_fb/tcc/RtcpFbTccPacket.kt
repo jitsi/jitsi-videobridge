@@ -273,7 +273,7 @@ class RtcpFbTccPacket(
     )
 
     private val data: TccMemberData by lazy(LazyThreadSafetyMode.NONE) {
-        val base_seq_no_ = getBaseSeqNum(buffer, offset)
+        val base_seq_no_ = RtpSequenceNumber(getBaseSeqNum(buffer, offset))
         val status_count = getPacketStatusCount(buffer, offset)
         val encoded_chunks_ = mutableListOf<Chunk>()
         val last_chunk_ = LastChunk()
@@ -315,13 +315,13 @@ class RtcpFbTccPacket(
                     0 -> { /* No-op */ }
                     1 -> {
                         val delta = buffer[index]
-                        packets_.add(ReceivedPacket(seq_no, delta.toPositiveShort()))
+                        packets_.add(ReceivedPacket(seq_no.value, delta.toPositiveShort()))
                         last_timestamp_us_ += delta * kDeltaScaleFactor
                         index += delta_size
                     }
                     2 -> {
                         val delta = buffer.getShortAsInt(index)
-                        packets_.add(ReceivedPacket(seq_no, delta.toShort()))
+                        packets_.add(ReceivedPacket(seq_no.value, delta.toShort()))
                         last_timestamp_us_ += delta * kDeltaScaleFactor
                         index += delta_size
                     }
@@ -329,19 +329,19 @@ class RtcpFbTccPacket(
                         throw Exception("Warning: invalid delta size for seq_no $seq_no")
                     }
                 }
-                ++seq_no
+                seq_no += 1
             }
         } else {
             // The packet does not contain receive deltas
             for (delta_size in delta_sizes) {
                 // Use delta sizes to detect if packet was received.
                 if (delta_size > 0) {
-                    packets_.add(ReceivedPacket(seq_no, 0))
+                    packets_.add(ReceivedPacket(seq_no.value, 0))
                 }
-                ++seq_no
+                seq_no += 1
             }
         }
-        TccMemberData(base_seq_no_, base_time_ticks_, encoded_chunks_, last_chunk_, num_seq_no_, last_timestamp_us_, packets_)
+        TccMemberData(base_seq_no_.value, base_time_ticks_, encoded_chunks_, last_chunk_, num_seq_no_, last_timestamp_us_, packets_)
     }
 
     // All but last encoded packet chunks.
