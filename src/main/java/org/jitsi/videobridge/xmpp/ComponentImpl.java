@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
 package org.jitsi.videobridge.xmpp;
 
 import java.util.*;
-
-import org.jitsi.xmpp.extensions.colibri.*;
-import net.java.sip.communicator.util.*;
 
 import org.jitsi.meet.*;
 import org.jitsi.osgi.*;
@@ -428,7 +425,7 @@ public class ComponentImpl
         // Schedule ping task
         // note: the task if stopped automatically on component shutdown
         ConfigurationService config
-            = ServiceUtils.getService(
+            = ServiceUtils2.getService(
                     bundleContext, ConfigurationService.class);
 
         loadConfig(config, "org.jitsi.videobridge");

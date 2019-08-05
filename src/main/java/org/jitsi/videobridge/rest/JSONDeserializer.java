@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,10 @@ import java.lang.reflect.*;
 import java.net.*;
 import java.util.*;
 
+import org.jitsi.utils.*;
 import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
-
-import org.jitsi.service.neomedia.*;
-import org.jitsi.utils.*;
 import org.json.simple.*;
 
 /**
@@ -423,8 +421,6 @@ final class JSONDeserializer
                 = conference.get(JSONSerializer.CHANNEL_BUNDLES);
             Object endpoints
                 = conference.get(JSONSerializer.ENDPOINTS);
-            Object recording
-                = conference.get(ColibriConferenceIQ.Recording.ELEMENT_NAME);
             Object strategy
                 = conference.get(ColibriConferenceIQ
                         .RTCPTerminationStrategy.ELEMENT_NAME);
@@ -456,11 +452,6 @@ final class JSONDeserializer
                 deserializeEndpoints(
                         (JSONArray) endpoints,
                         conferenceIQ);
-            }
-            // recording
-            if (recording != null)
-            {
-                deserializeRecording((JSONObject) recording, conferenceIQ);
             }
             if (strategy != null)
             {
@@ -756,36 +747,6 @@ final class JSONDeserializer
         }
     }
 
-    public static void deserializeRecording(JSONObject recording,
-                                            ColibriConferenceIQ conferenceIQ)
-    {
-        Object state
-            = recording.get(ColibriConferenceIQ.Recording.STATE_ATTR_NAME);
-        if (state == null)
-        {
-            return;
-        }
-
-        ColibriConferenceIQ.Recording recordingIQ
-                = new ColibriConferenceIQ.Recording(state.toString());
-
-        Object token
-            = recording.get(ColibriConferenceIQ.Recording.TOKEN_ATTR_NAME);
-        if (token != null)
-        {
-            recordingIQ.setToken(token.toString());
-        }
-
-        Object directory
-                = recording.get(ColibriConferenceIQ.Recording.DIRECTORY_ATTR_NAME);
-        if (directory != null)
-        {
-            recordingIQ.setDirectory(directory.toString());
-        }
-
-        conferenceIQ.setRecording(recordingIQ);
-    }
-
     public static ColibriConferenceIQ.SctpConnection deserializeSctpConnection(
             JSONObject sctpConnection,
             ColibriConferenceIQ.Content contentIQ)
@@ -1051,10 +1012,6 @@ final class JSONDeserializer
             if (IceUdpTransportPacketExtension.NAMESPACE.equals(xmlns))
             {
                 transportIQ = new IceUdpTransportPacketExtension();
-            }
-            else if (RawUdpTransportPacketExtension.NAMESPACE.equals(xmlns))
-            {
-                transportIQ = new RawUdpTransportPacketExtension();
             }
             else
             {

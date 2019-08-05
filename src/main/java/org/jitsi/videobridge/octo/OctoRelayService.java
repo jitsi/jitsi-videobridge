@@ -15,8 +15,9 @@
  */
 package org.jitsi.videobridge.octo;
 
-import net.java.sip.communicator.util.*;
+import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.utils.logging.*;
 import org.osgi.framework.*;
 
 import java.net.*;
@@ -44,8 +45,8 @@ public class OctoRelayService
         = "org.jitsi.videobridge.octo.BIND_ADDRESS";
         
     /**
-     * The name of the configuration property which controls the public address which 
-     * will be used as part of relayId.
+     * The name of the configuration property which controls the public address
+     * which will be used as part of relayId.
      */
     public static final String PUBLIC_ADDRESS_PNAME
         = "org.jitsi.videobridge.octo.PUBLIC_ADDRESS";
@@ -63,12 +64,6 @@ public class OctoRelayService
     private OctoRelay relay;
 
     /**
-     * The {@code ConfigurationService} which looks up values of configuration
-     * properties.
-     */
-    private ConfigurationService cfg;
-
-    /**
      * @return the {@link OctoRelay} managed by this
      * {@link OctoRelayService}.
      */
@@ -83,15 +78,15 @@ public class OctoRelayService
     @Override
     public void start(BundleContext bundleContext)
     {
-        cfg
-            = ServiceUtils.getService(
+        ConfigurationService cfg
+            = ServiceUtils2.getService(
                     bundleContext, ConfigurationService.class);
 
         String address = cfg.getString(ADDRESS_PNAME, null);
         String publicAddress = cfg.getString(PUBLIC_ADDRESS_PNAME, address);
         int port = cfg.getInt(PORT_PNAME, -1);
 
-        if (address != null && NetworkUtils.isValidPortNumber(port))
+        if (address != null && (1024 <= port && port <= 0xffff))
         {
             try
             {
@@ -123,13 +118,5 @@ public class OctoRelayService
         {
             relay.stop();
         }
-    }
-
-    /**
-     * @return the ID of the Octo relay managed by this {@link OctoRelayService}.
-     */
-    public String getRelayId()
-    {
-        return relay.getId();
     }
 }

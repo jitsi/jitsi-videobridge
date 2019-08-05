@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import org.osgi.framework.*;
 import javax.servlet.*;
 import javax.servlet.http.*;
 import java.io.*;
-import java.net.*;
 import java.util.*;
 
 /**
@@ -369,7 +368,6 @@ public class PublicRESTBundleActivator
                  *
                  * @param path the path to check
                  * @return the resource to server.
-                 * @throws MalformedURLException
                  */
                 @Override
                 public Resource getResource(String path)
@@ -609,6 +607,9 @@ public class PublicRESTBundleActivator
          */
         private final int targetPort;
 
+        /**
+         * Initializes a new {@link RedirectHandler}.
+         */
         RedirectHandler(String targetProtocol, int targetPort)
         {
             this.targetProtocol = targetProtocol;

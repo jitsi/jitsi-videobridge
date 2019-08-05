@@ -1,0 +1,25 @@
+[Unit]
+Description=Jitsi Videobridge
+After=network.target
+
+[Service]
+# allow bind to 80 and 443
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+EnvironmentFile=/etc/jitsi/videobridge/config
+Environment=LOGFILE=/var/log/jitsi/jvb.log
+User=jvb
+RuntimeDirectory=jitsi-videobridge
+RuntimeDirectoryMode=0750
+PIDFile=/var/run/jitsi-videobridge/jitsi-videobridge.pid
+# more threads for this process
+TasksMax=65000
+# allow more open files for this process
+LimitNPROC=65000
+LimitNOFILE=65000
+ExecStart=/bin/bash -c "exec /usr/share/jitsi-videobridge/jvb.sh --host=$${JVB_HOST:-localhost} --domain=${JVB_HOSTNAME} --port=${JVB_PORT} --secret=${JVB_SECRET} ${JVB_OPTS} < /dev/null >> ${LOGFILE} 2>&1"
+ExecStartPost=/bin/bash -c "echo $MAINPID > /var/run/jitsi-videobridge/jitsi-videobridge.pid"
+
+[Install]
+WantedBy=multi-user.target
+Alias=jvb.service
+Alias=jitsi-videobridge.service

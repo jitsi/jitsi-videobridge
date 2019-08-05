@@ -17,7 +17,7 @@ package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
-import org.jitsi.service.neomedia.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.util.*;
 
 /**
@@ -116,10 +116,10 @@ class VP8Frame
      * that was seen before the arrival of the first packet of this frame. This
      * is useful for piggybacking any mis-ordered packets.
      */
-    VP8Frame(@NotNull RawPacket firstPacketOfFrame,
+    VP8Frame(@NotNull VideoRtpPacket firstPacketOfFrame,
              int maxSequenceNumberSeenBeforeFirstPacket)
     {
-        this.ssrc = firstPacketOfFrame.getSSRCAsLong();
+        this.ssrc = firstPacketOfFrame.getSsrc();
         this.timestamp = firstPacketOfFrame.getTimestamp();
         this.startingSequenceNumber = firstPacketOfFrame.getSequenceNumber();
         this.maxSequenceNumberSeenBeforeFirstPacket
@@ -174,16 +174,25 @@ class VP8Frame
         return isTL0;
     }
 
+    /**
+     * Gets the SSRC.
+     */
     long getSSRCAsLong()
     {
         return ssrc;
     }
 
+    /**
+     * Gets the timestamp.
+     */
     long getTimestamp()
     {
         return timestamp;
     }
 
+    /**
+     * Gets the max sequence number.
+     */
     int getMaxSequenceNumber()
     {
         return maxSequenceNumber;
@@ -259,20 +268,20 @@ class VP8Frame
     }
 
     /**
-     * Determines whether the {@link RawPacket} that is specified as an argument
-     * is part of the VP8 picture that is represented by this
+     * Determines whether the {@link VideoRtpPacket} that is specified as an
+     * argument is part of the VP8 picture that is represented by this
      * {@link VP8Frame} instance.
      *
-     * @param pkt the {@link RawPacket} instance to check whether it's part of
-     * the VP8 picture that is represented by this {@link VP8Frame}
+     * @param pkt the {@link VideoRtpPacket} instance to check whether it's part
+     * of the VP8 picture that is represented by this {@link VP8Frame}
      * instance.
-     * @return true if the {@link RawPacket} that is specified as an argument
-     * is part of the VP8 picture that is represented by this
+     * @return true if the {@link VideoRtpPacket} that is specified as an
+     * argument is part of the VP8 picture that is represented by this
      * {@link VP8Frame} instance, false otherwise.
      */
-    private boolean matchesSSRC(@NotNull RawPacket pkt)
+    private boolean matchesSSRC(@NotNull VideoRtpPacket pkt)
     {
-        return ssrc == pkt.getSSRCAsLong();
+        return ssrc == pkt.getSsrc();
     }
 
     /**
@@ -282,7 +291,7 @@ class VP8Frame
      * @return true if the specified RTP packet is part of an older frame, false
      * otherwise.
      */
-    boolean matchesOlderFrame(@NotNull RawPacket pkt)
+    boolean matchesOlderFrame(@NotNull VideoRtpPacket pkt)
     {
         if (!matchesSSRC(pkt))
         {
@@ -301,7 +310,7 @@ class VP8Frame
      * @return true if the specified RTP packet is part of this frame, false
      * otherwise.
      */
-    boolean matchesFrame(@NotNull RawPacket pkt)
+    boolean matchesFrame(@NotNull VideoRtpPacket pkt)
     {
         return matchesSSRC(pkt) && timestamp == pkt.getTimestamp();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2018 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,13 @@
  */
 package org.jitsi.videobridge.octo;
 
-import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.util.*;
+import org.jitsi.nlj.rtp.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
 
 import java.util.*;
+import java.util.stream.*;
 
 /**
  * Represents an endpoint in a conference, which is connected to another
@@ -31,9 +32,27 @@ import java.util.*;
 public class OctoEndpoint
     extends AbstractEndpoint
 {
-    OctoEndpoint(Conference conference, String id)
+    /**
+     * The SSRCs that this endpoint has.
+     */
+    private Set<Long> receiveSsrcs = new HashSet<>();
+
+    /**
+     * The {@link OctoEndpoints} instance for the conference.
+     */
+    private final OctoEndpoints octoEndpoints;
+
+    /**
+     * Initializes a new {@link OctoEndpoint} with a specific ID in a specific
+     * conference.
+     * @param conference the conference.
+     * @param id the ID of the endpoint.
+     */
+    OctoEndpoint(Conference conference, String id, OctoEndpoints octoEndpoints)
     {
         super(conference, id);
+
+        this.octoEndpoints = octoEndpoints;
     }
 
     /**
@@ -48,52 +67,83 @@ public class OctoEndpoint
         // single OctoEndpoints instance.
     }
 
-    /**
-     * {@inheritDoc}
-     * </p>
-     * {@link OctoEndpoint}s are added/removed solely based on signaling. An
-     * endpoint is expired when the signaled media stream tracks for the
-     * Octo channels do not include any tracks for this endpoint.
-     */
     @Override
-    protected void maybeExpire()
+    public void requestKeyframe(long mediaSsrc)
     {
-        MediaStreamTrackDesc[] audioTracks
-            = getMediaStreamTracks(MediaType.AUDIO);
-        MediaStreamTrackDesc[] videoTracks
-            = getMediaStreamTracks(MediaType.VIDEO);
-
-        if (ArrayUtils.isNullOrEmpty(audioTracks)
-            && ArrayUtils.isNullOrEmpty(videoTracks))
+        // just making sure the tentacle hasn't expired
+        OctoTentacle tentacle = getConference().getTentacle();
+        if (tentacle != null)
         {
-            expire();
+            tentacle.requestKeyframe(mediaSsrc);
         }
+    }
+
+    @Override
+    public boolean shouldExpire()
+    {
+        return receiveSsrcs.isEmpty();
     }
 
     /**
      * @return the list of all {@link MediaStreamTrackDesc} (both audio and
      * video) of this endpoint.
      */
-    List<MediaStreamTrackDesc> getMediaStreamTracks()
+    @Override
+    public MediaStreamTrackDesc[] getMediaStreamTracks()
     {
-        List<MediaStreamTrackDesc> tracks = new LinkedList<>();
-        tracks.addAll(Arrays.asList(getMediaStreamTracks(MediaType.AUDIO)));
-        tracks.addAll(Arrays.asList(getMediaStreamTracks(MediaType.VIDEO)));
+        List<MediaStreamTrackDesc> l = Arrays.stream(getConference().getTentacle().transceiver.getMediaStreamTracks())
+                .filter(t -> t.getOwner() == getID()).collect(Collectors.toList());
+        return l.toArray(new MediaStreamTrackDesc[0]);
+    }
 
-        return tracks;
+    @Override
+    public void onNewSsrcAssociation(
+            String epId,
+            long primarySsrc,
+            long secondarySsrc,
+            SsrcAssociationType type)
+    {
+
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public MediaStreamTrackDesc[] getMediaStreamTracks(MediaType mediaType)
+    public boolean receivesSsrc(long ssrc)
     {
-        // With Octo a channel can have tracks belonging to different endpoints,
-        // so filter out only those that belong to this endpoint.
-        String id = getID();
-        return getAllMediaStreamTracks(mediaType).stream()
-            .filter(track -> id.equals(track.getOwner()))
-            .toArray(MediaStreamTrackDesc[]::new);
+        return receiveSsrcs.contains(ssrc);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void addReceiveSsrc(long ssrc)
+    {
+        // This is controlled through setReceiveSsrcs.
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void expire()
+    {
+        if (super.isExpired())
+        {
+            return;
+        }
+
+        octoEndpoints.endpointExpired(this);
+        super.expire();
+    }
+
+    /**
+     * Sets the set SSRCs we expect to receive from this endpoint.
+     */
+    void setReceiveSsrcs(Set<Long> ssrcs)
+    {
+        receiveSsrcs = new HashSet<>(ssrcs);
     }
 }

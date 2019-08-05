@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2018 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,10 @@
  */
 package org.jitsi.videobridge.xmpp;
 
-import org.jitsi.xmpp.extensions.colibri.*;
-import org.jitsi.xmpp.extensions.health.*;
-import net.java.sip.communicator.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.health.*;
 import org.jitsi.xmpp.mucclient.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
@@ -66,7 +65,7 @@ public class ClientConnectionImpl
     public void start(BundleContext bundleContext)
     {
         ConfigurationService config
-            = ServiceUtils.getService(
+            = ServiceUtils2.getService(
                 bundleContext, ConfigurationService.class);
         if (config == null)
         {

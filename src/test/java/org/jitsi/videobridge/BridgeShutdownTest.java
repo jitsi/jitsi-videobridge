@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,8 @@
  */
 package org.jitsi.videobridge;
 
+import org.jitsi.meet.*;
 import org.jitsi.xmpp.extensions.colibri.*;
-import net.java.sip.communicator.service.shutdown.*;
-
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.util.*;
@@ -84,8 +83,8 @@ public class BridgeShutdownTest
             = new TestShutdownService();
 
         bridge.getBundleContext().registerService(
-            ShutdownService.class,
-            testShutdownService, null);
+                ShutdownService.class,
+                testShutdownService, null);
 
         Jid focusJid = JidCreate.from("focusJid");
 
@@ -208,8 +207,7 @@ public class BridgeShutdownTest
                 ColibriConferenceIQ.GracefulShutdown.NAMESPACE));
     }
 
-    class TestShutdownService
-        implements ShutdownService
+    class TestShutdownService implements ShutdownService
     {
         boolean shutdownStarted = false;
 

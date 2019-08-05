@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015-2018 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,13 @@
  */
 package org.jitsi.videobridge;
 
-import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.utils.event.*;
-import org.jitsi.utils.*;
+import org.jitsi.utils.logging.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
+import org.json.simple.*;
 
 import java.io.*;
-import java.lang.ref.*;
 import java.util.*;
 
 /**
@@ -31,8 +32,10 @@ import java.util.*;
  * same conference (if Octo is being used).
  *
  * @author Boris Grozev
+ * @author Brian Baldino
  */
 public abstract class AbstractEndpoint extends PropertyChangeNotifier
+    implements EncodingsManager.EncodingsUpdateListener
 {
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a
@@ -41,19 +44,21 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     private final String id;
 
     /**
-     * The string used to identify this endpoint for the purposes of logging.
+     * The {@link Logger} used by the {@link Endpoint} class to print debug
+     * information.
      */
-    private final String loggingId;
+    private static final Logger classLogger
+            = Logger.getLogger(AbstractEndpoint.class);
+
+    /**
+     * The instance logger.
+     */
+    private final Logger logger;
 
     /**
      * A reference to the <tt>Conference</tt> this <tt>Endpoint</tt> belongs to.
      */
     private final Conference conference;
-
-    /**
-     * The list of <tt>Channel</tt>s associated with this <tt>Endpoint</tt>.
-     */
-    private final List<WeakReference<RtpChannel>> channels = new LinkedList<>();
 
     /**
      * The (human readable) display name of this <tt>Endpoint</tt>.
@@ -71,6 +76,11 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     private boolean expired = false;
 
+     /**
+     * The string used to identify this endpoint for the purposes of logging.
+     */
+    protected final String logPrefix;
+
     /**
      * Initializes a new {@link AbstractEndpoint} instance.
      * @param conference the {@link Conference} which this endpoint is to be a
@@ -80,9 +90,41 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     protected AbstractEndpoint(Conference conference, String id)
     {
         this.conference = Objects.requireNonNull(conference, "conference");
+        logPrefix
+            = "[id=" + id + " conference=" + conference.getID() + "] ";
+        logger = Logger.getLogger(classLogger, conference.getLogger());
         this.id = Objects.requireNonNull(id, "id");
-        loggingId = conference.getLoggingId() + ",endp_id=" + id;
     }
+
+    /**
+     * Sets the last-n value for this endpoint.
+     * @param lastN
+     */
+    public void setLastN(Integer lastN)
+    {
+    }
+
+    /**
+     * Set the maximum frame height, in pixels, of video streams that can be
+     * forwarded to this participant.
+     *
+     * @param maxReceiveFrameHeightPx the maximum frame height, in pixels, of
+     * video streams that can be forwarded to this participant.
+     */
+    public void setMaxReceiveFrameHeightPx(int maxReceiveFrameHeightPx) { }
+
+    /**
+     * Checks whether a specific SSRC belongs to this endpoint.
+     * @param ssrc
+     * @return
+     */
+    public abstract boolean receivesSsrc(long ssrc);
+
+    /**
+     * Adds an SSRC to this endpoint.
+     * @param ssrc
+     */
+    public abstract void addReceiveSsrc(long ssrc);
 
     /**
      * @return the {@link AbstractEndpointMessageTransport} associated with
@@ -94,132 +136,9 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     }
 
     /**
-     * Adds a specific {@link RtpChannel} to the list of channels
-     * associated with this {@link AbstractEndpoint}.
-     *
-     * @param channel the {@link RtpChannel }to add.
-     * @return {@code true} if the list of {@link RtpChannel}s associated with
-     * this endpoint changed as a result of the method invocation; otherwise,
-     * {@code false}.
+     * Gets the list of media stream tracks that belong to this endpoint.
      */
-    public boolean addChannel(RtpChannel channel)
-    {
-        Objects.requireNonNull(channel, "channel");
-
-        // The expire state of Channel is final. Adding an expired Channel to
-        // an Endpoint is a no-op.
-        if (channel.isExpired())
-        {
-            return false;
-        }
-
-        boolean added = false;
-        boolean removed = false;
-
-        synchronized (channels)
-        {
-            boolean add = true;
-
-            for (Iterator<WeakReference<RtpChannel>> i = channels.iterator();
-                 i.hasNext();)
-            {
-                RtpChannel c = i.next().get();
-
-                if (c == null)
-                {
-                    i.remove();
-                    removed = true;
-                }
-                else if (c.equals(channel))
-                {
-                    add = false;
-                }
-                else if (c.isExpired())
-                {
-                    i.remove();
-                    removed = true;
-                }
-            }
-            if (add)
-            {
-                channels.add(new WeakReference<>(channel));
-                added = true;
-            }
-        }
-
-        if (removed)
-        {
-            maybeExpire();
-        }
-
-        return added;
-    }
-
-    /**
-     * Gets the number of {@link RtpChannel}s of this endpoint which,
-     * optionally, are of a specific {@link MediaType}.
-     *
-     * @param mediaType the {@link MediaType} of the {@link RtpChannel}s to
-     * count or {@code null} to count all {@link RtpChannel}s.
-     * @return the number of {@link RtpChannel}s of this endpoint which,
-     * , optionally, are of the specified {@link MediaType}.
-     */
-    int getChannelCount(MediaType mediaType)
-    {
-        return getChannels(mediaType).size();
-    }
-
-    /**
-     * @return a list with all {@link RtpChannel}s of this {@link Endpoint}.
-     */
-    public List<RtpChannel> getChannels()
-    {
-        return getChannels(null);
-    }
-
-    /**
-     * Gets a list with the {@link RtpChannel}s of this {@link Endpoint} with a
-     * particular {@link MediaType} (or all of them, if {@code mediaType} is
-     * {@code null}).
-     *
-     * @param mediaType the {@link MediaType} to match. If {@code null}, all
-     * channels of this endpoint will be returned.
-     * @return a <tt>List</tt> with the channels of this <tt>Endpoint</tt> with
-     * a particular <tt>MediaType</tt>.
-     */
-    public List<RtpChannel> getChannels(MediaType mediaType)
-    {
-        boolean removed = false;
-        List<RtpChannel> channels = new LinkedList<>();
-
-        synchronized (this.channels)
-        {
-            for (Iterator<WeakReference<RtpChannel>> i
-                        = this.channels.iterator();
-                    i.hasNext();)
-            {
-                RtpChannel c = i.next().get();
-
-                if ((c == null) || c.isExpired())
-                {
-                    i.remove();
-                    removed = true;
-                }
-                else if ((mediaType == null)
-                        || mediaType.equals(c.getContent().getMediaType()))
-                {
-                    channels.add(c);
-                }
-            }
-        }
-
-        if (removed)
-        {
-            maybeExpire();
-        }
-
-        return channels;
-    }
+    abstract public MediaStreamTrackDesc[] getMediaStreamTracks();
 
     /**
      * Returns the display name of this <tt>Endpoint</tt>.
@@ -274,41 +193,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     }
 
     /**
-     * Removes a specific <tt>Channel</tt> from the list of <tt>Channel</tt>s
-     * associated with this <tt>Endpoint</tt>.
-     *
-     * @param channel the <tt>Channel</tt> to remove from the list of
-     * <tt>Channel</tt>s associated with this <tt>Endpoint</tt>
-     * @return <tt>true</tt> if the list of <tt>Channel</tt>s associated with
-     * this <tt>Endpoint</tt> changed as a result of the method invocation;
-     * otherwise, <tt>false</tt>
-     */
-    public boolean removeChannel(RtpChannel channel)
-    {
-        if (channel == null)
-        {
-            return false;
-        }
-
-        boolean removed;
-
-        synchronized (channels)
-        {
-            removed = channels.removeIf(w -> {
-                Channel c = w.get();
-                return c == null || c.equals(channel) || c.isExpired();
-            });
-        }
-
-        if (removed)
-        {
-            maybeExpire();
-        }
-
-        return removed;
-    }
-
-    /**
      * Sets the display name of this <tt>Endpoint</tt>.
      *
      * @param displayName the display name to set on this <tt>Endpoint</tt>.
@@ -342,89 +226,37 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     public void expire()
     {
+        logger.info(logPrefix + "Expiring.");
         this.expired = true;
-        getConference().endpointExpired(this);
-    }
 
-    /**
-     * @return a string which identifies this {@link Endpoint} for the
-     * purposes of logging. The string is a comma-separated list of "key=value"
-     * pairs.
-     */
-    public String getLoggingId()
-    {
-        return loggingId;
-    }
-
-    /**
-     * Expires this {@link Endpoint} if it has no channels and no SCTP
-     * connection.
-     */
-    protected void maybeExpire()
-    {}
-
-    /**
-     * @return the {@link Set} of selected endpoints, represented as a set of
-     * endpoint IDs.
-     */
-    public Set<String> getSelectedEndpoints()
-    {
-        return Collections.EMPTY_SET;
-    }
-
-    /**
-     * @return the {@link Set} of pinned endpoints, represented as a set of
-     * endpoint IDs.
-     */
-    public Set<String> getPinnedEndpoints()
-    {
-        return Collections.EMPTY_SET;
-    }
-
-    /**
-     * Gets an array that contains all the {@link MediaStreamTrackDesc} of the
-     * specified media type associated with this {@link Endpoint}.
-     *
-     * @param mediaType the media type of the {@link MediaStreamTrackDesc} to
-     * get.
-     * @return an array that contains all the {@link MediaStreamTrackDesc} of
-     * the specified media type associated with this {@link Endpoint}, or null.
-     */
-    public MediaStreamTrackDesc[] getMediaStreamTracks(MediaType mediaType)
-    {
-        return
-            getAllMediaStreamTracks(mediaType)
-                .toArray(new MediaStreamTrackDesc[0]);
-    }
-
-    /**
-     * @return all {@link MediaStreamTrackDesc} of all channels of type
-     * {@code mediaType} associated with this endpoint. Note that this may
-     * include {@link MediaStreamTrackDesc}s which do not belong to this
-     * endpoint.
-     * @param mediaType the media type of the {@link MediaStreamTrackDesc} to
-     * get.
-     */
-    protected List<MediaStreamTrackDesc> getAllMediaStreamTracks(
-        MediaType mediaType)
-    {
-        List<RtpChannel> channels = getChannels(mediaType);
-
-        if (channels == null || channels.isEmpty())
+        Conference conference = getConference();
+        if (conference != null)
         {
-            return Collections.EMPTY_LIST;
+            conference.endpointExpired(this);
         }
-
-        List<MediaStreamTrackDesc> allTracks = new LinkedList<>();
-        channels.stream()
-            .map(channel -> channel.getStream().getMediaStreamTrackReceiver())
-            .filter(Objects::nonNull)
-            .forEach(
-                trackReceiver -> allTracks.addAll(
-                    Arrays.asList(trackReceiver.getMediaStreamTracks())));
-        return allTracks;
     }
 
+    /**
+     * Return true if this endpoint should expire (based on whatever logic is
+     * appropriate for that endpoint implementation.
+     *
+     * NOTE(brian): Currently the bridge will automatically expire an endpoint
+     * if all of its channel shims are removed. Maybe we should instead have
+     * this logic always be called before expiring instead? But that would mean
+     * that expiration in the case of channel removal would take longer.
+     *
+     * @return true if this endpoint should expire, false otherwise
+     */
+    public abstract boolean shouldExpire();
+
+    /**
+     * Get the last 'activity' (packets received or packets sent) this endpoint has seen
+     * @return the timestamp, in milliseconds, of the last activity of this endpoint
+     */
+    public long getLastActivity()
+    {
+        return 0;
+    }
 
     /**
      * Sends a specific {@link String} {@code msg} to the remote end of this
@@ -434,6 +266,14 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     public abstract void sendMessage(String msg)
         throws IOException;
+
+
+    /**
+     * Requests a keyframe from this endpoint for the specified media SSRC.
+     *
+     * @param mediaSsrc the media SSRC to request a keyframe from.
+     */
+    public abstract void requestKeyframe(long mediaSsrc);
 
     /**
      * Notify this endpoint that another endpoint has set it
@@ -452,5 +292,38 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public void decrementSelectedCount()
     {
         // No-op
+    }
+
+    /**
+     * Recreates this {@link AbstractEndpoint}'s media stream tracks based
+     * on the sources (and source groups) described in it's video channel.
+     */
+    public void recreateMediaStreamTracks()
+    {
+    }
+
+    /**
+     * Describes this endpoint's transport in the given channel bundle XML
+     * element.
+     *
+     * @param channelBundle the channel bundle element to describe in.
+     */
+    public void describe(ColibriConferenceIQ.ChannelBundle channelBundle)
+            throws IOException
+    {
+    }
+
+    /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
+     */
+    public JSONObject getDebugState()
+    {
+        JSONObject debugState = new JSONObject();
+        debugState.put("displayName", displayName);
+        debugState.put("expired", expired);
+        debugState.put("statsId", statsId);
+
+        return debugState;
     }
 }

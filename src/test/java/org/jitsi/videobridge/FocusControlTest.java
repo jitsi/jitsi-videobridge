@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,10 @@
  */
 package org.jitsi.videobridge;
 
-import org.jitsi.xmpp.extensions.colibri.*;
-import org.jitsi.xmpp.extensions.health.*;
 import net.java.sip.communicator.util.*;
 
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.health.*;
 import org.jivesoftware.smack.packet.*;
 import org.junit.*;
 import org.junit.Test;
@@ -68,8 +68,9 @@ public class FocusControlTest
         osgiHandler.stop();
     }
 
-    private static void expectResult(ColibriConferenceIQ confIq,
-                                     int processingOptions)
+    private static void expectResult(
+            ColibriConferenceIQ confIq,
+            int processingOptions)
         throws Exception
     {
         IQ respIq = bridge.handleColibriConferenceIQ(confIq, processingOptions);
@@ -133,6 +134,9 @@ public class FocusControlTest
         respIq = bridge.handleColibriConferenceIQ(confIq);
         assertNotNull(respIq);
         XMPPError error = respIq.getError();
+        //TODO(brian): this test fails, because we no longer hit the access control in Videobridge#getConference which
+        // would set the error (we instead get the conference from the ColibriShim.ConferenceShim which stores a reference
+        // directly.  fix that one way or another.
         assertNotNull(error);
         // Should be 'not-allowed', but not easy to distinguish between
         // "conference not found"and "invalid focus" errors in the Videobridge

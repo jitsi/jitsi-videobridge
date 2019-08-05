@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,15 +21,12 @@ import java.util.*;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
-import org.jitsi.xmpp.extensions.colibri.*;
-import net.java.sip.communicator.util.*;
-
 import org.eclipse.jetty.server.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.health.*;
-import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.utils.logging.*;
+import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
@@ -220,7 +217,12 @@ class HandlerImpl
      * The HTTP resource which lists the JSON representation of the
      * <tt>VideobridgeStatistics</tt>s of <tt>Videobridge</tt>.
      */
-    private static final String STATISTICS = "stats";
+    static final String STATISTICS = "stats";
+
+    /**
+     * The target for the colibri debug interface.
+     */
+    static final String DEBUG = "debug";
 
     /**
      * The HTTP resource which allows control of {@link ClientConnectionImpl}
@@ -251,6 +253,18 @@ class HandlerImpl
      * {@link #COLIBRI_TARGET} requests.
      */
     private final boolean colibriEnabled;
+
+    /**
+     * The handler for statistics requests.
+     */
+    private final StatisticsRequestHandler statisticsRequestHandler
+            = new StatisticsRequestHandler(this);
+
+    /**
+     * The handler for debug requests.
+     */
+    private final DebugRequestHandler debugRequestHandler
+            = new DebugRequestHandler(this);
 
     /**
      * Initializes a new {@code HandlerImpl} instance within a specific
@@ -344,7 +358,7 @@ class HandlerImpl
             {
                 ColibriConferenceIQ conferenceIQ = new ColibriConferenceIQ();
 
-                conference.describeDeep(conferenceIQ);
+                conference.getShim().describeDeep(conferenceIQ);
 
                 JSONObject conferenceJSONObject
                     = JSONSerializer.serializeConference(conferenceIQ);
@@ -530,65 +544,6 @@ class HandlerImpl
         response.setStatus(status);
     }
 
-
-    /**
-     * Gets a JSON representation of the <tt>VideobridgeStatistics</tt> of (the
-     * associated) <tt>Videobridge</tt>.
-     *
-     * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
-     * @throws IOException
-     * @throws ServletException
-     */
-    private void doGetStatisticsJSON(
-            Request baseRequest,
-            HttpServletRequest request,
-            HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
-        BundleContext bundleContext = getBundleContext();
-
-        if (bundleContext != null)
-        {
-            StatsManager statsManager
-                = ServiceUtils.getService(bundleContext, StatsManager.class);
-
-            if (statsManager != null)
-            {
-                Iterator<Statistics> i
-                    = statsManager.getStatistics().iterator();
-                Statistics statistics = null;
-
-                if (i.hasNext())
-                {
-                    statistics = i.next();
-                }
-
-                JSONObject statisticsJSONObject
-                    = JSONSerializer.serializeStatistics(statistics);
-                Writer writer = response.getWriter();
-
-                response.setStatus(HttpServletResponse.SC_OK);
-                if (statisticsJSONObject == null)
-                {
-                    writer.write("null");
-                }
-                else
-                {
-                    statisticsJSONObject.writeJSONString(writer);
-                }
-
-                return;
-            }
-        }
-
-        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-    }
-
     /**
      * Modifies a <tt>Conference</tt> with ID <tt>target</tt> in (the
      * associated) <tt>Videobridge</tt>.
@@ -688,9 +643,9 @@ class HandlerImpl
                         try
                         {
                             IQ responseIQ
-                                = videobridge.handleColibriConferenceIQ(
-                                        requestConferenceIQ,
-                                        Videobridge.OPTION_ALLOW_NO_FOCUS);
+                                    = videobridge.handleColibriConferenceIQ(
+                                    requestConferenceIQ,
+                                    Videobridge.OPTION_ALLOW_NO_FOCUS);
 
                             if (responseIQ instanceof ColibriConferenceIQ)
                             {
@@ -825,9 +780,9 @@ class HandlerImpl
                     try
                     {
                         IQ responseIQ
-                            = videobridge.handleColibriConferenceIQ(
-                                    requestConferenceIQ,
-                                    Videobridge.OPTION_ALLOW_NO_FOCUS);
+                                = videobridge.handleColibriConferenceIQ(
+                                requestConferenceIQ,
+                                Videobridge.OPTION_ALLOW_NO_FOCUS);
 
                         if (responseIQ instanceof ColibriConferenceIQ)
                         {
@@ -878,6 +833,9 @@ class HandlerImpl
         }
     }
 
+    /**
+     * Handles a request for a shutdown
+     */
     private void doPostShutdownJSON(Request baseRequest,
                                     HttpServletRequest request,
                                     HttpServletResponse response)
@@ -1060,17 +1018,14 @@ class HandlerImpl
                 }
             }
         }
-        else if (target.equals(STATISTICS))
+        else if (target.startsWith(STATISTICS))
         {
-            if (GET_HTTP_METHOD.equals(request.getMethod()))
-            {
-                // Get the VideobridgeStatistics of Videobridge.
-                doGetStatisticsJSON(baseRequest, request, response);
-            }
-            else
-            {
-                response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
-            }
+            statisticsRequestHandler.handleStatsRequest(
+                    target, request, response);
+        }
+        else if (target.startsWith(DEBUG))
+        {
+            debugRequestHandler.handleDebugRequest(target, request, response);
         }
         else if (target.equals(SHUTDOWN))
         {

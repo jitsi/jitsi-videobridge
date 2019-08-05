@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,12 @@ import org.ice4j.*;
 import org.ice4j.ice.harvest.*;
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
-import org.jitsi.impl.neomedia.rtp.sendsidebandwidthestimation.*;
 import org.jitsi.impl.neomedia.transform.csrc.*;
 import org.jitsi.impl.neomedia.transform.srtp.*;
 import org.jitsi.meet.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.service.packetlogging.*;
 import org.jitsi.stats.media.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.*;
 
 /**
  * OSGi bundles description for the Jitsi Videobridge.
@@ -54,26 +52,7 @@ public class JvbBundleConfig
             "org/jitsi/service/libjitsi/LibJitsiActivator"
         },
         {
-            "net/java/sip/communicator/util/UtilActivator",
-            "net/java/sip/communicator/impl/fileaccess/FileAccessActivator"
-        },
-        {
-            "net/java/sip/communicator/impl/configuration/ConfigurationActivator"
-        },
-        {
-            "net/java/sip/communicator/impl/resources/ResourceManagementActivator"
-        },
-        {
-            "net/java/sip/communicator/impl/netaddr/NetaddrActivator"
-        },
-        {
-            "net/java/sip/communicator/impl/packetlogging/PacketLoggingActivator"
-        },
-        {
-            "net/java/sip/communicator/service/gui/internal/GuiServiceActivator"
-        },
-        {
-            "net/java/sip/communicator/service/protocol/media/ProtocolMediaActivator"
+            "org/jitsi/videobridge/osgi/ConfigurationActivator"
         },
         {
             "org/jitsi/videobridge/eventadmin/callstats/Activator"
@@ -89,7 +68,6 @@ public class JvbBundleConfig
             "org/jitsi/videobridge/rest/PublicRESTBundleActivator",
             "org/jitsi/videobridge/rest/PublicClearPortRedirectBundleActivator",
             "org/jitsi/videobridge/stats/StatsManagerBundleActivator",
-            "org/jitsi/videobridge/EndpointConnectionStatus"
         },
         {
             "org/jitsi/videobridge/VideobridgeBundleActivator"
@@ -99,6 +77,9 @@ public class JvbBundleConfig
         },
         {
             "org/jitsi/videobridge/octo/OctoRelayService"
+        },
+        {
+            "org/jitsi/videobridge/EndpointConnectionStatus"
         }
     };
 
@@ -107,6 +88,13 @@ public class JvbBundleConfig
     {
         return BUNDLES;
     }
+    /**
+     * The property name of the setting that enables/disables VP8 picture id
+     * rewriting.
+     */
+    //TODO(brian): moved this here when removing SimulcastController, find a home for it.
+    public static final String ENABLE_VP8_PICID_REWRITING_PNAME
+            = "org.jitsi.videobridge.ENABLE_VP8_PICID_REWRITING";
 
     @Override
     public Map<String, String> getSystemPropertyDefaults()
@@ -149,18 +137,6 @@ public class JvbBundleConfig
         // advertise link-local addresses.
         defaults.put(StackProperties.DISABLE_LINK_LOCAL_ADDRESSES, true_);
 
-        // If DTMF handling is enabled, DTMF packets will be read and swallowed.
-        // We want them forwarded as normal packets.
-        defaults.put(AudioMediaStream.DISABLE_DTMF_HANDLING_PNAME, true_);
-
-        // Enable retransmission requests for video streams.
-        defaults.put(VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME, true_);
-
-        // Disable packet logging.
-        defaults.put(
-                PacketLoggingConfiguration.PACKET_LOGGING_ENABLED_PROPERTY_NAME,
-                false_);
-
         // Configure the receive buffer size for the sockets used for the
         // single-port mode to be 10MB.
         defaults.put(AbstractUdpListener.SO_RCVBUF_PNAME, "10485760");
@@ -173,21 +149,6 @@ public class JvbBundleConfig
 
         // Enable AST RBE by default.
         defaults.put(RemoteBitrateEstimatorWrapper.ENABLE_AST_RBE_PNAME, true_);
-
-        // This causes RTP/RTCP packets received before the DTLS agent is ready
-        // to decrypt them to be dropped. Without it, these packets are passed
-        // on without decryption and this leads to:
-        // 1. Garbage being sent to the endpoints (or at least something they
-        //    cannot decrypt).
-        // 2. Failed attempts to parse encrypted RTCP packets (in a compound
-        //    packet, the headers of all but the first packet are encrypted).
-
-        // This is currently disabled, because it makes DTLS mandatory, and
-        // thus breaks communication with jigasi and jitsi.
-        //defaults.put(
-        //        "org.jitsi.impl.neomedia.transform.dtls.DtlsPacketTransformer"
-        //            + ".dropUnencryptedPkts",
-        //        true_);
 
         // make sure we use the properties files for configuration
         defaults.put(

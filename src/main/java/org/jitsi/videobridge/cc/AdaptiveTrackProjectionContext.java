@@ -15,9 +15,11 @@
  */
 package org.jitsi.videobridge.cc;
 
-import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.format.*;
+import org.jitsi.nlj.format.*;
+import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.util.PacketCache;
+import org.jitsi.rtp.rtcp.*;
+import org.json.simple.*;
 
 /**
  * Implementations of this interface are responsible for projecting a specific
@@ -36,12 +38,6 @@ import org.jitsi.service.neomedia.format.*;
 public interface AdaptiveTrackProjectionContext
 {
     /**
-     * An empty {@link RawPacket} array that is used as a return value when no
-     * packets need to be piggy-backed.
-     */
-    RawPacket[] EMPTY_PACKET_ARR = new RawPacket[0];
-
-    /**
      * Determines whether an RTP packet should be accepted or not.
      *
      * @param rtpPacket the RTP packet to determine whether to accept or not.
@@ -49,7 +45,7 @@ public interface AdaptiveTrackProjectionContext
      * @param targetIndex the target quality index
      * @return true if the packet should be accepted, false otherwise.
      */
-    boolean accept(RawPacket rtpPacket, int incomingIndex, int targetIndex);
+    boolean accept(VideoRtpPacket rtpPacket, int incomingIndex, int targetIndex);
 
     /**
      * @return true if this stream context needs a keyframe in order to either
@@ -67,22 +63,24 @@ public interface AdaptiveTrackProjectionContext
      * @param rtpPacket the RTP packet to rewrite.
      * @param incomingRawPacketCache the packet cache to pull piggy-backed
      * packets from.
-     * @return any RTP packets to piggy-back, or {@link #EMPTY_PACKET_ARR}.
+     * @return null to reject the packet or an array of RTP packets to
+     * piggy-back. An empty array means accept the packet without any additional
+     * packets to piggy-back
      * @throws RewriteException the underlying code has failed to rewrite the
      * RTP packet that is specified as an argument.
      */
-    RawPacket[]
-    rewriteRtp(RawPacket rtpPacket, RawPacketCache incomingRawPacketCache)
+    VideoRtpPacket[]
+    rewriteRtp(VideoRtpPacket rtpPacket, PacketCache incomingRawPacketCache)
         throws RewriteException;
 
     /**
      * Rewrites the RTCP packet that is specified as an argument.
      *
-     * @param rtcpPacket the RTCP packet to transform.
+     * @param rtcpSrPacket the RTCP packet to transform.
      * @return true if the RTCP packet is accepted, false otherwise, in which
      * case it needs to be dropped.
      */
-    boolean rewriteRtcp(RawPacket rtcpPacket);
+    boolean rewriteRtcp(RtcpSrPacket rtcpSrPacket);
 
     /**
      * @return the RTP state that describes the max sequence number, max
@@ -91,8 +89,14 @@ public interface AdaptiveTrackProjectionContext
     RtpState getRtpState();
 
     /**
-     * @return the {@link MediaFormat} of the RTP packets that this context
+     * @return the {@link PayloadType} of the RTP packets that this context
      * processes.
      */
-    MediaFormat getFormat();
+    PayloadType getPayloadType();
+
+    /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
+     */
+    JSONObject getDebugState();
 }

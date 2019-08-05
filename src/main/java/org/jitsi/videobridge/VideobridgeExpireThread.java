@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,12 +25,12 @@ import org.jitsi.utils.logging.*;
 import org.osgi.framework.*;
 
 /**
- * Implements a <tt>Thread</tt> which expires the {@link Channel}s of a specific
- * <tt>Videobridge</tt>.
+ * Implements a <tt>Thread</tt> which expires the {@link AbstractEndpoint}s and
+ * {@link Conference}s of a specific <tt>Videobridge</tt>.
  *
  * @author Lyubomir Marinov
  */
-class VideobridgeExpireThread
+public class VideobridgeExpireThread
 {
     /**
      * The <tt>Logger</tt> used by the <tt>VideobridgeExpireThread</tt> class
@@ -48,8 +48,8 @@ class VideobridgeExpireThread
             VideobridgeExpireThread.class.getSimpleName());
 
     /**
-     * The executor used to expire the individual {@link Channel}s,
-     * {@link Content}s, or {@link Conference}s.
+     * The executor used to expire the individual {@link AbstractEndpoint}s
+     * or {@link Conference}s.
      */
     private static final Executor EXPIRE_EXECUTOR
         = ExecutorUtils.newCachedThreadPool(
@@ -61,12 +61,18 @@ class VideobridgeExpireThread
      */
     public static final String EXPIRE_CHECK_SLEEP_SEC
             = "org.jitsi.videobridge.EXPIRE_CHECK_SLEEP_SEC";
+    /**
+     * The default number of seconds of inactivity after which <tt>Channel</tt>s
+     * expire.
+     * NOTE(brian): move from Channel
+     */
+    public static final int DEFAULT_EXPIRE = 60;
 
     /**
      * The default value of the {@link #EXPIRE_CHECK_SLEEP_SEC} property.
      */
     private static final int EXPIRE_CHECK_SLEEP_SEC_DEFAULT =
-            Channel.DEFAULT_EXPIRE;
+            DEFAULT_EXPIRE;
 
     /**
      * The {@link PeriodicRunnable} registered with {@link #EXECUTOR} which is
@@ -152,7 +158,7 @@ class VideobridgeExpireThread
     }
 
     /**
-     * Expires the {@link Channel}s of a specific <tt>Videobridge</tt> if they
+     * Expires the {@link Conference}s and/or {@link Endpoint}s of a specific <tt>Videobridge</tt> if they
      * have been inactive for more than their advertised <tt>expire</tt> number
      * of seconds.
      *
@@ -168,27 +174,19 @@ class VideobridgeExpireThread
             // The Conferences will live an iteration more than the Contents.
             if (conference.shouldExpire())
             {
-                EXPIRE_EXECUTOR.execute(conference::safeExpire);
+                logger.info("Conference "
+                        + conference.getID() + " should expire, expiring it");
+                EXPIRE_EXECUTOR.execute(
+                        () -> videobridge.expireConference(conference));
             }
             else
             {
-                for (Content content : conference.getContents())
+                for (AbstractEndpoint endpoint : conference.getEndpoints())
                 {
-                     // The Contents will live an iteration more than the
-                     // Channels.
-                    if (content.shouldExpire())
+                    if (endpoint.shouldExpire())
                     {
-                        EXPIRE_EXECUTOR.execute(content::safeExpire);
-                    }
-                    else
-                    {
-                        for (Channel channel : content.getChannels())
-                        {
-                            if (channel.shouldExpire())
-                            {
-                                EXPIRE_EXECUTOR.execute(channel::safeExpire);
-                            }
-                        }
+                        logger.info("Expiring endpoint " + endpoint.getID());
+                        EXPIRE_EXECUTOR.execute(endpoint::expire);
                     }
                 }
             }

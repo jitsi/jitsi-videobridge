@@ -1,12 +1,16 @@
 # General
-Jitsi Videobridge can accept and route RTP traffic over TCP. 
+Jitsi Videobridge can accept and route RTP traffic over ICE/TCP. 
 The feature is on by default and TCP addresses will 
 automatically be returned as ICE candidates via 
 COLIBRI.
 
-# Requirements
-The use of channel-bundle and rtcp-mux is required for TCP 
-candidates to be generated.
+# Warning
+ICE/TCP is not the recommended way to deal with clients connecting
+from networks where UDP traffic is restricted. The recommended way
+is to use jitsi-videobridge in conjunction with a TURN server. The 
+main reason is that using TURN/TLS uses a real TLS handshake, while 
+ICE/TCP uses a hard-coded handshake which is known to be recognized
+by some firewalls.
 
 # Configuration
 By default TCP support is enabled on port 443 with fallback 

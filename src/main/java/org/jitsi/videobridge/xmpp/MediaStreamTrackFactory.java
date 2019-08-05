@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,14 @@
  */
 package org.jitsi.videobridge.xmpp;
 
+import org.jitsi.nlj.rtp.*;
+import org.jitsi.service.configuration.*;
+import org.jitsi.service.libjitsi.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jitsimeet.*;
-import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.service.configuration.*;
-import org.jitsi.service.libjitsi.*;
-import org.jitsi.service.neomedia.codec.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 
 import java.util.*;
 import java.util.stream.*;
@@ -111,15 +111,16 @@ public class MediaStreamTrackFactory
      * {@link SourceGroupPacketExtension}, which is how we distinguish secondary
      * ssrcs, so we'll translate them into constants defined in libjitsi
      */
-    private static Map<String, String> secondarySsrcTypeMap = null;
+    private static Map<String, SsrcAssociationType> secondarySsrcTypeMap = null;
 
-    private static synchronized Map<String, String> getSecondarySsrcTypeMap()
+    private static synchronized
+        Map<String, SsrcAssociationType> getSecondarySsrcTypeMap()
     {
         if (secondarySsrcTypeMap == null)
         {
             secondarySsrcTypeMap = new HashMap<>();
             secondarySsrcTypeMap.put(
-                SourceGroupPacketExtension.SEMANTICS_FID, Constants.RTX);
+                SourceGroupPacketExtension.SEMANTICS_FID, SsrcAssociationType.RTX);
         }
 
         return secondarySsrcTypeMap;
@@ -213,7 +214,7 @@ public class MediaStreamTrackFactory
                     if (ssrcSecondarySsrcs != null)
                     {
                         ssrcSecondarySsrcs.forEach(ssrcSecondarySsrc -> {
-                            String type
+                            SsrcAssociationType type
                                 = getSecondarySsrcTypeMap()
                                         .get(ssrcSecondarySsrc.type);
                             if (type == null)
@@ -250,7 +251,7 @@ public class MediaStreamTrackFactory
      * @return a map of secondary ssrc -> type (rtx, fec, etc.)
      */
     private static List<SecondarySsrc> getSecondarySsrcs(
-        long ssrc, List<SourceGroupPacketExtension> sourceGroups)
+        long ssrc, Collection<SourceGroupPacketExtension> sourceGroups)
     {
         List<SecondarySsrc> secondarySsrcs = new ArrayList<>();
         for (SourceGroupPacketExtension sourceGroup : sourceGroups)
@@ -283,7 +284,7 @@ public class MediaStreamTrackFactory
      * type
      */
     private static Map<Long, SecondarySsrcs> getAllSecondarySsrcs(
-            TrackSsrcs ssrcs, List<SourceGroupPacketExtension> sourceGroups)
+            TrackSsrcs ssrcs, Collection<SourceGroupPacketExtension> sourceGroups)
     {
         Map<Long, SecondarySsrcs> allSecondarySsrcs = new HashMap<>();
 
@@ -376,8 +377,8 @@ public class MediaStreamTrackFactory
      * a set of primary video ssrcs belonging to a single track (video source)
      */
     private static List<TrackSsrcs> getTrackSsrcs(
-            List<SourcePacketExtension> sources,
-            List<SourceGroupPacketExtension> sourceGroups)
+            Collection<SourcePacketExtension> sources,
+            Collection<SourceGroupPacketExtension> sourceGroups)
     {
         //FIXME: determining the individual tracks should be done via msid,
         // but somewhere along the line we seem to lose the msid information
@@ -481,8 +482,8 @@ public class MediaStreamTrackFactory
      * @param trackSsrcsList the list of {@link TrackSsrcs} to update.
      */
     private static void setOwners(
-        List<SourcePacketExtension> sources,
-        List<TrackSsrcs> trackSsrcsList)
+        Collection<SourcePacketExtension> sources,
+        Collection<TrackSsrcs> trackSsrcsList)
     {
         for (TrackSsrcs trackSsrcs : trackSsrcsList)
         {
@@ -529,22 +530,27 @@ public class MediaStreamTrackFactory
     /**
      * Creates {@link MediaStreamTrackDesc}s from signaling params
      *
-     * @param mediaStreamTrackReceiver the {@link MediaStreamTrackReceiver} that
      * will receive the created {@link MediaStreamTrackDesc}s.
      * @param sources The {@link List} of {@link SourcePacketExtension} that
      * describes the list of jingle sources.
      * @param sourceGroups The {@link List} of
      * {@link SourceGroupPacketExtension} that describes the list of jingle
      * source groups.
-     * @return the {@link MediaStreamTrackReceiver} that are described in the
+     * @return an array of {@link MediaStreamTrackDesc} that are described in the
      * jingle sources and source groups.
      */
     public static MediaStreamTrackDesc[] createMediaStreamTracks(
-        MediaStreamTrackReceiver mediaStreamTrackReceiver,
-        List<SourcePacketExtension> sources,
-        List<SourceGroupPacketExtension> sourceGroups)
+        Collection<SourcePacketExtension> sources,
+        Collection<SourceGroupPacketExtension> sourceGroups)
     {
-        List<TrackSsrcs> trackSsrcsList = getTrackSsrcs(sources, sourceGroups);
+        final Collection<SourceGroupPacketExtension> finalSourceGroups
+                = sourceGroups == null ? new ArrayList<>() : sourceGroups;
+        if (sources == null)
+        {
+            sources = new ArrayList<>();
+        }
+
+        List<TrackSsrcs> trackSsrcsList = getTrackSsrcs(sources, finalSourceGroups);
         List<MediaStreamTrackDesc> tracks = new ArrayList<>();
 
         trackSsrcsList.forEach(trackSsrcs -> {
@@ -556,10 +562,9 @@ public class MediaStreamTrackFactory
                 numTemporalLayersPerStream = VP8_SIMULCAST_TEMPORAL_LAYERS;
             }
             Map<Long, SecondarySsrcs> secondarySsrcs
-                = getAllSecondarySsrcs(trackSsrcs, sourceGroups);
+                = getAllSecondarySsrcs(trackSsrcs, finalSourceGroups);
             MediaStreamTrackDesc track
                 = createTrack(
-                        mediaStreamTrackReceiver,
                         trackSsrcs,
                         numSpatialLayersPerStream,
                         numTemporalLayersPerStream,
@@ -597,6 +602,9 @@ public class MediaStreamTrackFactory
         public long ssrc;
         public String type;
 
+        /**
+         * Initializes a new {@link SecondarySsrc} instance.
+         */
         public SecondarySsrc(long ssrc, String type)
         {
             this.ssrc = ssrc;
@@ -613,11 +621,17 @@ public class MediaStreamTrackFactory
     {
         public List<SecondarySsrc> secondarySsrcs;
 
+        /**
+         * Initializes a new {@link SecondarySsrcs} instance.
+         */
         public SecondarySsrcs(List<SecondarySsrc> secondarySsrcs)
         {
             this.secondarySsrcs = secondarySsrcs;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Iterator<SecondarySsrc> iterator()
         {
@@ -636,31 +650,49 @@ public class MediaStreamTrackFactory
 
         private String owner;
 
+        /**
+         * Initializes a new {@link TrackSsrcs} instance for a single SSRC.
+         */
         private TrackSsrcs(Long ssrc)
         {
             this(Collections.singletonList(ssrc));
         }
 
+        /**
+         * Initializes a new {@link TrackSsrcs} instance for a list of SSRCs.
+         */
         public TrackSsrcs(List<Long> trackSsrcs)
         {
             this.trackSsrcs = trackSsrcs;
         }
 
+        /**
+         * Checks whether this instance contains a specific SSRC.
+         */
         public boolean contains(Long ssrc)
         {
             return trackSsrcs.contains(ssrc);
         }
 
+        /**
+         * @return the number of SSRCs in this instance.
+         */
         public int size()
         {
             return trackSsrcs.size();
         }
 
+        /**
+         * Gets the SSRC at a specific index.
+         */
         public Long get(int index)
         {
             return trackSsrcs.get(index);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Iterator<Long> iterator()
         {
@@ -670,7 +702,6 @@ public class MediaStreamTrackFactory
 
     /**
      * Creates a single MediaStreamTrack with the given information
-     * @param receiver the {@link MediaStreamTrackReceiver}
      * @param primarySsrcs the set of primary video ssrcs belonging to this track
      * @param numSpatialLayersPerStream the number of spatial layers per stream
      * for this track
@@ -682,7 +713,6 @@ public class MediaStreamTrackFactory
      * @return the created MediaStreamTrack
      */
     private static MediaStreamTrackDesc createTrack(
-            MediaStreamTrackReceiver receiver,
             TrackSsrcs primarySsrcs,
             int numSpatialLayersPerStream,
             int numTemporalLayersPerStream,
@@ -693,8 +723,7 @@ public class MediaStreamTrackFactory
                 * numSpatialLayersPerStream * numTemporalLayersPerStream;
         RTPEncodingDesc[] rtpEncodings = new RTPEncodingDesc[numEncodings];
         MediaStreamTrackDesc track
-            = new MediaStreamTrackDesc(
-                receiver, rtpEncodings, primarySsrcs.owner);
+            = new MediaStreamTrackDesc(rtpEncodings, primarySsrcs.owner);
 
         RTPEncodingDesc[] encodings
             = createRTPEncodings(
@@ -703,6 +732,8 @@ public class MediaStreamTrackFactory
                     allSecondarySsrcs);
         assert(encodings.length <= numEncodings);
         System.arraycopy(encodings, 0, rtpEncodings, 0, encodings.length);
+
+        track.updateEncodingCache();
 
         return track;
     }

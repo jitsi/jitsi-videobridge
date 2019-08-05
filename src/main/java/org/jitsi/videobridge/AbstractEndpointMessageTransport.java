@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2017-2018 Atlassian Pty Ltd
+ * Copyright @ 2017 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,9 @@
  */
 package org.jitsi.videobridge;
 
-import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
+import org.jitsi.videobridge.octo.*;
+import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
@@ -79,8 +80,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param src the transport channel on which {@code jsonObject} has
      * been received
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code ClientHello} which has been received by the associated
-     * {@code SctpConnection}
+     * {@code ClientHello} which has been received by the associated SCTP connection
      */
     protected void onClientHello(Object src, JSONObject jsonObject)
     {
@@ -102,38 +102,40 @@ public abstract class AbstractEndpointMessageTransport
         JSONObject jsonObject,
         String colibriClass)
     {
-        switch (colibriClass)
-        {
-        case COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED:
-            onSelectedEndpointChangedEvent(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED:
-            onSelectedEndpointsChangedEvent(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_PINNED_ENDPOINT_CHANGED:
-            onPinnedEndpointChangedEvent(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_PINNED_ENDPOINTS_CHANGED:
-            onPinnedEndpointsChangedEvent(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_CLIENT_HELLO:
-            onClientHello(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_ENDPOINT_MESSAGE:
-            onClientEndpointMessage(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_LASTN_CHANGED:
-            onLastNChangedEvent(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT:
-            onReceiverVideoConstraintEvent(src, jsonObject);
-            break;
-        default:
-            logger.info(
-                "Received a message with unknown colibri class: "
-                    + colibriClass);
-            break;
-        }
+        TaskPools.IO_POOL.submit(() -> {
+            switch (colibriClass)
+            {
+                case COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED:
+                    onSelectedEndpointChangedEvent(src, jsonObject);
+                    break;
+                case COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED:
+                    onSelectedEndpointsChangedEvent(src, jsonObject);
+                    break;
+                case COLIBRI_CLASS_PINNED_ENDPOINT_CHANGED:
+                    onPinnedEndpointChangedEvent(src, jsonObject);
+                    break;
+                case COLIBRI_CLASS_PINNED_ENDPOINTS_CHANGED:
+                    onPinnedEndpointsChangedEvent(src, jsonObject);
+                    break;
+                case COLIBRI_CLASS_CLIENT_HELLO:
+                    onClientHello(src, jsonObject);
+                    break;
+                case COLIBRI_CLASS_ENDPOINT_MESSAGE:
+                    onClientEndpointMessage(src, jsonObject);
+                    break;
+                case COLIBRI_CLASS_LASTN_CHANGED:
+                    onLastNChangedEvent(src, jsonObject);
+                    break;
+                case COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT:
+                    onReceiverVideoConstraintEvent(src, jsonObject);
+                    break;
+                default:
+                    logger.info(
+                            "Received a message with unknown colibri class: "
+                                    + colibriClass);
+                    break;
+            }
+        });
     }
 
     /**
@@ -166,15 +168,17 @@ public abstract class AbstractEndpointMessageTransport
      * jitsi messages.
      */
     @SuppressWarnings("unchecked")
-    private void onClientEndpointMessage(
+    protected void onClientEndpointMessage(
         Object src,
         JSONObject jsonObject)
     {
         String to = (String)jsonObject.get("to");
 
         // First insert the "from" to prevent spoofing.
-        jsonObject.put("from", getId(jsonObject.get("from")));
+        String from = getId(jsonObject.get("from"));
+        jsonObject.put("from", from);
         Conference conference = getConference();
+
         if (conference == null || conference.isExpired())
         {
             logger.warn(
@@ -182,13 +186,23 @@ public abstract class AbstractEndpointMessageTransport
             return;
         }
 
-        List<AbstractEndpoint> endpointSubset;
+        AbstractEndpoint sourceEndpoint = conference.getEndpoint(from);
+
+        if (sourceEndpoint == null)
+        {
+            logger.warn("Can not forward message, source endpoint not found.");
+            // The source endpoint might have expired. If it was an Octo
+            // endpoint and we forward the message, we may mistakenly forward
+            // it back through Octo and cause a loop.
+            return;
+        }
+
+        List<AbstractEndpoint> targets;
         if ("".equals(to))
         {
             // Broadcast message
-            endpointSubset = new LinkedList<>(conference.getEndpoints());
-            endpointSubset.removeIf(
-                e -> e.getID().equalsIgnoreCase(getId()));
+            targets = new LinkedList<>(conference.getEndpoints());
+            targets.removeIf(e -> e.getID().equalsIgnoreCase(getId()));
         }
         else
         {
@@ -196,35 +210,25 @@ public abstract class AbstractEndpointMessageTransport
             AbstractEndpoint targetEndpoint = conference.getEndpoint(to);
             if (targetEndpoint != null)
             {
-                endpointSubset = Collections.singletonList(targetEndpoint);
+                targets = Collections.singletonList(targetEndpoint);
             }
             else
             {
-                endpointSubset = Collections.emptyList();
                 logger.warn(
                     "Unable to find endpoint " + to
                         + " to send EndpointMessage");
+                return;
             }
         }
 
-        sendMessageToEndpoints(jsonObject.toString(), endpointSubset);
-    }
+        boolean sendToOcto
+            = !(sourceEndpoint instanceof OctoEndpoint)
+              && targets.stream().anyMatch(e -> (e instanceof OctoEndpoint));
 
-    /**
-     * Sends a specific message coming from this endpoint to other endpoints in
-     * the conference.
-     * @param msg the message to send.
-     * @param endpoints the list of endpoints to receive the message.
-     */
-    protected void sendMessageToEndpoints(
-        String msg,
-        List<AbstractEndpoint> endpoints)
-    {
-        Conference conference = getConference();
-        if (conference != null)
-        {
-            conference.sendMessage(msg, endpoints, true);
-        }
+        conference.sendMessage(
+                jsonObject.toString(),
+                targets,
+                sendToOcto);
     }
 
     /**
@@ -327,10 +331,7 @@ public abstract class AbstractEndpointMessageTransport
 
         if (endpoint != null)
         {
-            for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
-            {
-                channel.setLastN(lastN);
-            }
+            endpoint.setLastN(lastN);
         }
     }
 
@@ -365,13 +366,7 @@ public abstract class AbstractEndpointMessageTransport
 
         if (endpoint != null)
         {
-            for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
-            {
-                if (channel instanceof VideoChannel)
-                {
-                    ((VideoChannel) channel).setMaxFrameHeight(maxFrameHeight);
-                }
-            }
+            endpoint.setMaxReceiveFrameHeightPx(maxFrameHeight);
         }
     }
 

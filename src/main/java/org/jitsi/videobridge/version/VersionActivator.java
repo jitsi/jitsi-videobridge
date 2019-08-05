@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.version;
 
+import org.jitsi.utils.version.*;
 import org.jitsi.version.*;
 
 /**
@@ -22,23 +23,17 @@ import org.jitsi.version.*;
  * {@code VersionService} implementation for the Jitsi Videobridge.
  *
  * @author Pawel Domas
+ * @author Boris Grozev
  */
 public class VersionActivator
     extends AbstractVersionActivator
 {
     /**
-     * The {@code CurrentVersionImpl} instance describing the current version
-     * of Jitsi Videobridge.
-     */
-    private static final CurrentVersionImpl CURRENT_VERSION
-        = new CurrentVersionImpl();
-
-    /**
      * {@inheritDoc}
      */
     @Override
-    protected CurrentVersion getCurrentVersion()
+    protected Version getCurrentVersion()
     {
-        return CURRENT_VERSION;
+        return CurrentVersionImpl.VERSION;
     }
 }
