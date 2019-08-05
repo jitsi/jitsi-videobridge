@@ -1048,7 +1048,9 @@ public class Conference
     @Override
     public boolean shouldExpire()
     {
-        return getEndpointCount() == 0;
+        // Allow a conference to have no endpoints in the first 20 seconds.
+        return getEndpointCount() == 0
+                && (System.currentTimeMillis() - creationTime > 20000);
     }
 
     /**
