@@ -22,7 +22,7 @@ import org.jitsi.nlj.ReceiveSsrcRemovedEvent
 import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
-import org.jitsi.nlj.util.StreamInformationStoreImpl
+import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.isOlderThan
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
@@ -44,9 +44,9 @@ import java.util.concurrent.TimeUnit
 class TccGeneratorNode(
     private val onTccPacketReady: (RtcpPacket) -> Unit = {},
     private val scheduler: ScheduledExecutorService,
-    private val getSendBitrate: () -> Long
+    private val getSendBitrate: () -> Long,
+    streamInformation: StreamInformationStore
 ) : ObserverNode("TCC generator") {
-    private val streamInformation = StreamInformationStoreImpl()
     private var tccExtensionId: Int? = null
     private var currTccSeqNum: Int = 0
     private var lastTccSentTime: Long = 0
@@ -167,7 +167,12 @@ class TccGeneratorNode(
     }
 
     private fun isTccReadyToSend(currentPacketMarked: Boolean): Boolean {
-        val timeSinceLastTcc = if (lastTccSentTime == -1L) 0 else System.currentTimeMillis() - lastTccSentTime
+        if (lastTccSentTime <= 0) {
+            lastTccSentTime = System.currentTimeMillis()
+            return false
+        }
+
+        val timeSinceLastTcc = System.currentTimeMillis() - lastTccSentTime
         return timeSinceLastTcc >= 100 ||
             ((timeSinceLastTcc >= 20) && currentPacketMarked)
     }
@@ -197,6 +202,7 @@ class TccGeneratorNode(
         return super.getNodeStats().apply {
             addNumber("num_tcc_packets_sent", numTccSent)
             addNumber("tcc_feedback_bitrate_bps", tccFeedbackBitrate.rate)
+            addString("tcc_extension_id", tccExtensionId.toString())
         }
     }
 
