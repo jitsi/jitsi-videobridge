@@ -121,7 +121,8 @@ class RtxHandler(
         return super.getNodeStats().apply {
             addNumber("num_rtx_packets_received", numRtxPacketsReceived)
             addNumber("num_padding_packets_received", numPaddingPacketsReceived)
-            addString("rtx_payload_type_associations", associatedPayloadTypes.toString())
+            addString("rtx_payload_type_associations(rtx -> orig)", associatedPayloadTypes.toString())
+            addString("rtx_ssrc_associations(rtx -> orig)", associatedSsrcs.toString())
         }
     }
 
