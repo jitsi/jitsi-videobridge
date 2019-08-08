@@ -21,7 +21,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetLocalSsrcEvent
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
-import org.jitsi.nlj.util.StreamInformationStore
+import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
@@ -42,7 +42,7 @@ import kotlin.math.min
  * 3) Aggregation.  This class will pace outgoing requests such that we don't spam the sender
  */
 class KeyframeRequester(
-    private val streamInformationStore: StreamInformationStore
+    private val streamInformationStore: ReadOnlyStreamInformationStore
 ) : TransformerNode("Keyframe Requester") {
 
     // Map a SSRC to the timestamp (in ms) of when we last requested a keyframe for it
@@ -50,7 +50,6 @@ class KeyframeRequester(
     private val firCommandSequenceNumber: AtomicInteger = AtomicInteger(0)
     private val keyframeRequestsSyncRoot = Any()
     private var localSsrc: Long? = null
-    private val hasFirSupport: Boolean = true
     private var waitIntervalMs = DEFAULT_WAIT_INTERVAL_MS
 
     // Stats
@@ -70,45 +69,35 @@ class KeyframeRequester(
     private var numApiRequestsDropped: Int = 0
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
-        val packet = packetInfo.packet.apply {
-            when (this) {
-                is CompoundRtcpPacket -> {
-                    packets.first { it is RtcpFbPliPacket || it is RtcpFbFirPacket } as RtcpFbPacket
-                }
-                is RtcpFbFirPacket -> this
-                is RtcpFbPliPacket -> this
-                else -> return@transform packetInfo
-            }
-        }
+        val pliOrFirPacket = packetInfo.getPliOrFirPacket() ?: return packetInfo
 
         val now = System.currentTimeMillis()
-        var sourceSsrc: Long
-        var canSend: Boolean
-        var forward: Boolean
-        when (packet) {
+        val sourceSsrc: Long
+        val canSend: Boolean
+        val forward: Boolean
+        when (pliOrFirPacket) {
             is RtcpFbPliPacket -> {
-                sourceSsrc = packet.mediaSourceSsrc
+                sourceSsrc = pliOrFirPacket.mediaSourceSsrc
                 canSend = canSendKeyframeRequest(sourceSsrc, now)
                 forward = canSend && streamInformationStore.supportsPli
                 if (forward) numPlisForwarded++
                 if (!canSend) numPlisDropped++
             }
-            is RtcpFbFirPacket ->
-            {
-                sourceSsrc = packet.mediaSenderSsrc
+            is RtcpFbFirPacket -> {
+                sourceSsrc = pliOrFirPacket.mediaSenderSsrc
                 canSend = canSendKeyframeRequest(sourceSsrc, now)
                 // When both are supported, we favor generating a PLI rather than forwarding a FIR
                 forward = canSend && streamInformationStore.supportsFir && !streamInformationStore.supportsPli
                 if (forward) {
                     // When we forward a FIR we need to update the seq num.
-                    packet.seqNum = firCommandSequenceNumber.incrementAndGet()
+                    pliOrFirPacket.seqNum = firCommandSequenceNumber.incrementAndGet()
                     // We manage the seq num space, so we should use the same SSRC
-                    localSsrc?.let { packet.mediaSenderSsrc = it }
+                    localSsrc?.let { pliOrFirPacket.mediaSenderSsrc = it }
                     numFirsForwarded++
                 }
                 if (!canSend) numFirsDropped++
             }
-            // This is now possible, but the compiler doesn't know it.
+            // This is not possible, but the compiler doesn't know it.
             else -> throw IllegalStateException("Packet is neither PLI nor FIR")
         }
 
@@ -203,5 +192,16 @@ class KeyframeRequester(
 
     companion object {
         private const val DEFAULT_WAIT_INTERVAL_MS = 100
+    }
+}
+
+private fun PacketInfo.getPliOrFirPacket(): RtcpFbPacket? {
+    return when (val pkt = packet) {
+        is CompoundRtcpPacket -> {
+            pkt.packets.first { it is RtcpFbPliPacket || it is RtcpFbFirPacket } as RtcpFbPacket
+        }
+        is RtcpFbFirPacket -> pkt
+        is RtcpFbPliPacket -> pkt
+        else -> null
     }
 }
