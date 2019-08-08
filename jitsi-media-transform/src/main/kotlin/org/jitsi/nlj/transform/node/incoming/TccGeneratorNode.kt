@@ -25,6 +25,7 @@ import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.isOlderThan
+import org.jitsi.nlj.util.milliseconds
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
@@ -33,9 +34,14 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.utils.stats.RateStatistics
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
 import java.util.TreeMap
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+
+private val NEVER = Instant.MIN
 
 /**
  * Extract the TCC sequence numbers from each passing packet and generate
@@ -45,11 +51,12 @@ class TccGeneratorNode(
     private val onTccPacketReady: (RtcpPacket) -> Unit = {},
     private val scheduler: ScheduledExecutorService,
     private val getSendBitrate: () -> Long,
-    streamInformation: ReadOnlyStreamInformationStore
+    streamInformation: ReadOnlyStreamInformationStore,
+    private val clock: Clock = Clock.systemDefaultZone()
 ) : ObserverNode("TCC generator") {
     private var tccExtensionId: Int? = null
     private var currTccSeqNum: Int = 0
-    private var lastTccSentTime: Long = 0
+    private var lastTccSentTime: Instant = NEVER
     private val lock = Any()
     // Tcc seq num -> arrival time in ms
     private val packetArrivalTimes =
@@ -108,7 +115,7 @@ class TccGeneratorNode(
     private fun sendPeriodicFeedbacks() {
         try {
             logger.cdebug { "${System.identityHashCode(this)} sending periodic feedback at " +
-                    "${System.currentTimeMillis()}, window start seq is $windowStartSeq" }
+                    "${clock.instant()}, window start seq is $windowStartSeq" }
             buildFeedback()?.let {
                 sendTcc(it)
             }
@@ -156,8 +163,8 @@ class TccGeneratorNode(
         onTccPacketReady(tccPacket)
         numTccSent++
         recalculateSendInterval(getSendBitrate())
-        lastTccSentTime = System.currentTimeMillis()
-        tccFeedbackBitrate.update(tccPacket.length, lastTccSentTime)
+        lastTccSentTime = clock.instant()
+        tccFeedbackBitrate.update(tccPacket.length, clock.millis())
     }
 
     private fun reschedule() {
@@ -167,14 +174,18 @@ class TccGeneratorNode(
     }
 
     private fun isTccReadyToSend(currentPacketMarked: Boolean): Boolean {
-        if (lastTccSentTime <= 0) {
-            lastTccSentTime = System.currentTimeMillis()
+        val now = clock.instant()
+        // We don't want to send TCC the very first time we check (which would
+        // be after the first packet was added).  So the first time we check,
+        // set the last sent time to now to delay sending TCC by at least one 'interval'
+        if (lastTccSentTime == NEVER) {
+            lastTccSentTime = now
             return false
         }
 
-        val timeSinceLastTcc = System.currentTimeMillis() - lastTccSentTime
-        return timeSinceLastTcc >= 100 ||
-            ((timeSinceLastTcc >= 20) && currentPacketMarked)
+        val timeSinceLastTcc = Duration.between(lastTccSentTime, now)
+        return timeSinceLastTcc >= 100.milliseconds() ||
+            ((timeSinceLastTcc >= 20.milliseconds()) && currentPacketMarked)
     }
 
     private fun recalculateSendInterval(sendBitrateBps: Long) {
