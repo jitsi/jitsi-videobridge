@@ -19,14 +19,14 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
-import org.jitsi.nlj.util.StreamInformationStore
+import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 
 class TccSeqNumTagger(
     private val transportCcEngine: TransportCCEngine? = null,
-    streamInformationStore: StreamInformationStore
+    streamInformationStore: ReadOnlyStreamInformationStore
 ) : TransformerNode("TCC sequence number tagger") {
     private var currTccSeqNum: Int = 1
     private var tccExtensionId: Int? = null

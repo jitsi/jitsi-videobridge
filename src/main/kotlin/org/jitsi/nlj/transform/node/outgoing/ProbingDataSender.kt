@@ -27,7 +27,7 @@ import org.jitsi.nlj.rtp.PaddingVideoPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.PacketCache
-import org.jitsi.nlj.util.StreamInformationStore
+import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
@@ -49,7 +49,7 @@ class ProbingDataSender(
     private val rtxDataSender: PacketHandler,
     private val garbageDataSender: PacketHandler,
     private val diagnosticContext: DiagnosticContext,
-    streamInformationStore: StreamInformationStore
+    streamInformationStore: ReadOnlyStreamInformationStore
 ) : EventHandler, NodeStatsProducer {
 
     private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(this.javaClass)
