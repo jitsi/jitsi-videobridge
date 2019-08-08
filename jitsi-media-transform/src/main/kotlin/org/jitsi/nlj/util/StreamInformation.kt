@@ -19,6 +19,8 @@ package org.jitsi.nlj.util
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
+import org.jitsi.nlj.stats.NodeStatsBlock
+import org.jitsi.nlj.transform.NodeStatsProducer
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -55,7 +57,7 @@ interface StreamInformationStore : ReadOnlyStreamInformationStore {
     fun clearRtpPayloadTypes()
 }
 
-class StreamInformationStoreImpl : StreamInformationStore {
+class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
     private val extensionsLock = Any()
     private val extensionHandlers =
         mutableMapOf<RtpExtensionType, MutableList<RtpExtensionHandler>>()
@@ -108,6 +110,17 @@ class StreamInformationStoreImpl : StreamInformationStore {
         synchronized(payloadTypesLock) {
             payloadTypeHandlers.add(handler)
             handler(_rtpPayloadTypes)
+        }
+    }
+
+    override fun getNodeStats(): NodeStatsBlock {
+        return NodeStatsBlock("Stream Information Store").apply {
+            addBlock(NodeStatsBlock("RTP Extensions").apply {
+                rtpExtensions.forEach { addString(it.id.toString(), it.type.toString()) }
+            })
+            addBlock(NodeStatsBlock("RTP Payload Types").apply {
+                rtpPayloadTypes.forEach { addString(it.key.toString(), it.value.toString()) }
+            })
         }
     }
 }
