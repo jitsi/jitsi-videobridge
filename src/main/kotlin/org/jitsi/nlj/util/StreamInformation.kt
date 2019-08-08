@@ -17,6 +17,7 @@
 package org.jitsi.nlj.util
 
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.format.supportsFir
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.stats.NodeStatsBlock
@@ -44,6 +45,8 @@ interface ReadOnlyStreamInformationStore {
 
     val rtpPayloadTypes: Map<Byte, PayloadType>
     fun onRtpPayloadTypesChanged(handler: RtpPayloadTypesChangedHandler)
+
+    val supportsPli: Boolean
 }
 
 /**
@@ -71,6 +74,9 @@ class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
     override val rtpPayloadTypes: Map<Byte, PayloadType>
         get() = _rtpPayloadTypes
 
+    override var supportsPli: Boolean = false
+        private set
+
     override fun addRtpExtensionMapping(rtpExtension: RtpExtension) {
         synchronized(extensionsLock) {
             _rtpExtensions.add(rtpExtension)
@@ -95,6 +101,7 @@ class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
     override fun addRtpPayloadType(payloadType: PayloadType) {
         synchronized(payloadTypesLock) {
             _rtpPayloadTypes[payloadType.pt] = payloadType
+            supportsPli = rtpPayloadTypes.values.find { it.rtcpFeedbackSet.supportsFir() } != null
             payloadTypeHandlers.forEach { it(_rtpPayloadTypes) }
         }
     }
@@ -102,6 +109,7 @@ class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
     override fun clearRtpPayloadTypes() {
         synchronized(payloadTypesLock) {
             _rtpPayloadTypes.clear()
+            supportsPli = false
             payloadTypeHandlers.forEach { it(_rtpPayloadTypes) }
         }
     }
@@ -121,6 +129,7 @@ class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
             addBlock(NodeStatsBlock("RTP Payload Types").apply {
                 rtpPayloadTypes.forEach { addString(it.key.toString(), it.value.toString()) }
             })
+            addBoolean("supports_pli", supportsPli)
         }
     }
 }
