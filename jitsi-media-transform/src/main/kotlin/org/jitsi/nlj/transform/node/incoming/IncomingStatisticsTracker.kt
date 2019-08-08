@@ -20,6 +20,7 @@ import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.stats.JitterStats
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
+import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.RtpUtils.Companion.convertRtpTimestampToMs
 import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.isNewerThan
@@ -34,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Track various statistics about received RTP streams to be used in SR/RR report blocks
  */
 class IncomingStatisticsTracker(
-    private val streamInformationStore: StreamInformationStore
+    private val streamInformationStore: ReadOnlyStreamInformationStore
 ) : ObserverNode("Incoming statistics tracker") {
     private val ssrcStats: MutableMap<Long, IncomingSsrcStats> = ConcurrentHashMap()
 

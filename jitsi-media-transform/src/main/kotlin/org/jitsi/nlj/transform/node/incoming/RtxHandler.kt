@@ -23,6 +23,7 @@ import org.jitsi.nlj.rtp.RtxPacket
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
+import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
@@ -37,7 +38,7 @@ import java.util.concurrent.ConcurrentHashMap
  * https://tools.ietf.org/html/rfc4588
  */
 class RtxHandler(
-    streamInformationStore: StreamInformationStore
+    streamInformationStore: ReadOnlyStreamInformationStore
 ) : TransformerNode("RTX handler") {
     private var numPaddingPacketsReceived = 0
     private var numRtxPacketsReceived = 0
