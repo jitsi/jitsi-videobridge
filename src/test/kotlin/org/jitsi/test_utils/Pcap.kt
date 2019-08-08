@@ -164,7 +164,8 @@ object Pcaps {
             ),
             payloadTypes = listOf(
                 Vp8PayloadType(100),
-                OpusPayloadType(111)
+                OpusPayloadType(111),
+                RtxPayloadType(96, parameters = mapOf("apt" to "100"))
             ),
             headerExtensions = DEFAULT_HEADER_EXTENSIONS,
             ssrcAssociations = listOf()
