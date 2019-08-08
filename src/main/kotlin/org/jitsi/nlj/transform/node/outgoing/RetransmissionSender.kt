@@ -71,6 +71,9 @@ class RetransmissionSender(
         }
     }
 
+    /**
+     * Transform an original RTP packet into an RTX-encapsulated form of that packet.
+     */
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
         numRetransmissionsRequested++
@@ -132,6 +135,8 @@ class RetransmissionSender(
             addNumber("num_retransmissions_requested", numRetransmissionsRequested)
             addNumber("num_retransmissions_rtx_sent", numRetransmittedRtxPackets)
             addNumber("num_retransmissions_plain_sent", numRetransmittedPlainPackets)
+            addString("rtx_payload_type_associations(orig -> rtx)", associatedPayloadTypes.toString())
+            addString("rtx_ssrc_associations(orig -> rtx)", associatedSsrcs.toString())
         }
     }
 }
