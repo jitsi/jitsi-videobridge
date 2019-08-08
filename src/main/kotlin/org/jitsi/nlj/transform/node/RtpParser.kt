@@ -19,7 +19,6 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
-import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.utils.MediaType

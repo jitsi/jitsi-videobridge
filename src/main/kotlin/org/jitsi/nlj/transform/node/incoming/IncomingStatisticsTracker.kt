@@ -22,7 +22,6 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.RtpUtils.Companion.convertRtpTimestampToMs
-import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.isNewerThan
 import org.jitsi.nlj.util.isNextAfter
 import org.jitsi.nlj.util.numPacketsTo
