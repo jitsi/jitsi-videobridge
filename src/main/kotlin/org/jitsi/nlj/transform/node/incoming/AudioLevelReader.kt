@@ -20,6 +20,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.RtpExtensionType.SSRC_AUDIO_LEVEL
 import org.jitsi.nlj.transform.node.ObserverNode
+import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.rtp.header_extensions.AudioLevelHeaderExtension
@@ -27,7 +28,7 @@ import org.jitsi.rtp.rtp.header_extensions.AudioLevelHeaderExtension
 /**
  * https://tools.ietf.org/html/rfc6464#section-3
  */
-class AudioLevelReader(streamInformationStore: StreamInformationStore) : ObserverNode("Audio level reader") {
+class AudioLevelReader(streamInformationStore: ReadOnlyStreamInformationStore) : ObserverNode("Audio level reader") {
     private var audioLevelExtId: Int? = null
     var audioLevelListener: AudioLevelListener? = null
 
