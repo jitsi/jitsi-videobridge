@@ -17,6 +17,7 @@ package org.jitsi.nlj.transform.node.outgoing
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.RtpExtensionType.ABS_SEND_TIME
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.rtp.rtp.RtpPacket
@@ -40,5 +41,11 @@ class AbsSendTime(streamInformationStore: StreamInformationStore) : TransformerN
         }
 
         return packetInfo
+    }
+
+    override fun getNodeStats(): NodeStatsBlock {
+        return super.getNodeStats().apply {
+            addString("abs_send_time_ext_id", extensionId.toString())
+        }
     }
 }
