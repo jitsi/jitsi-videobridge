@@ -197,17 +197,17 @@ class KeyframeRequester(
 
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
-            addBoolean("hasPliSupport", hasPliSupport)
-            addBoolean("hasFirSupport", hasFirSupport)
-            addString("waitIntervalMs", waitIntervalMs.toString()) // use string to prevent aggregation
-            addNumber("numApiRequests", numApiRequests)
-            addNumber("numApiRequestsDropped", numApiRequestsDropped)
-            addNumber("numFirsDropped", numFirsDropped)
-            addNumber("numFirsGenerated", numFirsGenerated)
-            addNumber("numFirsForwarded", numFirsForwarded)
-            addNumber("numPlisDropped", numPlisDropped)
-            addNumber("numPlisGenerated", numPlisGenerated)
-            addNumber("numPlisForwarded", numPlisForwarded)
+            addBoolean("has_pli_support", hasPliSupport)
+            addBoolean("has_fir_support", hasFirSupport)
+            addString("wait_interval_ms", waitIntervalMs.toString()) // use string to prevent aggregation
+            addNumber("num_api_requests", numApiRequests)
+            addNumber("num_api_requests_dropped", numApiRequestsDropped)
+            addNumber("num_firs_dropped", numFirsDropped)
+            addNumber("num_firs_generated", numFirsGenerated)
+            addNumber("num_firs_forwarded", numFirsForwarded)
+            addNumber("num_plis_dropped", numPlisDropped)
+            addNumber("num_plis_generated", numPlisGenerated)
+            addNumber("num_plis_forwarded", numPlisForwarded)
         }
     }
 
