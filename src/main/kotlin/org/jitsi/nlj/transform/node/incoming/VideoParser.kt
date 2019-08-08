@@ -22,7 +22,7 @@ import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.transform.node.TransformerNode
-import org.jitsi.nlj.util.StreamInformationStore
+import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
@@ -31,7 +31,7 @@ import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
  * Parse video packets at a codec level and set appropriate meta-information
  */
 class VideoParser(
-    private val streamInformationStore: StreamInformationStore
+    private val streamInformationStore: ReadOnlyStreamInformationStore
 ) : TransformerNode("Video parser") {
     private var tracks: Array<MediaStreamTrackDesc> = arrayOf()
 
