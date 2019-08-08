@@ -7,19 +7,28 @@ import java.time.Instant
 /**
  * A fake [Clock] whose time is advanced manually
  */
-internal abstract class FakeClock : Clock() {
+internal abstract class FakeClock(
+    private val debug: Boolean = false
+) : Clock() {
     private var now = Instant.ofEpochMilli(0)
+
+    private fun log(str: String) {
+        if (debug) {
+            println(str)
+        }
+    }
 
     override fun instant(): Instant {
         return now
     }
 
     fun elapse(duration: Duration) {
+        log("elapsing $duration")
         now = now.plus(duration)
     }
 
     fun setTime(instant: Instant) {
-        println("clock setting time to $instant")
+        log("clock setting time to $instant")
         now = instant
     }
 }
