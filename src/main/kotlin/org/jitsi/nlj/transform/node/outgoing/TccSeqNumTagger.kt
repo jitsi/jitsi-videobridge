@@ -17,6 +17,7 @@ package org.jitsi.nlj.transform.node.outgoing
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.rtp.rtp.RtpPacket
@@ -48,5 +49,11 @@ class TccSeqNumTagger(
         }
 
         return packetInfo
+    }
+
+    override fun getNodeStats(): NodeStatsBlock {
+        return super.getNodeStats().apply {
+            addString("tcc_ext_id", tccExtensionId.toString())
+        }
     }
 }
