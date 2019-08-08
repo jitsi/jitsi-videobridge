@@ -19,6 +19,7 @@ import org.jitsi.nlj.AudioLevelListener
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.RtpExtensionType.SSRC_AUDIO_LEVEL
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.StreamInformationStore
@@ -54,6 +55,12 @@ class AudioLevelReader(streamInformationStore: ReadOnlyStreamInformationStore) :
                     packetInfo.shouldDiscard = true
                 }
             }
+        }
+    }
+
+    override fun getNodeStats(): NodeStatsBlock {
+        return super.getNodeStats().apply {
+            addString("audio_level_ext_id", audioLevelExtId.toString())
         }
     }
 }
