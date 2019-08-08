@@ -59,8 +59,8 @@ class RetransmissionSender(
                 currentRtpPayloadTypes.values.filterIsInstance<RtxPayloadType>()
                     .map { rtxPayloadType ->
                         rtxPayloadType.associatedPayloadType?.let { associatedPayloadType ->
-                            associatedPayloadTypes[rtxPayloadType.pt.toInt()] = associatedPayloadType
-                            logger.cdebug { "Associating RTX payload type ${rtxPayloadType.pt.toInt()} " +
+                            associatedPayloadTypes[associatedPayloadType] = rtxPayloadType.pt.toPositiveInt()
+                            logger.cdebug { "Associating RTX payload type ${rtxPayloadType.pt.toPositiveInt()} " +
                                 "with primary $associatedPayloadType" }
                         } ?: run {
                             logger.cerror { "Unable to parse RTX associated payload type from payload " +
