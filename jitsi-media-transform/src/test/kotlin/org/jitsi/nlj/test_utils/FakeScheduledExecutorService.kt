@@ -4,7 +4,6 @@ import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.spy
 import com.nhaarman.mockitokotlin2.whenever
-import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ScheduledExecutorService
@@ -120,26 +119,6 @@ internal class RecurringJob(command: Runnable, nextRunTime: Instant, val period:
         // TODO: this behavior is correct for scheduledAtFixedRate, but wrong for scheduleWithFixedDelay, so
         // when we want to support both we'll have to change the way this is calculated
         nextRunTime += period
-    }
-}
-
-/**
- * A fake [Clock] whose time is advanced manually
- */
-internal abstract class FakeClock : Clock() {
-    private var now = Instant.ofEpochMilli(0)
-
-    override fun instant(): Instant {
-        return now
-    }
-
-    fun elapse(duration: Duration) {
-        now = now.plus(duration)
-    }
-
-    fun setTime(instant: Instant) {
-        println("clock setting time to $instant")
-        now = instant
     }
 }
 
