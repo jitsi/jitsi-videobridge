@@ -23,7 +23,7 @@ import org.jitsi.nlj.rtp.RtxPacket
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
-import org.jitsi.nlj.util.StreamInformationStore
+import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
@@ -31,7 +31,7 @@ import org.jitsi.rtp.rtp.RtpPacket
 import java.util.concurrent.ConcurrentHashMap
 
 class RetransmissionSender(
-    streamInformationStore: StreamInformationStore
+    streamInformationStore: ReadOnlyStreamInformationStore
 ) : TransformerNode("Retransmission sender") {
     /**
      * Maps the video payload types to their RTX payload types

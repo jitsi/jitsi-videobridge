@@ -19,11 +19,11 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.RtpExtensionType.ABS_SEND_TIME
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
-import org.jitsi.nlj.util.StreamInformationStore
+import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.AbsSendTimeHeaderExtension
 
-class AbsSendTime(streamInformationStore: StreamInformationStore) : TransformerNode("Absolute send time") {
+class AbsSendTime(streamInformationStore: ReadOnlyStreamInformationStore) : TransformerNode("Absolute send time") {
     private var extensionId: Int? = null
 
     init {
