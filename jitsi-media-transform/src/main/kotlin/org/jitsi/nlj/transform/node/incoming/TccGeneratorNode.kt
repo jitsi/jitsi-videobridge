@@ -23,10 +23,8 @@ import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
-import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.isOlderThan
 import org.jitsi.nlj.util.milliseconds
-import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
@@ -38,8 +36,16 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.TreeMap
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
+import kotlin.Any
+import kotlin.Boolean
+import kotlin.Comparator
+import kotlin.Int
+import kotlin.Long
+import kotlin.Unit
+import kotlin.apply
+import kotlin.let
+import kotlin.synchronized
+import kotlin.toString
 
 private val NEVER = Instant.MIN
 
@@ -49,8 +55,6 @@ private val NEVER = Instant.MIN
  */
 class TccGeneratorNode(
     private val onTccPacketReady: (RtcpPacket) -> Unit = {},
-    private val scheduler: ScheduledExecutorService,
-    private val getSendBitrate: () -> Long,
     streamInformation: ReadOnlyStreamInformationStore,
     private val clock: Clock = Clock.systemDefaultZone()
 ) : ObserverNode("TCC generator") {
@@ -63,9 +67,7 @@ class TccGeneratorNode(
         TreeMap<Int, Long>(Comparator<Int> { o1, o2 -> RtpUtils.getSequenceNumberDelta(o1, o2) })
     // The first sequence number of the current tcc feedback packet
     private var windowStartSeq: Int = -1
-    private var sendIntervalMs: Long = 0
     private var running = true
-    private var periodicFeedbacks = false
     private val tccFeedbackBitrate = RateStatistics(1000)
     /**
      * SSRCs we've been told this endpoint will transmit on.  We'll use an
@@ -79,7 +81,6 @@ class TccGeneratorNode(
         streamInformation.onRtpExtensionMapping(TRANSPORT_CC) {
             tccExtensionId = it
         }
-        reschedule()
     }
 
     override fun observe(packetInfo: PacketInfo) {
@@ -106,23 +107,9 @@ class TccGeneratorNode(
                 windowStartSeq = tccSeqNum
             }
             packetArrivalTimes.putIfAbsent(tccSeqNum, timestamp)
-            if (!periodicFeedbacks && isTccReadyToSend(isMarked)) {
+            if (isTccReadyToSend(isMarked)) {
                 buildFeedback()?.let { sendTcc(it) }
             }
-        }
-    }
-
-    private fun sendPeriodicFeedbacks() {
-        try {
-            logger.cdebug { "${System.identityHashCode(this)} sending periodic feedback at " +
-                    "${clock.instant()}, window start seq is $windowStartSeq" }
-            buildFeedback()?.let {
-                sendTcc(it)
-            }
-        } catch (t: Throwable) {
-            logger.error("Error sending feedback", t)
-        } finally {
-            reschedule()
         }
     }
 
@@ -135,11 +122,7 @@ class TccGeneratorNode(
             // windowStartSeq is the first sequence number to include in the current feedback, but we may not have
             // received it so the base time shall be the time of the first received packet which will be included
             // in this feedback
-            val firstEntry = packetArrivalTimes.ceilingEntry(windowStartSeq)
-            if (firstEntry == null) {
-                reschedule()
-                return null
-            }
+            val firstEntry = packetArrivalTimes.ceilingEntry(windowStartSeq) ?: return null
             tccBuilder.SetBase(windowStartSeq, firstEntry.value * 1000)
 
             var nextSequenceNumber = windowStartSeq
@@ -162,15 +145,8 @@ class TccGeneratorNode(
     private fun sendTcc(tccPacket: RtcpFbTccPacket) {
         onTccPacketReady(tccPacket)
         numTccSent++
-        recalculateSendInterval(getSendBitrate())
         lastTccSentTime = clock.instant()
         tccFeedbackBitrate.update(tccPacket.length, clock.millis())
-    }
-
-    private fun reschedule() {
-        if (running && periodicFeedbacks) {
-            scheduler.schedule(::sendPeriodicFeedbacks, sendIntervalMs, TimeUnit.MILLISECONDS)
-        }
     }
 
     private fun isTccReadyToSend(currentPacketMarked: Boolean): Boolean {
@@ -186,16 +162,6 @@ class TccGeneratorNode(
         val timeSinceLastTcc = Duration.between(lastTccSentTime, now)
         return timeSinceLastTcc >= 100.milliseconds() ||
             ((timeSinceLastTcc >= 20.milliseconds()) && currentPacketMarked)
-    }
-
-    private fun recalculateSendInterval(sendBitrateBps: Long) {
-        synchronized(lock) {
-            // Let TWCC reports occupy 5% of the total sending bitrate. See
-            // https://cs.chromium.org/chromium/src/third_party/webrtc/modules/congestion_controller/include/receive_side_congestion_controller.h?type=cs&g=0&l=52
-            sendIntervalMs = (.5 + kTwccReportSize * 8.0 * 1000.0 /
-                    (.05 * sendBitrateBps).coerceIn(kMinTwccRate, kMaxTwccRate)).toPositiveLong()
-            logger.cdebug { "Send bitrate is now $sendBitrateBps, tcc send interval is $sendIntervalMs ms" }
-        }
     }
 
     override fun stop() {
@@ -215,18 +181,5 @@ class TccGeneratorNode(
             addNumber("tcc_feedback_bitrate_bps", tccFeedbackBitrate.rate)
             addString("tcc_extension_id", tccExtensionId.toString())
         }
-    }
-
-    companion object {
-        private const val kMaxSendIntervalMs = 250
-        private const val kMinSendIntervalMs = 50
-        // TwccReportSize = Ipv4(20B) + UDP(8B) + SRTP(10B) +
-        // AverageTwccReport(30B)
-        // TwccReport size at 50ms interval is 24 byte.
-        // TwccReport size at 250ms interval is 36 byte.
-        // AverageTwccReport = (TwccReport(50ms) + TwccReport(250ms)) / 2
-        private const val kTwccReportSize = 20 + 8 + 10 + 30
-        private const val kMinTwccRate = kTwccReportSize * 8.0 * 1000.0 / kMaxSendIntervalMs
-        private const val kMaxTwccRate = kTwccReportSize * 8.0 * 1000.0 / kMinSendIntervalMs
     }
 }
