@@ -47,6 +47,7 @@ interface ReadOnlyStreamInformationStore {
     fun onRtpPayloadTypesChanged(handler: RtpPayloadTypesChangedHandler)
 
     val supportsPli: Boolean
+    val supportsFir: Boolean
 }
 
 /**
@@ -75,6 +76,13 @@ class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
         get() = _rtpPayloadTypes
 
     override var supportsPli: Boolean = false
+        private set
+
+    // Support for FIR and PLI is declared per-payload type, but currently
+    // our code which requests FIR and PLI is not payload-type aware. So
+    // until this changes we will just check if any of the PTs supports
+    // FIR and PLI. This means that we effectively always assume support for FIR.
+    override var supportsFir: Boolean = true
         private set
 
     override fun addRtpExtensionMapping(rtpExtension: RtpExtension) {
@@ -130,6 +138,7 @@ class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
                 rtpPayloadTypes.forEach { addString(it.key.toString(), it.value.toString()) }
             })
             addBoolean("supports_pli", supportsPli)
+            addBoolean("supports_fir", supportsFir)
         }
     }
 }

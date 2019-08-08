@@ -50,10 +50,6 @@ class KeyframeRequester(
     private val firCommandSequenceNumber: AtomicInteger = AtomicInteger(0)
     private val keyframeRequestsSyncRoot = Any()
     private var localSsrc: Long? = null
-    // Support for FIR and PLI is declared per-payload type, but currently
-    // our code which requests FIR and PLI is not payload-type aware. So
-    // until this changes we will just check if any of the PTs supports
-    // FIR and PLI. This means that we effectively always assume support for FIR.
     private val hasFirSupport: Boolean = true
     private var waitIntervalMs = DEFAULT_WAIT_INTERVAL_MS
 
@@ -102,7 +98,7 @@ class KeyframeRequester(
                 sourceSsrc = packet.mediaSenderSsrc
                 canSend = canSendKeyframeRequest(sourceSsrc, now)
                 // When both are supported, we favor generating a PLI rather than forwarding a FIR
-                forward = canSend && hasFirSupport && !streamInformationStore.supportsPli
+                forward = canSend && streamInformationStore.supportsFir && !streamInformationStore.supportsPli
                 if (forward) {
                     // When we forward a FIR we need to update the seq num.
                     packet.seqNum = firCommandSequenceNumber.incrementAndGet()
@@ -127,7 +123,7 @@ class KeyframeRequester(
      * Returns 'true' when at least one method is supported, AND we haven't sent a request very recently.
      */
     private fun canSendKeyframeRequest(mediaSsrc: Long, nowMs: Long): Boolean {
-        if (!streamInformationStore.supportsPli && !hasFirSupport) {
+        if (!streamInformationStore.supportsPli && !streamInformationStore.supportsFir) {
             return false
         }
         synchronized(keyframeRequestsSyncRoot) {
@@ -160,7 +156,7 @@ class KeyframeRequester(
                 numPlisGenerated++
                 RtcpFbPliPacketBuilder(mediaSourceSsrc = mediaSsrc).build()
             }
-            hasFirSupport -> {
+            streamInformationStore.supportsFir -> {
                 numFirsGenerated++
                 RtcpFbFirPacketBuilder(
                     mediaSenderSsrc = mediaSsrc,
@@ -188,7 +184,6 @@ class KeyframeRequester(
 
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
-            addBoolean("has_fir_support", hasFirSupport)
             addString("wait_interval_ms", waitIntervalMs.toString()) // use string to prevent aggregation
             addNumber("num_api_requests", numApiRequests)
             addNumber("num_api_requests_dropped", numApiRequestsDropped)
