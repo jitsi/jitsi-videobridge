@@ -123,13 +123,18 @@ class H264PayloadType(
     rtcpFeedbackSet: RtcpFeedbackSet = CopyOnWriteArraySet()
 ) : VideoPayloadType(pt, PayloadTypeEncoding.H264, parameters = parameters, rtcpFeedbackSet = rtcpFeedbackSet)
 
+abstract class SecondaryVideoPayloadType(
+    pt: Byte,
+    encoding: PayloadTypeEncoding,
+    parameters: PayloadTypeParams
+) : VideoPayloadType(pt, encoding, parameters = parameters) {
+    val associatedPayloadType: Int = parameters["apt"]?.toInt() ?: error("SecondaryVideoPayloadType must contain 'apt'")
+}
+
 class RtxPayloadType(
     pt: Byte,
     parameters: PayloadTypeParams = ConcurrentHashMap()
-) : VideoPayloadType(pt, PayloadTypeEncoding.RTX, parameters = parameters) {
-    val associatedPayloadType: Int?
-        get() = parameters["apt"]?.toInt()
-}
+) : SecondaryVideoPayloadType(pt, PayloadTypeEncoding.RTX, parameters = parameters)
 
 abstract class AudioPayloadType(
     pt: Byte,
