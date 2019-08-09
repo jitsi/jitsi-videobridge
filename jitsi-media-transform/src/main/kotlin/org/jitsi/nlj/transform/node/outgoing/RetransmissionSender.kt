@@ -25,7 +25,6 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.cerror
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpPacket
 import java.util.concurrent.ConcurrentHashMap
@@ -34,9 +33,9 @@ class RetransmissionSender(
     streamInformationStore: ReadOnlyStreamInformationStore
 ) : TransformerNode("Retransmission sender") {
     /**
-     * Maps the video payload types to their RTX payload types
+     * Maps an original payload type (Int) to its [RtxPayloadType]
      */
-    private val associatedPayloadTypes: ConcurrentHashMap<Int, Int> = ConcurrentHashMap()
+    private val origPtToRtxPayloadType: MutableMap<Int, RtxPayloadType> = ConcurrentHashMap<Int, RtxPayloadType>()
     /**
      * Map the original media ssrcs to their RTX stream ssrcs
      */
@@ -53,21 +52,12 @@ class RetransmissionSender(
 
     init {
         streamInformationStore.onRtpPayloadTypesChanged { currentRtpPayloadTypes ->
-            if (currentRtpPayloadTypes.isEmpty()) {
-                associatedPayloadTypes.clear()
-            } else {
-                currentRtpPayloadTypes.values.filterIsInstance<RtxPayloadType>()
-                    .map { rtxPayloadType ->
-                        rtxPayloadType.associatedPayloadType?.let { associatedPayloadType ->
-                            associatedPayloadTypes[associatedPayloadType] = rtxPayloadType.pt.toPositiveInt()
-                            logger.cdebug { "Associating RTX payload type ${rtxPayloadType.pt.toPositiveInt()} " +
-                                "with primary $associatedPayloadType" }
-                        } ?: run {
-                            logger.cerror { "Unable to parse RTX associated payload type from payload " +
-                                "type $rtxPayloadType" }
-                        }
-                    }
-            }
+            origPtToRtxPayloadType.clear()
+            currentRtpPayloadTypes.values
+                .filterIsInstance<RtxPayloadType>()
+                .map {
+                    origPtToRtxPayloadType[it.associatedPayloadType] = it
+                }
         }
     }
 
@@ -79,10 +69,10 @@ class RetransmissionSender(
         numRetransmissionsRequested++
         // note(george) this instance gets notified about both remote/local ssrcs (see Transeiver.addSsrcAssociation)
         // so, in the case of firefox, we end up having rtx (associated) ssrcs but no rtx (associated) payload type.
-        val rtxPt = associatedPayloadTypes[rtpPacket.payloadType.toPositiveInt()] ?: return retransmitPlain(packetInfo)
+        val rtxPt = origPtToRtxPayloadType[rtpPacket.payloadType.toPositiveInt()] ?: return retransmitPlain(packetInfo)
         val rtxSsrc = associatedSsrcs[rtpPacket.ssrc] ?: return retransmitPlain(packetInfo)
 
-        return retransmitRtx(packetInfo, rtxPt, rtxSsrc)
+        return retransmitRtx(packetInfo, rtxPt.pt.toPositiveInt(), rtxSsrc)
     }
 
     private fun retransmitRtx(packetInfo: PacketInfo, rtxPt: Int, rtxSsrc: Long): PacketInfo {
@@ -135,7 +125,7 @@ class RetransmissionSender(
             addNumber("num_retransmissions_requested", numRetransmissionsRequested)
             addNumber("num_retransmissions_rtx_sent", numRetransmittedRtxPackets)
             addNumber("num_retransmissions_plain_sent", numRetransmittedPlainPackets)
-            addString("rtx_payload_type_associations(orig -> rtx)", associatedPayloadTypes.toString())
+            addString("rtx_payload_types(orig -> rtx)", this@RetransmissionSender.origPtToRtxPayloadType.toString())
             addString("rtx_ssrc_associations(orig -> rtx)", associatedSsrcs.toString())
         }
     }
