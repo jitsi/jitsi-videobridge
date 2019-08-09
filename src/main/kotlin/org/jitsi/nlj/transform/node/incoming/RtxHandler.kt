@@ -25,7 +25,6 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.cerror
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.logging.Logger
@@ -42,9 +41,11 @@ class RtxHandler(
     private var numPaddingPacketsReceived = 0
     private var numRtxPacketsReceived = 0
     /**
-     * Maps the RTX payload types to their associated video payload types
+     * Maps the Integer payload type of RTX to the [RtxPayloadType] instance.  We do this
+     * so we can look up the associated (original) payload type from the [RtxPayloadType]
+     * instance quickly via the Int RTX payload type in an incoming RTX packet.
      */
-    private val associatedPayloadTypes: ConcurrentHashMap<Int, Int> = ConcurrentHashMap()
+    private val rtxPtToRtxPayloadType = ConcurrentHashMap<Int, RtxPayloadType>()
     /**
      * Map the RTX stream ssrcs to their corresponding media ssrcs
      */
@@ -52,56 +53,40 @@ class RtxHandler(
 
     init {
         streamInformationStore.onRtpPayloadTypesChanged { currentPayloadTypes ->
-            if (currentPayloadTypes.isEmpty()) {
-                associatedPayloadTypes.clear()
-            } else {
-                currentPayloadTypes.values.filterIsInstance<RtxPayloadType>()
-                    .map { rtxPayloadType ->
-                        rtxPayloadType.associatedPayloadType?.let { associatedPayloadType ->
-                            associatedPayloadTypes[rtxPayloadType.pt.toInt()] = associatedPayloadType
-                            logger.cdebug { "Associating RTX payload type ${rtxPayloadType.pt.toInt()} " +
-                                "with primary $associatedPayloadType" }
-                        } ?: run {
-                            logger.cerror { "Unable to parse RTX associated payload type from payload " +
-                                "type $rtxPayloadType" }
-                        }
-                    }
-            }
+            rtxPtToRtxPayloadType.clear()
+            currentPayloadTypes.values
+                .filterIsInstance<RtxPayloadType>()
+                .map {
+                    rtxPtToRtxPayloadType[it.pt.toPositiveInt()] = it
+                }
         }
     }
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        if (associatedPayloadTypes.containsKey(rtpPacket.payloadType.toPositiveInt()) &&
-            associatedSsrcs.containsKey(rtpPacket.ssrc)) {
-//          logger.cdebug {
-//             "Received RTX packet: ssrc ${rtxPacket.header.ssrc}, seq num: ${rtxPacket.header.sequenceNumber} " +
-//             "rtx payload size: ${rtxPacket.payload.limit()}, padding size: ${rtxPacket.getPaddingSize()} " +
-//             "buffer:\n${rtxPacket.getBuffer().toHex()}" }
-            if (rtpPacket.payloadLength - rtpPacket.paddingSize < 2) {
-                logger.cdebug { "RTX packet is padding, ignore" }
-                numPaddingPacketsReceived++
-                packetDiscarded(packetInfo)
-                return null
-            }
-
-            val originalSeqNum = RtxPacket.getOriginalSequenceNumber(rtpPacket)
-            val originalPt = associatedPayloadTypes[rtpPacket.payloadType.toPositiveInt()]!!
-            val originalSsrc = associatedSsrcs[rtpPacket.ssrc]!!
-
-            // Move the payload 2 bytes to the left
-            RtxPacket.removeOriginalSequenceNumber(rtpPacket)
-            rtpPacket.sequenceNumber = originalSeqNum
-            rtpPacket.payloadType = originalPt
-            rtpPacket.ssrc = originalSsrc
-
-            logger.cdebug { "Recovered RTX packet.  Original packet: $originalSsrc $originalSeqNum" }
-            numRtxPacketsReceived++
-            packetInfo.resetPayloadVerification()
-            return packetInfo
-        } else {
-            return packetInfo
+        val rtxPayloadType = rtxPtToRtxPayloadType[rtpPacket.payloadType.toPositiveInt()] ?: return packetInfo
+        val originalSsrc = associatedSsrcs[rtpPacket.ssrc] ?: return packetInfo
+        // We do this check only after verifying we determine it's an RTX packet by finding
+        // the associated payload type and SSRC above
+        if (rtpPacket.payloadLength - rtpPacket.paddingSize < 2) {
+            logger.cdebug { "RTX packet is padding, ignore" }
+            numPaddingPacketsReceived++
+            packetDiscarded(packetInfo)
+            return null
         }
+        val originalSeqNum = RtxPacket.getOriginalSequenceNumber(rtpPacket)
+        val originalPt = rtxPayloadType.associatedPayloadType
+
+        // Move the payload 2 bytes to the left
+        RtxPacket.removeOriginalSequenceNumber(rtpPacket)
+        rtpPacket.sequenceNumber = originalSeqNum
+        rtpPacket.payloadType = originalPt
+        rtpPacket.ssrc = originalSsrc
+
+        logger.cdebug { "Recovered RTX packet.  Original packet: $originalSsrc $originalSeqNum" }
+        numRtxPacketsReceived++
+        packetInfo.resetPayloadVerification()
+        return packetInfo
     }
 
     override fun handleEvent(event: Event) {
@@ -120,7 +105,7 @@ class RtxHandler(
         return super.getNodeStats().apply {
             addNumber("num_rtx_packets_received", numRtxPacketsReceived)
             addNumber("num_padding_packets_received", numPaddingPacketsReceived)
-            addString("rtx_payload_type_associations(rtx -> orig)", associatedPayloadTypes.toString())
+            addString("rtx_payload_types", rtxPtToRtxPayloadType.values.toString())
             addString("rtx_ssrc_associations(rtx -> orig)", associatedSsrcs.toString())
         }
     }
