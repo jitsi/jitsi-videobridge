@@ -18,6 +18,7 @@ package org.jitsi.nlj.util
 
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.supportsFir
+import org.jitsi.nlj.format.supportsPli
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.stats.NodeStatsBlock
@@ -109,7 +110,7 @@ class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
     override fun addRtpPayloadType(payloadType: PayloadType) {
         synchronized(payloadTypesLock) {
             _rtpPayloadTypes[payloadType.pt] = payloadType
-            supportsPli = rtpPayloadTypes.values.find { it.rtcpFeedbackSet.supportsFir() } != null
+            supportsPli = rtpPayloadTypes.values.find { it.rtcpFeedbackSet.supportsPli() } != null
             payloadTypeHandlers.forEach { it(_rtpPayloadTypes) }
         }
     }
