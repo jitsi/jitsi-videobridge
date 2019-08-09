@@ -67,7 +67,7 @@ class RetransmissionSenderTest : ShouldSpec() {
 
         // Setup: add the rtx payload type and the rtx ssrc association
         streamInformationStore.addRtpPayloadType(
-                RtxPayloadType(rtxPayloadType.toByte(), mapOf("apt" to originalPayloadType.toString()))
+            RtxPayloadType(rtxPayloadType.toByte(), mapOf("apt" to originalPayloadType.toString()))
         )
         retransmissionSender.handleEvent(SsrcAssociationEvent(originalSsrc, rtxSsrc, SsrcAssociationType.RTX))
     }
