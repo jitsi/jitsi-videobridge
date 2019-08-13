@@ -24,6 +24,8 @@ import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
+import org.jitsi.nlj.util.LocalSsrcAssociation;
+import org.jitsi.nlj.util.RemoteSsrcAssociation;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
@@ -1334,7 +1336,14 @@ public class Endpoint
             long secondarySsrc,
             SsrcAssociationType type)
     {
-        transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, type);
+        if (endpointId.equalsIgnoreCase(getID()))
+        {
+            transceiver.addSsrcAssociation(new LocalSsrcAssociation(primarySsrc, secondarySsrc, type));
+        }
+        else
+        {
+            transceiver.addSsrcAssociation(new RemoteSsrcAssociation(primarySsrc, secondarySsrc, type));
+        }
     }
 
     /**
