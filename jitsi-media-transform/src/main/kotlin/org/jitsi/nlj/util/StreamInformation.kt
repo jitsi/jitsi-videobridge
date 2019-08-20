@@ -17,10 +17,10 @@
 package org.jitsi.nlj.util
 
 import org.jitsi.nlj.format.PayloadType
-import org.jitsi.nlj.format.supportsFir
 import org.jitsi.nlj.format.supportsPli
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
+import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import java.util.concurrent.ConcurrentHashMap
@@ -47,6 +47,9 @@ interface ReadOnlyStreamInformationStore {
     val rtpPayloadTypes: Map<Byte, PayloadType>
     fun onRtpPayloadTypesChanged(handler: RtpPayloadTypesChangedHandler)
 
+    fun getLocalPrimarySsrc(secondarySsrc: Long): Long?
+    fun getRemoteSecondarySsrc(primarySsrc: Long, associationType: SsrcAssociationType): Long?
+
     val supportsPli: Boolean
     val supportsFir: Boolean
 }
@@ -60,6 +63,8 @@ interface StreamInformationStore : ReadOnlyStreamInformationStore {
 
     fun addRtpPayloadType(payloadType: PayloadType)
     fun clearRtpPayloadTypes()
+
+    fun addSsrcAssociation(ssrcAssociation: SsrcAssociation)
 }
 
 class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
@@ -75,6 +80,9 @@ class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
     private val _rtpPayloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
     override val rtpPayloadTypes: Map<Byte, PayloadType>
         get() = _rtpPayloadTypes
+
+    private val localSsrcAssociations = SsrcAssociationStore("Local SSRC Associations")
+    private val remoteSsrcAssociations = SsrcAssociationStore("Remote SSRC Associations")
 
     override var supportsPli: Boolean = false
         private set
@@ -130,16 +138,32 @@ class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
         }
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return NodeStatsBlock("Stream Information Store").apply {
-            addBlock(NodeStatsBlock("RTP Extensions").apply {
-                rtpExtensions.forEach { addString(it.id.toString(), it.type.toString()) }
-            })
-            addBlock(NodeStatsBlock("RTP Payload Types").apply {
-                rtpPayloadTypes.forEach { addString(it.key.toString(), it.value.toString()) }
-            })
-            addBoolean("supports_pli", supportsPli)
-            addBoolean("supports_fir", supportsFir)
+    // NOTE(brian): Currently, we only have a use case to do a mapping of
+    // secondary -> primary for local SSRCs and primary -> secondary for
+    // remote SSRCs
+    override fun getLocalPrimarySsrc(secondarySsrc: Long): Long? =
+        localSsrcAssociations.getPrimarySsrc(secondarySsrc)
+
+    override fun getRemoteSecondarySsrc(primarySsrc: Long, associationType: SsrcAssociationType): Long? =
+        remoteSsrcAssociations.getSecondarySsrc(primarySsrc, associationType)
+
+    override fun addSsrcAssociation(ssrcAssociation: SsrcAssociation) {
+        when (ssrcAssociation) {
+            is LocalSsrcAssociation -> localSsrcAssociations.addAssociation(ssrcAssociation)
+            is RemoteSsrcAssociation -> remoteSsrcAssociations.addAssociation(ssrcAssociation)
         }
+    }
+
+    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("Stream Information Store").apply {
+        addBlock(NodeStatsBlock("RTP Extensions").apply {
+            rtpExtensions.forEach { addString(it.id.toString(), it.type.toString()) }
+        })
+        addBlock(NodeStatsBlock("RTP Payload Types").apply {
+            rtpPayloadTypes.forEach { addString(it.key.toString(), it.value.toString()) }
+        })
+        addBlock(localSsrcAssociations.getNodeStats())
+        addBlock(remoteSsrcAssociations.getNodeStats())
+        addBoolean("supports_pli", supportsPli)
+        addBoolean("supports_fir", supportsFir)
     }
 }

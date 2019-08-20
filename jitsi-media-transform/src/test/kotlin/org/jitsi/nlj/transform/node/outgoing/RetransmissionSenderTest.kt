@@ -22,11 +22,11 @@ import io.kotlintest.matchers.instanceOf
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.RemoteSsrcAssociation
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.rtp.rtp.RtpPacket
 
@@ -69,7 +69,9 @@ class RetransmissionSenderTest : ShouldSpec() {
         streamInformationStore.addRtpPayloadType(
             RtxPayloadType(rtxPayloadType.toByte(), mapOf("apt" to originalPayloadType.toString()))
         )
-        retransmissionSender.handleEvent(SsrcAssociationEvent(originalSsrc, rtxSsrc, SsrcAssociationType.RTX))
+        streamInformationStore.addSsrcAssociation(
+            RemoteSsrcAssociation(originalSsrc, rtxSsrc, SsrcAssociationType.RTX)
+        )
     }
 
     init {
