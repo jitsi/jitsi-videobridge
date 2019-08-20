@@ -18,7 +18,6 @@ package org.jitsi.nlj
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
-import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
@@ -26,6 +25,8 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.stats.PacketIOActivity
 import org.jitsi.nlj.stats.TransceiverStats
 import org.jitsi.nlj.transform.NodeStatsProducer
+import org.jitsi.nlj.util.LocalSsrcAssociation
+import org.jitsi.nlj.util.SsrcAssociation
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
@@ -230,11 +231,12 @@ class Transceiver(
 
     // TODO(brian): we may want to handle local and remote ssrc associations differently, as different parts of the
     // code care about one or the other, but currently there is no issue treating them the same.
-    fun addSsrcAssociation(primarySsrc: Long, secondarySsrc: Long, type: SsrcAssociationType) {
-        logger.cdebug { "Adding SSRC association: $primarySsrc <-> $secondarySsrc ($type)" }
-        val ssrcAssociationEvent = SsrcAssociationEvent(primarySsrc, secondarySsrc, type)
-        rtpReceiver.handleEvent(ssrcAssociationEvent)
-        rtpSender.handleEvent(ssrcAssociationEvent)
+    fun addSsrcAssociation(ssrcAssociation: SsrcAssociation) {
+        logger.cdebug {
+            val location = if (ssrcAssociation is LocalSsrcAssociation) "local" else "remote"
+            "Adding $location SSRC association: $ssrcAssociation"
+        }
+        streamInformationStore.addSsrcAssociation(ssrcAssociation)
     }
 
     fun setSrtpInformation(chosenSrtpProtectionProfile: Int, tlsRole: TlsRole, keyingMaterial: ByteArray) {
