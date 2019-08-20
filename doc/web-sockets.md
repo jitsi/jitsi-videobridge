@@ -18,7 +18,7 @@ The following properties configure the bridge.
 
 To enable the HTTP interface without TLS:
 ```
-org.jitsi.videobridge.rest.jetty.port=8080
+org.jitsi.videobridge.rest.jetty.port=9090
 ```
 
 To enable the HTTP interface with TLS:
