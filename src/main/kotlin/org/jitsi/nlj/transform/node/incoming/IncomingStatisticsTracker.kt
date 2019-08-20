@@ -105,6 +105,7 @@ class IncomingSsrcStats(
     private var outOfOrderPacketCount: Int = 0
     private val jitterStats = JitterStats()
     private var numReceivedPackets: Int = 0
+    private var numReceivedBytes: Int = 0
     // End variables protected by statsLock
 
     private var probation: Int = INITIAL_MIN_SEQUENTIAL
@@ -146,7 +147,7 @@ class IncomingSsrcStats(
 
     fun getSnapshot(): Snapshot {
         synchronized(statsLock) {
-            return Snapshot(numReceivedPackets, maxSeqNum, seqNumCycles, numExpectedPackets,
+            return Snapshot(numReceivedPackets, numReceivedBytes, maxSeqNum, seqNumCycles, numExpectedPackets,
                     cumulativePacketsLost, jitterStats.jitter)
         }
     }
@@ -177,6 +178,7 @@ class IncomingSsrcStats(
         val packetSequenceNumber = packet.sequenceNumber
         synchronized(statsLock) {
             numReceivedPackets++
+            numReceivedBytes += packet.length
             if (packetSequenceNumber isNewerThan maxSeqNum) {
                 if (packetSequenceNumber isNextAfter maxSeqNum) {
                     if (probation > 0) {
@@ -235,6 +237,7 @@ class IncomingSsrcStats(
      */
     data class Snapshot(
         val numReceivedPackets: Int = 0,
+        val numReceivedBytes: Int = 0,
         val maxSeqNum: Int = 0,
         val seqNumCycles: Int = 0,
         val numExpectedPackets: Int = 0,
