@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.utils.MediaType
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 
@@ -23,12 +22,6 @@ interface Event
 
 class ReceiveSsrcAddedEvent(val ssrc: Long) : Event
 class ReceiveSsrcRemovedEvent(val ssrc: Long) : Event
-
-class SsrcAssociationEvent(
-    val primarySsrc: Long,
-    val secondarySsrc: Long,
-    val type: SsrcAssociationType
-) : Event
 
 class SetMediaStreamTracksEvent(val mediaStreamTrackDescs: Array<MediaStreamTrackDesc>) : Event
 

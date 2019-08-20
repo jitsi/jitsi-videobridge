@@ -15,9 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.outgoing
 
-import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.rtp.RtxPacket
 import org.jitsi.nlj.rtp.SsrcAssociationType
@@ -30,17 +28,12 @@ import org.jitsi.rtp.rtp.RtpPacket
 import java.util.concurrent.ConcurrentHashMap
 
 class RetransmissionSender(
-    streamInformationStore: ReadOnlyStreamInformationStore
+    private val streamInformationStore: ReadOnlyStreamInformationStore
 ) : TransformerNode("Retransmission sender") {
     /**
      * Maps an original payload type (Int) to its [RtxPayloadType]
      */
     private val origPtToRtxPayloadType: MutableMap<Int, RtxPayloadType> = ConcurrentHashMap<Int, RtxPayloadType>()
-    /**
-     * Map the original media ssrcs to their RTX stream ssrcs
-     */
-    private val associatedSsrcs: ConcurrentHashMap<Long, Long> = ConcurrentHashMap()
-
     /**
      * A map of rtx stream ssrc to the current sequence number for that stream
      */
@@ -67,10 +60,8 @@ class RetransmissionSender(
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
         numRetransmissionsRequested++
-        // note(george) this instance gets notified about both remote/local ssrcs (see Transeiver.addSsrcAssociation)
-        // so, in the case of firefox, we end up having rtx (associated) ssrcs but no rtx (associated) payload type.
         val rtxPt = origPtToRtxPayloadType[rtpPacket.payloadType.toPositiveInt()] ?: return retransmitPlain(packetInfo)
-        val rtxSsrc = associatedSsrcs[rtpPacket.ssrc] ?: return retransmitPlain(packetInfo)
+        val rtxSsrc = streamInformationStore.getRemoteSecondarySsrc(rtpPacket.ssrc, SsrcAssociationType.RTX) ?: return retransmitPlain(packetInfo)
 
         return retransmitRtx(packetInfo, rtxPt.pt.toPositiveInt(), rtxSsrc)
     }
@@ -107,26 +98,12 @@ class RetransmissionSender(
         return packetInfo
     }
 
-    override fun handleEvent(event: Event) {
-        when (event) {
-            is SsrcAssociationEvent -> {
-                if (event.type == SsrcAssociationType.RTX) {
-                    logger.cdebug { "${hashCode()} associating RTX ssrc " +
-                            "${event.secondarySsrc} with primary ${event.primarySsrc}" }
-                    associatedSsrcs[event.primarySsrc] = event.secondarySsrc
-                }
-            }
-        }
-        super.handleEvent(event)
-    }
-
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
             addNumber("num_retransmissions_requested", numRetransmissionsRequested)
             addNumber("num_retransmissions_rtx_sent", numRetransmittedRtxPackets)
             addNumber("num_retransmissions_plain_sent", numRetransmittedPlainPackets)
             addString("rtx_payload_types(orig -> rtx)", this@RetransmissionSender.origPtToRtxPayloadType.toString())
-            addString("rtx_ssrc_associations(orig -> rtx)", associatedSsrcs.toString())
         }
     }
 }
