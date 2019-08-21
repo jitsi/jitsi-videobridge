@@ -75,7 +75,7 @@ public class ConferencePeriodicRunnable
 
             TransceiverStats transceiverStats
                     = endpoint.getTransceiver().getTransceiverStats();
-            int rtt_ms
+            int rttMs
                     = (int) transceiverStats.getEndpointConnectionStats().getRtt();
 
             Map<Long, IncomingSsrcStats.Snapshot> incomingStats
@@ -87,7 +87,7 @@ public class ConferencePeriodicRunnable
                 receiveStats.bytes = stats.getNumReceivedBytes();
                 receiveStats.packets = stats.getNumReceivedPackets();
                 receiveStats.packetsLost = stats.getCumulativePacketsLost();
-                receiveStats.rtt_ms = rtt_ms;
+                receiveStats.rtt_ms = rttMs;
                 // TODO: the incoming stats don't have the fractional packet
                 //  loss, it has to be computed between snapshots.
                 //receiveStats.fractionalPacketLoss = TODO;
@@ -105,7 +105,7 @@ public class ConferencePeriodicRunnable
                 sendStats.packets = stats.getPacketCount();
                 // TODO: we don't keep track of outgoing loss per ssrc.
                 //sendStats.packetsLost = TODO
-                sendStats.rtt_ms = rtt_ms;
+                sendStats.rtt_ms = rttMs;
                 // TODO: we don't keep track of outgoing loss per ssrc.
                 //sendStats.fractionalPacketLoss = TODO
                 // TODO: we don't keep track of outgoing loss per ssrc.
