@@ -28,7 +28,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-utils</artifactId>
-            <version>1.0-20190723.110846-12</version>
+            <version>1.0-2-g27c4398</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
