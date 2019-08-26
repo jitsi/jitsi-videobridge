@@ -39,7 +39,6 @@ import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.BandwidthEstimatorImpl
 import org.jitsi_modified.service.neomedia.rtp.BandwidthEstimator
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 
@@ -70,7 +69,6 @@ class Transceiver(
     logLevelDelegate: Logger? = null
 ) : Stoppable, NodeStatsProducer {
     private val logger = getLogger(this.javaClass, logLevelDelegate)
-    private val receiveSsrcs = ConcurrentHashMap.newKeySet<Long>()
     val packetIOActivity = PacketIOActivity()
     private val endpointConnectionStats = EndpointConnectionStats()
     private val streamInformationStore = StreamInformationStoreImpl()
@@ -163,17 +161,14 @@ class Transceiver(
         rtpSender.onOutgoingPacket(outgoingPacketHandler)
     }
 
-    fun addReceiveSsrc(ssrc: Long) {
-        logger.cdebug { "${hashCode()} adding receive ssrc $ssrc" }
-        receiveSsrcs.add(ssrc)
-        rtpReceiver.handleEvent(ReceiveSsrcAddedEvent(ssrc))
-        // TODO: fire events to rtp sender as well
+    fun addReceiveSsrc(ssrc: Long, mediaType: MediaType) {
+        logger.cdebug { "${hashCode()} adding receive ssrc $ssrc of type $mediaType" }
+        streamInformationStore.addReceiveSsrc(ssrc, mediaType)
     }
 
     fun removeReceiveSsrc(ssrc: Long) {
         logger.cinfo { "Transceiver ${hashCode()} removing receive ssrc $ssrc" }
-        receiveSsrcs.remove(ssrc)
-        rtpReceiver.handleEvent(ReceiveSsrcRemovedEvent(ssrc))
+        streamInformationStore.removeReceiveSsrc(ssrc)
     }
 
     /**
@@ -185,7 +180,7 @@ class Transceiver(
         rtpReceiver.handleEvent(localSsrcSetEvent)
     }
 
-    fun receivesSsrc(ssrc: Long): Boolean = receiveSsrcs.contains(ssrc)
+    fun receivesSsrc(ssrc: Long): Boolean = streamInformationStore.receiveSsrcs.contains(ssrc)
 
     fun setMediaStreamTracks(mediaStreamTracks: Array<MediaStreamTrackDesc>): Boolean {
         logger.cdebug { "$id setting media stream tracks: ${mediaStreamTracks.joinToString()}" }
@@ -260,7 +255,6 @@ class Transceiver(
     override fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("Transceiver $id").apply {
             addBlock(streamInformationStore.getNodeStats())
-            addString("receiveSsrcs", receiveSsrcs.toString())
             addBlock(mediaStreamTracks.getNodeStats())
             addString("endpointConnectionStats", endpointConnectionStats.getSnapshot().toString())
             addBlock(bandwidthEstimator.getNodeStats())
