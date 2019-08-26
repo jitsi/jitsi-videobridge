@@ -21,6 +21,8 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import java.util.concurrent.CopyOnWriteArrayList
 
+typealias SsrcAssociationHandler = (SsrcAssociation) -> Unit
+
 class SsrcAssociationStore(
     private val name: String = "SSRC Associations"
 ) : NodeStatsProducer {
@@ -33,9 +35,22 @@ class SsrcAssociationStore(
     private var ssrcAssociationsByPrimarySsrc = mapOf<Long, List<SsrcAssociation>>()
     private var ssrcAssociationsBySecondarySsrc = mapOf<Long, SsrcAssociation>()
 
+    private val handlers: MutableList<SsrcAssociationHandler> = CopyOnWriteArrayList()
+
+    /**
+     * Each time an association is added, we want to invoke the handlers
+     * and each time a handler is added, want to invoke it with all existing
+     * associations.  In order to make each of those operations a single,
+     * atomic operation, we use this lock to synchronize them.
+     */
+    private val lock = Any()
+
     fun addAssociation(ssrcAssociation: SsrcAssociation) {
-        ssrcAssociations.add(ssrcAssociation)
-        rebuildMaps()
+        synchronized(lock) {
+            ssrcAssociations.add(ssrcAssociation)
+            rebuildMaps()
+            handlers.forEach { it(ssrcAssociation) }
+        }
     }
 
     private fun rebuildMaps() {
@@ -43,10 +58,30 @@ class SsrcAssociationStore(
         ssrcAssociationsBySecondarySsrc = ssrcAssociations.associateBy(SsrcAssociation::secondarySsrc)
     }
 
-    fun getPrimarySsrc(secondarySsrc: Long): Long? = ssrcAssociationsBySecondarySsrc[secondarySsrc]?.primarySsrc
+    fun getPrimarySsrc(secondarySsrc: Long): Long? =
+        ssrcAssociationsBySecondarySsrc[secondarySsrc]?.primarySsrc
 
     fun getSecondarySsrc(primarySsrc: Long, associationType: SsrcAssociationType): Long? =
         ssrcAssociationsByPrimarySsrc[primarySsrc]?.find { it.type == associationType }?.secondarySsrc
+
+    /**
+     * When an SSRC has no associations at all (audio, for example), we consider it a
+     * 'primary' SSRC.  So to perform this check we assume the given SSRC has been
+     * signalled and simply verify that it's *not* signaled as a secondary SSRC.
+     * Note that this may mean there is a slight window before the SSRC associations are
+     * processed during which we return true for an SSRC which will later be denoted
+     * as a secondary ssrc.
+     */
+    fun isPrimarySsrc(ssrc: Long): Boolean {
+        return !ssrcAssociationsBySecondarySsrc.containsKey(ssrc)
+    }
+
+    fun onAssociation(handler: (SsrcAssociation) -> Unit) {
+        synchronized(lock) {
+            handlers.add(handler)
+            ssrcAssociations.forEach(handler)
+        }
+    }
 
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock(name).apply {
         addString("SSRC associations", ssrcAssociations.toString())
