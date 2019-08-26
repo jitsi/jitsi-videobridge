@@ -15,10 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.ReceiveSsrcAddedEvent
-import org.jitsi.nlj.ReceiveSsrcRemovedEvent
 import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
@@ -36,16 +33,6 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.TreeMap
-import kotlin.Any
-import kotlin.Boolean
-import kotlin.Comparator
-import kotlin.Int
-import kotlin.Long
-import kotlin.Unit
-import kotlin.apply
-import kotlin.let
-import kotlin.synchronized
-import kotlin.toString
 
 private val NEVER = Instant.MIN
 
@@ -55,7 +42,7 @@ private val NEVER = Instant.MIN
  */
 class TccGeneratorNode(
     private val onTccPacketReady: (RtcpPacket) -> Unit = {},
-    streamInformation: ReadOnlyStreamInformationStore,
+    private val streamInformation: ReadOnlyStreamInformationStore,
     private val clock: Clock = Clock.systemDefaultZone()
 ) : ObserverNode("TCC generator") {
     private var tccExtensionId: Int? = null
@@ -69,12 +56,6 @@ class TccGeneratorNode(
     private var windowStartSeq: Int = -1
     private var running = true
     private val tccFeedbackBitrate = RateStatistics(1000)
-    /**
-     * SSRCs we've been told this endpoint will transmit on.  We'll use an
-     * SSRC from this list for the RTCPFB mediaSourceSsrc field in the
-     * TCC packets we generate
-     */
-    private var mediaSsrcs: MutableSet<Long> = mutableSetOf()
     private var numTccSent: Int = 0
 
     init {
@@ -115,7 +96,7 @@ class TccGeneratorNode(
 
     private fun buildFeedback(): RtcpFbTccPacket? {
         val tccBuilder = RtcpFbTccPacketBuilder(
-            mediaSourceSsrc = mediaSsrcs.firstOrNull() ?: -1L,
+            mediaSourceSsrc = streamInformation.primaryMediaSsrcs.firstOrNull() ?: -1L,
             feedbackPacketSeqNum = currTccSeqNum++
         )
         synchronized(lock) {
@@ -166,13 +147,6 @@ class TccGeneratorNode(
 
     override fun stop() {
         running = false
-    }
-
-    override fun handleEvent(event: Event) {
-        when (event) {
-            is ReceiveSsrcAddedEvent -> mediaSsrcs.add(event.ssrc)
-            is ReceiveSsrcRemovedEvent -> mediaSsrcs.remove(event.ssrc)
-        }
     }
 
     override fun getNodeStats(): NodeStatsBlock {

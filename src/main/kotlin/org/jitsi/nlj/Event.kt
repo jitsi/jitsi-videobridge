@@ -20,9 +20,6 @@ import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 
 interface Event
 
-class ReceiveSsrcAddedEvent(val ssrc: Long) : Event
-class ReceiveSsrcRemovedEvent(val ssrc: Long) : Event
-
 class SetMediaStreamTracksEvent(val mediaStreamTrackDescs: Array<MediaStreamTrackDesc>) : Event
 
 class SetLocalSsrcEvent(val mediaType: MediaType, val ssrc: Long) : Event

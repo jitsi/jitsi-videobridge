@@ -23,6 +23,7 @@ import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
+import org.jitsi.utils.MediaType
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -50,6 +51,25 @@ interface ReadOnlyStreamInformationStore {
     fun getLocalPrimarySsrc(secondarySsrc: Long): Long?
     fun getRemoteSecondarySsrc(primarySsrc: Long, associationType: SsrcAssociationType): Long?
 
+    /**
+     * All signaled receive SSRCs
+     */
+    val receiveSsrcs: Set<Long>
+
+    /**
+     * A list of all primary media (audio and video) SSRCs for which the
+     * endpoint associated with this stream information store sends video
+     * (does not include things like RTX)
+     */
+    val primaryMediaSsrcs: Set<Long>
+
+    /**
+     * A list of all primary video SSRCs for which the endpoint associated
+     * with this stream information store sends video (does not include
+     * RTX)
+     */
+    val primaryVideoSsrcs: Set<Long>
+
     val supportsPli: Boolean
     val supportsFir: Boolean
 }
@@ -65,6 +85,9 @@ interface StreamInformationStore : ReadOnlyStreamInformationStore {
     fun clearRtpPayloadTypes()
 
     fun addSsrcAssociation(ssrcAssociation: SsrcAssociation)
+
+    fun addReceiveSsrc(ssrc: Long, mediaType: MediaType)
+    fun removeReceiveSsrc(ssrc: Long)
 }
 
 class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
@@ -83,6 +106,14 @@ class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
 
     private val localSsrcAssociations = SsrcAssociationStore("Local SSRC Associations")
     private val remoteSsrcAssociations = SsrcAssociationStore("Remote SSRC Associations")
+
+    private val receiveSsrcStore = ReceiveSsrcStore(localSsrcAssociations)
+    override val receiveSsrcs: Set<Long>
+        get() = receiveSsrcStore.receiveSsrcs
+    override val primaryMediaSsrcs: Set<Long>
+        get() = receiveSsrcStore.primaryMediaSsrcs
+    override val primaryVideoSsrcs: Set<Long>
+        get() = receiveSsrcStore.primaryVideoSsrcs
 
     override var supportsPli: Boolean = false
         private set
@@ -154,6 +185,12 @@ class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
         }
     }
 
+    override fun addReceiveSsrc(ssrc: Long, mediaType: MediaType) =
+        receiveSsrcStore.addReceiveSsrc(ssrc, mediaType)
+
+    override fun removeReceiveSsrc(ssrc: Long) =
+        receiveSsrcStore.removeReceiveSsrc(ssrc)
+
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("Stream Information Store").apply {
         addBlock(NodeStatsBlock("RTP Extensions").apply {
             rtpExtensions.forEach { addString(it.id.toString(), it.type.toString()) }
@@ -163,6 +200,7 @@ class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
         })
         addBlock(localSsrcAssociations.getNodeStats())
         addBlock(remoteSsrcAssociations.getNodeStats())
+        addBlock(receiveSsrcStore.getNodeStats())
         addBoolean("supports_pli", supportsPli)
         addBoolean("supports_fir", supportsFir)
     }
