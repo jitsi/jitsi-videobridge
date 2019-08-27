@@ -232,9 +232,10 @@ public class ClientConnectionImpl
      * }
      * }</pre>
      *
-     * @return {@code false} if this instance has not been initialized, or the
-     * JSON is not in the expected format. Otherwise (regardless of whether
-     * a client with the specified ID existed or not), returns {@code true}.
+     * @return {@code true} if the MUC client with the specified ID was removed.
+     * Otherwise (if instance has not been initialized, if the JSON is not in
+     * the expected format, or if no MUC client with the specified ID exists),
+     * returns {@code false}.
      */
     public boolean removeMucClient(JSONObject jsonObject)
     {
@@ -244,7 +245,6 @@ public class ClientConnectionImpl
             return false;
         }
 
-        mucClientManager.removeMucClient((String) jsonObject.get("id"));
-        return true;
+        return mucClientManager.removeMucClient((String) jsonObject.get("id"));
     }
 }
