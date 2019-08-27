@@ -251,9 +251,9 @@ public class ChannelShim
     public void setSources(@NotNull List<SourcePacketExtension> sources)
     {
         this.sources = sources;
-        sources.stream()
-            .map(source -> source.getSSRC())
-            .forEach(endpoint::addReceiveSsrc);
+        sources.forEach(s -> {
+            endpoint.addReceiveSsrc(s.getSSRC(), getMediaType());
+        });
     }
 
     /**

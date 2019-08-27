@@ -119,7 +119,7 @@ public class OctoEndpoint
      * {@inheritDoc}
      */
     @Override
-    public void addReceiveSsrc(long ssrc)
+    public void addReceiveSsrc(long ssrc, MediaType mediaType)
     {
         // This is controlled through setReceiveSsrcs.
     }
