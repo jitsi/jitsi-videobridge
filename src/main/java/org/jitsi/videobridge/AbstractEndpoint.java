@@ -15,7 +15,7 @@
  */
 package org.jitsi.videobridge;
 
-import org.jitsi.utils.MediaType;
+import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.xmpp.extensions.colibri.*;
