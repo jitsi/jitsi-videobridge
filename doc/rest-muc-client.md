@@ -25,4 +25,4 @@ An XMPP client connection (i.e. a MucClient) can be removed by posting a JSON wh
 }
 ```
 
-The request will be successful (return 200) as long as the format of the JSON is as expected, regardless of whether a connection was found and removed or it wasn't found.
+The request will be successful (return 200) if an XMPP client connection was removed. 
