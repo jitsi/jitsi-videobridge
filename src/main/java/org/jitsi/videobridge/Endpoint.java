@@ -22,8 +22,6 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.srtp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.*;
-import org.jitsi.nlj.transform.node.incoming.*;
-import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.nlj.util.LocalSsrcAssociation;
 import org.jitsi.nlj.util.RemoteSsrcAssociation;
 import org.jitsi.rtp.*;
@@ -33,6 +31,9 @@ import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.*;
+import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.logging2.Logger;
+import org.jitsi.utils.logging2.LoggerImpl;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
@@ -83,13 +84,6 @@ public class Endpoint
      */
     public static final String SELECTED_ENDPOINTS_PROPERTY_NAME
         = Endpoint.class.getName() + ".selectedEndpoints";
-
-    /**
-     * The {@link Logger} used by the {@link Endpoint} class to print debug
-     * information.
-     */
-    private static final Logger classLogger
-            = Logger.getLogger(Endpoint.class);
 
     /**
      * The logger for the instance.
@@ -230,7 +224,10 @@ public class Endpoint
     {
         super(conference, id);
 
-        logger = Logger.getLogger(classLogger, conference.getLogger());
+        Map<String, String> context = new HashMap<>();
+        context.put("epId", id);
+        logger = new LoggerImpl(getClass().toString(), new LogContext(context));
+
         diagnosticContext = conference.newDiagnosticContext();
         transceiver
                 = new Transceiver(
