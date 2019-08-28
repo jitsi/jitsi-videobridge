@@ -42,6 +42,12 @@ public class VideobridgeStatistics
     extends Statistics
 {
     /**
+     * The name of the number of video channels statistic. Its runtime type is
+     * {@code Integer}.
+     */
+    public static final String AUDIO_CHANNELS = "audiochannels";
+
+    /**
      * The name of the bit rate statistic for download.
      */
     public static final String BITRATE_DOWNLOAD = "bit_rate_download";
@@ -400,6 +406,7 @@ public class VideobridgeStatistics
         }
 
         // Is it necessary to set initial values for all of these?
+        unlockedSetStat(AUDIO_CHANNELS, 0);
         unlockedSetStat(BITRATE_DOWNLOAD, 0);
         unlockedSetStat(BITRATE_UPLOAD, 0);
         unlockedSetStat(CONFERENCES, 0);
@@ -488,6 +495,7 @@ public class VideobridgeStatistics
                 = ServiceUtils2.getService(bundleContext, Videobridge.class);
         Videobridge.Statistics jvbStats = videobridge.getStatistics();
 
+        int audioChannels = 0;
         int videoChannels = 0;
         int conferences = 0;
         int endpoints = 0;
@@ -537,6 +545,10 @@ public class VideobridgeStatistics
                 if (MediaType.VIDEO.equals(contentShim.getMediaType()))
                 {
                     videoChannels += contentShim.getChannelCount();
+                }
+                else if (MediaType.AUDIO.equals(contentShim.getMediaType()))
+                {
+                    audioChannels += contentShim.getChannelCount();
                 }
             }
             for (Endpoint endpoint : conference.getLocalEndpoints())
@@ -651,6 +663,7 @@ public class VideobridgeStatistics
         lock.lock();
         try
         {
+            unlockedSetStat(AUDIO_CHANNELS, audioChannels);
             unlockedSetStat(
                     BITRATE_DOWNLOAD,
                     (bitrateDownloadBps + 500) / 1000 /* kbps */);
