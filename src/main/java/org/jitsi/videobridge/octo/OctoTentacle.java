@@ -105,7 +105,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         if (octoRelayService != null)
         {
             relay = octoRelayService.getRelay();
-            keyframeRequester = new KeyframeRequester(transceiver.getStreamInformationStore());
+            keyframeRequester = new KeyframeRequester(transceiver.getStreamInformationStore(), logger.toNewLogger());
             keyframeRequester.attach(new ConsumerNode("octo keyframe relay node")
             {
                 @Override

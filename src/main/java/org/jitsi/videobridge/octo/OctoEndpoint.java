@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.octo;
 
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
@@ -48,9 +49,9 @@ public class OctoEndpoint
      * @param conference the conference.
      * @param id the ID of the endpoint.
      */
-    OctoEndpoint(Conference conference, String id, OctoEndpoints octoEndpoints)
+    OctoEndpoint(Conference conference, String id, OctoEndpoints octoEndpoints, Logger parentLogger)
     {
-        super(conference, id);
+        super(conference, id, parentLogger);
 
         this.octoEndpoints = octoEndpoints;
     }

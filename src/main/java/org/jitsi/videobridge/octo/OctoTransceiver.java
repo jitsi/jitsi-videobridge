@@ -46,6 +46,7 @@ public class OctoTransceiver
      * debug information.
      */
     private static final Logger logger = Logger.getLogger(OctoTransceiver.class);
+    private final org.jitsi.utils.logging2.Logger newLogger = logger.toNewLogger();
 
     /**
      * Count the number of dropped packets and exceptions.
@@ -179,9 +180,9 @@ public class OctoTransceiver
             }
         };
 
-        Node videoRoot = new VideoParser(streamInformationStore);
-        videoRoot.attach(new Vp8Parser())
-            .attach(new VideoBitrateCalculator())
+        Node videoRoot = new VideoParser(streamInformationStore, newLogger);
+        videoRoot.attach(new Vp8Parser(newLogger))
+            .attach(new VideoBitrateCalculator(newLogger))
             .attach(terminationNode);
 
         AudioLevelReader audioLevelReader
@@ -202,7 +203,7 @@ public class OctoTransceiver
                         pkt -> pkt instanceof AudioRtpPacket,
                         audioRoot);
 
-        Node rtpRoot = new RtpParser(streamInformationStore);
+        Node rtpRoot = new RtpParser(streamInformationStore, newLogger);
         rtpRoot.attach(audioVideoDemuxer);
 
         // We currently only have single RTCP packets in Octo.

@@ -15,7 +15,7 @@
  */
 package org.jitsi.videobridge;
 
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
@@ -38,8 +38,8 @@ public abstract class AbstractEndpointMessageTransport
      * The {@link Logger} used by the {@link Endpoint} class to print debug
      * information.
      */
-    private static final Logger classLogger
-        = Logger.getLogger(AbstractEndpointMessageTransport.class);
+//    private static final Logger classLogger
+//        = Logger.getLogger(AbstractEndpointMessageTransport.class);
 
     /**
      * The {@link Endpoint} associated with this
@@ -51,19 +51,16 @@ public abstract class AbstractEndpointMessageTransport
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
-    private final Logger logger;
+    protected final Logger logger;
 
     /**
      * Initializes a new {@link AbstractEndpointMessageTransport} instance.
      * @param endpoint
      */
-    public AbstractEndpointMessageTransport(AbstractEndpoint endpoint)
+    public AbstractEndpointMessageTransport(AbstractEndpoint endpoint, Logger parentLogger)
     {
         this.endpoint = endpoint;
-        this.logger
-            = Logger.getLogger(
-                classLogger,
-                endpoint == null ? null : endpoint.getConference().getLogger());
+        this.logger = parentLogger.createChildLogger(getClass().getName());
     }
 
     /**

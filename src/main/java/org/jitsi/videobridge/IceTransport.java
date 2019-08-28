@@ -25,7 +25,8 @@ import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.utils.logging.Logger;
+import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.transport.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -48,8 +49,10 @@ public class IceTransport
      * print debug information. Note that instances should use {@link #logger}
      * instead.
      */
+/*
     private static final Logger classLogger
         = Logger.getLogger(IceTransport.class);
+*/
 
     /**
      * The name of the property that can be used to control the value of
@@ -144,7 +147,7 @@ public class IceTransport
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
-    private final Logger logger;
+    protected final Logger logger;
 
     /**
      * A string to add to log messages to identify the instance.
@@ -179,7 +182,7 @@ public class IceTransport
      * @param controlling {@code true} if the new instance is to serve as a
      * controlling ICE agent and passive DTLS endpoint; otherwise, {@code false}
      */
-    IceTransport(Endpoint endpoint, boolean controlling)
+    IceTransport(Endpoint endpoint, boolean controlling, Logger parentLogger)
         throws IOException
     {
         Conference conference = endpoint.getConference();
@@ -187,7 +190,7 @@ public class IceTransport
         this.endpointId = endpoint.getID();
         this.conferenceId = conference.getID();
         this.controlling = controlling;
-        this.logger = Logger.getLogger(classLogger, conference.getLogger());
+        this.logger = parentLogger.createChildLogger(getClass().getName());
 
         // We've seen some instances where the configuration service is not
         // yet initialized. These are now fixed, but just in case this happens

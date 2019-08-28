@@ -16,7 +16,7 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.utils.dsi.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 
@@ -34,8 +34,8 @@ import java.util.stream.*;
  */
 public class ConferenceSpeechActivity
 {
-    private static final Logger classLogger
-            = Logger.getLogger(ConferenceSpeechActivity.class);
+//    private static final Logger classLogger
+//            = Logger.getLogger(ConferenceSpeechActivity.class);
     /**
      * The <tt>Logger</tt> used by the <tt>ConferenceSpeechActivity</tt> class
      * and its instances to print debug information.
@@ -164,7 +164,7 @@ public class ConferenceSpeechActivity
     public ConferenceSpeechActivity(Conference conference)
     {
         this.conference = Objects.requireNonNull(conference, "conference");
-        logger = Logger.getLogger(classLogger, conference.getLogger());
+        logger = conference.getLogger().createChildLogger(ConferenceSpeechActivity.class.getName());
 
         dominantSpeakerIdentification
                 .addActiveSpeakerChangedListener(activeSpeakerChangedListener);

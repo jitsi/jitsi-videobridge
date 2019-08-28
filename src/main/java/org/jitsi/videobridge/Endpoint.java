@@ -86,11 +86,6 @@ public class Endpoint
         = Endpoint.class.getName() + ".selectedEndpoints";
 
     /**
-     * The logger for the instance.
-     */
-    private final Logger logger;
-
-    /**
      * The set of IDs of the pinned endpoints of this {@code Endpoint}.
      */
     private Set<String> pinnedEndpoints = new HashSet<>();
@@ -220,13 +215,12 @@ public class Endpoint
      * <tt>Conference</tt> with which the new instance is to be initialized
      * @param conference
      */
-    public Endpoint(String id, Conference conference)
+    public Endpoint(
+            String id,
+            Conference conference,
+            Logger parentLogger)
     {
-        super(conference, id);
-
-        Map<String, String> context = new HashMap<>();
-        context.put("epId", id);
-        logger = new LoggerImpl(getClass().toString(), new LogContext(context));
+        super(conference, id, parentLogger);
 
         diagnosticContext = conference.newDiagnosticContext();
         transceiver
@@ -248,7 +242,7 @@ public class Endpoint
                 });
         bitrateController = new BitrateController(this, diagnosticContext);
 
-        messageTransport = new EndpointMessageTransport(this);
+        messageTransport = new EndpointMessageTransport(this, logger);
 
         diagnosticContext.put("endpoint_id", id);
         bandwidthProbing
@@ -260,8 +254,7 @@ public class Endpoint
         {
             if (logger.isDebugEnabled())
             {
-                logger.debug(logPrefix +
-                        "Estimated bandwidth is now " + newValueBps + " bps.");
+                logger.debug("Estimated bandwidth is now " + newValueBps + " bps.");
             }
             bitrateController.bandwidthChanged(newValueBps);
         });
@@ -301,7 +294,7 @@ public class Endpoint
 
             if (logger.isDebugEnabled())
             {
-                logger.debug(logPrefix + "Pinned "
+                logger.debug("Pinned "
                     + Arrays.toString(pinnedEndpoints.toArray()));
             }
 
@@ -326,7 +319,7 @@ public class Endpoint
 
             if (logger.isDebugEnabled())
             {
-                logger.debug(logPrefix + "Selected "
+                logger.debug("Selected "
                     + Arrays.toString(selectedEndpoints.toArray()));
             }
 
@@ -468,15 +461,13 @@ public class Endpoint
             }
             else
             {
-                logger.warn(logPrefix
-                    + "Ignoring an rtcp packet of type"
+                logger.warn("Ignoring an rtcp packet of type"
                     + packet.getClass().getSimpleName());
                 return false;
             }
         }
 
-        logger.warn(logPrefix
-            + "Ignoring an unknown packet type:"
+        logger.warn("Ignoring an unknown packet type:"
             + packet.getClass().getSimpleName());
         return false;
     }
@@ -609,7 +600,7 @@ public class Endpoint
                 = transportManager != null && transportManager.hasIceFailed();
         if (iceFailed)
         {
-            logger.warn(logPrefix + "Allowing to expire because ICE failed.");
+            logger.warn("Allowing to expire because ICE failed.");
             return true;
         }
 
@@ -635,8 +626,7 @@ public class Endpoint
         if (Duration.ofMillis(now - lastActivity).getSeconds()
                 > maxExpireTimeSecsFromChannelShims)
         {
-            logger.info(logPrefix +
-                    "Allowing to expire because of no activity in over " +
+            logger.info("Allowing to expire because of no activity in over " +
                     maxExpireTimeSecsFromChannelShims + " seconds.");
             return true;
         }
@@ -679,7 +669,7 @@ public class Endpoint
         }
         catch (Exception e)
         {
-            logger.error(logPrefix + "Exception while expiring: ", e);
+            logger.error("Exception while expiring: ", e);
         }
         bandwidthProbing.enabled = false;
         recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing);
@@ -689,7 +679,7 @@ public class Endpoint
             transportManager.close();
         }
 
-        logger.info(logPrefix + "Expired.");
+        logger.info("Expired.");
     }
 
     /**
@@ -742,7 +732,7 @@ public class Endpoint
     {
         if (logger.isDebugEnabled())
         {
-            logger.debug(logPrefix + "Creating SCTP manager.");
+            logger.debug("Creating SCTP manager.");
         }
         // Create the SctpManager and provide it a method for sending SCTP data
         this.sctpManager = new SctpManager(
@@ -762,22 +752,20 @@ public class Endpoint
             @Override
             public void onReady()
             {
-                logger.info(logPrefix +
-                    "SCTP connection is ready, creating the Data channel stack");
+                logger.info("SCTP connection is ready, creating the Data channel stack");
                 dataChannelStack
                     = new DataChannelStack(
                         (data, sid, ppid)
                                 -> socket.send(data, true, sid, ppid));
                 dataChannelStack.onDataChannelStackEvents(dataChannel ->
                 {
-                    logger.info(
-                            logPrefix + "Remote side opened a data channel.");
+                    logger.info("Remote side opened a data channel.");
                     Endpoint.this.messageTransport.setDataChannel(dataChannel);
                 });
                 dataChannelHandler.setDataChannelStack(dataChannelStack);
                 if (OPEN_DATA_LOCALLY)
                 {
-                    logger.info(logPrefix + "Will open the data channel.");
+                    logger.info("Will open the data channel.");
                     DataChannel dataChannel
                         = dataChannelStack.createDataChannel(
                             DataChannelProtocolConstants.RELIABLE,
@@ -790,15 +778,14 @@ public class Endpoint
                 }
                 else
                 {
-                    logger.info(logPrefix +
-                        "Will wait for the remote side to open the data channel.");
+                    logger.info("Will wait for the remote side to open the data channel.");
                 }
             }
 
             @Override
             public void onDisconnected()
             {
-                logger.info(logPrefix + "SCTP connection is disconnected.");
+                logger.info("SCTP connection is disconnected.");
             }
         };
         socket.dataCallback = (data, sid, ssn, tsn, ppid, context, flags) -> {
@@ -848,8 +835,7 @@ public class Endpoint
                     }
                     if (logger.isDebugEnabled())
                     {
-                        logger.debug(logPrefix +
-                                "SCTP socket " + socket.hashCode() +
+                        logger.debug("SCTP socket " + socket.hashCode() +
                                 " accepted connection.");
                     }
                 });
@@ -868,8 +854,7 @@ public class Endpoint
         String icePassword = getIcePassword();
         if (icePassword == null || !icePassword.equals(password))
         {
-            logger.warn(logPrefix +
-                    "Incoming web socket request with an invalid password." +
+            logger.warn("Incoming web socket request with an invalid password." +
                     "Expected: " + icePassword + ", received " + password);
             return false;
         }
@@ -945,8 +930,7 @@ public class Endpoint
             String selectedUpdate = createSelectedUpdateMessage(true);
             if (logger.isDebugEnabled())
             {
-                logger.debug(logPrefix +
-                        "Is now selected, sending message: " + selectedUpdate);
+                logger.debug("Is now selected, sending message: " + selectedUpdate);
             }
             try
             {
@@ -954,8 +938,7 @@ public class Endpoint
             }
             catch (IOException e)
             {
-                logger.error(logPrefix +
-                        "Error sending SelectedUpdate message: " + e);
+                logger.error("Error sending SelectedUpdate message: " + e);
             }
         }
     }
@@ -972,8 +955,7 @@ public class Endpoint
             String selectedUpdate = createSelectedUpdateMessage(false);
             if (logger.isDebugEnabled())
             {
-                logger.debug(logPrefix +
-                        "Is no longer selected, sending message: " +
+                logger.debug("Is no longer selected, sending message: " +
                         selectedUpdate);
             }
             try
@@ -982,8 +964,7 @@ public class Endpoint
             }
             catch (IOException e)
             {
-                logger.error(logPrefix +
-                        "Error sending SelectedUpdate message: " + e);
+                logger.error("Error sending SelectedUpdate message: " + e);
             }
         }
     }
@@ -1014,7 +995,7 @@ public class Endpoint
                 {
                     try
                     {
-                        transportManager = new DtlsTransport(this);
+                        transportManager = new DtlsTransport(this, logger);
                         transportManagerCreated = true;
                     }
                     catch (IOException ioe)
@@ -1307,7 +1288,7 @@ public class Endpoint
     {
         if (logger.isDebugEnabled())
         {
-            logger.debug(logPrefix + "Adding receive ssrc " + ssrc + " of type " + mediaType);
+            logger.debug("Adding receive ssrc " + ssrc + " of type " + mediaType);
         }
         transceiver.addReceiveSsrc(ssrc, mediaType);
     }

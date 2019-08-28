@@ -22,8 +22,10 @@ import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.event.*;
-import org.jitsi.utils.logging.*;
-import org.jitsi.utils.logging.Logger;
+import org.jitsi.utils.logging.DiagnosticContext;
+import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.logging2.Logger;
+import org.jitsi.utils.logging2.LoggerImpl;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
@@ -59,7 +61,7 @@ public class Conference
      * information. Note that {@link Conference} instances should use {@link
      * #logger} instead.
      */
-    private static final Logger classLogger = Logger.getLogger(Conference.class);
+//    private static final Logger classLogger = Logger.getLogger(Conference.class);
 
     /**
      * The endpoints participating in this {@link Conference}. Although it's a
@@ -115,7 +117,7 @@ public class Conference
     /**
      * The string used to identify this conference for the purposes of logging.
      */
-    private final String logPrefix;
+//    private final String logPrefix;
 
     /**
      * The world readable name of this instance if any.
@@ -168,7 +170,9 @@ public class Conference
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
-    private final Logger logger = Logger.getLogger(classLogger, null);
+//    private final Logger logger = Logger.getLogger(classLogger, null);
+    private final Logger logger;
+
 
     /**
      * Whether this conference should be considered when generating statistics.
@@ -231,12 +235,17 @@ public class Conference
         this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
         this.includeInStatistics = enableLogging;
         this.name = name;
-        this.logPrefix = "[id=" + id + " gid=" + gid + " name=" + name + "] ";
-
-        if (!enableLogging)
+//        this.logPrefix = "[id=" + id + " gid=" + gid + " name=" + name + "] ";
+        Map<String, String> context = new HashMap<>();
+        context.put("confId", id);
+        context.put("gId", gid);
+        if (name != null)
         {
-            logger.setLevel(Level.WARNING);
+            context.put("name", name.toString());
         }
+
+        Level minLevel = enableLogging ? Level.ALL : Level.OFF;
+        logger = new LoggerImpl(Conference.class.getName(), minLevel, new LogContext(context));
 
         lastKnownFocus = focus;
 
@@ -245,7 +254,9 @@ public class Conference
             = (sourceSsrc, level)
                 -> speechActivity.levelChanged(sourceSsrc, (int) level);
 
-        expireableImpl = new ExpireableImpl(logPrefix, this::expire);
+        //TODO(brian)
+//        expireableImpl = new ExpireableImpl(logPrefix, this::expire);
+        expireableImpl = new ExpireableImpl("", this::expire);
 
         if (enableLogging)
         {
@@ -427,7 +438,7 @@ public class Conference
         {
             String id
                 = dominantSpeaker == null ? "null" : dominantSpeaker.getID();
-            logger.info(getLogPrefix() + "ds_change ds_id=" + id);
+            logger.info("ds_change ds_id=" + id);
         }
 
         if (dominantSpeaker != null)
@@ -458,7 +469,7 @@ public class Conference
             }
         }
 
-        logger.info(logPrefix + "Expiring.");
+        logger.info("Expiring.");
         EventAdmin eventAdmin = getEventAdmin();
         if (eventAdmin != null)
         {
@@ -475,7 +486,7 @@ public class Conference
         {
             if (logger.isDebugEnabled())
             {
-                logger.debug(logPrefix + "Expiring endpoints.");
+                logger.debug("Expiring endpoints.");
             }
             getEndpoints().forEach(AbstractEndpoint::expire);
             speechActivity.expire();
@@ -538,13 +549,14 @@ public class Conference
         if (logger.isInfoEnabled())
         {
             StringBuilder sb = new StringBuilder("expire_conf,");
-            sb.append(logPrefix)
-                .append("duration=").append(durationSeconds)
+            sb.append("duration=").append(durationSeconds)
                 .append(",conf_completed=")
                     .append(videobridgeStatistics.totalConferencesCompleted)
                 .append(",has_failed=").append(hasFailed)
                 .append(",has_partially_failed=").append(hasPartiallyFailed);
-            logger.info(Logger.Category.STATISTICS, sb.toString());
+            //TODO(brian): bring back cateogry
+//            logger.info(Logger.Category.STATISTICS, sb.toString());
+            logger.info(sb.toString());
         }
     }
 
@@ -615,7 +627,7 @@ public class Conference
         {
             synchronized (endpoints)
             {
-                endpoint = new Endpoint(id, this);
+                endpoint = new Endpoint(id, this, logger);
                 // The propertyChangeListener will weakly reference this
                 // Conference and will unregister itself from the endpoint
                 // sooner or later.
@@ -1026,10 +1038,10 @@ public class Conference
      * purposes of logging. The string is a comma-separated list of "key=value"
      * pairs.
      */
-    public String getLogPrefix()
-    {
-        return logPrefix;
-    }
+//    public String getLogPrefix()
+//    {
+//        return logPrefix;
+//    }
 
     /**
      * @return the global ID of the conference, or {@code null} if none has been

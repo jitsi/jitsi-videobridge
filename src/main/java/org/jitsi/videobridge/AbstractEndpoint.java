@@ -17,7 +17,7 @@ package org.jitsi.videobridge;
 
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
@@ -48,13 +48,13 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * The {@link Logger} used by the {@link Endpoint} class to print debug
      * information.
      */
-    private static final Logger classLogger
-            = Logger.getLogger(AbstractEndpoint.class);
+//    private static final Logger classLogger
+//            = Logger.getLogger(AbstractEndpoint.class);
 
     /**
      * The instance logger.
      */
-    private final Logger logger;
+    protected final Logger logger;
 
     /**
      * A reference to the <tt>Conference</tt> this <tt>Endpoint</tt> belongs to.
@@ -80,7 +80,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      /**
      * The string used to identify this endpoint for the purposes of logging.
      */
-    protected final String logPrefix;
+//    protected final String logPrefix;
 
     /**
      * Initializes a new {@link AbstractEndpoint} instance.
@@ -88,12 +88,12 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * part of.
      * @param id the ID of the endpoint.
      */
-    protected AbstractEndpoint(Conference conference, String id)
+    protected AbstractEndpoint(Conference conference, String id, Logger parentLogger)
     {
         this.conference = Objects.requireNonNull(conference, "conference");
-        logPrefix
-            = "[id=" + id + " conference=" + conference.getID() + "] ";
-        logger = Logger.getLogger(classLogger, conference.getLogger());
+        Map<String, String> context = new HashMap<>();
+        context.put("epId", id);
+        logger = parentLogger.createChildLogger(this.getClass().getName(), context);
         this.id = Objects.requireNonNull(id, "id");
     }
 
@@ -228,7 +228,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     public void expire()
     {
-        logger.info(logPrefix + "Expiring.");
+        logger.info("Expiring.");
         this.expired = true;
 
         Conference conference = getConference();

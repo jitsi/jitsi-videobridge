@@ -32,7 +32,7 @@ import org.jitsi.rtp.*;
 import org.jitsi.rtp.extensions.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
@@ -55,8 +55,8 @@ public class DtlsTransport extends IceTransport
      * print debug information. Note that instances should use {@link #logger}
      * instead.
      */
-    private static final Logger classLogger
-            = Logger.getLogger(DtlsTransport.class);
+//    private static final Logger classLogger
+//            = Logger.getLogger(DtlsTransport.class);
 
     /**
      * A predicate which is true for DTLS packets. See
@@ -85,7 +85,6 @@ public class DtlsTransport extends IceTransport
     static final CountingErrorHandler queueErrorCounter
             = new CountingErrorHandler();
 
-    private final Logger logger;
     private final DtlsStack dtlsStack;
     private final ProtocolReceiver dtlsReceiver;
     private final ProtocolSender dtlsSender;
@@ -112,16 +111,11 @@ public class DtlsTransport extends IceTransport
      * @param endpoint the endpoint with which this {@link DtlsTransport} is
      *                 associated.
      */
-    public DtlsTransport(Endpoint endpoint)
+    public DtlsTransport(Endpoint endpoint, Logger parentLogger)
             throws IOException
     {
-        super(endpoint, true);
+        super(endpoint, true, parentLogger);
         this.endpoint = endpoint;
-
-        this.logger
-                = Logger.getLogger(
-                        classLogger,
-                        endpoint.getConference().getLogger());
 
         outgoingPacketQueue
                 = new PacketInfoQueue(
@@ -131,7 +125,7 @@ public class DtlsTransport extends IceTransport
                         1024);
         outgoingPacketQueue.setErrorHandler(queueErrorCounter);
 
-        dtlsStack = new DtlsStack(endpoint.getID());
+        dtlsStack = new DtlsStack(logger);
         dtlsReceiver = new ProtocolReceiver(dtlsStack);
         dtlsSender = new ProtocolSender(dtlsStack);
 
