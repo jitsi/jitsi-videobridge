@@ -1213,6 +1213,12 @@ public class Endpoint
         transceiver.requestKeyFrame(mediaSsrc);
     }
 
+    @Override
+    public void requestKeyframe()
+    {
+        transceiver.requestKeyFrame();
+    }
+
     /**
      * Sets the media stream tracks.
      * @param mediaStreamTracks

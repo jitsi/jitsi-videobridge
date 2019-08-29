@@ -81,6 +81,12 @@ public class OctoEndpoint
     }
 
     @Override
+    public void requestKeyframe()
+    {
+        streamInformationStore.getPrimaryVideoSsrcs().stream().findFirst().ifPresent(this::requestKeyframe);
+    }
+
+    @Override
     public boolean shouldExpire()
     {
         return streamInformationStore.getReceiveSsrcs().isEmpty();
