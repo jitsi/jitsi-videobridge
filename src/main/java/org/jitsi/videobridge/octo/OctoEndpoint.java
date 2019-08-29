@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.octo;
 
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi.utils.*;
@@ -34,9 +35,9 @@ public class OctoEndpoint
     extends AbstractEndpoint
 {
     /**
-     * The SSRCs that this endpoint has.
+     * Information about the streams belonging to this {@link OctoEndpoint}
      */
-    private Set<Long> receiveSsrcs = new HashSet<>();
+    private StreamInformationStore streamInformationStore = new StreamInformationStoreImpl();
 
     /**
      * The {@link OctoEndpoints} instance for the conference.
@@ -82,7 +83,7 @@ public class OctoEndpoint
     @Override
     public boolean shouldExpire()
     {
-        return receiveSsrcs.isEmpty();
+        return streamInformationStore.getReceiveSsrcs().isEmpty();
     }
 
     /**
@@ -104,7 +105,14 @@ public class OctoEndpoint
             long secondarySsrc,
             SsrcAssociationType type)
     {
-
+        if (epId.equalsIgnoreCase(getID()))
+        {
+            streamInformationStore.addSsrcAssociation(new LocalSsrcAssociation(primarySsrc, secondarySsrc, type));
+        }
+        else
+        {
+            streamInformationStore.addSsrcAssociation(new RemoteSsrcAssociation(primarySsrc, secondarySsrc, type));
+        }
     }
 
     /**
@@ -113,7 +121,7 @@ public class OctoEndpoint
     @Override
     public boolean receivesSsrc(long ssrc)
     {
-        return receiveSsrcs.contains(ssrc);
+        return streamInformationStore.getReceiveSsrcs().contains(ssrc);
     }
 
     /**
@@ -143,8 +151,11 @@ public class OctoEndpoint
     /**
      * Sets the set SSRCs we expect to receive from this endpoint.
      */
-    void setReceiveSsrcs(Set<Long> ssrcs)
+    void setReceiveSsrcs(Map<MediaType, Set<Long>> ssrcsByMediaType)
     {
-        receiveSsrcs = new HashSet<>(ssrcs);
+        streamInformationStore.getReceiveSsrcs().forEach(streamInformationStore::removeReceiveSsrc);
+        ssrcsByMediaType.forEach((mediaType, ssrcs) -> {
+            ssrcs.forEach(ssrc -> streamInformationStore.addReceiveSsrc(ssrc, mediaType));
+        });
     }
 }
