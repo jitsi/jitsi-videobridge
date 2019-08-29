@@ -26,7 +26,7 @@ import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.extensions.*;
 import org.jitsi.rtp.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
@@ -45,8 +45,7 @@ public class OctoTransceiver
      * The {@link Logger} used by the {@link OctoTransceiver} class to print
      * debug information.
      */
-    private static final Logger logger = Logger.getLogger(OctoTransceiver.class);
-    private final org.jitsi.utils.logging2.Logger newLogger = logger.toNewLogger();
+    private final Logger logger;
 
     /**
      * Count the number of dropped packets and exceptions.
@@ -82,9 +81,10 @@ public class OctoTransceiver
      *
      * @param tentacle
      */
-    OctoTransceiver(OctoTentacle tentacle)
+    OctoTransceiver(OctoTentacle tentacle, Logger parentLogger)
     {
         this.tentacle = tentacle;
+        this.logger = parentLogger.createChildLogger(this.getClass().getName());
         inputTreeRoot = createInputTree();
         incomingPacketQueue = new PacketInfoQueue(
                 "octo-tranceiver-incoming-packet-queue",
@@ -180,9 +180,9 @@ public class OctoTransceiver
             }
         };
 
-        Node videoRoot = new VideoParser(streamInformationStore, newLogger);
-        videoRoot.attach(new Vp8Parser(newLogger))
-            .attach(new VideoBitrateCalculator(newLogger))
+        Node videoRoot = new VideoParser(streamInformationStore, logger);
+        videoRoot.attach(new Vp8Parser(logger))
+            .attach(new VideoBitrateCalculator(logger))
             .attach(terminationNode);
 
         AudioLevelReader audioLevelReader
@@ -203,7 +203,7 @@ public class OctoTransceiver
                         pkt -> pkt instanceof AudioRtpPacket,
                         audioRoot);
 
-        Node rtpRoot = new RtpParser(streamInformationStore, newLogger);
+        Node rtpRoot = new RtpParser(streamInformationStore, logger);
         rtpRoot.attach(audioVideoDemuxer);
 
         // We currently only have single RTCP packets in Octo.
