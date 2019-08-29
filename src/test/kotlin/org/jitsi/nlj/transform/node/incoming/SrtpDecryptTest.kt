@@ -25,15 +25,11 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.srtp_samples.SrtpSample
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.test_utils.matchers.ByteArrayBuffer.haveSameContentAs
-import org.jitsi.service.libjitsi.LibJitsi
 
 internal class SrtpDecryptTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
-        // We need to start libjitsi so that the openssl lib gets loaded.
-        LibJitsi.start()
-
         val srtpTransformers = SrtpUtil.initializeTransformer(
             SrtpSample.srtpProfileInformation,
             SrtpSample.keyingMaterial.array(),

@@ -20,7 +20,6 @@ import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.safeShutdown
-import org.jitsi.service.libjitsi.LibJitsi
 import org.jitsi.test_utils.Pcaps
 import java.time.Duration
 import java.util.concurrent.Executors
@@ -37,9 +36,6 @@ import java.util.concurrent.Executors
  */
 
 fun main() {
-    // We need to start libjitsi so that the openssl lib gets loaded.
-    LibJitsi.start()
-
     val pcap = Pcaps.Incoming.ONE_PARTICIPANT_RTP_RTCP_SIM_RTX
 
     var numBuffersRequested = 0

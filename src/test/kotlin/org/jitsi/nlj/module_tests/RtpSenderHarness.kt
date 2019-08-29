@@ -21,16 +21,12 @@ import org.jitsi.nlj.util.safeShutdown
 import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.service.libjitsi.LibJitsi
 import org.jitsi.test_utils.Pcaps
 import java.time.Duration
 import java.util.concurrent.Executors
 import kotlin.system.measureTimeMillis
 
 fun main(args: Array<String>) {
-    // We need to start libjitsi so that the openssl lib gets loaded.
-    LibJitsi.start()
-
     val pcap = Pcaps.Outgoing.ONE_PARITICPANT_RTP_AND_RTCP_DECRYPTED
 
     val producer = PcapPacketProducer(pcap.filePath)
