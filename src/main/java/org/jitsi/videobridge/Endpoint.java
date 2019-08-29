@@ -417,6 +417,11 @@ public class Endpoint
         }
     }
 
+    public double getRtt()
+    {
+        return getTransceiver().getTransceiverStats().getEndpointConnectionStats().getRtt();
+    }
+
     /**
      * {@inheritDoc}
      */

@@ -430,7 +430,54 @@ public class Conference
             broadcastMessage(
                     createDominantSpeakerEndpointChangeEvent(
                         dominantSpeaker.getID()));
+            if (getEndpointCount() > 2)
+            {
+                double senderRtt = getRtt(dominantSpeaker);
+                double maxReceiveRtt = getMaxReceiverRtt(dominantSpeaker.getID());
+                // We add an additional 10ms delay to reduce the risk of the keyframe arriving
+                // too early
+                double keyframeDelay = maxReceiveRtt - senderRtt + 10;
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Scheduling keyframe request from " + dominantSpeaker.getID() + " after a delay" +
+                            " of " + keyframeDelay + "ms");
+                }
+                TaskPools.SCHEDULED_POOL.schedule(
+                        (Runnable)dominantSpeaker::requestKeyframe,
+                        (long)keyframeDelay,
+                        TimeUnit.MILLISECONDS
+                );
+            }
         }
+    }
+
+    private double getRtt(AbstractEndpoint endpoint)
+    {
+        if (endpoint instanceof Endpoint)
+        {
+            Endpoint localDominantSpeaker = (Endpoint)endpoint;
+            return localDominantSpeaker.getRtt();
+        }
+        else
+        {
+            // Octo endpoint
+            // TODO(brian): we don't currently have a way to get the RTT from this bridge
+            // to a remote endpoint, so we hard-code a value here.  Discussed this with
+            // Boris, and we talked about perhaps having OctoEndpoint periodically
+            // send pings to the remote endpoint to calculate its RTT from the perspective
+            // of this bridge.
+            return 100;
+        }
+    }
+
+    private double getMaxReceiverRtt(String excludedEndpointId)
+    {
+        return endpointsCache.stream()
+                .filter(ep -> !ep.getID().equalsIgnoreCase(excludedEndpointId))
+                .map(Endpoint::getRtt)
+                .mapToDouble(Double::valueOf)
+                .max()
+                .orElse(0);
     }
 
     /**
