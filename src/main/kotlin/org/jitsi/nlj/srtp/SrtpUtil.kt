@@ -20,8 +20,8 @@ import org.bouncycastle.crypto.tls.SRTPProtectionProfile
 import org.bouncycastle.crypto.tls.TlsClientContext
 import org.bouncycastle.crypto.tls.TlsContext
 import org.bouncycastle.crypto.tls.TlsServerContext
-import org.jitsi.impl.neomedia.transform.srtp.SRTPContextFactory
-import org.jitsi.impl.neomedia.transform.srtp.SRTPPolicy
+import org.jitsi.srtp.SrtpContextFactory
+import org.jitsi.srtp.SrtpPolicy
 
 enum class TlsRole {
     CLIENT,
@@ -46,8 +46,8 @@ class SrtpUtil {
                     SrtpProfileInformation(
                         cipherKeyLength = 128 / 8,
                         cipherSaltLength = 112 / 8,
-                        cipherName = SRTPPolicy.AESCM_ENCRYPTION,
-                        authFunctionName = SRTPPolicy.HMACSHA1_AUTHENTICATION,
+                        cipherName = SrtpPolicy.AESCM_ENCRYPTION,
+                        authFunctionName = SrtpPolicy.HMACSHA1_AUTHENTICATION,
                         authKeyLength = 160 / 8,
                         rtcpAuthTagLength = 80 / 8,
                         rtpAuthTagLength = 32 / 8
@@ -57,8 +57,8 @@ class SrtpUtil {
                     SrtpProfileInformation(
                         cipherKeyLength = 128 / 8,
                         cipherSaltLength = 112 / 8,
-                        cipherName = SRTPPolicy.AESCM_ENCRYPTION,
-                        authFunctionName = SRTPPolicy.HMACSHA1_AUTHENTICATION,
+                        cipherName = SrtpPolicy.AESCM_ENCRYPTION,
+                        authFunctionName = SrtpPolicy.HMACSHA1_AUTHENTICATION,
                         authKeyLength = 160 / 8,
                         rtcpAuthTagLength = 80 / 8,
                         rtpAuthTagLength = 80 / 8
@@ -68,8 +68,8 @@ class SrtpUtil {
                     SrtpProfileInformation(
                         cipherKeyLength = 0,
                         cipherSaltLength = 0,
-                        cipherName = SRTPPolicy.NULL_ENCRYPTION,
-                        authFunctionName = SRTPPolicy.HMACSHA1_AUTHENTICATION,
+                        cipherName = SrtpPolicy.NULL_ENCRYPTION,
+                        authFunctionName = SrtpPolicy.HMACSHA1_AUTHENTICATION,
                         authKeyLength = 160 / 8,
                         rtcpAuthTagLength = 80 / 8,
                         rtpAuthTagLength = 32 / 8
@@ -79,8 +79,8 @@ class SrtpUtil {
                     SrtpProfileInformation(
                         cipherKeyLength = 0,
                         cipherSaltLength = 0,
-                        cipherName = SRTPPolicy.NULL_ENCRYPTION,
-                        authFunctionName = SRTPPolicy.HMACSHA1_AUTHENTICATION,
+                        cipherName = SrtpPolicy.NULL_ENCRYPTION,
+                        authFunctionName = SrtpPolicy.HMACSHA1_AUTHENTICATION,
                         authKeyLength = 160 / 8,
                         rtcpAuthTagLength = 80 / 8,
                         rtpAuthTagLength = 80 / 8
@@ -124,7 +124,7 @@ class SrtpUtil {
                 keyingMaterialOffset += keyingMaterialValue.size
             }
 
-            val srtcpPolicy = org.jitsi.impl.neomedia.transform.srtp.SRTPPolicy(
+            val srtcpPolicy = SrtpPolicy(
                 srtpProfileInformation.cipherName,
                 srtpProfileInformation.cipherKeyLength,
                 srtpProfileInformation.authFunctionName,
@@ -132,7 +132,7 @@ class SrtpUtil {
                 srtpProfileInformation.rtcpAuthTagLength,
                 srtpProfileInformation.cipherSaltLength
             )
-            val srtpPolicy = org.jitsi.impl.neomedia.transform.srtp.SRTPPolicy(
+            val srtpPolicy = SrtpPolicy(
                 srtpProfileInformation.cipherName,
                 srtpProfileInformation.cipherKeyLength,
                 srtpProfileInformation.authFunctionName,
@@ -141,22 +141,26 @@ class SrtpUtil {
                 srtpProfileInformation.cipherSaltLength
             )
 
-            val clientSrtpContextFactory = SRTPContextFactory(
+            /* To support RetransmissionSender.retransmitPlain, we need to allow send-side SRTP replay. */
+            /* TODO: enable this only in cases where we actually need to use retransmitPlain? */
+            srtpPolicy.isSendReplayEnabled = true
+
+            val clientSrtpContextFactory = SrtpContextFactory(
                 tlsRole == TlsRole.CLIENT,
                 clientWriteSrtpMasterKey,
                 clientWriterSrtpMasterSalt,
                 srtpPolicy,
                 srtcpPolicy
             )
-            val serverSrtpContextFactory = SRTPContextFactory(
+            val serverSrtpContextFactory = SrtpContextFactory(
                 tlsRole == TlsRole.SERVER,
                 serverWriteSrtpMasterKey,
                 serverWriterSrtpMasterSalt,
                 srtpPolicy,
                 srtcpPolicy
             )
-            val forwardSrtpContextFactory: SRTPContextFactory
-            val reverseSrtpContextFactory: SRTPContextFactory
+            val forwardSrtpContextFactory: SrtpContextFactory
+            val reverseSrtpContextFactory: SrtpContextFactory
 
             when (tlsRole) {
                 TlsRole.CLIENT -> {

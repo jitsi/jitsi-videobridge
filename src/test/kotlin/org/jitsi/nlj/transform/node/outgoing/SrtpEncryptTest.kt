@@ -30,15 +30,11 @@ import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacketBuilder
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.TransportLayerRtcpFbPacket
 import org.jitsi.nlj.test_utils.matchers.haveSameContentAs
-import org.jitsi.service.libjitsi.LibJitsi
 
 internal class SrtpEncryptTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
-        // We need to start libjitsi so that the openssl lib gets loaded.
-        LibJitsi.start()
-
         val srtpTransformers = SrtpUtil.initializeTransformer(
             SrtpSample.srtpProfileInformation,
             SrtpSample.keyingMaterial.array(),
