@@ -16,15 +16,15 @@
 
 package org.jitsi.nlj.rtcp
 
-import org.jitsi.nlj.util.RtpUtils
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cwarn
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.nlj.util.isNextAfter
-import org.jitsi.nlj.util.isOlderThan
-import org.jitsi.nlj.util.numPacketsTo
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacketBuilder
+import org.jitsi.rtp.util.RtpUtils
+import org.jitsi.rtp.util.isNextAfter
+import org.jitsi.rtp.util.isOlderThan
+import org.jitsi.rtp.util.numPacketsTo
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant

@@ -20,7 +20,6 @@ import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
-import org.jitsi.nlj.util.isOlderThan
 import org.jitsi.nlj.util.milliseconds
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
@@ -28,6 +27,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi.rtp.util.RtpUtils
+import org.jitsi.rtp.util.isOlderThan
 import org.jitsi.utils.stats.RateStatistics
 import java.time.Clock
 import java.time.Duration

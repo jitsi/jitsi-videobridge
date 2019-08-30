@@ -21,12 +21,12 @@ import org.jitsi.nlj.stats.JitterStats
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
-import org.jitsi.nlj.util.RtpUtils.Companion.convertRtpTimestampToMs
-import org.jitsi.nlj.util.isNewerThan
-import org.jitsi.nlj.util.isNextAfter
-import org.jitsi.nlj.util.numPacketsTo
-import org.jitsi.nlj.util.rolledOverTo
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.rtp.util.RtpUtils.Companion.convertRtpTimestampToMs
+import org.jitsi.rtp.util.isNewerThan
+import org.jitsi.rtp.util.isNextAfter
+import org.jitsi.rtp.util.numPacketsTo
+import org.jitsi.rtp.util.rolledOverTo
 import toUInt
 import java.util.concurrent.ConcurrentHashMap
 
