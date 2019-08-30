@@ -29,7 +29,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>rtp</artifactId>
-            <version>1.0-3-gb0d1012</version>
+            <version>1.0-5-gf0871e5</version>
         </dependency>
         <dependency>
             <groupId>org.jitsi</groupId>

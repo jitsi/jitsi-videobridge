@@ -16,6 +16,9 @@
 
 package org.jitsi.nlj.util
 
+import org.jitsi.rtp.util.isNewerThan
+import org.jitsi.rtp.util.rolledOverTo
+
 class Rfc3711IndexTracker {
     var roc: Int = 0
         private set
