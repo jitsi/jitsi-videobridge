@@ -39,7 +39,7 @@
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-reflect</artifactId>
-            <version>1.2.50</version>
+            <version>${kotlin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
