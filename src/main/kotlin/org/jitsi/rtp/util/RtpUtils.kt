@@ -15,6 +15,8 @@
  */
 package org.jitsi.rtp.util
 
+import org.jitsi.utils.TimeUtils
+
 // TODO: this and RTPUtils should be merged
 class RtpUtils {
     companion object {
@@ -100,6 +102,33 @@ class RtpUtils {
 
             return diff
         }
+
+        /**
+         * Returns a sequence of Ints from olderSeqNum (exclusive) to newerSeqNum (exclusive),
+         * taking rollover into account
+         */
+        fun sequenceNumbersBetween(olderSeqNum: Int, newerSeqNum: Int): Sequence<Int> {
+            var currSeqNum = olderSeqNum
+            return generateSequence {
+                currSeqNum = (currSeqNum + 1) % 0x1_0000
+                if (currSeqNum == newerSeqNum) {
+                    null
+                } else {
+                    currSeqNum
+                }
+            }
+        }
+
+        /**
+         * Given [timestampMs] (a timestamp in milliseconds), convert it to an NTP timestamp represented
+         * as a pair of ints: the first one being the most significant word and the second being the least
+         * significant word.
+         */
+        fun millisToNtpTimestamp(timestampMs: Long): Long = TimeUtils.toNtpTime(timestampMs)
+
+        fun convertRtpTimestampToMs(rtpTimestamp: Int, ticksPerSecond: Int): Long {
+            return ((rtpTimestamp / (ticksPerSecond.toDouble())) * 1000).toLong()
+        }
     }
 }
 
@@ -121,3 +150,26 @@ infix fun Long.isNewerTimestampThan(otherTimestamp: Long): Boolean =
 
 infix fun Long.isOlderTimestampThan(otherTimestamp: Long): Boolean =
     RtpUtils.getTimestampDiff(this, otherTimestamp) < 0
+
+/**
+ * Returns true if getting to [otherSeqNum] from the current sequence number involves wrapping around
+ */
+infix fun Int.rolledOverTo(otherSeqNum: Int): Boolean =
+    /**
+     * If, according to [isOlderThan], [this] is older than [otherSeqNum] and
+     * yet [otherSeqNum] is less than [this], then we wrapped around to get from [this] to
+     * [otherSeqNum]
+     */
+     this isOlderThan otherSeqNum && otherSeqNum < this
+
+/**
+ * Returns true if [this] is sequentially after [otherSeqNum], according to the rules of RTP sequence
+ * numbers
+ */
+infix fun Int.isNextAfter(otherSeqNum: Int): Boolean = RtpUtils.getSequenceNumberDelta(this, otherSeqNum) == 1
+
+/**
+ * Return the amount of packets between the RTP sequence number represented by [this] and the [otherSeqNum].  NOTE:
+ * [this] must represent an older RTP sequence number than [otherSeqNum] (TODO: validate/enforce that)
+ */
+infix fun Int.numPacketsTo(otherSeqNum: Int): Int = -RtpUtils.getSequenceNumberDelta(this, otherSeqNum) - 1
