@@ -40,7 +40,7 @@ import java.util.*;
  *
  */
 public class TransportCCEngine
-    implements RemoteBitrateObserver, CallStatsObserver, RtcpListener
+    implements RemoteBitrateObserver, RtcpListener
 {
     /**
      * The maximum number of received packets and their timestamps to save.
@@ -119,9 +119,8 @@ public class TransportCCEngine
     }
 
     /**
-     * {@inheritDoc}
+     * Called when an RTP sender has a new round-trip time estimate.
      */
-    @Override
     public void onRttUpdate(long avgRttMs, long maxRttMs)
     {
         bitrateEstimatorAbsSendTime.onRttUpdate(avgRttMs, maxRttMs);
