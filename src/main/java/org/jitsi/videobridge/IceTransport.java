@@ -45,16 +45,6 @@ import org.osgi.framework.*;
 public class IceTransport
 {
     /**
-     * The {@link Logger} used by the {@link IceTransport} class to
-     * print debug information. Note that instances should use {@link #logger}
-     * instead.
-     */
-/*
-    private static final Logger classLogger
-        = Logger.getLogger(IceTransport.class);
-*/
-
-    /**
      * The name of the property that can be used to control the value of
      * {@link #iceUfragPrefix}.
      */

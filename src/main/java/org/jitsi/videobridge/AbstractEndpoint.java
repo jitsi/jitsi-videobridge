@@ -48,12 +48,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * The {@link Logger} used by the {@link Endpoint} class to print debug
      * information.
      */
-//    private static final Logger classLogger
-//            = Logger.getLogger(AbstractEndpoint.class);
-
-    /**
-     * The instance logger.
-     */
     protected final Logger logger;
 
     /**
@@ -76,11 +70,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * on this <tt>Endpoint</tt>.
      */
     private boolean expired = false;
-
-     /**
-     * The string used to identify this endpoint for the purposes of logging.
-     */
-//    protected final String logPrefix;
 
     /**
      * Initializes a new {@link AbstractEndpoint} instance.

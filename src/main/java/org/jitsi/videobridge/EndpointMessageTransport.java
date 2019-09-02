@@ -39,14 +39,6 @@ class EndpointMessageTransport
     extends AbstractEndpointMessageTransport
     implements DataChannelStack.DataChannelMessageListener
 {
-
-    /**
-     * The {@link Logger} used by the {@link Endpoint} class to print debug
-     * information.
-     */
-//    private static final Logger classLogger
-//        = Logger.getLogger(EndpointMessageTransport.class);
-
     /**
      * The {@link Endpoint} associated with this
      * {@link EndpointMessageTransport}.

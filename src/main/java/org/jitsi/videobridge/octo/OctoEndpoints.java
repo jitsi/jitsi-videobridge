@@ -31,13 +31,6 @@ import java.util.*;
  class OctoEndpoints
  {
      /**
-      * The {@link Logger} used by the {@link RtpChannel} class to print debug
-      * information. Note that instances should use {@link #logger} instead.
-      */
-//     private static final Logger classLogger
-//         = Logger.getLogger(OctoEndpoints.class);
-
-     /**
       * The owning conference.
       */
      private Conference conference;
@@ -64,7 +57,6 @@ import java.util.*;
      OctoEndpoints(Conference conference)
      {
          this.conference = conference;
-//         logger = Logger.getLogger(classLogger, conference.getLogger());
          logger = conference.getLogger().createChildLogger(OctoEndpoint.class.getName());
          messageTransport = new OctoEndpointMessageTransport(this, logger);
      }

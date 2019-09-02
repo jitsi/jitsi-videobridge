@@ -57,13 +57,6 @@ public class Conference
      implements PropertyChangeListener, Expireable
 {
     /**
-     * The {@link Logger} used by the {@link Conference} class to print debug
-     * information. Note that {@link Conference} instances should use {@link
-     * #logger} instead.
-     */
-//    private static final Logger classLogger = Logger.getLogger(Conference.class);
-
-    /**
      * The endpoints participating in this {@link Conference}. Although it's a
      * {@link ConcurrentHashMap}, writing to it must be protected by
      * synchronizing on the map itself, because it must be kept in sync with
@@ -113,11 +106,6 @@ public class Conference
      * specified.
      */
     private final String gid;
-
-    /**
-     * The string used to identify this conference for the purposes of logging.
-     */
-//    private final String logPrefix;
 
     /**
      * The world readable name of this instance if any.
@@ -170,7 +158,6 @@ public class Conference
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
-//    private final Logger logger = Logger.getLogger(classLogger, null);
     private final Logger logger;
 
 
@@ -235,7 +222,6 @@ public class Conference
         this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
         this.includeInStatistics = enableLogging;
         this.name = name;
-//        this.logPrefix = "[id=" + id + " gid=" + gid + " name=" + name + "] ";
         Map<String, String> context = new HashMap<>();
         context.put("confId", id);
         context.put("gId", gid);
@@ -1028,16 +1014,6 @@ public class Conference
     {
         return logger;
     }
-
-    /**
-     * @return a string which identifies this {@link Conference} for the
-     * purposes of logging. The string is a comma-separated list of "key=value"
-     * pairs.
-     */
-//    public String getLogPrefix()
-//    {
-//        return logPrefix;
-//    }
 
     /**
      * @return the global ID of the conference, or {@code null} if none has been

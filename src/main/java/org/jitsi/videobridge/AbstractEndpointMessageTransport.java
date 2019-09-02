@@ -35,13 +35,6 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 public abstract class AbstractEndpointMessageTransport
 {
     /**
-     * The {@link Logger} used by the {@link Endpoint} class to print debug
-     * information.
-     */
-//    private static final Logger classLogger
-//        = Logger.getLogger(AbstractEndpointMessageTransport.class);
-
-    /**
      * The {@link Endpoint} associated with this
      * {@link EndpointMessageTransport}.
      */

@@ -34,8 +34,6 @@ import java.util.stream.*;
  */
 public class ConferenceSpeechActivity
 {
-//    private static final Logger classLogger
-//            = Logger.getLogger(ConferenceSpeechActivity.class);
     /**
      * The <tt>Logger</tt> used by the <tt>ConferenceSpeechActivity</tt> class
      * and its instances to print debug information.

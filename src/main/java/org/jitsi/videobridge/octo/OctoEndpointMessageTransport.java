@@ -31,13 +31,6 @@ class OctoEndpointMessageTransport
     extends AbstractEndpointMessageTransport
 {
     /**
-     * The {@link Logger} used by the {@link RtpChannel} class and its instances
-     * to print debug information.
-     */
-//    private static final Logger logger
-//        = Logger.getLogger(OctoEndpointMessageTransport.class);
-
-    /**
      * The associated {@link OctoEndpoints}.
      */
     private final OctoEndpoints octoEndpoints;

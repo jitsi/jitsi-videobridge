@@ -51,14 +51,6 @@ import java.util.function.*;
 public class DtlsTransport extends IceTransport
 {
     /**
-     * The {@link Logger} used by the {@link DtlsTransport} class to
-     * print debug information. Note that instances should use {@link #logger}
-     * instead.
-     */
-//    private static final Logger classLogger
-//            = Logger.getLogger(DtlsTransport.class);
-
-    /**
      * A predicate which is true for DTLS packets. See
      * https://tools.ietf.org/html/rfc7983#section-7
      */
