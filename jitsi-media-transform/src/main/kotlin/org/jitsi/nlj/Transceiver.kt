@@ -30,11 +30,11 @@ import org.jitsi.nlj.util.SsrcAssociation
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
-import org.jitsi.nlj.util.getLogger
+import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.concurrent.RecurringRunnableExecutor
 import org.jitsi.utils.logging.DiagnosticContext
-import org.jitsi.utils.logging.Logger
+import org.jitsi.utils.logging2.Logger
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.BandwidthEstimatorImpl
@@ -66,11 +66,11 @@ class Transceiver(
      */
     backgroundExecutor: ScheduledExecutorService,
     diagnosticContext: DiagnosticContext,
-    logLevelDelegate: Logger? = null
+    parentLogger: Logger
 ) : Stoppable, NodeStatsProducer {
-    private val logger = getLogger(this.javaClass, logLevelDelegate)
+    private val logger = parentLogger.createChildLogger(Transceiver::class)
     val packetIOActivity = PacketIOActivity()
-    private val endpointConnectionStats = EndpointConnectionStats()
+    private val endpointConnectionStats = EndpointConnectionStats(logger)
     private val streamInformationStore = StreamInformationStoreImpl()
     /**
      * A central place to subscribe to be notified on the reception or transmission of RTCP packets for
@@ -87,14 +87,14 @@ class Transceiver(
     private val transportCcEngine = TransportCCEngine(diagnosticContext, bandwidthEstimator)
 
     private val rtpSender: RtpSender = RtpSenderImpl(
-            id,
-            transportCcEngine,
-            rtcpEventNotifier,
-            senderExecutor,
-            backgroundExecutor,
-            streamInformationStore,
-            logLevelDelegate,
-            diagnosticContext
+        id,
+        transportCcEngine,
+        rtcpEventNotifier,
+        senderExecutor,
+        backgroundExecutor,
+        streamInformationStore,
+        logger,
+        diagnosticContext
     )
     private val rtpReceiver: RtpReceiver =
         RtpReceiverImpl(
@@ -107,7 +107,7 @@ class Transceiver(
             backgroundExecutor,
             { rtpSender.getPacketStreamStats().bitrate },
             streamInformationStore,
-            logLevelDelegate
+            logger
         )
 
     init {
@@ -243,7 +243,9 @@ class Transceiver(
         val srtpTransformers = SrtpUtil.initializeTransformer(
             srtpProfileInfo,
             keyingMaterial,
-            tlsRole)
+            tlsRole,
+            logger
+        )
 
         rtpReceiver.setSrtpTransformers(srtpTransformers)
         rtpSender.setSrtpTransformers(srtpTransformers)

@@ -14,22 +14,8 @@
  * limitations under the License.
  */
 
-package org.jitsi.nlj.module_tests
+package org.jitsi.nlj.util
 
-import org.jitsi.nlj.resources.logging.StdoutLogger
-import org.jitsi.nlj.srtp.SrtpTransformers
-import org.jitsi.nlj.srtp.SrtpUtil
-import org.jitsi.test_utils.SrtpData
-
-class SrtpTransformerFactory {
-    companion object {
-        fun createSrtpTransformers(srtpData: SrtpData): SrtpTransformers {
-            return SrtpUtil.initializeTransformer(
-                srtpData.srtpProfileInformation,
-                srtpData.keyingMaterial,
-                srtpData.tlsRole,
-                StdoutLogger()
-            )
-        }
-    }
+fun StringBuffer.appendLnIndent(numSpaces: Int, msg: String) {
+    append(" ".repeat(numSpaces)).appendln(msg)
 }

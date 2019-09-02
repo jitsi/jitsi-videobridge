@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class PayloadVerificationPlugin {
     companion object : NodePlugin {
-        private val logger = getLogger(this.javaClass)
+        private val logger = getLogger(PayloadVerificationPlugin::class)
 
         val numFailures = AtomicInteger()
 

@@ -22,13 +22,18 @@ import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cdebug
+import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.Logger
 
 /**
  * Some [Vp8Packet] fields are not able to be determined by looking at a single VP8 packet (for example the spatial
  * layer index can only be acquired from keyframes).  This class keeps a longer-running 'memory' of the information
  * needed to fill out fields like that in [Vp8Packet]s
  */
-class Vp8Parser : TransformerNode("Vp8 parser") {
+class Vp8Parser(
+    parentLogger: Logger
+) : TransformerNode("Vp8 parser") {
+    private val logger = parentLogger.createChildLogger(Vp8Parser::class)
     private val ssrcToSpatialLayerQuality: MutableMap<Long, Int> = HashMap()
     // Stats
     private var numKeyframes: Int = 0

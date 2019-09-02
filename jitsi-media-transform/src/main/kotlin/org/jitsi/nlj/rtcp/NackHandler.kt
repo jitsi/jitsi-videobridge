@@ -22,10 +22,11 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.PacketCache
 import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.getLogger
+import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacket
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.utils.logging2.Logger
 
 /**
  * When a nack packet is received, the [NackHandler] will try to retrieve the
@@ -33,14 +34,15 @@ import org.jitsi.rtp.rtp.RtpPacket
  */
 class NackHandler(
     private val packetCache: PacketCache,
-    private val onNackedPacketsReady: PacketHandler
+    private val onNackedPacketsReady: PacketHandler,
+    parentLogger: Logger
 ) : NodeStatsProducer, RtcpListener, EndpointConnectionStats.EndpointConnectionStatsListener {
     private var numNacksReceived = 0
     private var numNackedPackets = 0
     private var numRetransmittedPackets = 0
     private var numPacketsNotResentDueToDelay = 0
     private var numCacheMisses = 0
-    private val logger = getLogger(this.javaClass)
+    private val logger = parentLogger.createChildLogger(NackHandler::class)
     private var currRtt: Double = -1.0
 
     override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Long) {

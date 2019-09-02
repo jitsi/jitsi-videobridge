@@ -89,6 +89,6 @@ class Vp8Packet(
     }
 
     companion object {
-        private val logger = getLogger(this.javaClass)
+        private val logger = getLogger(Vp8Packet::class)
     }
 }
