@@ -550,12 +550,8 @@ public class Conference
         {
             StringBuilder sb = new StringBuilder("expire_conf,");
             sb.append("duration=").append(durationSeconds)
-                .append(",conf_completed=")
-                    .append(videobridgeStatistics.totalConferencesCompleted)
                 .append(",has_failed=").append(hasFailed)
                 .append(",has_partially_failed=").append(hasPartiallyFailed);
-            //TODO(brian): bring back cateogry
-//            logger.info(Logger.Category.STATISTICS, sb.toString());
             logger.info(sb.toString());
         }
     }
