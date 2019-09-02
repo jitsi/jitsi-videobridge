@@ -11,6 +11,7 @@ import io.kotlintest.Spec
 import io.kotlintest.matchers.numerics.shouldBeGreaterThan
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.test_utils.FakeClock
 import org.jitsi.nlj.util.StreamInformationStore
@@ -37,7 +38,7 @@ class TccGeneratorNodeTest : ShouldSpec() {
         super.beforeSpec(spec)
         doNothing().whenever(streamInformationStore).onRtpExtensionMapping(
                 eq(RtpExtensionType.TRANSPORT_CC), setTccExtId.capture())
-        tccGenerator = TccGeneratorNode(onTccReady, streamInformationStore, clock)
+        tccGenerator = TccGeneratorNode(onTccReady, streamInformationStore, StdoutLogger(), clock)
         setTccExtId.firstValue(tccExtensionId)
     }
 

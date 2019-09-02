@@ -23,13 +23,17 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.cdebug
+import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.utils.logging2.Logger
 import java.util.concurrent.ConcurrentHashMap
 
 class RetransmissionSender(
-    private val streamInformationStore: ReadOnlyStreamInformationStore
+    private val streamInformationStore: ReadOnlyStreamInformationStore,
+    parentLogger: Logger
 ) : TransformerNode("Retransmission sender") {
+    private val logger = parentLogger.createChildLogger(RetransmissionSender::class)
     /**
      * Maps an original payload type (Int) to its [RtxPayloadType]
      */

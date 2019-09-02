@@ -17,10 +17,12 @@ package org.jitsi.nlj.module_tests
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpReceiver
+import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.util.safeShutdown
 import org.jitsi.test_utils.Pcaps
 import java.time.Duration
 import java.util.concurrent.Executors
+import java.util.logging.Level
 import kotlin.system.measureTimeMillis
 
 /**
@@ -46,8 +48,9 @@ fun main(args: Array<String>) {
     repeat(numReceivers) {
         val receiver = ReceiverFactory.createReceiver(
             executor, backgroundExecutor, pcap.srtpData,
-            pcap.payloadTypes, pcap.headerExtensions, pcap.ssrcAssociations)
-
+            pcap.payloadTypes, pcap.headerExtensions, pcap.ssrcAssociations,
+            logger = StdoutLogger("receiver", Level.ALL)
+        )
         receivers.add(receiver)
     }
 

@@ -47,10 +47,10 @@ import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.getLogger
+import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.util.RTCPUtils
-import org.jitsi.utils.logging.Logger
+import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.queue.CountingErrorHandler
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
@@ -79,25 +79,24 @@ class RtpReceiverImpl @JvmOverloads constructor(
      */
     getSendBitrate: () -> Long,
     streamInformationStore: ReadOnlyStreamInformationStore,
-    logLevelDelegate: Logger? = null
+    parentLogger: Logger
 ) : RtpReceiver() {
-    private val logger = getLogger(classLogger, logLevelDelegate)
+    private val logger = parentLogger.createChildLogger(RtpReceiverImpl::class)
     private var running: Boolean = true
     private val inputTreeRoot: Node
     private val incomingPacketQueue =
             PacketInfoQueue("rtp-receiver-incoming-packet-queue", executor, this::handleIncomingPacket)
     private val srtpDecryptWrapper = SrtpTransformerNode("SRTP Decrypt node")
     private val srtcpDecryptWrapper = SrtpTransformerNode("SRTCP Decrypt node")
-    private val tccGenerator = TccGeneratorNode(rtcpSender, streamInformationStore)
+    private val tccGenerator = TccGeneratorNode(rtcpSender, streamInformationStore, logger)
     private val audioLevelReader = AudioLevelReader(streamInformationStore)
     private val silenceDiscarder = SilenceDiscarder(true)
     private val statsTracker = IncomingStatisticsTracker(streamInformationStore)
     private val packetStreamStats = PacketStreamStatsNode()
     private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statsTracker)
-    private val rtcpTermination = RtcpTermination(rtcpEventNotifier)
+    private val rtcpTermination = RtcpTermination(rtcpEventNotifier, logger)
 
     companion object {
-        private val classLogger: Logger = Logger.getLogger(this::class.java)
         val queueErrorCounter = CountingErrorHandler()
 
         private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP receiver incoming queue"
@@ -125,7 +124,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
 
     init {
-        logger.cdebug { "Receiver ${this.hashCode()} using executor ${executor.hashCode()}" }
+        logger.cdebug { "using executor ${executor.hashCode()}" }
         rtcpEventNotifier.addRtcpEventListener(rtcpRrGenerator)
 
         incomingPacketQueue.setErrorHandler(queueErrorCounter)
@@ -137,7 +136,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     name = "SRTP path"
                     predicate = PacketPredicate { !RTCPUtils.isRtcp(it.buffer, it.offset, it.length) }
                     path = pipeline {
-                        node(RtpParser(streamInformationStore))
+                        node(RtpParser(streamInformationStore, logger))
                         node(tccGenerator)
                         // TODO: temporarily putting the audioLevelReader node here such that we can determine whether
                         // or not a packet should be discarded before doing SRTP. audioLevelReader has been moved here
@@ -162,12 +161,12 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 name = "Video path"
                                 predicate = PacketPredicate { it is VideoRtpPacket }
                                 path = pipeline {
-                                    node(RtxHandler(streamInformationStore))
+                                    node(RtxHandler(streamInformationStore, logger))
                                     node(PaddingTermination())
-                                    node(VideoParser(streamInformationStore))
-                                    node(Vp8Parser())
-                                    node(VideoBitrateCalculator())
-                                    node(RetransmissionRequesterNode(rtcpSender, backgroundExecutor))
+                                    node(VideoParser(streamInformationStore, logger))
+                                    node(Vp8Parser(logger))
+                                    node(VideoBitrateCalculator(logger))
+                                    node(RetransmissionRequesterNode(rtcpSender, backgroundExecutor, logger))
                                     node(packetHandlerWrapper)
                                 }
                             }

@@ -19,6 +19,7 @@ package org.jitsi.nlj.module_tests
 import org.jitsi.nlj.RtpReceiver
 import org.jitsi.nlj.RtpReceiverImpl
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.util.LocalSsrcAssociation
@@ -26,6 +27,7 @@ import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.test_utils.SourceAssociation
 import org.jitsi.test_utils.SrtpData
+import org.jitsi.utils.logging2.Logger
 import java.util.Random
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
@@ -39,7 +41,8 @@ class ReceiverFactory {
             payloadTypes: List<PayloadType>,
             headerExtensions: List<RtpExtension>,
             ssrcAssociations: List<SourceAssociation>,
-            rtcpSender: (RtcpPacket) -> Unit = {}
+            rtcpSender: (RtcpPacket) -> Unit = {},
+            logger: Logger = StdoutLogger()
         ): RtpReceiver {
             val streamInformationStore = StreamInformationStoreImpl()
             val receiver = RtpReceiverImpl(
@@ -49,7 +52,8 @@ class ReceiverFactory {
                 executor = executor,
                 backgroundExecutor = backgroundExecutor,
                 getSendBitrate = { 0L },
-                streamInformationStore = streamInformationStore
+                streamInformationStore = streamInformationStore,
+                parentLogger = logger
             )
             receiver.setSrtpTransformers(SrtpTransformerFactory.createSrtpTransformers(srtpData))
 

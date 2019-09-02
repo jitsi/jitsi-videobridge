@@ -22,6 +22,7 @@ import io.kotlintest.matchers.collections.shouldContainExactly
 import io.kotlintest.matchers.collections.shouldHaveSize
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
+import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.test_utils.FakeScheduledExecutorService
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacket
@@ -37,7 +38,7 @@ class StreamPacketRequesterTest : ShouldSpec() {
     }
 
     private val streamPacketRequester = RetransmissionRequester.StreamPacketRequester(
-            123L, scheduler, scheduler.clock, ::rtcpSender
+            123L, scheduler, scheduler.clock, ::rtcpSender, StdoutLogger()
     )
 
     init {

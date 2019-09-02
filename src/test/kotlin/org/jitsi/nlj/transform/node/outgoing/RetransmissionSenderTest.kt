@@ -23,6 +23,7 @@ import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.RtxPayloadType
+import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
@@ -52,7 +53,7 @@ class RetransmissionSenderTest : ShouldSpec() {
         ssrc = originalSsrc
     }
     private val dummyPacketInfo = PacketInfo(dummyPacket)
-    private val retransmissionSender = RetransmissionSender(streamInformationStore)
+    private val retransmissionSender = RetransmissionSender(streamInformationStore, StdoutLogger())
 
     private fun Node.onOutput(func: (PacketInfo) -> Unit) {
         this.attach(object : ConsumerNode("verifier") {

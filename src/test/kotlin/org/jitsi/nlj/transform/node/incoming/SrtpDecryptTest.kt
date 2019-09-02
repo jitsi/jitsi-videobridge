@@ -22,6 +22,7 @@ import io.kotlintest.shouldBe
 import io.kotlintest.shouldNotBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.resources.srtp_samples.SrtpSample
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.test_utils.matchers.ByteArrayBuffer.haveSameContentAs
@@ -33,7 +34,9 @@ internal class SrtpDecryptTest : ShouldSpec() {
         val srtpTransformers = SrtpUtil.initializeTransformer(
             SrtpSample.srtpProfileInformation,
             SrtpSample.keyingMaterial.array(),
-            SrtpSample.tlsRole)
+            SrtpSample.tlsRole,
+            StdoutLogger()
+        )
 
         "decrypting an RTCP packet" {
             val packetInfo = PacketInfo(SrtpSample.incomingEncryptedRtcpPacket.clone())

@@ -41,8 +41,9 @@ import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
-import org.jitsi.nlj.util.getLogger
+import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.rtp.extensions.toHex
+import org.jitsi.utils.logging2.Logger
 import java.nio.ByteBuffer
 import java.util.Hashtable
 import java.util.Vector
@@ -52,10 +53,11 @@ class TlsServerImpl(
     /**
      * The function to call when the client certificateInfo is available.
      */
-    private val notifyClientCertificateReceived: (Certificate?) -> Unit
+    private val notifyClientCertificateReceived: (Certificate?) -> Unit,
+    parentLogger: Logger
 ) : DefaultTlsServer(BC_TLS_CRYPTO) {
 
-    private val logger = getLogger(this.javaClass)
+    private val logger = parentLogger.createChildLogger(TlsServerImpl::class)
 
     private var session: TlsSession? = null
 

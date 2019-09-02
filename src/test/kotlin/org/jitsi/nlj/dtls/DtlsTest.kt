@@ -20,6 +20,7 @@ import io.kotlintest.IsolationMode
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.PcapWriter
 import org.jitsi.nlj.transform.node.incoming.ProtocolReceiver
@@ -34,6 +35,7 @@ import kotlin.concurrent.thread
 class DtlsTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
     private val debugEnabled = true
+    private val logger = StdoutLogger()
 
     fun debug(s: String) {
         if (debugEnabled) {
@@ -42,8 +44,8 @@ class DtlsTest : ShouldSpec() {
     }
 
     init {
-        val dtlsServer = DtlsStack("server").apply { actAsServer() }
-        val dtlsClient = DtlsStack("client").apply { actAsClient() }
+        val dtlsServer = DtlsStack(logger).apply { actAsServer() }
+        val dtlsClient = DtlsStack(logger).apply { actAsClient() }
 
         dtlsClient.remoteFingerprints = mapOf(
             dtlsServer.localFingerprintHashFunction to dtlsServer.localFingerprint)
@@ -56,7 +58,7 @@ class DtlsTest : ShouldSpec() {
         val clientSender = ProtocolSender(dtlsClient)
         val clientReceiver = ProtocolReceiver(dtlsClient)
 
-        val pcapWriter = PcapWriter("/tmp/dtls-test.pcal")
+        val pcapWriter = PcapWriter(logger, "/tmp/dtls-test.pcap")
 
         // The server and client senders are connected directly to their
         // peer's receiver

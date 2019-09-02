@@ -25,8 +25,9 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.getLogger
+import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.rtp.UnparsedPacket
+import org.jitsi.utils.logging2.Logger
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.LinkedBlockingQueue
@@ -59,10 +60,9 @@ import java.util.concurrent.TimeUnit
  *
  */
 class DtlsStack(
-    val id: String
+    parentLogger: Logger
 ) : ProtocolStack, DatagramTransport, NodeStatsProducer {
-    private val logger = getLogger(this.javaClass)
-    private val logPrefix = "[$id]"
+    private val logger = parentLogger.createChildLogger(DtlsStack::class)
     private val roleSet = CompletableFuture<Unit>()
 
     /**
@@ -89,7 +89,7 @@ class DtlsStack(
         remoteCertificate?.let {
             DtlsUtils.verifyAndValidateCertificate(it, remoteFingerprints)
             // The above throws an exception if the checks fail.
-            logger.cdebug { "$logPrefix Fingerprints verified." }
+            logger.cdebug { "Fingerprints verified." }
         }
     }
 
@@ -134,12 +134,24 @@ class DtlsStack(
     }
 
     fun actAsServer() {
-        role = DtlsServer(id, this, certificateInfo, handshakeCompleteHandler, this::verifyAndValidateRemoteCertificate)
+        role = DtlsServer(
+            this,
+            certificateInfo,
+            handshakeCompleteHandler,
+            this::verifyAndValidateRemoteCertificate,
+            logger
+        )
         roleSet.complete(Unit)
     }
 
     fun actAsClient() {
-        role = DtlsClient(id, this, certificateInfo, handshakeCompleteHandler, this::verifyAndValidateRemoteCertificate)
+        role = DtlsClient(
+            this,
+            certificateInfo,
+            handshakeCompleteHandler,
+            this::verifyAndValidateRemoteCertificate,
+            logger
+        )
         roleSet.complete(Unit)
     }
 

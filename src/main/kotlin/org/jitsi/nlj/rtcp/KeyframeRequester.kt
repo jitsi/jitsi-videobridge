@@ -23,6 +23,7 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.cdebug
+import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
@@ -30,6 +31,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacketBuilder
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacketBuilder
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.logging2.Logger
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.min
 
@@ -42,8 +44,10 @@ import kotlin.math.min
  * 3) Aggregation.  This class will pace outgoing requests such that we don't spam the sender
  */
 class KeyframeRequester(
-    private val streamInformationStore: ReadOnlyStreamInformationStore
+    private val streamInformationStore: ReadOnlyStreamInformationStore,
+    parentLogger: Logger
 ) : TransformerNode("Keyframe Requester") {
+    private val logger = parentLogger.createChildLogger(KeyframeRequester::class)
 
     // Map a SSRC to the timestamp (in ms) of when we last requested a keyframe for it
     private val keyframeRequests = mutableMapOf<Long, Long>()

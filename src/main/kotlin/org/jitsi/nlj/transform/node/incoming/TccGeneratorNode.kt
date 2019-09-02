@@ -20,6 +20,8 @@ import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
+import org.jitsi.nlj.util.cdebug
+import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.nlj.util.milliseconds
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
@@ -28,6 +30,7 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.isOlderThan
+import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.stats.RateStatistics
 import java.time.Clock
 import java.time.Duration
@@ -43,8 +46,10 @@ private val NEVER = Instant.MIN
 class TccGeneratorNode(
     private val onTccPacketReady: (RtcpPacket) -> Unit = {},
     private val streamInformation: ReadOnlyStreamInformationStore,
+    parentLogger: Logger,
     private val clock: Clock = Clock.systemDefaultZone()
 ) : ObserverNode("TCC generator") {
+    private val logger = parentLogger.createChildLogger(TccGeneratorNode::class)
     private var tccExtensionId: Int? = null
     private var currTccSeqNum: Int = 0
     private var lastTccSentTime: Instant = NEVER
@@ -99,6 +104,8 @@ class TccGeneratorNode(
             mediaSourceSsrc = streamInformation.primaryMediaSsrcs.firstOrNull() ?: -1L,
             feedbackPacketSeqNum = currTccSeqNum++
         )
+        logger.cdebug { "building TCC packet with media ssrc ${tccBuilder.mediaSourceSsrc} and" +
+            " seq num ${tccBuilder.feedbackPacketSeqNum}" }
         synchronized(lock) {
             // windowStartSeq is the first sequence number to include in the current feedback, but we may not have
             // received it so the base time shall be the time of the first received packet which will be included
@@ -120,11 +127,14 @@ class TccGeneratorNode(
             windowStartSeq = nextSequenceNumber
         }
 
+        logger.cdebug { "built TCC packet with ${tccBuilder.num_seq_no_} packets represented" }
+
         return tccBuilder.build()
     }
 
     private fun sendTcc(tccPacket: RtcpFbTccPacket) {
         onTccPacketReady(tccPacket)
+        logger.cdebug { "sent TCC packet with seq num ${tccPacket.feedbackSeqNum}" }
         numTccSent++
         lastTccSentTime = clock.instant()
         tccFeedbackBitrate.update(tccPacket.length, clock.millis())
