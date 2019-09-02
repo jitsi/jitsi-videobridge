@@ -240,9 +240,7 @@ public class Conference
             = (sourceSsrc, level)
                 -> speechActivity.levelChanged(sourceSsrc, (int) level);
 
-        //TODO(brian)
-//        expireableImpl = new ExpireableImpl(logPrefix, this::expire);
-        expireableImpl = new ExpireableImpl("", this::expire);
+        expireableImpl = new ExpireableImpl(logger, this::expire);
 
         if (enableLogging)
         {
