@@ -22,6 +22,7 @@ import org.bouncycastle.crypto.tls.TlsContext
 import org.bouncycastle.crypto.tls.TlsServerContext
 import org.jitsi.srtp.SrtpContextFactory
 import org.jitsi.srtp.SrtpPolicy
+import org.jitsi.utils.logging2.Logger
 
 enum class TlsRole {
     CLIENT,
@@ -101,7 +102,8 @@ class SrtpUtil {
         fun initializeTransformer(
             srtpProfileInformation: SrtpProfileInformation,
             keyingMaterial: ByteArray,
-            tlsRole: TlsRole
+            tlsRole: TlsRole,
+            parentLogger: Logger
         ): SrtpTransformers {
             val clientWriteSrtpMasterKey = ByteArray(srtpProfileInformation.cipherKeyLength)
             val serverWriteSrtpMasterKey = ByteArray(srtpProfileInformation.cipherKeyLength)
@@ -175,10 +177,10 @@ class SrtpUtil {
             }
 
             return SrtpTransformers(
-                SrtpDecryptTransformer(reverseSrtpContextFactory),
-                SrtpEncryptTransformer(forwardSrtpContextFactory),
-                SrtcpDecryptTransformer(reverseSrtpContextFactory),
-                SrtcpEncryptTransformer(forwardSrtpContextFactory)
+                SrtpDecryptTransformer(reverseSrtpContextFactory, parentLogger),
+                SrtpEncryptTransformer(forwardSrtpContextFactory, parentLogger),
+                SrtcpDecryptTransformer(reverseSrtpContextFactory, parentLogger),
+                SrtcpEncryptTransformer(forwardSrtpContextFactory, parentLogger)
             )
         }
     }

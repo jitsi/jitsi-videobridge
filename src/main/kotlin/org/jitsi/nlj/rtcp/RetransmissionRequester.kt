@@ -17,14 +17,15 @@
 package org.jitsi.nlj.rtcp
 
 import org.jitsi.nlj.util.cdebug
+import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.nlj.util.cwarn
-import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacketBuilder
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.isNextAfter
 import org.jitsi.rtp.util.isOlderThan
 import org.jitsi.rtp.util.numPacketsTo
+import org.jitsi.utils.logging2.Logger
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -37,18 +38,16 @@ import java.util.concurrent.atomic.AtomicBoolean
 class RetransmissionRequester(
     private val rtcpSender: (RtcpPacket) -> Unit,
     private val scheduler: ScheduledExecutorService,
+    parentLogger: Logger,
     private val clock: Clock = Clock.systemUTC()
 ) {
-    companion object {
-        private const val MAX_REQUESTS = 10
-        private val REQUEST_INTERVAL = Duration.ofMillis(150)
-    }
+    private val logger = parentLogger.createChildLogger(RetransmissionRequester::class)
     private val streamPacketRequesters: MutableMap<Long, StreamPacketRequester> = HashMap()
 
     fun packetReceived(ssrc: Long, seqNum: Int) {
         val streamPacketRequester = synchronized(streamPacketRequesters) {
             streamPacketRequesters.computeIfAbsent(ssrc) { key ->
-                StreamPacketRequester(key, scheduler, clock, rtcpSender)
+                StreamPacketRequester(key, scheduler, clock, rtcpSender, logger)
             }
         }
         streamPacketRequester.packetReceived(seqNum)
@@ -69,13 +68,15 @@ class RetransmissionRequester(
         private val scheduler: ScheduledExecutorService,
         private val clock: Clock,
         private val rtcpSender: (RtcpPacket) -> Unit,
+        parentLogger: Logger,
         private val maxMissingSeqNums: Int = 100
     ) {
         companion object {
             val NO_REQUEST_DUE: Instant = Instant.MAX
         }
         private var running: AtomicBoolean = AtomicBoolean(true)
-        private val logger = getLogger(this.javaClass)
+        private val logger =
+            parentLogger.createChildLogger(StreamPacketRequester::class, context = mapOf("ssrc" to ssrc.toString()))
         private var highestReceivedSeqNum = -1
         private val requests: MutableMap<Int, PacketRetransmissionRequest> = HashMap()
         private val taskHandleLock = Any()
@@ -217,5 +218,10 @@ class RetransmissionRequester(
             }
             numTimesRequested++
         }
+    }
+
+    companion object {
+        private const val MAX_REQUESTS = 10
+        private val REQUEST_INTERVAL = Duration.ofMillis(150)
     }
 }

@@ -21,22 +21,26 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.rtp.rtcp.CompoundRtcpPacket
-import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.rtp.rtcp.RtcpSrPacket
-import org.jitsi.rtp.rtcp.RtcpSdesPacket
-import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpByePacket
 import org.jitsi.rtp.rtcp.RtcpHeader
+import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.rtp.rtcp.RtcpRrPacket
+import org.jitsi.rtp.rtcp.RtcpSdesPacket
+import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.SenderInfoParser
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
+import org.jitsi.utils.logging2.Logger
 
 class RtcpTermination(
-    private val rtcpEventNotifier: RtcpEventNotifier
+    private val rtcpEventNotifier: RtcpEventNotifier,
+    parentLogger: Logger
 ) : TransformerNode("RTCP termination") {
+    private val logger = parentLogger.createChildLogger(RtcpTermination::class)
     private var packetReceiveCounts = mutableMapOf<String, Int>()
     /**
      * Number of packets we failed to forward because a compound packet contained more than one

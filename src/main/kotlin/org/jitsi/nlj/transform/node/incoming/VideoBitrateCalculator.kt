@@ -22,6 +22,8 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.cdebug
+import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.Logger
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
 
@@ -31,7 +33,10 @@ import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
  * individual encoding (that is, each forwardable stream taking into account spatial and temporal scalability) and
  * tags the [VideoRtpPacket] with a snapshot of the current estimated bitrate for the encoding to which it belongs
  */
-class VideoBitrateCalculator : ObserverNode("Video bitrate calculator") {
+class VideoBitrateCalculator(
+    parentLogger: Logger
+) : ObserverNode("Video bitrate calculator") {
+    private val logger = parentLogger.createChildLogger(VideoBitrateCalculator::class)
     private var mediaStreamTrackDescs: Array<MediaStreamTrackDesc> = arrayOf()
 
     override fun observe(packetInfo: PacketInfo) {

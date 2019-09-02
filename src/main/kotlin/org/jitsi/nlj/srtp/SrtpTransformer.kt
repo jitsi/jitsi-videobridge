@@ -20,27 +20,26 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.utils.logging.Logger
 import org.jitsi.srtp.BaseSrtpCryptoContext
 import org.jitsi.srtp.SrtcpCryptoContext
 import org.jitsi.srtp.SrtpContextFactory
 import org.jitsi.srtp.SrtpCryptoContext
+import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.nlj.util.cwarn
+import org.jitsi.utils.logging2.Logger
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Implements the methods common to all 4 transformer implementation (encrypt/decrypt for SRTP/SRTCP)
  */
 abstract class AbstractSrtpTransformer<CryptoContextType : BaseSrtpCryptoContext>(
-    protected val contextFactory: SrtpContextFactory
+    protected val contextFactory: SrtpContextFactory,
+    protected val logger: Logger
 ) {
     /**
      * All the known SSRC's corresponding SrtpCryptoContexts
      */
     private val contexts: MutableMap<Long, CryptoContextType> = ConcurrentHashMap()
-
-    companion object {
-        val logger: Logger = Logger.getLogger(this::class.java)
-    }
 
     fun close() {
         synchronized(contexts) {
@@ -93,20 +92,19 @@ abstract class AbstractSrtpTransformer<CryptoContextType : BaseSrtpCryptoContext
 /**
  * Implements methods common for the two SRTP transformer implementations.
  */
-abstract class SrtpTransformer(contextFactory: SrtpContextFactory) : AbstractSrtpTransformer<SrtpCryptoContext>(contextFactory) {
-    companion object {
-        val logger: Logger = Logger.getLogger(this::class.java)
-    }
+abstract class SrtpTransformer(
+    contextFactory: SrtpContextFactory,
+    logger: Logger
+) : AbstractSrtpTransformer<SrtpCryptoContext>(contextFactory, logger) {
 
     override fun deriveContext(ssrc: Long, index: Long): SrtpCryptoContext? =
             contextFactory.deriveContext(ssrc.toInt(), 0) ?: null
 
     override fun getContext(packetInfo: PacketInfo): SrtpCryptoContext? {
-        val rtpPacket: RtpPacket = packetInfo.packet as? RtpPacket
-            ?: run {
-                logger.warn("Can not handle non-RTP packet: ${packetInfo.packet.javaClass}")
-                return null
-            }
+        val rtpPacket: RtpPacket = packetInfo.packet as? RtpPacket ?: run {
+            logger.cwarn { "Can not handle non-RTP packet: ${packetInfo.packet.javaClass}" }
+            return null
+        }
         return getContext(rtpPacket.ssrc, rtpPacket.sequenceNumber.toLong())
     }
 }
@@ -114,10 +112,10 @@ abstract class SrtpTransformer(contextFactory: SrtpContextFactory) : AbstractSrt
 /**
  * Implements methods common for the two SRTP transformer implementations.
  */
-abstract class SrtcpTransformer(contextFactory: SrtpContextFactory) : AbstractSrtpTransformer<SrtcpCryptoContext>(contextFactory) {
-    companion object {
-        val logger: Logger = Logger.getLogger(this::class.java)
-    }
+abstract class SrtcpTransformer(
+    contextFactory: SrtpContextFactory,
+    logger: Logger
+) : AbstractSrtpTransformer<SrtcpCryptoContext>(contextFactory, logger) {
 
     override fun deriveContext(ssrc: Long, index: Long): SrtcpCryptoContext? =
             contextFactory.deriveControlContext(ssrc.toInt()) ?: null
@@ -134,11 +132,10 @@ abstract class SrtcpTransformer(contextFactory: SrtpContextFactory) : AbstractSr
 /**
  * A transformer which decrypts SRTCP packets.
  */
-class SrtcpDecryptTransformer(contextFactory: SrtpContextFactory) : SrtcpTransformer(contextFactory) {
-    companion object {
-        val logger: Logger = Logger.getLogger(this::class.java)
-    }
-
+class SrtcpDecryptTransformer(
+    contextFactory: SrtpContextFactory,
+    parentLogger: Logger
+) : SrtcpTransformer(contextFactory, parentLogger.createChildLogger(SrtcpDecryptTransformer::class)) {
     override fun transform(packetInfo: PacketInfo, context: SrtcpCryptoContext): Boolean {
         context.reverseTransformPacket(packetInfo.packet)
         packetInfo.resetPayloadVerification()
@@ -150,10 +147,10 @@ class SrtcpDecryptTransformer(contextFactory: SrtpContextFactory) : SrtcpTransfo
  * A transformer which encrypts RTCP packets (producing SRTCP packets). Note that as opposed to the other transformers,
  * this one replaces the [Packet].
  */
-class SrtcpEncryptTransformer(contextFactory: SrtpContextFactory) : SrtcpTransformer(contextFactory) {
-    companion object {
-        val logger: Logger = Logger.getLogger(this::class.java)
-    }
+class SrtcpEncryptTransformer(
+    contextFactory: SrtpContextFactory,
+    parentLogger: Logger
+) : SrtcpTransformer(contextFactory, parentLogger.createChildLogger(SrtcpEncryptTransformer::class)) {
 
     override fun transform(packetInfo: PacketInfo, context: SrtcpCryptoContext): Boolean {
         context.transformPacket(packetInfo.packet)
@@ -173,10 +170,10 @@ class SrtcpEncryptTransformer(contextFactory: SrtpContextFactory) : SrtcpTransfo
  * A transformer which decrypts SRTP packets. Note that it expects the [Packet] to have already been parsed as
  * [RtpPacket].
  */
-class SrtpDecryptTransformer(contextFactory: SrtpContextFactory) : SrtpTransformer(contextFactory) {
-    companion object {
-        val logger: Logger = Logger.getLogger(this::class.java)
-    }
+class SrtpDecryptTransformer(
+    contextFactory: SrtpContextFactory,
+    parentLogger: Logger
+) : SrtpTransformer(contextFactory, parentLogger.createChildLogger(SrtpDecryptTransformer::class)) {
 
     override fun transform(packetInfo: PacketInfo, context: SrtpCryptoContext): Boolean {
         // For silence packets we update the ROC (if authentication passes), but don't decrypt
@@ -189,10 +186,10 @@ class SrtpDecryptTransformer(contextFactory: SrtpContextFactory) : SrtpTransform
 /**
  * A transformer which encrypts RTP packets (producing SRTP packets).
  */
-class SrtpEncryptTransformer(contextFactory: SrtpContextFactory) : SrtpTransformer(contextFactory) {
-    companion object {
-        val logger: Logger = Logger.getLogger(this::class.java)
-    }
+class SrtpEncryptTransformer(
+    contextFactory: SrtpContextFactory,
+    parentLogger: Logger
+) : SrtpTransformer(contextFactory, parentLogger.createChildLogger(SrtpEncryptTransformer::class)) {
 
     override fun transform(packetInfo: PacketInfo, context: SrtpCryptoContext): Boolean {
         return context.transformPacket(packetInfo.packetAs()).apply {

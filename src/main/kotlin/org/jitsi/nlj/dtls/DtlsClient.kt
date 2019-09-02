@@ -23,31 +23,31 @@ import org.bouncycastle.tls.DatagramTransport
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
-import org.jitsi.nlj.util.getLogger
+import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.Logger
 
 class DtlsClient(
-    id: String,
     private val datagramTransport: DatagramTransport,
     certificateInfo: CertificateInfo,
     private val handshakeCompleteHandler: (Int, TlsRole, ByteArray) -> Unit = { _, _, _ -> },
     verifyAndValidateRemoteCertificate: (Certificate?) -> Unit = {},
+    parentLogger: Logger,
     private val dtlsClientProtocol: DTLSClientProtocol = DTLSClientProtocol()
 ) : DtlsRole {
-    private val logger = getLogger(this.javaClass)
-    private val logPrefix = "[$id]"
+    private val logger = parentLogger.createChildLogger(DtlsClient::class)
 
-    private val tlsClient: TlsClientImpl = TlsClientImpl(certificateInfo, verifyAndValidateRemoteCertificate)
+    private val tlsClient: TlsClientImpl = TlsClientImpl(certificateInfo, verifyAndValidateRemoteCertificate, logger)
 
     override fun start(): DTLSTransport = connect()
 
     fun connect(): DTLSTransport {
         try {
             return dtlsClientProtocol.connect(this.tlsClient, datagramTransport).also {
-                logger.cinfo { "$logPrefix DTLS handshake finished" }
+                logger.cinfo { "DTLS handshake finished" }
                 handshakeCompleteHandler(tlsClient.chosenSrtpProtectionProfile, TlsRole.CLIENT, tlsClient.srtpKeyingMaterial)
             }
         } catch (e: Exception) {
-            logger.cerror { "$logPrefix Error during DTLS connection: $e" }
+            logger.cerror { "Error during DTLS connection: $e" }
             throw e
         }
     }
