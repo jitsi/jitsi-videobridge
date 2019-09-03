@@ -323,7 +323,7 @@ public class AdaptiveTrackProjection
                 && !(context instanceof GenericAdaptiveTrackProjectionContext))
             {
                 // context switch
-                context = new GenericAdaptiveTrackProjectionContext(payloadTypeObject, getRtpState());
+                context = new GenericAdaptiveTrackProjectionContext(payloadTypeObject, getRtpState(), parentLogger);
                 contextPayloadType = payloadType;
             }
 
@@ -332,7 +332,7 @@ public class AdaptiveTrackProjection
         }
         else if (context == null || contextPayloadType != payloadType)
         {
-            context = new GenericAdaptiveTrackProjectionContext(payloadTypeObject, getRtpState());
+            context = new GenericAdaptiveTrackProjectionContext(payloadTypeObject, getRtpState(), parentLogger);
             contextPayloadType = payloadType;
             return context;
         }

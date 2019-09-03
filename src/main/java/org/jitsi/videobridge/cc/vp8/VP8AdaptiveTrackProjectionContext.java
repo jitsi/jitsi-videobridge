@@ -77,7 +77,7 @@ public class VP8AdaptiveTrackProjectionContext
      * The {@link VP8QualityFilter} instance that does quality filtering on the
      * incoming frames.
      */
-    private final VP8QualityFilter vp8QualityFilter = new VP8QualityFilter();
+    private final VP8QualityFilter vp8QualityFilter;
 
     /**
      * The diagnostic context of this instance.
@@ -116,6 +116,7 @@ public class VP8AdaptiveTrackProjectionContext
         logContext.put("id", Integer.toString(hashCode()));
         this.logger = parentLogger.createChildLogger(VP8AdaptiveTrackProjectionContext.class.getName(), logContext);
         this.payloadType = payloadType;
+        this.vp8QualityFilter = new VP8QualityFilter(parentLogger);
 
         // Compute the starting sequence number and the timestamp of the initial
         // frame based on the RTP state.

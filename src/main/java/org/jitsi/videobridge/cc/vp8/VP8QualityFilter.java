@@ -18,8 +18,10 @@ package org.jitsi.videobridge.cc.vp8;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.json.simple.*;
+
+import java.util.*;
 
 /**
  * This class is responsible for dropping VP8 simulcast/svc packets based on
@@ -34,8 +36,7 @@ class VP8QualityFilter
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
-    private static final Logger
-        logger = Logger.getLogger(VP8QualityFilter.class);
+    private final Logger logger;
 
     /**
      * The default maximum frequency (in millis) at which the media engine
@@ -80,6 +81,13 @@ class VP8QualityFilter
      * field is synchronized on this instance.
      */
     private int currentSpatialLayerId = SUSPENDED_LAYER_ID;
+
+    public VP8QualityFilter(Logger parentLogger)
+    {
+        Map<String, String> logContext = new HashMap<>();
+        logContext.put("id", Integer.toString(hashCode()));
+        this.logger = parentLogger.createChildLogger(VP8QualityFilter.class.getName(), logContext);
+    }
 
     /**
      * @return true if a the target spatial/quality layer id has changed and a
@@ -158,12 +166,8 @@ class VP8QualityFilter
         int spatialLayerId = getSpatialLayerId(incomingIndex);
         if (DePacketizer.isKeyFrame(buf, payloadOff, payloadLen))
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug(
-                        hashCode() + " Quality filter got keyframe for stream "
-                                + firstPacketOfFrame.getSsrc());
-            }
+            logger.debug(() -> "Quality filter got keyframe for stream "
+                    + firstPacketOfFrame.getSsrc());
             return acceptKeyframe(spatialLayerId, nowMs);
         }
         else if (currentSpatialLayerId > SUSPENDED_LAYER_ID)
@@ -280,17 +284,13 @@ class VP8QualityFilter
         {
             // something went terribly wrong, normally we should be able to
             // extract the layer id from a keyframe.
-            logger.error(hashCode() + " unable to get layer id from keyframe");
+            logger.error("unable to get layer id from keyframe");
             return false;
         }
 
-        if (logger.isDebugEnabled())
-        {
-            logger.debug(
-                hashCode() + " Received a keyframe of spatial layer: "
-                        + spatialLayerIdOfKeyframe);
+        logger.debug(() -> "Received a keyframe of spatial layer: "
+                    + spatialLayerIdOfKeyframe);
 
-        }
 
         // The keyframe request has been fulfilled at this point, regardless of
         // whether we'll be able to achieve the internalSpatialLayerIdTarget.
@@ -305,12 +305,9 @@ class VP8QualityFilter
 
             mostRecentKeyframeGroupArrivalTimeMs = nowMs;
 
-            if (logger.isDebugEnabled())
-            {
-                logger.debug(hashCode() + " First keyframe in this kf group " +
-                    "currentSpatialLayerId: " + spatialLayerIdOfKeyframe +
-                    ". Target is " + internalSpatialLayerIdTarget);
-            }
+            logger.debug(() -> "First keyframe in this kf group " +
+                "currentSpatialLayerId: " + spatialLayerIdOfKeyframe +
+                ". Target is " + internalSpatialLayerIdTarget);
 
             if (spatialLayerIdOfKeyframe <= internalSpatialLayerIdTarget)
             {
@@ -337,12 +334,9 @@ class VP8QualityFilter
             {
                 // upscale or current quality case
                 currentSpatialLayerId = spatialLayerIdOfKeyframe;
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug(hashCode() + " Upscaling to spatial layer "
-                        + spatialLayerIdOfKeyframe
-                        + ". The target is " + internalSpatialLayerIdTarget);
-                }
+                logger.debug(() -> "Upscaling to spatial layer "
+                    + spatialLayerIdOfKeyframe
+                    + ". The target is " + internalSpatialLayerIdTarget);
                 return true;
             }
             else if (spatialLayerIdOfKeyframe <= internalSpatialLayerIdTarget
@@ -350,12 +344,9 @@ class VP8QualityFilter
             {
                 // downscale case
                 currentSpatialLayerId = spatialLayerIdOfKeyframe;
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug(hashCode() + " Downscaling to spatial layer "
-                        + spatialLayerIdOfKeyframe + ". The target is + "
-                        + internalSpatialLayerIdTarget);
-                }
+                logger.debug(() -> " Downscaling to spatial layer "
+                    + spatialLayerIdOfKeyframe + ". The target is + "
+                    + internalSpatialLayerIdTarget);
                 return true;
             }
             else
