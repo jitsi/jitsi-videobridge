@@ -19,6 +19,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
+import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.createChildLogger
@@ -36,8 +37,6 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.TreeMap
-
-private val NEVER = Instant.MIN
 
 /**
  * Extract the TCC sequence numbers from each passing packet and generate

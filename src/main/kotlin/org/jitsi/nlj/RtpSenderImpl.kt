@@ -185,7 +185,7 @@ class RtpSenderImpl(
         srtcpEncryptWrapper.transformer = srtpTransformers.srtcpEncryptTransformer
     }
 
-    override fun requestKeyframe(mediaSsrc: Long) {
+    override fun requestKeyframe(mediaSsrc: Long?) {
         keyframeRequester.requestKeyframe(mediaSsrc)
     }
 

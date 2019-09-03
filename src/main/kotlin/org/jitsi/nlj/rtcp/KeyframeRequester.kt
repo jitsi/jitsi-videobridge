@@ -21,6 +21,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetLocalSsrcEvent
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
+import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.createChildLogger
@@ -32,6 +33,9 @@ import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacketBuilder
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.min
 
@@ -43,18 +47,19 @@ import kotlin.math.min
  * on what the client supports
  * 3) Aggregation.  This class will pace outgoing requests such that we don't spam the sender
  */
-class KeyframeRequester(
+class KeyframeRequester @JvmOverloads constructor(
     private val streamInformationStore: ReadOnlyStreamInformationStore,
-    parentLogger: Logger
+    parentLogger: Logger,
+    private val clock: Clock = Clock.systemDefaultZone()
 ) : TransformerNode("Keyframe Requester") {
     private val logger = parentLogger.createChildLogger(KeyframeRequester::class)
 
-    // Map a SSRC to the timestamp (in ms) of when we last requested a keyframe for it
-    private val keyframeRequests = mutableMapOf<Long, Long>()
+    // Map a SSRC to the timestamp (represented as an [Instant]) of when we last requested a keyframe for it
+    private val keyframeRequests = mutableMapOf<Long, Instant>()
     private val firCommandSequenceNumber: AtomicInteger = AtomicInteger(0)
     private val keyframeRequestsSyncRoot = Any()
     private var localSsrc: Long? = null
-    private var waitIntervalMs = DEFAULT_WAIT_INTERVAL_MS
+    private var waitInterval = DEFAULT_WAIT_INTERVAL
 
     // Stats
 
@@ -75,7 +80,7 @@ class KeyframeRequester(
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val pliOrFirPacket = packetInfo.getPliOrFirPacket() ?: return packetInfo
 
-        val now = System.currentTimeMillis()
+        val now = clock.instant()
         val sourceSsrc: Long
         val canSend: Boolean
         val forward: Boolean
@@ -115,32 +120,36 @@ class KeyframeRequester(
     /**
      * Returns 'true' when at least one method is supported, AND we haven't sent a request very recently.
      */
-    private fun canSendKeyframeRequest(mediaSsrc: Long, nowMs: Long): Boolean {
+    private fun canSendKeyframeRequest(mediaSsrc: Long, now: Instant): Boolean {
         if (!streamInformationStore.supportsPli && !streamInformationStore.supportsFir) {
             return false
         }
         synchronized(keyframeRequestsSyncRoot) {
-            return if (nowMs - keyframeRequests.getOrDefault(mediaSsrc, 0) < waitIntervalMs) {
-                logger.cdebug { "Sent a keyframe request less than ${waitIntervalMs}ms ago for $mediaSsrc, " +
-                        "ignoring request" }
+            return if (Duration.between(keyframeRequests.getOrDefault(mediaSsrc, NEVER), now) < waitInterval) {
+                logger.cdebug { "Sent a keyframe request less than $waitInterval ago for $mediaSsrc, " +
+                    "ignoring request" }
                 false
             } else {
-                keyframeRequests[mediaSsrc] = nowMs
+                keyframeRequests[mediaSsrc] = now
                 logger.cdebug { "Keyframe requester requesting keyframe for $mediaSsrc" }
                 true
             }
         }
     }
 
-    @JvmOverloads
-    fun requestKeyframe(mediaSsrc: Long, now: Long = System.currentTimeMillis()) {
+    fun requestKeyframe(mediaSsrc: Long? = null) {
+        val ssrc = mediaSsrc ?: streamInformationStore.primaryMediaSsrcs.firstOrNull() ?: run {
+            numApiRequestsDropped++
+            logger.cdebug { "No video SSRC found to request keyframe" }
+            return
+        }
         numApiRequests++
-        if (!canSendKeyframeRequest(mediaSsrc, now)) {
+        if (!canSendKeyframeRequest(ssrc, clock.instant())) {
             numApiRequestsDropped++
             return
         }
 
-        doRequestKeyframe(mediaSsrc)
+        doRequestKeyframe(ssrc)
     }
 
     private fun doRequestKeyframe(mediaSsrc: Long) {
@@ -177,7 +186,7 @@ class KeyframeRequester(
 
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
-            addString("wait_interval_ms", waitIntervalMs.toString()) // use string to prevent aggregation
+            addString("wait_interval_ms", waitInterval.toMillis().toString())
             addNumber("num_api_requests", numApiRequests)
             addNumber("num_api_requests_dropped", numApiRequestsDropped)
             addNumber("num_firs_dropped", numFirsDropped)
@@ -191,11 +200,11 @@ class KeyframeRequester(
 
     fun onRttUpdate(newRtt: Double) {
         // avg(rtt) + stddev(rtt) would be more accurate than rtt + 10.
-        waitIntervalMs = min(DEFAULT_WAIT_INTERVAL_MS, newRtt.toInt() + 10)
+        waitInterval = Duration.ofMillis(min(DEFAULT_WAIT_INTERVAL.toMillis(), newRtt.toLong() + 10))
     }
 
     companion object {
-        private const val DEFAULT_WAIT_INTERVAL_MS = 100
+        private val DEFAULT_WAIT_INTERVAL = Duration.ofMillis(100)
     }
 }
 
