@@ -215,13 +215,7 @@ public class Conference
                       String gid)
     {
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
-        this.shim = new ConferenceShim(this);
-        this.id = Objects.requireNonNull(id, "id");
-        this.gid = gid;
-        this.focus = focus;
-        this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
-        this.includeInStatistics = enableLogging;
-        this.name = name;
+        Level minLevel = enableLogging ? Level.ALL : Level.WARNING;
         Map<String, String> context = new HashMap<>();
         context.put("confId", id);
         context.put("gId", gid);
@@ -229,9 +223,15 @@ public class Conference
         {
             context.put("name", name.toString());
         }
-
-        Level minLevel = enableLogging ? Level.ALL : Level.WARNING;
         logger = new LoggerImpl(Conference.class.getName(), minLevel, new LogContext(context));
+        this.shim = new ConferenceShim(this, logger);
+        this.id = Objects.requireNonNull(id, "id");
+        this.gid = gid;
+        this.focus = focus;
+        this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
+        this.includeInStatistics = enableLogging;
+        this.name = name;
+
 
         lastKnownFocus = focus;
 

@@ -19,7 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.MediaType;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -36,11 +36,9 @@ import java.util.*;
 public class ChannelShim
 {
     /**
-     * The {@link Logger} used by the {@link VideobridgeShim} class and its
-     * instances to print debug information.
+     * The {@link Logger}
      */
-    private static final Logger logger =
-            Logger.getLogger(VideobridgeShim.class);
+    private final Logger logger;
 
     /**
      * Gets the {@link SsrcAssociationType} corresponding to a given
@@ -82,7 +80,6 @@ public class ChannelShim
         RtpExtensionType type = RtpExtensionType.Companion.createFromUri(uri);
         if (type == null)
         {
-            logger.warn("Ignoring unknown RTP extension type: " + uri);
             return null;
         }
 
@@ -151,13 +148,15 @@ public class ChannelShim
             @NotNull String id,
             @NotNull Endpoint endpoint,
             long localSsrc,
-            ContentShim contentShim)
+            ContentShim contentShim,
+            Logger parentLogger)
     {
         this.id = id;
         this.endpoint = endpoint;
         this.localSsrc = localSsrc;
         this.contentShim = contentShim;
         this.creationTimestampMs = System.currentTimeMillis();
+        this.logger = parentLogger.createChildLogger(ChannelShim.class.getName());
         endpoint.addChannel(this);
     }
 
@@ -348,6 +347,10 @@ public class ChannelShim
             if (rtpExtension != null)
             {
                 endpoint.getTransceiver().addRtpExtension(rtpExtension);
+            }
+            else
+            {
+                logger.warn("Ignoring unknown RTP extension type: " + ext.getURI());
             }
         });
     }

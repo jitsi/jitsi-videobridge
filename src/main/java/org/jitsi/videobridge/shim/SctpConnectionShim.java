@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.shim;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 
 /**
@@ -34,8 +35,9 @@ public class SctpConnectionShim extends ChannelShim
     public SctpConnectionShim(
             @NotNull String id,
             @NotNull Endpoint endpoint,
-            ContentShim contentShim)
+            ContentShim contentShim,
+            Logger parentLogger)
     {
-        super(id, endpoint, 1, contentShim);
+        super(id, endpoint, 1, contentShim, parentLogger);
     }
 }
