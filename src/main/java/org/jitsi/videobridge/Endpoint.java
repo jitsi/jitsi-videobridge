@@ -746,7 +746,8 @@ public class Endpoint
                         = new PacketInfo(new UnparsedPacket(data, offset, length));
                     transportManager.sendDtlsData(packet);
                     return 0;
-                }
+                },
+                logger
         );
         sctpHandler.setSctpManager(sctpManager);
         // NOTE(brian): as far as I know we always act as the 'server' for sctp
