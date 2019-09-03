@@ -3,7 +3,7 @@ package org.jitsi.videobridge.rest;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.json.simple.*;
 import org.osgi.framework.*;
@@ -29,8 +29,7 @@ public class DebugRequestHandler
     /**
      * The logger instance used by {@link DebugRequestHandler}.
      */
-    private static final Logger logger
-            = Logger.getLogger(DebugRequestHandler.class);
+    private static final Logger logger = new LoggerImpl(DebugRequestHandler.class.getName());
 
     /**
      * We specifically disable the debug interface by default to prevent it

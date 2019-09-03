@@ -23,7 +23,7 @@ import org.eclipse.jetty.servlets.*;
 import org.eclipse.jetty.util.resource.*;
 import org.jitsi.rest.*;
 import org.jitsi.util.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.rest.ssi.*;
 import org.osgi.framework.*;
 
@@ -46,8 +46,7 @@ public class PublicRESTBundleActivator
      * The logger instance used by this
      * {@link PublicClearPortRedirectBundleActivator}.
      */
-    private static final Logger logger
-        = Logger.getLogger(PublicRESTBundleActivator.class);
+    private static final Logger logger = new LoggerImpl(PublicRESTBundleActivator.class.getName());
 
     /**
      * The prefix of the property names for the Jetty instance managed by
@@ -387,7 +386,7 @@ public class PublicRESTBundleActivator
                     }
                     catch(IOException e)
                     {
-                        logger.info("Error constructing resource.", e);
+                        logger.error("Error constructing resource.", e);
                         return null;
                     }
                 }

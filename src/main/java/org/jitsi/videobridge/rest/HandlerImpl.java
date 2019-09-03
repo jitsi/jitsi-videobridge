@@ -25,7 +25,7 @@ import org.eclipse.jetty.server.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
@@ -206,7 +206,7 @@ class HandlerImpl
     /**
      * The logger instance used by REST handler.
      */
-    private static final Logger logger = Logger.getLogger(HandlerImpl.class);
+    private static final Logger logger = new LoggerImpl(HandlerImpl.class.getName());
 
     /**
      * The HTTP resource which is used to trigger graceful shutdown.
