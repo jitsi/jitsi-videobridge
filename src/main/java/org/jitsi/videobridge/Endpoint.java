@@ -760,8 +760,9 @@ public class Endpoint
                 logger.info("SCTP connection is ready, creating the Data channel stack");
                 dataChannelStack
                     = new DataChannelStack(
-                        (data, sid, ppid)
-                                -> socket.send(data, true, sid, ppid));
+                        (data, sid, ppid) -> socket.send(data, true, sid, ppid),
+                        logger
+                    );
                 dataChannelStack.onDataChannelStackEvents(dataChannel ->
                 {
                     logger.info("Remote side opened a data channel.");
