@@ -24,9 +24,8 @@ import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.resources.logging.StdoutLogger
+import org.jitsi.nlj.resources.node.onOutput
 import org.jitsi.nlj.rtp.SsrcAssociationType
-import org.jitsi.nlj.transform.node.ConsumerNode
-import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.RemoteSsrcAssociation
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.rtp.rtp.RtpPacket
@@ -54,14 +53,6 @@ class RetransmissionSenderTest : ShouldSpec() {
     }
     private val dummyPacketInfo = PacketInfo(dummyPacket)
     private val retransmissionSender = RetransmissionSender(streamInformationStore, StdoutLogger())
-
-    private fun Node.onOutput(func: (PacketInfo) -> Unit) {
-        this.attach(object : ConsumerNode("verifier") {
-            override fun consume(packetInfo: PacketInfo) {
-                func(packetInfo)
-            }
-        })
-    }
 
     override fun beforeTest(testCase: TestCase) {
         super.beforeTest(testCase)

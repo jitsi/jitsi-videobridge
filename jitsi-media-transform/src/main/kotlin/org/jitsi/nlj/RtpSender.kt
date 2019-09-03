@@ -38,6 +38,6 @@ abstract class RtpSender :
     abstract fun setSrtpTransformers(srtpTransformers: SrtpTransformers)
     abstract fun getStreamStats(): OutgoingStatisticsSnapshot
     abstract fun getPacketStreamStats(): PacketStreamStats.Snapshot
-    abstract fun requestKeyframe(mediaSsrc: Long)
+    abstract fun requestKeyframe(mediaSsrc: Long? = null)
     abstract fun tearDown()
 }
