@@ -240,7 +240,7 @@ public class Endpoint
                         handleIncomingPacket(packetInfo);
                     }
                 });
-        bitrateController = new BitrateController(this, diagnosticContext);
+        bitrateController = new BitrateController(this, diagnosticContext, logger);
 
         messageTransport = new EndpointMessageTransport(this, logger);
 
