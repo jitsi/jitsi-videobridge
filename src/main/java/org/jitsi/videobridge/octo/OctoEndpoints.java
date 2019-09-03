@@ -16,7 +16,7 @@
 package org.jitsi.videobridge.octo;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.json.simple.*;
 
@@ -31,13 +31,6 @@ import java.util.*;
  class OctoEndpoints
  {
      /**
-      * The {@link Logger} used by the {@link RtpChannel} class to print debug
-      * information. Note that instances should use {@link #logger} instead.
-      */
-     private static final Logger classLogger
-         = Logger.getLogger(OctoEndpoints.class);
-
-     /**
       * The owning conference.
       */
      private Conference conference;
@@ -48,8 +41,7 @@ import java.util.*;
       * The {@link OctoEndpointMessageTransport} used to parse and handle
       * incoming data messages from Octo.
       */
-     final OctoEndpointMessageTransport messageTransport
-         = new OctoEndpointMessageTransport(this);
+     final OctoEndpointMessageTransport messageTransport;
 
      /**
       * The {@link Logger} to be used by this instance to print debug
@@ -65,7 +57,8 @@ import java.util.*;
      OctoEndpoints(Conference conference)
      {
          this.conference = conference;
-         logger = Logger.getLogger(classLogger, conference.getLogger());
+         logger = conference.getLogger().createChildLogger(OctoEndpoint.class.getName());
+         messageTransport = new OctoEndpointMessageTransport(this, logger);
      }
 
      /**
@@ -88,7 +81,7 @@ import java.util.*;
          Set<String> toCreate = new HashSet<>(endpointIds);
          toCreate.removeAll(octoEndpointIds);
 
-         toCreate.forEach(this::addEndpoint);
+         toCreate.forEach((id) -> addEndpoint(id, logger));
          toExpire.forEach(id ->
          {
              AbstractEndpoint endpoint = conference.getEndpoint(id);
@@ -119,9 +112,9 @@ import java.util.*;
       * @param id the ID for the new instance.
       * @return the newly created instance.
       */
-     private OctoEndpoint addEndpoint(String id)
+     private OctoEndpoint addEndpoint(String id, Logger parentLogger)
      {
-         OctoEndpoint endpoint = new OctoEndpoint(conference, id, this);
+         OctoEndpoint endpoint = new OctoEndpoint(conference, id, this, parentLogger);
 
          conference.addEndpoint(endpoint);
 

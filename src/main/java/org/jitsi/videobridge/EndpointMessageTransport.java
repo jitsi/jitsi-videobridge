@@ -16,7 +16,7 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.eventadmin.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.rest.*;
@@ -39,26 +39,12 @@ class EndpointMessageTransport
     extends AbstractEndpointMessageTransport
     implements DataChannelStack.DataChannelMessageListener
 {
-
-    /**
-     * The {@link Logger} used by the {@link Endpoint} class to print debug
-     * information.
-     */
-    private static final Logger classLogger
-        = Logger.getLogger(EndpointMessageTransport.class);
-
     /**
      * The {@link Endpoint} associated with this
      * {@link EndpointMessageTransport}.
      *
      */
     private final Endpoint endpoint;
-
-    /**
-     * The {@link Logger} to be used by this instance to print debug
-     * information.
-     */
-    private final Logger logger;
 
     /**
      * The last accepted web-socket by this instance, if any.
@@ -83,13 +69,10 @@ class EndpointMessageTransport
      * Initializes a new {@link EndpointMessageTransport} instance.
      * @param endpoint the associated {@link Endpoint}.
      */
-    EndpointMessageTransport(Endpoint endpoint)
+    EndpointMessageTransport(Endpoint endpoint, Logger parentLogger)
     {
-        super(endpoint);
+        super(endpoint, parentLogger);
         this.endpoint = endpoint;
-        this.logger
-            = Logger.getLogger(
-                    classLogger, endpoint.getConference().getLogger());
     }
 
     /**
@@ -217,8 +200,7 @@ class EndpointMessageTransport
         Object o = jsonObject.get("pinnedEndpoints");
         if (!(o instanceof JSONArray))
         {
-            logger.warn(endpoint.logPrefix +
-                    "Received invalid or unexpected JSON: " + jsonObject);
+            logger.warn("Received invalid or unexpected JSON: " + jsonObject);
             return;
         }
 
@@ -234,7 +216,7 @@ class EndpointMessageTransport
 
         if (logger.isDebugEnabled())
         {
-            logger.debug(endpoint.logPrefix + "Pinned " + newPinnedEndpoints);
+            logger.debug("Pinned " + newPinnedEndpoints);
         }
         endpoint.pinnedEndpointsChanged(newPinnedEndpoints);
     }
@@ -272,8 +254,7 @@ class EndpointMessageTransport
         Object o = jsonObject.get("selectedEndpoints");
         if (!(o instanceof JSONArray))
         {
-            logger.warn(endpoint.logPrefix +
-                    "Received invalid or unexpected JSON: " + jsonObject);
+            logger.warn("Received invalid or unexpected JSON: " + jsonObject);
             return;
         }
 
@@ -315,8 +296,7 @@ class EndpointMessageTransport
         Object dst = getActiveTransportChannel();
         if (dst == null)
         {
-            logger.info(endpoint.logPrefix +
-                    "No available transport channel, can't send a message");
+            logger.info("No available transport channel, can't send a message");
         }
         else
         {
@@ -411,8 +391,7 @@ class EndpointMessageTransport
                 webSocketLastActive = false;
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug(endpoint.logPrefix +
-                            "Web socket closed, statusCode " + statusCode
+                    logger.debug("Web socket closed, statusCode " + statusCode
                             + " ( " + reason + ").");
                 }
             }
@@ -436,8 +415,7 @@ class EndpointMessageTransport
                 webSocket = null;
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug(endpoint.logPrefix +
-                        "Endpoint expired, closed colibri web-socket.");
+                    logger.debug("Endpoint expired, closed colibri web-socket.");
                 }
             }
         }
@@ -453,8 +431,7 @@ class EndpointMessageTransport
     {
         if (ws == null || !ws.equals(webSocket))
         {
-            logger.warn(endpoint.logPrefix +
-                    "Received text from an unknown web socket.");
+            logger.warn("Received text from an unknown web socket.");
             return;
         }
 

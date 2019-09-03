@@ -24,7 +24,7 @@ import org.jitsi.nlj.transform.node.*;
 import org.jitsi.osgi.*;
 import org.jitsi.rtp.*;
 import org.jitsi.utils.event.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -49,8 +49,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      * The {@link Logger} used by the {@link OctoTentacle} class and its
      * instances to print debug information.
      */
-    private static final Logger logger
-            = Logger.getLogger(OctoTentacle.class);
+    private final Logger logger;
 
     /**
      * The conference for this {@link OctoTentacle}.
@@ -93,8 +92,9 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
     public OctoTentacle(Conference conference)
     {
         this.conference = conference;
+        this.logger = conference.getLogger().createChildLogger(this.getClass().getName());
         octoEndpoints = new OctoEndpoints(conference);
-        transceiver = new OctoTransceiver(this);
+        transceiver = new OctoTransceiver(this, logger);
 
         BundleContext bundleContext = conference.getBundleContext();
         OctoRelayService octoRelayService
@@ -105,7 +105,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         if (octoRelayService != null)
         {
             relay = octoRelayService.getRelay();
-            keyframeRequester = new KeyframeRequester(transceiver.getStreamInformationStore());
+            keyframeRequester = new KeyframeRequester(transceiver.getStreamInformationStore(), logger);
             keyframeRequester.attach(new ConsumerNode("octo keyframe relay node")
             {
                 @Override

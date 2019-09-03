@@ -15,7 +15,7 @@
  */
 package org.jitsi.videobridge.octo;
 
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.json.simple.*;
 
@@ -31,13 +31,6 @@ class OctoEndpointMessageTransport
     extends AbstractEndpointMessageTransport
 {
     /**
-     * The {@link Logger} used by the {@link RtpChannel} class and its instances
-     * to print debug information.
-     */
-    private static final Logger logger
-        = Logger.getLogger(OctoEndpointMessageTransport.class);
-
-    /**
      * The associated {@link OctoEndpoints}.
      */
     private final OctoEndpoints octoEndpoints;
@@ -45,9 +38,9 @@ class OctoEndpointMessageTransport
     /**
      * Initializes a new {@link AbstractEndpointMessageTransport} instance.
      */
-    OctoEndpointMessageTransport(OctoEndpoints octoEndpoints)
+    OctoEndpointMessageTransport(OctoEndpoints octoEndpoints, Logger parentLogger)
     {
-        super(null);
+        super(null, parentLogger);
         this.octoEndpoints = octoEndpoints;
     }
 
