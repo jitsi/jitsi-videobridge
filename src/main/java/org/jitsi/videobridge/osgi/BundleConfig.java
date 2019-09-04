@@ -29,7 +29,7 @@ import org.jitsi.videobridge.xmpp.*;
  * @author Pawel Domas
  * @author George Politis
  */
-public class JvbBundleConfig
+public class BundleConfig
     extends OSGiBundleConfig
 {
     /**
