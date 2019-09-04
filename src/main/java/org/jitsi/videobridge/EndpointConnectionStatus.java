@@ -32,9 +32,8 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  * the data channel.
  *
  * An endpoint's connectivity status is considered connected as long as there
- * is any traffic activity seen on any of it's channels as defined in
- * {@link Channel#lastTransportActivityTime}. When there is no activity for
- * longer than {@link #maxInactivityLimit} it will be assumed that
+ * is any traffic activity seen on any of its endpoints. When there is no
+ * activity for longer than {@link #maxInactivityLimit} it will be assumed that
  * the endpoint is having some connectivity issues. Those may be temporary or
  * permanent. When that happens there will be a Colibri message broadcast
  * to all conference endpoints. The Colibri class name of the message is defined
@@ -42,9 +41,6 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  * and it will contain "active" attribute set to "false". If those problems turn
  * out to be temporary and the traffic is restored another message is sent with
  * "active" set to "true".
- *
- * The module is started by OSGi as configured in
- * {@link org.jitsi.videobridge.osgi.JvbBundleConfig}
  *
  * @author Pawel Domas
  */
