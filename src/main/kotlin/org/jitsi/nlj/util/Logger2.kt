@@ -22,6 +22,11 @@ import org.jitsi.utils.logging2.LoggerImpl
 import java.util.logging.Level
 import kotlin.reflect.KClass
 
+/**
+ * Note that, although the logger now supports taking a message supplier
+ * argument, these methods are still more efficient as they're inline (and
+ * therefore don't require constructing a lambda object)
+ */
 inline fun Logger.cinfo(msg: () -> String) {
     if (isInfoEnabled) {
         this.info(msg())

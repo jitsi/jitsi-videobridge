@@ -34,7 +34,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-utils</artifactId>
-            <version>1.0-4-g77b92a5</version>
+            <version>1.0-5-g7b044d4</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
