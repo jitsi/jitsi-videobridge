@@ -16,7 +16,7 @@
 package org.jitsi.videobridge.xmpp;
 
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jitsimeet.*;
@@ -37,7 +37,7 @@ public class MediaStreamTrackFactory
      * instances for logging output.
      */
     private static final Logger logger
-        = Logger.getLogger(MediaStreamTrackFactory.class);
+        = new LoggerImpl(MediaStreamTrackFactory.class.getName());
 
     /**
      * The system property name that for a boolean that's controlling whether or
