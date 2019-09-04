@@ -24,7 +24,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-srtp</artifactId>
-            <version>1.0-14-g15dd616</version>
+            <version>1.0-15-g5848a60</version>
         </dependency>
         <dependency>
             <groupId>org.jitsi</groupId>
