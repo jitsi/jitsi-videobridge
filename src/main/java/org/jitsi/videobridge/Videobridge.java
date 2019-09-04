@@ -19,7 +19,6 @@ import kotlin.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.eventadmin.*;
-import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.meet.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.stats.*;
@@ -1107,8 +1106,6 @@ public class Videobridge
                     System.clearProperty(newPropertyName);
                 }
             }
-
-            System.clearProperty(RtxTransformer.DISABLE_NACK_TERMINATION_PNAME);
         }
     }
 
