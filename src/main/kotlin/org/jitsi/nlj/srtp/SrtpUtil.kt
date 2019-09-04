@@ -153,14 +153,16 @@ class SrtpUtil {
                 clientWriteSrtpMasterKey,
                 clientWriterSrtpMasterSalt,
                 srtpPolicy,
-                srtcpPolicy
+                srtcpPolicy,
+                parentLogger
             )
             val serverSrtpContextFactory = SrtpContextFactory(
                 tlsRole == TlsRole.SERVER,
                 serverWriteSrtpMasterKey,
                 serverWriterSrtpMasterSalt,
                 srtpPolicy,
-                srtcpPolicy
+                srtcpPolicy,
+                parentLogger
             )
             val forwardSrtpContextFactory: SrtpContextFactory
             val reverseSrtpContextFactory: SrtpContextFactory
