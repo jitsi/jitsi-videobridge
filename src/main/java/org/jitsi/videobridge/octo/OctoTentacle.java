@@ -23,6 +23,7 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.osgi.*;
 import org.jitsi.rtp.*;
+import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
@@ -229,18 +230,25 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
 
         endpointIds.forEach(endpointId ->
         {
-            Set<Long> endpointSsrcs =
-                allSources.stream()
-                    .filter(source -> endpointId.equals(
-                            MediaStreamTrackFactory.getOwner(source)))
+            Map<MediaType, Set<Long>> endpointSsrcsByMediaType = new HashMap<>();
+            Set<Long> epAudioSsrcs = audioSources.stream()
+                    .filter(source -> endpointId.equals(MediaStreamTrackFactory.getOwner(source)))
                     .filter(Objects::nonNull)
                     .map(SourcePacketExtension::getSSRC)
                     .collect(Collectors.toSet());
+            endpointSsrcsByMediaType.put(MediaType.AUDIO, epAudioSsrcs);
+
+            Set<Long> epVideoSsrcs = videoSources.stream()
+                    .filter(source -> endpointId.equals(MediaStreamTrackFactory.getOwner(source)))
+                    .filter(Objects::nonNull)
+                    .map(SourcePacketExtension::getSSRC)
+                    .collect(Collectors.toSet());
+            endpointSsrcsByMediaType.put(MediaType.VIDEO, epVideoSsrcs);
 
             AbstractEndpoint endpoint = conference.getEndpoint(endpointId);
             if (endpoint instanceof OctoEndpoint)
             {
-                ((OctoEndpoint) endpoint).setReceiveSsrcs(endpointSsrcs);
+                ((OctoEndpoint) endpoint).setReceiveSsrcs(endpointSsrcsByMediaType);
             }
             else
             {

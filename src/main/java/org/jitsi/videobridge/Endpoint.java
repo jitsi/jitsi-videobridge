@@ -417,6 +417,11 @@ public class Endpoint
         }
     }
 
+    public double getRtt()
+    {
+        return getTransceiver().getTransceiverStats().getEndpointConnectionStats().getRtt();
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -1211,6 +1216,12 @@ public class Endpoint
     public void requestKeyframe(long mediaSsrc)
     {
         transceiver.requestKeyFrame(mediaSsrc);
+    }
+
+    @Override
+    public void requestKeyframe()
+    {
+        transceiver.requestKeyFrame();
     }
 
     /**
