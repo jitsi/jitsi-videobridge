@@ -18,6 +18,7 @@ package org.jitsi.videobridge.cc.vp8;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging2.*;
 import org.json.simple.*;
 
@@ -86,7 +87,10 @@ class VP8QualityFilter
     {
         Map<String, String> logContext = new HashMap<>();
         logContext.put("id", Integer.toString(hashCode()));
-        this.logger = parentLogger.createChildLogger(VP8QualityFilter.class.getName(), logContext);
+        this.logger = parentLogger.createChildLogger(
+                VP8QualityFilter.class.getName(),
+                JMap.of("id", Integer.toString(hashCode()))
+        );
     }
 
     /**

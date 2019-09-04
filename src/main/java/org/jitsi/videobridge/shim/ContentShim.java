@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.shim;
 
 import org.jitsi.utils.*;
+import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -83,9 +84,10 @@ public class ContentShim
     {
         this.mediaType = mediaType;
         this.conference = conference;
-        Map<String, String> logContext = new HashMap<>();
-        logContext.put("type", mediaType.toString());
-        this.logger = parentLogger.createChildLogger(ContentShim.class.getName(), logContext);
+        this.logger = parentLogger.createChildLogger(
+                ContentShim.class.getName(),
+                JMap.of("type", mediaType.toString())
+        );
     }
 
     /**

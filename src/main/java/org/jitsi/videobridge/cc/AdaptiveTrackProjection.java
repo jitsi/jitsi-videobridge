@@ -22,6 +22,7 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.PacketCache;
 import org.jitsi.rtp.rtcp.*;
+import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.vp8.*;
@@ -141,9 +142,10 @@ public class AdaptiveTrackProjection
         targetSsrc = source.getRTPEncodings()[0].getPrimarySSRC();
         this.diagnosticContext = diagnosticContext;
         this.parentLogger = parentLogger;
-        Map<String, String> logContext = new HashMap<>();
-        logContext.put("id", Integer.toString(hashCode()));
-        this.logger = parentLogger.createChildLogger(AdaptiveTrackProjection.class.getName(), logContext);
+        this.logger = parentLogger.createChildLogger(
+                AdaptiveTrackProjection.class.getName(),
+                JMap.of("id", Integer.toString(hashCode()))
+        );
         this.keyframeRequester = keyframeRequester;
     }
 

@@ -25,6 +25,7 @@ import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.util.*;
 import org.jitsi.utils.LRUCache;
+import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.*;
@@ -112,9 +113,10 @@ public class VP8AdaptiveTrackProjectionContext
             @NotNull Logger parentLogger)
     {
         this.diagnosticContext = diagnosticContext;
-        Map<String, String> logContext = new HashMap<>();
-        logContext.put("id", Integer.toString(hashCode()));
-        this.logger = parentLogger.createChildLogger(VP8AdaptiveTrackProjectionContext.class.getName(), logContext);
+        this.logger = parentLogger.createChildLogger(
+                VP8AdaptiveTrackProjectionContext.class.getName(),
+                JMap.of("id", Integer.toString(hashCode()))
+        );
         this.payloadType = payloadType;
         this.vp8QualityFilter = new VP8QualityFilter(parentLogger);
 
