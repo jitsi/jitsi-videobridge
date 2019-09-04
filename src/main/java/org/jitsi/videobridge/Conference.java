@@ -231,7 +231,11 @@ public class Conference
         }
 
         Level minLevel = enableLogging ? Level.ALL : Level.WARNING;
-        logger = new LoggerImpl(Conference.class.getName(), minLevel, new LogContext(context));
+        logger
+            = new LoggerImpl(
+                    Conference.class.getName(),
+                    minLevel,
+                    new LogContext(context));
 
         lastKnownFocus = focus;
 

@@ -15,10 +15,10 @@
  */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.util.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.shim.*;
 import org.osgi.framework.*;
 
@@ -82,7 +82,7 @@ public class EndpointConnectionStatus
      * The logger instance used by this class.
      */
     private final static Logger logger
-        = Logger.getLogger(EndpointConnectionStatus.class);
+        = new LoggerImpl(EndpointConnectionStatus.class.getName());
 
     /**
      * How long it can take an endpoint to send first data, before it will
@@ -151,7 +151,7 @@ public class EndpointConnectionStatus
             logger.error("Endpoint connection monitoring is already running");
         }
 
-        ConfigurationService config = ServiceUtils.getService(
+        ConfigurationService config = ServiceUtils2.getService(
                 bundleContext, ConfigurationService.class);
 
         firstTransferTimeout = config.getLong(

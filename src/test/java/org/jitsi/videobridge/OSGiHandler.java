@@ -17,8 +17,8 @@
  */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.util.*;
 import org.jitsi.meet.*;
+import org.jitsi.osgi.*;
 import org.jitsi.videobridge.osgi.*;
 import org.osgi.framework.*;
 
@@ -94,13 +94,8 @@ public class OSGiHandler
         }
     }
 
-    public BundleContext getBundleContext()
-    {
-        return bc;
-    }
-
     public <T> T getService(Class<T> serviceClass)
     {
-        return ServiceUtils.getService(bc, serviceClass);
+        return ServiceUtils2.getService(bc, serviceClass);
     }
 }
