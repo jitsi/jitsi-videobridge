@@ -15,9 +15,12 @@
  */
 package org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging.DiagnosticContext;
+import org.jitsi.utils.logging.TimeSeriesLogger;
+import org.jitsi.utils.logging2.*;
 import org.jitsi_modified.service.neomedia.rtp.BandwidthEstimator;
 
 import java.util.*;
@@ -162,11 +165,9 @@ class SendSideBandwidthEstimation
     private static final Random kRandom = new Random();
 
     /**
-     * The <tt>Logger</tt> used by the {@link SendSideBandwidthEstimation} class
-     * and its instances for logging output.
+     * The <tt>Logger</tt> used by this instance for logging output.
      */
-    private static final Logger logger
-            = Logger.getLogger(SendSideBandwidthEstimation.class);
+    private final Logger logger;
 
     /**
      * The {@link TimeSeriesLogger} to be used by this instance to print time
@@ -286,8 +287,10 @@ class SendSideBandwidthEstimation
      */
     private final StatisticsImpl statistics = new StatisticsImpl();
 
-    SendSideBandwidthEstimation(DiagnosticContext diagnosticContext, long startBitrate)
+    SendSideBandwidthEstimation(DiagnosticContext diagnosticContext, long startBitrate,
+        @NotNull Logger parentLogger)
     {
+        logger = parentLogger.createChildLogger(getClass().getName());
         this.diagnosticContext = diagnosticContext;
 
         float lossExperimentProbability = (float) cfg.getDouble(

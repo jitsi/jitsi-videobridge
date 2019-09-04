@@ -82,9 +82,9 @@ class Transceiver(
 
     private var mediaStreamTracks = MediaStreamTracks()
 
-    private val bandwidthEstimator: BandwidthEstimatorImpl = BandwidthEstimatorImpl(diagnosticContext)
+    private val bandwidthEstimator: BandwidthEstimatorImpl = BandwidthEstimatorImpl(diagnosticContext, logger)
 
-    private val transportCcEngine = TransportCCEngine(diagnosticContext, bandwidthEstimator)
+    private val transportCcEngine = TransportCCEngine(diagnosticContext, bandwidthEstimator, logger)
 
     private val rtpSender: RtpSender = RtpSenderImpl(
         id,
