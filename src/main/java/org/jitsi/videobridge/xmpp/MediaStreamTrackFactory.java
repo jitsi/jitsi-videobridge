@@ -16,8 +16,6 @@
 package org.jitsi.videobridge.xmpp;
 
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.service.configuration.*;
-import org.jitsi.service.libjitsi.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
@@ -34,11 +32,6 @@ import java.util.stream.*;
  */
 public class MediaStreamTrackFactory
 {
-    /**
-     * The {@link ConfigurationService} to pull configuration options from.
-     */
-    private static ConfigurationService cfg = LibJitsi.getConfigurationService();
-
     /**
      * The {@link Logger} used by the {@link MediaStreamTrackDesc} class and its
      * instances for logging output.
@@ -95,16 +88,16 @@ public class MediaStreamTrackFactory
     /**
      * A boolean that determines whether to enable support for VP9 SVC. This is
      * experimental and is left disabled by default.
+     * TODO: make configurable if needed.
      */
-    private static final boolean ENABLE_VP9_SVC
-        = cfg.getBoolean(ENABLE_VP9_SVC_PNAME, false);
+    private static final boolean ENABLE_VP9_SVC = false;
 
     /**
      * A boolean that's controlling whether or not to enable SVC filtering for
      * scalable video codecs.
+     * TODO: make configurable if needed.
      */
-    private static final Boolean ENABLE_SVC
-        = cfg.getBoolean(ENABLE_SVC_PNAME, false);
+    private static final Boolean ENABLE_SVC = false;
 
     /**
      * libjitsi isn't aware of the group semantics names defined in
