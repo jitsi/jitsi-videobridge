@@ -18,6 +18,7 @@ package org.jitsi.nlj.resources.logging
 
 import org.jitsi.utils.logging2.LogContext
 import org.jitsi.utils.logging2.Logger
+import java.util.function.Supplier
 import java.util.logging.Level
 
 /**
@@ -43,6 +44,11 @@ class StdoutLogger(
             println("$name: $context $msg")
         }
     }
+    private fun log(level: Level, msgSupplier: () -> String) {
+        if (isLoggable(level)) {
+            println("$name: $context ${msgSupplier()}")
+        }
+    }
     private fun log(level: Level, msg: Any, throwable: Throwable) {
         log(level, "$msg $throwable")
     }
@@ -57,6 +63,10 @@ class StdoutLogger(
     override fun error(msg: Any) {
         log(Level.SEVERE, msg)
     }
+
+    override fun error(msgSupplier: Supplier<String>) {
+        log(Level.SEVERE, msgSupplier)
+    }
     override fun error(msg: Any, throwable: Throwable) {
         log(Level.SEVERE, msg, throwable)
     }
@@ -67,6 +77,10 @@ class StdoutLogger(
     }
     override fun warn(msg: Any) {
         log(Level.WARNING, msg)
+    }
+
+    override fun warn(msgSupplier: Supplier<String>) {
+        log(Level.WARNING, msgSupplier)
     }
 
     override fun warn(msg: Any, throwable: Throwable) {
@@ -80,6 +94,9 @@ class StdoutLogger(
     override fun info(msg: Any) {
         log(Level.INFO, msg)
     }
+    override fun info(msgSupplier: Supplier<String>) {
+        log(Level.INFO, msgSupplier)
+    }
 
     override fun isDebugEnabled(): Boolean = isLoggable(Level.FINE)
     override fun setLevelDebug() {
@@ -88,6 +105,9 @@ class StdoutLogger(
     override fun debug(msg: Any) {
         log(Level.FINE, msg)
     }
+    override fun debug(msgSupplier: Supplier<String>) {
+        log(Level.FINE, msgSupplier)
+    }
 
     override fun isTraceEnabled(): Boolean = isLoggable(Level.FINER)
     override fun setLevelTrace() {
@@ -95,6 +115,9 @@ class StdoutLogger(
     }
     override fun trace(msg: Any) {
         log(Level.FINER, msg)
+    }
+    override fun trace(msgSupplier: Supplier<String>) {
+        log(Level.FINER, msgSupplier)
     }
 
     override fun setLevelAll() {
