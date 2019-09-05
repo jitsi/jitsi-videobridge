@@ -50,9 +50,7 @@ class RtpUtils {
                 }
             }
         }
-        fun getPaddedLengthValue(unpaddedSizeBytes: Int): Int {
-            return calculateRtcpLengthFieldValue(unpaddedSizeBytes + getNumPaddingBytes(unpaddedSizeBytes))
-        }
+
         /**
          * [sizeBytes] MUST including padding (i.e. it should be 32-bit word aligned)
          */
@@ -63,13 +61,18 @@ class RtpUtils {
             return (sizeBytes / 4) - 1
         }
 
-        fun getNumPaddingBytes(dataSizeBytes: Int): Int {
-            var paddingBytes = 0
-            while ((dataSizeBytes + paddingBytes) % 4 != 0) {
-                paddingBytes++
+        /**
+         * Get the number of bytes needed to pad [dataSizeBytes] bytes to a 4-byte word boundary.
+         */
+        fun getNumPaddingBytes(dataSizeBytes: Int): Int =
+            when (dataSizeBytes % 4) {
+                0 -> 0
+                1 -> 3
+                2 -> 2
+                3 -> 1
+                else -> 0 // The above is exhaustive.
             }
-            return paddingBytes
-        }
+
         /**
          * Returns the delta between two RTP sequence numbers, taking into account
          * rollover.  This will return the 'shortest' delta between the two
