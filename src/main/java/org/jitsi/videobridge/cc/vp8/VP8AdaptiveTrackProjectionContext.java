@@ -113,10 +113,7 @@ public class VP8AdaptiveTrackProjectionContext
             @NotNull Logger parentLogger)
     {
         this.diagnosticContext = diagnosticContext;
-        this.logger = parentLogger.createChildLogger(
-                VP8AdaptiveTrackProjectionContext.class.getName(),
-                JMap.of("id", Integer.toString(hashCode()))
-        );
+        this.logger = parentLogger.createChildLogger(VP8AdaptiveTrackProjectionContext.class.getName());
         this.payloadType = payloadType;
         this.vp8QualityFilter = new VP8QualityFilter(parentLogger);
 

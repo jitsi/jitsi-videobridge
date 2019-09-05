@@ -142,10 +142,7 @@ public class AdaptiveTrackProjection
         targetSsrc = source.getRTPEncodings()[0].getPrimarySSRC();
         this.diagnosticContext = diagnosticContext;
         this.parentLogger = parentLogger;
-        this.logger = parentLogger.createChildLogger(
-                AdaptiveTrackProjection.class.getName(),
-                JMap.of("id", Integer.toString(hashCode()))
-        );
+        this.logger = parentLogger.createChildLogger(AdaptiveTrackProjection.class.getName());
         this.keyframeRequester = keyframeRequester;
     }
 
@@ -281,7 +278,7 @@ public class AdaptiveTrackProjection
         int payloadType = rtpPacket.getPayloadType();
         if (context == null || contextPayloadType != payloadType)
         {
-            logger.debug(() -> " adaptive track projection " + hashCode() +
+            logger.debug(() -> " adaptive track projection " +
                     " creating context for payload type " + payloadType);
             payloadTypeObject = payloadTypes.get((byte)payloadType);
             if (payloadTypeObject == null)

@@ -85,12 +85,7 @@ class VP8QualityFilter
 
     public VP8QualityFilter(Logger parentLogger)
     {
-        Map<String, String> logContext = new HashMap<>();
-        logContext.put("id", Integer.toString(hashCode()));
-        this.logger = parentLogger.createChildLogger(
-                VP8QualityFilter.class.getName(),
-                JMap.of("id", Integer.toString(hashCode()))
-        );
+        this.logger = parentLogger.createChildLogger(VP8QualityFilter.class.getName());
     }
 
     /**
