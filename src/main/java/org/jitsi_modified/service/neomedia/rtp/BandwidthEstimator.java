@@ -62,7 +62,7 @@ public interface BandwidthEstimator
 
     /**
      * @return the latest effective fraction loss calculated by this
-     * {@link org.jitsi_modified.service.neomedia.rtp.BandwidthEstimator}. The value is between 0 and 256 (corresponding
+     * {@link BandwidthEstimator}. The value is between 0 and 256 (corresponding
      * to 0% and 100% respectively).
      */
     int getLatestFractionLoss();
