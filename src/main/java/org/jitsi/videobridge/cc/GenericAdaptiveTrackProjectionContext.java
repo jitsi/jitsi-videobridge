@@ -199,7 +199,7 @@ class GenericAdaptiveTrackProjectionContext
                 int destinationSequenceNumber
                     = maxDestinationSequenceNumber + 1;
                 sequenceNumberDelta
-                    = RtpUtils.Companion.getSequenceNumberDelta(
+                    = RtpUtils.getSequenceNumberDelta(
                             destinationSequenceNumber,
                             sourceSequenceNumber);
 
@@ -234,13 +234,13 @@ class GenericAdaptiveTrackProjectionContext
             long destinationTimestamp
                 = computeDestinationTimestamp(rtpPacket.getTimestamp());
 
-            if (RtpUtils.Companion.isOlderSequenceNumberThan(
+            if (RtpUtils.isOlderSequenceNumberThan(
                 maxDestinationSequenceNumber, destinationSequenceNumber))
             {
                 maxDestinationSequenceNumber = destinationSequenceNumber;
             }
 
-            if (RtpUtils.Companion.isNewerTimestampThan(
+            if (RtpUtils.isNewerTimestampThan(
                 destinationSequenceNumber, maxDestinationTimestamp))
             {
                 maxDestinationTimestamp = destinationTimestamp;
@@ -278,14 +278,14 @@ class GenericAdaptiveTrackProjectionContext
             return;
         }
 
-        if (RtpUtils.Companion.isNewerTimestampThan(
+        if (RtpUtils.isNewerTimestampThan(
             maxDestinationSequenceNumber, sourceTimestamp))
         {
             long destinationTimestamp =
                 (maxDestinationTimestamp + 3000) & 0xffff_ffffL;
 
             timestampDelta
-                = RtpUtils.Companion.getTimestampDiff(
+                = RtpUtils.getTimestampDiff(
                         destinationTimestamp, sourceTimestamp);
         }
 

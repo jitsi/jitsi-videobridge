@@ -269,7 +269,7 @@ public class VP8FrameProjection
         else
         {
             // compute and apply a delta
-            delta = RtpUtils.Companion.getTimestampDiff(
+            delta = RtpUtils.getTimestampDiff(
                 nextVP8Frame.getTimestamp(), vp8Frame.getTimestamp());
         }
 
@@ -304,7 +304,7 @@ public class VP8FrameProjection
         if (vp8Frame != null)
         {
             int vp8FrameLength
-                    = RtpUtils.Companion.getSequenceNumberDelta(
+                    = RtpUtils.getSequenceNumberDelta(
                         vp8Frame.getMaxSequenceNumber(),
                         vp8Frame.getStartingSequenceNumber());
 
@@ -360,7 +360,7 @@ public class VP8FrameProjection
 
         List<Vp8Packet> piggyBackedPackets = new ArrayList<>();
         int len
-                = RtpUtils.Companion.getSequenceNumberDelta(
+                = RtpUtils.getSequenceNumberDelta(
                         piggyBackUntilSequenceNumber,
                         originalSequenceNumber)
                     + 1;
@@ -429,7 +429,7 @@ public class VP8FrameProjection
         pkt.setTimestamp(timestamp);
 
         int sequenceNumberDelta
-                = RtpUtils.Companion.getSequenceNumberDelta(
+                = RtpUtils.getSequenceNumberDelta(
                     pkt.getSequenceNumber(),
                     vp8Frame.getStartingSequenceNumber());
 
@@ -474,7 +474,7 @@ public class VP8FrameProjection
         {
             int sequenceNumber = rtpPacket.getSequenceNumber();
             int deltaFromMax
-                = RtpUtils.Companion.getSequenceNumberDelta(
+                = RtpUtils.getSequenceNumberDelta(
                         vp8Frame.getMaxSequenceNumber(),
                         sequenceNumber);
 

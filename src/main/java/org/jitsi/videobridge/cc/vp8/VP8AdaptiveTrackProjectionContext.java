@@ -315,7 +315,7 @@ public class VP8AdaptiveTrackProjectionContext
                 = getMaxSequenceNumberOfFrame(ssrc, timestamp);
 
             if (previousMaxSequenceNumber != -1
-                && RtpUtils.Companion.isOlderSequenceNumberThan(
+                && RtpUtils.isOlderSequenceNumberThan(
                     previousMaxSequenceNumber, sequenceNumber))
             {
                 frameToMaxSequenceNumberMap.put(timestamp, sequenceNumber);
@@ -419,7 +419,7 @@ public class VP8AdaptiveTrackProjectionContext
         }
 
         long srcTs = rtcpSrPacket.getSenderInfo().getRtpTimestamp();
-        long delta = RtpUtils.Companion.getTimestampDiff(
+        long delta = RtpUtils.getTimestampDiff(
             lastVP8FrameProjectionCopy.getTimestamp(),
             lastVP8FrameProjectionCopy.getVP8Frame().getTimestamp());
 
