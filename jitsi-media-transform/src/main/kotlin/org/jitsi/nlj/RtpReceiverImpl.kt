@@ -48,8 +48,10 @@ import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.rtp.Packet
+import org.jitsi.rtp.extensions.looksLikeRtcp
+import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.util.RTCPUtils
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.queue.CountingErrorHandler
 import java.util.concurrent.ExecutorService
@@ -134,7 +136,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
             demux("SRTP/SRTCP") {
                 packetPath {
                     name = "SRTP path"
-                    predicate = PacketPredicate { !RTCPUtils.isRtcp(it.buffer, it.offset, it.length) }
+                    predicate = PacketPredicate(Packet::looksLikeRtp)
                     path = pipeline {
                         node(RtpParser(streamInformationStore, logger))
                         node(tccGenerator)
@@ -175,7 +177,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                 }
                 packetPath {
                     name = "SRTCP path"
-                    predicate = PacketPredicate { RTCPUtils.isRtcp(it.buffer, it.offset, it.length) }
+                    predicate = PacketPredicate(Packet::looksLikeRtcp)
                     path = pipeline {
                         node(srtcpDecryptWrapper)
                         node(CompoundRtcpParser())
