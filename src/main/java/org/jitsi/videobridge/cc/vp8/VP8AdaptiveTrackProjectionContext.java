@@ -20,11 +20,10 @@ import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
-import org.jitsi.nlj.util.PacketCache;
+import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.util.*;
-import org.jitsi.util.*;
-import org.jitsi.utils.LRUCache;
+import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.cc.*;
 import org.json.simple.*;
@@ -316,7 +315,7 @@ public class VP8AdaptiveTrackProjectionContext
                 = getMaxSequenceNumberOfFrame(ssrc, timestamp);
 
             if (previousMaxSequenceNumber != -1
-                && RTPUtils.isOlderSequenceNumberThan(
+                && RtpUtils.Companion.isOlderSequenceNumberThan(
                     previousMaxSequenceNumber, sequenceNumber))
             {
                 frameToMaxSequenceNumberMap.put(timestamp, sequenceNumber);

@@ -19,9 +19,8 @@ import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
-import org.jitsi.nlj.util.ArrayCache;
-import org.jitsi.nlj.util.PacketCache;
-import org.jitsi.util.*;
+import org.jitsi.nlj.util.*;
+import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging.*;
 
 import java.util.*;
@@ -270,7 +269,7 @@ public class VP8FrameProjection
         else
         {
             // compute and apply a delta
-            delta = RTPUtils.rtpTimestampDiff(
+            delta = RtpUtils.Companion.getTimestampDiff(
                 nextVP8Frame.getTimestamp(), vp8Frame.getTimestamp());
         }
 
@@ -304,9 +303,10 @@ public class VP8FrameProjection
         // called the close method.
         if (vp8Frame != null)
         {
-            int vp8FrameLength = RTPUtils.getSequenceNumberDelta(
-                vp8Frame.getMaxSequenceNumber(),
-                vp8Frame.getStartingSequenceNumber());
+            int vp8FrameLength
+                    = RtpUtils.Companion.getSequenceNumberDelta(
+                        vp8Frame.getMaxSequenceNumber(),
+                        vp8Frame.getStartingSequenceNumber());
 
             int maxSequenceNumber = startingSequenceNumber + vp8FrameLength;
             return maxSequenceNumber & SEQUENCE_NUMBER_MASK;
@@ -359,8 +359,11 @@ public class VP8FrameProjection
         long vp8FrameSSRC = vp8Frame.getSSRCAsLong();
 
         List<Vp8Packet> piggyBackedPackets = new ArrayList<>();
-        int len = RTPUtils.getSequenceNumberDelta(
-            piggyBackUntilSequenceNumber, originalSequenceNumber) + 1;
+        int len
+                = RtpUtils.Companion.getSequenceNumberDelta(
+                        piggyBackUntilSequenceNumber,
+                        originalSequenceNumber)
+                    + 1;
 
         if (logger.isDebugEnabled())
         {
@@ -425,11 +428,13 @@ public class VP8FrameProjection
         pkt.setSsrc(ssrc);
         pkt.setTimestamp(timestamp);
 
-        int sequenceNumberDelta = RTPUtils.getSequenceNumberDelta(
-            pkt.getSequenceNumber(), vp8Frame.getStartingSequenceNumber());
+        int sequenceNumberDelta
+                = RtpUtils.Companion.getSequenceNumberDelta(
+                    pkt.getSequenceNumber(),
+                    vp8Frame.getStartingSequenceNumber());
 
-        int sequenceNumber = RTPUtils.applySequenceNumberDelta(
-            startingSequenceNumber, sequenceNumberDelta);
+        int sequenceNumber
+            = (startingSequenceNumber + sequenceNumberDelta) & 0xFFFF;
         pkt.setSequenceNumber(sequenceNumber);
 
         pkt.setTL0PICIDX(tl0PICIDX);
@@ -468,8 +473,10 @@ public class VP8FrameProjection
         synchronized (vp8Frame)
         {
             int sequenceNumber = rtpPacket.getSequenceNumber();
-            int deltaFromMax = RTPUtils.getSequenceNumberDelta(
-                vp8Frame.getMaxSequenceNumber(), sequenceNumber);
+            int deltaFromMax
+                = RtpUtils.Companion.getSequenceNumberDelta(
+                        vp8Frame.getMaxSequenceNumber(),
+                        sequenceNumber);
 
             boolean isGreaterThanMax
                 = vp8Frame.getMaxSequenceNumber() == -1 || deltaFromMax < 0;

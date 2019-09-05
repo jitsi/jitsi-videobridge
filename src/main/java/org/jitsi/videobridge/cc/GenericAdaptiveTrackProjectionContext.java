@@ -18,9 +18,9 @@ package org.jitsi.videobridge.cc;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.nlj.util.PacketCache;
+import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.*;
-import org.jitsi.util.*;
+import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
@@ -198,8 +198,10 @@ class GenericAdaptiveTrackProjectionContext
                 // "destination = source + delta".
                 int destinationSequenceNumber
                     = maxDestinationSequenceNumber + 1;
-                sequenceNumberDelta = RTPUtils.getSequenceNumberDelta(
-                    destinationSequenceNumber, sourceSequenceNumber);
+                sequenceNumberDelta
+                    = RtpUtils.Companion.getSequenceNumberDelta(
+                            destinationSequenceNumber,
+                            sourceSequenceNumber);
 
                 if (logger.isDebugEnabled())
                 {
@@ -232,13 +234,13 @@ class GenericAdaptiveTrackProjectionContext
             long destinationTimestamp
                 = computeDestinationTimestamp(rtpPacket.getTimestamp());
 
-            if (RTPUtils.isOlderSequenceNumberThan(
+            if (RtpUtils.Companion.isOlderSequenceNumberThan(
                 maxDestinationSequenceNumber, destinationSequenceNumber))
             {
                 maxDestinationSequenceNumber = destinationSequenceNumber;
             }
 
-            if (RTPUtils.isNewerTimestampThan(
+            if (RtpUtils.Companion.isNewerTimestampThan(
                 destinationSequenceNumber, maxDestinationTimestamp))
             {
                 maxDestinationTimestamp = destinationTimestamp;
@@ -276,14 +278,15 @@ class GenericAdaptiveTrackProjectionContext
             return;
         }
 
-        if (RTPUtils.isNewerTimestampThan(
+        if (RtpUtils.Companion.isNewerTimestampThan(
             maxDestinationSequenceNumber, sourceTimestamp))
         {
             long destinationTimestamp =
                 (maxDestinationTimestamp + 3000) & 0xffff_ffffL;
 
             timestampDelta
-                = RTPUtils.rtpTimestampDiff(destinationTimestamp, sourceTimestamp);
+                = RtpUtils.Companion.getTimestampDiff(
+                        destinationTimestamp, sourceTimestamp);
         }
 
         timestampDeltaInitialized = true;

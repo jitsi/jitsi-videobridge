@@ -18,7 +18,7 @@ package org.jitsi.videobridge.cc.vp8;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.util.*;
+import org.jitsi.rtp.util.*;
 
 /**
  * Groups together some RTP/VP8 fields that refer to a specific incoming VP8
@@ -300,7 +300,8 @@ class VP8Frame
             return false;
         }
 
-        return RTPUtils.rtpTimestampDiff(pkt.getTimestamp(), timestamp) < 0;
+        return RtpUtils.Companion
+                .getTimestampDiff(pkt.getTimestamp(), timestamp) < 0;
     }
 
     /**
