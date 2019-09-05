@@ -78,6 +78,7 @@ class RtpUtils {
          * getSequenceNumberDelta(1, 65530) -> 7 (65530 + 7 = 1)
          * @return the delta between two RTP sequence numbers (modulo 2^16).
          */
+        @JvmStatic
         fun getSequenceNumberDelta(a: Int, b: Int): Int {
             val diff = a - b
             return when {
@@ -87,12 +88,19 @@ class RtpUtils {
             }
         }
 
+        @JvmStatic
         fun isNewerSequenceNumberThan(a: Int, b: Int): Boolean =
             getSequenceNumberDelta(a, b) > 0
+
+        @JvmStatic
         fun isOlderSequenceNumberThan(a: Int, b: Int): Boolean =
             getSequenceNumberDelta(a, b) < 0
+
+        @JvmStatic
         fun isNewerTimestampThan(a: Long, b: Long): Boolean =
             getTimestampDiff(a, b) > 0
+
+        @JvmStatic
         fun isOlderTimestampThan(a: Long, b: Long): Boolean =
             getTimestampDiff(a, b) < 0
 
@@ -100,6 +108,7 @@ class RtpUtils {
          * Returns the difference between two RTP timestamps.
          * @return the difference between two RTP timestamps.
          */
+        @JvmStatic
         fun getTimestampDiff(a: Long, b: Long): Long {
             var diff = a - b
             if (diff < -0x8000_0000L) {
@@ -132,8 +141,10 @@ class RtpUtils {
          * as a pair of ints: the first one being the most significant word and the second being the least
          * significant word.
          */
+        @JvmStatic
         fun millisToNtpTimestamp(timestampMs: Long): Long = TimeUtils.toNtpTime(timestampMs)
 
+        @JvmStatic
         fun convertRtpTimestampToMs(rtpTimestamp: Int, ticksPerSecond: Int): Long {
             return ((rtpTimestamp / (ticksPerSecond.toDouble())) * 1000).toLong()
         }
