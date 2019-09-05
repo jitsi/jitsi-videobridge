@@ -27,9 +27,8 @@ import org.jitsi.utils.logging2.*;
 import java.util.*;
 
 /**
- * Implements transport-cc functionality as a {@link TransformEngine}. The
- * intention is to have the same instance shared between all media streams of
- * a transport channel, so we expect it will be accessed by multiple threads.
+ * Implements transport-cc functionality.
+ *
  * See https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01
  *
  * @author Boris Grozev
