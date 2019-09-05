@@ -70,7 +70,7 @@ public class BandwidthEstimatorImpl
      * The initial value of the estimation, in bits per second.
      */
     private static final long START_BITRATE_BPS
-        = cfg != null ? cfg.getLong(START_BITRATE_BPS_PNAME, 300000) : 300000;
+        = cfg != null ? cfg.getLong(START_BITRATE_BPS_PNAME, 2500000) : 2500000;
 
     /**
      * bitrate_controller_impl.h
