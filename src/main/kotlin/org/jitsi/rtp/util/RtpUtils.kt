@@ -17,7 +17,6 @@ package org.jitsi.rtp.util
 
 import org.jitsi.utils.TimeUtils
 
-// TODO: this and RTPUtils should be merged
 class RtpUtils {
     companion object {
         /**
