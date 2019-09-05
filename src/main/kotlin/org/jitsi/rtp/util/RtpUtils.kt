@@ -160,7 +160,7 @@ infix fun Int.rolledOverTo(otherSeqNum: Int): Boolean =
      * yet [otherSeqNum] is less than [this], then we wrapped around to get from [this] to
      * [otherSeqNum]
      */
-     this isOlderThan otherSeqNum && otherSeqNum < this
+    this isOlderThan otherSeqNum && otherSeqNum < this
 
 /**
  * Returns true if [this] is sequentially after [otherSeqNum], according to the rules of RTP sequence

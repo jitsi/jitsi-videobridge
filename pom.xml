@@ -33,7 +33,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-utils</artifactId>
-            <version>1.0-2-g27c4398</version>
+            <version>1.0-9-gb8d9bee</version>
         </dependency>
 
         <!--Testing dependencies-->

@@ -18,8 +18,13 @@ package org.jitsi.rtp.extensions.bytearray
 import org.jitsi.rtp.extensions.getBitAsBool
 import org.jitsi.rtp.extensions.putBit
 import org.jitsi.rtp.extensions.putBits
-import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.util.BufferPool
+import org.jitsi.utils.ByteArrayUtils.readInt
+import org.jitsi.utils.ByteArrayUtils.writeInt
+import org.jitsi.utils.ByteArrayUtils.readShort
+import org.jitsi.utils.ByteArrayUtils.writeShort
+import org.jitsi.utils.ByteArrayUtils.readUint24
+import org.jitsi.utils.ByteArrayUtils.writeUint24
 import java.lang.Math.abs
 
 /**
@@ -42,44 +47,12 @@ fun ByteArray.putBitAsBoolean(byteIndex: Int, destBitPos: Int, isSet: Boolean) {
     set(byteIndex, byte)
 }
 
-fun ByteArray.getShort(byteIndex: Int): Short {
-    val b1 = get(byteIndex).toPositiveInt()
-    val b2 = get(byteIndex + 1).toPositiveInt()
-    return ((b1 shl 8) + b2).toShort()
-}
-
-fun ByteArray.putShort(byteIndex: Int, value: Short) {
-    set(byteIndex, (value.toPositiveInt() ushr 8).toByte())
-    set(byteIndex + 1, value.toByte())
-}
-
-fun ByteArray.get3Bytes(byteIndex: Int): Int {
-    val b1 = get(byteIndex).toPositiveInt()
-    val b2 = get(byteIndex + 1).toPositiveInt()
-    val b3 = get(byteIndex + 2).toPositiveInt()
-    return (b1 shl 16) + (b2 shl 8) + b3
-}
-
-fun ByteArray.put3Bytes(byteIndex: Int, value: Int) {
-    set(byteIndex, ((value and 0x00FF0000) ushr 16).toByte())
-    set(byteIndex + 1, ((value and 0x0000FF00) ushr 8).toByte())
-    set(byteIndex + 2, (value and 0x000000FF).toByte())
-}
-
-fun ByteArray.getInt(byteIndex: Int): Int {
-    val b1 = get(byteIndex).toPositiveInt()
-    val b2 = get(byteIndex + 1).toPositiveInt()
-    val b3 = get(byteIndex + 2).toPositiveInt()
-    val b4 = get(byteIndex + 3).toPositiveInt()
-    return ((b1 shl 24) + (b2 shl 16) + (b3 shl 8) + b4)
-}
-
-fun ByteArray.putInt(byteIndex: Int, value: Int) {
-    set(byteIndex, (value ushr 24).toByte())
-    set(byteIndex + 1, (value ushr 16).toByte())
-    set(byteIndex + 2, (value ushr 8).toByte())
-    set(byteIndex + 3, value.toByte())
-}
+fun ByteArray.getShort(byteIndex: Int): Short = readShort(this, byteIndex)
+fun ByteArray.putShort(byteIndex: Int, value: Short) = writeShort(this, byteIndex, value)
+fun ByteArray.get3Bytes(byteIndex: Int): Int = readUint24(this, byteIndex)
+fun ByteArray.put3Bytes(byteIndex: Int, value: Int) = writeUint24(this, byteIndex, value)
+fun ByteArray.getInt(byteIndex: Int): Int = readInt(this, byteIndex)
+fun ByteArray.putInt(byteIndex: Int, value: Int) = writeInt(this, byteIndex, value)
 
 fun byteArrayOf(vararg elements: Number): ByteArray {
     return elements.map { it.toByte() }.toByteArray()
