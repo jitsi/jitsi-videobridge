@@ -88,6 +88,15 @@ class RtpUtils {
             }
         }
 
+        fun isNewerSequenceNumberThan(a: Int, b: Int): Boolean =
+            getSequenceNumberDelta(a, b) > 0
+        fun isOlderSequenceNumberThan(a: Int, b: Int): Boolean =
+            getSequenceNumberDelta(a, b) < 0
+        fun isNewerTimestampThan(a: Long, b: Long): Boolean =
+            getTimestampDiff(a, b) > 0
+        fun isOlderTimestampThan(a: Long, b: Long): Boolean =
+            getTimestampDiff(a, b) < 0
+
         /**
          * Returns the difference between two RTP timestamps.
          * @return the difference between two RTP timestamps.
@@ -140,16 +149,16 @@ fun Byte.isPadding(): Boolean = this == 0x00.toByte()
  * represented by [otherSeqNum]
  */
 infix fun Int.isNewerThan(otherSeqNum: Int): Boolean =
-    RtpUtils.getSequenceNumberDelta(this, otherSeqNum) > 0
+    RtpUtils.isNewerSequenceNumberThan(this, otherSeqNum)
 
 infix fun Int.isOlderThan(otherSeqNum: Int): Boolean =
-    RtpUtils.getSequenceNumberDelta(this, otherSeqNum) < 0
+    RtpUtils.isOlderSequenceNumberThan(this, otherSeqNum)
 
 infix fun Long.isNewerTimestampThan(otherTimestamp: Long): Boolean =
-    RtpUtils.getTimestampDiff(this, otherTimestamp) > 0
+    RtpUtils.isNewerTimestampThan(this, otherTimestamp)
 
 infix fun Long.isOlderTimestampThan(otherTimestamp: Long): Boolean =
-    RtpUtils.getTimestampDiff(this, otherTimestamp) < 0
+    RtpUtils.isOlderTimestampThan(this, otherTimestamp)
 
 /**
  * Returns true if getting to [otherSeqNum] from the current sequence number involves wrapping around
