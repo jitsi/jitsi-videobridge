@@ -1352,7 +1352,7 @@ public class Conference
     {
         public NoOpTimeSeriesPoint()
         {
-            this(null);
+            this(Collections.emptyMap());
         }
 
         public NoOpTimeSeriesPoint(Map<String, Object> m)
