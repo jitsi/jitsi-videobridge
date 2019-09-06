@@ -418,6 +418,11 @@ public class ConferenceSpeechActivity
             final boolean finalDominantSpeakerChanged = dominantSpeakerChanged;
             final boolean finalEndpointsChanged = endpointsListChanged;
             TaskPools.IO_POOL.submit(() -> {
+                final Conference conference = this.conference;
+                if (conference == null)
+                {
+                    return;
+                }
                 if (finalDominantSpeakerChanged)
                 {
                     conference.dominantSpeakerChanged();
