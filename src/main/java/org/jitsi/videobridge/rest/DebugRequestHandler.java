@@ -5,13 +5,12 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
-import org.json.simple.*;
 import org.osgi.framework.*;
 
 import javax.servlet.http.*;
 import java.io.*;
 
-import static org.jitsi.videobridge.rest.HandlerImpl.DEBUG;
+import static org.jitsi.videobridge.rest.HandlerImpl.*;
 
 /**
  * Handles requests for "/colibri/debug*".

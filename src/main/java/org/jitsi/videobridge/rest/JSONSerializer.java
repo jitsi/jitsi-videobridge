@@ -31,7 +31,7 @@ import org.json.simple.*;
  * @author Lyubomir Marinov
  */
 @SuppressWarnings("unchecked")
-final class JSONSerializer
+public final class JSONSerializer
 {
     /**
      * The name of the JSON pair which specifies the value of the
