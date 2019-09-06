@@ -261,12 +261,6 @@ class HandlerImpl
             = new StatisticsRequestHandler(this);
 
     /**
-     * The handler for debug requests.
-     */
-    private final DebugRequestHandler debugRequestHandler
-            = new DebugRequestHandler(this);
-
-    /**
      * Initializes a new {@code HandlerImpl} instance within a specific
      * {@code BundleContext}.
      *
@@ -1022,10 +1016,6 @@ class HandlerImpl
         {
             statisticsRequestHandler.handleStatsRequest(
                     target, request, response);
-        }
-        else if (target.startsWith(DEBUG))
-        {
-            debugRequestHandler.handleDebugRequest(target, request, response);
         }
         else if (target.equals(SHUTDOWN))
         {

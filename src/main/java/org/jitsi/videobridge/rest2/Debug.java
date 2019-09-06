@@ -35,7 +35,7 @@ import javax.ws.rs.core.*;
  *
  * @author bbaldino
  */
-@Path("/debug")
+@Path("/")
 public class Debug
 {
     private final BundleContext bundleContext;
@@ -65,6 +65,15 @@ public class Debug
     {
         logger.info("Disabling payload verification");
         Node.Companion.enablePayloadVerification(false);
+    }
+
+    @GET
+    @Path("/")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String bridgeDebug()
+    {
+        OrderedJsonObject confJson = getVideobridge().getDebugState(null, null);
+        return confJson.toJSONString();
     }
 
     @GET

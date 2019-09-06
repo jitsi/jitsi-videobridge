@@ -135,7 +135,7 @@ public class RESTBundleActivator
         DebugApp a = new DebugApp(bundleContext);
         ServletHolder sh = new ServletHolder(new ServletContainer(a));
         ServletContextHandler context = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
-        context.setContextPath("/colibri/brian");
+        context.setContextPath("/colibri/debug");
         context.addServlet(sh, "/*");
 
         handlers.add(context);
