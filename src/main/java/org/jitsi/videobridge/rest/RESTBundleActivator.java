@@ -110,7 +110,6 @@ public class RESTBundleActivator
                     getCfgBoolean(ENABLE_REST_SHUTDOWN_PNAME, false),
                     getCfgBoolean(ENABLE_REST_COLIBRI_PNAME, true));
     }
-    private ServletHolder servletHolder;
 
     /**
      * {@inheritDoc}
