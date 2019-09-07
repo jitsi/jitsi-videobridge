@@ -220,11 +220,6 @@ class HandlerImpl
     static final String STATISTICS = "stats";
 
     /**
-     * The target for the colibri debug interface.
-     */
-    static final String DEBUG = "debug";
-
-    /**
      * The HTTP resource which allows control of {@link ClientConnectionImpl}
      * (i.e. adding or removing MUC clients).
      */
