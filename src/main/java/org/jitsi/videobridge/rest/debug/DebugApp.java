@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest2;
+package org.jitsi.videobridge.rest.debug;
 
 import org.glassfish.jersey.server.*;
 import org.osgi.framework.*;

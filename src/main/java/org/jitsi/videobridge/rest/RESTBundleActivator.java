@@ -19,12 +19,10 @@ import java.util.*;
 
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.servlet.*;
-import org.glassfish.jersey.server.*;
 import org.glassfish.jersey.servlet.*;
-import org.jitsi.osgi.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.rest2.*;
+import org.jitsi.videobridge.rest.debug.*;
 import org.osgi.framework.*;
 
 /**
