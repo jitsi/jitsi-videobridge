@@ -132,8 +132,8 @@ public class RESTBundleActivator
         if (colibriHandler != null)
             handlers.add(colibriHandler);
 
-        DebugApp a = new DebugApp(bundleContext);
-        ServletHolder sh = new ServletHolder(new ServletContainer(a));
+        DebugApp debugHandler = new DebugApp(bundleContext);
+        ServletHolder sh = new ServletHolder(new ServletContainer(debugHandler));
         ServletContextHandler context = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
         context.setContextPath("/colibri/debug");
         context.addServlet(sh, "/*");
