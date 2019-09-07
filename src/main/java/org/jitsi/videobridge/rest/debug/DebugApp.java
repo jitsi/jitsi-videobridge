@@ -19,6 +19,11 @@ package org.jitsi.videobridge.rest.debug;
 import org.glassfish.jersey.server.*;
 import org.osgi.framework.*;
 
+/**
+ * An extension of {@link ResourceConfig} so that we can pass
+ * the {@link BundleContext} to the {@link Debug} resource
+ * so it can get the {@link org.jitsi.videobridge.Videobridge} instance
+ */
 public class DebugApp extends ResourceConfig
 {
     public DebugApp(BundleContext bundleContext)
