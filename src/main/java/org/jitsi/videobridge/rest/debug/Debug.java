@@ -21,6 +21,7 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.rest.*;
 import org.osgi.framework.*;
 
 import javax.ws.rs.*;
@@ -38,17 +39,12 @@ import javax.ws.rs.core.*;
 @Path("/")
 public class Debug
 {
-    private final BundleContext bundleContext;
+    private final VideobridgeProvider videobridgeProvider;
     private Logger logger = new LoggerImpl(Debug.class.getName());
 
-    public Debug(BundleContext bundleContext)
+    public Debug(VideobridgeProvider videobridgeProvider)
     {
-        this.bundleContext = bundleContext;
-    }
-
-    private Videobridge getVideobridge()
-    {
-        return ServiceUtils2.getService(bundleContext, Videobridge.class);
+        this.videobridgeProvider = videobridgeProvider;
     }
 
     @POST
@@ -72,7 +68,7 @@ public class Debug
     @Produces(MediaType.APPLICATION_JSON)
     public String bridgeDebug()
     {
-        OrderedJsonObject confJson = getVideobridge().getDebugState(null, null);
+        OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(null, null);
         return confJson.toJSONString();
     }
 
@@ -81,7 +77,7 @@ public class Debug
     @Produces(MediaType.APPLICATION_JSON)
     public String confDebug(@PathParam("confId") String confId)
     {
-        OrderedJsonObject confJson = getVideobridge().getDebugState(confId, null);
+        OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(confId, null);
         return confJson.toJSONString();
     }
 
@@ -90,7 +86,7 @@ public class Debug
     @Produces(MediaType.APPLICATION_JSON)
     public String epDebug(@PathParam("confId") String confId, @PathParam("epId") String epId)
     {
-        OrderedJsonObject confJson = getVideobridge().getDebugState(confId, epId);
+        OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(confId, epId);
         return confJson.toJSONString();
     }
 }

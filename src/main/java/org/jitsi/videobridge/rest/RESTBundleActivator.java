@@ -129,7 +129,9 @@ public class RESTBundleActivator
         if (colibriHandler != null)
             handlers.add(colibriHandler);
 
-        DebugApp debugHandler = new DebugApp(bundleContext);
+        VideobridgeProvider videobridgeProvider = new VideobridgeProvider(bundleContext);
+
+        DebugApp debugHandler = new DebugApp(videobridgeProvider);
         ServletHolder sh = new ServletHolder(new ServletContainer(debugHandler));
         ServletContextHandler context = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
         context.setContextPath("/colibri/debug");

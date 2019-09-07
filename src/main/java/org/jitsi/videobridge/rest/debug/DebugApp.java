@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.rest.debug;
 
 import org.glassfish.jersey.server.*;
+import org.jitsi.videobridge.rest.*;
 import org.osgi.framework.*;
 
 /**
@@ -26,8 +27,8 @@ import org.osgi.framework.*;
  */
 public class DebugApp extends ResourceConfig
 {
-    public DebugApp(BundleContext bundleContext)
+    public DebugApp(VideobridgeProvider videobridgeProvider)
     {
-        register(new Debug(bundleContext));
+        register(new Debug(videobridgeProvider));
     }
 }
