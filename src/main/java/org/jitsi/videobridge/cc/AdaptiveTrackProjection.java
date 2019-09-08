@@ -22,7 +22,9 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.PacketCache;
 import org.jitsi.rtp.rtcp.*;
+import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.vp8.*;
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc;
 import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc;
@@ -54,8 +56,13 @@ public class AdaptiveTrackProjection
      * The <tt>Logger</tt> used by the <tt>AdaptiveTrackProjection</tt> class
      * and its instances for logging output.
      */
-    private static final Logger logger
-        = Logger.getLogger(AdaptiveTrackProjection.class);
+    private final Logger logger;
+    /**
+     * The parent logger, so that we can pass it to the next created context
+     * TODO(brian): maybe we should allow a child logger to retrieve its
+     * parent?
+     */
+    private final Logger parentLogger;
 
     /**
      * An empty array that is used as a return value when no packets need to be
@@ -127,11 +134,15 @@ public class AdaptiveTrackProjection
     AdaptiveTrackProjection(
         @NotNull DiagnosticContext diagnosticContext,
         @NotNull MediaStreamTrackDesc source,
-        Runnable keyframeRequester)
+        Runnable keyframeRequester,
+        Logger parentLogger
+    )
     {
         weakSource = new WeakReference<>(source);
         targetSsrc = source.getRTPEncodings()[0].getPrimarySSRC();
         this.diagnosticContext = diagnosticContext;
+        this.parentLogger = parentLogger;
+        this.logger = parentLogger.createChildLogger(AdaptiveTrackProjection.class.getName());
         this.keyframeRequester = keyframeRequester;
     }
 
@@ -267,7 +278,7 @@ public class AdaptiveTrackProjection
         int payloadType = rtpPacket.getPayloadType();
         if (context == null || contextPayloadType != payloadType)
         {
-            logger.debug(hashCode() + " TEMP: adaptive track projection " + hashCode() +
+            logger.debug(() -> " adaptive track projection " +
                     " creating context for payload type " + payloadType);
             payloadTypeObject = payloadTypes.get((byte)payloadType);
             if (payloadTypeObject == null)
@@ -304,14 +315,14 @@ public class AdaptiveTrackProjection
             {
                 // context switch
                 context = new VP8AdaptiveTrackProjectionContext(
-                    diagnosticContext, payloadTypeObject, getRtpState());
+                    diagnosticContext, payloadTypeObject, getRtpState(), parentLogger);
                 contextPayloadType = payloadType;
             }
             else if (!hasTemporalLayerIndex
                 && !(context instanceof GenericAdaptiveTrackProjectionContext))
             {
                 // context switch
-                context = new GenericAdaptiveTrackProjectionContext(payloadTypeObject, getRtpState());
+                context = new GenericAdaptiveTrackProjectionContext(payloadTypeObject, getRtpState(), parentLogger);
                 contextPayloadType = payloadType;
             }
 
@@ -320,7 +331,7 @@ public class AdaptiveTrackProjection
         }
         else if (context == null || contextPayloadType != payloadType)
         {
-            context = new GenericAdaptiveTrackProjectionContext(payloadTypeObject, getRtpState());
+            context = new GenericAdaptiveTrackProjectionContext(payloadTypeObject, getRtpState(), parentLogger);
             contextPayloadType = payloadType;
             return context;
         }

@@ -18,7 +18,7 @@ package org.jitsi.videobridge.rest;
 import org.eclipse.jetty.websocket.servlet.*;
 import org.jitsi.osgi.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.osgi.framework.*;
 
 import java.io.*;
@@ -32,8 +32,7 @@ class ColibriWebSocketServlet
     /**
      * The logger instance used by this {@link ColibriWebSocketServlet}.
      */
-    private static final Logger logger
-        = Logger.getLogger(ColibriWebSocketServlet.class);
+    private static final Logger logger = new LoggerImpl(ColibriWebSocketServlet.class.getName());
 
     /**
      * The {@link BundleContext} in which this instance is running.
@@ -104,23 +103,17 @@ class ColibriWebSocketServlet
         if (path == null
             || !path.startsWith(ColibriWebSocketService.COLIBRI_WS_PATH))
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Received request for an invalid path: " + path);
-            }
+            logger.debug(() -> "Received request for an invalid path: " + path);
             response.sendError(404, "invalid path");
             return null;
         }
 
-        path
+        String wsPath
             = path.substring(ColibriWebSocketService.COLIBRI_WS_PATH.length());
-        String[] ids = path.split("/");
+        String[] ids = wsPath.split("/");
         if (ids.length < 3)
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Received request for an invalid path: " + path);
-            }
+            logger.debug(() -> "Received request for an invalid path: " + wsPath);
             response.sendError(404, "invalid path");
             return null;
         }

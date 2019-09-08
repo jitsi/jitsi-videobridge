@@ -23,7 +23,7 @@ import org.jitsi.nlj.util.PacketCache;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.json.simple.*;
 
 /**
@@ -98,8 +98,7 @@ class GenericAdaptiveTrackProjectionContext
      * <tt>GenericAdaptiveTrackProjectionContext</tt> class and its instances to
      * log debug information.
      */
-    private static final Logger logger
-        = Logger.getLogger(GenericAdaptiveTrackProjectionContext.class);
+    private final Logger logger;
 
     private final long ssrc;
 
@@ -150,12 +149,14 @@ class GenericAdaptiveTrackProjectionContext
      */
     GenericAdaptiveTrackProjectionContext(
             @NotNull PayloadType payloadType,
-            @NotNull RtpState rtpState)
+            @NotNull RtpState rtpState,
+            @NotNull Logger parentLogger)
     {
         this.payloadType = payloadType;
         this.ssrc = rtpState.ssrc;
         this.maxDestinationSequenceNumber = rtpState.maxSequenceNumber;
         this.maxDestinationTimestamp = rtpState.maxTimestamp;
+        this.logger = parentLogger.createChildLogger(GenericAdaptiveTrackProjectionContext.class.getName());
     }
 
     /**
@@ -202,14 +203,11 @@ class GenericAdaptiveTrackProjectionContext
                 sequenceNumberDelta = RTPUtils.getSequenceNumberDelta(
                     destinationSequenceNumber, sourceSequenceNumber);
 
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug("delta ssrc=" + rtpPacket.getSsrc()
-                        + ",src_sequence=" + sourceSequenceNumber
-                        + ",dst_sequence=" + destinationSequenceNumber
-                        + ",max_sequence=" + maxDestinationSequenceNumber
-                        + ",delta=" + sequenceNumberDelta);
-                }
+                logger.debug(() -> "delta ssrc=" + rtpPacket.getSsrc()
+                    + ",src_sequence=" + sourceSequenceNumber
+                    + ",dst_sequence=" + destinationSequenceNumber
+                    + ",max_sequence=" + maxDestinationSequenceNumber
+                    + ",delta=" + sequenceNumberDelta);
 
                 accept = true;
             }
@@ -245,21 +243,15 @@ class GenericAdaptiveTrackProjectionContext
                 maxDestinationTimestamp = destinationTimestamp;
             }
 
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("accept ssrc=" + rtpPacket.getSsrc()
+                logger.debug(() -> "accept ssrc=" + rtpPacket.getSsrc()
                 + ",src_sequence=" + sourceSequenceNumber
                 + ",dst_sequence=" + destinationSequenceNumber
                 + ",max_sequence=" + maxDestinationSequenceNumber);
-            }
         }
         else
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("reject ssrc=" + rtpPacket.getSsrc()
-                    + ",src_sequence=" + sourceSequenceNumber);
-            }
+            logger.debug(() -> "reject ssrc=" + rtpPacket.getSsrc()
+                + ",src_sequence=" + sourceSequenceNumber);
         }
 
         return accept;
@@ -332,13 +324,10 @@ class GenericAdaptiveTrackProjectionContext
             rtpPacket.setTimestamp(destinationTimestamp);
         }
 
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("rewrite ssrc=" + rtpPacket.getSsrc()
-                + ",src_sequence=" + sourceSequenceNumber
-                + ",dst_sequence=" + destinationSequenceNumber
-                + ",max_sequence=" + maxDestinationSequenceNumber);
-        }
+        logger.debug(() -> "rewrite ssrc=" + rtpPacket.getSsrc()
+            + ",src_sequence=" + sourceSequenceNumber
+            + ",dst_sequence=" + destinationSequenceNumber
+            + ",max_sequence=" + maxDestinationSequenceNumber);
 
         return EMPTY_PACKET_ARR;
     }

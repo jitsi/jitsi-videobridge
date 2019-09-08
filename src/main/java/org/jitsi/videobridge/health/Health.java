@@ -18,7 +18,7 @@ package org.jitsi.videobridge.health;
 import org.ice4j.ice.harvest.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.utils.concurrent.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.transport.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -38,7 +38,7 @@ public class Health
      * The {@link Logger} used by the {@link Health} class and its
      * instances to print debug information.
      */
-    private static final Logger logger = Logger.getLogger(Health.class);
+    private static final Logger logger = new LoggerImpl(Health.class.getName());
 
     /**
      * The pseudo-random generator used to generate random input for

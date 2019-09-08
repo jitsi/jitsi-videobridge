@@ -46,13 +46,6 @@ package org.jitsi.videobridge.cc;
          PADDING_PERIOD_MS_PNAME = "org.jitsi.videobridge.PADDING_PERIOD_MS";
 
      /**
-      * The {@link Logger} to be used by this instance to print debug
-      * information.
-      */
-     private static final Logger logger
-         = Logger.getLogger(BandwidthProbing.class);
-
-     /**
       * The {@link TimeSeriesLogger} to be used by this instance to print time
       * series.
       */

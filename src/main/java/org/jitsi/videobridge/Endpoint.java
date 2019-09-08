@@ -240,7 +240,7 @@ public class Endpoint
                         handleIncomingPacket(packetInfo);
                     }
                 });
-        bitrateController = new BitrateController(this, diagnosticContext);
+        bitrateController = new BitrateController(this, diagnosticContext, logger);
 
         messageTransport = new EndpointMessageTransport(this, logger);
 
@@ -746,7 +746,8 @@ public class Endpoint
                         = new PacketInfo(new UnparsedPacket(data, offset, length));
                     transportManager.sendDtlsData(packet);
                     return 0;
-                }
+                },
+                logger
         );
         sctpHandler.setSctpManager(sctpManager);
         // NOTE(brian): as far as I know we always act as the 'server' for sctp
@@ -760,8 +761,9 @@ public class Endpoint
                 logger.info("SCTP connection is ready, creating the Data channel stack");
                 dataChannelStack
                     = new DataChannelStack(
-                        (data, sid, ppid)
-                                -> socket.send(data, true, sid, ppid));
+                        (data, sid, ppid) -> socket.send(data, true, sid, ppid),
+                        logger
+                    );
                 dataChannelStack.onDataChannelStackEvents(dataChannel ->
                 {
                     logger.info("Remote side opened a data channel.");

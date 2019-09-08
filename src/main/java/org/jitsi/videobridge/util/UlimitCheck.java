@@ -15,7 +15,7 @@
  */
 package org.jitsi.videobridge.util;
 
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 
 import java.io.*;
 
@@ -31,8 +31,7 @@ public class UlimitCheck
      * The {@link Logger} to be used by the {@link UlimitCheck} class
      * and its instances to print debug information.
      */
-    private static final Logger logger
-        = Logger.getLogger(UlimitCheck.class);
+    private static final Logger logger = new LoggerImpl(UlimitCheck.class.getName());
 
     /**
      * Executes a command in {@code bash} and returns the output ({@code stdin}

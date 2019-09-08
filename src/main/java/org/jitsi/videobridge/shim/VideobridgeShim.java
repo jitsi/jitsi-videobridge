@@ -16,7 +16,7 @@
 package org.jitsi.videobridge.shim;
 
 import org.jitsi.utils.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
@@ -40,8 +40,7 @@ public class VideobridgeShim
      * The {@link Logger} used by the {@link VideobridgeShim} class and its
      * instances to print debug information.
      */
-    private static final Logger logger =
-            Logger.getLogger(VideobridgeShim.class);
+    private static final Logger logger = new LoggerImpl(VideobridgeShim.class.getName());
 
     /**
      * This method collects all of the channel bundle IDs referenced in the
@@ -258,10 +257,7 @@ public class VideobridgeShim
     public IQ handleColibriConferenceIQ(
             ColibriConferenceIQ conferenceIQ, int options)
     {
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Got ColibriConferenceIq:\n" + conferenceIQ.toXML());
-        }
+        logger.debug(() -> "Got ColibriConferenceIq:\n" + conferenceIQ.toXML());
         Jid focus = conferenceIQ.getFrom();
 
         if (!videobridge.accept(focus, options))

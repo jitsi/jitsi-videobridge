@@ -21,6 +21,7 @@ import org.jitsi.nlj.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
+import org.jitsi.utils.collections.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging.DiagnosticContext;
 import org.jitsi.utils.logging2.*;
@@ -42,6 +43,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.logging.*;
 
+import static org.jitsi.utils.collections.JMap.entry;
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
 /**
@@ -215,23 +217,24 @@ public class Conference
                       String gid)
     {
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
-        this.shim = new ConferenceShim(this);
+        Level minLevel = enableLogging ? Level.ALL : Level.WARNING;
+        Map<String, String> context = JMap.ofEntries(
+            entry("confId", id),
+            entry("gId", gid)
+        );
+        if (name != null)
+        {
+            context.put("name", name.toString());
+        }
+        logger = new LoggerImpl(Conference.class.getName(), minLevel, new LogContext(context));
+        this.shim = new ConferenceShim(this, logger);
         this.id = Objects.requireNonNull(id, "id");
         this.gid = gid;
         this.focus = focus;
         this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
         this.includeInStatistics = enableLogging;
         this.name = name;
-        Map<String, String> context = new HashMap<>();
-        context.put("confId", id);
-        context.put("gId", gid);
-        if (name != null)
-        {
-            context.put("name", name.toString());
-        }
 
-        Level minLevel = enableLogging ? Level.ALL : Level.WARNING;
-        logger = new LoggerImpl(Conference.class.getName(), minLevel, new LogContext(context));
 
         lastKnownFocus = focus;
 

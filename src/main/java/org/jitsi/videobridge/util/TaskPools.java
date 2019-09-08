@@ -17,13 +17,13 @@
 package org.jitsi.videobridge.util;
 
 import org.jitsi.nlj.util.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 
 import java.util.concurrent.*;
 
 public class TaskPools
 {
-    private static final Logger classLogger = Logger.getLogger(TaskPools.class);
+    private static final Logger classLogger = new LoggerImpl(TaskPools.class.getName());
     /**
      * A global executor service which can be used for non-CPU-intensive tasks.
      */

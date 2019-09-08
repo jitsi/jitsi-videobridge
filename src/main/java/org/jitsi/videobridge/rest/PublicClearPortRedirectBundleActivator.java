@@ -18,7 +18,7 @@ package org.jitsi.videobridge.rest;
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.handler.*;
 import org.jitsi.rest.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.osgi.framework.*;
 
 import javax.servlet.*;
@@ -39,8 +39,7 @@ public class PublicClearPortRedirectBundleActivator
      * The logger instance used by this
      * {@link PublicClearPortRedirectBundleActivator}.
      */
-    private static final Logger logger
-        = Logger.getLogger(PublicClearPortRedirectBundleActivator.class);
+    private static final Logger logger = new LoggerImpl(PublicClearPortRedirectBundleActivator.class.getName());
 
     /**
      * The prefix of the property names for the Jetty instance managed by

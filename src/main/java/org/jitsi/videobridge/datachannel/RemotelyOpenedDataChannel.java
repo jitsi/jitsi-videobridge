@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.datachannel;
 
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 
 import java.nio.*;
@@ -32,10 +33,11 @@ public class RemotelyOpenedDataChannel extends DataChannel
      */
     public RemotelyOpenedDataChannel(
             DataChannelStack.DataChannelDataSender dataChannelDataSender,
+            Logger parentLogger,
             int channelType, int priority, long reliability, int sid,
             String label)
     {
-        super(dataChannelDataSender, channelType, priority,
+        super(dataChannelDataSender, parentLogger, channelType, priority,
                 reliability, sid, label);
         ready = true;
         sendOpenChannelAck();
