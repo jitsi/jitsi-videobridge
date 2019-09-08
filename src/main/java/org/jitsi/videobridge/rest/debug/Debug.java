@@ -18,11 +18,8 @@ package org.jitsi.videobridge.rest.debug;
 
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.osgi.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
-import org.osgi.framework.*;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
@@ -36,7 +33,7 @@ import javax.ws.rs.core.*;
  *
  * @author bbaldino
  */
-@Path("/")
+@Path("/debug")
 public class Debug
 {
     private final VideobridgeProvider videobridgeProvider;
