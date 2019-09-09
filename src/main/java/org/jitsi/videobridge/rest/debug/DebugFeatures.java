@@ -16,6 +16,10 @@
 
 package org.jitsi.videobridge.rest.debug;
 
+/**
+ * Enumerates different debug features which can be enabled and disabled via
+ * the debug REST API.
+ */
 public enum DebugFeatures
 {
     PAYLOAD_VERIFICATION("payload-verification");

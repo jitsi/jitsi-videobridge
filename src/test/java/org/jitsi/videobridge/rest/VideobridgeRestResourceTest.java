@@ -25,6 +25,11 @@ import javax.ws.rs.core.*;
 
 import static org.mockito.Mockito.*;
 
+/**
+ * A helper test class which handles mocking out a {@link Videobridge}
+ * and a {@link VideobridgeProvider} which is needed for many of the
+ * REST resources.
+ */
 public abstract class VideobridgeRestResourceTest extends JerseyTest
 {
     protected static VideobridgeProvider videobridgeProvider;
