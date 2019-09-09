@@ -17,7 +17,7 @@
 package org.jitsi.videobridge.rest.debug;
 
 import org.glassfish.jersey.server.*;
-import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
 /**

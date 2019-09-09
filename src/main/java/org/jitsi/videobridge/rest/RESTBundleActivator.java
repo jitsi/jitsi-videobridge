@@ -24,6 +24,7 @@ import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.debug.*;
 import org.jitsi.videobridge.rest.health.*;
+import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
 /**

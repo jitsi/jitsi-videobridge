@@ -18,6 +18,7 @@ package org.jitsi.videobridge.rest;
 
 import org.glassfish.jersey.test.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.util.*;
 import org.junit.*;
 
 import javax.ws.rs.core.*;

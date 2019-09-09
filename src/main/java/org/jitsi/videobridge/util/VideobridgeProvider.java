@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest;
+package org.jitsi.videobridge.util;
 
 import org.jitsi.osgi.*;
 import org.jitsi.videobridge.*;

@@ -16,7 +16,7 @@
 
 package org.jitsi.videobridge.rest.health;
 
-import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.util.*;
 
 import javax.servlet.http.*;
 import javax.ws.rs.*;

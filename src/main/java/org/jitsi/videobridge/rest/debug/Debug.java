@@ -19,7 +19,7 @@ package org.jitsi.videobridge.rest.debug;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.util.*;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
