@@ -5,7 +5,7 @@ Jitsi Media Transform contains classes for processing and transforming RTP and R
 We use ktlint for linting and autoformatting. The ktlint command-line utility
 can be installed by running:
 ```
-curl -sSLO https://github.com/shyiko/ktlint/releases/download/0.34.2/ktlint && chmod a+x ktlint && sudo mv ktlint /usr/local/bin/
+curl -sSLO https://github.com/pinterest/ktlint/releases/download/0.34.2/ktlint && chmod a+x ktlint && sudo mv ktlint /usr/local/bin/
 ```
 
 Or, on macOS with Homebrew:
