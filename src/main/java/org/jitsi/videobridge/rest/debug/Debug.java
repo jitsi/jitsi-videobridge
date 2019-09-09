@@ -44,29 +44,42 @@ public class Debug
         this.videobridgeProvider = videobridgeProvider;
     }
 
-    @POST
-    @Path("/payload-verification/enable")
-    public void enablePayloadVerification()
-    {
-        logger.info("Enabling payload verification");
-        Node.Companion.enablePayloadVerification(true);
-    }
-
-    @POST
-    @Path("/payload-verification/disable")
-    public void disablePayloadVerification()
-    {
-        logger.info("Disabling payload verification");
-        Node.Companion.enablePayloadVerification(false);
-    }
-
     @GET
-    @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
     public String bridgeDebug()
     {
         OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(null, null);
         return confJson.toJSONString();
+    }
+
+    @POST
+    @Path("/enable/{feature}")
+    public Response enableFeature(@PathParam("feature") DebugFeatures feature)
+    {
+        switch (feature)
+        {
+            case PAYLOAD_VERIFICATION: {
+                logger.info("Enabling payload verification");
+                Node.Companion.enablePayloadVerification(true);
+            }
+        }
+
+        return Response.ok().build();
+    }
+
+    @POST
+    @Path("/disable/{feature}")
+    public Response disableFeature(@PathParam("feature") DebugFeatures feature)
+    {
+        switch (feature)
+        {
+            case PAYLOAD_VERIFICATION: {
+                logger.info("Disabling payload verification");
+                Node.Companion.enablePayloadVerification(false);
+            }
+        }
+
+        return Response.ok().build();
     }
 
     @GET
