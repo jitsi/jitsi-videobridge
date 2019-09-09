@@ -19,8 +19,8 @@ package org.jitsi.nlj.stats
 import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.doubles.plusOrMinus
 import io.kotlintest.matchers.withClue
-import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.shouldBe
+import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.rtp.RtpPacket
 

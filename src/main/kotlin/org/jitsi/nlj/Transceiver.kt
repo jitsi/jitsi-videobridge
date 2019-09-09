@@ -15,6 +15,8 @@
  */
 package org.jitsi.nlj
 
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.ScheduledExecutorService
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
@@ -39,8 +41,6 @@ import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.BandwidthEstimatorImpl
 import org.jitsi_modified.service.neomedia.rtp.BandwidthEstimator
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.ScheduledExecutorService
 
 // This is an API class, so its usages will largely be outside of this library
 @Suppress("unused")

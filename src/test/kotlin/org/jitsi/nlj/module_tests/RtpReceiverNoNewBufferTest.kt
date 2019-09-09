@@ -16,13 +16,13 @@
 
 package org.jitsi.nlj.module_tests
 
+import java.time.Duration
+import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.safeShutdown
 import org.jitsi.test_utils.Pcaps
-import java.time.Duration
-import java.util.concurrent.Executors
-import java.util.concurrent.LinkedBlockingQueue
 
 /**
  * Verify that the same buffer we feed into the receive pipeline is the one we get

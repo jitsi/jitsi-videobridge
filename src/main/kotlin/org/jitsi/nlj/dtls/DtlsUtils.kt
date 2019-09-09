@@ -15,6 +15,14 @@
  */
 package org.jitsi.nlj.dtls
 
+import java.math.BigInteger
+import java.security.KeyPair
+import java.security.KeyPairGenerator
+import java.security.SecureRandom
+import java.security.Security
+import java.time.Duration
+import java.util.Date
+import java.util.NoSuchElementException
 import org.bouncycastle.asn1.ASN1Encoding
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
@@ -31,14 +39,6 @@ import org.bouncycastle.tls.TlsUtils
 import org.bouncycastle.tls.crypto.TlsSecret
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCertificate
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto
-import java.math.BigInteger
-import java.security.KeyPair
-import java.security.KeyPairGenerator
-import java.security.SecureRandom
-import java.security.Security
-import java.time.Duration
-import java.util.Date
-import java.util.NoSuchElementException
 
 val SECURE_RANDOM = SecureRandom()
 val BC_TLS_CRYPTO = BcTlsCrypto(SECURE_RANDOM)

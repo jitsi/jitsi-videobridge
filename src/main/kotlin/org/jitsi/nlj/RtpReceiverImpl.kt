@@ -15,6 +15,8 @@
  */
 package org.jitsi.nlj
 
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.ScheduledExecutorService
 import org.jitsi.nlj.rtcp.CompoundRtcpParser
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpRrGenerator
@@ -54,8 +56,6 @@ import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.queue.CountingErrorHandler
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.ScheduledExecutorService
 
 class RtpReceiverImpl @JvmOverloads constructor(
     val id: String,

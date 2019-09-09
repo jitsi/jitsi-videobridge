@@ -15,9 +15,9 @@
  */
 package org.jitsi.nlj.util
 
+import java.time.Duration
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.util.Util.Companion.getMbps
-import java.time.Duration
 
 /**
  * Adds a compound value which computes the bitrate in megabits per second given two values

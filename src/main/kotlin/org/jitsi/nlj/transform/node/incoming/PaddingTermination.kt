@@ -15,13 +15,13 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
+import java.util.Collections
+import java.util.TreeMap
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.FilterNode
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.LRUCache
-import java.util.Collections
-import java.util.TreeMap
 
 class PaddingTermination : FilterNode("Padding termination") {
     private val replayContexts: MutableMap<Long, MutableSet<Int>> = TreeMap()

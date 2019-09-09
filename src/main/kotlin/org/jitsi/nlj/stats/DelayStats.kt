@@ -16,9 +16,9 @@
 
 package org.jitsi.nlj.stats
 
-import org.jitsi.nlj.PacketInfo
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.LongAdder
+import org.jitsi.nlj.PacketInfo
 
 open class DelayStats {
     private val totalDelayMs = LongAdder()

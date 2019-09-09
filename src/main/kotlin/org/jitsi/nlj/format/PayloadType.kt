@@ -15,9 +15,9 @@
  */
 package org.jitsi.nlj.format
 
-import org.jitsi.utils.MediaType
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
+import org.jitsi.utils.MediaType
 
 typealias PayloadTypeParams = Map<String, String>
 

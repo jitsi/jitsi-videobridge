@@ -15,6 +15,11 @@
  */
 package org.jitsi.nlj.transform.node
 
+import java.time.Duration
+import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Predicate
+import kotlin.properties.Delegates
+import kotlin.streams.toList
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.EventHandler
 import org.jitsi.nlj.PacketHandler
@@ -29,11 +34,6 @@ import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.addMbps
 import org.jitsi.nlj.util.addRatio
 import org.json.simple.JSONObject
-import java.time.Duration
-import java.util.concurrent.ConcurrentHashMap
-import java.util.function.Predicate
-import kotlin.properties.Delegates
-import kotlin.streams.toList
 
 /**
  * An abstract base class for all [Node] subclasses.  This class

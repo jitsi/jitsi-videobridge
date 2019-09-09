@@ -16,11 +16,11 @@
 
 package org.jitsi.nlj.util
 
+import java.util.logging.Level
+import kotlin.reflect.KClass
 import org.jitsi.utils.logging2.LogContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
-import java.util.logging.Level
-import kotlin.reflect.KClass
 
 /**
  * Note that, although the logger now supports taking a message supplier

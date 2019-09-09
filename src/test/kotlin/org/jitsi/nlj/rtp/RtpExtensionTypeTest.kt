@@ -16,8 +16,8 @@
 
 package org.jitsi.nlj.rtp
 
-import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.shouldBe
+import io.kotlintest.specs.ShouldSpec
 
 class RtpExtensionTypeTest : ShouldSpec() {
 

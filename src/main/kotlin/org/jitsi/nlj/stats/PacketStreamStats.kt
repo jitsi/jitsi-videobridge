@@ -15,8 +15,8 @@
  */
 package org.jitsi.nlj.stats
 
-import org.jitsi.utils.stats.RateStatistics
 import java.util.concurrent.atomic.AtomicLong
+import org.jitsi.utils.stats.RateStatistics
 
 /**
  * Keeps tracks of the basic statistics for a stream of packets.

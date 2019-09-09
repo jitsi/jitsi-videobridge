@@ -19,8 +19,8 @@ import io.pkts.Pcap
 import io.pkts.packet.Packet
 import io.pkts.packet.UDPPacket
 import io.pkts.protocol.Protocol
-import org.jitsi.rtp.UnparsedPacket
 import java.util.concurrent.TimeUnit
+import org.jitsi.rtp.UnparsedPacket
 
 abstract class AbstractPacketProducer : PacketProducer {
     private val handlers = mutableListOf<PacketReceiver>()
