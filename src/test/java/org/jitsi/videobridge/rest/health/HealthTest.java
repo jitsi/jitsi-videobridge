@@ -17,33 +17,20 @@
 package org.jitsi.videobridge.rest.health;
 
 import org.eclipse.jetty.http.*;
-import org.glassfish.jersey.test.*;
-import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.junit.*;
 
 import javax.ws.rs.core.*;
 
-import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.*;
 import static org.mockito.Mockito.*;
 
-public class HealthTest extends JerseyTest
+public class HealthTest extends VideobridgeRestResourceTest
 {
-    private static VideobridgeProvider videobridgeProvider;
-    private static Videobridge videobridge;
-
-    @BeforeClass
-    public static void setup()
-    {
-        videobridgeProvider = mock(VideobridgeProvider.class);
-        videobridge = mock(Videobridge.class);
-    }
 
     @Override
-    protected Application configure()
+    public Application getApplication()
     {
-        enable(TestProperties.LOG_TRAFFIC);
-        enable(TestProperties.DUMP_ENTITY);
         return new HealthApp(videobridgeProvider);
     }
 
