@@ -10,6 +10,8 @@ import io.kotlintest.IsolationMode
 import io.kotlintest.Spec
 import io.kotlintest.matchers.numerics.shouldBeGreaterThan
 import io.kotlintest.specs.ShouldSpec
+import java.time.Duration
+import java.time.Instant
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.rtp.RtpExtensionType
@@ -19,8 +21,6 @@ import org.jitsi.nlj.util.ms
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
-import java.time.Duration
-import java.time.Instant
 
 class TccGeneratorNodeTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf

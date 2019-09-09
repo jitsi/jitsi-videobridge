@@ -16,11 +16,11 @@
 
 package org.jitsi.nlj.util
 
+import java.util.concurrent.ConcurrentHashMap
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.rtp.rtp.RtpPacket
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Creates a packet cache for packets by SSRC

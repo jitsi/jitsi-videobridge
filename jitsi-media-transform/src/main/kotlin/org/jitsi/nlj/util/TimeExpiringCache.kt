@@ -16,9 +16,9 @@
 
 package org.jitsi.nlj.util
 
-import org.jitsi.utils.TimeProvider
 import java.time.Duration
 import java.util.TreeMap
+import org.jitsi.utils.TimeProvider
 
 /**
  * A cache which holds an arbitrary [DataType] and stores it, as well

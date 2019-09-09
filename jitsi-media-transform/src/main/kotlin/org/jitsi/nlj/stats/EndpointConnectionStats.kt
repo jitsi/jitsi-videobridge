@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.stats
 
+import java.util.concurrent.CopyOnWriteArrayList
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.createChildLogger
@@ -25,7 +26,6 @@ import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.utils.LRUCache
 import org.jitsi.utils.logging2.Logger
-import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * The maximum number of SR packets and their timestamps to save.

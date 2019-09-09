@@ -18,11 +18,11 @@ package org.jitsi.nlj.rtp
 
 import io.kotlintest.IsolationMode
 import io.kotlintest.should
-import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.shouldBe
+import io.kotlintest.specs.ShouldSpec
+import java.nio.ByteBuffer
 import org.jitsi.nlj.test_utils.matchers.haveSameContentAs
 import org.jitsi.rtp.rtp.RtpPacket
-import java.nio.ByteBuffer
 
 class RtxPacketTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf

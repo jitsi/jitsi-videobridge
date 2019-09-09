@@ -16,13 +16,13 @@
 
 package org.jitsi.nlj.module_tests
 
+import java.time.Duration
+import java.util.concurrent.Executors
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.safeShutdown
 import org.jitsi.test_utils.Pcaps
-import java.time.Duration
-import java.util.concurrent.Executors
 
 /**
  * Read packets from a PCAP file and feed them through a receiver

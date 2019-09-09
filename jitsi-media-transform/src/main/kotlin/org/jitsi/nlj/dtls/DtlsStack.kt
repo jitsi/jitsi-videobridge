@@ -15,6 +15,10 @@
  */
 package org.jitsi.nlj.dtls
 
+import java.time.Duration
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.DTLSTransport
 import org.bouncycastle.tls.DatagramTransport
@@ -28,10 +32,6 @@ import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.utils.logging2.Logger
-import java.time.Duration
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit
 
 /**
  * Represents a single instance of a DTLS stack for a given connection.  This class also acts as the [DatagramTransport]

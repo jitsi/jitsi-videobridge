@@ -16,8 +16,8 @@
 
 package org.jitsi.nlj.stats
 
-import org.jitsi.nlj.PacketInfo
 import kotlin.math.abs
+import org.jitsi.nlj.PacketInfo
 
 open class JitterStats {
     var jitter: Double = 0.0

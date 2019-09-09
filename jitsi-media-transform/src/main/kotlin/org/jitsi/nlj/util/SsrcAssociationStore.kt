@@ -16,10 +16,10 @@
 
 package org.jitsi.nlj.util
 
+import java.util.concurrent.CopyOnWriteArrayList
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
-import java.util.concurrent.CopyOnWriteArrayList
 
 typealias SsrcAssociationHandler = (SsrcAssociation) -> Unit
 

@@ -16,6 +16,8 @@
 
 package org.jitsi.nlj.util
 
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.supportsPli
 import org.jitsi.nlj.rtp.RtpExtension
@@ -24,8 +26,6 @@ import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.utils.MediaType
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * A handler installed on a specific [RtpExtensionType] to be notified

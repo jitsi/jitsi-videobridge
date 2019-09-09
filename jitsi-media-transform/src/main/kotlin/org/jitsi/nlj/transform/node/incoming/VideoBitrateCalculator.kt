@@ -17,8 +17,8 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.Event
-import org.jitsi.nlj.SetMediaStreamTracksEvent
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.SetMediaStreamTracksEvent
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.cdebug

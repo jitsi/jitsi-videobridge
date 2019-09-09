@@ -16,6 +16,14 @@
 
 package org.jitsi.nlj.rtcp
 
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.util.SortedSet
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.nlj.util.cwarn
@@ -26,14 +34,6 @@ import org.jitsi.rtp.util.isNextAfter
 import org.jitsi.rtp.util.isOlderThan
 import org.jitsi.rtp.util.numPacketsTo
 import org.jitsi.utils.logging2.Logger
-import java.time.Clock
-import java.time.Duration
-import java.time.Instant
-import java.util.SortedSet
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 class RetransmissionRequester(
     private val rtcpSender: (RtcpPacket) -> Unit,

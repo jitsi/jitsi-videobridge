@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
+import java.util.concurrent.ConcurrentHashMap
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.stats.JitterStats
@@ -28,7 +29,6 @@ import org.jitsi.rtp.util.isNextAfter
 import org.jitsi.rtp.util.numPacketsTo
 import org.jitsi.rtp.util.rolledOverTo
 import toUInt
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Track various statistics about received RTP streams to be used in SR/RR report blocks

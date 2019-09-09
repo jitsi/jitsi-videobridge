@@ -15,11 +15,11 @@
  */
 package org.jitsi.nlj.util
 
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArraySet
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.utils.MediaType
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArraySet
 
 class ReceiveSsrcStore(
     private val ssrcAssociationStore: SsrcAssociationStore
