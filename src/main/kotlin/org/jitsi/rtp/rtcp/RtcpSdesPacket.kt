@@ -16,13 +16,13 @@
 
 package org.jitsi.rtp.rtcp
 
-import org.jitsi.rtp.util.BufferPool
-import org.jitsi.rtp.util.RtpUtils
+import java.nio.charset.StandardCharsets
 import org.jitsi.rtp.extensions.bytearray.ByteArrayUtils
 import org.jitsi.rtp.extensions.bytearray.toHex
+import org.jitsi.rtp.util.BufferPool
+import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.getByteAsInt
 import org.jitsi.rtp.util.getIntAsLong
-import java.nio.charset.StandardCharsets
 
 /**
  * https://tools.ietf.org/html/rfc3550#section-6.5

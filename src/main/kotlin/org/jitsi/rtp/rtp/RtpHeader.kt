@@ -16,14 +16,14 @@
 
 package org.jitsi.rtp.rtp
 
+import kotlin.experimental.and
+import kotlin.experimental.or
 import org.jitsi.rtp.extensions.bytearray.putInt
 import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionHelpers
 import org.jitsi.rtp.util.getIntAsLong
 import org.jitsi.rtp.util.getShortAsInt
-import kotlin.experimental.and
-import kotlin.experimental.or
 
 /**
  * [RtpHeader] exists only as a set of helper methods to retrieve and set fields inside of

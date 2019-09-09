@@ -16,11 +16,10 @@
 
 package org.jitsi.rtp.extensions
 
-import org.jitsi.utils.ByteArrayBuffer
 import java.lang.Integer.min
+import org.jitsi.utils.ByteArrayBuffer
 
-fun ByteArrayBuffer.toHex(): String
-{
+fun ByteArrayBuffer.toHex(): String {
     val HEX_CHARS = "0123456789ABCDEF"
 
     val sb = StringBuilder()

@@ -18,10 +18,10 @@ package org.jitsi.rtp.rtcp
 
 import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.collections.shouldHaveSize
-import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.shouldBe
-import org.jitsi.rtp.util.byteBufferOf
+import io.kotlintest.specs.ShouldSpec
 import java.nio.ByteBuffer
+import org.jitsi.rtp.util.byteBufferOf
 
 internal class RtcpSrPacketTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf

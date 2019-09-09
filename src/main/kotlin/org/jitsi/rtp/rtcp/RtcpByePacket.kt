@@ -16,8 +16,8 @@
 
 package org.jitsi.rtp.rtcp
 
-import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.extensions.bytearray.getInt
+import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 
 /**
  * An [RtcpByePacket] cannot be changed once it has been created, so we

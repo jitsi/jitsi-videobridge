@@ -18,8 +18,8 @@ package org.jitsi.rtp.extensions.bytearray
 
 import io.kotlintest.data.forall
 import io.kotlintest.should
-import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.shouldBe
+import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.tables.row
 import org.jitsi.test_helpers.matchers.haveSameContentAs
 

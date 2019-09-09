@@ -15,8 +15,8 @@
  */
 package org.jitsi.rtp.extensions
 
-import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtp.RtpHeader
 

@@ -16,13 +16,13 @@
 
 package org.jitsi.rtp.util
 
-import org.jitsi.rtp.extensions.getBits
-import org.jitsi.rtp.extensions.unsigned.toPositiveInt
-import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.extensions.bytearray.get3Bytes
 import org.jitsi.rtp.extensions.bytearray.getInt
 import org.jitsi.rtp.extensions.bytearray.getShort
 import org.jitsi.rtp.extensions.bytearray.putBits
+import org.jitsi.rtp.extensions.getBits
+import org.jitsi.rtp.extensions.unsigned.toPositiveInt
+import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 
 // TODO: could do some kind of 'Offset' inline class? or 'field' which described the offset
 // and size?

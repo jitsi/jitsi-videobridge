@@ -22,8 +22,8 @@ import io.kotlintest.matchers.collections.shouldHaveSize
 import io.kotlintest.should
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
-import org.jitsi.test_helpers.matchers.haveSameContentAs
 import java.nio.charset.StandardCharsets
+import org.jitsi.test_helpers.matchers.haveSameContentAs
 
 internal class RtcpByePacketTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf

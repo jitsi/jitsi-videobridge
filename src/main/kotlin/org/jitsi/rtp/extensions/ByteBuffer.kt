@@ -15,9 +15,9 @@
  */
 package org.jitsi.rtp.extensions
 
+import java.nio.ByteBuffer
 import org.jitsi.rtp.util.BufferPool
 import unsigned.toUInt
-import java.nio.ByteBuffer
 
 /**
  * Return a (deep) copy of this ByteBuffer.

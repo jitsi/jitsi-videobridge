@@ -18,8 +18,8 @@ package org.jitsi.rtp.rtp
 
 import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.collections.shouldContainInOrder
-import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.shouldBe
+import io.kotlintest.specs.ShouldSpec
 
 // TODO: sets shouldn't change any other field
 class RtpHeaderTest : ShouldSpec() {

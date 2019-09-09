@@ -17,9 +17,9 @@
 package org.jitsi.rtp.rtp
 
 import io.kotlintest.should
-import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldNotBe
+import io.kotlintest.specs.ShouldSpec
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.bytearray.getShort
 import org.jitsi.rtp.extensions.bytearray.putShort

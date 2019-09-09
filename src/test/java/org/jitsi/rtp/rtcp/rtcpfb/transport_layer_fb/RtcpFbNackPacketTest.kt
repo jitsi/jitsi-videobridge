@@ -18,10 +18,10 @@ package org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb
 
 import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.collections.shouldContainExactly
-import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.shouldBe
-import org.jitsi.rtp.util.byteBufferOf
+import io.kotlintest.specs.ShouldSpec
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
+import org.jitsi.rtp.util.byteBufferOf
 
 internal class RtcpFbNackPacketTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf

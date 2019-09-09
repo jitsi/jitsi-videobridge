@@ -17,12 +17,12 @@
 package org.jitsi.rtp.rtcp
 
 import io.kotlintest.should
-import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.shouldBe
+import io.kotlintest.specs.ShouldSpec
+import java.nio.ByteBuffer
 import org.jitsi.rtp.extensions.put3Bytes
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.test_helpers.matchers.haveSameContentAs
-import java.nio.ByteBuffer
 
 class RtcpReportBlockTest : ShouldSpec() {
     private val expectedSsrc: Long = 12345

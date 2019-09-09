@@ -16,10 +16,10 @@
 
 package org.jitsi.rtp.rtcp
 
+import org.jitsi.rtp.extensions.bytearray.putInt
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.RtpUtils
-import org.jitsi.rtp.extensions.bytearray.putInt
 import org.jitsi.rtp.util.getIntAsLong
 
 /**

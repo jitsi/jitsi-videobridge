@@ -16,9 +16,9 @@
 
 package org.jitsi.rtp.rtp.header_extensions
 
+import kotlin.experimental.and
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpPacket
-import kotlin.experimental.and
 
 /**
  * https://tools.ietf.org/html/rfc6464#section-3

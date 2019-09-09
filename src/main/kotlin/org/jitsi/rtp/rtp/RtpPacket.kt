@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp.rtp
 
+import kotlin.experimental.or
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
 import org.jitsi.rtp.extensions.bytearray.putShort
@@ -23,7 +24,6 @@ import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionHelpers
 import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.getByteAsInt
 import org.jitsi.rtp.util.isPadding
-import kotlin.experimental.or
 
 /**
  *

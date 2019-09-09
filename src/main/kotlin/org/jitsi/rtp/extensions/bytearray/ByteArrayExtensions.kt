@@ -15,17 +15,17 @@
  */
 
 package org.jitsi.rtp.extensions.bytearray
+import java.lang.Math.abs
 import org.jitsi.rtp.extensions.getBitAsBool
 import org.jitsi.rtp.extensions.putBit
 import org.jitsi.rtp.extensions.putBits
 import org.jitsi.rtp.util.BufferPool
 import org.jitsi.utils.ByteArrayUtils.readInt
-import org.jitsi.utils.ByteArrayUtils.writeInt
 import org.jitsi.utils.ByteArrayUtils.readShort
-import org.jitsi.utils.ByteArrayUtils.writeShort
 import org.jitsi.utils.ByteArrayUtils.readUint24
+import org.jitsi.utils.ByteArrayUtils.writeInt
+import org.jitsi.utils.ByteArrayUtils.writeShort
 import org.jitsi.utils.ByteArrayUtils.writeUint24
-import java.lang.Math.abs
 
 /**
  * Put the right-most [numBits] bits from [src] into the byte at [byteIndex]
