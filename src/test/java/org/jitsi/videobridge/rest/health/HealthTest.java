@@ -47,10 +47,15 @@ public class HealthTest extends JerseyTest
         return new HealthApp(videobridgeProvider);
     }
 
+    @Before
+    public void beforeTest()
+    {
+        when(videobridgeProvider.get()).thenReturn(videobridge);
+    }
+
     @Test
     public void testHealthNoException() throws Exception
     {
-        when(videobridgeProvider.get()).thenReturn(videobridge);
         doNothing().when(videobridge).healthCheck();
 
         Response resp = target("/health").request().get();
@@ -60,7 +65,6 @@ public class HealthTest extends JerseyTest
     @Test
     public void testHealthException() throws Exception
     {
-        when(videobridgeProvider.get()).thenReturn(videobridge);
         doThrow(new RuntimeException("")).when(videobridge).healthCheck();
 
         Response resp = target("/health").request().get();
