@@ -50,11 +50,29 @@ public class DebugTest extends VideobridgeRestResourceTest
     }
 
     @Test
+    public void testEnableNonexistentDebugFeature()
+    {
+        Response resp = target("/debug/enable/blah")
+                .request()
+                .post(Entity.json(null));
+        assertEquals(HttpStatus.NOT_FOUND_404, resp.getStatus());
+    }
+
+    @Test
     public void testDisableDebugFeature()
     {
         Response resp = target("/debug/disable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
+    }
+
+    @Test
+    public void testDisableNonexistentDebugFeature()
+    {
+        Response resp = target("/debug/disable/blah")
+                .request()
+                .post(Entity.json(null));
+        assertEquals(HttpStatus.NOT_FOUND_404, resp.getStatus());
     }
 }

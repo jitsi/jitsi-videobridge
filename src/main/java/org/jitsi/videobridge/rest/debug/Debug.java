@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.rest.debug;
 
+import org.eclipse.jetty.http.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
@@ -61,6 +62,10 @@ public class Debug
             case PAYLOAD_VERIFICATION: {
                 logger.info("Enabling payload verification");
                 Node.Companion.enablePayloadVerification(true);
+                break;
+            }
+            default: {
+                return Response.status(HttpStatus.NOT_FOUND_404).build();
             }
         }
 
@@ -76,6 +81,10 @@ public class Debug
             case PAYLOAD_VERIFICATION: {
                 logger.info("Disabling payload verification");
                 Node.Companion.enablePayloadVerification(false);
+                break;
+            }
+            default: {
+                return Response.status(HttpStatus.NOT_FOUND_404).build();
             }
         }
 
