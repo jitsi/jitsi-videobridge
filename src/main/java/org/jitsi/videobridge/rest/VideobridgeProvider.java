@@ -20,6 +20,13 @@ import org.jitsi.osgi.*;
 import org.jitsi.videobridge.*;
 import org.osgi.framework.*;
 
+/**
+ * A class to acquire a {@link Videobridge} from a {@link BundleContext}.
+ *
+ * This abstraction makes it easier to test methods which rely on a
+ * {@link Videobridge} instance as this class can easily provide
+ * a mock instead of the real Videobridge.
+ */
 public class VideobridgeProvider
 {
     protected final BundleContext bundleContext;
