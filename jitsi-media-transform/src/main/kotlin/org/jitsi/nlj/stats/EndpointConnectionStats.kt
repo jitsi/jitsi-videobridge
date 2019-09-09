@@ -23,9 +23,16 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
 import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.utils.LRUCache
 import org.jitsi.utils.logging2.Logger
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+
+/**
+ * The maximum number of SR packets and their timestamps to save.
+ */
+private const val MAX_SR_TIMESTAMP_HISTORY = 200
+
+private typealias SsrcAndTimestamp = Pair<Long, Long>
 
 /**
  * Tracks stats which are not necessarily tied to send or receive but the endpoint overall
@@ -41,9 +48,9 @@ class EndpointConnectionStats(
     )
     private val endpointConnectionStatsListeners: MutableList<EndpointConnectionStatsListener> = CopyOnWriteArrayList()
 
-    // Maps the compacted NTP timestamp found in an SR SenderInfo to the clock time (in milliseconds)
-    //  at which it was transmitted
-    private val srSentTimes: MutableMap<Long, Long> = ConcurrentHashMap()
+    // Per-SSRC, maps the compacted NTP timestamp found in an SR SenderInfo to
+    //  the clock time (in milliseconds) at which it was transmitted
+    private val srSentTimes: MutableMap<SsrcAndTimestamp, Long> = LRUCache(MAX_SR_TIMESTAMP_HISTORY)
     private val logger = parentLogger.createChildLogger(EndpointConnectionStats::class)
 
     /**
@@ -78,7 +85,7 @@ class EndpointConnectionStats(
         when (packet) {
             is RtcpSrPacket -> {
                 logger.cdebug { "Tracking sent SR packet with compacted timestamp ${packet.senderInfo.compactedNtpTimestamp}" }
-                srSentTimes[packet.senderInfo.compactedNtpTimestamp] =
+                srSentTimes[Pair(packet.senderSsrc, packet.senderInfo.compactedNtpTimestamp)] =
                         System.currentTimeMillis()
             }
         }
@@ -87,7 +94,7 @@ class EndpointConnectionStats(
     private fun processReportBlock(receivedTime: Long, reportBlock: RtcpReportBlock) {
         if (reportBlock.lastSrTimestamp > 0 && reportBlock.delaySinceLastSr > 0) {
             // We need to know when we sent the last SR
-            val srSentTime = srSentTimes.getOrDefault(reportBlock.lastSrTimestamp, -1)
+            val srSentTime = srSentTimes.getOrDefault(SsrcAndTimestamp(reportBlock.ssrc, reportBlock.lastSrTimestamp), -1)
             if (srSentTime > 0) {
                 // The delaySinceLastSr value is given in 1/65536ths of a second, so divide it by 65.536 to get it
                 // in milliseconds
