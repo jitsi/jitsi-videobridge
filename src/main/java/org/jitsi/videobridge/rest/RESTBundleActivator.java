@@ -133,11 +133,13 @@ public class RESTBundleActivator
 
         VideobridgeProvider videobridgeProvider = new VideobridgeProvider(bundleContext);
 
-        DebugApp debugHandler = new DebugApp(videobridgeProvider);
-        ServletHolder debugServletHolder = new ServletHolder(new ServletContainer(debugHandler));
         ServletContextHandler colibriContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
         colibriContextHandler.setContextPath("/colibri");
-        colibriContextHandler.addServlet(debugServletHolder, "/*");
+
+        DebugApp debugHandler = new DebugApp(videobridgeProvider);
+        ServletHolder debugServletHolder = new ServletHolder(new ServletContainer(debugHandler));
+        colibriContextHandler.addServlet(debugServletHolder, "/debug/*");
+
         handlers.add(colibriContextHandler);
 
         HealthApp healthHandler = new HealthApp(videobridgeProvider);
