@@ -23,6 +23,8 @@ import org.glassfish.jersey.servlet.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.debug.*;
+import org.jitsi.videobridge.rest.health.*;
+import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
 /**
@@ -129,13 +131,22 @@ public class RESTBundleActivator
         if (colibriHandler != null)
             handlers.add(colibriHandler);
 
-        DebugApp debugHandler = new DebugApp(bundleContext);
-        ServletHolder sh = new ServletHolder(new ServletContainer(debugHandler));
-        ServletContextHandler context = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
-        context.setContextPath("/colibri/debug");
-        context.addServlet(sh, "/*");
+        VideobridgeProvider videobridgeProvider = new VideobridgeProvider(bundleContext);
 
-        handlers.add(context);
+        DebugApp debugHandler = new DebugApp(videobridgeProvider);
+        ServletHolder debugServletHolder = new ServletHolder(new ServletContainer(debugHandler));
+        ServletContextHandler colibriContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
+        colibriContextHandler.setContextPath("/colibri");
+        colibriContextHandler.addServlet(debugServletHolder, "/*");
+        handlers.add(colibriContextHandler);
+
+        HealthApp healthHandler = new HealthApp(videobridgeProvider);
+        ServletHolder healthServletHolder = new ServletHolder(new ServletContainer(healthHandler));
+        ServletContextHandler aboutContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
+        aboutContextHandler.setContextPath("/about");
+        aboutContextHandler.addServlet(healthServletHolder, "/*");
+
+        handlers.add(aboutContextHandler);
 
         return initializeHandlerList(handlers);
     }

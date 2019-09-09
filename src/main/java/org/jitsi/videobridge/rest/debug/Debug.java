@@ -16,12 +16,11 @@
 
 package org.jitsi.videobridge.rest.debug;
 
+import org.eclipse.jetty.http.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.osgi.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.*;
-import org.osgi.framework.*;
+import org.jitsi.videobridge.util.*;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
@@ -35,45 +34,61 @@ import javax.ws.rs.core.*;
  *
  * @author bbaldino
  */
-@Path("/")
+@Path("/debug")
 public class Debug
 {
-    private final BundleContext bundleContext;
+    private final VideobridgeProvider videobridgeProvider;
     private Logger logger = new LoggerImpl(Debug.class.getName());
 
-    public Debug(BundleContext bundleContext)
+    public Debug(VideobridgeProvider videobridgeProvider)
     {
-        this.bundleContext = bundleContext;
-    }
-
-    private Videobridge getVideobridge()
-    {
-        return ServiceUtils2.getService(bundleContext, Videobridge.class);
-    }
-
-    @POST
-    @Path("/payload-verification/enable")
-    public void enablePayloadVerification()
-    {
-        logger.info("Enabling payload verification");
-        Node.Companion.enablePayloadVerification(true);
-    }
-
-    @POST
-    @Path("/payload-verification/disable")
-    public void disablePayloadVerification()
-    {
-        logger.info("Disabling payload verification");
-        Node.Companion.enablePayloadVerification(false);
+        this.videobridgeProvider = videobridgeProvider;
     }
 
     @GET
-    @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
     public String bridgeDebug()
     {
-        OrderedJsonObject confJson = getVideobridge().getDebugState(null, null);
+        OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(null, null);
         return confJson.toJSONString();
+    }
+
+    @POST
+    @Path("/enable/{feature}")
+    public Response enableFeature(@PathParam("feature") DebugFeatures feature)
+    {
+        switch (feature)
+        {
+            case PAYLOAD_VERIFICATION: {
+                logger.info("Enabling payload verification");
+                Node.Companion.enablePayloadVerification(true);
+                break;
+            }
+            default: {
+                return Response.status(HttpStatus.NOT_FOUND_404).build();
+            }
+        }
+
+        return Response.ok().build();
+    }
+
+    @POST
+    @Path("/disable/{feature}")
+    public Response disableFeature(@PathParam("feature") DebugFeatures feature)
+    {
+        switch (feature)
+        {
+            case PAYLOAD_VERIFICATION: {
+                logger.info("Disabling payload verification");
+                Node.Companion.enablePayloadVerification(false);
+                break;
+            }
+            default: {
+                return Response.status(HttpStatus.NOT_FOUND_404).build();
+            }
+        }
+
+        return Response.ok().build();
     }
 
     @GET
@@ -81,7 +96,7 @@ public class Debug
     @Produces(MediaType.APPLICATION_JSON)
     public String confDebug(@PathParam("confId") String confId)
     {
-        OrderedJsonObject confJson = getVideobridge().getDebugState(confId, null);
+        OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(confId, null);
         return confJson.toJSONString();
     }
 
@@ -90,7 +105,7 @@ public class Debug
     @Produces(MediaType.APPLICATION_JSON)
     public String epDebug(@PathParam("confId") String confId, @PathParam("epId") String epId)
     {
-        OrderedJsonObject confJson = getVideobridge().getDebugState(confId, epId);
+        OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(confId, epId);
         return confJson.toJSONString();
     }
 }

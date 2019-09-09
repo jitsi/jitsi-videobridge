@@ -14,21 +14,30 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.debug;
+package org.jitsi.videobridge.util;
 
-import org.glassfish.jersey.server.*;
-import org.jitsi.videobridge.util.*;
+import org.jitsi.osgi.*;
+import org.jitsi.videobridge.*;
 import org.osgi.framework.*;
 
 /**
- * An extension of {@link ResourceConfig} so that we can pass
- * the {@link BundleContext} to the {@link Debug} resource
- * so it can get the {@link org.jitsi.videobridge.Videobridge} instance
+ * A class to acquire a {@link Videobridge} from a {@link BundleContext}.
+ *
+ * This abstraction makes it easier to test methods which rely on a
+ * {@link Videobridge} instance as this class can easily provide
+ * a mock instead of the real Videobridge.
  */
-public class DebugApp extends ResourceConfig
+public class VideobridgeProvider
 {
-    public DebugApp(VideobridgeProvider videobridgeProvider)
+    protected final BundleContext bundleContext;
+
+    public VideobridgeProvider(BundleContext bundleContext)
     {
-        register(new Debug(videobridgeProvider));
+        this.bundleContext = bundleContext;
+    }
+
+    public Videobridge get()
+    {
+        return ServiceUtils2.getService(bundleContext, Videobridge.class);
     }
 }

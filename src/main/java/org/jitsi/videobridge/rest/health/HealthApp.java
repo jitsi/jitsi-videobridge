@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.debug;
+package org.jitsi.videobridge.rest.health;
 
 import org.glassfish.jersey.server.*;
+import org.jitsi.videobridge.rest.debug.*;
 import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
@@ -25,10 +26,10 @@ import org.osgi.framework.*;
  * the {@link BundleContext} to the {@link Debug} resource
  * so it can get the {@link org.jitsi.videobridge.Videobridge} instance
  */
-public class DebugApp extends ResourceConfig
+public class HealthApp extends ResourceConfig
 {
-    public DebugApp(VideobridgeProvider videobridgeProvider)
+    public HealthApp(VideobridgeProvider videobridgeProvider)
     {
-        register(new Debug(videobridgeProvider));
+        register(new Health(videobridgeProvider));
     }
 }
