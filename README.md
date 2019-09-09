@@ -5,7 +5,12 @@ Jitsi RTP contains classes for parsing and creating RTP and RTCP packets.
 We use ktlint for linting and autoformatting. The ktlint command-line utility
 can be installed by running:
 ```
-curl -sSLO https://github.com/shyiko/ktlint/releases/download/0.31.0/ktlint && chmod a+x ktlint && sudo mv ktlint /usr/local/bin/
+curl -sSLO https://github.com/pinterest/ktlint/releases/download/0.34.2/ktlint && chmod a+x ktlint && sudo mv ktlint /usr/local/bin/
+```
+
+Or, on macOS with Homebrew:
+```
+brew install ktlint
 ```
 
 To perform the checks simply run `ktlint`.
@@ -17,7 +22,7 @@ ktlint --install-git-pre-commit-hook
 ```
 
 You can automatically update Intellij IDEA's formatting rules to to be
-compatible with ktlint. However, note that version 0.31.0 of ktlint will
+compatible with ktlint. However, note that version 0.34.2 of ktlint will
 override any Java code style settings.
 ```
 ktlint --apply-to-idea-project
