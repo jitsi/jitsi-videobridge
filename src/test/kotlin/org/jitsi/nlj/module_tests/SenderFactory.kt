@@ -16,6 +16,9 @@
 
 package org.jitsi.nlj.module_tests
 
+import java.util.Random
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.ScheduledExecutorService
 import org.jitsi.nlj.RtpSender
 import org.jitsi.nlj.RtpSenderImpl
 import org.jitsi.nlj.SetLocalSsrcEvent
@@ -29,9 +32,6 @@ import org.jitsi.test_utils.SourceAssociation
 import org.jitsi.test_utils.SrtpData
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
-import java.util.Random
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.ScheduledExecutorService
 
 class SenderFactory {
     companion object {

@@ -16,10 +16,10 @@
 
 package org.jitsi.nlj.resources.logging
 
-import org.jitsi.utils.logging2.LogContext
-import org.jitsi.utils.logging2.Logger
 import java.util.function.Supplier
 import java.util.logging.Level
+import org.jitsi.utils.logging2.LogContext
+import org.jitsi.utils.logging2.Logger
 
 /**
  * Logger which logs all messages to stdout (but obeys a set log level).  By default

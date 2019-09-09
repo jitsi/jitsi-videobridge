@@ -15,6 +15,8 @@
  */
 package org.jitsi.nlj
 
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.ScheduledExecutorService
 import org.jitsi.nlj.rtcp.KeyframeRequester
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
@@ -46,8 +48,6 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.ScheduledExecutorService
 
 class RtpSenderImpl(
     val id: String,

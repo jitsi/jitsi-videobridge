@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
+import java.util.concurrent.ConcurrentHashMap
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.ResumableStreamRewriter
@@ -22,7 +23,6 @@ import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.forEachIf
 import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Discards RTP packets which contains shouldDiscard, masking their loss in the RTP sequence numbers and timestamps of RTP

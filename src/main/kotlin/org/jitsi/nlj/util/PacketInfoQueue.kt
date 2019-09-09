@@ -16,9 +16,9 @@
 
 package org.jitsi.nlj.util
 
-import org.jitsi.utils.queue.PacketQueue
-import org.jitsi.nlj.PacketInfo
 import java.util.concurrent.ExecutorService
+import org.jitsi.nlj.PacketInfo
+import org.jitsi.utils.queue.PacketQueue
 
 /**
  * A [PacketInfo] queue. We do not want to use the copy functionality, which is why the related

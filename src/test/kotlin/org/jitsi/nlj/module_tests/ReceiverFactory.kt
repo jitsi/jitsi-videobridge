@@ -16,6 +16,9 @@
 
 package org.jitsi.nlj.module_tests
 
+import java.util.Random
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.ScheduledExecutorService
 import org.jitsi.nlj.RtpReceiver
 import org.jitsi.nlj.RtpReceiverImpl
 import org.jitsi.nlj.format.PayloadType
@@ -28,9 +31,6 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.test_utils.SourceAssociation
 import org.jitsi.test_utils.SrtpData
 import org.jitsi.utils.logging2.Logger
-import java.util.Random
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.ScheduledExecutorService
 
 class ReceiverFactory {
     companion object {

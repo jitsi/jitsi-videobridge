@@ -15,8 +15,8 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.rtp.Packet
 import java.time.Duration
+import org.jitsi.rtp.Packet
 
 class EventTimeline(
     private val timeline: MutableList<Pair<String, Long>> = mutableListOf()

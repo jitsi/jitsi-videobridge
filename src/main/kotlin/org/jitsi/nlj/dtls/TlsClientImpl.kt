@@ -15,6 +15,8 @@
  */
 package org.jitsi.nlj.dtls
 
+import java.nio.ByteBuffer
+import java.util.Hashtable
 import org.bouncycastle.crypto.util.PrivateKeyFactory
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.CertificateRequest
@@ -44,8 +46,6 @@ import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.utils.logging2.Logger
-import java.nio.ByteBuffer
-import java.util.Hashtable
 
 /**
  * Implementation of [DefaultTlsClient].

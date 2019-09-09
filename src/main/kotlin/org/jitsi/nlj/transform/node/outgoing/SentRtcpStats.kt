@@ -16,11 +16,11 @@
 
 package org.jitsi.nlj.transform.node.outgoing
 
+import kotlin.reflect.KClass
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.rtp.rtcp.RtcpPacket
-import kotlin.reflect.KClass
 
 class SentRtcpStats : ObserverNode("Sent RTCP stats") {
     private var sentRtcpCounts = mutableMapOf<KClass<out RtcpPacket>, Int>().withDefault { 0 }

@@ -16,10 +16,10 @@
 
 package org.jitsi.nlj.util
 
+import java.io.Writer
 import org.json.simple.JSONAware
 import org.json.simple.JSONObject
 import org.json.simple.JSONStreamAware
-import java.io.Writer
 
 /**
  * Functions just like [JSONObject], but preserves the order

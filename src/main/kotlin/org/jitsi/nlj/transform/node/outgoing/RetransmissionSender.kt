@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.outgoing
 
+import java.util.concurrent.ConcurrentHashMap
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.rtp.RtxPacket
@@ -27,7 +28,6 @@ import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.logging2.Logger
-import java.util.concurrent.ConcurrentHashMap
 
 class RetransmissionSender(
     private val streamInformationStore: ReadOnlyStreamInformationStore,

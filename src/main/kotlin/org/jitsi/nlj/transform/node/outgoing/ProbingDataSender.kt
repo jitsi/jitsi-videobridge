@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.transform.node.outgoing
 
+import java.util.Random
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.EventHandler
 import org.jitsi.nlj.PacketHandler
@@ -36,7 +37,6 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
-import java.util.Random
 
 /**
  * [ProbingDataSender] currently supports probing via 2 methods:

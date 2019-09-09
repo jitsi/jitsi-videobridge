@@ -15,9 +15,9 @@
  */
 package org.jitsi.nlj.util
 
-import org.jitsi.rtp.Packet
 import java.time.Duration
 import java.util.function.Predicate
+import org.jitsi.rtp.Packet
 
 class Util {
     companion object {
