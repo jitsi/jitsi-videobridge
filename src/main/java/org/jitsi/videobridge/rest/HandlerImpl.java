@@ -220,11 +220,6 @@ class HandlerImpl
     static final String STATISTICS = "stats";
 
     /**
-     * The target for the colibri debug interface.
-     */
-    static final String DEBUG = "debug";
-
-    /**
      * The HTTP resource which allows control of {@link ClientConnectionImpl}
      * (i.e. adding or removing MUC clients).
      */
@@ -259,12 +254,6 @@ class HandlerImpl
      */
     private final StatisticsRequestHandler statisticsRequestHandler
             = new StatisticsRequestHandler(this);
-
-    /**
-     * The handler for debug requests.
-     */
-    private final DebugRequestHandler debugRequestHandler
-            = new DebugRequestHandler(this);
 
     /**
      * Initializes a new {@code HandlerImpl} instance within a specific
@@ -1022,10 +1011,6 @@ class HandlerImpl
         {
             statisticsRequestHandler.handleStatsRequest(
                     target, request, response);
-        }
-        else if (target.startsWith(DEBUG))
-        {
-            debugRequestHandler.handleDebugRequest(target, request, response);
         }
         else if (target.equals(SHUTDOWN))
         {

@@ -18,8 +18,11 @@ package org.jitsi.videobridge.rest;
 import java.util.*;
 
 import org.eclipse.jetty.server.*;
+import org.eclipse.jetty.servlet.*;
+import org.glassfish.jersey.servlet.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.rest.debug.*;
 import org.osgi.framework.*;
 
 /**
@@ -125,6 +128,14 @@ public class RESTBundleActivator
 
         if (colibriHandler != null)
             handlers.add(colibriHandler);
+
+        DebugApp debugHandler = new DebugApp(bundleContext);
+        ServletHolder sh = new ServletHolder(new ServletContainer(debugHandler));
+        ServletContextHandler context = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
+        context.setContextPath("/colibri/debug");
+        context.addServlet(sh, "/*");
+
+        handlers.add(context);
 
         return initializeHandlerList(handlers);
     }
