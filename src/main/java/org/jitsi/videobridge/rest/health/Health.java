@@ -33,7 +33,7 @@ public class Health
     }
 
     @GET
-    public Response getHealth() throws IOException
+    public Response getHealth()
     {
         try
         {
