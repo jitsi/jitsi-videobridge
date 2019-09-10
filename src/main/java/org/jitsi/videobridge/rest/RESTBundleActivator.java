@@ -24,6 +24,7 @@ import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.debug.*;
 import org.jitsi.videobridge.rest.health.*;
+import org.jitsi.videobridge.rest.shutdown.*;
 import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
@@ -74,7 +75,7 @@ public class RESTBundleActivator
     }
 
     /**
-     * {@inheritDoc} 
+     * {@inheritDoc}
      */
     @Override
     protected void doStop(BundleContext bundleContext)
@@ -132,13 +133,24 @@ public class RESTBundleActivator
             handlers.add(colibriHandler);
 
         VideobridgeProvider videobridgeProvider = new VideobridgeProvider(bundleContext);
+        if (getCfgBoolean(ENABLE_REST_COLIBRI_PNAME, true))
+        {
+            ServletContextHandler colibriContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
+            colibriContextHandler.setContextPath("/colibri");
 
-        DebugApp debugHandler = new DebugApp(videobridgeProvider);
-        ServletHolder debugServletHolder = new ServletHolder(new ServletContainer(debugHandler));
-        ServletContextHandler colibriContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
-        colibriContextHandler.setContextPath("/colibri");
-        colibriContextHandler.addServlet(debugServletHolder, "/*");
-        handlers.add(colibriContextHandler);
+            DebugApp debugHandler = new DebugApp(videobridgeProvider);
+            ServletHolder debugServletHolder = new ServletHolder(new ServletContainer(debugHandler));
+            colibriContextHandler.addServlet(debugServletHolder, "/debug/*");
+
+            if (getCfgBoolean(ENABLE_REST_SHUTDOWN_PNAME, false))
+            {
+                ShutdownApp shutdownHandler = new ShutdownApp(videobridgeProvider);
+                ServletHolder shutdownServletHolder = new ServletHolder(new ServletContainer(shutdownHandler));
+                colibriContextHandler.addServlet(shutdownServletHolder, "/shutdown/*");
+            }
+
+            handlers.add(colibriContextHandler);
+        }
 
         HealthApp healthHandler = new HealthApp(videobridgeProvider);
         ServletHolder healthServletHolder = new ServletHolder(new ServletContainer(healthHandler));

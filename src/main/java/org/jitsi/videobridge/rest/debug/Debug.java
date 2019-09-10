@@ -34,7 +34,7 @@ import javax.ws.rs.core.*;
  *
  * @author bbaldino
  */
-@Path("/debug")
+@Path("/")
 public class Debug
 {
     private final VideobridgeProvider videobridgeProvider;
