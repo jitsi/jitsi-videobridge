@@ -26,7 +26,6 @@ import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 import org.junit.*;
 import org.mockito.*;
-import org.mockito.invocation.*;
 import org.mockito.stubbing.*;
 
 import javax.ws.rs.client.*;
@@ -85,8 +84,7 @@ public class ShutdownTest extends VideobridgeRestResourceTest
     {
         setSuccessfulShutdownIqResponse();
 
-        Shutdown.ShutdownJson json = new Shutdown.ShutdownJson();
-        json.isGraceful = true;
+        Shutdown.ShutdownJson json = new Shutdown.ShutdownJson(true);
         Response resp = target("/").request().post(Entity.json(json));
 
         assertTrue(shutdownIQArgumentCaptor.getValue().isGracefulShutdown());
@@ -99,8 +97,7 @@ public class ShutdownTest extends VideobridgeRestResourceTest
     {
         setSuccessfulShutdownIqResponse();
 
-        Shutdown.ShutdownJson json = new Shutdown.ShutdownJson();
-        json.isGraceful = false;
+        Shutdown.ShutdownJson json = new Shutdown.ShutdownJson(false);
         Response resp = target("/").request().post(Entity.json(json));
 
         assertFalse(shutdownIQArgumentCaptor.getValue().isGracefulShutdown());
@@ -113,8 +110,7 @@ public class ShutdownTest extends VideobridgeRestResourceTest
     {
         setSuccessfulShutdownIqResponse();
 
-        Shutdown.ShutdownJson json = new Shutdown.ShutdownJson();
-        json.isGraceful = false;
+        Shutdown.ShutdownJson json = new Shutdown.ShutdownJson(false);
         Response resp = target("/")
                 .request()
                 .header("X-FORWARDED-FOR", "jitsi")
@@ -129,8 +125,7 @@ public class ShutdownTest extends VideobridgeRestResourceTest
     {
         setErrorShutdownIqResponse(XMPPError.Condition.not_authorized);
 
-        Shutdown.ShutdownJson json = new Shutdown.ShutdownJson();
-        json.isGraceful = true;
+        Shutdown.ShutdownJson json = new Shutdown.ShutdownJson(false);
         Response resp = target("/").request().post(Entity.json(json));
 
         assertEquals(HttpStatus.UNAUTHORIZED_401, resp.getStatus());
@@ -141,8 +136,7 @@ public class ShutdownTest extends VideobridgeRestResourceTest
     {
         setErrorShutdownIqResponse(XMPPError.Condition.service_unavailable);
 
-        Shutdown.ShutdownJson json = new Shutdown.ShutdownJson();
-        json.isGraceful = true;
+        Shutdown.ShutdownJson json = new Shutdown.ShutdownJson(true);
         Response resp = target("/").request().post(Entity.json(json));
 
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE_503, resp.getStatus());
@@ -153,11 +147,21 @@ public class ShutdownTest extends VideobridgeRestResourceTest
     {
         setErrorShutdownIqResponse(XMPPError.Condition.undefined_condition);
 
-        Shutdown.ShutdownJson json = new Shutdown.ShutdownJson();
-        json.isGraceful = true;
+        Shutdown.ShutdownJson json = new Shutdown.ShutdownJson(true);
         Response resp = target("/").request().post(Entity.json(json));
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR_500, resp.getStatus());
+    }
+
+    @Test
+    public void testJsonString()
+    {
+        setSuccessfulShutdownIqResponse();
+
+        String json = "{ \"graceful-shutdown\": \"true\" }";
+        Response resp = target("/").request().post(Entity.json(json));
+
+        assertEquals(HttpStatus.OK_200, resp.getStatus());
     }
 
     @Test
@@ -168,6 +172,6 @@ public class ShutdownTest extends VideobridgeRestResourceTest
         String json = "{}";
         Response resp = target("/").request().post(Entity.json(json));
 
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR_500, resp.getStatus());
+        assertEquals(HttpStatus.BAD_REQUEST_400, resp.getStatus());
     }
 }

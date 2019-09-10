@@ -75,10 +75,19 @@ public class Shutdown
      */
     public static class ShutdownJson
     {
+        // Unfortunately, using @JsonProperty here alone is not enough to throw an error
+        // if the property is missing from the JSON, but we can't leave it out entirely
+        // as it's needed for serialization (since the constructor param JsonProperty
+        // is only for the parameter, not the member, so it isn't used when
+        // serializing).
         @JsonProperty(value = "graceful-shutdown", required = true)
-        Boolean isGraceful;
+        private Boolean isGraceful;
 
-        public ShutdownJson() {}
+        @JsonCreator
+        public ShutdownJson(@JsonProperty(value = "graceful-shutdown", required = true) Boolean isGraceful)
+        {
+            this.isGraceful = isGraceful;
+        }
 
         ShutdownIQ toIq()
         {
