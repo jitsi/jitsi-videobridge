@@ -196,14 +196,6 @@ class HandlerImpl
     private static final String DEFAULT_COLIBRI_TARGET = "/colibri/";
 
     /**
-     * The HTTP resource which retrieves a JSON representation of the
-     * <tt>DominantSpeakerIdentification</tt> of a <tt>Conference</tt> of
-     * <tt>Videobridge</tt>.
-     */
-    private static final String DOMINANT_SPEAKER_IDENTIFICATION
-        = "dominant-speaker-identification";
-
-    /**
      * The logger instance used by REST handler.
      */
     private static final Logger logger = new LoggerImpl(HandlerImpl.class.getName());
@@ -260,179 +252,6 @@ class HandlerImpl
 
         if (colibriEnabled)
             logger.info("Colibri REST endpoints are enabled");
-    }
-
-    /**
-     * Retrieves a JSON representation of a <tt>Conference</tt> with ID
-     * <tt>target</tt> of (the associated) <tt>Videobridge</tt>.
-     *
-     * @param target the ID of the <tt>Conference</tt> of (the associated)
-     * <tt>Videobridge</tt> to represent in JSON format
-     * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
-     * @throws IOException
-     * @throws ServletException
-     */
-    private void doGetConferenceJSON(
-            String target,
-            Request baseRequest,
-            HttpServletRequest request,
-            HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
-        Videobridge videobridge = getVideobridge();
-
-        if (videobridge == null)
-        {
-            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-        }
-        else
-        {
-            // We allow requests for certain sub-resources of a Conference
-            // though such as DominantSpeakerIdentification.
-            int conferenceIDEndIndex = target.indexOf('/');
-            String conferenceID = target;
-
-            if ((conferenceIDEndIndex > 0)
-                    && (conferenceIDEndIndex < target.length() - 1))
-            {
-                target = target.substring(conferenceIDEndIndex + 1);
-                if (DOMINANT_SPEAKER_IDENTIFICATION.equals(target))
-                {
-                    conferenceID
-                        = conferenceID.substring(0, conferenceIDEndIndex);
-                }
-            }
-
-            Conference conference
-                = videobridge.getConference(conferenceID, null);
-
-            if (conference == null)
-            {
-                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            }
-            else if (DOMINANT_SPEAKER_IDENTIFICATION.equals(target))
-            {
-                doGetDominantSpeakerIdentificationJSON(
-                        conference,
-                        baseRequest,
-                        request,
-                        response);
-            }
-            else
-            {
-                ColibriConferenceIQ conferenceIQ = new ColibriConferenceIQ();
-
-                conference.getShim().describeDeep(conferenceIQ);
-
-                JSONObject conferenceJSONObject
-                    = JSONSerializer.serializeConference(conferenceIQ);
-
-                if (conferenceJSONObject == null)
-                {
-                    response.setStatus(
-                            HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                }
-                else
-                {
-                    response.setStatus(HttpServletResponse.SC_OK);
-                    conferenceJSONObject.writeJSONString(response.getWriter());
-                }
-            }
-        }
-    }
-
-    /**
-     * Lists the <tt>Conference</tt>s of (the associated) <tt>Videobridge</tt>.
-     *
-     * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
-     * @throws IOException
-     * @throws ServletException
-     */
-    private void doGetConferencesJSON(
-            Request baseRequest,
-            HttpServletRequest request,
-            HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
-        Videobridge videobridge = getVideobridge();
-
-        if (videobridge == null)
-        {
-            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-        }
-        else
-        {
-            Conference[] conferences = videobridge.getConferences();
-            List<ColibriConferenceIQ> conferenceIQs = new ArrayList<>();
-
-            for (Conference conference : conferences)
-            {
-                ColibriConferenceIQ conferenceIQ = new ColibriConferenceIQ();
-
-                conferenceIQ.setID(conference.getID());
-                conferenceIQs.add(conferenceIQ);
-            }
-
-            JSONArray conferencesJSONArray
-                = JSONSerializer.serializeConferences(conferenceIQs);
-
-            if (conferencesJSONArray == null)
-                conferencesJSONArray = new JSONArray();
-
-            response.setStatus(HttpServletResponse.SC_OK);
-            conferencesJSONArray.writeJSONString(response.getWriter());
-        }
-    }
-
-    /**
-     * Retrieves a JSON representation of the
-     * <tt>DominantSpeakerIdentification</tt> of a specific <tt>Conference</tt>.
-     *
-     * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
-     * @throws IOException
-     * @throws ServletException
-     */
-    private void doGetDominantSpeakerIdentificationJSON(
-            Conference conference,
-            Request baseRequest,
-            HttpServletRequest request,
-            HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
-        ConferenceSpeechActivity conferenceSpeechActivity
-            = conference.getSpeechActivity();
-
-        if (conferenceSpeechActivity == null)
-        {
-            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-        }
-        else
-        {
-            JSONObject jsonObject
-                = conferenceSpeechActivity
-                    .doGetDominantSpeakerIdentificationJSON();
-
-            if (jsonObject != null)
-            {
-                response.setStatus(HttpServletResponse.SC_OK);
-                jsonObject.writeJSONString(response.getWriter());
-            }
-        }
     }
 
     /**
@@ -765,26 +584,22 @@ class HandlerImpl
             return;
         }
 
+        String requestMethod = request.getMethod();
         if (target == null)
         {
             // TODO Auto-generated method stub
         }
-        else if (target.startsWith(CONFERENCES))
+        else if (target.startsWith(CONFERENCES) &&
+            (POST_HTTP_METHOD.equals(requestMethod) || PATCH_HTTP_METHOD.equals(requestMethod)))
         {
             target = target.substring(CONFERENCES.length());
             if (target.startsWith("/"))
                 target = target.substring(1);
 
-            String requestMethod = request.getMethod();
 
             if ("".equals(target))
             {
-                if (GET_HTTP_METHOD.equals(requestMethod))
-                {
-                    // List the Conferences of Videobridge.
-                    doGetConferencesJSON(baseRequest, request, response);
-                }
-                else if (POST_HTTP_METHOD.equals(requestMethod))
+                if (POST_HTTP_METHOD.equals(requestMethod))
                 {
                     // Create a new Conference in Videobridge.
                     doPostConferencesJSON(baseRequest, request, response);
@@ -797,18 +612,7 @@ class HandlerImpl
             }
             else
             {
-                // The target at this point of the execution is reduced to a
-                // String which starts with a Conference ID.
-                if (GET_HTTP_METHOD.equals(requestMethod))
-                {
-                    // Retrieve a representation of a Conference of Videobridge.
-                    doGetConferenceJSON(
-                        target,
-                        baseRequest,
-                        request,
-                        response);
-                }
-                else if (PATCH_HTTP_METHOD.equals(requestMethod))
+                if (PATCH_HTTP_METHOD.equals(requestMethod))
                 {
                     // Modify a Conference of Videobridge.
                     doPatchConferenceJSON(

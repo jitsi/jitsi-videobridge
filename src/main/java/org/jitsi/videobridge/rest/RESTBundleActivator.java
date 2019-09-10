@@ -23,6 +23,7 @@ import org.glassfish.jersey.servlet.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.about.version.*;
+import org.jitsi.videobridge.rest.conferences.*;
 import org.jitsi.videobridge.rest.debug.*;
 import org.jitsi.videobridge.rest.about.health.*;
 import org.jitsi.videobridge.rest.mucclient.*;
@@ -139,6 +140,10 @@ public class RESTBundleActivator
         {
             ServletContextHandler colibriContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
             colibriContextHandler.setContextPath("/colibri");
+
+            ConferencesApp conferencesHandler = new ConferencesApp(videobridgeProvider);
+            ServletHolder conferencesServletHolder = new ServletHolder(new ServletContainer(conferencesHandler));
+            colibriContextHandler.addServlet(conferencesServletHolder, "/conferences/*");
 
             DebugApp debugHandler = new DebugApp(videobridgeProvider);
             ServletHolder debugServletHolder = new ServletHolder(new ServletContainer(debugHandler));
