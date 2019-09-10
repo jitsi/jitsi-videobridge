@@ -17,8 +17,10 @@
 package org.jitsi.videobridge.rest.shutdown;
 
 import com.fasterxml.jackson.annotation.*;
+import org.eclipse.jetty.http.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
+import org.jivesoftware.smack.packet.*;
 import org.jxmpp.jid.impl.*;
 import org.jxmpp.stringprep.*;
 
@@ -47,9 +49,21 @@ public class Shutdown
             ipAddress = request.getRemoteAddr();
         }
         shutdownIq.setFrom(JidCreate.from(ipAddress));
-        videobridgeProvider.get().handleShutdownIQ(shutdownIq);
-
-        return Response.ok().build();
+        IQ responseIq = videobridgeProvider.get().handleShutdownIQ(shutdownIq);
+        if (IQ.Type.result.equals(responseIq.getType()))
+        {
+            return Response.ok().build();
+        }
+        XMPPError.Condition condition = responseIq.getError().getCondition();
+        if (XMPPError.Condition.not_authorized.equals(condition))
+        {
+            return Response.status(HttpStatus.UNAUTHORIZED_401).build();
+        }
+        else if (XMPPError.Condition.service_unavailable.equals(condition))
+        {
+            return Response.status(HttpStatus.SERVICE_UNAVAILABLE_503).build();
+        }
+        return Response.status(HttpStatus.INTERNAL_SERVER_ERROR_500).build();
     }
 
     /**
