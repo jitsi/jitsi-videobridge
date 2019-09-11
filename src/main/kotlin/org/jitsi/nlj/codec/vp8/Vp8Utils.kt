@@ -17,8 +17,8 @@
 package org.jitsi.nlj.codec.vp8
 
 import java.nio.ByteBuffer
-import org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi_modified.impl.neomedia.codec.video.vp8.DePacketizer
 
 class Vp8Utils {
     companion object {
