@@ -38,6 +38,19 @@ class RtpUtilsTest : ShouldSpec() {
                 }
             }
         }
+        "applySequenceNumberDelta" {
+            should("work correctly") {
+                forall(
+                        row(10, -9, 1),
+                        row(1, 9, 10),
+                        row(65530, 7, 1),
+                        row(1, -7, 65530),
+                        row(1234, 0, 1234)
+                ) { start, delta, expected ->
+                    RtpUtils.applySequenceNumberDelta(start, delta) shouldBe expected
+                }
+            }
+        }
         "isNewerThan" {
             should("work correctly") {
                 forall(

@@ -91,6 +91,18 @@ class RtpUtils {
             }
         }
 
+        /**
+         * Apply a delta to a given sequence number and return the result (taking
+         * rollover into account)
+         * @param startingSequenceNumber the starting sequence number
+         * @param delta the delta to be applied
+         * @return the sequence number result from doing
+         * startingSequenceNumber + delta
+         */
+        @JvmStatic
+        fun applySequenceNumberDelta(start: Int, delta: Int): Int =
+                (start + delta) and 0xffff
+
         @JvmStatic
         fun isNewerSequenceNumberThan(a: Int, b: Int): Boolean =
             getSequenceNumberDelta(a, b) > 0
