@@ -152,11 +152,12 @@ public class RESTBundleActivator
             handlers.add(colibriContextHandler);
         }
 
-        HealthApp healthHandler = new HealthApp(videobridgeProvider);
-        ServletHolder healthServletHolder = new ServletHolder(new ServletContainer(healthHandler));
         ServletContextHandler aboutContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
         aboutContextHandler.setContextPath("/about");
-        aboutContextHandler.addServlet(healthServletHolder, "/*");
+        
+        HealthApp healthHandler = new HealthApp(videobridgeProvider);
+        ServletHolder healthServletHolder = new ServletHolder(new ServletContainer(healthHandler));
+        aboutContextHandler.addServlet(healthServletHolder, "/health/*");
 
         handlers.add(aboutContextHandler);
 

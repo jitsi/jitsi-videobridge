@@ -22,7 +22,7 @@ import javax.servlet.http.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
-@Path("/health")
+@Path("/")
 public class Health
 {
     protected final VideobridgeProvider videobridgeProvider;
