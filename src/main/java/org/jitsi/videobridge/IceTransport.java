@@ -19,14 +19,13 @@ import java.beans.*;
 import java.io.*;
 import java.util.*;
 
-import net.java.sip.communicator.util.*;
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
 import org.jitsi.eventadmin.*;
+import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.transport.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -345,7 +344,7 @@ public class IceTransport
     private String getColibriWsUrl()
     {
         ColibriWebSocketService colibriWebSocketService
-            = ServiceUtils.getService(
+            = ServiceUtils2.getService(
                     bundleContext, ColibriWebSocketService.class);
         if (colibriWebSocketService != null)
         {

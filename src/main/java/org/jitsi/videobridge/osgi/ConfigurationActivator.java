@@ -48,7 +48,7 @@ public class ConfigurationActivator
         }
         else
         {
-            logger.warn("Failed to registed the Configuration service.");
+            logger.warn("Failed to register the Configuration service.");
         }
     }
 

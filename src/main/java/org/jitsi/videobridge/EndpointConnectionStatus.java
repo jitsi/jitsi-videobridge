@@ -15,10 +15,10 @@
  */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.util.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.shim.*;
 import org.osgi.framework.*;
 
@@ -32,9 +32,8 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  * the data channel.
  *
  * An endpoint's connectivity status is considered connected as long as there
- * is any traffic activity seen on any of it's channels as defined in
- * {@link Channel#lastTransportActivityTime}. When there is no activity for
- * longer than {@link #maxInactivityLimit} it will be assumed that
+ * is any traffic activity seen on any of its endpoints. When there is no
+ * activity for longer than {@link #maxInactivityLimit} it will be assumed that
  * the endpoint is having some connectivity issues. Those may be temporary or
  * permanent. When that happens there will be a Colibri message broadcast
  * to all conference endpoints. The Colibri class name of the message is defined
@@ -42,9 +41,6 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  * and it will contain "active" attribute set to "false". If those problems turn
  * out to be temporary and the traffic is restored another message is sent with
  * "active" set to "true".
- *
- * The module is started by OSGi as configured in
- * {@link org.jitsi.videobridge.osgi.JvbBundleConfig}
  *
  * @author Pawel Domas
  */
@@ -86,7 +82,7 @@ public class EndpointConnectionStatus
      * The logger instance used by this class.
      */
     private final static Logger logger
-        = Logger.getLogger(EndpointConnectionStatus.class);
+        = new LoggerImpl(EndpointConnectionStatus.class.getName());
 
     /**
      * How long it can take an endpoint to send first data, before it will
@@ -155,7 +151,7 @@ public class EndpointConnectionStatus
             logger.error("Endpoint connection monitoring is already running");
         }
 
-        ConfigurationService config = ServiceUtils.getService(
+        ConfigurationService config = ServiceUtils2.getService(
                 bundleContext, ConfigurationService.class);
 
         firstTransferTimeout = config.getLong(

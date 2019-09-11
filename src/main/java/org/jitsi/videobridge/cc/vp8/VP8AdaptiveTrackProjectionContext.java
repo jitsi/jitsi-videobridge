@@ -20,12 +20,10 @@ import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
-import org.jitsi.nlj.util.PacketCache;
+import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.util.*;
-import org.jitsi.util.*;
 import org.jitsi.utils.LRUCache;
-import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.*;
@@ -120,10 +118,10 @@ public class VP8AdaptiveTrackProjectionContext
         // Compute the starting sequence number and the timestamp of the initial
         // frame based on the RTP state.
         int startingSequenceNumber =
-            (rtpState.maxSequenceNumber + 1) & 0xffff;
+                RtpUtils.applySequenceNumberDelta(rtpState.maxSequenceNumber, 1);
 
         long timestamp =
-            (rtpState.maxTimestamp + 3000) & 0xffff_ffffL;
+                RtpUtils.applyTimestampDelta(rtpState.maxTimestamp, 3000);
 
         lastVP8FrameProjection = new VP8FrameProjection(diagnosticContext, logger,
             rtpState.ssrc, startingSequenceNumber, timestamp);
@@ -320,7 +318,7 @@ public class VP8AdaptiveTrackProjectionContext
                 = getMaxSequenceNumberOfFrame(ssrc, timestamp);
 
             if (previousMaxSequenceNumber != -1
-                && RTPUtils.isOlderSequenceNumberThan(
+                && RtpUtils.isOlderSequenceNumberThan(
                     previousMaxSequenceNumber, sequenceNumber))
             {
                 frameToMaxSequenceNumberMap.put(timestamp, sequenceNumber);
@@ -407,11 +405,11 @@ public class VP8AdaptiveTrackProjectionContext
         }
 
         long srcTs = rtcpSrPacket.getSenderInfo().getRtpTimestamp();
-        long delta = RtpUtils.Companion.getTimestampDiff(
+        long delta = RtpUtils.getTimestampDiff(
             lastVP8FrameProjectionCopy.getTimestamp(),
             lastVP8FrameProjectionCopy.getVP8Frame().getTimestamp());
 
-        long dstTs = (srcTs + delta) & 0xFFFF_FFFFL;
+        long dstTs = RtpUtils.applyTimestampDelta(srcTs, delta);
 
         if (srcTs != dstTs)
         {

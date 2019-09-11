@@ -15,8 +15,9 @@
  */
 package org.jitsi.videobridge.octo;
 
-import org.jitsi.util.*;
 import org.jitsi.utils.*;
+
+import static org.jitsi.utils.ByteArrayUtils.*;
 
 /**
  * A utility class which handles the on-the-wire Octo format. Octo encapsulates
@@ -119,7 +120,7 @@ class OctoPacket
     {
         assertMinLen(buf, off, len);
 
-        int cid = RTPUtils.readUint24AsInt(buf, off + 1);
+        int cid = readUint24(buf, off + 1);
         return Integer.toHexString(cid);
     }
 
@@ -173,7 +174,7 @@ class OctoPacket
     {
         assertMinLen(buf, off, len);
 
-        long eid = RTPUtils.readUint32AsLong(buf, off + 4);
+        long eid = readUint32(buf, off + 4);
         return String.format("%08x", eid);
     }
 
@@ -190,7 +191,7 @@ class OctoPacket
         assertMinLen(buf, off, len);
 
         int cid = Integer.parseInt(conferenceId, 16);
-        RTPUtils.writeUint24(buf, off + 1, cid);
+        writeUint24(buf, off + 1, cid);
     }
 
     /**
@@ -206,7 +207,7 @@ class OctoPacket
         assertMinLen(buf, off, len);
 
         long eid = Long.parseLong(endpointId, 16);
-        RTPUtils.writeInt(buf, off + 4, (int) eid);
+        writeInt(buf, off + 4, (int) eid);
     }
 
     /**

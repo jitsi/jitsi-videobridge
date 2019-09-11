@@ -16,31 +16,22 @@
 
 package org.jitsi.videobridge.xmpp;
 
-import org.easymock.*;
-import org.jitsi.service.configuration.*;
-import org.jitsi.service.libjitsi.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.junit.*;
 import org.junit.runner.*;
-import org.powermock.api.easymock.*;
-import org.powermock.core.classloader.annotations.*;
 import org.powermock.modules.junit4.*;
 import org.powermock.reflect.*;
 
 import java.util.*;
 
-import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 import static org.powermock.api.easymock.PowerMock.*;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest(LibJitsi.class)
 public class MediaStreamTrackFactoryTest
 {
-    private ConfigurationService mockConfigurationService;
-
     private SourceGroupPacketExtension createGroup(
         String semantics, SourcePacketExtension... sources)
     {
@@ -65,43 +56,6 @@ public class MediaStreamTrackFactoryTest
         return spe;
     }
 
-    private void setUpMockConfigurationService()
-    {
-        mockConfigurationService
-            = PowerMock.createMock(ConfigurationService.class);
-        expect(LibJitsi.getConfigurationService())
-            .andReturn(mockConfigurationService).anyTimes();
-
-        //Capture<Boolean> boolCapture = Capture.newInstance();
-        //expect(cs.getBoolean(
-        // EasyMock.anyString(), EasyMock.captureBoolean(boolCapture)))
-        // .andReturn(boolCapture.getValue());
-    }
-
-    private void useMockDefaults()
-    {
-        expect(mockConfigurationService.getBoolean(
-                EasyMock.anyString(), EasyMock.anyBoolean()))
-            .andAnswer(() -> (boolean)EasyMock.getCurrentArguments()[1])
-            .anyTimes();
-        expect(mockConfigurationService.getInt(
-                EasyMock.anyString(), EasyMock.anyInt()))
-            .andAnswer(() -> (int)EasyMock.getCurrentArguments()[1])
-            .anyTimes();
-    }
-
-    private void setUpMockConfigurationServiceAndUseDefaults()
-    {
-        setUpMockConfigurationService();
-        useMockDefaults();
-    }
-
-    @Before
-    public void setUp()
-    {
-        PowerMock.mockStatic(LibJitsi.class);
-    }
-
     @After
     public void tearDown()
     {
@@ -113,7 +67,6 @@ public class MediaStreamTrackFactoryTest
     public void createMediaStreamTrack()
         throws Exception
     {
-        setUpMockConfigurationServiceAndUseDefaults();
         replayAll();
 
         long videoSsrc = 12345;
@@ -136,7 +89,6 @@ public class MediaStreamTrackFactoryTest
         throws
         Exception
     {
-        setUpMockConfigurationServiceAndUseDefaults();
         replayAll();
 
         long videoSsrc = 12345;
@@ -165,7 +117,6 @@ public class MediaStreamTrackFactoryTest
         throws
         Exception
     {
-        setUpMockConfigurationServiceAndUseDefaults();
         replayAll();
 
         long videoSsrc1 = 12345;
@@ -216,7 +167,6 @@ public class MediaStreamTrackFactoryTest
         throws
         Exception
     {
-        setUpMockConfigurationServiceAndUseDefaults();
         replayAll();
 
         // Here we add an override for the config service for a specific setting
@@ -271,7 +221,6 @@ public class MediaStreamTrackFactoryTest
     public void createMediaStreamTracks4()
         throws Exception
     {
-        setUpMockConfigurationServiceAndUseDefaults();
         replayAll();
 
         Whitebox.setInternalState(
@@ -334,7 +283,6 @@ public class MediaStreamTrackFactoryTest
     @Test
     public void testEmptySimGroup()
     {
-        setUpMockConfigurationServiceAndUseDefaults();
         replayAll();
 
         long videoSsrc1 = 12345;
@@ -360,7 +308,6 @@ public class MediaStreamTrackFactoryTest
     @Test
     public void testEmptySource()
     {
-        setUpMockConfigurationServiceAndUseDefaults();
         replayAll();
 
         SourcePacketExtension videoSource1 = createSource(null);

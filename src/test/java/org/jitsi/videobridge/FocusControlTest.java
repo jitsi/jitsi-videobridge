@@ -15,8 +15,7 @@
  */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.util.*;
-
+import org.jitsi.utils.logging2.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.health.*;
 import org.jivesoftware.smack.packet.*;
@@ -45,6 +44,9 @@ public class FocusControlTest
     private static Videobridge bridge;
 
     private static OSGiHandler osgiHandler = new OSGiHandler();
+
+    private static Logger logger
+            = new LoggerImpl(FocusControlTest.class.getName());
 
     /**
      * Initializes OSGi and the videobridge.
@@ -85,7 +87,7 @@ public class FocusControlTest
     {
         IQ respIq = bridge.handleColibriConferenceIQ(confIq, processingOptions);
 
-        Logger.getLogger(FocusControlTest.class).info(respIq.toXML());
+        logger.info(respIq.toXML());
 
         assertNotNull(respIq);
         assertEquals(IQ.Type.error, respIq.getType());
@@ -99,7 +101,7 @@ public class FocusControlTest
     {
         IQ respIq = bridge.handleHealthCheckIQ(healthIq);
 
-        Logger.getLogger(FocusControlTest.class).info(respIq.toXML());
+        logger.info(respIq.toXML());
 
         assertNotNull(respIq);
         assertEquals(IQ.Type.error, respIq.getType());

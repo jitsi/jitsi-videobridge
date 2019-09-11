@@ -235,7 +235,6 @@ public class Conference
         this.includeInStatistics = enableLogging;
         this.name = name;
 
-
         lastKnownFocus = focus;
 
         speechActivity = new ConferenceSpeechActivity(this);

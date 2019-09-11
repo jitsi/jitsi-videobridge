@@ -128,7 +128,7 @@ public class Main
                 Boolean.toString(apis.contains(Videobridge.XMPP_API)));
 
         ComponentMain main = new ComponentMain();
-        JvbBundleConfig osgiBundles = new JvbBundleConfig();
+        BundleConfig osgiBundles = new BundleConfig();
 
         // Start Jitsi Videobridge as an external Jabber component.
         if (apis.contains(Videobridge.XMPP_API))

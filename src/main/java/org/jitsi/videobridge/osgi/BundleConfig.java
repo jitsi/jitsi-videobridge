@@ -18,14 +18,9 @@ package org.jitsi.videobridge.osgi;
 import java.util.*;
 import org.ice4j.*;
 import org.ice4j.ice.harvest.*;
-import org.jitsi.impl.neomedia.device.*;
-import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
-import org.jitsi.impl.neomedia.transform.csrc.*;
-import org.jitsi.impl.neomedia.transform.srtp.*;
 import org.jitsi.meet.*;
 import org.jitsi.stats.media.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.*;
 
 /**
  * OSGi bundles description for the Jitsi Videobridge.
@@ -34,7 +29,7 @@ import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.*;
  * @author Pawel Domas
  * @author George Politis
  */
-public class JvbBundleConfig
+public class BundleConfig
     extends OSGiBundleConfig
 {
     /**
@@ -88,13 +83,6 @@ public class JvbBundleConfig
     {
         return BUNDLES;
     }
-    /**
-     * The property name of the setting that enables/disables VP8 picture id
-     * rewriting.
-     */
-    //TODO(brian): moved this here when removing SimulcastController, find a home for it.
-    public static final String ENABLE_VP8_PICID_REWRITING_PNAME
-            = "org.jitsi.videobridge.ENABLE_VP8_PICID_REWRITING";
 
     @Override
     public Map<String, String> getSystemPropertyDefaults()
@@ -103,24 +91,9 @@ public class JvbBundleConfig
         Map<String, String> defaults = super.getSystemPropertyDefaults();
 
         String true_ = Boolean.toString(true);
-        String false_ = Boolean.toString(false);
-
-        // It makes no sense for Jitsi Videobridge to pace its RTP output.
-        defaults.put(
-                DeviceConfiguration.PROP_VIDEO_RTP_PACING_THRESHOLD,
-                Integer.toString(Integer.MAX_VALUE));
-
-        // XXX Explicitly support Jitsi Meet by default because is is the
-        // primary use case of Jitsi Videobridge right now.
-        defaults.put(
-                SsrcTransformEngine
-                    .DROP_MUTED_AUDIO_SOURCE_IN_REVERSE_TRANSFORM,
-                true_);
-        defaults.put(SRTPCryptoContext.CHECK_REPLAY_PNAME, false_);
 
         // Sends "consent freshness" check every 3 seconds
-        defaults.put(
-                StackProperties.CONSENT_FRESHNESS_INTERVAL, "3000");
+        defaults.put(StackProperties.CONSENT_FRESHNESS_INTERVAL, "3000");
         // Retry every 500ms by setting original and max wait intervals
         defaults.put(
                 StackProperties.CONSENT_FRESHNESS_ORIGINAL_WAIT_INTERVAL,
@@ -141,14 +114,8 @@ public class JvbBundleConfig
         // single-port mode to be 10MB.
         defaults.put(AbstractUdpListener.SO_RCVBUF_PNAME, "10485760");
 
-        // Configure the starting send bitrate to be 2.5Mbps.
-        defaults.put(BandwidthEstimatorImpl.START_BITRATE_BPS_PNAME, "2500000");
-
         // Enable VP8 temporal scalability filtering by default.
         defaults.put(MediaStreamTrackFactory.ENABLE_SVC_PNAME, true_);
-
-        // Enable AST RBE by default.
-        defaults.put(RemoteBitrateEstimatorWrapper.ENABLE_AST_RBE_PNAME, true_);
 
         // make sure we use the properties files for configuration
         defaults.put(

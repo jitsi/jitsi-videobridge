@@ -16,14 +16,13 @@
 package org.jitsi.videobridge.cc;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.nlj.util.PacketCache;
+import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.util.*;
+import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
 /**
@@ -200,8 +199,10 @@ class GenericAdaptiveTrackProjectionContext
                 // "destination = source + delta".
                 int destinationSequenceNumber
                     = maxDestinationSequenceNumber + 1;
-                sequenceNumberDelta = RTPUtils.getSequenceNumberDelta(
-                    destinationSequenceNumber, sourceSequenceNumber);
+                sequenceNumberDelta
+                    = RtpUtils.getSequenceNumberDelta(
+                            destinationSequenceNumber,
+                            sourceSequenceNumber);
 
                 logger.debug(() -> "delta ssrc=" + rtpPacket.getSsrc()
                     + ",src_sequence=" + sourceSequenceNumber
@@ -226,18 +227,20 @@ class GenericAdaptiveTrackProjectionContext
             maybeInitializeTimestampDelta(rtpPacket.getTimestamp());
 
             int destinationSequenceNumber
-                = computeDestinationSequenceNumber(sourceSequenceNumber);
+                = RtpUtils.applySequenceNumberDelta(
+                        sourceSequenceNumber, sequenceNumberDelta);
 
             long destinationTimestamp
-                = computeDestinationTimestamp(rtpPacket.getTimestamp());
+                = RtpUtils.applyTimestampDelta(
+                        rtpPacket.getTimestamp(), timestampDelta);
 
-            if (RTPUtils.isOlderSequenceNumberThan(
+            if (RtpUtils.isOlderSequenceNumberThan(
                 maxDestinationSequenceNumber, destinationSequenceNumber))
             {
                 maxDestinationSequenceNumber = destinationSequenceNumber;
             }
 
-            if (RTPUtils.isNewerTimestampThan(
+            if (RtpUtils.isNewerTimestampThan(
                 destinationSequenceNumber, maxDestinationTimestamp))
             {
                 maxDestinationTimestamp = destinationTimestamp;
@@ -269,14 +272,15 @@ class GenericAdaptiveTrackProjectionContext
             return;
         }
 
-        if (RTPUtils.isNewerTimestampThan(
+        if (RtpUtils.isNewerTimestampThan(
             maxDestinationSequenceNumber, sourceTimestamp))
         {
             long destinationTimestamp =
-                (maxDestinationTimestamp + 3000) & RawPacket.TIMESTAMP_MASK;
+                    RtpUtils.applyTimestampDelta(maxDestinationTimestamp, 3000);
 
             timestampDelta
-                = RTPUtils.rtpTimestampDiff(destinationTimestamp, sourceTimestamp);
+                = RtpUtils.getTimestampDiff(
+                        destinationTimestamp, sourceTimestamp);
         }
 
         timestampDeltaInitialized = true;
@@ -308,7 +312,8 @@ class GenericAdaptiveTrackProjectionContext
     {
         int sourceSequenceNumber = rtpPacket.getSequenceNumber();
         int destinationSequenceNumber
-            = computeDestinationSequenceNumber(sourceSequenceNumber);
+            = RtpUtils.applySequenceNumberDelta(
+                    sourceSequenceNumber, sequenceNumberDelta);
 
         if (sourceSequenceNumber != destinationSequenceNumber)
         {
@@ -317,7 +322,7 @@ class GenericAdaptiveTrackProjectionContext
 
         long sourceTimestamp = rtpPacket.getTimestamp();
         long destinationTimestamp
-            = computeDestinationTimestamp(sourceTimestamp);
+            = RtpUtils.applyTimestampDelta(sourceTimestamp, timestampDelta);
 
         if (sourceTimestamp != destinationTimestamp)
         {
@@ -330,26 +335,6 @@ class GenericAdaptiveTrackProjectionContext
             + ",max_sequence=" + maxDestinationSequenceNumber);
 
         return EMPTY_PACKET_ARR;
-    }
-
-    /**
-     * TODO
-     */
-    private int computeDestinationSequenceNumber(int sourceSequenceNumber)
-    {
-        return sequenceNumberDelta != 0
-            ? (sourceSequenceNumber + sequenceNumberDelta)
-            & RawPacket.SEQUENCE_NUMBER_MASK : sourceSequenceNumber;
-    }
-
-    /**
-     * TODO
-     */
-    private long computeDestinationTimestamp(long sourceTimestamp)
-    {
-        return timestampDelta != 0
-            ? (sourceTimestamp + timestampDelta) & RawPacket.TIMESTAMP_MASK
-            : sourceTimestamp;
     }
 
     /**
