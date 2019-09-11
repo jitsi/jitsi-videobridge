@@ -16,12 +16,12 @@
 
 package org.jitsi.nlj.rtp.codec.vp8
 
-import org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer
 import org.jitsi.nlj.codec.vp8.Vp8Utils
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.cwarn
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
+import org.jitsi_modified.impl.neomedia.codec.video.vp8.DePacketizer
 
 class Vp8Packet(
     data: ByteArray,
