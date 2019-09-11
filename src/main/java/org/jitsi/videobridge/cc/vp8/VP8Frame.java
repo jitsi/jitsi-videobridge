@@ -16,9 +16,9 @@
 package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
-import org.jitsi_modified.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.util.*;
+import org.jitsi_modified.impl.neomedia.codec.video.vp8.*;
 
 /**
  * Groups together some RTP/VP8 fields that refer to a specific incoming VP8
