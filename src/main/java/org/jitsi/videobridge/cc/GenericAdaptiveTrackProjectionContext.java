@@ -73,17 +73,17 @@ class GenericAdaptiveTrackProjectionContext
 
         if (payloadType instanceof Vp8PayloadType)
         {
-            return org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer
+            return org.jitsi_modified.impl.neomedia.codec.video.vp8.DePacketizer
                     .isKeyFrame(buf, payloadOff, payloadLen);
         }
         else if (payloadType instanceof H264PayloadType)
         {
-            return org.jitsi.impl.neomedia.codec.video.h264.DePacketizer
+            return org.jitsi_modified.impl.neomedia.codec.video.h264.DePacketizer
                     .isKeyFrame(buf, payloadOff, payloadLen);
         }
         else if (payloadType instanceof Vp9PayloadType)
         {
-            return org.jitsi.impl.neomedia.codec.video.vp9.DePacketizer
+            return org.jitsi_modified.impl.neomedia.codec.video.vp9.DePacketizer
                     .isKeyFrame(buf, payloadOff, payloadLen);
         }
         else
