@@ -981,21 +981,5 @@ class HandlerImpl
                 endResponse(target, baseRequest, request, response);
             }
         }
-        else
-        {
-            // Initially, we had VERSION_TARGET equal to /version. But such an
-            // HTTP resource could be rewritten by Meet. In order to decrease
-            // the risk of rewriting, we moved the VERSION_TARGET to
-            // /about/version. For the sake of compatibility though, we are
-            // preserving /version.
-            String versionTarget = "/version";
-
-            if (versionTarget.equals(target))
-            {
-                target = target.substring(versionTarget.length());
-
-                handleVersionJSON(target, baseRequest, request, response);
-            }
-        }
     }
 }
