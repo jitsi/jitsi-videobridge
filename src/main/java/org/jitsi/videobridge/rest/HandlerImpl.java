@@ -940,10 +940,9 @@ class HandlerImpl
         throws IOException,
                ServletException
     {
-        super.handleJSON(target, baseRequest, request, response);
-
-        if (baseRequest.isHandled())
-            return; // The super implementation has handled the request.
+        // NOTE(brian): we intentionally no longer call the parent handleJSON here, as
+        // all of the endpoints it was handling (health and version) are now replaced
+        // by logic here in the bridge
 
         // The target starts with "/colibri/".
         if (target.startsWith(COLIBRI_TARGET))
