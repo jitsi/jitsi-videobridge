@@ -359,11 +359,8 @@ public class VP8FrameProjection
         long vp8FrameSSRC = vp8Frame.getSSRCAsLong();
 
         List<Vp8Packet> piggyBackedPackets = new ArrayList<>();
-        int len
-                = RtpUtils.getSequenceNumberDelta(
-                        piggyBackUntilSequenceNumber,
-                        originalSequenceNumber)
-                    + 1;
+        int len = RtpUtils.getSequenceNumberDelta(
+            piggyBackUntilSequenceNumber, originalSequenceNumber) + 1;
 
         if (logger.isDebugEnabled())
         {

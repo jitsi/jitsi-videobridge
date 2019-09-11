@@ -300,8 +300,7 @@ class VP8Frame
             return false;
         }
 
-        return RtpUtils.Companion
-                .getTimestampDiff(pkt.getTimestamp(), timestamp) < 0;
+        return RtpUtils.getTimestampDiff(pkt.getTimestamp(), timestamp) < 0;
     }
 
     /**
