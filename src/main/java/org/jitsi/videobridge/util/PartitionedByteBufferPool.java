@@ -17,7 +17,7 @@
 package org.jitsi.videobridge.util;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.stats.*;
 import org.json.simple.*;
 
@@ -53,8 +53,7 @@ class PartitionedByteBufferPool
     /**
      * The {@link Logger}
      */
-    private static final Logger logger
-            = Logger.getLogger(PartitionedByteBufferPool.class);
+    private static final Logger logger = new LoggerImpl(PartitionedByteBufferPool.class.getName());
 
     /**
      * Used to select a partition at random.

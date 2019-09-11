@@ -26,7 +26,7 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.utils.*;
-import org.jitsi.utils.logging.Logger;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.Version;
 import org.jitsi.videobridge.health.*;
@@ -53,6 +53,7 @@ import org.osgi.framework.*;
 
 import java.util.*;
 import java.util.concurrent.atomic.*;
+import java.util.function.*;
 import java.util.regex.*;
 
 /**
@@ -81,7 +82,7 @@ public class Videobridge
      * The <tt>Logger</tt> used by the <tt>Videobridge</tt> class and its
      * instances to print debug information.
      */
-    private static final Logger logger = Logger.getLogger(Videobridge.class);
+    private static final Logger logger = new LoggerImpl(Videobridge.class.getName());
 
     /**
      * The optional flag which specifies to
@@ -250,30 +251,17 @@ public class Videobridge
     }
 
     /**
-     * Initializes a new {@link Conference} instance with an ID unique to the
-     * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt> and
-     * adds the new instance to the list of existing <tt>Conference</tt>
-     * instances. Optionally the new instance is owned by a specific conference
-     * focus i.e. further/future requests to manage the new instance must come
-     * from the specified <tt>focus</tt> or they will be ignored. If the focus
-     * is not specified this safety check is overridden.
-     *
-     * @param focus (optional) a <tt>String</tt> which specifies the JID of
-     * the conference focus which will own the new instance i.e. from whom
-     * further/future requests to manage the new instance must come or they will
-     * be ignored. Pass <tt>null</tt> to override this safety check.
-     * @param name world readable name of the conference to create.
-     * @param enableLogging whether logging should be enabled or disabled for
-     * the {@link Conference}.
-     * @param gid the optional "global" id of the conference.
-     * @return a new <tt>Conference</tt> instance with an ID unique to the
-     * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
+     * Generate conference IDs until one is found that isn't in use and create a new {@link Conference}
+     * object using that ID
+     * @param focus
+     * @param name
+     * @param enableLogging
+     * @param gid
+     * @return
      */
-    public Conference createConference(
-            Jid focus, Localpart name, boolean enableLogging, String gid)
+    private Conference doCreateConference(Jid focus, Localpart name, boolean enableLogging, String gid)
     {
         Conference conference = null;
-
         do
         {
             String id = generateConferenceID();
@@ -296,15 +284,40 @@ public class Videobridge
         }
         while (conference == null);
 
+        return conference;
+    }
+
+    /**
+     * Initializes a new {@link Conference} instance with an ID unique to the
+     * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt> and
+     * adds the new instance to the list of existing <tt>Conference</tt>
+     * instances. Optionally the new instance is owned by a specific conference
+     * focus i.e. further/future requests to manage the new instance must come
+     * from the specified <tt>focus</tt> or they will be ignored. If the focus
+     * is not specified this safety check is overridden.
+     *
+     * @param focus (optional) a <tt>String</tt> which specifies the JID of
+     * the conference focus which will own the new instance i.e. from whom
+     * further/future requests to manage the new instance must come or they will
+     * be ignored. Pass <tt>null</tt> to override this safety check.
+     * @param name world readable name of the conference to create.
+     * @param enableLogging whether logging should be enabled or disabled for
+     * the {@link Conference}.
+     * @param gid the optional "global" id of the conference.
+     * @return a new <tt>Conference</tt> instance with an ID unique to the
+     * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
+     */
+    public Conference createConference(
+            Jid focus, Localpart name, boolean enableLogging, String gid)
+    {
+        final Conference conference = doCreateConference(focus, name, enableLogging, gid);
+
         // The method Videobridge.getConferenceCountString() should better
         // be executed outside synchronized blocks in order to reduce the
         // risks of causing deadlocks.
-        if (logger.isInfoEnabled())
-        {
-            logger.info("create_conf, id=" + conference.getID()
-                    + " gid=" + conference.getGid()
-                    + " logging=" + enableLogging);
-        }
+        logger.info(() -> "create_conf, id=" + conference.getID()
+                + " gid=" + conference.getGid()
+                + " logging=" + enableLogging);
 
         return conference;
     }
@@ -851,12 +864,8 @@ public class Videobridge
             = (cfg == null)
                 ? 0
                 : cfg.getInt(DEFAULT_OPTIONS_PROPERTY_NAME, 0);
-        if (logger.isDebugEnabled())
-        {
-            logger.debug(
-                    "Default videobridge processing options: 0x"
-                        + Integer.toHexString(defaultProcessingOptions));
-        }
+        logger.debug(() -> "Default videobridge processing options: 0x"
+                    + Integer.toHexString(defaultProcessingOptions));
 
         String shutdownSourcesRegexp
             = (cfg == null)

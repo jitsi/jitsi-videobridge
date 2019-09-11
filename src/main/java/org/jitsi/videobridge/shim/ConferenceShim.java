@@ -19,7 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.util.*;
@@ -43,7 +43,7 @@ public class ConferenceShim
      * The {@link Logger} used by the {@link ConferenceShim} class to print
      * debug information.
      */
-    private static final Logger logger = Logger.getLogger(ConferenceShim.class);
+    private final Logger logger;
 
     /**
      * The corresponding {@link Conference}.
@@ -60,8 +60,9 @@ public class ConferenceShim
      *
      * @param conference the corresponding conference.
      */
-    public ConferenceShim(Conference conference)
+    public ConferenceShim(Conference conference, Logger parentLogger)
     {
+        this.logger = parentLogger.createChildLogger(ConferenceShim.class.getName());
         this.conference = conference;
     }
 
@@ -77,7 +78,7 @@ public class ConferenceShim
         synchronized (contents)
         {
             return contents.computeIfAbsent(type,
-                    key -> new ContentShim(getConference(), type));
+                    key -> new ContentShim(getConference(), type, logger));
         }
     }
 

@@ -24,6 +24,8 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
@@ -212,7 +214,7 @@ public class BitrateController
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
-    private final Logger logger = Logger.getLogger(BitrateController.class);
+    private final Logger logger;
 
     /**
      * The {@link TimeSeriesLogger} to be used by this instance to print time
@@ -333,10 +335,13 @@ public class BitrateController
      */
     public BitrateController(
             Endpoint destinationEndpoint,
-            @NotNull DiagnosticContext diagnosticContext)
+            @NotNull DiagnosticContext diagnosticContext,
+            Logger parentLogger
+    )
     {
         this.destinationEndpoint = destinationEndpoint;
         this.diagnosticContext = diagnosticContext;
+        this.logger = parentLogger.createChildLogger(BitrateController.class.getName());
 
         ConfigurationService cfg = LibJitsi.getConfigurationService();
 
@@ -615,7 +620,7 @@ public class BitrateController
 
         if (!changeIsLargerThanThreshold(lastBwe, newBandwidthBps))
         {
-            logger.debug("New bandwidth (" + newBandwidthBps
+            logger.debug(() -> "New bandwidth (" + newBandwidthBps
                 + ") is not significantly " +
                 "changed from previous estimate (" + lastBwe + "), ignoring");
             // If this is a "negligible" change in the bandwidth estimation
@@ -627,11 +632,7 @@ public class BitrateController
         }
         else
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug(destinationEndpoint.getID() +
-                        " bandwidth has changed, updating");
-            }
+            logger.debug(() -> "bandwidth has changed, updating");
 
             lastBwe = newBandwidthBps;
             update();
@@ -651,12 +652,7 @@ public class BitrateController
      */
     public void endpointOrderingChanged(List<String> conferenceEndpoints)
     {
-        if (logger.isDebugEnabled())
-        {
-            logger.debug(
-                destinationEndpoint.getID()
-                        + " endpoint ordering has changed, updating");
-        }
+        logger.debug(() -> " endpoint ordering has changed, updating");
 
         sortedEndpointIds = conferenceEndpoints;
         update();
@@ -867,18 +863,15 @@ public class BitrateController
                     trackBitrateAllocation.track, () ->
                         destinationEndpoint.getConference().requestKeyframe(
                             trackBitrateAllocation.endpointID,
-                            trackBitrateAllocation.targetSSRC));
+                            trackBitrateAllocation.targetSSRC),
+                    logger);
 
             for (PayloadType payloadType : payloadTypes.values())
             {
                 adaptiveTrackProjection.addPayloadType(payloadType);
             }
 
-            if (logger.isDebugEnabled())
-            {
-                logger.debug(
-                    "new track projection for " + trackBitrateAllocation.track);
-            }
+            logger.debug(() -> "new track projection for " + trackBitrateAllocation.track);
 
             // Route all encodings to the specified bitrate controller.
             for (RTPEncodingDesc rtpEncoding : rtpEncodings)
@@ -1147,11 +1140,8 @@ public class BitrateController
         {
             this.maxRxFrameHeightPx = maxRxFrameHeightPx;
 
-            if (logger.isDebugEnabled())
-            {
-                logger.debug(destinationEndpoint.getID() + " setting max receive frame height to " +
-                        + maxRxFrameHeightPx + "px, updating");
-            }
+            logger.debug(() -> "setting max receive frame height to " +
+                    + maxRxFrameHeightPx + "px, updating");
 
             update();
         }
@@ -1196,10 +1186,7 @@ public class BitrateController
         if (this.lastN != lastN) {
             this.lastN = lastN;
 
-            if (logger.isDebugEnabled())
-            {
-                logger.debug(destinationEndpoint.getID() + " lastN has changed, updating");
-            }
+            logger.debug(() -> destinationEndpoint.getID() + " lastN has changed, updating");
 
             update();
         }

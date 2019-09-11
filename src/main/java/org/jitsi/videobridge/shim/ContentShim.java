@@ -16,6 +16,8 @@
 package org.jitsi.videobridge.shim;
 
 import org.jitsi.utils.*;
+import org.jitsi.utils.collections.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
@@ -43,6 +45,11 @@ public class ContentShim
             Long.toHexString(
                 System.currentTimeMillis() + Videobridge.RANDOM.nextLong());
     }
+
+    /**
+     * The {@link Logger}
+     */
+    private final Logger logger;
 
     /**
      * The media type of this content.
@@ -73,10 +80,14 @@ public class ContentShim
      * @param conference the parent conference.
      * @param mediaType the media type (audio/video).
      */
-    public ContentShim(Conference conference, MediaType mediaType)
+    public ContentShim(Conference conference, MediaType mediaType, Logger parentLogger)
     {
         this.mediaType = mediaType;
         this.conference = conference;
+        this.logger = parentLogger.createChildLogger(
+                ContentShim.class.getName(),
+                JMap.of("type", mediaType.toString())
+        );
     }
 
     /**
@@ -117,12 +128,13 @@ public class ContentShim
         {
             String channelId = generateUniqueChannelID();
 
-            ChannelShim channelShim
-                = new ChannelShim(
-                    channelId,
-                    conference.getOrCreateLocalEndpoint(endpointId),
-                    localSsrc,
-                    this);
+            ChannelShim channelShim = new ChannelShim(
+                channelId,
+                conference.getOrCreateLocalEndpoint(endpointId),
+                localSsrc,
+                this,
+                logger
+            );
             channelShim.getEndpoint().setLocalSsrc(mediaType, localSsrc);
             channels.put(channelId, channelShim);
             return channelShim;
@@ -146,7 +158,7 @@ public class ContentShim
             {
                 String sctpConnId = generateUniqueChannelID();
                 SctpConnectionShim connection
-                        = new SctpConnectionShim(sctpConnId, endpoint, this);
+                        = new SctpConnectionShim(sctpConnId, endpoint, this, logger);
                 channels.put(sctpConnId, connection);
 
                 // Trigger the creation of the actual new SCTP connection

@@ -22,6 +22,7 @@ import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.Logger;
 
 import java.util.*;
 
@@ -39,8 +40,12 @@ public class VP8FrameProjection
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
-    private static final Logger
-        logger = Logger.getLogger(VP8FrameProjection.class);
+    private final Logger logger;
+
+    /**
+     * The parent logger, so we can pass it to new instances of {@link VP8FrameProjection}
+     */
+    private final Logger parentLogger;
 
     /**
      * The time series logger for this instance.
@@ -129,9 +134,10 @@ public class VP8FrameProjection
      */
     VP8FrameProjection(
         @NotNull DiagnosticContext diagnosticContext,
+        @NotNull Logger parentLogger,
         long ssrc, int startingSequenceNumber, long timestamp)
     {
-        this(diagnosticContext, null /* vp8Frame */, ssrc, timestamp,
+        this(diagnosticContext, parentLogger, null /* vp8Frame */, ssrc, timestamp,
             startingSequenceNumber, 0 /* extendedPictureId */,
             0 /* tl0PICIDX */, 0 /* createdMs */);
     }
@@ -153,11 +159,14 @@ public class VP8FrameProjection
      */
     private VP8FrameProjection(
         @NotNull DiagnosticContext diagnosticContext,
+        @NotNull Logger parentLogger,
         VP8Frame vp8Frame,
         long ssrc, long timestamp, int startingSequenceNumber,
         int extendedPictureId, int tl0PICIDX, long createdMs)
     {
         this.diagnosticContext = diagnosticContext;
+        this.parentLogger = parentLogger;
+        this.logger = parentLogger.createChildLogger(VP8FrameProjection.class.getName());
         this.ssrc = ssrc;
         this.timestamp = timestamp;
         this.startingSequenceNumber = startingSequenceNumber;
@@ -200,7 +209,7 @@ public class VP8FrameProjection
             if (nextVP8Frame.isKeyframe())
             {
                 close();
-                return new VP8FrameProjection(diagnosticContext,
+                return new VP8FrameProjection(diagnosticContext, parentLogger,
                     nextVP8Frame, ssrc, timestamp,
                     startingSequenceNumber, extendedPictureId, tl0PICIDX,
                     nowMs);
@@ -222,7 +231,7 @@ public class VP8FrameProjection
             // can be updated from other threads and the isLast field can be
             // read by other threads.
             close();
-            return new VP8FrameProjection(diagnosticContext,
+            return new VP8FrameProjection(diagnosticContext, parentLogger,
                 nextVP8Frame, ssrc, nextTimestamp(nextVP8Frame, nowMs),
                 nextStartingSequenceNumber(), nextExtendedPictureId(),
                 nextTL0PICIDX(nextVP8Frame), nowMs);
@@ -362,12 +371,9 @@ public class VP8FrameProjection
         int len = RtpUtils.getSequenceNumberDelta(
             piggyBackUntilSequenceNumber, originalSequenceNumber) + 1;
 
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Piggybacking " + len + " missed packets from "
-                + originalSequenceNumber
-                + " until " + piggyBackUntilSequenceNumber);
-        }
+        logger.debug(() -> "Piggybacking " + len + " missed packets from "
+            + originalSequenceNumber
+            + " until " + piggyBackUntilSequenceNumber);
 
         for (int i = 0; i < len; i++)
         {
@@ -396,11 +402,8 @@ public class VP8FrameProjection
 
         if (piggyBackedPackets.size() > 0)
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Sending " + piggyBackedPackets.size()
-                        + " piggybacked packets");
-            }
+            logger.debug(() -> "Sending " + piggyBackedPackets.size()
+                    + " piggybacked packets");
             for (Vp8Packet pktOut : piggyBackedPackets)
             {
                 rewriteRtpInternal(pktOut);

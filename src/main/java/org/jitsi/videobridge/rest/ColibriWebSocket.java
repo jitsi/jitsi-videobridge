@@ -16,7 +16,7 @@
 package org.jitsi.videobridge.rest;
 
 import org.eclipse.jetty.websocket.api.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 
 import java.util.*;
@@ -29,8 +29,7 @@ public class ColibriWebSocket extends WebSocketAdapter
     /**
      * The logger instance used by this {@link ColibriWebSocket}.
      */
-    private static final Logger logger
-        = Logger.getLogger(ColibriWebSocket.class);
+    private static final Logger logger = new LoggerImpl(ColibriWebSocket.class.getName());
 
     /**
      * The {@link ColibriWebSocketServlet} which created this web socket.
@@ -60,11 +59,8 @@ public class ColibriWebSocket extends WebSocketAdapter
     @Override
     public void onWebSocketText(String message)
     {
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Received text from " + endpoint.getID() + ": "
-                             + message);
-        }
+        logger.debug(() -> "Received text from " + endpoint.getID() + ": "
+                + message);
         endpoint.onWebSocketText(this, message);
     }
 

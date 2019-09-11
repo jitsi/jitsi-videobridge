@@ -16,7 +16,7 @@
 
 package org.jitsi.videobridge.datachannel;
 
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 
 import java.nio.*;
@@ -37,16 +37,17 @@ public class DataChannelStack
 {
     private final Map<Integer, DataChannel> dataChannels = new HashMap<>();
     private final DataChannelDataSender dataChannelDataSender;
-    private final Logger logger = Logger.getLogger(this.getClass());
+    private final Logger logger;
     private DataChannelStackEventListener listener;
 
     /**
      * Initializes a new {@link DataChannelStack} with a specific sender.
      * @param dataChannelDataSender the sender.
      */
-    public DataChannelStack(DataChannelDataSender dataChannelDataSender)
+    public DataChannelStack(DataChannelDataSender dataChannelDataSender, Logger parentLogger)
     {
         this.dataChannelDataSender = dataChannelDataSender;
+        logger = parentLogger.createChildLogger(DataChannelStack.class.getName());
     }
 
     /**
@@ -54,10 +55,7 @@ public class DataChannelStack
      */
     public void onIncomingDataChannelPacket(ByteBuffer data, int sid, int ppid)
     {
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Data channel stack received SCTP message");
-        }
+        logger.debug(() -> "Data channel stack received SCTP message");
         DataChannelMessage message = DataChannelProtocolMessageParser.parse(data.array(), ppid);
         if (message instanceof OpenChannelMessage)
         {
@@ -66,6 +64,7 @@ public class DataChannelStack
             // Remote side wants to open a channel
             DataChannel dataChannel = new RemotelyOpenedDataChannel(
                     dataChannelDataSender,
+                    logger,
                     openChannelMessage.channelType,
                     openChannelMessage.priority,
                     openChannelMessage.reliability,
@@ -126,7 +125,8 @@ public class DataChannelStack
     public DataChannel createDataChannel(int channelType, int priority, long reliability, int sid, String label)
     {
         synchronized (dataChannels) {
-            DataChannel dataChannel = new DataChannel(dataChannelDataSender, channelType, priority, reliability, sid, label);
+            DataChannel dataChannel = new DataChannel(
+                    dataChannelDataSender, logger, channelType, priority, reliability, sid, label);
             dataChannels.put(sid, dataChannel);
             return dataChannel;
         }

@@ -17,7 +17,7 @@
 package org.jitsi.videobridge.sctp;
 
 import org.jitsi.nlj.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi_modified.sctp4j.*;
 
 /**
@@ -31,7 +31,7 @@ import org.jitsi_modified.sctp4j.*;
  * {@link SctpSocket} will receive it via the data callback.
  */
 public class SctpManager {
-    private static Logger logger = Logger.getLogger(SctpManager.class);
+    private final Logger logger;
     /**
      * The {@link SctpDataSender} is necessary from the start, as it's needed to send outgoing SCTP protocol packets
      * (e.g. used in the connection negotiation)
@@ -57,9 +57,10 @@ public class SctpManager {
      * @param dataSender a {@link SctpDataSender} which will be used when we need to send SCTP packets to the remote
      *                   peer
      */
-    public SctpManager(SctpDataSender dataSender)
+    public SctpManager(SctpDataSender dataSender, Logger parentLogger)
     {
         this.dataSender = dataSender;
+        this.logger = parentLogger.createChildLogger(SctpManager.class.getName());
     }
 
     /**
@@ -68,10 +69,7 @@ public class SctpManager {
      *                   application packet
      */
     public void handleIncomingSctp(PacketInfo sctpPacket) {
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("SCTP Socket " + socket.hashCode() + " receiving incoming SCTP data");
-        }
+        logger.debug(() -> "SCTP Socket " + socket.hashCode() + " receiving incoming SCTP data");
 //        ByteBuffer packetBuffer = sctpPacket.getPacket().getBuffer();
         socket.onConnIn(sctpPacket.getPacket().getBuffer(), sctpPacket.getPacket().getOffset(), sctpPacket.getPacket().getLength());
     }
@@ -84,10 +82,7 @@ public class SctpManager {
     {
         socket = Sctp4j.createServerSocket(DEFAULT_SCTP_PORT);
         socket.outgoingDataSender = this.dataSender;
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Created SCTP server socket " + socket.hashCode());
-        }
+        logger.debug(() -> "Created SCTP server socket " + socket.hashCode());
         return (SctpServerSocket)socket;
     }
 

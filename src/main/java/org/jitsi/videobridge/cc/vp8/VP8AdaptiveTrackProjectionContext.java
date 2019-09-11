@@ -23,8 +23,9 @@ import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.util.*;
-import org.jitsi.utils.*;
+import org.jitsi.utils.LRUCache;
 import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.*;
 import org.json.simple.*;
 
@@ -41,8 +42,7 @@ import java.util.concurrent.*;
 public class VP8AdaptiveTrackProjectionContext
     implements AdaptiveTrackProjectionContext
 {
-    private static final Logger logger
-            = Logger.getLogger(VP8AdaptiveTrackProjectionContext.class);
+    private final Logger logger;
     /**
      * A map of partially transmitted {@link VP8FrameProjection}s, i.e.
      * projections of VP8 frames for which we haven't transmitted all their
@@ -76,7 +76,7 @@ public class VP8AdaptiveTrackProjectionContext
      * The {@link VP8QualityFilter} instance that does quality filtering on the
      * incoming frames.
      */
-    private final VP8QualityFilter vp8QualityFilter = new VP8QualityFilter();
+    private final VP8QualityFilter vp8QualityFilter;
 
     /**
      * The diagnostic context of this instance.
@@ -107,10 +107,13 @@ public class VP8AdaptiveTrackProjectionContext
     public VP8AdaptiveTrackProjectionContext(
             @NotNull DiagnosticContext diagnosticContext,
             @NotNull PayloadType payloadType,
-            @NotNull RtpState rtpState)
+            @NotNull RtpState rtpState,
+            @NotNull Logger parentLogger)
     {
         this.diagnosticContext = diagnosticContext;
+        this.logger = parentLogger.createChildLogger(VP8AdaptiveTrackProjectionContext.class.getName());
         this.payloadType = payloadType;
+        this.vp8QualityFilter = new VP8QualityFilter(parentLogger);
 
         // Compute the starting sequence number and the timestamp of the initial
         // frame based on the RTP state.
@@ -120,7 +123,7 @@ public class VP8AdaptiveTrackProjectionContext
         long timestamp =
             (rtpState.maxTimestamp + 3000) & 0xffff_ffffL;
 
-        lastVP8FrameProjection = new VP8FrameProjection(diagnosticContext,
+        lastVP8FrameProjection = new VP8FrameProjection(diagnosticContext, logger,
             rtpState.ssrc, startingSequenceNumber, timestamp);
     }
 
@@ -333,16 +336,11 @@ public class VP8AdaptiveTrackProjectionContext
     @Override
     public boolean needsKeyframe()
     {
-        boolean loggerIsDebugEnabled = logger.isDebugEnabled();
-
         if (vp8QualityFilter.needsKeyframe())
         {
-            if (loggerIsDebugEnabled)
-            {
-                logger.debug(hashCode() + " quality filter "
+            logger.debug(() -> "quality filter "
                     + vp8QualityFilter.hashCode()
                     + " says vp8 track needs keyframe");
-            }
 
             return true;
         }
@@ -350,28 +348,16 @@ public class VP8AdaptiveTrackProjectionContext
         VP8Frame lastVP8Frame = lastVP8FrameProjection.getVP8Frame();
         if (lastVP8Frame == null)
         {
-            if (loggerIsDebugEnabled)
-            {
-                logger.debug(hashCode()
-                    + " track projection last frame is null, needs keyframe");
-            }
+            logger.debug(() -> " track projection last frame is null, needs keyframe");
         }
         else if (lastVP8Frame.needsKeyframe())
         {
-            if (loggerIsDebugEnabled)
-            {
-                logger.debug(hashCode()
-                    + " last vp8 frame says we need keyframe");
-            }
+            logger.debug(() -> " last vp8 frame says we need keyframe");
         }
         boolean result = lastVP8Frame == null || lastVP8Frame.needsKeyframe();
         if (result)
         {
-            if (loggerIsDebugEnabled)
-            {
-                logger.debug(hashCode()
-                    + " vp8 track projection does need keyframe");
-            }
+            logger.debug(() -> " vp8 track projection does need keyframe");
         }
         return result;
     }

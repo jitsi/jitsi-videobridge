@@ -25,7 +25,7 @@ import org.eclipse.jetty.server.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
@@ -206,23 +206,13 @@ class HandlerImpl
     /**
      * The logger instance used by REST handler.
      */
-    private static final Logger logger = Logger.getLogger(HandlerImpl.class);
-
-    /**
-     * The HTTP resource which is used to trigger graceful shutdown.
-     */
-    private static final String SHUTDOWN = "shutdown";
+    private static final Logger logger = new LoggerImpl(HandlerImpl.class.getName());
 
     /**
      * The HTTP resource which lists the JSON representation of the
      * <tt>VideobridgeStatistics</tt>s of <tt>Videobridge</tt>.
      */
     static final String STATISTICS = "stats";
-
-    /**
-     * The target for the colibri debug interface.
-     */
-    static final String DEBUG = "debug";
 
     /**
      * The HTTP resource which allows control of {@link ClientConnectionImpl}
@@ -241,13 +231,6 @@ class HandlerImpl
     }
 
     /**
-     * Indicates if graceful shutdown mode is enabled. If not then
-     * SC_SERVICE_UNAVAILABLE status will be returned for {@link #SHUTDOWN}
-     * requests.
-     */
-    private final boolean shutdownEnabled;
-
-    /**
      * Indicates if /colibri/* REST endpoints are enabled. If not then
      * SC_SERVICE_UNAVAILABLE status will be returned for
      * {@link #COLIBRI_TARGET} requests.
@@ -261,31 +244,23 @@ class HandlerImpl
             = new StatisticsRequestHandler(this);
 
     /**
-     * The handler for debug requests.
-     */
-    private final DebugRequestHandler debugRequestHandler
-            = new DebugRequestHandler(this);
-
-    /**
      * Initializes a new {@code HandlerImpl} instance within a specific
      * {@code BundleContext}.
      *
      * @param bundleContext the {@code BundleContext} within which the new
      * instance is to be initialized
      * @param enableShutdown {@code true} if graceful shutdown is to be
-     * enabled; otherwise, {@code false}
+     * enabled; otherwise, {@code false}.  This field is now deprecated, as this
+     * logic is handled by {@link org.jitsi.videobridge.rest.shutdown.ShutdownApp}.
      * @param enableColibri {@code true} if /colibri/* endpoints are to be
      * enabled; otherwise, {@code false}
      */
-    public HandlerImpl(BundleContext bundleContext, boolean enableShutdown,
-        boolean enableColibri)
+    public HandlerImpl(
+            BundleContext bundleContext,
+            @Deprecated boolean enableShutdown,
+            boolean enableColibri)
     {
         super(bundleContext);
-
-        shutdownEnabled = enableShutdown;
-
-        if (shutdownEnabled)
-            logger.info("Graceful shutdown over REST is enabled");
 
         colibriEnabled = enableColibri;
 
@@ -464,84 +439,6 @@ class HandlerImpl
                 jsonObject.writeJSONString(response.getWriter());
             }
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void doGetHealthJSON(
-            Request baseRequest,
-            HttpServletRequest request,
-            HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
-        beginResponse(/* target */ null, baseRequest, request, response);
-
-        Videobridge videobridge = getVideobridge();
-
-        if (videobridge == null)
-        {
-            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-        }
-        else
-        {
-            getHealthJSON(videobridge, baseRequest, request, response);
-        }
-
-        endResponse(/* target */ null, baseRequest, request, response);
-    }
-
-    /**
-     * Gets a JSON representation of the health (status) of a specific
-     * {@link Videobridge}.
-     *
-     * @param videobridge the {@code Videobridge} to get the health (status) of
-     * in the form of a JSON representation
-     * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
-     * @throws IOException
-     * @throws ServletException
-     */
-    public static void getHealthJSON(
-        Videobridge videobridge,
-        Request baseRequest,
-        HttpServletRequest request,
-        HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
-        int status;
-        String reason = null;
-
-        try
-        {
-            // Check if the videobridge is functional
-            videobridge.healthCheck();
-            status = HttpServletResponse.SC_OK;
-        }
-        catch (Exception ex)
-        {
-            if (ex instanceof IOException)
-                throw (IOException) ex;
-            else if (ex instanceof ServletException)
-                throw (ServletException) ex;
-            else
-            {
-                status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
-                reason = ex.getMessage();
-            }
-        }
-
-        if (reason != null)
-        {
-            response.getOutputStream().println(reason);
-        }
-        response.setStatus(status);
     }
 
     /**
@@ -834,91 +731,6 @@ class HandlerImpl
     }
 
     /**
-     * Handles a request for a shutdown
-     */
-    private void doPostShutdownJSON(Request baseRequest,
-                                    HttpServletRequest request,
-                                    HttpServletResponse response)
-        throws IOException
-    {
-        Videobridge videobridge = getVideobridge();
-
-        if (videobridge == null)
-        {
-            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-            return;
-        }
-
-        if (!RESTUtil.isJSONContentType(request.getContentType()))
-        {
-            response.setStatus(HttpServletResponse.SC_NOT_ACCEPTABLE);
-            return;
-        }
-
-        Object requestJSONObject;
-        int status;
-
-        try
-        {
-            requestJSONObject = new JSONParser().parse(request.getReader());
-            if ((requestJSONObject == null)
-                || !(requestJSONObject instanceof JSONObject))
-            {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                return;
-            }
-        }
-        catch (ParseException pe)
-        {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            return;
-        }
-
-        ShutdownIQ requestShutdownIQ
-            = JSONDeserializer.deserializeShutdownIQ(
-                    (JSONObject) requestJSONObject);
-
-        if ((requestShutdownIQ == null))
-        {
-            status = HttpServletResponse.SC_BAD_REQUEST;
-        }
-        else
-        {
-            // Fill source address
-            String ipAddress = request.getHeader("X-FORWARDED-FOR");
-            if (ipAddress == null)
-            {
-                ipAddress = request.getRemoteAddr();
-            }
-
-            requestShutdownIQ.setFrom(JidCreate.from(ipAddress));
-
-            try
-            {
-                IQ responseIQ
-                    = videobridge.handleShutdownIQ(
-                            requestShutdownIQ);
-
-                if (IQ.Type.result.equals(responseIQ.getType()))
-                {
-                    status = HttpServletResponse.SC_OK;
-                }
-                else
-                {
-                    status = getHttpStatusCodeForResultIq(responseIQ);
-                }
-            }
-            catch (Exception e)
-            {
-                logger.error(
-                    "Error while trying to handle shutdown request", e);
-                status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
-            }
-        }
-        response.setStatus(status);
-    }
-
-    /**
      * Gets the {@code Videobridge} instance available to this Jetty
      * {@code Handler}.
      *
@@ -1022,27 +834,6 @@ class HandlerImpl
         {
             statisticsRequestHandler.handleStatsRequest(
                     target, request, response);
-        }
-        else if (target.startsWith(DEBUG))
-        {
-            debugRequestHandler.handleDebugRequest(target, request, response);
-        }
-        else if (target.equals(SHUTDOWN))
-        {
-            if (!shutdownEnabled)
-            {
-                response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-                return;
-            }
-
-            if (POST_HTTP_METHOD.equals(request.getMethod()))
-            {
-                doPostShutdownJSON(baseRequest, request, response);
-            }
-            else
-            {
-                response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
-            }
         }
         else if (target.startsWith(MUC_CLIENT + "/"))
         {

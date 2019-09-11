@@ -17,7 +17,7 @@
 package org.jitsi.videobridge.datachannel;
 
 import org.jitsi.rtp.extensions.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 
 import java.nio.*;
@@ -38,7 +38,7 @@ public class DataChannel
 
     protected boolean ready = false;
 
-    protected final Logger logger = Logger.getLogger(this.getClass());
+    protected final Logger logger;
 
     private DataChannelStack.DataChannelEventListener eventListener;
     private DataChannelStack.DataChannelMessageListener messageListener;
@@ -48,9 +48,12 @@ public class DataChannel
      */
     public DataChannel(
             DataChannelStack.DataChannelDataSender dataChannelDataSender,
-            int channelType, int priority, long reliability, int sid, String label)
+            Logger parentLogger,
+            int channelType, int priority, long reliability, int sid, String label
+    )
     {
         this.dataChannelDataSender = dataChannelDataSender;
+        this.logger = parentLogger.createChildLogger(this.getClass().getName());
         this.channelType = channelType;
         this.priority = priority;
         this.reliability = reliability;
@@ -116,19 +119,13 @@ public class DataChannel
         else if (message instanceof DataChannelStringMessage)
         {
             DataChannelStringMessage dataChannelStringMessage = (DataChannelStringMessage)message;
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Received data channel string message: " + dataChannelStringMessage.data);
-            }
+            logger.debug(() -> "Received data channel string message: " + dataChannelStringMessage.data);
         }
         else if (message instanceof DataChannelBinaryMessage)
         {
             DataChannelBinaryMessage dataChannelBinaryMessage = (DataChannelBinaryMessage)message;
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Received data channel binary message: " +
-                        ByteBufferKt.toHex(ByteBuffer.wrap(dataChannelBinaryMessage.data)));
-            }
+            logger.debug(() -> "Received data channel binary message: " +
+                    ByteBufferKt.toHex(ByteBuffer.wrap(dataChannelBinaryMessage.data)));
         }
 
         messageListener.onDataChannelMessage(message);

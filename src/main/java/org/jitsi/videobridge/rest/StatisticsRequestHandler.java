@@ -18,7 +18,7 @@ package org.jitsi.videobridge.rest;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.osgi.*;
 import org.jitsi.rest.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
@@ -42,8 +42,7 @@ class StatisticsRequestHandler
     /**
      * The logger instance used by {@link StatisticsRequestHandler}.
      */
-    private static final Logger logger
-            = Logger.getLogger(StatisticsRequestHandler.class);
+    private static final Logger logger = new LoggerImpl(StatisticsRequestHandler.class.getName());
 
     /**
      * The {@link HandlerImpl}.

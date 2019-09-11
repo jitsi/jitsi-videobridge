@@ -17,7 +17,7 @@
 package org.jitsi.videobridge.util;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.json.simple.*;
 
 import java.util.*;
@@ -25,7 +25,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
 /**
- * Implements a {@link ByteBufferPoolImpl}.
+ * A pool of reusable byte[]
  *
  * @author Brian Baldino
  * @author Boris Grozev
@@ -62,10 +62,11 @@ public class ByteBufferPool
     /**
      * The {@link Logger}
      */
-    private static final Logger logger = Logger.getLogger(ByteBufferPool.class);
+    private static final Logger logger = new LoggerImpl(ByteBufferPool.class.getName());
 
     /**
-     * TODO Brian
+     * A debug data structure which tracks outstanding buffers and tracks from where (via
+     * a stack trace) they were requested and returned.
      */
     private static final Map<Integer, StackTraceElement[]> bookkeeping
             = new ConcurrentHashMap<>();
