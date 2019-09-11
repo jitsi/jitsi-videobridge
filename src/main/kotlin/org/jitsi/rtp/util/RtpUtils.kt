@@ -94,14 +94,24 @@ class RtpUtils {
         /**
          * Apply a delta to a given sequence number and return the result (taking
          * rollover into account)
-         * @param startingSequenceNumber the starting sequence number
+         * @param start the starting sequence number
          * @param delta the delta to be applied
-         * @return the sequence number result from doing
-         * startingSequenceNumber + delta
+         * @return the sequence number resulting from doing "start + delta"
          */
         @JvmStatic
         fun applySequenceNumberDelta(start: Int, delta: Int): Int =
                 (start + delta) and 0xffff
+
+        /**
+         * Apply a delta to a given RTP timestamp and return the result (taking
+         * rollover into account)
+         * @param start the starting timestamp
+         * @param delta the delta to be applied
+         * @return the timestamp result from doing "start + delta"
+         */
+        @JvmStatic
+        fun applyTimestampDelta(start: Long, delta: Long): Long =
+            (start + delta) and 0xffff_ffffL
 
         @JvmStatic
         fun isNewerSequenceNumberThan(a: Int, b: Int): Boolean =

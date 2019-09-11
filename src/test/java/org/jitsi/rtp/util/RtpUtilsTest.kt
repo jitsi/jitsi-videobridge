@@ -62,6 +62,19 @@ class RtpUtilsTest : ShouldSpec() {
                 }
             }
         }
+        "applyTimestampDelta" {
+            should("work correctly") {
+                forall(
+                    row(10L, -9L, 1L),
+                    row(1L, 9L, 10L),
+                    row(0xffff_fff0L, 0x11L, 1L),
+                    row(1L, -0x11L, 0xffff_fff0L),
+                    row(1234L, 0L, 1234L)
+                ) { start, delta, expected ->
+                    RtpUtils.applyTimestampDelta(start, delta) shouldBe expected
+                }
+            }
+        }
         "isOlderThan" {
             should("work correctly") {
                 forall(
