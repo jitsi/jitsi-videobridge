@@ -59,16 +59,6 @@ public class VP8FrameProjection
     private static final Vp8Packet[] EMPTY_PACKET_ARR = new Vp8Packet[0];
 
     /**
-     * The bitmask for the RTP sequence number field.
-     */
-    private static final int SEQUENCE_NUMBER_MASK = 0xffff;
-
-    /**
-     * The bitmask for the RTP timestamp field.
-     */
-    private static final long TIMESTAMP_MASK = 0xffff_ffffl;
-
-    /**
      * The diagnostic context for this instance.
      */
     private final DiagnosticContext diagnosticContext;
@@ -282,8 +272,7 @@ public class VP8FrameProjection
                 nextVP8Frame.getTimestamp(), vp8Frame.getTimestamp());
         }
 
-        long nextTimestamp = timestamp + delta;
-        return nextTimestamp & TIMESTAMP_MASK;
+        return RtpUtils.applyTimestampDelta(timestamp, delta);
     }
 
     /**
@@ -296,7 +285,7 @@ public class VP8FrameProjection
      */
     private int nextStartingSequenceNumber()
     {
-        return (maxSequenceNumber() + 1) & SEQUENCE_NUMBER_MASK;
+        return RtpUtils.applySequenceNumberDelta(maxSequenceNumber(), 1);
     }
 
     /**
@@ -317,12 +306,11 @@ public class VP8FrameProjection
                         vp8Frame.getMaxSequenceNumber(),
                         vp8Frame.getStartingSequenceNumber());
 
-            int maxSequenceNumber = startingSequenceNumber + vp8FrameLength;
-            return maxSequenceNumber & SEQUENCE_NUMBER_MASK;
+            return RtpUtils.applySequenceNumberDelta(startingSequenceNumber, vp8FrameLength);
         }
         else
         {
-            return (startingSequenceNumber - 1) & SEQUENCE_NUMBER_MASK;
+            return RtpUtils.applySequenceNumberDelta(startingSequenceNumber, -1);
         }
     }
 
@@ -378,7 +366,7 @@ public class VP8FrameProjection
         for (int i = 0; i < len; i++)
         {
             int piggyBackedPacketSequenceNumber
-                = (originalSequenceNumber + i) & SEQUENCE_NUMBER_MASK;
+                = RtpUtils.applySequenceNumberDelta(originalSequenceNumber, i);
 
             ArrayCache.Container container
                     = cache.get(vp8FrameSSRC, piggyBackedPacketSequenceNumber);
@@ -434,7 +422,7 @@ public class VP8FrameProjection
                     vp8Frame.getStartingSequenceNumber());
 
         int sequenceNumber
-            = (startingSequenceNumber + sequenceNumberDelta) & 0xFFFF;
+            = RtpUtils.applySequenceNumberDelta(startingSequenceNumber, sequenceNumberDelta);
         pkt.setSequenceNumber(sequenceNumber);
 
         pkt.setTL0PICIDX(tl0PICIDX);

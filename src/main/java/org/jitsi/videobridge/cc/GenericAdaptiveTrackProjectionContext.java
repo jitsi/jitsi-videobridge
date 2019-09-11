@@ -227,10 +227,12 @@ class GenericAdaptiveTrackProjectionContext
             maybeInitializeTimestampDelta(rtpPacket.getTimestamp());
 
             int destinationSequenceNumber
-                = computeDestinationSequenceNumber(sourceSequenceNumber);
+                = RtpUtils.applySequenceNumberDelta(
+                        sourceSequenceNumber, sequenceNumberDelta);
 
             long destinationTimestamp
-                = computeDestinationTimestamp(rtpPacket.getTimestamp());
+                = RtpUtils.applyTimestampDelta(
+                        rtpPacket.getTimestamp(), timestampDelta);
 
             if (RtpUtils.isOlderSequenceNumberThan(
                 maxDestinationSequenceNumber, destinationSequenceNumber))
@@ -274,7 +276,7 @@ class GenericAdaptiveTrackProjectionContext
             maxDestinationSequenceNumber, sourceTimestamp))
         {
             long destinationTimestamp =
-                (maxDestinationTimestamp + 3000) & 0xffff_ffffL;
+                    RtpUtils.applyTimestampDelta(maxDestinationTimestamp, 3000);
 
             timestampDelta
                 = RtpUtils.getTimestampDiff(
@@ -310,7 +312,8 @@ class GenericAdaptiveTrackProjectionContext
     {
         int sourceSequenceNumber = rtpPacket.getSequenceNumber();
         int destinationSequenceNumber
-            = computeDestinationSequenceNumber(sourceSequenceNumber);
+            = RtpUtils.applySequenceNumberDelta(
+                    sourceSequenceNumber, sequenceNumberDelta);
 
         if (sourceSequenceNumber != destinationSequenceNumber)
         {
@@ -319,7 +322,7 @@ class GenericAdaptiveTrackProjectionContext
 
         long sourceTimestamp = rtpPacket.getTimestamp();
         long destinationTimestamp
-            = computeDestinationTimestamp(sourceTimestamp);
+            = RtpUtils.applyTimestampDelta(sourceTimestamp, timestampDelta);
 
         if (sourceTimestamp != destinationTimestamp)
         {
@@ -332,26 +335,6 @@ class GenericAdaptiveTrackProjectionContext
             + ",max_sequence=" + maxDestinationSequenceNumber);
 
         return EMPTY_PACKET_ARR;
-    }
-
-    /**
-     * TODO
-     */
-    private int computeDestinationSequenceNumber(int sourceSequenceNumber)
-    {
-        return sequenceNumberDelta != 0
-            ? (sourceSequenceNumber + sequenceNumberDelta)
-            & 0xffff : sourceSequenceNumber;
-    }
-
-    /**
-     * TODO
-     */
-    private long computeDestinationTimestamp(long sourceTimestamp)
-    {
-        return timestampDelta != 0
-            ? (sourceTimestamp + timestampDelta) & 0xffff_ffffL
-            : sourceTimestamp;
     }
 
     /**

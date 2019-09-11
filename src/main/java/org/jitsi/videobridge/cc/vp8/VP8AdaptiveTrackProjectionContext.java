@@ -118,10 +118,10 @@ public class VP8AdaptiveTrackProjectionContext
         // Compute the starting sequence number and the timestamp of the initial
         // frame based on the RTP state.
         int startingSequenceNumber =
-            (rtpState.maxSequenceNumber + 1) & 0xffff;
+                RtpUtils.applySequenceNumberDelta(rtpState.maxSequenceNumber, 1);
 
         long timestamp =
-            (rtpState.maxTimestamp + 3000) & 0xffff_ffffL;
+                RtpUtils.applyTimestampDelta(rtpState.maxTimestamp, 3000);
 
         lastVP8FrameProjection = new VP8FrameProjection(diagnosticContext, logger,
             rtpState.ssrc, startingSequenceNumber, timestamp);
@@ -409,7 +409,7 @@ public class VP8AdaptiveTrackProjectionContext
             lastVP8FrameProjectionCopy.getTimestamp(),
             lastVP8FrameProjectionCopy.getVP8Frame().getTimestamp());
 
-        long dstTs = (srcTs + delta) & 0xFFFF_FFFFL;
+        long dstTs = RtpUtils.applyTimestampDelta(srcTs, delta);
 
         if (srcTs != dstTs)
         {
