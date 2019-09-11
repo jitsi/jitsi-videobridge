@@ -62,37 +62,6 @@ class GenericAdaptiveTrackProjectionContext
     private static final VideoRtpPacket[] EMPTY_PACKET_ARR = new VideoRtpPacket[0];
 
     /**
-     * Checks if the given packet with the given format is part of a key frame.
-     */
-    private static boolean isKeyframe(
-            @NotNull VideoRtpPacket rtpPacket, @NotNull PayloadType payloadType)
-    {
-        byte[] buf = rtpPacket.getBuffer();
-        int payloadOff = rtpPacket.getPayloadOffset(),
-                payloadLen = rtpPacket.getPayloadLength();
-
-        if (payloadType instanceof Vp8PayloadType)
-        {
-            return org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer
-                    .isKeyFrame(buf, payloadOff, payloadLen);
-        }
-        else if (payloadType instanceof H264PayloadType)
-        {
-            return org.jitsi.impl.neomedia.codec.video.h264.DePacketizer
-                    .isKeyFrame(buf, payloadOff, payloadLen);
-        }
-        else if (payloadType instanceof Vp9PayloadType)
-        {
-            return org.jitsi.impl.neomedia.codec.video.vp9.DePacketizer
-                    .isKeyFrame(buf, payloadOff, payloadLen);
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    /**
      * The <tt>Logger</tt> used by the
      * <tt>GenericAdaptiveTrackProjectionContext</tt> class and its instances to
      * log debug information.
@@ -188,7 +157,7 @@ class GenericAdaptiveTrackProjectionContext
         boolean accept;
         if (needsKeyframe)
         {
-            if (isKeyframe(rtpPacket, payloadType))
+            if (rtpPacket.isKeyframe())
             {
                 needsKeyframe = false;
                 // resume after being suspended, we compute the new seqnum delta
