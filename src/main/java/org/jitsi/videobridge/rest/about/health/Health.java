@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.health;
+package org.jitsi.videobridge.rest.about.health;
 
 import org.jitsi.videobridge.util.*;
 
 import javax.servlet.http.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
-import java.io.*;
 
 @Path("/health")
 public class Health

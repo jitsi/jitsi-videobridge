@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.health;
+package org.jitsi.videobridge.rest.about.health;
 
 import org.glassfish.jersey.server.*;
 import org.jitsi.videobridge.rest.debug.*;
