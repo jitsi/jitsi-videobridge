@@ -19,6 +19,11 @@ package org.jitsi.videobridge.util;
 import org.jitsi.osgi.*;
 import org.osgi.framework.*;
 
+/**
+ * A generic class for providing an OSGI service based on a given
+ * {@link BundleContext} and service class
+ * @param <T> the service being provided
+ */
 public class OsgiServiceProvider<T>
 {
     protected final BundleContext bundleContext;
