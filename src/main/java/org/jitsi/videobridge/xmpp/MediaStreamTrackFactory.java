@@ -97,7 +97,7 @@ public class MediaStreamTrackFactory
      * scalable video codecs.
      * TODO: make configurable if needed.
      */
-    private static final Boolean ENABLE_SVC = false;
+    private static final Boolean ENABLE_SVC = true;
 
     /**
      * libjitsi isn't aware of the group semantics names defined in
