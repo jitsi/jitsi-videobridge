@@ -427,4 +427,21 @@ public class RTPEncodingDesc
     {
         return numOfReceivers.get() > 0;
     }
+
+    /**
+     * Gets this encoding's temporal layer ID.
+     * @return
+     */
+    public int getTid()
+    {
+        return tid;
+    }
+
+    /**
+     * Gets this encoding's spatial layer ID.
+     */
+    public int getSid()
+    {
+        return sid;
+    }
 }

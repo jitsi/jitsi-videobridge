@@ -82,4 +82,6 @@ fun RTPEncodingDesc.getNodeStats() = NodeStatsBlock(primarySSRC.toString()).appl
     addBoolean("is_received", isReceived)
     addNumber("rtx_ssrc", getSecondarySsrc(SsrcAssociationType.RTX))
     addNumber("fec_ssrc", getSecondarySsrc(SsrcAssociationType.FEC))
+    addNumber("tid", tid)
+    addNumber("sid", sid)
 }
