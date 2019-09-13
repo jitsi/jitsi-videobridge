@@ -69,6 +69,9 @@ public class MediaStreamTrackFactoryTest
     {
         replayAll();
 
+        Whitebox.setInternalState(
+                MediaStreamTrackFactory.class, "ENABLE_SVC", false);
+
         long videoSsrc = 12345;
 
         SourcePacketExtension videoSource = createSource(videoSsrc);
@@ -90,6 +93,9 @@ public class MediaStreamTrackFactoryTest
         Exception
     {
         replayAll();
+
+        Whitebox.setInternalState(
+                MediaStreamTrackFactory.class, "ENABLE_SVC", false);
 
         long videoSsrc = 12345;
         long rtxSsrc = 54321;
@@ -118,6 +124,9 @@ public class MediaStreamTrackFactoryTest
         Exception
     {
         replayAll();
+
+        Whitebox.setInternalState(
+                MediaStreamTrackFactory.class, "ENABLE_SVC", false);
 
         long videoSsrc1 = 12345;
         long videoSsrc2 = 23456;
