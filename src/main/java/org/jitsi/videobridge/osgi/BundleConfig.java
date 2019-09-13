@@ -114,9 +114,6 @@ public class BundleConfig
         // single-port mode to be 10MB.
         defaults.put(AbstractUdpListener.SO_RCVBUF_PNAME, "10485760");
 
-        // Enable VP8 temporal scalability filtering by default.
-        defaults.put(MediaStreamTrackFactory.ENABLE_SVC_PNAME, true_);
-
         // make sure we use the properties files for configuration
         defaults.put(
             "net.java.sip.communicator.impl.configuration.USE_PROPFILE_CONFIG",
