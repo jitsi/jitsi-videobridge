@@ -114,7 +114,7 @@ public class ChannelShim
     /**
      * The source groups that were signaled for this channel.
      */
-    Collection<SourceGroupPacketExtension> sourceGroups;
+    private Collection<SourceGroupPacketExtension> sourceGroups;
 
     /**
      * The expire value for this channel.
