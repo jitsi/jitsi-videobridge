@@ -383,7 +383,7 @@ public class ChannelShim
     /**
      * @return This {@link ChannelShim}'s endpoint.
      */
-    public Endpoint getEndpoint()
+    Endpoint getEndpoint()
     {
         return endpoint;
     }
@@ -391,7 +391,7 @@ public class ChannelShim
     /**
      * @return the ID of this channel.
      */
-    public String getId()
+    String getId()
     {
         return id;
     }

@@ -198,7 +198,7 @@ public class ContentShim
     /**
      * Returns a copy of this content's list of channels.
      */
-    public List<ChannelShim> getChannelShims()
+    List<ChannelShim> getChannelShims()
     {
         synchronized (channels)
         {
