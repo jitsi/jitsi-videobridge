@@ -940,10 +940,9 @@ class HandlerImpl
         throws IOException,
                ServletException
     {
-        super.handleJSON(target, baseRequest, request, response);
-
-        if (baseRequest.isHandled())
-            return; // The super implementation has handled the request.
+        // NOTE(brian): we intentionally no longer call the parent handleJSON here, as
+        // all of the endpoints it was handling (health and version) are now replaced
+        // by logic here in the bridge
 
         // The target starts with "/colibri/".
         if (target.startsWith(COLIBRI_TARGET))
@@ -980,22 +979,6 @@ class HandlerImpl
             {
                 // It looks like handleColibriJSON() indeed handled the request.
                 endResponse(target, baseRequest, request, response);
-            }
-        }
-        else
-        {
-            // Initially, we had VERSION_TARGET equal to /version. But such an
-            // HTTP resource could be rewritten by Meet. In order to decrease
-            // the risk of rewriting, we moved the VERSION_TARGET to
-            // /about/version. For the sake of compatibility though, we are
-            // preserving /version.
-            String versionTarget = "/version";
-
-            if (versionTarget.equals(target))
-            {
-                target = target.substring(versionTarget.length());
-
-                handleVersionJSON(target, baseRequest, request, response);
             }
         }
     }

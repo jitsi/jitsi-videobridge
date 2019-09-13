@@ -17,20 +17,26 @@
 package org.jitsi.videobridge.util;
 
 import org.jitsi.osgi.*;
-import org.jitsi.videobridge.*;
 import org.osgi.framework.*;
 
 /**
- * A class to acquire a {@link Videobridge} from a {@link BundleContext}.
- *
- * This abstraction makes it easier to test methods which rely on a
- * {@link Videobridge} instance as this class can easily provide
- * a mock instead of the real Videobridge.
+ * A generic class for providing an OSGI service based on a given
+ * {@link BundleContext} and service class
+ * @param <T> the service being provided
  */
-public class VideobridgeProvider extends OsgiServiceProvider<Videobridge>
+public class OsgiServiceProvider<T>
 {
-    public VideobridgeProvider(BundleContext bundleContext)
+    protected final BundleContext bundleContext;
+    protected final Class<T> typeClass;
+
+    public OsgiServiceProvider(BundleContext bundleContext, Class<T> typeClass)
     {
-        super(bundleContext, Videobridge.class);
+        this.bundleContext = bundleContext;
+        this.typeClass = typeClass;
+    }
+
+    public T get()
+    {
+        return ServiceUtils2.getService(bundleContext, typeClass);
     }
 }

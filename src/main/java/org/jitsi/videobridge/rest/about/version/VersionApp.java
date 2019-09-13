@@ -14,22 +14,15 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.health;
+package org.jitsi.videobridge.rest.about.version;
 
 import org.glassfish.jersey.server.*;
-import org.jitsi.videobridge.rest.debug.*;
 import org.jitsi.videobridge.util.*;
-import org.osgi.framework.*;
 
-/**
- * An extension of {@link ResourceConfig} so that we can pass
- * the {@link BundleContext} to the {@link Debug} resource
- * so it can get the {@link org.jitsi.videobridge.Videobridge} instance
- */
-public class HealthApp extends ResourceConfig
+public class VersionApp extends ResourceConfig
 {
-    public HealthApp(VideobridgeProvider videobridgeProvider)
+    public VersionApp(VersionServiceProvider versionServiceProvider)
     {
-        register(new Health(videobridgeProvider));
+        register(new Version(versionServiceProvider));
     }
 }

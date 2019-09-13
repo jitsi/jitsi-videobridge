@@ -14,23 +14,22 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.util;
+package org.jitsi.videobridge.rest.about.health;
 
-import org.jitsi.osgi.*;
-import org.jitsi.videobridge.*;
+import org.glassfish.jersey.server.*;
+import org.jitsi.videobridge.rest.debug.*;
+import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
 /**
- * A class to acquire a {@link Videobridge} from a {@link BundleContext}.
- *
- * This abstraction makes it easier to test methods which rely on a
- * {@link Videobridge} instance as this class can easily provide
- * a mock instead of the real Videobridge.
+ * An extension of {@link ResourceConfig} so that we can pass
+ * the {@link BundleContext} to the {@link Debug} resource
+ * so it can get the {@link org.jitsi.videobridge.Videobridge} instance
  */
-public class VideobridgeProvider extends OsgiServiceProvider<Videobridge>
+public class HealthApp extends ResourceConfig
 {
-    public VideobridgeProvider(BundleContext bundleContext)
+    public HealthApp(VideobridgeProvider videobridgeProvider)
     {
-        super(bundleContext, Videobridge.class);
+        register(new Health(videobridgeProvider));
     }
 }

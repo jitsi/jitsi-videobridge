@@ -22,8 +22,9 @@ import org.eclipse.jetty.servlet.*;
 import org.glassfish.jersey.servlet.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.rest.about.version.*;
 import org.jitsi.videobridge.rest.debug.*;
-import org.jitsi.videobridge.rest.health.*;
+import org.jitsi.videobridge.rest.about.health.*;
 import org.jitsi.videobridge.rest.shutdown.*;
 import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
@@ -152,11 +153,17 @@ public class RESTBundleActivator
             handlers.add(colibriContextHandler);
         }
 
-        HealthApp healthHandler = new HealthApp(videobridgeProvider);
-        ServletHolder healthServletHolder = new ServletHolder(new ServletContainer(healthHandler));
         ServletContextHandler aboutContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
         aboutContextHandler.setContextPath("/about");
-        aboutContextHandler.addServlet(healthServletHolder, "/*");
+
+        HealthApp healthHandler = new HealthApp(videobridgeProvider);
+        ServletHolder healthServletHolder = new ServletHolder(new ServletContainer(healthHandler));
+        aboutContextHandler.addServlet(healthServletHolder, "/health/*");
+
+        VersionServiceProvider versionServiceProvider = new VersionServiceProvider(bundleContext);
+        VersionApp versionHandler = new VersionApp(versionServiceProvider);
+        ServletHolder versionServletHolder = new ServletHolder(new ServletContainer(versionHandler));
+        aboutContextHandler.addServlet(versionServletHolder, "/version/*");
 
         handlers.add(aboutContextHandler);
 
