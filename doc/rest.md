@@ -54,6 +54,8 @@ For the _public_ interface:
  Specifies whether client certificate authentication is to be required when HTTPS is enabled. The default value is ```false```.
  * ```org.jitsi.videobridge.rest.jetty.host``` - 
  Specifies the server host.
+ * ```org.jitsi.videobridge.clearport.redirect.jetty.port``` -
+ Specifies a non-TLS port which should be redirected to the TLS port (or -1 to disable it). The default value is ```80```
 
 Specific parts of the _public_ interface can be configured with the following additional properties:
  ```
