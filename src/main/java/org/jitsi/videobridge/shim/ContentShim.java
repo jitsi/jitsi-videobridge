@@ -73,7 +73,7 @@ public class ContentShim
      * initial offer, assuming it's up to the other side not to conflict with us
      * and therefore it won't need to be changed.
      */
-    final long localSsrc = Videobridge.RANDOM.nextLong() & 0xffff_ffffL;
+    private final long localSsrc = Videobridge.RANDOM.nextLong() & 0xffff_ffffL;
 
     /**
      * Initializes a new {@link ContentShim} instance.
@@ -198,7 +198,7 @@ public class ContentShim
     /**
      * Returns a copy of this content's list of channels.
      */
-    List<ChannelShim> getChannelShims()
+    public List<ChannelShim> getChannelShims()
     {
         synchronized (channels)
         {

@@ -114,7 +114,7 @@ public class ChannelShim
     /**
      * The source groups that were signaled for this channel.
      */
-    Collection<SourceGroupPacketExtension> sourceGroups;
+    private Collection<SourceGroupPacketExtension> sourceGroups;
 
     /**
      * The expire value for this channel.
@@ -383,7 +383,7 @@ public class ChannelShim
     /**
      * @return This {@link ChannelShim}'s endpoint.
      */
-    Endpoint getEndpoint()
+    public Endpoint getEndpoint()
     {
         return endpoint;
     }
@@ -391,7 +391,7 @@ public class ChannelShim
     /**
      * @return the ID of this channel.
      */
-    String getId()
+    public String getId()
     {
         return id;
     }
