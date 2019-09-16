@@ -25,6 +25,9 @@ import javax.servlet.http.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
+/**
+ * Add or remove XMPP environments to which the bridge will connect
+ */
 @Path("/")
 public class MucClient
 {
