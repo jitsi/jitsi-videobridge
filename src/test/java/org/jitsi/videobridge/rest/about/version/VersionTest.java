@@ -61,7 +61,7 @@ public class VersionTest extends JerseyTest
             new VersionImpl("appName", 2, 0)
         );
 
-        Response resp = target("/version").request().get();
+        Response resp = target("/").request().get();
         assertEquals(HttpStatus.OK_200, resp.getStatus());
         Version.VersionInfo versionInfo = resp.readEntity(Version.VersionInfo.class);
         assertEquals("appName", versionInfo.name);
