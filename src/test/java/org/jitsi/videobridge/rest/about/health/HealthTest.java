@@ -45,7 +45,7 @@ public class HealthTest extends VideobridgeRestResourceTest
     {
         doNothing().when(videobridge).healthCheck();
 
-        Response resp = target("/health").request().get();
+        Response resp = target("/").request().get();
         assertEquals(HttpStatus.OK_200, resp.getStatus());
     }
 
@@ -54,7 +54,7 @@ public class HealthTest extends VideobridgeRestResourceTest
     {
         doThrow(new RuntimeException("")).when(videobridge).healthCheck();
 
-        Response resp = target("/health").request().get();
+        Response resp = target("/").request().get();
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR_500, resp.getStatus());
     }
 }
