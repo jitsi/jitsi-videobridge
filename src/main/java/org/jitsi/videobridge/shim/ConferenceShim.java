@@ -192,11 +192,21 @@ public class ConferenceShim
 
             for (ChannelShim channelShim : contentShim.getChannelShims())
             {
-                ColibriConferenceIQ.Channel channelIQ
-                    = new ColibriConferenceIQ.Channel();
+                if (channelShim instanceof SctpConnectionShim)
+                {
+                    ColibriConferenceIQ.SctpConnection sctpConnectionIQ
+                        = new ColibriConferenceIQ.SctpConnection();
+                    channelShim.describe(sctpConnectionIQ);
+                    contentIQ.addSctpConnection(sctpConnectionIQ);
+                }
+                else
+                {
+                    ColibriConferenceIQ.Channel channelIQ
+                        = new ColibriConferenceIQ.Channel();
 
-                channelShim.describe(channelIQ);
-                contentIQ.addChannel(channelIQ);
+                    channelShim.describe(channelIQ);
+                    contentIQ.addChannel(channelIQ);
+                }
             }
         }
         // Do we also want endpoint-s anc channel-bundle-id-s?
