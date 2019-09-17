@@ -162,20 +162,6 @@
             <arg line="${run.arg.line}" />
         </java>
     </target>
-
-    <target name="test" depends="compile-test">
-        <mkdir dir="${junit.reports}"/>
-        <junit printsummary="yes" haltonfailure="true" fork="true" forkmode="once">
-            <formatter type="xml" />
-            <classpath refid="run.test.classpath"/>
-            <sysproperty
-                    key="java.library.path"
-                    path="lib/native/linux-64:lib/native/linux:lib/native/mac:lib/native/windows-64:lib/native/windows" />
-            <test name="org.jitsi.videobridge.VideoBridgeTestSuite"
-                  todir="${junit.reports}"/>
-        </junit>
-    </target>
-
     <target name="jar" depends="compile">
         <jar
             compress="true"
