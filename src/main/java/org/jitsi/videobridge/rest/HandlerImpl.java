@@ -214,12 +214,6 @@ class HandlerImpl
      */
     static final String STATISTICS = "stats";
 
-    /**
-     * The HTTP resource which allows control of {@link ClientConnectionImpl}
-     * (i.e. adding or removing MUC clients).
-     */
-    private static final String MUC_CLIENT = "muc-client";
-
     static
     {
         String colibriTarget = DEFAULT_COLIBRI_TARGET;
@@ -834,97 +828,6 @@ class HandlerImpl
         {
             statisticsRequestHandler.handleStatsRequest(
                     target, request, response);
-        }
-        else if (target.startsWith(MUC_CLIENT + "/"))
-        {
-            doHandleMucClientRequest(
-                target.substring((MUC_CLIENT + "/").length()),
-                request,
-                response);
-        }
-    }
-
-    /**
-     * Handles a request to /colibri/muc-client/.
-     * @param target the target URL with the part before "muc-client/" stripped.
-     * @param request the request.
-     * @param response the response being prepared.
-     */
-    private void doHandleMucClientRequest(
-        String target,
-        HttpServletRequest request,
-        HttpServletResponse response)
-    {
-        if (!POST_HTTP_METHOD.equals(request.getMethod()))
-        {
-            response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
-            return;
-        }
-
-        if (!RESTUtil.isJSONContentType(request.getContentType()))
-        {
-            response.setStatus(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
-            return;
-        }
-
-        JSONObject requestJSONObject;
-        try
-        {
-            Object o = new JSONParser().parse(request.getReader());
-            if (o instanceof JSONObject)
-            {
-                requestJSONObject = (JSONObject) o;
-            }
-            else
-            {
-                requestJSONObject = null;
-            }
-        }
-        catch (Exception e)
-        {
-            requestJSONObject = null;
-        }
-
-        if (requestJSONObject == null)
-        {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            return;
-        }
-
-        ClientConnectionImpl clientConnectionImpl
-            = getService(ClientConnectionImpl.class);
-        if (clientConnectionImpl == null)
-        {
-            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-            return;
-        }
-
-        if ("add".equals(target))
-        {
-            if (clientConnectionImpl.addMucClient(requestJSONObject))
-            {
-                response.setStatus(HttpServletResponse.SC_OK);
-            }
-            else
-            {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            }
-        }
-        else if ("remove".equals(target))
-        {
-            if (clientConnectionImpl.removeMucClient(requestJSONObject))
-            {
-                response.setStatus(HttpServletResponse.SC_OK);
-            }
-            else
-            {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            }
-        }
-        else
-        {
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            return;
         }
     }
 

@@ -14,22 +14,14 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.util;
+package org.jitsi.videobridge.rest.mucclient;
 
-import org.jitsi.videobridge.*;
-import org.osgi.framework.*;
+import org.glassfish.jersey.server.*;
+import org.jitsi.videobridge.util.*;
 
-/**
- * A class to acquire a {@link Videobridge} from a {@link BundleContext}.
- *
- * This abstraction makes it easier to test methods which rely on a
- * {@link Videobridge} instance as this class can easily provide
- * a mock instead of the real Videobridge.
- */
-public class VideobridgeProvider extends OsgiServiceProvider<Videobridge>
+public class MucClientApp extends ResourceConfig
 {
-    public VideobridgeProvider(BundleContext bundleContext)
-    {
-        super(bundleContext, Videobridge.class);
+    public MucClientApp(ClientConnectionProvider clientConnectionProvider) {
+        register(new MucClient(clientConnectionProvider));
     }
 }

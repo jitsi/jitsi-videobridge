@@ -16,20 +16,20 @@
 
 package org.jitsi.videobridge.util;
 
-import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.xmpp.*;
 import org.osgi.framework.*;
 
 /**
- * A class to acquire a {@link Videobridge} from a {@link BundleContext}.
+ * A class to acquire a {@link ClientConnectionImpl} from a {@link BundleContext}.
  *
  * This abstraction makes it easier to test methods which rely on a
- * {@link Videobridge} instance as this class can easily provide
- * a mock instead of the real Videobridge.
+ * {@link ClientConnectionImpl} instance as this class can easily provide
+ * a mock instead of the real ClientConnection.
  */
-public class VideobridgeProvider extends OsgiServiceProvider<Videobridge>
+public class ClientConnectionProvider extends OsgiServiceProvider<ClientConnectionImpl>
 {
-    public VideobridgeProvider(BundleContext bundleContext)
+    public ClientConnectionProvider(BundleContext bundleContext)
     {
-        super(bundleContext, Videobridge.class);
+        super(bundleContext, ClientConnectionImpl.class);
     }
 }
