@@ -24,7 +24,7 @@ import org.osgi.framework.*;
  *
  * This abstraction makes it easier to test methods which rely on a
  * {@link ClientConnectionImpl} instance as this class can easily provide
- * a mock instead of the real Videobridge.
+ * a mock instead of the real ClientConnection.
  */
 public class ClientConnectionProvider extends OsgiServiceProvider<ClientConnectionImpl>
 {
