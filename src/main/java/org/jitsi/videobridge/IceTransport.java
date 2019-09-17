@@ -316,7 +316,7 @@ public class IceTransport
             boolean controlling, String streamName, ConfigurationService cfg)
             throws IOException
     {
-        Agent iceAgent = new Agent(logger.getLevel(), iceUfragPrefix);
+        Agent iceAgent = new Agent(iceUfragPrefix, logger);
 
         //add videobridge specific harvesters such as a mapping and an Amazon
         //AWS EC2 harvester
