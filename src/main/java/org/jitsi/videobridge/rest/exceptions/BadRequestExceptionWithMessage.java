@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest;
+package org.jitsi.videobridge.rest.exceptions;
 
 import javax.servlet.http.*;
 import javax.ws.rs.*;

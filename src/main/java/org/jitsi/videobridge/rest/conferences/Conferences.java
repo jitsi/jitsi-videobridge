@@ -18,15 +18,14 @@ package org.jitsi.videobridge.rest.conferences;
 
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.rest.exceptions.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
-import javax.servlet.http.*;
 import javax.ws.rs.*;
-import javax.ws.rs.client.*;
 import javax.ws.rs.core.*;
 import java.util.*;
 
