@@ -14,16 +14,22 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.conferences;
+package org.jitsi.videobridge.rest;
 
-import org.glassfish.jersey.server.*;
-import org.jitsi.videobridge.util.*;
+import javax.servlet.http.*;
+import javax.ws.rs.*;
+import javax.ws.rs.core.*;
 
-public class ConferencesApp extends ResourceConfig
+/**
+ * The ctor for {@link BadRequestException} which takes in a String doesn't
+ * actually include that String in the response.  A much longer syntax (seen
+ * in the constructor below) is necessary.  This class exists in order to expose
+ * that behavior in a more concise way
+ */
+public class BadRequestExceptionWithMessage extends BadRequestException
 {
-    public ConferencesApp(VideobridgeProvider videobridgeProvider)
+    public BadRequestExceptionWithMessage(String message)
     {
-//        register((new ClientResponseExceptionFilter()));
-        register(new Conferences(videobridgeProvider));
+        super(Response.status(HttpServletResponse.SC_BAD_REQUEST, message).build());
     }
 }

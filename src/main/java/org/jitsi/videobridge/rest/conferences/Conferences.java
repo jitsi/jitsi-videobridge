@@ -101,7 +101,7 @@ public class Conferences
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response createConference(String requestBody)
+    public String createConference(String requestBody)
     {
         Object requestJson = null;
         try
@@ -109,23 +109,20 @@ public class Conferences
             requestJson = new JSONParser().parse(requestBody);
             if (!(requestJson instanceof JSONObject))
             {
-                return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
+                throw new BadRequestException();
             }
         }
         catch (ParseException pe)
         {
-            String message = String.format("Failed to create conference," +
-                    " could not parse JSON, message: %s", pe.getMessage());
-            return Response.status(HttpServletResponse.SC_BAD_REQUEST, message).build();
+            throw new BadRequestExceptionWithMessage(
+                    "Failed to create conference, could not parse JSON: " + pe.getMessage());
         }
         ColibriConferenceIQ requestConferenceIQ
                 = JSONDeserializer.deserializeConference(
                 (JSONObject) requestJson);
         if ((requestConferenceIQ == null) || requestConferenceIQ.getID() != null)
         {
-            return Response.status(
-                    HttpServletResponse.SC_BAD_REQUEST,
-                    "Must not include conference ID").build();
+            throw new BadRequestExceptionWithMessage("Must not include conference ID");
         }
         IQ responseIq = videobridgeProvider.get().handleColibriConferenceIQ(
                 requestConferenceIQ,
@@ -133,17 +130,12 @@ public class Conferences
         );
         if (responseIq.getError() != null)
         {
-            return Response.status(
-                    HttpServletResponse.SC_BAD_REQUEST,
-                    "Failed to create conference, message: "
-                    + responseIq.getError().getDescriptiveText()).build();
+            throw new BadRequestExceptionWithMessage(
+                "Failed to create conference: " + responseIq.getError().getDescriptiveText());
         }
         if (!(responseIq instanceof ColibriConferenceIQ))
         {
-            return Response.status(
-                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    "Non-error, non-colibri IQ result"
-            ).build();
+            throw new InternalServerErrorExceptionWithMessage("Non-error, non-colibri IQ result");
         }
         JSONObject responseJson =
                 JSONSerializer.serializeConference((ColibriConferenceIQ)responseIq);
@@ -151,6 +143,53 @@ public class Conferences
         {
             responseJson = new JSONObject();
         }
-        return Response.ok(responseJson.toJSONString(), MediaType.APPLICATION_JSON).build();
+        return responseJson.toJSONString();
+    }
+
+    @PATCH
+    @Path("/{confId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public String patchConference(@PathParam("confId") String confId, String requestBody)
+    {
+        Conference conference = videobridgeProvider.get().getConference(confId, null);
+        if (conference == null)
+        {
+            throw new NotFoundException();
+        }
+        Object requestJson = null;
+        try
+        {
+            requestJson = new JSONParser().parse(requestBody);
+        }
+        catch (ParseException e)
+        {
+            throw new BadRequestException();
+        }
+        ColibriConferenceIQ requestIq = JSONDeserializer.deserializeConference((JSONObject)requestJson);
+        if (requestIq == null || ((requestIq.getID() != null) &&
+                !requestIq.getID().equalsIgnoreCase(conference.getID())))
+        {
+            throw new BadRequestException();
+        }
+        IQ responseIq = videobridgeProvider.get()
+                .handleColibriConferenceIQ(requestIq, Videobridge.OPTION_ALLOW_NO_FOCUS);
+
+        if (responseIq.getError() != null)
+        {
+            throw new BadRequestExceptionWithMessage(
+                    "Failed to create conference: " + responseIq.getError().getDescriptiveText());
+        }
+        if (!(responseIq instanceof ColibriConferenceIQ))
+        {
+            throw new InternalServerErrorExceptionWithMessage("Non-error, non-colibri IQ result");
+        }
+        JSONObject responseJson =
+                JSONSerializer.serializeConference((ColibriConferenceIQ)responseIq);
+        if (responseJson == null)
+        {
+            responseJson = new JSONObject();
+        }
+        return responseJson.toJSONString();
     }
 }

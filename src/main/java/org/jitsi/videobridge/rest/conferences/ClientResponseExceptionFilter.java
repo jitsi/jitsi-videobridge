@@ -16,14 +16,19 @@
 
 package org.jitsi.videobridge.rest.conferences;
 
-import org.glassfish.jersey.server.*;
-import org.jitsi.videobridge.util.*;
+import javax.annotation.*;
+import javax.ws.rs.*;
+import javax.ws.rs.client.*;
+import javax.ws.rs.container.*;
+import javax.ws.rs.ext.*;
+import java.io.*;
 
-public class ConferencesApp extends ResourceConfig
+@Provider
+public class ClientResponseExceptionFilter implements ContainerResponseFilter
 {
-    public ConferencesApp(VideobridgeProvider videobridgeProvider)
+    @Override
+    public void filter(ContainerRequestContext containerRequestContext, ContainerResponseContext containerResponseContext) throws IOException
     {
-//        register((new ClientResponseExceptionFilter()));
-        register(new Conferences(videobridgeProvider));
+        System.out.println("hello");
     }
 }

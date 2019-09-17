@@ -31,6 +31,8 @@ import org.jitsi.videobridge.rest.shutdown.*;
 import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
+import javax.servlet.*;
+
 /**
  * Implements <tt>BundleActivator</tt> for the OSGi bundle which implements a
  * REST API for Videobridge.
