@@ -196,10 +196,13 @@ public class IceTransport
         iceComponent = iceStream.getComponent(Component.RTP);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
 
+        //TODO(brian): this should be replaced by passing a log context
+        // when creating the child logger, but we don't have this
+        // value yet when creating the child logger, so we need to
+        // change the logger to allow adding context after creation,
+        // then we can get rid of the need for logPrefix here
         this.logPrefix
-                = "[endpoint=" + endpoint.getID() +
-                " conference=" + conference.getID() +
-                " local_ufrag=" + iceAgent.getLocalUfrag() + "] ";
+                = "[local_ufrag=" + iceAgent.getLocalUfrag() + "] ";
 
         EventAdmin eventAdmin = conference.getEventAdmin();
         if (eventAdmin != null)
