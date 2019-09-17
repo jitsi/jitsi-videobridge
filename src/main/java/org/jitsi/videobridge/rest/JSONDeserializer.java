@@ -31,7 +31,7 @@ import org.json.simple.*;
  *
  * @author Lyubomir Marinov
  */
-final class JSONDeserializer
+public final class JSONDeserializer
 {
     /**
      * Deserializes the values of a <tt>JSONObject</tt> which are neither

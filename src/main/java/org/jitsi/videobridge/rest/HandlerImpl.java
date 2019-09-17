@@ -589,8 +589,8 @@ class HandlerImpl
         {
             // TODO Auto-generated method stub
         }
-        else if (target.startsWith(CONFERENCES) &&
-            (POST_HTTP_METHOD.equals(requestMethod) || PATCH_HTTP_METHOD.equals(requestMethod)))
+//            (POST_HTTP_METHOD.equals(requestMethod) || PATCH_HTTP_METHOD.equals(requestMethod)))
+        else if (target.startsWith(CONFERENCES) && PATCH_HTTP_METHOD.equals(requestMethod))
         {
             target = target.substring(CONFERENCES.length());
             if (target.startsWith("/"))
@@ -647,6 +647,10 @@ class HandlerImpl
         throws IOException,
                ServletException
     {
+        if (true)
+        {
+            return;
+        }
         // NOTE(brian): we intentionally no longer call the parent handleJSON here, as
         // all of the endpoints it was handling (health and version) are now replaced
         // by logic here in the bridge
@@ -672,7 +676,7 @@ class HandlerImpl
             // All responses to requests for resources under the base /colibri/
             // are in JSON format.
             beginResponse(target, baseRequest, request, response);
-            handleColibriJSON(target, baseRequest, request, response);
+//            handleColibriJSON(target, baseRequest, request, response);
 
             int newResponseStatus = response.getStatus();
 
