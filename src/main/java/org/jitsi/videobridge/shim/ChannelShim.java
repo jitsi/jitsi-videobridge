@@ -242,23 +242,13 @@ public class ChannelShim
                 iq.addSource(bridgeSource);
             }
 
-            if (sources != null && !sources.isEmpty())
-            {
-                int[] ssrcs = new int[sources.size()];
-                int i = 0;
-                for (SourcePacketExtension source : sources)
-                {
-                    long ssrc = source.getSSRC();
-                    if (ssrc != -1)
-                    {
-                        ssrcs[i] = (int) source.getSSRC();
-                        i++;
-                    }
-                }
-                if (i < ssrcs.length)
-                {
-                    ssrcs = Arrays.copyOf(ssrcs, i);
-                }
+            if (sources != null) {
+                int[] ssrcs = sources.stream()
+                        .map(SourcePacketExtension::getSSRC)
+                        .filter(ssrc -> ssrc != -1L)
+                        .mapToInt(Long::intValue)
+                        .toArray();
+
                 iq.setSSRCs(ssrcs);
             }
         }
