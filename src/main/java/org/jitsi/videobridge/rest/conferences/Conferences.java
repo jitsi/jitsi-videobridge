@@ -137,29 +137,7 @@ public class Conferences
             throw new BadRequestExceptionWithMessage("Must not include conference ID");
         }
 
-        IQ responseIq = videobridgeProvider.get().handleColibriConferenceIQ(
-                requestConferenceIQ,
-                Videobridge.OPTION_ALLOW_NO_FOCUS);
-
-        if (responseIq.getError() != null)
-        {
-            throw new BadRequestExceptionWithMessage(
-                "Failed to create conference: " + responseIq.getError().getDescriptiveText());
-        }
-
-        if (!(responseIq instanceof ColibriConferenceIQ))
-        {
-            throw new InternalServerErrorExceptionWithMessage("Non-error, non-colibri IQ result");
-        }
-
-        JSONObject responseJson = JSONSerializer.serializeConference((ColibriConferenceIQ)responseIq);
-
-        if (responseJson == null)
-        {
-            responseJson = new JSONObject();
-        }
-
-        return responseJson.toJSONString();
+        return getVideobridgeIqResponseAsJson(requestConferenceIQ, Videobridge.OPTION_ALLOW_NO_FOCUS);
     }
 
     @PATCH
@@ -191,8 +169,13 @@ public class Conferences
             throw new BadRequestException();
         }
 
+        return getVideobridgeIqResponseAsJson(requestIq, Videobridge.OPTION_ALLOW_NO_FOCUS);
+    }
+
+    private String getVideobridgeIqResponseAsJson(ColibriConferenceIQ request, int options)
+    {
         IQ responseIq = videobridgeProvider.get()
-                .handleColibriConferenceIQ(requestIq, Videobridge.OPTION_ALLOW_NO_FOCUS);
+                .handleColibriConferenceIQ(request, options);
 
         if (responseIq.getError() != null)
         {
