@@ -23,7 +23,6 @@ public class ConferencesApp extends ResourceConfig
 {
     public ConferencesApp(VideobridgeProvider videobridgeProvider)
     {
-//        register((new ClientResponseExceptionFilter()));
         register(new Conferences(videobridgeProvider));
     }
 }
