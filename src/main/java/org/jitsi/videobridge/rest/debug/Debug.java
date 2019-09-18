@@ -65,7 +65,7 @@ public class Debug
                 break;
             }
             default: {
-                return Response.status(HttpStatus.NOT_FOUND_404).build();
+                throw new NotFoundException();
             }
         }
 
@@ -84,7 +84,7 @@ public class Debug
                 break;
             }
             default: {
-                return Response.status(HttpStatus.NOT_FOUND_404).build();
+                throw new NotFoundException();
             }
         }
 
