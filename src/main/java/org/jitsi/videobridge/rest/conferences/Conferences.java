@@ -72,6 +72,10 @@ public class Conferences
     {
         Conference conference
                 = videobridgeProvider.get().getConference(confId, null);
+        
+        if (conference == null) {
+            throw new NotFoundException();
+        }
 
         ColibriConferenceIQ conferenceIQ = new ColibriConferenceIQ();
 
@@ -90,6 +94,10 @@ public class Conferences
     {
         Conference conference
                 = videobridgeProvider.get().getConference(confId, null);
+
+        if (conference == null) {
+            throw new NotFoundException();
+        }
 
         ConferenceSpeechActivity conferenceSpeechActivity
                 = conference.getSpeechActivity();
