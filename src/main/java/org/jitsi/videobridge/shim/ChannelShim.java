@@ -241,6 +241,26 @@ public class ChannelShim
                 bridgeSource.setSSRC(localSsrc);
                 iq.addSource(bridgeSource);
             }
+
+            if (sources != null && !sources.isEmpty())
+            {
+                int[] ssrcs = new int[sources.size()];
+                int i = 0;
+                for (SourcePacketExtension source : sources)
+                {
+                    long ssrc = source.getSSRC();
+                    if (ssrc != -1)
+                    {
+                        ssrcs[i] = (int) source.getSSRC();
+                        i++;
+                    }
+                }
+                if (i < ssrcs.length)
+                {
+                    ssrcs = Arrays.copyOf(ssrcs, i);
+                }
+                iq.setSSRCs(ssrcs);
+            }
         }
     }
 
