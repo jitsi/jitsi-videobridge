@@ -114,7 +114,7 @@ public class Conferences
     @Produces(MediaType.APPLICATION_JSON)
     public String createConference(String requestBody)
     {
-        Object requestJson = null;
+        Object requestJson;
         try
         {
             requestJson = new JSONParser().parse(requestBody);
@@ -128,32 +128,37 @@ public class Conferences
             throw new BadRequestExceptionWithMessage(
                     "Failed to create conference, could not parse JSON: " + pe.getMessage());
         }
+
         ColibriConferenceIQ requestConferenceIQ
-                = JSONDeserializer.deserializeConference(
-                (JSONObject) requestJson);
+                = JSONDeserializer.deserializeConference((JSONObject) requestJson);
+
         if ((requestConferenceIQ == null) || requestConferenceIQ.getID() != null)
         {
             throw new BadRequestExceptionWithMessage("Must not include conference ID");
         }
+
         IQ responseIq = videobridgeProvider.get().handleColibriConferenceIQ(
                 requestConferenceIQ,
-                Videobridge.OPTION_ALLOW_NO_FOCUS
-        );
+                Videobridge.OPTION_ALLOW_NO_FOCUS);
+
         if (responseIq.getError() != null)
         {
             throw new BadRequestExceptionWithMessage(
                 "Failed to create conference: " + responseIq.getError().getDescriptiveText());
         }
+
         if (!(responseIq instanceof ColibriConferenceIQ))
         {
             throw new InternalServerErrorExceptionWithMessage("Non-error, non-colibri IQ result");
         }
-        JSONObject responseJson =
-                JSONSerializer.serializeConference((ColibriConferenceIQ)responseIq);
+
+        JSONObject responseJson = JSONSerializer.serializeConference((ColibriConferenceIQ)responseIq);
+
         if (responseJson == null)
         {
             responseJson = new JSONObject();
         }
+
         return responseJson.toJSONString();
     }
 
@@ -168,7 +173,7 @@ public class Conferences
         {
             throw new NotFoundException();
         }
-        Object requestJson = null;
+        Object requestJson;
         try
         {
             requestJson = new JSONParser().parse(requestBody);
@@ -177,12 +182,15 @@ public class Conferences
         {
             throw new BadRequestException();
         }
+
         ColibriConferenceIQ requestIq = JSONDeserializer.deserializeConference((JSONObject)requestJson);
+
         if (requestIq == null || ((requestIq.getID() != null) &&
                 !requestIq.getID().equalsIgnoreCase(conference.getID())))
         {
             throw new BadRequestException();
         }
+
         IQ responseIq = videobridgeProvider.get()
                 .handleColibriConferenceIQ(requestIq, Videobridge.OPTION_ALLOW_NO_FOCUS);
 
@@ -191,16 +199,19 @@ public class Conferences
             throw new BadRequestExceptionWithMessage(
                     "Failed to create conference: " + responseIq.getError().getDescriptiveText());
         }
+
         if (!(responseIq instanceof ColibriConferenceIQ))
         {
             throw new InternalServerErrorExceptionWithMessage("Non-error, non-colibri IQ result");
         }
-        JSONObject responseJson =
-                JSONSerializer.serializeConference((ColibriConferenceIQ)responseIq);
+
+        JSONObject responseJson = JSONSerializer.serializeConference((ColibriConferenceIQ)responseIq);
+
         if (responseJson == null)
         {
             responseJson = new JSONObject();
         }
+
         return responseJson.toJSONString();
     }
 }
