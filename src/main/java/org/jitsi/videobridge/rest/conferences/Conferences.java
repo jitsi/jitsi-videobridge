@@ -59,7 +59,9 @@ public class Conferences
                 = JSONSerializer.serializeConferences(conferenceIQs);
 
         if (conferencesJSONArray == null)
+        {
             conferencesJSONArray = new JSONArray();
+        }
 
 
         return conferencesJSONArray.toJSONString();
@@ -72,8 +74,9 @@ public class Conferences
     {
         Conference conference
                 = videobridgeProvider.get().getConference(confId, null);
-        
-        if (conference == null) {
+
+        if (conference == null)
+        {
             throw new NotFoundException();
         }
 
@@ -95,7 +98,8 @@ public class Conferences
         Conference conference
                 = videobridgeProvider.get().getConference(confId, null);
 
-        if (conference == null) {
+        if (conference == null)
+        {
             throw new NotFoundException();
         }
 
