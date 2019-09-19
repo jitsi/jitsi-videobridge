@@ -21,6 +21,7 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.queue.*;
+import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 
 import javax.ws.rs.*;
@@ -118,5 +119,30 @@ public class Debug
     {
         OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(confId, epId);
         return confJson.toJSONString();
+    }
+
+    @GET
+    @Path("/stats/{feature}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String getStats(@PathParam("feature") DebugFeatures feature)
+    {
+        switch (feature)
+        {
+            case NODE_STATS: {
+                return StatsKeepingNode.Companion.getStatsJson().toJSONString();
+            }
+            case POOL_STATS: {
+                return ByteBufferPool.getStatsJson().toJSONString();
+            }
+            case QUEUE_STATS: {
+                return videobridgeProvider.get().getQueueStats().toJSONString();
+            }
+            case TRANSIT_STATS: {
+                return PacketTransitStats.getStatsJson().toJSONString();
+            }
+            default: {
+                throw new NotFoundException();
+            }
+        }
     }
 }
