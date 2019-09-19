@@ -63,7 +63,7 @@ class MediaStreamTracks : NodeStatsProducer {
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("MediaStreamTracks").apply {
         tracks.forEachIndexed { i, track ->
             val trackBlock = NodeStatsBlock("track_$i")
-            trackBlock.addString("owner", track.owner)
+            track.owner?.let { trackBlock.addString("owner", it) }
             track.rtpEncodings.forEach { trackBlock.addBlock(it.getNodeStats()) }
             addBlock(trackBlock)
         }
