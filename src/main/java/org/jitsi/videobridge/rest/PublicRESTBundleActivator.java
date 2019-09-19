@@ -211,8 +211,7 @@ public class PublicRESTBundleActivator
         // The rules for mappings of the Servlet specification do not allow path
         // matching in the middle of the path.
         servletContextHandler.addServlet(
-                holder,
-                HandlerImpl.COLIBRI_TARGET + "*");
+                holder, "/colibri/*");
 
         return holder;
     }

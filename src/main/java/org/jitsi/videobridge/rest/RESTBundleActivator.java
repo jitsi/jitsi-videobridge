@@ -23,12 +23,15 @@ import org.glassfish.jersey.servlet.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.about.version.*;
+import org.jitsi.videobridge.rest.conferences.*;
 import org.jitsi.videobridge.rest.debug.*;
 import org.jitsi.videobridge.rest.about.health.*;
 import org.jitsi.videobridge.rest.mucclient.*;
 import org.jitsi.videobridge.rest.shutdown.*;
 import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
+
+import javax.servlet.*;
 
 /**
  * Implements <tt>BundleActivator</tt> for the OSGi bundle which implements a
@@ -139,6 +142,10 @@ public class RESTBundleActivator
         {
             ServletContextHandler colibriContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
             colibriContextHandler.setContextPath("/colibri");
+
+            ConferencesApp conferencesHandler = new ConferencesApp(videobridgeProvider);
+            ServletHolder conferencesServletHolder = new ServletHolder(new ServletContainer(conferencesHandler));
+            colibriContextHandler.addServlet(conferencesServletHolder, "/conferences/*");
 
             DebugApp debugHandler = new DebugApp(videobridgeProvider);
             ServletHolder debugServletHolder = new ServletHolder(new ServletContainer(debugHandler));
