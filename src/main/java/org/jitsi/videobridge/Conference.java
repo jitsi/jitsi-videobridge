@@ -74,7 +74,7 @@ public class Conference
      * (we iterate over it for each RTP packet) and the Octo endpoints are not
      * needed.
      */
-    private List<Endpoint> endpointsCache = Collections.EMPTY_LIST;
+    private List<Endpoint> endpointsCache = Collections.emptyList();
 
     /**
      * The {@link EventAdmin} instance (to be) used by this {@code Conference}
