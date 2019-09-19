@@ -939,8 +939,20 @@ public class Conference
      */
     void endpointExpired(AbstractEndpoint endpoint)
     {
-        if (endpoints.remove(endpoint.getID()) != null)
+        final AbstractEndpoint removedEndpoint;
+        synchronized (endpoints)
         {
+            removedEndpoint = endpoints.remove(endpoint.getID());
+        }
+
+        if (removedEndpoint != null)
+        {
+            final EventAdmin eventAdmin = getEventAdmin();
+            if (eventAdmin != null)
+            {
+                eventAdmin.sendEvent(
+                    EventFactory.endpointExpired(removedEndpoint));
+            }
             updateEndpointsCache();
             endpointsChanged();
         }

@@ -49,6 +49,12 @@ public class EventFactory
         = "org/jitsi/videobridge/Endpoint/CREATED";
 
     /**
+     * The name of the topic of a "endpoint expired" event.
+     */
+    public static final String ENDPOINT_EXPIRED_TOPIC
+        = "org/jitsi/videobridge/Endpoint/EXPIRED";
+
+    /**
      * The name of the topic of a "message transport ready" event triggered on
      * an endpoint instance when it's message transport connection is ready for
      * sending/receiving data.
@@ -109,6 +115,18 @@ public class EventFactory
     public static Event endpointCreated(AbstractEndpoint endpoint)
     {
         return new Event(ENDPOINT_CREATED_TOPIC, makeProperties(endpoint));
+    }
+
+    /**
+     * Creates a new "endpoint expired" <tt>Event</tt>, which indicates that
+     * a COLIBRI endpoint was expired.
+     * @param endpoint the just expired endpoint.
+     *
+     * @return the <tt>Event</tt> which was created.
+     */
+    public static Event endpointExpired(AbstractEndpoint endpoint)
+    {
+        return new Event(ENDPOINT_EXPIRED_TOPIC, makeProperties(endpoint));
     }
 
     /**
