@@ -16,10 +16,11 @@
 
 package org.jitsi.videobridge.rest.debug;
 
-import org.eclipse.jetty.http.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.logging2.Logger;
+import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.util.*;
 
 import javax.ws.rs.*;
@@ -57,18 +58,8 @@ public class Debug
     @Path("/enable/{feature}")
     public Response enableFeature(@PathParam("feature") DebugFeatures feature)
     {
-        switch (feature)
-        {
-            case PAYLOAD_VERIFICATION: {
-                logger.info("Enabling payload verification");
-                Node.Companion.enablePayloadVerification(true);
-                break;
-            }
-            default: {
-                throw new NotFoundException();
-            }
-        }
-
+        logger.info("Enabling " + feature.getValue());
+        setFeature(feature, true);
         return Response.ok().build();
     }
 
@@ -76,19 +67,39 @@ public class Debug
     @Path("/disable/{feature}")
     public Response disableFeature(@PathParam("feature") DebugFeatures feature)
     {
+        logger.info("Disabling " + feature.getValue());
+        setFeature(feature, false);
+        return Response.ok().build();
+    }
+
+    private void setFeature(DebugFeatures feature, boolean enabled)
+    {
         switch (feature)
         {
             case PAYLOAD_VERIFICATION: {
-                logger.info("Disabling payload verification");
-                Node.Companion.enablePayloadVerification(false);
+                Node.Companion.enablePayloadVerification(enabled);
+                break;
+            }
+            case NODE_STATS: {
+                StatsKeepingNode.Companion.setEnableStatistics(enabled);
+                break;
+            }
+            case POOL_STATS: {
+                ByteBufferPool.enableStatistics(enabled);
+                break;
+            }
+            case QUEUE_STATS: {
+                PacketQueue.setEnableStatisticsDefault(true);
+                break;
+            }
+            case TRANSIT_STATS: {
+                //TODO
                 break;
             }
             default: {
                 throw new NotFoundException();
             }
         }
-
-        return Response.ok().build();
     }
 
     @GET
