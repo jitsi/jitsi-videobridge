@@ -98,44 +98,14 @@ public class RESTBundleActivator
     }
 
     /**
-     * Initializes a new {@link Handler} instance which is to handle the
-     * &quot;/colibri&quot; target for a specific {@code Server} instance.
-     *
-     * @param bundleContext the {@code BundleContext} in which the new instance
-     * is to be initialized
-     * @param server the {@code Server} for which the new instance is to handle
-     * the &quot;/colibri&quot; target
-     * @return a new {@code Handler} instance which is to handle the
-     * &quot;/colibri&quot; target for {@code server}
-     */
-    private Handler initializeColibriHandler(
-            BundleContext bundleContext,
-            Server server)
-    {
-        return
-            new HandlerImpl(
-                    bundleContext,
-                    getCfgBoolean(ENABLE_REST_SHUTDOWN_PNAME, false),
-                    getCfgBoolean(ENABLE_REST_COLIBRI_PNAME, true));
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
     protected Handler initializeHandlerList(
             BundleContext bundleContext,
             Server server)
-        throws Exception
     {
         List<Handler> handlers = new ArrayList<>();
-
-        // The /colibri target of the REST API.
-        Handler colibriHandler
-            = initializeColibriHandler(bundleContext, server);
-
-        if (colibriHandler != null)
-            handlers.add(colibriHandler);
 
         VideobridgeProvider videobridgeProvider = new VideobridgeProvider(bundleContext);
         if (getCfgBoolean(ENABLE_REST_COLIBRI_PNAME, true))

@@ -16,10 +16,12 @@
 
 package org.jitsi.videobridge.rest.debug;
 
-import org.eclipse.jetty.http.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.logging2.Logger;
+import org.jitsi.utils.queue.*;
+import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 
 import javax.ws.rs.*;
@@ -57,18 +59,8 @@ public class Debug
     @Path("/enable/{feature}")
     public Response enableFeature(@PathParam("feature") DebugFeatures feature)
     {
-        switch (feature)
-        {
-            case PAYLOAD_VERIFICATION: {
-                logger.info("Enabling payload verification");
-                Node.Companion.enablePayloadVerification(true);
-                break;
-            }
-            default: {
-                return Response.status(HttpStatus.NOT_FOUND_404).build();
-            }
-        }
-
+        logger.info("Enabling " + feature.getValue());
+        setFeature(feature, true);
         return Response.ok().build();
     }
 
@@ -76,19 +68,39 @@ public class Debug
     @Path("/disable/{feature}")
     public Response disableFeature(@PathParam("feature") DebugFeatures feature)
     {
+        logger.info("Disabling " + feature.getValue());
+        setFeature(feature, false);
+        return Response.ok().build();
+    }
+
+    private void setFeature(DebugFeatures feature, boolean enabled)
+    {
         switch (feature)
         {
             case PAYLOAD_VERIFICATION: {
-                logger.info("Disabling payload verification");
-                Node.Companion.enablePayloadVerification(false);
+                Node.Companion.enablePayloadVerification(enabled);
+                break;
+            }
+            case NODE_STATS: {
+                StatsKeepingNode.Companion.setEnableStatistics(enabled);
+                break;
+            }
+            case POOL_STATS: {
+                ByteBufferPool.enableStatistics(enabled);
+                break;
+            }
+            case QUEUE_STATS: {
+                PacketQueue.setEnableStatisticsDefault(true);
+                break;
+            }
+            case TRANSIT_STATS: {
+                //TODO
                 break;
             }
             default: {
-                return Response.status(HttpStatus.NOT_FOUND_404).build();
+                throw new NotFoundException();
             }
         }
-
-        return Response.ok().build();
     }
 
     @GET
@@ -107,5 +119,30 @@ public class Debug
     {
         OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(confId, epId);
         return confJson.toJSONString();
+    }
+
+    @GET
+    @Path("/stats/{feature}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String getStats(@PathParam("feature") DebugFeatures feature)
+    {
+        switch (feature)
+        {
+            case NODE_STATS: {
+                return StatsKeepingNode.Companion.getStatsJson().toJSONString();
+            }
+            case POOL_STATS: {
+                return ByteBufferPool.getStatsJson().toJSONString();
+            }
+            case QUEUE_STATS: {
+                return videobridgeProvider.get().getQueueStats().toJSONString();
+            }
+            case TRANSIT_STATS: {
+                return PacketTransitStats.getStatsJson().toJSONString();
+            }
+            default: {
+                throw new NotFoundException();
+            }
+        }
     }
 }

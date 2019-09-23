@@ -22,7 +22,11 @@ package org.jitsi.videobridge.rest.debug;
  */
 public enum DebugFeatures
 {
-    PAYLOAD_VERIFICATION("payload-verification");
+    PAYLOAD_VERIFICATION("payload-verification"),
+    NODE_STATS("node-stats"),
+    POOL_STATS("pool-stats"),
+    QUEUE_STATS("queue-stats"),
+    TRANSIT_STATS("transit-stats");
 
     private final String value;
 
