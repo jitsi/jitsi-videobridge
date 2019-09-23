@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,19 @@
  */
 package org.jitsi.videobridge.version;
 
-import org.jitsi.version.*;
+import org.jitsi.utils.version.*;
 
 /**
- * A static implementation of the {@link CurrentVersion} interface for Jitsi
- * Videobridge.
+ * Keeps constants for the application version.
+ *
+ * Note that the constants are modified at build time, so changes to this file
+ * must be synchronized with the build system.
  *
  * @author George Politis
  * @author Pawel Domas
+ * @author Boris Grozev
  */
 public class CurrentVersionImpl
-    implements CurrentVersion
 {
     /**
      * The version major of the current application version. In an example
@@ -54,47 +56,13 @@ public class CurrentVersionImpl
     public static final String NIGHTLY_BUILD_ID = "build.SVN";
 
     /**
-     * {@inheritDoc}
+     * The currently running version.
      */
-    @Override
-    public int getMajorVersion()
-    {
-        return VERSION_MAJOR;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public int getMinorVersion()
-    {
-        return VERSION_MINOR;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getNightlyBuildID()
-    {
-        return NIGHTLY_BUILD_ID;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getPreReleaseID()
-    {
-        return PRE_RELEASE_ID;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getDefaultAppName()
-    {
-        return "JVB";
-    }
+    static final Version VERSION
+        = new VersionImpl(
+        "JVB",
+        VERSION_MAJOR,
+        VERSION_MINOR,
+        NIGHTLY_BUILD_ID,
+        PRE_RELEASE_ID);
 }
