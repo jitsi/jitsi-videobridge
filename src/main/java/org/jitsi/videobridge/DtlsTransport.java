@@ -198,7 +198,7 @@ public class DtlsTransport extends IceTransport
             final boolean hasSha1Hash = remoteFingerprints
                 .keySet()
                 .stream()
-                .anyMatch(hash -> hash.equalsIgnoreCase("sha1"));
+                .anyMatch(hash -> hash.equalsIgnoreCase("sha-1"));
 
             if (dtlsStack.getRole() == null
                 && hasSha1Hash)
