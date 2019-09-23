@@ -43,6 +43,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.function.*;
+import java.util.stream.*;
 
 /**
  * @author Brian Baldino
@@ -145,8 +146,6 @@ public class DtlsTransport extends IceTransport
     public void startConnectivityEstablishment(
             IceUdpTransportPacketExtension transportPacketExtension)
     {
-        // TODO(boris): read the Setup attribute and support acting like the
-        // DTLS server.
         List<DtlsFingerprintPacketExtension> fingerprintExtensions
                 = transportPacketExtension.getChildExtensionsOfType(
                         DtlsFingerprintPacketExtension.class);
@@ -196,9 +195,13 @@ public class DtlsTransport extends IceTransport
         {
             dtlsStack.setRemoteFingerprints(remoteFingerprints);
 
-            String hash = remoteFingerprints.entrySet().iterator().next().getKey();
+            final boolean hasSha1Hash = remoteFingerprints
+                .keySet()
+                .stream()
+                .anyMatch(hash -> hash.equalsIgnoreCase("sha-1"));
+
             if (dtlsStack.getRole() == null
-                && hash != null && hash.equalsIgnoreCase("sha-1"))
+                && hasSha1Hash)
             {
                 // hack(george) Jigasi sends a sha-1 dtls fingerprint without a
                 // setup attribute and it assumes a server role for the bridge.
