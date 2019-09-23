@@ -145,8 +145,6 @@ public class DtlsTransport extends IceTransport
     public void startConnectivityEstablishment(
             IceUdpTransportPacketExtension transportPacketExtension)
     {
-        // TODO(boris): read the Setup attribute and support acting like the
-        // DTLS server.
         List<DtlsFingerprintPacketExtension> fingerprintExtensions
                 = transportPacketExtension.getChildExtensionsOfType(
                         DtlsFingerprintPacketExtension.class);
