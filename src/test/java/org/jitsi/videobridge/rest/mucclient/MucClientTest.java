@@ -17,7 +17,10 @@
 package org.jitsi.videobridge.rest.mucclient;
 
 import org.eclipse.jetty.http.*;
+import org.glassfish.jersey.server.*;
 import org.glassfish.jersey.test.*;
+import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.rest.about.version.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.json.simple.*;
@@ -26,6 +29,7 @@ import org.mockito.*;
 
 import javax.ws.rs.client.*;
 import javax.ws.rs.core.*;
+import javax.ws.rs.core.Application;
 
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -33,28 +37,25 @@ import static org.mockito.Mockito.*;
 
 public class MucClientTest extends JerseyTest
 {
-    protected static ClientConnectionProvider clientConnectionProvider;
-    protected static ClientConnectionImpl clientConnection;
-
-    @BeforeClass
-    public static void setup()
-    {
-        clientConnectionProvider = mock(ClientConnectionProvider.class);
-        clientConnection = mock(ClientConnectionImpl.class);
-    }
+    protected ClientConnectionProvider clientConnectionProvider;
+    protected ClientConnectionImpl clientConnection;
+    protected static final String BASE_URL = "/colibri/muc-client";
 
     @Override
     protected Application configure()
     {
+        clientConnectionProvider = mock(ClientConnectionProvider.class);
+        clientConnection = mock(ClientConnectionImpl.class);
+        when(clientConnectionProvider.get()).thenReturn(clientConnection);
+
         enable(TestProperties.LOG_TRAFFIC);
         enable(TestProperties.DUMP_ENTITY);
-        return new MucClientApp(clientConnectionProvider);
-    }
-
-    @Before
-    public void beforeTest()
-    {
-        when(clientConnectionProvider.get()).thenReturn(clientConnection);
+        return new ResourceConfig() {
+            {
+                register(new MockBinder<>(clientConnectionProvider, ClientConnectionProvider.class));
+                register(MucClient.class);
+            }
+        };
     }
 
     @Test
@@ -72,7 +73,7 @@ public class MucClientTest extends JerseyTest
         json.put("muc_jids", "jid1, jid2");
         json.put("muc_nickname", "muc_nickname");
 
-        Response resp = target("/add").request().post(Entity.json(json.toJSONString()));
+        Response resp = target(BASE_URL + "/add").request().post(Entity.json(json.toJSONString()));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
         assertEquals(json, jsonConfigCaptor.getValue());
     }
@@ -89,7 +90,7 @@ public class MucClientTest extends JerseyTest
         json.put("muc_jids", "jid1, jid2");
         json.put("muc_nickname", "muc_nickname");
 
-        Response resp = target("/add").request().post(Entity.json(json.toJSONString()));
+        Response resp = target(BASE_URL + "/add").request().post(Entity.json(json.toJSONString()));
         assertEquals(HttpStatus.BAD_REQUEST_400, resp.getStatus());
     }
 
@@ -103,7 +104,7 @@ public class MucClientTest extends JerseyTest
         JSONObject json = new JSONObject();
         json.put("id", "id");
 
-        Response resp = target("/remove").request().post(Entity.json(json.toJSONString()));
+        Response resp = target(BASE_URL + "/remove").request().post(Entity.json(json.toJSONString()));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
         assertEquals(json, jsonConfigCaptor.getValue());
     }
@@ -115,7 +116,7 @@ public class MucClientTest extends JerseyTest
         JSONObject json = new JSONObject();
         json.put("id", "id");
 
-        Response resp = target("/remove").request().post(Entity.json(json.toJSONString()));
+        Response resp = target(BASE_URL + "/remove").request().post(Entity.json(json.toJSONString()));
         assertEquals(HttpStatus.BAD_REQUEST_400, resp.getStatus());
     }
 }

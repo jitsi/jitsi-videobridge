@@ -21,6 +21,7 @@ import org.jitsi.videobridge.xmpp.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
+import javax.inject.*;
 import javax.servlet.http.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
@@ -28,14 +29,11 @@ import javax.ws.rs.core.*;
 /**
  * Add or remove XMPP environments to which the bridge will connect
  */
-@Path("/")
+@Path("/colibri/muc-client")
 public class MucClient
 {
-    protected final ClientConnectionProvider clientConnectionProvider;
-    public MucClient(ClientConnectionProvider clientConnectionProvider)
-    {
-        this.clientConnectionProvider = clientConnectionProvider;
-    }
+    @Inject
+    protected ClientConnectionProvider clientConnectionProvider;
 
     @Path("/add")
     @POST
