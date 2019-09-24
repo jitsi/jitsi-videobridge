@@ -27,16 +27,9 @@ public class Application extends ResourceConfig
 
     public Application(BundleContext bundleContext)
     {
+        // Register the resource binder for injecting OSGI services
         register(new OsgiServiceBinder(bundleContext));
+        // Register all resources in the package
         packages("org.jitsi.videobridge.rest.root");
-//        register(Stats.class);
-//        register(Version.class);
-//        register(Health.class);
-//        register(Conferences.class);
-        //TODO: add check for config prop
-//        logger.info("Enabling shutdown via REST");
-//        register(Shutdown.class);
-//        register(Debug.class);
-//        register(MucClient.class);
     }
 }
