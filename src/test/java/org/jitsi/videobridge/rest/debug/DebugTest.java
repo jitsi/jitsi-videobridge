@@ -17,35 +17,46 @@
 package org.jitsi.videobridge.rest.debug;
 
 import org.eclipse.jetty.http.*;
+import org.glassfish.jersey.server.*;
+import org.glassfish.jersey.test.*;
+import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.util.*;
 import org.junit.*;
-import org.jitsi.videobridge.rest.debug.DebugFeatures;
 
 import javax.ws.rs.client.*;
-import javax.ws.rs.core.*;
 import javax.ws.rs.core.Application;
+import javax.ws.rs.core.*;
 
 import static junit.framework.TestCase.*;
 import static org.mockito.Mockito.*;
 
-public class DebugTest extends VideobridgeRestResourceTest
+public class DebugTest extends JerseyTest
 {
-    @Override
-    protected Application getApplication()
-    {
-        return new DebugApp(videobridgeProvider);
-    }
+    protected VideobridgeProvider videobridgeProvider;
+    protected Videobridge videobridge;
 
-    @Before
-    public void beforeTest()
+    @Override
+    protected Application configure()
     {
+        videobridgeProvider = mock(VideobridgeProvider.class);
+        videobridge = mock(Videobridge.class);
         when(videobridgeProvider.get()).thenReturn(videobridge);
+
+        enable(TestProperties.LOG_TRAFFIC);
+        enable(TestProperties.DUMP_ENTITY);
+        return new ResourceConfig() {
+            {
+                register(new MockBinder<>(videobridgeProvider, VideobridgeProvider.class));
+                register(Debug.class);
+            }
+        };
     }
 
     @Test
     public void testEnableDebugFeature()
     {
-        Response resp = target("/enable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
+        Response resp = target("/colibri/debug/enable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
@@ -54,7 +65,7 @@ public class DebugTest extends VideobridgeRestResourceTest
     @Test
     public void testEnableNonexistentDebugFeature()
     {
-        Response resp = target("/enable/blah")
+        Response resp = target("/colibri/debug/enable/blah")
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.NOT_FOUND_404, resp.getStatus());
@@ -63,7 +74,7 @@ public class DebugTest extends VideobridgeRestResourceTest
     @Test
     public void testDisableDebugFeature()
     {
-        Response resp = target("/disable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
+        Response resp = target("/colibri/debug/disable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
@@ -72,7 +83,7 @@ public class DebugTest extends VideobridgeRestResourceTest
     @Test
     public void testDisableNonexistentDebugFeature()
     {
-        Response resp = target("/disable/blah")
+        Response resp = target("/colibri/debug/disable/blah")
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.NOT_FOUND_404, resp.getStatus());

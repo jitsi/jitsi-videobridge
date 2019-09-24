@@ -21,6 +21,7 @@ import org.jitsi.videobridge.rest.about.health.*;
 import org.jitsi.videobridge.rest.about.version.Version;
 import org.jitsi.videobridge.rest.binders.*;
 import org.jitsi.videobridge.rest.conferences.*;
+import org.jitsi.videobridge.rest.debug.*;
 import org.jitsi.videobridge.rest.stats.*;
 import org.osgi.framework.*;
 
@@ -34,5 +35,6 @@ public class Application extends ResourceConfig
         register(Version.class);
         register(Health.class);
         register(Conferences.class);
+        register(Debug.class);
     }
 }

@@ -24,6 +24,7 @@ import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 
+import javax.inject.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
@@ -36,16 +37,13 @@ import javax.ws.rs.core.*;
  *
  * @author bbaldino
  */
-@Path("/")
+@Path("/colibri/debug")
 public class Debug
 {
-    private final VideobridgeProvider videobridgeProvider;
-    private Logger logger = new LoggerImpl(Debug.class.getName());
+    @Inject
+    private VideobridgeProvider videobridgeProvider;
 
-    public Debug(VideobridgeProvider videobridgeProvider)
-    {
-        this.videobridgeProvider = videobridgeProvider;
-    }
+    private Logger logger = new LoggerImpl(Debug.class.getName());
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)

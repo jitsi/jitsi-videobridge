@@ -35,12 +35,6 @@ public class HealthTest extends JerseyTest
     protected VideobridgeProvider videobridgeProvider;
     protected Videobridge videobridge;
 
-    @Before
-    public void beforeTest()
-    {
-        when(videobridgeProvider.get()).thenReturn(videobridge);
-    }
-
     @Override
     protected Application configure()
     {
