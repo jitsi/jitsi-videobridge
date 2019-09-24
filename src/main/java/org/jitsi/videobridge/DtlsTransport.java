@@ -250,6 +250,7 @@ public class DtlsTransport extends IceTransport
         final String setupRole;
         if (role == null)
         {
+            // We've not chosen a role yet, so we can be either
             setupRole = "actpass";
         }
         else if (role instanceof DtlsServer)
