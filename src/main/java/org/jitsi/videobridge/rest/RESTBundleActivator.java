@@ -28,6 +28,7 @@ import org.jitsi.videobridge.rest.debug.*;
 import org.jitsi.videobridge.rest.about.health.*;
 import org.jitsi.videobridge.rest.mucclient.*;
 import org.jitsi.videobridge.rest.shutdown.*;
+import org.jitsi.videobridge.rest.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
@@ -125,6 +126,11 @@ public class RESTBundleActivator
             MucClientApp mucClientHandler = new MucClientApp(clientConnectionProvider);
             ServletHolder mucClientServletHolder = new ServletHolder(new ServletContainer(mucClientHandler));
             colibriContextHandler.addServlet(mucClientServletHolder, "/muc-client/*");
+
+            StatsManagerProvider statsManagerProvider = new StatsManagerProvider(bundleContext);
+            StatsApp statHandler = new StatsApp(statsManagerProvider);
+            ServletHolder statsServletHolder = new ServletHolder(new ServletContainer(statHandler));
+            colibriContextHandler.addServlet(statsServletHolder, "/stats/*");
 
             if (getCfgBoolean(ENABLE_REST_SHUTDOWN_PNAME, false))
             {
