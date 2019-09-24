@@ -19,23 +19,15 @@ import java.util.*;
 
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.servlet.*;
-import org.glassfish.hk2.utilities.binding.*;
 import org.glassfish.jersey.server.*;
 import org.glassfish.jersey.servlet.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.rest.about.version.*;
 import org.jitsi.videobridge.rest.binders.*;
 import org.jitsi.videobridge.rest.conferences.*;
-import org.jitsi.videobridge.rest.debug.*;
-import org.jitsi.videobridge.rest.about.health.*;
-import org.jitsi.videobridge.rest.mucclient.*;
-import org.jitsi.videobridge.rest.shutdown.*;
 import org.jitsi.videobridge.rest.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
-
-import javax.servlet.*;
 
 /**
  * Implements <tt>BundleActivator</tt> for the OSGi bundle which implements a
@@ -130,29 +122,14 @@ public class RESTBundleActivator
 //            ServletHolder mucClientServletHolder = new ServletHolder(new ServletContainer(mucClientHandler));
 //            colibriContextHandler.addServlet(mucClientServletHolder, "/muc-client/*");
 
-//            StatsManagerProvider statsManagerProvider = new StatsManagerProvider(bundleContext);
-//            StatsApp statHandler = new StatsApp(statsManagerProvider);
-//            ServletHolder statsServletHolder = new ServletHolder(new ServletContainer(statHandler));
-//            colibriContextHandler.addServlet(statsServletHolder, "/stats/*");
-
-
             ResourceConfig statResource = new ResourceConfig(Stats.class);
             ServletHolder statsServletHolder = new ServletHolder(new ServletContainer(statResource));
 //            colibriContextHandler.addServlet(statsServletHolder, "/stats/*");
 
             ResourceConfig cResource = new ResourceConfig() {
                 {
-                    register(new Foo(bundleContext));
-//                    register(new AbstractBinder()
-//                    {
-//                        @Override
-//                        protected void configure()
-//                        {
-//                            bind(new StatsManagerProvider((bundleContext))).to(StatsManagerProvider.class);
-//                        }
-//                    });
+                    register(new OsgiServiceBinder(bundleContext));
                     register(Stats.class);
-//                    register(statResource);
                 }
             };
             ServletHolder sh = new ServletHolder(new ServletContainer(cResource));
