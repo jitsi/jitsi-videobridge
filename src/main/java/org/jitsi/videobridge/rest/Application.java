@@ -17,17 +17,21 @@
 package org.jitsi.videobridge.rest;
 
 import org.glassfish.jersey.server.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.rest.about.health.*;
 import org.jitsi.videobridge.rest.about.version.Version;
 import org.jitsi.videobridge.rest.binders.*;
 import org.jitsi.videobridge.rest.conferences.*;
 import org.jitsi.videobridge.rest.debug.*;
 import org.jitsi.videobridge.rest.mucclient.*;
+import org.jitsi.videobridge.rest.shutdown.Shutdown;
 import org.jitsi.videobridge.rest.stats.*;
 import org.osgi.framework.*;
 
 public class Application extends ResourceConfig
 {
+    protected Logger logger = new LoggerImpl(getClass().getName());
+
     public Application(BundleContext bundleContext)
     {
         register(new OsgiServiceBinder(bundleContext));
@@ -35,6 +39,9 @@ public class Application extends ResourceConfig
         register(Version.class);
         register(Health.class);
         register(Conferences.class);
+        //TODO: add check for config prop
+        logger.info("Enabling shutdown via REST");
+        register(Shutdown.class);
         register(Debug.class);
         register(MucClient.class);
     }
