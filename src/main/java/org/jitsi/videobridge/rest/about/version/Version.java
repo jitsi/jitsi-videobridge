@@ -19,18 +19,15 @@ package org.jitsi.videobridge.rest.about.version;
 import com.fasterxml.jackson.annotation.*;
 import org.jitsi.videobridge.util.*;
 
+import javax.inject.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
-@Path("/")
+@Path("/about/version")
 public class Version
 {
-    protected final VersionServiceProvider versionServiceProvider;
-
-    public Version(VersionServiceProvider versionServiceProvider)
-    {
-        this.versionServiceProvider = versionServiceProvider;
-    }
+    @Inject
+    protected VersionServiceProvider versionServiceProvider;
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)

@@ -14,15 +14,22 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.about.version;
+package org.jitsi.videobridge.rest;
 
 import org.glassfish.jersey.server.*;
-import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.rest.about.version.*;
+import org.jitsi.videobridge.rest.about.version.Version;
+import org.jitsi.videobridge.rest.binders.*;
+import org.jitsi.videobridge.rest.stats.*;
+import org.osgi.framework.*;
 
-public class VersionApp extends ResourceConfig
+public class Application extends ResourceConfig
 {
-    public VersionApp(VersionServiceProvider versionServiceProvider)
+    public Application(BundleContext bundleContext)
     {
-        register(new Version(versionServiceProvider));
+//        packages("org.jitsi.videobridge.rest");
+        register(new OsgiServiceBinder(bundleContext));
+        register(Stats.class);
+        register(Version.class);
     }
 }

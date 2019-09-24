@@ -103,15 +103,15 @@ public class RESTBundleActivator
     {
         List<Handler> handlers = new ArrayList<>();
 
-        VideobridgeProvider videobridgeProvider = new VideobridgeProvider(bundleContext);
-        if (getCfgBoolean(ENABLE_REST_COLIBRI_PNAME, true))
-        {
-            ServletContextHandler colibriContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
-            colibriContextHandler.setContextPath("/colibri");
-
-            ConferencesApp conferencesHandler = new ConferencesApp(videobridgeProvider);
-            ServletHolder conferencesServletHolder = new ServletHolder(new ServletContainer(conferencesHandler));
-            colibriContextHandler.addServlet(conferencesServletHolder, "/conferences/*");
+//        VideobridgeProvider videobridgeProvider = new VideobridgeProvider(bundleContext);
+//        if (getCfgBoolean(ENABLE_REST_COLIBRI_PNAME, true))
+//        {
+//            ServletContextHandler colibriContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
+//            colibriContextHandler.setContextPath("/colibri");
+//
+//            ConferencesApp conferencesHandler = new ConferencesApp(videobridgeProvider);
+//            ServletHolder conferencesServletHolder = new ServletHolder(new ServletContainer(conferencesHandler));
+//            colibriContextHandler.addServlet(conferencesServletHolder, "/conferences/*");
 //
 //            DebugApp debugHandler = new DebugApp(videobridgeProvider);
 //            ServletHolder debugServletHolder = new ServletHolder(new ServletContainer(debugHandler));
@@ -122,19 +122,19 @@ public class RESTBundleActivator
 //            ServletHolder mucClientServletHolder = new ServletHolder(new ServletContainer(mucClientHandler));
 //            colibriContextHandler.addServlet(mucClientServletHolder, "/muc-client/*");
 
-            ResourceConfig statResource = new ResourceConfig(Stats.class);
-            ServletHolder statsServletHolder = new ServletHolder(new ServletContainer(statResource));
+//            ResourceConfig statResource = new ResourceConfig(Stats.class);
+//            ServletHolder statsServletHolder = new ServletHolder(new ServletContainer(statResource));
 //            colibriContextHandler.addServlet(statsServletHolder, "/stats/*");
 
-            ResourceConfig cResource = new ResourceConfig() {
-                {
-                    register(new OsgiServiceBinder(bundleContext));
-                    register(Stats.class);
-                }
-            };
-            ServletHolder sh = new ServletHolder(new ServletContainer(cResource));
-            colibriContextHandler.addServlet(sh, "/stats/*");
-
+//            ResourceConfig cResource = new ResourceConfig() {
+//                {
+//                    register(new OsgiServiceBinder(bundleContext));
+//                    register(Stats.class);
+//                }
+//            };
+//            ServletHolder sh = new ServletHolder(new ServletContainer(cResource));
+//            colibriContextHandler.addServlet(sh, "/stats/*");
+//
 //            if (getCfgBoolean(ENABLE_REST_SHUTDOWN_PNAME, false))
 //            {
 //                ShutdownApp shutdownHandler = new ShutdownApp(videobridgeProvider);
@@ -142,8 +142,8 @@ public class RESTBundleActivator
 //                colibriContextHandler.addServlet(shutdownServletHolder, "/shutdown/*");
 //            }
 
-            handlers.add(colibriContextHandler);
-        }
+//            handlers.add(colibriContextHandler);
+//        }
 
 //        ServletContextHandler aboutContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
 //        aboutContextHandler.setContextPath("/about");
@@ -158,6 +158,12 @@ public class RESTBundleActivator
 //        aboutContextHandler.addServlet(versionServletHolder, "/version/*");
 //
 //        handlers.add(aboutContextHandler);
+
+            ServletContextHandler appHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
+            appHandler.setContextPath("/");
+            appHandler.addServlet(new ServletHolder(new ServletContainer(new Application(bundleContext))), "/*");
+
+        handlers.add(appHandler);
 
         return initializeHandlerList(handlers);
     }

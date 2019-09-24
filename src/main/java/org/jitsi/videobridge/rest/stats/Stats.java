@@ -25,7 +25,7 @@ import javax.inject.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
-@Path("/")
+@Path("/colibri/stats")
 public class Stats
 {
     @Inject

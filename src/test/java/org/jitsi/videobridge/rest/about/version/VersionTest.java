@@ -17,41 +17,39 @@
 package org.jitsi.videobridge.rest.about.version;
 
 import org.eclipse.jetty.http.*;
+import org.glassfish.jersey.server.*;
 import org.glassfish.jersey.test.*;
 import org.jitsi.utils.version.*;
+import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.util.*;
 import org.junit.*;
 
+import javax.ws.rs.core.Application;
 import javax.ws.rs.core.*;
 
-import static junit.framework.TestCase.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static junit.framework.TestCase.*;
+import static org.mockito.Mockito.*;
 
 public class VersionTest extends JerseyTest
 {
-    protected static VersionServiceProvider versionServiceProvider;
-    protected static VersionService versionService;
-
-    @BeforeClass
-    public static void setup()
-    {
-        versionServiceProvider = mock(VersionServiceProvider.class);
-        versionService = mock(VersionService.class);
-    }
+    protected VersionServiceProvider versionServiceProvider;
+    protected VersionService versionService;
 
     @Override
     protected Application configure()
     {
+        versionServiceProvider = mock(VersionServiceProvider.class);
+        versionService = mock(VersionService.class);
+        when(versionServiceProvider.get()).thenReturn(versionService);
+
         enable(TestProperties.LOG_TRAFFIC);
         enable(TestProperties.DUMP_ENTITY);
-        return new VersionApp(versionServiceProvider);
-    }
-
-    @Before
-    public void beforeTest()
-    {
-        when(versionServiceProvider.get()).thenReturn(versionService);
+        return new ResourceConfig() {
+            {
+                register(new MockBinder<>(versionServiceProvider, VersionServiceProvider.class));
+                register(Version.class);
+            }
+        };
     }
 
     @Test
@@ -61,7 +59,7 @@ public class VersionTest extends JerseyTest
             new VersionImpl("appName", 2, 0)
         );
 
-        Response resp = target("/").request().get();
+        Response resp = target("/about/version").request().get();
         assertEquals(HttpStatus.OK_200, resp.getStatus());
         Version.VersionInfo versionInfo = resp.readEntity(Version.VersionInfo.class);
         assertEquals("appName", versionInfo.name);
