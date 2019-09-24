@@ -246,8 +246,26 @@ public class DtlsTransport extends IceTransport
         fingerprintPE.setFingerprint(dtlsStack.getLocalFingerprint());
         fingerprintPE.setHash(dtlsStack.getLocalFingerprintHashFunction());
 
-        // TODO: don't we only support ACTIVE right now?
-        fingerprintPE.setSetup("ACTPASS");
+        final DtlsRole role = dtlsStack.getRole();
+        final String setupRole;
+        if (role == null)
+        {
+            // We've not chosen a role yet, so we can be either
+            setupRole = "actpass";
+        }
+        else if (role instanceof DtlsServer)
+        {
+            setupRole = "passive";
+        }
+        else if (role instanceof DtlsClient)
+        {
+            setupRole = "active";
+        }
+        else
+        {
+            throw new IllegalStateException("Can not describe role " + role);
+        }
+        fingerprintPE.setSetup(setupRole);
     }
 
     /**
