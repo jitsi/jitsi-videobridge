@@ -248,7 +248,11 @@ public class DtlsTransport extends IceTransport
 
         final DtlsRole role = dtlsStack.getRole();
         final String setupRole;
-        if (role instanceof DtlsServer)
+        if (role == null)
+        {
+            setupRole = "actpass";
+        }
+        else if (role instanceof DtlsServer)
         {
             setupRole = "passive";
         }
@@ -258,7 +262,7 @@ public class DtlsTransport extends IceTransport
         }
         else
         {
-            setupRole = "actpass";
+            throw new IllegalStateException("Can not describe role " + role);
         }
         fingerprintPE.setSetup(setupRole);
     }
