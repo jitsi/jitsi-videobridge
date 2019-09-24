@@ -34,6 +34,7 @@ public class HealthTest extends JerseyTest
 {
     protected VideobridgeProvider videobridgeProvider;
     protected Videobridge videobridge;
+    protected static final String BASE_URL = "/about/health";
 
     @Override
     protected Application configure()
@@ -57,7 +58,7 @@ public class HealthTest extends JerseyTest
     {
         doNothing().when(videobridge).healthCheck();
 
-        Response resp = target("/about/health").request().get();
+        Response resp = target(BASE_URL).request().get();
         assertEquals(HttpStatus.OK_200, resp.getStatus());
     }
 
@@ -66,7 +67,7 @@ public class HealthTest extends JerseyTest
     {
         doThrow(new RuntimeException("")).when(videobridge).healthCheck();
 
-        Response resp = target("/about/health").request().get();
+        Response resp = target(BASE_URL).request().get();
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR_500, resp.getStatus());
     }
 }

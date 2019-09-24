@@ -34,6 +34,7 @@ public class VersionTest extends JerseyTest
 {
     protected VersionServiceProvider versionServiceProvider;
     protected VersionService versionService;
+    protected static final String BASE_URL = "/about/version";
 
     @Override
     protected Application configure()
@@ -59,7 +60,7 @@ public class VersionTest extends JerseyTest
             new VersionImpl("appName", 2, 0)
         );
 
-        Response resp = target("/about/version").request().get();
+        Response resp = target(BASE_URL).request().get();
         assertEquals(HttpStatus.OK_200, resp.getStatus());
         Version.VersionInfo versionInfo = resp.readEntity(Version.VersionInfo.class);
         assertEquals("appName", versionInfo.name);

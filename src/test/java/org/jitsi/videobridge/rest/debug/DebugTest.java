@@ -35,6 +35,7 @@ public class DebugTest extends JerseyTest
 {
     protected VideobridgeProvider videobridgeProvider;
     protected Videobridge videobridge;
+    protected static final String BASE_URL = "/colibri/debug";
 
     @Override
     protected Application configure()
@@ -65,7 +66,7 @@ public class DebugTest extends JerseyTest
     @Test
     public void testEnableNonexistentDebugFeature()
     {
-        Response resp = target("/colibri/debug/enable/blah")
+        Response resp = target(BASE_URL + "/enable/blah")
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.NOT_FOUND_404, resp.getStatus());
@@ -74,7 +75,7 @@ public class DebugTest extends JerseyTest
     @Test
     public void testDisableDebugFeature()
     {
-        Response resp = target("/colibri/debug/disable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
+        Response resp = target(BASE_URL + "/disable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
@@ -83,7 +84,7 @@ public class DebugTest extends JerseyTest
     @Test
     public void testDisableNonexistentDebugFeature()
     {
-        Response resp = target("/colibri/debug/disable/blah")
+        Response resp = target(BASE_URL + "/disable/blah")
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.NOT_FOUND_404, resp.getStatus());
