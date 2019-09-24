@@ -24,18 +24,16 @@ import org.jivesoftware.smack.packet.*;
 import org.jxmpp.jid.impl.*;
 import org.jxmpp.stringprep.*;
 
+import javax.inject.*;
 import javax.servlet.http.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
-@Path("/")
+@Path("/colibri/shutdown")
 public class Shutdown
 {
-    protected final VideobridgeProvider videobridgeProvider;
-    public Shutdown(VideobridgeProvider videobridgeProvider)
-    {
-        this.videobridgeProvider = videobridgeProvider;
-    }
+    @Inject
+    protected VideobridgeProvider videobridgeProvider;
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)

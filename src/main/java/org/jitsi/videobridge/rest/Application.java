@@ -29,7 +29,6 @@ public class Application extends ResourceConfig
 {
     public Application(BundleContext bundleContext)
     {
-//        packages("org.jitsi.videobridge.rest");
         register(new OsgiServiceBinder(bundleContext));
         register(Stats.class);
         register(Version.class);

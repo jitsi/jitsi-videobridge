@@ -17,11 +17,14 @@
 package org.jitsi.videobridge.rest.shutdown;
 
 import org.eclipse.jetty.http.*;
+import org.glassfish.jersey.server.*;
 import org.glassfish.jersey.servlet.*;
 import org.glassfish.jersey.test.*;
 import org.glassfish.jersey.test.grizzly.*;
 import org.glassfish.jersey.test.spi.*;
+import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 import org.junit.*;
@@ -30,21 +33,17 @@ import org.mockito.stubbing.*;
 
 import javax.ws.rs.client.*;
 import javax.ws.rs.core.*;
-import javax.ws.rs.core.Application;
 
 import static junit.framework.TestCase.*;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
-public class ShutdownTest extends VideobridgeRestResourceTest
+public class ShutdownTest extends JerseyTest
 {
     private ArgumentCaptor<ShutdownIQ> shutdownIQArgumentCaptor = ArgumentCaptor.forClass(ShutdownIQ.class);
+    protected VideobridgeProvider videobridgeProvider;
+    protected Videobridge videobridge;
+    protected static final String BASE_URL = "/colibri/shutdown";
 
-    @Override
-    public Application getApplication()
-    {
-        throw new RuntimeException("This shouldn't be called for this test, see comments below");
-    }
 
     // This method and configureDeployment are needed to set up a proper servlet context so that
     // the '@Context HttpServletRequest request' parameter in Shutdown#shutdown is set correctly
@@ -57,7 +56,19 @@ public class ShutdownTest extends VideobridgeRestResourceTest
     @Override
     protected DeploymentContext configureDeployment()
     {
-        return ServletDeploymentContext.forServlet(new ServletContainer(new ShutdownApp(videobridgeProvider))).build();
+        videobridgeProvider = mock(VideobridgeProvider.class);
+        videobridge = mock(Videobridge.class);
+        when(videobridgeProvider.get()).thenReturn(videobridge);
+
+        enable(TestProperties.LOG_TRAFFIC);
+        enable(TestProperties.DUMP_ENTITY);
+        return ServletDeploymentContext.forServlet(new ServletContainer(new ResourceConfig()
+        {
+            {
+                register(new MockBinder<>(videobridgeProvider, VideobridgeProvider.class));
+                register(Shutdown.class);
+            }
+        })).build();
     }
 
     @Before
@@ -86,7 +97,7 @@ public class ShutdownTest extends VideobridgeRestResourceTest
         setSuccessfulShutdownIqResponse();
 
         Shutdown.ShutdownJson json = new Shutdown.ShutdownJson(true);
-        Response resp = target("/").request().post(Entity.json(json));
+        Response resp = target(BASE_URL + "/").request().post(Entity.json(json));
 
         assertTrue(shutdownIQArgumentCaptor.getValue().isGracefulShutdown());
         assertEquals("127.0.0.1", shutdownIQArgumentCaptor.getValue().getFrom().toString());
@@ -99,7 +110,7 @@ public class ShutdownTest extends VideobridgeRestResourceTest
         setSuccessfulShutdownIqResponse();
 
         Shutdown.ShutdownJson json = new Shutdown.ShutdownJson(false);
-        Response resp = target("/").request().post(Entity.json(json));
+        Response resp = target(BASE_URL + "/").request().post(Entity.json(json));
 
         assertFalse(shutdownIQArgumentCaptor.getValue().isGracefulShutdown());
         assertEquals("127.0.0.1", shutdownIQArgumentCaptor.getValue().getFrom().toString());
@@ -112,7 +123,7 @@ public class ShutdownTest extends VideobridgeRestResourceTest
         setSuccessfulShutdownIqResponse();
 
         Shutdown.ShutdownJson json = new Shutdown.ShutdownJson(false);
-        Response resp = target("/")
+        Response resp = target(BASE_URL + "/")
                 .request()
                 .header("X-FORWARDED-FOR", "jitsi")
                 .post(Entity.json(json));
@@ -127,7 +138,7 @@ public class ShutdownTest extends VideobridgeRestResourceTest
         setErrorShutdownIqResponse(XMPPError.Condition.not_authorized);
 
         Shutdown.ShutdownJson json = new Shutdown.ShutdownJson(false);
-        Response resp = target("/").request().post(Entity.json(json));
+        Response resp = target(BASE_URL + "/").request().post(Entity.json(json));
 
         assertEquals(HttpStatus.UNAUTHORIZED_401, resp.getStatus());
     }
@@ -138,7 +149,7 @@ public class ShutdownTest extends VideobridgeRestResourceTest
         setErrorShutdownIqResponse(XMPPError.Condition.service_unavailable);
 
         Shutdown.ShutdownJson json = new Shutdown.ShutdownJson(true);
-        Response resp = target("/").request().post(Entity.json(json));
+        Response resp = target(BASE_URL + "/").request().post(Entity.json(json));
 
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE_503, resp.getStatus());
     }
@@ -149,7 +160,7 @@ public class ShutdownTest extends VideobridgeRestResourceTest
         setErrorShutdownIqResponse(XMPPError.Condition.undefined_condition);
 
         Shutdown.ShutdownJson json = new Shutdown.ShutdownJson(true);
-        Response resp = target("/").request().post(Entity.json(json));
+        Response resp = target(BASE_URL + "/").request().post(Entity.json(json));
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR_500, resp.getStatus());
     }
@@ -160,7 +171,7 @@ public class ShutdownTest extends VideobridgeRestResourceTest
         setSuccessfulShutdownIqResponse();
 
         String json = "{ \"graceful-shutdown\": \"true\" }";
-        Response resp = target("/").request().post(Entity.json(json));
+        Response resp = target(BASE_URL + "/").request().post(Entity.json(json));
 
         assertEquals(HttpStatus.OK_200, resp.getStatus());
     }
@@ -171,7 +182,7 @@ public class ShutdownTest extends VideobridgeRestResourceTest
         setSuccessfulShutdownIqResponse();
 
         String json = "{}";
-        Response resp = target("/").request().post(Entity.json(json));
+        Response resp = target(BASE_URL + "/").request().post(Entity.json(json));
 
         assertEquals(HttpStatus.BAD_REQUEST_400, resp.getStatus());
     }
