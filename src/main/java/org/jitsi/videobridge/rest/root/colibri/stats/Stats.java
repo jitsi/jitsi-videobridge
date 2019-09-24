@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.stats;
+package org.jitsi.videobridge.rest.root.colibri.stats;
 
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.stats.*;
@@ -30,11 +30,6 @@ public class Stats
 {
     @Inject
     protected StatsManagerProvider statsManagerProvider;
-
-//    public Stats(StatsManagerProvider statsManagerProvider)
-//    {
-//        this.statsManagerProvider = statsManagerProvider;
-//    }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.shutdown;
+package org.jitsi.videobridge.rest.root.colibri.shutdown;
 
 import com.fasterxml.jackson.annotation.*;
 import org.eclipse.jetty.http.*;

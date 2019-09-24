@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.debug;
+package org.jitsi.videobridge.rest.root.colibri.debug;
 
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;

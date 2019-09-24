@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.conferences;
+package org.jitsi.videobridge.rest.root.colibri.conferences;
 
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;

@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.mucclient;
+package org.jitsi.videobridge.rest.root.colibri.mucclient;
 
 import org.eclipse.jetty.http.*;
 import org.glassfish.jersey.server.*;
 import org.glassfish.jersey.test.*;
 import org.jitsi.videobridge.rest.*;
-import org.jitsi.videobridge.rest.about.version.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.json.simple.*;

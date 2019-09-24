@@ -44,6 +44,7 @@ public class OsgiServiceBinder extends AbstractBinder
         bind(new VideobridgeProvider((bundleContext))).to(VideobridgeProvider.class);
         bind(new VersionServiceProvider((bundleContext))).to(VersionServiceProvider.class);
         bind(new ClientConnectionProvider((bundleContext))).to(ClientConnectionProvider.class);
+        bind(new ConfigProvider(bundleContext)).to(ConfigProvider.class);
     }
 }
 

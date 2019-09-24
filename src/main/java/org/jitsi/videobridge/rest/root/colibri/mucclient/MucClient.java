@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.mucclient;
+package org.jitsi.videobridge.rest.root.colibri.mucclient;
 
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;

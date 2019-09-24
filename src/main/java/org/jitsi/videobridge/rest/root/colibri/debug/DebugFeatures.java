@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.debug;
+package org.jitsi.videobridge.rest.root.colibri.debug;
 
 /**
  * Enumerates different debug features which can be enabled and disabled via

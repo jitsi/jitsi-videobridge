@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.about.version;
+package org.jitsi.videobridge.rest.root.about.version;
 
 import org.eclipse.jetty.http.*;
 import org.glassfish.jersey.server.*;

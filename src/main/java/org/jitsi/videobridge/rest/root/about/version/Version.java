@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.about.version;
+package org.jitsi.videobridge.rest.root.about.version;
 
 import com.fasterxml.jackson.annotation.*;
 import org.jitsi.videobridge.util.*;
@@ -28,6 +28,11 @@ public class Version
 {
     @Inject
     protected VersionServiceProvider versionServiceProvider;
+
+    public Version()
+    {
+        System.out.println("hello");
+    }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)

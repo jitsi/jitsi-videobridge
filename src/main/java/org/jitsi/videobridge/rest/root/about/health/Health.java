@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.about.health;
+package org.jitsi.videobridge.rest.root.about.health;
 
 import org.jitsi.videobridge.util.*;
 
