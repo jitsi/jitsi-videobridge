@@ -17,10 +17,16 @@
 package org.jitsi.videobridge.rest.binders;
 
 import org.glassfish.hk2.utilities.binding.*;
-import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
+/**
+ * OsgiServiceBinder creates various providers for OSGI services
+ * needed by Jersey REST resources.  This binding enables the
+ * REST resource classes to have the needed OSGI service providers
+ * injected rather than requiring they be passed in (which simplifies
+ * registering them with Jersey).
+ */
 public class OsgiServiceBinder extends AbstractBinder
 {
     protected final BundleContext bundleContext;
