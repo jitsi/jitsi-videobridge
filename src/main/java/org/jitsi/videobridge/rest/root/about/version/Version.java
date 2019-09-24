@@ -29,11 +29,6 @@ public class Version
     @Inject
     protected VersionServiceProvider versionServiceProvider;
 
-    public Version()
-    {
-        System.out.println("hello");
-    }
-
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public VersionInfo getVersion()
