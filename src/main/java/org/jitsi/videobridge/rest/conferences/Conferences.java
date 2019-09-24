@@ -25,19 +25,16 @@ import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
+import javax.inject.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 import java.util.*;
 
-@Path("/")
+@Path("/colibri/conferences")
 public class Conferences
 {
-    private final VideobridgeProvider videobridgeProvider;
-
-    public Conferences(VideobridgeProvider videobridgeProvider)
-    {
-        this.videobridgeProvider = videobridgeProvider;
-    }
+    @Inject
+    private VideobridgeProvider videobridgeProvider;
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)

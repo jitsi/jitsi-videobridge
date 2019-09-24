@@ -18,9 +18,9 @@ package org.jitsi.videobridge.rest;
 
 import org.glassfish.jersey.server.*;
 import org.jitsi.videobridge.rest.about.health.*;
-import org.jitsi.videobridge.rest.about.version.*;
 import org.jitsi.videobridge.rest.about.version.Version;
 import org.jitsi.videobridge.rest.binders.*;
+import org.jitsi.videobridge.rest.conferences.*;
 import org.jitsi.videobridge.rest.stats.*;
 import org.osgi.framework.*;
 
@@ -33,5 +33,6 @@ public class Application extends ResourceConfig
         register(Stats.class);
         register(Version.class);
         register(Health.class);
+        register(Conferences.class);
     }
 }
