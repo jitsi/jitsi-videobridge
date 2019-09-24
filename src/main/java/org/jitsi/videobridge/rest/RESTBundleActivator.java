@@ -19,10 +19,13 @@ import java.util.*;
 
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.servlet.*;
+import org.glassfish.hk2.utilities.binding.*;
+import org.glassfish.jersey.server.*;
 import org.glassfish.jersey.servlet.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.about.version.*;
+import org.jitsi.videobridge.rest.binders.*;
 import org.jitsi.videobridge.rest.conferences.*;
 import org.jitsi.videobridge.rest.debug.*;
 import org.jitsi.videobridge.rest.about.health.*;
@@ -117,44 +120,67 @@ public class RESTBundleActivator
             ConferencesApp conferencesHandler = new ConferencesApp(videobridgeProvider);
             ServletHolder conferencesServletHolder = new ServletHolder(new ServletContainer(conferencesHandler));
             colibriContextHandler.addServlet(conferencesServletHolder, "/conferences/*");
+//
+//            DebugApp debugHandler = new DebugApp(videobridgeProvider);
+//            ServletHolder debugServletHolder = new ServletHolder(new ServletContainer(debugHandler));
+//            colibriContextHandler.addServlet(debugServletHolder, "/debug/*");
+//
+//            ClientConnectionProvider clientConnectionProvider = new ClientConnectionProvider(bundleContext);
+//            MucClientApp mucClientHandler = new MucClientApp(clientConnectionProvider);
+//            ServletHolder mucClientServletHolder = new ServletHolder(new ServletContainer(mucClientHandler));
+//            colibriContextHandler.addServlet(mucClientServletHolder, "/muc-client/*");
 
-            DebugApp debugHandler = new DebugApp(videobridgeProvider);
-            ServletHolder debugServletHolder = new ServletHolder(new ServletContainer(debugHandler));
-            colibriContextHandler.addServlet(debugServletHolder, "/debug/*");
+//            StatsManagerProvider statsManagerProvider = new StatsManagerProvider(bundleContext);
+//            StatsApp statHandler = new StatsApp(statsManagerProvider);
+//            ServletHolder statsServletHolder = new ServletHolder(new ServletContainer(statHandler));
+//            colibriContextHandler.addServlet(statsServletHolder, "/stats/*");
 
-            ClientConnectionProvider clientConnectionProvider = new ClientConnectionProvider(bundleContext);
-            MucClientApp mucClientHandler = new MucClientApp(clientConnectionProvider);
-            ServletHolder mucClientServletHolder = new ServletHolder(new ServletContainer(mucClientHandler));
-            colibriContextHandler.addServlet(mucClientServletHolder, "/muc-client/*");
 
-            StatsManagerProvider statsManagerProvider = new StatsManagerProvider(bundleContext);
-            StatsApp statHandler = new StatsApp(statsManagerProvider);
-            ServletHolder statsServletHolder = new ServletHolder(new ServletContainer(statHandler));
-            colibriContextHandler.addServlet(statsServletHolder, "/stats/*");
+            ResourceConfig statResource = new ResourceConfig(Stats.class);
+            ServletHolder statsServletHolder = new ServletHolder(new ServletContainer(statResource));
+//            colibriContextHandler.addServlet(statsServletHolder, "/stats/*");
 
-            if (getCfgBoolean(ENABLE_REST_SHUTDOWN_PNAME, false))
-            {
-                ShutdownApp shutdownHandler = new ShutdownApp(videobridgeProvider);
-                ServletHolder shutdownServletHolder = new ServletHolder(new ServletContainer(shutdownHandler));
-                colibriContextHandler.addServlet(shutdownServletHolder, "/shutdown/*");
-            }
+            ResourceConfig cResource = new ResourceConfig() {
+                {
+                    register(new Foo(bundleContext));
+//                    register(new AbstractBinder()
+//                    {
+//                        @Override
+//                        protected void configure()
+//                        {
+//                            bind(new StatsManagerProvider((bundleContext))).to(StatsManagerProvider.class);
+//                        }
+//                    });
+                    register(Stats.class);
+//                    register(statResource);
+                }
+            };
+            ServletHolder sh = new ServletHolder(new ServletContainer(cResource));
+            colibriContextHandler.addServlet(sh, "/stats/*");
+
+//            if (getCfgBoolean(ENABLE_REST_SHUTDOWN_PNAME, false))
+//            {
+//                ShutdownApp shutdownHandler = new ShutdownApp(videobridgeProvider);
+//                ServletHolder shutdownServletHolder = new ServletHolder(new ServletContainer(shutdownHandler));
+//                colibriContextHandler.addServlet(shutdownServletHolder, "/shutdown/*");
+//            }
 
             handlers.add(colibriContextHandler);
         }
 
-        ServletContextHandler aboutContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
-        aboutContextHandler.setContextPath("/about");
-
-        HealthApp healthHandler = new HealthApp(videobridgeProvider);
-        ServletHolder healthServletHolder = new ServletHolder(new ServletContainer(healthHandler));
-        aboutContextHandler.addServlet(healthServletHolder, "/health/*");
-
-        VersionServiceProvider versionServiceProvider = new VersionServiceProvider(bundleContext);
-        VersionApp versionHandler = new VersionApp(versionServiceProvider);
-        ServletHolder versionServletHolder = new ServletHolder(new ServletContainer(versionHandler));
-        aboutContextHandler.addServlet(versionServletHolder, "/version/*");
-
-        handlers.add(aboutContextHandler);
+//        ServletContextHandler aboutContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
+//        aboutContextHandler.setContextPath("/about");
+//
+//        HealthApp healthHandler = new HealthApp(videobridgeProvider);
+//        ServletHolder healthServletHolder = new ServletHolder(new ServletContainer(healthHandler));
+//        aboutContextHandler.addServlet(healthServletHolder, "/health/*");
+//
+//        VersionServiceProvider versionServiceProvider = new VersionServiceProvider(bundleContext);
+//        VersionApp versionHandler = new VersionApp(versionServiceProvider);
+//        ServletHolder versionServletHolder = new ServletHolder(new ServletContainer(versionHandler));
+//        aboutContextHandler.addServlet(versionServletHolder, "/version/*");
+//
+//        handlers.add(aboutContextHandler);
 
         return initializeHandlerList(handlers);
     }

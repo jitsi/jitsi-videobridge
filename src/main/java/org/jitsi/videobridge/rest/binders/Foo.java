@@ -14,16 +14,25 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.stats;
+package org.jitsi.videobridge.rest.binders;
 
+import org.glassfish.hk2.utilities.binding.*;
 import org.glassfish.jersey.server.*;
 import org.jitsi.videobridge.util.*;
+import org.osgi.framework.*;
 
-public class StatsApp extends ResourceConfig
+public class Foo extends AbstractBinder
 {
-    public StatsApp(StatsManagerProvider statsManagerProvider)
+    protected final BundleContext bundleContext;
+
+    public Foo(BundleContext bundleContext)
     {
-        register(Stats.class);
-//        register(new Stats(statsManagerProvider));
+        this.bundleContext = bundleContext;
+    }
+    @Override
+    protected void configure()
+    {
+        bind(new StatsManagerProvider((bundleContext))).to(StatsManagerProvider.class);
     }
 }
+

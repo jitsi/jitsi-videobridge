@@ -21,18 +21,20 @@ import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 
+import javax.inject.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
 @Path("/")
 public class Stats
 {
-    protected final StatsManagerProvider statsManagerProvider;
+    @Inject
+    protected StatsManagerProvider statsManagerProvider;
 
-    public Stats(StatsManagerProvider statsManagerProvider)
-    {
-        this.statsManagerProvider = statsManagerProvider;
-    }
+//    public Stats(StatsManagerProvider statsManagerProvider)
+//    {
+//        this.statsManagerProvider = statsManagerProvider;
+//    }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
