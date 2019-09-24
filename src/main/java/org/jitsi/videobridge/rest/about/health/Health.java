@@ -18,18 +18,16 @@ package org.jitsi.videobridge.rest.about.health;
 
 import org.jitsi.videobridge.util.*;
 
+import javax.inject.*;
 import javax.servlet.http.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
-@Path("/")
+@Path("/about/health")
 public class Health
 {
-    protected final VideobridgeProvider videobridgeProvider;
-    public Health(VideobridgeProvider videobridgeProvider)
-    {
-        this.videobridgeProvider = videobridgeProvider;
-    }
+    @Inject
+    protected VideobridgeProvider videobridgeProvider;
 
     @GET
     public Response getHealth()

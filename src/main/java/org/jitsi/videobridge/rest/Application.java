@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.rest;
 
 import org.glassfish.jersey.server.*;
+import org.jitsi.videobridge.rest.about.health.*;
 import org.jitsi.videobridge.rest.about.version.*;
 import org.jitsi.videobridge.rest.about.version.Version;
 import org.jitsi.videobridge.rest.binders.*;
@@ -31,5 +32,6 @@ public class Application extends ResourceConfig
         register(new OsgiServiceBinder(bundleContext));
         register(Stats.class);
         register(Version.class);
+        register(Health.class);
     }
 }

@@ -30,6 +30,7 @@ import org.mockito.stubbing.*;
 
 import javax.ws.rs.client.*;
 import javax.ws.rs.core.*;
+import javax.ws.rs.core.Application;
 
 import static junit.framework.TestCase.*;
 import static org.mockito.Mockito.reset;

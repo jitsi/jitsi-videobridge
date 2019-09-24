@@ -17,22 +17,23 @@
 package org.jitsi.videobridge.rest.about.health;
 
 import org.eclipse.jetty.http.*;
+import org.glassfish.jersey.server.*;
+import org.glassfish.jersey.test.*;
+import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.util.*;
 import org.junit.*;
 
+import javax.ws.rs.core.Application;
 import javax.ws.rs.core.*;
 
 import static junit.framework.TestCase.*;
 import static org.mockito.Mockito.*;
 
-public class HealthTest extends VideobridgeRestResourceTest
+public class HealthTest extends JerseyTest
 {
-
-    @Override
-    public Application getApplication()
-    {
-        return new HealthApp(videobridgeProvider);
-    }
+    protected VideobridgeProvider videobridgeProvider;
+    protected Videobridge videobridge;
 
     @Before
     public void beforeTest()
@@ -40,12 +41,29 @@ public class HealthTest extends VideobridgeRestResourceTest
         when(videobridgeProvider.get()).thenReturn(videobridge);
     }
 
+    @Override
+    protected Application configure()
+    {
+        videobridgeProvider = mock(VideobridgeProvider.class);
+        videobridge = mock(Videobridge.class);
+        when(videobridgeProvider.get()).thenReturn(videobridge);
+
+        enable(TestProperties.LOG_TRAFFIC);
+        enable(TestProperties.DUMP_ENTITY);
+        return new ResourceConfig() {
+            {
+                register(new MockBinder<>(videobridgeProvider, VideobridgeProvider.class));
+                register(Health.class);
+            }
+        };
+    }
+
     @Test
     public void testHealthNoException() throws Exception
     {
         doNothing().when(videobridge).healthCheck();
 
-        Response resp = target("/").request().get();
+        Response resp = target("/about/health").request().get();
         assertEquals(HttpStatus.OK_200, resp.getStatus());
     }
 
@@ -54,7 +72,7 @@ public class HealthTest extends VideobridgeRestResourceTest
     {
         doThrow(new RuntimeException("")).when(videobridge).healthCheck();
 
-        Response resp = target("/").request().get();
+        Response resp = target("/about/health").request().get();
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR_500, resp.getStatus());
     }
 }

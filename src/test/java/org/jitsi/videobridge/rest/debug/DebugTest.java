@@ -19,9 +19,11 @@ package org.jitsi.videobridge.rest.debug;
 import org.eclipse.jetty.http.*;
 import org.jitsi.videobridge.rest.*;
 import org.junit.*;
+import org.jitsi.videobridge.rest.debug.DebugFeatures;
 
 import javax.ws.rs.client.*;
 import javax.ws.rs.core.*;
+import javax.ws.rs.core.Application;
 
 import static junit.framework.TestCase.*;
 import static org.mockito.Mockito.*;
