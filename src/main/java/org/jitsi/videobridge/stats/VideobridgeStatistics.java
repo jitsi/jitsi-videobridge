@@ -23,11 +23,11 @@ import java.util.concurrent.locks.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
+import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 import org.osgi.framework.*;
 
@@ -57,11 +57,6 @@ public class VideobridgeStatistics
      * The currently configured region.
      */
     public static String region = null;
-
-    /**
-     * The name of the property used to configure the region.
-     */
-    public static final String REGION_PNAME = "org.jitsi.videobridge.REGION";
 
     static
     {
@@ -95,12 +90,7 @@ public class VideobridgeStatistics
         BundleContext bundleContext
             = StatsManagerBundleActivator.getBundleContext();
 
-        ConfigurationService cfg
-            = ServiceUtils2.getService(bundleContext, ConfigurationService.class);
-        if (cfg != null)
-        {
-            region = cfg.getString(REGION_PNAME, region);
-        }
+        region = JvbConfig.getConfig().getString("videobridge.octo.region");
 
         // Is it necessary to set initial values for all of these?
         unlockedSetStat(BITRATE_DOWNLOAD, 0);
@@ -465,7 +455,7 @@ public class VideobridgeStatistics
             {
                 unlockedSetStat(RELAY_ID, octoRelay.getId());
             }
-            if (region != null)
+            if (!StringUtils.isNullOrEmpty(region))
             {
                 unlockedSetStat(REGION, region);
             }
