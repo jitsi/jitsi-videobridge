@@ -420,7 +420,7 @@ public class VideobridgeShim
                     = conference.getOrCreateLocalEndpoint(channelBundleIq.getId());
             try
             {
-                endpoint.setTransportInfo(transportIq, isControlling);
+                endpoint.initDtlsTransport(transportIq, isControlling);
             }
             catch (IOException ioe)
             {

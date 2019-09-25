@@ -1052,8 +1052,8 @@ public class Endpoint
      * @throws IOException if the endpoint's transport manager failed to
      * initialize.
      */
-    public void setTransportInfo(IceUdpTransportPacketExtension transportInfo,
-                                 boolean controlling)
+    public void initDtlsTransport(IceUdpTransportPacketExtension transportInfo,
+                                  boolean controlling)
             throws IOException
     {
         boolean transportManagerCreated = false;
