@@ -807,7 +807,7 @@ public class Endpoint
         };
         socket.listen();
         // We don't want to block the calling thread on the
-        // onDtlsTransportSet future completing to add the
+        // dtlsTransportFuture future completing to add the
         // onDtlsHandshakeComplete handler, so we'll asynchronously run the
         // code which adds the onDtlsHandshakeComplete handler from the IO pool.
         dtlsTransportFuture.thenAcceptAsync(dtlsTransport -> {
