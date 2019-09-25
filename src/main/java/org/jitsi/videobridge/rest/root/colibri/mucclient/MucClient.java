@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.rest.root.colibri.mucclient;
 
+import org.jitsi.videobridge.rest.root.colibri.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.json.simple.*;
@@ -30,7 +31,7 @@ import javax.ws.rs.core.*;
  * Add or remove XMPP environments to which the bridge will connect
  */
 @Path("/colibri/muc-client")
-public class MucClient
+public class MucClient extends ColibriResource
 {
     @Inject
     protected ClientConnectionProvider clientConnectionProvider;

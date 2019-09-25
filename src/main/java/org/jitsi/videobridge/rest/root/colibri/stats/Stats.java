@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.rest.root.colibri.stats;
 
 import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.rest.root.colibri.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
@@ -26,7 +27,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
 @Path("/colibri/stats")
-public class Stats
+public class Stats extends ColibriResource
 {
     @Inject
     protected StatsManagerProvider statsManagerProvider;

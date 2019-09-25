@@ -236,12 +236,16 @@
       <version>2.29</version>
       <scope>test</scope>
     </dependency>
-
-
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.11</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.reflections</groupId>
+      <artifactId>reflections</artifactId>
+      <version>0.9.11</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

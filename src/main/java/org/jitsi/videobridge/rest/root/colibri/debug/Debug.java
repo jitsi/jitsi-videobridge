@@ -21,6 +21,7 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.queue.*;
+import org.jitsi.videobridge.rest.root.colibri.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 
@@ -38,7 +39,7 @@ import javax.ws.rs.core.*;
  * @author bbaldino
  */
 @Path("/colibri/debug")
-public class Debug
+public class Debug extends ColibriResource
 {
     @Inject
     private VideobridgeProvider videobridgeProvider;
