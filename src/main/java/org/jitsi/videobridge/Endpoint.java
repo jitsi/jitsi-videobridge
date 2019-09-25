@@ -208,6 +208,16 @@ public class Endpoint
             new RecurringRunnableExecutor(Endpoint.class.getSimpleName());
 
     /**
+     * Get {@link DtlsTransport} of this {@link Endpoint} if it was previously
+     * successfully initialized;
+     * @return successfully initialized {@link DtlsTransport} or {@code null}
+     */
+    private DtlsTransport tryGetDtlsTransport()
+    {
+        return dtlsTransport;
+    }
+
+    /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
      * identifier/ID of the endpoint of a participant in a <tt>Conference</tt>.
      *
@@ -406,6 +416,7 @@ public class Endpoint
      */
     private boolean isTransportConnected()
     {
+        final DtlsTransport dtlsTransport = tryGetDtlsTransport();
         return dtlsTransport != null && dtlsTransport.isConnected();
     }
 
@@ -593,6 +604,7 @@ public class Endpoint
     @Override
     public boolean shouldExpire()
     {
+        final DtlsTransport dtlsTransport = tryGetDtlsTransport();
         boolean iceFailed
                 = dtlsTransport != null && dtlsTransport.hasIceFailed();
         if (iceFailed)
@@ -671,6 +683,7 @@ public class Endpoint
         bandwidthProbing.enabled = false;
         recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing);
 
+        final DtlsTransport dtlsTransport = tryGetDtlsTransport();
         if (dtlsTransport != null)
         {
             dtlsTransport.close();
@@ -734,6 +747,11 @@ public class Endpoint
         // Create the SctpManager and provide it a method for sending SCTP data
         this.sctpManager = new SctpManager(
                 (data, offset, length) -> {
+                    final DtlsTransport dtlsTransport = tryGetDtlsTransport();
+                    if (dtlsTransport == null)
+                    {
+                        return -1;
+                    }
                     PacketInfo packet
                         = new PacketInfo(new UnparsedPacket(data, offset, length));
                     dtlsTransport.sendDtlsData(packet);
@@ -913,6 +931,7 @@ public class Endpoint
      */
     private String getIcePassword()
     {
+        final DtlsTransport dtlsTransport = tryGetDtlsTransport();
         return dtlsTransport == null
                 ? null : dtlsTransport.getIcePassword();
     }
@@ -1418,7 +1437,7 @@ public class Endpoint
         //debugState.put("messageTransport", messageTransport.getDebugState());
         debugState.put("bitrateController", bitrateController.getDebugState());
         debugState.put("bandwidthProbing", bandwidthProbing.getDebugState());
-        DtlsTransport dtlsTransport = this.dtlsTransport;
+        DtlsTransport dtlsTransport = tryGetDtlsTransport();
         debugState.put(
             "dtlsTransport",
             dtlsTransport == null ? null : dtlsTransport.getDebugState());
