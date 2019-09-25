@@ -1062,13 +1062,18 @@ public class Endpoint
      *
      * @param transportInfo the XML extension which contains the remote
      * transport information.
+     * @param controlling true if ICE agent should start as controlling agent,
+     * false - otherwise.
      * @throws IOException if the endpoint's transport manager failed to
      * initialize.
      */
-    public void setTransportInfo(IceUdpTransportPacketExtension transportInfo)
+    public void setTransportInfo(IceUdpTransportPacketExtension transportInfo,
+                                 boolean controlling)
             throws IOException
     {
-        getTransportManager().startConnectivityEstablishment(transportInfo);
+        final DtlsTransport transportManager = getTransportManager();
+        transportManager.iceAgent.setControlling(controlling);
+        transportManager.startConnectivityEstablishment(transportInfo);
     }
 
     /**
