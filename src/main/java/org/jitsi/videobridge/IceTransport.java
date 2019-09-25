@@ -127,12 +127,6 @@ public class IceTransport
             = this::iceStateChange;
 
     /**
-     * Whether this <tt>IceTransport</tt> will serve as the the controlling or
-     * controlled ICE agent.
-     */
-    private final boolean controlling;
-
-    /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
@@ -168,8 +162,8 @@ public class IceTransport
      *
      * @param endpoint the {@link Endpoint} associated with this
      * {@link IceTransport}.
-     * @param controlling {@code true} if the new instance is to serve as a
-     * controlling ICE agent and passive DTLS endpoint; otherwise, {@code false}
+     * @param controlling {@code true} if the new instance will initialized to
+     * serve as a controlling ICE agent; otherwise, {@code false}
      */
     IceTransport(Endpoint endpoint, boolean controlling, Logger parentLogger)
         throws IOException
@@ -178,7 +172,6 @@ public class IceTransport
         this.bundleContext = conference.getBundleContext();
         this.endpointId = endpoint.getID();
         this.conferenceId = conference.getID();
-        this.controlling = controlling;
         this.logger = parentLogger.createChildLogger(getClass().getName());
 
         // We've seen some instances where the configuration service is not
@@ -308,7 +301,7 @@ public class IceTransport
      * ICE-UDP transport.
      *
      * @param controlling
-     * @param iceStreamName
+     * @param streamName
      * @return a new <tt>Agent</tt> instance which implements the ICE protocol
      * and which is to be used by this instance to implement the Jingle ICE-UDP
      * transport
@@ -767,8 +760,16 @@ public class IceTransport
         debugState.put("keepAliveStrategy", keepAliveStrategy.toString());
         debugState.put("closed", closed);
         debugState.put("iceConnected", iceConnected);
-        debugState.put("controlling", controlling);
         debugState.put("iceFailed", iceFailed);
+
+        final Agent iceAgent = this.iceAgent;
+        if (iceAgent != null)
+        {
+            // Actual agent's ICE control role might differ from initial role
+            // due to ICE control role conflict resolution during connection
+            // establishment.
+            debugState.put("controlling", iceAgent.isControlling());
+        }
         return debugState;
     }
 }
