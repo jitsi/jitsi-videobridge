@@ -93,7 +93,7 @@ public class VideobridgeExpireThread
     void start()
     {
         Config jvbConfig = JvbConfig.getConfig().getConfig("videobridge");
-        //TODO: change expireCheckSleepSec (and PeriodicRunnable) to use Duration
+        //TODO: change expireCheckSleepSec to use Duration
         int expireCheckSleepSec = (int)jvbConfig.getDuration("expire-thread-interval", TimeUnit.SECONDS);
 
         logger.info(
