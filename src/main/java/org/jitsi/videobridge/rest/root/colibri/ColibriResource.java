@@ -17,24 +17,15 @@
 package org.jitsi.videobridge.rest.root.colibri;
 
 import org.jitsi.videobridge.rest.annotations.*;
-import org.jitsi.videobridge.rest.root.colibri.conferences.*;
-import org.jitsi.videobridge.rest.root.colibri.shutdown.Shutdown;
 
-import javax.ws.rs.*;
-
+/**
+ * A parent resource from which ALL resources on
+ * /colibri/ paths MUST inherit.  The inheritance
+ * is required such that we can enforce all sub-paths
+ * on /colibri/ are gated by the {@link Constants#ENABLE_REST_COLIBRI_PNAME}
+ * config value
+ */
 @EnabledByConfig(Constants.ENABLE_REST_COLIBRI_PNAME)
-@Path("colibri")
-public class Colibri
+public class ColibriResource
 {
-    @Path("shutdown")
-    public Class<Shutdown> shutdown()
-    {
-        return Shutdown.class;
-    }
-
-    @Path("conferences")
-    public Class<Conferences> conferences()
-    {
-        return Conferences.class;
-    }
 }

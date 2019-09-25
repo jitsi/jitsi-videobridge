@@ -33,8 +33,8 @@ public class Application extends ResourceConfig
         register(new OsgiServiceBinder(bundleContext));
         // Filters
         register(ConfigFilter.class);
-        register(Colibri.class);
+//        register(Colibri.class);
         // Register all resources in the package
-//        packages("org.jitsi.videobridge.rest.root");
+        packages("org.jitsi.videobridge.rest.root");
     }
 }

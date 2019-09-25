@@ -30,7 +30,6 @@ import javax.ws.rs.core.*;
  * 2) The value corresponding to the provided configuration key
  * is either not present or returns a value of false.
  */
-@PreMatching
 public class ConfigFilter implements ContainerRequestFilter
 {
     @Context
@@ -39,16 +38,35 @@ public class ConfigFilter implements ContainerRequestFilter
     @Inject
     ConfigProvider configProvider;
 
+    /**
+     * REST paths can be enabled/disabled by config at multiple levels, so it's
+     * possible that the specific resource class for the URI may be enabled, but
+     * part of its parent path isn't.  For example:
+     * /colibri/shutdown, is enabled by
+     * {@link org.jitsi.videobridge.rest.root.colibri.shutdown.Constants#ENABLE_REST_SHUTDOWN_PNAME},
+     * but the root /colibri path is controlled by
+     * {@link org.jitsi.videobridge.rest.root.colibri.Constants#ENABLE_REST_COLIBRI_PNAME}.
+     * So when we check if a specific resource should be enabled, we need to walk its
+     * entire ancestry to make sure all parent resources are also enabled.  This means that
+     * in order to enforce this sort of hierarchy, sub-resources must descend from a common
+     * parent (a la {@link  org.jitsi.videobridge.rest.root.colibri.ColibriResource})
+     */
     @Override
     public void filter(ContainerRequestContext containerRequestContext)
     {
-        if (resourceInfo.getResourceClass().isAnnotationPresent(EnabledByConfig.class))
+        Class<?> clazz = resourceInfo.getResourceClass();
+        while (!(Object.class == clazz))
         {
-            EnabledByConfig anno = resourceInfo.getResourceClass().getAnnotation(EnabledByConfig.class);
-            if (!(configProvider.get().getBoolean(anno.value(), false)))
+            if  (clazz.isAnnotationPresent(EnabledByConfig.class))
             {
-                throw new NotFoundException();
+                EnabledByConfig anno = clazz.getAnnotation(EnabledByConfig.class);
+                if (!(configProvider.get().getBoolean(anno.value(), true)))
+                {
+                    System.out.println(anno.value() + " is set to false, not allowing path");
+                    throw new NotFoundException();
+                }
             }
+            clazz = clazz.getSuperclass();
         }
     }
 }

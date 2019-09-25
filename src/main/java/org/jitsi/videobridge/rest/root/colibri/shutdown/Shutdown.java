@@ -20,6 +20,7 @@ import com.fasterxml.jackson.annotation.*;
 import org.eclipse.jetty.http.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.videobridge.rest.annotations.*;
+import org.jitsi.videobridge.rest.root.colibri.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
@@ -33,7 +34,7 @@ import javax.ws.rs.core.*;
 
 @Path("/colibri/shutdown")
 @EnabledByConfig(Constants.ENABLE_REST_SHUTDOWN_PNAME)
-public class Shutdown
+public class Shutdown extends ColibriResource
 {
     @Inject
     protected VideobridgeProvider videobridgeProvider;
