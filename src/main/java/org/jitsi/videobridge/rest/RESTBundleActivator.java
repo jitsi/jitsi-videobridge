@@ -83,15 +83,11 @@ public class RESTBundleActivator
             BundleContext bundleContext,
             Server server)
     {
-        List<Handler> handlers = new ArrayList<>();
-
         ServletContextHandler appHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
         appHandler.setContextPath("/");
         appHandler.addServlet(new ServletHolder(new ServletContainer(new Application(bundleContext))), "/*");
 
-        handlers.add(appHandler);
-
-        return initializeHandlerList(handlers);
+        return appHandler;
     }
 
     /**
