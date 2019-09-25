@@ -15,14 +15,14 @@
  */
 package org.jitsi.videobridge;
 
-import java.util.*;
-import java.util.concurrent.*;
-
-import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
+import com.typesafe.config.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
+import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
+
+import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Implements a <tt>Thread</tt> which expires the {@link AbstractEndpoint}s and
@@ -56,23 +56,11 @@ public class VideobridgeExpireThread
             true, VideobridgeExpireThread.class.getSimpleName() + "-channel");
 
     /**
-     * The name of the property which specifies the interval in seconds at which
-     * a {@link VideobridgeExpireThread} instance should run.
-     */
-    public static final String EXPIRE_CHECK_SLEEP_SEC
-            = "org.jitsi.videobridge.EXPIRE_CHECK_SLEEP_SEC";
-    /**
      * The default number of seconds of inactivity after which <tt>Channel</tt>s
      * expire.
      * NOTE(brian): move from Channel
      */
     public static final int DEFAULT_EXPIRE = 60;
-
-    /**
-     * The default value of the {@link #EXPIRE_CHECK_SLEEP_SEC} property.
-     */
-    private static final int EXPIRE_CHECK_SLEEP_SEC_DEFAULT =
-            DEFAULT_EXPIRE;
 
     /**
      * The {@link PeriodicRunnable} registered with {@link #EXECUTOR} which is
@@ -101,21 +89,13 @@ public class VideobridgeExpireThread
     /**
      * Starts this {@link VideobridgeExpireThread} in a specific
      * {@link BundleContext}.
-     * @param bundleContext the <tt>BundleContext</tt> in which this
-     * {@link VideobridgeExpireThread} is to start.
      */
-    void start(final BundleContext bundleContext)
+    void start()
     {
-        ConfigurationService cfg
-                = ServiceUtils2.getService(
-                bundleContext,
-                ConfigurationService.class);
+        Config jvbConfig = JvbConfig.getConfig().getConfig("videobridge");
+        //TODO: change expireCheckSleepSec (and PeriodicRunnable) to use Duration
+        int expireCheckSleepSec = (int)jvbConfig.getDuration("expire-thread-interval", TimeUnit.SECONDS);
 
-        int expireCheckSleepSec
-                = (cfg == null)
-                    ? EXPIRE_CHECK_SLEEP_SEC_DEFAULT
-                    : cfg.getInt(
-                        EXPIRE_CHECK_SLEEP_SEC, EXPIRE_CHECK_SLEEP_SEC_DEFAULT);
         logger.info(
             "Starting with " + expireCheckSleepSec + " second interval.");
 
@@ -146,7 +126,7 @@ public class VideobridgeExpireThread
     /**
      * Stops this {@link VideobridgeExpireThread}.
      */
-    void stop(final BundleContext bundleContext)
+    void stop()
     {
         logger.info("Stopping.");
         if (expireRunnable != null)

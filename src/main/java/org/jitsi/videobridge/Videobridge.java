@@ -855,7 +855,7 @@ public class Videobridge
         ConfigurationService cfg = getConfigurationService();
         Config jvbConfig = JvbConfig.getConfig().getConfig("videobridge");
 
-        videobridgeExpireThread.start(bundleContext);
+        videobridgeExpireThread.start();
         if (health != null)
         {
             health.stop();
@@ -1060,7 +1060,7 @@ public class Videobridge
         }
         finally
         {
-            videobridgeExpireThread.stop(bundleContext);
+            videobridgeExpireThread.stop();
             this.bundleContext = null;
         }
     }
