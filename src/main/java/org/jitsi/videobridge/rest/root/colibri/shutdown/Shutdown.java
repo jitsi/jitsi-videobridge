@@ -39,9 +39,6 @@ public class Shutdown extends ColibriResource
     @Inject
     protected VideobridgeProvider videobridgeProvider;
 
-    @Inject
-    protected ConfigProvider configProvider;
-
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     public Response shutdown(ShutdownJson shutdown, @Context HttpServletRequest request) throws XmppStringprepException
