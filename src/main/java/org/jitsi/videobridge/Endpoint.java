@@ -1070,7 +1070,7 @@ public class Endpoint
                 {
                     try
                     {
-                        dtlsTransport = new DtlsTransport(this, true, logger);
+                        dtlsTransport = new DtlsTransport(this, controlling, logger);
                         transportManagerCreated = true;
                     }
                     catch (IOException ioe)
@@ -1087,7 +1087,6 @@ public class Endpoint
         }
 
         final DtlsTransport transportManager = getDtlsTransport();
-        transportManager.iceAgent.setControlling(controlling);
         transportManager.startConnectivityEstablishment(transportInfo);
     }
 
