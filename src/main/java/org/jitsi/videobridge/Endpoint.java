@@ -988,7 +988,6 @@ public class Endpoint
     public DtlsTransport getDtlsTransport()
         throws IOException
     {
-        boolean transportManagerCreated = false;
         synchronized (dtlsTransportSyncRoot)
         {
             if (dtlsTransport == null)
@@ -998,25 +997,11 @@ public class Endpoint
                     // We've already tried and failed to initialize the TM.
                     throw dtlsTransportException;
                 }
-                else
-                {
-                    try
-                    {
-                        dtlsTransport = new DtlsTransport(this, true, logger);
-                        transportManagerCreated = true;
-                    }
-                    catch (IOException ioe)
-                    {
-                        throw dtlsTransportException = ioe;
-                    }
-                }
+                throw new IllegalStateException(
+                    "DTLS transport is not yet initialized");
             }
         }
 
-        if (transportManagerCreated)
-        {
-            onDtlsTransportSet.complete(true);
-        }
         return dtlsTransport;
     }
 
@@ -1071,6 +1056,36 @@ public class Endpoint
                                  boolean controlling)
             throws IOException
     {
+        boolean transportManagerCreated = false;
+        synchronized (dtlsTransportSyncRoot)
+        {
+            if (dtlsTransport == null)
+            {
+                if (dtlsTransportException != null)
+                {
+                    // We've already tried and failed to initialize the TM.
+                    throw dtlsTransportException;
+                }
+                else
+                {
+                    try
+                    {
+                        dtlsTransport = new DtlsTransport(this, true, logger);
+                        transportManagerCreated = true;
+                    }
+                    catch (IOException ioe)
+                    {
+                        throw dtlsTransportException = ioe;
+                    }
+                }
+            }
+        }
+
+        if (transportManagerCreated)
+        {
+            onDtlsTransportSet.complete(true);
+        }
+
         final DtlsTransport transportManager = getDtlsTransport();
         transportManager.iceAgent.setControlling(controlling);
         transportManager.startConnectivityEstablishment(transportInfo);
