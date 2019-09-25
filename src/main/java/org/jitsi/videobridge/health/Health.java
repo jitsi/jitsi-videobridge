@@ -22,6 +22,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.transport.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.xmpp.extensions.jingle.*;
 
 import java.io.*;
 import java.util.*;
@@ -124,7 +125,9 @@ public class Health
             // Trigger the creation of the transport manager.
             try
             {
-                endpoint.getDtlsTransport();
+                endpoint.initDtlsTransport(
+                    new IceUdpTransportPacketExtension(),
+                    false);
             }
             catch (IOException ioe)
             {

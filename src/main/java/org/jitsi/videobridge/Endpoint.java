@@ -406,15 +406,7 @@ public class Endpoint
      */
     private boolean isTransportConnected()
     {
-        try
-        {
-            return getDtlsTransport().isConnected();
-        }
-        catch (IOException ioe)
-        {
-            logger.warn("Could not get transport manager: ", ioe);
-            return false;
-        }
+        return dtlsTransport != null && dtlsTransport.isConnected();
     }
 
     public double getRtt()
