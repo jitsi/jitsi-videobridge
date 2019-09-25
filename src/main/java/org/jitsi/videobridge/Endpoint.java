@@ -1002,7 +1002,7 @@ public class Endpoint
                 {
                     try
                     {
-                        transportManager = new DtlsTransport(this, logger);
+                        transportManager = new DtlsTransport(this, true, logger);
                         transportManagerCreated = true;
                     }
                     catch (IOException ioe)
