@@ -27,7 +27,8 @@ public class JvbConfig
 
     static
     {
-        logger.info("Loaded config: " + config.root().render());
+        logger.debug("Loaded complete config: " + config.root().render());
+        logger.info("Loaded JVB config: " + config.getConfig("videobridge").root().render());
     }
 
     public static @NotNull Config getConfig()

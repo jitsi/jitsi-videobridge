@@ -15,8 +15,8 @@
  */
 package org.jitsi.videobridge.health;
 
+import com.typesafe.config.*;
 import org.ice4j.ice.harvest.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
@@ -25,6 +25,7 @@ import org.jitsi.videobridge.xmpp.*;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Checks the health of {@link Videobridge}.
@@ -51,43 +52,6 @@ public class Health
      */
     private static final RecurringRunnableExecutor executor
         = new RecurringRunnableExecutor(Health.class.getName());
-
-    /**
-     * The default interval between health checks.
-     */
-    private static final int PERIOD_DEFAULT = 10000;
-
-    /**
-     * The name of the property which configures the interval between health
-     * checks.
-     */
-    public static final String PERIOD_PNAME
-        = "org.jitsi.videobridge.health.INTERVAL";
-
-    /**
-     * The default timeout for health checks.
-     */
-    private static final int TIMEOUT_DEFAULT = 30000;
-
-    /**
-     * The name of the property which configures the timeout for health checks.
-     * The {@link #check()} API will return failure unless a there was a health
-     * check performed in the last that many milliseconds.
-     */
-    public static final String TIMEOUT_PNAME
-        = "org.jitsi.videobridge.health.TIMEOUT";
-
-    /**
-     * The name of the property which makes any failures sticky (i.e. once the
-     * bridge becomes unhealthy it will never go back to a healthy state).
-     */
-    public static final String STICKY_FAILURES_PNAME
-        = "org.jitsi.videobridge.health.STICKY_FAILURES";
-
-    /**
-     * The default value for the {@code STICKY_FAILURES} property.
-     */
-    private static final boolean STICKY_FAILURES_DEFAULT = false;
 
     /**
      * Failures in the first 5 minutes are never sticky.
@@ -291,28 +255,12 @@ public class Health
      * Iniatializes a new {@link Health} instance for a specific
      * {@link Videobridge}.
      */
-    public Health(Videobridge videobridge, ConfigurationService cfg)
+    public Health(Videobridge videobridge, Config healthConfig)
     {
-        super(videobridge, PERIOD_DEFAULT, true);
-
-        if (cfg == null)
-        {
-            logger.warn("Configuration service is null, using only defaults.");
-        }
-
-        int period =
-            cfg == null ? PERIOD_DEFAULT
-                : cfg.getInt(PERIOD_PNAME, PERIOD_DEFAULT);
-        setPeriod(period);
-
-        timeout =
-            cfg == null ? TIMEOUT_DEFAULT
-                : cfg.getInt(TIMEOUT_PNAME, TIMEOUT_DEFAULT);
-
-        stickyFailures
-            = cfg == null ? STICKY_FAILURES_DEFAULT
-                : cfg.getBoolean(
-                    STICKY_FAILURES_PNAME, STICKY_FAILURES_DEFAULT);
+        super(videobridge, healthConfig.getDuration("interval", TimeUnit.MILLISECONDS), true);
+        //TODO: change to use 'Duration' for timeout
+        timeout = (int)healthConfig.getDuration("timeout").toMillis();
+        stickyFailures = healthConfig.getBoolean("sticky-failures");
 
         startMs = System.currentTimeMillis();
 

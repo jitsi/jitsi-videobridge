@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import com.typesafe.config.*;
 import kotlin.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
@@ -852,13 +853,14 @@ public class Videobridge
         UlimitCheck.printUlimits();
 
         ConfigurationService cfg = getConfigurationService();
+        Config jvbConfig = JvbConfig.getConfig().getConfig("videobridge");
 
         videobridgeExpireThread.start(bundleContext);
         if (health != null)
         {
             health.stop();
         }
-        health = new Health(this, cfg);
+        health = new Health(this, jvbConfig.getConfig("health"));
 
         defaultProcessingOptions
             = (cfg == null)
