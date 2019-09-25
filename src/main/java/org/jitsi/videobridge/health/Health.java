@@ -124,7 +124,7 @@ public class Health
             // Trigger the creation of the transport manager.
             try
             {
-                endpoint.getTransportManager();
+                endpoint.getDtlsTransport();
             }
             catch (IOException ioe)
             {

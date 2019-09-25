@@ -408,7 +408,7 @@ public class Endpoint
     {
         try
         {
-            return getTransportManager().isConnected();
+            return getDtlsTransport().isConnected();
         }
         catch (IOException ioe)
         {
@@ -985,7 +985,7 @@ public class Endpoint
      *
      * @throws IOException if the transport manager fails to initialize.
      */
-    public DtlsTransport getTransportManager()
+    public DtlsTransport getDtlsTransport()
         throws IOException
     {
         boolean transportManagerCreated = false;
@@ -1071,7 +1071,7 @@ public class Endpoint
                                  boolean controlling)
             throws IOException
     {
-        final DtlsTransport transportManager = getTransportManager();
+        final DtlsTransport transportManager = getDtlsTransport();
         transportManager.iceAgent.setControlling(controlling);
         transportManager.startConnectivityEstablishment(transportInfo);
     }
@@ -1215,7 +1215,7 @@ public class Endpoint
     public void describe(ColibriConferenceIQ.ChannelBundle channelBundle)
             throws IOException
     {
-        getTransportManager().describe(channelBundle);
+        getDtlsTransport().describe(channelBundle);
     }
 
 
