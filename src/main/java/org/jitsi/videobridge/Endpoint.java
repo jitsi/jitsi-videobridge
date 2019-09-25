@@ -124,12 +124,6 @@ public class Endpoint
     private final EndpointMessageTransport messageTransport;
 
     /**
-     * TODO Brian
-     */
-    private CompletableFuture<Boolean> onDtlsTransportSet
-            = new CompletableFuture<>();
-
-    /**
      * A count of how many endpoints have 'selected' this endpoint
      */
     private AtomicInteger selectedCount = new AtomicInteger(0);
@@ -155,16 +149,11 @@ public class Endpoint
      * prematurely, or more than once.
      *
      */
-    private DtlsTransport dtlsTransport;
+    private final CompletableFuture<DtlsTransport> dtlsTransportFuture
+        = new CompletableFuture<>();
 
     /**
-     * The exception thrown from the attempt to initialize the transport manager,
-     * if any.
-     */
-    private IOException dtlsTransportException = null;
-
-    /**
-     * Synchronizes access to {@link #dtlsTransport}.
+     * Synchronizes access to {@link #dtlsTransportFuture}.
      */
     private final Object dtlsTransportSyncRoot = new Object();
 
@@ -214,7 +203,12 @@ public class Endpoint
      */
     private DtlsTransport tryGetDtlsTransport()
     {
-        return dtlsTransport;
+        if (dtlsTransportFuture.isDone() &&
+            !dtlsTransportFuture.isCompletedExceptionally())
+        {
+            return dtlsTransportFuture.getNow(null);
+        }
+        return null;
     }
 
     /**
@@ -821,7 +815,7 @@ public class Endpoint
         // onDtlsTransportSet future completing to add the
         // onDtlsHandshakeComplete handler, so we'll asynchronously run the
         // code which adds the onDtlsHandshakeComplete handler from the IO pool.
-        onDtlsTransportSet.thenRunAsync(() -> {
+        dtlsTransportFuture.thenAcceptAsync(dtlsTransport -> {
             dtlsTransport.onDtlsHandshakeComplete(() -> {
                 // We don't want to block the thread calling
                 // onDtlsHandshakeComplete so run the socket acceptance in an IO
@@ -999,18 +993,28 @@ public class Endpoint
     public DtlsTransport getDtlsTransport()
         throws IOException
     {
+        final DtlsTransport dtlsTransport;
         synchronized (dtlsTransportSyncRoot)
         {
-            if (dtlsTransport == null)
+            try
             {
-                if (dtlsTransportException != null)
-                {
-                    // We've already tried and failed to initialize the TM.
-                    throw dtlsTransportException;
-                }
-                throw new IllegalStateException(
-                    "DTLS transport is not yet initialized");
+                dtlsTransport = dtlsTransportFuture.getNow(null);
             }
+            catch (CompletionException ce)
+            {
+                if (ce.getCause() instanceof IOException)
+                {
+                    // Unwrap IOException to backward compatibility with
+                    // existing users.
+                    throw (IOException)ce.getCause();
+                }
+                throw ce;
+            }
+        }
+        if (dtlsTransport == null)
+        {
+            throw new IllegalStateException(
+                "DTLS transport is not yet initialized");
         }
 
         return dtlsTransport;
@@ -1067,38 +1071,29 @@ public class Endpoint
                                   boolean controlling)
             throws IOException
     {
-        boolean transportManagerCreated = false;
+        final DtlsTransport dtlsTransport;
         synchronized (dtlsTransportSyncRoot)
         {
-            if (dtlsTransport == null)
+            if (this.dtlsTransportFuture.isDone())
             {
-                if (dtlsTransportException != null)
-                {
-                    // We've already tried and failed to initialize the TM.
-                    throw dtlsTransportException;
-                }
-                else
-                {
-                    try
-                    {
-                        dtlsTransport = new DtlsTransport(this, controlling, logger);
-                        transportManagerCreated = true;
-                    }
-                    catch (IOException ioe)
-                    {
-                        throw dtlsTransportException = ioe;
-                    }
-                }
+                throw new IllegalStateException(
+                    "DtlsTransport is already initialized");
             }
+
+            try
+            {
+                dtlsTransport = new DtlsTransport(this, controlling, logger);
+            }
+            catch (IOException ioe)
+            {
+                dtlsTransportFuture.completeExceptionally(ioe);
+                throw ioe;
+            }
+
+            dtlsTransportFuture.complete(dtlsTransport);
         }
 
-        if (transportManagerCreated)
-        {
-            onDtlsTransportSet.complete(true);
-        }
-
-        final DtlsTransport transportManager = getDtlsTransport();
-        transportManager.startConnectivityEstablishment(transportInfo);
+        dtlsTransport.startConnectivityEstablishment(transportInfo);
     }
 
     /**
