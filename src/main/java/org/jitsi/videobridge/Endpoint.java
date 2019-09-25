@@ -126,7 +126,7 @@ public class Endpoint
     /**
      * TODO Brian
      */
-    private CompletableFuture<Boolean> onTransportManagerSet
+    private CompletableFuture<Boolean> onDtlsTransportSet
             = new CompletableFuture<>();
 
     /**
@@ -155,18 +155,18 @@ public class Endpoint
      * prematurely, or more than once.
      *
      */
-    private DtlsTransport transportManager;
+    private DtlsTransport dtlsTransport;
 
     /**
      * The exception thrown from the attempt to initialize the transport manager,
      * if any.
      */
-    private IOException transportManagerException = null;
+    private IOException dtlsTransportException = null;
 
     /**
-     * Synchronizes access to {@link #transportManager}.
+     * Synchronizes access to {@link #dtlsTransport}.
      */
-    private final Object transportManagerSyncRoot = new Object();
+    private final Object dtlsTransportSyncRoot = new Object();
 
     /**
      * The {@link Transceiver} which handles receiving and sending of (S)RTP.
@@ -602,7 +602,7 @@ public class Endpoint
     public boolean shouldExpire()
     {
         boolean iceFailed
-                = transportManager != null && transportManager.hasIceFailed();
+                = dtlsTransport != null && dtlsTransport.hasIceFailed();
         if (iceFailed)
         {
             logger.warn("Allowing to expire because ICE failed.");
@@ -679,9 +679,9 @@ public class Endpoint
         bandwidthProbing.enabled = false;
         recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing);
 
-        if (transportManager != null)
+        if (dtlsTransport != null)
         {
-            transportManager.close();
+            dtlsTransport.close();
         }
 
         logger.info("Expired.");
@@ -744,7 +744,7 @@ public class Endpoint
                 (data, offset, length) -> {
                     PacketInfo packet
                         = new PacketInfo(new UnparsedPacket(data, offset, length));
-                    transportManager.sendDtlsData(packet);
+                    dtlsTransport.sendDtlsData(packet);
                     return 0;
                 },
                 logger
@@ -808,11 +808,11 @@ public class Endpoint
         };
         socket.listen();
         // We don't want to block the calling thread on the
-        // onTransportManagerSet future completing to add the
+        // onDtlsTransportSet future completing to add the
         // onDtlsHandshakeComplete handler, so we'll asynchronously run the
         // code which adds the onDtlsHandshakeComplete handler from the IO pool.
-        onTransportManagerSet.thenRunAsync(() -> {
-            transportManager.onDtlsHandshakeComplete(() -> {
+        onDtlsTransportSet.thenRunAsync(() -> {
+            dtlsTransport.onDtlsHandshakeComplete(() -> {
                 // We don't want to block the thread calling
                 // onDtlsHandshakeComplete so run the socket acceptance in an IO
                 // pool thread
@@ -921,8 +921,8 @@ public class Endpoint
      */
     private String getIcePassword()
     {
-        return transportManager == null
-                ? null : transportManager.getIcePassword();
+        return dtlsTransport == null
+                ? null : dtlsTransport.getIcePassword();
     }
 
     /**
@@ -989,25 +989,25 @@ public class Endpoint
         throws IOException
     {
         boolean transportManagerCreated = false;
-        synchronized (transportManagerSyncRoot)
+        synchronized (dtlsTransportSyncRoot)
         {
-            if (transportManager == null)
+            if (dtlsTransport == null)
             {
-                if (transportManagerException != null)
+                if (dtlsTransportException != null)
                 {
                     // We've already tried and failed to initialize the TM.
-                    throw transportManagerException;
+                    throw dtlsTransportException;
                 }
                 else
                 {
                     try
                     {
-                        transportManager = new DtlsTransport(this, true, logger);
+                        dtlsTransport = new DtlsTransport(this, true, logger);
                         transportManagerCreated = true;
                     }
                     catch (IOException ioe)
                     {
-                        throw transportManagerException = ioe;
+                        throw dtlsTransportException = ioe;
                     }
                 }
             }
@@ -1015,9 +1015,9 @@ public class Endpoint
 
         if (transportManagerCreated)
         {
-            onTransportManagerSet.complete(true);
+            onDtlsTransportSet.complete(true);
         }
-        return transportManager;
+        return dtlsTransport;
     }
 
     /**
@@ -1412,10 +1412,10 @@ public class Endpoint
         //debugState.put("messageTransport", messageTransport.getDebugState());
         debugState.put("bitrateController", bitrateController.getDebugState());
         debugState.put("bandwidthProbing", bandwidthProbing.getDebugState());
-        DtlsTransport transportManager = this.transportManager;
+        DtlsTransport dtlsTransport = this.dtlsTransport;
         debugState.put(
-            "transportManager",
-            transportManager == null ? null : transportManager.getDebugState());
+            "dtlsTransport",
+            dtlsTransport == null ? null : dtlsTransport.getDebugState());
         debugState.put("transceiver", transceiver.getNodeStats().toJson());
         debugState.put("acceptAudio", acceptAudio);
         debugState.put("acceptVideo", acceptVideo);
