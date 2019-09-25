@@ -41,12 +41,6 @@ import org.osgi.framework.*;
 public class RESTBundleActivator
     extends AbstractJettyBundleActivator
 {
-    /**
-     * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
-     * boolean property which enables <tt>/colibri/*</tt> REST API endpoints.
-     */
-    public static final String ENABLE_REST_COLIBRI_PNAME
-      = "org.jitsi.videobridge.ENABLE_REST_COLIBRI";
 
     /**
      * The prefix of the property names for the Jetty instance managed by

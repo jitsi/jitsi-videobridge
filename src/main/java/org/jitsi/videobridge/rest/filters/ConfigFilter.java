@@ -23,7 +23,6 @@ import javax.inject.*;
 import javax.ws.rs.*;
 import javax.ws.rs.container.*;
 import javax.ws.rs.core.*;
-import java.io.*;
 
 /**
  * A filter which returns 404 not found for any path which:
@@ -31,6 +30,7 @@ import java.io.*;
  * 2) The value corresponding to the provided configuration key
  * is either not present or returns a value of false.
  */
+@PreMatching
 public class ConfigFilter implements ContainerRequestFilter
 {
     @Context
@@ -45,7 +45,7 @@ public class ConfigFilter implements ContainerRequestFilter
         if (resourceInfo.getResourceClass().isAnnotationPresent(EnabledByConfig.class))
         {
             EnabledByConfig anno = resourceInfo.getResourceClass().getAnnotation(EnabledByConfig.class);
-            if (!(configProvider.get().getBoolean(anno.value(), true)))
+            if (!(configProvider.get().getBoolean(anno.value(), false)))
             {
                 throw new NotFoundException();
             }
