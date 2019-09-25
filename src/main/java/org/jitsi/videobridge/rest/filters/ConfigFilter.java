@@ -55,14 +55,13 @@ public class ConfigFilter implements ContainerRequestFilter
     public void filter(ContainerRequestContext containerRequestContext)
     {
         Class<?> clazz = resourceInfo.getResourceClass();
-        while (!(Object.class == clazz))
+        while ((Object.class != clazz) && clazz != null)
         {
             if  (clazz.isAnnotationPresent(EnabledByConfig.class))
             {
                 EnabledByConfig anno = clazz.getAnnotation(EnabledByConfig.class);
-                if (!(configProvider.get().getBoolean(anno.value(), true)))
+                if (!(configProvider.get().getBoolean(anno.value(), false)))
                 {
-                    System.out.println(anno.value() + " is set to false, not allowing path");
                     throw new NotFoundException();
                 }
             }

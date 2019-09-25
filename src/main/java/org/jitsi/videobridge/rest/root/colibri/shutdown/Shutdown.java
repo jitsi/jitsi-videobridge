@@ -32,6 +32,11 @@ import javax.servlet.http.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
+/**
+ * A resource for shutting down the videobridge via REST.  This
+ * must be enabled explicitly via the {@link Constants#ENABLE_REST_SHUTDOWN_PNAME}
+ * config value.
+ */
 @Path("/colibri/shutdown")
 @EnabledByConfig(Constants.ENABLE_REST_SHUTDOWN_PNAME)
 public class Shutdown extends ColibriResource
