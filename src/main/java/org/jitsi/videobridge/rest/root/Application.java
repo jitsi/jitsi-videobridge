@@ -19,6 +19,7 @@ package org.jitsi.videobridge.rest.root;
 import org.glassfish.jersey.server.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.rest.binders.*;
+import org.jitsi.videobridge.rest.filters.*;
 import org.osgi.framework.*;
 
 public class Application extends ResourceConfig
@@ -29,6 +30,8 @@ public class Application extends ResourceConfig
     {
         // Register the resource binder for injecting OSGI services
         register(new OsgiServiceBinder(bundleContext));
+        // Filters
+        register(ConfigFilter.class);
         // Register all resources in the package
         packages("org.jitsi.videobridge.rest.root");
     }

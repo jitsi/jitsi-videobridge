@@ -19,6 +19,7 @@ package org.jitsi.videobridge.rest.root.colibri.shutdown;
 import com.fasterxml.jackson.annotation.*;
 import org.eclipse.jetty.http.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.videobridge.rest.annotations.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
@@ -31,36 +32,19 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
 @Path("/colibri/shutdown")
+@EnabledByConfig(Constants.ENABLE_REST_SHUTDOWN_PNAME)
 public class Shutdown
 {
-    /**
-     * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
-     * boolean property which enables graceful shutdown through REST API.
-     * It is disabled by default.
-     */
-    public static final String ENABLE_REST_SHUTDOWN_PNAME
-            = "org.jitsi.videobridge.ENABLE_REST_SHUTDOWN";
-
     @Inject
     protected VideobridgeProvider videobridgeProvider;
 
     @Inject
     protected ConfigProvider configProvider;
 
-    protected Boolean enabled()
-    {
-        //TODO: see if we can enforce this with a filter instead?
-        return configProvider.get().getBoolean(ENABLE_REST_SHUTDOWN_PNAME, true);
-    }
-
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     public Response shutdown(ShutdownJson shutdown, @Context HttpServletRequest request) throws XmppStringprepException
     {
-        if (!enabled())
-        {
-            throw new NotFoundException();
-        }
         ShutdownIQ shutdownIq = shutdown.toIq();
 
         String ipAddress = request.getHeader("X-FORWARDED-FOR");
