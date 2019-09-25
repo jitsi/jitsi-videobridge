@@ -153,11 +153,6 @@ public class Endpoint
         = new CompletableFuture<>();
 
     /**
-     * Synchronizes access to {@link #dtlsTransportFuture}.
-     */
-    private final Object dtlsTransportSyncRoot = new Object();
-
-    /**
      * The {@link Transceiver} which handles receiving and sending of (S)RTP.
      */
     private final Transceiver transceiver;
@@ -994,29 +989,26 @@ public class Endpoint
         throws IOException
     {
         final DtlsTransport dtlsTransport;
-        synchronized (dtlsTransportSyncRoot)
+        try
         {
-            try
-            {
-                dtlsTransport = dtlsTransportFuture.getNow(null);
-            }
-            catch (CompletionException ce)
-            {
-                if (ce.getCause() instanceof IOException)
-                {
-                    // Unwrap IOException to backward compatibility with
-                    // existing users.
-                    throw (IOException)ce.getCause();
-                }
-                throw ce;
-            }
+            dtlsTransport = dtlsTransportFuture.getNow(null);
         }
+        catch (CompletionException ce)
+        {
+            if (ce.getCause() instanceof IOException)
+            {
+                // Unwrap IOException to backward compatibility with
+                // existing users.
+                throw (IOException)ce.getCause();
+            }
+            throw ce;
+        }
+
         if (dtlsTransport == null)
         {
             throw new IllegalStateException(
                 "DTLS transport is not yet initialized");
         }
-
         return dtlsTransport;
     }
 
@@ -1072,25 +1064,27 @@ public class Endpoint
             throws IOException
     {
         final DtlsTransport dtlsTransport;
-        synchronized (dtlsTransportSyncRoot)
+        if (this.dtlsTransportFuture.isDone())
         {
-            if (this.dtlsTransportFuture.isDone())
-            {
-                throw new IllegalStateException(
-                    "DtlsTransport is already initialized");
-            }
+            throw new IllegalStateException(
+                "DtlsTransport is already initialized");
+        }
 
-            try
-            {
-                dtlsTransport = new DtlsTransport(this, controlling, logger);
-            }
-            catch (IOException ioe)
-            {
-                dtlsTransportFuture.completeExceptionally(ioe);
-                throw ioe;
-            }
+        try
+        {
+            dtlsTransport = new DtlsTransport(this, controlling, logger);
+        }
+        catch (IOException ioe)
+        {
+            dtlsTransportFuture.completeExceptionally(ioe);
+            throw ioe;
+        }
 
-            dtlsTransportFuture.complete(dtlsTransport);
+        if (!dtlsTransportFuture.complete(dtlsTransport))
+        {
+            dtlsTransport.close();
+            throw new IllegalStateException(
+                "DtlsTransport is concurrently initialized");
         }
 
         dtlsTransport.startConnectivityEstablishment(transportInfo);
