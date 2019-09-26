@@ -25,7 +25,6 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
@@ -34,8 +33,8 @@ import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.shim.*;
-import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.transport.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.version.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.*;
@@ -54,7 +53,6 @@ import org.osgi.framework.*;
 
 import java.util.*;
 import java.util.concurrent.atomic.*;
-import java.util.function.*;
 import java.util.regex.*;
 
 /**
@@ -70,14 +68,6 @@ import java.util.regex.*;
 public class Videobridge
 {
     public static final String COLIBRI_CLASS = "colibriClass";
-
-    /**
-     * The name of configuration property used to specify default processing
-     * options passed as the second argument to
-     * {@link #handleColibriConferenceIq2(ColibriConferenceIQ, int)}}.
-     */
-    public static final String DEFAULT_OPTIONS_PROPERTY_NAME
-        = "org.jitsi.videobridge.defaultOptions";
 
     /**
      * The <tt>Logger</tt> used by the <tt>Videobridge</tt> class and its
@@ -114,27 +104,11 @@ public class Videobridge
     public static final String REST_API = "rest";
 
     /**
-     * The (base) <tt>System</tt> and/or <tt>ConfigurationService</tt> property
+     * The (base) <tt>Config</tt> property
      * of the REST-like HTTP/JSON API of Jitsi Videobridge.
      */
     public static final String REST_API_PNAME
         = "org.jitsi.videobridge." + REST_API;
-
-    /**
-     * The property that specifies allowed entities for turning on graceful
-     * shutdown mode. For XMPP API this is "from" JID. In case of REST
-     * the source IP is being copied into the "from" field of the IQ.
-     */
-    public static final String SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME
-        = "org.jitsi.videobridge.shutdown.ALLOWED_SOURCE_REGEXP";
-
-    /**
-     * The property that specifies entities authorized to operate the bridge.
-     * For XMPP API this is "from" JID. In case of REST the source IP is being
-     * copied into the "from" field of the IQ.
-     */
-    public static final String AUTHORIZED_SOURCE_REGEXP_PNAME
-        = "org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP";
 
     /**
      * The XMPP API of Jitsi Videobridge.
@@ -142,7 +116,7 @@ public class Videobridge
     public static final String XMPP_API = "xmpp";
 
     /**
-     * The (base) <tt>System</tt> and/or <tt>ConfigurationService</tt> property
+     * The (base) <tt>Config</tt> property
      * of the XMPP API of Jitsi Videobridge.
      */
     public static final String XMPP_API_PNAME
@@ -529,30 +503,6 @@ public class Videobridge
     }
 
     /**
-     * Returns the <tt>ConfigurationService</tt> used by this
-     * <tt>Videobridge</tt>.
-     *
-     * @return the <tt>ConfigurationService</tt> used by this
-     * <tt>Videobridge</tt>.
-     */
-    public ConfigurationService getConfigurationService()
-    {
-        BundleContext bundleContext = getBundleContext();
-
-        if (bundleContext == null)
-        {
-            return null;
-        }
-        else
-        {
-            return
-                ServiceUtils2.getService(
-                        bundleContext,
-                        ConfigurationService.class);
-        }
-    }
-
-    /**
      * Returns the <tt>EventAdmin</tt> instance (to be) used by this
      * <tt>Videobridge</tt>.
      *
@@ -776,11 +726,9 @@ public class Videobridge
      */
     public boolean isXmppApiEnabled()
     {
-        ConfigurationService cfg = getConfigurationService();
-
-        // The XMPP API is disabled by default.
-        return cfg != null &&
-            cfg.getBoolean(Videobridge.XMPP_API_PNAME, false);
+        return JvbConfig.getConfig().getStringList("videobridge.enabled-apis")
+                .stream()
+                .anyMatch("xmpp"::equalsIgnoreCase);
     }
 
     /**
@@ -852,7 +800,6 @@ public class Videobridge
 
         UlimitCheck.printUlimits();
 
-        ConfigurationService cfg = getConfigurationService();
         Config jvbConfig = JvbConfig.getConfig().getConfig("videobridge");
 
         videobridgeExpireThread.start();
@@ -862,17 +809,11 @@ public class Videobridge
         }
         health = new Health(this, jvbConfig.getConfig("health"));
 
-        defaultProcessingOptions
-            = (cfg == null)
-                ? 0
-                : cfg.getInt(DEFAULT_OPTIONS_PROPERTY_NAME, 0);
+        defaultProcessingOptions = jvbConfig.getInt("xmpp.processing-options");
         logger.debug(() -> "Default videobridge processing options: 0x"
                     + Integer.toHexString(defaultProcessingOptions));
 
-        String shutdownSourcesRegexp
-            = (cfg == null)
-                ? null
-                : cfg.getString(SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME);
+        String shutdownSourcesRegexp = jvbConfig.getString("xmpp.shutdown-allowed-source-regex");
 
         if (!StringUtils.isNullOrEmpty(shutdownSourcesRegexp))
         {
@@ -888,9 +829,7 @@ public class Videobridge
             }
         }
 
-        String authorizedSourceRegexp
-            = (cfg == null)
-                    ? null : cfg.getString(AUTHORIZED_SOURCE_REGEXP_PNAME);
+        String authorizedSourceRegexp = jvbConfig.getString("xmpp.authorized-source-regex");
         if (!StringUtils.isNullOrEmpty(authorizedSourceRegexp))
         {
             try
@@ -961,7 +900,8 @@ public class Videobridge
                 HealthCheckIQ.NAMESPACE,
                 new HealthCheckIQProvider());
 
-        startIce4j(bundleContext, cfg);
+        Config ice4jConfig = JvbConfig.getConfig().getConfig("ice4j");
+        startIce4j(bundleContext, ice4jConfig);
     }
 
     /**
@@ -972,51 +912,16 @@ public class Videobridge
      */
     private void startIce4j(
             BundleContext bundleContext,
-            ConfigurationService cfg)
+            Config ice4jConfig)
     {
         // TODO Packet logging for ice4j is not supported at this time.
         StunStack.setPacketLogger(null);
 
+
         // Make all ice4j properties system properties.
-        if (cfg != null)
+        for (Map.Entry<String, ConfigValue> configEntry : ice4jConfig.entrySet())
         {
-            List<String> ice4jPropertyNames
-                = cfg.getPropertyNamesByPrefix("org.ice4j.", false);
-
-            if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
-            {
-                for (String propertyName : ice4jPropertyNames)
-                {
-                    String propertyValue = cfg.getString(propertyName);
-
-                    // we expect the getString to return either null or a
-                    // non-empty String object.
-                    if (propertyValue != null)
-                        System.setProperty(propertyName, propertyValue);
-                }
-            }
-
-            // These properties are moved to ice4j. This is to make sure that we
-            // still support the old names.
-            String oldPrefix = "org.jitsi.videobridge";
-            String newPrefix = "org.ice4j.ice.harvest";
-            for (String propertyName : new String[]{
-                HarvesterConfiguration.NAT_HARVESTER_LOCAL_ADDRESS,
-                HarvesterConfiguration.NAT_HARVESTER_PUBLIC_ADDRESS,
-                HarvesterConfiguration.DISABLE_AWS_HARVESTER,
-                HarvesterConfiguration.FORCE_AWS_HARVESTER,
-                HarvesterConfiguration.STUN_MAPPING_HARVESTER_ADDRESSES})
-            {
-                String propertyValue = cfg.getString(propertyName);
-
-                if (propertyValue != null)
-                {
-                    String newPropertyName
-                        = newPrefix
-                                + propertyName.substring(oldPrefix.length());
-                    System.setProperty(newPropertyName, propertyValue);
-                }
-            }
+            System.setProperty(configEntry.getKey(), configEntry.getValue().unwrapped().toString());
         }
 
         // Initialize the the host candidate interface filters in the ice4j
@@ -1055,8 +960,8 @@ public class Videobridge
                 health = null;
             }
 
-            ConfigurationService cfg = getConfigurationService();
-            stopIce4j(bundleContext, cfg);
+            Config ice4jConfig = JvbConfig.getConfig().getConfig("ice4j");
+            stopIce4j(bundleContext, ice4jConfig);
         }
         finally
         {
@@ -1073,7 +978,7 @@ public class Videobridge
      */
     private void stopIce4j(
         BundleContext bundleContext,
-        ConfigurationService cfg)
+        Config ice4jConfig)
     {
         // Shut down harvesters.
         Harvesters.closeStaticConfiguration();
@@ -1083,40 +988,9 @@ public class Videobridge
         // initialization. If the conditions have changed upon restart (of the
         // component, rather than the JVM), it would not be enough to "not set"
         // the system property (as it would have survived the restart).
-        if (cfg != null)
+        for (Map.Entry<String, ConfigValue> configEntry : ice4jConfig.entrySet())
         {
-            List<String> ice4jPropertyNames
-                = cfg.getPropertyNamesByPrefix("org.ice4j.", false);
-
-            if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
-            {
-                for (String propertyName : ice4jPropertyNames)
-                {
-                    System.clearProperty(propertyName);
-                }
-            }
-
-            // These properties are moved to ice4j. This is to make sure that we
-            // still support the old names.
-            String oldPrefix = "org.jitsi.videobridge";
-            String newPrefix = "org.ice4j.ice.harvest";
-            for (String propertyName : new String[]{
-                HarvesterConfiguration.NAT_HARVESTER_LOCAL_ADDRESS,
-                HarvesterConfiguration.NAT_HARVESTER_PUBLIC_ADDRESS,
-                HarvesterConfiguration.DISABLE_AWS_HARVESTER,
-                HarvesterConfiguration.FORCE_AWS_HARVESTER,
-                HarvesterConfiguration.STUN_MAPPING_HARVESTER_ADDRESSES})
-            {
-                String propertyValue = cfg.getString(propertyName);
-
-                if (propertyValue != null)
-                {
-                    String newPropertyName
-                        = newPrefix
-                        + propertyName.substring(oldPrefix.length());
-                    System.clearProperty(newPropertyName);
-                }
-            }
+            System.clearProperty(configEntry.getKey());
         }
     }
 

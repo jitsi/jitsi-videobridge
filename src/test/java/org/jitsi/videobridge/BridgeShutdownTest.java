@@ -15,7 +15,9 @@
  */
 package org.jitsi.videobridge;
 
+import com.typesafe.config.*;
 import org.jitsi.meet.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.packet.IQ;
@@ -54,8 +56,8 @@ public class BridgeShutdownTest
     {
         // Allow focus JID
         System.setProperty(
-            Videobridge.SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME,
-            "focus.*");
+                "videobridge.xmpp.shutdown-allowed-source-regex",
+                "focus.*");
 
         osgiHandler.start();
 
