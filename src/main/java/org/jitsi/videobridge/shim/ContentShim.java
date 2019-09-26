@@ -22,6 +22,7 @@ import org.jitsi.videobridge.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 
+import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -271,12 +272,23 @@ public class ContentShim
                         XMPPError.Condition.bad_request,
                         "Endpoint ID does not match channel bundle ID");
             }
+
+            final boolean newEndpoint =
+                !(conference.getEndpoint(endpointId) instanceof Endpoint);
+
             channelShim = createRtpChannel(endpointId);
             if (channelShim == null)
             {
                 throw new VideobridgeShim.IqProcessingException(
                         XMPPError.Condition.internal_server_error,
                         "Error creating channel");
+            }
+
+            if (newEndpoint)
+            {
+                initializeEndpointTransport(
+                    channelShim.getEndpoint(),
+                    Boolean.TRUE.equals(channelIq.isInitiator()));
             }
         }
         else
@@ -353,8 +365,18 @@ public class ContentShim
                         "No endpoint ID specified for the new SCTP connection");
             }
 
+            final boolean newEndpoint =
+                !(conference.getEndpoint(endpointId) instanceof Endpoint);
+
             sctpConnectionShim
                     = createSctpConnection(endpointId);
+
+            if (newEndpoint)
+            {
+                initializeEndpointTransport(
+                    sctpConnectionShim.getEndpoint(),
+                    Boolean.TRUE.equals(sctpConnectionIq.isInitiator()));
+            }
         }
         else
         {
@@ -387,6 +409,31 @@ public class ContentShim
         }
 
         return sctpConnectionShim;
+    }
+
+    /**
+     * Initializes DTLS transport of newly created endpoint
+     * @param endpoint new endpoint with DTLS transport not yet initialized
+     * @param controlling true if DTLS transport should have controlling role
+     * of its ICE agent; false - otherwise;
+     * @throws VideobridgeShim.IqProcessingException thrown when DTLS transport
+     * is failed to initialize
+     */
+    private static void initializeEndpointTransport(
+        Endpoint endpoint, boolean controlling)
+        throws VideobridgeShim.IqProcessingException
+    {
+        try
+        {
+            endpoint.initDtlsTransport(controlling);
+        }
+        catch (IOException ioe)
+        {
+            throw new VideobridgeShim.IqProcessingException(
+                XMPPError.Condition.internal_server_error,
+                "Error initializing DTLS transport for endpoint " +
+                    endpoint.getID());
+        }
     }
 
     /**

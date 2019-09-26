@@ -313,7 +313,6 @@ public class VideobridgeShim
 
         ColibriConferenceIQ.Channel octoAudioChannel = null;
         ColibriConferenceIQ.Channel octoVideoChannel = null;
-        boolean isControlling = false;
 
         for (ColibriConferenceIQ.Content contentIQ : conferenceIQ.getContents())
         {
@@ -336,14 +335,6 @@ public class VideobridgeShim
                     = new ColibriConferenceIQ.Content(contentType.toString());
 
             responseConferenceIQ.addContent(responseContentIQ);
-
-            for (ColibriConferenceIQ.Channel channel : contentIQ.getChannels()) {
-                Boolean isInitiator = channel.isInitiator();
-                if (isInitiator != null)
-                {
-                    isControlling |= isInitiator;
-                }
-            }
 
             try
             {
@@ -416,11 +407,19 @@ public class VideobridgeShim
                 continue;
             }
 
-            Endpoint endpoint
-                    = conference.getOrCreateLocalEndpoint(channelBundleIq.getId());
+            final String endpointId = channelBundleIq.getId();
+            final boolean newEndpoint =
+                !(conference.getEndpoint(endpointId) instanceof Endpoint);
+
+            final Endpoint endpoint
+                = conference.getOrCreateLocalEndpoint(endpointId);
             try
             {
-                endpoint.initDtlsTransport(transportIq, isControlling);
+                if (newEndpoint)
+                {
+                    endpoint.initDtlsTransport(false);
+                }
+                endpoint.setTransportInfo(transportIq);
             }
             catch (IOException ioe)
             {

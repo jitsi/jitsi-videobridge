@@ -125,9 +125,7 @@ public class Health
             // Trigger the creation of the transport manager.
             try
             {
-                endpoint.initDtlsTransport(
-                    new IceUdpTransportPacketExtension(),
-                    false);
+                endpoint.initDtlsTransport(false);
             }
             catch (IOException ioe)
             {

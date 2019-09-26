@@ -1050,18 +1050,15 @@ public class Endpoint
     }
 
     /**
-     * Sets the remote transport information (ICE candidates, DTLS fingerprints).
+     * Initialize DTLS transport of this endpoint.
      *
-     * @param transportInfo the XML extension which contains the remote
-     * transport information.
      * @param controlling true if ICE agent should start as controlling agent,
      * false - otherwise.
      * @throws IOException if the endpoint's transport manager failed to
      * initialize.
      */
-    public void initDtlsTransport(IceUdpTransportPacketExtension transportInfo,
-                                  boolean controlling)
-            throws IOException
+    public void initDtlsTransport(boolean controlling)
+        throws IOException
     {
         final DtlsTransport dtlsTransport;
         if (this.dtlsTransportFuture.isDone())
@@ -1086,8 +1083,20 @@ public class Endpoint
             throw new IllegalStateException(
                 "DtlsTransport is concurrently initialized");
         }
+    }
 
-        dtlsTransport.startConnectivityEstablishment(transportInfo);
+    /**
+     * Sets the remote transport information (ICE candidates, DTLS fingerprints).
+     *
+     * @param transportInfo the XML extension which contains the remote
+     * transport information.
+     * @throws IOException if the endpoint's transport manager failed to
+     * initialize.
+     */
+    public void setTransportInfo(IceUdpTransportPacketExtension transportInfo)
+        throws IOException
+    {
+        getDtlsTransport().startConnectivityEstablishment(transportInfo);
     }
 
     /**
