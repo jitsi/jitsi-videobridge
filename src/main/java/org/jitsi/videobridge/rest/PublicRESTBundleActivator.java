@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.rest;
 
+import com.typesafe.config.*;
 import org.eclipse.jetty.rewrite.handler.*;
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.handler.*;
@@ -25,6 +26,7 @@ import org.jitsi.rest.*;
 import org.jitsi.util.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.rest.ssi.*;
+import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
 import javax.servlet.*;
@@ -525,8 +527,10 @@ public class PublicRESTBundleActivator
         }
 
         // Colibri WebSockets
+        WebsocketConfig websocketConfig =
+                ConfigBeanFactory.create(JvbConfig.getConfig().getConfig("videobridge.websockets"), WebsocketConfig.class);
         ColibriWebSocketService colibriWebSocketService
-            = new ColibriWebSocketService(bundleContext, isTls());
+            = new ColibriWebSocketService(websocketConfig, isTls());
         servletHolder
             = colibriWebSocketService.initializeColibriWebSocketServlet(
                     bundleContext,
