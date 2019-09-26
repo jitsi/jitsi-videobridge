@@ -15,10 +15,7 @@
  */
 package org.jitsi.videobridge;
 
-import java.beans.*;
-import java.io.*;
-import java.util.*;
-
+import com.typesafe.config.*;
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
@@ -28,11 +25,16 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.transport.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
-import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jingle.CandidateType;
+import org.jitsi.xmpp.extensions.jingle.*;
 import org.json.simple.*;
 import org.osgi.framework.*;
+
+import java.beans.*;
+import java.io.*;
+import java.util.*;
 
 /**
  * Implements the Jingle ICE-UDP transport.
@@ -43,12 +45,6 @@ import org.osgi.framework.*;
  */
 public class IceTransport
 {
-    /**
-     * The name of the property that can be used to control the value of
-     * {@link #iceUfragPrefix}.
-     */
-    public static final String ICE_UFRAG_PREFIX_PNAME
-            = "org.jitsi.videobridge.ICE_UFRAG_PREFIX";
     /**
      * The optional prefix to use for generated ICE local username fragments.
      */
@@ -63,18 +59,6 @@ public class IceTransport
      * directly.
      */
     private static boolean useComponentSocket = true;
-
-    /**
-     * The name of the property which configures {@link #useComponentSocket}.
-     */
-    public static final String USE_COMPONENT_SOCKET_PNAME
-        = "org.jitsi.videobridge.USE_COMPONENT_SOCKET";
-
-    /**
-     * The name of the property used to control {@link #keepAliveStrategy}.
-     */
-    public static final String KEEP_ALIVE_STRATEGY_PNAME
-            = "org.jitsi.videobridge.KEEP_ALIVE_STRATEGY";
 
     /**
      * The {@link KeepAliveStrategy} to configure for ice4j {@link Component}s,
@@ -174,17 +158,9 @@ public class IceTransport
         this.conferenceId = conference.getID();
         this.logger = parentLogger.createChildLogger(getClass().getName());
 
-        // We've seen some instances where the configuration service is not
-        // yet initialized. These are now fixed, but just in case this happens
-        // again we break early (otherwise we may initialize some of the static
-        // fields, and it will not be re-initialized when the configuration
-        // service is available).
-        ConfigurationService cfg
-                = Objects.requireNonNull(
-                        conference.getVideobridge().getConfigurationService(),
-                        "No configuration service.");
+        Config iceConfig = JvbConfig.getConfig().getConfig("videobridge.transport.ice");
         String streamName = "stream-" + endpoint.getID();
-        iceAgent = createIceAgent(controlling, streamName, cfg);
+        iceAgent = createIceAgent(controlling, streamName, iceConfig);
         iceStream = iceAgent.getStream(streamName);
         iceComponent = iceStream.getComponent(Component.RTP);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
@@ -215,33 +191,16 @@ public class IceTransport
      * @param iceAgent the {@link Agent} that we'd like to append new harvesters
      * to.
      */
-    private void configureHarvesters(Agent iceAgent, ConfigurationService cfg)
+    private void configureHarvesters(Agent iceAgent, Config iceConfig)
     {
-        if (cfg != null)
-        {
-            useComponentSocket
-                    = cfg.getBoolean(
-                            USE_COMPONENT_SOCKET_PNAME,
-                            useComponentSocket);
-        }
+        useComponentSocket = iceConfig.getBoolean("use-component-socket");
         if (logger.isDebugEnabled())
         {
             logger.debug("Using component socket: " + useComponentSocket);
         }
 
-        iceUfragPrefix = cfg.getString(ICE_UFRAG_PREFIX_PNAME, null);
-        String strategyName = cfg.getString(KEEP_ALIVE_STRATEGY_PNAME);
-        KeepAliveStrategy strategy
-                = KeepAliveStrategy.fromString(strategyName);
-        if (strategyName != null && strategy == null)
-        {
-            logger.warn("Invalid keep alive strategy name: "
-                    + strategyName);
-        }
-        else if (strategy != null)
-        {
-            keepAliveStrategy = strategy;
-        }
+        iceUfragPrefix = iceConfig.getString("ufrag-prefix");
+        keepAliveStrategy = iceConfig.getEnum(KeepAliveStrategy.class, "keep-alive-strategy");
 
         // TODO CandidateHarvesters may take (non-trivial) time to initialize so
         // initialize them as soon as possible, don't wa it to initialize them
@@ -250,7 +209,7 @@ public class IceTransport
         // while Jetty binds to all/any local addresses and, consequently, the
         // order of the binding is important at the time of this writing. That's
         // why TcpHarvester is left to initialize as late as possible right now.
-        Harvesters.initializeStaticConfiguration(cfg);
+        Harvesters.initializeStaticConfiguration(iceConfig);
 
         if (Harvesters.tcpHarvester != null)
         {
@@ -309,14 +268,14 @@ public class IceTransport
      * purposes of this <tt>TransportManager</tt> fails
      */
     private Agent createIceAgent(
-            boolean controlling, String streamName, ConfigurationService cfg)
+            boolean controlling, String streamName, Config iceConfig)
             throws IOException
     {
         Agent iceAgent = new Agent(iceUfragPrefix, logger);
 
         //add videobridge specific harvesters such as a mapping and an Amazon
         //AWS EC2 harvester
-        configureHarvesters(iceAgent, cfg);
+        configureHarvesters(iceAgent, iceConfig);
         iceAgent.setControlling(controlling);
         iceAgent.setPerformConsentFreshness(true);
 

@@ -16,8 +16,8 @@
 
 package org.jitsi.videobridge.transport;
 
+import com.typesafe.config.*;
 import org.ice4j.ice.harvest.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.logging.*;
 
 import java.io.*;
@@ -45,73 +45,11 @@ public class Harvesters
     private static int tcpHarvesterMappedPort = -1;
 
     /**
-     * The name of the property which disables the use of a
-     * <tt>TcpHarvester</tt>.
-     */
-    public static final String DISABLE_TCP_HARVESTER
-            = "org.jitsi.videobridge.DISABLE_TCP_HARVESTER";
-
-    /**
-     * The name of the property which controls the port number used for
-     * <tt>SinglePortUdpHarvester</tt>s.
-     */
-    public static final String SINGLE_PORT_HARVESTER_PORT
-            = "org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT";
-
-    /**
-    /**
-     * The default value of the port to be used for
-     * {@code SinglePortUdpHarvester}.
-     */
-    private static final int SINGLE_PORT_DEFAULT_VALUE = 10000;
-
-    /**
      * The {@link Logger} used by the {@link Harvesters} class to
      * print debug information.
      */
     private static final Logger classLogger
             = Logger.getLogger(Harvesters.class);
-
-    /**
-     * The default port that the <tt>TcpHarvester</tt> will
-     * bind to.
-     */
-    private static final int TCP_DEFAULT_PORT = 443;
-
-    /**
-     * The port on which the <tt>TcpHarvester</tt> will bind to
-     * if no port is specifically configured, and binding to
-     * <tt>DEFAULT_TCP_PORT</tt> fails (for example, if the process doesn't have
-     * the required privileges to bind to a port below 1024).
-     */
-    private static final int TCP_FALLBACK_PORT = 4443;
-
-    /**
-     * The name of the property which specifies an additional port to be
-     * advertised by the TCP harvester.
-     */
-    public static final String TCP_HARVESTER_MAPPED_PORT
-            = "org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT";
-
-    /**
-     * The name of the property which controls the port to which the
-     * <tt>TcpHarvester</tt> will bind.
-     */
-    public static final String TCP_HARVESTER_PORT
-            = "org.jitsi.videobridge.TCP_HARVESTER_PORT";
-
-    /**
-     * The name of the property which controls the use of ssltcp candidates by
-     * <tt>TcpHarvester</tt>.
-     */
-    public static final String TCP_HARVESTER_SSLTCP
-            = "org.jitsi.videobridge.TCP_HARVESTER_SSLTCP";
-
-
-    /**
-     * The default value of the <tt>TCP_HARVESTER_SSLTCP</tt> property.
-     */
-    private static final boolean TCP_HARVESTER_SSLTCP_DEFAULT = true;
 
     /**
      * The single <tt>TcpHarvester</tt> instance for the
@@ -131,11 +69,11 @@ public class Harvesters
      * <tt>IceTransport</tt> instances, that is
      * {@link #tcpHarvester} and {@link #singlePortHarvesters}.
      *
-     * @param cfg the {@link ConfigurationService} which provides values to
+     * @param iceConfig the {@link Config} which provides values to
      * configurable properties of the behavior/logic of the method
      * implementation
      */
-    public static void initializeStaticConfiguration(ConfigurationService cfg)
+    public static void initializeStaticConfiguration(Config iceConfig)
     {
         synchronized (Harvesters.class)
         {
@@ -146,8 +84,7 @@ public class Harvesters
             staticConfigurationInitialized = true;
 
 
-            int singlePort = cfg.getInt(SINGLE_PORT_HARVESTER_PORT,
-                    SINGLE_PORT_DEFAULT_VALUE);
+            int singlePort = iceConfig.getInt("single-port-harvester-port");
             if (singlePort != -1)
             {
                 singlePortHarvesters
@@ -161,64 +98,37 @@ public class Harvesters
                 healthy = singlePortHarvesters != null;
             }
 
-            if (!cfg.getBoolean(DISABLE_TCP_HARVESTER, false))
+            if (!iceConfig.getBoolean("disable-tcp-harvester"))
             {
-                int port = cfg.getInt(TCP_HARVESTER_PORT, -1);
-                boolean fallback = false;
-                boolean ssltcp = cfg.getBoolean(TCP_HARVESTER_SSLTCP,
-                        TCP_HARVESTER_SSLTCP_DEFAULT);
-
-                if (port == -1)
+                List<Integer> ports = iceConfig.getIntList("tcp-harvester-ports");
+                boolean ssltcp = iceConfig.getBoolean("use-ssltcp");
+                for (Integer port : ports)
                 {
-                    port = TCP_DEFAULT_PORT;
-                    fallback = true;
-                }
-
-                try
-                {
-                    tcpHarvester = new TcpHarvester(port, ssltcp);
-                }
-                catch (IOException ioe)
-                {
-                    classLogger.warn(
-                            "Failed to initialize TCP harvester on port " + port
-                                    + ": " + ioe
-                                    + (fallback
-                                    ? ". Retrying on port " + TCP_FALLBACK_PORT
-                                    : "")
-                                    + ".");
-                    // If no fallback is allowed, the method will return.
-                }
-                if (tcpHarvester == null)
-                {
-                    // If TCP_HARVESTER_PORT specified a port, then fallback was
-                    // disabled. However, if the binding on the port (above)
-                    // fails, then the method should return.
-                    if (!fallback)
-                        return;
-
-                    port = TCP_FALLBACK_PORT;
+                    classLogger.info("Attempting to initialize TCP harvester on port " + port);
                     try
                     {
-                        tcpHarvester
-                                = new TcpHarvester(port, ssltcp);
+                        tcpHarvester = new TcpHarvester(port, ssltcp);
+                        classLogger.info("Initialized TCP harvester on port " + port
+                            + ", using SSLTCP: " + ssltcp);
                     }
                     catch (IOException ioe)
                     {
                         classLogger.warn(
-                                "Failed to initialize TCP harvester on fallback"
-                                        + " port " + port + ": " + ioe);
-                        return;
+                                "Failed to initialize TCP harvester on port " + port
+                                        + ": " + ioe);
+                    }
+                    if (tcpHarvester != null)
+                    {
+                        break;
                     }
                 }
-
-                if (classLogger.isInfoEnabled())
+                if (tcpHarvester == null)
                 {
-                    classLogger.info("Initialized TCP harvester on port " + port
-                            + ", using SSLTCP:" + ssltcp);
+                    classLogger.error("Failed to initialize TCP harvester");
+                    return;
                 }
 
-                int mappedPort = cfg.getInt(TCP_HARVESTER_MAPPED_PORT, -1);
+                int mappedPort = iceConfig.getInt("tcp-harvester-mapped-port");
                 if (mappedPort != -1)
                 {
                     tcpHarvesterMappedPort = mappedPort;
