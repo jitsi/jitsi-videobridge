@@ -15,14 +15,14 @@
  */
 package org.jitsi.videobridge.stats;
 
-import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
-import org.jitsi.util.*;
-import org.jitsi.utils.logging.*;
-import org.jxmpp.jid.*;
-import org.jxmpp.jid.impl.*;
-import org.jxmpp.stringprep.*;
+import com.typesafe.config.*;
+import org.jitsi.videobridge.stats.config.*;
+import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
+
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.stream.*;
 
 /**
  * Implements a <tt>BundleActivator</tt> for <tt>StatsManager</tt> which starts
@@ -51,41 +51,6 @@ public class StatsManagerBundleActivator
     public static final int DEFAULT_STAT_INTERVAL = 1000;
 
     /**
-     * The default value for statistics transport.
-     */
-    private static final String DEFAULT_STAT_TRANSPORT = null;
-
-    /**
-     * The name of the property which enables generating and sending statistics
-     * about the Videobridge.
-     */
-    private static final String ENABLE_STATISTICS_PNAME
-        = "org.jitsi.videobridge.ENABLE_STATISTICS";
-
-    /**
-     * The <tt>Logger</tt> used by the <tt>StatsManagerBundleActivator</tt>
-     * class and its instances to print debug information.
-     */
-    private static final Logger logger
-        = Logger.getLogger(StatsManagerBundleActivator.class);
-
-    /**
-     * The name of the property which specifies the name of the PubSub node that
-     * will receive the statistics about the Videobridge if PubSub transport is
-     * used to send statistics.
-     */
-    private static final String PUBSUB_NODE_PNAME
-        = "org.jitsi.videobridge.PUBSUB_NODE";
-
-    /**
-     * The name of the property which specifies the name of the service that
-     * will receive the statistics about the Videobridge if PubSub transport is
-     * used to send statistics.
-     */
-    private static final String PUBSUB_SERVICE_PNAME
-        = "org.jitsi.videobridge.PUBSUB_SERVICE";
-
-    /**
      * The value for callstats.io statistics transport.
      */
     public static final String STAT_TRANSPORT_CALLSTATS_IO = "callstats.io";
@@ -93,17 +58,17 @@ public class StatsManagerBundleActivator
     /**
      * The value for COLIBRI statistics transport.
      */
-    private static final String STAT_TRANSPORT_COLIBRI = "colibri";
+    public static final String STAT_TRANSPORT_COLIBRI = "colibri";
 
     /**
      * The value for PubSub statistics transport.
      */
-    private static final String STAT_TRANSPORT_PUBSUB = "pubsub";
+    public static final String STAT_TRANSPORT_PUBSUB = "pubsub";
 
     /**
      * The value used to enable the MUC statistics transport.
      */
-    private static final String STAT_TRANSPORT_MUC = "muc";
+    public static final String STAT_TRANSPORT_MUC = "muc";
 
     /**
      * The name of the property which specifies the interval in milliseconds for
@@ -111,13 +76,6 @@ public class StatsManagerBundleActivator
      */
     public static final String STATISTICS_INTERVAL_PNAME
         = "org.jitsi.videobridge.STATISTICS_INTERVAL";
-
-    /**
-     * The name of the property which specifies the transport for sending
-     * statistics about the Videobridge.
-     */
-    private static final String STATISTICS_TRANSPORT_PNAME
-        = "org.jitsi.videobridge.STATISTICS_TRANSPORT";
 
     /**
      * Gets the <tt>BundleContext</tt> in which a
@@ -145,86 +103,22 @@ public class StatsManagerBundleActivator
      *
      * @param statsMgr the {@code StatsManager} to add the new
      * {@code StatsTransport} to
-     * @param cfg the {@code ConfigurationService} to read property values from
-     * or {@code null} to read the property values from {@code System}
-     * @param interval the interval/period in milliseconds at which the
-     * newly-initialized and added {@code StatsTransport} is to repeatedly send
-     * {@code Statistics}
-     * @param transport the identifier of the {@code StatsTransport} to
-     * initialize and add to {@code statsMgr}
+     * @param statsTransportConfig the {@link StatsTransportConfig} to read property values from
      */
-    private void addTransport(
-            StatsManager statsMgr,
-            ConfigurationService cfg,
-            int interval,
-            String transport)
+    private void addTransport(StatsManager statsMgr, StatsTransportConfig statsTransportConfig)
     {
-        StatsTransport t = null;
+        StatsTransport t = StatsTransportFactory.create(statsTransportConfig);
+        int interval = (int)statsTransportConfig.getInterval().toMillis();
 
-        if (STAT_TRANSPORT_CALLSTATS_IO.equalsIgnoreCase(transport))
+        // The interval/period of the Statistics better be the same as the
+        // interval/period of the StatsTransport.
+        if (statsMgr.findStatistics(VideobridgeStatistics.class, interval)
+                == null)
         {
-            t = new CallStatsIOTransport();
-        }
-        else if (STAT_TRANSPORT_COLIBRI.equalsIgnoreCase(transport))
-        {
-            t = new ColibriStatsTransport();
-        }
-        else if (STAT_TRANSPORT_PUBSUB.equalsIgnoreCase(transport))
-        {
-            Jid service;
-            try
-            {
-                service = JidCreate.from(cfg.getString(PUBSUB_SERVICE_PNAME));
-            }
-            catch (XmppStringprepException e)
-            {
-                logger.error("Invalid pubsub service name", e);
-                return;
-            }
-
-            String node = cfg.getString(PUBSUB_NODE_PNAME);
-            if(service != null && node != null)
-            {
-                t = new PubSubStatsTransport(service, node);
-            }
-            else
-            {
-                logger.error(
-                        "No configuration properties for PubSub service"
-                            + " and/or node found.");
-            }
-        }
-        else if (STAT_TRANSPORT_MUC.equalsIgnoreCase(transport))
-        {
-            logger.info("Using a MUC stats transport");
-            t = new MucStatsTransport();
-        }
-        else
-        {
-            logger.error(
-                    "Unknown/unsupported statistics transport: " + transport);
+            statsMgr.addStatistics(new VideobridgeStatistics(), interval);
         }
 
-        if (t != null)
-        {
-            // Each StatsTransport type/identifier (i.e. specified by the
-            // transport method argument) is allowed its own interval/period.
-            interval
-                = ConfigUtils.getInt(
-                        cfg,
-                        STATISTICS_INTERVAL_PNAME + "." + transport,
-                        interval);
-
-            // The interval/period of the Statistics better be the same as the
-            // interval/period of the StatsTransport.
-            if (statsMgr.findStatistics(VideobridgeStatistics.class, interval)
-                    == null)
-            {
-                statsMgr.addStatistics(new VideobridgeStatistics(), interval);
-            }
-
-            statsMgr.addTransport(t, interval);
-        }
+        statsMgr.addTransport(t, interval);
     }
 
     /**
@@ -234,34 +128,15 @@ public class StatsManagerBundleActivator
      *
      * @param statsMgr the {@code StatsManager} to populate with new
      * {@code StatsTransport}s
-     * @param cfg the {@code ConfigurationService} to read property values from
-     * or {@code null} to read the property values from {@code System}
-     * @param interval the interval/period in milliseconds at which the
-     * newly-initialized and added {@code StatsTransport}s to repeatedly send
-     * {@code Statistics}
+     * @param statsConfig the {@code Config} to read property values from
      */
-    private void addTransports(
-            StatsManager statsMgr,
-            ConfigurationService cfg,
-            int interval)
+    private void addTransports(StatsManager statsMgr, Config statsConfig)
     {
-        String transports
-            = ConfigUtils.getString(
-                    cfg,
-                    STATISTICS_TRANSPORT_PNAME,
-                    DEFAULT_STAT_TRANSPORT);
+        List<StatsTransportConfig> configs = statsConfig.getConfigList("transports").stream()
+                .map(StatsTransportConfigBeanFactory::create)
+                .collect(Collectors.toList());
 
-        if (transports == null || transports.length() == 0)
-        {
-            // It is OK to have the statistics enabled without explicitly
-            // choosing transports because the statistics may be exposed through
-            // the REST API as well.
-            return;
-        }
-
-        // Allow multiple transports.
-        for (String transport : transports.split(","))
-            addTransport(statsMgr, cfg, interval, transport);
+        configs.forEach(config -> addTransport(statsMgr, config));
     }
 
     /**
@@ -277,36 +152,27 @@ public class StatsManagerBundleActivator
     public void start(BundleContext bundleContext)
         throws Exception
     {
-        ConfigurationService cfg
-            = ServiceUtils2.getService(
-                    bundleContext,
-                    ConfigurationService.class);
-        boolean enable = false;
-
-        if (cfg != null)
+        Config statsConfig = JvbConfig.getConfig().getConfig("videobridge.stats");
+        if (!statsConfig.getBoolean("enabled"))
         {
-            enable = cfg.getBoolean(ENABLE_STATISTICS_PNAME, enable);
+            return;
         }
 
-        if (enable)
+        StatsManagerBundleActivator.bundleContext = bundleContext;
+
+        boolean started = false;
+        try
         {
-            StatsManagerBundleActivator.bundleContext = bundleContext;
-
-            boolean started = false;
-
-            try
+            start(statsConfig);
+            started = true;
+        }
+        finally
+        {
+            if (!started
+                    && (StatsManagerBundleActivator.bundleContext
+                    == bundleContext))
             {
-                start(cfg);
-                started = true;
-            }
-            finally
-            {
-                if (!started
-                        && (StatsManagerBundleActivator.bundleContext
-                                == bundleContext))
-                {
-                    StatsManagerBundleActivator.bundleContext = null;
-                }
+                StatsManagerBundleActivator.bundleContext = null;
             }
         }
     }
@@ -316,19 +182,14 @@ public class StatsManagerBundleActivator
      * Initializes and starts a new <tt>StatsManager</tt> instance and registers
      * it as an OSGi service in the specified <tt>bundleContext</tt>.
      *
-     * @param cfg the <tt>ConfigurationService</tt> in the
-     * <tt>BundleContext</tt> in which the <tt>StatsManager</tt> OSGi is to
-     * start
+     * @param statsConfig the <tt>Config</tt> for this service
      */
-    private void start(ConfigurationService cfg)
+    private void start(Config statsConfig)
         throws Exception
     {
         StatsManager statsMgr = new StatsManager();
-        int interval
-            = ConfigUtils.getInt(
-                    cfg,
-                    STATISTICS_INTERVAL_PNAME,
-                    DEFAULT_STAT_INTERVAL);
+        //TODO: use Duration for interval
+        int interval = (int)statsConfig.getDuration("interval", TimeUnit.MILLISECONDS);
 
         // Add Statistics to StatsManager.
         //
@@ -343,7 +204,7 @@ public class StatsManagerBundleActivator
         statsMgr.addStatistics(new VideobridgeStatistics(), interval);
 
         // Add StatsTransports to StatsManager.
-        addTransports(statsMgr, cfg, interval);
+        addTransports(statsMgr, statsConfig);
 
         statsMgr.start(bundleContext);
 
