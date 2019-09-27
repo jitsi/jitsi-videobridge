@@ -639,11 +639,13 @@ public class Conference
      * in this <tt>Conference</tt>.
      * @param id the identifier/ID of the <tt>Endpoint</tt> which will be
      * created
+     * @param iceControlling ICE control role of endpoint
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      */
-    @NotNull
-    public Endpoint createLocalEndpoint(String id) {
-        AbstractEndpoint existingEndpoint = endpoints.get(id);
+    public Endpoint createLocalEndpoint(String id, boolean iceControlling)
+        throws IOException
+    {
+        final AbstractEndpoint existingEndpoint = endpoints.get(id);
         if (existingEndpoint instanceof OctoEndpoint)
         {
             // It is possible that an Endpoint was migrated from another bridge
@@ -660,16 +662,16 @@ public class Conference
                 + id + "already created");
         }
 
-        Endpoint endpoint;
+        final Endpoint endpoint = new Endpoint(id, this, logger);
+        endpoint.initDtlsTransport(iceControlling);
+        // The propertyChangeListener will weakly reference this
+        // Conference and will unregister itself from the endpoint
+        // sooner or later.
+        endpoint.addPropertyChangeListener(propertyChangeListener);
+
         synchronized (endpoints)
         {
-            endpoint = new Endpoint(id, this, logger);
-            // The propertyChangeListener will weakly reference this
-            // Conference and will unregister itself from the endpoint
-            // sooner or later.
-            endpoint.addPropertyChangeListener(propertyChangeListener);
             endpoints.put(id, endpoint);
-
             updateEndpointsCache();
         }
 

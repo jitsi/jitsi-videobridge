@@ -291,24 +291,26 @@ public class ConferenceShim
         {
             for (ColibriConferenceIQ.Channel channel : content.getChannels())
             {
-                ensureEndpointInitialized(
-                    channel.getEndpoint(), Boolean.TRUE.equals(channel.isInitiator()));
+                ensureEndpointCreated(
+                    channel.getEndpoint(),
+                    Boolean.TRUE.equals(channel.isInitiator()));
             }
             for (ColibriConferenceIQ.SctpConnection channel : content.getSctpConnections())
             {
-                ensureEndpointInitialized(
-                    channel.getEndpoint(), Boolean.TRUE.equals(channel.isInitiator()));
+                ensureEndpointCreated(
+                    channel.getEndpoint(),
+                    Boolean.TRUE.equals(channel.isInitiator()));
             }
         }
 
         for (ColibriConferenceIQ.ChannelBundle channelBundle : conferenceIQ.getChannelBundles())
         {
-            ensureEndpointInitialized(channelBundle.getId(), false);
+            ensureEndpointCreated(channelBundle.getId(), false);
         }
 
         for (ColibriConferenceIQ.Endpoint endpoint : conferenceIQ.getEndpoints())
         {
-            ensureEndpointInitialized(endpoint.getId(), false);
+            ensureEndpointCreated(endpoint.getId(), false);
         }
     }
 
@@ -316,47 +318,29 @@ public class ConferenceShim
      * Checks if endpoint with specified ID is initialized, if endpoint is not
      * exist in a conference it is created and it's transport is initialized.
      * @param endpointId identifier of endpoint to check and initialize
-     * @param iceControlling ICE controlling role for newly created endpoint
+     * @param iceControlling ICE control role for newly created endpoint
      * @throws VideobridgeShim.IqProcessingException
      */
-    private void ensureEndpointInitialized(
+    private void ensureEndpointCreated(
         String endpointId,
         boolean iceControlling)
         throws VideobridgeShim.IqProcessingException
     {
-        final boolean newEndpoint =
-            conference.getLocalEndpoint(endpointId) == null;
 
-        if (newEndpoint)
+        if (conference.getLocalEndpoint(endpointId) != null)
         {
-            final Endpoint endpoint
-                = conference.createLocalEndpoint(endpointId);
-            initializeEndpointTransport(endpoint, iceControlling);
+            return;
         }
-    }
-
-    /**
-     * Initializes DTLS transport of newly created endpoint
-     * @param endpoint new endpoint with DTLS transport not yet initialized
-     * @param controlling true if DTLS transport should have controlling role
-     * of its ICE agent; false - otherwise;
-     * @throws VideobridgeShim.IqProcessingException thrown when DTLS transport
-     * is failed to initialize
-     */
-    private static void initializeEndpointTransport(
-        Endpoint endpoint, boolean controlling)
-        throws VideobridgeShim.IqProcessingException
-    {
         try
         {
-            endpoint.initDtlsTransport(controlling);
+            conference.createLocalEndpoint(endpointId, iceControlling);
         }
         catch (IOException ioe)
         {
             throw new VideobridgeShim.IqProcessingException(
                 XMPPError.Condition.internal_server_error,
-                "Error initializing DTLS transport for endpoint " +
-                    endpoint.getID());
+                "Error initializing endpoint " +
+                    endpointId);
         }
     }
 

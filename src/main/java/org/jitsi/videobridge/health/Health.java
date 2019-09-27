@@ -22,7 +22,6 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.transport.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.jitsi.xmpp.extensions.jingle.*;
 
 import java.io.*;
 import java.util.*;
@@ -113,17 +112,15 @@ public class Health
 
         for (int i = 0; i < numEndpoints; ++i)
         {
-            final Endpoint endpoint
-                = conference.createLocalEndpoint(generateEndpointID());
-
-            // Trigger the creation of the transport manager.
+            final Endpoint endpoint;
             try
             {
-                endpoint.initDtlsTransport(false);
+                endpoint = conference.createLocalEndpoint(
+                    generateEndpointID(), true);
             }
-            catch (IOException ioe)
+            catch (IOException e)
             {
-                throw new RuntimeException(ioe);
+                throw new RuntimeException(e);
             }
 
             endpoints.add(endpoint);
