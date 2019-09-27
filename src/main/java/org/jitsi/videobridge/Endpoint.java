@@ -144,7 +144,7 @@ public class Endpoint
     private final BandwidthProbing bandwidthProbing;
 
     /**
-     * This {@link Endpoint}'s transport manager.
+     * This {@link Endpoint}'s DTLS transport.
      */
     @NotNull
     private final DtlsTransport dtlsTransport;
@@ -389,7 +389,7 @@ public class Endpoint
     }
 
     /**
-     * Checks if this endpoint's transport manager is connected.
+     * Checks if this endpoint's DTLS transport is connected.
      * @return
      */
     private boolean isTransportConnected()
@@ -947,11 +947,11 @@ public class Endpoint
     }
 
     /**
-     * Gets this {@link Endpoint}'s transport manager, initializing it if it
+     * Gets this {@link Endpoint}'s DTLS transport, initializing it if it
      * wasn't already initialized. If there was a previous unsuccessful attempt
      * to initialize it, re-throws the same exception.
      *
-     * @return this {@link Endpoint}'s transport manager.
+     * @return this {@link Endpoint}'s DTLS transport.
      */
     public DtlsTransport getDtlsTransport()
     {
