@@ -118,9 +118,9 @@ public class Health
                 endpoint = conference.createLocalEndpoint(
                     generateEndpointID(), true);
             }
-            catch (IOException e)
+            catch (IOException ioe)
             {
-                throw new RuntimeException(e);
+                throw new RuntimeException(ioe);
             }
 
             endpoints.add(endpoint);

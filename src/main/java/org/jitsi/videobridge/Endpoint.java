@@ -195,7 +195,9 @@ public class Endpoint
      * @param id the identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt> with which the new instance is to be initialized
      * @param conference conference this endpoint belongs to
-     * @param iceControlling ICE control role of endpoint
+     * @param iceControlling {@code true} if the ICE agent of this endpoint's
+     * transport will initialized to serve as a controlling ICE agent;
+     * otherwise, {@code false}
      */
     public Endpoint(
             String id,

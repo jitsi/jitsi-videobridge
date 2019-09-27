@@ -284,7 +284,8 @@ public class ConferenceShim
                     channel.getEndpoint(),
                     Boolean.TRUE.equals(channel.isInitiator()));
             }
-            for (ColibriConferenceIQ.SctpConnection channel : content.getSctpConnections())
+            for (ColibriConferenceIQ.SctpConnection channel
+                : content.getSctpConnections())
             {
                 ensureEndpointCreated(
                     channel.getEndpoint(),
@@ -292,12 +293,14 @@ public class ConferenceShim
             }
         }
 
-        for (ColibriConferenceIQ.ChannelBundle channelBundle : conferenceIQ.getChannelBundles())
+        for (ColibriConferenceIQ.ChannelBundle channelBundle
+            : conferenceIQ.getChannelBundles())
         {
             ensureEndpointCreated(channelBundle.getId(), false);
         }
 
-        for (ColibriConferenceIQ.Endpoint endpoint : conferenceIQ.getEndpoints())
+        for (ColibriConferenceIQ.Endpoint endpoint
+            : conferenceIQ.getEndpoints())
         {
             ensureEndpointCreated(endpoint.getId(), false);
         }
@@ -310,9 +313,7 @@ public class ConferenceShim
      * @param iceControlling ICE control role for newly created endpoint
      * @throws VideobridgeShim.IqProcessingException
      */
-    private void ensureEndpointCreated(
-        String endpointId,
-        boolean iceControlling)
+    private void ensureEndpointCreated(String endpointId, boolean iceControlling)
         throws VideobridgeShim.IqProcessingException
     {
 

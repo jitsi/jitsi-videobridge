@@ -272,7 +272,6 @@ public class ContentShim
                         XMPPError.Condition.bad_request,
                         "Endpoint ID does not match channel bundle ID");
             }
-
             channelShim = createRtpChannel(endpointId);
             if (channelShim == null)
             {
