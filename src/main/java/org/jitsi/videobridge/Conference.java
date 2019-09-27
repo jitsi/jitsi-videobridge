@@ -956,6 +956,12 @@ public class Conference
      */
     public void addEndpoint(AbstractEndpoint endpoint)
     {
+        if (endpoint.getConference() != this)
+        {
+            throw new IllegalArgumentException("Endpoint belong to other " +
+                "conference = " + endpoint.getConference());
+        }
+
         final AbstractEndpoint overwrittenEndpoint;
         synchronized (endpoints)
         {
