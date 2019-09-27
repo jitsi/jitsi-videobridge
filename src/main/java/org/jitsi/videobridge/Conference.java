@@ -662,8 +662,8 @@ public class Conference
                 + id + "already created");
         }
 
-        final Endpoint endpoint = new Endpoint(id, this, logger);
-        endpoint.initDtlsTransport(iceControlling);
+        final Endpoint endpoint = new Endpoint(
+            id, this, logger, iceControlling);
         // The propertyChangeListener will weakly reference this
         // Conference and will unregister itself from the endpoint
         // sooner or later.

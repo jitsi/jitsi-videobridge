@@ -309,7 +309,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * @param channelBundle the channel bundle element to describe in.
      */
     public void describe(ColibriConferenceIQ.ChannelBundle channelBundle)
-            throws IOException
     {
     }
 

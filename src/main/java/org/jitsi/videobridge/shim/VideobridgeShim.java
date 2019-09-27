@@ -428,33 +428,12 @@ public class VideobridgeShim
                 continue;
             }
 
-            try
-            {
-                endpoint.setTransportInfo(transportIq);
-            }
-            catch (IOException ioe)
-            {
-                logger.error(
-                    "Error processing channel-bundle: " + ioe.toString());
-                return IQUtils.createError(
-                        conferenceIQ,
-                        XMPPError.Condition.internal_server_error,
-                        "Failed to set transport: " + ioe.getMessage());
-            }
+            endpoint.setTransportInfo(transportIq);
         }
 
-        Set<String> channelBundleIdsToDescribe
-                = getAllSignaledChannelBundleIds(conferenceIQ);
-        try
-        {
-            conferenceShim.describeChannelBundles(
-                    responseConferenceIQ,
-                    channelBundleIdsToDescribe);
-        }
-        catch (IqProcessingException e)
-        {
-            return IQUtils.createError(conferenceIQ, e.condition, e.errorMessage);
-        }
+        conferenceShim.describeChannelBundles(
+            responseConferenceIQ,
+            getAllSignaledChannelBundleIds(conferenceIQ));
 
         // Update the endpoint information of Videobridge with the endpoint
         // information of the IQ.

@@ -107,12 +107,10 @@ public class ConferenceShim
      * Describes the channel bundles of this conference in a Colibri IQ.
      * @param iq the IQ to describe in.
      * @param endpointIds the list of IDs to describe.
-     * @throws VideobridgeShim.IqProcessingException
      */
     void describeChannelBundles(
             ColibriConferenceIQ iq,
             Set<String> endpointIds)
-            throws VideobridgeShim.IqProcessingException
     {
         for (AbstractEndpoint endpoint : conference.getEndpoints())
         {
@@ -121,16 +119,7 @@ public class ConferenceShim
             {
                 ColibriConferenceIQ.ChannelBundle responseBundleIQ
                     = new ColibriConferenceIQ.ChannelBundle(endpointId);
-                try
-                {
-                    endpoint.describe(responseBundleIQ);
-                }
-                catch (IOException ioe)
-                {
-                    throw new VideobridgeShim.IqProcessingException(
-                            XMPPError.Condition.internal_server_error,
-                            ioe.getMessage());
-                }
+                endpoint.describe(responseBundleIQ);
 
                 iq.addChannelBundle(responseBundleIQ);
             }
