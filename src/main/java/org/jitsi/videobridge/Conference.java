@@ -64,7 +64,7 @@ public class Conference
      * synchronizing on the map itself, because it must be kept in sync with
      * {@link #endpointsCache}.
      */
-    private final Map<String, AbstractEndpoint> endpoints
+    private final ConcurrentHashMap<String, AbstractEndpoint> endpoints
             = new ConcurrentHashMap<>();
 
     /**
@@ -669,11 +669,7 @@ public class Conference
         // sooner or later.
         endpoint.addPropertyChangeListener(propertyChangeListener);
 
-        synchronized (endpoints)
-        {
-            endpoints.put(id, endpoint);
-            updateEndpointsCache();
-        }
+        addEndpoint(endpoint);
 
         EventAdmin eventAdmin = getEventAdmin();
         if (eventAdmin != null)
@@ -682,7 +678,7 @@ public class Conference
                     EventFactory.endpointCreated(endpoint));
         }
 
-        endpointsChanged();
+
         return endpoint;
     }
 
@@ -935,7 +931,10 @@ public class Conference
         synchronized (endpoints)
         {
             removedEndpoint = endpoints.remove(endpoint.getID());
-            updateEndpointsCache();
+            if (removedEndpoint != null)
+            {
+                updateEndpointsCache();
+            }
         }
 
         if (removedEndpoint != null)
@@ -957,13 +956,21 @@ public class Conference
      */
     public void addEndpoint(AbstractEndpoint endpoint)
     {
+        final AbstractEndpoint overwrittenEndpoint;
         synchronized (endpoints)
         {
-            endpoints.put(endpoint.getID(), endpoint);
+            overwrittenEndpoint = endpoints.put(endpoint.getID(), endpoint);
             updateEndpointsCache();
         }
 
         endpointsChanged();
+
+        if (overwrittenEndpoint != null)
+        {
+            logger.info("Endpoint with id " + endpoint.getID() + ": " +
+                overwrittenEndpoint + " has been overwritten by new " +
+                "endpoint with same id: " + endpoint);
+        }
     }
 
     /**
