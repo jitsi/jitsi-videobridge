@@ -644,6 +644,7 @@ public class Conference
      * otherwise, {@code false}
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      */
+    @NotNull
     public Endpoint createLocalEndpoint(String id, boolean iceControlling)
         throws IOException
     {
@@ -677,7 +678,7 @@ public class Conference
         if (eventAdmin != null)
         {
             eventAdmin.sendEvent(
-                    EventFactory.endpointCreated(endpoint));
+                EventFactory.endpointCreated(endpoint));
         }
 
 

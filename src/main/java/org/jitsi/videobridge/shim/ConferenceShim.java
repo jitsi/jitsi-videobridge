@@ -270,7 +270,7 @@ public class ConferenceShim
 
     /**
      * Process whole {@link ColibriConferenceIQ} and allocate and initialize
-     * endpoints and it's transport
+     * found new endpoints.
      * @param conferenceIQ conference IQ having endpoints
      */
     void initializeNewEndpoints(ColibriConferenceIQ conferenceIQ)
