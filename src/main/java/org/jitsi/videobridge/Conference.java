@@ -964,19 +964,19 @@ public class Conference
                 "conference = " + endpoint.getConference());
         }
 
-        final AbstractEndpoint overwrittenEndpoint;
+        final AbstractEndpoint replacedEndpoint;
         synchronized (endpoints)
         {
-            overwrittenEndpoint = endpoints.put(endpoint.getID(), endpoint);
+            replacedEndpoint = endpoints.put(endpoint.getID(), endpoint);
             updateEndpointsCache();
         }
 
         endpointsChanged();
 
-        if (overwrittenEndpoint != null)
+        if (replacedEndpoint != null)
         {
             logger.info("Endpoint with id " + endpoint.getID() + ": " +
-                overwrittenEndpoint + " has been overwritten by new " +
+                replacedEndpoint + " has been replaced by new " +
                 "endpoint with same id: " + endpoint);
         }
     }
