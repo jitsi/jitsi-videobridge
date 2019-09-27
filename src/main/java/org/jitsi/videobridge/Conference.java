@@ -935,6 +935,7 @@ public class Conference
         synchronized (endpoints)
         {
             removedEndpoint = endpoints.remove(endpoint.getID());
+            updateEndpointsCache();
         }
 
         if (removedEndpoint != null)
@@ -945,7 +946,6 @@ public class Conference
                 eventAdmin.sendEvent(
                     EventFactory.endpointExpired(removedEndpoint));
             }
-            updateEndpointsCache();
             endpointsChanged();
         }
     }
