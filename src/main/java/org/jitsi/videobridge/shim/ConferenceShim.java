@@ -269,11 +269,11 @@ public class ConferenceShim
     }
 
     /**
-     * Process whole {@link ColibriConferenceIQ} and allocate and initialize
-     * found new endpoints.
+     * Process whole {@link ColibriConferenceIQ} and initialize all signaled
+     * endpoints which were not initialized before.
      * @param conferenceIQ conference IQ having endpoints
      */
-    void initializeNewEndpoints(ColibriConferenceIQ conferenceIQ)
+    void initializeSignaledEndpoints(ColibriConferenceIQ conferenceIQ)
         throws VideobridgeShim.IqProcessingException
     {
         for (ColibriConferenceIQ.Content content : conferenceIQ.getContents())
@@ -316,7 +316,6 @@ public class ConferenceShim
     private void ensureEndpointCreated(String endpointId, boolean iceControlling)
         throws VideobridgeShim.IqProcessingException
     {
-
         if (conference.getLocalEndpoint(endpointId) != null)
         {
             return;

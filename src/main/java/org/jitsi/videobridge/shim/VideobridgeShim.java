@@ -24,7 +24,6 @@ import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jxmpp.jid.*;
 
-import java.io.*;
 import java.util.*;
 
 /**
@@ -313,7 +312,7 @@ public class VideobridgeShim
 
         try
         {
-            conferenceShim.initializeNewEndpoints(conferenceIQ);
+            conferenceShim.initializeSignaledEndpoints(conferenceIQ);
         }
         catch (IqProcessingException e)
         {
