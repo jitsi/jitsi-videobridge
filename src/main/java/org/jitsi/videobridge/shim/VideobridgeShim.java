@@ -420,17 +420,11 @@ public class VideobridgeShim
             }
 
             final String endpointId = channelBundleIq.getId();
-            final boolean newEndpoint =
-                !(conference.getEndpoint(endpointId) instanceof Endpoint);
 
             final Endpoint endpoint
-                = conference.getOrCreateLocalEndpoint(endpointId);
+                = conference.getLocalEndpoint(endpointId);
             try
             {
-                if (newEndpoint)
-                {
-                    endpoint.initDtlsTransport(false);
-                }
                 endpoint.setTransportInfo(transportIq);
             }
             catch (IOException ioe)

@@ -113,14 +113,8 @@ public class Health
 
         for (int i = 0; i < numEndpoints; ++i)
         {
-            Endpoint endpoint
-                = conference.getOrCreateLocalEndpoint(generateEndpointID());
-
-            // Fail as quickly as possible.
-            if (endpoint == null)
-            {
-                throw new NullPointerException("Failed to create an endpoint.");
-            }
+            final Endpoint endpoint
+                = conference.createLocalEndpoint(generateEndpointID());
 
             // Trigger the creation of the transport manager.
             try

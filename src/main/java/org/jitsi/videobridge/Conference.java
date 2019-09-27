@@ -630,52 +630,57 @@ public class Conference
      */
     public AbstractEndpoint getEndpoint(String id)
     {
-        return getEndpoint(id, /* create */ false);
+        return endpoints.get(id);
     }
 
     /**
-     * Gets an <tt>Endpoint</tt> participating in this <tt>Conference</tt> which
-     * has a specific identifier/ID. If an <tt>Endpoint</tt> participating in
-     * this <tt>Conference</tt> with the specified <tt>id</tt> does not exist at
-     * the time the method is invoked, the method optionally initializes a new
-     * <tt>Endpoint</tt> instance with the specified <tt>id</tt> and adds it to
-     * the list of <tt>Endpoint</tt>s participating in this <tt>Conference</tt>.
-     *
-     * @param id the identifier/ID of the <tt>Endpoint</tt> which is to be
-     * returned
+     * Initializes a new <tt>Endpoint</tt> instance with the specified
+     * <tt>id</tt> and adds it to the list of <tt>Endpoint</tt>s participating
+     * in this <tt>Conference</tt>.
+     * @param id the identifier/ID of the <tt>Endpoint</tt> which will be
+     * created
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
-     * which has the specified <tt>id</tt> or <tt>null</tt> if there is no such
-     * <tt>Endpoint</tt> and <tt>create</tt> equals <tt>false</tt>
      */
-    private AbstractEndpoint getEndpoint(String id, boolean create)
-    {
-        AbstractEndpoint endpoint;
-        endpoint = endpoints.get(id);
-
-        if (endpoint == null && create)
+    @NotNull
+    public Endpoint createLocalEndpoint(String id) {
+        AbstractEndpoint existingEndpoint = endpoints.get(id);
+        if (existingEndpoint instanceof OctoEndpoint)
         {
-            synchronized (endpoints)
-            {
-                endpoint = new Endpoint(id, this, logger);
-                // The propertyChangeListener will weakly reference this
-                // Conference and will unregister itself from the endpoint
-                // sooner or later.
-                endpoint.addPropertyChangeListener(propertyChangeListener);
-                endpoints.put(id, endpoint);
-
-                updateEndpointsCache();
-            }
-
-            EventAdmin eventAdmin = getEventAdmin();
-            if (eventAdmin != null)
-            {
-                eventAdmin.sendEvent(
-                        EventFactory.endpointCreated(endpoint));
-            }
-
-            endpointsChanged();
+            // It is possible that an Endpoint was migrated from another bridge
+            // in the conference to this one, and the sources lists (which
+            // implicitly signal the Octo endpoints in the conference) haven't
+            // been updated yet. We'll force the Octo endpoint to expire and
+            // we'll continue with the creation of a new local Endpoint for the
+            // participant.
+            existingEndpoint.expire();
+        }
+        else if (existingEndpoint != null)
+        {
+            throw new IllegalArgumentException("Local endpoint with ID = "
+                + id + "already created");
         }
 
+        Endpoint endpoint;
+        synchronized (endpoints)
+        {
+            endpoint = new Endpoint(id, this, logger);
+            // The propertyChangeListener will weakly reference this
+            // Conference and will unregister itself from the endpoint
+            // sooner or later.
+            endpoint.addPropertyChangeListener(propertyChangeListener);
+            endpoints.put(id, endpoint);
+
+            updateEndpointsCache();
+        }
+
+        EventAdmin eventAdmin = getEventAdmin();
+        if (eventAdmin != null)
+        {
+            eventAdmin.sendEvent(
+                    EventFactory.endpointCreated(endpoint));
+        }
+
+        endpointsChanged();
         return endpoint;
     }
 
@@ -808,39 +813,24 @@ public class Conference
 
     /**
      * Gets an <tt>Endpoint</tt> participating in this <tt>Conference</tt> which
-     * has a specific identifier/ID. If an <tt>Endpoint</tt> participating in
-     * this <tt>Conference</tt> with the specified <tt>id</tt> does not exist at
-     * the time the method is invoked, the method initializes a new
-     * <tt>Endpoint</tt> instance with the specified <tt>id</tt> and adds it to
-     * the list of <tt>Endpoint</tt>s participating in this <tt>Conference</tt>.
+     * has a specific identifier/ID.
      *
      * @param id the identifier/ID of the <tt>Endpoint</tt> which is to be
      * returned
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
-     * which has the specified <tt>id</tt>
+     * or {@code null} if endpoint with specified ID does not exist in a
+     * conference
      */
-    public Endpoint getOrCreateLocalEndpoint(String id)
+    @Nullable
+    public Endpoint getLocalEndpoint(String id)
     {
-        AbstractEndpoint endpoint = getEndpoint(id, /* create */ true);
-        if (endpoint instanceof OctoEndpoint)
+        AbstractEndpoint endpoint = getEndpoint(id);
+        if (endpoint instanceof Endpoint)
         {
-            // It is possible that an Endpoint was migrated from another bridge
-            // in the conference to this one, and the sources lists (which
-            // implicitly signal the Octo endpoints in the conference) haven't
-            // been updated yet. We'll force the Octo endpoint to expire and
-            // we'll continue with the creation of a new local Endpoint for the
-            // participant.
-            endpoint.expire();
-            endpoint = getEndpoint(id, /* create */ true);
+            return (Endpoint) endpoint;
         }
 
-        if (!(endpoint instanceof Endpoint))
-        {
-            throw new IllegalStateException("Endpoint with id " + id +
-                    " should be an Endpoint instance");
-        }
-
-        return (Endpoint) endpoint;
+        return null;
     }
 
     /**

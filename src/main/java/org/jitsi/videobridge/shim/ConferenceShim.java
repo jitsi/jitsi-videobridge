@@ -325,12 +325,12 @@ public class ConferenceShim
         throws VideobridgeShim.IqProcessingException
     {
         final boolean newEndpoint =
-            !(conference.getEndpoint(endpointId) instanceof Endpoint);
+            conference.getLocalEndpoint(endpointId) == null;
 
         if (newEndpoint)
         {
             final Endpoint endpoint
-                = conference.getOrCreateLocalEndpoint(endpointId);
+                = conference.createLocalEndpoint(endpointId);
             initializeEndpointTransport(endpoint, iceControlling);
         }
     }
