@@ -197,7 +197,7 @@ public class Endpoint
      * @param conference conference this endpoint belongs to
      * @param iceControlling {@code true} if the ICE agent of this endpoint's
      * transport will initialized to serve as a controlling ICE agent;
-     * otherwise, {@code false}
+     * otherwise - {@code false}
      */
     public Endpoint(
             String id,
