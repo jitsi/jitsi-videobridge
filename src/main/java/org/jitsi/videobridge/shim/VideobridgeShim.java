@@ -421,8 +421,13 @@ public class VideobridgeShim
 
             final String endpointId = channelBundleIq.getId();
 
-            final Endpoint endpoint
-                = conference.getLocalEndpoint(endpointId);
+            final Endpoint endpoint = conference.getLocalEndpoint(endpointId);
+            if (endpoint == null)
+            {
+                // Endpoint is expired and removed as part of handling IQ
+                continue;
+            }
+
             try
             {
                 endpoint.setTransportInfo(transportIq);
