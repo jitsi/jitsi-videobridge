@@ -39,6 +39,9 @@ TODO: script for translation old config to new
 * `org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID` -> `videobridge.websockets.server-id`
 * `org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE` -> `videobridge.websockets.enabled` **NOTE** it has been inverted from `disable` to `enable`
 * `org.jitsi.videobridge.rest.COLIBRI_WS_TLS` -> `videobridge.websockets.tls`
+* `org.jitsi.videobridge.octo.BIND_ADDRESS` -> `videobridge.octo.bind-address`
+* `org.jitsi.videobridge.octo.PUBLIC_ADDRESS` -> `videobridge.octo.public-address`
+* `org.jitsi.videobridge.octo.BIND_PORT` -> `videobridge.octo.port`
 
 
 ##### [1] Setting TCP harvester ports
@@ -80,11 +83,6 @@ In some places, JVB may use other Jitsi libraries which rely on the old `Configu
 
 ##### MucClientConfiguration (the usage here can be changed to use `loadFromMap` instead of `loadFromConfigurationService`)
 * All props with perfix `org.jitsi.videobridge.xmpp.user.`
-
-##### OctoRelayService (this will change to use new config)
-* `org.jitsi.videobridge.octo.BIND_ADDRESS`
-* `org.jitsi.videobridge.octo.PUBLIC_ADDRESS`
-* `org.jitsi.videobridge.octo.BIND_PORT`
 
 ##### ComponentMain
 * `ConfigurationService#logConfigurationProperties`
