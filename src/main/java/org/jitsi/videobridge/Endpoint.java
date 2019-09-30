@@ -196,7 +196,7 @@ public class Endpoint
      * <tt>Conference</tt> with which the new instance is to be initialized
      * @param conference conference this endpoint belongs to
      * @param iceControlling {@code true} if the ICE agent of this endpoint's
-     * transport will initialized to serve as a controlling ICE agent;
+     * transport will be initialized to serve as a controlling ICE agent;
      * otherwise - {@code false}
      */
     public Endpoint(
@@ -947,12 +947,11 @@ public class Endpoint
     }
 
     /**
-     * Gets this {@link Endpoint}'s DTLS transport, initializing it if it
-     * wasn't already initialized. If there was a previous unsuccessful attempt
-     * to initialize it, re-throws the same exception.
+     * Gets this {@link Endpoint}'s DTLS transport.
      *
      * @return this {@link Endpoint}'s DTLS transport.
      */
+    @NotNull
     public DtlsTransport getDtlsTransport()
     {
         return dtlsTransport;

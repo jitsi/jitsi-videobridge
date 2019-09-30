@@ -644,7 +644,7 @@ public class Conference
      * @param id the identifier/ID of the <tt>Endpoint</tt> which will be
      * created
      * @param iceControlling {@code true} if the ICE agent of this endpoint's
-     * transport will initialized to serve as a controlling ICE agent;
+     * transport will be initialized to serve as a controlling ICE agent;
      * otherwise, {@code false}
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      */
@@ -652,7 +652,7 @@ public class Conference
     public Endpoint createLocalEndpoint(String id, boolean iceControlling)
         throws IOException
     {
-        final AbstractEndpoint existingEndpoint = endpoints.get(id);
+        final AbstractEndpoint existingEndpoint = getEndpoint(id);
         if (existingEndpoint instanceof OctoEndpoint)
         {
             // It is possible that an Endpoint was migrated from another bridge
@@ -684,7 +684,6 @@ public class Conference
             eventAdmin.sendEvent(
                 EventFactory.endpointCreated(endpoint));
         }
-
 
         return endpoint;
     }

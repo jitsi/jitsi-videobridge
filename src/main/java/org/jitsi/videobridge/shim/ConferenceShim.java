@@ -270,7 +270,7 @@ public class ConferenceShim
 
     /**
      * Process whole {@link ColibriConferenceIQ} and initialize all signaled
-     * endpoints which were not initialized before.
+     * endpoints which has not been initialized before.
      * @param conferenceIQ conference IQ having endpoints
      */
     void initializeSignaledEndpoints(ColibriConferenceIQ conferenceIQ)
@@ -316,10 +316,11 @@ public class ConferenceShim
     }
 
     /**
-     * Checks if endpoint with specified ID is initialized, if endpoint is not
-     * exist in a conference it is created and it's transport is initialized.
+     * Checks if endpoint with specified ID is initialized, if endpoint does not
+     * exist in a conference, it will be created and initialized.
      * @param endpointId identifier of endpoint to check and initialize
-     * @param iceControlling ICE control role for newly created endpoint
+     * @param iceControlling ICE control role of transport of newly created
+     * endpoint
      * @throws VideobridgeShim.IqProcessingException
      */
     private void ensureEndpointCreated(String endpointId, boolean iceControlling)
