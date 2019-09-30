@@ -18,6 +18,7 @@ package org.jitsi.videobridge.osgi;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.utils.logging.*;
+import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
 /**
@@ -37,19 +38,12 @@ public class ConfigurationActivator
     @Override
     public void start(BundleContext bundleContext)
     {
-        ConfigurationService cfg = LibJitsi.getConfigurationService();
-        if (cfg != null)
-        {
-            bundleContext.registerService(
-                    ConfigurationService.class.getName(),
-                    cfg,
-                    null);
-            logger.info("Registered the LibJitsi ConfigurationService in OSGi.");
-        }
-        else
-        {
-            logger.warn("Failed to register the Configuration service.");
-        }
+        ConfigurationService cfg = new LegacyConfigurationServiceShim();
+        bundleContext.registerService(
+                ConfigurationService.class.getName(),
+                cfg,
+                null);
+        logger.info("Registered the legacy ConfigurationService in OSGi.");
     }
 
     @Override

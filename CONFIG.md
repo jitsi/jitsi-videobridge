@@ -58,3 +58,37 @@ Previously, we [read from a set of legacy videobridge properties](https://github
 
 ##### [4] Stats transports
 Previously, stats transports were set via a comma-separated string in the `org.jitsi.videobridge.STATISTICS_TRANSPORT` property.  The `pubsub` stats transport had extra settings which were set by the `org.jitsi.videobridge.PUBSUB_SERVICE` and `org.jitsi.videobridge.PUBSUB_NODE` properties.  The new config defines a `videobridge.stats.transports` property which is a list of stats transport config objects, correlating to the `org.jitsi.videobridge.stats.config.StatsTransportConfig` object.  There is a subclass `org.jitsi.videobridge.stats.config.PubSubStatsTransportConfig` for pubsub which holds the extra data relevant to the pubsub config.  The data in the config value is parsed directly into this config file instances and used in the code to instantiate the stats transports.
+
+## Legacy config
+In some places, JVB may use other Jitsi libraries which rely on the old `ConfigurationService` interface.  Other libraries, which still use the old `ConfigurationService` still rely on these libraries, so we don't want to migrate them to the new config.  For these, JVB defines its own `ConfigurationService` implementation: `LegacyConfigurationServiceShim` which provides the existing interface but reads from the new config.  Known properties that rely on this path are:
+
+##### AbstractJettyBundleActivator
+* `org.jitsi.videobridge.rest.private.jetty.sslContextFactory.keyStorePath`
+* `org.jitsi.videobridge.rest.private.jetty.port`
+* `org.jitsi.videobridge.rest`
+* `org.jitsi.videobridge.rest.jetty.sslContextFactory.keyStorePath`
+* `org.jitsi.videobridge.rest.jetty.port`
+
+##### PublicClearPortRedirectBundleAcivator
+* `org.jitsi.videobridge.rest.jetty.tls.port`
+
+##### BandwidthEstimatoImpl (This will go away when JMT is updated to use new config)
+* `org.jitsi.impl.neomedia.rtp.sendsidebandwidthestimation.BandwidthEstimatorImpl.START_BITRATE_BPS`
+* `org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.SendSideBandwidthEstimation.lossExperimentProbability`
+* `org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.SendSideBandwidthEstimation.timeoutExperimentProbability`
+*
+
+##### MucClientConfiguration (the usage here can be changed to use `loadFromMap` instead of `loadFromConfigurationService`)
+* All props with perfix `org.jitsi.videobridge.xmpp.user.`
+
+##### OctoRelayService (this will change to use new config)
+* `org.jitsi.videobridge.octo.BIND_ADDRESS`
+* `org.jitsi.videobridge.octo.PUBLIC_ADDRESS`
+* `org.jitsi.videobridge.octo.BIND_PORT`
+
+##### ComponentMain
+* `ConfigurationService#logConfigurationProperties`
+
+##### EndpointConnectionStatus (this will change to use new config)
+* `org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT`
+* `org.jitsi.videobridge.EndpointConnectionStatus.MAX_INACTIVITY_LIMIT`
