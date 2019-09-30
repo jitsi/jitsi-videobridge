@@ -280,16 +280,25 @@ public class ConferenceShim
         {
             for (ColibriConferenceIQ.Channel channel : content.getChannels())
             {
-                ensureEndpointCreated(
-                    channel.getEndpoint(),
-                    Boolean.TRUE.equals(channel.isInitiator()));
+                final String endpoint = channel.getEndpoint();
+                if (endpoint != null)
+                {
+                    ensureEndpointCreated(
+                        channel.getEndpoint(),
+                        Boolean.TRUE.equals(channel.isInitiator()));
+                }
             }
+
             for (ColibriConferenceIQ.SctpConnection channel
                 : content.getSctpConnections())
             {
-                ensureEndpointCreated(
-                    channel.getEndpoint(),
-                    Boolean.TRUE.equals(channel.isInitiator()));
+                final String endpoint = channel.getEndpoint();
+                if (endpoint != null)
+                {
+                    ensureEndpointCreated(
+                        channel.getEndpoint(),
+                        Boolean.TRUE.equals(channel.isInitiator()));
+                }
             }
         }
 

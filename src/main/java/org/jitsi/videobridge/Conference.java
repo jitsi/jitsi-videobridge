@@ -630,6 +630,10 @@ public class Conference
      */
     public AbstractEndpoint getEndpoint(String id)
     {
+        if (id == null)
+        {
+            throw new IllegalArgumentException("id is null");
+        }
         return endpoints.get(id);
     }
 
