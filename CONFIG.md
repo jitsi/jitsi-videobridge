@@ -42,6 +42,8 @@ TODO: script for translation old config to new
 * `org.jitsi.videobridge.octo.BIND_ADDRESS` -> `videobridge.octo.bind-address`
 * `org.jitsi.videobridge.octo.PUBLIC_ADDRESS` -> `videobridge.octo.public-address`
 * `org.jitsi.videobridge.octo.BIND_PORT` -> `videobridge.octo.port`
+* `org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT` -> `videobridge.endpoint-connection-status.first-transfer-timeout`
+
 
 
 ##### [1] Setting TCP harvester ports
@@ -86,7 +88,3 @@ In some places, JVB may use other Jitsi libraries which rely on the old `Configu
 
 ##### ComponentMain
 * `ConfigurationService#logConfigurationProperties`
-
-##### EndpointConnectionStatus (this will change to use new config)
-* `org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT`
-* `org.jitsi.videobridge.EndpointConnectionStatus.MAX_INACTIVITY_LIMIT`

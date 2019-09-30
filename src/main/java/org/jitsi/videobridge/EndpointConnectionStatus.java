@@ -15,14 +15,16 @@
  */
 package org.jitsi.videobridge;
 
+import com.typesafe.config.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.shim.*;
+import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
@@ -48,36 +50,6 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 public class EndpointConnectionStatus
     extends EventHandlerActivator
 {
-    /**
-     * The base for config property names constants.
-     */
-    private final static String CFG_PNAME_BASE
-        = "org.jitsi.videobridge.EndpointConnectionStatus";
-
-    /**
-     * The name of the configuration property which configures
-     * {@link #firstTransferTimeout}.
-     */
-    public final static String CFG_PNAME_FIRST_TRANSFER_TIMEOUT
-        = CFG_PNAME_BASE + ".FIRST_TRANSFER_TIMEOUT";
-
-    /**
-     * The name of the configuration property which configures
-     * {@link #maxInactivityLimit}.
-     */
-    public static final String CFG_PNAME_MAX_INACTIVITY_LIMIT
-        = CFG_PNAME_BASE + ".MAX_INACTIVITY_LIMIT";
-
-    /**
-     * The default value for {@link #firstTransferTimeout}.
-     */
-    private final static long DEFAULT_FIRST_TRANSFER_TIMEOUT = 15000L;
-
-    /**
-     * The default value for {@link #maxInactivityLimit}.
-     */
-    private final static long DEFAULT_MAX_INACTIVITY_LIMIT = 3000L;
-
     /**
      * The logger instance used by this class.
      */
@@ -151,16 +123,13 @@ public class EndpointConnectionStatus
             logger.error("Endpoint connection monitoring is already running");
         }
 
-        ConfigurationService config = ServiceUtils2.getService(
-                bundleContext, ConfigurationService.class);
+        Config endpointConnectionStatusConfig =
+                JvbConfig.getConfig().getConfig("videobridge.endpoint-connection-status");
+        firstTransferTimeout =
+                endpointConnectionStatusConfig.getDuration("first-transfer-timeout", TimeUnit.MILLISECONDS);
 
-        firstTransferTimeout = config.getLong(
-                CFG_PNAME_FIRST_TRANSFER_TIMEOUT,
-                DEFAULT_FIRST_TRANSFER_TIMEOUT);
-
-        maxInactivityLimit = config.getLong(
-                CFG_PNAME_MAX_INACTIVITY_LIMIT,
-                DEFAULT_MAX_INACTIVITY_LIMIT);
+        maxInactivityLimit =
+                endpointConnectionStatusConfig.getDuration("max-inactivity-limit", TimeUnit.MILLISECONDS);
 
         if (firstTransferTimeout <= maxInactivityLimit)
         {
