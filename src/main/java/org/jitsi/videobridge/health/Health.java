@@ -115,8 +115,9 @@ public class Health
             final Endpoint endpoint;
             try
             {
+                final boolean iceControlling = i % 2 == 0;
                 endpoint = conference.createLocalEndpoint(
-                    generateEndpointID(), true);
+                    generateEndpointID(), iceControlling);
             }
             catch (IOException ioe)
             {
