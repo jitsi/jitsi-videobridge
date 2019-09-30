@@ -628,13 +628,11 @@ public class Conference
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      * which has the specified <tt>id</tt> or <tt>null</tt>
      */
-    public AbstractEndpoint getEndpoint(String id)
+    @Nullable
+    public AbstractEndpoint getEndpoint(@NotNull String id)
     {
-        if (id == null)
-        {
-            throw new IllegalArgumentException("id is null");
-        }
-        return endpoints.get(id);
+        return endpoints.get(
+            Objects.requireNonNull(id, "id must be non null"));
     }
 
     /**
