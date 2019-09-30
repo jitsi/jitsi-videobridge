@@ -103,11 +103,13 @@ public class DtlsTransport extends IceTransport
      * Initializes a new {@link DtlsTransport} instance for a specific endpoint.
      * @param endpoint the endpoint with which this {@link DtlsTransport} is
      *                 associated.
+     * @param controlling {@code true} if the new instance will be initialized
+     * to serve as a controlling ICE agent; otherwise, {@code false}
      */
-    public DtlsTransport(Endpoint endpoint, Logger parentLogger)
+    public DtlsTransport(Endpoint endpoint, boolean controlling, Logger parentLogger)
             throws IOException
     {
-        super(endpoint, true, parentLogger);
+        super(endpoint, controlling, parentLogger);
         this.endpoint = endpoint;
 
         outgoingPacketQueue

@@ -124,12 +124,6 @@ public class Endpoint
     private final EndpointMessageTransport messageTransport;
 
     /**
-     * TODO Brian
-     */
-    private CompletableFuture<Boolean> onTransportManagerSet
-            = new CompletableFuture<>();
-
-    /**
      * A count of how many endpoints have 'selected' this endpoint
      */
     private AtomicInteger selectedCount = new AtomicInteger(0);
@@ -150,23 +144,10 @@ public class Endpoint
     private final BandwidthProbing bandwidthProbing;
 
     /**
-     * This {@link Endpoint}'s transport manager.
-     * Since it contains an ICE Agent we don't want to initialize it
-     * prematurely, or more than once.
-     *
+     * This {@link Endpoint}'s DTLS transport.
      */
-    private DtlsTransport transportManager;
-
-    /**
-     * The exception thrown from the attempt to initialize the transport manager,
-     * if any.
-     */
-    private IOException transportManagerException = null;
-
-    /**
-     * Synchronizes access to {@link #transportManager}.
-     */
-    private final Object transportManagerSyncRoot = new Object();
+    @NotNull
+    private final DtlsTransport dtlsTransport;
 
     /**
      * The {@link Transceiver} which handles receiving and sending of (S)RTP.
@@ -213,12 +194,17 @@ public class Endpoint
      *
      * @param id the identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt> with which the new instance is to be initialized
-     * @param conference
+     * @param conference conference this endpoint belongs to
+     * @param iceControlling {@code true} if the ICE agent of this endpoint's
+     * transport will be initialized to serve as a controlling ICE agent;
+     * otherwise - {@code false}
      */
     public Endpoint(
             String id,
             Conference conference,
-            Logger parentLogger)
+            Logger parentLogger,
+            boolean iceControlling)
+        throws IOException
     {
         super(conference, id, parentLogger);
 
@@ -263,6 +249,8 @@ public class Endpoint
 
         bandwidthProbing.enabled = true;
         recurringRunnableExecutor.registerRecurringRunnable(bandwidthProbing);
+
+        dtlsTransport = new DtlsTransport(this, iceControlling, parentLogger);
 
         if (conference.includeInStatistics())
         {
@@ -401,20 +389,12 @@ public class Endpoint
     }
 
     /**
-     * Checks if this endpoint's transport manager is connected.
+     * Checks if this endpoint's DTLS transport is connected.
      * @return
      */
     private boolean isTransportConnected()
     {
-        try
-        {
-            return getTransportManager().isConnected();
-        }
-        catch (IOException ioe)
-        {
-            logger.warn("Could not get transport manager: ", ioe);
-            return false;
-        }
+        return dtlsTransport.isConnected();
     }
 
     public double getRtt()
@@ -601,8 +581,7 @@ public class Endpoint
     @Override
     public boolean shouldExpire()
     {
-        boolean iceFailed
-                = transportManager != null && transportManager.hasIceFailed();
+        boolean iceFailed = dtlsTransport.hasIceFailed();
         if (iceFailed)
         {
             logger.warn("Allowing to expire because ICE failed.");
@@ -679,10 +658,7 @@ public class Endpoint
         bandwidthProbing.enabled = false;
         recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing);
 
-        if (transportManager != null)
-        {
-            transportManager.close();
-        }
+        dtlsTransport.close();
 
         logger.info("Expired.");
     }
@@ -744,7 +720,7 @@ public class Endpoint
                 (data, offset, length) -> {
                     PacketInfo packet
                         = new PacketInfo(new UnparsedPacket(data, offset, length));
-                    transportManager.sendDtlsData(packet);
+                    dtlsTransport.sendDtlsData(packet);
                     return 0;
                 },
                 logger
@@ -807,47 +783,42 @@ public class Endpoint
                     () -> dataChannelHandler.consume(new PacketInfo(dcp)));
         };
         socket.listen();
-        // We don't want to block the calling thread on the
-        // onTransportManagerSet future completing to add the
-        // onDtlsHandshakeComplete handler, so we'll asynchronously run the
-        // code which adds the onDtlsHandshakeComplete handler from the IO pool.
-        onTransportManagerSet.thenRunAsync(() -> {
-            transportManager.onDtlsHandshakeComplete(() -> {
-                // We don't want to block the thread calling
-                // onDtlsHandshakeComplete so run the socket acceptance in an IO
-                // pool thread
-                //TODO(brian): we should have a common 'notifier'/'publisher'
-                // interface that has notify/notifyAsync logic so we don't have
-                // to worry about this everywhere
-                TaskPools.IO_POOL.submit(() -> {
-                    // FIXME: This runs forever once the socket is closed (
-                    // accept never returns true).
-                    int attempts = 0;
-                    while (!socket.accept())
-                    {
-                        attempts++;
-                        try
-                        {
-                            Thread.sleep(100);
-                        }
-                        catch (InterruptedException e)
-                        {
-                            break;
-                        }
 
-                        if (attempts > 100)
-                        {
-                            break;
-                        }
-                    }
-                    if (logger.isDebugEnabled())
+        dtlsTransport.onDtlsHandshakeComplete(() -> {
+            // We don't want to block the thread calling
+            // onDtlsHandshakeComplete so run the socket acceptance in an IO
+            // pool thread
+            //TODO(brian): we should have a common 'notifier'/'publisher'
+            // interface that has notify/notifyAsync logic so we don't have
+            // to worry about this everywhere
+            TaskPools.IO_POOL.submit(() -> {
+                // FIXME: This runs forever once the socket is closed (
+                // accept never returns true).
+                int attempts = 0;
+                while (!socket.accept())
+                {
+                    attempts++;
+                    try
                     {
-                        logger.debug("SCTP socket " + socket.hashCode() +
-                                " accepted connection.");
+                        Thread.sleep(100);
                     }
-                });
+                    catch (InterruptedException e)
+                    {
+                        break;
+                    }
+
+                    if (attempts > 100)
+                    {
+                        break;
+                    }
+                }
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("SCTP socket " + socket.hashCode() +
+                            " accepted connection.");
+                }
             });
-        }, TaskPools.IO_POOL);
+        });
     }
 
     /**
@@ -921,8 +892,7 @@ public class Endpoint
      */
     private String getIcePassword()
     {
-        return transportManager == null
-                ? null : transportManager.getIcePassword();
+        return dtlsTransport.getIcePassword();
     }
 
     /**
@@ -977,47 +947,14 @@ public class Endpoint
     }
 
     /**
-     * Gets this {@link Endpoint}'s transport manager, initializing it if it
-     * wasn't already initialized. If there was a previous unsuccessful attempt
-     * to initialize it, re-throws the same exception.
+     * Gets this {@link Endpoint}'s DTLS transport.
      *
-     * @return this {@link Endpoint}'s transport manager.
-     *
-     * @throws IOException if the transport manager fails to initialize.
+     * @return this {@link Endpoint}'s DTLS transport.
      */
-    public DtlsTransport getTransportManager()
-        throws IOException
+    @NotNull
+    public DtlsTransport getDtlsTransport()
     {
-        boolean transportManagerCreated = false;
-        synchronized (transportManagerSyncRoot)
-        {
-            if (transportManager == null)
-            {
-                if (transportManagerException != null)
-                {
-                    // We've already tried and failed to initialize the TM.
-                    throw transportManagerException;
-                }
-                else
-                {
-                    try
-                    {
-                        transportManager = new DtlsTransport(this, logger);
-                        transportManagerCreated = true;
-                    }
-                    catch (IOException ioe)
-                    {
-                        throw transportManagerException = ioe;
-                    }
-                }
-            }
-        }
-
-        if (transportManagerCreated)
-        {
-            onTransportManagerSet.complete(true);
-        }
-        return transportManager;
+        return dtlsTransport;
     }
 
     /**
@@ -1062,13 +999,10 @@ public class Endpoint
      *
      * @param transportInfo the XML extension which contains the remote
      * transport information.
-     * @throws IOException if the endpoint's transport manager failed to
-     * initialize.
      */
     public void setTransportInfo(IceUdpTransportPacketExtension transportInfo)
-            throws IOException
     {
-        getTransportManager().startConnectivityEstablishment(transportInfo);
+        getDtlsTransport().startConnectivityEstablishment(transportInfo);
     }
 
     /**
@@ -1204,13 +1138,11 @@ public class Endpoint
 
     /**
      * {@inheritDoc}
-     * @throws IOException if the transport manager fails to initialize.
      */
     @Override
     public void describe(ColibriConferenceIQ.ChannelBundle channelBundle)
-            throws IOException
     {
-        getTransportManager().describe(channelBundle);
+        getDtlsTransport().describe(channelBundle);
     }
 
 
@@ -1407,10 +1339,7 @@ public class Endpoint
         //debugState.put("messageTransport", messageTransport.getDebugState());
         debugState.put("bitrateController", bitrateController.getDebugState());
         debugState.put("bandwidthProbing", bandwidthProbing.getDebugState());
-        DtlsTransport transportManager = this.transportManager;
-        debugState.put(
-            "transportManager",
-            transportManager == null ? null : transportManager.getDebugState());
+        debugState.put("dtlsTransport", dtlsTransport.getDebugState());
         debugState.put("transceiver", transceiver.getNodeStats().toJson());
         debugState.put("acceptAudio", acceptAudio);
         debugState.put("acceptVideo", acceptVideo);

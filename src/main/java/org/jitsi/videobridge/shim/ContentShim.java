@@ -22,6 +22,7 @@ import org.jitsi.videobridge.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 
+import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -130,7 +131,7 @@ public class ContentShim
 
             ChannelShim channelShim = new ChannelShim(
                 channelId,
-                conference.getOrCreateLocalEndpoint(endpointId),
+                conference.getLocalEndpoint(endpointId),
                 localSsrc,
                 this,
                 logger
@@ -153,8 +154,8 @@ public class ContentShim
         synchronized (channels)
         {
             Endpoint endpoint
-                    = conference.getOrCreateLocalEndpoint(endpointId);
-            if (endpoint instanceof Endpoint)
+                    = conference.getLocalEndpoint(endpointId);
+            if (endpoint != null)
             {
                 String sctpConnId = generateUniqueChannelID();
                 SctpConnectionShim connection

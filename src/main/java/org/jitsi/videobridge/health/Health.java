@@ -112,19 +112,12 @@ public class Health
 
         for (int i = 0; i < numEndpoints; ++i)
         {
-            Endpoint endpoint
-                = conference.getOrCreateLocalEndpoint(generateEndpointID());
-
-            // Fail as quickly as possible.
-            if (endpoint == null)
-            {
-                throw new NullPointerException("Failed to create an endpoint.");
-            }
-
-            // Trigger the creation of the transport manager.
+            final Endpoint endpoint;
             try
             {
-                endpoint.getTransportManager();
+                final boolean iceControlling = i % 2 == 0;
+                endpoint = conference.createLocalEndpoint(
+                    generateEndpointID(), iceControlling);
             }
             catch (IOException ioe)
             {

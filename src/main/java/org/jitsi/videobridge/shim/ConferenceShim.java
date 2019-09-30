@@ -107,12 +107,10 @@ public class ConferenceShim
      * Describes the channel bundles of this conference in a Colibri IQ.
      * @param iq the IQ to describe in.
      * @param endpointIds the list of IDs to describe.
-     * @throws VideobridgeShim.IqProcessingException
      */
     void describeChannelBundles(
             ColibriConferenceIQ iq,
             Set<String> endpointIds)
-            throws VideobridgeShim.IqProcessingException
     {
         for (AbstractEndpoint endpoint : conference.getEndpoints())
         {
@@ -121,16 +119,7 @@ public class ConferenceShim
             {
                 ColibriConferenceIQ.ChannelBundle responseBundleIQ
                     = new ColibriConferenceIQ.ChannelBundle(endpointId);
-                try
-                {
-                    endpoint.describe(responseBundleIQ);
-                }
-                catch (IOException ioe)
-                {
-                    throw new VideobridgeShim.IqProcessingException(
-                            XMPPError.Condition.internal_server_error,
-                            ioe.getMessage());
-                }
+                endpoint.describe(responseBundleIQ);
 
                 iq.addChannelBundle(responseBundleIQ);
             }
@@ -277,6 +266,81 @@ public class ConferenceShim
                 audioChannel.getSources(),
                 videoChannel.getSources(),
                 videoChannel.getSourceGroups());
+    }
+
+    /**
+     * Process whole {@link ColibriConferenceIQ} and initialize all signaled
+     * endpoints which has not been initialized before.
+     * @param conferenceIQ conference IQ having endpoints
+     */
+    void initializeSignaledEndpoints(ColibriConferenceIQ conferenceIQ)
+        throws VideobridgeShim.IqProcessingException
+    {
+        for (ColibriConferenceIQ.Content content : conferenceIQ.getContents())
+        {
+            for (ColibriConferenceIQ.Channel channel : content.getChannels())
+            {
+                final String endpoint = channel.getEndpoint();
+                if (endpoint != null)
+                {
+                    ensureEndpointCreated(
+                        channel.getEndpoint(),
+                        Boolean.TRUE.equals(channel.isInitiator()));
+                }
+            }
+
+            for (ColibriConferenceIQ.SctpConnection channel
+                : content.getSctpConnections())
+            {
+                final String endpoint = channel.getEndpoint();
+                if (endpoint != null)
+                {
+                    ensureEndpointCreated(
+                        channel.getEndpoint(),
+                        Boolean.TRUE.equals(channel.isInitiator()));
+                }
+            }
+        }
+
+        for (ColibriConferenceIQ.ChannelBundle channelBundle
+            : conferenceIQ.getChannelBundles())
+        {
+            ensureEndpointCreated(channelBundle.getId(), false);
+        }
+
+        for (ColibriConferenceIQ.Endpoint endpoint
+            : conferenceIQ.getEndpoints())
+        {
+            ensureEndpointCreated(endpoint.getId(), false);
+        }
+    }
+
+    /**
+     * Checks if endpoint with specified ID is initialized, if endpoint does not
+     * exist in a conference, it will be created and initialized.
+     * @param endpointId identifier of endpoint to check and initialize
+     * @param iceControlling ICE control role of transport of newly created
+     * endpoint
+     * @throws VideobridgeShim.IqProcessingException
+     */
+    private void ensureEndpointCreated(String endpointId, boolean iceControlling)
+        throws VideobridgeShim.IqProcessingException
+    {
+        if (conference.getLocalEndpoint(endpointId) != null)
+        {
+            return;
+        }
+        try
+        {
+            conference.createLocalEndpoint(endpointId, iceControlling);
+        }
+        catch (IOException ioe)
+        {
+            throw new VideobridgeShim.IqProcessingException(
+                XMPPError.Condition.internal_server_error,
+                "Error initializing endpoint " +
+                    endpointId);
+        }
     }
 
     /**

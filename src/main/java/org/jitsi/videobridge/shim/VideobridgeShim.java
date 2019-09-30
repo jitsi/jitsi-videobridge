@@ -24,7 +24,6 @@ import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jxmpp.jid.*;
 
-import java.io.*;
 import java.util.*;
 
 /**
@@ -311,6 +310,18 @@ public class VideobridgeShim
         responseConferenceIQ.setGracefulShutdown(
                 videobridge.isShutdownInProgress());
 
+        try
+        {
+            conferenceShim.initializeSignaledEndpoints(conferenceIQ);
+        }
+        catch (IqProcessingException e)
+        {
+            return IQUtils.createError(
+                conferenceIQ,
+                XMPPError.Condition.internal_server_error,
+                "Failed to init endpoints in conference: " + conferenceId);
+        }
+
         ColibriConferenceIQ.Channel octoAudioChannel = null;
         ColibriConferenceIQ.Channel octoVideoChannel = null;
 
@@ -407,35 +418,21 @@ public class VideobridgeShim
                 continue;
             }
 
-            Endpoint endpoint
-                    = conference.getOrCreateLocalEndpoint(channelBundleIq.getId());
-            try
+            final String endpointId = channelBundleIq.getId();
+
+            final Endpoint endpoint = conference.getLocalEndpoint(endpointId);
+            if (endpoint == null)
             {
-                endpoint.setTransportInfo(transportIq);
+                // Endpoint is expired and removed as part of handling IQ
+                continue;
             }
-            catch (IOException ioe)
-            {
-                logger.error(
-                    "Error processing channel-bundle: " + ioe.toString());
-                return IQUtils.createError(
-                        conferenceIQ,
-                        XMPPError.Condition.internal_server_error,
-                        "Failed to set transport: " + ioe.getMessage());
-            }
+
+            endpoint.setTransportInfo(transportIq);
         }
 
-        Set<String> channelBundleIdsToDescribe
-                = getAllSignaledChannelBundleIds(conferenceIQ);
-        try
-        {
-            conferenceShim.describeChannelBundles(
-                    responseConferenceIQ,
-                    channelBundleIdsToDescribe);
-        }
-        catch (IqProcessingException e)
-        {
-            return IQUtils.createError(conferenceIQ, e.condition, e.errorMessage);
-        }
+        conferenceShim.describeChannelBundles(
+            responseConferenceIQ,
+            getAllSignaledChannelBundleIds(conferenceIQ));
 
         // Update the endpoint information of Videobridge with the endpoint
         // information of the IQ.
