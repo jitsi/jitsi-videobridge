@@ -15,8 +15,9 @@
  */
 package org.jitsi.videobridge.xmpp;
 
+import com.typesafe.config.*;
 import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.health.*;
 import org.jitsi.xmpp.mucclient.*;
@@ -25,6 +26,7 @@ import org.json.simple.*;
 import org.osgi.framework.*;
 
 import java.util.*;
+import java.util.stream.*;
 
 /**
  * Provides jitsi-videobridge functions through an XMPP client connection.
@@ -64,15 +66,6 @@ public class ClientConnectionImpl
     @Override
     public void start(BundleContext bundleContext)
     {
-        ConfigurationService config
-            = ServiceUtils2.getService(
-                bundleContext, ConfigurationService.class);
-        if (config == null)
-        {
-            logger.info("Not using XMPP user login; no config service.");
-            return;
-        }
-
         // Register this instance as an OSGi service.
         Collection<ClientConnectionImpl> userLoginBundles
             = ServiceUtils2.getServices(
@@ -94,9 +87,13 @@ public class ClientConnectionImpl
                 ShutdownIQ.createGracefulShutdownIQ());
             mucClientManager.setIQListener(this);
 
-            Collection<MucClientConfiguration> configurations
-                = MucClientConfiguration.loadFromConfigService(
-                    config, PREFIX, true);
+            //TODO: requires adding a no-arg ctor to MucClientConfiguration
+            List<MucClientConfiguration> configurations =
+                    JvbConfig.getConfig().getConfigList("videobridge.xmpp-client.configs")
+                    .stream()
+                    .map(c -> ConfigBeanFactory.create(c, MucClientConfiguration.class))
+                    .collect(Collectors.toList());
+
             configurations.forEach(c -> mucClientManager.addMucClient(c));
 
             bundleContext.registerService(
