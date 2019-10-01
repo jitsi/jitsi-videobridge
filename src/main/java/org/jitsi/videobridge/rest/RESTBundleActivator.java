@@ -22,17 +22,8 @@ import org.eclipse.jetty.servlet.*;
 import org.glassfish.jersey.servlet.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.rest.about.version.*;
-import org.jitsi.videobridge.rest.conferences.*;
-import org.jitsi.videobridge.rest.debug.*;
-import org.jitsi.videobridge.rest.about.health.*;
-import org.jitsi.videobridge.rest.mucclient.*;
-import org.jitsi.videobridge.rest.shutdown.*;
-import org.jitsi.videobridge.rest.stats.*;
-import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.rest.root.*;
 import org.osgi.framework.*;
-
-import javax.servlet.*;
 
 /**
  * Implements <tt>BundleActivator</tt> for the OSGi bundle which implements a
@@ -50,20 +41,6 @@ import javax.servlet.*;
 public class RESTBundleActivator
     extends AbstractJettyBundleActivator
 {
-    /**
-     * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
-     * boolean property which enables graceful shutdown through REST API.
-     * It is disabled by default.
-     */
-    public static final String ENABLE_REST_SHUTDOWN_PNAME
-        = "org.jitsi.videobridge.ENABLE_REST_SHUTDOWN";
-
-    /**
-     * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
-     * boolean property which enables <tt>/colibri/*</tt> REST API endpoints.
-     */
-    public static final String ENABLE_REST_COLIBRI_PNAME
-      = "org.jitsi.videobridge.ENABLE_REST_COLIBRI";
 
     /**
      * The prefix of the property names for the Jetty instance managed by
@@ -106,57 +83,11 @@ public class RESTBundleActivator
             BundleContext bundleContext,
             Server server)
     {
-        List<Handler> handlers = new ArrayList<>();
+        ServletContextHandler appHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
+        appHandler.setContextPath("/");
+        appHandler.addServlet(new ServletHolder(new ServletContainer(new Application(bundleContext))), "/*");
 
-        VideobridgeProvider videobridgeProvider = new VideobridgeProvider(bundleContext);
-        if (getCfgBoolean(ENABLE_REST_COLIBRI_PNAME, true))
-        {
-            ServletContextHandler colibriContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
-            colibriContextHandler.setContextPath("/colibri");
-
-            ConferencesApp conferencesHandler = new ConferencesApp(videobridgeProvider);
-            ServletHolder conferencesServletHolder = new ServletHolder(new ServletContainer(conferencesHandler));
-            colibriContextHandler.addServlet(conferencesServletHolder, "/conferences/*");
-
-            DebugApp debugHandler = new DebugApp(videobridgeProvider);
-            ServletHolder debugServletHolder = new ServletHolder(new ServletContainer(debugHandler));
-            colibriContextHandler.addServlet(debugServletHolder, "/debug/*");
-
-            ClientConnectionProvider clientConnectionProvider = new ClientConnectionProvider(bundleContext);
-            MucClientApp mucClientHandler = new MucClientApp(clientConnectionProvider);
-            ServletHolder mucClientServletHolder = new ServletHolder(new ServletContainer(mucClientHandler));
-            colibriContextHandler.addServlet(mucClientServletHolder, "/muc-client/*");
-
-            StatsManagerProvider statsManagerProvider = new StatsManagerProvider(bundleContext);
-            StatsApp statHandler = new StatsApp(statsManagerProvider);
-            ServletHolder statsServletHolder = new ServletHolder(new ServletContainer(statHandler));
-            colibriContextHandler.addServlet(statsServletHolder, "/stats/*");
-
-            if (getCfgBoolean(ENABLE_REST_SHUTDOWN_PNAME, false))
-            {
-                ShutdownApp shutdownHandler = new ShutdownApp(videobridgeProvider);
-                ServletHolder shutdownServletHolder = new ServletHolder(new ServletContainer(shutdownHandler));
-                colibriContextHandler.addServlet(shutdownServletHolder, "/shutdown/*");
-            }
-
-            handlers.add(colibriContextHandler);
-        }
-
-        ServletContextHandler aboutContextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
-        aboutContextHandler.setContextPath("/about");
-
-        HealthApp healthHandler = new HealthApp(videobridgeProvider);
-        ServletHolder healthServletHolder = new ServletHolder(new ServletContainer(healthHandler));
-        aboutContextHandler.addServlet(healthServletHolder, "/health/*");
-
-        VersionServiceProvider versionServiceProvider = new VersionServiceProvider(bundleContext);
-        VersionApp versionHandler = new VersionApp(versionServiceProvider);
-        ServletHolder versionServletHolder = new ServletHolder(new ServletContainer(versionHandler));
-        aboutContextHandler.addServlet(versionServletHolder, "/version/*");
-
-        handlers.add(aboutContextHandler);
-
-        return initializeHandlerList(handlers);
+        return appHandler;
     }
 
     /**
