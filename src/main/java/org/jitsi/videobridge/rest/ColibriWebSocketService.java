@@ -16,8 +16,7 @@
 package org.jitsi.videobridge.rest;
 
 import org.eclipse.jetty.servlet.*;
-import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
+import org.jitsi.videobridge.util.config.*;
 import org.osgi.framework.*;
 
 /**
@@ -25,35 +24,6 @@ import org.osgi.framework.*;
  */
 public class ColibriWebSocketService
 {
-    /**
-     * The name of the property which controls the domain name used in URLs
-     * advertised for COLIBRI WebSockets.
-     */
-    public static final String DOMAIN_PNAME
-        = "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN";
-
-    /**
-     * The name of the property which controls the server ID used in URLs
-     * advertised for COLIBRI WebSockets.
-     */
-    public static final String SERVER_ID_PNAME
-        = "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID";
-
-    /**
-     * The name of the property which controls whether URLs advertised for
-     * COLIBRI WebSockets should use the "ws" (if false) or "wss" (if true)
-     * schema.
-     */
-    public static final String TLS_PNAME
-        = "org.jitsi.videobridge.rest.COLIBRI_WS_TLS";
-
-    /**
-     * The name of the property which disables the
-     * {@link ColibriWebSocketService}.
-     */
-    public static final String DISABLE_PNAME
-        = "org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE";
-
     /**
      * The root path of the HTTP endpoint for COLIBRI WebSockets.
      */
@@ -69,7 +39,14 @@ public class ColibriWebSocketService
     /**
      * A string which identifies the jitsi-videobridge instance.
      */
-    private final String serverId;
+    private static final ConfigProperty<String> serverId = WebSocketConfig.serverId;
+
+    private static final ConfigProperty<Boolean> enabled = WebSocketConfig.enabled;
+
+    private static final ConfigProperty<String> domain = WebSocketConfig.domain;
+
+    private static final ConfigProperty<Boolean> tls = WebSocketConfig.tls;
+
 
     /**
      * Initializes a {@link ColibriWebSocketService} in a specific
@@ -77,39 +54,24 @@ public class ColibriWebSocketService
      *
      * @param bundleContext the bundle context.
      * @param tls whether to use "ws" or "wss" in advertised URLs in the absence
-     * of configuration which overrides it (see {@link #TLS_PNAME}).
+     * of configuration which overrides it (see {@link WebSocketConfig#tls})
      */
     public ColibriWebSocketService(
         BundleContext bundleContext, boolean tls)
     {
-        ConfigurationService cfg
-            = ServiceUtils2.getService(bundleContext, ConfigurationService.class);
-
         String baseUrl = null;
-        String serverId = null;
 
-        // The domain name is currently a required property.
-        if (cfg != null && !cfg.getBoolean(DISABLE_PNAME, false))
+        if (enabled.get())
         {
-            String domain = cfg.getString(DOMAIN_PNAME, null);
-            if (domain != null)
+            if (domain.get() != null)
             {
-                // We default to matching the protocol used by the local jetty
-                // instance, but we allow for the configuration via properties
-                // to override it since certain use-cases require it.
-                tls = cfg.getBoolean(TLS_PNAME, tls);
-
-                // The server ID is not critical, just use a default string
-                // unless configured.
-                serverId = cfg.getString(SERVER_ID_PNAME, "default-id");
-
-                baseUrl = tls ? "wss://" : "ws://";
-                baseUrl += domain + COLIBRI_WS_PATH + serverId + "/";
+                boolean useTls = ColibriWebSocketService.tls.get() == null ? tls : ColibriWebSocketService.tls.get();
+                baseUrl = (useTls ? "wss://" : "ws://")
+                    + domain.get() + COLIBRI_WS_PATH + serverId.get() + "/" ;
             }
         }
 
         this.baseUrl = baseUrl;
-        this.serverId = serverId;
     }
 
     /**
@@ -117,7 +79,7 @@ public class ColibriWebSocketService
      */
     String getServerId()
     {
-        return serverId;
+        return serverId.get();
     }
 
     /**
@@ -159,10 +121,7 @@ public class ColibriWebSocketService
     {
         ServletHolder holder = null;
 
-        ConfigurationService cfg
-            = ServiceUtils2.getService(bundleContext, ConfigurationService.class);
-        if (baseUrl != null &&
-            (cfg == null || !cfg.getBoolean(DISABLE_PNAME, false)))
+        if (baseUrl != null && enabled.get())
         {
             holder = new ServletHolder();
 
