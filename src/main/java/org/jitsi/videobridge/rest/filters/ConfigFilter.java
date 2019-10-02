@@ -27,8 +27,9 @@ import javax.ws.rs.core.*;
 /**
  * A filter which returns 404 not found for any path which:
  * 1) Is marked with the {@link EnabledByConfig} annotation and
- * 2) The value corresponding to the provided configuration key
- * is either not present or returns a value of false.
+ * 2) The resulting value corresponding to the provided configuration key
+ * after checking the config file (and potentially falling back to the
+ * default value) is false
  */
 public class ConfigFilter implements ContainerRequestFilter
 {
@@ -60,7 +61,7 @@ public class ConfigFilter implements ContainerRequestFilter
             if  (clazz.isAnnotationPresent(EnabledByConfig.class))
             {
                 EnabledByConfig anno = clazz.getAnnotation(EnabledByConfig.class);
-                if (!(configProvider.get().getBoolean(anno.value(), false)))
+                if (!(configProvider.get().getBoolean(anno.value(), anno.defaultValue())))
                 {
                     throw new NotFoundException();
                 }
