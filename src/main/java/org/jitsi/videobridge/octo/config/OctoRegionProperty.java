@@ -31,8 +31,8 @@ public class OctoRegionProperty
     private static ConfigProperty<String> singleInstance = new ConfigPropertyBuilder<String>()
             .withGetter(Config::getString)
             .withConfigs(
-                new ConfigPropertyBuilder.ConfigInfo(JvbConfig.getConfig(), propKey),
-                new ConfigPropertyBuilder.ConfigInfo(JvbConfig.getLegacyConfig(), legacyPropKey)
+                new ConfigInfo(JvbConfig.getConfig(), propKey),
+                new ConfigInfo(JvbConfig.getLegacyConfig(), legacyPropKey)
             )
             .withDefault("default")
             .readOnce()

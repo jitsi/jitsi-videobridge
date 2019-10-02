@@ -23,11 +23,11 @@ import java.util.function.*;
 
 public abstract class ConfigPropertyImpl<T> implements ConfigProperty<T>
 {
-    protected final List<ConfigPropertyBuilder.ConfigInfo> configInfos;
+    protected final List<ConfigInfo> configInfos;
     protected final BiFunction<Config, String, T> getter;
     protected final T defaultValue;
 
-    public ConfigPropertyImpl(List<ConfigPropertyBuilder.ConfigInfo> configInfos, BiFunction<Config, String, T> getter, T defaultValue)
+    public ConfigPropertyImpl(List<ConfigInfo> configInfos, BiFunction<Config, String, T> getter, T defaultValue)
     {
         this.configInfos = configInfos;
         this.getter = getter;
@@ -37,7 +37,7 @@ public abstract class ConfigPropertyImpl<T> implements ConfigProperty<T>
 
     protected T doGet()
     {
-        for (ConfigPropertyBuilder.ConfigInfo configInfo : configInfos)
+        for (ConfigInfo configInfo : configInfos)
         {
             try
             {

@@ -18,22 +18,14 @@ package org.jitsi.videobridge.util.config;
 
 import com.typesafe.config.*;
 
-import java.util.*;
-import java.util.function.*;
-
-public class ReadOnceProperty<T> extends ConfigPropertyImpl<T>
+public class ConfigInfo
 {
-    protected T value;
+    protected final Config config;
+    protected final String propKey;
 
-    public ReadOnceProperty(List<ConfigInfo> configInfos, BiFunction<Config, String, T> getter, T defaultValue)
+    public ConfigInfo(Config config, String propKey)
     {
-        super(configInfos, getter, defaultValue);
-        value = doGet();
-    }
-
-    @Override
-    public T get()
-    {
-        return value;
+        this.config = config;
+        this.propKey = propKey;
     }
 }

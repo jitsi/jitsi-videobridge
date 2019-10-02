@@ -16,7 +16,6 @@
 
 package org.jitsi.videobridge.health.config;
 
-import com.typesafe.config.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
 
@@ -31,8 +30,8 @@ public class HealthIntervalProperty
     private static ConfigProperty<Integer> singleInstance = new ConfigPropertyBuilder<Integer>()
             .withGetter((config, key) -> (int)config.getDuration(key, TimeUnit.MILLISECONDS))
             .withConfigs(
-                new ConfigPropertyBuilder.ConfigInfo(JvbConfig.getConfig(), propKey),
-                new ConfigPropertyBuilder.ConfigInfo(JvbConfig.getLegacyConfig(), legacyPropKey)
+                new ConfigInfo(JvbConfig.getConfig(), propKey),
+                new ConfigInfo(JvbConfig.getLegacyConfig(), legacyPropKey)
             )
             .withDefault(legacyDefaultValue)
             .readOnce()

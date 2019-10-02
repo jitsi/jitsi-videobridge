@@ -77,15 +77,4 @@ public class ConfigPropertyBuilder<T>
         return new ReadEveryTimeProperty<T>(configInfos, getter, defaultValue);
     }
 
-    public static class ConfigInfo
-    {
-        protected final Config config;
-        protected final String propKey;
-
-        public ConfigInfo(Config config, String propKey)
-        {
-            this.config = config;
-            this.propKey = propKey;
-        }
-    }
 }

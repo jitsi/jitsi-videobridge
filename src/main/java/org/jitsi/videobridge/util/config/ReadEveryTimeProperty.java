@@ -23,7 +23,7 @@ import java.util.function.*;
 
 public class ReadEveryTimeProperty<T> extends ConfigPropertyImpl<T>
 {
-    public ReadEveryTimeProperty(List<ConfigPropertyBuilder.ConfigInfo> configInfos, BiFunction<Config, String, T> getter, T defaultValue)
+    public ReadEveryTimeProperty(List<ConfigInfo> configInfos, BiFunction<Config, String, T> getter, T defaultValue)
     {
         super(configInfos, getter, defaultValue);
     }
