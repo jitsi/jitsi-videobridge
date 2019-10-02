@@ -117,6 +117,14 @@ public class Main
                     HOST_ARG_NAME,
                     domain == null ? HOST_ARG_VALUE : domain);
 
+        // Some of our dependencies bring in slf4j, which means Jetty will default to using
+        // slf4j as its logging backend.  The version of slf4j brought in, however, is too old
+        // for Jetty so it throws errors.  We use java.util.logging so tell Jetty to use that
+        // as its logging backend.
+        //TODO: Instead of setting this here, we should integrate it with the infra/debian scripts
+        // to be passed.
+        System.setProperty("org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.JavaUtilLog");
+
         // Before initializing the application programming interfaces (APIs) of
         // Jitsi Videobridge, set any System properties which they use and which
         // may be specified by the command-line arguments.
