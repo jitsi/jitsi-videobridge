@@ -20,15 +20,20 @@ import com.typesafe.config.*;
 
 import java.util.*;
 import java.util.function.*;
+import java.util.stream.*;
 
-public class ConfigPropertyBuilder<T>
+/**
+ * A builder class for creating a {@link ConfigProperty} instance
+ * @param <PropValueType> the type of the property value
+ */
+public class ConfigPropertyBuilder<PropValueType>
 {
-    protected BiFunction<Config, String, T> getter = null;
-    protected T defaultValue = null;
-    protected List<ConfigInfo> configInfos = null;
+    protected BiFunction<Config, String, PropValueType> getter = null;
+    protected PropValueType defaultValue = null;
+    protected List<ConfigValueRetrieverBuilder<PropValueType>> configValueRetrieverBuilders = null;
     protected boolean readOnce = false;
 
-    public ConfigPropertyBuilder<T> withGetter(BiFunction<Config, String, T> getter)
+    public ConfigPropertyBuilder<PropValueType> usingGetter(BiFunction<Config, String, PropValueType> getter)
     {
         if (this.getter != null)
         {
@@ -39,18 +44,30 @@ public class ConfigPropertyBuilder<T>
         return this;
     }
 
-    public ConfigPropertyBuilder<T> withConfigs(ConfigInfo... configInfos)
+    /**
+     * We take the builders here, instead of the built type, so that we can pass
+     * a 'getter' set at the top level to each of the retrievers (so the same
+     * getter doesn't have to be set explicitly on each retriever)
+     *
+     * @param configValueRetrieverBuilders the {@link ConfigValueRetrieverBuilder}s, in
+     *                                     the order in which they should be queried for
+     *                                     the config property
+     * @return this {@link ConfigPropertyBuilder} instance, for method chaining
+     */
+    @SafeVarargs
+    public final ConfigPropertyBuilder<PropValueType> fromConfigs(
+            ConfigValueRetrieverBuilder<PropValueType>... configValueRetrieverBuilders)
     {
-        if (this.configInfos != null)
+        if (this.configValueRetrieverBuilders != null)
         {
             throw new RuntimeException("Configs already set");
         }
-        this.configInfos = Arrays.asList(configInfos);
+        this.configValueRetrieverBuilders = Arrays.asList(configValueRetrieverBuilders);
 
         return this;
     }
 
-    public ConfigPropertyBuilder<T> withDefault(T defaultValue)
+    public ConfigPropertyBuilder<PropValueType> withDefault(PropValueType defaultValue)
     {
         if (this.defaultValue != null)
         {
@@ -61,20 +78,30 @@ public class ConfigPropertyBuilder<T>
         return this;
     }
 
-    public ConfigPropertyBuilder<T> readOnce()
+    public ConfigPropertyBuilder<PropValueType> readOnce()
     {
         readOnce = true;
 
         return this;
     }
 
-    public ConfigProperty<T> build()
+    public ConfigProperty<PropValueType> build()
     {
+        List<ConfigValueRetriever<PropValueType>> retrievers = this.configValueRetrieverBuilders
+                .stream()
+                .map(retrieverBuilder -> {
+                    if (this.getter != null)
+                    {
+                        retrieverBuilder.usingGetter(this.getter);
+                    }
+                    return retrieverBuilder.build();
+                })
+                .collect(Collectors.toList());
         if (readOnce)
         {
-            return new ReadOnceProperty<T>(configInfos, getter, defaultValue);
+            return new ReadOnceProperty<>(retrievers, defaultValue);
         }
-        return new ReadEveryTimeProperty<T>(configInfos, getter, defaultValue);
+        return new ReadEveryTimeProperty<>(retrievers, defaultValue);
     }
 
 }

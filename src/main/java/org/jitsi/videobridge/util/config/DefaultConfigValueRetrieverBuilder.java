@@ -16,28 +16,17 @@
 
 package org.jitsi.videobridge.util.config;
 
-import java.util.*;
+import org.jitsi.videobridge.util.*;
 
 /**
- * A property whose value is read once from the underlying config
- * (on creation).  That value is returned every time {@link ConfigProperty#get()}
- * is called.
- *
- * @param <T> the value type of the config property
+ * A helper class to model a simple key retrieval from the legacy config
+ * @param <PropValueType>
  */
-public class ReadOnceProperty<T> extends ConfigPropertyImpl<T>
+public class DefaultConfigValueRetrieverBuilder<PropValueType> extends ConfigValueRetrieverBuilder<PropValueType>
 {
-    protected T value;
-
-    public ReadOnceProperty(List<ConfigValueRetriever<T>> configValueRetrievers, T defaultValue)
+    public DefaultConfigValueRetrieverBuilder(String legacyPropKey)
     {
-        super(configValueRetrievers, defaultValue);
-        value = doGet();
-    }
-
-    @Override
-    public T get()
-    {
-        return value;
+        property(legacyPropKey);
+        fromConfig(JvbConfig.getConfig());
     }
 }

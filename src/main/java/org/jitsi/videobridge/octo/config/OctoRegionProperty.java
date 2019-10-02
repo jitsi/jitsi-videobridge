@@ -29,11 +29,11 @@ public class OctoRegionProperty
     protected static final String propKey = "videobridge.octo.region";
 
     private static ConfigProperty<String> singleInstance = new ConfigPropertyBuilder<String>()
-            .withGetter(Config::getString)
-            .withConfigs(
-                new ConfigInfo(JvbConfig.getConfig(), propKey),
-                new ConfigInfo(JvbConfig.getLegacyConfig(), legacyPropKey)
+            .fromConfigs(
+                new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey),
+                new DefaultConfigValueRetrieverBuilder<>(propKey)
             )
+            .usingGetter(Config::getString)
             .withDefault("default")
             .readOnce()
             .build();

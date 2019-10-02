@@ -27,10 +27,10 @@ public class StickyFailuresProperty
     protected static final String propKey = "videobridge.health.sticky-failures";
 
     private static ConfigProperty<Boolean> singleInstance = new ConfigPropertyBuilder<Boolean>()
-            .withGetter(Config::getBoolean)
-            .withConfigs(
-                    new ConfigInfo(JvbConfig.getConfig(), propKey),
-                    new ConfigInfo(JvbConfig.getLegacyConfig(), legacyPropKey)
+            .usingGetter(Config::getBoolean)
+            .fromConfigs(
+                    new DefaultConfigValueRetrieverBuilder<>(propKey),
+                    new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey)
             )
             .withDefault(legacyDefaultValue)
             .readOnce()

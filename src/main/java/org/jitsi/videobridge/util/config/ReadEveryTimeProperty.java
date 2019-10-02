@@ -16,16 +16,18 @@
 
 package org.jitsi.videobridge.util.config;
 
-import com.typesafe.config.*;
-
 import java.util.*;
-import java.util.function.*;
 
+/**
+ * A property whose value is re-read from the underlying config
+ * every time {@link ConfigProperty#get()} is called
+ * @param <T> the value type of the config property
+ */
 public class ReadEveryTimeProperty<T> extends ConfigPropertyImpl<T>
 {
-    public ReadEveryTimeProperty(List<ConfigInfo> configInfos, BiFunction<Config, String, T> getter, T defaultValue)
+    public ReadEveryTimeProperty(List<ConfigValueRetriever<T>> configValueRetrievers, T defaultValue)
     {
-        super(configInfos, getter, defaultValue);
+        super(configValueRetrievers, defaultValue);
     }
 
     @Override

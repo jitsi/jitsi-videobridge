@@ -16,16 +16,17 @@
 
 package org.jitsi.videobridge.util.config;
 
-import com.typesafe.config.*;
+import org.jitsi.videobridge.util.*;
 
-public class ConfigInfo
+/**
+ * A helper class to model a simple key retrieval from the legacy config
+ * @param <PropValueType>
+ */
+public class DefaultLegacyConfigValueRetrieverBuilder<PropValueType> extends ConfigValueRetrieverBuilder<PropValueType>
 {
-    protected final Config config;
-    protected final String propKey;
-
-    public ConfigInfo(Config config, String propKey)
+    public DefaultLegacyConfigValueRetrieverBuilder(String legacyPropKey)
     {
-        this.config = config;
-        this.propKey = propKey;
+        property(legacyPropKey);
+        fromConfig(JvbConfig.getLegacyConfig());
     }
 }

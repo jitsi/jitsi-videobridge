@@ -16,7 +16,6 @@
 
 package org.jitsi.videobridge.health.config;
 
-import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
 
 import java.util.concurrent.*;
@@ -28,10 +27,10 @@ public class HealthTimeoutProperty
     protected static final String propKey = "videobridge.health.timeout";
 
     private static ConfigProperty<Integer> singleInstance = new ConfigPropertyBuilder<Integer>()
-            .withGetter((config, key) -> (int)config.getDuration(key, TimeUnit.MILLISECONDS))
-            .withConfigs(
-                    new ConfigInfo(JvbConfig.getConfig(), propKey),
-                    new ConfigInfo(JvbConfig.getLegacyConfig(), legacyPropKey)
+            .usingGetter((config, key) -> (int)config.getDuration(key, TimeUnit.MILLISECONDS))
+            .fromConfigs(
+                new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey),
+                new DefaultConfigValueRetrieverBuilder<>(propKey)
             )
             .withDefault(legacyDefaultValue)
             .readOnce()

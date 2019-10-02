@@ -21,31 +21,35 @@ import com.typesafe.config.*;
 import java.util.*;
 import java.util.function.*;
 
+/**
+ * A base helper class for modeling a configuration property.  Contains the
+ * code for iterating over multiple {@link ConfigValueRetriever}s for the first
+ * one which successfully returns a result; if none contain the property,
+ * it returns the default value.
+ *
+ * @param <T> the type of the property value
+ */
 public abstract class ConfigPropertyImpl<T> implements ConfigProperty<T>
 {
-    protected final List<ConfigInfo> configInfos;
-    protected final BiFunction<Config, String, T> getter;
+    protected final List<ConfigValueRetriever<T>> configValueRetrievers;
     protected final T defaultValue;
 
-    public ConfigPropertyImpl(List<ConfigInfo> configInfos, BiFunction<Config, String, T> getter, T defaultValue)
+    public ConfigPropertyImpl(List<ConfigValueRetriever<T>> configValueRetrievers, T defaultValue)
     {
-        this.configInfos = configInfos;
-        this.getter = getter;
+        this.configValueRetrievers = configValueRetrievers;
         this.defaultValue = defaultValue;
     }
 
-
     protected T doGet()
     {
-        for (ConfigInfo configInfo : configInfos)
+        for (ConfigValueRetriever<T> configValueRetriever : configValueRetrievers)
         {
             try
             {
-                return getter.apply(configInfo.config, configInfo.propKey);
+                return configValueRetriever.getValue();
             }
             catch (ConfigException.Missing ignored) { }
         }
         return defaultValue;
     }
-
 }
