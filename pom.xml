@@ -19,7 +19,6 @@
     <jitsi-desktop.version>2.13.cb5485e</jitsi-desktop.version>
     <kotlin.version>1.2.41</kotlin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <slf4j.version>1.7.26</slf4j.version>
     <smack.version>4.2.4-47d17fc</smack.version>
   </properties>
 
