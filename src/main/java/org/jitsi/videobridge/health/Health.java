@@ -22,6 +22,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.health.config.*;
 import org.jitsi.videobridge.transport.*;
+import org.jitsi.videobridge.util.config.*;
 import org.jitsi.videobridge.xmpp.*;
 
 import java.io.*;
@@ -52,19 +53,6 @@ public class Health
      */
     private static final RecurringRunnableExecutor executor
         = new RecurringRunnableExecutor(Health.class.getName());
-
-    /**
-     * The default timeout for health checks.
-     */
-    private static final int TIMEOUT_DEFAULT = 30000;
-
-    /**
-     * The name of the property which configures the timeout for health checks.
-     * The {@link #check()} API will return failure unless a there was a health
-     * check performed in the last that many milliseconds.
-     */
-    public static final String TIMEOUT_PNAME
-        = "org.jitsi.videobridge.health.TIMEOUT";
 
     /**
      * The name of the property which makes any failures sticky (i.e. once the
@@ -251,7 +239,7 @@ public class Health
      * considered unhealthy; i.e. if no health check has been completed in the
      * last {@code timeout} milliseconds the bridge is unhealthy.
      */
-    private final int timeout;
+    private final ConfigProperty<Integer> timeout = HealthTimeoutProperty.getInstance();
 
     /**
      * Whether failures are sticky, i.e. once the bridge becomes unhealthy it
@@ -276,10 +264,6 @@ public class Health
     public Health(Videobridge videobridge, ConfigurationService cfg)
     {
         super(videobridge, HealthIntervalProperty.getInstance().get(), true);
-
-        timeout =
-            cfg == null ? TIMEOUT_DEFAULT
-                : cfg.getInt(TIMEOUT_PNAME, TIMEOUT_DEFAULT);
 
         stickyFailures
             = cfg == null ? STICKY_FAILURES_DEFAULT
@@ -365,7 +349,7 @@ public class Health
         long lastResultMs = this.lastResultMs;
         long timeSinceLastResult = System.currentTimeMillis() - lastResultMs;
 
-        if (timeSinceLastResult > timeout)
+        if (timeSinceLastResult > timeout.get())
         {
             throw new Exception(
                 "No health checks performed recently, the last result was "
