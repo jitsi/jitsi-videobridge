@@ -16,47 +16,30 @@
 
 package org.jitsi.videobridge.octo.config;
 
+import com.typesafe.config.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
 
 /**
  * A singleton property representing the octo's region
  */
-public class OctoRegionProperty implements ConfigProperty<String>
+public class OctoRegionProperty
 {
     protected static final String legacyPropKey = "org.jitsi.videobridge.REGION";
     protected static final String propKey = "videobridge.octo.region";
 
-    protected final String value;
+    private static ConfigProperty<String> singleInstance = new ConfigPropertyBuilder<String>()
+            .withGetter(Config::getString)
+            .withConfigs(
+                new ConfigPropertyBuilder.ConfigInfo(JvbConfig.getConfig(), propKey),
+                new ConfigPropertyBuilder.ConfigInfo(JvbConfig.getLegacyConfig(), legacyPropKey)
+            )
+            .withDefault("default")
+            .readOnce()
+            .build();
 
-    private static OctoRegionProperty singleInstance = new OctoRegionProperty();
-
-    public static OctoRegionProperty getInstance()
+    public static ConfigProperty<String> getInstance()
     {
         return singleInstance;
     }
-
-    private OctoRegionProperty()
-    {
-        value = doGet();
-    }
-
-    protected static String doGet()
-    {
-        if (JvbConfig.getConfig().hasPath(propKey))
-        {
-            return JvbConfig.getConfig().getString(propKey);
-        }
-        else
-        {
-            return JvbConfig.getLegacyConfig().getString(legacyPropKey);
-        }
-    }
-
-    @Override
-    public String get()
-    {
-        return value;
-    }
-
 }
