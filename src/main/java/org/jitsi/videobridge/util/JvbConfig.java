@@ -20,18 +20,33 @@ import com.typesafe.config.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 
+import java.nio.file.*;
+
 public class JvbConfig
 {
     protected static Config config = ConfigFactory.load();
     protected static Logger logger = new LoggerImpl(JvbConfig.class.getName());
+    protected static Config legacyConfig;
 
     static
     {
-        logger.info("Loaded config: " + config.root().render());
+        String oldConfigHomeDirLocation = System.getProperty("net.java.sip.communicator.SC_HOME_DIR_LOCATION");
+        String oldConfigHomeDirName = System.getProperty("net.java.sip.communicator.SC_HOME_DIR_NAME");
+        legacyConfig = ConfigFactory.parseFile(
+                Paths.get(oldConfigHomeDirLocation, oldConfigHomeDirName, "sip-communicator.properties")
+                        .toFile()
+        );
+        logger.info("Loaded complete config: " + config.withFallback(legacyConfig).root().render());
+        logger.info("Loaded JVB config: " + config.getConfig("videobridge").root().render());
     }
 
     public static @NotNull Config getConfig()
     {
         return config;
+    }
+
+    public static Config getLegacyConfig()
+    {
+        return legacyConfig;
     }
 }
