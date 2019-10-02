@@ -20,6 +20,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.health.config.*;
 import org.jitsi.videobridge.transport.*;
 import org.jitsi.videobridge.xmpp.*;
 
@@ -51,18 +52,6 @@ public class Health
      */
     private static final RecurringRunnableExecutor executor
         = new RecurringRunnableExecutor(Health.class.getName());
-
-    /**
-     * The default interval between health checks.
-     */
-    private static final int PERIOD_DEFAULT = 10000;
-
-    /**
-     * The name of the property which configures the interval between health
-     * checks.
-     */
-    public static final String PERIOD_PNAME
-        = "org.jitsi.videobridge.health.INTERVAL";
 
     /**
      * The default timeout for health checks.
@@ -286,17 +275,7 @@ public class Health
      */
     public Health(Videobridge videobridge, ConfigurationService cfg)
     {
-        super(videobridge, PERIOD_DEFAULT, true);
-
-        if (cfg == null)
-        {
-            logger.warn("Configuration service is null, using only defaults.");
-        }
-
-        int period =
-            cfg == null ? PERIOD_DEFAULT
-                : cfg.getInt(PERIOD_PNAME, PERIOD_DEFAULT);
-        setPeriod(period);
+        super(videobridge, HealthIntervalProperty.getInstance().get(), true);
 
         timeout =
             cfg == null ? TIMEOUT_DEFAULT
