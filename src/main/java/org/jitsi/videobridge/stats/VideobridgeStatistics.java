@@ -15,21 +15,21 @@
  */
 package org.jitsi.videobridge.stats;
 
+import org.jitsi.nlj.stats.*;
+import org.jitsi.nlj.transform.node.incoming.*;
+import org.jitsi.osgi.*;
+import org.jitsi.utils.*;
+import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.octo.*;
+import org.jitsi.videobridge.octo.config.*;
+import org.jitsi.videobridge.shim.*;
+import org.json.simple.*;
+import org.osgi.framework.*;
+
 import java.lang.management.*;
 import java.text.*;
 import java.util.*;
 import java.util.concurrent.locks.*;
-
-import org.jitsi.nlj.stats.*;
-import org.jitsi.nlj.transform.node.incoming.*;
-import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
-import org.jitsi.utils.*;
-import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.octo.*;
-import org.jitsi.videobridge.shim.*;
-import org.json.simple.*;
-import org.osgi.framework.*;
 
 import static org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.*;
 
@@ -56,12 +56,7 @@ public class VideobridgeStatistics
     /**
      * The currently configured region.
      */
-    public static String region = null;
-
-    /**
-     * The name of the property used to configure the region.
-     */
-    public static final String REGION_PNAME = "org.jitsi.videobridge.REGION";
+    public static OctoRegionProperty region = OctoRegionProperty.getInstance();
 
     static
     {
@@ -94,13 +89,6 @@ public class VideobridgeStatistics
     {
         BundleContext bundleContext
             = StatsManagerBundleActivator.getBundleContext();
-
-        ConfigurationService cfg
-            = ServiceUtils2.getService(bundleContext, ConfigurationService.class);
-        if (cfg != null)
-        {
-            region = cfg.getString(REGION_PNAME, region);
-        }
 
         // Is it necessary to set initial values for all of these?
         unlockedSetStat(BITRATE_DOWNLOAD, 0);
@@ -467,7 +455,7 @@ public class VideobridgeStatistics
             }
             if (region != null)
             {
-                unlockedSetStat(REGION, region);
+                unlockedSetStat(REGION, region.get());
             }
             unlockedSetStat(VERSION, videobridge.getVersion().toString());
         }
