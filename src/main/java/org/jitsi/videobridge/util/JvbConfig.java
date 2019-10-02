@@ -32,10 +32,17 @@ public class JvbConfig
     {
         String oldConfigHomeDirLocation = System.getProperty("net.java.sip.communicator.SC_HOME_DIR_LOCATION");
         String oldConfigHomeDirName = System.getProperty("net.java.sip.communicator.SC_HOME_DIR_NAME");
-        legacyConfig = ConfigFactory.parseFile(
-                Paths.get(oldConfigHomeDirLocation, oldConfigHomeDirName, "sip-communicator.properties")
-                        .toFile()
-        );
+        try
+        {
+            legacyConfig = ConfigFactory.parseFile(
+                    Paths.get(oldConfigHomeDirLocation, oldConfigHomeDirName, "sip-communicator.properties")
+                            .toFile());
+        }
+        catch (InvalidPathException | NullPointerException e)
+        {
+            logger.info("No legacy config file found");
+            legacyConfig = ConfigFactory.parseString("");
+        }
         logger.info("Loaded complete config: " + config.withFallback(legacyConfig).root().render());
         logger.info("Loaded JVB config: " + config.getConfig("videobridge").root().render());
     }
