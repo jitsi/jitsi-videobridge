@@ -60,7 +60,7 @@ public class ConfigFilter implements ContainerRequestFilter
             if  (clazz.isAnnotationPresent(EnabledByConfig.class))
             {
                 EnabledByConfig anno = clazz.getAnnotation(EnabledByConfig.class);
-                if (!(configProvider.get().getBoolean(anno.value(), false)))
+                if (!(configProvider.get().getBoolean(anno.value(), anno.defaultValue())))
                 {
                     throw new NotFoundException();
                 }

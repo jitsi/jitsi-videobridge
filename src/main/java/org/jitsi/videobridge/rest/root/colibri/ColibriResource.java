@@ -25,7 +25,7 @@ import org.jitsi.videobridge.rest.annotations.*;
  * on /colibri/ are gated by the {@link Constants#ENABLE_REST_COLIBRI_PNAME}
  * config value
  */
-@EnabledByConfig(Constants.ENABLE_REST_COLIBRI_PNAME)
+@EnabledByConfig(value = Constants.ENABLE_REST_COLIBRI_PNAME, defaultValue = true)
 public class ColibriResource
 {
 }
