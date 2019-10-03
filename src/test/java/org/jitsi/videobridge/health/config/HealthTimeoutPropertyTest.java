@@ -21,11 +21,11 @@ import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
 import org.junit.*;
 
+import static org.jitsi.testutils.ConfigUtils.EMPTY_CONFIG;
 import static org.junit.Assert.*;
 
 public class HealthTimeoutPropertyTest
 {
-    private static Config EMPTY_CONFIG = ConfigFactory.parseString("");
     @Test
     public void whenOnlyOldConfigIsPresent()
     {
