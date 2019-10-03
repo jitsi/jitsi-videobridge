@@ -28,7 +28,10 @@ public class OctoRegionProperty
     protected static final String legacyPropKey = "org.jitsi.videobridge.REGION";
     protected static final String propKey = "videobridge.octo.region";
 
-    private static ConfigProperty<String> singleInstance = new ConfigPropertyBuilder<String>()
+
+    static ConfigProperty<String> createInstance()
+    {
+        return new ConfigPropertyBuilder<String>()
             .fromConfigs(
                 new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey),
                 new DefaultConfigValueRetrieverBuilder<>(propKey)
@@ -37,6 +40,9 @@ public class OctoRegionProperty
             .withDefault("default")
             .readOnce()
             .build();
+    }
+
+    static ConfigProperty<String> singleInstance = createInstance();
 
     public static ConfigProperty<String> getInstance()
     {

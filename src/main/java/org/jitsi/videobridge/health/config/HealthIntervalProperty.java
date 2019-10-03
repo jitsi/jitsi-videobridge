@@ -26,15 +26,20 @@ public class HealthIntervalProperty
     protected static final Integer legacyDefaultValue = 10000;
     protected static final String propKey = "videobridge.health.interval";
 
-    private static ConfigProperty<Integer> singleInstance = new ConfigPropertyBuilder<Integer>()
-            .fromConfigs(
-                new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey),
-                new DefaultConfigValueRetrieverBuilder<>(propKey)
-            )
-            .usingGetter((config, key) -> (int)config.getDuration(key, TimeUnit.MILLISECONDS))
-            .withDefault(legacyDefaultValue)
-            .readOnce()
-            .build();
+    static ConfigProperty<Integer> createInstance()
+    {
+        return new ConfigPropertyBuilder<Integer>()
+                .fromConfigs(
+                    new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey),
+                    new DefaultConfigValueRetrieverBuilder<>(propKey)
+                )
+                .usingGetter((config, key) -> (int)config.getDuration(key, TimeUnit.MILLISECONDS))
+                .withDefault(legacyDefaultValue)
+                .readOnce()
+                .build();
+    }
+
+    private static ConfigProperty<Integer> singleInstance = createInstance();
 
     public static ConfigProperty<Integer> getInstance()
     {
