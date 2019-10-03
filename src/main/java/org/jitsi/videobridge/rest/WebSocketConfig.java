@@ -33,8 +33,8 @@ public class WebSocketConfig
         {
             return new ConfigPropertyBuilder<Boolean>()
                 .fromConfigs(
-                    new DefaultConfigValueRetrieverBuilder<>("videobridge.websockets.enabled"),
-                    new DefaultLegacyConfigValueRetrieverBuilder<Boolean>("org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE")
+                    new DefaultConfigValueRetrieverBuilder<>(propKey),
+                    new DefaultLegacyConfigValueRetrieverBuilder<Boolean>(legacyPropKey)
                         // The legacy config value was 'DISABLE' and the new one is 'ENABLED', so if we pull the value
                         // from the legacy config, we need to invert it
                         .withTransformation((value) -> !value)
@@ -52,42 +52,79 @@ public class WebSocketConfig
      * The property which controls the server ID used in URLs
      * advertised for COLIBRI WebSockets.
      */
-    static ConfigProperty<String> serverId = new ConfigPropertyBuilder<String>()
-            .fromConfigs(
-                new DefaultConfigValueRetrieverBuilder<>("videobridge.websockets.server-id"),
-                new DefaultLegacyConfigValueRetrieverBuilder<>("org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID")
-            )
-            .usingGetter(Config::getString)
-            .withDefault("default-id")
-            .readOnce()
-            .build();
+    public static class ServerIdProperty
+    {
+        protected static final String legacyPropKey = "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID";
+        protected static final String legacyDefault = "default-id";
+        protected static final String propKey = "videobridge.websockets.server-id";
+
+        static ConfigProperty<String> createInstance()
+        {
+            return new ConfigPropertyBuilder<String>()
+                .fromConfigs(
+                    new DefaultConfigValueRetrieverBuilder<>(propKey),
+                    new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey)
+                )
+                .usingGetter(Config::getString)
+                .withDefault(legacyDefault)
+                .readOnce()
+                .build();
+        }
+    }
+
+    static ConfigProperty<String> serverId = ServerIdProperty.createInstance();
 
     /**
      * The property which controls the domain name used in URLs
      * advertised for COLIBRI WebSockets.
      */
-    static ConfigProperty<String> domain = new ConfigPropertyBuilder<String>()
-            .fromConfigs(
-                new DefaultConfigValueRetrieverBuilder<>("videobridge.websockets.domain"),
-                new DefaultLegacyConfigValueRetrieverBuilder<>("org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN")
-            )
-            .usingGetter(Config::getString)
-            .withDefault(null)
-            .readOnce()
-            .build();
+    public static class DomainProperty
+    {
+        protected static final String legacyPropKey = "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN";
+        protected static final String legacyDefault = null;
+        protected static final String propKey = "videobridge.websockets.domain";
+
+        static ConfigProperty<String> createInstance()
+        {
+            return new ConfigPropertyBuilder<String>()
+                .fromConfigs(
+                        new DefaultConfigValueRetrieverBuilder<>(propKey),
+                        new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey)
+                )
+                .usingGetter(Config::getString)
+                .withDefault(legacyDefault)
+                .readOnce()
+                .build();
+        }
+    }
+
+    static ConfigProperty<String> domain = DomainProperty.createInstance();
 
     /**
      * The property which controls whether URLs advertised for
      * COLIBRI WebSockets should use the "ws" (if false) or "wss" (if true)
      * schema.
      */
-    static ConfigProperty<Boolean> tls = new ConfigPropertyBuilder<Boolean>()
-            .fromConfigs(
-                    new DefaultConfigValueRetrieverBuilder<>("videobridge.websockets.tls"),
-                    new DefaultLegacyConfigValueRetrieverBuilder<>("org.jitsi.videobridge.rest.COLIBRI_WS_TLS")
-            )
-            .usingGetter(Config::getBoolean)
-            .withDefault(null)
-            .readOnce()
-            .build();
+    public static class TlsProperty
+    {
+        protected static final String legacyPropKey = "org.jitsi.videobridge.rest.COLIBRI_WS_TLS";
+        protected static final Boolean legacyDefault = null;
+        protected static final String propKey = "videobridge.websockets.tls";
+
+        static ConfigProperty<Boolean> createInstance()
+        {
+            return new ConfigPropertyBuilder<Boolean>()
+                .fromConfigs(
+                    new DefaultConfigValueRetrieverBuilder<>(propKey),
+                    new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey)
+                )
+                .usingGetter(Config::getBoolean)
+                .withDefault(legacyDefault)
+                .readOnce()
+                .build();
+        }
+
+    }
+
+    static ConfigProperty<Boolean> tls = TlsProperty.createInstance();
 }
