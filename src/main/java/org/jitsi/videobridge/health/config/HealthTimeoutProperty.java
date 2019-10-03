@@ -26,15 +26,20 @@ public class HealthTimeoutProperty
     protected static final Integer legacyDefaultValue = 30000;
     protected static final String propKey = "videobridge.health.timeout";
 
-    private static ConfigProperty<Integer> singleInstance = new ConfigPropertyBuilder<Integer>()
-            .usingGetter((config, key) -> (int)config.getDuration(key, TimeUnit.MILLISECONDS))
-            .fromConfigs(
-                new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey),
-                new DefaultConfigValueRetrieverBuilder<>(propKey)
-            )
-            .withDefault(legacyDefaultValue)
-            .readOnce()
-            .build();
+    static ConfigProperty<Integer> createInstance()
+    {
+        return new ConfigPropertyBuilder<Integer>()
+                .usingGetter((config, key) -> (int)config.getDuration(key, TimeUnit.MILLISECONDS))
+                .fromConfigs(
+                        new DefaultConfigValueRetrieverBuilder<>(propKey),
+                        new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey)
+                )
+                .withDefault(legacyDefaultValue)
+                .readOnce()
+                .build();
+    }
+
+    private static ConfigProperty<Integer> singleInstance = createInstance();
 
     public static ConfigProperty<Integer> getInstance()
     {
