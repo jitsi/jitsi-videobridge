@@ -76,11 +76,15 @@ public class ConfigValueRetrieverBuilder<PropValueType>
             throw new RuntimeException("Missing required fields");
         }
 
-        return new ConfigValueRetriever<>(
-                config,
-                propKey,
-                getter,
-                transformer
-        );
+        if (transformer != null)
+        {
+            return new TransformingConfigValueRetriever<>(
+                    config,
+                    propKey,
+                    getter,
+                    transformer
+            );
+        }
+        return new SimpleConfigValueRetriever<>(config, propKey, getter);
     }
 }

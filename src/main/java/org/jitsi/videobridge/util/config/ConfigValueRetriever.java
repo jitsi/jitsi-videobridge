@@ -16,41 +16,14 @@
 
 package org.jitsi.videobridge.util.config;
 
-import com.typesafe.config.*;
-
-import java.util.function.*;
-
 /**
- * Responsible for retrieving the value of a given property key
- * from a given config and performing any transformations on the retrieved
- * value.  It's necessary to have both the config and key held together here,
- * as the same property may use different keys in different configs (e.g.
- * a legacy key name in a legacy config and a new one in a newer config).
- *
+ * Responsible for retrieving a configuration property's value.
+ * The implementation of how this is done can vary, for example
+ * {@link TransformingConfigValueRetriever} can apply a transformation
+ * on the retrieved value before returning it.
  * @param <PropValueType>
  */
-public class ConfigValueRetriever<PropValueType>
+public interface ConfigValueRetriever<PropValueType>
 {
-    protected final Config config;
-    protected final String propKey;
-    protected BiFunction<Config, String, PropValueType> getter;
-    protected final Function<PropValueType, PropValueType> configValueTransformer;
-
-    protected ConfigValueRetriever(
-            Config config,
-            String propKey,
-            BiFunction<Config, String, PropValueType> getter,
-            Function<PropValueType, PropValueType> transformer)
-    {
-        this.propKey = propKey;
-        this.config = config;
-        this.getter = getter;
-        this.configValueTransformer = transformer;
-    }
-
-    public PropValueType getValue()
-    {
-        PropValueType value = getter.apply(config, propKey);
-        return configValueTransformer.apply(value);
-    }
+    PropValueType getValue();
 }

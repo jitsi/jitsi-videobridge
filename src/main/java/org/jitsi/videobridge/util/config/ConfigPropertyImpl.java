@@ -19,7 +19,6 @@ package org.jitsi.videobridge.util.config;
 import com.typesafe.config.*;
 
 import java.util.*;
-import java.util.function.*;
 
 /**
  * A base helper class for modeling a configuration property.  Contains the
@@ -40,6 +39,11 @@ public abstract class ConfigPropertyImpl<T> implements ConfigProperty<T>
         this.defaultValue = defaultValue;
     }
 
+    /**
+     * Iterate through each of the retrievers, returning a value the first time
+     * one is successfully retrieved.  If none are found, return the default value.
+     * @return the retrieved value for this configuration property
+     */
     protected T doGet()
     {
         for (ConfigValueRetriever<T> configValueRetriever : configValueRetrievers)
