@@ -26,7 +26,6 @@ public class DefaultConfigValueRetrieverBuilder<PropValueType> extends ConfigVal
 {
     public DefaultConfigValueRetrieverBuilder(String legacyPropKey)
     {
-        property(legacyPropKey);
-        fromConfig(JvbConfig.getConfig());
+        this.property(legacyPropKey).fromConfig(JvbConfig.getConfig());
     }
 }

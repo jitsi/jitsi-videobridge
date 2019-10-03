@@ -33,7 +33,7 @@ public class ConfigValueRetriever<PropValueType>
 {
     protected final Config config;
     protected final String propKey;
-    protected BiFunction<Config, String, PropValueType> getter = null;
+    protected BiFunction<Config, String, PropValueType> getter;
     protected final Function<PropValueType, PropValueType> configValueTransformer;
 
     protected ConfigValueRetriever(
@@ -53,10 +53,4 @@ public class ConfigValueRetriever<PropValueType>
         PropValueType value = getter.apply(config, propKey);
         return configValueTransformer.apply(value);
     }
-
-    public interface ConfigValueTransformer<T>
-    {
-        T transform(T originalValue);
-    }
-
 }
