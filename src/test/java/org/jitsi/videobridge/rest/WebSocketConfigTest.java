@@ -17,11 +17,10 @@
 package org.jitsi.videobridge.rest;
 
 import com.typesafe.config.*;
-import org.jitsi.videobridge.util.*;
+import org.jitsi.testutils.*;
 import org.jitsi.videobridge.util.config.*;
 import org.junit.*;
 
-import static org.jitsi.testutils.ConfigUtils.*;
 import static org.junit.Assert.*;
 
 public class WebSocketConfigTest
@@ -30,10 +29,11 @@ public class WebSocketConfigTest
     @Test
     public void testEnabledFromOldConfig()
     {
-        JvbConfig.configSupplier = () -> EMPTY_CONFIG;
         Config legacyConfig = ConfigFactory.parseString(WebSocketConfig.EnabledProperty.legacyPropKey + "=false");
-        JvbConfig.legacyConfigSupplier = () -> legacyConfig;
-        JvbConfig.reloadConfig();
+        new ConfigSetup()
+            .withLegacyConfig(legacyConfig)
+            .withNoNewConfig()
+            .finishSetup();
 
         ConfigProperty<Boolean> websocketsEnabled = WebSocketConfig.EnabledProperty.createInstance();
 
