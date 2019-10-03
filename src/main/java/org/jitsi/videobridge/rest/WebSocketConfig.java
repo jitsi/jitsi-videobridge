@@ -22,20 +22,31 @@ import org.jitsi.videobridge.util.config.*;
 public class WebSocketConfig
 {
     /**
-     * Whether or not the websocket service is enable
+     * Whether or not the websocket service is enabled
      */
-    static ConfigProperty<Boolean> enabled = new ConfigPropertyBuilder<Boolean>()
-            .fromConfigs(
-                new DefaultConfigValueRetrieverBuilder<>("videobridge.websockets.enabled"),
-                new DefaultLegacyConfigValueRetrieverBuilder<Boolean>("org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE")
-                    // The legacy config value was 'DISABLE' and the new one is 'ENABLED', so if we pull the value
-                    // from the legacy config, we need to invert it
-                    .withTransformation((value) -> !value)
-            )
-            .usingGetter(Config::getBoolean)
-            .withDefault(false)
-            .readOnce()
-            .build();
+    public static class EnabledProperty
+    {
+        protected static final String legacyPropKey = "org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE";
+        protected static final Boolean legacyDefault = false;
+        protected static final String propKey = "videobridge.websockets.enabled";
+        static ConfigProperty<Boolean> createInstance()
+        {
+            return new ConfigPropertyBuilder<Boolean>()
+                .fromConfigs(
+                    new DefaultConfigValueRetrieverBuilder<>("videobridge.websockets.enabled"),
+                    new DefaultLegacyConfigValueRetrieverBuilder<Boolean>("org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE")
+                        // The legacy config value was 'DISABLE' and the new one is 'ENABLED', so if we pull the value
+                        // from the legacy config, we need to invert it
+                        .withTransformation((value) -> !value)
+                )
+                .usingGetter(Config::getBoolean)
+                .withDefault(legacyDefault)
+                .readOnce()
+                .build();
+        }
+    }
+
+    static ConfigProperty<Boolean> enabled = EnabledProperty.createInstance();
 
     /**
      * The property which controls the server ID used in URLs
