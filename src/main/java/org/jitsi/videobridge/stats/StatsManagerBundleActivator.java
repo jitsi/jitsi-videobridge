@@ -49,21 +49,11 @@ public class StatsManagerBundleActivator
      */
     private static BundleContext bundleContext;
 
-    /**
-     * The default value for statistics interval.
-     */
-    public static final int DEFAULT_STAT_INTERVAL = 1000;
-
-    /**
-     * The name of the property which specifies the interval in milliseconds for
-     * sending statistics about the Videobridge.
-     */
-    public static final String STATISTICS_INTERVAL_PNAME
-        = "org.jitsi.videobridge.STATISTICS_INTERVAL";
-
     protected ConfigProperty<Boolean> statsEnabled = StatsEnabledProperty.getInstance();
 
     protected ConfigProperty<List<StatsTransport>> statsTransports = StatsTransportsProperty.getInstance();
+
+    protected ConfigProperty<Integer> statsInterval = StatsIntervalProperty.getInstance();
 
     /**
      * Gets the <tt>BundleContext</tt> in which a
@@ -138,12 +128,6 @@ public class StatsManagerBundleActivator
         throws Exception
     {
         StatsManager statsMgr = new StatsManager();
-        int interval
-            = ConfigUtils.getInt(
-                    cfg,
-                    STATISTICS_INTERVAL_PNAME,
-                    DEFAULT_STAT_INTERVAL);
-
 
         // Add Statistics to StatsManager.
         //
@@ -155,18 +139,19 @@ public class StatsManagerBundleActivator
         //
         // XXX Consequently, the default Statistics instance is to be added to
         // StatsManager before adding any StatsTransport instances.
-        statsMgr.addStatistics(new VideobridgeStatistics(), interval);
+        statsMgr.addStatistics(new VideobridgeStatistics(), statsInterval.get());
 
-        //TODO: support individual intervals for each transport
+
         // Add StatsTransports to StatsManager.
         statsTransports.get().forEach(statsTransport -> {
-            statsMgr.addTransport(statsTransport, interval);
+            //TODO: support individual intervals for each transport
+            statsMgr.addTransport(statsTransport, statsInterval.get());
 
             // The interval/period of the Statistics better be the same as the
             // interval/period of the StatsTransport.
-            if (statsMgr.findStatistics(VideobridgeStatistics.class, interval) == null)
+            if (statsMgr.findStatistics(VideobridgeStatistics.class, statsInterval.get()) == null)
             {
-                statsMgr.addStatistics(new VideobridgeStatistics(), interval);
+                statsMgr.addStatistics(new VideobridgeStatistics(), statsInterval.get());
             }
         });
 

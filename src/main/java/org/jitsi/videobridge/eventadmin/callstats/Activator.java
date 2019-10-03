@@ -21,6 +21,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.stats.media.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.stats.*;
+import org.jitsi.videobridge.stats.config.*;
 import org.osgi.framework.*;
 
 /**
@@ -126,18 +127,16 @@ public class Activator
                 cfg,
                 CallStatsIOTransport.PNAME_CALLSTATS_IO_BRIDGE_ID,
                 CallStatsIOTransport.DEFAULT_BRIDGE_ID);
-            int interval = ConfigUtils.getInt(
-                cfg,
-                StatsManagerBundleActivator.STATISTICS_INTERVAL_PNAME,
-                StatsManagerBundleActivator.DEFAULT_STAT_INTERVAL);
+            int interval = StatsIntervalProperty.getInstance().get();
 
             // Update with per stats transport interval if available.
-            interval = ConfigUtils.getInt(
-                cfg,
-                StatsManagerBundleActivator.STATISTICS_INTERVAL_PNAME
-                    + "."
-                    + StatsManagerBundleActivator.STAT_TRANSPORT_CALLSTATS_IO,
-                interval);
+            //TODO: access intervals per transport
+//            interval = ConfigUtils.getInt(
+//                cfg,
+//                StatsManagerBundleActivator.STATISTICS_INTERVAL_PNAME
+//                    + "."
+//                    + StatsManagerBundleActivator.STAT_TRANSPORT_CALLSTATS_IO,
+//                interval);
             String conferenceIDPrefix = ConfigUtils.getString(
                 cfg,
                 CallStatsIOTransport.PNAME_CALLSTATS_IO_CONF_PREFIX,
