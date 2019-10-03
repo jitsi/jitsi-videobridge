@@ -50,6 +50,42 @@ public class StatsTransportsProperty
     protected static final String propKey = "videobridge.stats.transports";
     protected static final Logger logger = new LoggerImpl(StatsTransportsProperty.class.getName());
 
+    /**
+     * The name of the property which specifies the name of the PubSub node that
+     * will receive the statistics about the Videobridge if PubSub transport is
+     * used to send statistics.
+     */
+    protected static final String PUBSUB_NODE_PNAME
+        = "org.jitsi.videobridge.PUBSUB_NODE";
+
+    /**
+     * The name of the property which specifies the name of the service that
+     * will receive the statistics about the Videobridge if PubSub transport is
+     * used to send statistics.
+     */
+    public static final String PUBSUB_SERVICE_PNAME
+        = "org.jitsi.videobridge.PUBSUB_SERVICE";
+
+    /**
+     * The value for callstats.io statistics transport.
+     */
+    public static final String STAT_TRANSPORT_CALLSTATS_IO = "callstats.io";
+
+    /**
+     * The value for COLIBRI statistics transport.
+     */
+    public static final String STAT_TRANSPORT_COLIBRI = "colibri";
+
+    /**
+     * The value for PubSub statistics transport.
+     */
+    public static final String STAT_TRANSPORT_PUBSUB = "pubsub";
+
+    /**
+     * The value used to enable the MUC statistics transport.
+     */
+    public static final String STAT_TRANSPORT_MUC = "muc";
+
     private static ConfigProperty<List<StatsTransport>> singleInstance = createInstance();
 
     public static ConfigProperty<List<StatsTransport>> getInstance()
@@ -80,7 +116,7 @@ public class StatsTransportsProperty
             .fromConfig(JvbConfig.getConfig())
             .usingGetter(Config::getConfigList)
             .withTransformer(configs -> configs.stream()
-                .map(StatsTransportFactory::create)
+                .map(NewConfigTransportsFactory::create)
                 .collect(Collectors.toList()))
             .build();
     }
@@ -96,79 +132,122 @@ public class StatsTransportsProperty
             .property(legacyPropKey)
             .fromConfig(JvbConfig.getLegacyConfig())
             .usingGetter(Config::getString)
-            .withTransformer(transportNames -> createStatsTransportsFromOldConfig(transportNames, JvbConfig.getLegacyConfig()))
+            .withTransformer(transportNames -> OldConfigTransportsFactory.create(transportNames, JvbConfig.getLegacyConfig()))
             .build();
     }
 
-    // We have to take in the legacyConfig here as well to get the other pubsub properties
-
     /**
-     * A helper function to take a {@code String} with comma-delimited stats transport names
-     * and return a list of {@code List<StatsTransport>}
-     * @param transportNames
-     * @param legacyConfig the top-level legacy config object.  We need this because there are
-     *                     other properties at the top-level scope needed when creating a
-     *                     {@link PubSubStatsTransport} instance
-     * @return
+     * Given a new-style {@link Config}, create the appropriate
+     * {@link org.jitsi.videobridge.stats.StatsTransport}
      */
-    static List<StatsTransport> createStatsTransportsFromOldConfig(String transportNames, Config legacyConfig)
+    static class NewConfigTransportsFactory
     {
-         List<StatsTransport> statsTransports = new ArrayList<>();
+        public static StatsTransport create(Config config)
+        {
+            //TODO: constants for the prop strings used here (a new property class? only for rnew config?)
+            String name = config.getString("name");
+            if (STAT_TRANSPORT_CALLSTATS_IO.equalsIgnoreCase(name))
+            {
+                return new CallStatsIOTransport();
+            }
+            else if (STAT_TRANSPORT_COLIBRI.equalsIgnoreCase(name))
+            {
+                return new ColibriStatsTransport();
+            }
+            else if (STAT_TRANSPORT_MUC.equalsIgnoreCase(name))
+            {
+                return new MucStatsTransport();
+            }
+            else if (STAT_TRANSPORT_PUBSUB.equalsIgnoreCase(name))
+            {
+                Jid service;
+                try
+                {
+                    service = JidCreate.from(config.getString("service"));
+                }
+                catch (XmppStringprepException e)
+                {
+                    return null;
+                }
+                String nodeName = config.getString("node");
 
-         for (String transportName : transportNames.split(","))
-         {
-             StatsTransport statsTransport = null;
-             if (STAT_TRANSPORT_CALLSTATS_IO.equalsIgnoreCase(transportName))
-             {
-                 statsTransport = new CallStatsIOTransport();
-             }
-             else if (STAT_TRANSPORT_COLIBRI.equalsIgnoreCase(transportName))
-             {
-                 statsTransport = new ColibriStatsTransport();
-             }
-             else if (STAT_TRANSPORT_PUBSUB.equalsIgnoreCase(transportName))
-             {
-                 Jid service;
-                 try
-                 {
-                     service = JidCreate.from(legacyConfig.getString(PUBSUB_SERVICE_PNAME));
-                 }
-                 catch (XmppStringprepException e)
-                 {
-                     logger.error("Invalid pubsub service name", e);
-                     continue;
-                 }
+                return new PubSubStatsTransport(service, nodeName);
+            }
 
-                 String node = legacyConfig.getString(PUBSUB_NODE_PNAME);
-                 if(service != null && node != null)
-                 {
-                     statsTransport = new PubSubStatsTransport(service, node);
-                 }
-                 else
-                 {
-                     logger.error(
-                             "No configuration properties for PubSub service"
-                                     + " and/or node found.");
-                     continue;
-                 }
-             }
-             else if (STAT_TRANSPORT_MUC.equalsIgnoreCase(transportName))
-             {
-                 logger.info("Using a MUC stats transport");
-                 statsTransport = new MucStatsTransport();
-             }
-             else
-             {
-                 logger.error(
-                         "Unknown/unsupported statistics transport: " + transportName);
-             }
+            return null;
+        }
+    }
 
-             if (statsTransport != null)
-             {
-                 statsTransports.add(statsTransport);
-             }
-         }
+    static class OldConfigTransportsFactory
+    {
+        /**
+         * A helper function to take a {@code String} with comma-delimited stats transport names
+         * and return a list of {@code List<StatsTransport>}
+         * @param transportNames a comma-separate list of transport names
+         * @param legacyConfig the top-level legacy config object.  We need this because there are
+         *                     other properties at the top-level scope needed when creating a
+         *                     {@link PubSubStatsTransport} instance
+         * @return
+         */
+        static List<StatsTransport> create(String transportNames, Config legacyConfig)
+        {
+            List<StatsTransport> statsTransports = new ArrayList<>();
 
-        return statsTransports;
+            for (String transportName : transportNames.split(","))
+            {
+                StatsTransport statsTransport = null;
+                if (STAT_TRANSPORT_CALLSTATS_IO.equalsIgnoreCase(transportName))
+                {
+                    statsTransport = new CallStatsIOTransport();
+                }
+                else if (STAT_TRANSPORT_COLIBRI.equalsIgnoreCase(transportName))
+                {
+                    statsTransport = new ColibriStatsTransport();
+                }
+                else if (STAT_TRANSPORT_PUBSUB.equalsIgnoreCase(transportName))
+                {
+                    Jid service;
+                    try
+                    {
+                        service = JidCreate.from(legacyConfig.getString(PUBSUB_SERVICE_PNAME));
+                    }
+                    catch (XmppStringprepException e)
+                    {
+                        logger.error("Invalid pubsub service name", e);
+                        continue;
+                    }
+
+                    String node = legacyConfig.getString(PUBSUB_NODE_PNAME);
+                    if(service != null && node != null)
+                    {
+                        statsTransport = new PubSubStatsTransport(service, node);
+                    }
+                    else
+                    {
+                        logger.error(
+                            "No configuration properties for PubSub service"
+                                + " and/or node found.");
+                        continue;
+                    }
+                }
+                else if (STAT_TRANSPORT_MUC.equalsIgnoreCase(transportName))
+                {
+                    logger.info("Using a MUC stats transport");
+                    statsTransport = new MucStatsTransport();
+                }
+                else
+                {
+                    logger.error(
+                        "Unknown/unsupported statistics transport: " + transportName);
+                }
+
+                if (statsTransport != null)
+                {
+                    statsTransports.add(statsTransport);
+                }
+            }
+
+            return statsTransports;
+        }
     }
 }
