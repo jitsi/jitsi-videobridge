@@ -17,11 +17,11 @@
 package org.jitsi.videobridge.health.config;
 
 import com.typesafe.config.*;
+import org.jitsi.testutils.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
 import org.junit.*;
 
-import static org.jitsi.testutils.ConfigUtils.EMPTY_CONFIG;
 import static org.junit.Assert.*;
 
 public class HealthTimeoutPropertyTest
@@ -29,10 +29,11 @@ public class HealthTimeoutPropertyTest
     @Test
     public void whenOnlyOldConfigIsPresent()
     {
-        JvbConfig.configSupplier = () -> EMPTY_CONFIG;
         Config legacyConfig = ConfigFactory.parseString(HealthTimeoutProperty.legacyPropKey + "=60000");
-        JvbConfig.legacyConfigSupplier = () -> legacyConfig;
-        JvbConfig.reloadConfig();
+        new ConfigSetup()
+                .withLegacyConfig(legacyConfig)
+                .withNoNewConfig()
+                .finishSetup();
 
         ConfigProperty<Integer> healthTimeoutProp = HealthTimeoutProperty.createInstance();
         assertEquals("The value from the old config should be read correctly", 60000, (int)healthTimeoutProp.get());
@@ -42,9 +43,10 @@ public class HealthTimeoutPropertyTest
     public void whenOnlyNewConfigIsPresent()
     {
         Config newConfig = ConfigFactory.parseString(HealthTimeoutProperty.propKey + "=10 seconds");
-        JvbConfig.configSupplier = () -> newConfig;
-        JvbConfig.legacyConfigSupplier = () -> EMPTY_CONFIG;
-        JvbConfig.reloadConfig();
+        new ConfigSetup()
+            .withNewConfig(newConfig)
+            .withNoLegacyConfig()
+            .finishSetup();
 
         ConfigProperty<Integer> healthTimeoutProp = HealthTimeoutProperty.createInstance();
         assertEquals("The value from the new config should be read correctly", 10000, (int)healthTimeoutProp.get());
@@ -54,10 +56,11 @@ public class HealthTimeoutPropertyTest
     public void whenOldAndNewConfigsArePresent()
     {
         Config legacyConfig = ConfigFactory.parseString(HealthTimeoutProperty.legacyPropKey + "=60000");
-        JvbConfig.legacyConfigSupplier = () -> legacyConfig;
         Config newConfig = ConfigFactory.parseString(HealthTimeoutProperty.propKey + "=10 seconds");
-        JvbConfig.configSupplier = () -> newConfig;
-        JvbConfig.reloadConfig();
+        new ConfigSetup()
+            .withLegacyConfig(legacyConfig)
+            .withNewConfig(newConfig)
+            .finishSetup();
 
         ConfigProperty<Integer> healthTimeoutProp = HealthTimeoutProperty.createInstance();
         assertEquals("The new config value should be used", 10000, (int)healthTimeoutProp.get());
@@ -67,9 +70,10 @@ public class HealthTimeoutPropertyTest
     public void doesNotChangeAfterConfigReload()
     {
         Config newConfig = ConfigFactory.parseString(HealthTimeoutProperty.propKey + "=10 seconds");
-        JvbConfig.configSupplier = () -> newConfig;
-        JvbConfig.legacyConfigSupplier = () -> EMPTY_CONFIG;
-        JvbConfig.reloadConfig();
+        new ConfigSetup()
+            .withNewConfig(newConfig)
+            .withNoLegacyConfig()
+            .finishSetup();
 
         ConfigProperty<Integer> healthTimeoutProp = HealthTimeoutProperty.createInstance();
 
