@@ -74,7 +74,7 @@ public class StatsManagerBundleActivator
      * will receive the statistics about the Videobridge if PubSub transport is
      * used to send statistics.
      */
-    private static final String PUBSUB_NODE_PNAME
+    public static final String PUBSUB_NODE_PNAME
         = "org.jitsi.videobridge.PUBSUB_NODE";
 
     /**
@@ -82,7 +82,7 @@ public class StatsManagerBundleActivator
      * will receive the statistics about the Videobridge if PubSub transport is
      * used to send statistics.
      */
-    private static final String PUBSUB_SERVICE_PNAME
+    public static final String PUBSUB_SERVICE_PNAME
         = "org.jitsi.videobridge.PUBSUB_SERVICE";
 
     /**
@@ -93,17 +93,17 @@ public class StatsManagerBundleActivator
     /**
      * The value for COLIBRI statistics transport.
      */
-    private static final String STAT_TRANSPORT_COLIBRI = "colibri";
+    public static final String STAT_TRANSPORT_COLIBRI = "colibri";
 
     /**
      * The value for PubSub statistics transport.
      */
-    private static final String STAT_TRANSPORT_PUBSUB = "pubsub";
+    public static final String STAT_TRANSPORT_PUBSUB = "pubsub";
 
     /**
      * The value used to enable the MUC statistics transport.
      */
-    private static final String STAT_TRANSPORT_MUC = "muc";
+    public static final String STAT_TRANSPORT_MUC = "muc";
 
     /**
      * The name of the property which specifies the interval in milliseconds for
