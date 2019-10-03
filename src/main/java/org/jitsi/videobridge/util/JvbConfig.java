@@ -21,30 +21,43 @@ import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 
 import java.nio.file.*;
+import java.util.function.*;
 
 public class JvbConfig
 {
-    protected static Config config = ConfigFactory.load();
     protected static Logger logger = new LoggerImpl(JvbConfig.class.getName());
-    protected static Config legacyConfig;
 
-    static
-    {
+    public static Supplier<Config> configSupplier = ConfigFactory::load;
+    public static Supplier<Config> legacyConfigSupplier = () -> {
         String oldConfigHomeDirLocation = System.getProperty("net.java.sip.communicator.SC_HOME_DIR_LOCATION");
         String oldConfigHomeDirName = System.getProperty("net.java.sip.communicator.SC_HOME_DIR_NAME");
         try
         {
-            legacyConfig = ConfigFactory.parseFile(
+            return ConfigFactory.parseFile(
                     Paths.get(oldConfigHomeDirLocation, oldConfigHomeDirName, "sip-communicator.properties")
                             .toFile());
         }
         catch (InvalidPathException | NullPointerException e)
         {
             logger.info("No legacy config file found");
-            legacyConfig = ConfigFactory.parseString("");
+            return ConfigFactory.parseString("");
         }
+    };
+    protected static Config config = configSupplier.get();
+    protected static Config legacyConfig = legacyConfigSupplier.get();
+
+
+    static
+    {
         logger.info("Loaded complete config: " + config.withFallback(legacyConfig).root().render());
         logger.info("Loaded JVB config: " + config.getConfig("videobridge").root().render());
+    }
+
+    public static void reloadConfig()
+    {
+        ConfigFactory.invalidateCaches();
+        config = configSupplier.get();
+        legacyConfig = legacyConfigSupplier.get();
     }
 
     public static @NotNull Config getConfig()
