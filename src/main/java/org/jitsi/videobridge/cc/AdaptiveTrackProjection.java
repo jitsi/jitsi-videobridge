@@ -191,25 +191,31 @@ public class AdaptiveTrackProjection
         if (encoding == null)
         {
             MediaStreamTrackDesc sourceTrack = getSource();
-            if (sourceTrack != null)
-            {
-                MediaStreamTrackReceiver mediaStreamTrackReceiver
-                    = sourceTrack.getMediaStreamTrackReceiver();
 
-                logger.warn(
-                    "Dropping an RTP packet, because egress was unable " +
-                        "to find an encoding for raw packet " +
-                        mediaStreamTrackReceiver
-                            .getStream().packetToString(rtpPacket)
-                        + ". Ingress is aware of these tracks: "
-                        + Arrays.toString(
-                            mediaStreamTrackReceiver.getMediaStreamTracks()));
-            }
-            else
+            // We're exclusively interesting in finding issues with VP8 support
+            // at the moment.
+            if (Constants.VP8.equalsIgnoreCase(contextCopy.getFormat().getEncoding()))
             {
-                logger.warn(
-                    "Dropping an RTP packet, because egress was unable " +
-                        "to find an encoding for raw packet " + rtpPacket);
+                if (sourceTrack != null)
+                {
+                    MediaStreamTrackReceiver mediaStreamTrackReceiver
+                        = sourceTrack.getMediaStreamTrackReceiver();
+
+                    logger.warn(
+                        "Dropping an RTP packet, because egress was unable " +
+                            "to find an encoding for raw packet " +
+                            mediaStreamTrackReceiver
+                                .getStream().packetToString(rtpPacket)
+                            + ". Ingress is aware of these tracks: "
+                            + Arrays.toString(
+                            mediaStreamTrackReceiver.getMediaStreamTracks()));
+                }
+                else
+                {
+                    logger.warn(
+                        "Dropping an RTP packet, because egress was unable " +
+                            "to find an encoding for raw packet " + rtpPacket);
+                }
             }
 
             return false;
