@@ -19,10 +19,14 @@ import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.jitsi.utils.logging.*;
+import org.jitsi.videobridge.stats.config.*;
+import org.jitsi.videobridge.util.config.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
 import org.jxmpp.stringprep.*;
 import org.osgi.framework.*;
+
+import java.util.*;
 
 /**
  * Implements a <tt>BundleActivator</tt> for <tt>StatsManager</tt> which starts
@@ -54,13 +58,6 @@ public class StatsManagerBundleActivator
      * The default value for statistics transport.
      */
     private static final String DEFAULT_STAT_TRANSPORT = null;
-
-    /**
-     * The name of the property which enables generating and sending statistics
-     * about the Videobridge.
-     */
-    private static final String ENABLE_STATISTICS_PNAME
-        = "org.jitsi.videobridge.ENABLE_STATISTICS";
 
     /**
      * The <tt>Logger</tt> used by the <tt>StatsManagerBundleActivator</tt>
@@ -118,6 +115,10 @@ public class StatsManagerBundleActivator
      */
     private static final String STATISTICS_TRANSPORT_PNAME
         = "org.jitsi.videobridge.STATISTICS_TRANSPORT";
+
+    protected ConfigProperty<Boolean> statsEnabled = StatsEnabledProperty.getInstance();
+
+    protected ConfigProperty<List<StatsTransport>> statsTransports = StatsTransportsProperty.getInstance();
 
     /**
      * Gets the <tt>BundleContext</tt> in which a
@@ -281,14 +282,8 @@ public class StatsManagerBundleActivator
             = ServiceUtils2.getService(
                     bundleContext,
                     ConfigurationService.class);
-        boolean enable = false;
 
-        if (cfg != null)
-        {
-            enable = cfg.getBoolean(ENABLE_STATISTICS_PNAME, enable);
-        }
-
-        if (enable)
+        if (statsEnabled.get())
         {
             StatsManagerBundleActivator.bundleContext = bundleContext;
 
@@ -330,6 +325,7 @@ public class StatsManagerBundleActivator
                     STATISTICS_INTERVAL_PNAME,
                     DEFAULT_STAT_INTERVAL);
 
+
         // Add Statistics to StatsManager.
         //
         // This is the default Statistics instance which (1) uses the default
@@ -342,8 +338,20 @@ public class StatsManagerBundleActivator
         // StatsManager before adding any StatsTransport instances.
         statsMgr.addStatistics(new VideobridgeStatistics(), interval);
 
+        //TODO: support individual intervals for each transport
+        statsTransports.get().forEach(statsTransport -> {
+            statsMgr.addTransport(statsTransport, interval);
+
+            // The interval/period of the Statistics better be the same as the
+            // interval/period of the StatsTransport.
+            if (statsMgr.findStatistics(VideobridgeStatistics.class, interval) == null)
+            {
+                statsMgr.addStatistics(new VideobridgeStatistics(), interval);
+            }
+        });
+
         // Add StatsTransports to StatsManager.
-        addTransports(statsMgr, cfg, interval);
+//        addTransports(statsMgr, cfg, interval);
 
         statsMgr.start(bundleContext);
 

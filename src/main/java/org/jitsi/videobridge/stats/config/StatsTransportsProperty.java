@@ -50,6 +50,13 @@ public class StatsTransportsProperty
     protected static final String propKey = "videobridge.stats.transports";
     protected static final Logger logger = new LoggerImpl(StatsTransportsProperty.class.getName());
 
+    private static ConfigProperty<List<StatsTransport>> singleInstance = createInstance();
+
+    public static ConfigProperty<List<StatsTransport>> getInstance()
+    {
+        return singleInstance;
+    }
+
     static ConfigProperty<List<StatsTransport>> createInstance()
     {
         List<ConfigValueRetriever<List<StatsTransport>>> retrievers = new ArrayList<>();
