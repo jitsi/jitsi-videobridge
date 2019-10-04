@@ -21,6 +21,8 @@ import org.jitsi.stats.media.*;
 import org.jitsi.util.*;
 import org.osgi.framework.*;
 
+import java.time.*;
+
 import static org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.*;
 
 /**
@@ -72,6 +74,13 @@ public class CallStatsIOTransport
      */
     public static final String PNAME_CALLSTATS_IO_CONF_PREFIX
         = "io.callstats.sdk.CallStats.conferenceIDPrefix";
+
+    public CallStatsIOTransport() {}
+
+    public CallStatsIOTransport(Duration interval)
+    {
+        super(interval);
+    }
 
     /**
      * The {@code BridgeStatistics} which initializes new

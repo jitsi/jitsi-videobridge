@@ -17,13 +17,8 @@ package org.jitsi.videobridge.stats;
 
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.util.*;
-import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.stats.config.*;
 import org.jitsi.videobridge.util.config.*;
-import org.jxmpp.jid.*;
-import org.jxmpp.jid.impl.*;
-import org.jxmpp.stringprep.*;
 import org.osgi.framework.*;
 
 import java.util.*;
@@ -144,14 +139,13 @@ public class StatsManagerBundleActivator
 
         // Add StatsTransports to StatsManager.
         statsTransports.get().forEach(statsTransport -> {
-            //TODO: support individual intervals for each transport
             statsMgr.addTransport(statsTransport, statsInterval.get());
 
             // The interval/period of the Statistics better be the same as the
             // interval/period of the StatsTransport.
-            if (statsMgr.findStatistics(VideobridgeStatistics.class, statsInterval.get()) == null)
+            if (statsMgr.findStatistics(VideobridgeStatistics.class, statsTransport.getInterval().toMillis()) == null)
             {
-                statsMgr.addStatistics(new VideobridgeStatistics(), statsInterval.get());
+                statsMgr.addStatistics(new VideobridgeStatistics(), statsTransport.getInterval().toMillis());
             }
         });
 

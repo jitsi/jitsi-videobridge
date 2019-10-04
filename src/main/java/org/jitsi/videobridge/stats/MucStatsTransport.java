@@ -19,6 +19,8 @@ import org.jitsi.osgi.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.utils.logging.*;
 
+import java.time.*;
+
 /**
  * Implements a {@link StatsTransport} which publishes via Presence in an XMPP
  * MUC.
@@ -34,6 +36,13 @@ public class MucStatsTransport
      */
     private static final Logger logger
         = Logger.getLogger(MucStatsTransport.class);
+
+    public MucStatsTransport() {}
+
+    public MucStatsTransport(Duration interval)
+    {
+        super(interval);
+    }
 
     /**
      * Gets the {@link ClientConnectionImpl} to be used to publish

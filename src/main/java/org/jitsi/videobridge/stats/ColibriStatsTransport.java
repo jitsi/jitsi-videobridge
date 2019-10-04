@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.stats;
 
+import java.time.*;
 import java.util.*;
 
 import org.jitsi.osgi.*;
@@ -40,6 +41,13 @@ public class ColibriStatsTransport
      */
     private static final Logger logger
         = Logger.getLogger(ColibriStatsTransport.class);
+
+    public ColibriStatsTransport() {}
+
+    public ColibriStatsTransport(Duration interval)
+    {
+        super(interval);
+    }
 
     /**
      * Builds the IQ packet that will be sent.

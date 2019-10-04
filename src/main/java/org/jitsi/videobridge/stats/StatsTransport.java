@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge.stats;
 
+import java.time.*;
+
 /**
  * Defines an interface for classes that will send statistics.
  *
@@ -24,6 +26,19 @@ package org.jitsi.videobridge.stats;
 public abstract class StatsTransport
     extends BundleContextHolder2
 {
+    /**
+     * A desired interval for this specific transport (which will
+     * override the default interval).  {@code null} if no interval
+     * is set.
+     */
+    protected Duration interval = null;
+
+    public StatsTransport() {}
+
+    public StatsTransport(Duration interval)
+    {
+        this.interval = interval;
+    }
     /**
      * Publishes a specific (set of) <tt>Statistics</tt> through this
      * <tt>StatsTransport</tt>.
@@ -49,5 +64,16 @@ public abstract class StatsTransport
             long measurementInterval)
     {
         publishStatistics(statistics);
+    }
+
+    /**
+     * A desired interval for this specific transport (which will
+     * override the default interval).  {@code null} if no interval
+     * override is set
+     * @return
+     */
+    public Duration getInterval()
+    {
+        return interval;
     }
 }

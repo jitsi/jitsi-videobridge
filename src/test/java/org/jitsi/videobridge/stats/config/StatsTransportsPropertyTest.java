@@ -22,6 +22,7 @@ import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.config.*;
 import org.junit.*;
 
+import java.time.*;
 import java.util.*;
 
 import static org.junit.Assert.*;
@@ -61,6 +62,28 @@ public class StatsTransportsPropertyTest
     }
 
     @Test
+    public void whenOnlyOldConfigIsPresentCustomInterval()
+    {
+        Config legacyConfig =
+            ConfigFactory.parseResources("stats-transports-property.conf")
+                .getConfig("old-config-with-custom-interval");
+        new ConfigSetup()
+            .withLegacyConfig(legacyConfig)
+            .withNoNewConfig()
+            .finishSetup();
+
+        ConfigProperty<List<StatsTransport>> statsTransports = StatsTransportsProperty.createInstance();
+        assertEquals(3, statsTransports.get().size());
+        assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof ColibriStatsTransport));
+        assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof MucStatsTransport));
+        assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof CallStatsIOTransport));
+
+        assertEquals(Duration.ofSeconds(5), statsTransports.get().stream().filter(t -> t instanceof ColibriStatsTransport).findFirst().get().getInterval());
+        assertNull(statsTransports.get().stream().filter(t -> t instanceof MucStatsTransport).findFirst().get().getInterval());
+        assertNull(statsTransports.get().stream().filter(t -> t instanceof CallStatsIOTransport).findFirst().get().getInterval());
+    }
+
+    @Test
     public void whenOnlyNewConfigIsPresentSimple()
     {
         Config config = ConfigFactory.parseResources("stats-transports-property.conf").getConfig("new-config-simple");
@@ -89,6 +112,24 @@ public class StatsTransportsPropertyTest
         assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof ColibriStatsTransport));
         assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof PubSubStatsTransport));
         //TODO: verify the service and node names
+    }
+
+    @Test
+    public void whenOnlyNewConfigIsPresentCustomInterval()
+    {
+        Config config = ConfigFactory.parseResources("stats-transports-property.conf").getConfig("new-config-custom-interval");
+        new ConfigSetup()
+            .withNewConfig(config)
+            .withNoLegacyConfig()
+            .finishSetup();
+
+        ConfigProperty<List<StatsTransport>> statsTransports = StatsTransportsProperty.createInstance();
+        assertEquals(2, statsTransports.get().size());
+        assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof ColibriStatsTransport));
+        assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof CallStatsIOTransport));
+
+        assertEquals(Duration.ofSeconds(7), statsTransports.get().stream().filter(t -> t instanceof CallStatsIOTransport).findFirst().get().getInterval());
+        assertNull(statsTransports.get().stream().filter(t -> t instanceof ColibriStatsTransport).findFirst().get().getInterval());
     }
 
     @Test

@@ -25,6 +25,7 @@ import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
 import org.jxmpp.stringprep.*;
 
+import java.time.*;
 import java.util.*;
 import java.util.stream.*;
 
@@ -146,17 +147,18 @@ public class StatsTransportsProperty
         {
             //TODO: constants for the prop strings used here (a new property class? only for rnew config?)
             String name = config.getString("name");
+            Duration interval = config.hasPath("interval") ? config.getDuration("interval") : null;
             if (STAT_TRANSPORT_CALLSTATS_IO.equalsIgnoreCase(name))
             {
-                return new CallStatsIOTransport();
+                return new CallStatsIOTransport(interval);
             }
             else if (STAT_TRANSPORT_COLIBRI.equalsIgnoreCase(name))
             {
-                return new ColibriStatsTransport();
+                return new ColibriStatsTransport(interval);
             }
             else if (STAT_TRANSPORT_MUC.equalsIgnoreCase(name))
             {
-                return new MucStatsTransport();
+                return new MucStatsTransport(interval);
             }
             else if (STAT_TRANSPORT_PUBSUB.equalsIgnoreCase(name))
             {
@@ -171,7 +173,7 @@ public class StatsTransportsProperty
                 }
                 String nodeName = config.getString("node");
 
-                return new PubSubStatsTransport(service, nodeName);
+                return new PubSubStatsTransport(service, nodeName, interval);
             }
 
             return null;
@@ -198,11 +200,11 @@ public class StatsTransportsProperty
                 StatsTransport statsTransport = null;
                 if (STAT_TRANSPORT_CALLSTATS_IO.equalsIgnoreCase(transportName))
                 {
-                    statsTransport = new CallStatsIOTransport();
+                    statsTransport = new CallStatsIOTransport(getInterval(legacyConfig, STAT_TRANSPORT_CALLSTATS_IO));
                 }
                 else if (STAT_TRANSPORT_COLIBRI.equalsIgnoreCase(transportName))
                 {
-                    statsTransport = new ColibriStatsTransport();
+                    statsTransport = new ColibriStatsTransport(getInterval(legacyConfig, STAT_TRANSPORT_COLIBRI));
                 }
                 else if (STAT_TRANSPORT_PUBSUB.equalsIgnoreCase(transportName))
                 {
@@ -220,7 +222,7 @@ public class StatsTransportsProperty
                     String node = legacyConfig.getString(PUBSUB_NODE_PNAME);
                     if(service != null && node != null)
                     {
-                        statsTransport = new PubSubStatsTransport(service, node);
+                        statsTransport = new PubSubStatsTransport(service, node, getInterval(legacyConfig, STAT_TRANSPORT_PUBSUB));
                     }
                     else
                     {
@@ -233,7 +235,7 @@ public class StatsTransportsProperty
                 else if (STAT_TRANSPORT_MUC.equalsIgnoreCase(transportName))
                 {
                     logger.info("Using a MUC stats transport");
-                    statsTransport = new MucStatsTransport();
+                    statsTransport = new MucStatsTransport(getInterval(legacyConfig, STAT_TRANSPORT_MUC));
                 }
                 else
                 {
@@ -249,5 +251,11 @@ public class StatsTransportsProperty
 
             return statsTransports;
         }
+    }
+
+    private static Duration getInterval(Config legacyConfig, String transportName)
+    {
+        String intervalKey = StatsIntervalProperty.legacyPropKey + "." + transportName;
+        return legacyConfig.hasPath(intervalKey) ? legacyConfig.getDuration(intervalKey) : null;
     }
 }

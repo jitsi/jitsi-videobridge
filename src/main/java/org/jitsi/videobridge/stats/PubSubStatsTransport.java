@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.stats;
 
+import java.time.*;
 import java.util.*;
 
 import org.jitsi.videobridge.pubsub.*;
@@ -78,6 +79,12 @@ public class PubSubStatsTransport
      */
     public PubSubStatsTransport(Jid serviceName, String nodeName)
     {
+        this(serviceName, nodeName, null);
+    }
+
+    public PubSubStatsTransport(Jid serviceName, String nodeName, Duration interval)
+    {
+        super(interval);
         this.serviceName = serviceName;
         this.nodeName = nodeName;
     }
