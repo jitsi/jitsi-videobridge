@@ -38,13 +38,15 @@ public class Stats extends ColibriResource
     {
         StatsManager statsManager = statsManagerProvider.get();
 
-        JSONArray jsonStats = new JSONArray();
-
-        for (Statistics stat : statsManager.getStatistics())
+        Statistics videobridgeStats =
+            statsManager.getStatistics().stream()
+                .filter(s -> s instanceof VideobridgeStatistics)
+                .findAny()
+                .orElse(null);
+        if (videobridgeStats != null)
         {
-            jsonStats.add(JSONSerializer.serializeStatistics(stat));
+            return JSONSerializer.serializeStatistics(videobridgeStats).toJSONString();
         }
-
-        return jsonStats.toJSONString();
+        return new JSONObject().toJSONString();
     }
 }
