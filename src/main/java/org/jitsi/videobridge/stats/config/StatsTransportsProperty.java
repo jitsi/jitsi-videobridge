@@ -94,6 +94,11 @@ public class StatsTransportsProperty
         return singleInstance;
     }
 
+    public static StatsTransport getStatsTransportByType(Class className)
+    {
+        return getInstance().get().stream().filter(st -> st.getClass() == className).findFirst().orElse(null);
+    }
+
     static ConfigProperty<List<StatsTransport>> createInstance()
     {
         List<ConfigValueRetriever<List<StatsTransport>>> retrievers = new ArrayList<>();

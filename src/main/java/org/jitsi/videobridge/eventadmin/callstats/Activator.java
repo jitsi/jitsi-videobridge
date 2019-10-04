@@ -130,13 +130,13 @@ public class Activator
             int interval = StatsIntervalProperty.getInstance().get();
 
             // Update with per stats transport interval if available.
-            //TODO: access intervals per transport
-//            interval = ConfigUtils.getInt(
-//                cfg,
-//                StatsManagerBundleActivator.STATISTICS_INTERVAL_PNAME
-//                    + "."
-//                    + StatsManagerBundleActivator.STAT_TRANSPORT_CALLSTATS_IO,
-//                interval);
+            StatsTransport callStatsTransport =
+                StatsTransportsProperty.getStatsTransportByType(CallStatsIOTransport.class);
+            if (callStatsTransport != null)
+            {
+                interval = (int)callStatsTransport.getInterval().toMillis();
+            }
+
             String conferenceIDPrefix = ConfigUtils.getString(
                 cfg,
                 CallStatsIOTransport.PNAME_CALLSTATS_IO_CONF_PREFIX,
