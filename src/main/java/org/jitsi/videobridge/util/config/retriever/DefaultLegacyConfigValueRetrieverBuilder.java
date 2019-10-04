@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.util.config;
+package org.jitsi.videobridge.util.config.retriever;
 
 import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.util.config.retriever.*;
 
 /**
  * A helper class to model a simple key retrieval from the legacy config

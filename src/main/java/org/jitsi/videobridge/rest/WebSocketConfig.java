@@ -18,6 +18,7 @@ package org.jitsi.videobridge.rest;
 
 import com.typesafe.config.*;
 import org.jitsi.videobridge.util.config.*;
+import org.jitsi.videobridge.util.config.retriever.*;
 
 public class WebSocketConfig
 {

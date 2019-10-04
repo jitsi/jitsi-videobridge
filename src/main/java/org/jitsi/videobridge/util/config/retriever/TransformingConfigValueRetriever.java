@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.util.config;
+package org.jitsi.videobridge.util.config.retriever;
 
 import com.typesafe.config.*;
 

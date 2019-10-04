@@ -21,6 +21,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
+import org.jitsi.videobridge.util.config.retriever.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
 import org.jxmpp.stringprep.*;
@@ -28,8 +29,6 @@ import org.jxmpp.stringprep.*;
 import java.time.*;
 import java.util.*;
 import java.util.stream.*;
-
-import static org.jitsi.videobridge.stats.StatsManagerBundleActivator.*;
 
 /**
  * Extract the stats transports from the config file, whichever style it may be

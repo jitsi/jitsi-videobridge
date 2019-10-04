@@ -16,6 +16,8 @@
 
 package org.jitsi.videobridge.util.config;
 
+import org.jitsi.videobridge.util.config.retriever.*;
+
 import java.util.*;
 
 /**

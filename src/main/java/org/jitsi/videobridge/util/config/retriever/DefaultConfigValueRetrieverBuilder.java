@@ -14,16 +14,19 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.util.config;
+package org.jitsi.videobridge.util.config.retriever;
+
+import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.util.config.retriever.*;
 
 /**
- * Responsible for retrieving a configuration property's value.
- * The implementation of how this is done can vary, for example
- * {@link TransformingConfigValueRetriever} can apply a transformation
- * on the retrieved value before returning it.
+ * A helper class to model a simple key retrieval from the legacy config
  * @param <PropValueType>
  */
-public interface ConfigValueRetriever<PropValueType>
+public class DefaultConfigValueRetrieverBuilder<PropValueType> extends ConfigValueRetrieverBuilder<PropValueType>
 {
-    PropValueType getValue();
+    public DefaultConfigValueRetrieverBuilder(String legacyPropKey)
+    {
+        this.property(legacyPropKey).fromConfig(JvbConfig.getConfig());
+    }
 }

@@ -17,8 +17,8 @@
 package org.jitsi.videobridge.health.config;
 
 import com.typesafe.config.*;
-import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
+import org.jitsi.videobridge.util.config.retriever.*;
 
 public class StickyFailuresProperty
 {
