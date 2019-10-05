@@ -59,7 +59,7 @@ public class VideobridgeStatistics
     /**
      * The currently configured region.
      */
-    public static ConfigProperty<String> region = OctoRegionProperty.getInstance();
+    public static OctoRegionProperty region = OctoRegionProperty.getInstance();
 
     static
     {

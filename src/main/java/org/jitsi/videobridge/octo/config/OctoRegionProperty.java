@@ -17,34 +17,31 @@
 package org.jitsi.videobridge.octo.config;
 
 import com.typesafe.config.*;
+import org.jitsi.utils.collections.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
 import org.jitsi.videobridge.util.config.retriever.*;
 
 /**
  * A singleton property representing the octo's region
  */
-public class OctoRegionProperty
+public class OctoRegionProperty extends ReadOnceProperty<String>
 {
     protected static final String legacyPropKey = "org.jitsi.videobridge.REGION";
     protected static final String propKey = "videobridge.octo.region";
 
+    static OctoRegionProperty singleton = new OctoRegionProperty();
 
-    static ConfigProperty<String> createInstance()
+    public OctoRegionProperty()
     {
-        return new ConfigPropertyBuilder<String>()
-            .fromConfigs(
-                new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey),
-                new DefaultConfigValueRetrieverBuilder<>(propKey)
-            )
-            .usingGetter(Config::getString)
-            .readOnce()
-            .build();
+        super(JList.of(
+            new SimpleConfigValueRetriever<>(JvbConfig.getLegacyConfig(), legacyPropKey, Config::getString),
+            new SimpleConfigValueRetriever<>(JvbConfig.getConfig(), propKey, Config::getString)
+        ));
     }
 
-    static ConfigProperty<String> singleInstance = createInstance();
-
-    public static ConfigProperty<String> getInstance()
+    public static OctoRegionProperty getInstance()
     {
-        return singleInstance;
+        return singleton;
     }
 }
