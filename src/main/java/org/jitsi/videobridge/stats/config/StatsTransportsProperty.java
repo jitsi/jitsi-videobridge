@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.stats.config;
 
 import com.typesafe.config.*;
+import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
@@ -44,7 +45,7 @@ import java.util.stream.*;
  * to acquire the end result: a {@code List<StatsTransport>}.
  *
  */
-public class StatsTransportsProperty implements ConfigProperty<List<StatsTransport>>
+public class StatsTransportsProperty extends ReadOnceProperty<List<StatsTransport>>
 {
     protected static final String legacyPropKey = "org.jitsi.videobridge.STATISTICS_TRANSPORT";
     protected static final String propKey = "videobridge.stats.transports";
@@ -86,13 +87,14 @@ public class StatsTransportsProperty implements ConfigProperty<List<StatsTranspo
      */
     public static final String STAT_TRANSPORT_MUC = "muc";
 
-    protected final ConfigProperty<List<StatsTransport>> backingProperty;
+    private static StatsTransportsProperty singleton = new StatsTransportsProperty();
 
-    private static StatsTransportsProperty singleton = new StatsTransportsProperty(createBackingProperty());
-
-    protected StatsTransportsProperty(ConfigProperty<List<StatsTransport>> backingProperty)
+    protected StatsTransportsProperty()
     {
-        this.backingProperty = backingProperty;
+        // Create the retrievers when the instance is created, so they read the config
+        // at property creation time (this gives unit tests a chance to inject
+        // test configs)
+        super(JList.of(createLegacyConfigRetriever(), createNewConfigRetriever()));
     }
 
     public static StatsTransportsProperty getInstance()
@@ -100,26 +102,14 @@ public class StatsTransportsProperty implements ConfigProperty<List<StatsTranspo
         return singleton;
     }
 
+    /**
+     * Return a stats transport of the given type, null if none exists
+     * @param className
+     * @return
+     */
     public StatsTransport getStatsTransportByType(Class className)
     {
-        return getInstance().get().stream().filter(st -> st.getClass() == className).findFirst().orElse(null);
-    }
-
-    @Override
-    public List<StatsTransport> get()
-    {
-        return backingProperty.get();
-    }
-
-    protected static ConfigProperty<List<StatsTransport>> createBackingProperty()
-    {
-        List<ConfigValueRetriever<List<StatsTransport>>> retrievers = new ArrayList<>();
-        // Create the retrievers when the instance is created, so they read the config
-        // at property creation time
-        retrievers.add(createLegacyConfigRetriever());
-        retrievers.add(createNewConfigRetriever());
-
-        return new ReadOnceProperty<>(retrievers);
+        return get().stream().filter(st -> st.getClass() == className).findFirst().orElse(null);
     }
 
     /**
@@ -150,7 +140,8 @@ public class StatsTransportsProperty implements ConfigProperty<List<StatsTranspo
             .property(legacyPropKey)
             .fromConfig(JvbConfig.getLegacyConfig())
             .usingGetter(Config::getString)
-            .withTransformer(transportNames -> OldConfigTransportsFactory.create(transportNames, JvbConfig.getLegacyConfig()))
+            .withTransformer(transportNames ->
+                OldConfigTransportsFactory.create(transportNames, JvbConfig.getLegacyConfig()))
             .build();
     }
 
@@ -270,6 +261,13 @@ public class StatsTransportsProperty implements ConfigProperty<List<StatsTranspo
         }
     }
 
+    /**
+     * Given a  legacy config and the name of a transport, look up a custom interval
+     * for that transport and return it; if no custom interval exists return null
+     * @param legacyConfig
+     * @param transportName
+     * @return
+     */
     private static Duration getInterval(Config legacyConfig, String transportName)
     {
         String intervalKey = StatsIntervalProperty.legacyPropKey + "." + transportName;
