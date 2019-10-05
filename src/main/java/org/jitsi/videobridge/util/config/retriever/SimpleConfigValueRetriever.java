@@ -38,7 +38,7 @@ public class SimpleConfigValueRetriever<PropValueType> implements ConfigValueRet
     protected final String propKey;
     protected BiFunction<Config, String, PropValueType> getter;
 
-    protected SimpleConfigValueRetriever(
+    public SimpleConfigValueRetriever(
             Config config,
             String propKey,
             BiFunction<Config, String, PropValueType> getter)

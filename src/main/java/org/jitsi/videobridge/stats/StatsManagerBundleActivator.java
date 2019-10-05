@@ -48,7 +48,7 @@ public class StatsManagerBundleActivator
 
     protected StatsTransportsProperty statsTransports = StatsTransportsProperty.getInstance();
 
-    protected ConfigProperty<Integer> statsInterval = StatsIntervalProperty.getInstance();
+    protected StatsIntervalProperty statsInterval = StatsIntervalProperty.getInstance();
 
     /**
      * Gets the <tt>BundleContext</tt> in which a

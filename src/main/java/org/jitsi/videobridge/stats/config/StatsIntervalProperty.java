@@ -17,30 +17,34 @@
 package org.jitsi.videobridge.stats.config;
 
 import com.typesafe.config.*;
+import org.jitsi.utils.collections.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
 import org.jitsi.videobridge.util.config.retriever.*;
 
-public class StatsIntervalProperty
+import java.util.concurrent.*;
+
+public class StatsIntervalProperty extends ReadOnceProperty<Integer>
 {
     protected static final String legacyPropKey = "org.jitsi.videobridge.STATISTICS_INTERVAL";
     protected static final String propKey = "videobridge.stats.interval";
 
-    static ConfigProperty<Integer> createInstance()
+    private static StatsIntervalProperty singleton = new StatsIntervalProperty();
+
+    protected StatsIntervalProperty()
     {
-        return new ConfigPropertyBuilder<Integer>()
-            .usingGetter(Config::getInt)
-            .fromConfigs(
-                new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey),
-                new DefaultConfigValueRetrieverBuilder<>(propKey)
+        super(JList.of(
+            new SimpleConfigValueRetriever<>(JvbConfig.getLegacyConfig(), legacyPropKey, Config::getInt),
+            new SimpleConfigValueRetriever<>(
+                JvbConfig.getConfig(),
+                propKey,
+                (config, key) -> (int)config.getDuration(key, TimeUnit.MILLISECONDS)
             )
-            .readOnce()
-            .build();
+        ));
     }
 
-    private static ConfigProperty<Integer> singleInstance = createInstance();
-
-    public static ConfigProperty<Integer> getInstance()
+    public static StatsIntervalProperty getInstance()
     {
-        return singleInstance;
+        return singleton;
     }
 }
