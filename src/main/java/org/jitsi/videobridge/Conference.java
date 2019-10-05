@@ -219,9 +219,12 @@ public class Conference
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
         Level minLevel = enableLogging ? Level.ALL : Level.WARNING;
         Map<String, String> context = JMap.ofEntries(
-            entry("confId", id),
-            entry("gId", gid)
+            entry("confId", id)
         );
+        if (gid != null)
+        {
+            context.put("gId", gid);
+        }
         if (name != null)
         {
             context.put("name", name.toString());
