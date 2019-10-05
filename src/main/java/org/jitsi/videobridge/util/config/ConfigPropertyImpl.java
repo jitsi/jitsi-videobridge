@@ -32,12 +32,10 @@ import java.util.*;
 public abstract class ConfigPropertyImpl<T> implements ConfigProperty<T>
 {
     protected final List<ConfigValueRetriever<T>> configValueRetrievers;
-    protected final T defaultValue;
 
-    public ConfigPropertyImpl(List<ConfigValueRetriever<T>> configValueRetrievers, T defaultValue)
+    public ConfigPropertyImpl(List<ConfigValueRetriever<T>> configValueRetrievers)
     {
         this.configValueRetrievers = configValueRetrievers;
-        this.defaultValue = defaultValue;
     }
 
     /**
@@ -55,6 +53,14 @@ public abstract class ConfigPropertyImpl<T> implements ConfigProperty<T>
             }
             catch (ConfigException.Missing ignored) { }
         }
-        return defaultValue;
+        throw new ConfigPropertyNotFoundException(this.getClass().toString());
+    }
+
+    public static class ConfigPropertyNotFoundException extends RuntimeException
+    {
+        public ConfigPropertyNotFoundException(String propName)
+        {
+            super("Config property " + propName + " not found");
+        }
     }
 }

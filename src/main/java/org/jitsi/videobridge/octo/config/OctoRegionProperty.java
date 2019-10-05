@@ -37,7 +37,6 @@ public class OctoRegionProperty
                 new DefaultConfigValueRetrieverBuilder<>(propKey)
             )
             .usingGetter(Config::getString)
-            .withDefault("default")
             .readOnce()
             .build();
     }

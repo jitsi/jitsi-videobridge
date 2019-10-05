@@ -30,7 +30,6 @@ import java.util.stream.*;
 public class ConfigPropertyBuilder<PropValueType>
 {
     protected BiFunction<Config, String, PropValueType> getter = null;
-    protected PropValueType defaultValue = null;
     protected List<ConfigValueRetrieverBuilder<PropValueType>> configValueRetrieverBuilders = null;
     protected boolean readOnce = false;
 
@@ -68,17 +67,6 @@ public class ConfigPropertyBuilder<PropValueType>
         return this;
     }
 
-    public ConfigPropertyBuilder<PropValueType> withDefault(PropValueType defaultValue)
-    {
-        if (this.defaultValue != null)
-        {
-            throw new RuntimeException("Default value already set");
-        }
-        this.defaultValue = defaultValue;
-
-        return this;
-    }
-
     public ConfigPropertyBuilder<PropValueType> readOnce()
     {
         readOnce = true;
@@ -100,9 +88,9 @@ public class ConfigPropertyBuilder<PropValueType>
                 .collect(Collectors.toList());
         if (readOnce)
         {
-            return new ReadOnceProperty<>(retrievers, defaultValue);
+            return new ReadOnceProperty<>(retrievers);
         }
-        return new ReadEveryTimeProperty<>(retrievers, defaultValue);
+        return new ReadEveryTimeProperty<>(retrievers);
     }
 
 }

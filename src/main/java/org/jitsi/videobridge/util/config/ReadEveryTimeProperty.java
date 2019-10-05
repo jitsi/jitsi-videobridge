@@ -27,9 +27,9 @@ import java.util.*;
  */
 public class ReadEveryTimeProperty<T> extends ConfigPropertyImpl<T>
 {
-    public ReadEveryTimeProperty(List<ConfigValueRetriever<T>> configValueRetrievers, T defaultValue)
+    public ReadEveryTimeProperty(List<ConfigValueRetriever<T>> configValueRetrievers)
     {
-        super(configValueRetrievers, defaultValue);
+        super(configValueRetrievers);
     }
 
     @Override

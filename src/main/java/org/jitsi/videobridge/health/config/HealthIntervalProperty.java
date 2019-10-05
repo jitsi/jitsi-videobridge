@@ -24,7 +24,6 @@ import java.util.concurrent.*;
 public class HealthIntervalProperty
 {
     protected static final String legacyPropKey = "org.jitsi.videobridge.health.INTERVAL";
-    protected static final Integer legacyDefaultValue = 10000;
     protected static final String propKey = "videobridge.health.interval";
 
     static ConfigProperty<Integer> createInstance()
@@ -35,7 +34,6 @@ public class HealthIntervalProperty
                     new DefaultConfigValueRetrieverBuilder<>(propKey)
                 )
                 .usingGetter((config, key) -> (int)config.getDuration(key, TimeUnit.MILLISECONDS))
-                .withDefault(legacyDefaultValue)
                 .readOnce()
                 .build();
     }

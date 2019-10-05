@@ -23,7 +23,6 @@ import org.jitsi.videobridge.util.config.retriever.*;
 public class StickyFailuresProperty
 {
     protected static final String legacyPropKey = "org.jitsi.videobridge.health.STICKY_FAILURES";
-    protected static final boolean legacyDefaultValue = false;
     protected static final String propKey = "videobridge.health.sticky-failures";
 
     private static ConfigProperty<Boolean> singleInstance = new ConfigPropertyBuilder<Boolean>()
@@ -32,7 +31,6 @@ public class StickyFailuresProperty
                     new DefaultConfigValueRetrieverBuilder<>(propKey),
                     new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey)
             )
-            .withDefault(legacyDefaultValue)
             .readOnce()
             .build();
 

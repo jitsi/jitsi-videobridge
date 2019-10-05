@@ -28,7 +28,6 @@ public class WebSocketConfig
     public static class EnabledProperty
     {
         protected static final String legacyPropKey = "org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE";
-        protected static final Boolean legacyDefault = false;
         protected static final String propKey = "videobridge.websockets.enabled";
         static ConfigProperty<Boolean> createInstance()
         {
@@ -41,7 +40,6 @@ public class WebSocketConfig
                         .withTransformation((value) -> !value)
                 )
                 .usingGetter(Config::getBoolean)
-                .withDefault(legacyDefault)
                 .readOnce()
                 .build();
         }
@@ -56,7 +54,6 @@ public class WebSocketConfig
     public static class ServerIdProperty
     {
         protected static final String legacyPropKey = "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID";
-        protected static final String legacyDefault = "default-id";
         protected static final String propKey = "videobridge.websockets.server-id";
 
         static ConfigProperty<String> createInstance()
@@ -67,7 +64,6 @@ public class WebSocketConfig
                     new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey)
                 )
                 .usingGetter(Config::getString)
-                .withDefault(legacyDefault)
                 .readOnce()
                 .build();
         }
@@ -82,7 +78,6 @@ public class WebSocketConfig
     public static class DomainProperty
     {
         protected static final String legacyPropKey = "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN";
-        protected static final String legacyDefault = null;
         protected static final String propKey = "videobridge.websockets.domain";
 
         static ConfigProperty<String> createInstance()
@@ -93,7 +88,6 @@ public class WebSocketConfig
                         new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey)
                 )
                 .usingGetter(Config::getString)
-                .withDefault(legacyDefault)
                 .readOnce()
                 .build();
         }
@@ -109,7 +103,6 @@ public class WebSocketConfig
     public static class TlsProperty
     {
         protected static final String legacyPropKey = "org.jitsi.videobridge.rest.COLIBRI_WS_TLS";
-        protected static final Boolean legacyDefault = null;
         protected static final String propKey = "videobridge.websockets.tls";
 
         static ConfigProperty<Boolean> createInstance()
@@ -120,7 +113,6 @@ public class WebSocketConfig
                     new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey)
                 )
                 .usingGetter(Config::getBoolean)
-                .withDefault(legacyDefault)
                 .readOnce()
                 .build();
         }

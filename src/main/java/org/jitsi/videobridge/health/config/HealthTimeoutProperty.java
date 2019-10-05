@@ -24,7 +24,6 @@ import java.util.concurrent.*;
 public class HealthTimeoutProperty
 {
     protected static final String legacyPropKey = "org.jitsi.videobridge.health.TIMEOUT";
-    protected static final Integer legacyDefaultValue = 30000;
     protected static final String propKey = "videobridge.health.timeout";
 
     static ConfigProperty<Integer> createInstance()
@@ -35,7 +34,6 @@ public class HealthTimeoutProperty
                         new DefaultConfigValueRetrieverBuilder<>(propKey),
                         new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey)
                 )
-                .withDefault(legacyDefaultValue)
                 .readOnce()
                 .build();
     }

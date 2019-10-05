@@ -31,9 +31,9 @@ public class ReadOnceProperty<T> extends ConfigPropertyImpl<T>
 {
     protected T value;
 
-    public ReadOnceProperty(List<ConfigValueRetriever<T>> configValueRetrievers, T defaultValue)
+    public ReadOnceProperty(List<ConfigValueRetriever<T>> configValueRetrievers)
     {
-        super(configValueRetrievers, defaultValue);
+        super(configValueRetrievers);
         value = doGet();
     }
 

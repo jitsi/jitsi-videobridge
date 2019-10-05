@@ -106,7 +106,7 @@ public class StatsTransportsProperty
         retrievers.add(createLegacyConfigRetriever());
         retrievers.add(createNewConfigRetriever());
 
-        return new ReadOnceProperty<>(retrievers, Collections.emptyList());
+        return new ReadOnceProperty<>(retrievers);
     }
 
     /**
