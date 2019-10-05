@@ -17,30 +17,28 @@
 package org.jitsi.videobridge.stats.config;
 
 import com.typesafe.config.*;
+import org.jitsi.utils.collections.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
 import org.jitsi.videobridge.util.config.retriever.*;
 
-public class StatsEnabledProperty
+public class StatsEnabledProperty extends ReadOnceProperty<Boolean>
 {
     protected static final String legacyPropKey = "org.jitsi.videobridge.ENABLE_STATISTICS";
     protected static final String propKey = "videobridge.stats.enabled";
 
-    static ConfigProperty<Boolean> createInstance()
+    private static StatsEnabledProperty singleton = new StatsEnabledProperty();
+
+    protected StatsEnabledProperty()
     {
-        return new ConfigPropertyBuilder<Boolean>()
-            .usingGetter(Config::getBoolean)
-            .fromConfigs(
-                new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey),
-                new DefaultConfigValueRetrieverBuilder<>(propKey)
-            )
-            .readOnce()
-            .build();
+        super(JList.of(
+            new SimpleConfigValueRetriever<>(JvbConfig.getLegacyConfig(), legacyPropKey, Config::getBoolean),
+            new SimpleConfigValueRetriever<>(JvbConfig.getConfig(), propKey, Config::getBoolean)
+        ));
     }
 
-    private static ConfigProperty<Boolean> singleInstance = createInstance();
-
-    public static ConfigProperty<Boolean> getInstance()
+    public static StatsEnabledProperty getInstance()
     {
-        return singleInstance;
+        return singleton;
     }
 }

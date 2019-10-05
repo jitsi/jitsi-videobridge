@@ -44,7 +44,7 @@ public class StatsManagerBundleActivator
      */
     private static BundleContext bundleContext;
 
-    protected ConfigProperty<Boolean> statsEnabled = StatsEnabledProperty.getInstance();
+    protected StatsEnabledProperty statsEnabled = StatsEnabledProperty.getInstance();
 
     protected StatsTransportsProperty statsTransports = StatsTransportsProperty.getInstance();
 
