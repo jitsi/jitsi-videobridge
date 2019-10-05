@@ -233,7 +233,7 @@ public class Health
      * Whether failures are sticky, i.e. once the bridge becomes unhealthy it
      * will never go back to a healthy state.
      */
-    private final ConfigProperty<Boolean> stickyFailures = StickyFailuresProperty.getInstance();
+    private final StickyFailuresProperty stickyFailures = StickyFailuresProperty.getInstance();
 
     /**
      * The time when this instance was started.

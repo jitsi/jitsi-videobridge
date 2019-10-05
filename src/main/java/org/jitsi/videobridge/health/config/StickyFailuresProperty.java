@@ -17,25 +17,28 @@
 package org.jitsi.videobridge.health.config;
 
 import com.typesafe.config.*;
+import org.jitsi.utils.collections.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
 import org.jitsi.videobridge.util.config.retriever.*;
 
-public class StickyFailuresProperty
+public class StickyFailuresProperty extends ReadOnceProperty<Boolean>
 {
     protected static final String legacyPropKey = "org.jitsi.videobridge.health.STICKY_FAILURES";
     protected static final String propKey = "videobridge.health.sticky-failures";
 
-    private static ConfigProperty<Boolean> singleInstance = new ConfigPropertyBuilder<Boolean>()
-            .usingGetter(Config::getBoolean)
-            .fromConfigs(
-                    new DefaultConfigValueRetrieverBuilder<>(propKey),
-                    new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey)
-            )
-            .readOnce()
-            .build();
+    private static StickyFailuresProperty singleton = new StickyFailuresProperty();
 
-    public static ConfigProperty<Boolean> getInstance()
+    protected StickyFailuresProperty()
     {
-        return singleInstance;
+        super(JList.of(
+            new SimpleConfigValueRetriever<>(JvbConfig.getLegacyConfig(), legacyPropKey, Config::getBoolean),
+            new SimpleConfigValueRetriever<>(JvbConfig.getConfig(), propKey, Config::getBoolean)
+        ));
+    }
+
+    public static StickyFailuresProperty getInstance()
+    {
+        return singleton;
     }
 }
