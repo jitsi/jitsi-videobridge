@@ -35,7 +35,7 @@ public class HealthTimeoutPropertyTest
                 .withNoNewConfig()
                 .finishSetup();
 
-        ConfigProperty<Integer> healthTimeoutProp = HealthTimeoutProperty.createInstance();
+        ConfigProperty<Integer> healthTimeoutProp = new HealthTimeoutProperty();
         assertEquals("The value from the old config should be read correctly", 60000, (int)healthTimeoutProp.get());
     }
 
@@ -48,7 +48,7 @@ public class HealthTimeoutPropertyTest
             .withNoLegacyConfig()
             .finishSetup();
 
-        ConfigProperty<Integer> healthTimeoutProp = HealthTimeoutProperty.createInstance();
+        ConfigProperty<Integer> healthTimeoutProp = new HealthTimeoutProperty();
         assertEquals("The value from the new config should be read correctly", 10000, (int)healthTimeoutProp.get());
     }
 
@@ -62,8 +62,8 @@ public class HealthTimeoutPropertyTest
             .withNewConfig(newConfig)
             .finishSetup();
 
-        ConfigProperty<Integer> healthTimeoutProp = HealthTimeoutProperty.createInstance();
-        assertEquals("The new config value should be used", 10000, (int)healthTimeoutProp.get());
+        ConfigProperty<Integer> healthTimeoutProp = new HealthTimeoutProperty();
+        assertEquals("The old config value should be used", 60000, (int)healthTimeoutProp.get());
     }
 
     @Test
@@ -75,7 +75,7 @@ public class HealthTimeoutPropertyTest
             .withNoLegacyConfig()
             .finishSetup();
 
-        ConfigProperty<Integer> healthTimeoutProp = HealthTimeoutProperty.createInstance();
+        ConfigProperty<Integer> healthTimeoutProp = new HealthTimeoutProperty();
 
         Config changedConfig = ConfigFactory.parseString(HealthTimeoutProperty.propKey + "=90 seconds");
         JvbConfig.configSupplier = () -> changedConfig;

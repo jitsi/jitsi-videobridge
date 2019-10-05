@@ -16,32 +16,36 @@
 
 package org.jitsi.videobridge.health.config;
 
+import com.typesafe.config.*;
+import org.jitsi.utils.collections.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
 import org.jitsi.videobridge.util.config.retriever.*;
 
 import java.util.concurrent.*;
+import java.util.function.*;
 
-public class HealthTimeoutProperty
+public class HealthTimeoutProperty extends ReadOnceProperty<Integer>
 {
     protected static final String legacyPropKey = "org.jitsi.videobridge.health.TIMEOUT";
     protected static final String propKey = "videobridge.health.timeout";
 
-    static ConfigProperty<Integer> createInstance()
+    private static BiFunction<Config, String, Integer> getter =
+        (config, key) -> (int)config.getDuration(key, TimeUnit.MILLISECONDS);
+
+    private static HealthTimeoutProperty singleton = new HealthTimeoutProperty();
+
+
+    protected HealthTimeoutProperty()
     {
-        return new ConfigPropertyBuilder<Integer>()
-                .usingGetter((config, key) -> (int)config.getDuration(key, TimeUnit.MILLISECONDS))
-                .fromConfigs(
-                        new DefaultConfigValueRetrieverBuilder<>(propKey),
-                        new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey)
-                )
-                .readOnce()
-                .build();
+        super(JList.of(
+            new SimpleConfigValueRetriever<>(JvbConfig.getLegacyConfig(), legacyPropKey, getter),
+            new SimpleConfigValueRetriever<>(JvbConfig.getConfig(), propKey, getter)
+        ));
     }
 
-    private static ConfigProperty<Integer> singleInstance = createInstance();
-
-    public static ConfigProperty<Integer> getInstance()
+    public static HealthTimeoutProperty getInstance()
     {
-        return singleInstance;
+        return singleton;
     }
 }
