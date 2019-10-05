@@ -41,7 +41,7 @@ public class ColibriWebSocketService
      */
     private static final ConfigProperty<String> serverId = WebSocketConfig.serverId;
 
-    private static final ConfigProperty<Boolean> enabled = WebSocketConfig.enabled;
+    private static final WebSocketConfig.EnabledProperty enabled = WebSocketConfig.enabled;
 
     private static final ConfigProperty<String> domain = WebSocketConfig.domain;
 

@@ -35,7 +35,7 @@ public class WebSocketConfigTest
             .withNoNewConfig()
             .finishSetup();
 
-        ConfigProperty<Boolean> websocketsEnabled = WebSocketConfig.EnabledProperty.createInstance();
+        ConfigProperty<Boolean> websocketsEnabled = new WebSocketConfig.EnabledProperty();
 
         assertTrue(websocketsEnabled.get());
     }

@@ -17,6 +17,8 @@
 package org.jitsi.videobridge.rest;
 
 import com.typesafe.config.*;
+import org.jitsi.utils.collections.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
 import org.jitsi.videobridge.util.config.retriever.*;
 
@@ -25,99 +27,88 @@ public class WebSocketConfig
     /**
      * Whether or not the websocket service is enabled
      */
-    public static class EnabledProperty
+    public static class EnabledProperty extends ReadOnceProperty<Boolean>
     {
         protected static final String legacyPropKey = "org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE";
         protected static final String propKey = "videobridge.websockets.enabled";
-        static ConfigProperty<Boolean> createInstance()
+
+        protected EnabledProperty()
         {
-            return new ConfigPropertyBuilder<Boolean>()
-                .fromConfigs(
-                    new DefaultConfigValueRetrieverBuilder<>(propKey),
-                    new DefaultLegacyConfigValueRetrieverBuilder<Boolean>(legacyPropKey)
-                        // The legacy config value was 'DISABLE' and the new one is 'ENABLED', so if we pull the value
-                        // from the legacy config, we need to invert it
-                        .withTransformation((value) -> !value)
-                )
-                .usingGetter(Config::getBoolean)
-                .readOnce()
-                .build();
+            super(JList.of(
+                new TransformingConfigValueRetriever<>(
+                    JvbConfig.getLegacyConfig(),
+                    legacyPropKey,
+                    Config::getBoolean,
+                    // The legacy config value was 'DISABLE' and the new one is
+                    // 'ENABLED', so if we pull the value from the legacy config,
+                    // we need to invert it
+                    value -> !value
+                ),
+                new SimpleConfigValueRetriever<>(JvbConfig.getConfig(), propKey, Config::getBoolean)
+            ));
         }
     }
 
-    static ConfigProperty<Boolean> enabled = EnabledProperty.createInstance();
+    public static EnabledProperty enabled = new EnabledProperty();
 
     /**
      * The property which controls the server ID used in URLs
      * advertised for COLIBRI WebSockets.
      */
-    public static class ServerIdProperty
+    public static class ServerIdProperty extends ReadOnceProperty<String>
     {
         protected static final String legacyPropKey = "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID";
         protected static final String propKey = "videobridge.websockets.server-id";
 
-        static ConfigProperty<String> createInstance()
+        protected ServerIdProperty()
         {
-            return new ConfigPropertyBuilder<String>()
-                .fromConfigs(
-                    new DefaultConfigValueRetrieverBuilder<>(propKey),
-                    new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey)
-                )
-                .usingGetter(Config::getString)
-                .readOnce()
-                .build();
+            super(JList.of(
+                new SimpleConfigValueRetriever<>(JvbConfig.getLegacyConfig(), legacyPropKey, Config::getString),
+                new SimpleConfigValueRetriever<>(JvbConfig.getConfig(), propKey, Config::getString)
+            ));
         }
     }
 
-    static ConfigProperty<String> serverId = ServerIdProperty.createInstance();
+    static ServerIdProperty serverId = new ServerIdProperty();
 
     /**
      * The property which controls the domain name used in URLs
      * advertised for COLIBRI WebSockets.
      */
-    public static class DomainProperty
+    public static class DomainProperty extends ReadOnceProperty<String>
     {
         protected static final String legacyPropKey = "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN";
         protected static final String propKey = "videobridge.websockets.domain";
 
-        static ConfigProperty<String> createInstance()
+        protected DomainProperty()
         {
-            return new ConfigPropertyBuilder<String>()
-                .fromConfigs(
-                        new DefaultConfigValueRetrieverBuilder<>(propKey),
-                        new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey)
-                )
-                .usingGetter(Config::getString)
-                .readOnce()
-                .build();
+            super(JList.of(
+                new SimpleConfigValueRetriever<>(JvbConfig.getLegacyConfig(), legacyPropKey, Config::getString),
+                new SimpleConfigValueRetriever<>(JvbConfig.getConfig(), propKey, Config::getString)
+            ));
         }
     }
 
-    static ConfigProperty<String> domain = DomainProperty.createInstance();
+    static DomainProperty domain = new DomainProperty();
 
     /**
      * The property which controls whether URLs advertised for
      * COLIBRI WebSockets should use the "ws" (if false) or "wss" (if true)
      * schema.
      */
-    public static class TlsProperty
+    public static class TlsProperty extends ReadOnceProperty<Boolean>
     {
         protected static final String legacyPropKey = "org.jitsi.videobridge.rest.COLIBRI_WS_TLS";
         protected static final String propKey = "videobridge.websockets.tls";
 
-        static ConfigProperty<Boolean> createInstance()
+        protected TlsProperty()
         {
-            return new ConfigPropertyBuilder<Boolean>()
-                .fromConfigs(
-                    new DefaultConfigValueRetrieverBuilder<>(propKey),
-                    new DefaultLegacyConfigValueRetrieverBuilder<>(legacyPropKey)
-                )
-                .usingGetter(Config::getBoolean)
-                .readOnce()
-                .build();
+            super(JList.of(
+                new SimpleConfigValueRetriever<>(JvbConfig.getLegacyConfig(), legacyPropKey, Config::getBoolean),
+                new SimpleConfigValueRetriever<>(JvbConfig.getConfig(), propKey, Config::getBoolean)
+            ));
         }
-
     }
 
-    static ConfigProperty<Boolean> tls = TlsProperty.createInstance();
+    static TlsProperty tls = new TlsProperty();
 }

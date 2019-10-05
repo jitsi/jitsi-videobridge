@@ -33,7 +33,7 @@ public class TransformingConfigValueRetriever<PropValueType> extends SimpleConfi
 {
     protected final Function<PropValueType, PropValueType> configValueTransformer;
 
-    protected TransformingConfigValueRetriever(
+    public TransformingConfigValueRetriever(
             Config config,
             String propKey,
             BiFunction<Config, String, PropValueType> getter,
