@@ -46,7 +46,7 @@ public class StatsManagerBundleActivator
 
     protected ConfigProperty<Boolean> statsEnabled = StatsEnabledProperty.getInstance();
 
-    protected ConfigProperty<List<StatsTransport>> statsTransports = StatsTransportsProperty.getInstance();
+    protected StatsTransportsProperty statsTransports = StatsTransportsProperty.getInstance();
 
     protected ConfigProperty<Integer> statsInterval = StatsIntervalProperty.getInstance();
 

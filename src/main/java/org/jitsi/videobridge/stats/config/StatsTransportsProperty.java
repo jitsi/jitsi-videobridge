@@ -44,7 +44,7 @@ import java.util.stream.*;
  * to acquire the end result: a {@code List<StatsTransport>}.
  *
  */
-public class StatsTransportsProperty
+public class StatsTransportsProperty implements ConfigProperty<List<StatsTransport>>
 {
     protected static final String legacyPropKey = "org.jitsi.videobridge.STATISTICS_TRANSPORT";
     protected static final String propKey = "videobridge.stats.transports";
@@ -86,19 +86,32 @@ public class StatsTransportsProperty
      */
     public static final String STAT_TRANSPORT_MUC = "muc";
 
-    private static ConfigProperty<List<StatsTransport>> singleInstance = createInstance();
+    protected final ConfigProperty<List<StatsTransport>> backingProperty;
 
-    public static ConfigProperty<List<StatsTransport>> getInstance()
+    private static StatsTransportsProperty singleton = new StatsTransportsProperty(createBackingProperty());
+
+    protected StatsTransportsProperty(ConfigProperty<List<StatsTransport>> backingProperty)
     {
-        return singleInstance;
+        this.backingProperty = backingProperty;
     }
 
-    public static StatsTransport getStatsTransportByType(Class className)
+    public static StatsTransportsProperty getInstance()
+    {
+        return singleton;
+    }
+
+    public StatsTransport getStatsTransportByType(Class className)
     {
         return getInstance().get().stream().filter(st -> st.getClass() == className).findFirst().orElse(null);
     }
 
-    static ConfigProperty<List<StatsTransport>> createInstance()
+    @Override
+    public List<StatsTransport> get()
+    {
+        return backingProperty.get();
+    }
+
+    protected static ConfigProperty<List<StatsTransport>> createBackingProperty()
     {
         List<ConfigValueRetriever<List<StatsTransport>>> retrievers = new ArrayList<>();
         // Create the retrievers when the instance is created, so they read the config

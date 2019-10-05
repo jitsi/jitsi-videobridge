@@ -131,7 +131,7 @@ public class Activator
 
             // Update with per stats transport interval if available.
             StatsTransport callStatsTransport =
-                StatsTransportsProperty.getStatsTransportByType(CallStatsIOTransport.class);
+                StatsTransportsProperty.getInstance().getStatsTransportByType(CallStatsIOTransport.class);
             if (callStatsTransport != null)
             {
                 interval = (int)callStatsTransport.getInterval().toMillis();
