@@ -16,22 +16,26 @@
 
 package org.jitsi.videobridge.util.config.supplier;
 
-import org.jitsi.videobridge.util.*;
+import com.typesafe.config.*;
 
 import java.util.function.*;
 
-public class LegacyConfigValueSupplier<T> implements Supplier<T>
+public class TypesafeConfigSupplier<T> implements Supplier<T>
 {
-    protected final TypesafeConfigSupplier<T> typesafeConfigSupplier;
+    protected Supplier<T> getter;
 
-    public LegacyConfigValueSupplier(Class<T> clazz, String prop)
+    @SuppressWarnings("unchecked")
+    public TypesafeConfigSupplier(Class<T> clazz, Config config, String prop)
     {
-        typesafeConfigSupplier = new TypesafeConfigSupplier<>(clazz, JvbConfig.getLegacyConfig(), prop);
+        if (clazz == String.class)
+        {
+            getter = () -> (T)config.getString(prop);
+        }
     }
 
     @Override
     public T get()
     {
-        return typesafeConfigSupplier.get();
+        return getter.get();
     }
 }

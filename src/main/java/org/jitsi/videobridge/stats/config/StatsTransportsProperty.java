@@ -22,13 +22,13 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
-import org.jitsi.videobridge.util.config.retriever.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
 import org.jxmpp.stringprep.*;
 
 import java.time.*;
 import java.util.*;
+import java.util.function.*;
 import java.util.stream.*;
 
 /**
@@ -94,7 +94,7 @@ public class StatsTransportsProperty extends ReadOnceProperty<List<StatsTranspor
         // Create the retrievers when the instance is created, so they read the config
         // at property creation time (this gives unit tests a chance to inject
         // test configs)
-        super(JList.of(createLegacyConfigRetriever(), createNewConfigRetriever()));
+        super(JList.of(createLegacyConfigValueSupplier(), createNewConfigValueSupplier()));
     }
 
     public static StatsTransportsProperty getInstance()
@@ -113,36 +113,30 @@ public class StatsTransportsProperty extends ReadOnceProperty<List<StatsTranspor
     }
 
     /**
-     * Creates a retriever which pulls data from a new config object and returns a configuration
+     * Creates a supplier which pulls data from a new config object and returns a configuration
      * value of type {@code List<StatsTransport>}
      * @return
      */
-    static ConfigValueRetriever<List<StatsTransport>> createNewConfigRetriever()
+    static Supplier<List<StatsTransport>> createNewConfigValueSupplier()
     {
-        return new TypeTransformingConfigValueRetriever.Builder<List<? extends Config>, List<StatsTransport>>()
-            .property(propKey)
-            .fromConfig(JvbConfig.getConfig())
-            .usingGetter(Config::getConfigList)
-            .withTransformer(configs -> configs.stream()
-                .map(NewConfigTransportsFactory::create)
-                .collect(Collectors.toList()))
-            .build();
+       return () -> JvbConfig.getConfig().getConfigList(propKey).stream()
+               .map(NewConfigTransportsFactory::create)
+               .collect(Collectors.toList());
     }
 
     /**
-     * Creates a retriever which pulls data from a legacy config object and returns a configuration
+     * Creates a Supplier which pulls data from a legacy config object and returns a configuration
      * value of type {@code List<StatsTransport>}
      * @return
      */
-    static ConfigValueRetriever<List<StatsTransport>> createLegacyConfigRetriever()
+    static Supplier<List<StatsTransport>> createLegacyConfigValueSupplier()
     {
-        return new TypeTransformingConfigValueRetriever.Builder<String, List<StatsTransport>>()
-            .property(legacyPropKey)
-            .fromConfig(JvbConfig.getLegacyConfig())
-            .usingGetter(Config::getString)
-            .withTransformer(transportNames ->
-                OldConfigTransportsFactory.create(transportNames, JvbConfig.getLegacyConfig()))
-            .build();
+        return () ->
+        {
+            String transportNames = JvbConfig.getLegacyConfig().getString(legacyPropKey);
+            return OldConfigTransportsFactory.create(transportNames, JvbConfig.getLegacyConfig());
+        };
+
     }
 
     /**

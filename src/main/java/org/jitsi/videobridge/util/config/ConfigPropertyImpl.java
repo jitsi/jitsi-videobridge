@@ -17,14 +17,13 @@
 package org.jitsi.videobridge.util.config;
 
 import com.typesafe.config.*;
-import org.jitsi.videobridge.util.config.retriever.*;
 
 import java.util.*;
 import java.util.function.*;
 
 /**
  * A base helper class for modeling a configuration property.  Contains the
- * code for iterating over multiple {@link ConfigValueRetriever}s for the first
+ * code for iterating over multiple {@link Supplier}s for the first
  * one which successfully returns a result; if none contain the property,
  * it returns the default value.
  *

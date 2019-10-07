@@ -16,11 +16,9 @@
 
 package org.jitsi.videobridge.health.config;
 
-import com.typesafe.config.*;
 import org.jitsi.utils.collections.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
-import org.jitsi.videobridge.util.config.retriever.*;
 
 public class StickyFailuresProperty extends ReadOnceProperty<Boolean>
 {
@@ -32,8 +30,8 @@ public class StickyFailuresProperty extends ReadOnceProperty<Boolean>
     protected StickyFailuresProperty()
     {
         super(JList.of(
-            new SimpleConfigValueRetriever<>(JvbConfig.getLegacyConfig(), legacyPropKey, Config::getBoolean),
-            new SimpleConfigValueRetriever<>(JvbConfig.getConfig(), propKey, Config::getBoolean)
+            () -> JvbConfig.getLegacyConfig().getBoolean(legacyPropKey),
+            () -> JvbConfig.getConfig().getBoolean(propKey)
         ));
     }
 

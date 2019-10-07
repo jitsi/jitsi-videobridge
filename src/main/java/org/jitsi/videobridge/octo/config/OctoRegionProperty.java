@@ -16,11 +16,9 @@
 
 package org.jitsi.videobridge.octo.config;
 
-import com.typesafe.config.*;
 import org.jitsi.utils.collections.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
-import org.jitsi.videobridge.util.config.retriever.*;
 
 /**
  * A singleton property representing the octo's region
@@ -35,8 +33,8 @@ public class OctoRegionProperty extends ReadOnceProperty<String>
     public OctoRegionProperty()
     {
         super(JList.of(
-            new SimpleConfigValueRetriever<>(JvbConfig.getLegacyConfig(), legacyPropKey, Config::getString),
-            new SimpleConfigValueRetriever<>(JvbConfig.getConfig(), propKey, Config::getString)
+            () -> JvbConfig.getLegacyConfig().getString(legacyPropKey),
+            () -> JvbConfig.getConfig().getString(propKey)
         ));
     }
 

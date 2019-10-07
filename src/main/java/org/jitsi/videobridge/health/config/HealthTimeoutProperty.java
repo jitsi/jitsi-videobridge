@@ -16,22 +16,16 @@
 
 package org.jitsi.videobridge.health.config;
 
-import com.typesafe.config.*;
 import org.jitsi.utils.collections.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
-import org.jitsi.videobridge.util.config.retriever.*;
 
 import java.util.concurrent.*;
-import java.util.function.*;
 
 public class HealthTimeoutProperty extends ReadOnceProperty<Integer>
 {
     protected static final String legacyPropKey = "org.jitsi.videobridge.health.TIMEOUT";
     protected static final String propKey = "videobridge.health.timeout";
-
-    private static BiFunction<Config, String, Integer> getter =
-        (config, key) -> (int)config.getDuration(key, TimeUnit.MILLISECONDS);
 
     private static HealthTimeoutProperty singleton = new HealthTimeoutProperty();
 
@@ -39,8 +33,8 @@ public class HealthTimeoutProperty extends ReadOnceProperty<Integer>
     protected HealthTimeoutProperty()
     {
         super(JList.of(
-            new SimpleConfigValueRetriever<>(JvbConfig.getLegacyConfig(), legacyPropKey, getter),
-            new SimpleConfigValueRetriever<>(JvbConfig.getConfig(), propKey, getter)
+            () -> JvbConfig.getLegacyConfig().getInt(legacyPropKey),
+            () -> (int)JvbConfig.getConfig().getDuration(propKey, TimeUnit.MILLISECONDS)
         ));
     }
 

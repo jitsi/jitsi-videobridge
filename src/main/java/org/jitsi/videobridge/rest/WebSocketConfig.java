@@ -16,11 +16,9 @@
 
 package org.jitsi.videobridge.rest;
 
-import com.typesafe.config.*;
 import org.jitsi.utils.collections.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
-import org.jitsi.videobridge.util.config.retriever.*;
 
 public class WebSocketConfig
 {
@@ -35,16 +33,11 @@ public class WebSocketConfig
         protected EnabledProperty()
         {
             super(JList.of(
-                new TransformingConfigValueRetriever<>(
-                    JvbConfig.getLegacyConfig(),
-                    legacyPropKey,
-                    Config::getBoolean,
-                    // The legacy config value was 'DISABLE' and the new one is
-                    // 'ENABLED', so if we pull the value from the legacy config,
-                    // we need to invert it
-                    value -> !value
-                ),
-                new SimpleConfigValueRetriever<>(JvbConfig.getConfig(), propKey, Config::getBoolean)
+                // The legacy config value was 'DISABLE' and the new one is
+                // 'ENABLED', so if we pull the value from the legacy config,
+                // we need to invert it
+                () -> !JvbConfig.getLegacyConfig().getBoolean(legacyPropKey),
+                () -> JvbConfig.getConfig().getBoolean(propKey)
             ));
         }
     }
@@ -63,8 +56,8 @@ public class WebSocketConfig
         protected ServerIdProperty()
         {
             super(JList.of(
-                new SimpleConfigValueRetriever<>(JvbConfig.getLegacyConfig(), legacyPropKey, Config::getString),
-                new SimpleConfigValueRetriever<>(JvbConfig.getConfig(), propKey, Config::getString)
+                () -> JvbConfig.getLegacyConfig().getString(legacyPropKey),
+                () -> JvbConfig.getConfig().getString(propKey)
             ));
         }
     }
@@ -83,8 +76,8 @@ public class WebSocketConfig
         protected DomainProperty()
         {
             super(JList.of(
-                new SimpleConfigValueRetriever<>(JvbConfig.getLegacyConfig(), legacyPropKey, Config::getString),
-                new SimpleConfigValueRetriever<>(JvbConfig.getConfig(), propKey, Config::getString)
+                () -> JvbConfig.getLegacyConfig().getString(legacyPropKey),
+                () -> JvbConfig.getConfig().getString(propKey)
             ));
         }
     }
@@ -104,8 +97,8 @@ public class WebSocketConfig
         protected TlsProperty()
         {
             super(JList.of(
-                new SimpleConfigValueRetriever<>(JvbConfig.getLegacyConfig(), legacyPropKey, Config::getBoolean),
-                new SimpleConfigValueRetriever<>(JvbConfig.getConfig(), propKey, Config::getBoolean)
+                () -> JvbConfig.getLegacyConfig().getBoolean(legacyPropKey),
+                () -> JvbConfig.getConfig().getBoolean(propKey)
             ));
         }
     }

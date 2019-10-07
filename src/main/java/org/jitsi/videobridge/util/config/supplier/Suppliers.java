@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.util.config.retriever;
+package org.jitsi.videobridge.util.config.supplier;
 
-/**
- * Responsible for retrieving a configuration property's value.
- * The implementation of how this is done can vary, for example
- * {@link TransformingConfigValueRetriever} can apply a transformation
- * on the retrieved value before returning it.
- * @param <PropValueType>
- */
-public interface ConfigValueRetriever<PropValueType>
+import java.util.function.*;
+
+public class Suppliers
 {
-    PropValueType getValue();
+    public static Supplier<String> legacyString(String propName)
+    {
+        return null;
+//        return new LegacyConfigValueSupplier<>(, propName);
+    }
 }
