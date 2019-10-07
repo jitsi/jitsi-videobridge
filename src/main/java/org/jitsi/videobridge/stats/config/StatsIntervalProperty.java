@@ -22,16 +22,16 @@ import org.jitsi.videobridge.util.config.*;
 
 public class StatsIntervalProperty extends ReadOnceProperty<Integer>
 {
-    protected static final String legacyPropKey = "org.jitsi.videobridge.STATISTICS_INTERVAL";
-    protected static final String propKey = "videobridge.stats.interval";
+    protected static final String legacyPropName = "org.jitsi.videobridge.STATISTICS_INTERVAL";
+    protected static final String propName = "videobridge.stats.interval";
 
     private static StatsIntervalProperty singleton = new StatsIntervalProperty();
 
     protected StatsIntervalProperty()
     {
         super(JList.of(
-            new LegacyConfigValueSupplier<>(config -> config.getInt(legacyPropKey)),
-            new ConfigValueSupplier<>(config -> config.getInt(propKey))
+            new LegacyConfigValueSupplier<>(config -> config.getInt(legacyPropName)),
+            new ConfigValueSupplier<>(config -> config.getInt(propName))
         ));
     }
 

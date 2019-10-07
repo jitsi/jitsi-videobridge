@@ -24,16 +24,16 @@ import java.util.concurrent.*;
 
 public class HealthTimeoutProperty extends ReadOnceProperty<Integer>
 {
-    protected static final String legacyPropKey = "org.jitsi.videobridge.health.TIMEOUT";
-    protected static final String propKey = "videobridge.health.timeout";
+    protected static final String legacyPropName = "org.jitsi.videobridge.health.TIMEOUT";
+    protected static final String propName = "videobridge.health.timeout";
 
     private static HealthTimeoutProperty singleton = new HealthTimeoutProperty();
 
     protected HealthTimeoutProperty()
     {
         super(JList.of(
-            new LegacyConfigValueSupplier<>(config -> config.getInt(legacyPropKey)),
-            new ConfigValueSupplier<>(config -> (int)config.getDuration(propKey, TimeUnit.MILLISECONDS))
+            new LegacyConfigValueSupplier<>(config -> config.getInt(legacyPropName)),
+            new ConfigValueSupplier<>(config -> (int)config.getDuration(propName, TimeUnit.MILLISECONDS))
         ));
     }
 

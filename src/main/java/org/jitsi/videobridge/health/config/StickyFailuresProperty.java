@@ -22,16 +22,16 @@ import org.jitsi.videobridge.util.config.*;
 
 public class StickyFailuresProperty extends ReadOnceProperty<Boolean>
 {
-    protected static final String legacyPropKey = "org.jitsi.videobridge.health.STICKY_FAILURES";
-    protected static final String propKey = "videobridge.health.sticky-failures";
+    protected static final String legacyPropName = "org.jitsi.videobridge.health.STICKY_FAILURES";
+    protected static final String propName = "videobridge.health.sticky-failures";
 
     private static StickyFailuresProperty singleton = new StickyFailuresProperty();
 
     protected StickyFailuresProperty()
     {
         super(JList.of(
-            new LegacyConfigValueSupplier<>(config -> config.getBoolean(legacyPropKey)),
-            new ConfigValueSupplier<>(config -> config.getBoolean(propKey))
+            new LegacyConfigValueSupplier<>(config -> config.getBoolean(legacyPropName)),
+            new ConfigValueSupplier<>(config -> config.getBoolean(propName))
         ));
     }
 

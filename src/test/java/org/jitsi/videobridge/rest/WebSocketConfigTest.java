@@ -28,7 +28,7 @@ public class WebSocketConfigTest
     @Test
     public void testEnabledFromOldConfig()
     {
-        Config legacyConfig = ConfigFactory.parseString(WebSocketConfig.EnabledProperty.legacyPropKey + "=false");
+        Config legacyConfig = ConfigFactory.parseString(WebSocketConfig.EnabledProperty.legacyPropName + "=false");
         new ConfigSetup()
             .withLegacyConfig(legacyConfig)
             .withNoNewConfig()

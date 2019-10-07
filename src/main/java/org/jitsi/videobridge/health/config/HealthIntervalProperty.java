@@ -24,16 +24,16 @@ import java.util.concurrent.*;
 
 public class HealthIntervalProperty extends ReadOnceProperty<Integer>
 {
-    protected static final String legacyPropKey = "org.jitsi.videobridge.health.INTERVAL";
-    protected static final String propKey = "videobridge.health.interval";
+    protected static final String legacyPropName = "org.jitsi.videobridge.health.INTERVAL";
+    protected static final String propName = "videobridge.health.interval";
 
     private static HealthIntervalProperty singleton = new HealthIntervalProperty();
 
     protected HealthIntervalProperty()
     {
         super(JList.of(
-            new LegacyConfigValueSupplier<>(config -> config.getInt(legacyPropKey)),
-            new ConfigValueSupplier<>(config -> (int)config.getDuration(propKey, TimeUnit.MILLISECONDS))
+            new LegacyConfigValueSupplier<>(config -> config.getInt(legacyPropName)),
+            new ConfigValueSupplier<>(config -> (int)config.getDuration(propName, TimeUnit.MILLISECONDS))
         ));
     }
 

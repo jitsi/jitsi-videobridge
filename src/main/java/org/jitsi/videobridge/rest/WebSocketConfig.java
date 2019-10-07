@@ -27,8 +27,8 @@ public class WebSocketConfig
      */
     public static class EnabledProperty extends ReadOnceProperty<Boolean>
     {
-        protected static final String legacyPropKey = "org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE";
-        protected static final String propKey = "videobridge.websockets.enabled";
+        protected static final String legacyPropName = "org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE";
+        protected static final String propName = "videobridge.websockets.enabled";
 
         protected EnabledProperty()
         {
@@ -36,8 +36,8 @@ public class WebSocketConfig
                 // The legacy config value was 'DISABLE' and the new one is
                 // 'ENABLED', so if we pull the value from the legacy config,
                 // we need to invert it
-                new LegacyConfigValueSupplier<>(config -> !config.getBoolean(legacyPropKey)),
-                new ConfigValueSupplier<>(config -> config.getBoolean(propKey))
+                new LegacyConfigValueSupplier<>(config -> !config.getBoolean(legacyPropName)),
+                new ConfigValueSupplier<>(config -> config.getBoolean(propName))
             ));
         }
     }
@@ -50,14 +50,14 @@ public class WebSocketConfig
      */
     public static class ServerIdProperty extends ReadOnceProperty<String>
     {
-        protected static final String legacyPropKey = "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID";
-        protected static final String propKey = "videobridge.websockets.server-id";
+        protected static final String legacyPropName = "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID";
+        protected static final String propName = "videobridge.websockets.server-id";
 
         protected ServerIdProperty()
         {
             super(JList.of(
-                new LegacyConfigValueSupplier<>(config -> config.getString(legacyPropKey)),
-                new ConfigValueSupplier<>(config -> config.getString(propKey))
+                new LegacyConfigValueSupplier<>(config -> config.getString(legacyPropName)),
+                new ConfigValueSupplier<>(config -> config.getString(propName))
             ));
         }
     }
@@ -70,14 +70,14 @@ public class WebSocketConfig
      */
     public static class DomainProperty extends ReadOnceProperty<String>
     {
-        protected static final String legacyPropKey = "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN";
-        protected static final String propKey = "videobridge.websockets.domain";
+        protected static final String legacyPropName = "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN";
+        protected static final String propName = "videobridge.websockets.domain";
 
         protected DomainProperty()
         {
             super(JList.of(
-                new LegacyConfigValueSupplier<>(config -> config.getString(legacyPropKey)),
-                new ConfigValueSupplier<>(config -> config.getString(propKey))
+                new LegacyConfigValueSupplier<>(config -> config.getString(legacyPropName)),
+                new ConfigValueSupplier<>(config -> config.getString(propName))
             ));
         }
     }
@@ -91,14 +91,14 @@ public class WebSocketConfig
      */
     public static class TlsProperty extends ReadOnceProperty<Boolean>
     {
-        protected static final String legacyPropKey = "org.jitsi.videobridge.rest.COLIBRI_WS_TLS";
-        protected static final String propKey = "videobridge.websockets.tls";
+        protected static final String legacyPropName = "org.jitsi.videobridge.rest.COLIBRI_WS_TLS";
+        protected static final String propName = "videobridge.websockets.tls";
 
         protected TlsProperty()
         {
             super(JList.of(
-                new LegacyConfigValueSupplier<>(config -> config.getBoolean(legacyPropKey)),
-                new ConfigValueSupplier<>(config -> config.getBoolean(propKey))
+                new LegacyConfigValueSupplier<>(config -> config.getBoolean(legacyPropName)),
+                new ConfigValueSupplier<>(config -> config.getBoolean(propName))
             ));
         }
     }

@@ -25,16 +25,16 @@ import org.jitsi.videobridge.util.config.*;
  */
 public class OctoRegionProperty extends ReadOnceProperty<String>
 {
-    protected static final String legacyPropKey = "org.jitsi.videobridge.REGION";
-    protected static final String propKey = "videobridge.octo.region";
+    protected static final String legacyPropName = "org.jitsi.videobridge.REGION";
+    protected static final String propName = "videobridge.octo.region";
 
     static OctoRegionProperty singleton = new OctoRegionProperty();
 
     public OctoRegionProperty()
     {
         super(JList.of(
-            new LegacyConfigValueSupplier<>(config -> config.getString(legacyPropKey)),
-            new ConfigValueSupplier<>(config -> config.getString(propKey))
+            new LegacyConfigValueSupplier<>(config -> config.getString(legacyPropName)),
+            new ConfigValueSupplier<>(config -> config.getString(propName))
         ));
     }
 

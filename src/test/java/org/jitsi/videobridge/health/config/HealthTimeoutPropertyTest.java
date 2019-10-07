@@ -28,7 +28,7 @@ public class HealthTimeoutPropertyTest
     @Test
     public void whenOnlyOldConfigIsPresent()
     {
-        Config legacyConfig = ConfigFactory.parseString(HealthTimeoutProperty.legacyPropKey + "=60000");
+        Config legacyConfig = ConfigFactory.parseString(HealthTimeoutProperty.legacyPropName + "=60000");
         new ConfigSetup()
                 .withLegacyConfig(legacyConfig)
                 .withNoNewConfig()
@@ -41,7 +41,7 @@ public class HealthTimeoutPropertyTest
     @Test
     public void whenOnlyNewConfigIsPresent()
     {
-        Config newConfig = ConfigFactory.parseString(HealthTimeoutProperty.propKey + "=10 seconds");
+        Config newConfig = ConfigFactory.parseString(HealthTimeoutProperty.propName + "=10 seconds");
         new ConfigSetup()
             .withNewConfig(newConfig)
             .withNoLegacyConfig()
@@ -54,8 +54,8 @@ public class HealthTimeoutPropertyTest
     @Test
     public void whenOldAndNewConfigsArePresent()
     {
-        Config legacyConfig = ConfigFactory.parseString(HealthTimeoutProperty.legacyPropKey + "=60000");
-        Config newConfig = ConfigFactory.parseString(HealthTimeoutProperty.propKey + "=10 seconds");
+        Config legacyConfig = ConfigFactory.parseString(HealthTimeoutProperty.legacyPropName + "=60000");
+        Config newConfig = ConfigFactory.parseString(HealthTimeoutProperty.propName + "=10 seconds");
         new ConfigSetup()
             .withLegacyConfig(legacyConfig)
             .withNewConfig(newConfig)
@@ -68,7 +68,7 @@ public class HealthTimeoutPropertyTest
     @Test
     public void doesNotChangeAfterConfigReload()
     {
-        Config newConfig = ConfigFactory.parseString(HealthTimeoutProperty.propKey + "=10 seconds");
+        Config newConfig = ConfigFactory.parseString(HealthTimeoutProperty.propName + "=10 seconds");
         new ConfigSetup()
             .withNewConfig(newConfig)
             .withNoLegacyConfig()
@@ -76,7 +76,7 @@ public class HealthTimeoutPropertyTest
 
         HealthTimeoutProperty healthTimeoutProp = new HealthTimeoutProperty();
 
-        Config changedConfig = ConfigFactory.parseString(HealthTimeoutProperty.propKey + "=90 seconds");
+        Config changedConfig = ConfigFactory.parseString(HealthTimeoutProperty.propName + "=90 seconds");
         JvbConfig.configSupplier = () -> changedConfig;
         JvbConfig.reloadConfig();
 

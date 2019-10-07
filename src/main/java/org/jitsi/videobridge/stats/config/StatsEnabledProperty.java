@@ -22,16 +22,16 @@ import org.jitsi.videobridge.util.config.*;
 
 public class StatsEnabledProperty extends ReadOnceProperty<Boolean>
 {
-    protected static final String legacyPropKey = "org.jitsi.videobridge.ENABLE_STATISTICS";
-    protected static final String propKey = "videobridge.stats.enabled";
+    protected static final String legacyPropName = "org.jitsi.videobridge.ENABLE_STATISTICS";
+    protected static final String propName = "videobridge.stats.enabled";
 
     private static StatsEnabledProperty singleton = new StatsEnabledProperty();
 
     protected StatsEnabledProperty()
     {
         super(JList.of(
-            new LegacyConfigValueSupplier<>(config -> config.getBoolean(legacyPropKey)),
-            new ConfigValueSupplier<>(config -> config.getBoolean(propKey))
+            new LegacyConfigValueSupplier<>(config -> config.getBoolean(legacyPropName)),
+            new ConfigValueSupplier<>(config -> config.getBoolean(propName))
         ));
     }
 

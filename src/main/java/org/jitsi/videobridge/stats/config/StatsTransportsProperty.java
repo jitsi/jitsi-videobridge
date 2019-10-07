@@ -47,8 +47,8 @@ import java.util.stream.*;
  */
 public class StatsTransportsProperty extends ReadOnceProperty<List<StatsTransport>>
 {
-    protected static final String legacyPropKey = "org.jitsi.videobridge.STATISTICS_TRANSPORT";
-    protected static final String propKey = "videobridge.stats.transports";
+    protected static final String legacyPropName = "org.jitsi.videobridge.STATISTICS_TRANSPORT";
+    protected static final String propName = "videobridge.stats.transports";
     protected static final Logger logger = new LoggerImpl(StatsTransportsProperty.class.getName());
 
     /**
@@ -120,7 +120,7 @@ public class StatsTransportsProperty extends ReadOnceProperty<List<StatsTranspor
     static Supplier<List<StatsTransport>> createNewConfigValueSupplier()
     {
         return new ConfigValueSupplier<>(config ->
-            config.getConfigList(propKey).stream()
+            config.getConfigList(propName).stream()
                .map(NewConfigTransportsFactory::create)
                .collect(Collectors.toList()));
     }
@@ -133,7 +133,7 @@ public class StatsTransportsProperty extends ReadOnceProperty<List<StatsTranspor
     static Supplier<List<StatsTransport>> createLegacyConfigValueSupplier()
     {
         return new LegacyConfigValueSupplier<>(config -> {
-            String transportNames = config.getString(legacyPropKey);
+            String transportNames = config.getString(legacyPropName);
             return OldConfigTransportsFactory.create(transportNames, config);
         });
     }
@@ -263,7 +263,7 @@ public class StatsTransportsProperty extends ReadOnceProperty<List<StatsTranspor
      */
     private static Duration getInterval(Config legacyConfig, String transportName)
     {
-        String intervalKey = StatsIntervalProperty.legacyPropKey + "." + transportName;
+        String intervalKey = StatsIntervalProperty.legacyPropName + "." + transportName;
         return legacyConfig.hasPath(intervalKey) ? legacyConfig.getDuration(intervalKey) : null;
     }
 }
