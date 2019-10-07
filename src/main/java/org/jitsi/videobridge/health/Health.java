@@ -16,7 +16,6 @@
 package org.jitsi.videobridge.health;
 
 import org.ice4j.ice.harvest.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
@@ -248,7 +247,7 @@ public class Health
      * Iniatializes a new {@link Health} instance for a specific
      * {@link Videobridge}.
      */
-    public Health(Videobridge videobridge, ConfigurationService cfg)
+    public Health(Videobridge videobridge)
     {
         super(videobridge, HealthIntervalProperty.getInstance().get(), true);
 
