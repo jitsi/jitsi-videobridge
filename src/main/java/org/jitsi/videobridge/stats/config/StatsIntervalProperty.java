@@ -18,9 +18,7 @@ package org.jitsi.videobridge.stats.config;
 
 import org.jitsi.utils.collections.*;
 import org.jitsi.utils.config.*;
-import org.jitsi.videobridge.util.*;
-
-import java.util.concurrent.*;
+import org.jitsi.videobridge.util.config.*;
 
 public class StatsIntervalProperty extends ReadOnceProperty<Integer>
 {
@@ -32,8 +30,8 @@ public class StatsIntervalProperty extends ReadOnceProperty<Integer>
     protected StatsIntervalProperty()
     {
         super(JList.of(
-            () -> JvbConfig.getLegacyConfig().getInt(legacyPropKey),
-            () -> (int)JvbConfig.getConfig().getDuration(propKey, TimeUnit.MILLISECONDS)
+            new LegacyConfigValueSupplier<>(config -> config.getInt(legacyPropKey)),
+            new ConfigValueSupplier<>(config -> config.getInt(propKey))
         ));
     }
 

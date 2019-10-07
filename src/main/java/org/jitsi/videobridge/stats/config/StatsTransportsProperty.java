@@ -21,7 +21,7 @@ import org.jitsi.utils.collections.*;
 import org.jitsi.utils.config.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.stats.*;
-import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.util.config.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
 import org.jxmpp.stringprep.*;
@@ -119,9 +119,10 @@ public class StatsTransportsProperty extends ReadOnceProperty<List<StatsTranspor
      */
     static Supplier<List<StatsTransport>> createNewConfigValueSupplier()
     {
-       return () -> JvbConfig.getConfig().getConfigList(propKey).stream()
+        return new ConfigValueSupplier<>(config ->
+            config.getConfigList(propKey).stream()
                .map(NewConfigTransportsFactory::create)
-               .collect(Collectors.toList());
+               .collect(Collectors.toList()));
     }
 
     /**
@@ -131,12 +132,10 @@ public class StatsTransportsProperty extends ReadOnceProperty<List<StatsTranspor
      */
     static Supplier<List<StatsTransport>> createLegacyConfigValueSupplier()
     {
-        return () ->
-        {
-            String transportNames = JvbConfig.getLegacyConfig().getString(legacyPropKey);
-            return OldConfigTransportsFactory.create(transportNames, JvbConfig.getLegacyConfig());
-        };
-
+        return new LegacyConfigValueSupplier<>(config -> {
+            String transportNames = config.getString(legacyPropKey);
+            return OldConfigTransportsFactory.create(transportNames, config);
+        });
     }
 
     /**

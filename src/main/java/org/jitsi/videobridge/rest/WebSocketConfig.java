@@ -18,7 +18,7 @@ package org.jitsi.videobridge.rest;
 
 import org.jitsi.utils.collections.*;
 import org.jitsi.utils.config.*;
-import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.util.config.*;
 
 public class WebSocketConfig
 {
@@ -36,8 +36,8 @@ public class WebSocketConfig
                 // The legacy config value was 'DISABLE' and the new one is
                 // 'ENABLED', so if we pull the value from the legacy config,
                 // we need to invert it
-                () -> !JvbConfig.getLegacyConfig().getBoolean(legacyPropKey),
-                () -> JvbConfig.getConfig().getBoolean(propKey)
+                new LegacyConfigValueSupplier<>(config -> !config.getBoolean(legacyPropKey)),
+                new ConfigValueSupplier<>(config -> config.getBoolean(propKey))
             ));
         }
     }
@@ -56,8 +56,8 @@ public class WebSocketConfig
         protected ServerIdProperty()
         {
             super(JList.of(
-                () -> JvbConfig.getLegacyConfig().getString(legacyPropKey),
-                () -> JvbConfig.getConfig().getString(propKey)
+                new LegacyConfigValueSupplier<>(config -> config.getString(legacyPropKey)),
+                new ConfigValueSupplier<>(config -> config.getString(propKey))
             ));
         }
     }
@@ -76,8 +76,8 @@ public class WebSocketConfig
         protected DomainProperty()
         {
             super(JList.of(
-                () -> JvbConfig.getLegacyConfig().getString(legacyPropKey),
-                () -> JvbConfig.getConfig().getString(propKey)
+                new LegacyConfigValueSupplier<>(config -> config.getString(legacyPropKey)),
+                new ConfigValueSupplier<>(config -> config.getString(propKey))
             ));
         }
     }
@@ -97,8 +97,8 @@ public class WebSocketConfig
         protected TlsProperty()
         {
             super(JList.of(
-                () -> JvbConfig.getLegacyConfig().getBoolean(legacyPropKey),
-                () -> JvbConfig.getConfig().getBoolean(propKey)
+                new LegacyConfigValueSupplier<>(config -> config.getBoolean(legacyPropKey)),
+                new ConfigValueSupplier<>(config -> config.getBoolean(propKey))
             ));
         }
     }

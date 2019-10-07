@@ -18,7 +18,7 @@ package org.jitsi.videobridge.health.config;
 
 import org.jitsi.utils.collections.*;
 import org.jitsi.utils.config.*;
-import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.util.config.*;
 
 import java.util.concurrent.*;
 
@@ -29,12 +29,11 @@ public class HealthTimeoutProperty extends ReadOnceProperty<Integer>
 
     private static HealthTimeoutProperty singleton = new HealthTimeoutProperty();
 
-
     protected HealthTimeoutProperty()
     {
         super(JList.of(
-            () -> JvbConfig.getLegacyConfig().getInt(legacyPropKey),
-            () -> (int)JvbConfig.getConfig().getDuration(propKey, TimeUnit.MILLISECONDS)
+            new LegacyConfigValueSupplier<>(config -> config.getInt(legacyPropKey)),
+            new ConfigValueSupplier<>(config -> (int)config.getDuration(propKey, TimeUnit.MILLISECONDS))
         ));
     }
 
