@@ -14,26 +14,19 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.util.config;
+package org.jitsi.videobridge.util.config.supplier;
 
-import java.util.*;
+import com.typesafe.config.*;
+import org.jitsi.videobridge.util.*;
+
 import java.util.function.*;
 
-/**
- * A property whose value is re-read from the underlying config
- * every time {@link ConfigProperty#get()} is called
- * @param <T> the value type of the config property
- */
-public class ReadEveryTimeProperty<T> extends ConfigPropertyImpl<T>
+public abstract class LegacyConfigValueSupplier<T>
 {
-    public ReadEveryTimeProperty(List<Supplier<T>> configValueSuppliers)
+    protected Config getConfig()
     {
-        super(configValueSuppliers);
+        return JvbConfig.getLegacyConfig();
     }
 
-    @Override
-    public T get()
-    {
-        return doGet();
-    }
+    protected abstract Supplier<T> getSupplier();
 }

@@ -19,6 +19,7 @@ package org.jitsi.videobridge.util.config;
 import org.jitsi.videobridge.util.config.retriever.*;
 
 import java.util.*;
+import java.util.function.*;
 
 /**
  * A property whose value is read once from the underlying config
@@ -31,9 +32,9 @@ public class ReadOnceProperty<T> extends ConfigPropertyImpl<T>
 {
     protected T value;
 
-    public ReadOnceProperty(List<ConfigValueRetriever<T>> configValueRetrievers)
+    public ReadOnceProperty(List<Supplier<T>> configValueSuppliers)
     {
-        super(configValueRetrievers);
+        super(configValueSuppliers);
         value = doGet();
     }
 

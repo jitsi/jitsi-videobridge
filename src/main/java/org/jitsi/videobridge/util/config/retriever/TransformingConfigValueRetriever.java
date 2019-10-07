@@ -34,12 +34,12 @@ public class TransformingConfigValueRetriever<PropValueType> extends SimpleConfi
     protected final Function<PropValueType, PropValueType> configValueTransformer;
 
     public TransformingConfigValueRetriever(
-            Config config,
+//            Config config,
             String propKey,
-            BiFunction<Config, String, PropValueType> getter,
+            Function<String, PropValueType> getter,
             Function<PropValueType, PropValueType> transformer)
     {
-        super(config, propKey, getter);
+        super(propKey, getter);
         this.configValueTransformer = transformer;
     }
 

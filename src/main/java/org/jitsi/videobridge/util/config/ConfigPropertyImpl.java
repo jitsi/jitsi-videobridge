@@ -20,6 +20,7 @@ import com.typesafe.config.*;
 import org.jitsi.videobridge.util.config.retriever.*;
 
 import java.util.*;
+import java.util.function.*;
 
 /**
  * A base helper class for modeling a configuration property.  Contains the
@@ -31,11 +32,11 @@ import java.util.*;
  */
 public abstract class ConfigPropertyImpl<T> implements ConfigProperty<T>
 {
-    protected final List<ConfigValueRetriever<T>> configValueRetrievers;
+    protected final List<Supplier<T>> configValueSuppliers;
 
-    public ConfigPropertyImpl(List<ConfigValueRetriever<T>> configValueRetrievers)
+    public ConfigPropertyImpl(List<Supplier<T>> configValueSuppliers)
     {
-        this.configValueRetrievers = configValueRetrievers;
+        this.configValueSuppliers = configValueSuppliers;
     }
 
     /**
@@ -45,11 +46,11 @@ public abstract class ConfigPropertyImpl<T> implements ConfigProperty<T>
      */
     protected T doGet()
     {
-        for (ConfigValueRetriever<T> configValueRetriever : configValueRetrievers)
+        for (Supplier<T> configValueSupplier : configValueSuppliers)
         {
             try
             {
-                return configValueRetriever.getValue();
+                return configValueSupplier.get();
             }
             catch (ConfigException.Missing ignored) { }
         }

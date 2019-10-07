@@ -34,23 +34,23 @@ import java.util.function.*;
  */
 public class SimpleConfigValueRetriever<PropValueType> implements ConfigValueRetriever<PropValueType>
 {
-    protected final Config config;
+//    protected final Config config;
     protected final String propKey;
-    protected BiFunction<Config, String, PropValueType> getter;
+    protected Function<String, PropValueType> getter;
 
     public SimpleConfigValueRetriever(
-            Config config,
+//            Config config,
             String propKey,
-            BiFunction<Config, String, PropValueType> getter)
+            Function<String, PropValueType> getter)
     {
         this.propKey = propKey;
-        this.config = config;
+//        this.config = config;
         this.getter = getter;
     }
 
     @Override
     public PropValueType getValue()
     {
-        return getter.apply(config, propKey);
+        return getter.apply(propKey);
     }
 }
