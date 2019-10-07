@@ -19,7 +19,6 @@ package org.jitsi.videobridge.health.config;
 import com.typesafe.config.*;
 import org.jitsi.testutils.*;
 import org.jitsi.videobridge.util.*;
-import org.jitsi.videobridge.util.config.*;
 import org.junit.*;
 
 import static org.junit.Assert.*;
@@ -35,7 +34,7 @@ public class HealthTimeoutPropertyTest
                 .withNoNewConfig()
                 .finishSetup();
 
-        ConfigProperty<Integer> healthTimeoutProp = new HealthTimeoutProperty();
+        HealthTimeoutProperty healthTimeoutProp = new HealthTimeoutProperty();
         assertEquals("The value from the old config should be read correctly", 60000, (int)healthTimeoutProp.get());
     }
 
@@ -48,7 +47,7 @@ public class HealthTimeoutPropertyTest
             .withNoLegacyConfig()
             .finishSetup();
 
-        ConfigProperty<Integer> healthTimeoutProp = new HealthTimeoutProperty();
+        HealthTimeoutProperty healthTimeoutProp = new HealthTimeoutProperty();
         assertEquals("The value from the new config should be read correctly", 10000, (int)healthTimeoutProp.get());
     }
 
@@ -62,7 +61,7 @@ public class HealthTimeoutPropertyTest
             .withNewConfig(newConfig)
             .finishSetup();
 
-        ConfigProperty<Integer> healthTimeoutProp = new HealthTimeoutProperty();
+        HealthTimeoutProperty healthTimeoutProp = new HealthTimeoutProperty();
         assertEquals("The old config value should be used", 60000, (int)healthTimeoutProp.get());
     }
 
@@ -75,7 +74,7 @@ public class HealthTimeoutPropertyTest
             .withNoLegacyConfig()
             .finishSetup();
 
-        ConfigProperty<Integer> healthTimeoutProp = new HealthTimeoutProperty();
+        HealthTimeoutProperty healthTimeoutProp = new HealthTimeoutProperty();
 
         Config changedConfig = ConfigFactory.parseString(HealthTimeoutProperty.propKey + "=90 seconds");
         JvbConfig.configSupplier = () -> changedConfig;

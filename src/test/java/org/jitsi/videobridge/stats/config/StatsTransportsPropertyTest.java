@@ -19,11 +19,9 @@ package org.jitsi.videobridge.stats.config;
 import com.typesafe.config.*;
 import org.jitsi.testutils.*;
 import org.jitsi.videobridge.stats.*;
-import org.jitsi.videobridge.util.config.*;
 import org.junit.*;
 
 import java.time.*;
-import java.util.*;
 
 import static org.junit.Assert.*;
 
@@ -38,7 +36,7 @@ public class StatsTransportsPropertyTest
             .withNoNewConfig()
             .finishSetup();
 
-        ConfigProperty<List<StatsTransport>> statsTransports = new StatsTransportsProperty();
+        StatsTransportsProperty statsTransports = new StatsTransportsProperty();
         assertEquals(3, statsTransports.get().size());
         assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof ColibriStatsTransport));
         assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof MucStatsTransport));
@@ -54,7 +52,7 @@ public class StatsTransportsPropertyTest
             .withNoNewConfig()
             .finishSetup();
 
-        ConfigProperty<List<StatsTransport>> statsTransports = new StatsTransportsProperty();
+        StatsTransportsProperty statsTransports = new StatsTransportsProperty();
         assertEquals(2, statsTransports.get().size());
         assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof ColibriStatsTransport));
         assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof PubSubStatsTransport));
@@ -72,7 +70,7 @@ public class StatsTransportsPropertyTest
             .withNoNewConfig()
             .finishSetup();
 
-        ConfigProperty<List<StatsTransport>> statsTransports = new StatsTransportsProperty();
+        StatsTransportsProperty statsTransports = new StatsTransportsProperty();
         assertEquals(3, statsTransports.get().size());
         assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof ColibriStatsTransport));
         assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof MucStatsTransport));
@@ -92,7 +90,7 @@ public class StatsTransportsPropertyTest
             .withNoLegacyConfig()
             .finishSetup();
 
-        ConfigProperty<List<StatsTransport>> statsTransports = new StatsTransportsProperty();
+        StatsTransportsProperty statsTransports = new StatsTransportsProperty();
         assertEquals(2, statsTransports.get().size());
         assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof ColibriStatsTransport));
         assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof CallStatsIOTransport));
@@ -107,7 +105,7 @@ public class StatsTransportsPropertyTest
             .withNoLegacyConfig()
             .finishSetup();
 
-        ConfigProperty<List<StatsTransport>> statsTransports = new StatsTransportsProperty();
+        StatsTransportsProperty statsTransports = new StatsTransportsProperty();
         assertEquals(2, statsTransports.get().size());
         assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof ColibriStatsTransport));
         assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof PubSubStatsTransport));
@@ -123,7 +121,7 @@ public class StatsTransportsPropertyTest
             .withNoLegacyConfig()
             .finishSetup();
 
-        ConfigProperty<List<StatsTransport>> statsTransports = new StatsTransportsProperty();
+        StatsTransportsProperty statsTransports = new StatsTransportsProperty();
         assertEquals(2, statsTransports.get().size());
         assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof ColibriStatsTransport));
         assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof CallStatsIOTransport));
@@ -142,7 +140,7 @@ public class StatsTransportsPropertyTest
             .withNewConfig(config)
             .finishSetup();
 
-        ConfigProperty<List<StatsTransport>> statsTransports = new StatsTransportsProperty();
+        StatsTransportsProperty statsTransports = new StatsTransportsProperty();
         // We should take the values from the old config if its present
         assertEquals(3, statsTransports.get().size());
         assertTrue(statsTransports.get().stream().anyMatch(t -> t instanceof ColibriStatsTransport));

@@ -18,7 +18,6 @@ package org.jitsi.videobridge.rest;
 
 import com.typesafe.config.*;
 import org.jitsi.testutils.*;
-import org.jitsi.videobridge.util.config.*;
 import org.junit.*;
 
 import static org.junit.Assert.*;
@@ -35,7 +34,7 @@ public class WebSocketConfigTest
             .withNoNewConfig()
             .finishSetup();
 
-        ConfigProperty<Boolean> websocketsEnabled = new WebSocketConfig.EnabledProperty();
+        WebSocketConfig.EnabledProperty websocketsEnabled = new WebSocketConfig.EnabledProperty();
 
         assertTrue(websocketsEnabled.get());
     }

@@ -16,7 +16,6 @@
 package org.jitsi.videobridge.rest;
 
 import org.eclipse.jetty.servlet.*;
-import org.jitsi.videobridge.util.config.*;
 import org.osgi.framework.*;
 
 /**
@@ -39,13 +38,13 @@ public class ColibriWebSocketService
     /**
      * A string which identifies the jitsi-videobridge instance.
      */
-    private static final ConfigProperty<String> serverId = WebSocketConfig.serverId;
+    private static final WebSocketConfig.ServerIdProperty serverId = WebSocketConfig.serverId;
 
     private static final WebSocketConfig.EnabledProperty enabled = WebSocketConfig.enabled;
 
-    private static final ConfigProperty<String> domain = WebSocketConfig.domain;
+    private static final WebSocketConfig.DomainProperty domain = WebSocketConfig.domain;
 
-    private static final ConfigProperty<Boolean> tls = WebSocketConfig.tls;
+    private static final WebSocketConfig.TlsProperty tls = WebSocketConfig.tls;
 
 
     /**

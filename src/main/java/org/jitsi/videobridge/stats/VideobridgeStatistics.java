@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.stats;
 
-import com.typesafe.config.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.osgi.*;
@@ -24,8 +23,6 @@ import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.shim.*;
-import org.jitsi.videobridge.util.*;
-import org.jitsi.videobridge.util.config.*;
 import org.json.simple.*;
 import org.osgi.framework.*;
 

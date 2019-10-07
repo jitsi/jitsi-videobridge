@@ -22,7 +22,6 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.health.config.*;
 import org.jitsi.videobridge.transport.*;
-import org.jitsi.videobridge.util.config.*;
 import org.jitsi.videobridge.xmpp.*;
 
 import java.io.*;
@@ -227,7 +226,7 @@ public class Health
      * considered unhealthy; i.e. if no health check has been completed in the
      * last {@code timeout} milliseconds the bridge is unhealthy.
      */
-    private final ConfigProperty<Integer> timeout = HealthTimeoutProperty.getInstance();
+    private final HealthTimeoutProperty timeout = HealthTimeoutProperty.getInstance();
 
     /**
      * Whether failures are sticky, i.e. once the bridge becomes unhealthy it

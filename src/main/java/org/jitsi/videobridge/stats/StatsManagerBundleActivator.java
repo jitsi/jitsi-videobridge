@@ -18,10 +18,7 @@ package org.jitsi.videobridge.stats;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.videobridge.stats.config.*;
-import org.jitsi.videobridge.util.config.*;
 import org.osgi.framework.*;
-
-import java.util.*;
 
 /**
  * Implements a <tt>BundleActivator</tt> for <tt>StatsManager</tt> which starts

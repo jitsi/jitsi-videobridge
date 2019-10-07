@@ -17,8 +17,8 @@
 package org.jitsi.videobridge.health.config;
 
 import org.jitsi.utils.collections.*;
+import org.jitsi.utils.config.*;
 import org.jitsi.videobridge.util.*;
-import org.jitsi.videobridge.util.config.*;
 
 public class StickyFailuresProperty extends ReadOnceProperty<Boolean>
 {
