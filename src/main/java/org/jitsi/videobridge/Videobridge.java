@@ -775,11 +775,7 @@ public class Videobridge
      */
     public boolean isXmppApiEnabled()
     {
-        ConfigurationService cfg = getConfigurationService();
-
-        // The XMPP API is disabled by default.
-        return cfg != null &&
-            cfg.getBoolean(Videobridge.XMPP_API_PNAME, false);
+        return VideobridgeConfig.EnabledApisProperty.isEnabled(Videobridge.XMPP_API_PNAME);
     }
 
     /**

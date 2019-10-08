@@ -16,32 +16,32 @@
 
 package org.jitsi.videobridge.util.config;
 
-import com.typesafe.config.*;
 import org.jitsi.cmd.*;
-import org.jitsi.utils.config.*;
 
 import java.util.function.*;
 
-public class JvbPropertyConfig<T> extends PropertyConfig<T>
+public class CommandLineConfigValueSupplier<T> implements Supplier<T>
 {
-    public JvbPropertyConfig<T> fromLegacyConfig(Function<Config, T> getter)
-    {
-        suppliedBy(new LegacyConfigValueSupplier<>(getter));
+    protected final Function<CmdLine, T> getter;
 
-        return this;
+    public CommandLineConfigValueSupplier(Function<CmdLine, T> getter)
+    {
+        this.getter = getter;
     }
 
-    public JvbPropertyConfig<T> fromCommandLine(Function<CmdLine, T> getter)
+    @Override
+    public T get()
     {
-        suppliedBy(new CommandLineConfigValueSupplier<T>(getter));
-
-        return this;
-    }
-
-    public JvbPropertyConfig<T> fromNewConfig(Function<Config, T> getter)
-    {
-        suppliedBy(new ConfigValueSupplier<>(getter));
-
-        return this;
+        String[] commandLineArgs = System.getProperty("sun.java.command").split(" ");
+        CmdLine cmdLine = new CmdLine();
+        try
+        {
+            cmdLine.parse(commandLineArgs);
+            return getter.apply(cmdLine);
+        }
+        catch (ParseException e)
+        {
+            return null;
+        }
     }
 }

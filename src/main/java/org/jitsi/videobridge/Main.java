@@ -114,8 +114,6 @@ public class Main
         cmdLine.parse(args);
 
         // Parse the command-line arguments.
-        String apis
-            = cmdLine.getOptionValue(APIS_ARG_NAME, Videobridge.XMPP_API);
         String domain = cmdLine.getOptionValue(DOMAIN_ARG_NAME, null);
         int port = cmdLine.getIntOptionValue(PORT_ARG_NAME, PORT_ARG_VALUE);
         String secret = cmdLine.getOptionValue(SECRET_ARG_NAME, "");
@@ -142,18 +140,19 @@ public class Main
         // Before initializing the application programming interfaces (APIs) of
         // Jitsi Videobridge, set any System properties which they use and which
         // may be specified by the command-line arguments.
+        //TODO(brian): do we still need to do this?
         System.setProperty(
                 Videobridge.REST_API_PNAME,
-                Boolean.toString(apis.contains(Videobridge.REST_API)));
+                Boolean.toString(VideobridgeConfig.EnabledApisProperty.isEnabled(Videobridge.REST_API)));
         System.setProperty(
                 Videobridge.XMPP_API_PNAME,
-                Boolean.toString(apis.contains(Videobridge.XMPP_API)));
+                Boolean.toString(VideobridgeConfig.EnabledApisProperty.isEnabled(Videobridge.XMPP_API)));
 
         ComponentMain main = new ComponentMain();
         BundleConfig osgiBundles = new BundleConfig();
 
         // Start Jitsi Videobridge as an external Jabber component.
-        if (apis.contains(Videobridge.XMPP_API))
+        if (VideobridgeConfig.EnabledApisProperty.isEnabled(Videobridge.XMPP_API))
         {
             ComponentImpl component
                 = new ComponentImpl(
