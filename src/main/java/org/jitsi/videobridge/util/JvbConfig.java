@@ -50,6 +50,7 @@ public class JvbConfig
     {
         logger.info("Loaded complete config: " + config.withFallback(legacyConfig).root().render());
         logger.info("Loaded JVB config: " + config.getConfig("videobridge").root().render());
+        logger.info("Loaded legacy config: " + legacyConfig.root().render());
     }
 
     public static void reloadConfig()
