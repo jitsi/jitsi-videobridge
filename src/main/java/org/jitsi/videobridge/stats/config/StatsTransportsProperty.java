@@ -17,11 +17,9 @@
 package org.jitsi.videobridge.stats.config;
 
 import com.typesafe.config.*;
-import org.jitsi.utils.collections.*;
 import org.jitsi.utils.config.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.stats.*;
-import org.jitsi.videobridge.util.config.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
 import org.jxmpp.stringprep.*;
@@ -45,7 +43,7 @@ import java.util.stream.*;
  * to acquire the end result: a {@code List<StatsTransport>}.
  *
  */
-public class StatsTransportsProperty extends ReadOnceProperty<List<StatsTransport>>
+public class StatsTransportsProperty extends ConfigPropertyImpl<List<StatsTransport>>
 {
     protected static final String legacyPropName = "org.jitsi.videobridge.STATISTICS_TRANSPORT";
     protected static final String propName = "videobridge.stats.transports";
@@ -94,7 +92,12 @@ public class StatsTransportsProperty extends ReadOnceProperty<List<StatsTranspor
         // Create the retrievers when the instance is created, so they read the config
         // at property creation time (this gives unit tests a chance to inject
         // test configs)
-        super(JList.of(createLegacyConfigValueSupplier(), createNewConfigValueSupplier()));
+        super(new JvbPropertyConfig<List<StatsTransport>>()
+            .fromLegacyConfig(createLegacyConfigValueSupplier())
+            .fromNewConfig(createNewConfigValueSupplier())
+            .readOnce()
+            .throwIfNotFound()
+        );
     }
 
     public static StatsTransportsProperty getInstance()
@@ -113,29 +116,29 @@ public class StatsTransportsProperty extends ReadOnceProperty<List<StatsTranspor
     }
 
     /**
-     * Creates a supplier which pulls data from a new config object and returns a configuration
+     * Creates a Function which pulls data from a new config object and returns a configuration
      * value of type {@code List<StatsTransport>}
      * @return
      */
-    static Supplier<List<StatsTransport>> createNewConfigValueSupplier()
+    static Function<Config, List<StatsTransport>> createNewConfigValueSupplier()
     {
-        return new ConfigValueSupplier<>(config ->
+        return config ->
             config.getConfigList(propName).stream()
                .map(NewConfigTransportsFactory::create)
-               .collect(Collectors.toList()));
+               .collect(Collectors.toList());
     }
 
     /**
-     * Creates a Supplier which pulls data from a legacy config object and returns a configuration
+     * Creates a Function which pulls data from a legacy config object and returns a configuration
      * value of type {@code List<StatsTransport>}
      * @return
      */
-    static Supplier<List<StatsTransport>> createLegacyConfigValueSupplier()
+    static Function<Config, List<StatsTransport>> createLegacyConfigValueSupplier()
     {
-        return new LegacyConfigValueSupplier<>(config -> {
+        return config -> {
             String transportNames = config.getString(legacyPropName);
             return OldConfigTransportsFactory.create(transportNames, config);
-        });
+        };
     }
 
     /**
