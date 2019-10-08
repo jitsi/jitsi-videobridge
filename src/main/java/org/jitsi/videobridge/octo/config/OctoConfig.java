@@ -27,7 +27,7 @@ public class OctoConfig
     /**
      * A singleton property representing the octo's region
      */
-    public static class RegionProperty extends ConfigPropertyImpl<String>
+    public static class RegionProperty extends AbstractConfigProperty<String>
     {
         protected static final String legacyPropName = "org.jitsi.videobridge.REGION";
         protected static final String propName = "videobridge.octo.region";
@@ -49,7 +49,7 @@ public class OctoConfig
      * The name of the configuration property which controls the address on
      * which the Octo relay should bind.
      */
-    public static class BindAddress extends ConfigPropertyImpl<String>
+    public static class BindAddress extends AbstractConfigProperty<String>
     {
         protected static final String legacyPropName = "org.jitsi.videobridge.octo.BIND_ADDRESS";
         protected static final String propName = "videobridge.octo.bind-address";
@@ -71,7 +71,7 @@ public class OctoConfig
      * The name of the configuration property which controls the public address
      * which will be used as part of relayId.
      */
-    public static class PublicAddress extends ConfigPropertyImpl<String>
+    public static class PublicAddress extends AbstractConfigProperty<String>
     {
         protected static final String legacyPropName = "org.jitsi.videobridge.octo.PUBLIC_ADDRESS";
         protected static final String propName = "videobridge.octo.public-address";
@@ -93,7 +93,7 @@ public class OctoConfig
      * The name of the property which controls the port number which the Octo
      * relay should use.
      */
-    public static class Port extends ConfigPropertyImpl<UnprivilegedPort>
+    public static class Port extends AbstractConfigProperty<UnprivilegedPort>
     {
         protected static final String legacyPropName = "org.jitsi.videobridge.octo.BIND_PORT";
         protected static final String propName = "videobridge.octo.port";

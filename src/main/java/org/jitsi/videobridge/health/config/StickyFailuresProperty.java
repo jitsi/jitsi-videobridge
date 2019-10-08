@@ -19,7 +19,7 @@ package org.jitsi.videobridge.health.config;
 import org.jitsi.utils.config.*;
 import org.jitsi.videobridge.stats.config.*;
 
-public class StickyFailuresProperty extends ConfigPropertyImpl<Boolean>
+public class StickyFailuresProperty extends AbstractConfigProperty<Boolean>
 {
     protected static final String legacyPropName = "org.jitsi.videobridge.health.STICKY_FAILURES";
     protected static final String propName = "videobridge.health.sticky-failures";

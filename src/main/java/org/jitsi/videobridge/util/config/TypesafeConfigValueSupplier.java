@@ -22,7 +22,7 @@ import org.jitsi.utils.config.*;
 import java.util.function.*;
 
 /**
- * When retrieving configuration values, {@link ConfigPropertyImpl} will iterate
+ * When retrieving configuration values, {@link AbstractConfigProperty} will iterate
  * through each of the suppliers and stop at at the first one which does not
  * throw {@link ConfigPropertyNotFoundException}.  The typesafe.config library
  * doesn't throw that exception (since that's one we define), so we have to

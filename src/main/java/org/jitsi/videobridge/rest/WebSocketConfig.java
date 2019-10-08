@@ -26,7 +26,7 @@ public class WebSocketConfig
     /**
      * Whether or not the websocket service is enabled
      */
-    public static class EnabledProperty extends ConfigPropertyImpl<Boolean>
+    public static class EnabledProperty extends AbstractConfigProperty<Boolean>
     {
         protected static final String legacyPropName = "org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE";
         protected static final String propName = "videobridge.websockets.enabled";
@@ -51,7 +51,7 @@ public class WebSocketConfig
      * The property which controls the server ID used in URLs
      * advertised for COLIBRI WebSockets.
      */
-    public static class ServerIdProperty extends ConfigPropertyImpl<String>
+    public static class ServerIdProperty extends AbstractConfigProperty<String>
     {
         protected static final String legacyPropName = "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID";
         protected static final String propName = "videobridge.websockets.server-id";
@@ -73,7 +73,7 @@ public class WebSocketConfig
      * The property which controls the domain name used in URLs
      * advertised for COLIBRI WebSockets.
      */
-    public static class DomainProperty extends ConfigPropertyImpl<String>
+    public static class DomainProperty extends AbstractConfigProperty<String>
     {
         protected static final String legacyPropName = "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN";
         protected static final String propName = "videobridge.websockets.domain";
@@ -96,7 +96,7 @@ public class WebSocketConfig
      * COLIBRI WebSockets should use the "ws" (if false) or "wss" (if true)
      * schema.
      */
-    public static class TlsProperty extends ConfigPropertyImpl<Boolean>
+    public static class TlsProperty extends AbstractConfigProperty<Boolean>
     {
         protected static final String legacyPropName = "org.jitsi.videobridge.rest.COLIBRI_WS_TLS";
         protected static final String propName = "videobridge.websockets.tls";

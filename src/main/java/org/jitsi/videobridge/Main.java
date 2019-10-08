@@ -208,7 +208,7 @@ public class Main
             }
             catch (NoSuchMethodException ignored) {
                 // This can happen if the class we found was an abstract class,
-                // for example ConfigPropertyImpl
+                // for example AbstractConfigProperty
             }
             catch (Exception ignored) {}
         }

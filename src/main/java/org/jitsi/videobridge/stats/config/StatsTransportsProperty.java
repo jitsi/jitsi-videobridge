@@ -43,7 +43,7 @@ import java.util.stream.*;
  * to acquire the end result: a {@code List<StatsTransport>}.
  *
  */
-public class StatsTransportsProperty extends ConfigPropertyImpl<List<StatsTransport>>
+public class StatsTransportsProperty extends AbstractConfigProperty<List<StatsTransport>>
 {
     protected static final String legacyPropName = "org.jitsi.videobridge.STATISTICS_TRANSPORT";
     protected static final String propName = "videobridge.stats.transports";

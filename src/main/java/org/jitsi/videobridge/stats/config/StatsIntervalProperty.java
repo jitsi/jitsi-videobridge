@@ -20,7 +20,7 @@ import org.jitsi.utils.config.*;
 
 import java.util.concurrent.*;
 
-public class StatsIntervalProperty extends ConfigPropertyImpl<Integer>
+public class StatsIntervalProperty extends AbstractConfigProperty<Integer>
 {
     protected static final String legacyPropName = "org.jitsi.videobridge.STATISTICS_INTERVAL";
     protected static final String propName = "videobridge.stats.interval";

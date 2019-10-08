@@ -21,7 +21,7 @@ import org.jitsi.videobridge.stats.config.*;
 
 import java.util.concurrent.*;
 
-public class HealthIntervalProperty extends ConfigPropertyImpl<Integer>
+public class HealthIntervalProperty extends AbstractConfigProperty<Integer>
 {
     protected static final String legacyPropName = "org.jitsi.videobridge.health.INTERVAL";
     protected static final String propName = "videobridge.health.interval";

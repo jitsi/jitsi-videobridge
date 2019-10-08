@@ -24,7 +24,7 @@ import org.jitsi.videobridge.util.config.*;
 //NOTE(brian): temporary to illustrate how making a property obsolete would wokr
 // and be caught by validateConfig in Main
 @ObsoleteConfig("This property is no longer used, see ReplacementProperty")
-public class DummyObsoleteProperty extends ConfigPropertyImpl<String>
+public class DummyObsoleteProperty extends AbstractConfigProperty<String>
 {
     protected static final String legacyPropKey = "some.old.prop.key";
 

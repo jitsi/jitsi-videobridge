@@ -27,7 +27,7 @@ public class CallStatsIoTransportConfig
     /**
      * The callstats AppID.
      */
-    public static class AppIdProperty extends ConfigPropertyImpl<Integer>
+    public static class AppIdProperty extends AbstractConfigProperty<Integer>
     {
         protected static final String legacyPropName = "io.callstats.sdk.CallStats.appId";
         protected static final String propName = "videobridge.callstats-io.app-id";
@@ -48,7 +48,7 @@ public class CallStatsIoTransportConfig
     /**
      * Shared Secret for authentication on Callstats.io
      */
-    public static class AppSecretProperty extends ConfigPropertyImpl<String>
+    public static class AppSecretProperty extends AbstractConfigProperty<String>
     {
         protected static final String legacyPropName = "io.callstats.sdk.CallStats.appSecret";
         protected static final String propName = "videobridge.callstats-io.app-secret";
@@ -69,7 +69,7 @@ public class CallStatsIoTransportConfig
     /**
      * ID of the key that was used to generate token.
      */
-    public static class KeyIdProperty extends ConfigPropertyImpl<String>
+    public static class KeyIdProperty extends AbstractConfigProperty<String>
     {
         protected static final String legacyPropName = "io.callstats.sdk.CallStats.keyId";
         protected static final String propName = "videobridge.callstats-io.key-id";
@@ -90,7 +90,7 @@ public class CallStatsIoTransportConfig
     /**
      * The path to private key file.
      */
-    public static class KeyPathProperty extends ConfigPropertyImpl<String>
+    public static class KeyPathProperty extends AbstractConfigProperty<String>
     {
         protected static final String legacyPropName = "io.callstats.sdk.CallStats.keyPath";
         protected static final String propName = "videobridge.callstats-io.key-path";
@@ -111,7 +111,7 @@ public class CallStatsIoTransportConfig
     /**
      * The bridge id to report to callstats.io.
      */
-    public static class BridgeIdProperty extends ConfigPropertyImpl<String>
+    public static class BridgeIdProperty extends AbstractConfigProperty<String>
     {
         protected static final String legacyPropName = "io.callstats.sdk.CallStats.bridgeId";
         protected static final String propName = "videobridge.callstats-io.bridge-id";
@@ -132,7 +132,7 @@ public class CallStatsIoTransportConfig
     /**
      * The bridge conference prefix to report to callstats.io.
      */
-    public static class ConferenceIdPrefixProperty extends ConfigPropertyImpl<String>
+    public static class ConferenceIdPrefixProperty extends AbstractConfigProperty<String>
     {
         protected static final String legacyPropName = "io.callstats.sdk.CallStats.conferenceIDPrefix";
         protected static final String propName = "videobridge.callstats-io.conference-id-prefix";

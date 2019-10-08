@@ -21,7 +21,7 @@ import org.jitsi.videobridge.stats.config.*;
 
 import java.util.concurrent.*;
 
-public class HealthTimeoutProperty extends ConfigPropertyImpl<Integer>
+public class HealthTimeoutProperty extends AbstractConfigProperty<Integer>
 {
     protected static final String legacyPropName = "org.jitsi.videobridge.health.TIMEOUT";
     protected static final String propName = "videobridge.health.timeout";

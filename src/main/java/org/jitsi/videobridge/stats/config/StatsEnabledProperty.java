@@ -18,7 +18,7 @@ package org.jitsi.videobridge.stats.config;
 
 import org.jitsi.utils.config.*;
 
-public class StatsEnabledProperty extends ConfigPropertyImpl<Boolean>
+public class StatsEnabledProperty extends AbstractConfigProperty<Boolean>
 {
     protected static final String legacyPropName = "org.jitsi.videobridge.ENABLE_STATISTICS";
     protected static final String propName = "videobridge.stats.enabled";

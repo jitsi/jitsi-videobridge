@@ -18,7 +18,6 @@ package org.jitsi.videobridge.octo.config;
 
 import com.typesafe.config.*;
 import org.jitsi.testutils.*;
-import org.jitsi.videobridge.health.config.*;
 import org.junit.*;
 
 import static org.junit.Assert.*;
