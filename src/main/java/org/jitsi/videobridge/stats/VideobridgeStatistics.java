@@ -54,11 +54,6 @@ public class VideobridgeStatistics
      */
     private static final int CONFERENCE_SIZE_BUCKETS = 22;
 
-    /**
-     * The currently configured region.
-     */
-    public static OctoRegionProperty region = OctoRegionProperty.getInstance();
-
     static
     {
         dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
@@ -454,9 +449,9 @@ public class VideobridgeStatistics
             {
                 unlockedSetStat(RELAY_ID, octoRelay.getId());
             }
-            if (!StringUtils.isEmpty(region.get()))
+            if (OctoConfig.region.get() != null)
             {
-                unlockedSetStat(REGION, region.get());
+                unlockedSetStat(REGION, OctoConfig.region.get());
             }
             unlockedSetStat(VERSION, videobridge.getVersion().toString());
         }

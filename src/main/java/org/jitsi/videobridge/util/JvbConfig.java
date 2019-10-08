@@ -46,7 +46,6 @@ public class JvbConfig
     protected static Config config = configSupplier.get();
     protected static Config legacyConfig = legacyConfigSupplier.get();
 
-
     static
     {
         logger.info("Loaded complete config: " + config.withFallback(legacyConfig).root().render());

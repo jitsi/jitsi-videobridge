@@ -17,7 +17,10 @@ package org.jitsi.videobridge.octo;
 
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.utils.config.*;
 import org.jitsi.utils.logging.*;
+import org.jitsi.videobridge.octo.config.*;
+import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
 import java.net.*;
@@ -36,27 +39,6 @@ public class OctoRelayService
      */
     private static final Logger logger
         = Logger.getLogger(OctoRelayService.class);
-
-    /**
-     * The name of the configuration property which controls the address on
-     * which the Octo relay should bind.
-     */
-    public static final String ADDRESS_PNAME
-        = "org.jitsi.videobridge.octo.BIND_ADDRESS";
-        
-    /**
-     * The name of the configuration property which controls the public address
-     * which will be used as part of relayId.
-     */
-    public static final String PUBLIC_ADDRESS_PNAME
-        = "org.jitsi.videobridge.octo.PUBLIC_ADDRESS";
-
-    /**
-     * The name of the property which controls the port number which the Octo
-     * relay should use.
-     */
-    public static final String PORT_PNAME
-        = "org.jitsi.videobridge.octo.BIND_PORT";
 
     /**
      * The Octo relay instance used by this {@link OctoRelayService}.
@@ -82,29 +64,38 @@ public class OctoRelayService
             = ServiceUtils2.getService(
                     bundleContext, ConfigurationService.class);
 
-        String address = cfg.getString(ADDRESS_PNAME, null);
-        String publicAddress = cfg.getString(PUBLIC_ADDRESS_PNAME, address);
-        int port = cfg.getInt(PORT_PNAME, -1);
 
-        if (address != null && (1024 <= port && port <= 0xffff))
+        final String address = OctoConfig.bindAddress.get();
+        if (address == null)
         {
-            try
-            {
-                relay = new OctoRelay(address, port);
-                relay.setPublicAddress(publicAddress);
-                bundleContext
-                    .registerService(OctoRelayService.class.getName(), this,
-                                     null);
-            }
-            catch (UnknownHostException | SocketException e)
-            {
-                logger.error("Failed to initialize Octo relay with address "
-                                 + address + ":" + port + ". ", e);
-            }
+            logger.info("Octo relay not configured (bind address null)");
+            return;
         }
-        else
+
+        final String publicAddress = OctoConfig.publicAddress.get();
+        final UnprivilegedPort port;
+        try
         {
-            logger.info("Octo relay not configured.");
+            port = OctoConfig.port.get();
+        }
+        catch (UnprivilegedPort.InvalidUnprivilegedPortException e)
+        {
+            logger.error("Invalid port: " + e.getMessage());
+            return;
+        }
+
+        try
+        {
+            relay = new OctoRelay(address, port.get());
+            relay.setPublicAddress(publicAddress);
+            bundleContext
+                .registerService(OctoRelayService.class.getName(), this,
+                                 null);
+        }
+        catch (UnknownHostException | SocketException e)
+        {
+            logger.error("Failed to initialize Octo relay with address "
+                             + address + ":" + port.get() + ". ", e);
         }
     }
 

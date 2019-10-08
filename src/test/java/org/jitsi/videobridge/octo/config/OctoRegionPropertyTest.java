@@ -34,7 +34,7 @@ public class OctoRegionPropertyTest
             .withNoNewConfig()
             .finishSetup();
 
-        OctoRegionProperty octoRegionProperty = new OctoRegionProperty();
+        OctoConfig.RegionProperty octoRegionProperty = new OctoConfig.RegionProperty();
         assertNull("We should return null when it isn't set", octoRegionProperty.get());
     }
 
@@ -47,7 +47,7 @@ public class OctoRegionPropertyTest
             .withNewConfig(newConfig)
             .finishSetup();
 
-        OctoRegionProperty octoRegionProperty = new OctoRegionProperty();
+        OctoConfig.RegionProperty octoRegionProperty = new OctoConfig.RegionProperty();
         assertNull("We should return null when it isn't set", octoRegionProperty.get());
     }
 }
