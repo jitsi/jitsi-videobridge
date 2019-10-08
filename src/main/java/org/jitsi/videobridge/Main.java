@@ -17,8 +17,18 @@ package org.jitsi.videobridge;
 
 import org.jitsi.cmd.*;
 import org.jitsi.meet.*;
+import org.jitsi.utils.config.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.reflections.*;
+import org.reflections.scanners.*;
+import org.reflections.util.*;
+
+import java.lang.annotation.*;
+import java.lang.reflect.*;
+import java.util.*;
+import java.util.stream.*;
 
 /**
  * Provides the <tt>main</tt> entry point of the Jitsi Videobridge application
@@ -87,6 +97,8 @@ public class Main
      */
     private static final String SUBDOMAIN_ARG_NAME = "--subdomain";
 
+    private static final Logger logger = new LoggerImpl(Main.class.getName());
+
     /**
      * Represents the <tt>main</tt> entry point of the Jitsi Videobridge
      * application which implements an external Jabber component.
@@ -125,6 +137,9 @@ public class Main
         // to be passed.
         System.setProperty("org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.JavaUtilLog");
 
+
+        validateConfig();
+
         // Before initializing the application programming interfaces (APIs) of
         // Jitsi Videobridge, set any System properties which they use and which
         // may be specified by the command-line arguments.
@@ -155,5 +170,67 @@ public class Main
         {
             main.runMainProgramLoop(osgiBundles);
         }
+    }
+
+    //TODO(brian): clean this method up
+    protected static void validateConfig()
+    {
+        Reflections r = new Reflections(new ConfigurationBuilder()
+            .setUrls(ClasspathHelper.forPackage("org.jitsi"))
+            .setScanners(
+                new SubTypesScanner(),
+                new TypeAnnotationsScanner()
+            )
+        );
+
+        Set<Class<? extends ConfigProperty>> ss = r.getSubTypesOf(ConfigProperty.class);
+
+        ss = ss.stream().filter(c -> c.isAnnotationPresent(ObsoleteConfig.class)).collect(Collectors.toSet());
+
+        for (Class<? extends ConfigProperty> c : ss)
+        {
+            try
+            {
+                Constructor<? extends ConfigProperty> ctor = c.getDeclaredConstructor();
+                ctor.setAccessible(true);
+                ctor.newInstance().get();
+                ObsoleteConfig anno = c.getAnnotation(ObsoleteConfig.class);
+                logger.info("Prop " + c + " is obsolete but was present in config: " + anno.value());
+            }
+            catch (InvocationTargetException e)
+            {
+                // We don't get a raw ConfigPropertyNotFoundException
+                // when calling it this way, instead it's wrapped by
+                // an InvocationTargetException
+                if (e.getCause() instanceof ConfigPropertyNotFoundException)
+                {
+                    logger.info("Prop " + c + " is obsolete but wasn't found defined, ok!");
+                }
+            }
+            catch (NoSuchMethodException ignored) {
+                // This can happen if the class we found was an abstract class,
+                // for example ConfigPropertyImpl
+            }
+            catch (Exception ignored) {}
+        }
+
+//        Set<Class<?>> obsoleteConfigProperties =
+//            new Reflections("org.jitsi").getTypesAnnotatedWith(ObsoleteConfig.class);
+//
+//        //TODO: I think there should be a way to narrow down the query above to get subtypes of ConfigProperty
+//        // with this annotation, but not sure yet.  This way is fine, but I think the way I just described
+//        // would be ideal.
+//        for (Class<?> clazz : obsoleteConfigProperties)
+//        {
+//            if (ConfigProperty.class.isAssignableFrom(clazz))
+//            {
+////                ConfigProperty<?> cp = ((ConfigProperty)clazz);
+//
+//            }
+//            ObsoleteConfig anno = clazz.getAnnotation(ObsoleteConfig.class);
+//            logger.warn("WARNING: You have configuration property " + clazz.getName() + " defined but it " +
+//                "is no longer used: " + anno.value());
+//        }
+
     }
 }
