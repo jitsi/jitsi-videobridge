@@ -188,6 +188,10 @@ public class Main
 
         for (Class<? extends ConfigProperty> c : ss)
         {
+            if (Modifier.isAbstract(c.getModifiers()))
+            {
+                continue;
+            }
             try
             {
                 Constructor<? extends ConfigProperty> ctor = c.getDeclaredConstructor();
@@ -205,10 +209,6 @@ public class Main
                 {
                     logger.info("Prop " + c + " is obsolete but wasn't found defined, ok!");
                 }
-            }
-            catch (NoSuchMethodException ignored) {
-                // This can happen if the class we found was an abstract class,
-                // for example AbstractConfigProperty
             }
             catch (Exception ignored) {}
         }
