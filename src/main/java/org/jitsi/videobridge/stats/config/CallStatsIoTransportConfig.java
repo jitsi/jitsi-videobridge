@@ -16,29 +16,30 @@
 
 package org.jitsi.videobridge.stats.config;
 
-import com.sun.javafx.fxml.expression.*;
 import org.jitsi.utils.collections.*;
 import org.jitsi.utils.config.*;
 import org.jitsi.videobridge.util.config.*;
 
-import static org.jitsi.videobridge.stats.config.TypesafeConfigUtils.getStringOrNull;
+import static org.jitsi.videobridge.stats.config.TypesafeConfigUtils.*;
 
 public class CallStatsIoTransportConfig
 {
     /**
      * The callstats AppID.
      */
-    public static class AppIdProperty extends ReadOnceProperty<Integer>
+    public static class AppIdProperty extends ConfigPropertyImpl<Integer>
     {
         protected static final String legacyPropName = "io.callstats.sdk.CallStats.appId";
         protected static final String propName = "videobridge.callstats-io.app-id";
 
         protected AppIdProperty()
         {
-            super(JList.of(
-                new LegacyConfigValueSupplier<>(config -> config.getInt(legacyPropName)),
-                new ConfigValueSupplier<>(config -> config.getInt(propName))
-            ));
+            super(new JvbPropertyConfig<Integer>()
+                .fromLegacyConfig(config -> config.getInt(legacyPropName))
+                .fromNewConfig(config -> config.getInt(propName))
+                .readOnce()
+                .throwIfNotFound()
+            );
         }
     }
 
@@ -47,17 +48,19 @@ public class CallStatsIoTransportConfig
     /**
      * Shared Secret for authentication on Callstats.io
      */
-    public static class AppSecretProperty extends ReadOnceProperty<String>
+    public static class AppSecretProperty extends ConfigPropertyImpl<String>
     {
         protected static final String legacyPropName = "io.callstats.sdk.CallStats.appSecret";
         protected static final String propName = "videobridge.callstats-io.app-secret";
 
         protected AppSecretProperty()
         {
-            super(JList.of(
-                new LegacyConfigValueSupplier<>(config -> config.getString(legacyPropName)),
-                new ConfigValueSupplier<>(config -> getStringOrNull(config, propName))
-            ));
+            super(new JvbPropertyConfig<String>()
+                .fromLegacyConfig(config -> config.getString(legacyPropName))
+                .fromNewConfig(config -> getStringOrNull(config, propName))
+                .readOnce()
+                .returnNullIfNotFound()
+            );
         }
     }
 
@@ -66,17 +69,19 @@ public class CallStatsIoTransportConfig
     /**
      * ID of the key that was used to generate token.
      */
-    public static class KeyIdProperty extends ReadOnceProperty<String>
+    public static class KeyIdProperty extends ConfigPropertyImpl<String>
     {
         protected static final String legacyPropName = "io.callstats.sdk.CallStats.keyId";
         protected static final String propName = "videobridge.callstats-io.key-id";
 
         protected KeyIdProperty()
         {
-            super(JList.of(
-                new LegacyConfigValueSupplier<>(config -> config.getString(legacyPropName)),
-                new ConfigValueSupplier<>(config -> getStringOrNull(config, propName))
-            ));
+            super(new JvbPropertyConfig<String>()
+                .fromLegacyConfig(config -> config.getString(legacyPropName))
+                .fromNewConfig(config -> getStringOrNull(config, propName))
+                .readOnce()
+                .returnNullIfNotFound()
+            );
         }
     }
 
@@ -85,17 +90,19 @@ public class CallStatsIoTransportConfig
     /**
      * The path to private key file.
      */
-    public static class KeyPathProperty extends ReadOnceProperty<String>
+    public static class KeyPathProperty extends ConfigPropertyImpl<String>
     {
         protected static final String legacyPropName = "io.callstats.sdk.CallStats.keyPath";
         protected static final String propName = "videobridge.callstats-io.key-path";
 
         protected KeyPathProperty()
         {
-            super(JList.of(
-                new LegacyConfigValueSupplier<>(config -> config.getString(legacyPropName)),
-                new ConfigValueSupplier<>(config -> getStringOrNull(config, propName))
-            ));
+            super(new JvbPropertyConfig<String>()
+                .fromLegacyConfig(config -> config.getString(legacyPropName))
+                .fromNewConfig(config -> getStringOrNull(config, propName))
+                .readOnce()
+                .returnNullIfNotFound()
+            );
         }
     }
 
@@ -104,17 +111,19 @@ public class CallStatsIoTransportConfig
     /**
      * The bridge id to report to callstats.io.
      */
-    public static class BridgeIdProperty extends ReadOnceProperty<String>
+    public static class BridgeIdProperty extends ConfigPropertyImpl<String>
     {
         protected static final String legacyPropName = "io.callstats.sdk.CallStats.bridgeId";
         protected static final String propName = "videobridge.callstats-io.bridge-id";
 
         protected BridgeIdProperty()
         {
-            super(JList.of(
-                new LegacyConfigValueSupplier<>(config -> config.getString(legacyPropName)),
-                new ConfigValueSupplier<>(config -> config.getString(propName))
-            ));
+            super(new JvbPropertyConfig<String>()
+                .fromLegacyConfig(config -> config.getString(legacyPropName))
+                .fromNewConfig(config -> config.getString(propName))
+                .readOnce()
+                .returnNullIfNotFound()
+            );
         }
     }
 
@@ -123,17 +132,19 @@ public class CallStatsIoTransportConfig
     /**
      * The bridge conference prefix to report to callstats.io.
      */
-    public static class ConferenceIdPrefixProperty extends ReadOnceProperty<String>
+    public static class ConferenceIdPrefixProperty extends ConfigPropertyImpl<String>
     {
         protected static final String legacyPropName = "io.callstats.sdk.CallStats.conferenceIDPrefix";
         protected static final String propName = "videobridge.callstats-io.conference-id-prefix";
 
         protected ConferenceIdPrefixProperty()
         {
-            super(JList.of(
-                new LegacyConfigValueSupplier<>(config -> config.getString(legacyPropName)),
-                new ConfigValueSupplier<>(config -> config.getString(propName))
-            ));
+            super(new JvbPropertyConfig<String>()
+                .fromLegacyConfig(config -> config.getString(legacyPropName))
+                .fromNewConfig(config -> config.getString(propName))
+                .readOnce()
+                .returnNullIfNotFound()
+            );
         }
     }
 
