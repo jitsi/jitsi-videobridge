@@ -140,9 +140,12 @@ public class StatsManagerBundleActivator
 
             // The interval/period of the Statistics better be the same as the
             // interval/period of the StatsTransport.
-            if (statsMgr.findStatistics(VideobridgeStatistics.class, statsTransport.getInterval().toMillis()) == null)
+            int statsTransportInterval = statsTransport.getInterval() == null ?
+                StatsIntervalProperty.getInstance().get() :
+                (int)statsTransport.getInterval().toMillis();
+            if (statsMgr.findStatistics(VideobridgeStatistics.class, statsTransportInterval) == null)
             {
-                statsMgr.addStatistics(new VideobridgeStatistics(), statsTransport.getInterval().toMillis());
+                statsMgr.addStatistics(new VideobridgeStatistics(), statsTransportInterval);
             }
         });
 
