@@ -15,9 +15,6 @@
  */
 package org.jitsi.videobridge.octo;
 
-import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
-import org.jitsi.utils.config.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.util.*;
@@ -60,11 +57,6 @@ public class OctoRelayService
     @Override
     public void start(BundleContext bundleContext)
     {
-        ConfigurationService cfg
-            = ServiceUtils2.getService(
-                    bundleContext, ConfigurationService.class);
-
-
         final String address = OctoConfig.bindAddress.get();
         if (address == null)
         {
