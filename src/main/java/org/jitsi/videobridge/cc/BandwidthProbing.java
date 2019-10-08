@@ -15,11 +15,12 @@
  */
 package org.jitsi.videobridge.cc;
 
+ import org.jitsi.nlj.util.*;
  import org.jitsi.service.configuration.*;
  import org.jitsi.service.libjitsi.*;
  import org.jitsi.utils.concurrent.*;
  import org.jitsi.utils.logging.*;
- import org.jitsi_modified.service.neomedia.rtp.*;
+ import org.jitsi.nlj.rtp.bandwidthestimation.*;
  import org.json.simple.*;
 
  import java.util.*;
@@ -209,9 +210,9 @@ package org.jitsi.videobridge.cc;
      }
 
      @Override
-     public void bandwidthEstimationChanged(long newBwBps)
+     public void bandwidthEstimationChanged(Bandwidth newBw)
      {
-         this.latestBwe = newBwBps;
+         this.latestBwe = (long)newBw.getBps();
      }
 
      /**

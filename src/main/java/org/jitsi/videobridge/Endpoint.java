@@ -242,7 +242,7 @@ public class Endpoint
             {
                 logger.debug("Estimated bandwidth is now " + newValueBps + " bps.");
             }
-            bitrateController.bandwidthChanged(newValueBps);
+            bitrateController.bandwidthChanged((long)newValueBps.getBps());
         });
         transceiver.onBandwidthEstimateChanged(bandwidthProbing);
         conference.encodingsManager.subscribe(this);
