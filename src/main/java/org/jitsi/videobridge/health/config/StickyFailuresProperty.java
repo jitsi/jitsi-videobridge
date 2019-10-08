@@ -16,11 +16,10 @@
 
 package org.jitsi.videobridge.health.config;
 
-import org.jitsi.utils.collections.*;
 import org.jitsi.utils.config.*;
-import org.jitsi.videobridge.util.config.*;
+import org.jitsi.videobridge.stats.config.*;
 
-public class StickyFailuresProperty extends ReadOnceProperty<Boolean>
+public class StickyFailuresProperty extends ConfigPropertyImpl<Boolean>
 {
     protected static final String legacyPropName = "org.jitsi.videobridge.health.STICKY_FAILURES";
     protected static final String propName = "videobridge.health.sticky-failures";
@@ -29,10 +28,12 @@ public class StickyFailuresProperty extends ReadOnceProperty<Boolean>
 
     protected StickyFailuresProperty()
     {
-        super(JList.of(
-            new LegacyConfigValueSupplier<>(config -> config.getBoolean(legacyPropName)),
-            new ConfigValueSupplier<>(config -> config.getBoolean(propName))
-        ));
+        super(new JvbPropertyConfig<Boolean>()
+            .fromLegacyConfig(config -> config.getBoolean(legacyPropName))
+            .fromNewConfig(config -> config.getBoolean(propName))
+            .readOnce()
+            .throwIfNotFound()
+        );
     }
 
     public static StickyFailuresProperty getInstance()
