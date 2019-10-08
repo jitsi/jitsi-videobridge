@@ -16,11 +16,9 @@
 
 package org.jitsi.videobridge.stats.config;
 
-import org.jitsi.utils.collections.*;
 import org.jitsi.utils.config.*;
-import org.jitsi.videobridge.util.config.*;
 
-public class StatsEnabledProperty extends ReadOnceProperty<Boolean>
+public class StatsEnabledProperty extends ConfigPropertyImpl<Boolean>
 {
     protected static final String legacyPropName = "org.jitsi.videobridge.ENABLE_STATISTICS";
     protected static final String propName = "videobridge.stats.enabled";
@@ -29,11 +27,13 @@ public class StatsEnabledProperty extends ReadOnceProperty<Boolean>
 
     protected StatsEnabledProperty()
     {
-        super(JList.of(
-            new LegacyConfigValueSupplier<>(config -> config.getBoolean(legacyPropName)),
-            new ConfigValueSupplier<>(config -> config.getBoolean(propName))
-        ));
-    }
+        super(new JvbPropertyConfig<Boolean>()
+            .fromLegacyConfig(config -> config.getBoolean(legacyPropName))
+            .fromNewConfig(config -> config.getBoolean(propName))
+            .readOnce()
+            .throwIfNotFound()
+        );
+   }
 
     public static StatsEnabledProperty getInstance()
     {
