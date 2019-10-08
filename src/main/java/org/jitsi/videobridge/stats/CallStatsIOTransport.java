@@ -19,6 +19,7 @@ import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.stats.media.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.stats.config.*;
 import org.osgi.framework.*;
 
 import java.time.*;
@@ -34,47 +35,6 @@ import static org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.*;
 public class CallStatsIOTransport
     extends StatsTransport
 {
-    /**
-     * The callstats AppID.
-     */
-    private static final String PNAME_CALLSTATS_IO_APP_ID
-        = "io.callstats.sdk.CallStats.appId";
-
-    /**
-     * Shared Secret for authentication on Callstats.io
-     */
-    private static final String PNAME_CALLSTATS_IO_APP_SECRET
-        = "io.callstats.sdk.CallStats.appSecret";
-
-    /**
-     * ID of the key that was used to generate token.
-     */
-    private static final String PNAME_CALLSTATS_IO_KEY_ID
-        = "io.callstats.sdk.CallStats.keyId";
-
-    /**
-     * The path to private key file.
-     */
-    private static final String PNAME_CALLSTATS_IO_KEY_PATH
-        = "io.callstats.sdk.CallStats.keyPath";
-
-    /**
-     * The bridge id to report to callstats.io.
-     */
-    public static final String PNAME_CALLSTATS_IO_BRIDGE_ID
-        = "io.callstats.sdk.CallStats.bridgeId";
-
-    /**
-     * The default bridge id to use if setting is missing.
-     */
-    public static final String DEFAULT_BRIDGE_ID = "jitsi";
-
-    /**
-     * The bridge conference prefix to report to callstats.io.
-     */
-    public static final String PNAME_CALLSTATS_IO_CONF_PREFIX
-        = "io.callstats.sdk.CallStats.conferenceIDPrefix";
-
     public CallStatsIOTransport() {}
 
     public CallStatsIOTransport(Duration interval)
@@ -153,35 +113,11 @@ public class CallStatsIOTransport
      */
     private void init(BundleContext bundleContext)
     {
-        ConfigurationService cfg
-            = ServiceUtils2.getService(
-                    bundleContext,
-                    ConfigurationService.class);
-
-        init(bundleContext, cfg);
-    }
-
-    /**
-     * Initializes this {@code StatsTransport} so that
-     * {@link #publishStatistics(Statistics)} may executed successfully.
-     * Initializes {@link #statsService} i.e. the jitsi-stats library.
-     *
-     * @param bundleContext the {@code BundleContext} in which this
-     * {@code StatsTransport} is to be initialized
-     * @param cfg the {@code ConfigurationService} registered in
-     * {@code bundleContext} if any
-     */
-    private void init(BundleContext bundleContext, ConfigurationService cfg)
-    {
-        int appId = ConfigUtils.getInt(cfg, PNAME_CALLSTATS_IO_APP_ID, 0);
-        String appSecret
-            = ConfigUtils.getString(cfg, PNAME_CALLSTATS_IO_APP_SECRET, null);
-        String keyId
-            = ConfigUtils.getString(cfg, PNAME_CALLSTATS_IO_KEY_ID, null);
-        String keyPath
-            = ConfigUtils.getString(cfg, PNAME_CALLSTATS_IO_KEY_PATH, null);
-        String bridgeId = ConfigUtils.getString(
-            cfg, PNAME_CALLSTATS_IO_BRIDGE_ID, DEFAULT_BRIDGE_ID);
+        int appId = CallStatsIoTransportConfig.appId.get();
+        String appSecret = CallStatsIoTransportConfig.appSecret.get();
+        String keyId = CallStatsIoTransportConfig.keyId.get();
+        String keyPath = CallStatsIoTransportConfig.keyPath.get();
+        String bridgeId = CallStatsIoTransportConfig.bridgeId.get();
 
         // as we create only one instance of StatsService we will expect
         // it to register in OSGi as service, if it doesn't it means it failed

@@ -123,10 +123,7 @@ public class Activator
         case ServiceEvent.REGISTERED:
             ConfigurationService cfg = ServiceUtils2.getService(
                 bundleContext, ConfigurationService.class);
-            String bridgeId = ConfigUtils.getString(
-                cfg,
-                CallStatsIOTransport.PNAME_CALLSTATS_IO_BRIDGE_ID,
-                CallStatsIOTransport.DEFAULT_BRIDGE_ID);
+            String bridgeId = CallStatsIoTransportConfig.bridgeId.get();
             int interval = StatsIntervalProperty.getInstance().get();
 
             // Update with per stats transport interval if available.
@@ -137,10 +134,7 @@ public class Activator
                 interval = (int)callStatsTransport.getInterval().toMillis();
             }
 
-            String conferenceIDPrefix = ConfigUtils.getString(
-                cfg,
-                CallStatsIOTransport.PNAME_CALLSTATS_IO_CONF_PREFIX,
-                null);
+            String conferenceIDPrefix = CallStatsIoTransportConfig.conferenceIdPrefix.get();
 
             conferenceStatsHandler = new CallStatsConferenceStatsHandler();
             conferenceStatsHandler.start(
