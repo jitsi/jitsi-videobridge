@@ -18,6 +18,7 @@ package org.jitsi.videobridge.rest;
 
 import org.jitsi.utils.collections.*;
 import org.jitsi.utils.config.*;
+import org.jitsi.videobridge.stats.config.*;
 import org.jitsi.videobridge.util.config.*;
 
 public class WebSocketConfig
@@ -25,20 +26,22 @@ public class WebSocketConfig
     /**
      * Whether or not the websocket service is enabled
      */
-    public static class EnabledProperty extends ReadOnceProperty<Boolean>
+    public static class EnabledProperty extends ConfigPropertyImpl<Boolean>
     {
         protected static final String legacyPropName = "org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE";
         protected static final String propName = "videobridge.websockets.enabled";
 
         protected EnabledProperty()
         {
-            super(JList.of(
+            super(new JvbPropertyConfig<Boolean>()
                 // The legacy config value was 'DISABLE' and the new one is
                 // 'ENABLED', so if we pull the value from the legacy config,
                 // we need to invert it
-                new LegacyConfigValueSupplier<>(config -> !config.getBoolean(legacyPropName)),
-                new ConfigValueSupplier<>(config -> config.getBoolean(propName))
-            ));
+                .fromLegacyConfig(config -> !config.getBoolean(legacyPropName))
+                .fromNewConfig(config -> config.getBoolean(propName))
+                .readOnce()
+                .throwIfNotFound()
+            );
         }
     }
 
@@ -48,17 +51,19 @@ public class WebSocketConfig
      * The property which controls the server ID used in URLs
      * advertised for COLIBRI WebSockets.
      */
-    public static class ServerIdProperty extends ReadOnceProperty<String>
+    public static class ServerIdProperty extends ConfigPropertyImpl<String>
     {
         protected static final String legacyPropName = "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID";
         protected static final String propName = "videobridge.websockets.server-id";
 
         protected ServerIdProperty()
         {
-            super(JList.of(
-                new LegacyConfigValueSupplier<>(config -> config.getString(legacyPropName)),
-                new ConfigValueSupplier<>(config -> config.getString(propName))
-            ));
+            super(new JvbPropertyConfig<String>()
+                .fromLegacyConfig(config -> config.getString(legacyPropName))
+                .fromNewConfig(config -> config.getString(propName))
+                .readOnce()
+                .throwIfNotFound()
+            );
         }
     }
 
@@ -68,17 +73,19 @@ public class WebSocketConfig
      * The property which controls the domain name used in URLs
      * advertised for COLIBRI WebSockets.
      */
-    public static class DomainProperty extends ReadOnceProperty<String>
+    public static class DomainProperty extends ConfigPropertyImpl<String>
     {
         protected static final String legacyPropName = "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN";
         protected static final String propName = "videobridge.websockets.domain";
 
         protected DomainProperty()
         {
-            super(JList.of(
-                new LegacyConfigValueSupplier<>(config -> config.getString(legacyPropName)),
-                new ConfigValueSupplier<>(config -> config.getString(propName))
-            ));
+            super(new JvbPropertyConfig<String>()
+                .fromLegacyConfig(config -> config.getString(legacyPropName))
+                .fromNewConfig(config -> config.getString(propName))
+                .readOnce()
+                .returnNullIfNotFound()
+            );
         }
     }
 
@@ -89,17 +96,19 @@ public class WebSocketConfig
      * COLIBRI WebSockets should use the "ws" (if false) or "wss" (if true)
      * schema.
      */
-    public static class TlsProperty extends ReadOnceProperty<Boolean>
+    public static class TlsProperty extends ConfigPropertyImpl<Boolean>
     {
         protected static final String legacyPropName = "org.jitsi.videobridge.rest.COLIBRI_WS_TLS";
         protected static final String propName = "videobridge.websockets.tls";
 
         protected TlsProperty()
         {
-            super(JList.of(
-                new LegacyConfigValueSupplier<>(config -> config.getBoolean(legacyPropName)),
-                new ConfigValueSupplier<>(config -> config.getBoolean(propName))
-            ));
+            super(new JvbPropertyConfig<Boolean>()
+                .fromLegacyConfig(config -> config.getBoolean(legacyPropName))
+                .fromNewConfig(config -> config.getBoolean(propName))
+                .readOnce()
+                .returnNullIfNotFound()
+            );
         }
     }
 
