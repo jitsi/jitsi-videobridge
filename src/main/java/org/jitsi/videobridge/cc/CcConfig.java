@@ -25,7 +25,7 @@ public class CcConfig
 {
 
     /**
-     * The system property name that holds the interval/period in milliseconds
+     * The property that holds the interval/period in milliseconds
      * at which {@link BandwidthProbing#run()} is to be invoked.
      */
     public static class PaddingPeriodProperty extends AbstractConfigProperty<Long>
@@ -45,4 +45,130 @@ public class CcConfig
     }
 
     public static PaddingPeriodProperty paddingPeriod = new PaddingPeriodProperty();
+
+    /**
+     * The property that holds the bandwidth estimation threshold.
+     */
+    public static class BweChangeThresholdPctProperty extends AbstractConfigProperty<Integer>
+    {
+        protected static final String legacyPropName = "org.jitsi.videobridge.BWE_CHANGE_THRESHOLD_PCT";
+        protected static final String propName = "videobridge.cc.bwe-change-threshold-pct";
+
+        protected BweChangeThresholdPctProperty()
+        {
+            super(new JvbPropertyConfig<Integer>()
+                .fromLegacyConfig(config -> config.getInt(legacyPropName))
+                .fromNewConfig(config -> config.getInt(propName))
+                .readOnce()
+                .throwIfNotFound()
+            );
+        }
+    }
+
+    public static BweChangeThresholdPctProperty bweChangeThresholdPct = new BweChangeThresholdPctProperty();
+
+    public static class ThumbnailMaxHeightProperty extends AbstractConfigProperty<Integer>
+    {
+        protected static final String legacyPropName = "org.jitsi.videobridge.THUMBNAIL_MAX_HEIGHT";
+        protected static final String propName = "videobridge.cc.thumbnail-max-height-px";
+
+        protected ThumbnailMaxHeightProperty()
+        {
+            super(new JvbPropertyConfig<Integer>()
+                .fromLegacyConfig(config -> config.getInt(legacyPropName))
+                .fromNewConfig(config -> config.getInt(propName))
+                .readOnce()
+                .throwIfNotFound()
+            );
+        }
+    }
+
+    public static ThumbnailMaxHeightProperty thumbnailMaxHeightPx = new ThumbnailMaxHeightProperty();
+
+    /**
+     * The property name of the preferred resolution to allocate for the onstage
+     * participant, before allocating bandwidth for the thumbnails.
+     */
+    public static class OnstagePreferredHeightProperty extends AbstractConfigProperty<Integer>
+    {
+        protected static final String legacyPropName = "org.jitsi.videobridge.ONSTAGE_PREFERRED_HEIGHT";
+        protected static final String propName = "videobridge.cc.onstage-preferred-height-px";
+
+        protected OnstagePreferredHeightProperty()
+        {
+            super(new JvbPropertyConfig<Integer>()
+                .fromLegacyConfig(config -> config.getInt(legacyPropName))
+                .fromNewConfig(config -> config.getInt(propName))
+                .readOnce()
+                .throwIfNotFound()
+            );
+        }
+    }
+
+    public static OnstagePreferredHeightProperty onstagePreferredHeight = new OnstagePreferredHeightProperty();
+
+    /**
+     * The property of the preferred frame rate to allocate for the onstage
+     * participant.
+     */
+    public static class OnstagePreferredFramerateProperty extends AbstractConfigProperty<Double>
+    {
+        protected static final String legacyPropName = "org.jitsi.videobridge.ONSTAGE_PREFERRED_FRAME_RATE";
+        protected static final String propName = "videobridge.cc.onstage-preferred-framerate-fps";
+
+        protected OnstagePreferredFramerateProperty()
+        {
+            super(new JvbPropertyConfig<Double>()
+                .fromLegacyConfig(config -> config.getDouble(legacyPropName))
+                .fromNewConfig(config -> config.getDouble(propName))
+                .readOnce()
+                .throwIfNotFound()
+            );
+        }
+    }
+
+    public static OnstagePreferredFramerateProperty onstagePreferredFramerate = new OnstagePreferredFramerateProperty();
+
+    /**
+     * The property of the option that enables/disables video suspension
+     * for the on-stage participant.
+     */
+    public static class OnstageVideoSuspensionEnabledProperty extends AbstractConfigProperty<Boolean>
+    {
+        protected static final String legacyPropName = "org.jitsi.videobridge.ENABLE_ONSTAGE_VIDEO_SUSPEND";
+        protected static final String propName = "videobridge.cc.onstage-video-suspenion-enabled";
+
+        protected OnstageVideoSuspensionEnabledProperty()
+        {
+            super(new JvbPropertyConfig<Boolean>()
+                .fromLegacyConfig(config -> config.getBoolean(legacyPropName))
+                .fromNewConfig(config -> config.getBoolean(propName))
+                .readOnce()
+                .throwIfNotFound()
+            );
+        }
+    }
+
+    public static OnstageVideoSuspensionEnabledProperty onstageVideoSuspensionEnabled = new OnstageVideoSuspensionEnabledProperty();
+
+    /**
+     * The property used to trust bandwidth estimations.
+     */
+    public static class TrustBweProperty extends AbstractConfigProperty<Boolean>
+    {
+        protected static final String legacyPropName = "org.jitsi.videobridge.TRUST_BWE";
+        protected static final String propName = "videobridge.cc.trust-bwe";
+
+        protected TrustBweProperty()
+        {
+            super(new JvbPropertyConfig<Boolean>()
+                .fromLegacyConfig(config -> config.getBoolean(legacyPropName))
+                .fromNewConfig(config -> config.getBoolean(propName))
+                .readOnce()
+                .throwIfNotFound()
+            );
+        }
+    }
+
+    public static TrustBweProperty trustBwe = new TrustBweProperty();
 }
