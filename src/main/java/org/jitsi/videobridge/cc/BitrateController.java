@@ -79,7 +79,7 @@ import java.util.concurrent.*;
  * depends on the bitrate allocation of the specific {@link
  * MediaStreamTrackDesc} and on the state of the bitstream that is produced by
  * this filter. For example, if we have a {@link MediaStreamTrackDesc} with 2
- * {@link RTPEncodingDesc} in a simulcast configuration, then we can switch
+ * {@link RTPEncodingDesc} in a simulcast configuration then we can switch
  * between the two {@link RTPEncodingDesc}s if it is mandated by the bitrate
  * allocation and only if we see a refresh point.
  *

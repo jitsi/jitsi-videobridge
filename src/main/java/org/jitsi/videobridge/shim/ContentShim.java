@@ -422,7 +422,7 @@ public class ContentShim
         }
         else
         {
-            channelShim.setExpire(ExpireThreadIntervalProperty.getInstance().get());
+            channelShim.setExpire(VideobridgeConfig.expireThreadInterval.get());
         }
 
         return true;

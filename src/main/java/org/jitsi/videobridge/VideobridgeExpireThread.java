@@ -85,7 +85,7 @@ public class VideobridgeExpireThread
      */
     void start()
     {
-        int expireCheckSleepSec = ExpireThreadIntervalProperty.getInstance().get();
+        int expireCheckSleepSec = VideobridgeConfig.expireThreadInterval.get();
         logger.info(
             "Starting with " + expireCheckSleepSec + " second interval.");
 
