@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.stats.config;
+package org.jitsi.videobridge.util.config;
 
 import com.typesafe.config.*;
 import org.jitsi.utils.config.*;
-import org.jitsi.videobridge.util.config.*;
 
 import java.util.function.*;
 
@@ -33,7 +32,7 @@ public class JvbPropertyConfig<T> extends PropertyConfig<T>
 
     public JvbPropertyConfig<T> fromNewConfig(Function<Config, T> getter)
     {
-        suppliedBy(new ConfigValueSupplier<T>(getter));
+        suppliedBy(new ConfigValueSupplier<>(getter));
 
         return this;
     }

@@ -20,6 +20,7 @@ import com.typesafe.config.*;
 import org.jitsi.utils.config.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.stats.*;
+import org.jitsi.videobridge.util.config.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
 import org.jxmpp.stringprep.*;

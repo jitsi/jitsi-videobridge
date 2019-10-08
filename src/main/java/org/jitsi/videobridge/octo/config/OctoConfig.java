@@ -17,8 +17,8 @@
 package org.jitsi.videobridge.octo.config;
 
 import org.jitsi.utils.config.*;
-import org.jitsi.videobridge.stats.config.*;
 import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.util.config.*;
 
 import static org.jitsi.videobridge.stats.config.TypesafeConfigUtils.*;
 

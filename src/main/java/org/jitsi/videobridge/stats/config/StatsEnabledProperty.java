@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.stats.config;
 
 import org.jitsi.utils.config.*;
+import org.jitsi.videobridge.util.config.*;
 
 public class StatsEnabledProperty extends AbstractConfigProperty<Boolean>
 {

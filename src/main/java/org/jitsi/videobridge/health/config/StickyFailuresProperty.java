@@ -17,7 +17,7 @@
 package org.jitsi.videobridge.health.config;
 
 import org.jitsi.utils.config.*;
-import org.jitsi.videobridge.stats.config.*;
+import org.jitsi.videobridge.util.config.*;
 
 public class StickyFailuresProperty extends AbstractConfigProperty<Boolean>
 {

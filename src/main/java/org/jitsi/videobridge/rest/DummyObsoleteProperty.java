@@ -16,9 +16,7 @@
 
 package org.jitsi.videobridge.rest;
 
-import org.jitsi.utils.collections.*;
 import org.jitsi.utils.config.*;
-import org.jitsi.videobridge.stats.config.*;
 import org.jitsi.videobridge.util.config.*;
 
 //NOTE(brian): temporary to illustrate how making a property obsolete would wokr
