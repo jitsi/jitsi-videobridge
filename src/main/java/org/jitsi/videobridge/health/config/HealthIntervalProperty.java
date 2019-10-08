@@ -16,13 +16,12 @@
 
 package org.jitsi.videobridge.health.config;
 
-import org.jitsi.utils.collections.*;
 import org.jitsi.utils.config.*;
-import org.jitsi.videobridge.util.config.*;
+import org.jitsi.videobridge.stats.config.*;
 
 import java.util.concurrent.*;
 
-public class HealthIntervalProperty extends ReadOnceProperty<Integer>
+public class HealthIntervalProperty extends ConfigPropertyImpl<Integer>
 {
     protected static final String legacyPropName = "org.jitsi.videobridge.health.INTERVAL";
     protected static final String propName = "videobridge.health.interval";
@@ -31,10 +30,12 @@ public class HealthIntervalProperty extends ReadOnceProperty<Integer>
 
     protected HealthIntervalProperty()
     {
-        super(JList.of(
-            new LegacyConfigValueSupplier<>(config -> config.getInt(legacyPropName)),
-            new ConfigValueSupplier<>(config -> (int)config.getDuration(propName, TimeUnit.MILLISECONDS))
-        ));
+        super(new JvbPropertyConfig<Integer>()
+            .fromLegacyConfig(config -> config.getInt(legacyPropName))
+            .fromNewConfig(config -> (int)config.getDuration(propName, TimeUnit.MILLISECONDS))
+            .readOnce()
+            .throwIfNotFound()
+        );
     }
 
     public static HealthIntervalProperty getInstance()
