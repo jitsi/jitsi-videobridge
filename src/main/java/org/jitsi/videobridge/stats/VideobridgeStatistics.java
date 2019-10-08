@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.stats;
 
+import org.apache.commons.lang3.StringUtils;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.osgi.*;
@@ -453,7 +454,7 @@ public class VideobridgeStatistics
             {
                 unlockedSetStat(RELAY_ID, octoRelay.getId());
             }
-            if (region != null)
+            if (!StringUtils.isEmpty(region.get()))
             {
                 unlockedSetStat(REGION, region.get());
             }
