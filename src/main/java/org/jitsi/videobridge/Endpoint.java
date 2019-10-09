@@ -676,7 +676,7 @@ public class Endpoint
                 = transceiverStats.getIncomingPacketStreamStats();
         PacketStreamStats.Snapshot outgoingStats
                 = transceiverStats.getOutgoingPacketStreamStats();
-        BandwidthEstimator.Statistics bweStats
+        NodeStatsBlock bweStats
                 = transceiverStats.getBandwidthEstimatorStats();
 
         conferenceStats.totalBytesReceived.addAndGet(
@@ -688,22 +688,26 @@ public class Endpoint
         conferenceStats.totalPacketsSent.addAndGet(
                 outgoingStats.getPackets());
 
-        bweStats.update(System.currentTimeMillis());
+        Number lossLimitedMs = bweStats.getNumber("lossLimitedMs");
+        Number lossDegradedMs = bweStats.getNumber("lossDegradedMs");
+        Number lossFreeMs = bweStats.getNumber("lossFreeMs");
 
-        Videobridge.Statistics videobridgeStats
+        if (lossLimitedMs != null && lossDegradedMs != null && lossFreeMs != null)
+        {
+            Videobridge.Statistics videobridgeStats
                 = getConference().getVideobridge().getStatistics();
 
-        long lossLimitedMs = bweStats.getLossLimitedMs();
-        long lossDegradedMs = bweStats.getLossDegradedMs();
-        long participantMs = bweStats.getLossFreeMs()
-                + lossDegradedMs + lossLimitedMs;
+            long participantMs = lossFreeMs.longValue() +
+                lossDegradedMs.longValue() +
+                lossLimitedMs.longValue();
 
-        videobridgeStats.totalLossControlledParticipantMs
+            videobridgeStats.totalLossControlledParticipantMs
                 .addAndGet(participantMs);
-        videobridgeStats.totalLossLimitedParticipantMs
-                .addAndGet(lossLimitedMs);
-        videobridgeStats.totalLossDegradedParticipantMs
-                .addAndGet(lossDegradedMs);
+            videobridgeStats.totalLossLimitedParticipantMs
+                .addAndGet(lossLimitedMs.longValue());
+            videobridgeStats.totalLossDegradedParticipantMs
+                .addAndGet(lossDegradedMs.longValue());
+        }
     }
 
     /**
