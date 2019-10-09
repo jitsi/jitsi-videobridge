@@ -43,21 +43,38 @@ public class JvbConfig
             return ConfigFactory.parseString("");
         }
     };
-    protected static Config config = configSupplier.get();
-    protected static Config legacyConfig = legacyConfigSupplier.get();
 
-    static
+    protected static Config config;
+    protected static Config legacyConfig;
+
+    /**
+     * Requiring explicit initialization of the config makes it more obvious
+     * when the config is being read (instead of on first access) and makes testing
+     * more straightforward (as we can ensure we re-initialize after setting up
+     * a new dummy configuration)
+     */
+    public static void init()
     {
+        config = configSupplier.get();
+        legacyConfig = legacyConfigSupplier.get();
+
         logger.info("Loaded complete config: " + config.withFallback(legacyConfig).root().render());
-        logger.info("Loaded JVB config: " + config.getConfig("videobridge").root().render());
+        if (config.hasPath("videobridge"))
+        {
+            logger.info("Loaded JVB config: " + config.getConfig("videobridge").root().render());
+        }
+        else
+        {
+            logger.info("No new config found");
+        }
         logger.info("Loaded legacy config: " + legacyConfig.root().render());
-    }
+   }
 
     public static void reloadConfig()
     {
+        logger.info("Reloading config");
         ConfigFactory.invalidateCaches();
-        config = configSupplier.get();
-        legacyConfig = legacyConfigSupplier.get();
+        init();
     }
 
     public static @NotNull Config getConfig()

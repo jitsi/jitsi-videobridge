@@ -20,6 +20,7 @@ import org.jitsi.meet.*;
 import org.jitsi.utils.config.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.osgi.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.reflections.*;
 import org.reflections.scanners.*;
@@ -134,6 +135,7 @@ public class Main
         // to be passed.
         System.setProperty("org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.JavaUtilLog");
 
+        JvbConfig.init();
 
         validateConfig();
 
