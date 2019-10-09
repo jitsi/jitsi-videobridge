@@ -132,9 +132,10 @@ public class Main
             {
                 Constructor<? extends ConfigProperty> ctor = obsoleteConfigProperty.getDeclaredConstructor();
                 ctor.setAccessible(true);
-                ctor.newInstance().get();
+                Object value = ctor.newInstance().get();
                 ObsoleteConfig anno = obsoleteConfigProperty.getAnnotation(ObsoleteConfig.class);
-                logger.info("Prop " + obsoleteConfigProperty + " is obsolete but was present in config: " + anno.value());
+                logger.info("Prop " + obsoleteConfigProperty + " is obsolete but was present in config with " +
+                    "value '" + value.toString() + "': " + anno.value());
             }
             catch (InvocationTargetException e)
             {
