@@ -59,7 +59,6 @@ public class Main
      * gracefully handled during the execution of the application
      */
     public static void main(String[] args)
-        throws Exception
     {
         // Some of our dependencies bring in slf4j, which means Jetty will default to using
         // slf4j as its logging backend.  The version of slf4j brought in, however, is too old
@@ -107,10 +106,9 @@ public class Main
         }
     }
 
-    //TODO(brian): clean this method up
     protected static void validateConfig()
     {
-        Reflections r = new Reflections(new ConfigurationBuilder()
+        Reflections reflections = new Reflections(new ConfigurationBuilder()
             .setUrls(ClasspathHelper.forPackage("org.jitsi"))
             .setScanners(
                 new SubTypesScanner(),
@@ -118,23 +116,25 @@ public class Main
             )
         );
 
-        Set<Class<? extends ConfigProperty>> ss = r.getSubTypesOf(ConfigProperty.class);
+        Set<Class<? extends ConfigProperty>> obsoleteConfigProperties =
+            reflections.getSubTypesOf(ConfigProperty.class)
+                .stream()
+                .filter(c -> c.isAnnotationPresent(ObsoleteConfig.class))
+                .collect(Collectors.toSet());
 
-        ss = ss.stream().filter(c -> c.isAnnotationPresent(ObsoleteConfig.class)).collect(Collectors.toSet());
-
-        for (Class<? extends ConfigProperty> c : ss)
+        for (Class<? extends ConfigProperty> obsoleteConfigProperty : obsoleteConfigProperties)
         {
-            if (Modifier.isAbstract(c.getModifiers()))
+            if (Modifier.isAbstract(obsoleteConfigProperty.getModifiers()))
             {
                 continue;
             }
             try
             {
-                Constructor<? extends ConfigProperty> ctor = c.getDeclaredConstructor();
+                Constructor<? extends ConfigProperty> ctor = obsoleteConfigProperty.getDeclaredConstructor();
                 ctor.setAccessible(true);
                 ctor.newInstance().get();
-                ObsoleteConfig anno = c.getAnnotation(ObsoleteConfig.class);
-                logger.info("Prop " + c + " is obsolete but was present in config: " + anno.value());
+                ObsoleteConfig anno = obsoleteConfigProperty.getAnnotation(ObsoleteConfig.class);
+                logger.info("Prop " + obsoleteConfigProperty + " is obsolete but was present in config: " + anno.value());
             }
             catch (InvocationTargetException e)
             {
@@ -143,29 +143,17 @@ public class Main
                 // an InvocationTargetException
                 if (e.getCause() instanceof ConfigPropertyNotFoundException)
                 {
-                    logger.info("Prop " + c + " is obsolete but wasn't found defined, ok!");
+                    logger.info("Prop " + obsoleteConfigProperty + " is obsolete but wasn't found defined, ok!");
                 }
             }
-            catch (Exception ignored) {}
+            catch (NoSuchMethodException e)
+            {
+                logger.error("Configuration property " + obsoleteConfigProperty + " must have a no-arg constructor!");
+            }
+            catch (InstantiationException | IllegalAccessException e)
+            {
+                logger.debug("Error creating instance of " + obsoleteConfigProperty + ": " + e.toString());
+            }
         }
-
-//        Set<Class<?>> obsoleteConfigProperties =
-//            new Reflections("org.jitsi").getTypesAnnotatedWith(ObsoleteConfig.class);
-//
-//        //TODO: I think there should be a way to narrow down the query above to get subtypes of ConfigProperty
-//        // with this annotation, but not sure yet.  This way is fine, but I think the way I just described
-//        // would be ideal.
-//        for (Class<?> clazz : obsoleteConfigProperties)
-//        {
-//            if (ConfigProperty.class.isAssignableFrom(clazz))
-//            {
-////                ConfigProperty<?> cp = ((ConfigProperty)clazz);
-//
-//            }
-//            ObsoleteConfig anno = clazz.getAnnotation(ObsoleteConfig.class);
-//            logger.warn("WARNING: You have configuration property " + clazz.getName() + " defined but it " +
-//                "is no longer used: " + anno.value());
-//        }
-
     }
 }
