@@ -19,6 +19,8 @@ package org.jitsi.testutils;
 import com.typesafe.config.*;
 import org.jitsi.videobridge.util.*;
 
+import java.util.function.*;
+
 import static org.jitsi.testutils.ConfigUtils.EMPTY_CONFIG;
 
 /**
@@ -27,6 +29,12 @@ import static org.jitsi.testutils.ConfigUtils.EMPTY_CONFIG;
  */
 public class ConfigSetup
 {
+    protected String commandLineArgs = "";
+    protected Supplier<Config> legacyConfigSupplier = () -> EMPTY_CONFIG;
+    protected Supplier<Config> newConfigSupplier = () -> EMPTY_CONFIG;
+
+    // This no longer needs to be explicitly called
+    @Deprecated
     public ConfigSetup withNoLegacyConfig()
     {
         JvbConfig.legacyConfigSupplier = () -> EMPTY_CONFIG;
@@ -36,11 +44,13 @@ public class ConfigSetup
 
     public ConfigSetup withLegacyConfig(Config legacyConfig)
     {
-        JvbConfig.legacyConfigSupplier = () -> legacyConfig;
+        legacyConfigSupplier = () -> legacyConfig;
 
         return this;
     }
 
+    // This no longer needs to be explicitly called
+    @Deprecated
     public ConfigSetup withNoNewConfig()
     {
         JvbConfig.configSupplier = () -> EMPTY_CONFIG;
@@ -50,13 +60,32 @@ public class ConfigSetup
 
     public ConfigSetup withNewConfig(Config newConfig)
     {
-        JvbConfig.configSupplier = () -> newConfig;
+        newConfigSupplier = () -> newConfig;
+
+        return this;
+    }
+
+    public ConfigSetup withCommandLineArg(String argName, String value)
+    {
+        commandLineArgs += " " + argName + "=" + value;
 
         return this;
     }
 
     public void finishSetup()
     {
+        // Make sure config doesn't see any command line args from a previous setup
+        if (commandLineArgs.isEmpty())
+        {
+            JvbConfig.commandLineArgsSupplier =() -> "";
+        }
+        else
+        {
+            JvbConfig.commandLineArgsSupplier = () -> commandLineArgs;
+        }
+        JvbConfig.legacyConfigSupplier = legacyConfigSupplier;
+        JvbConfig.configSupplier = newConfigSupplier;
+
         JvbConfig.reloadConfig();
     }
 }

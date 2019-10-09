@@ -29,6 +29,7 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.Version;
+import org.jitsi.videobridge.config.*;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.pubsub.*;
@@ -775,7 +776,7 @@ public class Videobridge
      */
     public boolean isXmppApiEnabled()
     {
-        return VideobridgeConfig.EnabledApisProperty.isEnabled(Videobridge.XMPP_API_PNAME);
+        return VideobridgeConfig.isApiEnabled(Videobridge.XMPP_API);
     }
 
     /**

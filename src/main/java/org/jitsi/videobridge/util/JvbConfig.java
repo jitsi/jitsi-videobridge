@@ -27,6 +27,10 @@ public class JvbConfig
 {
     protected static Logger logger = new LoggerImpl(JvbConfig.class.getName());
 
+    protected static Config config;
+    protected static Config legacyConfig;
+    protected static String commandLineArgs;
+
     public static Supplier<Config> configSupplier = ConfigFactory::load;
     public static Supplier<Config> legacyConfigSupplier = () -> {
         String oldConfigHomeDirLocation = System.getProperty("net.java.sip.communicator.SC_HOME_DIR_LOCATION");
@@ -43,9 +47,7 @@ public class JvbConfig
             return ConfigFactory.parseString("");
         }
     };
-
-    protected static Config config;
-    protected static Config legacyConfig;
+    public static Supplier<String> commandLineArgsSupplier = () -> config.getString("sun.java.command");
 
     /**
      * Requiring explicit initialization of the config makes it more obvious
@@ -57,6 +59,7 @@ public class JvbConfig
     {
         config = configSupplier.get();
         legacyConfig = legacyConfigSupplier.get();
+        commandLineArgs = commandLineArgsSupplier.get();
 
         logger.info("Loaded complete config: " + config.withFallback(legacyConfig).root().render());
         if (config.hasPath("videobridge"))
@@ -68,6 +71,7 @@ public class JvbConfig
             logger.info("No new config found");
         }
         logger.info("Loaded legacy config: " + legacyConfig.root().render());
+        logger.info("Have command line args: '" + commandLineArgs + "'");
    }
 
     public static void reloadConfig()
@@ -85,5 +89,10 @@ public class JvbConfig
     public static Config getLegacyConfig()
     {
         return legacyConfig;
+    }
+
+    public static String[] getCommandLineArgs()
+    {
+        return commandLineArgs.split(" ");
     }
 }

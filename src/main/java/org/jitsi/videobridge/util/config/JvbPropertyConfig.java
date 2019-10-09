@@ -31,9 +31,16 @@ public class JvbPropertyConfig<T> extends PropertyConfig<T>
         return this;
     }
 
-    public JvbPropertyConfig<T> fromCommandLine(Function<CmdLine, T> getter)
+    public JvbPropertyConfig<T> fromCommandLine(String argName)
     {
-        suppliedBy(new CommandLineConfigValueSupplier<T>(getter));
+        suppliedBy(new CommandLineConfigValueSupplier<>(argName));
+
+        return this;
+    }
+
+    public JvbPropertyConfig<T> fromCommandLine(String argName, Function<CmdLine, T> getter)
+    {
+        suppliedBy(new CommandLineConfigValueSupplier<>(argName,  getter));
 
         return this;
     }

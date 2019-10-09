@@ -19,10 +19,10 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.config.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 
-import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 

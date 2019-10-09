@@ -17,31 +17,56 @@
 package org.jitsi.videobridge.util.config;
 
 import org.jitsi.cmd.*;
+import org.jitsi.utils.config.*;
+import org.jitsi.videobridge.util.*;
 
 import java.util.function.*;
 
+/**
+ * A supplier which reads from the parsed command-line arguments.
+ *
+ * @param <T> the type of the configuration property's value
+ */
 public class CommandLineConfigValueSupplier<T> implements Supplier<T>
 {
+    protected final String argName;
     protected final Function<CmdLine, T> getter;
 
-    public CommandLineConfigValueSupplier(Function<CmdLine, T> getter)
+    /**
+     * This method is only capable returning strings, so we'll rely on the fact
+     * that T has been properly set to String and perform an unchecked cast
+     *
+     * @param argName the name of the command-line argument
+     */
+    @SuppressWarnings("unchecked")
+    public CommandLineConfigValueSupplier(String argName)
     {
+        this(argName, cmdLine -> (T)cmdLine.getOptionValue(argName, null));
+    }
+
+    public CommandLineConfigValueSupplier(String argName, Function<CmdLine, T> getter)
+    {
+        this.argName = argName;
         this.getter = getter;
     }
 
     @Override
     public T get()
     {
-        String[] commandLineArgs = System.getProperty("sun.java.command").split(" ");
+        String[] commandLineArgs = JvbConfig.getCommandLineArgs();
         CmdLine cmdLine = new CmdLine();
         try
         {
             cmdLine.parse(commandLineArgs);
-            return getter.apply(cmdLine);
+            T value = getter.apply(cmdLine);
+            if (value == null)
+            {
+                throw new ConfigPropertyNotFoundException(argName);
+            }
+            return value;
         }
-        catch (ParseException e)
-        {
-            return null;
-        }
+        catch (ParseException ignored) { }
+
+        throw new ConfigPropertyNotFoundException(argName);
     }
 }

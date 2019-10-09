@@ -15,10 +15,10 @@
  */
 package org.jitsi.videobridge;
 
-import org.jitsi.cmd.*;
 import org.jitsi.meet.*;
 import org.jitsi.utils.config.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.config.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -48,55 +48,6 @@ import java.util.stream.*;
  */
 public class Main
 {
-    /**
-     * The name of the command-line argument which specifies the application
-     * programming interfaces (APIs) to enable for Jitsi Videobridge.
-     */
-    private static final String APIS_ARG_NAME = "--apis";
-
-    /**
-     * The name of the command-line argument which specifies the XMPP domain
-     * to use.
-     */
-    private static final String DOMAIN_ARG_NAME = "--domain";
-
-    /**
-     * The name of the command-line argument which specifies the IP address or
-     * the name of the XMPP host to connect to.
-     */
-    private static final String HOST_ARG_NAME = "--host";
-
-    /**
-     * The default value of the {@link #HOST_ARG_NAME} command-line argument if
-     * it is not explicitly provided.
-     */
-    private static final String HOST_ARG_VALUE = "localhost";
-
-    /**
-     * The name of the command-line argument which specifies the port of the
-     * XMPP host to connect on.
-     */
-    private static final String PORT_ARG_NAME = "--port";
-
-    /**
-     * The default value of the {@link #PORT_ARG_NAME} command-line argument if
-     * it is not explicitly provided.
-     */
-    private static final int PORT_ARG_VALUE = 5275;
-
-    /**
-     * The name of the command-line argument which specifies the secret key for
-     * the sub-domain of the Jabber component implemented by this application
-     * with which it is to authenticate to the XMPP server to connect to.
-     */
-    private static final String SECRET_ARG_NAME = "--secret";
-
-    /**
-     * The name of the command-line argument which specifies sub-domain name for
-     * the videobridge component.
-     */
-    private static final String SUBDOMAIN_ARG_NAME = "--subdomain";
-
     private static final Logger logger = new LoggerImpl(Main.class.getName());
 
     /**
@@ -110,23 +61,6 @@ public class Main
     public static void main(String[] args)
         throws Exception
     {
-        CmdLine cmdLine = new CmdLine();
-
-        cmdLine.parse(args);
-
-        // Parse the command-line arguments.
-        String domain = cmdLine.getOptionValue(DOMAIN_ARG_NAME, null);
-        int port = cmdLine.getIntOptionValue(PORT_ARG_NAME, PORT_ARG_VALUE);
-        String secret = cmdLine.getOptionValue(SECRET_ARG_NAME, "");
-        String subdomain
-            = cmdLine.getOptionValue(
-                    SUBDOMAIN_ARG_NAME, ComponentImpl.SUBDOMAIN);
-
-        String host
-            = cmdLine.getOptionValue(
-                    HOST_ARG_NAME,
-                    domain == null ? HOST_ARG_VALUE : domain);
-
         // Some of our dependencies bring in slf4j, which means Jetty will default to using
         // slf4j as its logging backend.  The version of slf4j brought in, however, is too old
         // for Jetty so it throws errors.  We use java.util.logging so tell Jetty to use that
@@ -143,26 +77,27 @@ public class Main
         // Jitsi Videobridge, set any System properties which they use and which
         // may be specified by the command-line arguments.
         //TODO(brian): do we still need to do this?
-        System.setProperty(
-                Videobridge.REST_API_PNAME,
-                Boolean.toString(VideobridgeConfig.EnabledApisProperty.isEnabled(Videobridge.REST_API)));
-        System.setProperty(
-                Videobridge.XMPP_API_PNAME,
-                Boolean.toString(VideobridgeConfig.EnabledApisProperty.isEnabled(Videobridge.XMPP_API)));
+//        System.setProperty(
+//                Videobridge.REST_API_PNAME,
+//                Boolean.toString(VideobridgeConfig.EnabledApisProperty.isEnabled(Videobridge.REST_API)));
+//        System.setProperty(
+//                Videobridge.XMPP_API_PNAME,
+//                Boolean.toString(VideobridgeConfig.EnabledApisProperty.isEnabled(Videobridge.XMPP_API)));
 
         ComponentMain main = new ComponentMain();
         BundleConfig osgiBundles = new BundleConfig();
 
         // Start Jitsi Videobridge as an external Jabber component.
-        if (VideobridgeConfig.EnabledApisProperty.isEnabled(Videobridge.XMPP_API))
+        XmppComponentApiConfig xmppConfig = (XmppComponentApiConfig)VideobridgeConfig.enabledApiConfigs.getConfigForApi(Videobridge.XMPP_API);
+        if (VideobridgeConfig.isApiEnabled(Videobridge.XMPP_API) && xmppConfig != null)
         {
             ComponentImpl component
                 = new ComponentImpl(
-                        host,
-                        port,
-                        domain,
-                        subdomain,
-                        secret);
+                        xmppConfig.getHost(),
+                        xmppConfig.getPort(),
+                        xmppConfig.getDomain(),
+                        xmppConfig.getSubdomain(),
+                        xmppConfig.getSecret());
 
             main.runMainProgramLoop(component, osgiBundles);
         }

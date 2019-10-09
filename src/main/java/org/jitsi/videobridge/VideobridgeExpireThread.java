@@ -18,10 +18,9 @@ package org.jitsi.videobridge;
 import java.util.*;
 import java.util.concurrent.*;
 
-import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
+import org.jitsi.videobridge.config.*;
 import org.osgi.framework.*;
 
 /**
