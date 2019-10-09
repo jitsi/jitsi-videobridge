@@ -37,7 +37,7 @@ public class CcConfig
         {
             super(new JvbPropertyConfig<Long>()
                 .fromLegacyConfig(config -> config.getLong(legacyPropName))
-                .fromNewConfig(config -> config.getDuration(propName, TimeUnit.SECONDS))
+                .fromNewConfig(config -> config.getDuration(propName, TimeUnit.MILLISECONDS))
                 .readOnce()
                 .throwIfNotFound()
             );
