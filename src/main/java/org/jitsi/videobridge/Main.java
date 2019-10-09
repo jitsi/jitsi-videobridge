@@ -21,6 +21,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.config.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.util.config.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.reflections.*;
 import org.reflections.scanners.*;
@@ -108,53 +109,7 @@ public class Main
 
     protected static void validateConfig()
     {
-        Reflections reflections = new Reflections(new ConfigurationBuilder()
-            .setUrls(ClasspathHelper.forPackage("org.jitsi"))
-            .setScanners(
-                new SubTypesScanner(),
-                new TypeAnnotationsScanner()
-            )
-        );
-
-        Set<Class<? extends ConfigProperty>> obsoleteConfigProperties =
-            reflections.getSubTypesOf(ConfigProperty.class)
-                .stream()
-                .filter(c -> c.isAnnotationPresent(ObsoleteConfig.class))
-                .collect(Collectors.toSet());
-
-        for (Class<? extends ConfigProperty> obsoleteConfigProperty : obsoleteConfigProperties)
-        {
-            if (Modifier.isAbstract(obsoleteConfigProperty.getModifiers()))
-            {
-                continue;
-            }
-            try
-            {
-                Constructor<? extends ConfigProperty> ctor = obsoleteConfigProperty.getDeclaredConstructor();
-                ctor.setAccessible(true);
-                Object value = ctor.newInstance().get();
-                ObsoleteConfig anno = obsoleteConfigProperty.getAnnotation(ObsoleteConfig.class);
-                logger.info("Prop " + obsoleteConfigProperty + " is obsolete but was present in config with " +
-                    "value '" + value.toString() + "': " + anno.value());
-            }
-            catch (InvocationTargetException e)
-            {
-                // We don't get a raw ConfigPropertyNotFoundException
-                // when calling it this way, instead it's wrapped by
-                // an InvocationTargetException
-                if (e.getCause() instanceof ConfigPropertyNotFoundException)
-                {
-                    logger.info("Prop " + obsoleteConfigProperty + " is obsolete but wasn't found defined, ok!");
-                }
-            }
-            catch (NoSuchMethodException e)
-            {
-                logger.error("Configuration property " + obsoleteConfigProperty + " must have a no-arg constructor!");
-            }
-            catch (InstantiationException | IllegalAccessException e)
-            {
-                logger.debug("Error creating instance of " + obsoleteConfigProperty + ": " + e.toString());
-            }
-        }
+        ConfigValidator configValidator = new ConfigValidator("org.jitsi");
+        configValidator.validate();
     }
 }
