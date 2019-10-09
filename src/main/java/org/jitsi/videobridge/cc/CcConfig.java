@@ -136,7 +136,7 @@ public class CcConfig
     public static class OnstageVideoSuspensionEnabledProperty extends AbstractConfigProperty<Boolean>
     {
         protected static final String legacyPropName = "org.jitsi.videobridge.ENABLE_ONSTAGE_VIDEO_SUSPEND";
-        protected static final String propName = "videobridge.cc.onstage-video-suspenion-enabled";
+        protected static final String propName = "videobridge.cc.onstage-video-suspension-enabled";
 
         protected OnstageVideoSuspensionEnabledProperty()
         {
