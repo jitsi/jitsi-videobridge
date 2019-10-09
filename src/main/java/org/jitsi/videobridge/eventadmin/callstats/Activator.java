@@ -16,10 +16,7 @@
 package org.jitsi.videobridge.eventadmin.callstats;
 
 import org.jitsi.eventadmin.*;
-import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.stats.media.*;
-import org.jitsi.util.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.stats.config.*;
 import org.osgi.framework.*;
@@ -121,8 +118,6 @@ public class Activator
         switch (ev.getType())
         {
         case ServiceEvent.REGISTERED:
-            ConfigurationService cfg = ServiceUtils2.getService(
-                bundleContext, ConfigurationService.class);
             String bridgeId = CallStatsIoTransportConfig.bridgeId.get();
             int interval = StatsIntervalProperty.getInstance().get();
 
