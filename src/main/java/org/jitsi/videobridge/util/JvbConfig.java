@@ -37,9 +37,11 @@ public class JvbConfig
         String oldConfigHomeDirName = System.getProperty("net.java.sip.communicator.SC_HOME_DIR_NAME");
         try
         {
-            return ConfigFactory.parseFile(
+            Config config = ConfigFactory.parseFile(
                     Paths.get(oldConfigHomeDirLocation, oldConfigHomeDirName, "sip-communicator.properties")
                             .toFile());
+            logger.info("Found a legacy config file");
+            return config;
         }
         catch (InvalidPathException | NullPointerException e)
         {
