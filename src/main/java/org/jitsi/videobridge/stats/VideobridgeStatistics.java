@@ -222,7 +222,7 @@ public class VideobridgeStatistics
                 continue;
             }
             conferences++;
-            int numConferenceEndpoints = conference.getEndpointCount();
+            int numConferenceEndpoints = conference.getLocalEndpointCount();
             if (numConferenceEndpoints > largestConferenceSize)
             {
                 largestConferenceSize = numConferenceEndpoints;

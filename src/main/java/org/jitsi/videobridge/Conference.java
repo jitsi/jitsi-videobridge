@@ -735,13 +735,23 @@ public class Conference
     }
 
     /**
-     * Returns the number of <tt>Endpoint</tt>s in this <tt>Conference</tt>.
+     * Returns the number of local AND remote {@link Endpoint}s in this {@link Conference}.
      *
-     * @return the number of <tt>Endpoint</tt>s in this <tt>Conference</tt>.
+     * @return the number of local AND remote {@link Endpoint}s in this {@link Conference}.
      */
     public int getEndpointCount()
     {
         return endpoints.size();
+    }
+
+    /**
+     * Returns the number of local {@link Endpoint}s in this {@link Conference}.
+     *
+     * @return the number of local {@link Endpoint}s in this {@link Conference}.
+     */
+    public int getLocalEndpointCount()
+    {
+        return getLocalEndpoints().size();
     }
 
     /**
