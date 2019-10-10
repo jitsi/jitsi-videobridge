@@ -16,18 +16,13 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.meet.*;
-import org.jitsi.utils.config.*;
+import org.jitsi.utils.config.validation.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.config.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.util.*;
-import org.jitsi.videobridge.util.config.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.reflections.*;
-import org.reflections.scanners.*;
-import org.reflections.util.*;
 
-import java.lang.reflect.*;
 import java.util.*;
 import java.util.stream.*;
 
@@ -112,6 +107,10 @@ public class Main
     protected static void validateConfig()
     {
         ConfigValidator configValidator = new ConfigValidator("org.jitsi");
-        configValidator.validate();
+        //TODO: pass command-line args as well
+        Set<String> configPropNames = JvbConfig.getConfig().withOnlyPath("videobridge").entrySet().stream()
+            .map(Map.Entry::getKey)
+            .collect(Collectors.toSet());
+        configValidator.validate(configPropNames);
     }
 }
