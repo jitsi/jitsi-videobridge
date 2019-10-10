@@ -16,8 +16,11 @@
 
 package org.jitsi.videobridge.util.config;
 
+import com.typesafe.config.*;
+import org.jitsi.cmd.*;
 import org.jitsi.utils.config.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.util.*;
 import org.reflections.*;
 import org.reflections.scanners.*;
 import org.reflections.util.*;
@@ -45,6 +48,7 @@ public class ConfigValidator
     public void validate()
     {
         checkForDefinedObsoleteProperties();
+        checkForUnknownProperties();
     }
 
     protected Set<Class<? extends ConfigProperty>> getConfigProperties()
@@ -52,6 +56,10 @@ public class ConfigValidator
         return reflections.getSubTypesOf(ConfigProperty.class);
     }
 
+    /**
+     * Warns about configuration properties which have been defined but are
+     * marked as obsolete.
+     */
     protected void checkForDefinedObsoleteProperties()
     {
         Set<Class<? extends ConfigProperty>> obsoleteConfigProperties = getConfigProperties()
@@ -97,5 +105,59 @@ public class ConfigValidator
                 logger.error("Error creating instance of " + obsoleteConfigProperty + ": " + e.toString());
             }
         }
+    }
+
+    /**
+     * Scan the new config for properties within the 'videobridge' scope
+     * which don't have a class which reads them
+     * TODO: handle other scopes
+     */
+    protected void checkForUnknownProperties()
+    {
+        JvbConfig.getConfig().withOnlyPath("videobridge").entrySet().forEach(entry ->
+        {
+            String key = entry.getKey();
+            System.out.println(key);
+            if (!doesAnyPropReadPropName(key))
+            {
+                logger.error("Config property " + key + " was defined in your config, but no " +
+                    "property class reads it.");
+            }
+        });
+        //TODO: validate command line args
+    }
+
+    protected boolean doesAnyPropReadPropName(String propName)
+    {
+        // Try and find any config property which reads this key
+        for (Class<? extends ConfigProperty> configProperty : getConfigProperties())
+        {
+            for (Field field : configProperty.getDeclaredFields())
+            {
+                // We assume all 'String' fields contain property names
+                // which, for this purpose, is probably fine because even if
+                // we read a non-property name string, it's unlikely that
+                // it would match something in a config file (and, even if it
+                // did, this just prints a warning)
+                if (field.getType() != String.class)
+                {
+                    continue;
+                }
+                field.setAccessible(true);
+                try
+                {
+                    String propKey = (String) field.get(null);
+                    if (propKey.equalsIgnoreCase(propName))
+                    {
+                        return true;
+                    }
+                } catch (IllegalAccessException e)
+                {
+                    logger.warn("Unable to read field " + field + " of class " + configProperty);
+                    e.printStackTrace();
+                }
+            }
+        }
+        return false;
     }
 }
