@@ -69,6 +69,8 @@ public class Main
         // to be passed.
         System.setProperty("org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.JavaUtilLog");
 
+        // Set the command-line args
+        JvbConfig.commandLineArgsSupplier = () -> args;
         JvbConfig.init();
 
         validateConfig();

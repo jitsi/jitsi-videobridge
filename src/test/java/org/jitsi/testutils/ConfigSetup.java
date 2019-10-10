@@ -19,6 +19,7 @@ package org.jitsi.testutils;
 import com.typesafe.config.*;
 import org.jitsi.videobridge.util.*;
 
+import java.util.*;
 import java.util.function.*;
 
 import static org.jitsi.testutils.ConfigUtils.EMPTY_CONFIG;
@@ -29,7 +30,7 @@ import static org.jitsi.testutils.ConfigUtils.EMPTY_CONFIG;
  */
 public class ConfigSetup
 {
-    protected String commandLineArgs = "";
+    protected List<String> commandLineArgs = new LinkedList<>();
     protected Supplier<Config> legacyConfigSupplier = () -> EMPTY_CONFIG;
     protected Supplier<Config> newConfigSupplier = () -> EMPTY_CONFIG;
 
@@ -67,7 +68,7 @@ public class ConfigSetup
 
     public ConfigSetup withCommandLineArg(String argName, String value)
     {
-        commandLineArgs += " " + argName + "=" + value;
+        commandLineArgs.add(argName + "=" + value);
 
         return this;
     }
@@ -77,11 +78,11 @@ public class ConfigSetup
         // Make sure config doesn't see any command line args from a previous setup
         if (commandLineArgs.isEmpty())
         {
-            JvbConfig.commandLineArgsSupplier =() -> "";
+            JvbConfig.commandLineArgsSupplier =() -> new String[0];
         }
         else
         {
-            JvbConfig.commandLineArgsSupplier = () -> commandLineArgs;
+            JvbConfig.commandLineArgsSupplier = () -> commandLineArgs.toArray(new String[0]);
         }
         JvbConfig.legacyConfigSupplier = legacyConfigSupplier;
         JvbConfig.configSupplier = newConfigSupplier;

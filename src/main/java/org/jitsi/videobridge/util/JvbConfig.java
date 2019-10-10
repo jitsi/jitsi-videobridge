@@ -21,6 +21,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 
 import java.nio.file.*;
+import java.util.*;
 import java.util.function.*;
 
 public class JvbConfig
@@ -29,7 +30,7 @@ public class JvbConfig
 
     protected static Config config;
     protected static Config legacyConfig;
-    protected static String commandLineArgs;
+    protected static String[] commandLineArgs;
 
     public static Supplier<Config> configSupplier = ConfigFactory::load;
     public static Supplier<Config> legacyConfigSupplier = () -> {
@@ -49,7 +50,7 @@ public class JvbConfig
             return ConfigFactory.parseString("");
         }
     };
-    public static Supplier<String> commandLineArgsSupplier = () -> config.getString("sun.java.command");
+    public static Supplier<String[]> commandLineArgsSupplier = () -> new String[0];
 
     /**
      * Requiring explicit initialization of the config makes it more obvious
@@ -73,7 +74,7 @@ public class JvbConfig
             logger.info("No new config found");
         }
         logger.info("Loaded legacy config: " + legacyConfig.root().render());
-        logger.info("Have command line args: '" + commandLineArgs + "'");
+        logger.info("Have command line args: '" + Arrays.toString(commandLineArgs) + "'");
    }
 
     public static void reloadConfig()
@@ -95,6 +96,6 @@ public class JvbConfig
 
     public static String[] getCommandLineArgs()
     {
-        return commandLineArgs.split(" ");
+        return commandLineArgs;
     }
 }
