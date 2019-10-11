@@ -97,7 +97,7 @@ case "$1" in
         sed -i 's/\$JVB_EXTRA_JVM_PARAMS//g' $CONFIG
 
         if ! grep -q "org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP" "$NEW_JITSI_CONFIG" ;then
-            echo "org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP=focus@auth.${JVB_HOSTNAME}/.*" >> $NEW_JITSI_CONFIG
+            echo "org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP=focus@auth\.${JVB_HOSTNAME//./\\.}/.*" >> $NEW_JITSI_CONFIG
         fi
 
         # we don't want to start the daemon as root
