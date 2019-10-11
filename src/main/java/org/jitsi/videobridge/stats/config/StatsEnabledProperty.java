@@ -28,9 +28,9 @@ public class StatsEnabledProperty extends AbstractConfigProperty<Boolean>
 
     protected StatsEnabledProperty()
     {
-        super(new JvbPropertyConfig<Boolean>()
-            .fromLegacyConfig(config -> config.getBoolean(legacyPropName))
-            .fromNewConfig(config -> config.getBoolean(propName))
+        super(new JvbPropertyConfig<>(Boolean.class)
+            .fromLegacyConfig(legacyPropName)
+            .fromNewConfig(propName)
             .readOnce()
             .throwIfNotFound()
         );

@@ -35,8 +35,8 @@ public class CcConfig
 
         protected PaddingPeriodProperty()
         {
-            super(new JvbPropertyConfig<Long>()
-                .fromLegacyConfig(config -> config.getLong(legacyPropName))
+            super(new JvbPropertyConfig<>(Long.class)
+                .fromLegacyConfig(legacyPropName)
                 .fromNewConfig(config -> config.getDuration(propName, TimeUnit.MILLISECONDS))
                 .readOnce()
                 .throwIfNotFound()
@@ -56,9 +56,9 @@ public class CcConfig
 
         protected BweChangeThresholdPctProperty()
         {
-            super(new JvbPropertyConfig<Integer>()
-                .fromLegacyConfig(config -> config.getInt(legacyPropName))
-                .fromNewConfig(config -> config.getInt(propName))
+            super(new JvbPropertyConfig<>(Integer.class)
+                .fromLegacyConfig(legacyPropName)
+                .fromNewConfig(propName)
                 .readOnce()
                 .throwIfNotFound()
             );
@@ -74,9 +74,9 @@ public class CcConfig
 
         protected ThumbnailMaxHeightProperty()
         {
-            super(new JvbPropertyConfig<Integer>()
-                .fromLegacyConfig(config -> config.getInt(legacyPropName))
-                .fromNewConfig(config -> config.getInt(propName))
+            super(new JvbPropertyConfig<>(Integer.class)
+                .fromLegacyConfig(legacyPropName)
+                .fromNewConfig(propName)
                 .readOnce()
                 .throwIfNotFound()
             );
@@ -96,9 +96,9 @@ public class CcConfig
 
         protected OnstagePreferredHeightProperty()
         {
-            super(new JvbPropertyConfig<Integer>()
-                .fromLegacyConfig(config -> config.getInt(legacyPropName))
-                .fromNewConfig(config -> config.getInt(propName))
+            super(new JvbPropertyConfig<>(Integer.class)
+                .fromLegacyConfig(legacyPropName)
+                .fromNewConfig(propName)
                 .readOnce()
                 .throwIfNotFound()
             );
@@ -118,9 +118,9 @@ public class CcConfig
 
         protected OnstagePreferredFramerateProperty()
         {
-            super(new JvbPropertyConfig<Double>()
-                .fromLegacyConfig(config -> config.getDouble(legacyPropName))
-                .fromNewConfig(config -> config.getDouble(propName))
+            super(new JvbPropertyConfig<>(Double.class)
+                .fromLegacyConfig(legacyPropName)
+                .fromNewConfig(propName)
                 .readOnce()
                 .throwIfNotFound()
             );
@@ -140,9 +140,9 @@ public class CcConfig
 
         protected OnstageVideoSuspensionEnabledProperty()
         {
-            super(new JvbPropertyConfig<Boolean>()
-                .fromLegacyConfig(config -> config.getBoolean(legacyPropName))
-                .fromNewConfig(config -> config.getBoolean(propName))
+            super(new JvbPropertyConfig<>(Boolean.class)
+                .fromLegacyConfig(legacyPropName)
+                .fromNewConfig(propName)
                 .readOnce()
                 .throwIfNotFound()
             );
@@ -161,9 +161,9 @@ public class CcConfig
 
         protected TrustBweProperty()
         {
-            super(new JvbPropertyConfig<Boolean>()
-                .fromLegacyConfig(config -> config.getBoolean(legacyPropName))
-                .fromNewConfig(config -> config.getBoolean(propName))
+            super(new JvbPropertyConfig<>(Boolean.class)
+                .fromLegacyConfig(legacyPropName)
+                .fromNewConfig(propName)
                 .readOnce()
                 .throwIfNotFound()
             );

@@ -27,36 +27,21 @@ import java.util.function.*;
  *
  * @param <T> the type of the configuration property's value
  */
-public class ConfigValueSupplier<T> implements Supplier<T>
+public class ConfigValueSupplier<T> extends AbstractConfigValueSupplier<T>
 {
-    protected final Supplier<T> typesafeConfigSupplier;
-
-    /**
-     * Create a {@link ConfigValueSupplier}
-     *
-     * @param getter a function which will be passed a {@link Config}
-     *               instance and should return the value for the
-     *               configuration property for which this supplier
-     *               was created.
-     */
-    public ConfigValueSupplier(Function<Config, T> getter)
+    public ConfigValueSupplier(Class<T> propValueType, String propName)
     {
-        Config config = JvbConfig.getConfig();
-        this.typesafeConfigSupplier =
-            new TypesafeConfigValueSupplier<>(() -> getter.apply(config));
+        super(JvbConfig.getConfig(), propValueType, propName);
     }
 
     /**
-     * Get the value of the configuration property for which
-     * this supplier was created
+     * This constructor is for cases which require custom logic (like performing
+     * some transformation on the retrieved type)
      *
-     * @return the configuration property's value, or
-     * {@link org.jitsi.utils.config.ConfigPropertyNotFoundException} if
-     * the property was not found
+     * @param customGetter
      */
-    @Override
-    public T get()
+    public ConfigValueSupplier(Function<Config, T> customGetter)
     {
-        return typesafeConfigSupplier.get();
+        super(JvbConfig.getConfig(), customGetter);
     }
 }

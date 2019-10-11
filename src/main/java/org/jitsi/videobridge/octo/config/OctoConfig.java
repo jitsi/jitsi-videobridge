@@ -34,9 +34,9 @@ public class OctoConfig
 
         protected RegionProperty()
         {
-            super(new JvbPropertyConfig<String>()
-                .fromLegacyConfig(config -> config.getString(legacyPropName))
-                .fromNewConfig(config -> config.getString(propName))
+            super(new JvbPropertyConfig<>(String.class)
+                .fromLegacyConfig(legacyPropName)
+                .fromNewConfig(propName)
                 .readOnce()
                 .returnNullIfNotFound()
             );
@@ -56,8 +56,8 @@ public class OctoConfig
 
         protected BindAddress()
         {
-            super(new JvbPropertyConfig<String>()
-                .fromLegacyConfig(config -> config.getString(legacyPropName))
+            super(new JvbPropertyConfig<>(String.class)
+                .fromLegacyConfig(legacyPropName)
                 .fromNewConfig(config -> getStringOrNull(config, propName))
                 .readOnce()
                 .returnNullIfNotFound()
@@ -78,8 +78,8 @@ public class OctoConfig
 
         protected PublicAddress()
         {
-            super(new JvbPropertyConfig<String>()
-                .fromLegacyConfig(config -> config.getString(legacyPropName))
+            super(new JvbPropertyConfig<>(String.class)
+                .fromLegacyConfig(legacyPropName)
                 .fromNewConfig(config -> getStringOrNull(config, propName))
                 .readOnce()
                 .returnNullIfNotFound()

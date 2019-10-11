@@ -30,9 +30,9 @@ public class StatsIntervalProperty extends AbstractConfigProperty<Integer>
 
     protected StatsIntervalProperty()
     {
-        super(new JvbPropertyConfig<Integer>()
-            .fromLegacyConfig(config -> config.getInt(legacyPropName))
-            .fromNewConfig(config -> (int)config.getDuration(propName, TimeUnit.MILLISECONDS))
+        super(new JvbPropertyConfig<>(Integer.class)
+            .fromLegacyConfig(legacyPropName)
+            .fromNewConfig(propName)
             .readOnce()
             .throwIfNotFound()
         );

@@ -19,6 +19,7 @@ package org.jitsi.videobridge.util.config;
 import com.typesafe.config.*;
 import org.jitsi.utils.config.*;
 
+import java.time.*;
 import java.util.function.*;
 
 /**
@@ -35,9 +36,58 @@ public class TypesafeConfigValueSupplier<T> implements Supplier<T>
 {
     protected final Supplier<T> supplier;
 
-    public TypesafeConfigValueSupplier(Supplier<T> supplier)
+    public TypesafeConfigValueSupplier(Config config, Class<T> propValueType, String propName)
     {
-        this.supplier = supplier;
+        // Find the proper Config getter function to retrieve type T
+        BiFunction<Config, String, T> getter = getGetter(propValueType);
+
+        this.supplier = () -> getter.apply(config, propName);
+    }
+
+    public TypesafeConfigValueSupplier(Supplier<T> customSupplier)
+    {
+        this.supplier = customSupplier;
+    }
+
+    /**
+     * Return a function which takes in a {@link Config} instance
+     * and a property name and attempts to retrieve the property refered
+     * to by the given propety name as type {@link T}
+     *
+     * @param propValueType
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public BiFunction<Config, String, T> getGetter(Class<T> propValueType)
+    {
+        if (propValueType == Integer.class)
+        {
+            return (config, propName) -> (T)new Integer(config.getInt(propName));
+        }
+        else if (propValueType == Double.class)
+        {
+            return (config, propName) -> (T)new Double(config.getDouble(propName));
+        }
+        else if (propValueType == Long.class)
+        {
+            return (config, propName) -> (T)new Long(config.getLong(propName));
+        }
+        else if (propValueType == Boolean.class)
+        {
+            return (config, propName) -> (T) Boolean.valueOf(config.getBoolean(propName));
+        }
+        else if (propValueType == Duration.class)
+        {
+            return (config, propName) -> (T)config.getDuration(propName);
+        }
+        else if (propValueType == String.class)
+        {
+            return (config, propName) -> (T)config.getString(propName);
+        }
+        else
+        {
+            throw new RuntimeException("No getter found for type " + propValueType);
+        }
     }
 
     @Override

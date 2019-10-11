@@ -31,12 +31,12 @@ public class WebSocketConfig
 
         protected EnabledProperty()
         {
-            super(new JvbPropertyConfig<Boolean>()
+            super(new JvbPropertyConfig<>(Boolean.class)
                 // The legacy config value was 'DISABLE' and the new one is
                 // 'ENABLED', so if we pull the value from the legacy config,
                 // we need to invert it
                 .fromLegacyConfig(config -> !config.getBoolean(legacyPropName))
-                .fromNewConfig(config -> config.getBoolean(propName))
+                .fromNewConfig(propName)
                 .readOnce()
                 .throwIfNotFound()
             );
@@ -56,7 +56,7 @@ public class WebSocketConfig
 
         protected ServerIdProperty()
         {
-            super(new JvbPropertyConfig<String>()
+            super(new JvbPropertyConfig<>(String.class)
                 .fromLegacyConfig(config -> config.getString(legacyPropName))
                 .fromNewConfig(config -> config.getString(propName))
                 .readOnce()
@@ -78,9 +78,9 @@ public class WebSocketConfig
 
         protected DomainProperty()
         {
-            super(new JvbPropertyConfig<String>()
-                .fromLegacyConfig(config -> config.getString(legacyPropName))
-                .fromNewConfig(config -> config.getString(propName))
+            super(new JvbPropertyConfig<>(String.class)
+                .fromLegacyConfig(legacyPropName)
+                .fromNewConfig(propName)
                 .readOnce()
                 .returnNullIfNotFound()
             );
@@ -101,9 +101,9 @@ public class WebSocketConfig
 
         protected TlsProperty()
         {
-            super(new JvbPropertyConfig<Boolean>()
-                .fromLegacyConfig(config -> config.getBoolean(legacyPropName))
-                .fromNewConfig(config -> config.getBoolean(propName))
+            super(new JvbPropertyConfig<>(Boolean.class)
+                .fromLegacyConfig(legacyPropName)
+                .fromNewConfig(propName)
                 .readOnce()
                 .returnNullIfNotFound()
             );

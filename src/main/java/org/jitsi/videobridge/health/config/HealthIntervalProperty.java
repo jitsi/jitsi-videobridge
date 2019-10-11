@@ -30,8 +30,8 @@ public class HealthIntervalProperty extends AbstractConfigProperty<Integer>
 
     protected HealthIntervalProperty()
     {
-        super(new JvbPropertyConfig<Integer>()
-            .fromLegacyConfig(config -> config.getInt(legacyPropName))
+        super(new JvbPropertyConfig<>(Integer.class)
+            .fromLegacyConfig(legacyPropName)
             .fromNewConfig(config -> (int)config.getDuration(propName, TimeUnit.MILLISECONDS))
             .readOnce()
             .throwIfNotFound()

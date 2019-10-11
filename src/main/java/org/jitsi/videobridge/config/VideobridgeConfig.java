@@ -35,8 +35,8 @@ public class VideobridgeConfig
 
         protected ExpireThreadIntervalProperty()
         {
-            super(new JvbPropertyConfig<Integer>()
-                .fromLegacyConfig(config -> config.getInt(legacyPropName))
+            super(new JvbPropertyConfig<>(Integer.class)
+                .fromLegacyConfig(legacyPropName)
                 .fromNewConfig(config -> (int)config.getDuration(propName, TimeUnit.SECONDS))
                 .readOnce()
                 .throwIfNotFound()

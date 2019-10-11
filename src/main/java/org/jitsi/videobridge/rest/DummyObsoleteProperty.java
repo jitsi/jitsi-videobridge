@@ -28,8 +28,8 @@ public class DummyObsoleteProperty extends AbstractConfigProperty<String>
 
     protected DummyObsoleteProperty()
     {
-        super(new JvbPropertyConfig<String>()
-            .fromLegacyConfig(config -> config.getString(legacyPropKey))
+        super(new JvbPropertyConfig<>(String.class)
+            .fromLegacyConfig(legacyPropKey)
             .readOnce()
             .throwIfNotFound()
         );

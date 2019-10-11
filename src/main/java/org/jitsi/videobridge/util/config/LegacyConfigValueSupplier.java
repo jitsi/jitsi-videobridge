@@ -19,6 +19,7 @@ package org.jitsi.videobridge.util.config;
 import com.typesafe.config.*;
 import org.jitsi.videobridge.util.*;
 
+import java.time.*;
 import java.util.function.*;
 
 /**
@@ -27,20 +28,29 @@ import java.util.function.*;
  *
  * @param <T> the type of the configuration property's value
  */
-public class LegacyConfigValueSupplier<T> implements Supplier<T>
+public class LegacyConfigValueSupplier<T> extends AbstractConfigValueSupplier<T>
 {
-    protected final Supplier<T> typesafeConfigSupplier;
-
-    public LegacyConfigValueSupplier(Function<Config, T> getter)
+    /**
+     * This constructor is suitable to use for the simpler case, where
+     * the caller merely wants to retrieve a prop named {@code propName}
+     * as type {@code propValueType}
+     *
+     * @param propValueType
+     * @param propName
+     */
+    public LegacyConfigValueSupplier(Class<T> propValueType, String propName)
     {
-        Config config = JvbConfig.getLegacyConfig();
-        this.typesafeConfigSupplier =
-            new TypesafeConfigValueSupplier<>(() -> getter.apply(config));
+        super(JvbConfig.getLegacyConfig(), propValueType, propName);
     }
 
-    @Override
-    public T get()
+    /**
+     * This constructor is for cases which require custom logic (like performing
+     * some transformation on the retrieved type)
+     *
+     * @param customGetter
+     */
+    public LegacyConfigValueSupplier(Function<Config, T> customGetter)
     {
-        return typesafeConfigSupplier.get();
+        super(JvbConfig.getLegacyConfig(), customGetter);
     }
 }

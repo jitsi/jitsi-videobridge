@@ -33,9 +33,9 @@ public class CallStatsIoTransportConfig
 
         protected AppIdProperty()
         {
-            super(new JvbPropertyConfig<Integer>()
-                .fromLegacyConfig(config -> config.getInt(legacyPropName))
-                .fromNewConfig(config -> config.getInt(propName))
+            super(new JvbPropertyConfig<>(Integer.class)
+                .fromLegacyConfig(legacyPropName)
+                .fromNewConfig(propName)
                 .readOnce()
                 .throwIfNotFound()
             );
@@ -54,7 +54,7 @@ public class CallStatsIoTransportConfig
 
         protected AppSecretProperty()
         {
-            super(new JvbPropertyConfig<String>()
+            super(new JvbPropertyConfig<>(String.class)
                 .fromLegacyConfig(config -> config.getString(legacyPropName))
                 .fromNewConfig(config -> getStringOrNull(config, propName))
                 .readOnce()
@@ -75,7 +75,7 @@ public class CallStatsIoTransportConfig
 
         protected KeyIdProperty()
         {
-            super(new JvbPropertyConfig<String>()
+            super(new JvbPropertyConfig<>(String.class)
                 .fromLegacyConfig(config -> config.getString(legacyPropName))
                 .fromNewConfig(config -> getStringOrNull(config, propName))
                 .readOnce()
@@ -96,7 +96,7 @@ public class CallStatsIoTransportConfig
 
         protected KeyPathProperty()
         {
-            super(new JvbPropertyConfig<String>()
+            super(new JvbPropertyConfig<>(String.class)
                 .fromLegacyConfig(config -> config.getString(legacyPropName))
                 .fromNewConfig(config -> getStringOrNull(config, propName))
                 .readOnce()
@@ -117,7 +117,7 @@ public class CallStatsIoTransportConfig
 
         protected BridgeIdProperty()
         {
-            super(new JvbPropertyConfig<String>()
+            super(new JvbPropertyConfig<>(String.class)
                 .fromLegacyConfig(config -> config.getString(legacyPropName))
                 .fromNewConfig(config -> config.getString(propName))
                 .readOnce()
@@ -138,7 +138,7 @@ public class CallStatsIoTransportConfig
 
         protected ConferenceIdPrefixProperty()
         {
-            super(new JvbPropertyConfig<String>()
+            super(new JvbPropertyConfig<>(String.class)
                 .fromLegacyConfig(config -> config.getString(legacyPropName))
                 .fromNewConfig(config -> config.getString(propName))
                 .readOnce()
