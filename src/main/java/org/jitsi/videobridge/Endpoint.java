@@ -46,7 +46,6 @@ import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi_modified.sctp4j.*;
-import org.jitsi_modified.service.neomedia.rtp.*;
 import org.json.simple.*;
 
 import java.io.*;
