@@ -40,9 +40,8 @@ public class ConfigValueSupplier<T> implements Supplier<T>
      */
     public ConfigValueSupplier(Function<Config, T> getter)
     {
-        Config config = JvbConfig.getConfig();
         this.typesafeConfigSupplier =
-            new TypesafeConfigValueSupplier<>(() -> getter.apply(config));
+            new TypesafeConfigValueSupplier<>(() -> getter.apply(JvbConfig.getConfig()));
     }
 
     /**

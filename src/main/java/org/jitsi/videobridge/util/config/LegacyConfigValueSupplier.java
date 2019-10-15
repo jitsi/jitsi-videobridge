@@ -32,9 +32,8 @@ public class LegacyConfigValueSupplier<T> implements Supplier<T>
 
     public LegacyConfigValueSupplier(Function<Config, T> getter)
     {
-        Config config = JvbConfig.getLegacyConfig();
         this.typesafeConfigSupplier =
-            new TypesafeConfigValueSupplier<>(() -> getter.apply(config));
+            new TypesafeConfigValueSupplier<>(() -> getter.apply(JvbConfig.getLegacyConfig()));
     }
 
     @Override
