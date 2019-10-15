@@ -39,7 +39,7 @@ public class HealthIntervalProperty extends AbstractConfigProperty<Integer>
             .fromLegacyConfig(config -> config.getInt(legacyPropName))
             .fromNewConfig(config -> (int)config.getDuration(propName, TimeUnit.MILLISECONDS))
             .readOnce()
-            .returnNullIfNotFound()
+            .throwIfNotFound()
         );
     }
 
