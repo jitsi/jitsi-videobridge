@@ -46,6 +46,7 @@ videobridge {
 ```
 This list will be updated as properties are migrated:
 
-| Old property name | New property name |
-| -------- | ------- |
-| org.jitsi.videobridge.health.INTERVAL | videobridge.health.interval |
+| Old property name | New property name | Notes |
+| -------- | ------- | ------- |
+| org.jitsi.videobridge.health.INTERVAL | videobridge.health.interval | The new config models this as a duration, rather than an amount of milliseconds |
+
