@@ -39,7 +39,7 @@ import org.jitsi.rtp.util.get3BytesAsInt
 import org.jitsi.rtp.util.getByteAsInt
 import org.jitsi.rtp.util.getShortAsInt
 
-open class PacketReport(val seqNum: Int)
+sealed class PacketReport(val seqNum: Int)
 
 class UnreceivedPacketReport(seqNum: Int) : PacketReport(seqNum)
 
