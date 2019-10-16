@@ -80,19 +80,20 @@ public class JvbConfig
      */
     public static void init()
     {
-        config = configSupplier.get();
         legacyConfig = legacyConfigSupplier.get();
         commandLineArgs = commandLineArgsSupplier.get();
 
-        logger.info("Loaded complete config: " + config.withFallback(legacyConfig).root().render());
+        config = configSupplier.get();
         if (config.hasPath("videobridge"))
         {
             logger.info("Loaded JVB config: " + config.getConfig("videobridge").root().render());
         }
         else
         {
-            logger.info("No new config found");
+            throw new RuntimeException("Videobridge config block missing!");
         }
+
+        logger.info("Loaded complete config: " + config.withFallback(legacyConfig).root().render());
         logger.info("Have command line args: '" + Arrays.toString(commandLineArgs) + "'");
    }
 
