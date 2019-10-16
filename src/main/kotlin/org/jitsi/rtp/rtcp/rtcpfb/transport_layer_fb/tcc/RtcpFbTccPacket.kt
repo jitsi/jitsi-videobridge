@@ -16,6 +16,8 @@
 
 package org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc
 
+import java.time.Duration
+import java.time.temporal.ChronoUnit
 import org.jitsi.rtp.extensions.bytearray.put3Bytes
 import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
@@ -37,13 +39,17 @@ import org.jitsi.rtp.util.get3BytesAsInt
 import org.jitsi.rtp.util.getByteAsInt
 import org.jitsi.rtp.util.getShortAsInt
 
+open class PacketReport(val seqNum: Int)
+
+class UnreceivedPacketReport(seqNum: Int) : PacketReport(seqNum)
+
 // Size in bytes of a delta time in rtcp packet.
 // Valid values are 0 (packet wasn't received), 1 or 2.
 typealias DeltaSize = Int
 
-class ReceivedPacket(val seqNum: Int, val deltaTicks: Short) {
-    operator fun component1(): Int = seqNum
-    operator fun component2(): Short = deltaTicks
+class ReceivedPacketReport(seqNum: Int, val deltaTicks: Short) : PacketReport(seqNum) {
+    val deltaDuration: Duration
+        get() = Duration.of(deltaTicks * 250L, ChronoUnit.MICROS)
 }
 
 /**
@@ -78,7 +84,7 @@ class RtcpFbTccPacketBuilder(
     // The size of the entire packet, in bytes
     private var size_bytes_ = kTransportFeedbackHeaderSizeBytes
     private var last_timestamp_us_: Long = 0
-    private val packets_ = mutableListOf<ReceivedPacket>()
+    private val packets_ = mutableListOf<PacketReport>()
 
     fun SetBase(base_sequence: Int, ref_timestamp_us: Long) {
         base_seq_no_ = RtpSequenceNumber(base_sequence)
@@ -117,7 +123,7 @@ class RtcpFbTccPacketBuilder(
         if (!AddDeltaSize(delta_size))
             return false
 
-        packets_.add(ReceivedPacket(sequence_number.value, delta))
+        packets_.add(ReceivedPacketReport(sequence_number.value, delta))
         last_timestamp_us_ += delta * kDeltaScaleFactor
         size_bytes_ += delta_size
 
@@ -186,11 +192,13 @@ class RtcpFbTccPacketBuilder(
             currOffset += kChunkSizeBytes
         }
         packets_.forEach {
-            when (it.deltaTicks) {
-                in 0..0xFF -> buf[currOffset++] = it.deltaTicks.toByte()
-                else -> {
-                    buf.putShort(currOffset, it.deltaTicks)
-                    currOffset += 2
+            if (it is ReceivedPacketReport) {
+                when (it.deltaTicks) {
+                    in 0..0xFF -> buf[currOffset++] = it.deltaTicks.toByte()
+                    else -> {
+                        buf.putShort(currOffset, it.deltaTicks)
+                        currOffset += 2
+                    }
                 }
             }
         }
@@ -252,7 +260,7 @@ class RtcpFbTccPacket(
     buffer: ByteArray,
     offset: Int,
     length: Int
-) : TransportLayerRtcpFbPacket(buffer, offset, length), Iterable<ReceivedPacket> {
+) : TransportLayerRtcpFbPacket(buffer, offset, length), Iterable<PacketReport> {
 
     /**
      * Because much of time this packet is one that we built (not one
@@ -269,7 +277,7 @@ class RtcpFbTccPacket(
         var last_chunk_: LastChunk,
         var num_seq_no_: Int,
         var last_timestamp_us_: Long,
-        val packets_: MutableList<ReceivedPacket>
+        val packets_: MutableList<PacketReport>
     )
 
     private val data: TccMemberData by lazy(LazyThreadSafetyMode.NONE) {
@@ -279,7 +287,7 @@ class RtcpFbTccPacket(
         val last_chunk_ = LastChunk()
         var num_seq_no_: Int = 0
         var last_timestamp_us_: Long = 0
-        val packets_ = mutableListOf<ReceivedPacket>()
+        val packets_ = mutableListOf<PacketReport>()
 
         val base_time_ticks_ = getReferenceTimeTicks(buffer, offset)
         val delta_sizes = mutableListOf<Int>()
@@ -312,16 +320,16 @@ class RtcpFbTccPacket(
                     throw Exception("Buffer overflow while parsing packet.")
                 }
                 when (delta_size) {
-                    0 -> { /* No-op */ }
+                    0 -> packets_.add(UnreceivedPacketReport(seq_no.value))
                     1 -> {
                         val delta = buffer[index]
-                        packets_.add(ReceivedPacket(seq_no.value, delta.toPositiveShort()))
+                        packets_.add(ReceivedPacketReport(seq_no.value, delta.toPositiveShort()))
                         last_timestamp_us_ += delta * kDeltaScaleFactor
                         index += delta_size
                     }
                     2 -> {
                         val delta = buffer.getShortAsInt(index)
-                        packets_.add(ReceivedPacket(seq_no.value, delta.toShort()))
+                        packets_.add(ReceivedPacketReport(seq_no.value, delta.toShort()))
                         last_timestamp_us_ += delta * kDeltaScaleFactor
                         index += delta_size
                     }
@@ -335,8 +343,10 @@ class RtcpFbTccPacket(
             // The packet does not contain receive deltas
             for (delta_size in delta_sizes) {
                 // Use delta sizes to detect if packet was received.
-                if (delta_size > 0) {
-                    packets_.add(ReceivedPacket(seq_no.value, 0))
+                if (delta_size == 0) {
+                    packets_.add(UnreceivedPacketReport(seq_no.value))
+                } else {
+                    packets_.add(ReceivedPacketReport(seq_no.value, 0))
                 }
                 seq_no += 1
             }
@@ -361,7 +371,7 @@ class RtcpFbTccPacket(
         set(value) {
             data.num_seq_no_ = value
         }
-    private val packets_: MutableList<ReceivedPacket>
+    private val packets_: MutableList<PacketReport>
         get() = data.packets_
     private var last_timestamp_us_: Long
         get() = data.last_timestamp_us_
@@ -380,7 +390,7 @@ class RtcpFbTccPacket(
     fun GetBaseTimeUs(): Long =
         base_time_ticks_ * kBaseScaleFactor
 
-    override fun iterator(): Iterator<ReceivedPacket> = packets_.iterator()
+    override fun iterator(): Iterator<PacketReport> = packets_.iterator()
 
     override fun clone(): RtcpFbTccPacket = RtcpFbTccPacket(cloneBuffer(0), 0, length)
 

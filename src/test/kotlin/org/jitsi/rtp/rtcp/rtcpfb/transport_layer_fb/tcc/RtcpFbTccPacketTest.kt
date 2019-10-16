@@ -16,10 +16,13 @@
 
 package org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc
 
+import io.kotlintest.matchers.beInstanceOf
 import io.kotlintest.matchers.maps.shouldContainKey
 import io.kotlintest.matchers.withClue
+import io.kotlintest.should
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
+import java.time.Duration
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
 import org.jitsi.rtp.util.byteBufferOf
 
@@ -136,10 +139,13 @@ class RtcpFbTccPacketTest : ShouldSpec() {
             "with RLE" {
                 val rtcpFbTccPacket = RtcpFbTccPacket(tccRleData.array(), tccRleData.arrayOffset(), tccRleData.limit())
                 should("parse the values correctly") {
-                    rtcpFbTccPacket.forEach { (seqNum, deltaTicks) ->
-                        expectedTccRlePacketInfo shouldContainKey seqNum
-                        withClue("seqNum $seqNum deltaTicks") {
-                            deltaTicks shouldBe expectedTccRlePacketInfo[seqNum]
+                    rtcpFbTccPacket.forEach {
+                        it should beInstanceOf<ReceivedPacketReport>()
+                        it as ReceivedPacketReport
+                        expectedTccRlePacketInfo shouldContainKey it.seqNum
+                        withClue("seqNum ${it.seqNum} deltaTicks") {
+                            it.deltaTicks shouldBe expectedTccRlePacketInfo[it.seqNum]
+                            it.deltaDuration shouldBe Duration.ofNanos(it.deltaTicks * 250 * 1000L)
                         }
                     }
                 }
@@ -147,10 +153,13 @@ class RtcpFbTccPacketTest : ShouldSpec() {
             "with mixed chunk types and a negative delta" {
                 val rtcpFbTccPacket = RtcpFbTccPacket(tccMixedChunkTypeData.array(), tccMixedChunkTypeData.arrayOffset(), tccMixedChunkTypeData.limit())
                 should("parse the values correctly") {
-                    rtcpFbTccPacket.forEach { (seqNum, recvTimestamp) ->
-                        expectedTccMixedChunkTypePacketInfo shouldContainKey seqNum
-                        withClue("seqNum $seqNum timestamp") {
-                            recvTimestamp shouldBe expectedTccMixedChunkTypePacketInfo[seqNum]
+                    rtcpFbTccPacket.forEach {
+                        it should beInstanceOf<ReceivedPacketReport>()
+                        it as ReceivedPacketReport
+                        expectedTccMixedChunkTypePacketInfo shouldContainKey it.seqNum
+                        withClue("seqNum ${it.seqNum} deltaTicks") {
+                            it.deltaTicks shouldBe expectedTccMixedChunkTypePacketInfo[it.seqNum]
+                            it.deltaDuration shouldBe Duration.ofNanos(it.deltaTicks * 250 * 1000L)
                         }
                     }
                 }
@@ -166,6 +175,31 @@ class RtcpFbTccPacketTest : ShouldSpec() {
             )
             rtcpFbTccPacketBuilder.SetBase(6227, 107784064)
             rtcpFbTccPacketBuilder.AddReceivedPacket(6228, 107784064) shouldBe true
+        }
+        "Creating and parsing an RtcpFbTccPacket" {
+            "with missing packets" {
+                val kBaseSeqNo = 1000
+                val kBaseTimestampUs = 10000L
+                val rtcpFbTccPacketBuilder = RtcpFbTccPacketBuilder(
+                    rtcpHeader = RtcpHeaderBuilder(
+                        senderSsrc = 839852602
+                    ),
+                    mediaSourceSsrc = 2397376430,
+                    feedbackPacketSeqNum = 163
+                )
+                rtcpFbTccPacketBuilder.SetBase(kBaseSeqNo, kBaseTimestampUs)
+                rtcpFbTccPacketBuilder.AddReceivedPacket(kBaseSeqNo + 0, kBaseTimestampUs)
+                rtcpFbTccPacketBuilder.AddReceivedPacket(kBaseSeqNo + 3, kBaseTimestampUs + 2000)
+
+                val coded = rtcpFbTccPacketBuilder.build()
+
+                val packet = RtcpFbTccPacket(coded.buffer, coded.offset, coded.length)
+                val it = packet.iterator()
+                it.next() should beInstanceOf<ReceivedPacketReport>()
+                it.next() should beInstanceOf<UnreceivedPacketReport>()
+                it.next() should beInstanceOf<UnreceivedPacketReport>()
+                it.next() should beInstanceOf<ReceivedPacketReport>()
+            }
         }
     }
 }
