@@ -57,7 +57,7 @@ public class JvbConfig
             Config config = ConfigFactory.parseFile(
                     Paths.get(oldConfigHomeDirLocation, oldConfigHomeDirName, "sip-communicator.properties")
                             .toFile());
-            logger.info("Found a legacy config file");
+            logger.info("Found a legacy config file: \n" + config.root().render());
             return config;
         }
         catch (InvalidPathException | NullPointerException e)
@@ -93,7 +93,6 @@ public class JvbConfig
         {
             logger.info("No new config found");
         }
-        logger.info("Loaded legacy config: " + legacyConfig.root().render());
         logger.info("Have command line args: '" + Arrays.toString(commandLineArgs) + "'");
    }
 
