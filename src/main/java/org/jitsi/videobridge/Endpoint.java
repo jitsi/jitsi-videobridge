@@ -676,7 +676,7 @@ public class Endpoint
                 = transceiverStats.getIncomingPacketStreamStats();
         PacketStreamStats.Snapshot outgoingStats
                 = transceiverStats.getOutgoingPacketStreamStats();
-        BandwidthEstimator.Statistics bweStats
+        BandwidthEstimator.StatisticsSnapshot bweStats
                 = transceiverStats.getBandwidthEstimatorStats();
 
         conferenceStats.totalBytesReceived.addAndGet(
