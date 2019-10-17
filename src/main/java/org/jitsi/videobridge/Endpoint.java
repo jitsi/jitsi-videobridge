@@ -19,6 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.rtp.bandwidthestimation.*;
 import org.jitsi.nlj.srtp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.*;
@@ -675,7 +676,7 @@ public class Endpoint
                 = transceiverStats.getIncomingPacketStreamStats();
         PacketStreamStats.Snapshot outgoingStats
                 = transceiverStats.getOutgoingPacketStreamStats();
-        NodeStatsBlock bweStats
+        BandwidthEstimator.Statistics bweStats
                 = transceiverStats.getBandwidthEstimatorStats();
 
         conferenceStats.totalBytesReceived.addAndGet(
