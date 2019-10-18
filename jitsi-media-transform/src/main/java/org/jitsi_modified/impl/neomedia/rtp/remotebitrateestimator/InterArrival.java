@@ -17,8 +17,9 @@ package org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator;
 
 import org.jitsi.utils.TimestampUtils;
 import org.jetbrains.annotations.*;
-import org.jitsi.utils.logging.DiagnosticContext;
+import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.logging2.Logger;
 
 /**
  * Helper class to compute the inter-arrival time delta and the size delta
@@ -37,6 +38,7 @@ class InterArrival
     private static final int kBurstDeltaThresholdMs  = 5;
 
     private final Logger logger;
+    private final TimeSeriesLogger timeSeriesLogger;
 
     /**
      * webrtc/modules/include/module_common_types.h
@@ -91,6 +93,7 @@ class InterArrival
         numConsecutiveReorderedPackets = 0;
         this.diagnosticContext = diagnosticContext;
         this.logger = parentLogger.createChildLogger(getClass().getName());
+        this.timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(getClass());
     }
 
     private boolean belongsToBurst(long arrivalTimeMs, long timestamp)
@@ -230,9 +233,9 @@ class InterArrival
                     = (int)
                         (currentTimestampGroup.size - prevTimestampGroup.size);
 
-                if (logger.isTraceEnabled())
+                if (timeSeriesLogger.isTraceEnabled())
                 {
-                    logger.trace(diagnosticContext
+                    timeSeriesLogger.trace(diagnosticContext
                         .makeTimeSeriesPoint("computed_deltas")
                         .addField("inter_arrival", hashCode())
                         .addField("arrival_time_ms", arrivalTimeMs)
@@ -316,9 +319,9 @@ class InterArrival
             long tsDeltaMs = (long) (timestampToMsCoeff * timestampDiff + 0.5);
             boolean inOrder = timestampDiff < 0x80000000L;
 
-            if (!inOrder && logger.isTraceEnabled())
+            if (!inOrder && timeSeriesLogger.isTraceEnabled())
             {
-                logger.trace(diagnosticContext
+                timeSeriesLogger.trace(diagnosticContext
                         .makeTimeSeriesPoint("reordered_packet")
                         .addField("inter_arrival", hashCode())
                         .addField("ts_delta_ms", tsDeltaMs));

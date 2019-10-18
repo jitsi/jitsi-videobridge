@@ -16,9 +16,9 @@
 
 package org.jitsi.nlj.stats
 
+import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
-import org.jitsi_modified.service.neomedia.rtp.BandwidthEstimator
 
 data class TransceiverStats(
     val endpointConnectionStats: EndpointConnectionStats.Snapshot,
@@ -26,5 +26,5 @@ data class TransceiverStats(
     val incomingPacketStreamStats: PacketStreamStats.Snapshot,
     val outgoingStats: OutgoingStatisticsSnapshot,
     val outgoingPacketStreamStats: PacketStreamStats.Snapshot,
-    val bandwidthEstimatorStats: BandwidthEstimator.Statistics
+    val bandwidthEstimatorStats: BandwidthEstimator.StatisticsSnapshot
 )

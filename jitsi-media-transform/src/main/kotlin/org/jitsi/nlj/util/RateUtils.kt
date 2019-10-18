@@ -14,17 +14,28 @@
  * limitations under the License.
  */
 
-@file:JvmName("ClockUtils")
-
 package org.jitsi.nlj.util
 
 import java.time.Duration
-import java.time.Instant
-import org.jitsi.utils.TimeUtils
 
-@JvmField
-val NEVER: Instant = Instant.MIN
+/**
+ * This method isn't technically necessary, but provides better readability, i.e.:
+ *
+ * val time = howLongToSend(1.megabytes()) atRate 1.mbps()
+ *
+ * as opposed to
+ *
+ * val time = 1.megabytes() atRate 1.mbps()
+ */
+fun howLongToSend(size: DataSize): DataSize = size
 
-fun Instant.formatMilli(): String = TimeUtils.formatTimeAsFullMillis(this.epochSecond, this.nano)
+infix fun DataSize.atRate(bw: Bandwidth): Duration {
+    val bitsPerNano = bw.bps / 1e9
+    return Duration.ofNanos((this.bits / bitsPerNano).toLong())
+}
 
-fun Duration.formatMilli(): String = TimeUtils.formatTimeAsFullMillis(this.seconds, this.nano)
+fun howMuchCanISendAtRate(bw: Bandwidth): Bandwidth = bw
+
+infix fun Bandwidth.`in`(time: Duration): DataSize {
+    return DataSize((bps * time.seconds).toLong())
+}
