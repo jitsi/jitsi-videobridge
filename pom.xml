@@ -90,12 +90,12 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-media-transform</artifactId>
-      <version>1.0-51-g49bf48b</version>
+      <version>1.0-54-g1407551</version>
     </dependency>
     <dependency>
       <groupId>org.jitsi</groupId>
       <artifactId>rtp</artifactId>
-      <version>1.0-14-g1ff20be</version>
+      <version>1.0-17-gfec6b74</version>
     </dependency>
     <dependency>
       <groupId>org.jitsi</groupId>
@@ -131,7 +131,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-utils</artifactId>
-      <version>1.0-11-g2c0bd54</version>
+      <version>1.0-19-ge5cd0ce</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>

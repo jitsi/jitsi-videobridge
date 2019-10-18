@@ -19,6 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.rtp.bandwidthestimation.*;
 import org.jitsi.nlj.srtp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.*;
@@ -46,7 +47,6 @@ import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi_modified.sctp4j.*;
-import org.jitsi_modified.service.neomedia.rtp.*;
 import org.json.simple.*;
 
 import java.io.*;
@@ -242,7 +242,7 @@ public class Endpoint
             {
                 logger.debug("Estimated bandwidth is now " + newValueBps + " bps.");
             }
-            bitrateController.bandwidthChanged(newValueBps);
+            bitrateController.bandwidthChanged((long)newValueBps.getBps());
         });
         transceiver.onBandwidthEstimateChanged(bandwidthProbing);
         conference.encodingsManager.subscribe(this);
@@ -676,7 +676,7 @@ public class Endpoint
                 = transceiverStats.getIncomingPacketStreamStats();
         PacketStreamStats.Snapshot outgoingStats
                 = transceiverStats.getOutgoingPacketStreamStats();
-        BandwidthEstimator.Statistics bweStats
+        BandwidthEstimator.StatisticsSnapshot bweStats
                 = transceiverStats.getBandwidthEstimatorStats();
 
         conferenceStats.totalBytesReceived.addAndGet(
@@ -688,22 +688,26 @@ public class Endpoint
         conferenceStats.totalPacketsSent.addAndGet(
                 outgoingStats.getPackets());
 
-        bweStats.update(System.currentTimeMillis());
+        Number lossLimitedMs = bweStats.getNumber("lossLimitedMs");
+        Number lossDegradedMs = bweStats.getNumber("lossDegradedMs");
+        Number lossFreeMs = bweStats.getNumber("lossFreeMs");
 
-        Videobridge.Statistics videobridgeStats
+        if (lossLimitedMs != null && lossDegradedMs != null && lossFreeMs != null)
+        {
+            Videobridge.Statistics videobridgeStats
                 = getConference().getVideobridge().getStatistics();
 
-        long lossLimitedMs = bweStats.getLossLimitedMs();
-        long lossDegradedMs = bweStats.getLossDegradedMs();
-        long participantMs = bweStats.getLossFreeMs()
-                + lossDegradedMs + lossLimitedMs;
+            long participantMs = lossFreeMs.longValue() +
+                lossDegradedMs.longValue() +
+                lossLimitedMs.longValue();
 
-        videobridgeStats.totalLossControlledParticipantMs
+            videobridgeStats.totalLossControlledParticipantMs
                 .addAndGet(participantMs);
-        videobridgeStats.totalLossLimitedParticipantMs
-                .addAndGet(lossLimitedMs);
-        videobridgeStats.totalLossDegradedParticipantMs
-                .addAndGet(lossDegradedMs);
+            videobridgeStats.totalLossLimitedParticipantMs
+                .addAndGet(lossLimitedMs.longValue());
+            videobridgeStats.totalLossDegradedParticipantMs
+                .addAndGet(lossDegradedMs.longValue());
+        }
     }
 
     /**
