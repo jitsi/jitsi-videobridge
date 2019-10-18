@@ -16,8 +16,9 @@
 package org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.utils.logging.DiagnosticContext;
+import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.logging2.Logger;
 
 import java.util.*;
 
@@ -35,6 +36,11 @@ class OveruseEstimator
      * logging output.
      */
     private final Logger logger;
+
+    /**
+     * The <tt>TimeSeriesLogger</tt> used for time series.
+     */
+    private final TimeSeriesLogger timeSeriesLogger;
 
     private static final int kDeltaCounterMax = 1000;
 
@@ -119,6 +125,7 @@ class OveruseEstimator
             @NotNull Logger parentLogger)
     {
         logger = parentLogger.createChildLogger(getClass().getName());
+        timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(getClass());
         this.diagnosticContext = diagnosticContext;
         slope = options.initialSlope;
         offset = options.initialOffset;
@@ -258,9 +265,9 @@ class OveruseEstimator
         prevOffset = offset;
         offset = offset + K[1] * residual;
 
-        if (logger.isTraceEnabled())
+        if (timeSeriesLogger.isTraceEnabled())
         {
-            logger.trace(diagnosticContext
+            timeSeriesLogger.trace(diagnosticContext
                 .makeTimeSeriesPoint("delay_variation_estimation", systemTimeMs)
                 .addField("estimator", hashCode())
                 .addField("time_delta", tDelta)

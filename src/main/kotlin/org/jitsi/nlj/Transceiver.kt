@@ -15,11 +15,15 @@
  */
 package org.jitsi.nlj
 
+import java.time.Clock
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
+import org.jitsi.nlj.rtp.TransportCcEngine
+import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
+import org.jitsi.nlj.rtp.bandwidthestimation.GoogleCcEstimator
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
@@ -34,13 +38,9 @@ import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.utils.MediaType
-import org.jitsi.utils.concurrent.RecurringRunnableExecutor
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
-import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
-import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.BandwidthEstimatorImpl
-import org.jitsi_modified.service.neomedia.rtp.BandwidthEstimator
 
 // This is an API class, so its usages will largely be outside of this library
 @Suppress("unused")
@@ -82,9 +82,9 @@ class Transceiver(
 
     private var mediaStreamTracks = MediaStreamTracks()
 
-    private val bandwidthEstimator: BandwidthEstimatorImpl = BandwidthEstimatorImpl(diagnosticContext, logger)
+    private val bandwidthEstimator: BandwidthEstimator = GoogleCcEstimator(diagnosticContext, logger)
 
-    private val transportCcEngine = TransportCCEngine(diagnosticContext, bandwidthEstimator, logger)
+    private val transportCcEngine = TransportCcEngine(bandwidthEstimator, logger)
 
     private val rtpSender: RtpSender = RtpSenderImpl(
         id,
@@ -113,12 +113,9 @@ class Transceiver(
     init {
         rtcpEventNotifier.addRtcpEventListener(endpointConnectionStats)
 
-        endpointConnectionStats.addListener(bandwidthEstimator)
-        rtcpEventNotifier.addRtcpEventListener(bandwidthEstimator)
         rtcpEventNotifier.addRtcpEventListener(transportCcEngine)
 
         endpointConnectionStats.addListener(rtpSender)
-        bandwidthEstimatorExecutor.registerRecurringRunnable(bandwidthEstimator)
     }
 
     fun onBandwidthEstimateChanged(listener: BandwidthEstimator.Listener) {
@@ -260,7 +257,7 @@ class Transceiver(
             addBlock(streamInformationStore.getNodeStats())
             addBlock(mediaStreamTracks.getNodeStats())
             addString("endpointConnectionStats", endpointConnectionStats.getSnapshot().toString())
-            addBlock(bandwidthEstimator.getNodeStats())
+            addJson("Bandwidth Estimation", bandwidthEstimator.getStats(Clock.systemUTC().instant()).toJson())
             addBlock(rtpReceiver.getNodeStats())
             addBlock(rtpSender.getNodeStats())
         }
@@ -276,13 +273,12 @@ class Transceiver(
             rtpReceiver.getPacketStreamStats(),
             rtpSender.getStreamStats(),
             rtpSender.getPacketStreamStats(),
-            bandwidthEstimator.statistics)
+            bandwidthEstimator.getStats(Clock.systemUTC().instant()))
     }
 
     override fun stop() {
         rtpReceiver.stop()
         rtpSender.stop()
-        bandwidthEstimatorExecutor.deRegisterRecurringRunnable(bandwidthEstimator)
     }
 
     fun teardown() {
@@ -291,28 +287,9 @@ class Transceiver(
     }
 
     companion object {
-        /**
-         * The executor which will periodically run the bandwidth estimators.
-         */
-        private val bandwidthEstimatorExecutor = RecurringRunnableExecutor("BandwidthEstimator")
-
         init {
 //            Node.plugins.add(BufferTracePlugin)
 //            Node.PLUGINS_ENABLED = true
         }
     }
-}
-
-/**
- * Extracts a [NodeStatsBlock] from a [BandwidthEstimatorImpl]. This is here temporarily, once we figure out
- * what to do with [BandwidthEstimator] it should go away or move.
- */
-fun BandwidthEstimatorImpl.getNodeStats(): NodeStatsBlock = NodeStatsBlock("BandwidthEstimator").apply {
-    addNumber("latestREMB", latestREMB)
-    addNumber("latestEstimate", latestEstimate)
-    addNumber("latestFractionLoss", latestFractionLoss)
-    val bweStats: BandwidthEstimator.Statistics = statistics
-    addNumber("lossDegradedMs", bweStats.lossDegradedMs)
-    addNumber("lossFreeMs", bweStats.lossFreeMs)
-    addNumber("lossLimitedMs", bweStats.lossLimitedMs)
 }

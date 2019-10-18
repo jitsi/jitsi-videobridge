@@ -29,12 +29,12 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>rtp</artifactId>
-            <version>1.0-5-gf0871e5</version>
+            <version>1.0-17-gfec6b74</version>
         </dependency>
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-utils</artifactId>
-            <version>1.0-5-g7b044d4</version>
+            <version>1.0-17-g4db0927</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
