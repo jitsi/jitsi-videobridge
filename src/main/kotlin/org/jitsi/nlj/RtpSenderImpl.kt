@@ -15,12 +15,14 @@
  */
 package org.jitsi.nlj
 
+import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import org.jitsi.nlj.rtcp.KeyframeRequester
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpSrUpdater
+import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeEventVisitor
@@ -47,11 +49,10 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.queue.CountingErrorHandler
-import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 
 class RtpSenderImpl(
     val id: String,
-    val transportCcEngine: TransportCCEngine? = null,
+    val transportCcEngine: TransportCcEngine? = null,
     private val rtcpEventNotifier: RtcpEventNotifier,
     /**
      * The executor this class will use for its primary work (i.e. critical path
@@ -159,7 +160,7 @@ class RtpSenderImpl(
     override fun onRttUpdate(newRtt: Double) {
         nackHandler.onRttUpdate(newRtt)
         keyframeRequester.onRttUpdate(newRtt)
-        transportCcEngine?.onRttUpdate(newRtt.toLong(), -1)
+        transportCcEngine?.onRttUpdate(Duration.ofNanos((newRtt*1e6).toLong()))
     }
 
     /**

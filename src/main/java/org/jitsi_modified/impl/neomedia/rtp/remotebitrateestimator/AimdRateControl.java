@@ -15,7 +15,6 @@
  */
 package org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator;
 
-import org.jitsi_modified.service.neomedia.rtp.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging.DiagnosticContext;
 import org.jitsi.utils.logging.TimeSeriesLogger;
@@ -372,7 +371,7 @@ class AimdRateControl
 
     public void reset()
     {
-        reset(RemoteBitrateEstimator.kDefaultMinBitrateBps);
+        reset(RemoteBitrateEstimatorAbsSendTime.kDefaultMinBitrateBps);
     }
 
     private void reset(long minBitrateBps)
@@ -409,12 +408,12 @@ class AimdRateControl
         currentBitrateBps = Math.max(minBitrateBps, currentBitrateBps);
     }
 
-    public void setRtt(long rtt)
+    public void setRtt(long nowMs, long rtt)
     {
         if (logger.isTraceEnabled())
         {
             logger.trace(diagnosticContext
-                    .makeTimeSeriesPoint("aimd_rtt", System.currentTimeMillis())
+                    .makeTimeSeriesPoint("aimd_rtt", nowMs)
                     .addField("aimd_id", hashCode())
                     .addField("rtt", rtt));
         }

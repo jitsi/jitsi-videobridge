@@ -14,17 +14,26 @@
  * limitations under the License.
  */
 
-@file:JvmName("ClockUtils")
-
 package org.jitsi.nlj.util
 
+import io.kotlintest.seconds
+import io.kotlintest.shouldBe
+import io.kotlintest.specs.ShouldSpec
 import java.time.Duration
-import java.time.Instant
-import org.jitsi.utils.TimeUtils
 
-@JvmField
-val NEVER: Instant = Instant.MIN
+class RateUtilsKtTest : ShouldSpec() {
 
-fun Instant.formatMilli(): String = TimeUtils.formatTimeAsFullMillis(this.epochSecond, this.nano)
-
-fun Duration.formatMilli(): String = TimeUtils.formatTimeAsFullMillis(this.seconds, this.nano)
+    init {
+        "atRate" {
+            should("work correctly") {
+                1.megabytes atRate 1.mbps shouldBe Duration.ofSeconds(8)
+            }
+        }
+        "in" {
+            should("work correctly") {
+                val size = howMuchCanISendAtRate(1.mbps).`in`(8.seconds)
+                size shouldBe 1.megabytes
+            }
+        }
+    }
+}
