@@ -25,13 +25,14 @@ import static org.junit.Assert.*;
 
 public class HealthIntervalPropertyTest
 {
-
+    private Config emptyNewConfig = ConfigFactory.parseString("videobridge {}");
     @Test
     public void whenOnlyOldConfigProvidesAValue()
     {
         Config legacyConfig = ConfigFactory.parseString(HealthIntervalProperty.legacyPropName + "=60000");
         new ConfigSetup()
             .withLegacyConfig(legacyConfig)
+            .withNewConfig(emptyNewConfig)
             .finishSetup();
 
         HealthIntervalProperty healthIntervalProperty = new HealthIntervalProperty();
@@ -81,7 +82,7 @@ public class HealthIntervalPropertyTest
     @Test(expected = ConfigPropertyNotFoundException.class)
     public void whenNoConfigProvidesTheValue()
     {
-        new ConfigSetup().finishSetup();
+        new ConfigSetup().withNewConfig(emptyNewConfig).finishSetup();
         HealthIntervalProperty healthIntervalProperty = new HealthIntervalProperty();
         healthIntervalProperty.get();
     }
@@ -92,6 +93,7 @@ public class HealthIntervalPropertyTest
         Config legacyConfig = ConfigFactory.parseString(HealthIntervalProperty.legacyPropName + "=60000");
         new ConfigSetup()
             .withLegacyConfig(legacyConfig)
+            .withNewConfig(emptyNewConfig)
             .finishSetup();
 
         HealthIntervalProperty healthIntervalProperty = new HealthIntervalProperty();
@@ -99,6 +101,7 @@ public class HealthIntervalPropertyTest
         Config changedConfig = ConfigFactory.parseString(HealthIntervalProperty.legacyPropName + "=90000");
         new ConfigSetup()
             .withLegacyConfig(changedConfig)
+            .withNewConfig(emptyNewConfig)
             .finishSetup();
 
         assertEquals(60000, (int)healthIntervalProperty.get());
