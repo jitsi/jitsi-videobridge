@@ -243,12 +243,14 @@ abstract class BandwidthEstimator(
      * Holds a snapshot of stats specific to the bandwidth estimator.
      */
     class StatisticsSnapshot(algorithmName: String, currentEstimate: Bandwidth) {
-        private val stats = mutableMapOf<String, Any>().apply {
+        private val stats = mutableMapOf<String, Any>()
+        var algorithmName: String by stats
+        var currentEstimate: Bandwidth by stats
+
+        init {
             addString("algorithmName", algorithmName)
             addBandwidth("currentEstimate", currentEstimate)
         }
-        var algorithmName: String by stats
-        var currentEstimate: Bandwidth by stats
 
         fun getValue(name: String): Any? = stats[name]
 
