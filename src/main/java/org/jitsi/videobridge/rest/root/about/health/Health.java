@@ -23,7 +23,7 @@ import javax.servlet.http.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
-@Path("/about/health")
+@Path("/about/unhealthy")
 public class Health
 {
     @Inject
