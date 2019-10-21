@@ -72,13 +72,11 @@ public class JvbConfig
      */
     public static Supplier<String[]> commandLineArgsSupplier = () -> new String[0];
 
-    /**
-     * Requiring explicit initialization of the config makes it more obvious
-     * when the config is being read (instead of on first access) and makes testing
-     * more straightforward (as we can ensure we re-initialize after setting up
-     * a new dummy configuration)
-     */
-    public static void init()
+    static {
+        loadConfig();
+    }
+
+    public static void loadConfig()
     {
         legacyConfig = legacyConfigSupplier.get();
         commandLineArgs = commandLineArgsSupplier.get();
@@ -101,7 +99,7 @@ public class JvbConfig
     {
         logger.info("Reloading config");
         ConfigFactory.invalidateCaches();
-        init();
+        loadConfig();
     }
 
     public static @NotNull Config getConfig()

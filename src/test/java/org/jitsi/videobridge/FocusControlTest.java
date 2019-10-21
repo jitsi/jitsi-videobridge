@@ -56,8 +56,6 @@ public class FocusControlTest
     public static void setUp()
         throws InterruptedException
     {
-        JvbConfig.init();
-
         osgiHandler.start();
 
         bridge = osgiHandler.getService(Videobridge.class);

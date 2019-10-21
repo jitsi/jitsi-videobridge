@@ -136,8 +136,6 @@ public class Main
                 Videobridge.XMPP_API_PNAME,
                 Boolean.toString(apis.contains(Videobridge.XMPP_API)));
 
-        JvbConfig.init();
-
         ComponentMain main = new ComponentMain();
         BundleConfig osgiBundles = new BundleConfig();
 

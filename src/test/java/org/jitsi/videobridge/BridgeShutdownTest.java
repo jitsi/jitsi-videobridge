@@ -53,8 +53,6 @@ public class BridgeShutdownTest
     public static void setUp()
         throws InterruptedException
     {
-        JvbConfig.init();
-        
         // Allow focus JID
         System.setProperty(
             Videobridge.SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME,
