@@ -43,6 +43,13 @@ public class VP8AdaptiveTrackProjectionContext
     implements AdaptiveTrackProjectionContext
 {
     private final Logger logger;
+
+    /**
+     * The time (in clock rate samples) to wait before discarding a
+     * non-fully-projected frame (see {@link #cleanupFrameProjectionMap}).
+     */
+    private final long WAIT_SAMPLES = 45000;
+
     /**
      * A map of partially transmitted {@link VP8FrameProjection}s, i.e.
      * projections of VP8 frames for which we haven't transmitted all their
@@ -58,11 +65,14 @@ public class VP8AdaptiveTrackProjectionContext
      * Recovered packets of fully transmitted frames (this can happen for
      * example when the sending endpoint probes for bandwidth with duplicate
      * packets over the RTX stream) are dropped as they're not needed anymore.
-     *
-     * TODO fine tune the ConcurrentHashMap instance to improve performance.
      */
-    private final Map<Long, VP8FrameProjection>
-        vp8FrameProjectionMap = new ConcurrentHashMap<>();
+    private final SortedMap<Long, VP8FrameProjection>
+        vp8FrameProjectionMap = new ConcurrentSkipListMap<>(
+            /* This is only a valid Comparitor if timestamp diffs of all
+             * timestamps are within half the number space.  (This property is
+             * assured by #cleanupFrameProjectionMap.)
+             */
+            (t1, t2) -> (int)RtpUtils.getTimestampDiff(t1, t2));
 
     /**
      * A map that stores the maximum sequence number of frames that are not
@@ -179,6 +189,52 @@ public class VP8AdaptiveTrackProjectionContext
         return null;
     }
 
+    /** Clean up old entries in the frame projection map.
+     *
+     * The frame projection map is maintained as a sorted map; to clean it up,
+     * we walk entries from the oldest (in timestamp ordering), removing anything
+     * more than #WAIT_SAMPLES older than the newest timestamp.
+     *
+     * Because the map is ordered, we can stop searching entries when we reach
+     * one that is new enough not to be removed, so this is amortized constant
+     * time per frame.
+     *
+     * Caller should be synchronized.
+     * */
+    private
+    void cleanupFrameProjectionMap(long newTimestamp)
+    {
+        if (vp8FrameProjectionMap.isEmpty())
+        {
+            return;
+        }
+
+        long newestTimestamp = vp8FrameProjectionMap.lastKey();
+
+        /* If our timestamps have jumped by a quarter of the number space, reset the map. */
+        long timestampJump = RtpUtils.getTimestampDiff(newTimestamp, newestTimestamp);
+        if (timestampJump >= 0x4000_0000 || timestampJump <= -0x4000_0000)
+        {
+            vp8FrameProjectionMap.clear();
+            return;
+        }
+
+        long threshold = RtpUtils.applyTimestampDelta(newTimestamp, -WAIT_SAMPLES);
+
+        Iterator<Long> it = vp8FrameProjectionMap.keySet().iterator();
+        while (it.hasNext())
+        {
+            Long key = it.next();
+            if (RtpUtils.isNewerTimestampThan(threshold, key))
+            {
+                it.remove();
+            }
+            else {
+                break;
+            }
+        }
+    }
+
     /**
      * Defines a packet filter that determines which packets to project in order
      * to produce an RTP stream that can be correctly be decoded at the receiver
@@ -258,13 +314,10 @@ public class VP8AdaptiveTrackProjectionContext
         // We have successfully projected the incoming frame and we've allocated
         // a starting sequence number for it. Any previous frames can no longer
         // grow.
+        cleanupFrameProjectionMap(rtpPacket.getTimestamp());
         vp8FrameProjectionMap.put(rtpPacket.getTimestamp(), nextVP8FrameProjection);
         // The frame attached to the "last" projection is no longer the "last".
         lastVP8FrameProjection = nextVP8FrameProjection;
-
-        // Cleanup the frame projection map.
-        vp8FrameProjectionMap.entrySet().removeIf(
-            e -> e.getValue().isFullyProjected(nowMs));
 
         return nextVP8FrameProjection;
     }
