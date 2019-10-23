@@ -311,10 +311,22 @@ public class VP8AdaptiveTrackProjectionContext
             return null;
         }
 
+        if (lastVP8FrameProjection.getSSRC() != nextVP8FrameProjection.getSSRC())
+        {
+            /* We've changed the encoding we're forwarding, so previous frames
+             * in the map are no longer relevant.
+             */
+            vp8FrameProjectionMap.clear();
+        }
+        else
+        {
+            /* Remove projections of old frames from the map. */
+            cleanupFrameProjectionMap(rtpPacket.getTimestamp());
+        }
+
         // We have successfully projected the incoming frame and we've allocated
         // a starting sequence number for it. Any previous frames can no longer
         // grow.
-        cleanupFrameProjectionMap(rtpPacket.getTimestamp());
         vp8FrameProjectionMap.put(rtpPacket.getTimestamp(), nextVP8FrameProjection);
         // The frame attached to the "last" projection is no longer the "last".
         lastVP8FrameProjection = nextVP8FrameProjection;
