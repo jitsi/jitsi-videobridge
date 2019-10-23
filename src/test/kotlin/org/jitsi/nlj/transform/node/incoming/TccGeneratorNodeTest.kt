@@ -10,12 +10,11 @@ import io.kotlintest.IsolationMode
 import io.kotlintest.Spec
 import io.kotlintest.matchers.numerics.shouldBeGreaterThan
 import io.kotlintest.specs.ShouldSpec
-import java.time.Duration
-import java.time.Instant
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.test_utils.FakeClock
+import org.jitsi.nlj.test_utils.timeline
 import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.ms
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -89,26 +88,3 @@ class TccGeneratorNodeTest : ShouldSpec() {
         return dummyPacket
     }
 }
-
-internal class TimelineTest(private val clock: FakeClock) {
-    private val tasks = mutableListOf<() -> Unit>()
-
-    fun time(time: Int) {
-        tasks.add { clock.setTime(Instant.ofEpochMilli(time.toLong())) }
-    }
-
-    fun run(block: () -> Unit) {
-        tasks.add(block)
-    }
-
-    fun elapse(duration: Duration) {
-        tasks.add { clock.elapse(duration) }
-    }
-
-    fun run() {
-        tasks.forEach { it.invoke() }
-    }
-}
-
-internal fun timeline(clock: FakeClock, block: TimelineTest.() -> Unit): TimelineTest =
-        TimelineTest(clock).apply(block)
