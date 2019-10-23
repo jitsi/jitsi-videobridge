@@ -18,8 +18,6 @@ package org.jitsi.videobridge.stats;
 import java.lang.management.*;
 import java.lang.reflect.*;
 
-import org.hyperic.sigar.*;
-import org.hyperic.sigar.cmd.*;
 import org.jitsi.utils.logging.*;
 
 /**
@@ -62,10 +60,9 @@ public class OsStatistics
     }
 
     /**
-     * The <tt>CPUInfo</tt> instance which is used to call the Sigar API and
-     * retrieve the CPU usage.
+     * The method that will return the system CPU load.
      */
-    private CPUInfo cpuInfo;
+    private Method cpuLoadMethod = null;
 
     /**
      * The method that will return the size of the free memory.
@@ -89,7 +86,6 @@ public class OsStatistics
     private OsStatistics()
     {
         operatingSystemMXBean = ManagementFactory.getOperatingSystemMXBean();
-        cpuInfo = new CPUInfo();
     }
 
     /**
@@ -98,21 +94,31 @@ public class OsStatistics
      */
     public double getCPUUsage()
     {
-        if(cpuInfo == null)
-            return -1.0;
+        if (cpuLoadMethod == null)
+        {
+            try
+            {
+                cpuLoadMethod = operatingSystemMXBean.getClass().getMethod(
+                    "getSystemCpuLoad");
+            }
+            catch (Exception e)
+            {
+                logger.error("The statistics of the CPU load is "
+                    + "not available.");
+                return -1;
+            }
+            cpuLoadMethod.setAccessible(true);
+        }
 
         try
         {
-            return cpuInfo.getCPUUsage();
+            return (Double) cpuLoadMethod.invoke(operatingSystemMXBean);
         }
-        catch(Throwable e)
+        catch (Exception e)
         {
-            if(e instanceof UnsatisfiedLinkError)
-                cpuInfo = null;
-            logger.error("Failed to retrieve the cpu usage.", e);
+            logger.error("Failed to retrieve the cpu usage.");
+            return -1;
         }
-
-        return -1.0;
     }
 
     /**
@@ -190,27 +196,5 @@ public class OsStatistics
                 + "not available.");
         }
         return memoryInMB;
-    }
-
-    /**
-     * Implements the <tt>SigarCommandBase</tt> abstract class which is used for
-     * retrieving CPU usage information.
-     */
-    private static class CPUInfo extends SigarCommandBase
-    {
-        /**
-         * Returns the CPU usage information.
-         * @return the CPU usage information.
-         * @throws SigarException if fails.
-         */
-        public double getCPUUsage() throws SigarException
-        {
-            return sigar.getCpuPerc().getCombined();
-        }
-
-        @Override
-        public void output(String[] arg0) throws SigarException
-        {
-        }
     }
 }
