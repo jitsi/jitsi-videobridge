@@ -255,9 +255,21 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code PinnedEndpointChangedEvent} which has been received.
      */
-    abstract protected void onPinnedEndpointChangedEvent(
+    protected void onPinnedEndpointChangedEvent(
         Object src,
-        JSONObject jsonObject);
+        JSONObject jsonObject)
+    {
+        // Find the new pinned endpoint.
+        String newPinnedEndpointID = (String) jsonObject.get("pinnedEndpoint");
+
+        Set<String> newPinnedIDs = Collections.EMPTY_SET;
+        if (newPinnedEndpointID != null && !"".equals(newPinnedEndpointID))
+        {
+            newPinnedIDs = Collections.singleton(newPinnedEndpointID);
+        }
+
+        endpoint.pinnedEndpointsChanged(newPinnedIDs);
+    }
 
     /**
      * Notifies this {@code Endpoint} that a {@code PinnedEndpointsChangedEvent}
@@ -268,9 +280,34 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code PinnedEndpointChangedEvent} which has been received.
      */
-    abstract protected void onPinnedEndpointsChangedEvent(
+    protected void onPinnedEndpointsChangedEvent(
         Object src,
-        JSONObject jsonObject);
+        JSONObject jsonObject)
+    {
+        // Find the new pinned endpoint.
+        Object o = jsonObject.get("pinnedEndpoints");
+        if (!(o instanceof JSONArray))
+        {
+            logger.warn("Received invalid or unexpected JSON: " + jsonObject);
+            return;
+        }
+
+        JSONArray jsonArray = (JSONArray) o;
+        Set<String> newPinnedEndpoints = new HashSet<>();
+        for (Object endpointId : jsonArray)
+        {
+            if (endpointId != null && endpointId instanceof String)
+            {
+                newPinnedEndpoints.add((String)endpointId);
+            }
+        }
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Pinned " + newPinnedEndpoints);
+        }
+        endpoint.pinnedEndpointsChanged(newPinnedEndpoints);
+    }
 
     /**
      * Notifies this {@code Endpoint} that a {@code SelectedEndpointChangedEvent}
@@ -281,9 +318,22 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code SelectedEndpointChangedEvent} which has been received.
      */
-    abstract protected void onSelectedEndpointChangedEvent(
+    protected void onSelectedEndpointChangedEvent(
         Object src,
-        JSONObject jsonObject);
+        JSONObject jsonObject)
+    {
+        // Find the new pinned endpoint.
+        String newSelectedEndpointID
+            = (String) jsonObject.get("selectedEndpoint");
+
+        Set<String> newSelectedIDs = Collections.EMPTY_SET;
+        if (newSelectedEndpointID != null && !"".equals(newSelectedEndpointID))
+        {
+            newSelectedIDs = Collections.singleton(newSelectedEndpointID);
+        }
+
+        endpoint.selectedEndpointsChanged(newSelectedIDs);
+    }
 
     /**
      * Notifies this {@code Endpoint} that a
@@ -294,9 +344,30 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code SelectedEndpointChangedEvent} which has been received.
      */
-    abstract protected void onSelectedEndpointsChangedEvent(
+    protected void onSelectedEndpointsChangedEvent(
         Object src,
-        JSONObject jsonObject);
+        JSONObject jsonObject)
+    {
+        // Find the new pinned endpoint.
+        Object o = jsonObject.get("selectedEndpoints");
+        if (!(o instanceof JSONArray))
+        {
+            logger.warn("Received invalid or unexpected JSON: " + jsonObject);
+            return;
+        }
+
+        JSONArray jsonArray = (JSONArray) o;
+        Set<String> newSelectedEndpoints = new HashSet<>();
+        for (Object endpointId : jsonArray)
+        {
+            if (endpointId != null && endpointId instanceof String)
+            {
+                newSelectedEndpoints.add((String)endpointId);
+            }
+        }
+
+        endpoint.selectedEndpointsChanged(newSelectedEndpoints);
+    }
 
     /**
      * Notifies this {@code Endpoint} that a {@code LastNChangedEvent}

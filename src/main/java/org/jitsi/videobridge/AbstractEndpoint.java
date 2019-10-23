@@ -41,6 +41,22 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     implements EncodingsManager.EncodingsUpdateListener
 {
     /**
+     * The name of the <tt>Endpoint</tt> property <tt>pinnedEndpoint</tt> which
+     * specifies the JID of the currently pinned <tt>Endpoint</tt> of this
+     * <tt>Endpoint</tt>.
+     */
+    public static final String PINNED_ENDPOINTS_PROPERTY_NAME
+        = Endpoint.class.getName() + ".pinnedEndpoints";
+
+    /**
+     * The name of the <tt>Endpoint</tt> property <tt>selectedEndpoint</tt>
+     * which specifies the JID of the currently selected <tt>Endpoint</tt> of
+     * this <tt>Endpoint</tt>.
+     */
+    public static final String SELECTED_ENDPOINTS_PROPERTY_NAME
+        = Endpoint.class.getName() + ".selectedEndpoints";
+
+    /**
      * The (unique) identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt>.
      */
@@ -72,6 +88,70 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * on this <tt>Endpoint</tt>.
      */
     private boolean expired = false;
+
+    /**
+     * The set of IDs of the pinned endpoints of this {@code Endpoint}.
+     */
+    private Set<String> pinnedEndpoints = new HashSet<>();
+
+    /**
+     * The set of currently selected <tt>Endpoint</tt>s at this
+     * <tt>Endpoint</tt>.
+     */
+    private Set<String> selectedEndpoints = new HashSet<>();
+
+
+    /**
+     * Sets the list of pinned endpoints for this endpoint.
+     * @param newPinnedEndpoints the set of pinned endpoints.
+     */
+    void pinnedEndpointsChanged(Set<String> newPinnedEndpoints)
+    {
+        // Check if that's different to what we think the pinned endpoints are.
+        Set<String> oldPinnedEndpoints = this.pinnedEndpoints;
+        if (!oldPinnedEndpoints.equals(newPinnedEndpoints))
+        {
+            this.pinnedEndpoints = newPinnedEndpoints;
+
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Pinned "
+                    + Arrays.toString(pinnedEndpoints.toArray()));
+            }
+
+            // bitrateController.setPinnedEndpointIds(pinnedEndpoints);
+
+            firePropertyChange(PINNED_ENDPOINTS_PROPERTY_NAME,
+                oldPinnedEndpoints, pinnedEndpoints);
+        }
+    }
+
+    /**
+     * Sets the list of selected endpoints for this endpoint.
+     * @param newSelectedEndpoints the set of selected endpoints.
+     */
+    void selectedEndpointsChanged(Set<String> newSelectedEndpoints)
+    {
+        // Check if that's different to what we think the pinned endpoints are.
+        Set<String> oldSelectedEndpoints = this.selectedEndpoints;
+        if (!oldSelectedEndpoints.equals(newSelectedEndpoints))
+        {
+            this.selectedEndpoints = newSelectedEndpoints;
+
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Selected "
+                    + Arrays.toString(selectedEndpoints.toArray()));
+            }
+
+            // bitrateController.setSelectedEndpointIds(
+               // Collections.unmodifiableSet(selectedEndpoints));
+
+            firePropertyChange(SELECTED_ENDPOINTS_PROPERTY_NAME,
+                oldSelectedEndpoints, selectedEndpoints);
+        }
+    }
+
 
     /**
      * Initializes a new {@link AbstractEndpoint} instance.
@@ -324,6 +404,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         debugState.put("displayName", displayName);
         debugState.put("expired", expired);
         debugState.put("statsId", statsId);
+        debugState.put("selectedEndpoints", selectedEndpoints.toString());
+        debugState.put("pinnedEndpoints", pinnedEndpoints.toString());
 
         return debugState;
     }

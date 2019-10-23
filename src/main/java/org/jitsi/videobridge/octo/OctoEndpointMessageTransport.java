@@ -72,62 +72,6 @@ class OctoEndpointMessageTransport
      * warning.
      */
     @Override
-    protected void onSelectedEndpointChangedEvent(
-        Object src,
-        JSONObject jsonObject)
-    {
-        logUnexpectedMessage(jsonObject.toJSONString());
-    }
-
-    /**
-     * {@inheritDoc}
-     * </p>
-     * We don't expect any of these messages to go through Octo, so we log a
-     * warning.
-     */
-    @Override
-    protected void onSelectedEndpointsChangedEvent(
-        Object src,
-        JSONObject jsonObject)
-    {
-        logUnexpectedMessage(jsonObject.toJSONString());
-    }
-
-    /**
-     * {@inheritDoc}
-     * </p>
-     * We don't expect any of these messages to go through Octo, so we log a
-     * warning.
-     */
-    @Override
-    protected void onPinnedEndpointChangedEvent(
-        Object src,
-        JSONObject jsonObject)
-    {
-        logUnexpectedMessage(jsonObject.toJSONString());
-    }
-
-    /**
-     * {@inheritDoc}
-     * </p>
-     * We don't expect any of these messages to go through Octo, so we log a
-     * warning.
-     */
-    @Override
-    protected void onPinnedEndpointsChangedEvent(
-        Object src,
-        JSONObject jsonObject)
-    {
-        logUnexpectedMessage(jsonObject.toJSONString());
-    }
-
-    /**
-     * {@inheritDoc}
-     * </p>
-     * We don't expect any of these messages to go through Octo, so we log a
-     * warning.
-     */
-    @Override
     protected void onClientHello(Object src, JSONObject jsonObject)
     {
         logUnexpectedMessage(jsonObject.toJSONString());

@@ -68,33 +68,6 @@ public class Endpoint
     extends AbstractEndpoint implements PotentialPacketHandler
 {
     /**
-     * The name of the <tt>Endpoint</tt> property <tt>pinnedEndpoint</tt> which
-     * specifies the JID of the currently pinned <tt>Endpoint</tt> of this
-     * <tt>Endpoint</tt>.
-     */
-    public static final String PINNED_ENDPOINTS_PROPERTY_NAME
-        = Endpoint.class.getName() + ".pinnedEndpoints";
-
-    /**
-     * The name of the <tt>Endpoint</tt> property <tt>selectedEndpoint</tt>
-     * which specifies the JID of the currently selected <tt>Endpoint</tt> of
-     * this <tt>Endpoint</tt>.
-     */
-    public static final String SELECTED_ENDPOINTS_PROPERTY_NAME
-        = Endpoint.class.getName() + ".selectedEndpoints";
-
-    /**
-     * The set of IDs of the pinned endpoints of this {@code Endpoint}.
-     */
-    private Set<String> pinnedEndpoints = new HashSet<>();
-
-    /**
-     * The set of currently selected <tt>Endpoint</tt>s at this
-     * <tt>Endpoint</tt>.
-     */
-    private Set<String> selectedEndpoints = new HashSet<>();
-
-    /**
      * The {@link SctpManager} instance we'll use to manage the SCTP connection
      */
     private SctpManager sctpManager;
@@ -299,57 +272,6 @@ public class Endpoint
     public EndpointMessageTransport getMessageTransport()
     {
         return messageTransport;
-    }
-
-    /**
-     * Sets the list of pinned endpoints for this endpoint.
-     * @param newPinnedEndpoints the set of pinned endpoints.
-     */
-    void pinnedEndpointsChanged(Set<String> newPinnedEndpoints)
-    {
-        // Check if that's different to what we think the pinned endpoints are.
-        Set<String> oldPinnedEndpoints = this.pinnedEndpoints;
-        if (!oldPinnedEndpoints.equals(newPinnedEndpoints))
-        {
-            this.pinnedEndpoints = newPinnedEndpoints;
-
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Pinned "
-                    + Arrays.toString(pinnedEndpoints.toArray()));
-            }
-
-            bitrateController.setPinnedEndpointIds(pinnedEndpoints);
-
-            firePropertyChange(PINNED_ENDPOINTS_PROPERTY_NAME,
-                oldPinnedEndpoints, pinnedEndpoints);
-        }
-    }
-
-    /**
-     * Sets the list of selected endpoints for this endpoint.
-     * @param newSelectedEndpoints the set of selected endpoints.
-     */
-    void selectedEndpointsChanged(Set<String> newSelectedEndpoints)
-    {
-        // Check if that's different to what we think the pinned endpoints are.
-        Set<String> oldSelectedEndpoints = this.selectedEndpoints;
-        if (!oldSelectedEndpoints.equals(newSelectedEndpoints))
-        {
-            this.selectedEndpoints = newSelectedEndpoints;
-
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Selected "
-                    + Arrays.toString(selectedEndpoints.toArray()));
-            }
-
-            bitrateController.setSelectedEndpointIds(
-                    Collections.unmodifiableSet(selectedEndpoints));
-
-            firePropertyChange(SELECTED_ENDPOINTS_PROPERTY_NAME,
-                oldSelectedEndpoints, selectedEndpoints);
-        }
     }
 
     /**
@@ -1396,8 +1318,6 @@ public class Endpoint
     {
         JSONObject debugState = super.getDebugState();
 
-        debugState.put("selectedEndpoints", selectedEndpoints.toString());
-        debugState.put("pinnedEndpoints", pinnedEndpoints.toString());
         debugState.put("selectedCount", selectedCount.get());
         //debugState.put("sctpManager", sctpManager.getDebugState());
         //debugState.put("messageTransport", messageTransport.getDebugState());
