@@ -2,7 +2,6 @@ package org.jitsi.nlj.test_utils
 
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.spy
 import com.nhaarman.mockitokotlin2.whenever
 import java.time.Duration
 import java.time.Instant
@@ -16,10 +15,10 @@ import java.util.concurrent.TimeUnit
  */
 internal abstract class FakeScheduledExecutorService : ScheduledExecutorService {
     private var jobs = JobsTimeline()
-    val clock: FakeClock = spy()
+    val clock: FakeClock = stubOnlySpy()
 
     override fun scheduleAtFixedRate(command: Runnable, initialDelay: Long, period: Long, unit: TimeUnit): ScheduledFuture<*> {
-        val future: ScheduledFuture<Unit> = mock()
+        val future: ScheduledFuture<Unit> = mock(stubOnly = true)
         val nextRunTime = clock.instant().plus(Duration.ofMillis(unit.toMillis(initialDelay)))
         val job = RecurringJob(command, nextRunTime, Duration.ofMillis(unit.toMillis(period)))
         jobs.add(job)
@@ -34,7 +33,7 @@ internal abstract class FakeScheduledExecutorService : ScheduledExecutorService 
 
     override fun schedule(command: Runnable, delay: Long, unit: TimeUnit): ScheduledFuture<*> {
 //        println("scheduling job with a delay of $delay $unit from time ${clock.instant()}")
-        val future: ScheduledFuture<Unit> = mock()
+        val future: ScheduledFuture<Unit> = mock(stubOnly = true)
         val nextRunTime = clock.instant().plus(Duration.ofNanos(unit.toNanos(delay)))
         val job = Job(command, nextRunTime)
         jobs.add(job)

@@ -1,6 +1,5 @@
 package org.jitsi.nlj.rtp.bandwidthestimation
 
-import com.nhaarman.mockitokotlin2.spy
 import io.kotlintest.matchers.doubles.shouldBeBetween
 import io.kotlintest.specs.ShouldSpec
 import java.time.Clock
@@ -13,6 +12,7 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 import org.jitsi.nlj.test_utils.FakeScheduledExecutorService
+import org.jitsi.nlj.test_utils.stubOnlySpy
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.NEVER
@@ -192,7 +192,7 @@ class BandwidthEstimationTest : ShouldSpec() {
         /* Internals of GoogleCc use ConfigurationService at construct time. */
         LibJitsi.start()
     }
-    private val scheduler: FakeScheduledExecutorService = spy()
+    private val scheduler: FakeScheduledExecutorService = stubOnlySpy()
     private val clock: Clock = scheduler.clock
 
     private val ctx = DiagnosticContext(clock)
