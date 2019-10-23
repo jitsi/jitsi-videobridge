@@ -62,11 +62,6 @@
       <version>${jetty.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.fusesource</groupId>
-      <artifactId>sigar</artifactId>
-      <version>1.6.4</version>
-    </dependency>
-    <dependency>
       <groupId>org.igniterealtime</groupId>
       <artifactId>tinder</artifactId>
       <version>1.3.0</version>
