@@ -95,7 +95,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-media-transform</artifactId>
-      <version>1.0-57-g690bd5d</version>
+      <version>1.0-58-g13fe894</version>
     </dependency>
     <dependency>
       <groupId>org.jitsi</groupId>
@@ -136,7 +136,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-utils</artifactId>
-      <version>1.0-19-ge5cd0ce</version>
+      <version>1.0-20-g37eacac</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
