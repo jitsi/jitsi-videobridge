@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.util;
 
+import org.jitsi.osgi.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.osgi.framework.*;
 

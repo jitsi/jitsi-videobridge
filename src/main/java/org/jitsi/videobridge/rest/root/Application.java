@@ -34,5 +34,7 @@ public class Application extends ResourceConfig
         register(ConfigFilter.class);
         // Register all resources in the package
         packages("org.jitsi.videobridge.rest.root");
+        // Load any resources from Jicoco
+        packages("org.jitsi.rest");
     }
 }
