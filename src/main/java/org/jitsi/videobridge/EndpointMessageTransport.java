@@ -178,6 +178,7 @@ class EndpointMessageTransport
         Object src,
         JSONObject jsonObject)
     {
+        super.onPinnedEndpointChangedEvent(src, jsonObject);
         relayJSONObject(jsonObject);
     }
 
@@ -189,6 +190,7 @@ class EndpointMessageTransport
         Object src,
         JSONObject jsonObject)
     {
+        super.onPinnedEndpointsChangedEvent(src, jsonObject);
         relayJSONObject(jsonObject);
     }
 
@@ -201,6 +203,7 @@ class EndpointMessageTransport
         Object src,
         JSONObject jsonObject)
     {
+        super.onSelectedEndpointChangedEvent(src, jsonObject);
         relayJSONObject(jsonObject);
     }
 
@@ -212,6 +215,7 @@ class EndpointMessageTransport
         Object src,
         JSONObject jsonObject)
     {
+        super.onSelectedEndpointsChangedEvent(src, jsonObject);
         relayJSONObject(jsonObject);
     }
 
