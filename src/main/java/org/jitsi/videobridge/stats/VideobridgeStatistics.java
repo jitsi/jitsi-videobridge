@@ -106,12 +106,9 @@ public class VideobridgeStatistics
         unlockedSetStat(BITRATE_DOWNLOAD, 0);
         unlockedSetStat(BITRATE_UPLOAD, 0);
         unlockedSetStat(CONFERENCES, 0);
-        unlockedSetStat(CPU_USAGE, 0d);
         unlockedSetStat(PARTICIPANTS, 0);
         unlockedSetStat(THREADS, 0);
         unlockedSetStat(RTP_LOSS, 0d);
-        unlockedSetStat(TOTAL_MEMORY, 0);
-        unlockedSetStat(USED_MEMORY, 0);
         unlockedSetStat(VIDEO_CHANNELS, 0);
         unlockedSetStat(VIDEO_STREAMS, 0);
         unlockedSetStat(LOSS_RATE_DOWNLOAD, 0d);
@@ -337,12 +334,6 @@ public class VideobridgeStatistics
         // THREADS
         int threadCount = ManagementFactory.getThreadMXBean().getThreadCount();
 
-        // OsStatistics
-        OsStatistics osStatistics = OsStatistics.getOsStatistics();
-        double cpuUsage = osStatistics.getCPUUsage();
-        int totalMemory = osStatistics.getTotalMemory();
-        int usedMemory = osStatistics.getUsedMemory();
-
         // TIMESTAMP
         String timestamp = currentTimeMillis();
 
@@ -415,9 +406,6 @@ public class VideobridgeStatistics
             unlockedSetStat(LARGEST_CONFERENCE, largestConferenceSize);
             unlockedSetStat(CONFERENCE_SIZES, conferenceSizesJson);
             unlockedSetStat(THREADS, threadCount);
-            unlockedSetStat(CPU_USAGE, Math.max(cpuUsage, 0));
-            unlockedSetStat(TOTAL_MEMORY, Math.max(totalMemory, 0));
-            unlockedSetStat(USED_MEMORY, Math.max(usedMemory, 0));
             unlockedSetStat(
                     SHUTDOWN_IN_PROGRESS,
                     videobridge.isShutdownInProgress());
