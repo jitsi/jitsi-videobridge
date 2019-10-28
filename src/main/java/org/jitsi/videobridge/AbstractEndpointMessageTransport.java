@@ -35,6 +35,12 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 public abstract class AbstractEndpointMessageTransport
 {
     /**
+     * The name of the JSON property that indicates the target Octo endpoint id
+     * of a propagated JSON message.
+     */
+    public final String PROP_TARGET_OCTO_ENDPOINT_ID = "targetOctoEndpointId";
+
+    /**
      * The {@link Endpoint} associated with this
      * {@link EndpointMessageTransport}.
      */
@@ -268,7 +274,7 @@ public abstract class AbstractEndpointMessageTransport
             newPinnedIDs = Collections.singleton(newPinnedEndpointID);
         }
 
-        endpoint.pinnedEndpointsChanged(newPinnedIDs);
+        onPinnedEndpointsChangedEvent(jsonObject, newPinnedIDs);
     }
 
     /**
@@ -306,7 +312,8 @@ public abstract class AbstractEndpointMessageTransport
         {
             logger.debug("Pinned " + newPinnedEndpoints);
         }
-        endpoint.pinnedEndpointsChanged(newPinnedEndpoints);
+
+        onPinnedEndpointsChangedEvent(jsonObject, newPinnedEndpoints);
     }
 
     /**
@@ -332,7 +339,7 @@ public abstract class AbstractEndpointMessageTransport
             newSelectedIDs = Collections.singleton(newSelectedEndpointID);
         }
 
-        endpoint.selectedEndpointsChanged(newSelectedIDs);
+        onSelectedEndpointsChangedEvent(jsonObject, newSelectedIDs);
     }
 
     /**
@@ -366,8 +373,34 @@ public abstract class AbstractEndpointMessageTransport
             }
         }
 
-        endpoint.selectedEndpointsChanged(newSelectedEndpoints);
+        onSelectedEndpointsChangedEvent(jsonObject, newSelectedEndpoints);
     }
+
+    /**
+     * Notifies local or remote endpoints that a pinned event has been received.
+     * If it is a local endpoint that has received the message, then this method
+     * propagates the message to all proxies of the local endpoint.
+     *
+     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
+     * {@code PinnedEndpointChangedEvent} which has been received.
+     * @param newPinnedEndpoints the new pinned endpoints
+     */
+    protected abstract void onPinnedEndpointsChangedEvent(
+        JSONObject jsonObject,
+        Set<String> newPinnedEndpoints);
+
+    /**
+     * Notifies local or remote endpoints that a selected event has been received.
+     * If it is a local endpoint that has received the message, then this method
+     * propagates the message to all proxies of the local endpoint.
+     *
+     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
+     * {@code SelectedEndpointChangedEvent} which has been received.
+     * @param newSelectedEndpoints the new selected endpoints
+     */
+    protected abstract void onSelectedEndpointsChangedEvent(
+        JSONObject jsonObject,
+        Set<String> newSelectedEndpoints);
 
     /**
      * Notifies this {@code Endpoint} that a {@code LastNChangedEvent}

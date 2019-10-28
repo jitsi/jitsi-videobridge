@@ -19,6 +19,8 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.json.simple.*;
 
+import java.util.*;
+
 /**
  * Extends {@link AbstractEndpointMessageTransport} for the purposes of Octo.
  *
@@ -63,6 +65,46 @@ class OctoEndpointMessageTransport
             return null;
         }
         return (String) id;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void onPinnedEndpointsChangedEvent(
+        JSONObject jsonObject, Set<String> newPinnedEndpoints)
+    {
+        // This is a message from a remote bridge for a remote endpoint.
+        String targetEndpointId
+            = (String) jsonObject.get(PROP_TARGET_OCTO_ENDPOINT_ID);
+
+        AbstractEndpoint targetEndpoint
+            = getConference().getEndpoint(targetEndpointId);
+
+        if (targetEndpoint != null)
+        {
+            targetEndpoint.pinnedEndpointsChanged(newPinnedEndpoints);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void onSelectedEndpointsChangedEvent(
+        JSONObject jsonObject, Set<String> newSelectedEndpoints)
+    {
+        // This is a message from a remote bridge for a remote endpoint.
+        String targetEndpointId
+            = (String) jsonObject.get(PROP_TARGET_OCTO_ENDPOINT_ID);
+
+        AbstractEndpoint targetEndpoint
+            = getConference().getEndpoint(targetEndpointId);
+
+        if (targetEndpoint != null)
+        {
+            targetEndpoint.selectedEndpointsChanged(newSelectedEndpoints);
+        }
     }
 
     /**

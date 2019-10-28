@@ -105,7 +105,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * Sets the list of pinned endpoints for this endpoint.
      * @param newPinnedEndpoints the set of pinned endpoints.
      */
-    void pinnedEndpointsChanged(Set<String> newPinnedEndpoints)
+    public void pinnedEndpointsChanged(Set<String> newPinnedEndpoints)
     {
         // Check if that's different to what we think the pinned endpoints are.
         Set<String> oldPinnedEndpoints = this.pinnedEndpoints;
@@ -130,7 +130,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * Sets the list of selected endpoints for this endpoint.
      * @param newSelectedEndpoints the set of selected endpoints.
      */
-    void selectedEndpointsChanged(Set<String> newSelectedEndpoints)
+    public void selectedEndpointsChanged(Set<String> newSelectedEndpoints)
     {
         // Check if that's different to what we think the pinned endpoints are.
         Set<String> oldSelectedEndpoints = this.selectedEndpoints;
