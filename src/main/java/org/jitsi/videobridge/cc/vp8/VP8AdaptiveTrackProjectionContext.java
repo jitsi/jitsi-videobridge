@@ -201,8 +201,7 @@ public class VP8AdaptiveTrackProjectionContext
      *
      * Caller should be synchronized.
      * */
-    private
-    void cleanupFrameProjectionMap(long newTimestamp)
+    private void cleanupFrameProjectionMap(long newTimestamp)
     {
         if (vp8FrameProjectionMap.isEmpty())
         {
@@ -225,7 +224,7 @@ public class VP8AdaptiveTrackProjectionContext
         while (it.hasNext())
         {
             Long key = it.next();
-            if (RtpUtils.isNewerTimestampThan(threshold, key))
+            if (RtpUtils.isOlderTimestampThan(key, threshold))
             {
                 it.remove();
             }
