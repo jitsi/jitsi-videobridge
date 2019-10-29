@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.rest.binders;
 
 import org.glassfish.hk2.utilities.binding.*;
+import org.jitsi.osgi.*;
 import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
