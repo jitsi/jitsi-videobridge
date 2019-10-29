@@ -23,6 +23,9 @@
       <includes>
         <include>*.jar</include>
       </includes>
+      <excludes>
+        <exclude>*-with-dependencies.jar</exclude>
+      </excludes>
     </fileSet>
     <fileSet>
       <directory>${project.basedir}/lib</directory>
