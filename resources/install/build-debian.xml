@@ -299,8 +299,6 @@ endif
                  link="lib"/>
         <symlink resource="/usr/share/java/jetty8-rewrite.jar"
                  link="lib"/>
-        <symlink resource="/usr/share/java/sigar.jar"
-                 link="lib"/>
 
         <mkdir dir="lib/src/jitsi-android-osgi/classes"/>
         <javac debug="true"
