@@ -16,6 +16,13 @@
       <unpack>false</unpack>
     </dependencySet>
   </dependencySets>
+  <files>
+    <file>
+        <source>${project.basedir}/target/${project.artifactId}-${project.version}.jar</source>
+        <outputDirectory>/</outputDirectory>
+        <destName>jitsi-videobridge.jar</destName>
+    </file>
+  </files>
   <fileSets>
     <fileSet>
       <directory>${project.build.directory}</directory>
@@ -25,6 +32,7 @@
       </includes>
       <excludes>
         <exclude>*-with-dependencies.jar</exclude>
+        <exclude>${project.artifactId}-${project.version}.jar</exclude>
       </excludes>
     </fileSet>
     <fileSet>
