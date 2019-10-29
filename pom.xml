@@ -110,7 +110,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco</artifactId>
-      <version>1.1-4-g7c0752f</version>
+      <version>1.1-5-g6ee23f2</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
