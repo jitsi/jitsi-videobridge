@@ -22,18 +22,18 @@ import org.jitsi.utils.config.*;
 import org.jitsi.videobridge.health.config.*;
 import org.junit.*;
 
+import static org.jitsi.testutils.ConfigUtils.EMPTY_NEW_CONFIG;
 import static org.junit.Assert.*;
 
 public class HealthIntervalPropertyTest
 {
-    private Config emptyNewConfig = ConfigFactory.parseString("videobridge {}");
     @Test
     public void whenOnlyOldConfigProvidesAValue()
     {
         Config legacyConfig = ConfigFactory.parseString(HealthConfig.HealthIntervalProperty.legacyPropName + "=60000");
         new ConfigSetup()
             .withLegacyConfig(legacyConfig)
-            .withNewConfig(emptyNewConfig)
+            .withNewConfig(EMPTY_NEW_CONFIG)
             .finishSetup();
 
         HealthConfig.HealthIntervalProperty healthIntervalProperty = new HealthConfig.HealthIntervalProperty();
@@ -83,7 +83,7 @@ public class HealthIntervalPropertyTest
     @Test(expected = ConfigPropertyNotFoundException.class)
     public void whenNoConfigProvidesTheValue()
     {
-        new ConfigSetup().withNewConfig(emptyNewConfig).finishSetup();
+        new ConfigSetup().withNewConfig(EMPTY_NEW_CONFIG).finishSetup();
         HealthConfig.HealthIntervalProperty healthIntervalProperty = new HealthConfig.HealthIntervalProperty();
         healthIntervalProperty.get();
     }
@@ -94,7 +94,7 @@ public class HealthIntervalPropertyTest
         Config legacyConfig = ConfigFactory.parseString(HealthConfig.HealthIntervalProperty.legacyPropName + "=60000");
         new ConfigSetup()
             .withLegacyConfig(legacyConfig)
-            .withNewConfig(emptyNewConfig)
+            .withNewConfig(EMPTY_NEW_CONFIG)
             .finishSetup();
 
         HealthConfig.HealthIntervalProperty healthIntervalProperty = new HealthConfig.HealthIntervalProperty();
@@ -102,7 +102,7 @@ public class HealthIntervalPropertyTest
         Config changedConfig = ConfigFactory.parseString(HealthConfig.HealthIntervalProperty.legacyPropName + "=90000");
         new ConfigSetup()
             .withLegacyConfig(changedConfig)
-            .withNewConfig(emptyNewConfig)
+            .withNewConfig(EMPTY_NEW_CONFIG)
             .finishSetup();
 
         assertEquals(60000, (int)healthIntervalProperty.get());
