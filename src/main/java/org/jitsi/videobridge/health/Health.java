@@ -20,6 +20,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.health.config.*;
 import org.jitsi.videobridge.transport.*;
 import org.jitsi.videobridge.xmpp.*;
 
@@ -274,7 +275,7 @@ public class Health
      */
     public Health(Videobridge videobridge, ConfigurationService cfg)
     {
-        super(videobridge, HealthIntervalProperty.getValue(), true);
+        super(videobridge, HealthConfig.HealthIntervalProperty.getValue(), true);
 
         if (cfg == null)
         {

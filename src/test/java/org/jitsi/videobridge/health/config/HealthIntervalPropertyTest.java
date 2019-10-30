@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.health;
+package org.jitsi.videobridge.health.config;
 
 import com.typesafe.config.*;
 import org.jitsi.testutils.*;
 import org.jitsi.utils.config.*;
+import org.jitsi.videobridge.health.config.*;
 import org.junit.*;
 
 import static org.junit.Assert.*;
@@ -29,13 +30,13 @@ public class HealthIntervalPropertyTest
     @Test
     public void whenOnlyOldConfigProvidesAValue()
     {
-        Config legacyConfig = ConfigFactory.parseString(HealthIntervalProperty.legacyPropName + "=60000");
+        Config legacyConfig = ConfigFactory.parseString(HealthConfig.HealthIntervalProperty.legacyPropName + "=60000");
         new ConfigSetup()
             .withLegacyConfig(legacyConfig)
             .withNewConfig(emptyNewConfig)
             .finishSetup();
 
-        HealthIntervalProperty healthIntervalProperty = new HealthIntervalProperty();
+        HealthConfig.HealthIntervalProperty healthIntervalProperty = new HealthConfig.HealthIntervalProperty();
         assertEquals(60000, (int)healthIntervalProperty.get());
     }
 
@@ -43,39 +44,39 @@ public class HealthIntervalPropertyTest
     public void whenOldConfigIsPresentButDoesntSetTheValue()
     {
         Config legacyConfig = ConfigFactory.parseString("some.other.property.name=10");
-        Config config = ConfigFactory.parseString(HealthIntervalProperty.propName + "=10 seconds");
+        Config config = ConfigFactory.parseString(HealthConfig.HealthIntervalProperty.propName + "=10 seconds");
         new ConfigSetup()
             .withLegacyConfig(legacyConfig)
             .withNewConfig(config)
             .finishSetup();
 
-        HealthIntervalProperty healthIntervalProperty = new HealthIntervalProperty();
+        HealthConfig.HealthIntervalProperty healthIntervalProperty = new HealthConfig.HealthIntervalProperty();
         assertEquals("The default value should be used", 10000, (int)healthIntervalProperty.get());
     }
 
     @Test
     public void whenOnlyNewConfigProvidesAValue()
     {
-        Config config = ConfigFactory.parseString(HealthIntervalProperty.propName + "=30 seconds");
+        Config config = ConfigFactory.parseString(HealthConfig.HealthIntervalProperty.propName + "=30 seconds");
         new ConfigSetup()
             .withNewConfig(config)
             .finishSetup();
 
-        HealthIntervalProperty healthIntervalProperty = new HealthIntervalProperty();
+        HealthConfig.HealthIntervalProperty healthIntervalProperty = new HealthConfig.HealthIntervalProperty();
         assertEquals(30000, (int)healthIntervalProperty.get());
     }
 
     @Test
     public void whenOldConfigAndNewConfigProvideAValue()
     {
-        Config legacyConfig = ConfigFactory.parseString(HealthIntervalProperty.legacyPropName + "=60000");
-        Config config = ConfigFactory.parseString(HealthIntervalProperty.propName + "=10 seconds");
+        Config legacyConfig = ConfigFactory.parseString(HealthConfig.HealthIntervalProperty.legacyPropName + "=60000");
+        Config config = ConfigFactory.parseString(HealthConfig.HealthIntervalProperty.propName + "=10 seconds");
         new ConfigSetup()
             .withLegacyConfig(legacyConfig)
             .withNewConfig(config)
             .finishSetup();
 
-        HealthIntervalProperty healthIntervalProperty = new HealthIntervalProperty();
+        HealthConfig.HealthIntervalProperty healthIntervalProperty = new HealthConfig.HealthIntervalProperty();
         assertEquals("The value in legacy config should be used", 60000, (int)healthIntervalProperty.get());
     }
 
@@ -83,22 +84,22 @@ public class HealthIntervalPropertyTest
     public void whenNoConfigProvidesTheValue()
     {
         new ConfigSetup().withNewConfig(emptyNewConfig).finishSetup();
-        HealthIntervalProperty healthIntervalProperty = new HealthIntervalProperty();
+        HealthConfig.HealthIntervalProperty healthIntervalProperty = new HealthConfig.HealthIntervalProperty();
         healthIntervalProperty.get();
     }
 
     @Test
     public void doesNotChangeWhenConfigIsReloaded()
     {
-        Config legacyConfig = ConfigFactory.parseString(HealthIntervalProperty.legacyPropName + "=60000");
+        Config legacyConfig = ConfigFactory.parseString(HealthConfig.HealthIntervalProperty.legacyPropName + "=60000");
         new ConfigSetup()
             .withLegacyConfig(legacyConfig)
             .withNewConfig(emptyNewConfig)
             .finishSetup();
 
-        HealthIntervalProperty healthIntervalProperty = new HealthIntervalProperty();
+        HealthConfig.HealthIntervalProperty healthIntervalProperty = new HealthConfig.HealthIntervalProperty();
 
-        Config changedConfig = ConfigFactory.parseString(HealthIntervalProperty.legacyPropName + "=90000");
+        Config changedConfig = ConfigFactory.parseString(HealthConfig.HealthIntervalProperty.legacyPropName + "=90000");
         new ConfigSetup()
             .withLegacyConfig(changedConfig)
             .withNewConfig(emptyNewConfig)
