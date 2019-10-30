@@ -42,3 +42,4 @@ This list will be updated as properties are migrated:
 | -------- | ------- | ------- |
 | org.jitsi.videobridge.health.INTERVAL | videobridge.health.interval | The new config models this as a duration, rather than an amount of milliseconds |
 | org.jitsi.videobridge.health.TIMEOUT | videobridge.health.timeout | The new config models this as a duration, rather than an amount of milliseconds |
+| org.jitsi.videobridge.health.STICKY_FAILURES | videobridge.health.sticky-failures | |

@@ -85,4 +85,36 @@ public class HealthConfig
     {
         return HealthTimeoutProperty.getValue();
     }
+
+    /**
+     * The the property which makes any failures sticky (i.e. once the
+     * bridge becomes unhealthy it will never go back to a healthy state).
+     */
+    public static class StickyFailuresProperty extends AbstractConfigProperty<Boolean>
+    {
+        protected static final String legacyPropName = "org.jitsi.videobridge.health.STICKY_FAILURES";
+        protected static final String propName = "videobridge.health.sticky-failures";
+
+        private static StickyFailuresProperty singleton = new StickyFailuresProperty();
+
+        protected StickyFailuresProperty()
+        {
+            super(new JvbPropertyConfig<Boolean>()
+                .fromLegacyConfig(config -> config.getBoolean(legacyPropName))
+                .fromNewConfig(config -> config.getBoolean(propName))
+                .readOnce()
+                .throwIfNotFound()
+            );
+        }
+
+        public static boolean getValue()
+        {
+            return singleton.get();
+        }
+    }
+
+    public static boolean stickyFailures()
+    {
+        return StickyFailuresProperty.getValue();
+    }
 }
