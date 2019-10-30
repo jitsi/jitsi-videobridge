@@ -858,7 +858,7 @@ public class Videobridge
         {
             health.stop();
         }
-        health = new Health(this, cfg);
+        health = new Health(this);
 
         defaultProcessingOptions
             = (cfg == null)
