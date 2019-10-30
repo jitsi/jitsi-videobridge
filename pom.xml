@@ -87,12 +87,12 @@
       <version>1.0-57-g690bd5d</version>
     </dependency>
     <dependency>
-      <groupId>org.jitsi</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>rtp</artifactId>
       <version>1.0-17-gfec6b74</version>
     </dependency>
     <dependency>
-      <groupId>org.jitsi</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>sctp</artifactId>
       <version>1.0-20190319.172750-1</version>
     </dependency>
