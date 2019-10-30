@@ -43,3 +43,4 @@ This list will be updated as properties are migrated:
 | org.jitsi.videobridge.health.INTERVAL | videobridge.health.interval | The new config models this as a duration, rather than an amount of milliseconds |
 | org.jitsi.videobridge.health.TIMEOUT | videobridge.health.timeout | The new config models this as a duration, rather than an amount of milliseconds |
 | org.jitsi.videobridge.health.STICKY_FAILURES | videobridge.health.sticky-failures | |
+| org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT | videobridge.ep-connection-status.first-transfer-timeout | The new config models this as a duration, rather than an amount of milliseconds |
