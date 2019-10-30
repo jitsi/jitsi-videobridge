@@ -16,7 +16,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 mainClass="org.jitsi.videobridge.Main"
-cp=$SCRIPT_DIR/jitsi-videobridge.jar:$SCRIPT_DIR/lib/*.jar
+cp=$SCRIPT_DIR/jitsi-videobridge.jar:$SCRIPT_DIR/lib/*
 libs="$SCRIPT_DIR/lib/native/macosx"
 logging_config="$SCRIPT_DIR/lib/logging.properties"
 videobridge_rc="$SCRIPT_DIR/lib/videobridge.rc"
