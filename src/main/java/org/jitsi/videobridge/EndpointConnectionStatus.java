@@ -36,11 +36,12 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  *
  * An endpoint's connectivity status is considered connected as long as there
  * is any traffic activity seen on any of its endpoints. When there is no
- * activity for longer than {@link #maxInactivityLimit} it will be assumed that
- * the endpoint is having some connectivity issues. Those may be temporary or
- * permanent. When that happens there will be a Colibri message broadcast
- * to all conference endpoints. The Colibri class name of the message is defined
- * in {@link EndpointMessageBuilder#COLIBRI_CLASS_ENDPOINT_CONNECTIVITY_STATUS}
+ * activity for longer than the value of {@link MaxInactivityLimitProperty}, it
+ * will be assumed that the endpoint is having some connectivity issues. Those
+ * may be temporary or permanent. When that happens there will be a Colibri
+ * message broadcast to all conference endpoints. The Colibri class name of
+ * the message is defined in
+ * {@link EndpointMessageBuilder#COLIBRI_CLASS_ENDPOINT_CONNECTIVITY_STATUS}
  * and it will contain "active" attribute set to "false". If those problems turn
  * out to be temporary and the traffic is restored another message is sent with
  * "active" set to "true".
@@ -58,28 +59,10 @@ public class EndpointConnectionStatus
         = "org.jitsi.videobridge.EndpointConnectionStatus";
 
     /**
-     * The name of the configuration property which configures
-     * {@link #maxInactivityLimit}.
-     */
-    public static final String CFG_PNAME_MAX_INACTIVITY_LIMIT
-        = CFG_PNAME_BASE + ".MAX_INACTIVITY_LIMIT";
-
-    /**
-     * The default value for {@link #maxInactivityLimit}.
-     */
-    private final static long DEFAULT_MAX_INACTIVITY_LIMIT = 3000L;
-
-    /**
      * The logger instance used by this class.
      */
     private final static Logger logger
         = new LoggerImpl(EndpointConnectionStatus.class.getName());
-
-    /**
-     * How long an endpoint can be inactive before it wil be considered
-     * disconnected.
-     */
-    private long maxInactivityLimit;
 
     /**
      * How often connectivity status is being probed. Value in milliseconds.
@@ -139,16 +122,12 @@ public class EndpointConnectionStatus
         ConfigurationService config = ServiceUtils2.getService(
                 bundleContext, ConfigurationService.class);
 
-        maxInactivityLimit = config.getLong(
-                CFG_PNAME_MAX_INACTIVITY_LIMIT,
-                DEFAULT_MAX_INACTIVITY_LIMIT);
-
-        if (FirstTransferTimeoutProperty.getValue() <= maxInactivityLimit)
+        if (FirstTransferTimeoutProperty.getValue() <= MaxInactivityLimitProperty.getValue())
         {
             throw new IllegalArgumentException(
                 String.format("FIRST_TRANSFER_TIMEOUT(%s) must be greater"
                             + " than MAX_INACTIVITY_LIMIT(%s)",
-                        FirstTransferTimeoutProperty.getValue(), maxInactivityLimit));
+                        FirstTransferTimeoutProperty.getValue(), MaxInactivityLimitProperty.getValue()));
         }
 
         super.start(bundleContext);
@@ -248,7 +227,7 @@ public class EndpointConnectionStatus
         }
 
         long noActivityForMs = System.currentTimeMillis() - lastActivity;
-        boolean inactive = noActivityForMs > maxInactivityLimit;
+        boolean inactive = noActivityForMs > MaxInactivityLimitProperty.getValue();
         if (inactive && !inactiveEndpoints.contains(endpoint))
         {
             logger.debug(endpointId + " is considered disconnected");
@@ -400,6 +379,36 @@ public class EndpointConnectionStatus
         private static FirstTransferTimeoutProperty singleton = new FirstTransferTimeoutProperty();
 
         protected FirstTransferTimeoutProperty()
+        {
+            super(new JvbPropertyConfig<Long>()
+                .fromLegacyConfig(config -> config.getLong(legacyPropName))
+                .fromNewConfig(config -> config.getDuration(propName, TimeUnit.MILLISECONDS))
+                .readOnce()
+                .throwIfNotFound()
+
+            );
+        }
+
+        public static Long getValue()
+        {
+            return singleton.get();
+        }
+    }
+
+    /**
+     * How long an endpoint can be inactive before it wil be considered
+     * disconnected.
+     */
+    public static class MaxInactivityLimitProperty extends AbstractConfigProperty<Long>
+    {
+        protected static final String legacyPropName =
+            "org.jitsi.videobridge.EndpointConnectionStatus.MAX_INACTIVITY_LIMIT";
+        protected static final String propName =
+            "videobridge.ep-connection-status.max-inactivity-limit";
+
+        private static MaxInactivityLimitProperty singleton = new MaxInactivityLimitProperty();
+
+        protected MaxInactivityLimitProperty()
         {
             super(new JvbPropertyConfig<Long>()
                 .fromLegacyConfig(config -> config.getLong(legacyPropName))
