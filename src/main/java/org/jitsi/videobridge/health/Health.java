@@ -53,18 +53,6 @@ public class Health
         = new RecurringRunnableExecutor(Health.class.getName());
 
     /**
-     * The default interval between health checks.
-     */
-    private static final int PERIOD_DEFAULT = 10000;
-
-    /**
-     * The name of the property which configures the interval between health
-     * checks.
-     */
-    public static final String PERIOD_PNAME
-        = "org.jitsi.videobridge.health.INTERVAL";
-
-    /**
      * The default timeout for health checks.
      */
     private static final int TIMEOUT_DEFAULT = 30000;
@@ -286,17 +274,12 @@ public class Health
      */
     public Health(Videobridge videobridge, ConfigurationService cfg)
     {
-        super(videobridge, PERIOD_DEFAULT, true);
+        super(videobridge, HealthIntervalProperty.getValue(), true);
 
         if (cfg == null)
         {
             logger.warn("Configuration service is null, using only defaults.");
         }
-
-        int period =
-            cfg == null ? PERIOD_DEFAULT
-                : cfg.getInt(PERIOD_PNAME, PERIOD_DEFAULT);
-        setPeriod(period);
 
         timeout =
             cfg == null ? TIMEOUT_DEFAULT

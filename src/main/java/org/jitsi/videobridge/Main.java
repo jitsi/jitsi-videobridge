@@ -17,8 +17,13 @@ package org.jitsi.videobridge;
 
 import org.jitsi.cmd.*;
 import org.jitsi.meet.*;
+import org.jitsi.utils.config.validation.*;
 import org.jitsi.videobridge.osgi.*;
+import org.jitsi.videobridge.util.config.*;
 import org.jitsi.videobridge.xmpp.*;
+
+import java.util.*;
+import java.util.stream.*;
 
 /**
  * Provides the <tt>main</tt> entry point of the Jitsi Videobridge application
@@ -98,6 +103,7 @@ public class Main
     public static void main(String[] args)
         throws Exception
     {
+        validateConfig();
         CmdLine cmdLine = new CmdLine();
 
         cmdLine.parse(args);
@@ -155,5 +161,15 @@ public class Main
         {
             main.runMainProgramLoop(osgiBundles);
         }
+    }
+
+    protected static void validateConfig()
+    {
+        ConfigValidator configValidator = new ConfigValidator("org.jitsi");
+        //TODO: pass command-line args as well
+        Set<String> configPropNames = JvbConfig.getConfig().withOnlyPath("videobridge").entrySet().stream()
+            .map(Map.Entry::getKey)
+            .collect(Collectors.toSet());
+        configValidator.validate(configPropNames);
     }
 }
