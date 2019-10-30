@@ -17,7 +17,6 @@ package org.jitsi.videobridge;
 
 import org.jitsi.eventadmin.*;
 import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.config.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.shim.*;
@@ -118,9 +117,6 @@ public class EndpointConnectionStatus
         {
             logger.error("Endpoint connection monitoring is already running");
         }
-
-        ConfigurationService config = ServiceUtils2.getService(
-                bundleContext, ConfigurationService.class);
 
         if (FirstTransferTimeoutProperty.getValue() <= MaxInactivityLimitProperty.getValue())
         {
