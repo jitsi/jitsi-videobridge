@@ -24,6 +24,7 @@ import java.util.*;
 import java.util.function.*;
 
 import static org.jitsi.testutils.ConfigUtils.EMPTY_CONFIG;
+import static org.jitsi.testutils.ConfigUtils.EMPTY_NEW_CONFIG;
 
 /**
  * Helper class to make installing new and legacy configurations
@@ -45,6 +46,13 @@ public class ConfigSetup
     public ConfigSetup withNewConfig(Config newConfig)
     {
         newConfigSupplier = () -> newConfig;
+
+        return this;
+    }
+
+    public ConfigSetup withEmptyNewConfig()
+    {
+        newConfigSupplier = () -> EMPTY_NEW_CONFIG;
 
         return this;
     }

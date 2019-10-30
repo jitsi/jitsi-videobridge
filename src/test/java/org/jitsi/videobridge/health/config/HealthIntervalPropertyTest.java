@@ -33,7 +33,7 @@ public class HealthIntervalPropertyTest
         Config legacyConfig = ConfigFactory.parseString(HealthConfig.HealthIntervalProperty.legacyPropName + "=60000");
         new ConfigSetup()
             .withLegacyConfig(legacyConfig)
-            .withNewConfig(EMPTY_NEW_CONFIG)
+            .withEmptyNewConfig()
             .finishSetup();
 
         HealthConfig.HealthIntervalProperty healthIntervalProperty = new HealthConfig.HealthIntervalProperty();
@@ -83,7 +83,7 @@ public class HealthIntervalPropertyTest
     @Test(expected = ConfigPropertyNotFoundException.class)
     public void whenNoConfigProvidesTheValue()
     {
-        new ConfigSetup().withNewConfig(EMPTY_NEW_CONFIG).finishSetup();
+        new ConfigSetup().withEmptyNewConfig().finishSetup();
         HealthConfig.HealthIntervalProperty healthIntervalProperty = new HealthConfig.HealthIntervalProperty();
         healthIntervalProperty.get();
     }
@@ -94,7 +94,7 @@ public class HealthIntervalPropertyTest
         Config legacyConfig = ConfigFactory.parseString(HealthConfig.HealthIntervalProperty.legacyPropName + "=60000");
         new ConfigSetup()
             .withLegacyConfig(legacyConfig)
-            .withNewConfig(EMPTY_NEW_CONFIG)
+            .withEmptyNewConfig()
             .finishSetup();
 
         HealthConfig.HealthIntervalProperty healthIntervalProperty = new HealthConfig.HealthIntervalProperty();
@@ -102,7 +102,7 @@ public class HealthIntervalPropertyTest
         Config changedConfig = ConfigFactory.parseString(HealthConfig.HealthIntervalProperty.legacyPropName + "=90000");
         new ConfigSetup()
             .withLegacyConfig(changedConfig)
-            .withNewConfig(EMPTY_NEW_CONFIG)
+            .withEmptyNewConfig()
             .finishSetup();
 
         assertEquals(60000, (int)healthIntervalProperty.get());
