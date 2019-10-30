@@ -53,13 +53,13 @@ public class TaskPools
         {
             ThreadPoolExecutor ex = (ThreadPoolExecutor)es;
             debugState.put("pool_size", ex.getPoolSize());
-            debugState.put("active_count", ex.getActiveCount());
-            debugState.put("completed_tasks", ex.getCompletedTaskCount());
+            debugState.put("active_task_count", ex.getActiveCount());
+            debugState.put("completed_task_count", ex.getCompletedTaskCount());
             debugState.put("core_pool_size", ex.getCorePoolSize());
             debugState.put("maximum_pool_size", ex.getMaximumPoolSize());
             debugState.put("largest_pool_size", ex.getLargestPoolSize());
             debugState.put("queue_class", ex.getQueue().getClass().getSimpleName());
-            debugState.put("queue_size", ex.getQueue().size());
+            debugState.put("pending_task_count", ex.getQueue().size());
         }
 
         return debugState;
