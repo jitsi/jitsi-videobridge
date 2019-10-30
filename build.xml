@@ -18,6 +18,7 @@
     <property name="src.test" value="src/test/java" />
     <property name="output" value="classes" />
     <property name="output.test" value="test-classes" />
+    <property name="resourcesDir" value="src/main/resources" />
     <property name="run.arg.line" value="" />
     <property name="run.jvmarg.line" value="" />
     <property name="dist" value="dist" />
@@ -171,6 +172,7 @@
             <include name="**/*.properties" />
             <exclude name="${output}/jitsi-videobridge.jar" />
         </fileset>
+        <fileset dir="${resourcesDir}" />
         </jar>
     </target>
 
