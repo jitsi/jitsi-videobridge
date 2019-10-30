@@ -96,6 +96,10 @@ public class Debug extends ColibriResource
                 //TODO
                 break;
             }
+            case TASK_POOL_STATS: {
+                //TODO
+                break;
+            }
             default: {
                 throw new NotFoundException();
             }
@@ -138,6 +142,9 @@ public class Debug extends ColibriResource
             }
             case TRANSIT_STATS: {
                 return PacketTransitStats.getStatsJson().toJSONString();
+            }
+            case TASK_POOL_STATS: {
+                return TaskPools.getStatsJson().toJSONString();
             }
             default: {
                 throw new NotFoundException();
