@@ -41,3 +41,4 @@ This list will be updated as properties are migrated:
 | Old property name | New property name | Notes |
 | -------- | ------- | ------- |
 | org.jitsi.videobridge.health.INTERVAL | videobridge.health.interval | The new config models this as a duration, rather than an amount of milliseconds |
+| org.jitsi.videobridge.health.TIMEOUT | videobridge.health.timeout | The new config models this as a duration, rather than an amount of milliseconds |

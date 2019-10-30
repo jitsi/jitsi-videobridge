@@ -54,4 +54,35 @@ public class HealthConfig
     {
         return HealthIntervalProperty.getValue();
     }
+
+    /**
+     * The property which configures the timeout for health checks.
+     */
+    public static class HealthTimeoutProperty extends AbstractConfigProperty<Integer>
+    {
+        protected static final String legacyPropName = "org.jitsi.videobridge.health.TIMEOUT";
+        protected static final String propName = "videobridge.health.timeout";
+
+        private static HealthTimeoutProperty singleton = new HealthTimeoutProperty();
+
+        public HealthTimeoutProperty()
+        {
+            super(new JvbPropertyConfig<Integer>()
+                .fromLegacyConfig(config -> config.getInt(legacyPropName))
+                .fromNewConfig(config -> (int)config.getDuration(propName, TimeUnit.MILLISECONDS))
+                .readOnce()
+                .throwIfNotFound()
+            );
+        }
+
+        public static Integer getValue()
+        {
+            return singleton.get();
+        }
+    }
+
+    public static int getTimeout()
+    {
+        return HealthTimeoutProperty.getValue();
+    }
 }

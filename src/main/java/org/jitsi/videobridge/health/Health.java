@@ -54,19 +54,6 @@ public class Health
         = new RecurringRunnableExecutor(Health.class.getName());
 
     /**
-     * The default timeout for health checks.
-     */
-    private static final int TIMEOUT_DEFAULT = 30000;
-
-    /**
-     * The name of the property which configures the timeout for health checks.
-     * The {@link #check()} API will return failure unless a there was a health
-     * check performed in the last that many milliseconds.
-     */
-    public static final String TIMEOUT_PNAME
-        = "org.jitsi.videobridge.health.TIMEOUT";
-
-    /**
      * The name of the property which makes any failures sticky (i.e. once the
      * bridge becomes unhealthy it will never go back to a healthy state).
      */
@@ -247,13 +234,6 @@ public class Health
     private long lastResultMs = -1;
 
     /**
-     * The timeout in milliseconds after which this videobridge will be
-     * considered unhealthy; i.e. if no health check has been completed in the
-     * last {@code timeout} milliseconds the bridge is unhealthy.
-     */
-    private final int timeout;
-
-    /**
      * Whether failures are sticky, i.e. once the bridge becomes unhealthy it
      * will never go back to a healthy state.
      */
@@ -281,10 +261,6 @@ public class Health
         {
             logger.warn("Configuration service is null, using only defaults.");
         }
-
-        timeout =
-            cfg == null ? TIMEOUT_DEFAULT
-                : cfg.getInt(TIMEOUT_PNAME, TIMEOUT_DEFAULT);
 
         stickyFailures
             = cfg == null ? STICKY_FAILURES_DEFAULT
@@ -370,7 +346,7 @@ public class Health
         long lastResultMs = this.lastResultMs;
         long timeSinceLastResult = System.currentTimeMillis() - lastResultMs;
 
-        if (timeSinceLastResult > timeout)
+        if (timeSinceLastResult > HealthConfig.getTimeout())
         {
             throw new Exception(
                 "No health checks performed recently, the last result was "
