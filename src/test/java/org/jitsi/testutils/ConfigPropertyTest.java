@@ -23,7 +23,7 @@ import java.util.function.*;
 
 import static org.junit.Assert.assertEquals;
 
-public class ConfigPropertyTest<T extends ConfigProperty, U>
+public class ConfigPropertyTest<T extends ConfigProperty<U>, U>
 {
     public void runBasicTests(
         String legacyPropName,
