@@ -366,12 +366,24 @@ public class ChannelShim
     }
 
     /**
-     * Sets the direction of this channel.
+     * Get the media direction of this channel.
+     */
+    public String getDirection()
+    {
+        return this.direction;
+    }
+
+    /**
+     * Sets the media direction of this channel.
      * @param direction the direction to set.
      */
     public void setDirection(String direction)
     {
-        this.direction = direction;
+        if (!Objects.equals(this.direction, direction))
+        {
+            this.direction = direction;
+            this.endpoint.refreshMediaDirection();
+        }
     }
 
     /**

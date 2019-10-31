@@ -155,23 +155,24 @@ public class Endpoint
     private final Transceiver transceiver;
 
     /**
-     * The list of {@link ChannelShim}s associated with this endpoint. This
+     * The set of {@link ChannelShim}s associated with this endpoint. This
      * allows us to expire the endpoint once all of its 'channels' have been
-     * removed.
+     * removed. The set of channels shims allows to determine if endpoint
+     * can accept audio or video.
      */
-    final List<ChannelShim> channelShims = new LinkedList<>();
+    private final Set<ChannelShim> channelShims = ConcurrentHashMap.newKeySet();
 
     /**
      * Whether this endpoint should accept audio packets. We set this according
      * to whether the endpoint has an audio Colibri channel.
      */
-    private boolean acceptAudio = false;
+    private volatile boolean acceptAudio = false;
 
     /**
      * Whether this endpoint should accept video packets. We set this according
      * to whether the endpoint has a video Colibri channel.
      */
-    private boolean acceptVideo = false;
+    private volatile boolean acceptVideo = false;
 
     /**
      * Whether or not the bridge should be the peer which opens the data channel
@@ -489,7 +490,6 @@ public class Endpoint
             {
                 transceiver.sendPacket(new PacketInfo(videoRtpPacket));
             }
-            return;
         }
         else if (packet instanceof RtcpSrPacket)
         {
@@ -505,9 +505,8 @@ public class Endpoint
                         + ", timestamp="
                         + rtcpSrPacket.getSenderInfo().getRtpTimestamp());
             }
+            transceiver.sendPacket(packetInfo);
         }
-
-        transceiver.sendPacket(packetInfo);
     }
 
     /**
@@ -1274,23 +1273,22 @@ public class Endpoint
     }
 
     /**
-     * Adds a channel to this enpoint.
+     * Get ChannelShims associated with current {@link Endpoint}.
+     */
+    public Set<ChannelShim> getChannelShims()
+    {
+        return Collections.unmodifiableSet(this.channelShims);
+    }
+
+    /**
+     * Adds a channel to this endpoint.
      * @param channelShim
      */
     public void addChannel(ChannelShim channelShim)
     {
-        synchronized (channelShims)
+        if (channelShims.add(channelShim))
         {
-            switch (channelShim.getMediaType())
-            {
-                case AUDIO:
-                    acceptAudio = true;
-                    break;
-                case VIDEO:
-                    acceptVideo = true;
-                    break;
-            }
-            channelShims.add(channelShim);
+            refreshMediaDirection();
         }
     }
 
@@ -1300,24 +1298,50 @@ public class Endpoint
      */
     public void removeChannel(ChannelShim channelShim)
     {
-        synchronized (channelShims)
+        if (channelShims.remove(channelShim))
         {
-            switch (channelShim.getMediaType())
-            {
-                case AUDIO:
-                    acceptAudio = false;
-                    break;
-                case VIDEO:
-                    acceptVideo = false;
-                    break;
-            }
-
-            channelShims.remove(channelShim);
             if (channelShims.isEmpty())
             {
                 expire();
             }
+            else
+            {
+                refreshMediaDirection();
+            }
         }
+    }
+
+    /**
+     * Refresh media direction based on direction of
+     * {@link ChannelShim}. An endpoint can accept
+     * media, if its {@link ChannelShim} has either
+     * 'sendrecv' or 'recvonly' media direction.
+     */
+    public void refreshMediaDirection()
+    {
+        boolean acceptAudio = false;
+        boolean acceptVideo = false;
+        for (ChannelShim channelShim : channelShims)
+        {
+            String direction = channelShim.getDirection();
+            if (direction != null)
+            {
+                if ("sendrecv".equalsIgnoreCase(direction) ||
+                    "recvonly".equalsIgnoreCase(direction))
+                {
+                    if (MediaType.AUDIO == channelShim.getMediaType())
+                    {
+                        acceptAudio = true;
+                    }
+                    else if (MediaType.VIDEO == channelShim.getMediaType())
+                    {
+                        acceptVideo = true;
+                    }
+                }
+            }
+        }
+        this.acceptAudio = acceptAudio;
+        this.acceptVideo = acceptVideo;
     }
 
     /**
