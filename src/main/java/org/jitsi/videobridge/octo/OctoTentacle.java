@@ -312,8 +312,9 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      */
     public void expire()
     {
+        logger.info("Expiring");
         setRelays(new LinkedList<>());
-        octoEndpoints.setEndpoints(Collections.EMPTY_SET);
+        octoEndpoints.setEndpoints(Collections.emptySet());
     }
 
     /**
