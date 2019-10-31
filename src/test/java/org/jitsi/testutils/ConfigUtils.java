@@ -21,4 +21,5 @@ import com.typesafe.config.*;
 public class ConfigUtils
 {
     public static Config EMPTY_CONFIG = ConfigFactory.parseString("");
+    public static Config EMPTY_NEW_CONFIG = ConfigFactory.parseString("videobridge {}");
 }

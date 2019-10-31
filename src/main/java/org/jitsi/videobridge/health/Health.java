@@ -16,10 +16,10 @@
 package org.jitsi.videobridge.health;
 
 import org.ice4j.ice.harvest.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.health.config.*;
 import org.jitsi.videobridge.transport.*;
 import org.jitsi.videobridge.xmpp.*;
 
@@ -51,31 +51,6 @@ public class Health
      */
     private static final RecurringRunnableExecutor executor
         = new RecurringRunnableExecutor(Health.class.getName());
-
-    /**
-     * The default timeout for health checks.
-     */
-    private static final int TIMEOUT_DEFAULT = 30000;
-
-    /**
-     * The name of the property which configures the timeout for health checks.
-     * The {@link #check()} API will return failure unless a there was a health
-     * check performed in the last that many milliseconds.
-     */
-    public static final String TIMEOUT_PNAME
-        = "org.jitsi.videobridge.health.TIMEOUT";
-
-    /**
-     * The name of the property which makes any failures sticky (i.e. once the
-     * bridge becomes unhealthy it will never go back to a healthy state).
-     */
-    public static final String STICKY_FAILURES_PNAME
-        = "org.jitsi.videobridge.health.STICKY_FAILURES";
-
-    /**
-     * The default value for the {@code STICKY_FAILURES} property.
-     */
-    private static final boolean STICKY_FAILURES_DEFAULT = false;
 
     /**
      * Failures in the first 5 minutes are never sticky.
@@ -246,19 +221,6 @@ public class Health
     private long lastResultMs = -1;
 
     /**
-     * The timeout in milliseconds after which this videobridge will be
-     * considered unhealthy; i.e. if no health check has been completed in the
-     * last {@code timeout} milliseconds the bridge is unhealthy.
-     */
-    private final int timeout;
-
-    /**
-     * Whether failures are sticky, i.e. once the bridge becomes unhealthy it
-     * will never go back to a healthy state.
-     */
-    private final boolean stickyFailures;
-
-    /**
      * The time when this instance was started.
      */
     private final long startMs;
@@ -272,23 +234,9 @@ public class Health
      * Iniatializes a new {@link Health} instance for a specific
      * {@link Videobridge}.
      */
-    public Health(Videobridge videobridge, ConfigurationService cfg)
+    public Health(Videobridge videobridge)
     {
-        super(videobridge, HealthIntervalProperty.getValue(), true);
-
-        if (cfg == null)
-        {
-            logger.warn("Configuration service is null, using only defaults.");
-        }
-
-        timeout =
-            cfg == null ? TIMEOUT_DEFAULT
-                : cfg.getInt(TIMEOUT_PNAME, TIMEOUT_DEFAULT);
-
-        stickyFailures
-            = cfg == null ? STICKY_FAILURES_DEFAULT
-                : cfg.getBoolean(
-                    STICKY_FAILURES_PNAME, STICKY_FAILURES_DEFAULT);
+        super(videobridge, HealthConfig.getInterval(), true);
 
         startMs = System.currentTimeMillis();
 
@@ -329,7 +277,7 @@ public class Health
         long duration = System.currentTimeMillis() - start;
         lastResultMs = start + duration;
 
-        if (stickyFailures && hasFailed && exception == null)
+        if (HealthConfig.stickyFailures() && hasFailed && exception == null)
         {
             // We didn't fail this last test, but we've failed before and
             // sticky failures are enabled.
@@ -344,7 +292,7 @@ public class Health
         {
             logger.info(
                 "Performed a successful health check in " + duration
-                    + "ms. Sticky failure: " + (stickyFailures && hasFailed));
+                    + "ms. Sticky failure: " + (HealthConfig.stickyFailures() && hasFailed));
         }
         else
         {
@@ -369,7 +317,7 @@ public class Health
         long lastResultMs = this.lastResultMs;
         long timeSinceLastResult = System.currentTimeMillis() - lastResultMs;
 
-        if (timeSinceLastResult > timeout)
+        if (timeSinceLastResult > HealthConfig.getTimeout())
         {
             throw new Exception(
                 "No health checks performed recently, the last result was "
