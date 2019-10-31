@@ -250,7 +250,7 @@ public class Endpoint
         bandwidthProbing.enabled = true;
         recurringRunnableExecutor.registerRecurringRunnable(bandwidthProbing);
 
-        dtlsTransport = new DtlsTransport(this, iceControlling, parentLogger);
+        dtlsTransport = new DtlsTransport(this, iceControlling, logger);
 
         if (conference.includeInStatistics())
         {
