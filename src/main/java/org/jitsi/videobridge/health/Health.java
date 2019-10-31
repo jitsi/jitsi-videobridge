@@ -236,7 +236,7 @@ public class Health
      */
     public Health(Videobridge videobridge)
     {
-        super(videobridge, HealthConfig.HealthIntervalProperty.getValue(), true);
+        super(videobridge, HealthConfig.getInterval(), true);
 
         startMs = System.currentTimeMillis();
 

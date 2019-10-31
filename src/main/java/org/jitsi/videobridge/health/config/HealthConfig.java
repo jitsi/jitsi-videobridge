@@ -27,7 +27,7 @@ public class HealthConfig
      * The property which configures the interval between health
      * checks.
      */
-    public static class HealthIntervalProperty extends AbstractConfigProperty<Integer>
+    protected static class HealthIntervalProperty extends AbstractConfigProperty<Integer>
     {
         protected static final String legacyPropName = "org.jitsi.videobridge.health.INTERVAL";
         protected static final String propName = "videobridge.health.interval";
@@ -58,7 +58,7 @@ public class HealthConfig
     /**
      * The property which configures the timeout for health checks.
      */
-    public static class HealthTimeoutProperty extends AbstractConfigProperty<Integer>
+    protected static class HealthTimeoutProperty extends AbstractConfigProperty<Integer>
     {
         protected static final String legacyPropName = "org.jitsi.videobridge.health.TIMEOUT";
         protected static final String propName = "videobridge.health.timeout";
@@ -90,7 +90,7 @@ public class HealthConfig
      * The the property which makes any failures sticky (i.e. once the
      * bridge becomes unhealthy it will never go back to a healthy state).
      */
-    public static class StickyFailuresProperty extends AbstractConfigProperty<Boolean>
+    protected static class StickyFailuresProperty extends AbstractConfigProperty<Boolean>
     {
         protected static final String legacyPropName = "org.jitsi.videobridge.health.STICKY_FAILURES";
         protected static final String propName = "videobridge.health.sticky-failures";
