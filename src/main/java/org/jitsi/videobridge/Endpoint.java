@@ -126,7 +126,7 @@ public class Endpoint
     /**
      * A count of how many endpoints have 'selected' this endpoint
      */
-    private AtomicInteger selectedCount = new AtomicInteger(0);
+    private final AtomicInteger selectedCount = new AtomicInteger(0);
 
     /**
      * The diagnostic context of this instance.
