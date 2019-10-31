@@ -442,6 +442,7 @@ public class OctoRelay
     {
         synchronized (packetHandlers)
         {
+            logger.info("Adding handler for conference " + conferenceId);
             if (packetHandlers.containsKey(conferenceId))
             {
                 logger.warn("Replacing an existing packet handler for gid="
@@ -466,6 +467,7 @@ public class OctoRelay
             PacketHandler existingHandler = packetHandlers.get(conferenceId);
             if (handler == existingHandler)
             {
+                logger.info("Removing handler for conference " + conferenceId);
                 packetHandlers.remove(conferenceId);
             }
         }
