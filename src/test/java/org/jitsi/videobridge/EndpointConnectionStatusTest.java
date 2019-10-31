@@ -42,4 +42,26 @@ public class EndpointConnectionStatusTest
             EndpointConnectionStatus.FirstTransferTimeoutProperty::new
         );
     }
+
+    @Test
+    public void testMaxInactivityLimitProperty()
+    {
+        ConfigPropertyTest<EndpointConnectionStatus.MaxInactivityLimitProperty, Long>
+            configPropertyTest = new ConfigPropertyTest<>();
+
+        configPropertyTest.runBasicTests(
+            EndpointConnectionStatus.MaxInactivityLimitProperty.legacyPropName,
+            new ConfigPropertyTest.ParamResult<>("5000", 5000L),
+            EndpointConnectionStatus.MaxInactivityLimitProperty.propName,
+            new ConfigPropertyTest.ParamResult<>("10 seconds", 10000L),
+            EndpointConnectionStatus.MaxInactivityLimitProperty::new
+        );
+
+        configPropertyTest.runReadOnceTest(
+            EndpointConnectionStatus.MaxInactivityLimitProperty.propName,
+            new ConfigPropertyTest.ParamResult<>("5 seconds", 5000L),
+            new ConfigPropertyTest.ParamResult<>("15 seconds", 15000L),
+            EndpointConnectionStatus.MaxInactivityLimitProperty::new
+        );
+    }
 }
