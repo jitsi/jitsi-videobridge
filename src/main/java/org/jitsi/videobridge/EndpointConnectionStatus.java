@@ -52,12 +52,6 @@ public class EndpointConnectionStatus
     extends EventHandlerActivator
 {
     /**
-     * The base for config property names constants.
-     */
-    private final static String CFG_PNAME_BASE
-        = "org.jitsi.videobridge.EndpointConnectionStatus";
-
-    /**
      * The logger instance used by this class.
      */
     private final static Logger logger
