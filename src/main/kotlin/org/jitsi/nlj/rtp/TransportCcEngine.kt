@@ -23,6 +23,7 @@ import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.PacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.UnreceivedPacketReport
@@ -75,6 +76,8 @@ class TransportCcEngine(
      */
     private val sentPacketDetails = LRUCache<Int, PacketDetail>(MAX_OUTGOING_PACKETS_HISTORY)
 
+    private val missingPacketDetailSeqNums = mutableListOf<Int>()
+
     /**
      * Called when an RTP sender has a new round-trip time estimate.
      */
@@ -97,16 +100,18 @@ class TransportCcEngine(
             localReferenceTime = now
         }
 
+        // We have to remember the oldest known sequence number here, as we
+        // remove from sentPacketDetails inside this loop
+        val oldestKnownSeqNum = synchronized(sentPacketsSyncRoot) { sentPacketDetails.oldestEntry() }
         for (packetReport in tccPacket) {
-            val packetDetail: PacketDetail?
             val tccSeqNum = packetReport.seqNum
-            synchronized(sentPacketsSyncRoot) {
-                packetDetail = sentPacketDetails.remove(tccSeqNum)
+            val packetDetail = synchronized(sentPacketsSyncRoot) {
+                sentPacketDetails.remove(tccSeqNum)
             }
 
             if (packetDetail == null) {
                 if (packetReport is ReceivedPacketReport) {
-                    logger.warn("Couldn't find packet detail for $tccSeqNum.")
+                    missingPacketDetailSeqNums.add(tccSeqNum)
                 }
                 continue
             }
@@ -124,6 +129,13 @@ class TransportCcEngine(
                         now, packetDetail.packetSendTime, arrivalTimeInLocalClock, tccSeqNum, packetDetail.packetLength)
                 }
             }
+        }
+        if (missingPacketDetailSeqNums.isNotEmpty()) {
+            logger.warn("TCC packet contained sequence numbers: " +
+                "${tccPacket.iterator().asSequence().map(PacketReport::seqNum).joinToString()}. " +
+                "Couldn't find packet detail for the seq nums: ${missingPacketDetailSeqNums.joinToString()}. " +
+                (oldestKnownSeqNum?.let { "Oldest known seqNum was $it." } ?: run { "Sent packet details map was empty." }))
+            missingPacketDetailSeqNums.clear()
         }
     }
 
@@ -151,5 +163,14 @@ class TransportCcEngine(
          * XXX this is an uninformed value.
          */
         private const val MAX_OUTGOING_PACKETS_HISTORY = 1000
+    }
+
+    private fun <K, V> LRUCache<K, V>.oldestEntry(): K? {
+        with(iterator()) {
+            if (hasNext()) {
+                return next().key
+            }
+        }
+        return null
     }
 }
