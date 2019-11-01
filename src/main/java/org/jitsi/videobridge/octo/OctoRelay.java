@@ -19,7 +19,8 @@ import org.ice4j.socket.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.collections.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
@@ -48,8 +49,7 @@ public class OctoRelay
      * The {@link Logger} used by the {@link OctoRelay} class and its
      * instances to print debug information.
      */
-    private static final Logger logger
-        = Logger.getLogger(OctoRelay.class);
+    private final Logger logger;
 
     /**
      * The receive buffer size to set of the socket.
@@ -130,6 +130,10 @@ public class OctoRelay
     OctoRelay(String address, int port)
         throws UnknownHostException, SocketException
     {
+        logger = new LoggerImpl(
+            OctoRelay.class.getName(),
+            new LogContext(JMap.of("address", address, "port", Integer.toString(port)))
+        );
         InetSocketAddress addr
                 = new InetSocketAddress(InetAddress.getByName(address), port);
         socket = new DatagramSocket(addr);
@@ -438,6 +442,7 @@ public class OctoRelay
     {
         synchronized (packetHandlers)
         {
+            logger.info("Adding handler for conference " + conferenceId);
             if (packetHandlers.containsKey(conferenceId))
             {
                 logger.warn("Replacing an existing packet handler for gid="
@@ -462,6 +467,7 @@ public class OctoRelay
             PacketHandler existingHandler = packetHandlers.get(conferenceId);
             if (handler == existingHandler)
             {
+                logger.info("Removing handler for conference " + conferenceId);
                 packetHandlers.remove(conferenceId);
             }
         }
