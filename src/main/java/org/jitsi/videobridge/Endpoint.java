@@ -490,6 +490,7 @@ public class Endpoint
             {
                 transceiver.sendPacket(new PacketInfo(videoRtpPacket));
             }
+            return;
         }
         else if (packet instanceof RtcpSrPacket)
         {
@@ -505,8 +506,9 @@ public class Endpoint
                         + ", timestamp="
                         + rtcpSrPacket.getSenderInfo().getRtpTimestamp());
             }
-            transceiver.sendPacket(packetInfo);
         }
+
+        transceiver.sendPacket(packetInfo);
     }
 
     /**
