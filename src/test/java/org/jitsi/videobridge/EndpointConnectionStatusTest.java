@@ -24,44 +24,44 @@ public class EndpointConnectionStatusTest
     @Test
     public void testFirstTransferTimePropertyConfig()
     {
-        ConfigPropertyTest<EndpointConnectionStatus.FirstTransferTimeoutProperty, Long>
+        ConfigPropertyTest<EndpointConnectionStatus.Config.FirstTransferTimeoutProperty, Long>
             configPropertyTest = new ConfigPropertyTest<>();
 
         configPropertyTest.runBasicTests(
-            EndpointConnectionStatus.FirstTransferTimeoutProperty.legacyPropName,
+            EndpointConnectionStatus.Config.FirstTransferTimeoutProperty.legacyPropName,
             new ConfigPropertyTest.ParamResult<>("5000", 5000L),
-            EndpointConnectionStatus.FirstTransferTimeoutProperty.propName,
+            EndpointConnectionStatus.Config.FirstTransferTimeoutProperty.propName,
             new ConfigPropertyTest.ParamResult<>("10 seconds", 10000L),
-            EndpointConnectionStatus.FirstTransferTimeoutProperty::new
+            EndpointConnectionStatus.Config.FirstTransferTimeoutProperty::new
         );
 
         configPropertyTest.runReadOnceTest(
-            EndpointConnectionStatus.FirstTransferTimeoutProperty.propName,
+            EndpointConnectionStatus.Config.FirstTransferTimeoutProperty.propName,
             new ConfigPropertyTest.ParamResult<>("5 seconds", 5000L),
             new ConfigPropertyTest.ParamResult<>("15 seconds", 15000L),
-            EndpointConnectionStatus.FirstTransferTimeoutProperty::new
+            EndpointConnectionStatus.Config.FirstTransferTimeoutProperty::new
         );
     }
 
     @Test
     public void testMaxInactivityLimitProperty()
     {
-        ConfigPropertyTest<EndpointConnectionStatus.MaxInactivityLimitProperty, Long>
+        ConfigPropertyTest<EndpointConnectionStatus.Config.MaxInactivityLimitProperty, Long>
             configPropertyTest = new ConfigPropertyTest<>();
 
         configPropertyTest.runBasicTests(
-            EndpointConnectionStatus.MaxInactivityLimitProperty.legacyPropName,
+            EndpointConnectionStatus.Config.MaxInactivityLimitProperty.legacyPropName,
             new ConfigPropertyTest.ParamResult<>("5000", 5000L),
-            EndpointConnectionStatus.MaxInactivityLimitProperty.propName,
+            EndpointConnectionStatus.Config.MaxInactivityLimitProperty.propName,
             new ConfigPropertyTest.ParamResult<>("10 seconds", 10000L),
-            EndpointConnectionStatus.MaxInactivityLimitProperty::new
+            EndpointConnectionStatus.Config.MaxInactivityLimitProperty::new
         );
 
         configPropertyTest.runReadOnceTest(
-            EndpointConnectionStatus.MaxInactivityLimitProperty.propName,
+            EndpointConnectionStatus.Config.MaxInactivityLimitProperty.propName,
             new ConfigPropertyTest.ParamResult<>("5 seconds", 5000L),
             new ConfigPropertyTest.ParamResult<>("15 seconds", 15000L),
-            EndpointConnectionStatus.MaxInactivityLimitProperty::new
+            EndpointConnectionStatus.Config.MaxInactivityLimitProperty::new
         );
     }
 }

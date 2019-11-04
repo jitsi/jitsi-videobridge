@@ -35,7 +35,7 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  *
  * An endpoint's connectivity status is considered connected as long as there
  * is any traffic activity seen on any of its endpoints. When there is no
- * activity for longer than the value of {@link MaxInactivityLimitProperty}, it
+ * activity for longer than the value of {@link Config#getMaxInactivityLimt()}, it
  * will be assumed that the endpoint is having some connectivity issues. Those
  * may be temporary or permanent. When that happens there will be a Colibri
  * message broadcast to all conference endpoints. The Colibri class name of
@@ -112,12 +112,12 @@ public class EndpointConnectionStatus
             logger.error("Endpoint connection monitoring is already running");
         }
 
-        if (FirstTransferTimeoutProperty.getValue() <= MaxInactivityLimitProperty.getValue())
+        if (Config.getFirstTransferTimeout() <= Config.getMaxInactivityLimt())
         {
             throw new IllegalArgumentException(
                 String.format("FIRST_TRANSFER_TIMEOUT(%s) must be greater"
                             + " than MAX_INACTIVITY_LIMIT(%s)",
-                        FirstTransferTimeoutProperty.getValue(), MaxInactivityLimitProperty.getValue()));
+                        Config.getFirstTransferTimeout(), Config.getMaxInactivityLimt()));
         }
 
         super.start(bundleContext);
@@ -195,7 +195,7 @@ public class EndpointConnectionStatus
             // We're doing that by checking how much time has elapsed since
             // the first endpoint's channel has been created.
             if (System.currentTimeMillis() - mostRecentChannelCreated
-                    > FirstTransferTimeoutProperty.getValue())
+                    > Config.getFirstTransferTimeout())
             {
                 if (logger.isDebugEnabled())
                     logger.debug(
@@ -217,7 +217,7 @@ public class EndpointConnectionStatus
         }
 
         long noActivityForMs = System.currentTimeMillis() - lastActivity;
-        boolean inactive = noActivityForMs > MaxInactivityLimitProperty.getValue();
+        boolean inactive = noActivityForMs > Config.getMaxInactivityLimt();
         if (inactive && !inactiveEndpoints.contains(endpoint))
         {
             logger.debug(endpointId + " is considered disconnected");
@@ -355,63 +355,76 @@ public class EndpointConnectionStatus
             .forEach(e -> sendEndpointConnectionStatus(e, false, endpoint));
     }
 
-    /**
-     * How long it can take an endpoint to send first data before it will
-     * be marked as inactive.
-     */
-    public static class FirstTransferTimeoutProperty extends AbstractConfigProperty<Long>
-    {
-        protected static final String legacyPropName =
-            "org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT";
-        protected static final String propName =
-            "videobridge.ep-connection-status.first-transfer-timeout";
-
-        private static FirstTransferTimeoutProperty singleton = new FirstTransferTimeoutProperty();
-
-        protected FirstTransferTimeoutProperty()
+    public static class Config {
+        /**
+         * How long it can take an endpoint to send first data before it will
+         * be marked as inactive.
+         */
+        protected static class FirstTransferTimeoutProperty extends AbstractConfigProperty<Long>
         {
-            super(new JvbPropertyConfig<Long>()
-                .fromLegacyConfig(config -> config.getLong(legacyPropName))
-                .fromNewConfig(config -> config.getDuration(propName, TimeUnit.MILLISECONDS))
-                .readOnce()
-                .throwIfNotFound()
+            protected static final String legacyPropName =
+                "org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT";
+            protected static final String propName =
+                "videobridge.ep-connection-status.first-transfer-timeout";
 
-            );
+            private static FirstTransferTimeoutProperty singleton = new FirstTransferTimeoutProperty();
+
+            protected FirstTransferTimeoutProperty()
+            {
+                super(new JvbPropertyConfig<Long>()
+                    .fromLegacyConfig(config -> config.getLong(legacyPropName))
+                    .fromNewConfig(config -> config.getDuration(propName, TimeUnit.MILLISECONDS))
+                    .readOnce()
+                    .throwIfNotFound()
+
+                );
+            }
+
+            public static Long getValue()
+            {
+                return singleton.get();
+            }
         }
 
-        public static Long getValue()
+        public static long getFirstTransferTimeout()
         {
-            return singleton.get();
+            return FirstTransferTimeoutProperty.getValue();
+        }
+
+        /**
+         * How long an endpoint can be inactive before it wil be considered
+         * disconnected.
+         */
+        protected static class MaxInactivityLimitProperty extends AbstractConfigProperty<Long>
+        {
+            protected static final String legacyPropName =
+                "org.jitsi.videobridge.EndpointConnectionStatus.MAX_INACTIVITY_LIMIT";
+            protected static final String propName =
+                "videobridge.ep-connection-status.max-inactivity-limit";
+
+            private static MaxInactivityLimitProperty singleton = new MaxInactivityLimitProperty();
+
+            protected MaxInactivityLimitProperty()
+            {
+                super(new JvbPropertyConfig<Long>()
+                    .fromLegacyConfig(config -> config.getLong(legacyPropName))
+                    .fromNewConfig(config -> config.getDuration(propName, TimeUnit.MILLISECONDS))
+                    .readOnce()
+                    .throwIfNotFound()
+
+                );
+            }
+
+            public static Long getValue()
+            {
+                return singleton.get();
+            }
+        }
+
+        public static long getMaxInactivityLimt()
+        {
+            return MaxInactivityLimitProperty.getValue();
         }
     }
 
-    /**
-     * How long an endpoint can be inactive before it wil be considered
-     * disconnected.
-     */
-    public static class MaxInactivityLimitProperty extends AbstractConfigProperty<Long>
-    {
-        protected static final String legacyPropName =
-            "org.jitsi.videobridge.EndpointConnectionStatus.MAX_INACTIVITY_LIMIT";
-        protected static final String propName =
-            "videobridge.ep-connection-status.max-inactivity-limit";
-
-        private static MaxInactivityLimitProperty singleton = new MaxInactivityLimitProperty();
-
-        protected MaxInactivityLimitProperty()
-        {
-            super(new JvbPropertyConfig<Long>()
-                .fromLegacyConfig(config -> config.getLong(legacyPropName))
-                .fromNewConfig(config -> config.getDuration(propName, TimeUnit.MILLISECONDS))
-                .readOnce()
-                .throwIfNotFound()
-
-            );
-        }
-
-        public static Long getValue()
-        {
-            return singleton.get();
-        }
-    }
 }
