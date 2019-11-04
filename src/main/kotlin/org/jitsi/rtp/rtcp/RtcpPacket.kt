@@ -46,20 +46,17 @@ abstract class RtcpPacket(
         get() = RtcpHeader.getVersion(buffer, offset)
         set(value) = RtcpHeader.setVersion(buffer, offset, value)
 
-    var hasPadding: Boolean
+    val hasPadding: Boolean
         get() = RtcpHeader.hasPadding(buffer, offset)
-        set(value) = RtcpHeader.setPadding(buffer, offset, value)
 
     val reportCount: Int
         get() = RtcpHeader.getReportCount(buffer, offset)
 
-    var packetType: Int
+    val packetType: Int
         get() = RtcpHeader.getPacketType(buffer, offset)
-        set(value) = RtcpHeader.setPacketType(buffer, offset, value)
 
-    var lengthField: Int
+    val lengthField: Int
         get() = RtcpHeader.getLength(buffer, offset)
-        set(value) = RtcpHeader.setLength(buffer, offset, value)
 
     var senderSsrc: Long
         get() = RtcpHeader.getSenderSsrc(buffer, offset)
