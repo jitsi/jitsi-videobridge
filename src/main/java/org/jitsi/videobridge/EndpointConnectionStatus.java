@@ -35,7 +35,7 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  *
  * An endpoint's connectivity status is considered connected as long as there
  * is any traffic activity seen on any of its endpoints. When there is no
- * activity for longer than the value of {@link Config#getMaxInactivityLimt()}, it
+ * activity for longer than the value of {@link Config#getMaxInactivityLimit()}, it
  * will be assumed that the endpoint is having some connectivity issues. Those
  * may be temporary or permanent. When that happens there will be a Colibri
  * message broadcast to all conference endpoints. The Colibri class name of
@@ -112,12 +112,12 @@ public class EndpointConnectionStatus
             logger.error("Endpoint connection monitoring is already running");
         }
 
-        if (Config.getFirstTransferTimeout() <= Config.getMaxInactivityLimt())
+        if (Config.getFirstTransferTimeout() <= Config.getMaxInactivityLimit())
         {
             throw new IllegalArgumentException(
-                String.format("FIRST_TRANSFER_TIMEOUT(%s) must be greater"
-                            + " than MAX_INACTIVITY_LIMIT(%s)",
-                        Config.getFirstTransferTimeout(), Config.getMaxInactivityLimt()));
+                String.format("first transfer timeout(%s) must be greater"
+                            + " than max inactivity limit(%s)",
+                        Config.getFirstTransferTimeout(), Config.getMaxInactivityLimit()));
         }
 
         super.start(bundleContext);
@@ -217,7 +217,7 @@ public class EndpointConnectionStatus
         }
 
         long noActivityForMs = System.currentTimeMillis() - lastActivity;
-        boolean inactive = noActivityForMs > Config.getMaxInactivityLimt();
+        boolean inactive = noActivityForMs > Config.getMaxInactivityLimit();
         if (inactive && !inactiveEndpoints.contains(endpoint))
         {
             logger.debug(endpointId + " is considered disconnected");
@@ -421,7 +421,7 @@ public class EndpointConnectionStatus
             }
         }
 
-        public static long getMaxInactivityLimt()
+        public static long getMaxInactivityLimit()
         {
             return MaxInactivityLimitProperty.getValue();
         }
