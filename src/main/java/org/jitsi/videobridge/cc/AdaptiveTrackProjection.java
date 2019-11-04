@@ -219,7 +219,7 @@ public class AdaptiveTrackProjection
         // suspended so that it can raise the needsKeyframe flag and also allow
         // it to compute a sequence number delta when the target becomes > -1.
 
-        if (videoRtpPacket.getQualityIndex() < 0)
+        if (videoRtpPacket.getEncodingIndex() < 0)
         {
             MediaStreamTrackDesc sourceTrack = getSource();
             logger.warn(
@@ -231,7 +231,7 @@ public class AdaptiveTrackProjection
 
         int targetIndexCopy = targetIndex;
         boolean accept = contextCopy.accept(
-            videoRtpPacket, videoRtpPacket.getQualityIndex(), targetIndexCopy);
+            videoRtpPacket, videoRtpPacket.getEncodingIndex(), targetIndexCopy);
 
         // We check if the context needs a keyframe regardless of whether or not
         // the packet was accepted.
