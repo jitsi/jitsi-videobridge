@@ -50,9 +50,8 @@ abstract class RtcpPacket(
         get() = RtcpHeader.hasPadding(buffer, offset)
         set(value) = RtcpHeader.setPadding(buffer, offset, value)
 
-    var reportCount: Int
+    val reportCount: Int
         get() = RtcpHeader.getReportCount(buffer, offset)
-        set(value) = RtcpHeader.setReportCount(buffer, offset, value)
 
     var packetType: Int
         get() = RtcpHeader.getPacketType(buffer, offset)

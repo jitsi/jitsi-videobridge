@@ -19,6 +19,7 @@ package org.jitsi.rtp.rtcp
 import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.collections.shouldHaveSize
 import io.kotlintest.shouldBe
+import io.kotlintest.shouldNotBe
 import io.kotlintest.specs.ShouldSpec
 import java.nio.ByteBuffer
 import org.jitsi.rtp.util.byteBufferOf
@@ -115,6 +116,38 @@ internal class RtcpSrPacketTest : ShouldSpec() {
                     // TODO: verify report block parse
 //                    srPacket.reportBlocks[0] shouldBe reportBlock1
 //                    srPacket.reportBlocks[1] shouldBe reportBlock2
+                }
+            }
+            "cloneWithoutReportBlocks" {
+                "when there were report blocks" {
+                    val clone = srPacket.cloneWithoutReportBlocks()
+                    should("clone everything correctly") {
+                        clone.version shouldBe srPacket.version
+                        clone.hasPadding shouldBe srPacket.hasPadding
+                        clone.reportCount shouldBe 0
+                        clone.packetType shouldBe srPacket.packetType
+                        clone.length shouldBe RtcpHeader.SIZE_BYTES + SenderInfoParser.SIZE_BYTES
+                        clone.senderSsrc shouldBe srPacket.senderSsrc
+                        clone.buffer shouldNotBe srPacket.buffer
+                    }
+                }
+                "when there were no report blocks" {
+                    val srPacketNoReportBlocks = RtcpSrPacketBuilder(
+                        RtcpHeaderBuilder(
+                            senderSsrc = 12345
+                        ),
+                        expectedSenderInfo
+                    ).build()
+                    val clone = srPacketNoReportBlocks.cloneWithoutReportBlocks()
+                    should("clone everything correctly") {
+                        clone.version shouldBe srPacket.version
+                        clone.hasPadding shouldBe srPacket.hasPadding
+                        clone.reportCount shouldBe 0
+                        clone.packetType shouldBe srPacket.packetType
+                        clone.length shouldBe RtcpHeader.SIZE_BYTES + SenderInfoParser.SIZE_BYTES
+                        clone.senderSsrc shouldBe srPacket.senderSsrc
+                        clone.buffer shouldNotBe srPacket.buffer
+                    }
                 }
             }
 //            "from explicit values" {

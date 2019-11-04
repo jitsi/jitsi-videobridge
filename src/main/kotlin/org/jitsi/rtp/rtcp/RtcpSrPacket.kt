@@ -144,6 +144,22 @@ class RtcpSrPacket(
 
     override fun clone(): RtcpSrPacket = RtcpSrPacket(cloneBuffer(0), 0, length)
 
+    fun cloneWithoutReportBlocks(): RtcpSrPacket {
+        return RtcpSrPacketBuilder(
+            rtcpHeader = RtcpHeaderBuilder(
+                reportCount = 0,
+                senderSsrc = this.senderSsrc
+            ),
+            senderInfo = SenderInfoBuilder(
+                ntpTimestampMsw = this.senderInfo.ntpTimestampMsw,
+                ntpTimestampLsw = this.senderInfo.ntpTimestampLsw,
+                rtpTimestamp = this.senderInfo.rtpTimestamp,
+                sendersPacketCount = this.senderInfo.sendersPacketCount,
+                sendersOctetCount = this.senderInfo.sendersOctetCount
+            )
+        ).build()
+    }
+
     // SenderInfo is defined differently so that we can scope these variables under a the 'senderInfo'
     // member here.  Is there a better way?
     inner class SenderInfo {
