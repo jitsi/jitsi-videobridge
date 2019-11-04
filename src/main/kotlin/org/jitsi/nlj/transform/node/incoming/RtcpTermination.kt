@@ -19,17 +19,16 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
+import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtcp.RtcpByePacket
-import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSdesPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
-import org.jitsi.rtp.rtcp.SenderInfoParser
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacket
@@ -61,7 +60,7 @@ class RtcpTermination(
                     // we want to forward in the same compound packet.  If we can, then we may need
                     // to turn this into a MultipleOutputNode
                     forwardedRtcp?.let {
-                        logger.cinfo { "Failed to forward a packet of type ${forwardedRtcp!!::class.simpleName} " +
+                        logger.cinfo { "Failed to forward a packet of type ${it::class.simpleName} " +
                             ". Replaced by ${rtcpPacket::class.simpleName}." }
                         numFailedToForward++
                     }
@@ -79,20 +78,25 @@ class RtcpTermination(
             packetReceiveCounts.merge(rtcpPacket::class.simpleName!!, 1, Int::plus)
             rtcpEventNotifier.notifyRtcpReceived(rtcpPacket, packetInfo.receivedTime)
 
-            if (rtcpPacket is RtcpSrPacket) {
-                // NOTE(george) effectively eliminates any report blocks as we don't want to relay those
-                logger.cdebug { "saw an sr from ssrc=${rtcpPacket.senderSsrc}, timestamp=${rtcpPacket.senderInfo.rtpTimestamp}" }
-                val lengthBytes = RtcpHeader.SIZE_BYTES + SenderInfoParser.SIZE_BYTES
-                rtcpPacket.length = lengthBytes
-                // We can do this because we've already parsed the compound packet and we are discarding it anyway
-                rtcpPacket.lengthField = (lengthBytes / 4) - 1
+            (forwardedRtcp as? RtcpSrPacket)?.let {
+                logger.cdebug { "Saw an sr from ssrc=${rtcpPacket.senderSsrc}, timestamp=${it.senderInfo.rtpTimestamp}" }
+                forwardedRtcp = if (it.reportCount > 0) {
+                    // Eliminates any report blocks as we don't want to relay those
+                    it.cloneWithoutReportBlocks()
+                } else {
+                    it
+                }
             }
         }
-        return if (forwardedRtcp != null) {
-            // Manually cast to RtcpPacket as a workaround for https://youtrack.jetbrains.com/issue/KT-7186
-            packetInfo.packet = forwardedRtcp as RtcpPacket
+
+        return forwardedRtcp?.let {
+            if (it.buffer != packetInfo.packet.buffer) {
+                // We're not using the original packet's buffer, so we can return it to the pool
+                BufferPool.returnBuffer(packetInfo.packet.buffer)
+            }
+            packetInfo.packet = it
             packetInfo
-        } else {
+        } ?: run {
             packetDiscarded(packetInfo)
             null
         }
