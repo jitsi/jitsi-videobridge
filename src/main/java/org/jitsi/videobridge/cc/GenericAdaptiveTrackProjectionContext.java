@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.cc;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.impl.neomedia.portaudio.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
@@ -157,7 +158,17 @@ class GenericAdaptiveTrackProjectionContext
         boolean accept;
         if (needsKeyframe)
         {
-            if (rtpPacket.isKeyframe())
+            if (!(rtpPacket instanceof ParsedVideoPacket))
+            {
+                /* We don't know how to parse this packet's codec type, so
+                 * isKeyframe will never be true.  The best we can do is
+                 * to start forwarding it immediately.  Hopefully the receiver
+                 * will send a PLI/FIR if it needs a keyframe.
+                 */
+                needsKeyframe = false;
+                accept = true;
+            }
+            else if (((ParsedVideoPacket)rtpPacket).isKeyframe())
             {
                 needsKeyframe = false;
                 // resume after being suspended, we compute the new seqnum delta
