@@ -38,7 +38,7 @@ public class ConfigTest
             .withNewConfig(EMPTY_NEW_CONFIG)
             .finishSetup();
 
-        List<MucClientConfiguration> configs = new Config.XmppClientConfig.XmppClientConfigsProperty().get();
+        List<MucClientConfiguration> configs = new Config.XmppClientApiConfig.XmppClientConfigsProperty().get();
         assertEquals(2, configs.size());
 
         MucClientConfiguration config1 = configs.stream()
@@ -79,7 +79,7 @@ public class ConfigTest
             .withNewConfig(ConfigFactory.parseResources("xmpp_client_configs.conf").getConfig("multiple-muc-config"))
             .finishSetup();
 
-        List<MucClientConfiguration> configs = new Config.XmppClientConfig.XmppClientConfigsProperty().get();
+        List<MucClientConfiguration> configs = new Config.XmppClientApiConfig.XmppClientConfigsProperty().get();
         assertEquals(2, configs.size());
 
         MucClientConfiguration config1 = configs.stream()

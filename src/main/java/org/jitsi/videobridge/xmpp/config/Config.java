@@ -26,7 +26,7 @@ import java.util.stream.*;
 
 public class Config
 {
-    public static class XmppClientConfig
+    public static class XmppClientApiConfig
     {
         protected static class EnabledProperty extends AbstractConfigProperty<Boolean>
         {
