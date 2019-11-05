@@ -73,13 +73,14 @@ public class Config
             public XmppClientConfigsProperty()
             {
                 super(new JvbPropertyConfig<List<MucClientConfiguration>>()
-//                    .fromLegacyConfig(config -> {
-                        //TODO
-
-//                    })
+                    .fromLegacyConfig(config -> config.getObject(legacyPropName).entrySet().stream()
+                            .map(e -> fromConfig(e.getKey(), (ConfigObject)e.getValue()))
+                            .collect(Collectors.toList())
+                    )
                     .fromNewConfig(config -> config.getObject(propName).entrySet().stream()
                         .map(e -> fromConfig(e.getKey(), (ConfigObject)e.getValue()))
-                        .collect(Collectors.toList()))
+                        .collect(Collectors.toList())
+                    )
                     //TODO: these configs may be candidates to re-read each time, but we
                     // need code to detect/handle changes
                     .readOnce()
