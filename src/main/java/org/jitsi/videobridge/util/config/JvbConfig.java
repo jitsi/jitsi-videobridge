@@ -20,9 +20,9 @@ import com.typesafe.config.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 
-import java.nio.file.*;
 import java.util.*;
-import java.util.function.*;
+
+import static org.jitsi.videobridge.util.config.ConfigSupplierSettings.*;
 
 /**
  * Helper class for retrieving configuration sources.  Currently, this supports reading config from
@@ -40,37 +40,6 @@ public class JvbConfig
     protected static Config config;
     protected static Config legacyConfig;
     protected static String[] commandLineArgs;
-
-    /**
-     * The supplier to load the new config.  Overridable for testing
-     */
-    public static Supplier<Config> configSupplier = ConfigFactory::load;
-
-    /**
-     * The supplier to load the legacy config.  Overridable for testing
-     */
-    public static Supplier<Config> legacyConfigSupplier = () -> {
-        String oldConfigHomeDirLocation = System.getProperty("net.java.sip.communicator.SC_HOME_DIR_LOCATION");
-        String oldConfigHomeDirName = System.getProperty("net.java.sip.communicator.SC_HOME_DIR_NAME");
-        try
-        {
-            Config config = ConfigFactory.parseFile(
-                    Paths.get(oldConfigHomeDirLocation, oldConfigHomeDirName, "sip-communicator.properties")
-                            .toFile());
-            logger.info("Found a legacy config file: \n" + config.root().render());
-            return config;
-        }
-        catch (InvalidPathException | NullPointerException e)
-        {
-            logger.info("No legacy config file found");
-            return ConfigFactory.parseString("");
-        }
-    };
-
-    /**
-     * The supplier to load the command-line arguments.  Overridable for testing
-     */
-    public static Supplier<String[]> commandLineArgsSupplier = () -> new String[0];
 
     static {
         loadConfig();
