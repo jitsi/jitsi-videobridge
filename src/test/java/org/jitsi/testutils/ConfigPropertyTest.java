@@ -18,6 +18,7 @@ package org.jitsi.testutils;
 
 import com.typesafe.config.*;
 import org.jitsi.utils.config.*;
+import org.jitsi.videobridge.util.config.*;
 
 import java.util.function.*;
 
@@ -75,6 +76,8 @@ public class ConfigPropertyTest<T extends ConfigProperty<U>, U>
         configProperty = propInstanceSupplier.get();
         assertEquals("Old config is present and provides a value",
             legacyParamResult.parsedValue, configProperty.get());
+
+        ConfigUtils.resetConfigSuppliers();
     }
 
    public void runReadOnceTest(
@@ -82,42 +85,44 @@ public class ConfigPropertyTest<T extends ConfigProperty<U>, U>
         ParamResult<U> firstValue,
         ParamResult<U> secondValue,
         Supplier<T> propInstanceSupplier
-    )
-    {
-        Config newConfig = ConfigFactory.parseString(newPropName + "=" + firstValue.configFileValue);
-        new ConfigSetup()
-            .withNewConfig(newConfig)
-            .finishSetup();
+   )
+   {
+       Config newConfig = ConfigFactory.parseString(newPropName + "=" + firstValue.configFileValue);
+       new ConfigSetup()
+           .withNewConfig(newConfig)
+           .finishSetup();
 
-        T configProperty = propInstanceSupplier.get();
+       T configProperty = propInstanceSupplier.get();
 
-        Config changedConfig = ConfigFactory.parseString(newPropName + "=" + secondValue.configFileValue);
-        new ConfigSetup()
-            .withNewConfig(changedConfig)
-            .finishSetup();
+       Config changedConfig = ConfigFactory.parseString(newPropName + "=" + secondValue.configFileValue);
+       new ConfigSetup()
+           .withNewConfig(changedConfig)
+           .finishSetup();
 
-        assertEquals("Read once: Property value should still be the original value",
-            firstValue.parsedValue, configProperty.get());
-    }
+       assertEquals("Read once: Property value should still be the original value",
+           firstValue.parsedValue, configProperty.get());
 
-    /**
-     * ParamResult models the combination of a configuration's value as it is
-     * written in a config value (always a String) and the expected result of
-     * when it is parsed (the generic type T), as these often differ
-     * @param <T> the type of the parsed result.
-     */
-    public static class ParamResult<T>
-    {
-        // The value for a config parameter as it would be written in the config file
-        String configFileValue;
-        // The value as it will be parsed by the configuration property class.  This
-        // doesn't always match configParamValue above; for example a value might
-        // be written as a Duration but parsed as a Long
-        T parsedValue;
-        public ParamResult(String configFileValue, T parsedValue)
-        {
-            this.configFileValue = configFileValue;
-            this.parsedValue = parsedValue;
-        }
-    }
+       ConfigUtils.resetConfigSuppliers();
+   }
+
+   /**
+    * ParamResult models the combination of a configuration's value as it is
+    * written in a config value (always a String) and the expected result of
+    * when it is parsed (the generic type T), as these often differ
+    * @param <T> the type of the parsed result.
+    */
+   public static class ParamResult<T>
+   {
+       // The value for a config parameter as it would be written in the config file
+       String configFileValue;
+       // The value as it will be parsed by the configuration property class.  This
+       // doesn't always match configParamValue above; for example a value might
+       // be written as a Duration but parsed as a Long
+       T parsedValue;
+       public ParamResult(String configFileValue, T parsedValue)
+       {
+           this.configFileValue = configFileValue;
+           this.parsedValue = parsedValue;
+       }
+   }
 }

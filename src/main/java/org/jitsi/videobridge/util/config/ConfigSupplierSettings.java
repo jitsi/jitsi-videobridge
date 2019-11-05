@@ -25,15 +25,13 @@ import java.util.function.*;
 public class ConfigSupplierSettings
 {
     protected static Logger logger = new LoggerImpl(ConfigSupplierSettings.class.getName());
+    public static final Supplier<Config> DEFAULT_NEW_CONFIG_SUPPLIER = ConfigFactory::load;
     /**
      * The supplier to load the new config.  Overridable for testing
      */
-    public static Supplier<Config> configSupplier = ConfigFactory::load;
+    public static Supplier<Config> configSupplier = DEFAULT_NEW_CONFIG_SUPPLIER;
 
-    /**
-     * The supplier to load the legacy config.  Overridable for testing
-     */
-    public static Supplier<Config> legacyConfigSupplier = () -> {
+    public static final Supplier<Config> DEFAULT_LEGACY_CONFIG_SUPPLIER = () -> {
         String oldConfigHomeDirLocation = System.getProperty("net.java.sip.communicator.SC_HOME_DIR_LOCATION");
         String oldConfigHomeDirName = System.getProperty("net.java.sip.communicator.SC_HOME_DIR_NAME");
         try
@@ -52,7 +50,13 @@ public class ConfigSupplierSettings
     };
 
     /**
+     * The supplier to load the legacy config.  Overridable for testing
+     */
+    public static Supplier<Config> legacyConfigSupplier = DEFAULT_LEGACY_CONFIG_SUPPLIER;
+
+    public static Supplier<String[]> DEFAULT_COMMAND_LINE_ARGS_SUPPLIER = () -> new String[0];
+    /**
      * The supplier to load the command-line arguments.  Overridable for testing
      */
-    public static Supplier<String[]> commandLineArgsSupplier = () -> new String[0];
+    public static Supplier<String[]> commandLineArgsSupplier = DEFAULT_COMMAND_LINE_ARGS_SUPPLIER;
 }

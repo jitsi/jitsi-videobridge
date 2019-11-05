@@ -17,9 +17,18 @@
 package org.jitsi.testutils;
 
 import com.typesafe.config.*;
+import org.jitsi.videobridge.util.config.*;
 
 public class ConfigUtils
 {
     public static Config EMPTY_CONFIG = ConfigFactory.parseString("");
     public static Config EMPTY_NEW_CONFIG = ConfigFactory.parseString("videobridge {}");
+
+    public static void resetConfigSuppliers()
+    {
+        ConfigSupplierSettings.configSupplier = ConfigSupplierSettings.DEFAULT_NEW_CONFIG_SUPPLIER;
+        ConfigSupplierSettings.legacyConfigSupplier = ConfigSupplierSettings.DEFAULT_LEGACY_CONFIG_SUPPLIER;
+        ConfigSupplierSettings.commandLineArgsSupplier = ConfigSupplierSettings.DEFAULT_COMMAND_LINE_ARGS_SUPPLIER;
+    }
+
 }
