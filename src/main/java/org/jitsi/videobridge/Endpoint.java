@@ -1314,10 +1314,9 @@ public class Endpoint
     }
 
     /**
-     * Update accepted media types based on directions of
-     * {@link ChannelShim}s. An endpoint can accept
-     * media, if its {@link ChannelShim} has either
-     * 'sendrecv' or 'recvonly' media direction.
+     * Update accepted media types based on
+     * {@link ChannelShim} permission to receive
+     * media
      */
     public void updateAcceptedMediaTypes()
     {
