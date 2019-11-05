@@ -1327,13 +1327,14 @@ public class Endpoint
         {
             if (channelShim.allowsReceivingMedia())
             {
-                if (MediaType.AUDIO == channelShim.getMediaType())
+                switch (channelShim.getMediaType())
                 {
-                    acceptAudio = true;
-                }
-                else if (MediaType.VIDEO == channelShim.getMediaType())
-                {
-                    acceptVideo = true;
+                    case AUDIO:
+                        acceptAudio = true;
+                        break;
+                    case VIDEO:
+                        acceptVideo = true;
+                        break;
                 }
             }
         }
