@@ -22,8 +22,6 @@ import org.jitsi.utils.logging2.*;
 
 import java.util.*;
 
-import static org.jitsi.videobridge.util.config.ConfigSupplierSettings.*;
-
 /**
  * Helper class for retrieving configuration sources.  Currently, this supports reading config from
  * 1) Command line arguments
@@ -47,10 +45,10 @@ public class JvbConfig
 
     public static void loadConfig()
     {
-        legacyConfig = legacyConfigSupplier.get();
-        commandLineArgs = commandLineArgsSupplier.get();
+        legacyConfig = ConfigSupplierSettings.legacyConfigSupplier.get();
+        commandLineArgs = ConfigSupplierSettings.commandLineArgsSupplier.get();
 
-        config = configSupplier.get();
+        config = ConfigSupplierSettings.configSupplier.get();
         if (config.hasPath("videobridge"))
         {
             logger.info("Loaded JVB config: " + config.getConfig("videobridge").root().render());

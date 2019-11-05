@@ -69,7 +69,7 @@ public class ConfigSetup
         // Make sure config doesn't see any command line args from a previous setup
         if (commandLineArgs.isEmpty())
         {
-            ConfigSupplierSettings.commandLineArgsSupplier =() -> new String[0];
+            ConfigSupplierSettings.commandLineArgsSupplier = () -> new String[0];
         }
         else
         {
