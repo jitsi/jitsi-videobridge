@@ -1290,7 +1290,7 @@ public class Endpoint
     {
         if (channelShims.add(channelShim))
         {
-            refreshMediaDirection();
+            updateAcceptedMediaTypes();
         }
     }
 
@@ -1308,18 +1308,18 @@ public class Endpoint
             }
             else
             {
-                refreshMediaDirection();
+                updateAcceptedMediaTypes();
             }
         }
     }
 
     /**
-     * Refresh media direction based on direction of
-     * {@link ChannelShim}. An endpoint can accept
+     * Update accepted media types based on directions of
+     * {@link ChannelShim}s. An endpoint can accept
      * media, if its {@link ChannelShim} has either
      * 'sendrecv' or 'recvonly' media direction.
      */
-    public void refreshMediaDirection()
+    public void updateAcceptedMediaTypes()
     {
         boolean acceptAudio = false;
         boolean acceptVideo = false;

@@ -382,7 +382,7 @@ public class ChannelShim
         if (!Objects.equals(this.direction, direction))
         {
             this.direction = direction;
-            this.endpoint.refreshMediaDirection();
+            this.endpoint.updateAcceptedMediaTypes();
         }
     }
 
