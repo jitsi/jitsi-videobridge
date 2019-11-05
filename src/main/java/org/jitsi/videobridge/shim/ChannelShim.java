@@ -251,6 +251,10 @@ public class ChannelShim
 
                 iq.setSSRCs(ssrcs);
             }
+
+            if (sourceGroups != null) {
+                sourceGroups.forEach(iq::addSourceGroup);
+            }
         }
     }
 
