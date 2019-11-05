@@ -366,11 +366,12 @@ public class ChannelShim
     }
 
     /**
-     * Get the media direction of this channel.
+     * Checks if this media channel allows receiving media
      */
-    public String getDirection()
+    public boolean allowsReceivingMedia()
     {
-        return this.direction;
+        return "sendrecv".equalsIgnoreCase(direction) ||
+            "recvonly".equalsIgnoreCase(direction);
     }
 
     /**

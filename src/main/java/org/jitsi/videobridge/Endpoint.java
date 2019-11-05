@@ -1325,20 +1325,15 @@ public class Endpoint
         boolean acceptVideo = false;
         for (ChannelShim channelShim : channelShims)
         {
-            String direction = channelShim.getDirection();
-            if (direction != null)
+            if (channelShim.allowsReceivingMedia())
             {
-                if ("sendrecv".equalsIgnoreCase(direction) ||
-                    "recvonly".equalsIgnoreCase(direction))
+                if (MediaType.AUDIO == channelShim.getMediaType())
                 {
-                    if (MediaType.AUDIO == channelShim.getMediaType())
-                    {
-                        acceptAudio = true;
-                    }
-                    else if (MediaType.VIDEO == channelShim.getMediaType())
-                    {
-                        acceptVideo = true;
-                    }
+                    acceptAudio = true;
+                }
+                else if (MediaType.VIDEO == channelShim.getMediaType())
+                {
+                    acceptVideo = true;
                 }
             }
         }
