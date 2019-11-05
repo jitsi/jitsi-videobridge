@@ -126,7 +126,7 @@ public class Endpoint
     /**
      * A count of how many endpoints have 'selected' this endpoint
      */
-    private AtomicInteger selectedCount = new AtomicInteger(0);
+    private final AtomicInteger selectedCount = new AtomicInteger(0);
 
     /**
      * The diagnostic context of this instance.
@@ -155,23 +155,24 @@ public class Endpoint
     private final Transceiver transceiver;
 
     /**
-     * The list of {@link ChannelShim}s associated with this endpoint. This
+     * The set of {@link ChannelShim}s associated with this endpoint. This
      * allows us to expire the endpoint once all of its 'channels' have been
-     * removed.
+     * removed. The set of channels shims allows to determine if endpoint
+     * can accept audio or video.
      */
-    final List<ChannelShim> channelShims = new LinkedList<>();
+    private final Set<ChannelShim> channelShims = ConcurrentHashMap.newKeySet();
 
     /**
      * Whether this endpoint should accept audio packets. We set this according
      * to whether the endpoint has an audio Colibri channel.
      */
-    private boolean acceptAudio = false;
+    private volatile boolean acceptAudio = false;
 
     /**
      * Whether this endpoint should accept video packets. We set this according
      * to whether the endpoint has a video Colibri channel.
      */
-    private boolean acceptVideo = false;
+    private volatile boolean acceptVideo = false;
 
     /**
      * Whether or not the bridge should be the peer which opens the data channel
@@ -1274,23 +1275,22 @@ public class Endpoint
     }
 
     /**
-     * Adds a channel to this enpoint.
+     * Get ChannelShims associated with current {@link Endpoint}.
+     */
+    public Set<ChannelShim> getChannelShims()
+    {
+        return Collections.unmodifiableSet(this.channelShims);
+    }
+
+    /**
+     * Adds a channel to this endpoint.
      * @param channelShim
      */
     public void addChannel(ChannelShim channelShim)
     {
-        synchronized (channelShims)
+        if (channelShims.add(channelShim))
         {
-            switch (channelShim.getMediaType())
-            {
-                case AUDIO:
-                    acceptAudio = true;
-                    break;
-                case VIDEO:
-                    acceptVideo = true;
-                    break;
-            }
-            channelShims.add(channelShim);
+            updateAcceptedMediaTypes();
         }
     }
 
@@ -1300,24 +1300,45 @@ public class Endpoint
      */
     public void removeChannel(ChannelShim channelShim)
     {
-        synchronized (channelShims)
+        if (channelShims.remove(channelShim))
         {
-            switch (channelShim.getMediaType())
-            {
-                case AUDIO:
-                    acceptAudio = false;
-                    break;
-                case VIDEO:
-                    acceptVideo = false;
-                    break;
-            }
-
-            channelShims.remove(channelShim);
             if (channelShims.isEmpty())
             {
                 expire();
             }
+            else
+            {
+                updateAcceptedMediaTypes();
+            }
         }
+    }
+
+    /**
+     * Update accepted media types based on
+     * {@link ChannelShim} permission to receive
+     * media
+     */
+    public void updateAcceptedMediaTypes()
+    {
+        boolean acceptAudio = false;
+        boolean acceptVideo = false;
+        for (ChannelShim channelShim : channelShims)
+        {
+            if (channelShim.allowsReceivingMedia())
+            {
+                switch (channelShim.getMediaType())
+                {
+                    case AUDIO:
+                        acceptAudio = true;
+                        break;
+                    case VIDEO:
+                        acceptVideo = true;
+                        break;
+                }
+            }
+        }
+        this.acceptAudio = acceptAudio;
+        this.acceptVideo = acceptVideo;
     }
 
     /**

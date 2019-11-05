@@ -181,7 +181,7 @@ public class EndpointConnectionStatus
         Endpoint endpoint = (Endpoint) abstractEndpoint;
         String endpointId = endpoint.getID();
 
-        long mostRecentChannelCreated = endpoint.channelShims.stream()
+        long mostRecentChannelCreated = endpoint.getChannelShims().stream()
                 .mapToLong(ChannelShim::getCreationTimestampMs)
                 .max()
                 .orElse(0);
