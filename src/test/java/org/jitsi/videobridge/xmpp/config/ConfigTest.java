@@ -30,6 +30,12 @@ import static org.jitsi.testutils.ConfigUtils.EMPTY_NEW_CONFIG;
 
 public class ConfigTest
 {
+    @After
+    public void teardown()
+    {
+        ConfigUtils.resetConfigSuppliers();
+    }
+
     @Test
     public void testLoadFromOldConfig() throws Exception
     {
@@ -68,7 +74,6 @@ public class ConfigTest
         assertEquals(1, config2.getMucJids().size());
         mucJid = config2.getMucJids().get(0);
         assertEquals("JvbBrewery@internal.auth.brian2.jitsi.net", mucJid);
-
     }
 
     @Test
