@@ -85,10 +85,7 @@ public class ClientConnectionImpl
                 ShutdownIQ.createGracefulShutdownIQ());
             mucClientManager.setIQListener(this);
 
-            if (Config.XmppClientApiConfig.isEnabled())
-            {
-                Config.XmppClientApiConfig.getClientConfigs().forEach(c -> mucClientManager.addMucClient(c));
-            }
+            Config.XmppClientApiConfig.getClientConfigs().forEach(c -> mucClientManager.addMucClient(c));
 
             bundleContext.registerService(
                 ClientConnectionImpl.class, this, null);

@@ -28,34 +28,6 @@ public class Config
 {
     public static class XmppClientApiConfig
     {
-        protected static class EnabledProperty extends AbstractConfigProperty<Boolean>
-        {
-            protected static final String propName = "videobridge.apis.xmpp-client.enabled";
-
-            private static EnabledProperty singleton = new EnabledProperty();
-
-            public EnabledProperty()
-            {
-                super(new JvbPropertyConfig<Boolean>()
-                    .fromNewConfig(config -> config.getBoolean(propName))
-                    //TODO: these configs may be candidates to re-read each time, but we
-                    // need code to detect/handle changes
-                    .readOnce()
-                    .throwIfNotFound()
-                );
-            }
-
-            public static Boolean getValue()
-            {
-                return singleton.get();
-            }
-        }
-
-        public static boolean isEnabled()
-        {
-            return EnabledProperty.getValue();
-        }
-
         /**
          * A list of XMPP client connection configurations which describe which XMPP
          * servers and MUCs the bridge should join.  These connections serve as an API
