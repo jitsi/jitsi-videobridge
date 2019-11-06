@@ -1275,11 +1275,14 @@ public class Endpoint
     }
 
     /**
-     * Get ChannelShims associated with current {@link Endpoint}.
+     * @return  the timestamp of the most recently created channel shim.
      */
-    public Set<ChannelShim> getChannelShims()
+    long getMostRecentChannelCreatedTime()
     {
-        return Collections.unmodifiableSet(this.channelShims);
+        return channelShims.stream()
+                .mapToLong(ChannelShim::getCreationTimestampMs)
+                .max()
+                .orElse(0);
     }
 
     /**
