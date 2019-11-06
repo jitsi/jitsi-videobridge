@@ -375,14 +375,21 @@ public class IceTransport
         if (IceMediaStream.PROPERTY_PAIR_CONSENT_FRESHNESS_CHANGED.equals(
                 ev.getPropertyName()))
         {
-            //TODO(brian): touch activity in new scheme here
-            // TODO we might not necessarily want to keep all channels alive by
-            // the ICE connection.
-            // Boris: I think we should do it for all channels, because it's
-            // limited to ActivityType.TRANSPORT
-//            getChannels().forEach(
-//                channel -> channel.touch(Channel.ActivityType.TRANSPORT));
+            /* TODO: Currently ice4j only triggers this event for the selected
+             * pair, but should we double-check the pair anyway?
+             */
+            long time = (Long)ev.getNewValue();
+            onIceConsentUpdated(time);
         }
+    }
+
+    /**
+     * Called whenever ICE consent checks have been updated.
+     *
+     * @param time the system time when consent was last confirmed.
+     */
+    protected void onIceConsentUpdated(long time)
+    {
     }
 
     /**
