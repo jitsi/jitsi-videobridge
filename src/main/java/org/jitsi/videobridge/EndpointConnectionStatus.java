@@ -181,11 +181,8 @@ public class EndpointConnectionStatus
         Endpoint endpoint = (Endpoint) abstractEndpoint;
         String endpointId = endpoint.getID();
 
-        long mostRecentChannelCreated = endpoint.getChannelShims().stream()
-                .mapToLong(ChannelShim::getCreationTimestampMs)
-                .max()
-                .orElse(0);
-
+        long mostRecentChannelCreated
+                = endpoint.getMostRecentChannelCreatedTime();
         long lastActivity = endpoint.getLastActivity();
 
         // Transport not initialized yet
