@@ -102,6 +102,19 @@ public class Endpoint
     private SctpManager sctpManager;
 
     /**
+     * The time at which this endpoint was created (in millis since epoch)
+     */
+    //TODO: use clock/instant in this file
+    private final Long creationTimeMillis;
+
+    /**
+     * How long we'll give an endpoint to either successfully establish
+     * an ICE connection or fail before we expire it.
+     */
+    //TODO: make this configurable
+    private static final Duration EP_TIMEOUT = Duration.ofMinutes(2);
+
+    /**
      * TODO Brian
      */
     private final SctpHandler sctpHandler = new SctpHandler();
@@ -209,6 +222,7 @@ public class Endpoint
     {
         super(conference, id, parentLogger);
 
+        creationTimeMillis = System.currentTimeMillis();
         diagnosticContext = conference.newDiagnosticContext();
         transceiver
                 = new Transceiver(
@@ -600,14 +614,20 @@ public class Endpoint
 
         long lastActivity
                 = packetIOActivity.getLastOverallActivityTimestampMs();
+        long now = System.currentTimeMillis();
         if (lastActivity <= 0)
         {
+            Duration timeSinceCreation = Duration.ofMillis(now - creationTimeMillis);
+            if (timeSinceCreation.compareTo(EP_TIMEOUT) > 0) {
+                logger.info("Endpoint's ICE connection has neither failed nor connected " +
+                    "after " + timeSinceCreation + ", expiring");
+                return true;
+            }
             // We haven't seen any activity yet. If this continues ICE will
             // eventually fail (which is handled above).
             return false;
         }
 
-        long now = System.currentTimeMillis();
         if (Duration.ofMillis(now - lastActivity).getSeconds()
                 > maxExpireTimeSecsFromChannelShims)
         {
