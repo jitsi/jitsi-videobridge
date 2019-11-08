@@ -90,6 +90,12 @@ public class DtlsTransport extends IceTransport
     private final Node outgoingDtlsPipelineRoot;
     private final Node outgoingSrtpPipelineRoot;
     private boolean dtlsHandshakeComplete = false;
+
+    /**
+     * Packet IO activity of this transport.
+     */
+    private final PacketIOActivity packetIOActivity = new PacketIOActivity();
+
     /**
      * Measures the jitter introduced by the bridge itself (i.e. jitter calculated between
      * packets based on the time they were received by the bridge and the time they
@@ -137,6 +143,15 @@ public class DtlsTransport extends IceTransport
         incomingPipelineRoot = createIncomingPipeline();
         outgoingDtlsPipelineRoot = createOutgoingDtlsPipeline();
         outgoingSrtpPipelineRoot = createOutgoingSrtpPipeline();
+    }
+
+    /**
+     * Get packet IO activity of this transport.
+     * @return {@link PacketIOActivity} of this transport
+     */
+    public PacketIOActivity getPacketIOActivity()
+    {
+        return packetIOActivity;
     }
 
     /**
@@ -416,6 +431,7 @@ public class DtlsTransport extends IceTransport
                                 len);
                     PacketInfo pktInfo = new PacketInfo(pkt);
                     pktInfo.setReceivedTime(System.currentTimeMillis());
+                    packetIOActivity.setLastPacketReceivedTimestampMs(System.currentTimeMillis());
                     incomingPipelineRoot.processPacket(pktInfo);
 
                     p.setData(receiveBuf, 0, receiveBuf.length);
@@ -477,6 +493,17 @@ public class DtlsTransport extends IceTransport
         endpoint.getConference().getVideobridge().getStatistics()
                 .totalIceFailed.incrementAndGet();
         endpoint.getConference().getStatistics().hasIceFailedEndpoint = true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void onIceConsentUpdated(long time)
+    {
+       super.onIceConsentUpdated(time);
+       packetIOActivity.setLastPacketReceivedTimestampMs(
+           System.currentTimeMillis());
     }
 
     /**
@@ -573,6 +600,7 @@ public class DtlsTransport extends IceTransport
         @Override
         protected void consume(@NotNull PacketInfo packetInfo)
         {
+            packetIOActivity.setLastPacketSentTimestampMs(System.currentTimeMillis());
             packetDelayStats.addPacket(packetInfo);
             bridgeJitterStats.packetSent(packetInfo);
             overallAverageBridgeJitter.addValue(bridgeJitterStats.getJitter());
