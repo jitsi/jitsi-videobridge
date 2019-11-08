@@ -502,8 +502,7 @@ public class DtlsTransport extends IceTransport
     protected void onIceConsentUpdated(long time)
     {
        super.onIceConsentUpdated(time);
-       packetIOActivity.setLastPacketReceivedTimestampMs(
-           System.currentTimeMillis());
+       packetIOActivity.setLastPacketReceivedTimestampMs(time);
     }
 
     /**
