@@ -20,7 +20,7 @@ import java.util.concurrent.*;
 
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.packet.id.*;
 import org.jivesoftware.smackx.pubsub.*;
@@ -50,7 +50,7 @@ public class PubSubPublisher
      * instances to print debug information.
      */
     private static final Logger logger
-        = Logger.getLogger(PubSubPublisher.class);
+        = new LoggerImpl(PubSubPublisher.class.getName());
 
     /**
      * The default timeout of the packets in milliseconds.

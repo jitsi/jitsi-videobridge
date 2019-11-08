@@ -21,7 +21,7 @@ import java.util.concurrent.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.stats.media.*;
 import org.jitsi.utils.concurrent.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 
 /**
@@ -38,7 +38,7 @@ class CallStatsConferenceStatsHandler
      * class and its instances to print debug information.
      */
     private static final Logger logger
-        = Logger.getLogger(CallStatsConferenceStatsHandler.class);
+        = new LoggerImpl(CallStatsConferenceStatsHandler.class.getName());
 
     /**
      * The {@link RecurringRunnableExecutor} which periodically invokes
@@ -117,7 +117,7 @@ class CallStatsConferenceStatsHandler
     {
         if (event == null)
         {
-            logger.debug("Could not handle an event because it was null.");
+            logger.debug(() -> "Could not handle an event because it was null.");
             return;
         }
 
@@ -143,9 +143,8 @@ class CallStatsConferenceStatsHandler
     {
         if (conference == null)
         {
-            logger.debug(
-                    "Could not log conference created event because the"
-                        + " conference is null.");
+            logger.debug(() -> "Could not log conference created event because " +
+                "the conference is null.");
             return;
         }
 
@@ -172,9 +171,8 @@ class CallStatsConferenceStatsHandler
     {
         if (conference == null)
         {
-            logger.debug(
-                    "Could not log conference expired event because the"
-                        + " conference is null.");
+            logger.debug(() -> "Could not log conference expired event " +
+                "because the conference is null.");
             return;
         }
 

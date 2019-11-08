@@ -19,7 +19,7 @@ import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.concurrent.locks.*;
 
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 
 /**
@@ -34,7 +34,7 @@ public abstract class Statistics
      * The {@link Logger} used by the {@link Endpoint} class to print debug
      * information.
      */
-    private static final Logger logger = Logger.getLogger(Statistics.class);
+    private static final Logger logger = new LoggerImpl(Statistics.class.getName());
 
     /**
      * Formats statistics in <tt>ColibriStatsExtension</tt> object

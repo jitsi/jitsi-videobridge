@@ -18,7 +18,7 @@ package org.jitsi.videobridge.transport;
 
 import org.ice4j.ice.harvest.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 
 import java.io.*;
 import java.util.*;
@@ -70,7 +70,7 @@ public class Harvesters
      * print debug information.
      */
     private static final Logger classLogger
-            = Logger.getLogger(Harvesters.class);
+            = new LoggerImpl(Harvesters.class.getName());
 
     /**
      * The default port that the <tt>TcpHarvester</tt> will

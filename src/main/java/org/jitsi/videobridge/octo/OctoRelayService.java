@@ -17,7 +17,7 @@ package org.jitsi.videobridge.octo;
 
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.osgi.framework.*;
 
 import java.net.*;
@@ -35,7 +35,7 @@ public class OctoRelayService
      * instances to print debug information.
      */
     private static final Logger logger
-        = Logger.getLogger(OctoRelayService.class);
+        = new LoggerImpl(OctoRelayService.class.getName());
 
     /**
      * The name of the configuration property which controls the address on

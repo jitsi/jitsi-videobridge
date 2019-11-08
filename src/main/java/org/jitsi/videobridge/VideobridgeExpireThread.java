@@ -21,7 +21,7 @@ import java.util.concurrent.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.utils.concurrent.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.osgi.framework.*;
 
 /**
@@ -36,8 +36,8 @@ public class VideobridgeExpireThread
      * The <tt>Logger</tt> used by the <tt>VideobridgeExpireThread</tt> class
      * and its instances to print debug information.
      */
-    private static final Logger logger
-        = Logger.getLogger(VideobridgeExpireThread.class);
+    private static final Logger logger =
+        new LoggerImpl(VideobridgeExpireThread.class.getName());
 
     /**
      * The executor which periodically calls {@link #expire(Videobridge)} (if

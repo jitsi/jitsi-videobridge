@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.xmpp;
 
 import org.jitsi.osgi.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -39,8 +40,8 @@ class XmppCommon
      * The {@link Logger} used by the {@link XmppCommon} class and its
      * instances for logging output.
      */
-    private static final org.jitsi.utils.logging.Logger logger
-        =  org.jitsi.utils.logging.Logger.getLogger(XmppCommon.class);
+    private static final Logger logger
+        =  new LoggerImpl(XmppCommon.class.getName());
 
     static final String[] FEATURES
         = new String[]
@@ -120,16 +121,16 @@ class XmppCommon
      */
     IQ handleIQ(IQ requestIQ)
     {
-        if (logger.isDebugEnabled() && requestIQ != null)
+        if (requestIQ != null)
         {
-            logger.debug("RECV: " + requestIQ.toXML());
+            logger.debug(() -> "RECV: " + requestIQ.toXML());
         }
 
         IQ replyIQ = handleIQInternal(requestIQ);
 
-        if (logger.isDebugEnabled() && replyIQ != null)
+        if (replyIQ != null)
         {
-            logger.debug("SENT: " + replyIQ.toXML());
+            logger.debug(() -> "SENT: " + replyIQ.toXML());
         }
 
         return replyIQ;
