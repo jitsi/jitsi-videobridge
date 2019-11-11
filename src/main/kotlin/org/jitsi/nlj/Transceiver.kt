@@ -66,7 +66,8 @@ class Transceiver(
      */
     backgroundExecutor: ScheduledExecutorService,
     diagnosticContext: DiagnosticContext,
-    parentLogger: Logger
+    parentLogger: Logger,
+    private val clock: Clock = Clock.systemUTC()
 ) : Stoppable, NodeStatsProducer {
     private val logger = parentLogger.createChildLogger(Transceiver::class)
     val packetIOActivity = PacketIOActivity()
@@ -127,7 +128,7 @@ class Transceiver(
      * this transceiver is associated with) to be processed by the receiver pipeline.
      */
     fun handleIncomingPacket(p: PacketInfo) {
-        packetIOActivity.lastPacketReceivedTimestampMs = System.currentTimeMillis()
+        packetIOActivity.lastRtpPacketReceivedTimestamp = clock.instant()
         rtpReceiver.enqueuePacket(p)
     }
 
@@ -136,7 +137,7 @@ class Transceiver(
      * passing them out the sender's outgoing pipeline
      */
     fun sendPacket(packetInfo: PacketInfo) {
-        packetIOActivity.lastPacketSentTimestampMs = System.currentTimeMillis()
+        packetIOActivity.lastRtpPacketSentTimestamp = clock.instant()
         rtpSender.processPacket(packetInfo)
     }
 
@@ -257,7 +258,7 @@ class Transceiver(
             addBlock(streamInformationStore.getNodeStats())
             addBlock(mediaStreamTracks.getNodeStats())
             addString("endpointConnectionStats", endpointConnectionStats.getSnapshot().toString())
-            addJson("Bandwidth Estimation", bandwidthEstimator.getStats(Clock.systemUTC().instant()).toJson())
+            addJson("Bandwidth Estimation", bandwidthEstimator.getStats(clock.instant()).toJson())
             addBlock(rtpReceiver.getNodeStats())
             addBlock(rtpSender.getNodeStats())
         }
@@ -273,7 +274,7 @@ class Transceiver(
             rtpReceiver.getPacketStreamStats(),
             rtpSender.getStreamStats(),
             rtpSender.getPacketStreamStats(),
-            bandwidthEstimator.getStats(Clock.systemUTC().instant()))
+            bandwidthEstimator.getStats(clock.instant()))
     }
 
     override fun stop() {
