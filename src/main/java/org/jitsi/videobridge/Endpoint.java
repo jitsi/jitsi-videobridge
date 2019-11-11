@@ -231,7 +231,8 @@ public class Endpoint
                 TaskPools.CPU_POOL,
                 TaskPools.SCHEDULED_POOL,
                 diagnosticContext,
-                logger);
+                logger,
+                Clock.systemUTC());
         transceiver.setIncomingPacketHandler(
                 new ConsumerNode("receiver chain handler")
                 {
