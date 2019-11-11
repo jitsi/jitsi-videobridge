@@ -18,7 +18,7 @@ package org.jitsi.videobridge.stats;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
 import org.jxmpp.stringprep.*;
@@ -67,7 +67,7 @@ public class StatsManagerBundleActivator
      * class and its instances to print debug information.
      */
     private static final Logger logger
-        = Logger.getLogger(StatsManagerBundleActivator.class);
+        = new LoggerImpl(StatsManagerBundleActivator.class.getName());
 
     /**
      * The name of the property which specifies the name of the PubSub node that

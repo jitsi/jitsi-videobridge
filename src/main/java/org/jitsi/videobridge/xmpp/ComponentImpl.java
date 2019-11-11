@@ -20,6 +20,7 @@ import java.util.*;
 import org.jitsi.meet.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.Videobridge;
 import org.jitsi.xmpp.component.*;
 import org.jitsi.xmpp.util.*;
@@ -47,8 +48,8 @@ public class ComponentImpl
      * The {@link Logger} used by the {@link ComponentImpl} class and its
      * instances for logging output.
      */
-    private static final org.jitsi.utils.logging.Logger logger
-            =  org.jitsi.utils.logging.Logger.getLogger(ComponentImpl.class);
+    private static final Logger logger
+            =  new LoggerImpl(ComponentImpl.class.getName());
 
     /**
      * The (default) description of <tt>ComponentImpl</tt> instances.
@@ -382,10 +383,7 @@ public class ComponentImpl
 
             send(packet);
 
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("SENT: " + packet.toXML());
-            }
+            logger.debug(() -> "SENT: " + packet.toXML());
         }
         catch (Exception e)
         {

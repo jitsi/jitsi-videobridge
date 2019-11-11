@@ -17,7 +17,7 @@ package org.jitsi.videobridge.osgi;
 
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
-import org.jitsi.utils.logging.*;
+import org.jitsi.utils.logging2.*;
 import org.osgi.framework.*;
 
 /**
@@ -32,7 +32,7 @@ public class ConfigurationActivator
      * The logger instance used by this class.
      */
     private final static Logger logger
-            = Logger.getLogger(ConfigurationActivator.class);
+            = new LoggerImpl(ConfigurationActivator.class.getName());
 
     @Override
     public void start(BundleContext bundleContext)

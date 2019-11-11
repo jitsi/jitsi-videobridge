@@ -17,6 +17,7 @@ package org.jitsi.videobridge.xmpp;
 
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.health.*;
 import org.jitsi.xmpp.mucclient.*;
@@ -38,8 +39,8 @@ public class ClientConnectionImpl
      * The {@link Logger} used by the {@link ClientConnectionImpl}
      * class and its instances for logging output.
      */
-    private static final org.jitsi.utils.logging.Logger logger
-        =  org.jitsi.utils.logging.Logger.getLogger(ClientConnectionImpl.class);
+    private static final Logger logger
+        =  new LoggerImpl(ClientConnectionImpl.class.getName());
 
     /**
      * The prefix of the property names used to configure this bundle.
