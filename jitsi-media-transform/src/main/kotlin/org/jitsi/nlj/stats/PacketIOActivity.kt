@@ -16,14 +16,46 @@
 
 package org.jitsi.nlj.stats
 
-import kotlin.math.max
+import org.jitsi.nlj.util.NEVER
+import org.jitsi.nlj.util.latest
+import org.jitsi.nlj.util.threadSafeVetoable
+import java.time.Instant
 
+@Suppress("unused")
 class PacketIOActivity {
-    var lastPacketReceivedTimestampMs: Long = 0
-    var lastPacketSentTimestampMs: Long = 0
+    var lastRtpPacketReceivedTimestamp: Instant by threadSafeVetoable(NEVER) { _, oldValue, newValue ->
+        newValue.isAfter(oldValue)
+    }
+    var lastRtpPacketSentTimestamp: Instant by threadSafeVetoable(NEVER) { _, oldValue, newValue ->
+        newValue.isAfter(oldValue)
+    }
+    var lastIceActivityTimestamp: Instant by threadSafeVetoable(NEVER) { _, oldValue, newValue ->
+        newValue.isAfter(oldValue)
+    }
 
-    val lastOverallActivityTimestampMs: Long
-        get() {
-            return max(lastPacketReceivedTimestampMs, lastPacketSentTimestampMs)
+    val lastOverallRtpActivity: Instant
+        get() = latest(lastRtpPacketReceivedTimestamp, lastRtpPacketSentTimestamp)
+
+    val latestOverallActivity: Instant
+        get() = latest(lastRtpPacketReceivedTimestamp, lastRtpPacketSentTimestamp, lastIceActivityTimestamp)
+
+    // Deprecated
+
+    @Deprecated(replaceWith = ReplaceWith("lastRtpPacketReceivedTimestamp"), message = "Deprecated")
+    var lastPacketReceivedTimestampMs: Long
+        set(value) {
+            lastRtpPacketReceivedTimestamp = Instant.ofEpochMilli(value)
         }
+        get() = lastRtpPacketSentTimestamp.toEpochMilli()
+
+    @Deprecated(replaceWith = ReplaceWith("lastRtpPacketSentTimestamp"), message = "Deprecated")
+    var lastPacketSentTimestampMs: Long
+        set(value) {
+            lastRtpPacketSentTimestamp = Instant.ofEpochMilli(value)
+        }
+        get() = lastRtpPacketSentTimestamp.toEpochMilli()
+
+    @Deprecated(replaceWith = ReplaceWith("lastOverallRtpPactivity"), message = "Deprecated")
+    val lastOverallActivityTimestampMs: Long
+        get() = lastOverallRtpActivity.toEpochMilli()
 }
