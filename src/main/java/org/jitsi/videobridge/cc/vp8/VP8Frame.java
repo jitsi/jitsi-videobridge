@@ -253,7 +253,7 @@ class VP8Frame
 
     public VP8FrameProjection getProjection()
     {
-        if (projection == null || !(projection instanceof VP8FrameProjection))
+        if (!(projection instanceof VP8FrameProjection))
         {
             return null;
         }
