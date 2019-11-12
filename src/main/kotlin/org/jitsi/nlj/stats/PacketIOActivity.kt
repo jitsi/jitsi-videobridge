@@ -38,24 +38,4 @@ class PacketIOActivity {
 
     val latestOverallActivity: Instant
         get() = latest(lastRtpPacketReceivedTimestamp, lastRtpPacketSentTimestamp, lastIceActivityTimestamp)
-
-    // Deprecated
-
-    @Deprecated(replaceWith = ReplaceWith("lastRtpPacketReceivedTimestamp"), message = "Deprecated")
-    var lastPacketReceivedTimestampMs: Long
-        set(value) {
-            lastRtpPacketReceivedTimestamp = Instant.ofEpochMilli(value)
-        }
-        get() = lastRtpPacketSentTimestamp.toEpochMilli()
-
-    @Deprecated(replaceWith = ReplaceWith("lastRtpPacketSentTimestamp"), message = "Deprecated")
-    var lastPacketSentTimestampMs: Long
-        set(value) {
-            lastRtpPacketSentTimestamp = Instant.ofEpochMilli(value)
-        }
-        get() = lastRtpPacketSentTimestamp.toEpochMilli()
-
-    @Deprecated(replaceWith = ReplaceWith("lastOverallRtpPactivity"), message = "Deprecated")
-    val lastOverallActivityTimestampMs: Long
-        get() = lastOverallRtpActivity.toEpochMilli()
 }
