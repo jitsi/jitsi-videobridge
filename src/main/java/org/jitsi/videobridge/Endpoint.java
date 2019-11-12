@@ -580,11 +580,11 @@ public class Endpoint
      * {@inheritDoc}
      */
     @Override
-    public long getLastActivity()
+    public Instant getLastActivity()
     {
         PacketIOActivity packetIOActivity
                 = this.transceiver.getPacketIOActivity();
-        return packetIOActivity.getLatestOverallActivity().toEpochMilli();
+        return packetIOActivity.getLatestOverallActivity();
     }
 
     /**
@@ -1298,13 +1298,12 @@ public class Endpoint
     /**
      * @return  the timestamp of the most recently created channel shim.
      */
-    long getMostRecentChannelCreatedTime()
+    Instant getMostRecentChannelCreatedTime()
     {
         return channelShims.stream()
             .map(ChannelShim::getCreationTimestamp)
             .max(Comparator.comparing(Function.identity()))
-            .orElse(ClockUtils.NEVER)
-            .toEpochMilli();
+            .orElse(ClockUtils.NEVER);
     }
 
     /**

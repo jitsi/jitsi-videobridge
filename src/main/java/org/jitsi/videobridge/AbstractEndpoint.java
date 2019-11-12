@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.jitsi.nlj.util.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
@@ -23,6 +24,7 @@ import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
 import java.io.*;
+import java.time.*;
 import java.util.*;
 
 /**
@@ -244,9 +246,9 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * Get the last 'activity' (packets received or packets sent) this endpoint has seen
      * @return the timestamp, in milliseconds, of the last activity of this endpoint
      */
-    public long getLastActivity()
+    public Instant getLastActivity()
     {
-        return 0;
+        return ClockUtils.NEVER;
     }
 
     /**
