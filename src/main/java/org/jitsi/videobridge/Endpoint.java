@@ -104,8 +104,7 @@ public class Endpoint
     /**
      * The time at which this endpoint was created (in millis since epoch)
      */
-    //TODO: use clock/instant in this file
-    private final Long creationTimeMillis;
+    private final Instant creationTimeMillis;
 
     /**
      * How long we'll give an endpoint to either successfully establish
@@ -230,7 +229,7 @@ public class Endpoint
 
         this.clock = clock;
 
-        creationTimeMillis = System.currentTimeMillis();
+        creationTimeMillis = clock.instant();
         diagnosticContext = conference.newDiagnosticContext();
         transceiver = new Transceiver(
             id,
@@ -622,21 +621,17 @@ public class Endpoint
             return true;
         }
 
-        PacketIOActivity packetIOActivity
-                = this.transceiver.getPacketIOActivity();
-
-        int maxExpireTimeSecsFromChannelShims = channelShims.stream()
+        Duration maxExpireTimeFromChannelShims = channelShims.stream()
                 .map(ChannelShim::getExpire)
-                .mapToInt(exp -> exp)
-                .max()
-                .orElse(0);
+                .map(Duration::ofSeconds)
+                .max(Comparator.comparing(Function.identity()))
+                .orElse(Duration.ofSeconds(0));
 
-        long lastActivity
-                = packetIOActivity.getLastOverallActivityTimestampMs();
-        long now = System.currentTimeMillis();
-        if (lastActivity <= 0)
+        Instant lastActivity = getLastActivity();
+        Instant now = clock.instant();
+        if (lastActivity == ClockUtils.NEVER)
         {
-            Duration timeSinceCreation = Duration.ofMillis(now - creationTimeMillis);
+            Duration timeSinceCreation = Duration.between(creationTimeMillis, now);
             if (timeSinceCreation.compareTo(EP_TIMEOUT) > 0) {
                 logger.info("Endpoint's ICE connection has neither failed nor connected " +
                     "after " + timeSinceCreation + ", expiring");
@@ -647,11 +642,10 @@ public class Endpoint
             return false;
         }
 
-        if (Duration.ofMillis(now - lastActivity).getSeconds()
-                > maxExpireTimeSecsFromChannelShims)
+        if (Duration.between(lastActivity, now).compareTo(maxExpireTimeFromChannelShims) > 0)
         {
             logger.info("Allowing to expire because of no activity in over " +
-                    maxExpireTimeSecsFromChannelShims + " seconds.");
+                    maxExpireTimeFromChannelShims);
             return true;
         }
         return false;
