@@ -67,7 +67,7 @@ class VP8QualityFilter
      * The spatial/quality layer id that this instance tries to achieve. Upon
      * receipt of a packet, we check whether externalSpatialLayerIdTarget
      * (that's specified as an argument to the
-     * {@link #acceptFrame(VideoRtpPacket, int, long)} method) is set to something
+     * {@link #acceptFrame(VP8Frame, int, int, long)} method) is set to something
      * different, in which case we set {@link #needsKeyframe} equal to true and
      * update.
      */
@@ -95,15 +95,13 @@ class VP8QualityFilter
     }
 
     /**
-     * Determines whether to accept or drop a VP8 frame. The first packet of a
-     * VP8 frame is required because this is were the spatial and/or temporal
-     * layer id are found.
+     * Determines whether to accept or drop a VP8 frame.
      *
      * Note that, at the time of this writing, there's no practical need for a
      * synchronized keyword because there's only one thread accessing this
      * method at a time.
      *
-     * @param firstPacketOfFrame the first packet of the VP8 frame.
+     * @param frame  the VP8 frame.
      * @param incomingIndex the quality index of the incoming RTP packet
      * @param externalTargetIndex the target quality index that the user of this
      * instance wants to achieve.
@@ -111,7 +109,7 @@ class VP8QualityFilter
      * @return true to accept the VP8 frame, otherwise false.
      */
     synchronized boolean acceptFrame(
-        @NotNull VideoRtpPacket firstPacketOfFrame,
+        @NotNull VP8Frame frame,
         int incomingIndex,
         int externalTargetIndex, long nowMs)
     {
@@ -143,11 +141,7 @@ class VP8QualityFilter
             return false;
         }
 
-        byte[] buf = firstPacketOfFrame.getBuffer();
-        int payloadOff = firstPacketOfFrame.getPayloadOffset(),
-            payloadLen = firstPacketOfFrame.getPayloadLength();
-        int temporalLayerIdOfFrame = DePacketizer.VP8PayloadDescriptor
-            .getTemporalLayerIndex(buf, payloadOff, payloadLen);
+        int temporalLayerIdOfFrame = frame.getTemporalLayer();
 
         if (temporalLayerIdOfFrame < 0)
         {
@@ -160,10 +154,10 @@ class VP8QualityFilter
         }
 
         int spatialLayerId = getSpatialLayerId(incomingIndex);
-        if (DePacketizer.isKeyFrame(buf, payloadOff, payloadLen))
+        if (frame.isKeyframe())
         {
             logger.debug(() -> "Quality filter got keyframe for stream "
-                    + firstPacketOfFrame.getSsrc());
+                    + frame.getSsrc());
             return acceptKeyframe(spatialLayerId, nowMs);
         }
         else if (currentSpatialLayerId > SUSPENDED_LAYER_ID)

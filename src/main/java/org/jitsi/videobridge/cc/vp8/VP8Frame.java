@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi_modified.impl.neomedia.codec.video.vp8.*;
 
@@ -27,16 +28,11 @@ import org.jitsi_modified.impl.neomedia.codec.video.vp8.*;
  * time of the creation of this instance.
  *
  * Instances of this class are *NOT* thread safe. While most internal state of
- * this class instances is final, the maxSequenceNumber and the
- * endingSequenceNumberIsKnown fields are not and it is therefore necessary
- * to synchronize reading/writing to those fields on this instance.
- *
- * Consider, for example, creating a new frame projection (that happens in the
- * translator thread and reads the maxSequenceNumber field) while packets are
- * being piggy-backed (that happens in the egress thread and could potentially
- * write the maxSequenceNumber field).
+ * this class instances is final, the sequence number ranges and haveStart/haveEnd
+ * are not.
  *
  * @author George Politis
+ * @author Jonathan Lennox
  */
 class VP8Frame
 {
@@ -53,17 +49,46 @@ class VP8Frame
     private final long timestamp;
 
     /**
-     * The starting RTP sequence number of the incoming frame that this instance
+     * The earliest RTP sequence number seen of the incoming frame that this instance
      * refers to (RFC3550).
      */
-    private final int startingSequenceNumber;
+    private int earliestKnownSequenceNumber;
 
     /**
-     * True if this is a base temporal layer frame, false otherwise.
+     * The latest RTP sequence number seen of the incoming frame that this instance
+     * refers to (RFC3550).
      */
-    private final boolean isTL0;
+    private int latestKnownSequenceNumber;
 
     /**
+     * A boolean that indicates whether or not we've seen the first packet of the frame.
+     * If so, its sequence is earliestKnownSequenceNumber.
+     */
+    private boolean seenStartOfFrame;
+
+    /**
+     * A boolean that indicates whether or not we've seen the last packet of the frame.
+     * If so, its sequence is latestKnownSequenceNumber.
+     */
+    private boolean seenEndOfFrame;
+
+    /**
+     * The number of packets seen from this frame.
+     */
+    private int numPacketsSeen;
+
+    /**
+     * The temporal layer of this frame.
+     */
+    private final int temporalLayer;
+
+     /**
+     * The VP8 PictureID of the incoming VP8 frame that this instance refers to
+     * (RFC7741).
+     */
+    private final int pictureId;
+
+   /**
      * The VP8 TL0PICIDX of the incoming VP8 frame that this instance refers to
      * (RFC7741).
      */
@@ -82,79 +107,69 @@ class VP8Frame
     private final boolean isReference;
 
     /**
-     * Becomes true if we have skipped a TL0 frame. In such an event, we need a
-     * keyframe to become un-stuck.
+     * A record of how this frame was projected, or not.
      */
-    private boolean needsKeyframe = false;
-
-    /**
-     * A boolean that indicates whether or not the ending sequence number of
-     * this frame is known. if so, it's the maxSequenceNumber
-     */
-    private boolean endingSequenceNumberIsKnown = false;
-
-    /**
-     * The max sequence number that was seen before the arrival of the first
-     * packet of this frame. This is useful for piggybacking any mis-ordered
-     * packets. For example, if a frame comprised of packets 1,2,3 is received
-     * as 2,1,3 then this field would be equal to 2.
-     */
-    private final int maxSequenceNumberSeenBeforeFirstPacket;
-
-    /**
-     * The max sequence number that will be forwarded for this frame. Note that
-     * this is not necessarily the ending sequence number.
-     */
-    private int maxSequenceNumber = -1;
+    private VP8ProjectionRecord projection;
 
     /**
      * Ctor.
      *
-     * @param firstPacketOfFrame The first VP8 packet of the frame that the
-     * packet refers to.
-     * @param maxSequenceNumberSeenBeforeFirstPacket the max sequence number
-     * that was seen before the arrival of the first packet of this frame. This
-     * is useful for piggybacking any mis-ordered packets.
+     * @param packet A packet from the frame to be constructed.
      */
-    VP8Frame(@NotNull VideoRtpPacket firstPacketOfFrame,
-             int maxSequenceNumberSeenBeforeFirstPacket)
+    VP8Frame(@NotNull Vp8Packet packet)
     {
-        this.ssrc = firstPacketOfFrame.getSsrc();
-        this.timestamp = firstPacketOfFrame.getTimestamp();
-        this.startingSequenceNumber = firstPacketOfFrame.getSequenceNumber();
-        this.maxSequenceNumberSeenBeforeFirstPacket
-            = maxSequenceNumberSeenBeforeFirstPacket;
+        this.ssrc = packet.getSsrc();
+        this.timestamp = packet.getTimestamp();
+        this.earliestKnownSequenceNumber = packet.getSequenceNumber();
+        this.latestKnownSequenceNumber = packet.getSequenceNumber();
+        this.seenStartOfFrame = packet.isStartOfFrame();
+        this.seenEndOfFrame = packet.isEndOfFrame();
+        this.numPacketsSeen = 1;
 
-        byte[] buf = firstPacketOfFrame.getBuffer();
-        int payloadOffset = firstPacketOfFrame.getPayloadOffset(),
-            payloadLen = firstPacketOfFrame.getPayloadLength();
+        byte[] buf = packet.getBuffer();
+        int payloadOffset = packet.getPayloadOffset(),
+            payloadLen = packet.getPayloadLength();
 
-        this.tl0PICIDX = DePacketizer
-            .VP8PayloadDescriptor.getTL0PICIDX(buf, payloadOffset, payloadLen);
-        this.isKeyframe = DePacketizer
-            .isKeyFrame(buf, payloadOffset, payloadLen);
-        this.isReference = DePacketizer
-            .VP8PayloadDescriptor.isReference(buf, payloadOffset, payloadLen);
-        this.isTL0 = DePacketizer.VP8PayloadDescriptor
-            .getTemporalLayerIndex(buf, payloadOffset, payloadLen) == 0;
+        this.tl0PICIDX = packet.getTL0PICIDX();
+        this.isKeyframe = packet.isKeyframe();
+        this.pictureId = packet.getPictureId();
+        this.isReference =
+            /* TODO add this to Vp8Packet if we need it, otherwise remove it. */
+            DePacketizer.VP8PayloadDescriptor.isReference(buf, payloadOffset, payloadLen);
+        this.temporalLayer = packet.getTemporalLayerIndex();
     }
 
     /**
-     * @return The starting RTP sequence number of the incoming frame that this
-     * instance refers to (RFC3550).
+     * Remember another packet of this frame.
+     * Note: this assumes every packet is received only once, i.e. a filter
+     * like {@link org.jitsi.nlj.transform.node.incoming.PaddingTermination} is in use.
+     * @param packet The packet to remember.  This should be a packet which
+     *               has tested true with {@link #matchesFrame(Vp8Packet)}.
      */
-    int getStartingSequenceNumber()
+    void addPacket(@NotNull Vp8Packet packet)
     {
-        return startingSequenceNumber;
-    }
-
-    /**
-     * @return true if we have skipped a TL0 frame. In such an event, we need a
-     * keyframe to become un-stuck.
-     */
-    boolean needsKeyframe()
-    {
-        return needsKeyframe;
+        if (!matchesFrame(packet))
+        {
+            throw new IllegalArgumentException("Non-matching packet added to frame");
+        }
+        int seq = packet.getSequenceNumber();
+        if (RtpUtils.isOlderSequenceNumberThan(seq, earliestKnownSequenceNumber))
+        {
+            earliestKnownSequenceNumber = seq;
+        }
+        if (RtpUtils.isNewerSequenceNumberThan(seq, latestKnownSequenceNumber))
+        {
+            latestKnownSequenceNumber = seq;
+        }
+        if (packet.isStartOfFrame())
+        {
+            seenStartOfFrame = true;
+        }
+        if (packet.isEndOfFrame())
+        {
+            seenEndOfFrame = true;
+        }
+        numPacketsSeen++;
     }
 
     /**
@@ -167,17 +182,25 @@ class VP8Frame
     }
 
     /**
+     * @return the temporal layer of this frame.
+     */
+    int getTemporalLayer()
+    {
+        return temporalLayer;
+    }
+
+    /**
      * @return true if this is a base temporal layer frame, false otherwise
      */
     boolean isTL0()
     {
-        return isTL0;
+        return temporalLayer == 0;
     }
 
     /**
      * Gets the SSRC.
      */
-    long getSSRCAsLong()
+    long getSsrc()
     {
         return ssrc;
     }
@@ -191,64 +214,60 @@ class VP8Frame
     }
 
     /**
-     * Gets the max sequence number.
+     * Gets the earliest sequence number seen for this frame.
      */
-    int getMaxSequenceNumber()
+    public int getEarliestKnownSequenceNumber()
     {
-        return maxSequenceNumber;
+        return earliestKnownSequenceNumber;
     }
 
     /**
-     * Tiny utility method that returns true if the ending sequence number for
-     * this frame is known, false otherwise.
-     *
-     * @return true if the ending sequence number for this frame is known, false
-     * otherwise.
+     * Gets the latest sequence number seen for this frame.
      */
-    private boolean endingSequenceNumberIsKnown()
+    public int getLatestKnownSequenceNumber()
     {
-        return endingSequenceNumberIsKnown;
+        return latestKnownSequenceNumber;
     }
 
     /**
-     * Tiny utility method that returns the next TL0PICIDX as an int.
-     *
-     * @return the next TL0PICIDX as an int.
+     * Whether the start of this frame has been seen.
      */
-    static int nextTL0PICIDX(int tl0picidx)
+    public boolean hasSeenStartOfFrame()
     {
-        // XXX The TL0PICIDX field is a 8-bit unsigned (ref. RFC7741).
-        return (tl0picidx + 1)
-            & DePacketizer.VP8PayloadDescriptor.TL0PICIDX_MASK;
+        return seenStartOfFrame;
     }
 
     /**
-     * Small utility method that checks whether the {@link VP8Frame} that is
-     * specified as a parameter is the next (with respect to the frame that this
-     * instance represents) VP8 base temporal layer (TL0) picture.
-     *
-     * @param vp8Frame the {@link VP8Frame} to check whether it's the next TL0.
-     * @return true if the VP8 frame is the next TL0.
+     * Whether the end of this frame has been seen.
      */
-    private boolean isNextTemporalBaseLayerFrame(@NotNull VP8Frame vp8Frame)
+    public boolean hasSeenEndOfFrame()
     {
-        return matchesSSRC(vp8Frame) && vp8Frame.isTL0
-            && nextTL0PICIDX(tl0PICIDX) == vp8Frame.tl0PICIDX;
+        return seenEndOfFrame;
     }
 
-    /**
-     * Small utility method that determines whether the {@link VP8Frame} that is
-     * specified as a parameter refers to the same VP8 base temporal layer (TL0)
-     * picture as this instance.
-     *
-     * @param vp8Frame the {@link VP8Frame} to check whether it refers to the
-     * same VP8 base temporal layer (TL0) picture as this instance.
-     * @return true if the VP8 frame refers to the same TL0, false otherwise.
-     */
-    private boolean
-    dependsOnSameTemporalBaseLayerFrame(@NotNull VP8Frame vp8Frame)
+    public VP8ProjectionRecord getProjectionRecord()
     {
-        return matchesSSRC(vp8Frame) && vp8Frame.tl0PICIDX == tl0PICIDX;
+        return projection;
+    }
+
+
+    public VP8FrameProjection getProjection()
+    {
+        if (projection == null || !(projection instanceof VP8FrameProjection))
+        {
+            return null;
+        }
+        return (VP8FrameProjection)projection;
+    }
+
+    public void setProjectionRecord(VP8ProjectionRecord projection)
+    {
+        this.projection = projection;
+    }
+
+    public int getPictureId()
+    {
+        return pictureId;
     }
 
     /**
@@ -285,132 +304,34 @@ class VP8Frame
     }
 
     /**
-     * Checks whether the specified RTP packet is part of an older frame.
-     *
-     * @param pkt the RTP packet to check whether it's part of an older frame.
-     * @return true if the specified RTP packet is part of an older frame, false
-     * otherwise.
-     */
-    boolean matchesOlderFrame(@NotNull VideoRtpPacket pkt)
-    {
-        if (!matchesSSRC(pkt))
-        {
-            // If the packet is from another (simulcast) stream, we can't check
-            // whether it's newer or not. We assume it's not old.
-            return false;
-        }
-
-        return RtpUtils.getTimestampDiff(pkt.getTimestamp(), timestamp) < 0;
-    }
-
-    /**
      * Checks whether the specified RTP packet is part of this frame.
      *
      * @param pkt the RTP packet to check whether it's part of this frame.
      * @return true if the specified RTP packet is part of this frame, false
      * otherwise.
      */
-    boolean matchesFrame(@NotNull VideoRtpPacket pkt)
+    boolean matchesFrame(@NotNull Vp8Packet pkt)
     {
         return matchesSSRC(pkt) && timestamp == pkt.getTimestamp();
     }
 
     /**
-     * Determines whether the frame that is passed in as a parameter can be used
-     * as the next frame and produce a decodable output.
+     * Checks whether the specified RTP packet consistently matches all the
+     * parameters of this frame.
      *
-     * @param vp8Frame the incoming frame to project or drop. The incoming frame
-     * is assumed to be newer than the instance.
-     * @return true if the frame that is passed in as a parameter can be used as
-     * the next frame and produce a decodable output.
-     */
-    boolean decodes(@NotNull VP8Frame vp8Frame)
-    {
-        // Keyframes CAN always be forwarded, regardless of what's last. The
-        // quality filter will have the final say on whether to project or not
-        // the incoming keyframe.
-        if (vp8Frame.isKeyframe)
-        {
-            needsKeyframe = false;
-            return true;
-        }
-
-        // If the new frame is not a keyframe and we haven't sent anything
-        // previously, or if the packet is of another RTP stream, then there's
-        // no point sending any packets because the receiving endpoint won't be
-        // able to decode the stream.
-        if (!matchesSSRC(vp8Frame))
-        {
-            return false;
-        }
-
-        if (!isReference)
-        {
-            // This instance is a non-reference frame, we can "massacre" it if
-            // needed.
-
-            // XXX this actually makes it possible to miss a reference frame :(
-            // It would require significant effort to prevent such a case.
-            return isNextTemporalBaseLayerFrame(vp8Frame)
-                || dependsOnSameTemporalBaseLayerFrame(vp8Frame);
-        }
-        else if (isTL0)
-        {
-            // This instance is a TL0. TL0 reference frames MUST NOT be
-            // corrupted (unless the new frame that we're processing is a
-            // keyframe; this case is handled above). If the last/ending
-            // sequence number of the this TL0 frame is known, we don't have to
-            // worry about the 'running out of room' problem; we can therefore
-            // accept the new frame.
-            boolean accept = endingSequenceNumberIsKnown()
-                && (isNextTemporalBaseLayerFrame(vp8Frame)
-                || dependsOnSameTemporalBaseLayerFrame(vp8Frame));
-
-            if (!accept && isNextTemporalBaseLayerFrame(vp8Frame))
-            {
-                // we're skipping a TL0.
-                needsKeyframe = true;
-            }
-
-            return accept;
-        }
-        else
-        {
-            // This instance is a non-TL0 reference frame. non-TL0 reference
-            // frames MUST NOT be corrupted, unless the new frame is a keyframe
-            // or a TL0 reference frame.
-
-            return (isNextTemporalBaseLayerFrame(vp8Frame)
-                || (endingSequenceNumberIsKnown()
-                && dependsOnSameTemporalBaseLayerFrame(vp8Frame)));
-        }
-    }
-
-    /**
-     * Sets the max sequence number that will be forwarded for this frame,
-     * optionally marking it as the ending sequence number.
+     * This can be useful for diagnosing invalid streams if this is false when
+     * {@link #matchesFrame(Vp8Packet)} is true.
      *
-     * @param sequenceNumber the sequence number to be set as the max
-     * @param isEndingSequenceNumber true if this is the last sequence number of
-     * this frame.
+     * @param pkt the RTP packet to check whether its parameters match this frame.
+     * @return true if the specified RTP packet is consistent with this frame, false
+     * otherwise.
      */
-    void
-    setMaxSequenceNumber(int sequenceNumber, boolean isEndingSequenceNumber)
+    boolean matchesFrameConsistently(@NotNull Vp8Packet pkt)
     {
-        maxSequenceNumber = sequenceNumber;
-        if (isEndingSequenceNumber)
-        {
-            endingSequenceNumberIsKnown = true;
-        }
-    }
-
-    /**
-     * @return the max sequence number that was seen before the arrival of the
-     * first packet of this frame. This is useful for piggybacking any
-     * mis-ordered packets.
-     */
-    int getMaxSequenceNumberSeenBeforeFirstPacket()
-    {
-        return maxSequenceNumberSeenBeforeFirstPacket;
+            return (temporalLayer == (pkt.getTemporalLayerIndex())) &&
+                (tl0PICIDX == pkt.getTL0PICIDX()) &&
+                (isKeyframe == pkt.isKeyframe()) &&
+                (pictureId == pkt.getPictureId());
+        /* TODO: also check start, end, seq nums., reference? */
     }
 }
