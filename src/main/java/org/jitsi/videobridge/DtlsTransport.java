@@ -41,9 +41,9 @@ import org.json.simple.*;
 
 import java.io.*;
 import java.net.*;
+import java.time.*;
 import java.util.*;
 import java.util.function.*;
-import java.util.stream.*;
 
 /**
  * @author Brian Baldino
@@ -477,6 +477,19 @@ public class DtlsTransport extends IceTransport
         endpoint.getConference().getVideobridge().getStatistics()
                 .totalIceFailed.incrementAndGet();
         endpoint.getConference().getStatistics().hasIceFailedEndpoint = true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void onIceConsentUpdated(long time)
+    {
+       super.onIceConsentUpdated(time);
+       endpoint
+           .getTransceiver()
+           .getPacketIOActivity()
+           .setLastIceActivityTimestamp(Instant.ofEpochMilli(time));
     }
 
     /**

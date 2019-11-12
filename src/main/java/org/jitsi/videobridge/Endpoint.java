@@ -584,7 +584,7 @@ public class Endpoint
     {
         PacketIOActivity packetIOActivity
                 = this.transceiver.getPacketIOActivity();
-        return packetIOActivity.getLastOverallActivityTimestampMs();
+        return packetIOActivity.getLatestOverallActivity().toEpochMilli();
     }
 
     /**
