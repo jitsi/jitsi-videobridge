@@ -580,11 +580,11 @@ public class Endpoint
      * {@inheritDoc}
      */
     @Override
-    public long getLastActivity()
+    public Instant getLastActivity()
     {
         PacketIOActivity packetIOActivity
-                = this.dtlsTransport.getPacketIOActivity();
-        return packetIOActivity.getLastOverallActivityTimestampMs();
+                = this.transceiver.getPacketIOActivity();
+        return packetIOActivity.getLatestOverallActivity();
     }
 
     /**
@@ -605,7 +605,7 @@ public class Endpoint
         }
 
         PacketIOActivity packetIOActivity
-                = this.dtlsTransport.getPacketIOActivity();
+                = this.transceiver.getPacketIOActivity();
 
         int maxExpireTimeSecsFromChannelShims = channelShims.stream()
                 .map(ChannelShim::getExpire)
