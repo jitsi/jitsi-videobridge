@@ -25,6 +25,7 @@ import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 
+import java.time.*;
 import java.util.*;
 
 /**
@@ -164,9 +165,9 @@ public class ChannelShim
      * Gets this channel's creation timestamp.
      * @return
      */
-    public long getCreationTimestampMs()
+    public Instant getCreationTimestamp()
     {
-        return creationTimestampMs;
+        return Instant.ofEpochMilli(creationTimestampMs);
     }
 
     /**

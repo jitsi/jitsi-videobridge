@@ -23,8 +23,7 @@ import org.jitsi.nlj.rtp.bandwidthestimation.*;
 import org.jitsi.nlj.srtp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.*;
-import org.jitsi.nlj.util.LocalSsrcAssociation;
-import org.jitsi.nlj.util.RemoteSsrcAssociation;
+import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
@@ -55,6 +54,7 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
+import java.util.function.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
@@ -1301,9 +1301,10 @@ public class Endpoint
     long getMostRecentChannelCreatedTime()
     {
         return channelShims.stream()
-                .mapToLong(ChannelShim::getCreationTimestampMs)
-                .max()
-                .orElse(0);
+            .map(ChannelShim::getCreationTimestamp)
+            .max(Comparator.comparing(Function.identity()))
+            .orElse(ClockUtils.NEVER)
+            .toEpochMilli();
     }
 
     /**
