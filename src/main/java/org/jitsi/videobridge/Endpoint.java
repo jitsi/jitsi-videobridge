@@ -580,11 +580,11 @@ public class Endpoint
      * {@inheritDoc}
      */
     @Override
-    public Instant getLastActivity()
+    public long getLastActivity()
     {
         PacketIOActivity packetIOActivity
                 = this.transceiver.getPacketIOActivity();
-        return packetIOActivity.getLatestOverallActivity();
+        return packetIOActivity.getLatestOverallActivity().getEpochSecond();
     }
 
     /**

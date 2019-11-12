@@ -23,7 +23,6 @@ import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
 import java.io.*;
-import java.time.*;
 import java.util.*;
 
 /**
@@ -245,9 +244,9 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * Get the last 'activity' (packets received or packets sent) this endpoint has seen
      * @return the timestamp, in milliseconds, of the last activity of this endpoint
      */
-    public Instant getLastActivity()
+    public long getLastActivity()
     {
-        return Instant.EPOCH;
+        return 0;
     }
 
     /**

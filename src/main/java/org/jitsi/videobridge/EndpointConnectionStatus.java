@@ -183,7 +183,7 @@ public class EndpointConnectionStatus
 
         long mostRecentChannelCreated
                 = endpoint.getMostRecentChannelCreatedTime();
-        long lastActivity = endpoint.getLastActivity().getEpochSecond();
+        long lastActivity = endpoint.getLastActivity();
 
         // Transport not initialized yet
         if (lastActivity == 0)
