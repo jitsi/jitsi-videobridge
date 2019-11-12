@@ -31,9 +31,7 @@ import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.*;
-import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
-import org.jitsi.utils.logging2.LoggerImpl;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
@@ -104,7 +102,7 @@ public class Endpoint
     /**
      * The time at which this endpoint was created (in millis since epoch)
      */
-    private final Instant creationTimeMillis;
+    private final Instant creationTime;
 
     /**
      * How long we'll give an endpoint to either successfully establish
@@ -229,7 +227,7 @@ public class Endpoint
 
         this.clock = clock;
 
-        creationTimeMillis = clock.instant();
+        creationTime = clock.instant();
         diagnosticContext = conference.newDiagnosticContext();
         transceiver = new Transceiver(
             id,
@@ -238,7 +236,7 @@ public class Endpoint
             TaskPools.SCHEDULED_POOL,
             diagnosticContext,
             logger,
-            Clock.systemUTC()
+            clock
         );
         transceiver.setIncomingPacketHandler(
             new ConsumerNode("receiver chain handler")
@@ -631,7 +629,7 @@ public class Endpoint
         Instant now = clock.instant();
         if (lastActivity == ClockUtils.NEVER)
         {
-            Duration timeSinceCreation = Duration.between(creationTimeMillis, now);
+            Duration timeSinceCreation = Duration.between(creationTime, now);
             if (timeSinceCreation.compareTo(EP_TIMEOUT) > 0) {
                 logger.info("Endpoint's ICE connection has neither failed nor connected " +
                     "after " + timeSinceCreation + ", expiring");
