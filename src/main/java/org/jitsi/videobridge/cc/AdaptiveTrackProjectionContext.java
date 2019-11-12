@@ -61,16 +61,10 @@ public interface AdaptiveTrackProjectionContext
      * is to make the resulting rtp stream continuous.
      *
      * @param rtpPacket the RTP packet to rewrite.
-     * @param incomingRawPacketCache the packet cache to pull piggy-backed
-     * packets from.
-     * @return null to reject the packet or an array of RTP packets to
-     * piggy-back. An empty array means accept the packet without any additional
-     * packets to piggy-back
      * @throws RewriteException the underlying code has failed to rewrite the
      * RTP packet that is specified as an argument.
      */
-    VideoRtpPacket[]
-    rewriteRtp(VideoRtpPacket rtpPacket, PacketCache incomingRawPacketCache)
+    void rewriteRtp(VideoRtpPacket rtpPacket)
         throws RewriteException;
 
     /**

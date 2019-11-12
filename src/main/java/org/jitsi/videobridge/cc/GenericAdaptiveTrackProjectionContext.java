@@ -57,12 +57,6 @@ class GenericAdaptiveTrackProjectionContext
     implements AdaptiveTrackProjectionContext
 {
     /**
-     * An empty array that is used as a return value when no packets need to be
-     * piggy-backed.
-     */
-    private static final VideoRtpPacket[] EMPTY_PACKET_ARR = new VideoRtpPacket[0];
-
-    /**
      * The <tt>Logger</tt> used by the
      * <tt>GenericAdaptiveTrackProjectionContext</tt> class and its instances to
      * log debug information.
@@ -281,14 +275,10 @@ class GenericAdaptiveTrackProjectionContext
      * source track transparent at the RTP level.
      *
      * @param rtpPacket the RTP packet to rewrite.
-     * @param incomingPacketCache the packet cache to pull piggy-backed
-     * packets from. It can be left null because piggybacking is not
-     * implemented.
-     * @return {@link #EMPTY_PACKET_ARR}
      */
     @Override
-    public VideoRtpPacket[] rewriteRtp(
-        @NotNull VideoRtpPacket rtpPacket, PacketCache incomingPacketCache)
+    public void rewriteRtp(
+        @NotNull VideoRtpPacket rtpPacket)
     {
         int sourceSequenceNumber = rtpPacket.getSequenceNumber();
         int destinationSequenceNumber
@@ -313,8 +303,6 @@ class GenericAdaptiveTrackProjectionContext
             + ",src_sequence=" + sourceSequenceNumber
             + ",dst_sequence=" + destinationSequenceNumber
             + ",max_sequence=" + maxDestinationSequenceNumber);
-
-        return EMPTY_PACKET_ARR;
     }
 
     /**

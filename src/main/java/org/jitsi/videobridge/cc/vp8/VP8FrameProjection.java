@@ -188,7 +188,7 @@ public class VP8FrameProjection implements VP8ProjectionRecord
      *
      * @param pkt the RTP packet to rewrite.
      */
-    Vp8Packet[] rewriteRtp(@NotNull Vp8Packet pkt, PacketCache cache)
+    void rewriteRtp(@NotNull Vp8Packet pkt)
     {
         // update ssrc, sequence number, timestamp, pictureId and tl0picidx
         pkt.setSsrc(ssrc);
@@ -211,7 +211,6 @@ public class VP8FrameProjection implements VP8ProjectionRecord
                     .addField("vp8.pictureid", extendedPictureId)
                     .addField("vp8.tl0picidx", tl0PICIDX));
         }
-        return EMPTY_PACKET_ARR;
     }
 
     /**

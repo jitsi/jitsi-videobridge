@@ -363,22 +363,18 @@ public class VP8AdaptiveTrackProjectionContext
      * Rewrites the RTP packet that is specified as an argument.
      *
      * @param rtpPacket the RTP packet to rewrite.
-     * @param incomingPacketCache the packet cache to pull piggy-backed
-     * packets from. Null is permissible, but in that case no packets will be
-     * piggy backed.
-     * @return any RTP packets to piggy-bac
      * @throws RewriteException if a VP8 frame projection is not found
      * for the RTP packet that is specified as a parameter.
      */
     @Override
-    public VideoRtpPacket[] rewriteRtp(
-        @NotNull VideoRtpPacket rtpPacket, PacketCache incomingPacketCache)
+    public void rewriteRtp(
+        @NotNull VideoRtpPacket rtpPacket)
         throws RewriteException
     {
         if (!(rtpPacket instanceof Vp8Packet))
         {
             logger.info("Got a non-VP8 packet.");
-            return null;
+            throw new RewriteException();
         }
 
         Vp8Packet vp8Packet = (Vp8Packet)rtpPacket;
@@ -391,10 +387,7 @@ public class VP8AdaptiveTrackProjectionContext
             throw new RewriteException();
         }
 
-        Vp8Packet[] ret
-            = vp8Frame.getProjection().rewriteRtp((Vp8Packet) rtpPacket, incomingPacketCache);
-
-        return ret;
+        vp8Frame.getProjection().rewriteRtp((Vp8Packet) rtpPacket);
     }
 
     /**

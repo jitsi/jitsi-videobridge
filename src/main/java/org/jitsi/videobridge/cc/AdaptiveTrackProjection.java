@@ -63,12 +63,6 @@ public class AdaptiveTrackProjection
     private final Logger parentLogger;
 
     /**
-     * An empty array that is used as a return value when no packets need to be
-     * piggy-backed.
-     */
-    public static final VideoRtpPacket[] EMPTY_PACKET_ARR = new VideoRtpPacket[0];
-
-    /**
      * A {@link WeakReference} to the {@link MediaStreamTrackDesc} that owns
      * the packets that this instance filters.
      *
@@ -196,9 +190,6 @@ public class AdaptiveTrackProjection
      */
     private final Runnable keyframeRequester;
 
-    private final PacketCache packetCache
-            = new PacketCache(packet -> packet instanceof VideoRtpPacket);
-
     /**
      * Determines whether an RTP packet needs to be accepted or not.
      *
@@ -213,7 +204,6 @@ public class AdaptiveTrackProjection
         {
             return false;
         }
-        packetCache.insert(videoRtpPacket);
 
         // XXX We want to let the context know that the stream has been
         // suspended so that it can raise the needsKeyframe flag and also allow
@@ -362,23 +352,18 @@ public class AdaptiveTrackProjection
     }
 
     /**
-     * Rewrites an RTP packet and it returns any additional RTP packets that
-     * need to be piggy-backed.
+     * Rewrites an RTP packet for projection.
      *
      * @param rtpPacket the RTP packet to rewrite.
-     * @return any piggy-backed packets to include with the packet.
-     * XXX unused?
      */
-    VideoRtpPacket[] rewriteRtp(@NotNull VideoRtpPacket rtpPacket)
+   void rewriteRtp(@NotNull VideoRtpPacket rtpPacket)
         throws RewriteException
     {
         AdaptiveTrackProjectionContext contextCopy = context;
-        if (contextCopy == null)
+        if (contextCopy != null)
         {
-            return EMPTY_PACKET_ARR;
+            contextCopy.rewriteRtp(rtpPacket);
         }
-
-        return contextCopy.rewriteRtp(rtpPacket, packetCache);
     }
 
     /**
@@ -446,7 +431,6 @@ public class AdaptiveTrackProjection
         debugState.put("contextPayloadType", contextPayloadType);
         debugState.put("idealIndex", idealIndex);
         debugState.put("targetIndex", targetIndex);
-        debugState.put("packetCache", packetCache.getNodeStats().toJson());
 
         return debugState;
     }
