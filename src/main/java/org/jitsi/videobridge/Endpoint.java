@@ -188,6 +188,11 @@ public class Endpoint
     private volatile boolean acceptVideo = false;
 
     /**
+     * The clock used by this endpoint
+     */
+    private final Clock clock;
+
+    /**
      * Whether or not the bridge should be the peer which opens the data channel
      * (as opposed to letting the far peer/client open it).
      */
@@ -214,34 +219,37 @@ public class Endpoint
      * otherwise - {@code false}
      */
     public Endpoint(
-            String id,
-            Conference conference,
-            Logger parentLogger,
-            boolean iceControlling)
+        String id,
+        Conference conference,
+        Logger parentLogger,
+        boolean iceControlling,
+        Clock clock)
         throws IOException
     {
         super(conference, id, parentLogger);
 
+        this.clock = clock;
+
         creationTimeMillis = System.currentTimeMillis();
         diagnosticContext = conference.newDiagnosticContext();
-        transceiver
-                = new Transceiver(
-                id,
-                TaskPools.CPU_POOL,
-                TaskPools.CPU_POOL,
-                TaskPools.SCHEDULED_POOL,
-                diagnosticContext,
-                logger,
-                Clock.systemUTC());
+        transceiver = new Transceiver(
+            id,
+            TaskPools.CPU_POOL,
+            TaskPools.CPU_POOL,
+            TaskPools.SCHEDULED_POOL,
+            diagnosticContext,
+            logger,
+            Clock.systemUTC()
+        );
         transceiver.setIncomingPacketHandler(
-                new ConsumerNode("receiver chain handler")
+            new ConsumerNode("receiver chain handler")
+            {
+                @Override
+                protected void consume(@NotNull PacketInfo packetInfo)
                 {
-                    @Override
-                    protected void consume(@NotNull PacketInfo packetInfo)
-                    {
-                        handleIncomingPacket(packetInfo);
-                    }
-                });
+                    handleIncomingPacket(packetInfo);
+                }
+            });
         bitrateController = new BitrateController(this, diagnosticContext, logger);
 
         messageTransport = new EndpointMessageTransport(this, logger);
@@ -271,8 +279,18 @@ public class Endpoint
         if (conference.includeInStatistics())
         {
             conference.getVideobridge().getStatistics()
-                    .totalEndpoints.incrementAndGet();
+                .totalEndpoints.incrementAndGet();
         }
+
+    }
+    public Endpoint(
+        String id,
+        Conference conference,
+        Logger parentLogger,
+        boolean iceControlling)
+        throws IOException
+    {
+        this(id, conference, parentLogger, iceControlling, Clock.systemUTC());
     }
 
     /**
