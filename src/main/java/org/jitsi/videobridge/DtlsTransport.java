@@ -95,7 +95,6 @@ public class DtlsTransport extends IceTransport
     private final Node outgoingDtlsPipelineRoot;
     private final Node outgoingSrtpPipelineRoot;
     private boolean dtlsHandshakeComplete = false;
-
     /**
      * Measures the jitter introduced by the bridge itself (i.e. jitter calculated between
      * packets based on the time they were received by the bridge and the time they
