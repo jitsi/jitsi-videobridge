@@ -65,11 +65,6 @@ public class DtlsTransport extends IceTransport
     private static final Predicate<Packet> NON_DTLS_PREDICATE
             = DTLS_PREDICATE.negate();
 
-    /**
-     * Clock for tracking packet activity
-     */
-    private static final Clock clock = Clock.systemUTC();
-
     public static final PacketDelayStats packetDelayStats = new PacketDelayStats();
     /**
      * An average of all of the individual bridge jitter values calculated by the
@@ -494,7 +489,7 @@ public class DtlsTransport extends IceTransport
        endpoint
            .getTransceiver()
            .getPacketIOActivity()
-           .setLastIceActivityTimestamp(clock.instant());
+           .setLastIceActivityTimestamp(Instant.ofEpochMilli(time));
     }
 
     /**
