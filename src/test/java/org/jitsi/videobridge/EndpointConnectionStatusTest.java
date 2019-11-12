@@ -19,26 +19,28 @@ package org.jitsi.videobridge;
 import org.jitsi.testutils.*;
 import org.junit.*;
 
+import java.time.*;
+
 public class EndpointConnectionStatusTest
 {
     @Test
     public void testFirstTransferTimePropertyConfig()
     {
-        ConfigPropertyTest<EndpointConnectionStatus.Config.FirstTransferTimeoutProperty, Long>
+        ConfigPropertyTest<EndpointConnectionStatus.Config.FirstTransferTimeoutProperty, Duration>
             configPropertyTest = new ConfigPropertyTest<>();
 
         configPropertyTest.runBasicTests(
             EndpointConnectionStatus.Config.FirstTransferTimeoutProperty.legacyPropName,
-            new ConfigPropertyTest.ParamResult<>("5000", 5000L),
+            new ConfigPropertyTest.ParamResult<>("5000", Duration.ofSeconds(5)),
             EndpointConnectionStatus.Config.FirstTransferTimeoutProperty.propName,
-            new ConfigPropertyTest.ParamResult<>("10 seconds", 10000L),
+            new ConfigPropertyTest.ParamResult<>("10 seconds", Duration.ofSeconds(10)),
             EndpointConnectionStatus.Config.FirstTransferTimeoutProperty::new
         );
 
         configPropertyTest.runReadOnceTest(
             EndpointConnectionStatus.Config.FirstTransferTimeoutProperty.propName,
-            new ConfigPropertyTest.ParamResult<>("5 seconds", 5000L),
-            new ConfigPropertyTest.ParamResult<>("15 seconds", 15000L),
+            new ConfigPropertyTest.ParamResult<>("5 seconds", Duration.ofSeconds(5)),
+            new ConfigPropertyTest.ParamResult<>("15 seconds", Duration.ofSeconds(15)),
             EndpointConnectionStatus.Config.FirstTransferTimeoutProperty::new
         );
     }
@@ -46,21 +48,21 @@ public class EndpointConnectionStatusTest
     @Test
     public void testMaxInactivityLimitProperty()
     {
-        ConfigPropertyTest<EndpointConnectionStatus.Config.MaxInactivityLimitProperty, Long>
+        ConfigPropertyTest<EndpointConnectionStatus.Config.MaxInactivityLimitProperty, Duration>
             configPropertyTest = new ConfigPropertyTest<>();
 
         configPropertyTest.runBasicTests(
             EndpointConnectionStatus.Config.MaxInactivityLimitProperty.legacyPropName,
-            new ConfigPropertyTest.ParamResult<>("5000", 5000L),
+            new ConfigPropertyTest.ParamResult<>("5000", Duration.ofSeconds(5)),
             EndpointConnectionStatus.Config.MaxInactivityLimitProperty.propName,
-            new ConfigPropertyTest.ParamResult<>("10 seconds", 10000L),
+            new ConfigPropertyTest.ParamResult<>("10 seconds", Duration.ofSeconds(10)),
             EndpointConnectionStatus.Config.MaxInactivityLimitProperty::new
         );
 
         configPropertyTest.runReadOnceTest(
             EndpointConnectionStatus.Config.MaxInactivityLimitProperty.propName,
-            new ConfigPropertyTest.ParamResult<>("5 seconds", 5000L),
-            new ConfigPropertyTest.ParamResult<>("15 seconds", 15000L),
+            new ConfigPropertyTest.ParamResult<>("5 seconds", Duration.ofSeconds(5)),
+            new ConfigPropertyTest.ParamResult<>("15 seconds", Duration.ofSeconds(15)),
             EndpointConnectionStatus.Config.MaxInactivityLimitProperty::new
         );
     }

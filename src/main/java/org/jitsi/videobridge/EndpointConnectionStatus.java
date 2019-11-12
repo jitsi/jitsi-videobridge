@@ -16,13 +16,16 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.eventadmin.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.config.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.shim.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.util.config.*;
 import org.osgi.framework.*;
 
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -79,11 +82,22 @@ public class EndpointConnectionStatus
     private Timer timer;
 
     /**
+     * The {@link Clock} used by this class
+     */
+    private final Clock clock;
+
+    public EndpointConnectionStatus(Clock clock)
+    {
+        super(new String[] { EventFactory.MSG_TRANSPORT_READY_TOPIC});
+        this.clock = clock;
+    }
+
+    /**
      * Creates new instance of <tt>EndpointConnectionStatus</tt>
      */
     public EndpointConnectionStatus()
     {
-        super(new String[] { EventFactory.MSG_TRANSPORT_READY_TOPIC});
+        this(Clock.systemUTC());
     }
 
     /**
@@ -112,7 +126,7 @@ public class EndpointConnectionStatus
             logger.error("Endpoint connection monitoring is already running");
         }
 
-        if (Config.getFirstTransferTimeout() <= Config.getMaxInactivityLimit())
+        if (Config.getFirstTransferTimeout().compareTo(Config.getMaxInactivityLimit()) <= 0)
         {
             throw new IllegalArgumentException(
                 String.format("first transfer timeout(%s) must be greater"
@@ -181,18 +195,19 @@ public class EndpointConnectionStatus
         Endpoint endpoint = (Endpoint) abstractEndpoint;
         String endpointId = endpoint.getID();
 
-        long mostRecentChannelCreated
+        Instant now = clock.instant();
+        Instant mostRecentChannelCreated
                 = endpoint.getMostRecentChannelCreatedTime();
-        long lastActivity = endpoint.getLastActivity();
+        Instant lastActivity = endpoint.getLastActivity();
 
         // Transport not initialized yet
-        if (lastActivity == 0)
+        if (lastActivity == ClockUtils.NEVER)
         {
             // Here we check if it's taking too long for the endpoint to connect
             // We're doing that by checking how much time has elapsed since
             // the first endpoint's channel has been created.
-            if (System.currentTimeMillis() - mostRecentChannelCreated
-                    > Config.getFirstTransferTimeout())
+            Duration timeSinceCreated = Duration.between(mostRecentChannelCreated, now);
+            if (timeSinceCreated.compareTo(Config.getFirstTransferTimeout()) > 0)
             {
                 if (logger.isDebugEnabled())
                     logger.debug(
@@ -213,8 +228,8 @@ public class EndpointConnectionStatus
             }
         }
 
-        long noActivityForMs = System.currentTimeMillis() - lastActivity;
-        boolean inactive = noActivityForMs > Config.getMaxInactivityLimit();
+        Duration noActivityTime = Duration.between(lastActivity, now);
+        boolean inactive = noActivityTime.compareTo(Config.getMaxInactivityLimit()) > 0;
         if (inactive && !inactiveEndpoints.contains(endpoint))
         {
             logger.debug(endpointId + " is considered disconnected");
@@ -236,7 +251,7 @@ public class EndpointConnectionStatus
         {
             logger.debug(String.format(
                     "No activity on %s for %s",
-                    endpointId, (( (double) noActivityForMs) / 1000d )));
+                    endpointId, noActivityTime));
         }
     }
 
@@ -357,7 +372,7 @@ public class EndpointConnectionStatus
          * How long it can take an endpoint to send first data before it will
          * be marked as inactive.
          */
-        protected static class FirstTransferTimeoutProperty extends AbstractConfigProperty<Long>
+        protected static class FirstTransferTimeoutProperty extends AbstractConfigProperty<Duration>
         {
             protected static final String legacyPropName =
                 "org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT";
@@ -368,22 +383,22 @@ public class EndpointConnectionStatus
 
             protected FirstTransferTimeoutProperty()
             {
-                super(new JvbPropertyConfig<Long>()
-                    .fromLegacyConfig(config -> config.getLong(legacyPropName))
-                    .fromNewConfig(config -> config.getDuration(propName, TimeUnit.MILLISECONDS))
+                super(new JvbPropertyConfig<Duration>()
+                    .fromLegacyConfig(config -> Duration.ofMillis(config.getLong(legacyPropName)))
+                    .fromNewConfig(config -> config.getDuration(propName))
                     .readOnce()
                     .throwIfNotFound()
 
                 );
             }
 
-            public static Long getValue()
+            public static Duration getValue()
             {
                 return singleton.get();
             }
         }
 
-        public static long getFirstTransferTimeout()
+        public static Duration getFirstTransferTimeout()
         {
             return FirstTransferTimeoutProperty.getValue();
         }
@@ -392,7 +407,7 @@ public class EndpointConnectionStatus
          * How long an endpoint can be inactive before it wil be considered
          * disconnected.
          */
-        protected static class MaxInactivityLimitProperty extends AbstractConfigProperty<Long>
+        protected static class MaxInactivityLimitProperty extends AbstractConfigProperty<Duration>
         {
             protected static final String legacyPropName =
                 "org.jitsi.videobridge.EndpointConnectionStatus.MAX_INACTIVITY_LIMIT";
@@ -403,22 +418,22 @@ public class EndpointConnectionStatus
 
             protected MaxInactivityLimitProperty()
             {
-                super(new JvbPropertyConfig<Long>()
-                    .fromLegacyConfig(config -> config.getLong(legacyPropName))
-                    .fromNewConfig(config -> config.getDuration(propName, TimeUnit.MILLISECONDS))
+                super(new JvbPropertyConfig<Duration>()
+                    .fromLegacyConfig(config -> Duration.ofMillis(config.getLong(legacyPropName)))
+                    .fromNewConfig(config -> config.getDuration(propName))
                     .readOnce()
                     .throwIfNotFound()
 
                 );
             }
 
-            public static Long getValue()
+            public static Duration getValue()
             {
                 return singleton.get();
             }
         }
 
-        public static long getMaxInactivityLimit()
+        public static Duration getMaxInactivityLimit()
         {
             return MaxInactivityLimitProperty.getValue();
         }

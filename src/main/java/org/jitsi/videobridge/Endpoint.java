@@ -23,8 +23,7 @@ import org.jitsi.nlj.rtp.bandwidthestimation.*;
 import org.jitsi.nlj.srtp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.*;
-import org.jitsi.nlj.util.LocalSsrcAssociation;
-import org.jitsi.nlj.util.RemoteSsrcAssociation;
+import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
@@ -32,9 +31,7 @@ import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.*;
-import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
-import org.jitsi.utils.logging2.LoggerImpl;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
@@ -55,6 +52,7 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
+import java.util.function.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
@@ -104,8 +102,7 @@ public class Endpoint
     /**
      * The time at which this endpoint was created (in millis since epoch)
      */
-    //TODO: use clock/instant in this file
-    private final Long creationTimeMillis;
+    private final Instant creationTime;
 
     /**
      * How long we'll give an endpoint to either successfully establish
@@ -188,6 +185,11 @@ public class Endpoint
     private volatile boolean acceptVideo = false;
 
     /**
+     * The clock used by this endpoint
+     */
+    private final Clock clock;
+
+    /**
      * Whether or not the bridge should be the peer which opens the data channel
      * (as opposed to letting the far peer/client open it).
      */
@@ -214,34 +216,37 @@ public class Endpoint
      * otherwise - {@code false}
      */
     public Endpoint(
-            String id,
-            Conference conference,
-            Logger parentLogger,
-            boolean iceControlling)
+        String id,
+        Conference conference,
+        Logger parentLogger,
+        boolean iceControlling,
+        Clock clock)
         throws IOException
     {
         super(conference, id, parentLogger);
 
-        creationTimeMillis = System.currentTimeMillis();
+        this.clock = clock;
+
+        creationTime = clock.instant();
         diagnosticContext = conference.newDiagnosticContext();
-        transceiver
-                = new Transceiver(
-                id,
-                TaskPools.CPU_POOL,
-                TaskPools.CPU_POOL,
-                TaskPools.SCHEDULED_POOL,
-                diagnosticContext,
-                logger,
-                Clock.systemUTC());
+        transceiver = new Transceiver(
+            id,
+            TaskPools.CPU_POOL,
+            TaskPools.CPU_POOL,
+            TaskPools.SCHEDULED_POOL,
+            diagnosticContext,
+            logger,
+            clock
+        );
         transceiver.setIncomingPacketHandler(
-                new ConsumerNode("receiver chain handler")
+            new ConsumerNode("receiver chain handler")
+            {
+                @Override
+                protected void consume(@NotNull PacketInfo packetInfo)
                 {
-                    @Override
-                    protected void consume(@NotNull PacketInfo packetInfo)
-                    {
-                        handleIncomingPacket(packetInfo);
-                    }
-                });
+                    handleIncomingPacket(packetInfo);
+                }
+            });
         bitrateController = new BitrateController(this, diagnosticContext, logger);
 
         messageTransport = new EndpointMessageTransport(this, logger);
@@ -271,8 +276,18 @@ public class Endpoint
         if (conference.includeInStatistics())
         {
             conference.getVideobridge().getStatistics()
-                    .totalEndpoints.incrementAndGet();
+                .totalEndpoints.incrementAndGet();
         }
+
+    }
+    public Endpoint(
+        String id,
+        Conference conference,
+        Logger parentLogger,
+        boolean iceControlling)
+        throws IOException
+    {
+        this(id, conference, parentLogger, iceControlling, Clock.systemUTC());
     }
 
     /**
@@ -580,11 +595,11 @@ public class Endpoint
      * {@inheritDoc}
      */
     @Override
-    public long getLastActivity()
+    public Instant getLastActivity()
     {
         PacketIOActivity packetIOActivity
                 = this.transceiver.getPacketIOActivity();
-        return packetIOActivity.getLatestOverallActivity().toEpochMilli();
+        return packetIOActivity.getLatestOverallActivity();
     }
 
     /**
@@ -604,21 +619,17 @@ public class Endpoint
             return true;
         }
 
-        PacketIOActivity packetIOActivity
-                = this.transceiver.getPacketIOActivity();
-
-        int maxExpireTimeSecsFromChannelShims = channelShims.stream()
+        Duration maxExpireTimeFromChannelShims = channelShims.stream()
                 .map(ChannelShim::getExpire)
-                .mapToInt(exp -> exp)
-                .max()
-                .orElse(0);
+                .map(Duration::ofSeconds)
+                .max(Comparator.comparing(Function.identity()))
+                .orElse(Duration.ofSeconds(0));
 
-        long lastActivity
-                = packetIOActivity.getLastOverallActivityTimestampMs();
-        long now = System.currentTimeMillis();
-        if (lastActivity <= 0)
+        Instant lastActivity = getLastActivity();
+        Instant now = clock.instant();
+        if (lastActivity == ClockUtils.NEVER)
         {
-            Duration timeSinceCreation = Duration.ofMillis(now - creationTimeMillis);
+            Duration timeSinceCreation = Duration.between(creationTime, now);
             if (timeSinceCreation.compareTo(EP_TIMEOUT) > 0) {
                 logger.info("Endpoint's ICE connection has neither failed nor connected " +
                     "after " + timeSinceCreation + ", expiring");
@@ -629,11 +640,10 @@ public class Endpoint
             return false;
         }
 
-        if (Duration.ofMillis(now - lastActivity).getSeconds()
-                > maxExpireTimeSecsFromChannelShims)
+        if (Duration.between(lastActivity, now).compareTo(maxExpireTimeFromChannelShims) > 0)
         {
             logger.info("Allowing to expire because of no activity in over " +
-                    maxExpireTimeSecsFromChannelShims + " seconds.");
+                    maxExpireTimeFromChannelShims);
             return true;
         }
         return false;
@@ -1298,12 +1308,12 @@ public class Endpoint
     /**
      * @return  the timestamp of the most recently created channel shim.
      */
-    long getMostRecentChannelCreatedTime()
+    Instant getMostRecentChannelCreatedTime()
     {
         return channelShims.stream()
-                .mapToLong(ChannelShim::getCreationTimestampMs)
-                .max()
-                .orElse(0);
+            .map(ChannelShim::getCreationTimestamp)
+            .max(Comparator.comparing(Function.identity()))
+            .orElse(ClockUtils.NEVER);
     }
 
     /**
