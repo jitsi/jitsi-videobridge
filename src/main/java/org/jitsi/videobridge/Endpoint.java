@@ -174,15 +174,15 @@ public class Endpoint
 
     /**
      * Whether this endpoint should accept audio packets. We set this according
-     * to whether the endpoint has an audio Colibri channel, and the direction
-     * of its audio channel.
+     * to whether the endpoint has an audio Colibri channel whose direction
+     * allows sending.
      */
     private volatile boolean acceptAudio = false;
 
     /**
      * Whether this endpoint should accept video packets. We set this according
-     * to whether the endpoint has a video Colibri channel, and the direction
-     * of its video channel.
+     * to whether the endpoint has a video Colibri channel whose direction
+     * allows sending.
      */
     private volatile boolean acceptVideo = false;
 
