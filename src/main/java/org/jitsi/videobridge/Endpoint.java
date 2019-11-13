@@ -560,6 +560,8 @@ public class Endpoint
      */
     void dtlsAppPacketReceived(PacketInfo dtlsAppPacket)
     {
+        getTransceiver().getPacketIOActivity()
+            .setLastSctpPacketReceivedTimestamp(clock.instant());
         sctpHandler.consume(dtlsAppPacket);
     }
 
@@ -756,6 +758,8 @@ public class Endpoint
         // Create the SctpManager and provide it a method for sending SCTP data
         this.sctpManager = new SctpManager(
                 (data, offset, length) -> {
+                    getTransceiver().getPacketIOActivity()
+                        .setLastSctpPacketSentTimestamp(clock.instant());
                     PacketInfo packet
                         = new PacketInfo(new UnparsedPacket(data, offset, length));
                     dtlsTransport.sendDtlsData(packet);
