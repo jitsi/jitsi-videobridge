@@ -103,7 +103,9 @@ public class ChannelShim
     private final long localSsrc;
 
     /**
-     * This channel's direction.
+     * This channel's direction from the perspective of the bridge.
+     * We expect it to be one of 'inactive', 'sendonly', 'recvonly', or
+     * 'sendrecv'.
      */
     private String direction = "sendrecv";
 
@@ -371,11 +373,11 @@ public class ChannelShim
     }
 
     /**
-     * Checks if this media channel allows receiving media
+     * Checks if this media channel allows media to be sent through it (from
+     * the perspective of the bridge).
      */
-    public boolean allowsReceivingMedia()
+    public boolean allowsSendingMedia()
     {
-        //NOTE: these directions are from the bridge's perspective
         return "sendrecv".equalsIgnoreCase(direction) ||
             "sendonly".equalsIgnoreCase(direction);
     }

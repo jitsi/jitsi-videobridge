@@ -174,13 +174,15 @@ public class Endpoint
 
     /**
      * Whether this endpoint should accept audio packets. We set this according
-     * to whether the endpoint has an audio Colibri channel.
+     * to whether the endpoint has an audio Colibri channel, and the direction
+     * of its audio channel.
      */
     private volatile boolean acceptAudio = false;
 
     /**
      * Whether this endpoint should accept video packets. We set this according
-     * to whether the endpoint has a video Colibri channel.
+     * to whether the endpoint has a video Colibri channel, and the direction
+     * of its video channel.
      */
     private volatile boolean acceptVideo = false;
 
@@ -1358,7 +1360,10 @@ public class Endpoint
         boolean acceptVideo = false;
         for (ChannelShim channelShim : channelShims)
         {
-            if (channelShim.allowsReceivingMedia())
+            // The endpoint accepts audio packets (in the sense of accepting
+            // packets from other endpoints being forwarded to it) if it has
+            // an audio channel whose direction allows sending packets.
+            if (channelShim.allowsSendingMedia())
             {
                 switch (channelShim.getMediaType())
                 {
