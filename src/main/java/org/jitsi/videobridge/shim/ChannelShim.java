@@ -375,8 +375,9 @@ public class ChannelShim
      */
     public boolean allowsReceivingMedia()
     {
+        //NOTE: these directions are from the bridge's perspective
         return "sendrecv".equalsIgnoreCase(direction) ||
-            "recvonly".equalsIgnoreCase(direction);
+            "sendonly".equalsIgnoreCase(direction);
     }
 
     /**
