@@ -251,7 +251,14 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.11</version>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- We need this so that maven-surefire-plugin can run junit4 tests -->
+    <dependency>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+      <version>5.5.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
