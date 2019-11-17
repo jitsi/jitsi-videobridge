@@ -73,12 +73,12 @@ class TccGeneratorNode(
             val rtpPacket = packetInfo.packetAs<RtpPacket>()
             rtpPacket.getHeaderExtension(tccExtId)?.let { ext ->
                 val tccSeqNum = TccHeaderExtension.getSequenceNumber(ext)
-                addPacket(tccSeqNum, packetInfo.receivedTime, rtpPacket.isMarked)
+                addPacket(tccSeqNum, packetInfo.receivedTime, rtpPacket.isMarked, rtpPacket.ssrc)
             }
         }
     }
 
-    private fun addPacket(tccSeqNum: Int, timestamp: Long, isMarked: Boolean) {
+    private fun addPacket(tccSeqNum: Int, timestamp: Long, isMarked: Boolean, ssrc: Long) {
         synchronized(lock) {
             if (packetArrivalTimes.ceilingKey(windowStartSeq) == null) {
                 // Packets in map are all older than the start of the next tcc feedback packet,
@@ -93,14 +93,14 @@ class TccGeneratorNode(
             }
             packetArrivalTimes.putIfAbsent(tccSeqNum, timestamp)
             if (isTccReadyToSend(isMarked)) {
-                buildFeedback()?.let { sendTcc(it) }
+                buildFeedback(ssrc)?.let { sendTcc(it) }
             }
         }
     }
 
-    private fun buildFeedback(): RtcpFbTccPacket? {
+    private fun buildFeedback(mediaSsrc: Long): RtcpFbTccPacket? {
         val tccBuilder = RtcpFbTccPacketBuilder(
-            mediaSourceSsrc = streamInformation.primaryMediaSsrcs.firstOrNull() ?: -1L,
+            mediaSourceSsrc = mediaSsrc,
             feedbackPacketSeqNum = currTccSeqNum++
         )
         logger.cdebug { "building TCC packet with media ssrc ${tccBuilder.mediaSourceSsrc} and" +
