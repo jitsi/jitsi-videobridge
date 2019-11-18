@@ -463,7 +463,9 @@
         <configuration>
           <source>1.8</source>
           <target>1.8</target>
-          <compilerArgs>-Xlint:all</compilerArgs>
+          <compilerArgs>
+            <arg>-Xlint:all</arg>
+          </compilerArgs>
         </configuration>
       </plugin>
       <plugin>
