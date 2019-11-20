@@ -16,14 +16,14 @@
 
 package org.jitsi.videobridge.health.config
 
-import org.jitsi.utils.configk.dsl.multiProperty
+import org.jitsi.utils.config.dsl.multiProperty
 import org.jitsi.videobridge.config.JvbConfigk
 import org.jitsi.videobridge.config.legacyProperty
 import org.jitsi.videobridge.config.newProperty
 import org.jitsi.videobridge.config.simple
 import java.time.Duration
 
-class HealthConfigk {
+class HealthConfig {
     companion object {
         private val interval = multiProperty<Long> {
             property {

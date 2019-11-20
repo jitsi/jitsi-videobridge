@@ -236,7 +236,7 @@ public class Health
      */
     public Health(Videobridge videobridge)
     {
-        super(videobridge, HealthConfigk.getInterval(), true);
+        super(videobridge, HealthConfig.getInterval(), true);
 
         startMs = System.currentTimeMillis();
 
@@ -277,7 +277,7 @@ public class Health
         long duration = System.currentTimeMillis() - start;
         lastResultMs = start + duration;
 
-        if (HealthConfigk.stickyFailures() && hasFailed && exception == null)
+        if (HealthConfig.stickyFailures() && hasFailed && exception == null)
         {
             // We didn't fail this last test, but we've failed before and
             // sticky failures are enabled.
@@ -292,7 +292,7 @@ public class Health
         {
             logger.info(
                 "Performed a successful health check in " + duration
-                    + "ms. Sticky failure: " + (HealthConfigk.stickyFailures() && hasFailed));
+                    + "ms. Sticky failure: " + (HealthConfig.stickyFailures() && hasFailed));
         }
         else
         {
@@ -317,7 +317,7 @@ public class Health
         long lastResultMs = this.lastResultMs;
         long timeSinceLastResult = System.currentTimeMillis() - lastResultMs;
 
-        if (timeSinceLastResult > HealthConfigk.getTimeout())
+        if (timeSinceLastResult > HealthConfig.getTimeout())
         {
             throw new Exception(
                 "No health checks performed recently, the last result was "
