@@ -23,6 +23,11 @@ import java.time.Duration
 
 class EndpointConnectionStatusConfig {
     companion object {
+
+        /**
+         * How long it can take an endpoint to send first data before it will
+         * be marked as inactive.
+         */
         private val firstTransferTimeout = multiProperty<Duration> {
             legacyProperty {
                 name("org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT")
@@ -38,6 +43,10 @@ class EndpointConnectionStatusConfig {
         @JvmStatic
         fun getFirstTransferTimeout(): Duration = firstTransferTimeout.value
 
+        /**
+         * How long an endpoint can be inactive before it wil be considered
+         * disconnected.
+         */
         private val maxInactivityLimit = multiProperty<Duration> {
             legacyProperty {
                 name("org.jitsi.videobridge.EndpointConnectionStatus.MAX_INACTIVITY_LIMIT")
