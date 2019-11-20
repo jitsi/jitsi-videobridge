@@ -16,26 +16,31 @@
 
 package org.jitsi.videobridge.config
 
-import org.jitsi.utils.configk.ConfigProperty
-import org.jitsi.utils.configk.dsl.MultiConfigPropertyBuilder
+import org.jitsi.utils.config.ConfigProperty
+import org.jitsi.utils.config.ConfigSource
+import org.jitsi.utils.config.dsl.MultiConfigPropertyBuilder
 import kotlin.reflect.KClass
 
 open class SimpleConfig<T : Any>(
     valueType: KClass<T>,
     legacyName: String,
     newName: String,
-    readOnce: Boolean
+    readOnce: Boolean,
+    // Allow these to be passed in for testing
+    legacyConfig: ConfigSource = JvbConfigk.legacyConfig,
+    newConfig: ConfigSource = JvbConfigk.newConfig
+
 ) : ConfigProperty<T> {
     private val multiProp = MultiConfigPropertyBuilder(valueType).apply {
         property {
             name(legacyName)
             if (readOnce) readOnce() else readEveryTime()
-            fromConfig(JvbConfigk.legacyConfig)
+            fromConfig(legacyConfig)
         }
         property {
             name(newName)
             if (readOnce) readOnce() else readEveryTime()
-            fromConfig(JvbConfigk.newConfig)
+            fromConfig(newConfig)
         }
     }.build()
 

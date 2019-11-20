@@ -17,14 +17,18 @@
 package org.jitsi.videobridge.config
 
 import com.typesafe.config.Config
-import org.jitsi.utils.configk.ConfigSource
-import org.jitsi.utils.configk.dsl.ConfigPropertyBuilder
-import org.jitsi.utils.configk.dsl.MultiConfigPropertyBuilder
-import org.jitsi.utils.configk.exception.ConfigurationValueTypeUnsupportedException
+import com.typesafe.config.ConfigFactory
+import org.jitsi.utils.config.ConfigSource
+import org.jitsi.utils.config.dsl.ConfigPropertyBuilder
+import org.jitsi.utils.config.dsl.MultiConfigPropertyBuilder
+import org.jitsi.utils.config.exception.ConfigurationValueTypeUnsupportedException
+import org.jitsi.utils.logging2.LoggerImpl
+import java.nio.file.InvalidPathException
+import java.nio.file.Paths
 import java.time.Duration
 import kotlin.reflect.KClass
 
-class TypesafeConfigSource(
+open class TypesafeConfigSource(
     override val name: String,
     private val config: Config
 ) : ConfigSource {
@@ -58,5 +62,30 @@ fun <T : Any> MultiConfigPropertyBuilder<T>.newProperty(block: ConfigPropertyBui
     property {
         fromConfig(JvbConfigk.newConfig)
         block()
+    }
+}
+
+class NewConfig : TypesafeConfigSource("new config", ConfigFactory.load())
+class LegacyConfig : TypesafeConfigSource("legacy config", loadLegacyConfig()) {
+    companion object {
+        private val logger = LoggerImpl(LegacyConfig::class.java.name)
+
+        fun loadLegacyConfig(): Config {
+            val oldConfigHomeDirLocation = System.getProperty("net.java.sip.communicator.SC_HOME_DIR_LOCATION")
+            val oldConfigHomeDirName = System.getProperty("net.java.sip.communicator.SC_HOME_DIR_NAME")
+            return try {
+                val config = ConfigFactory.parseFile(
+                    Paths.get(oldConfigHomeDirLocation, oldConfigHomeDirName, "sip-communicator.properties")
+                            .toFile())
+                logger.info("Found a legacy config file: \n" + config.root().render())
+                config
+            } catch (e: InvalidPathException) {
+                logger.info("No legacy config file found")
+                ConfigFactory.parseString("")
+            } catch (e: NullPointerException) {
+                logger.info("No legacy config file found")
+                ConfigFactory.parseString("")
+            }
+        }
     }
 }

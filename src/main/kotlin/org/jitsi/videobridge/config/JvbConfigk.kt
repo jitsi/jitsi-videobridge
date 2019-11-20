@@ -16,11 +16,31 @@
 
 package org.jitsi.videobridge.config
 
-import org.jitsi.videobridge.util.config.JvbConfig
+import org.jitsi.utils.config.ConfigSource
+import org.jitsi.utils.logging2.LoggerImpl
 
 class JvbConfigk {
     companion object {
-        val legacyConfig = TypesafeConfigSource("legacy config", JvbConfig.getLegacyConfig())
-        val newConfig = TypesafeConfigSource("new config", JvbConfig.getConfig())
+        private val logger = LoggerImpl(JvbConfigk::class.java.name)
+        lateinit var legacyConfig: ConfigSource
+        lateinit var newConfig: ConfigSource
+        lateinit var commandLineArgs: ConfigSource
+
+        init {
+            loadConfig()
+        }
+
+        private fun loadConfig() {
+            legacyConfig = ConfigSupplierSettingsk.legacyConfigSupplier()
+            newConfig = ConfigSupplierSettingsk.configSupplier()
+            //TODO: read through settings
+            commandLineArgs = CommandLineArgsConfigSource()
+        }
+
+        fun reloadConfig() {
+            logger.info("Reloading config")
+            //TODO: where to call ConfigFactory.invalidateCaches?
+            loadConfig()
+        }
     }
 }
