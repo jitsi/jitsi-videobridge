@@ -28,6 +28,10 @@ import java.nio.file.Paths
 import java.time.Duration
 import kotlin.reflect.KClass
 
+/**
+ * A [ConfigSource] which reads from a [com.typesafe.Config]
+ * object
+ */
 open class TypesafeConfigSource(
     override val name: String,
     private val config: Config
@@ -65,7 +69,16 @@ fun <T : Any> MultiConfigPropertyBuilder<T>.newProperty(block: ConfigPropertyBui
     }
 }
 
+/**
+ * The 'new' config factory is read via the default [com.typesafe.config.ConfigFactory]
+ * loader.
+ */
 class NewConfig : TypesafeConfigSource("new config", ConfigFactory.load())
+
+/**
+ * The 'legacy' config file is read by parsing the old file directly using
+ * [com.typesafe.config.ConfigFactory.parseFile]
+ */
 class LegacyConfig : TypesafeConfigSource("legacy config", loadLegacyConfig()) {
     companion object {
         private val logger = LoggerImpl(LegacyConfig::class.java.name)
