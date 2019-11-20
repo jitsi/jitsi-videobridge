@@ -17,5 +17,48 @@
 package org.jitsi.videobridge.testutils
 
 import org.jitsi.utils.config.ConfigSource
+import org.jitsi.utils.config.exception.ConfigPropertyNotFoundException
+import org.jitsi.utils.config.exception.ConfigurationValueTypeUnsupportedException
+import java.time.Duration
+import kotlin.reflect.KClass
 
 val EMPTY_CONFIG: ConfigSource = MockConfigSource("empty config", mapOf())
+
+class MockConfigSource private constructor(
+    override val name: String,
+    private val props: MutableMap<String, Any>,
+    // Just to distinguish this constructor from the public one
+    dummy: Int
+) : ConfigSource, MutableMap<String, Any> by props {
+
+    /**
+     * The caller should pass a non-mutable map of properties, because all
+     * modifications to the props should be done via access the MockConfigSource
+     * instance, not the given map directly.
+     */
+    constructor(name: String, props: Map<String, Any>) : this(name, props.toMutableMap(), 42)
+    var numGetsCalled = 0
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : Any> getterFor(valueType: KClass<T>): (String) -> T {
+        return when(valueType) {
+            Int::class -> getterHelper(::getInt)
+            Long::class -> getterHelper(::getLong)
+            Duration::class -> getterHelper(::getDuration)
+            else -> throw ConfigurationValueTypeUnsupportedException.new(valueType)
+        }
+    }
+
+    private fun getInt(path: String): Int? = props[path] as? Int
+    private fun getLong(path: String): Long? = props[path] as? Long
+    private fun getDuration(path: String): Duration? = props[path] as? Duration
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <U, T : Any> getterHelper(getter: (String) -> U): (String) -> T {
+        return { path ->
+            numGetsCalled++
+            getter(path) as? T ?:
+            throw ConfigPropertyNotFoundException("Could not find value for property at '$path'")
+        }
+    }
+}

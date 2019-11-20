@@ -24,6 +24,7 @@ class JvbConfig {
         private val logger = LoggerImpl(JvbConfig::class.java.name)
         lateinit var legacyConfig: ConfigSource
         lateinit var newConfig: ConfigSource
+        // Must be assigned manually by whatever has access to the command-line args
         lateinit var commandLineArgs: ConfigSource
 
         init {
@@ -31,10 +32,8 @@ class JvbConfig {
         }
 
         private fun loadConfig() {
-            legacyConfig = ConfigSupplierSettingsk.legacyConfigSupplier()
-            newConfig = ConfigSupplierSettingsk.configSupplier()
-            //TODO: read through settings
-            commandLineArgs = CommandLineArgsConfigSource()
+            legacyConfig = LegacyConfig()
+            newConfig = NewConfig()
         }
 
         fun reloadConfig() {
