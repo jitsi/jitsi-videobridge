@@ -21,6 +21,11 @@ import org.jitsi.utils.config.ConfigSource
 import org.jitsi.utils.config.dsl.MultiConfigPropertyBuilder
 import kotlin.reflect.KClass
 
+/**
+ * Models a property set in a legacy config file under one name and a new
+ * config file under another name which doesn't need to transform the value
+ * in any way
+ */
 open class SimpleConfig<T : Any>(
     valueType: KClass<T>,
     legacyName: String,
