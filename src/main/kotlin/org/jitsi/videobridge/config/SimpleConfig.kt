@@ -27,8 +27,8 @@ open class SimpleConfig<T : Any>(
     newName: String,
     readOnce: Boolean,
     // Allow these to be passed in for testing
-    legacyConfig: ConfigSource = JvbConfigk.legacyConfig,
-    newConfig: ConfigSource = JvbConfigk.newConfig
+    legacyConfig: ConfigSource = JvbConfig.legacyConfig,
+    newConfig: ConfigSource = JvbConfig.newConfig
 
 ) : ConfigProperty<T> {
     private val multiProp = MultiConfigPropertyBuilder(valueType).apply {

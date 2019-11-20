@@ -21,7 +21,7 @@ import org.jitsi.utils.config.ConfigSource
 import org.jitsi.utils.config.exception.ConfigPropertyNotFoundException
 import org.jitsi.utils.config.exception.ConfigurationValueTypeUnsupportedException
 import org.jitsi.videobridge.config.ConfigSupplierSettingsk
-import org.jitsi.videobridge.config.JvbConfigk
+import org.jitsi.videobridge.config.JvbConfig
 import java.time.Duration
 import java.util.LinkedList
 import kotlin.reflect.KClass
@@ -60,7 +60,7 @@ class ConfigSetupk {
         ConfigSupplierSettingsk.legacyConfigSupplier = legacyConfigSupplier
         ConfigSupplierSettingsk.configSupplier = newConfigSupplier
 
-        JvbConfigk.reloadConfig()
+        JvbConfig.reloadConfig()
     }
 
     companion object {

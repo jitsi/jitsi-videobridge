@@ -57,14 +57,14 @@ open class TypesafeConfigSource(
 
 fun <T : Any> MultiConfigPropertyBuilder<T>.legacyProperty(block: ConfigPropertyBuilder<T>.() -> Unit) {
     property {
-        fromConfig(JvbConfigk.legacyConfig)
+        fromConfig(JvbConfig.legacyConfig)
         block()
     }
 }
 
 fun <T : Any> MultiConfigPropertyBuilder<T>.newProperty(block: ConfigPropertyBuilder<T>.() -> Unit) {
     property {
-        fromConfig(JvbConfigk.newConfig)
+        fromConfig(JvbConfig.newConfig)
         block()
     }
 }

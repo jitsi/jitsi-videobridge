@@ -19,9 +19,9 @@ package org.jitsi.videobridge.config
 import org.jitsi.utils.config.ConfigSource
 import org.jitsi.utils.logging2.LoggerImpl
 
-class JvbConfigk {
+class JvbConfig {
     companion object {
-        private val logger = LoggerImpl(JvbConfigk::class.java.name)
+        private val logger = LoggerImpl(JvbConfig::class.java.name)
         lateinit var legacyConfig: ConfigSource
         lateinit var newConfig: ConfigSource
         lateinit var commandLineArgs: ConfigSource

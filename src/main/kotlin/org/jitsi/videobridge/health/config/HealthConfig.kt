@@ -17,7 +17,7 @@
 package org.jitsi.videobridge.health.config
 
 import org.jitsi.utils.config.dsl.multiProperty
-import org.jitsi.videobridge.config.JvbConfigk
+import org.jitsi.videobridge.config.JvbConfig
 import org.jitsi.videobridge.config.legacyProperty
 import org.jitsi.videobridge.config.newProperty
 import org.jitsi.videobridge.config.simple
@@ -29,12 +29,12 @@ class HealthConfig {
             property {
                 name("org.jitsi.videobridge.health.INTERVAL")
                 readOnce()
-                fromConfig(JvbConfigk.legacyConfig)
+                fromConfig(JvbConfig.legacyConfig)
             }
             property {
                 name("videobridge.health.interval")
                 readOnce()
-                fromConfig(JvbConfigk.newConfig)
+                fromConfig(JvbConfig.newConfig)
                 retrievedAs<Duration>() convertedBy { it.toMillis() }
             }
         }
