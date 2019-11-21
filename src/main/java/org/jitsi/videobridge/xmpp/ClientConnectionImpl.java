@@ -16,8 +16,8 @@
 package org.jitsi.videobridge.xmpp;
 
 import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.xmpp.config.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.health.*;
 import org.jitsi.xmpp.mucclient.*;
@@ -65,15 +65,6 @@ public class ClientConnectionImpl
     @Override
     public void start(BundleContext bundleContext)
     {
-        ConfigurationService config
-            = ServiceUtils2.getService(
-                bundleContext, ConfigurationService.class);
-        if (config == null)
-        {
-            logger.info("Not using XMPP user login; no config service.");
-            return;
-        }
-
         // Register this instance as an OSGi service.
         Collection<ClientConnectionImpl> userLoginBundles
             = ServiceUtils2.getServices(
@@ -95,10 +86,8 @@ public class ClientConnectionImpl
                 ShutdownIQ.createGracefulShutdownIQ());
             mucClientManager.setIQListener(this);
 
-            Collection<MucClientConfiguration> configurations
-                = MucClientConfiguration.loadFromConfigService(
-                    config, PREFIX, true);
-            configurations.forEach(c -> mucClientManager.addMucClient(c));
+            XmppClientConnectionConfig.getClientConfigs()
+                .forEach(cfg -> mucClientManager.addMucClient(cfg));
 
             bundleContext.registerService(
                 ClientConnectionImpl.class, this, null);

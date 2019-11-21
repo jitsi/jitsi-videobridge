@@ -18,6 +18,7 @@ package org.jitsi.videobridge.config
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigObject
 import org.jitsi.utils.config.ConfigSource
 import org.jitsi.utils.config.dsl.ConfigPropertyBuilder
 import org.jitsi.utils.config.dsl.MultiConfigPropertyBuilder
@@ -43,6 +44,7 @@ open class TypesafeConfigSource(
             Int::class -> { path -> getInt(path) as T }
             Long::class -> { path -> getLong(path) as T }
             Duration::class -> { path -> getDuration(path) as T }
+            ConfigObject::class -> { path -> getObject(path) as T }
             else -> throw ConfigurationValueTypeUnsupportedException.new(valueType)
         }
     }
@@ -53,6 +55,7 @@ open class TypesafeConfigSource(
     private fun getLong(path: String): Long = config.getLong(path)
     private fun getDuration(path: String): Duration = config.getDuration(path)
     private fun getBoolean(path: String): Boolean = config.getBoolean(path)
+    private fun getObject(path: String): ConfigObject = config.getObject(path)
 }
 
 fun <T : Any> MultiConfigPropertyBuilder<T>.legacyProperty(block: ConfigPropertyBuilder<T>.() -> Unit) {

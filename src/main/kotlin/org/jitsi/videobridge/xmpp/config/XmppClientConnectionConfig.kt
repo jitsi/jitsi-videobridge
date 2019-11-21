@@ -19,19 +19,21 @@ package org.jitsi.videobridge.xmpp.config
 import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValue
 import org.jitsi.utils.config.dsl.multiProperty
+import org.jitsi.videobridge.config.legacyProperty
+import org.jitsi.videobridge.config.newProperty
 import org.jitsi.xmpp.mucclient.MucClientConfiguration
 
 class XmppClientConnectionConfig {
     companion object {
         private val clientConnectionConfigs = multiProperty<List<MucClientConfiguration>> {
-            property {
+            legacyProperty {
                 name("org.jitsi.videobridge.xmpp.user")
                 readOnce()
                 retrievedAs<ConfigObject>() convertedBy { cfg ->
                     cfg.entries.map { it.toMucClientConfiguration() }
                 }
             }
-            property {
+            newProperty {
                 name("videobridge.apis.xmpp-client.configs")
                 readOnce()
                 retrievedAs<ConfigObject>() convertedBy { cfg ->
