@@ -16,7 +16,6 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.meet.*;
-import org.jitsi.videobridge.util.config.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.packet.IQ;

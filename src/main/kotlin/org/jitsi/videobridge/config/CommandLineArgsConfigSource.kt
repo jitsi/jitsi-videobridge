@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-package org.jitsi.testutils;
+package org.jitsi.videobridge.config
 
-import com.typesafe.config.*;
+import org.jitsi.utils.config.ConfigSource
+import kotlin.reflect.KClass
 
-public class ConfigUtils
-{
-    public static Config EMPTY_CONFIG = ConfigFactory.parseString("");
-    public static Config EMPTY_NEW_CONFIG = ConfigFactory.parseString("videobridge {}");
+class CommandLineArgsConfigSource(private val commandLineArgs: Array<String>) : ConfigSource {
+    override val name: String = "command line args"
+
+    override fun <T : Any> getterFor(valueType: KClass<T>): (String) -> T {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
 }

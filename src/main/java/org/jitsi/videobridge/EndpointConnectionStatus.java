@@ -18,16 +18,11 @@ package org.jitsi.videobridge;
 import org.jitsi.eventadmin.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
-import org.jitsi.utils.config.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.shim.*;
-import org.jitsi.videobridge.util.*;
-import org.jitsi.videobridge.util.config.*;
 import org.osgi.framework.*;
 
 import java.time.*;
 import java.util.*;
-import java.util.concurrent.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
@@ -367,76 +362,21 @@ public class EndpointConnectionStatus
             .forEach(e -> sendEndpointConnectionStatus(e, false, endpoint));
     }
 
-    public static class Config {
-        /**
-         * How long it can take an endpoint to send first data before it will
-         * be marked as inactive.
-         */
-        protected static class FirstTransferTimeoutProperty extends AbstractConfigProperty<Duration>
-        {
-            protected static final String legacyPropName =
-                "org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT";
-            protected static final String propName =
-                "videobridge.ep-connection-status.first-transfer-timeout";
-
-            private static FirstTransferTimeoutProperty singleton = new FirstTransferTimeoutProperty();
-
-            protected FirstTransferTimeoutProperty()
-            {
-                super(new JvbPropertyConfig<Duration>()
-                    .fromLegacyConfig(config -> Duration.ofMillis(config.getLong(legacyPropName)))
-                    .fromNewConfig(config -> config.getDuration(propName))
-                    .readOnce()
-                    .throwIfNotFound()
-
-                );
-            }
-
-            public static Duration getValue()
-            {
-                return singleton.get();
-            }
-        }
-
+    /**
+     * We can no longer embed the config class here directly (because it's in
+     * kotlin) and this class is in the top-level package, so the config file
+     * had to get a specific (and long) name.  This class is a wrapper for
+     * convenience.
+     */
+    protected static class Config {
         public static Duration getFirstTransferTimeout()
         {
-            return FirstTransferTimeoutProperty.getValue();
-        }
-
-        /**
-         * How long an endpoint can be inactive before it wil be considered
-         * disconnected.
-         */
-        protected static class MaxInactivityLimitProperty extends AbstractConfigProperty<Duration>
-        {
-            protected static final String legacyPropName =
-                "org.jitsi.videobridge.EndpointConnectionStatus.MAX_INACTIVITY_LIMIT";
-            protected static final String propName =
-                "videobridge.ep-connection-status.max-inactivity-limit";
-
-            private static MaxInactivityLimitProperty singleton = new MaxInactivityLimitProperty();
-
-            protected MaxInactivityLimitProperty()
-            {
-                super(new JvbPropertyConfig<Duration>()
-                    .fromLegacyConfig(config -> Duration.ofMillis(config.getLong(legacyPropName)))
-                    .fromNewConfig(config -> config.getDuration(propName))
-                    .readOnce()
-                    .throwIfNotFound()
-
-                );
-            }
-
-            public static Duration getValue()
-            {
-                return singleton.get();
-            }
+            return EndpointConnectionStatusConfig.getFirstTransferTimeout();
         }
 
         public static Duration getMaxInactivityLimit()
         {
-            return MaxInactivityLimitProperty.getValue();
+            return EndpointConnectionStatusConfig.getMaxInactivityLimit();
         }
     }
-
 }

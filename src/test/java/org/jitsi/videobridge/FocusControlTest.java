@@ -16,7 +16,6 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.util.config.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.health.*;
 import org.jivesoftware.smack.packet.*;
