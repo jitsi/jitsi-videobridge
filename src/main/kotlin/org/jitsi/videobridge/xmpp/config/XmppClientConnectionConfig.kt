@@ -48,7 +48,8 @@ class XmppClientConnectionConfig {
                 it.forEach { (propName, propValue) ->
                     config.setProperty(propName, propValue.unwrapped().toString())
                 }
-            }
+            } ?: run { throw Exception("Invalid muc client configuration. " +
+                    "Expected type ConfigObject but got ${value.unwrapped()::class.java}") }
             return config
         }
 
