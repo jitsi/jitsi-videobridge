@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="jitsi-videobridge" xmlns:maven-artifact="antlib:org.apache.maven.artifact.ant">
+    <!-- KOTLIN_HOME must be defined with -DKOTLIN_HOME and be set to the 'lib' directory
+         where the kotlin compile is installed i.e. /snap/kotlin/current/lib -->
+    <typedef resource="org/jetbrains/kotlin/ant/antlib.xml" classpath="${KOTLIN_HOME}/kotlin-ant.jar" />
     <!--
     Requires maven-ant-tasks to maintain this project's dependencies in Maven's
     pom.xml only and have the latter fetch them when necessary so that we don't
@@ -14,8 +17,8 @@
     -->
 
     <property file="local.properties" />
-    <property name="src" value="src/main/java" />
-    <property name="src.test" value="src/test/java" />
+    <property name="src" value="src/main/java;src/main/kotlin" />
+    <property name="src.test" value="src/test/java;src/test/kotlin" />
     <property name="output" value="classes" />
     <property name="output.test" value="test-classes" />
     <property name="resourcesDir" value="src/main/resources" />
@@ -99,10 +102,13 @@
             classpathref="compile.classpath"
             destdir="${output}"
             debug="true"
-            fork="true"
             source="1.8"
             srcdir="${src}"
-            target="1.8" />
+            target="1.8">
+            <withKotlin>
+                <compilerarg line="-jvm-target 1.8"/>
+            </withKotlin>
+        </javac>
     </target>
 
     <target name="compile-test" depends="compile">
@@ -111,10 +117,13 @@
                 classpathref="test.classpath"
                 destdir="${output.test}"
                 debug="true"
-                fork="true"
                 source="1.8"
                 srcdir="${src.test}"
-                target="1.8" />
+                target="1.8">
+            <withKotlin>
+                <compilerarg line="-jvm-target 1.8"/>
+            </withKotlin>
+        </javac>
     </target>
 
     <target name="run">
