@@ -19,7 +19,7 @@ import org.jitsi.eventadmin.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.stats.media.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.*;
 import org.jitsi.videobridge.stats.*;
 import org.osgi.framework.*;
 
