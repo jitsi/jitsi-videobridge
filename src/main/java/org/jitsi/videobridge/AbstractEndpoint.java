@@ -42,7 +42,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 {
     /**
      * The name of the <tt>Endpoint</tt> property <tt>pinnedEndpoint</tt> which
-     * specifies the JID of the currently pinned <tt>Endpoint</tt> of this
+     * specifies the ID of the currently pinned <tt>Endpoint</tt> of this
      * <tt>Endpoint</tt>.
      */
     public static final String PINNED_ENDPOINTS_PROPERTY_NAME
@@ -50,7 +50,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 
     /**
      * The name of the <tt>Endpoint</tt> property <tt>selectedEndpoint</tt>
-     * which specifies the JID of the currently selected <tt>Endpoint</tt> of
+     * which specifies the ID of the currently selected <tt>Endpoint</tt> of
      * this <tt>Endpoint</tt>.
      */
     public static final String SELECTED_ENDPOINTS_PROPERTY_NAME
