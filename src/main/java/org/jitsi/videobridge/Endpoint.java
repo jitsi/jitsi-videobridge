@@ -275,6 +275,33 @@ public class Endpoint
     }
 
     /**
+     * Sets the list of pinned endpoints for this endpoint.
+     * @param newPinnedEndpoints the set of pinned endpoints.
+    */
+    @Override
+    public boolean pinnedEndpointsChanged(Set<String> newPinnedEndpoints)
+    {
+        boolean changed = super.pinnedEndpointsChanged(newPinnedEndpoints);
+        if (changed)
+        {
+            bitrateController.setPinnedEndpointIds(newPinnedEndpoints);
+        }
+        return changed;
+    }
+
+    public boolean selectedEndpointsChanged(Set<String> newSelectedEndpoints)
+    {
+        boolean changed = super.selectedEndpointsChanged(newSelectedEndpoints);
+        if (changed)
+        {
+            bitrateController.setSelectedEndpointIds(
+                Collections.unmodifiableSet(newSelectedEndpoints));
+        }
+
+        return changed;
+    }
+
+    /**
      * Notifies this {@code Endpoint} that the list of {@code Endpoint}s ordered
      * by speech activity (i.e. the dominant speaker history) has changed.
      */

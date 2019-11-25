@@ -104,8 +104,11 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     /**
      * Sets the list of pinned endpoints for this endpoint.
      * @param newPinnedEndpoints the set of pinned endpoints.
+     * @return true if the underlying set of pinned endpoints has changed, false
+     * otherwise. The return value was introduced to enable overrides to
+     * act upon the underlying set changing.
      */
-    public void pinnedEndpointsChanged(Set<String> newPinnedEndpoints)
+    public boolean pinnedEndpointsChanged(Set<String> newPinnedEndpoints)
     {
         // Check if that's different to what we think the pinned endpoints are.
         Set<String> oldPinnedEndpoints = this.pinnedEndpoints;
@@ -119,18 +122,23 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
                     + Arrays.toString(pinnedEndpoints.toArray()));
             }
 
-            // bitrateController.setPinnedEndpointIds(pinnedEndpoints);
-
             firePropertyChange(PINNED_ENDPOINTS_PROPERTY_NAME,
                 oldPinnedEndpoints, pinnedEndpoints);
+
+            return true;
         }
+
+        return false;
     }
 
     /**
      * Sets the list of selected endpoints for this endpoint.
      * @param newSelectedEndpoints the set of selected endpoints.
+     * @return true if the underlying set of selected endpoints has changed,
+     * false otherwise. The return value was introduced to enable overrides to
+     * act upon the underlying set changing.
      */
-    public void selectedEndpointsChanged(Set<String> newSelectedEndpoints)
+    public boolean selectedEndpointsChanged(Set<String> newSelectedEndpoints)
     {
         // Check if that's different to what we think the pinned endpoints are.
         Set<String> oldSelectedEndpoints = this.selectedEndpoints;
@@ -144,12 +152,13 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
                     + Arrays.toString(selectedEndpoints.toArray()));
             }
 
-            // bitrateController.setSelectedEndpointIds(
-               // Collections.unmodifiableSet(selectedEndpoints));
-
             firePropertyChange(SELECTED_ENDPOINTS_PROPERTY_NAME,
                 oldSelectedEndpoints, selectedEndpoints);
+
+            return true;
         }
+
+        return false;
     }
 
 
