@@ -289,6 +289,10 @@ public class Endpoint
         return changed;
     }
 
+    /**
+     * Sets the list of selected endpoints for this endpoint.
+     * @param newSelectedEndpoints the set of selected endpoints.
+     */
     public boolean selectedEndpointsChanged(Set<String> newSelectedEndpoints)
     {
         boolean changed = super.selectedEndpointsChanged(newSelectedEndpoints);
