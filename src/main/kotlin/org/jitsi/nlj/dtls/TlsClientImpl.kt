@@ -18,6 +18,7 @@ package org.jitsi.nlj.dtls
 import java.nio.ByteBuffer
 import java.util.Hashtable
 import org.bouncycastle.crypto.util.PrivateKeyFactory
+import org.bouncycastle.tls.AlertDescription
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.CertificateRequest
 import org.bouncycastle.tls.CipherSuite
@@ -170,17 +171,35 @@ class TlsClientImpl(
         ProtocolVersion.DTLSv12.downTo(ProtocolVersion.DTLSv10)
 
     override fun notifyAlertRaised(alertLevel: Short, alertDescription: Short, message: String?, cause: Throwable?) {
-        val stack = with(StringBuffer()) {
-            val e = Exception()
-            for (el in e.stackTrace) {
-                appendln(el.toString())
+        when (alertDescription) {
+            AlertDescription.close_notify -> {
+                logger.info("close_notify raised, connection closing")
             }
-            toString()
+            else -> {
+                logger.cerror {
+                    StringBuffer().apply {
+                        appendln("Alert raised: $alertLevel $alertDescription " +
+                            "(${AlertDescription.getName(alertDescription)}). Message: $message " +
+                            "Cause: $cause")
+                        val e = Exception()
+                        for (el in e.stackTrace) {
+                            appendln(el.toString())
+                        }
+                    }.toString()
+                }
+            }
         }
-        logger.info(stack)
     }
 
     override fun notifyAlertReceived(alertLevel: Short, alertDescription: Short) {
-        logger.cerror { "TLS Client alert received: $alertLevel $alertDescription" }
+        when (alertDescription) {
+            AlertDescription.close_notify -> {
+                logger.info("close_notify received, connection closing")
+            }
+            else -> {
+                logger.cerror { "TLS Client alert received: $alertLevel $alertDescription" +
+                    "(${AlertDescription.getName(alertDescription)})" }
+            }
+        }
     }
 }
