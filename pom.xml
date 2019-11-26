@@ -19,7 +19,7 @@
     <kotlin.version>1.3.21</kotlin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <smack.version>4.2.4-47d17fc</smack.version>
-    <jitsi.utils.version>1.0-21-gb09b57b</jitsi.utils.version>
+    <jitsi.utils.version>1.0-23-ga53f8af</jitsi.utils.version>
   </properties>
 
   <dependencyManagement>
@@ -110,7 +110,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco</artifactId>
-      <version>1.1-5-g6ee23f2</version>
+      <version>1.1-6-g7e940e3</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -141,7 +141,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>libjitsi</artifactId>
-      <version>1.0-3-gd07c465</version>
+      <version>1.0-4-g07f0dfa</version>
     </dependency>
 
     <dependency>

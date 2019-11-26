@@ -17,7 +17,7 @@ package org.jitsi.videobridge.stats;
 
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;

@@ -18,7 +18,7 @@ package org.jitsi.videobridge.stats;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.stats.media.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.*;
 import org.osgi.framework.*;
 
 import static org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.*;
