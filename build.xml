@@ -17,7 +17,8 @@
     -->
 
     <property file="local.properties" />
-    <property name="src" value="src/main/java;src/main/kotlin" />
+    <property name="src.java" value="src/main/java" />
+    <property name="src" value="{src.java};src/main/kotlin" />
     <property name="src.test" value="src/test/java;src/test/kotlin" />
     <property name="output" value="classes" />
     <property name="output.test" value="test-classes" />
@@ -231,15 +232,15 @@
         </loadresource>
 
         <!-- set the build id according to the cruisecontrol property -->
-        <replaceregexp file="${src}/org/jitsi/videobridge/version/CurrentVersionImpl.java"
+        <replaceregexp file="${src.java}/org/jitsi/videobridge/version/CurrentVersionImpl.java"
                        match="VERSION_MAJOR = (.+)"
                        replace="VERSION_MAJOR = ${version.major};"
                        byline="true"/>
-        <replaceregexp file="${src}/org/jitsi/videobridge/version/CurrentVersionImpl.java"
+        <replaceregexp file="${src.java}/org/jitsi/videobridge/version/CurrentVersionImpl.java"
                        match="VERSION_MINOR = (.+)"
                        replace="VERSION_MINOR = ${version.minor};"
                        byline="true"/>
-        <replaceregexp file="${src}/org/jitsi/videobridge/version/CurrentVersionImpl.java"
+        <replaceregexp file="${src.java}/org/jitsi/videobridge/version/CurrentVersionImpl.java"
                  match="NIGHTLY_BUILD_ID = (.+)"
                  replace="NIGHTLY_BUILD_ID = &quot;${version.buildid}&quot;;"
                  byline="true"/>
