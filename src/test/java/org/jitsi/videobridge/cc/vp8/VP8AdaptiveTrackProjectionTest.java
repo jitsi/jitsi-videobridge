@@ -2,6 +2,7 @@ package org.jitsi.videobridge.cc.vp8;
 
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
+import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.logging.DiagnosticContext;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.cc.*;
@@ -11,6 +12,8 @@ import org.junit.*;
 import javax.xml.bind.*;
 import java.text.*;
 import java.util.concurrent.*;
+
+import static org.junit.Assert.*;
 
 public class VP8AdaptiveTrackProjectionTest
 {
@@ -35,8 +38,12 @@ public class VP8AdaptiveTrackProjectionTest
                 "00" + /* T/K byte (tid) */
             /* VP8 payload header */
                 "00" + /* P = 0. */
-                "fefefefe" /* Rest of payload is "don't care" for this code. */
-                           /* TODO: height */
+                /* Rest of payload is "don't care" for this code, except
+                   keyframe frame size, so make this a valid-ish keyframe header.
+                 */
+                "0000" + /* Length = 0. */
+                "9d012a" + /* Keyframe startcode */
+                "0050D002" /* 1280 × 720 (little-endian) */
             );
 
     private Vp8Packet buildPacket(int seq, long ts,
@@ -44,33 +51,38 @@ public class VP8AdaptiveTrackProjectionTest
         int tid, int picId, int tl0picidx)
     {
         byte[] buffer = vp8PacketTemplate.clone();
-        Vp8Packet packet = new Vp8Packet(buffer, 0, buffer.length);
 
-        packet.setSequenceNumber(seq);
-        packet.setTimestamp(ts);
+        RtpPacket rtpPacket = new RtpPacket(buffer,0, buffer.length);
 
-        packet.setPictureId(picId);
-        packet.setTL0PICIDX(tl0picidx);
+        rtpPacket.setSequenceNumber(seq);
+        rtpPacket.setTimestamp(ts);
 
-        DePacketizer.VP8PayloadDescriptor.setStartOfPartition(packet.buffer,
-            packet.getPayloadOffset(), startOfFrame);
-        DePacketizer.VP8PayloadDescriptor.setTemporalLayerIndex(packet.buffer,
-            packet.getPayloadOffset(), packet.length, tid);
+        /* Do VP8 manipulations on buffer before constructing Vp8Packet, because
+           Vp8Packet computes values at construct-time. */
+        DePacketizer.VP8PayloadDescriptor.setStartOfPartition(rtpPacket.buffer,
+            rtpPacket.getPayloadOffset(), startOfFrame);
+        DePacketizer.VP8PayloadDescriptor.setTemporalLayerIndex(rtpPacket.buffer,
+            rtpPacket.getPayloadOffset(), rtpPacket.length, tid);
 
         if (startOfFrame) {
             int szVP8PayloadDescriptor = DePacketizer
-                .VP8PayloadDescriptor.getSize(packet.buffer, packet.getPayloadOffset(), packet.length);
+                .VP8PayloadDescriptor.getSize(rtpPacket.buffer, rtpPacket.getPayloadOffset(), rtpPacket.length);
 
-            DePacketizer.VP8PayloadHeader.setKeyFrame(packet.buffer,
-                packet.getPayloadOffset() + szVP8PayloadDescriptor, keyframe);
+            DePacketizer.VP8PayloadHeader.setKeyFrame(rtpPacket.buffer,
+                rtpPacket.getPayloadOffset() + szVP8PayloadDescriptor, keyframe);
         }
-        packet.setMarked(endOfFrame);
+        rtpPacket.setMarked(endOfFrame);
 
-        return null;
+        Vp8Packet vp8Packet = rtpPacket.toOtherType(Vp8Packet::new);
+
+        vp8Packet.setPictureId(picId);
+        vp8Packet.setTL0PICIDX(tl0picidx);
+
+        return vp8Packet;
     }
 
     @Test
-    public void simpleProjectionTest()
+    public void simpleProjectionTest() throws RewriteException
     {
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
@@ -78,5 +90,14 @@ public class VP8AdaptiveTrackProjectionTest
         VP8AdaptiveTrackProjectionContext context =
             new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
                 initialState, logger);
+
+        Vp8Packet packet = buildPacket(1, 0, true, true, true, 0, 0, 0);
+
+        assertTrue(context.accept(packet, 0, 0));
+
+        context.rewriteRtp(packet);
+
+        assertEquals(10001, packet.getSequenceNumber());
+        assertEquals(1003000, packet.getTimestamp());
     }
 }

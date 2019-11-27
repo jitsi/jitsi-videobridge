@@ -91,16 +91,8 @@ public class VP8AdaptiveTrackProjectionContext
         this.payloadType = payloadType;
         this.vp8QualityFilter = new VP8QualityFilter(parentLogger);
 
-        // Compute the starting sequence number and the timestamp of the initial
-        // frame based on the RTP state.
-        int startingSequenceNumber =
-                RtpUtils.applySequenceNumberDelta(rtpState.maxSequenceNumber, 1);
-
-        long timestamp =
-                RtpUtils.applyTimestampDelta(rtpState.maxTimestamp, 3000);
-
         lastVP8FrameProjection = new VP8FrameProjection(diagnosticContext, logger,
-            rtpState.ssrc, startingSequenceNumber, timestamp);
+            rtpState.ssrc, rtpState.maxSequenceNumber, rtpState.maxTimestamp);
     }
 
     /** Lookup a Vp8Frame for a packet. */
@@ -222,7 +214,15 @@ public class VP8AdaptiveTrackProjectionContext
 
             // this is a simulcast switch. The typical incremental value =
             // 90kHz / 30 = 90,000Hz / 30 = 3000 per frame or per 33ms
-            long tsDelta = 3000 * Math.max(1, (nowMs - lastVP8FrameProjection.getCreatedMs()) / 33);
+            long tsDelta;
+            if (lastVP8FrameProjection.getCreatedMs() != 0)
+            {
+                tsDelta = 3000 * Math.max(1, (nowMs - lastVP8FrameProjection.getCreatedMs()) / 33);
+            }
+            else
+            {
+                tsDelta = 3000;
+            }
             projectedTs = RtpUtils.applyTimestampDelta(lastVP8FrameProjection.getTimestamp(), tsDelta);
         }
         else if (result.getNextFrame() != null)
@@ -283,7 +283,7 @@ public class VP8AdaptiveTrackProjectionContext
             VP8FrameProjection projection =
                 new VP8FrameProjection(diagnosticContext, logger,
                     frame, lastVP8FrameProjection.getSSRC(), projectedTs,
-                    RtpUtils.getSequenceNumberDelta(vp8Packet.getSequenceNumber(), projectedSeq),
+                    RtpUtils.getSequenceNumberDelta(projectedSeq, vp8Packet.getSequenceNumber()),
                     1 /* TODO: pic id */, 1 /* TODO: tl0picidx */, nowMs
                     );
             lastVP8FrameProjection = projection;

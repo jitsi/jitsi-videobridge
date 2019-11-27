@@ -188,6 +188,8 @@ public class VP8FrameMap
 
         VP8Frame frame = new VP8Frame(packet);
 
+        vp8FrameMap.put(seq, frame);
+
         return new FrameInsertionResult(frame, prevFrame, nextFrame);
     }
 
