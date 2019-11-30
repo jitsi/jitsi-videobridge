@@ -18,7 +18,7 @@
 
     <property file="local.properties" />
     <property name="src.java" value="src/main/java" />
-    <property name="src" value="{src.java};src/main/kotlin" />
+    <property name="src" value="${src.java};src/main/kotlin" />
     <property name="src.test" value="src/test/java;src/test/kotlin" />
     <property name="output" value="classes" />
     <property name="output.test" value="test-classes" />
