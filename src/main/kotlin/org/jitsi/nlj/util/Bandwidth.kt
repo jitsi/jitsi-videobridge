@@ -111,6 +111,20 @@ class Bandwidth(bps: Double) : Comparable<Bandwidth> {
     }
 
     override fun hashCode(): Int = bps.hashCode()
+
+    companion object {
+        fun fromString(str: String): Bandwidth {
+            val (digits, notDigits) = str.partition { it.isDigit() }
+            val amount = digits.toInt()
+            val unit = notDigits.trim().toLowerCase()
+            return when (unit) {
+                "bps" -> amount.bps
+                "kbps" -> amount.kbps
+                "mbps" -> amount.mbps
+                else -> throw IllegalArgumentException("Unrecognized unit $unit")
+            }
+        }
+    }
 }
 
 val Int.bps: Bandwidth
