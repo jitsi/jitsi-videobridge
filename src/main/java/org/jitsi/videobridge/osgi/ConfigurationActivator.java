@@ -15,13 +15,13 @@
  */
 package org.jitsi.videobridge.osgi;
 
+import org.jitsi.config.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.service.libjitsi.*;
 import org.jitsi.utils.logging2.*;
 import org.osgi.framework.*;
 
 /**
- * Registers LibJitsi's configuration service.
+ * Registers the legacy configuration service shim
  *
  * @author Boris Grozev
  */
@@ -37,19 +37,12 @@ public class ConfigurationActivator
     @Override
     public void start(BundleContext bundleContext)
     {
-        ConfigurationService cfg = LibJitsi.getConfigurationService();
-        if (cfg != null)
-        {
-            bundleContext.registerService(
-                    ConfigurationService.class.getName(),
-                    cfg,
-                    null);
-            logger.info("Registered the LibJitsi ConfigurationService in OSGi.");
-        }
-        else
-        {
-            logger.warn("Failed to register the Configuration service.");
-        }
+        ConfigurationService cfg = new LegacyConfigurationServiceShim();
+        bundleContext.registerService(
+            ConfigurationService.class.getName(),
+            cfg,
+            null);
+        logger.info("Registered the LegacyConfigurationServiceShim in OSGi.");
     }
 
     @Override
