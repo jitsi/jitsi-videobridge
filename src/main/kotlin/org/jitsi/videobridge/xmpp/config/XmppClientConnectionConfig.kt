@@ -18,9 +18,9 @@ package org.jitsi.videobridge.xmpp.config
 
 import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValue
+import org.jitsi.config.legacyProperty
+import org.jitsi.config.newProperty
 import org.jitsi.utils.config.dsl.multiProperty
-import org.jitsi.videobridge.config.legacyProperty
-import org.jitsi.videobridge.config.newProperty
 import org.jitsi.xmpp.mucclient.MucClientConfiguration
 
 class XmppClientConnectionConfig {

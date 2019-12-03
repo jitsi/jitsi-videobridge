@@ -16,9 +16,9 @@
 
 package org.jitsi.videobridge
 
+import org.jitsi.config.legacyProperty
+import org.jitsi.config.newProperty
 import org.jitsi.utils.config.dsl.multiProperty
-import org.jitsi.videobridge.config.legacyProperty
-import org.jitsi.videobridge.config.newProperty
 import java.time.Duration
 
 class EndpointConnectionStatusConfig {
