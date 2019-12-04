@@ -41,6 +41,33 @@ class BandwidthTest : ShouldSpec() {
                 1.mbps / 4.mbps shouldBe 0.25
             }
         }
+        "operation-assign operations on bandwidths" {
+            should("work correctly") {
+                var b = 1.mbps
+                b += 0.5.mbps
+                b shouldBe 1.5.mbps
+                b.kbps shouldBe 1500.0
+                b.bps shouldBe 1_500_000.0
+
+                b = 1.mbps
+                b -= 0.5.mbps
+                b shouldBe 0.5.mbps
+                b.kbps shouldBe 500.0
+                b.bps shouldBe 500_000.0
+
+                b = 1.mbps
+                b *= 2.0
+                b shouldBe 2.0.mbps
+                b.kbps shouldBe 2_000.0
+                b.bps shouldBe 2_000_000.0
+
+                b = 1.mbps
+                b /= 2.0
+                b shouldBe 0.5.mbps
+                b.kbps shouldBe 500.0
+                b.bps shouldBe 500_000.0
+            }
+        }
         "printing bandwidths" {
             should("print as the most appropriate unit") {
                 2_500_000.bps.toString() shouldBe "2.5 mbps"
