@@ -24,7 +24,7 @@ public class VP8AdaptiveTrackProjectionTest
         new ConcurrentHashMap<>(), new CopyOnWriteArraySet<>());
 
     @Test
-    public void simpleProjectionTest() throws RewriteException
+    public void singlePacketProjectionTest() throws RewriteException
     {
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
@@ -43,6 +43,76 @@ public class VP8AdaptiveTrackProjectionTest
 
         assertEquals(10001, packet.getSequenceNumber());
         assertEquals(1003000, packet.getTimestamp());
+    }
+
+    private void runInOrderTest(Vp8PacketGenerator generator, int targetIndex)
+        throws RewriteException
+    {
+        RtpState initialState =
+            new RtpState(1, 10000, 1000000);
+
+        VP8AdaptiveTrackProjectionContext context =
+            new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
+                initialState, logger);
+
+        int expectedSeq = 10001;
+        long expectedTs = 1003000;
+        for (int i = 0; i < 10000; i++)
+        {
+            Vp8Packet packet = generator.nextPacket();
+
+            boolean accepted = context.accept(packet, packet.getTemporalLayerIndex(), targetIndex);
+
+            if (packet.getTemporalLayerIndex() <= targetIndex)
+            {
+                assertTrue(accepted);
+
+                context.rewriteRtp(packet);
+
+                assertEquals(expectedSeq, packet.getSequenceNumber());
+                assertEquals(expectedTs, packet.getTimestamp());
+                expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1);
+            }
+            else
+            {
+                assertFalse(accepted);
+            }
+            if (packet.isEndOfFrame())
+            {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
+            }
+        }
+    }
+
+    @Test
+    public void simpleProjectionTest() throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(1);
+
+        runInOrderTest(generator, 2);
+    }
+
+    @Test
+    public void filteredProjectionTest() throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(1);
+
+    }
+
+    @Test
+    public void largerFrameProjectionTest() throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(3);
+
+        runInOrderTest(generator, 2);
+    }
+
+    @Test
+    public void largerFrameFilteredTest() throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(3);
+
+        runInOrderTest(generator, 0);
     }
 
     private static class Vp8PacketGenerator {
@@ -120,12 +190,12 @@ public class VP8AdaptiveTrackProjectionTest
                Vp8Packet computes values at construct-time. */
             DePacketizer.VP8PayloadDescriptor.setStartOfPartition(rtpPacket.buffer,
                 rtpPacket.getPayloadOffset(), startOfFrame);
-            DePacketizer.VP8PayloadDescriptor.setTemporalLayerIndex(rtpPacket.buffer,
-                rtpPacket.getPayloadOffset(), rtpPacket.length, tid);
+            assertTrue(DePacketizer.VP8PayloadDescriptor.setTemporalLayerIndex(rtpPacket.buffer,
+                rtpPacket.getPayloadOffset(), rtpPacket.getPayloadLength(), tid));
 
             if (startOfFrame) {
                 int szVP8PayloadDescriptor = DePacketizer
-                    .VP8PayloadDescriptor.getSize(rtpPacket.buffer, rtpPacket.getPayloadOffset(), rtpPacket.length);
+                    .VP8PayloadDescriptor.getSize(rtpPacket.buffer, rtpPacket.getPayloadOffset(), rtpPacket.getPayloadLength());
 
                 DePacketizer.VP8PayloadHeader.setKeyFrame(rtpPacket.buffer,
                     rtpPacket.getPayloadOffset() + szVP8PayloadDescriptor, keyframe);
@@ -133,6 +203,14 @@ public class VP8AdaptiveTrackProjectionTest
             rtpPacket.setMarked(endOfFrame);
 
             Vp8Packet vp8Packet = rtpPacket.toOtherType(Vp8Packet::new);
+
+            /* Make sure our manipulations of the raw buffer were correct. */
+            assertEquals(startOfFrame, vp8Packet.isStartOfFrame());
+            assertEquals(tid, vp8Packet.getTemporalLayerIndex());
+            if (startOfFrame)
+            {
+                assertEquals(keyframe, vp8Packet.isKeyframe());
+            }
 
             vp8Packet.setPictureId(picId);
             vp8Packet.setTL0PICIDX(tl0picidx);
