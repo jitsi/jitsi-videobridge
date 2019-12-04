@@ -15,63 +15,28 @@
  */
 package org.jitsi.videobridge.cc;
 
- import org.jitsi.nlj.util.*;
- import org.jitsi.service.configuration.*;
- import org.jitsi.service.libjitsi.*;
- import org.jitsi.utils.concurrent.*;
- import org.jitsi.utils.logging.*;
- import org.jitsi.nlj.rtp.bandwidthestimation.*;
- import org.json.simple.*;
+import org.jitsi.nlj.rtp.bandwidthestimation.*;
+import org.jitsi.nlj.util.*;
+import org.jitsi.utils.concurrent.*;
+import org.jitsi.utils.logging.*;
+import org.json.simple.*;
 
- import java.util.*;
+import java.util.*;
 
- /**
+import static org.jitsi.videobridge.cc.config.BandwidthProbingConfig.*;
+
+/**
   * @author George Politis
   */
  public class BandwidthProbing
      extends PeriodicRunnable implements BandwidthEstimator.Listener
  {
      /**
-      * The system property name that holds a boolean that determines whether or
-      * not to activate the RTX bandwidth probing mechanism that implements
-      * stream protection.
-      */
-     public static final String
-         DISABLE_RTX_PROBING_PNAME = "org.jitsi.videobridge.DISABLE_RTX_PROBING";
-
-     /**
-      * The system property name that holds the interval/period in milliseconds
-      * at which {@link #run()} is to be invoked.
-      */
-     public static final String
-         PADDING_PERIOD_MS_PNAME = "org.jitsi.videobridge.PADDING_PERIOD_MS";
-
-     /**
       * The {@link TimeSeriesLogger} to be used by this instance to print time
       * series.
       */
      private static final TimeSeriesLogger timeSeriesLogger
          = TimeSeriesLogger.getTimeSeriesLogger(BandwidthProbing.class);
-
-     /**
-      * The ConfigurationService to get config values from.
-      */
-     private static final ConfigurationService
-         cfg = LibJitsi.getConfigurationService();
-
-     /**
-      * the interval/period in milliseconds at which {@link #run()} is to be
-      * invoked.
-      */
-     private static final long PADDING_PERIOD_MS =
-         cfg != null ? cfg.getInt(PADDING_PERIOD_MS_PNAME, 15) : 15;
-
-     /**
-      * A boolean that determines whether or not to activate the RTX bandwidth
-      * probing mechanism that implements stream protection.
-      */
-     private static final boolean DISABLE_RTX_PROBING =
-         cfg != null && cfg.getBoolean(DISABLE_RTX_PROBING_PNAME, false);
 
      /**
       * The sequence number to use if probing with the JVB's SSRC.
@@ -104,7 +69,7 @@ package org.jitsi.videobridge.cc;
       */
      public BandwidthProbing(ProbingDataSender probingDataSender)
      {
-         super(PADDING_PERIOD_MS);
+         super(paddingPeriodMs());
          this.probingDataSender = probingDataSender;
      }
 
@@ -191,7 +156,7 @@ package org.jitsi.videobridge.cc;
 
          // XXX a signed int is practically sufficient, as it can represent up to
          // ~ 2GB
-         int bytes = (int) (PADDING_PERIOD_MS * paddingBps / 1000 / 8);
+         int bytes = (int) (paddingPeriodMs() * paddingBps / 1000 / 8);
 
          if (!bitrateControllerStatus.activeSsrcs.isEmpty())
          {
