@@ -139,6 +139,12 @@ public class VP8AdaptiveTrackProjectionContext
 
         VP8FrameMap.FrameInsertionResult result = insertPacketInMap(vp8Packet);
 
+        if (result == null)
+        {
+            /* Very old frame, more than Vp8FrameMap.FRAME_MAP_SIZE old. */
+            return false;
+        }
+
         if (!result.isNewFrame())
         {
             return result.getFrame().getProjection() != null;
@@ -230,10 +236,10 @@ public class VP8AdaptiveTrackProjectionContext
             /* This frame is old, slotted in after an earlier frame. */
             VP8Frame nextFrame = result.getNextFrame();
             int seqGap = RtpUtils.getSequenceNumberDelta(vp8Packet.getSequenceNumber(), nextFrame.getEarliestKnownSequenceNumber());
-            projectedSeq = RtpUtils.applySequenceNumberDelta(nextFrame.getProjectionRecord().getEarliestProjectedSequence(), -seqGap);
+            projectedSeq = RtpUtils.applySequenceNumberDelta(nextFrame.getProjectionRecord().getEarliestProjectedSequence(), seqGap);
 
             long tsGap = RtpUtils.getTimestampDiff(vp8Packet.getTimestamp(), nextFrame.getTimestamp());
-            projectedTs = RtpUtils.applyTimestampDelta(nextFrame.getProjectionRecord().getTimestamp(), -tsGap);
+            projectedTs = RtpUtils.applyTimestampDelta(nextFrame.getProjectionRecord().getTimestamp(), tsGap);
         }
         else if (result.getPrevFrame() != null)
         {
