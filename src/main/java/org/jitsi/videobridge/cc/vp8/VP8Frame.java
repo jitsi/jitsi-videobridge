@@ -341,7 +341,6 @@ class VP8Frame
     {
             return (temporalLayer == (pkt.getTemporalLayerIndex())) &&
                 (tl0PICIDX == pkt.getTL0PICIDX()) &&
-                (isKeyframe == pkt.isKeyframe()) &&
                 (pictureId == pkt.getPictureId());
         /* TODO: also check start, end, seq nums., reference? */
     }
