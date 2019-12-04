@@ -94,7 +94,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>rtp</artifactId>
-      <version>1.0-17-gfec6b74</version>
+      <version>1.0-20-gb3990a1</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
