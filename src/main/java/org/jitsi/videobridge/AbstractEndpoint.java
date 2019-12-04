@@ -243,10 +243,10 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public abstract boolean shouldExpire();
 
     /**
-     * Get the last 'activity' (packets received or packets sent) this endpoint has seen
+     * Get the last 'incoming activity' (packets received) this endpoint has seen
      * @return the timestamp, in milliseconds, of the last activity of this endpoint
      */
-    public Instant getLastActivity()
+    public Instant getLastIncomingActivity()
     {
         return ClockUtils.NEVER;
     }

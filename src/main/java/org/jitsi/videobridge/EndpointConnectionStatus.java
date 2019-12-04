@@ -193,7 +193,7 @@ public class EndpointConnectionStatus
         Instant now = clock.instant();
         Instant mostRecentChannelCreated
                 = endpoint.getMostRecentChannelCreatedTime();
-        Instant lastActivity = endpoint.getLastActivity();
+        Instant lastActivity = endpoint.getLastIncomingActivity();
 
         // Transport not initialized yet
         if (lastActivity == ClockUtils.NEVER)
