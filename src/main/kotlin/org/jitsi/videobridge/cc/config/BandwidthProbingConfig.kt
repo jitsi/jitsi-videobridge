@@ -47,8 +47,7 @@ class BandwidthProbingConfig {
             readOnce()
             name("org.jitsi.videobridge.DISABLE_RTX_PROBING")
             fromConfig(JitsiConfig.legacyConfig)
-            deprecated("This property is no longer used, RTX probing is always " +
-                    "used when RTX is supported.")
+            deprecated("RTX probing is always used when RTX is supported.")
         }
     }
 }
