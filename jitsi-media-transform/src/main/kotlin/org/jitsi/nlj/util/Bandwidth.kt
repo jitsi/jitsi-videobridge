@@ -24,8 +24,7 @@ import java.time.Duration
  * of bits per second.
  */
 class Bandwidth(bps: Double) : Comparable<Bandwidth> {
-    var bps: Double = bps
-        private set
+    val bps: Double = bps
 
     val kbps: Double = bps / 1000
     val mbps: Double = bps / (1000 * 1000)
@@ -33,16 +32,8 @@ class Bandwidth(bps: Double) : Comparable<Bandwidth> {
     operator fun minus(other: Bandwidth): Bandwidth =
         Bandwidth(bps - other.bps)
 
-    operator fun minusAssign(other: Bandwidth) {
-        bps -= other.bps
-    }
-
     operator fun plus(other: Bandwidth): Bandwidth =
         Bandwidth(bps + other.bps)
-
-    operator fun plusAssign(other: Bandwidth) {
-        bps += other.bps
-    }
 
     /**
      * For multiplication, we support multiplying against
@@ -56,16 +47,8 @@ class Bandwidth(bps: Double) : Comparable<Bandwidth> {
     operator fun times(other: Double): Bandwidth =
         Bandwidth(bps * other)
 
-    operator fun timesAssign(other: Double) {
-        bps *= other
-    }
-
     operator fun times(other: Int): Bandwidth =
         Bandwidth(bps * other)
-
-    operator fun timesAssign(other: Int) {
-        bps *= other
-    }
 
     /**
      * For division, we support both dividing by
@@ -75,16 +58,8 @@ class Bandwidth(bps: Double) : Comparable<Bandwidth> {
     operator fun div(other: Double): Bandwidth =
         Bandwidth(bps / other)
 
-    operator fun divAssign(other: Double) {
-        bps /= other
-    }
-
     operator fun div(other: Int): Bandwidth =
         Bandwidth(bps / other)
-
-    operator fun divAssign(other: Int) {
-        bps /= other
-    }
 
     operator fun div(other: Bandwidth): Double =
         bps / other.bps
