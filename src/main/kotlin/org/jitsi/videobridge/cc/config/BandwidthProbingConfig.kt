@@ -16,9 +16,11 @@
 
 package org.jitsi.videobridge.cc.config
 
+import org.jitsi.config.JitsiConfig
 import org.jitsi.config.legacyProperty
 import org.jitsi.config.newProperty
 import org.jitsi.utils.config.dsl.multiProperty
+import org.jitsi.utils.config.dsl.property
 import java.time.Duration
 
 class BandwidthProbingConfig {
@@ -41,5 +43,12 @@ class BandwidthProbingConfig {
         @JvmStatic
         fun paddingPeriodMs() = paddingPeriodProp.value
 
+        private val disableRtxProbingProp = property<Boolean> {
+            readOnce()
+            name("org.jitsi.videobridge.DISABLE_RTX_PROBING")
+            fromConfig(JitsiConfig.legacyConfig)
+            deprecated("This property is no longer used, RTX probing is always " +
+                    "used when RTX is supported.")
+        }
     }
 }
