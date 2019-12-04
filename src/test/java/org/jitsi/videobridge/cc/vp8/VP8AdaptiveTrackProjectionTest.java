@@ -12,6 +12,7 @@ import org.junit.*;
 
 import javax.xml.bind.*;
 import java.text.*;
+import java.util.*;
 import java.util.concurrent.*;
 
 import static org.junit.Assert.*;
@@ -84,6 +85,83 @@ public class VP8AdaptiveTrackProjectionTest
         }
     }
 
+    private static class ProjectedPacket
+    {
+        final Vp8Packet packet;
+        final int origSeq;
+
+        ProjectedPacket(Vp8Packet p, int s)
+        {
+            packet = p;
+            origSeq = s;
+        }
+    }
+
+    /** Run an out-of-order test on a single stream, randomized order except for the first packet. */
+    private void runOutOfOrderTest(Vp8PacketGenerator generator, int targetIndex)
+        throws RewriteException
+    {
+        RtpState initialState =
+            new RtpState(1, 10000, 1000000);
+
+        final long expectedTsOffset = RtpUtils.applyTimestampDelta(initialState.maxTimestamp, 3000);
+
+        final int reorderSize = 64;
+        ArrayList<Vp8Packet> buffer = new ArrayList<>(reorderSize);
+
+        for (int i = 0; i < reorderSize; i++)
+        {
+            buffer.add(generator.nextPacket());
+        }
+
+        long seed = System.currentTimeMillis(); // Pass an explicit seed for reproducible tests
+        Random random = new Random(seed);
+
+        VP8AdaptiveTrackProjectionContext context =
+            new VP8AdaptiveTrackProjectionContext(diagnosticContext,
+                payloadType,
+                initialState, logger);
+
+        int latestSeq = buffer.get(0).getSequenceNumber();
+
+        TreeMap<Integer, ProjectedPacket> projectedPackets = new TreeMap<>();
+
+        for (int i = 0; i < 10000; i++)
+        {
+            Vp8Packet packet = buffer.get(0);
+            int origSeq = packet.getSequenceNumber();
+            long origTs = packet.getTimestamp();
+
+            if (RtpUtils.isOlderSequenceNumberThan(latestSeq, origSeq))
+            {
+                latestSeq = origSeq;
+            }
+            boolean accepted = context.accept(packet, packet.getTemporalLayerIndex(), targetIndex);
+
+            if (RtpUtils.isOlderSequenceNumberThan(origSeq, RtpUtils.applySequenceNumberDelta(latestSeq, -VP8FrameMap.FRAME_MAP_SIZE))) {
+                assertFalse(accepted);
+            }
+            else if (packet.getTemporalLayerIndex() <= targetIndex)
+            {
+                assertTrue(accepted);
+
+                context.rewriteRtp(packet);
+
+                assertEquals(RtpUtils.applyTimestampDelta(origTs, expectedTsOffset), packet.getTimestamp());
+                int newSeq = packet.getSequenceNumber();
+                assertFalse(projectedPackets.containsKey(newSeq));
+                projectedPackets.put(newSeq, new ProjectedPacket(packet, origSeq));
+            }
+            else
+            {
+                assertFalse(accepted);
+            }
+
+            buffer.set(0, generator.nextPacket());
+            Collections.shuffle(buffer, random);
+        }
+    }
+
     @Test
     public void simpleProjectionTest() throws RewriteException
     {
@@ -113,6 +191,38 @@ public class VP8AdaptiveTrackProjectionTest
         Vp8PacketGenerator generator = new Vp8PacketGenerator(3);
 
         runInOrderTest(generator, 0);
+    }
+
+    @Test
+    public void simpleOutOfOrderTest() throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(1);
+
+        runOutOfOrderTest(generator, 2);
+    }
+
+    @Test
+    public void largerOutOfOrderTest() throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(3);
+
+        runOutOfOrderTest(generator, 2);
+    }
+
+    @Test
+    public void filteredOutOfOrderTest() throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(1);
+
+        runOutOfOrderTest(generator, 0);
+    }
+
+    @Test
+    public void largerFilteredOutOfOrderTest() throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(3);
+
+        runOutOfOrderTest(generator, 0);
     }
 
     private static class Vp8PacketGenerator {
