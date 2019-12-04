@@ -597,11 +597,11 @@ public class Endpoint
      * {@inheritDoc}
      */
     @Override
-    public Instant getLastActivity()
+    public Instant getLastIncomingActivity()
     {
         PacketIOActivity packetIOActivity
                 = this.transceiver.getPacketIOActivity();
-        return packetIOActivity.getLatestOverallActivity();
+        return packetIOActivity.getLastOverallIncomingActivity();
     }
 
     /**
@@ -627,7 +627,7 @@ public class Endpoint
                 .max(Comparator.comparing(Function.identity()))
                 .orElse(Duration.ofSeconds(0));
 
-        Instant lastActivity = getLastActivity();
+        Instant lastActivity = getLastIncomingActivity();
         Instant now = clock.instant();
         if (lastActivity == ClockUtils.NEVER)
         {
