@@ -47,8 +47,7 @@ public class VP8FrameMap
      */
     private final DiagnosticContext diagnosticContext;
 
-
-    private final int FRAME_MAP_SIZE = 500; /* Matches PacketCache default size. */
+    final static int FRAME_MAP_SIZE = 500; /* Matches PacketCache default size. */
 
     /**
      * Ctor.
