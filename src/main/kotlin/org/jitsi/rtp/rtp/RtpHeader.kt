@@ -93,8 +93,8 @@ class RtpHeader {
             (buf[baseOffset + 1].toInt() and 0x80) == 0x80
         fun setMarker(buf: ByteArray, baseOffset: Int, isSet: Boolean) {
             buf[baseOffset + 1] = when (isSet) {
-                true -> (buf[baseOffset].toInt() or 0x80).toByte()
-                false -> (buf[baseOffset].toInt() and 0x80.inv()).toByte()
+                true -> (buf[baseOffset + 1].toInt() or 0x80).toByte()
+                false -> (buf[baseOffset + 1].toInt() and 0x80.inv()).toByte()
             }
         }
 

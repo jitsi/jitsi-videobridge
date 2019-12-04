@@ -114,6 +114,16 @@ class RtpHeaderTest : ShouldSpec() {
                     RtpHeader.setMarker(headerData, 0, false)
                     RtpHeader.getMarker(headerData, 0) shouldBe false
                 }
+                should("not clobber payload type") {
+                    val origPt = RtpHeader.getPayloadType(headerData, 0)
+                    RtpHeader.setMarker(headerData, 0, true)
+                    RtpHeader.getMarker(headerData, 0) shouldBe true
+                    RtpHeader.getPayloadType(headerData, 0) shouldBe origPt
+
+                    RtpHeader.setMarker(headerData, 0, false)
+                    RtpHeader.getMarker(headerData, 0) shouldBe false
+                    RtpHeader.getPayloadType(headerData, 0) shouldBe origPt
+                }
             }
         }
         "payloadType" {
