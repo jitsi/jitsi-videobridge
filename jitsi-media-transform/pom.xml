@@ -14,6 +14,7 @@
         <kotlintest.version>3.2.1</kotlintest.version>
         <junit.version>5.2.0</junit.version>
         <bouncycastle.version>1.61</bouncycastle.version>
+        <jitsi.utils.version>1.0-23-ga53f8af</jitsi.utils.version>
     </properties>
     <dependencies>
         <dependency>
@@ -34,7 +35,17 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-utils</artifactId>
-            <version>1.0-17-g4db0927</version>
+            <version>${jitsi.utils.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jitsi</groupId>
+            <artifactId>jitsi-utils-kotlin</artifactId>
+            <version>${jitsi.utils.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jitsi</groupId>
+            <artifactId>jicoco-kotlin</artifactId>
+            <version>1.1-9-gffbb6dd</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -65,11 +76,6 @@
             <groupId>org.pcap4j</groupId>
             <artifactId>pcap4j-packetfactory-static</artifactId>
             <version>[1.0, 2.0)</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jitsi</groupId>
-            <artifactId>libjitsi</artifactId>
-            <version>1.0-20190723.113238-389</version>
         </dependency>
 
         <!-- test -->

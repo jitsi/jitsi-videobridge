@@ -16,8 +16,6 @@
 package org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.service.configuration.*;
-import org.jitsi.service.libjitsi.*;
 import org.jitsi.utils.logging.DiagnosticContext;
 import org.jitsi.utils.logging.TimeSeriesLogger;
 import org.jitsi.utils.logging2.*;
@@ -34,51 +32,6 @@ import java.util.*;
  */
 public class SendSideBandwidthEstimation
 {
-    /**
-     * The name of the property that specifies the low-loss threshold
-     * (expressed as a proportion of lost packets).
-     * See {@link #low_loss_threshold_}.
-     */
-    public final static String LOW_LOSS_THRESHOLD_PNAME
-        = SendSideBandwidthEstimation.class.getName() + ".lowLossThreshold";
-
-    /**
-     * The name of the property that specifies the high-loss threshold
-     * (expressed as a proportion of lost packets).
-     * See {@link #high_loss_threshold_}.
-     */
-    public final static String HIGH_LOSS_THRESHOLD_PNAME
-        = SendSideBandwidthEstimation.class.getName() + ".highLossThreshold";
-
-    /**
-     * The name of the property that specifies the bitrate threshold (in kbps).
-     * See {@link #bitrate_threshold_bps_}.
-     */
-    public final static String BITRATE_THRESHOLD_KBPS_PNAME
-        = SendSideBandwidthEstimation.class.getName() + ".bitrateThresholdKbps";
-
-    /**
-     * The name of the property that specifies the probability of enabling the
-     * loss-based experiment.
-     */
-    public final static String LOSS_EXPERIMENT_PROBABILITY_PNAME
-        = SendSideBandwidthEstimation.class.getName()
-        + ".lossExperimentProbability";
-
-    /**
-     * The name of the property that specifies the probability of enabling the
-     * timeout experiment.
-     */
-    public final static String TIMEOUT_EXPERIMENT_PROBABILITY_PNAME
-        = SendSideBandwidthEstimation.class.getName()
-        + ".timeoutExperimentProbability";
-
-    /**
-     * The ConfigurationService to get config values from.
-     */
-    private static final ConfigurationService
-        cfg = LibJitsi.getConfigurationService();
-
     /**
      * send_side_bandwidth_estimation.cc
      */
@@ -133,31 +86,6 @@ public class SendSideBandwidthEstimation
     private static final long kTimeoutIntervalMs = 1000;
 
     /**
-     * send_side_bandwidth_estimation.cc
-     */
-    private static final float kDefaultLowLossThreshold = 0.02f;
-
-    /**
-     * send_side_bandwidth_estimation.cc
-     */
-    private static final float kDefaultHighLossThreshold = 0.1f;
-
-    /**
-     * send_side_bandwidth_estimation.cc
-     */
-    private static final int kDefaultBitrateThresholdKbps = 0;
-
-    /**
-     * Disable the loss experiment by default.
-     */
-    private static final float kDefaultLossExperimentProbability = 0;
-
-    /**
-     * Disable the timeout experiment by default.
-     */
-    private static final float kDefaultTimeoutExperimentProbability = 0;
-
-    /**
      * The random number generator for all instances of this class.
      */
     private static final Random kRandom = new Random();
@@ -178,12 +106,12 @@ public class SendSideBandwidthEstimation
     /**
      * send_side_bandwidth_estimation.h
      */
-    private final float low_loss_threshold_;
+    private final double low_loss_threshold_;
 
     /**
      * send_side_bandwidth_estimation.h
      */
-    private final float high_loss_threshold_;
+    private final double high_loss_threshold_;
 
     /**
      * send_side_bandwidth_estimation.h
@@ -288,30 +216,23 @@ public class SendSideBandwidthEstimation
         logger = parentLogger.createChildLogger(getClass().getName());
         this.diagnosticContext = diagnosticContext;
 
-        float lossExperimentProbability = (float) cfg.getDouble(
-            LOSS_EXPERIMENT_PROBABILITY_PNAME,
-            kDefaultLossExperimentProbability);
+        double lossExperimentProbability = SendSideBandwidthEstimationConfig.lossExperimentProbability();
 
         if (kRandom.nextFloat() < lossExperimentProbability)
         {
-            low_loss_threshold_ = (float) cfg.getDouble(
-                LOW_LOSS_THRESHOLD_PNAME, kDefaultLowLossThreshold);
-            high_loss_threshold_ = (float) cfg.getDouble(
-                HIGH_LOSS_THRESHOLD_PNAME, kDefaultHighLossThreshold);
-            bitrate_threshold_bps_ = 1000 * cfg.getInt(
-                BITRATE_THRESHOLD_KBPS_PNAME, kDefaultBitrateThresholdKbps);
+            low_loss_threshold_ = SendSideBandwidthEstimationConfig.experimentalLowLossThreshold();
+            high_loss_threshold_ = SendSideBandwidthEstimationConfig.experimentalHighLossThreshold();
+            bitrate_threshold_bps_ = 1000 * SendSideBandwidthEstimationConfig.experimentalBitrateThresholdKbps();
         }
         else
         {
-            low_loss_threshold_ = kDefaultLowLossThreshold;
-            high_loss_threshold_ = kDefaultHighLossThreshold;
-            bitrate_threshold_bps_ = 1000 * kDefaultBitrateThresholdKbps;
+            low_loss_threshold_ = SendSideBandwidthEstimationConfig.defaultLowLossThreshold();
+            high_loss_threshold_ = SendSideBandwidthEstimationConfig.defaultHighLossThreshold();
+            bitrate_threshold_bps_ = 1000 * SendSideBandwidthEstimationConfig.defaultBitrateThresholdKbps();
         }
 
 
-        float timeoutExperimentProbability = (float) cfg.getDouble(
-            TIMEOUT_EXPERIMENT_PROBABILITY_PNAME,
-            kDefaultTimeoutExperimentProbability);
+        double timeoutExperimentProbability = SendSideBandwidthEstimationConfig.timeoutExperimentProbability();
 
         in_timeout_experiment_
             = kRandom.nextFloat() < timeoutExperimentProbability;

@@ -21,7 +21,6 @@ import org.jitsi.nlj.util.bits
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.mbps
-import org.jitsi.service.libjitsi.LibJitsi
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.LoggerImpl
@@ -188,10 +187,6 @@ class PacketReceiver(
 }
 
 class BandwidthEstimationTest : ShouldSpec() {
-    init {
-        /* Internals of GoogleCc use ConfigurationService at construct time. */
-        LibJitsi.start()
-    }
     private val scheduler: FakeScheduledExecutorService = stubOnlySpy()
     private val clock: Clock = scheduler.clock
 
