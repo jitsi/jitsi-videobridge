@@ -153,7 +153,7 @@ public class VP8FrameMap
     {
         if (!frame.matchesFrameConsistently(packet))
         {
-            logger.warn("Packet " + packet.getSequenceNumber() + "is not consistent with frame");
+            logger.warn("Packet " + packet.getSequenceNumber() + " is not consistent with frame");
         }
         frame.addPacket(packet);
         return new FrameInsertionResult(frame);
