@@ -51,4 +51,4 @@ This list will be updated as properties are migrated:
 | org.jitsi.videobridge.ONSTAGE_PREFERRED_FRAME_RATE | videobridge.cc.onstage-preferred-framerate | |
 | org.jitsi.videobridge.ENABLE_ONSTAGE_VIDEO_SUSPEND | videobridge.cc.enable-onstage-video-suspend | |
 | org.jitsi.videobridge.TRUST_BWE | videobridge.cc.trust-bwe | |
-| org.jitsi.videobridge.PADDING_PERIOD_MS | videobridge.cc.padding-period | |
+| org.jitsi.videobridge.PADDING_PERIOD_MS | videobridge.cc.padding-period | The new config models this as a duration, rather than an amount of milliseconds |
