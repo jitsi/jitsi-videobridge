@@ -45,3 +45,9 @@ This list will be updated as properties are migrated:
 | org.jitsi.videobridge.health.STICKY_FAILURES | videobridge.health.sticky-failures | |
 | org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT | videobridge.ep-connection-status.first-transfer-timeout | The new config models this as a duration, rather than an amount of milliseconds |
 | org.jitsi.videobridge.EndpointConnectionStatus.MAX_INACTIVITY_LIMIT | videobridge.ep-connection-status.max-inactivity-limit | The new config models this as a duration, rather than an amount of milliseconds |
+| org.jitsi.videobridge.BWE_CHANGE_THRESHOLD_PCT | videobridge.cc.bwe-change-threshold-pct | |
+| org.jitsi.videobridge.THUMBNAIL_MAX_HEIGHT | videobridge.cc.thumbnail-max-height-px | |
+| org.jitsi.videobridge.ONSTAGE_PREFERRED_HEIGHT | videobridge.cc.onstage-preferred-height-px | |
+| org.jitsi.videobridge.ONSTAGE_PREFERRED_FRAME_RATE | videobridge.cc.onstage-preferred-framerate | |
+| org.jitsi.videobridge.ENABLE_ONSTAGE_VIDEO_SUSPEND | videobridge.cc.enable-onstage-video-suspend | |
+| org.jitsi.videobridge.TRUST_BWE | videobridge.cc.trust-bwe | |

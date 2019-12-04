@@ -20,13 +20,11 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.rtcp.*;
-import org.jitsi.service.configuration.*;
-import org.jitsi.service.libjitsi.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
-import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.cc.config.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
@@ -92,123 +90,10 @@ import java.util.concurrent.*;
 public class BitrateController
 {
     /**
-     * The property name that holds the bandwidth estimation threshold.
-     */
-    public static final String BWE_CHANGE_THRESHOLD_PCT_PNAME
-        = "org.jitsi.videobridge.BWE_CHANGE_THRESHOLD_PCT";
-
-    /**
-     * The property name of the max resolution to allocate for the thumbnails.
-     */
-    public static final String THUMBNAIL_MAX_HEIGHT_PNAME
-        = "org.jitsi.videobridge.THUMBNAIL_MAX_HEIGHT";
-
-    /**
-     * The property name of the preferred resolution to allocate for the onstage
-     * participant, before allocating bandwidth for the thumbnails.
-     */
-    public static final String ONSTAGE_PREFERRED_HEIGHT_PNAME
-        = "org.jitsi.videobridge.ONSTAGE_PREFERRED_HEIGHT";
-
-    /**
-     * The property name of the preferred frame rate to allocate for the onstage
-     * participant.
-     */
-    public static final String ONSTAGE_PREFERRED_FRAME_RATE_PNAME
-        = "org.jitsi.videobridge.ONSTAGE_PREFERRED_FRAME_RATE";
-
-    /**
-     * The property name of the option that enables/disables video suspension
-     * for the on-stage participant.
-     */
-    public static final String ENABLE_ONSTAGE_VIDEO_SUSPEND_PNAME
-        = "org.jitsi.videobridge.ENABLE_ONSTAGE_VIDEO_SUSPEND";
-
-    /**
-     * The name of the property used to trust bandwidth estimations.
-     */
-    public static final String TRUST_BWE_PNAME
-        = "org.jitsi.videobridge.TRUST_BWE";
-
-    /**
      * An reusable empty array of {@link RateSnapshot} to reduce allocations.
      */
     private static final RateSnapshot[] EMPTY_RATE_SNAPSHOT_ARRAY
         = new RateSnapshot[0];
-
-    /**
-     * The default max resolution to allocate for the thumbnails.
-     */
-    private static final int THUMBNAIL_MAX_HEIGHT_DEFAULT = 180;
-
-    /**
-     * The default preferred resolution to allocate for the onstage participant,
-     * before allocating bandwidth for the thumbnails.
-     */
-    private static final int ONSTAGE_PREFERRED_HEIGHT_DEFAULT = 360;
-
-    /**
-     * The default preferred frame rate to allocate for the onstage participant.
-     */
-    private static final double ONSTAGE_PREFERRED_FRAME_RATE_DEFAULT = 30;
-
-    /**
-     * The video for the onstage participant can be disabled by default.
-     */
-    private static final boolean ENABLE_ONSTAGE_VIDEO_SUSPEND_DEFAULT = false;
-
-    /**
-     * The default value of the bandwidth change threshold above which we react
-     * with a new bandwidth allocation.
-     */
-    private static final int BWE_CHANGE_THRESHOLD_PCT_DEFAULT = 15;
-
-    /**
-     * The ConfigurationService to get config values from.
-     */
-    private static final ConfigurationService
-        cfg = LibJitsi.getConfigurationService();
-
-    /**
-     * In order to limit the resolution changes due to bandwidth changes we
-     * react to bandwidth changes greater BWE_CHANGE_THRESHOLD_PCT / 100 of the
-     * last bandwidth estimation.
-     */
-    private static final int BWE_CHANGE_THRESHOLD_PCT
-        = cfg != null ? cfg.getInt(BWE_CHANGE_THRESHOLD_PCT_PNAME,
-        BWE_CHANGE_THRESHOLD_PCT_DEFAULT) : BWE_CHANGE_THRESHOLD_PCT_DEFAULT;
-
-    /**
-     * The max resolution to allocate for the thumbnails.
-     */
-    private static final int THUMBNAIL_MAX_HEIGHT
-        = cfg != null ? cfg.getInt(THUMBNAIL_MAX_HEIGHT_PNAME,
-        THUMBNAIL_MAX_HEIGHT_DEFAULT) : THUMBNAIL_MAX_HEIGHT_DEFAULT;
-
-    /**
-     * The preferred resolution to allocate for the onstage participant, before
-     * allocating bandwidth for the thumbnails.
-     */
-    private static final int ONSTAGE_PREFERRED_HEIGHT
-        = cfg != null ? cfg.getInt(ONSTAGE_PREFERRED_HEIGHT_PNAME,
-        ONSTAGE_PREFERRED_HEIGHT_DEFAULT) : ONSTAGE_PREFERRED_HEIGHT_DEFAULT;
-
-    /**
-     * The preferred frame rate to allocate for the onstage participant.
-     */
-    private static final double ONSTAGE_PREFERRED_FRAME_RATE
-        = cfg != null ? cfg.getDouble(ONSTAGE_PREFERRED_FRAME_RATE_PNAME,
-        ONSTAGE_PREFERRED_FRAME_RATE_DEFAULT)
-        : ONSTAGE_PREFERRED_FRAME_RATE_DEFAULT;
-
-    /**
-     * Determines whether or not we're allowed to suspend the video of the
-     * on-stage participant.
-     */
-    private static final boolean ENABLE_ONSTAGE_VIDEO_SUSPEND
-        = cfg != null ? cfg.getBoolean(ENABLE_ONSTAGE_VIDEO_SUSPEND_PNAME,
-                ENABLE_ONSTAGE_VIDEO_SUSPEND_DEFAULT)
-        : ENABLE_ONSTAGE_VIDEO_SUSPEND_DEFAULT;
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -242,13 +127,6 @@ public class BitrateController
      * existing LastN code.
      */
     private Set<String> forwardedEndpointIds = INITIAL_EMPTY_SET;
-
-    /**
-     * A boolean that indicates whether or not we should trust the bandwidth
-     * estimations. If this is se to false, then we assume a bandwidth
-     * estimation of Long.MAX_VALUE.
-     */
-    private final boolean trustBwe;
 
     /**
      * A boolean that indicates whether to enable or disable the video quality
@@ -343,9 +221,6 @@ public class BitrateController
         this.diagnosticContext = diagnosticContext;
         this.logger = parentLogger.createChildLogger(BitrateController.class.getName());
 
-        ConfigurationService cfg = LibJitsi.getConfigurationService();
-
-        trustBwe = cfg != null && cfg.getBoolean(TRUST_BWE_PNAME, true);
         enableVideoQualityTracing = timeSeriesLogger.isTraceEnabled();
     }
 
@@ -387,7 +262,7 @@ public class BitrateController
         // the risk of clogging the receiver's pipe.
 
         return deltaBwe > 0
-            ||  deltaBwe < -1 * previousBwe * BWE_CHANGE_THRESHOLD_PCT / 100;
+            ||  deltaBwe < -1 * previousBwe * BitrateControllerConfig.bweChangeThresholdPct() / 100;
     }
 
     /**
@@ -470,7 +345,7 @@ public class BitrateController
     {
         JSONObject debugState = new JSONObject();
         debugState.put("forwardedEndpoints", forwardedEndpointIds.toString());
-        debugState.put("trustBwe", trustBwe);
+        debugState.put("trustBwe", BitrateControllerConfig.trustBwe());
         debugState.put("lastBwe", lastBwe);
         debugState.put("maxRxFrameHeightPx", maxRxFrameHeightPx);
         debugState.put("selectedEndpointIds", selectedEndpointIds.toString());
@@ -580,7 +455,7 @@ public class BitrateController
      */
     private long getAvailableBandwidth(long nowMs)
     {
-        boolean trustBwe = this.trustBwe;
+        boolean trustBwe = BitrateControllerConfig.trustBwe();
         if (trustBwe)
         {
             // Ignore the bandwidth estimations in the first 10 seconds because
@@ -1440,8 +1315,8 @@ public class BitrateController
                     // resolution. Basically what we want for the on-stage
                     // participant is 180p7.5fps, 180p15fps, 180p30fps,
                     // 360p30fps and 720p30fps.
-                    if (encoding.getHeight() < ONSTAGE_PREFERRED_HEIGHT
-                        || encoding.getFrameRate() >= ONSTAGE_PREFERRED_FRAME_RATE)
+                    if (encoding.getHeight() < BitrateControllerConfig.onstagePreferredHeightPx()
+                        || encoding.getFrameRate() >= BitrateControllerConfig.onstagePreferredFramerate())
                     {
                         long encodingBitrateBps = encoding.getBitrateBps(nowMs);
                         if (encodingBitrateBps > 0)
@@ -1452,12 +1327,12 @@ public class BitrateController
                             new RateSnapshot(encodingBitrateBps, encoding));
                     }
 
-                    if (encoding.getHeight() <= ONSTAGE_PREFERRED_HEIGHT)
+                    if (encoding.getHeight() <= BitrateControllerConfig.onstagePreferredHeightPx())
                     {
                         ratedPreferredIdx = ratesList.size() - 1;
                     }
                 }
-                else if (encoding.getHeight() <= THUMBNAIL_MAX_HEIGHT)
+                else if (encoding.getHeight() <= BitrateControllerConfig.thumbnailMaxHeightPx())
                 {
                     // For the thumbnails, we consider all temporal layers of
                     // the low resolution stream.
@@ -1512,7 +1387,7 @@ public class BitrateController
 
             if (ratedTargetIdx == -1 && selected)
             {
-                if (!ENABLE_ONSTAGE_VIDEO_SUSPEND)
+                if (!BitrateControllerConfig.enableOnstageVideoSuspend())
                 {
                     ratedTargetIdx = 0;
                     oversending = ratedIndices[0].bps > maxBps;
