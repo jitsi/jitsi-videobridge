@@ -16,25 +16,22 @@
 
 package org.jitsi.videobridge.health.config
 
+import org.jitsi.config.legacyProperty
+import org.jitsi.config.newProperty
+import org.jitsi.config.simple
 import org.jitsi.utils.config.dsl.multiProperty
-import org.jitsi.videobridge.config.JvbConfig
-import org.jitsi.videobridge.config.legacyProperty
-import org.jitsi.videobridge.config.newProperty
-import org.jitsi.videobridge.config.simple
 import java.time.Duration
 
 class HealthConfig {
     companion object {
         private val interval = multiProperty<Long> {
-            property {
+            legacyProperty {
                 name("org.jitsi.videobridge.health.INTERVAL")
                 readOnce()
-                fromConfig(JvbConfig.legacyConfig)
             }
-            property {
+            newProperty {
                 name("videobridge.health.interval")
                 readOnce()
-                fromConfig(JvbConfig.newConfig)
                 retrievedAs<Duration>() convertedBy { it.toMillis() }
             }
         }

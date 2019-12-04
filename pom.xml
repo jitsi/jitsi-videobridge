@@ -20,6 +20,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <smack.version>4.2.4-47d17fc</smack.version>
     <jitsi.utils.version>1.0-24-g8f17c70</jitsi.utils.version>
+    <jicoco.version>1.1-9-gffbb6dd</jicoco.version>
   </properties>
 
   <dependencyManagement>
@@ -81,16 +82,11 @@
       <artifactId>annotations</artifactId>
       <version>15.0</version>
     </dependency>
-    <dependency>
-      <groupId>com.typesafe</groupId>
-      <artifactId>config</artifactId>
-      <version>1.3.4</version>
-    </dependency>
     <!-- org.jitsi -->
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-media-transform</artifactId>
-      <version>1.0-68-gc207946</version>
+      <version>1.0-69-g378537a</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -110,7 +106,12 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco</artifactId>
-      <version>1.1-7-g05338ab</version>
+      <version>${jicoco.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>jicoco-kotlin</artifactId>
+      <version>${jicoco.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
