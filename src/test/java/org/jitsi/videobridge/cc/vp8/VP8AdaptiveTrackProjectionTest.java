@@ -19,7 +19,6 @@ import static org.junit.Assert.*;
 
 public class VP8AdaptiveTrackProjectionTest
 {
-    private final DiagnosticContext diagnosticContext = new DiagnosticContext();
     private final Logger logger = new LoggerImpl(getClass().getName());
     private final PayloadType payloadType = new Vp8PayloadType((byte)96,
         new ConcurrentHashMap<>(), new CopyOnWriteArraySet<>());
@@ -27,6 +26,9 @@ public class VP8AdaptiveTrackProjectionTest
     @Test
     public void singlePacketProjectionTest() throws RewriteException
     {
+        DiagnosticContext diagnosticContext = new DiagnosticContext();
+        diagnosticContext.put("test", "singlePacketProjectionTest");
+
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
 
@@ -49,6 +51,9 @@ public class VP8AdaptiveTrackProjectionTest
     private void runInOrderTest(Vp8PacketGenerator generator, int targetIndex)
         throws RewriteException
     {
+        DiagnosticContext diagnosticContext = new DiagnosticContext();
+        diagnosticContext.put("test", Thread.currentThread().getStackTrace()[2].getMethodName());
+
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
 
@@ -101,6 +106,9 @@ public class VP8AdaptiveTrackProjectionTest
     private void runOutOfOrderTest(Vp8PacketGenerator generator, int targetIndex)
         throws RewriteException
     {
+        DiagnosticContext diagnosticContext = new DiagnosticContext();
+        diagnosticContext.put("test", Thread.currentThread().getStackTrace()[2].getMethodName());
+
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
 
