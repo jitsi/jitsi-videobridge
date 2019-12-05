@@ -108,7 +108,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * otherwise. The return value was introduced to enable overrides to
      * act upon the underlying set changing.
      */
-    public boolean pinnedEndpointsChanged(Set<String> newPinnedEndpoints)
+    public void pinnedEndpointsChanged(Set<String> newPinnedEndpoints)
     {
         // Check if that's different to what we think the pinned endpoints are.
         Set<String> oldPinnedEndpoints = this.pinnedEndpoints;
@@ -124,11 +124,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 
             firePropertyChange(PINNED_ENDPOINTS_PROPERTY_NAME,
                 oldPinnedEndpoints, pinnedEndpoints);
-
-            return true;
         }
-
-        return false;
     }
 
     /**
@@ -138,7 +134,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * false otherwise. The return value was introduced to enable overrides to
      * act upon the underlying set changing.
      */
-    public boolean selectedEndpointsChanged(Set<String> newSelectedEndpoints)
+    public void selectedEndpointsChanged(Set<String> newSelectedEndpoints)
     {
         // Check if that's different to what we think the pinned endpoints are.
         Set<String> oldSelectedEndpoints = this.selectedEndpoints;
@@ -154,11 +150,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 
             firePropertyChange(SELECTED_ENDPOINTS_PROPERTY_NAME,
                 oldSelectedEndpoints, selectedEndpoints);
-
-            return true;
         }
-
-        return false;
     }
 
 

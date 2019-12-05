@@ -46,6 +46,7 @@ import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi_modified.sctp4j.*;
 import org.json.simple.*;
 
+import java.beans.*;
 import java.io.*;
 import java.nio.*;
 import java.time.*;
@@ -65,7 +66,7 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  * @author George Politis
  */
 public class Endpoint
-    extends AbstractEndpoint implements PotentialPacketHandler
+    extends AbstractEndpoint implements PotentialPacketHandler, PropertyChangeListener
 {
     /**
      * The {@link SctpManager} instance we'll use to manage the SCTP connection
@@ -203,6 +204,7 @@ public class Endpoint
         this.clock = clock;
 
         creationTime = clock.instant();
+        super.addPropertyChangeListener(this);
         diagnosticContext = conference.newDiagnosticContext();
         transceiver = new Transceiver(
             id,
@@ -274,35 +276,18 @@ public class Endpoint
         return messageTransport;
     }
 
-    /**
-     * Sets the list of pinned endpoints for this endpoint.
-     * @param newPinnedEndpoints the set of pinned endpoints.
-    */
+
     @Override
-    public boolean pinnedEndpointsChanged(Set<String> newPinnedEndpoints)
+    public void propertyChange(PropertyChangeEvent evt)
     {
-        boolean changed = super.pinnedEndpointsChanged(newPinnedEndpoints);
-        if (changed)
+        if (SELECTED_ENDPOINTS_PROPERTY_NAME.equals(evt.getPropertyName()))
         {
-            bitrateController.setPinnedEndpointIds(newPinnedEndpoints);
+            bitrateController.setSelectedEndpointIds((Set<String>) evt.getNewValue());
         }
-        return changed;
-    }
-
-    /**
-     * Sets the list of selected endpoints for this endpoint.
-     * @param newSelectedEndpoints the set of selected endpoints.
-     */
-    public boolean selectedEndpointsChanged(Set<String> newSelectedEndpoints)
-    {
-        boolean changed = super.selectedEndpointsChanged(newSelectedEndpoints);
-        if (changed)
+        else if (PINNED_ENDPOINTS_PROPERTY_NAME.equals(evt.getPropertyName()))
         {
-            bitrateController.setSelectedEndpointIds(
-                Collections.unmodifiableSet(newSelectedEndpoints));
+            bitrateController.setPinnedEndpointIds((Set<String>) evt.getNewValue());
         }
-
-        return changed;
     }
 
     /**
