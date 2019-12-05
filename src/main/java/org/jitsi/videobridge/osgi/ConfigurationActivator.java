@@ -37,10 +37,9 @@ public class ConfigurationActivator
     @Override
     public void start(BundleContext bundleContext)
     {
-        ConfigurationService cfg = new LegacyConfigurationServiceShim();
         bundleContext.registerService(
             ConfigurationService.class.getName(),
-            cfg,
+            JitsiConfig.getLegacyConfigShim(),
             null);
         logger.info("Registered the LegacyConfigurationServiceShim in OSGi.");
     }
