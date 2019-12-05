@@ -43,6 +43,12 @@ public class VP8AdaptiveTrackProjectionContext
     private final Logger logger;
 
     /**
+     * The time series logger for this instance.
+     */
+    private static final TimeSeriesLogger timeSeriesLogger
+        = TimeSeriesLogger.getTimeSeriesLogger(VP8AdaptiveTrackProjectionContext.class);
+
+    /**
      * A map that stores the per-encoding VP8 frame maps.
      */
     private final Map<Long, VP8FrameMap>
@@ -147,7 +153,32 @@ public class VP8AdaptiveTrackProjectionContext
 
         if (!result.isNewFrame())
         {
-            return result.getFrame().getProjection() != null;
+            VP8FrameProjection projection = result.getFrame().getProjection();
+
+            if (timeSeriesLogger.isTraceEnabled())
+            {
+                if (projection != null)
+                {
+                    DiagnosticContext.TimeSeriesPoint point =
+                        diagnosticContext.makeTimeSeriesPoint("rtp_vp8_existing_projection")
+                            .addField("proj.rtp.seq", projection
+                                .rewriteSeqNo(vp8Packet.getSequenceNumber()));
+                    addPacketToPoint(vp8Packet, point);
+                    addProjectionToPoint(projection, point);
+                    timeSeriesLogger.trace(point);
+                }
+                else
+                {
+                    VP8ProjectionRecord rec =
+                        result.getFrame().getProjectionRecord();
+                    DiagnosticContext.TimeSeriesPoint point =
+                        diagnosticContext.makeTimeSeriesPoint("rtp_vp8_existing_unprojected");
+                    addPacketToPoint(vp8Packet, point);
+                    addProjectionRecordToPoint(rec, point);
+                    timeSeriesLogger.trace(point);
+                }
+            }
+            return projection != null;
         }
 
         VP8Frame frame = result.getFrame();
@@ -294,12 +325,65 @@ public class VP8AdaptiveTrackProjectionContext
                     );
             lastVP8FrameProjection = projection;
             frame.setProjectionRecord(projection);
+
+            if (timeSeriesLogger.isTraceEnabled())
+            {
+                DiagnosticContext.TimeSeriesPoint point =
+                    diagnosticContext.makeTimeSeriesPoint("rtp_vp8_new_projection")
+                        .addField("proj.rtp.seq", projectedSeq);
+                addPacketToPoint(vp8Packet, point);
+                addProjectionToPoint(projection, point);
+                addPrevAndNextToPoint(result.getPrevFrame(), result.getNextFrame(), point);
+                timeSeriesLogger.trace(point);
+            }
         }
         else {
-            frame.setProjectionRecord(new VP8UnprojectedFrame(projectedSeq, projectedTs));
+            VP8ProjectionRecord rec = new VP8UnprojectedFrame(projectedSeq, projectedTs);
+            frame.setProjectionRecord(rec);
+
+            if (timeSeriesLogger.isTraceEnabled())
+            {
+                DiagnosticContext.TimeSeriesPoint point =
+                    diagnosticContext.makeTimeSeriesPoint("rtp_vp8_unprojected");
+                addPacketToPoint(vp8Packet, point);
+                addProjectionRecordToPoint(rec, point);
+                addPrevAndNextToPoint(result.getPrevFrame(), result.getNextFrame(), point);
+                timeSeriesLogger.trace(point);
+            }
         }
 
         return accept;
+    }
+
+    private static void addPacketToPoint(Vp8Packet vp8Packet, DiagnosticContext.TimeSeriesPoint point)
+    {
+        point.addField("orig.rtp.ssrc", vp8Packet.getSsrc())
+            .addField("orig.rtp.timestamp", vp8Packet.getTimestamp())
+            .addField("orig.rtp.seq", vp8Packet.getSequenceNumber())
+            .addField("orig.vp8.pictureid", vp8Packet.getPictureId())
+            .addField("orig.vp8.tl0picidx", vp8Packet.getTL0PICIDX())
+            .addField("orig.vp8.tid", vp8Packet.getTemporalLayerIndex())
+            .addField("orig.vp8.start", vp8Packet.isStartOfFrame())
+            .addField("orig.vp8.end", vp8Packet.isEndOfFrame());
+    }
+
+    private static void addProjectionToPoint(VP8FrameProjection projection, DiagnosticContext.TimeSeriesPoint point)
+    {
+        point.addField("proj.rtp.ssrc", projection.getSSRC())
+        .addField("proj.rtp.timestamp", projection.getTimestamp())
+        .addField("proj.vp8.pictureid", projection.getPictureId())
+        .addField("proj.vp8.tl0picidx", projection.getTl0PICIDX());
+    }
+
+    private static void addProjectionRecordToPoint(VP8ProjectionRecord rec, DiagnosticContext.TimeSeriesPoint point)
+    {
+        point.addField("unproj.rtp.timestamp", rec.getTimestamp())
+        .addField("unproj.rtp.seq", rec.getEarliestProjectedSequence());
+    }
+
+    private static void addPrevAndNextToPoint(VP8Frame prevFrame, VP8Frame nextFrame, DiagnosticContext.TimeSeriesPoint point)
+    {
+        /* TODO */
     }
 
     @Override

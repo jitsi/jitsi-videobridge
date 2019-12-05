@@ -183,6 +183,11 @@ public class VP8FrameProjection implements VP8ProjectionRecord
         return RtpUtils.applyTimestampDelta(timestamp, delta);
     }
 
+    public int rewriteSeqNo(int seq)
+    {
+        return RtpUtils.applySequenceNumberDelta(seq, sequenceNumberDelta);
+    }
+
     /**
      * Rewrites an RTP packet.
      *
@@ -194,8 +199,7 @@ public class VP8FrameProjection implements VP8ProjectionRecord
         pkt.setSsrc(ssrc);
         pkt.setTimestamp(timestamp);
 
-        int sequenceNumber
-            = RtpUtils.applySequenceNumberDelta(pkt.getSequenceNumber(), sequenceNumberDelta);
+        int sequenceNumber = rewriteSeqNo(pkt.getSequenceNumber());
         pkt.setSequenceNumber(sequenceNumber);
 
         pkt.setTL0PICIDX(tl0PICIDX);
@@ -239,6 +243,22 @@ public class VP8FrameProjection implements VP8ProjectionRecord
     }
 
     /**
+     * @return The picture ID of this projection.
+     */
+    public int getPictureId()
+    {
+        return extendedPictureId;
+    }
+
+    /**
+     * @return The TL0PICIDX of this projection.
+     */
+    public int getTl0PICIDX()
+    {
+        return tl0PICIDX;
+    }
+
+    /**
      * @return The system time (in ms) this projection was created.
      */
     public long getCreatedMs()
@@ -253,7 +273,7 @@ public class VP8FrameProjection implements VP8ProjectionRecord
         {
             return sequenceNumberDelta;
         }
-        return RtpUtils.applySequenceNumberDelta(vp8Frame.getEarliestKnownSequenceNumber(), sequenceNumberDelta);
+        return rewriteSeqNo(vp8Frame.getEarliestKnownSequenceNumber());
     }
 
     @Override
@@ -263,6 +283,6 @@ public class VP8FrameProjection implements VP8ProjectionRecord
         {
             return sequenceNumberDelta;
         }
-        return RtpUtils.applySequenceNumberDelta(vp8Frame.getLatestKnownSequenceNumber(), sequenceNumberDelta);
+        return rewriteSeqNo(vp8Frame.getLatestKnownSequenceNumber());
     }
 }
