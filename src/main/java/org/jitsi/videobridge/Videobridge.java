@@ -115,9 +115,16 @@ public class Videobridge
     /**
      * The (base) <tt>System</tt> and/or <tt>ConfigurationService</tt> property
      * of the REST-like HTTP/JSON API of Jitsi Videobridge.
+     *
+     * NOTE: Previously, the rest API name ("org.jitsi.videobridge.rest")
+     * conflicted with other values in the new config, since we have
+     * other properties scoped *under* "org.jitsi.videobridge.rest".   The
+     * long term solution will be to port the command-line args to new config,
+     * but for now we rename the property used to signal the rest API is
+     * enabled so it doesn't conflict.
      */
     public static final String REST_API_PNAME
-        = "org.jitsi.videobridge." + REST_API;
+        = "org.jitsi.videobridge." + REST_API + "_api_temp";
 
     /**
      * The property that specifies allowed entities for turning on graceful
