@@ -33,7 +33,7 @@ well if the SFU wants to leverage VP8 temporal scalability. We start our
 analysis by exploring the implications of the first guideline and, as we will 
 see, 2 and 3 follow naturally.
 
-With VP8 temporal scalability [2], where the SFU can drop packets to achieve
+With temporal scalability in VP8 (and other codecs)[2], where the SFU can drop frames to achieve
 lower frame rates, applying a fixed delta would leave gaps in the sequence
 numbers (because of the packets that the SFU drops). So the SFU needs to keep
 track of what it's sent and manage the sequence number space of the
@@ -42,14 +42,97 @@ frame). This mode of operation has several implications.
 
 First, it means that if the SFU decides to skip a frame for whatever reason,
 it cannot go back and change that decision because there would be no space left
-in the sequence numbers. So decisions about if and how to forward a frame apply
+in the sequence numbers.  Furthermore, if packet re-ordering or loss has occurred,
+a decision must be made immediately as to how much of a gap to leave in the
+sequence numbers so delayed packets have a place to be transmitted.
+
+When a frame arrives and it is to be forwarded, the SFU needs to determine how to
+assign its projected sequence numbers.  Decisions on how to assign sequence numbers
+are done based on _new_ and the _top_ frames respectively, where the top frame is the
+already-received frame that has the highest sequence number and new frames are frames
+subsequent to the top in sequence number space.
+
+If there is a gap in receive sequence numbers between the top and a new frame,
+the SFU can determine the worst-case gap size of projected sequence numbers to
+leave such that any not-yet-received packets can be forwarded correctly.
+However, the SFU can't (in general) know the temporal layer of frames it has
+not yet received. If it turns out that the not-yet-received frames were in fact
+not ones that the SFU wanted to forward, this will result in sequence number
+gaps in the projected bitstream, which the receiver may interpret as packet
+loss.  (Care must be taken in bandwidth estimation algorithms not to incorrectly
+reduce bandwidth based on this "false" packet loss.)
+
+Order of operations for sequence number projection:
+* For every encoding (received SSRC), remember the newest received sequence number,
+  newest projected sequence number, the newest received frame, and whether
+  the newest received frame was projected.
+    + ("Newest" is always in sequence number order.)
+* When a packet arrives, if it's newer than the previous newest packet on the encoding:
+    + Compute the sequence delta from the previous newest packet.  Call this the "gap".
+    + Set the newest received to this packet's sequence.
+    + Check whether this packet is part of the previous newest received frame.
+    + If this packet is part of the previous newest received frame:
+        + Update the previous frame with information from this packet.
+        + If that frame was not projected, return.
+    + Otherwise, determine whether this new packet's frame should be projected.
+       + If neither the previous frame and the new frame should be projected,
+         and the two frames' picture IDs are consecutive, set the gap to 0.  Otherwise:
+           + If the previous newest frame was not projected, and it had not received
+        its final packet, subtract one from the gap (min 1).
+           + If the new packet's frame should not be projected, and this is not its initial
+        packet, subtract one from the gap (min 1).
+           + If this frame should not be projected, subtract one from the gap (min 0).
+       + Remember this frame as the newest frame, and also store it in the frame
+         projection map.
+    + Increment newest projected sequence number by the gap.  If this packet's frame
+      should be projected, project this packet with this projected sequence number.
+* Otherwise, if the packet is older than the previous newest packet:
+    + Look up the packet's frame in the frame projection map.
+    + If it's present, update the frame with this packet.
+        + If that frame was projected, project it using that frame's sequence number mapping.
+    + Otherwise, determine whether this frame should be projected.  Store this frame
+      in the frame projection map.
+    + Find the next frame in the frame projection map.  Use that frame's
+      sequence number mapping for this new frame.
+  
+When starting a stream from scratch:
+* Wait for a packet of a keyframe, requesting one if necessary.  When one arrives,
+  initialize the projection information based on that packet, with an arbitrary
+  sequence number mapping.
+  
+When switching to an encoding that is already being received:
+* Wait for a packet of a keyframe.  When one arrives, compute the sequence number
+  gap on that encoding from its previous newest received sequence number.
+    + If that frame's previous newest frame hadn't received its final packet,
+      add one to the gap size.
+* Apply that gap to the previous encoding's highest projected sequence number.
+* Set up the frame projection map appropriately.
+
+When switching to an encoding which previously had not been received:
+* Wait for either the first packet of a keyframe, or any packet of a subsequent keyframe.
+* If the first packet of a keyframe is received, set a gap of 2 (if the previous
+  encoding's last projected frame had sent its last packet) or 1 (if not) and compute
+  a new sequence number mapping.
+* If a packet of a subsequent keyframe is received, treat as above.
+* Otherwise, when a non-first packet of a keyframe is received, put the track into
+  a mode where it will cache all packets of TL0 frames (including keyframes).
+  *TODO*: might defer this part.
+
+-----
+
+The SFU 
+
+So decisions about if and how to forward a frame must be made
+when a packet of a frame is first seen by the SFU.
+
+apply
 only on _new_ and the _top_ frames respectively, where the top frame is the
 frame that is currently being forwarded and new frames are frames subsequent to
 the top.
 
 When the SFU sees a new frame, it can decide whether to forward it, drop it or
 not process it (which effectively postpones the decision at a later time upon
-reception of a subsequent packet of that frame). If the SFU decides to forward
+reception of a subsequent packet of that or another frame). If the SFU decides to forward
 it, then it becomes the top frame and the previous top frame (if there was one)
 gets _finalized_ and its transformations are stored for re-application on
 re-transmissions.
@@ -107,7 +190,7 @@ frame is the next TL0.
 minimize delay) at any time.
 
 NOTES: there may be something to write here about implementing a protection
-mode that minimizes the afformentioned problems.
+mode that minimizes the aforementioned problems.
 
 [simulcast]: https://ieeexplore.ieee.org/abstract/document/7992929
 [1]: https://groups.google.com/d/topic/discuss-webrtc/gik2VH4hUjk/discussion
