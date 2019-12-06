@@ -19,7 +19,6 @@ package org.jitsi.videobridge.rest.config
 import org.jitsi.config.legacyProperty
 import org.jitsi.config.newProperty
 import org.jitsi.config.simple
-import org.jitsi.utils.config.ConfigProperty
 import org.jitsi.utils.config.dsl.multiProperty
 
 class WebsocketServiceConfig {
@@ -46,10 +45,10 @@ class WebsocketServiceConfig {
         fun enabled() = enabledProp.value
 
         /**
-         * The name of the property which controls the domain name used in URLs
+         * The property which controls the domain name used in URLs
          * advertised for COLIBRI WebSockets.
          */
-        private val domainProp: ConfigProperty<String> by lazy {
+        private val domainProp by lazy {
             simple<String>(
                 readOnce = true,
                 legacyName = "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN",
@@ -80,7 +79,13 @@ class WebsocketServiceConfig {
          * Note, should only be accessed after verifying [enabled] is true
          */
         @JvmStatic
-        fun useTls() = tlsProp.value
+        fun useTls(): Boolean? {
+            return try {
+                tlsProp.value
+            } catch (t: Throwable) {
+                null
+            }
+        }
 
         /**
          * The name of the property which controls the server ID used in URLs
