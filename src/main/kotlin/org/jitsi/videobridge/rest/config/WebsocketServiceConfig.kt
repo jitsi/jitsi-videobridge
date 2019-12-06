@@ -19,6 +19,7 @@ package org.jitsi.videobridge.rest.config
 import org.jitsi.config.legacyProperty
 import org.jitsi.config.newProperty
 import org.jitsi.config.simple
+import org.jitsi.utils.config.ConfigProperty
 import org.jitsi.utils.config.dsl.multiProperty
 
 class WebsocketServiceConfig {
@@ -27,7 +28,7 @@ class WebsocketServiceConfig {
          * The name of the property which enables the
          * [org.jitsi.videobridge.rest.ColibriWebSocketService]
          */
-        private val enabled = multiProperty<Boolean> {
+        private val enabledProp = multiProperty<Boolean> {
             legacyProperty {
                 name("org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE")
                 readOnce()
@@ -42,46 +43,61 @@ class WebsocketServiceConfig {
         }
 
         @JvmStatic
-        fun isEnabled() = enabled.value
+        fun enabled() = enabledProp.value
 
         /**
          * The name of the property which controls the domain name used in URLs
          * advertised for COLIBRI WebSockets.
          */
-        private val domain = simple<String>(
-            readOnce = true,
-            legacyName = "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN",
-            newName = "videobridge.websockets.domain"
-        )
+        private val domainProp: ConfigProperty<String> by lazy {
+            simple<String>(
+                readOnce = true,
+                legacyName = "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN",
+                newName = "videobridge.websockets.domain"
+            )
+        }
 
+        /**
+         * Note, should only be accessed after verifying [enabled] is true
+         */
         @JvmStatic
-        fun getDomain() = domain.value
+        fun domain() = domainProp.value
 
         /**
          * The name of the property which controls whether URLs advertised for
          * COLIBRI WebSockets should use the "ws" (if false) or "wss" (if true)
          * schema.
          */
-        private val tls = simple<Boolean>(
-            readOnce = true,
-            legacyName = "org.jitsi.videobridge.rest.COLIBRI_WS_TLS",
-            newName = "videobridge.websockets.tls"
-        )
+        private val tlsProp by lazy {
+            simple<Boolean>(
+                readOnce = true,
+                legacyName = "org.jitsi.videobridge.rest.COLIBRI_WS_TLS",
+                newName = "videobridge.websockets.tls"
+            )
+        }
 
+        /**
+         * Note, should only be accessed after verifying [enabled] is true
+         */
         @JvmStatic
-        fun useTls() = tls.value
+        fun useTls() = tlsProp.value
 
         /**
          * The name of the property which controls the server ID used in URLs
          * advertised for COLIBRI WebSockets.
          */
-        private val serverId = simple<String>(
-            readOnce = true,
-            legacyName = "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID",
-            newName = "videobridge.websockets.server-id"
-        )
+        private val serverIdProp by lazy {
+            simple<String>(
+                readOnce = true,
+                legacyName = "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID",
+                newName = "videobridge.websockets.server-id"
+            )
+        }
 
+        /**
+         * Note, should only be accessed after verifying [enabled] is true
+         */
         @JvmStatic
-        fun getServerId() = serverId.value
+        fun serverId() = serverIdProp.value
     }
 }

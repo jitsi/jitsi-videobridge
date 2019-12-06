@@ -16,8 +16,6 @@
 package org.jitsi.videobridge.rest;
 
 import org.eclipse.jetty.servlet.*;
-import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.rest.config.*;
 import org.osgi.framework.*;
@@ -63,9 +61,9 @@ public class ColibriWebSocketService
         String serverId = null;
 
         // The domain name is currently a required property.
-        if (isEnabled())
+        if (enabled())
         {
-            String domain = getDomain();
+            String domain = domain();
             // We default to matching the protocol used by the local jetty
             // instance, but we allow for the configuration via properties
             // to override it since certain use-cases require it.
@@ -73,7 +71,7 @@ public class ColibriWebSocketService
 
             // The server ID is not critical, just use a default string
             // unless configured.
-            serverId = WebsocketServiceConfig.getServerId();
+            serverId = WebsocketServiceConfig.serverId();
 
             baseUrl = tls ? "wss://" : "ws://";
             baseUrl += domain + COLIBRI_WS_PATH + serverId + "/";
@@ -130,7 +128,7 @@ public class ColibriWebSocketService
     {
         ServletHolder holder = null;
 
-        if (baseUrl != null && isEnabled())
+        if (baseUrl != null && enabled())
         {
             logger.info("Starting colibri websocket service");
             holder = new ServletHolder();
