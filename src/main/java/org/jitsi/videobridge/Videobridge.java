@@ -979,7 +979,7 @@ public class Videobridge
         if (cfg != null)
         {
             List<String> ice4jPropertyNames
-                = cfg.getPropertyNamesByPrefix("org.ice4j.", false);
+                = cfg.getPropertyNamesByPrefix("org.ice4j", false);
 
             if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
             {
@@ -1084,7 +1084,7 @@ public class Videobridge
         if (cfg != null)
         {
             List<String> ice4jPropertyNames
-                = cfg.getPropertyNamesByPrefix("org.ice4j.", false);
+                = cfg.getPropertyNamesByPrefix("org.ice4j", false);
 
             if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
             {

@@ -20,7 +20,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <smack.version>4.2.4-47d17fc</smack.version>
     <jitsi.utils.version>1.0-24-g8f17c70</jitsi.utils.version>
-    <jicoco.version>1.1-9-gffbb6dd</jicoco.version>
+    <jicoco.version>1.1-12-g2b135ca</jicoco.version>
   </properties>
 
   <dependencyManagement>
@@ -139,12 +139,6 @@
       <artifactId>jitsi-utils-kotlin</artifactId>
       <version>${jitsi.utils.version}</version>
     </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>libjitsi</artifactId>
-      <version>1.0-4-g07f0dfa</version>
-    </dependency>
-
     <dependency>
       <groupId>org.osgi</groupId>
       <artifactId>org.osgi.core</artifactId>
