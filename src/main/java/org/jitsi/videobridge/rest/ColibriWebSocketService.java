@@ -20,7 +20,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.rest.config.*;
 import org.osgi.framework.*;
 
-import static org.jitsi.videobridge.rest.config.WebsocketServiceConfig.*;
+import static org.jitsi.videobridge.rest.config.WebsocketServiceConfig.Config;
 
 /**
  * @author Boris Grozev
@@ -53,7 +53,7 @@ public class ColibriWebSocketService
      *
      * @param tls whether to use "ws" or "wss" in advertised URLs in the absence
      * of configuration which overrides it (see
-     * {@link WebsocketServiceConfig#useTls()}).
+     * {@link WebsocketServiceConfig.Config#useTls()}).
      */
     public ColibriWebSocketService(boolean tls)
     {
@@ -61,18 +61,18 @@ public class ColibriWebSocketService
         String serverId = null;
 
         // The domain name is currently a required property.
-        if (enabled())
+        if (Config.enabled())
         {
-            String domain = domain();
+            String domain = Config.domain();
             // We default to matching the protocol used by the local jetty
             // instance, but we allow for the configuration via properties
             // to override it since certain use-cases require it.
-            Boolean tlsProp = useTls();
+            Boolean tlsProp = Config.useTls();
             tls = tlsProp != null ? tlsProp : tls;
 
             // The server ID is not critical, just use a default string
             // unless configured.
-            serverId = WebsocketServiceConfig.serverId();
+            serverId = Config.serverId();
 
             baseUrl = tls ? "wss://" : "ws://";
             baseUrl += domain + COLIBRI_WS_PATH + serverId + "/";
@@ -129,7 +129,7 @@ public class ColibriWebSocketService
     {
         ServletHolder holder = null;
 
-        if (baseUrl != null && enabled())
+        if (baseUrl != null && Config.enabled())
         {
             logger.info("Starting colibri websocket service");
             holder = new ServletHolder();
