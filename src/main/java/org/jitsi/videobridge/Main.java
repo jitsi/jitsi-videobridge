@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.cmd.*;
+import org.jitsi.config.*;
 import org.jitsi.meet.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -134,6 +135,9 @@ public class Main
         System.setProperty(
                 Videobridge.XMPP_API_PNAME,
                 Boolean.toString(apis.contains(Videobridge.XMPP_API)));
+
+        // Need to force a reload to see the updated system properties
+        JitsiConfig.Companion.reload();
 
         ComponentMain main = new ComponentMain();
         BundleConfig osgiBundles = new BundleConfig();
