@@ -20,6 +20,8 @@ import org.jitsi.config.legacyProperty
 import org.jitsi.config.newProperty
 import org.jitsi.config.simple
 import org.jitsi.utils.config.dsl.multiProperty
+import org.jitsi.videobridge.config.ConditionalPropertyConditionNotMetException
+import org.jitsi.videobridge.config.conditionalProperty
 
 class WebsocketServiceConfig {
     companion object {
@@ -48,13 +50,17 @@ class WebsocketServiceConfig {
          * The property which controls the domain name used in URLs
          * advertised for COLIBRI WebSockets.
          */
-        private val domainProp by lazy {
-            simple<String>(
-                readOnce = true,
-                legacyName = "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN",
-                newName = "videobridge.websockets.domain"
-            )
-        }
+        private val domainProp = conditionalProperty(
+            ::enabled,
+            {
+                simple<String>(
+                    readOnce = true,
+                    legacyName = "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN",
+                    newName = "videobridge.websockets.domain"
+                )
+            },
+            "Websocket domain property is only parsed when websockets are enabled"
+        )
 
         /**
          * Note, should only be accessed after verifying [enabled] is true
@@ -63,17 +69,21 @@ class WebsocketServiceConfig {
         fun domain() = domainProp.value
 
         /**
-         * The name of the property which controls whether URLs advertised for
+         * The property which controls whether URLs advertised for
          * COLIBRI WebSockets should use the "ws" (if false) or "wss" (if true)
          * schema.
          */
-        private val tlsProp by lazy {
-            simple<Boolean>(
-                readOnce = true,
-                legacyName = "org.jitsi.videobridge.rest.COLIBRI_WS_TLS",
-                newName = "videobridge.websockets.tls"
-            )
-        }
+        private val tlsProp = conditionalProperty(
+            ::enabled,
+            {
+                simple<Boolean>(
+                    readOnce = true,
+                    legacyName = "org.jitsi.videobridge.rest.COLIBRI_WS_TLS",
+                    newName = "videobridge.websockets.tls"
+                )
+            },
+            "Websocket TLS property is only parsed when websockets are enabled"
+        )
 
         /**
          * Note, should only be accessed after verifying [enabled] is true
@@ -83,7 +93,10 @@ class WebsocketServiceConfig {
             return try {
                 tlsProp.value
             } catch (t: Throwable) {
-                null
+                when (t) {
+                    is ConditionalPropertyConditionNotMetException -> throw t
+                    else -> null
+                }
             }
         }
 
@@ -91,13 +104,17 @@ class WebsocketServiceConfig {
          * The name of the property which controls the server ID used in URLs
          * advertised for COLIBRI WebSockets.
          */
-        private val serverIdProp by lazy {
-            simple<String>(
-                readOnce = true,
-                legacyName = "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID",
-                newName = "videobridge.websockets.server-id"
-            )
-        }
+        private val serverIdProp = conditionalProperty(
+            ::enabled,
+            {
+                simple<String>(
+                    readOnce = true,
+                    legacyName = "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID",
+                    newName = "videobridge.websockets.server-id"
+                )
+            },
+            "Websocket server ID property is only parsed when websockets are enabled"
+        )
 
         /**
          * Note, should only be accessed after verifying [enabled] is true
