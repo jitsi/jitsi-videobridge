@@ -67,7 +67,8 @@ public class ColibriWebSocketService
             // We default to matching the protocol used by the local jetty
             // instance, but we allow for the configuration via properties
             // to override it since certain use-cases require it.
-            tls = useTls();
+            Boolean tlsProp = useTls();
+            tls = tlsProp != null ? tlsProp : tls;
 
             // The server ID is not critical, just use a default string
             // unless configured.
