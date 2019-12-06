@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
@@ -124,6 +125,41 @@ public class VP8AdaptiveTrackProjectionContext
     }
 
     /**
+     * Calculate the projected sequence number gap between two frames (of the same encoding),
+     * allowing collapsing for unprojected frames.
+     */
+    private int seqGap(@NotNull VP8Frame frame1, boolean frame1projected,
+        @NotNull VP8Frame frame2, boolean frame2projected)
+    {
+        int seqGap = RtpUtils.getSequenceNumberDelta(frame2.getEarliestKnownSequenceNumber(), frame1.getLatestKnownSequenceNumber());
+
+        if (false)
+            return seqGap;
+
+        if (!frame1projected && !frame2projected &&
+            frame2.getPictureId() == ((frame1.getPictureId() + 1) &
+                DePacketizer.VP8PayloadDescriptor.EXTENDED_PICTURE_ID_MASK))
+        {
+            /* If neither frame is being projected, and they have consecutive
+               picture IDs, we don't need to leave any gap. */
+            seqGap = 0;
+        }
+        else
+        {
+            if (!frame1projected && !frame1.hasSeenEndOfFrame() && seqGap > 1)
+            {
+                seqGap--;
+            }
+            if (!frame2projected && !frame2.hasSeenStartOfFrame() && seqGap > 1)
+            {
+                seqGap--;
+            }
+        }
+
+        return seqGap;
+    }
+
+    /**
      * Determines whether a packet should be accepted or not.
      *
      * @param rtpPacket the RTP packet to determine whether to project or not.
@@ -165,6 +201,7 @@ public class VP8AdaptiveTrackProjectionContext
                                 .rewriteSeqNo(vp8Packet.getSequenceNumber()));
                     addPacketToPoint(vp8Packet, point);
                     addProjectionToPoint(projection, point);
+                    addFrameToPoint(result.getFrame(), point);
                     timeSeriesLogger.trace(point);
                 }
                 else
@@ -175,6 +212,7 @@ public class VP8AdaptiveTrackProjectionContext
                         diagnosticContext.makeTimeSeriesPoint("rtp_vp8_existing_unprojected");
                     addPacketToPoint(vp8Packet, point);
                     addProjectionRecordToPoint(rec, point);
+                    addFrameToPoint(result.getFrame(), point);
                     timeSeriesLogger.trace(point);
                 }
             }
@@ -266,8 +304,9 @@ public class VP8AdaptiveTrackProjectionContext
         {
             /* This frame is old, slotted in after an earlier frame. */
             VP8Frame nextFrame = result.getNextFrame();
-            int seqGap = RtpUtils.getSequenceNumberDelta(vp8Packet.getSequenceNumber(), nextFrame.getEarliestKnownSequenceNumber());
-            projectedSeq = RtpUtils.applySequenceNumberDelta(nextFrame.getProjectionRecord().getEarliestProjectedSequence(), seqGap);
+            int seqGap = seqGap(frame, accept, nextFrame, nextFrame.getProjection() != null);
+
+            projectedSeq = RtpUtils.applySequenceNumberDelta(nextFrame.getProjectionRecord().getEarliestProjectedSequence(), -seqGap);
 
             long tsGap = RtpUtils.getTimestampDiff(vp8Packet.getTimestamp(), nextFrame.getTimestamp());
             projectedTs = RtpUtils.applyTimestampDelta(nextFrame.getProjectionRecord().getTimestamp(), tsGap);
@@ -276,30 +315,12 @@ public class VP8AdaptiveTrackProjectionContext
         {
             /* This frame is the newest frame. */
             VP8Frame prevFrame = result.getPrevFrame();
-            int seqGap = RtpUtils.getSequenceNumberDelta(vp8Packet.getSequenceNumber(), prevFrame.getLatestKnownSequenceNumber());
 
-            if (!accept && prevFrame.getProjection() == null &&
-                frame.getPictureId() == ((prevFrame.getPictureId() + 1) &
-                    DePacketizer.VP8PayloadDescriptor.EXTENDED_PICTURE_ID_MASK))
+            int seqGap = seqGap(prevFrame, prevFrame.getProjection() != null, frame, accept);
+
+            if (prevFrame.getProjection() == null && seqGap > 0)
             {
-                /* If neither frame is being projected, and they have consecutive
-                   picture IDs, we don't need to leave a gap. */
-                seqGap = 0;
-            }
-            else
-            {
-                if (prevFrame.getProjection() == null && !prevFrame.hasSeenEndOfFrame() && seqGap > 1)
-                {
-                    seqGap--;
-                }
-                if (!accept && !frame.hasSeenStartOfFrame() && seqGap > 1)
-                {
-                    seqGap--;
-                }
-                if (!accept && seqGap > 0)
-                {
-                    seqGap--;
-                }
+                seqGap--;
             }
 
             projectedSeq = RtpUtils.applySequenceNumberDelta(prevFrame.getProjectionRecord().getLatestProjectedSequence(), seqGap);
@@ -333,6 +354,7 @@ public class VP8AdaptiveTrackProjectionContext
                         .addField("proj.rtp.seq", projectedSeq);
                 addPacketToPoint(vp8Packet, point);
                 addProjectionToPoint(projection, point);
+                addFrameToPoint(result.getFrame(), point);
                 addPrevAndNextToPoint(result.getPrevFrame(), result.getNextFrame(), point);
                 timeSeriesLogger.trace(point);
             }
@@ -347,8 +369,34 @@ public class VP8AdaptiveTrackProjectionContext
                     diagnosticContext.makeTimeSeriesPoint("rtp_vp8_unprojected");
                 addPacketToPoint(vp8Packet, point);
                 addProjectionRecordToPoint(rec, point);
+                addFrameToPoint(result.getFrame(), point);
                 addPrevAndNextToPoint(result.getPrevFrame(), result.getNextFrame(), point);
                 timeSeriesLogger.trace(point);
+            }
+        }
+
+        /* Sanity check */
+        if (result.getPrevFrame() != null)
+        {
+            assert (!RtpUtils.isOlderSequenceNumberThan(projectedSeq,
+                result.getPrevFrame().getProjectionRecord()
+                    .getLatestProjectedSequence()));
+            if (accept && result.getPrevFrame().getProjection() != null) {
+                assert (RtpUtils.isNewerSequenceNumberThan(projectedSeq,
+                    result.getPrevFrame().getProjectionRecord()
+                        .getLatestProjectedSequence()));
+            }
+        }
+        if (result.getNextFrame() != null)
+        {
+            assert (!RtpUtils.isNewerSequenceNumberThan(projectedSeq,
+                result.getNextFrame().getProjectionRecord()
+                    .getEarliestProjectedSequence()));
+            if (accept)
+            {
+                assert (RtpUtils.isOlderSequenceNumberThan(projectedSeq,
+                    result.getNextFrame().getProjectionRecord()
+                        .getEarliestProjectedSequence()));
             }
         }
 
@@ -367,6 +415,11 @@ public class VP8AdaptiveTrackProjectionContext
             .addField("orig.vp8.end", vp8Packet.isEndOfFrame());
     }
 
+    private static void addFrameToPoint(VP8Frame frame, DiagnosticContext.TimeSeriesPoint point)
+    {
+        point.addField("frame", describeFrameForPoint(frame));
+    }
+
     private static void addProjectionToPoint(VP8FrameProjection projection, DiagnosticContext.TimeSeriesPoint point)
     {
         point.addField("proj.rtp.ssrc", projection.getSSRC())
@@ -381,9 +434,53 @@ public class VP8AdaptiveTrackProjectionContext
         .addField("unproj.rtp.seq", rec.getEarliestProjectedSequence());
     }
 
+    private static String describeFrameForPoint(VP8Frame frame)
+    {
+        StringBuilder b = new StringBuilder();
+
+        b.append(frame.hasSeenStartOfFrame() ? '[' : '(')
+            .append(frame.getEarliestKnownSequenceNumber())
+            .append('-')
+            .append(frame.getLatestKnownSequenceNumber())
+            .append(frame.hasSeenEndOfFrame() ? ']' : ')');
+
+        VP8FrameProjection proj = frame.getProjection();
+        if (proj != null)
+        {
+            b.append('→')
+                .append(frame.hasSeenStartOfFrame() ? '[' : '(')
+                .append(proj.getEarliestProjectedSequence())
+                .append('-')
+                .append(proj.getLatestProjectedSequence())
+                .append(frame.hasSeenEndOfFrame() ? ']' : ')');
+        }
+        else {
+            b.append('↝')
+                .append(frame.getProjectionRecord().getEarliestProjectedSequence());
+        }
+
+        return b.toString();
+    }
+
     private static void addPrevAndNextToPoint(VP8Frame prevFrame, VP8Frame nextFrame, DiagnosticContext.TimeSeriesPoint point)
     {
-        /* TODO */
+        if (prevFrame != null)
+        {
+            point.addField("prevFrame", describeFrameForPoint(prevFrame));
+        }
+        else
+        {
+            point.addField("prevFrame", null);
+        }
+
+        if (nextFrame != null)
+        {
+            point.addField("nextFrame", describeFrameForPoint(nextFrame));
+        }
+        else
+        {
+            point.addField("nextFrame", null);
+        }
     }
 
     @Override

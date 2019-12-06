@@ -123,6 +123,7 @@ public class VP8AdaptiveTrackProjectionTest
         }
 
         long seed = System.currentTimeMillis(); // Pass an explicit seed for reproducible tests
+        //  long seed = 1575666289164L;
         Random random = new Random(seed);
 
         VP8AdaptiveTrackProjectionContext context =
@@ -168,6 +169,28 @@ public class VP8AdaptiveTrackProjectionTest
             buffer.set(0, generator.nextPacket());
             Collections.shuffle(buffer, random);
         }
+
+        Iterator<Integer> iter = projectedPackets.keySet().iterator();
+
+        ProjectedPacket prevPacket = projectedPackets.get(iter.next());
+
+        while (iter.hasNext())
+        {
+            ProjectedPacket packet = projectedPackets.get(iter.next());
+
+            assertTrue(RtpUtils.isNewerSequenceNumberThan(packet.origSeq, prevPacket.origSeq));
+
+            prevPacket = packet;
+        }
+
+        /* Overall, we should not have expanded sequence numbers. */
+        ProjectedPacket firstPacket = projectedPackets.firstEntry().getValue();
+        ProjectedPacket lastPacket = projectedPackets.lastEntry().getValue();
+
+        int origDelta = RtpUtils.getSequenceNumberDelta(lastPacket.origSeq, firstPacket.origSeq);
+        int projDelta = RtpUtils.getSequenceNumberDelta(lastPacket.packet.getSequenceNumber(),
+            firstPacket.packet.getSequenceNumber());
+        assertTrue(projDelta <= origDelta);
     }
 
     @Test
