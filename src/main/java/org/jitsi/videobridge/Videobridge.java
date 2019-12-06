@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import kotlin.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
+import org.jitsi.config.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.meet.*;
 import org.jitsi.nlj.*;
@@ -1015,6 +1016,8 @@ public class Videobridge
                     System.setProperty(newPropertyName, propertyValue);
                 }
             }
+            // Reload for all the new system properties to be seen
+            JitsiConfig.Companion.reload();
         }
 
         // Initialize the the host candidate interface filters in the ice4j
