@@ -25,4 +25,12 @@ class CommandLineArgsConfigSource(private val commandLineArgs: Array<String>) : 
     override fun <T : Any> getterFor(valueType: KClass<T>): (String) -> T {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
+
+    override fun reload() {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun toStringMasked(): String {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
 }
