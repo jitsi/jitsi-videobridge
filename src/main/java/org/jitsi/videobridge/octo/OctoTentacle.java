@@ -223,6 +223,8 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
 
+        octoEndpoints.setEndpoints(endpointIds);
+
         // We only need to call this if the tracks of any endpoint actually
         // changed, but that's not easy to detect. It's safe to call it more
         // often.
