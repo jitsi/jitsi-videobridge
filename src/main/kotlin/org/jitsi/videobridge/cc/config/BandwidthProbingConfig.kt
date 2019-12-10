@@ -17,37 +17,43 @@
 package org.jitsi.videobridge.cc.config
 
 import org.jitsi.config.JitsiConfig
-import org.jitsi.config.legacyProperty
-import org.jitsi.config.newProperty
-import org.jitsi.utils.config.dsl.multiProperty
-import org.jitsi.utils.config.dsl.property
+import org.jitsi.utils.config.FallbackProperty
+import org.jitsi.utils.config.SimpleProperty
+import org.jitsi.utils.config.helpers.attributes
 import java.time.Duration
 
 class BandwidthProbingConfig {
-    companion object {
-        /**
-          * How often we check to send probing data
-          */
-        private val paddingPeriodProp = multiProperty<Long> {
-            legacyProperty {
-                readOnce()
-                name("org.jitsi.videobridge.PADDING_PERIOD_MS")
-            }
-            newProperty {
-                readOnce()
-                name("videobridge.cc.padding-period")
-                retrievedAs<Duration>() convertedBy { it.toMillis() }
-            }
-        }
+    class Config {
+        companion object {
+            /**
+             * How often we check to send probing data
+             */
+            class PaddingPeriodProperty : FallbackProperty<Long>(
+                attributes {
+                    readOnce()
+                    name("org.jitsi.videobridge.PADDING_PERIOD_MS")
+                    fromConfig(JitsiConfig.legacyConfig)
+                },
+                attributes {
+                    readOnce()
+                    name("videobridge.cc.padding-period")
+                    fromConfig(JitsiConfig.newConfig)
+                    retrievedAs<Duration>() convertedBy { it.toMillis() }
+                }
+            )
+            private val paddingPeriodProp = PaddingPeriodProperty()
 
-        @JvmStatic
-        fun paddingPeriodMs() = paddingPeriodProp.value
+            @JvmStatic
+            fun paddingPeriodMs() = paddingPeriodProp.value
 
-        private val disableRtxProbingProp = property<Boolean> {
-            readOnce()
-            name("org.jitsi.videobridge.DISABLE_RTX_PROBING")
-            fromConfig(JitsiConfig.legacyConfig)
-            deprecated("RTX probing is always used when RTX is supported.")
+            class DisableRtxProbingProperty : SimpleProperty<Boolean>(
+                attributes {
+                    readOnce()
+                    name("org.jitsi.videobridge.DISABLE_RTX_PROBING")
+                    fromConfig(JitsiConfig.legacyConfig)
+                    deprecated("RTX probing is always used when RTX is supported.")
+                }
+            )
         }
     }
 }
