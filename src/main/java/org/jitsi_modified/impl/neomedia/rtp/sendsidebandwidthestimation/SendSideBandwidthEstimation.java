@@ -20,6 +20,7 @@ import org.jitsi.utils.logging.DiagnosticContext;
 import org.jitsi.utils.logging.TimeSeriesLogger;
 import org.jitsi.utils.logging2.*;
 
+import java.time.*;
 import java.util.*;
 
 /**
@@ -201,9 +202,10 @@ public class SendSideBandwidthEstimation
     private final DiagnosticContext diagnosticContext;
 
     /**
-     * The most recent RTT calculation we've received for our connection with the remote endpoint
+     * The most recent RTT calculation we've received for our connection with
+     * the remote endpoint in milliseconds.
      */
-    private long rtt;
+    private long rttMs;
 
     /**
      * The instance that holds stats for this instance.
@@ -361,7 +363,7 @@ public class SendSideBandwidthEstimation
                     // rtt.
                     if (!has_decreased_since_last_fraction_loss_ &&
                         (now - time_last_decrease_ms_) >=
-                            (kBweDecreaseIntervalMs + getRtt()))
+                            (kBweDecreaseIntervalMs + getRttMs()))
                     {
                         time_last_decrease_ms_ = now;
 
@@ -562,27 +564,25 @@ public class SendSideBandwidthEstimation
         return statistics;
     }
 
-    public void onRttUpdate(double newRtt)
+    public void onRttUpdate(Duration newRtt)
     {
-        //TODO(brian): does it make sense to use rtt as a long in here? which is more approriate, double or long?
-        // we should make all types for rtt consistent
-        this.rtt = (long)newRtt;
+        this.rttMs = newRtt.toMillis();
     }
 
     /**
-     * Returns the last calculated RTT to the endpoint.
-     * @return the last calculated RTT to the endpoint.
+     * Returns the last calculated RTT to the endpoint in milliseconds.
+     * @return the last calculated RTT to the endpoint in milliseconds.
      */
-    private synchronized long getRtt()
+    private synchronized long getRttMs()
     {
-        if (rtt < 0 || rtt > 1000)
+        if (rttMs < 0 || rttMs > 1000)
         {
             logger.warn("RTT not calculated, or has a suspiciously high value ("
-                + rtt + "). Using the default of 100ms.");
-            rtt = 100;
+                + rttMs + "). Using the default of 100ms.");
+            rttMs = 100;
         }
 
-        return rtt;
+        return rttMs;
     }
 
     private class Pair<T>
@@ -761,8 +761,8 @@ public class SendSideBandwidthEstimation
                                 bitrate_)
                             .addField("bwe_incoming",
                                 bwe_incoming_)
-                            .addField("rtt",
-                                rtt));
+                            .addField("rtt_ms",
+                                    rttMs));
                     }
                 }
 
