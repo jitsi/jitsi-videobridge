@@ -263,6 +263,11 @@
       <version>3.3.2</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.jitsi</groupId>
+      <artifactId>jicoco-test-kotlin</artifactId>
+      <version>${jicoco.version}</version>
+    </dependency>
   </dependencies>
 
   <build>
