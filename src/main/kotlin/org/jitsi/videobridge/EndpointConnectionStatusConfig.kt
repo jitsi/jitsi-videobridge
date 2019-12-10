@@ -16,9 +16,9 @@
 
 package org.jitsi.videobridge
 
-import org.jitsi.config.JitsiConfig
+import org.jitsi.config.legacyConfigAttributes
+import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.FallbackProperty
-import org.jitsi.utils.config.helpers.attributes
 import java.time.Duration
 
 class EndpointConnectionStatusConfig {
@@ -29,16 +29,14 @@ class EndpointConnectionStatusConfig {
              * be marked as inactive.
              */
             class FirstTransferTimeoutProperty : FallbackProperty<Duration>(
-                attributes {
+                legacyConfigAttributes {
                     name("org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT")
                     readOnce()
-                    fromConfig(JitsiConfig.legacyConfig)
                     retrievedAs<Long>() convertedBy { Duration.ofMillis(it) }
                 },
-                attributes {
+                newConfigAttributes {
                     name("videobridge.ep-connection-status.first-transfer-timeout")
                     readOnce()
-                    fromConfig(JitsiConfig.newConfig)
                 }
             )
             private val firstTransferTimeout = FirstTransferTimeoutProperty()
@@ -51,16 +49,14 @@ class EndpointConnectionStatusConfig {
              * disconnected.
              */
             class MaxInactivityLimitProperty : FallbackProperty<Duration>(
-                attributes {
+                legacyConfigAttributes {
                     name("org.jitsi.videobridge.EndpointConnectionStatus.MAX_INACTIVITY_LIMIT")
                     readOnce()
-                    fromConfig(JitsiConfig.legacyConfig)
                     retrievedAs<Long>() convertedBy { Duration.ofMillis(it) }
                 },
-                attributes {
+                newConfigAttributes {
                     name("videobridge.ep-connection-status.max-inactivity-limit")
                     readOnce()
-                    fromConfig(JitsiConfig.newConfig)
                 }
             )
             private val maxInactivityLimit = MaxInactivityLimitProperty()

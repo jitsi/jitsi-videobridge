@@ -16,25 +16,23 @@
 
 package org.jitsi.videobridge.health.config
 
-import org.jitsi.config.JitsiConfig
 import org.jitsi.config.LegacyFallbackConfigProperty
+import org.jitsi.config.legacyConfigAttributes
+import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.FallbackProperty
-import org.jitsi.utils.config.helpers.attributes
 import java.time.Duration
 
 class HealthConfig {
     class Config {
         companion object {
             class HealthIntervalProperty : FallbackProperty<Long>(
-                attributes {
+                legacyConfigAttributes {
                     name("org.jitsi.videobridge.health.INTERVAL")
                     readOnce()
-                    fromConfig(JitsiConfig.legacyConfig)
                 },
-                attributes {
+                newConfigAttributes {
                     name("videobridge.health.interval")
                     readOnce()
-                    fromConfig(JitsiConfig.newConfig)
                     retrievedAs<Duration>() convertedBy { it.toMillis() }
                 }
             )
@@ -45,15 +43,13 @@ class HealthConfig {
             fun getInterval(): Long = interval.value
 
             class TimeoutProperty : FallbackProperty<Long>(
-                attributes {
+                legacyConfigAttributes {
                     name("org.jitsi.videobridge.health.TIMEOUT")
                     readOnce()
-                    fromConfig(JitsiConfig.legacyConfig)
                 },
-                attributes {
+                newConfigAttributes {
                     name("videobridge.health.timeout")
                     readOnce()
-                    fromConfig(JitsiConfig.newConfig)
                     retrievedAs<Duration>() convertedBy { it.toMillis() }
                 }
             )
