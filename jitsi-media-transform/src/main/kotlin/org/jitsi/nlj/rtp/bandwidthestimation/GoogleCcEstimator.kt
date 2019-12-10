@@ -74,7 +74,7 @@ class GoogleCcEstimator(diagnosticContext: DiagnosticContext, parentLogger: Logg
 
     override fun doRttUpdate(now: Instant, newRtt: Duration) {
         bitrateEstimatorAbsSendTime.onRttUpdate(now.toEpochMilli(), newRtt.toMillis())
-        sendSideBandwidthEstimation.onRttUpdate(newRtt.toNanos() / 1.0e9)
+        sendSideBandwidthEstimation.onRttUpdate(newRtt)
     }
 
     override fun getCurrentBw(now: Instant): Bandwidth {
