@@ -99,6 +99,12 @@ public class VP8FrameProjection implements VP8ProjectionRecord
     private final int tl0PICIDX;
 
     /**
+     * True if this projection is still "open" for new, later packets.
+     * Projections can be closed when we switch away from their encodings.
+     */
+    private boolean open = true;
+
+    /**
      * Ctor.
      *
      * @param ssrc the SSRC of the destination VP8 picture.
@@ -218,6 +224,33 @@ public class VP8FrameProjection implements VP8ProjectionRecord
     }
 
     /**
+     * Determines whether a packet can be forwarded as part of this
+     * {@link VP8FrameProjection} instance. The check is based on the sequence
+     * of the incoming packet and whether or not the {@link VP8FrameProjection}
+     * has been "closed" or not.
+     *
+     * @param rtpPacket the {@link Vp8Packet} that will be examined.
+     * @return true if the packet can be forwarded as part of this
+     * {@link VP8FrameProjection}, false otherwise.
+     */
+    public boolean accept(@NotNull Vp8Packet rtpPacket)
+    {
+        if (vp8Frame == null || !vp8Frame.matchesFrame(rtpPacket))
+        {
+            // The packet does not belong to this VP8 picture.
+            return false;
+        }
+
+        if (open)
+        {
+            return true;
+        }
+
+        return RtpUtils.isOlderSequenceNumberThan(rtpPacket.getSequenceNumber(),
+            getLatestProjectedSequence());
+    }
+
+    /**
      * @return The projected {@link VP8Frame}.
      */
     VP8Frame getVP8Frame()
@@ -273,7 +306,10 @@ public class VP8FrameProjection implements VP8ProjectionRecord
         {
             return sequenceNumberDelta;
         }
-        return rewriteSeqNo(vp8Frame.getEarliestKnownSequenceNumber());
+        synchronized (vp8Frame)
+        {
+            return rewriteSeqNo(vp8Frame.getEarliestKnownSequenceNumber());
+        }
     }
 
     @Override
@@ -283,6 +319,27 @@ public class VP8FrameProjection implements VP8ProjectionRecord
         {
             return sequenceNumberDelta;
         }
-        return rewriteSeqNo(vp8Frame.getLatestKnownSequenceNumber());
+        synchronized (vp8Frame)
+        {
+            return rewriteSeqNo(vp8Frame.getLatestKnownSequenceNumber());
+        }
+    }
+
+    /**
+     * Prevents the max sequence number of this frame to grow any further.
+     */
+    public void close()
+    {
+        if (vp8Frame != null)
+        {
+            synchronized (vp8Frame)
+            {
+                open = false;
+            }
+        }
+        else
+        {
+            open = false;
+        }
     }
 }

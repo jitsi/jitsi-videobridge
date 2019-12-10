@@ -98,7 +98,7 @@ class VP8Frame
      * A boolean that indicates whether the incoming VP8 frame that this
      * instance refers to is a keyframe (RFC7741).
      */
-    private final boolean isKeyframe;
+    private boolean isKeyframe;
 
     /**
      * A boolean that indicates whether the incoming VP8 frame that this
@@ -179,6 +179,14 @@ class VP8Frame
     boolean isKeyframe()
     {
         return isKeyframe;
+    }
+
+    /**
+     * Update a frame's notion of whether it is a keyframe.
+     */
+    void setKeyframe(boolean k)
+    {
+        isKeyframe = k;
     }
 
     /**

@@ -119,9 +119,23 @@ public class VP8AdaptiveTrackProjectionContext
     {
         VP8FrameMap frameMap = vp8FrameMaps.computeIfAbsent(vp8Packet.getSsrc(),
             ssrc -> new VP8FrameMap(diagnosticContext, logger));
-        /* TODO: add more context (ssrc) to frame map's logger or diagnosticContext? */
+        /* TODO: add more context (ssrc?) to frame map's logger or diagnosticContext? */
 
         return frameMap.insertPacket(vp8Packet);
+    }
+
+    /**
+     * Find a subsequent Tid==0 frame after the given frame
+     * @param frame The frame to query
+     * @return A subsequent TL0 frame, or null
+     */
+    private VP8Frame findNextTl0(VP8Frame frame)
+    {
+        VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
+        if (frameMap == null)
+            return null;
+
+        return frameMap.findNextTl0(frame);
     }
 
     /**
@@ -187,13 +201,16 @@ public class VP8AdaptiveTrackProjectionContext
             return false;
         }
 
+        VP8Frame frame = result.getFrame();
+
         if (!result.isNewFrame())
         {
             VP8FrameProjection projection = result.getFrame().getProjection();
+            boolean accept = (projection != null && projection.accept(vp8Packet));
 
             if (timeSeriesLogger.isTraceEnabled())
             {
-                if (projection != null)
+                if (accept)
                 {
                     DiagnosticContext.TimeSeriesPoint point =
                         diagnosticContext.makeTimeSeriesPoint("rtp_vp8_existing_projection")
@@ -216,26 +233,25 @@ public class VP8AdaptiveTrackProjectionContext
                     timeSeriesLogger.trace(point);
                 }
             }
-            return projection != null;
+            return accept;
         }
-
-        VP8Frame frame = result.getFrame();
 
         long nowMs = System.currentTimeMillis();
 
-        if (result.getPrevFrame() == null &&
-            vp8Packet.isKeyframe() &&
-            !vp8Packet.isStartOfFrame())
+        if (vp8Packet.isKeyframe() &&
+            ((lastVP8FrameProjection.getVP8Frame() == null ||
+             lastVP8FrameProjection.getVP8Frame().getSsrc() != frame.getSsrc())))
         {
-            /* We've never received a frame on this encoding before, and
-               this is not the first packet of the keyframe, so we have no
-               way to know how large a gap to leave.
-               TODO: cache this packet and subsequent TL0/keyframes.
-               TODO: if this is this stream's first packet ever, just start with
-                     a random sequence number, etc. (This would need to be able
-                     to distinguish true startup from context switching.)
+            /* If we're not currently projecting this SSRC, make sure we haven't
+               already decided not to project a subsequent TL0 frame of this SSRC.
+               If we have, we can't turn on the encoding starting from this
+               packet, so treat this frame as though it weren't a keyframe.
              */
-            return false;
+            VP8Frame f = findNextTl0(frame);
+            if (f != null && f.getProjection() == null)
+            {
+                frame.setKeyframe(false);
+            }
         }
 
         /* This is a new frame.  Check whether it should be accepted. */
@@ -251,38 +267,26 @@ public class VP8AdaptiveTrackProjectionContext
             accept)
         {
             /* We're switching to a new encoding. */
-            /* Calculate the sequence number gap based on the previous projected frame. */
-            /* TODO: There are cases where, if packets on the encoding we're switching
-                to were re-ordered badly enough, we'd need to revisit whether to route
-                subsequent TL0 frames. */
-            int projectedSeqGap;
-            if (frame.isKeyframe() && vp8Packet.isStartOfFrame())
-            {
-                projectedSeqGap = 1;
-            }
-            else if (result.getPrevFrame() != null)
-            {
-                VP8Frame prevFrame = result.getPrevFrame();
-                projectedSeqGap = RtpUtils.getSequenceNumberDelta(vp8Packet.getSequenceNumber(), prevFrame.getLatestKnownSequenceNumber());
-            }
-            else
-            {
-                /* This is the first packet we've received on this encoding,
-                   and this isn't the first packet of the frame, so we don't
-                   know how much of a gap to leave.  Choose a number
-                   that hopefully will be big enough.
-                   TODO: cache packets in this case?
-                 */
-                projectedSeqGap = 32;
-            }
+            assert(frame.isKeyframe());
+            /* Calculate the sequence number gap. */
+            /* Because we can only recognize VP8 keyframes from their first packet,
+               we don't need to do elaborate math here.
+             */
+
+            int projectedSeqGap = 1;
+
             if (lastVP8FrameProjection.getVP8Frame() != null &&
                 !lastVP8FrameProjection.getVP8Frame().hasSeenEndOfFrame())
             {
                 /* Leave a gap for the unfinished end of the previously routed
                    frame.
-                   TODO: don't route any packets after that gap.
                  */
                 projectedSeqGap++;
+
+                /* Make sure subsequent packets of the previous projection won't
+                   overlap the new one.
+                 */
+                lastVP8FrameProjection.close();
             }
 
             projectedSeq = RtpUtils.applySequenceNumberDelta(lastVP8FrameProjection.getLatestProjectedSequence(), projectedSeqGap);

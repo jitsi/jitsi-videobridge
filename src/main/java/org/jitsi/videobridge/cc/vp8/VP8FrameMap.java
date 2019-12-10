@@ -192,6 +192,22 @@ public class VP8FrameMap
         return new FrameInsertionResult(frame, prevFrame, nextFrame);
     }
 
+    public synchronized VP8Frame findNextTl0(VP8Frame frame)
+    {
+        Iterator<Integer> it =
+            vp8FrameMap.navigableKeySet().tailSet(frame.getLatestKnownSequenceNumber(), false).iterator();
+
+        while (it.hasNext()) {
+            int seq = it.next();
+            VP8Frame f = vp8FrameMap.get(seq);
+            if (f.getTemporalLayer() == 0)
+            {
+                return f;
+            }
+        }
+        return null;
+    }
+
     /**
      * The result of calling {@link #insertPacket(Vp8Packet).}
      */
