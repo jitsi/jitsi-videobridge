@@ -16,10 +16,10 @@
 
 package org.jitsi.videobridge.cc.config
 
-import org.jitsi.config.JitsiConfig
+import org.jitsi.config.legacyConfigAttributes
+import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.FallbackProperty
 import org.jitsi.utils.config.SimpleProperty
-import org.jitsi.utils.config.helpers.attributes
 import java.time.Duration
 
 class BandwidthProbingConfig {
@@ -29,15 +29,13 @@ class BandwidthProbingConfig {
              * How often we check to send probing data
              */
             class PaddingPeriodProperty : FallbackProperty<Long>(
-                attributes {
+                legacyConfigAttributes {
                     readOnce()
                     name("org.jitsi.videobridge.PADDING_PERIOD_MS")
-                    fromConfig(JitsiConfig.legacyConfig)
                 },
-                attributes {
+                newConfigAttributes {
                     readOnce()
                     name("videobridge.cc.padding-period")
-                    fromConfig(JitsiConfig.newConfig)
                     retrievedAs<Duration>() convertedBy { it.toMillis() }
                 }
             )
@@ -47,10 +45,9 @@ class BandwidthProbingConfig {
             fun paddingPeriodMs() = paddingPeriodProp.value
 
             class DisableRtxProbingProperty : SimpleProperty<Boolean>(
-                attributes {
+                legacyConfigAttributes {
                     readOnce()
                     name("org.jitsi.videobridge.DISABLE_RTX_PROBING")
-                    fromConfig(JitsiConfig.legacyConfig)
                     deprecated("RTX probing is always used when RTX is supported.")
                 }
             )
