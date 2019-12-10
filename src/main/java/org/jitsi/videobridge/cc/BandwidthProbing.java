@@ -69,7 +69,7 @@ import static org.jitsi.videobridge.cc.config.BandwidthProbingConfig.*;
       */
      public BandwidthProbing(ProbingDataSender probingDataSender)
      {
-         super(paddingPeriodMs());
+         super(Config.paddingPeriodMs());
          this.probingDataSender = probingDataSender;
      }
 
@@ -156,7 +156,7 @@ import static org.jitsi.videobridge.cc.config.BandwidthProbingConfig.*;
 
          // XXX a signed int is practically sufficient, as it can represent up to
          // ~ 2GB
-         int bytes = (int) (paddingPeriodMs() * paddingBps / 1000 / 8);
+         int bytes = (int) (Config.paddingPeriodMs() * paddingBps / 1000 / 8);
 
          if (!bitrateControllerStatus.activeSsrcs.isEmpty())
          {
