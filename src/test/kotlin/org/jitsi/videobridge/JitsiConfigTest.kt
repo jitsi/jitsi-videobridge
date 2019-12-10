@@ -18,34 +18,33 @@ package org.jitsi.videobridge
 
 import io.kotlintest.IsolationMode
 import io.kotlintest.specs.ShouldSpec
+import org.jitsi.config.ConfigTest
 import org.jitsi.config.JitsiConfigFactory
 import org.jitsi.utils.config.ConfigSource
 import org.jitsi.videobridge.testutils.ConfigSourceWrapper
 
-abstract class ConfigTest : ShouldSpec() {
+/**
+ * This class is/should be a duplicate of the one in jicoco-kotlin.  We can't
+ * move it to jicoco-test-kotlin because it would cause a circular maven
+ * dependency
+ */
+abstract class JitsiConfigTest : ConfigTest() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-    protected fun withLegacyConfig(configSource: ConfigSource) {
+    override fun withLegacyConfig(configSource: ConfigSource) {
         legacyConfigWrapper.innerConfig = configSource
     }
 
-    protected fun withNewConfig(configSource: ConfigSource) {
-        println("setting inner config on new config instance ${newConfigWrapper.hashCode()}")
+    override fun withNewConfig(configSource: ConfigSource) {
         newConfigWrapper.innerConfig = configSource
     }
 
     protected companion object {
         private val legacyConfigWrapper = ConfigSourceWrapper().also {
-            JitsiConfigFactory.legacyConfigSupplier = {
-                println("in the test legacy config supplier!")
-                it
-            }
+            JitsiConfigFactory.legacyConfigSupplier = { it }
         }
         private val newConfigWrapper = ConfigSourceWrapper().also {
-            JitsiConfigFactory.newConfigSupplier = {
-                println("in the test new config supplier! returning instance ${it.hashCode()}")
-                it
-            }
+            JitsiConfigFactory.newConfigSupplier = { it }
         }
     }
 }
