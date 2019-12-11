@@ -23,7 +23,6 @@ import org.jitsi.config.runBasicTests
 import org.jitsi.videobridge.JitsiConfigTest
 
 class HealthConfigTest : JitsiConfigTest() {
-
     init {
         "health interval" {
             runBasicTests(
