@@ -19,25 +19,25 @@ package org.jitsi.videobridge.config
 import org.jitsi.utils.config.ConfigProperty
 
 /**
- * Define a property which only exists based on the result of the given
+ * A property which only exists based on the result of the given
  * [predicate].  If [predicate] returns true, we define the prop via the
  * given [propDef], if not, we define a property which will throw on access
  * and use the given [notEnabledMessage]
  * TODO: move this to Jicoco
  */
-fun <T : Any >conditionalProperty(
-    predicate: () -> Boolean,
-    propDef: () -> ConfigProperty<T>,
-    notEnabledMessage: String
-): ConfigProperty<T> {
-    return if (predicate()) {
-        propDef()
-    } else {
-        object : ConfigProperty<T> {
-            override val value: T
-                get() = throw ConditionalPropertyConditionNotMetException(notEnabledMessage)
+abstract class ConditionalProperty <T : Any>(
+    private val predicate: () -> Boolean,
+    private val innerProp: ConfigProperty<T>,
+    private val notEnabledMessage: String
+) : ConfigProperty<T> {
+    override val value: T
+        get() {
+            return if (!predicate()) {
+                throw ConditionalPropertyConditionNotMetException(notEnabledMessage)
+            } else {
+                innerProp.value
+            }
         }
-    }
 }
 
 class ConditionalPropertyConditionNotMetException(msg: String) :
