@@ -17,6 +17,8 @@
 package org.jitsi.videobridge
 
 import io.kotlintest.IsolationMode
+import io.kotlintest.Spec
+import io.kotlintest.extensions.TopLevelTest
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.config.ConfigTest
 import org.jitsi.config.JitsiConfigFactory
@@ -30,6 +32,8 @@ import org.jitsi.videobridge.testutils.ConfigSourceWrapper
  */
 abstract class JitsiConfigTest : ConfigTest() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
+    private val legacyConfigWrapper = ConfigSourceWrapper()
+    private val newConfigWrapper = ConfigSourceWrapper()
 
     override fun withLegacyConfig(configSource: ConfigSource) {
         legacyConfigWrapper.innerConfig = configSource
@@ -39,12 +43,9 @@ abstract class JitsiConfigTest : ConfigTest() {
         newConfigWrapper.innerConfig = configSource
     }
 
-    protected companion object {
-        private val legacyConfigWrapper = ConfigSourceWrapper().also {
-            JitsiConfigFactory.legacyConfigSupplier = { it }
-        }
-        private val newConfigWrapper = ConfigSourceWrapper().also {
-            JitsiConfigFactory.newConfigSupplier = { it }
-        }
+    override fun beforeSpecClass(spec: Spec, tests: List<TopLevelTest>) {
+        super.beforeSpecClass(spec, tests)
+        JitsiConfigFactory.legacyConfigSupplier = { legacyConfigWrapper }
+        JitsiConfigFactory.newConfigSupplier = { newConfigWrapper }
     }
 }
