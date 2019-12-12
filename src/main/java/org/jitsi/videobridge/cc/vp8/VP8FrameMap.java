@@ -26,6 +26,7 @@ import org.jitsi.utils.logging2.Logger;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.*;
 
 /**
  * A history of recent frames on a VP8 stream.
@@ -155,7 +156,7 @@ public class VP8FrameMap
             logger.warn("Packet " + packet.getSequenceNumber() + " is not consistent with frame");
         }
         frame.addPacket(packet);
-        return new FrameInsertionResult(frame);
+        return new FrameInsertionResult(frame, false);
     }
 
 
@@ -174,12 +175,12 @@ public class VP8FrameMap
         Map.Entry<Integer, VP8Frame> nextFrameEntry = vp8FrameMap.ceilingEntry(seq);
 
         VP8Frame prevFrame = prevFrameEntry != null ? prevFrameEntry.getValue() : null;
-        VP8Frame nextFrame = nextFrameEntry != null ? nextFrameEntry.getValue() : null;
-
         if (prevFrame != null && prevFrame.matchesFrame(packet))
         {
             return doFrameInsert(prevFrame, packet);
         }
+
+        VP8Frame nextFrame = nextFrameEntry != null ? nextFrameEntry.getValue() : null;
         if (nextFrame != null && nextFrame.matchesFrame(packet))
         {
             return doFrameInsert(nextFrame, packet);
@@ -189,23 +190,59 @@ public class VP8FrameMap
 
         vp8FrameMap.put(seq, frame);
 
-        return new FrameInsertionResult(frame, prevFrame, nextFrame);
+        return new FrameInsertionResult(frame, true);
     }
 
-    public synchronized VP8Frame findNextTl0(VP8Frame frame)
+    public synchronized VP8Frame nextFrame(VP8Frame frame)
     {
-        Iterator<Integer> it =
-            vp8FrameMap.navigableKeySet().tailSet(frame.getLatestKnownSequenceNumber(), false).iterator();
+        Integer k = vp8FrameMap.higherKey(frame.getLatestKnownSequenceNumber());
+        if (k == null)
+        {
+            return null;
+        }
+        return vp8FrameMap.get(k);
+    }
 
-        while (it.hasNext()) {
-            int seq = it.next();
+    public synchronized VP8Frame nextFrameWith(VP8Frame frame, Predicate<VP8Frame> pred)
+    {
+        NavigableSet<Integer> tailSet =
+            vp8FrameMap.navigableKeySet().tailSet(frame.getLatestKnownSequenceNumber(), false);
+
+        for (int seq : tailSet)
+        {
             VP8Frame f = vp8FrameMap.get(seq);
-            if (f.getTemporalLayer() == 0)
+            if (pred.test(f))
             {
                 return f;
             }
         }
         return null;
+    }
+
+    public synchronized VP8Frame findNextTl0(VP8Frame frame)
+    {
+        return nextFrameWith(frame, VP8Frame::isTL0);
+    }
+
+    public synchronized VP8Frame prevFrameWith(VP8Frame frame, Predicate<VP8Frame> pred)
+    {
+        NavigableSet<Integer> revHeadSet =
+            vp8FrameMap.navigableKeySet().headSet(frame.getEarliestKnownSequenceNumber(), false).descendingSet();
+
+        for (int seq : revHeadSet)
+        {
+            VP8Frame f = vp8FrameMap.get(seq);
+            if (pred.test(f))
+            {
+                return f;
+            }
+        }
+        return null;
+    }
+
+    public synchronized VP8Frame findPrevAcceptedFrame(VP8Frame frame)
+    {
+        return prevFrameWith(frame, VP8Frame::isAccepted);
     }
 
     /**
@@ -219,30 +256,11 @@ public class VP8FrameMap
         /** Whether inserting the frame created a new frame. */
         private boolean newFrame;
 
-        /** The previous frame in the map before the one that was inserted.
-         * Null if there was not one, or if newFrame == false.
-         */
-        private VP8Frame prevFrame;
-
-        /** The next frame in the map after the one that was inserted.
-         * Null if there was not one, or if newFrame == false.
-         */
-        private VP8Frame nextFrame;
-
-        /** Construct a FrameInsertionResult which added the packet to an existing frame. */
-        private FrameInsertionResult(VP8Frame frame)
+        /** Construct a FrameInsertionResult. */
+        private FrameInsertionResult(VP8Frame frame, boolean newFrame)
         {
             this.frame = frame;
-            this.newFrame = false;
-        }
-
-        /** Construct a FrameInsertionResult which inserted a new frame. */
-        private FrameInsertionResult(VP8Frame frame, VP8Frame prevFrame, VP8Frame nextFrame)
-        {
-            this.frame = frame;
-            this.newFrame = true;
-            this.prevFrame = prevFrame;
-            this.nextFrame = nextFrame;
+            this.newFrame = newFrame;
         }
 
         /** Get the frame corresponding to the packet that was inserted. */
@@ -255,22 +273,6 @@ public class VP8FrameMap
         public boolean isNewFrame()
         {
             return newFrame;
-        }
-
-        /** Get the previous frame in the map before the one that was inserted.
-         * Null if there was not one, or if newFrame == false.
-         */
-        public VP8Frame getPrevFrame()
-        {
-            return prevFrame;
-        }
-
-        /** Get the next frame in the map after the one that was inserted.
-         * Null if there was not one, or if newFrame == false.
-         */
-        public VP8Frame getNextFrame()
-        {
-            return nextFrame;
         }
     }
 }

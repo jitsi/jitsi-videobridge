@@ -28,8 +28,8 @@ import org.jitsi_modified.impl.neomedia.codec.video.vp8.*;
  * time of the creation of this instance.
  *
  * Instances of this class are *NOT* thread safe. While most internal state of
- * this class instances is final, the sequence number ranges and haveStart/haveEnd
- * are not.
+ * this class instances is final, the sequence number ranges, haveStart/haveEnd,
+ * and isKeyframe.
  *
  * @author George Politis
  * @author Jonathan Lennox
@@ -110,6 +110,11 @@ class VP8Frame
      * A record of how this frame was projected, or not.
      */
     private VP8ProjectionRecord projection;
+
+    /**
+     * A boolean that records whether this frame was accepted.
+     */
+    private boolean accepted;
 
     /**
      * Ctor.
@@ -271,6 +276,22 @@ class VP8Frame
             return null;
         }
         return (VP8FrameProjection)projection;
+    }
+
+    /**
+     * Get whether this frame has been accepted.
+     */
+    public boolean isAccepted()
+    {
+        return accepted;
+    }
+
+    /**
+     * Set whether this frame has been accepted.
+     */
+    public void setAccepted(boolean a)
+    {
+        accepted = a;
     }
 
     /**
