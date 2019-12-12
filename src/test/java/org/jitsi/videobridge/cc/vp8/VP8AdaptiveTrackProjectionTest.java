@@ -256,6 +256,126 @@ public class VP8AdaptiveTrackProjectionTest
         runOutOfOrderTest(generator, 0);
     }
 
+    @Test
+    public void slightlyDelayedKeyframeTest() throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(1);
+
+        DiagnosticContext diagnosticContext = new DiagnosticContext();
+        diagnosticContext.put("test", "slightlyDelayedKeyframeTest");
+
+        RtpState initialState =
+            new RtpState(1, 10000, 1000000);
+
+        VP8AdaptiveTrackProjectionContext context =
+            new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
+                initialState, logger);
+
+        Vp8Packet firstPacket = generator.nextPacket();
+
+        for (int i = 0; i < 3; i++)
+        {
+            Vp8Packet packet = generator.nextPacket();
+
+            assertFalse(context.accept(packet, packet.getTemporalLayerIndex(), 2));
+        }
+
+        assertTrue(context.accept(firstPacket, firstPacket.getTemporalLayerIndex(), 2));
+
+        for (int i = 0; i < 9996; i++)
+        {
+            Vp8Packet packet = generator.nextPacket();
+
+            assertTrue(context.accept(packet, packet.getTemporalLayerIndex(), 2));
+        }
+    }
+
+    @Test
+    public void veryDelayedKeyframeTest() throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(1);
+
+        DiagnosticContext diagnosticContext = new DiagnosticContext();
+        diagnosticContext.put("test", "veryDelayedKeyframeTest");
+
+        RtpState initialState =
+            new RtpState(1, 10000, 1000000);
+
+        VP8AdaptiveTrackProjectionContext context =
+            new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
+                initialState, logger);
+
+        Vp8Packet firstPacket = generator.nextPacket();
+
+        for (int i = 0; i < 4; i++)
+        {
+            Vp8Packet packet = generator.nextPacket();
+
+            assertFalse(context.accept(packet, packet.getTemporalLayerIndex(), 2));
+        }
+
+        assertFalse(context.accept(firstPacket, firstPacket.getTemporalLayerIndex(), 2));
+
+        for (int i = 0; i < 10; i++)
+        {
+            Vp8Packet packet = generator.nextPacket();
+
+            assertFalse(context.accept(packet, packet.getTemporalLayerIndex(), 2));
+        }
+
+        generator.requestKeyframe();
+
+        for (int i = 0; i < 9996; i++)
+        {
+            Vp8Packet packet = generator.nextPacket();
+
+            assertTrue(context.accept(packet, packet.getTemporalLayerIndex(), 2));
+        }
+    }
+
+    @Test
+    public void delayedPartialKeyframeTest() throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(3);
+
+        DiagnosticContext diagnosticContext = new DiagnosticContext();
+        diagnosticContext.put("test", "delayedPartialKeyframeTest");
+
+        RtpState initialState =
+            new RtpState(1, 10000, 1000000);
+
+        VP8AdaptiveTrackProjectionContext context =
+            new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
+                initialState, logger);
+
+        Vp8Packet firstPacket = generator.nextPacket();
+
+        for (int i = 0; i < 11; i++)
+        {
+            Vp8Packet packet = generator.nextPacket();
+
+            assertFalse(context.accept(packet, packet.getTemporalLayerIndex(), 2));
+        }
+
+        assertFalse(context.accept(firstPacket, firstPacket.getTemporalLayerIndex(), 2));
+
+        for (int i = 0; i < 30; i++)
+        {
+            Vp8Packet packet = generator.nextPacket();
+
+            assertFalse(context.accept(packet, packet.getTemporalLayerIndex(), 2));
+        }
+
+        generator.requestKeyframe();
+
+        for (int i = 0; i < 9958; i++)
+        {
+            Vp8Packet packet = generator.nextPacket();
+
+            assertTrue(context.accept(packet, packet.getTemporalLayerIndex(), 2));
+        }
+    }
+
     private static class Vp8PacketGenerator {
         private static final byte[] vp8PacketTemplate =
             DatatypeConverter.parseHexBinary(
@@ -294,6 +414,7 @@ public class VP8AdaptiveTrackProjectionTest
         private int tl0picidx = 0;
         private int packetOfFrame = 0;
         private boolean keyframe = true;
+        private boolean keyframeRequested = false;
         private int tidCycle = 0;
 
         public Vp8Packet nextPacket()
@@ -364,7 +485,12 @@ public class VP8AdaptiveTrackProjectionTest
                 picId++;
                 picId %= DePacketizer.VP8PayloadDescriptor.EXTENDED_PICTURE_ID_MASK;
                 tidCycle++;
-                keyframe = false;
+                keyframe = keyframeRequested;
+                keyframeRequested = false;
+                if (keyframe)
+                {
+                    tidCycle = 0;
+                }
 
                 if (tid == 0) {
                     tl0picidx++;
@@ -381,8 +507,16 @@ public class VP8AdaptiveTrackProjectionTest
 
         private void requestKeyframe()
         {
-            keyframe = true;
-            tidCycle = 0;
+            if (packetOfFrame == 0)
+            {
+                keyframe = true;
+                keyframeRequested = false;
+                tidCycle = 0;
+            }
+            else
+            {
+                keyframeRequested = true;
+            }
         }
     }
 }
