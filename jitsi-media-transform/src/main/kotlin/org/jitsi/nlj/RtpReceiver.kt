@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.PacketStreamStats
 import org.jitsi.nlj.transform.NodeStatsProducer
@@ -39,6 +40,8 @@ abstract class RtpReceiver :
     abstract fun setSrtpTransformers(srtpTransformers: SrtpTransformers)
 
     abstract fun setAudioLevelListener(audioLevelListener: AudioLevelListener)
+
+    abstract fun onBandwidthEstimateChanged(listener: BandwidthEstimator.Listener)
 
     abstract fun getStreamStats(): IncomingStatisticsSnapshot
 

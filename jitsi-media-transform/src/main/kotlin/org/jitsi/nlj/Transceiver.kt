@@ -121,6 +121,7 @@ class Transceiver(
 
     fun onBandwidthEstimateChanged(listener: BandwidthEstimator.Listener) {
         bandwidthEstimator.addListener(listener)
+        rtpReceiver.onBandwidthEstimateChanged(listener)
     }
 
     /**
