@@ -31,6 +31,7 @@ import org.jitsi.rtp.rtcp.RtcpSdesPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbRembPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.utils.logging2.Logger
@@ -66,7 +67,8 @@ class RtcpTermination(
                     }
                     forwardedRtcp = rtcpPacket
                 }
-                is RtcpSdesPacket, is RtcpRrPacket, is RtcpFbNackPacket, is RtcpByePacket, is RtcpFbTccPacket -> {
+                is RtcpSdesPacket, is RtcpRrPacket, is RtcpFbNackPacket,
+                is RtcpByePacket, is RtcpFbTccPacket, is RtcpFbRembPacket -> {
                     // Supported, but no special handling here (any special handling will be in
                     // notifyRtcpReceived below
                 }

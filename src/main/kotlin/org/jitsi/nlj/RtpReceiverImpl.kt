@@ -18,10 +18,12 @@ package org.jitsi.nlj
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import org.jitsi.nlj.rtcp.CompoundRtcpParser
+import org.jitsi.nlj.rtcp.RembHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpRrGenerator
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeEventVisitor
@@ -97,6 +99,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val packetStreamStats = PacketStreamStatsNode()
     private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statsTracker)
     private val rtcpTermination = RtcpTermination(rtcpEventNotifier, logger)
+    private val rembHandler = RembHandler(logger)
 
     companion object {
         val queueErrorCounter = CountingErrorHandler()
@@ -128,6 +131,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     init {
         logger.cdebug { "using executor ${executor.hashCode()}" }
         rtcpEventNotifier.addRtcpEventListener(rtcpRrGenerator)
+        rtcpEventNotifier.addRtcpEventListener(rembHandler)
 
         incomingPacketQueue.setErrorHandler(queueErrorCounter)
 
@@ -224,6 +228,10 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun setAudioLevelListener(audioLevelListener: AudioLevelListener) {
         audioLevelReader.audioLevelListener = audioLevelListener
+    }
+
+    override fun onBandwidthEstimateChanged(listener: BandwidthEstimator.Listener) {
+        rembHandler.addListener(listener)
     }
 
     override fun getStreamStats() = statsTracker.getSnapshot()
