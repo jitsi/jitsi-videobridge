@@ -16,7 +16,6 @@
 
 package org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb
 
-import org.jitsi.rtp.extensions.bytearray.cloneFromPool
 import org.jitsi.rtp.extensions.bytearray.putInt
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
@@ -30,8 +29,6 @@ import org.jitsi.rtp.util.getBitsAsInt
 import org.jitsi.rtp.util.getByteAsInt
 import org.jitsi.rtp.util.getIntAsLong
 import org.jitsi.rtp.util.getShortAsInt
-import unsigned.or
-import unsigned.toUbyte
 
 /**
  * https://tools.ietf.org/html/draft-alvestrand-rmcat-remb-03
@@ -76,7 +73,7 @@ class RtcpFbRembPacket(
     }
 
     override fun clone(): RtcpFbRembPacket {
-        return RtcpFbRembPacket(buffer.cloneFromPool(), offset, length)
+        return RtcpFbRembPacket(cloneBuffer(0), 0, length)
     }
 
     companion object {
@@ -87,15 +84,26 @@ class RtcpFbRembPacket(
         const val NUM_SSRC_OFF = REMB_OFF + REMB_LEN
         const val NUM_SSRC_LEN = 1
         const val BR_OFF = NUM_SSRC_OFF + NUM_SSRC_LEN
-        const val BR_LEN = 4
-        const val SSRCS_OFF = NUM_SSRC_OFF + BR_LEN
+        const val BR_LEN = 3
+        const val SSRCS_OFF = BR_OFF + BR_LEN
 
         fun getBrExp(buf: ByteArray, baseOffset: Int): Int =
             buf.getBitsAsInt(baseOffset + BR_OFF, 0, 6)
         fun getBrMantissa(buf: ByteArray, baseOffset: Int): Int =
-            (buf.getBitsAsInt(baseOffset + BR_OFF, 6, 2) shl 2) + buf.getShortAsInt(baseOffset + BR_OFF + 1)
-        fun getBitrate(buf: ByteArray, baseOffset: Int): Long =
-            (getBrMantissa(buf, baseOffset) * Math.pow(2.0, getBrExp(buf, baseOffset).toDouble())).toLong()
+                (buf.getBitsAsInt(baseOffset + BR_OFF, 6, 2) shl 16) + buf.getShortAsInt(baseOffset + BR_OFF + 1)
+        fun getBitrate(buf: ByteArray, baseOffset: Int): Long {
+            val mantissa = getBrMantissa(buf, baseOffset)
+            val exp = getBrExp(buf, baseOffset)
+            val brBps = mantissa.toLong() shl exp
+            if ((brBps shr exp).toInt() != mantissa) {
+                // This block catches a Java long overflow (i.e. the bitrate larger than Long.MAX_VALUE). Although this
+                // could potentially indicate a malformed remb or a bug in our code, we chose to interpret as the remote
+                // party trying to signal unbounded bandwidth.
+                return Long.MAX_VALUE
+            }
+
+            return brBps
+        }
         fun getNumSsrc(buf: ByteArray, baseOffset: Int): Int =
             buf.getByteAsInt(baseOffset + NUM_SSRC_OFF)
         fun getSsrc(buf: ByteArray, baseOffset: Int, ssrcIndex: Int) =
@@ -105,16 +113,15 @@ class RtcpFbRembPacket(
             // 6 bit Exp
             // 18 bit mantissa
             var exp = 0
-            for (i in 0..63) {
-                if (brBps <= 0x3ffff shl i) {
-                    exp = i
-                    break
-                }
+            var mantissa = if (brBps > 0) brBps else 0
+
+            // 0x3ffff (262143) is the max value that can be put into an 18-bit unsigned integer
+            while (mantissa > 0x3ffff) {
+                mantissa = mantissa shr 1
+                ++exp
             }
 
-            // type of bitrate is an unsigned int (32 bits)
-            val mantissa = brBps.toInt() shr exp
-            return Pair(exp, mantissa)
+            return Pair(exp, mantissa.toInt())
         }
 
         fun setRemb(buf: ByteArray, baseOffset: Int) {
@@ -125,16 +132,18 @@ class RtcpFbRembPacket(
         }
 
         fun setNumSsrc(buf: ByteArray, off: Int, value: Int) {
-            buf[off] = value.toByte()
+            buf[off + NUM_SSRC_OFF] = value.toByte()
         }
 
         fun setBrExp(buf: ByteArray, baseOffset: Int, value: Int) {
-            buf[baseOffset + BR_OFF] = buf[baseOffset] or (value and 0x3f shl 2).toUbyte()
+            buf[baseOffset + BR_OFF] =
+                ((buf[baseOffset + BR_OFF].toInt() and 0x03) or (value and 0x3f shl 2)).toByte()
         }
 
         fun setBrMantissa(buf: ByteArray, baseOffset: Int, value: Int) {
-            buf[baseOffset + BR_OFF] = buf[baseOffset] or (value and 0x30000 shr 16).toUbyte()
-            buf[baseOffset + BR_OFF + 1] = (value and 0xff00 shr 8).toByte()
+            buf[baseOffset + BR_OFF] =
+                ((buf[baseOffset + BR_OFF].toInt() and 0xfc) or ((value shr 16) and 0x03)).toByte()
+            buf[baseOffset + BR_OFF + 1] = ((value shr 8) and 0xff).toByte()
             buf[baseOffset + BR_OFF + 2] = (value and 0xff).toByte()
         }
 
@@ -166,12 +175,12 @@ class RtcpFbRembPacketBuilder(
         rtcpHeader.apply {
             packetType = PayloadSpecificRtcpFbPacket.PT
             reportCount = RtcpFbRembPacket.FMT
-            length = RtpUtils.calculateRtcpLengthFieldValue(RtcpFbPliPacket.SIZE_BYTES)
+            length = RtpUtils.calculateRtcpLengthFieldValue(sizeBytes)
         }
         rtcpHeader.writeTo(buf, offset)
         RtcpFbPacket.setMediaSourceSsrc(buf, offset, 0)
         RtcpFbRembPacket.setRemb(buf, offset)
-        RtcpFbRembPacket.setNumSsrc(buf, offset, if (ssrcs.isNotEmpty()) ssrcs.size else 0)
+        RtcpFbRembPacket.setNumSsrc(buf, offset, ssrcs.size)
 
         val expAndMantissa = getExpAndMantissa(brBps)
         RtcpFbRembPacket.setBrExp(buf, offset, expAndMantissa.first)
