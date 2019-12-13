@@ -254,6 +254,14 @@ public class VP8AdaptiveTrackProjectionTest
     }
 
     @Test
+    public void hugeFrameTest() throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(200);
+
+        runInOrderTest(generator, 0);
+    }
+
+    @Test
     public void simpleOutOfOrderTest() throws RewriteException
     {
         Vp8PacketGenerator generator = new Vp8PacketGenerator(1);
