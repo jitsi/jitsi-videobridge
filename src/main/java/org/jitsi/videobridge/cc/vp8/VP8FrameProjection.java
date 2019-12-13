@@ -33,7 +33,7 @@ import java.util.*;
  *
  * @author George Politis
  */
-public class VP8FrameProjection implements VP8ProjectionRecord
+public class VP8FrameProjection
 {
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -273,7 +273,6 @@ public class VP8FrameProjection implements VP8ProjectionRecord
     /**
      * @return The RTP timestamp of this projection.
      */
-    @Override
     public long getTimestamp()
     {
         return timestamp;
@@ -303,7 +302,6 @@ public class VP8FrameProjection implements VP8ProjectionRecord
         return createdMs;
     }
 
-    @Override
     public int getEarliestProjectedSequence()
     {
         if (vp8Frame == null)
@@ -316,7 +314,6 @@ public class VP8FrameProjection implements VP8ProjectionRecord
         }
     }
 
-    @Override
     public int getLatestProjectedSequence()
     {
         if (vp8Frame == null)

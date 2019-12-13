@@ -107,9 +107,9 @@ class VP8Frame
     private final boolean isReference;
 
     /**
-     * A record of how this frame was projected, or not.
+     * A record of how this frame was projected, or null if not.
      */
-    private VP8ProjectionRecord projection;
+    private VP8FrameProjection projection;
 
     /**
      * A boolean that records whether this frame was accepted.
@@ -259,23 +259,11 @@ class VP8Frame
     }
 
     /**
-     * Get the projection record of this frame.
-     */
-    public VP8ProjectionRecord getProjectionRecord()
-    {
-        return projection;
-    }
-
-    /**
      * Get the projection of this frame, or null.
      */
     public VP8FrameProjection getProjection()
     {
-        if (!(projection instanceof VP8FrameProjection))
-        {
-            return null;
-        }
-        return (VP8FrameProjection)projection;
+        return projection;
     }
 
     /**
@@ -297,7 +285,7 @@ class VP8Frame
     /**
      * Set the projection record of this frame.
      */
-    public void setProjectionRecord(VP8ProjectionRecord projection)
+    public void setProjection(VP8FrameProjection projection)
     {
         this.projection = projection;
     }

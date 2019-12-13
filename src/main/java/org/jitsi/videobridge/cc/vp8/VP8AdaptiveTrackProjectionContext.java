@@ -273,7 +273,7 @@ public class VP8AdaptiveTrackProjectionContext
             if (accepted)
             {
                 VP8FrameProjection projection = createProjection(frame, vp8Packet);
-                frame.setProjectionRecord(projection);
+                frame.setProjection(projection);
 
                 if (RtpUtils.isNewerSequenceNumberThan(projection.getEarliestProjectedSequence(),
                         lastVP8FrameProjection.getLatestProjectedSequence()))
@@ -385,8 +385,8 @@ public class VP8AdaptiveTrackProjectionContext
             f1 = f2;
         } while (f2 != frame);
 
-        int projectedSeq = RtpUtils.applySequenceNumberDelta(prevFrame.getProjectionRecord().getLatestProjectedSequence(), seqGap);
-        long projectedTs = RtpUtils.applyTimestampDelta(prevFrame.getProjectionRecord().getTimestamp(), tsGap);
+        int projectedSeq = RtpUtils.applySequenceNumberDelta(prevFrame.getProjection().getLatestProjectedSequence(), seqGap);
+        long projectedTs = RtpUtils.applyTimestampDelta(prevFrame.getProjection().getTimestamp(), tsGap);
         int projectedPicId = Vp8Utils.applyPictureIdDelta(prevFrame.getProjection().getPictureId(), picGap);
         int projectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(prevFrame.getProjection().getTl0PICIDX(), tl0Gap);
 
