@@ -14,7 +14,7 @@
         <kotlintest.version>3.2.1</kotlintest.version>
         <junit.version>5.2.0</junit.version>
         <bouncycastle.version>1.61</bouncycastle.version>
-        <jitsi.utils.version>1.0-23-ga53f8af</jitsi.utils.version>
+        <jitsi.utils.version>1.0-26-g20ce8cc</jitsi.utils.version>
     </properties>
     <dependencies>
         <dependency>
@@ -45,7 +45,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jicoco-kotlin</artifactId>
-            <version>1.1-9-gffbb6dd</version>
+            <version>1.1-13-g118a064</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
