@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.codec.vp8.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
@@ -169,8 +170,8 @@ public class VP8AdaptiveTrackProjectionContext
         int seqGap = RtpUtils.getSequenceNumberDelta(frame2.getEarliestKnownSequenceNumber(), frame1.getLatestKnownSequenceNumber());
 
         if (!frame1.isAccepted() && !frame2.isAccepted() &&
-            frame2.getPictureId() == ((frame1.getPictureId() + 1) &
-                DePacketizer.VP8PayloadDescriptor.EXTENDED_PICTURE_ID_MASK))
+            frame2.getPictureId() ==
+                Vp8Utils.applyPictureIdDelta(frame1.getPictureId(), 1))
         {
             /* If neither frame is being projected, and they have consecutive
                picture IDs, we don't need to leave any gap. */
@@ -194,6 +195,23 @@ public class VP8AdaptiveTrackProjectionContext
 
         return seqGap;
     }
+
+    /**
+     * Calculate the projected picture ID gap between two frames (of the same encoding),
+     * allowing collapsing for unaccepted frames.
+     */
+    private int picGap(@NotNull VP8Frame frame1, @NotNull VP8Frame frame2)
+    {
+        int picGap = Vp8Utils.getPictureIdDelta(frame2.getPictureId(), frame1.getPictureId());
+
+        if (!frame1.isAccepted() && picGap > 0)
+        {
+            picGap--;
+        }
+
+        return picGap;
+    }
+
 
     private boolean frameIsNewSsrc(VP8Frame frame)
     {
@@ -319,11 +337,25 @@ public class VP8AdaptiveTrackProjectionContext
         }
         long projectedTs = RtpUtils.applyTimestampDelta(lastVP8FrameProjection.getTimestamp(), tsDelta);
 
+        int picId;
+        int tl0PicIdx;
+        if (lastVP8FrameProjection.getVP8Frame() != null)
+        {
+            picId = Vp8Utils.applyPictureIdDelta(lastVP8FrameProjection.getPictureId(),
+                1);
+            tl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(lastVP8FrameProjection.getTl0PICIDX(),
+                1);
+        }
+        else {
+            picId = frame.getPictureId();
+            tl0PicIdx = frame.getTl0PICIDX();
+        }
+
         VP8FrameProjection projection =
             new VP8FrameProjection(diagnosticContext, logger,
                 frame, lastVP8FrameProjection.getSSRC(), projectedTs,
                 RtpUtils.getSequenceNumberDelta(projectedSeq, initialPacket.getSequenceNumber()),
-                1 /* TODO: pic id */, 1 /* TODO: tl0picidx */, nowMs
+                picId, tl0PicIdx, nowMs
             );
 
         return projection;
@@ -341,23 +373,28 @@ public class VP8AdaptiveTrackProjectionContext
         assert(prevFrame != null);
 
         long tsGap = RtpUtils.getTimestampDiff(frame.getTimestamp(), prevFrame.getTimestamp());
+        int tl0Gap = Vp8Utils.getTl0PicIdxDelta(frame.getTl0PICIDX(), prevFrame.getTl0PICIDX());
         int seqGap = 0;
+        int picGap = 0;
 
         VP8Frame f1 = prevFrame, f2;
         do {
             f2 = nextFrame(f1);
             seqGap += seqGap(f1, f2);
+            picGap += picGap(f1, f2);
             f1 = f2;
         } while (f2 != frame);
 
         int projectedSeq = RtpUtils.applySequenceNumberDelta(prevFrame.getProjectionRecord().getLatestProjectedSequence(), seqGap);
         long projectedTs = RtpUtils.applyTimestampDelta(prevFrame.getProjectionRecord().getTimestamp(), tsGap);
+        int projectedPicId = Vp8Utils.applyPictureIdDelta(prevFrame.getProjection().getPictureId(), picGap);
+        int projectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(prevFrame.getProjection().getTl0PICIDX(), tl0Gap);
 
         VP8FrameProjection projection =
             new VP8FrameProjection(diagnosticContext, logger,
                 frame, lastVP8FrameProjection.getSSRC(), projectedTs,
                 RtpUtils.getSequenceNumberDelta(projectedSeq, initialPacket.getSequenceNumber()),
-                1 /* TODO: pic id */, 1 /* TODO: tl0picidx */, nowMs
+                projectedPicId, projectedTl0PicIdx, nowMs
             );
 
         return projection;

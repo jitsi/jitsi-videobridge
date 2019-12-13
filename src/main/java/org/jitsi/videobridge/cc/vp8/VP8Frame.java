@@ -311,6 +311,14 @@ class VP8Frame
     }
 
     /**
+     * Get the tl0picidx of this frame.
+     */
+    public int getTl0PICIDX()
+    {
+        return tl0PICIDX;
+    }
+
+    /**
      * Small utility method that checks whether the {@link VP8Frame} that is
      * specified as a parameter belongs to the same RTP stream as the frame that
      * this instance refers to.

@@ -1,5 +1,6 @@
 package org.jitsi.videobridge.cc.vp8;
 
+import org.jitsi.nlj.codec.vp8.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.rtp.rtp.*;
@@ -46,6 +47,8 @@ public class VP8AdaptiveTrackProjectionTest
 
         assertEquals(10001, packet.getSequenceNumber());
         assertEquals(1003000, packet.getTimestamp());
+        assertEquals(0, packet.getPictureId());
+        assertEquals(0, packet.getTemporalLayerIndex());
     }
 
     private void runInOrderTest(Vp8PacketGenerator generator, int targetIndex)
@@ -63,11 +66,19 @@ public class VP8AdaptiveTrackProjectionTest
 
         int expectedSeq = 10001;
         long expectedTs = 1003000;
+        int expectedPicId = 0;
+        int expectedTl0PicIdx = 0;
+
         for (int i = 0; i < 10000; i++)
         {
             Vp8Packet packet = generator.nextPacket();
 
             boolean accepted = context.accept(packet, packet.getTemporalLayerIndex(), targetIndex);
+
+            if (packet.isStartOfFrame() && packet.getTemporalLayerIndex() == 0)
+            {
+                expectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(expectedTl0PicIdx, 1);
+            }
 
             if (packet.getTemporalLayerIndex() <= targetIndex)
             {
@@ -77,7 +88,14 @@ public class VP8AdaptiveTrackProjectionTest
 
                 assertEquals(expectedSeq, packet.getSequenceNumber());
                 assertEquals(expectedTs, packet.getTimestamp());
+                assertEquals(expectedPicId, packet.getPictureId());
+                assertEquals(expectedTl0PicIdx, packet.getTL0PICIDX());
+
                 expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1);
+                if (packet.isEndOfFrame())
+                {
+                    expectedPicId = Vp8Utils.applyPictureIdDelta(expectedPicId, 1);
+                }
             }
             else
             {
@@ -140,6 +158,7 @@ public class VP8AdaptiveTrackProjectionTest
             Vp8Packet packet = buffer.get(0);
             int origSeq = packet.getSequenceNumber();
             long origTs = packet.getTimestamp();
+            int origTl0PicIdx = packet.getTL0PICIDX();
 
             if (RtpUtils.isOlderSequenceNumberThan(latestSeq, origSeq))
             {
@@ -157,6 +176,7 @@ public class VP8AdaptiveTrackProjectionTest
                 context.rewriteRtp(packet);
 
                 assertEquals(RtpUtils.applyTimestampDelta(origTs, expectedTsOffset), packet.getTimestamp());
+                assertEquals(origTl0PicIdx, packet.getTL0PICIDX());
                 int newSeq = packet.getSequenceNumber();
                 assertFalse(projectedPackets.containsKey(newSeq));
                 projectedPackets.put(newSeq, new ProjectedPacket(packet, origSeq));
@@ -179,6 +199,14 @@ public class VP8AdaptiveTrackProjectionTest
             ProjectedPacket packet = projectedPackets.get(iter.next());
 
             assertTrue(RtpUtils.isNewerSequenceNumberThan(packet.origSeq, prevPacket.origSeq));
+            if (RtpUtils.isOlderTimestampThan(prevPacket.packet.getTimestamp(), packet.packet.getTimestamp()))
+            {
+                assertTrue(Vp8Utils.getPictureIdDelta(prevPacket.packet.getPictureId(), packet.packet.getPictureId()) < 0);
+            }
+            else
+            {
+                assertEquals(prevPacket.packet.getPictureId(), packet.packet.getPictureId());
+            }
 
             prevPacket = packet;
         }
@@ -440,26 +468,36 @@ public class VP8AdaptiveTrackProjectionTest
 
         int expectedSeq = 10001;
         long expectedTs = 1003000;
+        int expectedPicId = 0;
+        int expectedTl0PicIdx = 0;
 
         /* Start by wanting spatial layer 0 */
         for (int i = 0; i < 900; i++)
         {
             Vp8Packet packet1 = generator1.nextPacket();
 
+            if (packet1.isStartOfFrame() && packet1.getTemporalLayerIndex() == 0)
+            {
+                expectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(expectedTl0PicIdx, 1);
+            }
+
             assertTrue(context.accept(packet1, packet1.getTemporalLayerIndex(), 2));
+
+            context.rewriteRtp(packet1);
 
             Vp8Packet packet2 = generator2.nextPacket();
             assertFalse(context.accept(packet2, packet2.getTemporalLayerIndex() + 3, 2));
 
-            context.rewriteRtp(packet1);
-
             assertEquals(expectedSeq, packet1.getSequenceNumber());
             assertEquals(expectedTs, packet1.getTimestamp());
-            expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1);
+            assertEquals(expectedPicId, packet1.getPictureId());
+            assertEquals(expectedTl0PicIdx, packet1.getTL0PICIDX());
 
+            expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1);
             if (packet1.isEndOfFrame())
             {
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
+                expectedPicId = Vp8Utils.applyPictureIdDelta(expectedPicId, 1);
             }
         }
 
@@ -467,6 +505,11 @@ public class VP8AdaptiveTrackProjectionTest
         for (int i = 0; i < 90; i++)
         {
             Vp8Packet packet1 = generator1.nextPacket();
+
+            if (packet1.isStartOfFrame() && packet1.getTemporalLayerIndex() == 0)
+            {
+                expectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(expectedTl0PicIdx, 1);
+            }
 
             assertTrue(context.accept(packet1, packet1.getTemporalLayerIndex(), 5));
 
@@ -477,11 +520,15 @@ public class VP8AdaptiveTrackProjectionTest
 
             assertEquals(expectedSeq, packet1.getSequenceNumber());
             assertEquals(expectedTs, packet1.getTimestamp());
+            assertEquals(expectedPicId, packet1.getPictureId());
+            assertEquals(expectedTl0PicIdx, packet1.getTL0PICIDX());
+
             expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1);
 
             if (packet1.isEndOfFrame())
             {
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
+                expectedPicId = Vp8Utils.applyPictureIdDelta(expectedPicId, 1);
             }
         }
 
@@ -493,10 +540,26 @@ public class VP8AdaptiveTrackProjectionTest
         {
             Vp8Packet packet1 = generator1.nextPacket();
 
+            if (i == 0 && packet1.isStartOfFrame() && packet1.getTemporalLayerIndex() == 0)
+            {
+                expectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(expectedTl0PicIdx, 1);
+            }
+
             /* We will cut off the layer 0 keyframe after 1 packet, once we see the layer 1 keyframe. */
             assertEquals(i == 0, context.accept(packet1, packet1.getTemporalLayerIndex(), 5));
 
+            if (i == 0)
+            {
+                context.rewriteRtp(packet1);
+            }
+
             Vp8Packet packet2 = generator2.nextPacket();
+
+            if (packet2.isStartOfFrame() && packet2.getTemporalLayerIndex() == 0)
+            {
+                expectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(expectedTl0PicIdx, 1);
+            }
+
             assertTrue(context.accept(packet2, packet2.getTemporalLayerIndex() + 3, 5));
 
             context.rewriteRtp(packet2);
@@ -509,15 +572,20 @@ public class VP8AdaptiveTrackProjectionTest
                 /* (N.B. this is adjusted by elapsed wall time; if you stop in a
                   debugger this value will be more and the test will fail. */
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
+                /* pid id and tl0picidx will advance by 1 for the extra keyframe. */
+                expectedPicId = Vp8Utils.applyPictureIdDelta(expectedPicId, 1);
             }
 
             assertEquals(expectedSeq, packet2.getSequenceNumber());
             assertEquals(expectedTs, packet2.getTimestamp());
+            assertEquals(expectedPicId, packet2.getPictureId());
+            assertEquals(expectedTl0PicIdx, packet2.getTL0PICIDX());
             expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1);
 
             if (packet2.isEndOfFrame())
             {
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
+                expectedPicId = Vp8Utils.applyPictureIdDelta(expectedPicId, 1);
             }
         }
     }
@@ -593,6 +661,10 @@ public class VP8AdaptiveTrackProjectionTest
             boolean startOfFrame = (packetOfFrame == 0);
             boolean endOfFrame = (packetOfFrame == packetsPerFrame - 1);
 
+            if (startOfFrame && tid == 0) {
+                tl0picidx = Vp8Utils.applyTl0PicIdxDelta(tl0picidx, 1);
+            }
+
             byte[] buffer = vp8PacketTemplate.clone();
 
             RtpPacket rtpPacket = new RtpPacket(buffer,0, buffer.length);
@@ -635,19 +707,13 @@ public class VP8AdaptiveTrackProjectionTest
             {
                 packetOfFrame = 0;
                 ts = RtpUtils.applyTimestampDelta(ts, 3000);
-                picId++;
-                picId %= DePacketizer.VP8PayloadDescriptor.EXTENDED_PICTURE_ID_MASK;
+                picId = Vp8Utils.applyPictureIdDelta(picId, 1);
                 tidCycle++;
                 keyframe = keyframeRequested;
                 keyframeRequested = false;
                 if (keyframe)
                 {
                     tidCycle = 0;
-                }
-
-                if (tid == 0) {
-                    tl0picidx++;
-                    tl0picidx %= DePacketizer.VP8PayloadDescriptor.TL0PICIDX_MASK;
                 }
             }
             else
