@@ -39,14 +39,9 @@ public class VP8FrameMap
          * timestamps are within half the number space.  (This property is
          * assured by #cleanupFrameMap.)
          */
-        (s1, s2) -> (int) RtpUtils.getSequenceNumberDelta(s1, s2));
+        RtpUtils::getSequenceNumberDelta);
 
     private final Logger logger;
-
-    /**
-     * The diagnostic context of this instance.
-     */
-    private final DiagnosticContext diagnosticContext;
 
     final static int FRAME_MAP_SIZE = 500; /* Matches PacketCache default size. */
 
@@ -55,10 +50,8 @@ public class VP8FrameMap
      *
      */
     public VP8FrameMap(
-        @NotNull DiagnosticContext diagnosticContext,
         @NotNull Logger parentLogger)
     {
-        this.diagnosticContext = diagnosticContext;
         this.logger = parentLogger.createChildLogger(VP8AdaptiveTrackProjectionContext.class.getName());
     }
 

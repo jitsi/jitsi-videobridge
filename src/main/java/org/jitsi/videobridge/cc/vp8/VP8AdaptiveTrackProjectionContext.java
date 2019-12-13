@@ -25,7 +25,6 @@ import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.*;
-import org.jitsi_modified.impl.neomedia.codec.video.vp8.*;
 import org.json.simple.*;
 
 import java.util.*;
@@ -117,7 +116,7 @@ public class VP8AdaptiveTrackProjectionContext
     private VP8FrameMap.FrameInsertionResult insertPacketInMap(Vp8Packet vp8Packet)
     {
         VP8FrameMap frameMap = vp8FrameMaps.computeIfAbsent(vp8Packet.getSsrc(),
-            ssrc -> new VP8FrameMap(diagnosticContext, logger));
+            ssrc -> new VP8FrameMap(logger));
         /* TODO: add more context (ssrc?) to frame map's logger or diagnosticContext? */
 
         return frameMap.insertPacket(vp8Packet);
