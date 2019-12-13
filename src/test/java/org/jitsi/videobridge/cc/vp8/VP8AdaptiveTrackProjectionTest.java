@@ -421,6 +421,107 @@ public class VP8AdaptiveTrackProjectionTest
         }
     }
 
+    @Test
+    public void twoStreamsSwitchingTest() throws RewriteException
+    {
+        Vp8PacketGenerator generator1 = new Vp8PacketGenerator(3);
+        Vp8PacketGenerator generator2 = new Vp8PacketGenerator(3);
+        generator2.setSsrc(0xdeadbeefL);
+
+        DiagnosticContext diagnosticContext = new DiagnosticContext();
+        diagnosticContext.put("test", "twoStreamsSwitchingTest");
+
+        RtpState initialState =
+            new RtpState(1, 10000, 1000000);
+
+        VP8AdaptiveTrackProjectionContext context =
+            new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
+                initialState, logger);
+
+        int expectedSeq = 10001;
+        long expectedTs = 1003000;
+
+        /* Start by wanting spatial layer 0 */
+        for (int i = 0; i < 900; i++)
+        {
+            Vp8Packet packet1 = generator1.nextPacket();
+
+            assertTrue(context.accept(packet1, packet1.getTemporalLayerIndex(), 2));
+
+            Vp8Packet packet2 = generator2.nextPacket();
+            assertFalse(context.accept(packet2, packet2.getTemporalLayerIndex() + 3, 2));
+
+            context.rewriteRtp(packet1);
+
+            assertEquals(expectedSeq, packet1.getSequenceNumber());
+            assertEquals(expectedTs, packet1.getTimestamp());
+            expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1);
+
+            if (packet1.isEndOfFrame())
+            {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
+            }
+        }
+
+        /* Switch to wanting spatial layer 1, but don't send a keyframe. We should stay at the higher layer. */
+        for (int i = 0; i < 90; i++)
+        {
+            Vp8Packet packet1 = generator1.nextPacket();
+
+            assertTrue(context.accept(packet1, packet1.getTemporalLayerIndex(), 5));
+
+            Vp8Packet packet2 = generator2.nextPacket();
+            assertFalse(context.accept(packet2, packet2.getTemporalLayerIndex() + 3, 5));
+
+            context.rewriteRtp(packet1);
+
+            assertEquals(expectedSeq, packet1.getSequenceNumber());
+            assertEquals(expectedTs, packet1.getTimestamp());
+            expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1);
+
+            if (packet1.isEndOfFrame())
+            {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
+            }
+        }
+
+        generator1.requestKeyframe();
+        generator2.requestKeyframe();
+
+        /* After a keyframe we should accept spatial layer 1 */
+        for (int i = 0; i < 9000; i++)
+        {
+            Vp8Packet packet1 = generator1.nextPacket();
+
+            /* We will cut off the layer 0 keyframe after 1 packet, once we see the layer 1 keyframe. */
+            assertEquals(i == 0, context.accept(packet1, packet1.getTemporalLayerIndex(), 5));
+
+            Vp8Packet packet2 = generator2.nextPacket();
+            assertTrue(context.accept(packet2, packet2.getTemporalLayerIndex() + 3, 5));
+
+            context.rewriteRtp(packet2);
+
+            if (i == 0)
+            {
+                /* We leave a 2-packet gap for the layer 0 keyframe. */
+                expectedSeq += 2;
+                /* ts will advance by an extra 3000 samples for the extra frame. */
+                /* (N.B. this is adjusted by elapsed wall time; if you stop in a
+                  debugger this value will be more and the test will fail. */
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
+            }
+
+            assertEquals(expectedSeq, packet2.getSequenceNumber());
+            assertEquals(expectedTs, packet2.getTimestamp());
+            expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1);
+
+            if (packet2.isEndOfFrame())
+            {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
+            }
+        }
+    }
+
     private static class Vp8PacketGenerator {
         private static final byte[] vp8PacketTemplate =
             DatatypeConverter.parseHexBinary(
