@@ -19,7 +19,6 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.rtp.util.*;
-import org.jitsi_modified.impl.neomedia.codec.video.vp8.*;
 
 /**
  * Groups together some RTP/VP8 fields that refer to a specific incoming VP8
@@ -73,11 +72,6 @@ class VP8Frame
     private boolean seenEndOfFrame;
 
     /**
-     * The number of packets seen from this frame.
-     */
-    private int numPacketsSeen;
-
-    /**
      * The temporal layer of this frame.
      */
     private final int temporalLayer;
@@ -123,11 +117,6 @@ class VP8Frame
         this.latestKnownSequenceNumber = packet.getSequenceNumber();
         this.seenStartOfFrame = packet.isStartOfFrame();
         this.seenEndOfFrame = packet.isEndOfFrame();
-        this.numPacketsSeen = 1;
-
-        byte[] buf = packet.getBuffer();
-        int payloadOffset = packet.getPayloadOffset(),
-            payloadLen = packet.getPayloadLength();
 
         this.tl0PICIDX = packet.getTL0PICIDX();
         this.isKeyframe = packet.isKeyframe();
@@ -165,7 +154,6 @@ class VP8Frame
         {
             seenEndOfFrame = true;
         }
-        numPacketsSeen++;
     }
 
     /**
