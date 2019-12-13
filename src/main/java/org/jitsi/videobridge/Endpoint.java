@@ -467,12 +467,8 @@ public class Endpoint
         if (packet instanceof VideoRtpPacket)
         {
             //TODO(brian): we lose all information in PacketInfo here,
-            // unfortunately, because the BitrateController can return more
-            // than/less than what was passed in (and in different order) so
-            // we can't just reassign a transformed packet back into its
-            // proper PacketInfo. Need to change those classes to work with
+            // Need to change those classes to work with
             // the new packet types
-            // TODO(jonathan): This is no longer true but I haven't done the work yet.
             boolean accepted = bitrateController.transformRtp(packetInfo);
             if (!accepted)
             {
@@ -483,7 +479,6 @@ public class Endpoint
             }
 
             // The original packet was transformed in place.
-            // TODO: should we send this *after* the extras?
             transceiver.sendPacket(packetInfo);
 
             return;
