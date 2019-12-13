@@ -99,10 +99,10 @@ public class VP8FrameProjection implements VP8ProjectionRecord
     private final int tl0PICIDX;
 
     /**
-     * True if this projection is still "open" for new, later packets.
+     * -1 if this projection is still "open" for new, later packets.
      * Projections can be closed when we switch away from their encodings.
      */
-    private boolean open = true;
+    private int closedSeq = -1;
 
     /**
      * Ctor.
@@ -241,13 +241,17 @@ public class VP8FrameProjection implements VP8ProjectionRecord
             return false;
         }
 
-        if (open)
+        synchronized (vp8Frame)
         {
-            return true;
-        }
+            if (closedSeq < 0)
+            {
+                return true;
+            }
 
-        return RtpUtils.isOlderSequenceNumberThan(rtpPacket.getSequenceNumber(),
-            getLatestProjectedSequence());
+            return RtpUtils
+                .isOlderSequenceNumberThan(rtpPacket.getSequenceNumber(),
+                    closedSeq);
+        }
     }
 
     /**
@@ -334,12 +338,8 @@ public class VP8FrameProjection implements VP8ProjectionRecord
         {
             synchronized (vp8Frame)
             {
-                open = false;
+                closedSeq = vp8Frame.getLatestKnownSequenceNumber();
             }
-        }
-        else
-        {
-            open = false;
         }
     }
 }
