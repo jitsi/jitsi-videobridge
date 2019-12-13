@@ -19,7 +19,6 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
@@ -209,7 +208,7 @@ public class AdaptiveTrackProjection
         // suspended so that it can raise the needsKeyframe flag and also allow
         // it to compute a sequence number delta when the target becomes > -1.
 
-        if (videoRtpPacket.getEncodingIndex() < 0)
+        if (videoRtpPacket.getQualityIndex() < 0)
         {
             MediaStreamTrackDesc sourceTrack = getSource();
             logger.warn(
@@ -221,7 +220,7 @@ public class AdaptiveTrackProjection
 
         int targetIndexCopy = targetIndex;
         boolean accept = contextCopy.accept(
-            videoRtpPacket, videoRtpPacket.getEncodingIndex(), targetIndexCopy);
+            videoRtpPacket, videoRtpPacket.getQualityIndex(), targetIndexCopy);
 
         // We check if the context needs a keyframe regardless of whether or not
         // the packet was accepted.
