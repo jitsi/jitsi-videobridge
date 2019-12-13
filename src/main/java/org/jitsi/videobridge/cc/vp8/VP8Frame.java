@@ -101,12 +101,6 @@ class VP8Frame
     private boolean isKeyframe;
 
     /**
-     * A boolean that indicates whether the incoming VP8 frame that this
-     * instance refers to is a reference frame (RFC7741).
-     */
-    private final boolean isReference;
-
-    /**
      * A record of how this frame was projected, or null if not.
      */
     private VP8FrameProjection projection;
@@ -138,9 +132,6 @@ class VP8Frame
         this.tl0PICIDX = packet.getTL0PICIDX();
         this.isKeyframe = packet.isKeyframe();
         this.pictureId = packet.getPictureId();
-        this.isReference =
-            /* TODO add this to Vp8Packet if we need it, otherwise remove it. */
-            DePacketizer.VP8PayloadDescriptor.isReference(buf, payloadOffset, payloadLen);
         this.temporalLayer = packet.getTemporalLayerIndex();
     }
 
@@ -367,6 +358,6 @@ class VP8Frame
             return (temporalLayer == (pkt.getTemporalLayerIndex())) &&
                 (tl0PICIDX == pkt.getTL0PICIDX()) &&
                 (pictureId == pkt.getPictureId());
-        /* TODO: also check start, end, seq nums., reference? */
+        /* TODO: also check start, end, seq nums? */
     }
 }
