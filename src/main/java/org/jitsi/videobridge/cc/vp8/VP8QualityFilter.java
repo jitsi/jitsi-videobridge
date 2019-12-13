@@ -175,6 +175,12 @@ class VP8QualityFilter
                 needsKeyframe = true;
             }
 
+            if (spatialLayerId != currentSpatialLayerId)
+            {
+                // for non-keyframes, we can't route anything but the current spatial layer
+                return false;
+            }
+
             // This branch reads the {@link #currentSpatialLayerId} and it
             // filters packets based on their temporal layer.
 
