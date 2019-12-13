@@ -111,7 +111,7 @@ public class VP8FrameMap
 
 
     /** Find a frame in the frame map, based on a packet. */
-    public synchronized VP8Frame findFrame(Vp8Packet packet)
+    public synchronized VP8Frame findFrame(@NotNull Vp8Packet packet)
     {
         int seq = packet.getSequenceNumber();
 
@@ -142,7 +142,9 @@ public class VP8FrameMap
     }
 
     /** Helper function to insert a packet into an existing frame. */
-    private FrameInsertionResult doFrameInsert(VP8Frame frame, Vp8Packet packet)
+    @NotNull
+    @Contract("_, _ -> new")
+    private FrameInsertionResult doFrameInsert(@NotNull VP8Frame frame, Vp8Packet packet)
     {
         if (!frame.matchesFrameConsistently(packet))
         {
@@ -158,7 +160,7 @@ public class VP8FrameMap
      * @param packet The packet to insert.
      * @return What happened.  null if insertion failed.
      */
-    public synchronized FrameInsertionResult insertPacket(Vp8Packet packet)
+    public synchronized FrameInsertionResult insertPacket(@NotNull Vp8Packet packet)
     {
         int seq = packet.getSequenceNumber();
         if (!cleanupFrameMap(seq))
@@ -186,7 +188,7 @@ public class VP8FrameMap
         return new FrameInsertionResult(frame, true);
     }
 
-    public synchronized VP8Frame nextFrame(VP8Frame frame)
+    public synchronized VP8Frame nextFrame(@NotNull VP8Frame frame)
     {
         Integer k = vp8FrameMap.higherKey(frame.getLatestKnownSequenceNumber());
         if (k == null)
@@ -196,7 +198,7 @@ public class VP8FrameMap
         return vp8FrameMap.get(k);
     }
 
-    public synchronized VP8Frame nextFrameWith(VP8Frame frame, Predicate<VP8Frame> pred)
+    public synchronized VP8Frame nextFrameWith(@NotNull VP8Frame frame, Predicate<VP8Frame> pred)
     {
         NavigableSet<Integer> tailSet =
             vp8FrameMap.navigableKeySet().tailSet(frame.getLatestKnownSequenceNumber(), false);
@@ -217,7 +219,7 @@ public class VP8FrameMap
         return nextFrameWith(frame, VP8Frame::isTL0);
     }
 
-    public synchronized VP8Frame prevFrameWith(VP8Frame frame, Predicate<VP8Frame> pred)
+    public synchronized VP8Frame prevFrameWith(@NotNull VP8Frame frame, Predicate<VP8Frame> pred)
     {
         NavigableSet<Integer> revHeadSet =
             vp8FrameMap.navigableKeySet().headSet(frame.getEarliestKnownSequenceNumber(), false).descendingSet();

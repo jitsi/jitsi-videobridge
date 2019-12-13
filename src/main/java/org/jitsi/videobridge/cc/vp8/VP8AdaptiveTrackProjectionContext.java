@@ -101,7 +101,7 @@ public class VP8AdaptiveTrackProjectionContext
     }
 
     /** Lookup a Vp8Frame for a packet. */
-    private VP8Frame lookupVP8Frame(Vp8Packet vp8Packet)
+    private VP8Frame lookupVP8Frame(@NotNull Vp8Packet vp8Packet)
     {
         VP8FrameMap frameMap = vp8FrameMaps.get(vp8Packet.getSsrc());
         if (frameMap == null)
@@ -113,7 +113,8 @@ public class VP8AdaptiveTrackProjectionContext
     /**
      * Insert a packet in the appropriate Vp8FrameMap.
      */
-    private VP8FrameMap.FrameInsertionResult insertPacketInMap(Vp8Packet vp8Packet)
+    private VP8FrameMap.FrameInsertionResult insertPacketInMap(
+        @NotNull Vp8Packet vp8Packet)
     {
         VP8FrameMap frameMap = vp8FrameMaps.computeIfAbsent(vp8Packet.getSsrc(),
             ssrc -> new VP8FrameMap(logger));
@@ -125,7 +126,7 @@ public class VP8AdaptiveTrackProjectionContext
     /**
      * Find the next frame after the given one.
      */
-    public synchronized VP8Frame nextFrame(VP8Frame frame)
+    public synchronized VP8Frame nextFrame(@NotNull VP8Frame frame)
     {
         VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
         if (frameMap == null)
@@ -137,7 +138,7 @@ public class VP8AdaptiveTrackProjectionContext
     /**
      * Find the previous accepted frame before the given one.
      */
-    public VP8Frame findPrevAcceptedFrame(VP8Frame frame)
+    public VP8Frame findPrevAcceptedFrame(@NotNull VP8Frame frame)
     {
         VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
         if (frameMap == null)
@@ -151,7 +152,8 @@ public class VP8AdaptiveTrackProjectionContext
      * @param frame The frame to query
      * @return A subsequent TL0 frame, or null
      */
-    private VP8Frame findNextTl0(VP8Frame frame)
+    @Nullable
+    private VP8Frame findNextTl0(@NotNull VP8Frame frame)
     {
         VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
         if (frameMap == null)
@@ -301,7 +303,8 @@ public class VP8AdaptiveTrackProjectionContext
     /**
      * Create a projection for this frame. It is the first frame sent for a layer.
      */
-    private VP8FrameProjection createLayerSwitchProjection(VP8Frame frame, Vp8Packet initialPacket)
+    @NotNull
+    private VP8FrameProjection createLayerSwitchProjection(@NotNull VP8Frame frame, @NotNull Vp8Packet initialPacket)
     {
         assert(frame.isKeyframe());
         assert(initialPacket.isStartOfFrame());
@@ -364,7 +367,8 @@ public class VP8AdaptiveTrackProjectionContext
      * Create a projection for this frame. It is being sent subsequent to other projected frames
      * of this layer.
      */
-    private VP8FrameProjection createInLayerProjection(VP8Frame frame, Vp8Packet initialPacket)
+    @NotNull
+    private VP8FrameProjection createInLayerProjection(@NotNull VP8Frame frame, @NotNull Vp8Packet initialPacket)
     {
         long nowMs = System.currentTimeMillis();
 
