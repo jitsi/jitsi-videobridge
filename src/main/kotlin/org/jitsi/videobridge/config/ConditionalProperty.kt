@@ -20,10 +20,8 @@ import org.jitsi.utils.config.ConfigProperty
 
 /**
  * A property which only exists based on the result of the given
- * [predicate].  If [predicate] returns true, we define the prop via the
- * given [propDef], if not, we define a property which will throw on access
- * and use the given [notEnabledMessage]
- * TODO: move this to Jicoco
+ * [predicate].  If [predicate] returns true, the inner property [innerProp]
+ * can be accessed via [value], if not, [value] will throw
  */
 abstract class ConditionalProperty <T : Any>(
     private val predicate: () -> Boolean,

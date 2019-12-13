@@ -20,7 +20,7 @@ package org.jitsi.videobridge.config
  * There are some places where we can't help but rely on a value that comes
  * from a singleton (for example when testing [ConditionalProperty]s which use
  * a function which reads a singleton in their predicate), so this class exists
- * to give a hook to reset singleton instances for recreation.  This hook is
+ * to give a hook to reset singleton instances for recreation.  [reset] is
  * ONLY INTENDED TO BE USED BY TESTS WHERE NECESSARY.
  */
 class ResettableSingleton<T : Any>(
