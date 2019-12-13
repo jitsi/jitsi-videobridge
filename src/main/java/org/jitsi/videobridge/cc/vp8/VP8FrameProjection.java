@@ -157,38 +157,6 @@ public class VP8FrameProjection
         this.createdMs = createdMs;
     }
 
-
-
-    /**
-     * Small utility method that computes and returns the RTP timestamp to use
-     * in the projection of the frame that is specified as an argument. The
-     * specified frame is assumed to be the frame that will be sent immediately
-     * after the {@link #vp8Frame}.
-     *
-     * @param nextVP8Frame the frame that will be sent immediately after
-     * {@link #vp8Frame}
-     * @return the TL0PICIDX to use in the projection of the frame that is
-     * specified as an argument.
-     */
-    private long nextTimestamp(@NotNull VP8Frame nextVP8Frame, long nowMs)
-    {
-        long delta;
-        if (!vp8Frame.matchesSSRC(nextVP8Frame))
-        {
-            // this is a simulcast switch. The typical incremental value =
-            // 90kHz / 30 = 90,000Hz / 30 = 3000 per frame or per 33ms
-            delta = 3000 * Math.max(1, (nowMs - createdMs) / 33);
-        }
-        else
-        {
-            // compute and apply a delta
-            delta = RtpUtils.getTimestampDiff(
-                nextVP8Frame.getTimestamp(), vp8Frame.getTimestamp());
-        }
-
-        return RtpUtils.applyTimestampDelta(timestamp, delta);
-    }
-
     public int rewriteSeqNo(int seq)
     {
         return RtpUtils.applySequenceNumberDelta(seq, sequenceNumberDelta);
