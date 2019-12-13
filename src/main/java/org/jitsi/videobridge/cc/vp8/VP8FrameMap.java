@@ -188,6 +188,7 @@ public class VP8FrameMap
         return new FrameInsertionResult(frame, true);
     }
 
+    @Nullable
     public synchronized VP8Frame nextFrame(@NotNull VP8Frame frame)
     {
         Integer k = vp8FrameMap.higherKey(frame.getLatestKnownSequenceNumber());
@@ -198,6 +199,7 @@ public class VP8FrameMap
         return vp8FrameMap.get(k);
     }
 
+    @Nullable
     public synchronized VP8Frame nextFrameWith(@NotNull VP8Frame frame, Predicate<VP8Frame> pred)
     {
         NavigableSet<Integer> tailSet =
@@ -214,11 +216,13 @@ public class VP8FrameMap
         return null;
     }
 
-    public synchronized VP8Frame findNextTl0(VP8Frame frame)
+    @Nullable
+    public synchronized VP8Frame findNextTl0(@NotNull VP8Frame frame)
     {
         return nextFrameWith(frame, VP8Frame::isTL0);
     }
 
+    @Nullable
     public synchronized VP8Frame prevFrameWith(@NotNull VP8Frame frame, Predicate<VP8Frame> pred)
     {
         NavigableSet<Integer> revHeadSet =
@@ -235,7 +239,8 @@ public class VP8FrameMap
         return null;
     }
 
-    public synchronized VP8Frame findPrevAcceptedFrame(VP8Frame frame)
+    @Nullable
+    public synchronized VP8Frame findPrevAcceptedFrame(@NotNull VP8Frame frame)
     {
         return prevFrameWith(frame, VP8Frame::isAccepted);
     }

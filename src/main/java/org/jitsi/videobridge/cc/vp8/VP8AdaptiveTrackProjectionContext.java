@@ -138,6 +138,7 @@ public class VP8AdaptiveTrackProjectionContext
     /**
      * Find the previous accepted frame before the given one.
      */
+    @Nullable
     public VP8Frame findPrevAcceptedFrame(@NotNull VP8Frame frame)
     {
         VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
@@ -290,7 +291,8 @@ public class VP8AdaptiveTrackProjectionContext
     /**
      * Create a projection for this frame.
      */
-    private VP8FrameProjection createProjection(VP8Frame frame, Vp8Packet initialPacket)
+    @NotNull
+    private VP8FrameProjection createProjection(@NotNull VP8Frame frame, @NotNull Vp8Packet initialPacket)
     {
         if (frameIsNewSsrc(frame))
         {
