@@ -131,7 +131,8 @@ public class ColibriWebSocketService
 
         if (baseUrl != null && Config.enabled())
         {
-            logger.info("Starting colibri websocket service");
+            logger.info("Starting colibri websocket service with baseUrl: "
+                + baseUrl);
             holder = new ServletHolder();
 
             holder.setServlet(new ColibriWebSocketServlet(bundleContext, this));
