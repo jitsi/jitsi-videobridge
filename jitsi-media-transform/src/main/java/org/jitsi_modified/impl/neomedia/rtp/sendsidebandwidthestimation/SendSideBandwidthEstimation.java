@@ -23,6 +23,8 @@ import org.jitsi.utils.logging2.*;
 import java.time.*;
 import java.util.*;
 
+import static org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.config.SendSideBandwidthEstimationConfig.*;
+
 /**
  * Implements the send-side bandwidth estimation described in
  * https://tools.ietf.org/html/draft-ietf-rmcat-gcc-01
@@ -218,23 +220,23 @@ public class SendSideBandwidthEstimation
         logger = parentLogger.createChildLogger(getClass().getName());
         this.diagnosticContext = diagnosticContext;
 
-        double lossExperimentProbability = SendSideBandwidthEstimationConfig.lossExperimentProbability();
+        double lossExperimentProbability = Config.lossExperimentProbability();
 
         if (kRandom.nextFloat() < lossExperimentProbability)
         {
-            low_loss_threshold_ = SendSideBandwidthEstimationConfig.experimentalLowLossThreshold();
-            high_loss_threshold_ = SendSideBandwidthEstimationConfig.experimentalHighLossThreshold();
-            bitrate_threshold_bps_ = 1000 * SendSideBandwidthEstimationConfig.experimentalBitrateThresholdKbps();
+            low_loss_threshold_ = Config.experimentalLowLossThreshold();
+            high_loss_threshold_ = Config.experimentalHighLossThreshold();
+            bitrate_threshold_bps_ = 1000 * Config.experimentalBitrateThresholdKbps();
         }
         else
         {
-            low_loss_threshold_ = SendSideBandwidthEstimationConfig.defaultLowLossThreshold();
-            high_loss_threshold_ = SendSideBandwidthEstimationConfig.defaultHighLossThreshold();
-            bitrate_threshold_bps_ = 1000 * SendSideBandwidthEstimationConfig.defaultBitrateThresholdKbps();
+            low_loss_threshold_ = Config.defaultLowLossThreshold();
+            high_loss_threshold_ = Config.defaultHighLossThreshold();
+            bitrate_threshold_bps_ = 1000 * Config.defaultBitrateThresholdKbps();
         }
 
 
-        double timeoutExperimentProbability = SendSideBandwidthEstimationConfig.timeoutExperimentProbability();
+        double timeoutExperimentProbability = Config.timeoutExperimentProbability();
 
         in_timeout_experiment_
             = kRandom.nextFloat() < timeoutExperimentProbability;
