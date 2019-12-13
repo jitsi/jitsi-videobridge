@@ -47,6 +47,10 @@ class PcapWriter(
         handle.dumpOpen(filePath)
     }
 
+    companion object {
+        private val localhost = Inet4Address.getByName("127.0.0.1") as Inet4Address
+    }
+
     override fun observe(packetInfo: PacketInfo) {
         val udpPayload = UnknownPacket.Builder()
         // We can't pass offset/limit values to udpPayload.rawData, so we need to create an array that contains
@@ -57,15 +61,15 @@ class PcapWriter(
         val udp = UdpPacket.Builder()
                 .srcPort(UdpPort(123, "blah"))
                 .dstPort(UdpPort(456, "blah"))
-                .srcAddr(Inet4Address.getLocalHost() as Inet4Address)
-                .dstAddr(Inet4Address.getLocalHost() as Inet4Address)
+                .srcAddr(localhost)
+                .dstAddr(localhost)
                 .correctChecksumAtBuild(true)
                 .correctLengthAtBuild(true)
                 .payloadBuilder(udpPayload)
 
         val ipPacket = IpV4Packet.Builder()
-                .srcAddr(Inet4Address.getLocalHost() as Inet4Address)
-                .dstAddr(Inet4Address.getLocalHost() as Inet4Address)
+                .srcAddr(localhost)
+                .dstAddr(localhost)
                 .protocol(IpNumber.UDP)
                 .version(IpVersion.IPV4)
                 .tos(IpV4Rfc1349Tos.newInstance(0))
