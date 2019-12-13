@@ -223,6 +223,23 @@ public class VP8FrameMap
     }
 
     @Nullable
+    public synchronized VP8Frame findNextAcceptedFrame(@NotNull VP8Frame frame)
+    {
+        return nextFrameWith(frame, VP8Frame::isAccepted);
+    }
+
+    @Nullable
+    public synchronized VP8Frame prevFrame(@NotNull VP8Frame frame)
+    {
+        Integer k = vp8FrameMap.lowerKey(frame.getEarliestKnownSequenceNumber());
+        if (k == null)
+        {
+            return null;
+        }
+        return vp8FrameMap.get(k);
+    }
+
+    @Nullable
     public synchronized VP8Frame prevFrameWith(@NotNull VP8Frame frame, Predicate<VP8Frame> pred)
     {
         NavigableSet<Integer> revHeadSet =

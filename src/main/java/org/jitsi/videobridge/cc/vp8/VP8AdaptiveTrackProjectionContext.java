@@ -118,14 +118,28 @@ public class VP8AdaptiveTrackProjectionContext
     {
         VP8FrameMap frameMap = vp8FrameMaps.computeIfAbsent(vp8Packet.getSsrc(),
             ssrc -> new VP8FrameMap(logger));
-        /* TODO: add more context (ssrc?) to frame map's logger or diagnosticContext? */
+        /* TODO: add more context (ssrc?) to frame map's logger? */
 
         return frameMap.insertPacket(vp8Packet);
     }
 
     /**
+     * Find the previous frame before the given one.
+     */
+    @Nullable
+    public synchronized VP8Frame prevFrame(@NotNull VP8Frame frame)
+    {
+        VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
+        if (frameMap == null)
+            return null;
+
+        return frameMap.prevFrame(frame);
+    }
+
+    /**
      * Find the next frame after the given one.
      */
+    @Nullable
     public synchronized VP8Frame nextFrame(@NotNull VP8Frame frame)
     {
         VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
@@ -146,6 +160,19 @@ public class VP8AdaptiveTrackProjectionContext
             return null;
 
         return frameMap.findPrevAcceptedFrame(frame);
+    }
+
+    /**
+     * Find the next accepted frame after the given one.
+     */
+    @Nullable
+    public VP8Frame findNextAcceptedFrame(@NotNull VP8Frame frame)
+    {
+        VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
+        if (frameMap == null)
+            return null;
+
+        return frameMap.findNextAcceptedFrame(frame);
     }
 
     /**
@@ -370,30 +397,41 @@ public class VP8AdaptiveTrackProjectionContext
      * of this layer.
      */
     @NotNull
-    private VP8FrameProjection createInLayerProjection(@NotNull VP8Frame frame, @NotNull Vp8Packet initialPacket)
+    private VP8FrameProjection createInLayerProjection(@NotNull VP8Frame frame, @NotNull VP8Frame refFrame, @NotNull Vp8Packet initialPacket)
     {
         long nowMs = System.currentTimeMillis();
 
-        VP8Frame prevFrame = findPrevAcceptedFrame(frame);
-        assert(prevFrame != null);
-
-        long tsGap = RtpUtils.getTimestampDiff(frame.getTimestamp(), prevFrame.getTimestamp());
-        int tl0Gap = Vp8Utils.getTl0PicIdxDelta(frame.getTl0PICIDX(), prevFrame.getTl0PICIDX());
+        long tsGap = RtpUtils.getTimestampDiff(frame.getTimestamp(), refFrame.getTimestamp());
+        int tl0Gap = Vp8Utils.getTl0PicIdxDelta(frame.getTl0PICIDX(), refFrame.getTl0PICIDX());
         int seqGap = 0;
         int picGap = 0;
 
-        VP8Frame f1 = prevFrame, f2;
-        do {
-            f2 = nextFrame(f1);
-            seqGap += seqGap(f1, f2);
-            picGap += picGap(f1, f2);
-            f1 = f2;
-        } while (f2 != frame);
+        VP8Frame f1 = refFrame, f2;
+        if (RtpUtils.isOlderTimestampThan(refFrame.getLatestKnownSequenceNumber(), frame.getEarliestKnownSequenceNumber()))
+        {
+            do
+            {
+                f2 = nextFrame(f1);
+                seqGap += seqGap(f1, f2);
+                picGap += picGap(f1, f2);
+                f1 = f2;
+            }
+            while (f2 != frame);
+        }
+        else
+        {
+            do {
+                f2 = prevFrame(f1);
+                seqGap += -seqGap(f2, f1);
+                picGap += -picGap(f2, f1);
+                f1 = f2;
+            } while (f2 != frame);
+        }
 
-        int projectedSeq = RtpUtils.applySequenceNumberDelta(prevFrame.getProjection().getLatestProjectedSequence(), seqGap);
-        long projectedTs = RtpUtils.applyTimestampDelta(prevFrame.getProjection().getTimestamp(), tsGap);
-        int projectedPicId = Vp8Utils.applyPictureIdDelta(prevFrame.getProjection().getPictureId(), picGap);
-        int projectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(prevFrame.getProjection().getTl0PICIDX(), tl0Gap);
+        int projectedSeq = RtpUtils.applySequenceNumberDelta(refFrame.getProjection().getLatestProjectedSequence(), seqGap);
+        long projectedTs = RtpUtils.applyTimestampDelta(refFrame.getProjection().getTimestamp(), tsGap);
+        int projectedPicId = Vp8Utils.applyPictureIdDelta(refFrame.getProjection().getPictureId(), picGap);
+        int projectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(refFrame.getProjection().getTl0PICIDX(), tl0Gap);
 
         VP8FrameProjection projection =
             new VP8FrameProjection(diagnosticContext, logger,
@@ -403,6 +441,32 @@ public class VP8AdaptiveTrackProjectionContext
             );
 
         return projection;
+    }
+
+    /**
+     * Create a projection for this frame. It is being sent subsequent to other projected frames
+     * of this layer.
+     */
+    @NotNull
+    private VP8FrameProjection createInLayerProjection(@NotNull VP8Frame frame, @NotNull Vp8Packet initialPacket)
+    {
+        VP8Frame prevFrame = findPrevAcceptedFrame(frame);
+        if (prevFrame != null)
+        {
+            return createInLayerProjection(frame, prevFrame, initialPacket);
+        }
+        /* prev frame has rolled off beginning of frame map, try next frame */
+        VP8Frame nextFrame = findNextAcceptedFrame(frame);
+        if (nextFrame != null)
+        {
+            return createInLayerProjection(frame, nextFrame, initialPacket);
+        }
+
+        /* Neither previous or next is found. Very big frame? Use previous projected.
+           (This must be valid because we don't execute this function unless
+           frameIsNewSsrc has returned false.)
+         */
+        return createInLayerProjection(frame, lastVP8FrameProjection.getVP8Frame(), initialPacket);
     }
 
     @Override
