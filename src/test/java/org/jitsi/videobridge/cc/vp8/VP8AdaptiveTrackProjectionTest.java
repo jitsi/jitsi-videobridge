@@ -141,7 +141,7 @@ public class VP8AdaptiveTrackProjectionTest
         }
 
         long seed = System.currentTimeMillis(); // Pass an explicit seed for reproducible tests
-        //  long seed = 1575666289164L;
+        //  long seed = 1576267371838L;
         Random random = new Random(seed);
 
         VP8AdaptiveTrackProjectionContext context =
@@ -234,6 +234,7 @@ public class VP8AdaptiveTrackProjectionTest
     {
         Vp8PacketGenerator generator = new Vp8PacketGenerator(1);
 
+        runInOrderTest(generator, 0);
     }
 
     @Test
