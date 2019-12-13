@@ -281,12 +281,14 @@ public class VP8AdaptiveTrackProjectionTest
         }
 
         assertTrue(context.accept(firstPacket, firstPacket.getTemporalLayerIndex(), 2));
+        context.rewriteRtp(firstPacket);
 
         for (int i = 0; i < 9996; i++)
         {
             Vp8Packet packet = generator.nextPacket();
 
             assertTrue(context.accept(packet, packet.getTemporalLayerIndex(), 2));
+            context.rewriteRtp(packet);
         }
     }
 
@@ -330,6 +332,7 @@ public class VP8AdaptiveTrackProjectionTest
             Vp8Packet packet = generator.nextPacket();
 
             assertTrue(context.accept(packet, packet.getTemporalLayerIndex(), 2));
+            context.rewriteRtp(packet);
         }
     }
 
@@ -373,6 +376,48 @@ public class VP8AdaptiveTrackProjectionTest
             Vp8Packet packet = generator.nextPacket();
 
             assertTrue(context.accept(packet, packet.getTemporalLayerIndex(), 2));
+            context.rewriteRtp(packet);
+        }
+    }
+
+    @Test
+    public void twoStreamsNoSwitchingTest() throws RewriteException
+    {
+        Vp8PacketGenerator generator1 = new Vp8PacketGenerator(3);
+        Vp8PacketGenerator generator2 = new Vp8PacketGenerator(3);
+        generator2.setSsrc(0xdeadbeefL);
+
+        DiagnosticContext diagnosticContext = new DiagnosticContext();
+        diagnosticContext.put("test", "twoStreamsNoSwitchingTest");
+
+        RtpState initialState =
+            new RtpState(1, 10000, 1000000);
+
+        VP8AdaptiveTrackProjectionContext context =
+            new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
+                initialState, logger);
+
+        int expectedSeq = 10001;
+        long expectedTs = 1003000;
+        for (int i = 0; i < 10000; i++)
+        {
+            Vp8Packet packet1 = generator1.nextPacket();
+
+            assertTrue(context.accept(packet1, packet1.getTemporalLayerIndex() + 3, 5));
+
+            Vp8Packet packet2 = generator2.nextPacket();
+            assertFalse(context.accept(packet2, packet2.getTemporalLayerIndex(), 5));
+
+            context.rewriteRtp(packet1);
+
+            assertEquals(expectedSeq, packet1.getSequenceNumber());
+            assertEquals(expectedTs, packet1.getTimestamp());
+            expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1);
+
+            if (packet1.isEndOfFrame())
+            {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
+            }
         }
     }
 
@@ -416,6 +461,12 @@ public class VP8AdaptiveTrackProjectionTest
         private boolean keyframe = true;
         private boolean keyframeRequested = false;
         private int tidCycle = 0;
+        private long ssrc = 0xcafebabeL;
+
+        public void setSsrc(long ssrc)
+        {
+            this.ssrc = ssrc;
+        }
 
         public Vp8Packet nextPacket()
         {
@@ -445,6 +496,7 @@ public class VP8AdaptiveTrackProjectionTest
 
             RtpPacket rtpPacket = new RtpPacket(buffer,0, buffer.length);
 
+            rtpPacket.setSsrc(ssrc);
             rtpPacket.setSequenceNumber(seq);
             rtpPacket.setTimestamp(ts);
 
