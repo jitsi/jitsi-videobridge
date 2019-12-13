@@ -19,8 +19,8 @@
     <kotlin.version>1.3.21</kotlin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <smack.version>4.2.4-47d17fc</smack.version>
-    <jitsi.utils.version>1.0-24-g8f17c70</jitsi.utils.version>
-    <jicoco.version>1.1-12-g2b135ca</jicoco.version>
+    <jitsi.utils.version>1.0-26-g20ce8cc</jitsi.utils.version>
+    <jicoco.version>1.1-13-g118a064</jicoco.version>
   </properties>
 
   <dependencyManagement>
@@ -86,7 +86,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-media-transform</artifactId>
-      <version>1.0-71-g06b12ea</version>
+      <version>1.0-72-ga759af5</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -262,6 +262,11 @@
       <artifactId>kotlintest-runner-junit5</artifactId>
       <version>3.3.2</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jitsi</groupId>
+      <artifactId>jicoco-test-kotlin</artifactId>
+      <version>${jicoco.version}</version>
     </dependency>
   </dependencies>
 
@@ -473,6 +478,9 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.2</version>
+        <configuration>
+            <reuseForks>false</reuseForks>
+        </configuration>
       </plugin>
     </plugins>
   </build>
