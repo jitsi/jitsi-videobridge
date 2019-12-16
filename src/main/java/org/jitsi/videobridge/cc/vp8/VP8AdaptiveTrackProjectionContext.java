@@ -292,8 +292,8 @@ public class VP8AdaptiveTrackProjectionContext
         {
             if (vp8Packet.isKeyframe() && frameIsNewSsrc(frame))
             {
-            /* If we're not currently projecting this SSRC, make sure we haven't
-               already decided not to accept a subsequent TL0 frame of this SSRC.
+            /* If we're not currently projecting this SSRC, check if we've
+               already decided to drop a subsequent TL0 frame of this SSRC.
                If we have, we can't turn on the encoding starting from this
                packet, so treat this frame as though it weren't a keyframe.
              */
