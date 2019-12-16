@@ -16,9 +16,9 @@
 package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.*;
 import org.jitsi.nlj.codec.vp8.*;
 import org.jitsi.nlj.format.*;
-import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.util.*;
@@ -264,22 +264,21 @@ public class VP8AdaptiveTrackProjectionContext
     /**
      * Determines whether a packet should be accepted or not.
      *
-     * @param rtpPacket the RTP packet to determine whether to project or not.
+     * @param packetInfo the RTP packet to determine whether to project or not.
      * @param incomingIndex the quality index of the incoming RTP packet
      * @param targetIndex the target quality index we want to achieve
      * @return true if the packet should be accepted, false otherwise.
      */
     @Override
     public synchronized boolean accept(
-        @NotNull VideoRtpPacket rtpPacket, int incomingIndex, int targetIndex)
+        @NotNull PacketInfo packetInfo, int incomingIndex, int targetIndex)
     {
-        if (!(rtpPacket instanceof Vp8Packet))
+        if (!(packetInfo.getPacket() instanceof Vp8Packet))
         {
             logger.warn("Packet is not VP8 packet");
             return false;
         }
-
-        Vp8Packet vp8Packet = (Vp8Packet)rtpPacket;
+        Vp8Packet vp8Packet = packetInfo.packetAs();
 
         VP8FrameMap.FrameInsertionResult result = insertPacketInMap(vp8Packet);
 
@@ -553,22 +552,21 @@ public class VP8AdaptiveTrackProjectionContext
     /**
      * Rewrites the RTP packet that is specified as an argument.
      *
-     * @param rtpPacket the RTP packet to rewrite.
+     * @param packetInfo the packet info for the RTP packet to rewrite.
      * @throws RewriteException if a VP8 frame projection is not found
      * for the RTP packet that is specified as a parameter.
      */
     @Override
     public void rewriteRtp(
-        @NotNull VideoRtpPacket rtpPacket)
+        @NotNull PacketInfo packetInfo)
         throws RewriteException
     {
-        if (!(rtpPacket instanceof Vp8Packet))
+        if (!(packetInfo.getPacket() instanceof Vp8Packet))
         {
             logger.info("Got a non-VP8 packet.");
             throw new RewriteException("Non-VP8 packet in VP8 track projection");
         }
-
-        Vp8Packet vp8Packet = (Vp8Packet)rtpPacket;
+        Vp8Packet vp8Packet = packetInfo.packetAs();
 
         VP8Frame vp8Frame = lookupVP8Frame(vp8Packet);
         if (vp8Frame == null)
@@ -583,7 +581,7 @@ public class VP8AdaptiveTrackProjectionContext
             throw new RewriteException("Frame does not have projection?");
         }
 
-        vp8Frame.getProjection().rewriteRtp((Vp8Packet) rtpPacket);
+        vp8Frame.getProjection().rewriteRtp(vp8Packet);
     }
 
     /**

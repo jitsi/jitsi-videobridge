@@ -276,8 +276,9 @@ public class BitrateController
      * written into the {@link Endpoint} that owns this {@link BitrateController}
      * ; otherwise, <tt>false</tt>
      */
-    public boolean accept(@NotNull VideoRtpPacket videoRtpPacket)
+    public boolean accept(@NotNull PacketInfo packetInfo)
     {
+        VideoRtpPacket videoRtpPacket = packetInfo.packetAs();
         long ssrc = videoRtpPacket.getSsrc();
 
         AdaptiveTrackProjection adaptiveTrackProjection
@@ -291,7 +292,7 @@ public class BitrateController
             return false;
         }
 
-        return adaptiveTrackProjection.accept(videoRtpPacket);
+        return adaptiveTrackProjection.accept(packetInfo);
     }
 
     /**
@@ -1125,7 +1126,7 @@ public class BitrateController
 
         try
         {
-            adaptiveTrackProjection.rewriteRtp(videoPacket);
+            adaptiveTrackProjection.rewriteRtp(packetInfo);
 
             // The rewriteRtp operation must not modify the VP8 payload.
             if (PacketInfo.Companion.getENABLE_PAYLOAD_VERIFICATION())

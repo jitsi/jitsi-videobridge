@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.cc;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.rtcp.*;
@@ -129,15 +130,16 @@ class GenericAdaptiveTrackProjectionContext
      * synchronized keyword because there's only one thread (the translator
      * thread) accessing this method at a time.
      *
-     * @param rtpPacket the RTP packet to determine whether to accept or not.
+     * @param packetInfo the RTP packet to determine whether to accept or not.
      * @param incomingIndex the quality index of the
      * @param targetIndex the target quality index
      * @return true if the packet should be accepted, false otherwise.
      */
     @Override
     public synchronized boolean
-    accept(@NotNull VideoRtpPacket rtpPacket, int incomingIndex, int targetIndex)
+    accept(@NotNull PacketInfo packetInfo, int incomingIndex, int targetIndex)
     {
+        VideoRtpPacket rtpPacket = packetInfo.packetAs();
         if (targetIndex == RTPEncodingDesc.SUSPENDED_INDEX)
         {
             // suspend the stream.
@@ -272,12 +274,13 @@ class GenericAdaptiveTrackProjectionContext
      * specified as an argument in order to make suspending/resuming of the
      * source track transparent at the RTP level.
      *
-     * @param rtpPacket the RTP packet to rewrite.
+     * @param packetInfo the RTP packet info to rewrite.
      */
     @Override
     public void rewriteRtp(
-        @NotNull VideoRtpPacket rtpPacket)
+        @NotNull PacketInfo packetInfo)
     {
+        VideoRtpPacket rtpPacket = packetInfo.packetAs();
         int sourceSequenceNumber = rtpPacket.getSequenceNumber();
         int destinationSequenceNumber
             = RtpUtils.applySequenceNumberDelta(

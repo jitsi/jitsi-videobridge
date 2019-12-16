@@ -196,8 +196,9 @@ public class AdaptiveTrackProjection
      * or not.
      * @return true if the packet is accepted, false otherwise.
      */
-    public boolean accept(@NotNull VideoRtpPacket videoRtpPacket)
+    public boolean accept(@NotNull PacketInfo packetInfo)
     {
+        VideoRtpPacket videoRtpPacket = packetInfo.packetAs();
         AdaptiveTrackProjectionContext contextCopy = getContext(videoRtpPacket);
         if (contextCopy == null)
         {
@@ -220,7 +221,7 @@ public class AdaptiveTrackProjection
 
         int targetIndexCopy = targetIndex;
         boolean accept = contextCopy.accept(
-            videoRtpPacket, videoRtpPacket.getQualityIndex(), targetIndexCopy);
+            packetInfo, videoRtpPacket.getQualityIndex(), targetIndexCopy);
 
         // We check if the context needs a keyframe regardless of whether or not
         // the packet was accepted.
@@ -353,15 +354,15 @@ public class AdaptiveTrackProjection
     /**
      * Rewrites an RTP packet for projection.
      *
-     * @param rtpPacket the RTP packet to rewrite.
+     * @param packetInfo the RTP packet to rewrite.
      */
-   void rewriteRtp(@NotNull VideoRtpPacket rtpPacket)
+   void rewriteRtp(@NotNull PacketInfo packetInfo)
         throws RewriteException
     {
         AdaptiveTrackProjectionContext contextCopy = context;
         if (contextCopy != null)
         {
-            contextCopy.rewriteRtp(rtpPacket);
+            contextCopy.rewriteRtp(packetInfo);
         }
     }
 

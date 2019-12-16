@@ -1,5 +1,6 @@
 package org.jitsi.videobridge.cc.vp8;
 
+import org.jitsi.nlj.*;
 import org.jitsi.nlj.codec.vp8.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
@@ -39,11 +40,12 @@ public class VP8AdaptiveTrackProjectionTest
 
         Vp8PacketGenerator generator = new Vp8PacketGenerator(1);
 
-        Vp8Packet packet = generator.nextPacket();
+        PacketInfo packetInfo = generator.nextPacket();
+        Vp8Packet packet = packetInfo.packetAs();
 
-        assertTrue(context.accept(packet, 0, 0));
+        assertTrue(context.accept(packetInfo, 0, 0));
 
-        context.rewriteRtp(packet);
+        context.rewriteRtp(packetInfo);
 
         assertEquals(10001, packet.getSequenceNumber());
         assertEquals(1003000, packet.getTimestamp());
@@ -71,9 +73,10 @@ public class VP8AdaptiveTrackProjectionTest
 
         for (int i = 0; i < 10000; i++)
         {
-            Vp8Packet packet = generator.nextPacket();
+            PacketInfo packetInfo = generator.nextPacket();
+            Vp8Packet packet = packetInfo.packetAs();
 
-            boolean accepted = context.accept(packet, packet.getTemporalLayerIndex(), targetIndex);
+            boolean accepted = context.accept(packetInfo, packet.getTemporalLayerIndex(), targetIndex);
 
             if (packet.isStartOfFrame() && packet.getTemporalLayerIndex() == 0)
             {
@@ -84,7 +87,7 @@ public class VP8AdaptiveTrackProjectionTest
             {
                 assertTrue(accepted);
 
-                context.rewriteRtp(packet);
+                context.rewriteRtp(packetInfo);
 
                 assertEquals(expectedSeq, packet.getSequenceNumber());
                 assertEquals(expectedTs, packet.getTimestamp());
@@ -134,7 +137,7 @@ public class VP8AdaptiveTrackProjectionTest
         final long expectedTsOffset = RtpUtils.getTimestampDiff(expectedInitialTs, generator.ts);
 
         final int reorderSize = 64;
-        ArrayList<Vp8Packet> buffer = new ArrayList<>(reorderSize);
+        ArrayList<PacketInfo> buffer = new ArrayList<>(reorderSize);
 
         for (int i = 0; i < reorderSize; i++)
         {
@@ -150,13 +153,15 @@ public class VP8AdaptiveTrackProjectionTest
                 payloadType,
                 initialState, logger);
 
-        int latestSeq = buffer.get(0).getSequenceNumber();
+        int latestSeq = ((Vp8Packet)buffer.get(0).getPacket()).getSequenceNumber();
 
         TreeMap<Integer, ProjectedPacket> projectedPackets = new TreeMap<>();
 
         for (int i = 0; i < 10000; i++)
         {
-            Vp8Packet packet = buffer.get(0);
+            PacketInfo packetInfo = buffer.get(0);
+            Vp8Packet packet = packetInfo.packetAs();
+
             int origSeq = packet.getSequenceNumber();
             long origTs = packet.getTimestamp();
             int origTl0PicIdx = packet.getTL0PICIDX();
@@ -165,7 +170,7 @@ public class VP8AdaptiveTrackProjectionTest
             {
                 latestSeq = origSeq;
             }
-            boolean accepted = context.accept(packet, packet.getTemporalLayerIndex(), targetIndex);
+            boolean accepted = context.accept(packetInfo, packet.getTemporalLayerIndex(), targetIndex);
 
             if (RtpUtils.isOlderSequenceNumberThan(origSeq, RtpUtils.applySequenceNumberDelta(latestSeq, -VP8FrameMap.FRAME_MAP_SIZE))) {
                 assertFalse(accepted);
@@ -174,7 +179,7 @@ public class VP8AdaptiveTrackProjectionTest
             {
                 assertTrue(accepted);
 
-                context.rewriteRtp(packet);
+                context.rewriteRtp(packetInfo);
 
                 assertEquals(RtpUtils.applyTimestampDelta(origTs, expectedTsOffset), packet.getTimestamp());
                 assertEquals(origTl0PicIdx, packet.getTL0PICIDX());
@@ -309,24 +314,27 @@ public class VP8AdaptiveTrackProjectionTest
             new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
                 initialState, logger);
 
-        Vp8Packet firstPacket = generator.nextPacket();
+        PacketInfo firstPacketInfo = generator.nextPacket();
+        Vp8Packet firstPacket = firstPacketInfo.packetAs();
 
         for (int i = 0; i < 3; i++)
         {
-            Vp8Packet packet = generator.nextPacket();
+            PacketInfo packetInfo = generator.nextPacket();
+            Vp8Packet packet = packetInfo.packetAs();
 
-            assertFalse(context.accept(packet, packet.getTemporalLayerIndex(), 2));
+            assertFalse(context.accept(packetInfo, packet.getTemporalLayerIndex(), 2));
         }
 
-        assertTrue(context.accept(firstPacket, firstPacket.getTemporalLayerIndex(), 2));
-        context.rewriteRtp(firstPacket);
+        assertTrue(context.accept(firstPacketInfo, firstPacket.getTemporalLayerIndex(), 2));
+        context.rewriteRtp(firstPacketInfo);
 
         for (int i = 0; i < 9996; i++)
         {
-            Vp8Packet packet = generator.nextPacket();
+            PacketInfo packetInfo = generator.nextPacket();
+            Vp8Packet packet = packetInfo.packetAs();
 
-            assertTrue(context.accept(packet, packet.getTemporalLayerIndex(), 2));
-            context.rewriteRtp(packet);
+            assertTrue(context.accept(packetInfo, packet.getTemporalLayerIndex(), 2));
+            context.rewriteRtp(packetInfo);
         }
     }
 
@@ -345,32 +353,36 @@ public class VP8AdaptiveTrackProjectionTest
             new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
                 initialState, logger);
 
-        Vp8Packet firstPacket = generator.nextPacket();
+        PacketInfo firstPacketInfo = generator.nextPacket();
+        Vp8Packet firstPacket = firstPacketInfo.packetAs();
 
         for (int i = 0; i < 4; i++)
         {
-            Vp8Packet packet = generator.nextPacket();
+            PacketInfo packetInfo = generator.nextPacket();
+            Vp8Packet packet = packetInfo.packetAs();
 
-            assertFalse(context.accept(packet, packet.getTemporalLayerIndex(), 2));
+            assertFalse(context.accept(packetInfo, packet.getTemporalLayerIndex(), 2));
         }
 
-        assertFalse(context.accept(firstPacket, firstPacket.getTemporalLayerIndex(), 2));
+        assertFalse(context.accept(firstPacketInfo, firstPacket.getTemporalLayerIndex(), 2));
 
         for (int i = 0; i < 10; i++)
         {
-            Vp8Packet packet = generator.nextPacket();
+            PacketInfo packetInfo = generator.nextPacket();
+            Vp8Packet packet = packetInfo.packetAs();
 
-            assertFalse(context.accept(packet, packet.getTemporalLayerIndex(), 2));
+            assertFalse(context.accept(packetInfo, packet.getTemporalLayerIndex(), 2));
         }
 
         generator.requestKeyframe();
 
         for (int i = 0; i < 9996; i++)
         {
-            Vp8Packet packet = generator.nextPacket();
+            PacketInfo packetInfo = generator.nextPacket();
+            Vp8Packet packet = packetInfo.packetAs();
 
-            assertTrue(context.accept(packet, packet.getTemporalLayerIndex(), 2));
-            context.rewriteRtp(packet);
+            assertTrue(context.accept(packetInfo, packet.getTemporalLayerIndex(), 2));
+            context.rewriteRtp(packetInfo);
         }
     }
 
@@ -389,32 +401,36 @@ public class VP8AdaptiveTrackProjectionTest
             new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
                 initialState, logger);
 
-        Vp8Packet firstPacket = generator.nextPacket();
+        PacketInfo firstPacketInfo = generator.nextPacket();
+        Vp8Packet firstPacket = firstPacketInfo.packetAs();
 
         for (int i = 0; i < 11; i++)
         {
-            Vp8Packet packet = generator.nextPacket();
+            PacketInfo packetInfo = generator.nextPacket();
+            Vp8Packet packet = packetInfo.packetAs();
 
-            assertFalse(context.accept(packet, packet.getTemporalLayerIndex(), 2));
+            assertFalse(context.accept(packetInfo, packet.getTemporalLayerIndex(), 2));
         }
 
-        assertFalse(context.accept(firstPacket, firstPacket.getTemporalLayerIndex(), 2));
+        assertFalse(context.accept(firstPacketInfo, firstPacket.getTemporalLayerIndex(), 2));
 
         for (int i = 0; i < 30; i++)
         {
-            Vp8Packet packet = generator.nextPacket();
+            PacketInfo packetInfo = generator.nextPacket();
+            Vp8Packet packet = packetInfo.packetAs();
 
-            assertFalse(context.accept(packet, packet.getTemporalLayerIndex(), 2));
+            assertFalse(context.accept(packetInfo, packet.getTemporalLayerIndex(), 2));
         }
 
         generator.requestKeyframe();
 
         for (int i = 0; i < 9958; i++)
         {
-            Vp8Packet packet = generator.nextPacket();
+            PacketInfo packetInfo = generator.nextPacket();
+            Vp8Packet packet = packetInfo.packetAs();
 
-            assertTrue(context.accept(packet, packet.getTemporalLayerIndex(), 2));
-            context.rewriteRtp(packet);
+            assertTrue(context.accept(packetInfo, packet.getTemporalLayerIndex(), 2));
+            context.rewriteRtp(packetInfo);
         }
     }
 
@@ -439,14 +455,17 @@ public class VP8AdaptiveTrackProjectionTest
         long expectedTs = 1003000;
         for (int i = 0; i < 10000; i++)
         {
-            Vp8Packet packet1 = generator1.nextPacket();
+            PacketInfo packetInfo1 = generator1.nextPacket();
+            Vp8Packet packet1 = packetInfo1.packetAs();
 
-            assertTrue(context.accept(packet1, packet1.getTemporalLayerIndex() + 3, 5));
+            assertTrue(context.accept(packetInfo1, packet1.getTemporalLayerIndex() + 3, 5));
 
-            Vp8Packet packet2 = generator2.nextPacket();
-            assertFalse(context.accept(packet2, packet2.getTemporalLayerIndex(), 5));
+            PacketInfo packetInfo2 = generator2.nextPacket();
+            Vp8Packet packet2 = packetInfo2.packetAs();
 
-            context.rewriteRtp(packet1);
+            assertFalse(context.accept(packetInfo2, packet2.getTemporalLayerIndex(), 5));
+
+            context.rewriteRtp(packetInfo1);
 
             assertEquals(expectedSeq, packet1.getSequenceNumber());
             assertEquals(expectedTs, packet1.getTimestamp());
@@ -484,19 +503,21 @@ public class VP8AdaptiveTrackProjectionTest
         /* Start by wanting spatial layer 0 */
         for (int i = 0; i < 900; i++)
         {
-            Vp8Packet packet1 = generator1.nextPacket();
+            PacketInfo packetInfo1 = generator1.nextPacket();
+            Vp8Packet packet1 = packetInfo1.packetAs();
 
             if (packet1.isStartOfFrame() && packet1.getTemporalLayerIndex() == 0)
             {
                 expectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(expectedTl0PicIdx, 1);
             }
 
-            assertTrue(context.accept(packet1, packet1.getTemporalLayerIndex(), 2));
+            assertTrue(context.accept(packetInfo1, packet1.getTemporalLayerIndex(), 2));
 
-            context.rewriteRtp(packet1);
+            context.rewriteRtp(packetInfo1);
 
-            Vp8Packet packet2 = generator2.nextPacket();
-            assertFalse(context.accept(packet2, packet2.getTemporalLayerIndex() + 3, 2));
+            PacketInfo packetInfo2 = generator2.nextPacket();
+            Vp8Packet packet2 = packetInfo2.packetAs();
+            assertFalse(context.accept(packetInfo2, packet2.getTemporalLayerIndex() + 3, 2));
 
             assertEquals(expectedSeq, packet1.getSequenceNumber());
             assertEquals(expectedTs, packet1.getTimestamp());
@@ -514,19 +535,21 @@ public class VP8AdaptiveTrackProjectionTest
         /* Switch to wanting spatial layer 1, but don't send a keyframe. We should stay at the higher layer. */
         for (int i = 0; i < 90; i++)
         {
-            Vp8Packet packet1 = generator1.nextPacket();
+            PacketInfo packetInfo1 = generator1.nextPacket();
+            Vp8Packet packet1 = packetInfo1.packetAs();
 
             if (packet1.isStartOfFrame() && packet1.getTemporalLayerIndex() == 0)
             {
                 expectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(expectedTl0PicIdx, 1);
             }
 
-            assertTrue(context.accept(packet1, packet1.getTemporalLayerIndex(), 5));
+            assertTrue(context.accept(packetInfo1, packet1.getTemporalLayerIndex(), 5));
 
-            Vp8Packet packet2 = generator2.nextPacket();
-            assertFalse(context.accept(packet2, packet2.getTemporalLayerIndex() + 3, 5));
+            PacketInfo packetInfo2 = generator2.nextPacket();
+            Vp8Packet packet2 = packetInfo2.packetAs();
+            assertFalse(context.accept(packetInfo2, packet2.getTemporalLayerIndex() + 3, 5));
 
-            context.rewriteRtp(packet1);
+            context.rewriteRtp(packetInfo1);
 
             assertEquals(expectedSeq, packet1.getSequenceNumber());
             assertEquals(expectedTs, packet1.getTimestamp());
@@ -548,7 +571,8 @@ public class VP8AdaptiveTrackProjectionTest
         /* After a keyframe we should accept spatial layer 1 */
         for (int i = 0; i < 9000; i++)
         {
-            Vp8Packet packet1 = generator1.nextPacket();
+            PacketInfo packetInfo1 = generator1.nextPacket();
+            Vp8Packet packet1 = packetInfo1.packetAs();
 
             if (i == 0 && packet1.isStartOfFrame() && packet1.getTemporalLayerIndex() == 0)
             {
@@ -556,23 +580,24 @@ public class VP8AdaptiveTrackProjectionTest
             }
 
             /* We will cut off the layer 0 keyframe after 1 packet, once we see the layer 1 keyframe. */
-            assertEquals(i == 0, context.accept(packet1, packet1.getTemporalLayerIndex(), 5));
+            assertEquals(i == 0, context.accept(packetInfo1, packet1.getTemporalLayerIndex(), 5));
 
             if (i == 0)
             {
-                context.rewriteRtp(packet1);
+                context.rewriteRtp(packetInfo1);
             }
 
-            Vp8Packet packet2 = generator2.nextPacket();
+            PacketInfo packetInfo2 = generator2.nextPacket();
+            Vp8Packet packet2 = packetInfo2.packetAs();
 
             if (packet2.isStartOfFrame() && packet2.getTemporalLayerIndex() == 0)
             {
                 expectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(expectedTl0PicIdx, 1);
             }
 
-            assertTrue(context.accept(packet2, packet2.getTemporalLayerIndex() + 3, 5));
+            assertTrue(context.accept(packetInfo2, packet2.getTemporalLayerIndex() + 3, 5));
 
-            context.rewriteRtp(packet2);
+            context.rewriteRtp(packetInfo2);
 
             if (i == 0)
             {
@@ -654,7 +679,7 @@ public class VP8AdaptiveTrackProjectionTest
             this.ssrc = ssrc;
         }
 
-        public Vp8Packet nextPacket()
+        public PacketInfo nextPacket()
         {
             int tid;
             switch(tidCycle % 4)
@@ -738,7 +763,7 @@ public class VP8AdaptiveTrackProjectionTest
                 packetOfFrame++;
             }
 
-            return vp8Packet;
+            return new PacketInfo(vp8Packet);
         }
 
         private void requestKeyframe()

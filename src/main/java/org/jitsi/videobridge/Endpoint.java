@@ -452,7 +452,7 @@ public class Endpoint
             if (packet instanceof VideoRtpPacket)
             {
                 return acceptVideo
-                        && bitrateController.accept((VideoRtpPacket) packet);
+                        && bitrateController.accept(packetInfo);
             }
             if (packet instanceof AudioRtpPacket)
             {
@@ -498,9 +498,6 @@ public class Endpoint
         Packet packet = packetInfo.getPacket();
         if (packet instanceof VideoRtpPacket)
         {
-            //TODO(brian): we lose all information in PacketInfo here,
-            // Need to change those classes to work with
-            // the new packet types
             boolean accepted = bitrateController.transformRtp(packetInfo);
             if (!accepted)
             {
