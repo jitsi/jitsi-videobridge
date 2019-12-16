@@ -28,7 +28,7 @@ import org.jitsi.rtp.util.*;
  *
  * Instances of this class are *NOT* thread safe. While most internal state of
  * this class instances is final, the sequence number ranges, haveStart/haveEnd,
- * and isKeyframe.
+ * and isKeyframe are not.
  *
  * @author George Politis
  * @author Jonathan Lennox
