@@ -218,7 +218,7 @@ public class VP8AdaptiveTrackProjectionContext
         else
         {
             /* If the earlier frame wasn't projected, and we haven't seen its
-             * final packet, we know it has consume at least one more sequence number. */
+             * final packet, we know it has to consume at least one more sequence number. */
             if (!frame1.isAccepted() && !frame1.hasSeenEndOfFrame() && seqGap > 1)
             {
                 seqGap--;
