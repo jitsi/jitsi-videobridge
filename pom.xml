@@ -267,6 +267,7 @@
       <groupId>org.jitsi</groupId>
       <artifactId>jicoco-test-kotlin</artifactId>
       <version>${jicoco.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 

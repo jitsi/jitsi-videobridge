@@ -16,22 +16,24 @@
 
 package org.jitsi.videobridge.rest.config
 
+import io.kotlintest.TestCase
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldThrow
 import org.jitsi.config.BooleanMockConfigValueGenerator
+import org.jitsi.config.MockConfigSource
 import org.jitsi.config.MockConfigValue
 import org.jitsi.config.MockConfigValueGenerator
 import org.jitsi.config.runBasicTests
 import org.jitsi.videobridge.JitsiConfigTest
 import org.jitsi.videobridge.config.ConditionalPropertyConditionNotMetException
-import org.jitsi.videobridge.testutils.MockConfigSource
 import org.jitsi.videobridge.testutils.resetSingleton
 
 class WebsocketServiceConfigTest : JitsiConfigTest() {
+    // By default install config sources which can be modified later
+    private val legacyConfig = MockConfigSource("legacy", mapOf())
+    private val newConfig = MockConfigSource("new", mapOf())
+
     init {
-        // By default install config sources which can be modified later
-        val legacyConfig = MockConfigSource("legacy", mapOf())
-        val newConfig = MockConfigSource("new", mapOf())
         withLegacyConfig(legacyConfig)
         withNewConfig(newConfig)
         "enabled" {
