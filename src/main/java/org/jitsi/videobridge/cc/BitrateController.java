@@ -732,13 +732,14 @@ public class BitrateController
                 return adaptiveTrackProjection;
             }
 
+            final String endpointID = trackBitrateAllocation.endpointID;
+            final long targetSSRC = trackBitrateAllocation.targetSSRC;
             adaptiveTrackProjection
                 = new AdaptiveTrackProjection(
                     diagnosticContext,
                     trackBitrateAllocation.track, () ->
                         destinationEndpoint.getConference().requestKeyframe(
-                            trackBitrateAllocation.endpointID,
-                            trackBitrateAllocation.targetSSRC),
+                            endpointID, targetSSRC),
                     logger);
 
             for (PayloadType payloadType : payloadTypes.values())
