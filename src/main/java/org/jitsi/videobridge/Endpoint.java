@@ -691,6 +691,7 @@ public class Endpoint
         }
         bandwidthProbing.enabled = false;
         recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing);
+        getConference().encodingsManager.unsubscribe(this);
 
         dtlsTransport.close();
 
