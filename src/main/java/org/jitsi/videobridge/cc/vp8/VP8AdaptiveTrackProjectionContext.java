@@ -131,7 +131,9 @@ public class VP8AdaptiveTrackProjectionContext
     {
         VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
         if (frameMap == null)
+        {
             return null;
+        }
 
         return frameMap.prevFrame(frame);
     }
@@ -144,7 +146,9 @@ public class VP8AdaptiveTrackProjectionContext
     {
         VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
         if (frameMap == null)
+        {
             return null;
+        }
 
         return frameMap.nextFrame(frame);
     }
@@ -157,7 +161,9 @@ public class VP8AdaptiveTrackProjectionContext
     {
         VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
         if (frameMap == null)
+        {
             return null;
+        }
 
         return frameMap.findPrevAcceptedFrame(frame);
     }
@@ -170,7 +176,9 @@ public class VP8AdaptiveTrackProjectionContext
     {
         VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
         if (frameMap == null)
+        {
             return null;
+        }
 
         return frameMap.findNextAcceptedFrame(frame);
     }
@@ -185,7 +193,9 @@ public class VP8AdaptiveTrackProjectionContext
     {
         VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
         if (frameMap == null)
+        {
             return null;
+        }
 
         return frameMap.findNextTl0(frame);
     }
