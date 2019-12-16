@@ -357,7 +357,8 @@ public class VP8AdaptiveTrackProjectionContext
         if (lastVP8FrameProjection.getVP8Frame() != null &&
             !lastVP8FrameProjection.getVP8Frame().hasSeenEndOfFrame())
         {
-            /* Leave a gap to signal that the previously routed frame was incomplete. */
+            /* Leave a gap to signal to the decoder that the previously routed
+               frame was incomplete. */
             projectedSeqGap++;
 
             /* Make sure subsequent packets of the previous projection won't
