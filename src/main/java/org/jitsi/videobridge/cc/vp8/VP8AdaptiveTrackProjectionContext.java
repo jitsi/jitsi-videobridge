@@ -209,8 +209,7 @@ public class VP8AdaptiveTrackProjectionContext
         int seqGap = RtpUtils.getSequenceNumberDelta(frame2.getEarliestKnownSequenceNumber(), frame1.getLatestKnownSequenceNumber());
 
         if (!frame1.isAccepted() && !frame2.isAccepted() &&
-            frame2.getPictureId() ==
-                Vp8Utils.applyPictureIdDelta(frame1.getPictureId(), 1))
+            frame2.isImmediatelyAfter(frame1))
         {
             /* If neither frame is being projected, and they have consecutive
                picture IDs, we don't need to leave any gap. */

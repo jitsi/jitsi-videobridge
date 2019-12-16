@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.codec.vp8.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.rtp.util.*;
@@ -347,5 +348,15 @@ class VP8Frame
                 (tl0PICIDX == pkt.getTL0PICIDX()) &&
                 (pictureId == pkt.getPictureId());
         /* TODO: also check start, end, seq nums? */
+    }
+
+    /**
+     * Check whether this frame is immediately after another one, according
+     * to their extended picture IDs.
+     */
+    boolean isImmediatelyAfter(@NotNull VP8Frame otherFrame)
+    {
+        return pictureId ==
+            Vp8Utils.applyPictureIdDelta(otherFrame.getPictureId(), 1);
     }
 }
