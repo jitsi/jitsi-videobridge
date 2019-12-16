@@ -169,26 +169,33 @@ public class VP8FrameProjection
      */
     void rewriteRtp(@NotNull Vp8Packet pkt)
     {
+        int sequenceNumber = rewriteSeqNo(pkt.getSequenceNumber());
+
+        if (timeSeriesLogger.isTraceEnabled())
+        {
+            timeSeriesLogger.trace(diagnosticContext
+                .makeTimeSeriesPoint("rtp_vp8_rewrite")
+                .addField("orig.rtp.ssrc", pkt.getSsrc())
+                .addField("orig.rtp.timestamp", pkt.getTimestamp())
+                .addField("orig.rtp.seq", pkt.getSequenceNumber())
+                .addField("orig.vp8.pictureid", pkt.getPictureId())
+                .addField("orig.vp8.tl0picidx", pkt.getTL0PICIDX())
+                .addField("proj.rtp.ssrc", ssrc)
+                .addField("proj.rtp.timestamp", timestamp)
+                .addField("proj.rtp.seq", sequenceNumber)
+                .addField("proj.vp8.pictureid", extendedPictureId)
+                .addField("proj.vp8.tl0picidx", tl0PICIDX));
+        }
+
         // update ssrc, sequence number, timestamp, pictureId and tl0picidx
         pkt.setSsrc(ssrc);
         pkt.setTimestamp(timestamp);
 
-        int sequenceNumber = rewriteSeqNo(pkt.getSequenceNumber());
         pkt.setSequenceNumber(sequenceNumber);
 
         pkt.setTL0PICIDX(tl0PICIDX);
         pkt.setPictureId(extendedPictureId);
 
-        if (timeSeriesLogger.isTraceEnabled())
-        {
-            timeSeriesLogger.trace(diagnosticContext
-                    .makeTimeSeriesPoint("rtp_vp8_rewrite")
-                    .addField("rtp.ssrc", ssrc)
-                    .addField("rtp.timestamp", timestamp)
-                    .addField("rtp.seq", sequenceNumber)
-                    .addField("vp8.pictureid", extendedPictureId)
-                    .addField("vp8.tl0picidx", tl0PICIDX));
-        }
     }
 
     /**
