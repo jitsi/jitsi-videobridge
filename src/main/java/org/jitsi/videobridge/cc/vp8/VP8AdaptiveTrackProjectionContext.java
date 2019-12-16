@@ -557,7 +557,7 @@ public class VP8AdaptiveTrackProjectionContext
         if (!(rtpPacket instanceof Vp8Packet))
         {
             logger.info("Got a non-VP8 packet.");
-            throw new RewriteException();
+            throw new RewriteException("Non-VP8 packet in VP8 track projection");
         }
 
         Vp8Packet vp8Packet = (Vp8Packet)rtpPacket;
@@ -567,12 +567,12 @@ public class VP8AdaptiveTrackProjectionContext
         {
             // This packet does not belong to an accepted frame.
             // Possibly it aged off the frame map since accept was called?
-            throw new RewriteException();
+            throw new RewriteException("Frame not in tracker (aged off?)");
         }
 
         if (vp8Frame.getProjection() == null) {
             /* Shouldn't happen for an accepted packet whose frame is still known? */
-            throw new RewriteException();
+            throw new RewriteException("Frame does not have projection?");
         }
 
         vp8Frame.getProjection().rewriteRtp((Vp8Packet) rtpPacket);
