@@ -732,6 +732,13 @@ public class BitrateController
                 return adaptiveTrackProjection;
             }
 
+            // XXX the lambda keeps a reference to the trackBitrateAllocation
+            // (a short lived object under normal circumstances) which keeps
+            // a reference to the Endpoint object that it refers to. That
+            // can cause excessive object retention (i.e. the endpoint is expired
+            // but a reference persists in the adaptiveTrackProjectionMap). We're
+            // creating local final variables and pass that to the lambda function
+            // in order to avoid that.
             final String endpointID = trackBitrateAllocation.endpointID;
             final long targetSSRC = trackBitrateAllocation.targetSSRC;
             adaptiveTrackProjection
