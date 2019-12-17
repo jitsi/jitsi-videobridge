@@ -18,7 +18,6 @@ package org.jitsi.nlj.stats
 
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.spy
 import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.doubles.plusOrMinus
 import io.kotlintest.milliseconds
@@ -35,7 +34,7 @@ import org.jitsi.rtp.rtcp.RtcpSrPacket
 class EndpointConnectionStatsTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-    private val clock: FakeClock = spy()
+    private val clock: FakeClock = FakeClock()
 
     private var mostRecentPublishedRtt: Double = -1.0
     private var numRttUpdates: Int = 0

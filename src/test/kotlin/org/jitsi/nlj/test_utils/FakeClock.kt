@@ -19,12 +19,14 @@ package org.jitsi.nlj.test_utils
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.time.ZoneId
 
 /**
  * A fake [Clock] whose time is advanced manually
  */
-internal abstract class FakeClock(
-    private val debug: Boolean = false
+internal class FakeClock(
+    private val debug: Boolean = false,
+    private val zone_: ZoneId = ZoneId.systemDefault()
 ) : Clock() {
     private var now = Instant.ofEpochMilli(0)
 
@@ -46,5 +48,15 @@ internal abstract class FakeClock(
     fun setTime(instant: Instant) {
         log("clock setting time to $instant")
         now = instant
+    }
+
+    override fun getZone(): ZoneId {
+        return zone_
+    }
+
+    override fun withZone(zone: ZoneId?): Clock {
+        if (zone_ == zone)
+            return this
+        return FakeClock(zone_ = zone!!)
     }
 }
