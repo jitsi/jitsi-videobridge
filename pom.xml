@@ -1,17 +1,12 @@
-<project
-    xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-
   <groupId>org.jitsi</groupId>
   <artifactId>jitsi-videobridge</artifactId>
   <version>2.1-SNAPSHOT</version>
   <packaging>jar</packaging>
-
   <name>jitsi-videobridge</name>
   <url>https://github.com/jitsi/jitsi-videobridge</url>
-
   <properties>
     <assembly.skipAssembly>true</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
@@ -20,14 +15,12 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <smack.version>4.2.4-47d17fc</smack.version>
     <jitsi.utils.version>1.0-26-g20ce8cc</jitsi.utils.version>
-    <jicoco.version>1.1-13-g118a064</jicoco.version>
+    <jicoco.version>1.1-14-g1cd1c19</jicoco.version>
   </properties>
-
   <dependencyManagement>
     <dependencies>
     </dependencies>
   </dependencyManagement>
-
   <dependencies>
     <dependency>
       <groupId>com.googlecode.json-simple</groupId>
@@ -106,12 +99,12 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco</artifactId>
-      <version>${jicoco.version}</version>
+      <version>10.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco-kotlin</artifactId>
-      <version>${jicoco.version}</version>
+      <version>10.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -124,7 +117,7 @@
       <artifactId>jitsi-stats</artifactId>
       <version>1.0-3-gd5cc199</version>
     </dependency>
-     <dependency>
+    <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-xmpp-extensions</artifactId>
       <version>1.0-2-g6624b3a</version>
@@ -149,7 +142,6 @@
       <artifactId>xpp3</artifactId>
       <version>1.1.4c</version>
     </dependency>
-
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
       <artifactId>kotlin-stdlib-jdk8</artifactId>
@@ -191,7 +183,6 @@
       <artifactId>reflections</artifactId>
       <version>0.9.11</version>
     </dependency>
-
     <!-- runtime -->
     <dependency>
       <groupId>rusv</groupId>
@@ -206,27 +197,27 @@
       <version>3.4</version>
       <scope>test</scope>
     </dependency>
-	<!-- https://mvnrepository.com/artifact/org.powermock/powermock-core -->
-	<dependency>
-		<groupId>org.powermock</groupId>
-		<artifactId>powermock-core</artifactId>
-		<version>1.7.3</version>
-		<scope>test</scope>
-	</dependency>
-	<!-- https://mvnrepository.com/artifact/org.powermock/powermock-api-easymock -->
-	<dependency>
-		<groupId>org.powermock</groupId>
-		<artifactId>powermock-api-easymock</artifactId>
-		<version>1.7.3</version>
-		<scope>test</scope>
-	</dependency>
-	<!-- https://mvnrepository.com/artifact/org.powermock/powermock-module-junit4 -->
-	<dependency>
-		<groupId>org.powermock</groupId>
-		<artifactId>powermock-module-junit4</artifactId>
-		<version>1.7.3</version>
-		<scope>test</scope>
-	</dependency>
+    <!-- https://mvnrepository.com/artifact/org.powermock/powermock-core -->
+    <dependency>
+      <groupId>org.powermock</groupId>
+      <artifactId>powermock-core</artifactId>
+      <version>1.7.3</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.powermock/powermock-api-easymock -->
+    <dependency>
+      <groupId>org.powermock</groupId>
+      <artifactId>powermock-api-easymock</artifactId>
+      <version>1.7.3</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.powermock/powermock-module-junit4 -->
+    <dependency>
+      <groupId>org.powermock</groupId>
+      <artifactId>powermock-module-junit4</artifactId>
+      <version>1.7.3</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.test-framework</groupId>
       <artifactId>jersey-test-framework-core</artifactId>
@@ -266,11 +257,10 @@
     <dependency>
       <groupId>org.jitsi</groupId>
       <artifactId>jicoco-test-kotlin</artifactId>
-      <version>${jicoco.version}</version>
+      <version>10.0-SNAPSHOT</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
-
   <build>
     <plugins>
       <plugin>
@@ -380,7 +370,7 @@
               <executable>java</executable>
               <arguments>
                 <argument>-classpath</argument>
-                <classpath />
+                <classpath/>
                 <argument>-Djava.util.logging.config.file=${project.basedir}/lib/logging.properties</argument>
                 <argument>${exec.mainClass}</argument>
               </arguments>
@@ -436,9 +426,9 @@
         </executions>
         <configuration>
           <jvmTarget>1.8</jvmTarget>
-            <args>
-              <arg>-Xallow-result-return-type</arg>
-            </args>
+          <args>
+            <arg>-Xallow-result-return-type</arg>
+          </args>
         </configuration>
       </plugin>
       <plugin>
@@ -459,12 +449,16 @@
           <execution>
             <id>java-compile</id>
             <phase>compile</phase>
-            <goals> <goal>compile</goal> </goals>
+            <goals>
+              <goal>compile</goal>
+            </goals>
           </execution>
           <execution>
             <id>java-test-compile</id>
             <phase>test-compile</phase>
-            <goals> <goal>testCompile</goal> </goals>
+            <goals>
+              <goal>testCompile</goal>
+            </goals>
           </execution>
         </executions>
         <configuration>
@@ -480,12 +474,11 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.2</version>
         <configuration>
-            <reuseForks>false</reuseForks>
+          <reuseForks>false</reuseForks>
         </configuration>
       </plugin>
     </plugins>
   </build>
-
   <repositories>
     <repository>
       <id>jitsi-maven-repository-releases</id>
