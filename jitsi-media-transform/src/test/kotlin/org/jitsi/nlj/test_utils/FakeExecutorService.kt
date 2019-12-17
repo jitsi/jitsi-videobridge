@@ -9,7 +9,7 @@ import java.util.concurrent.Future
 
 internal abstract class FakeExecutorService : ExecutorService {
     private var jobs = JobsTimeline()
-    val clock: FakeClock = stubOnlySpy()
+    val clock: FakeClock = FakeClock()
 
     override fun execute(command: Runnable) {
         jobs.add(Job(command, clock.instant()))

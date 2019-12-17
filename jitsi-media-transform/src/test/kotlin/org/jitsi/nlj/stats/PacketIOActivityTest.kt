@@ -16,7 +16,6 @@
 
 package org.jitsi.nlj.stats
 
-import com.nhaarman.mockitokotlin2.spy
 import io.kotlintest.IsolationMode
 import io.kotlintest.minutes
 import io.kotlintest.seconds
@@ -28,7 +27,7 @@ class PacketIOActivityTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val packetIoActivity = PacketIOActivity()
-    private val clock: FakeClock = spy()
+    private val clock: FakeClock = FakeClock()
 
     init {
         "Last packet time values" {

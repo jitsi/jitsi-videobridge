@@ -4,7 +4,6 @@ import com.nhaarman.mockitokotlin2.argumentCaptor
 import com.nhaarman.mockitokotlin2.doNothing
 import com.nhaarman.mockitokotlin2.eq
 import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.spy
 import com.nhaarman.mockitokotlin2.whenever
 import io.kotlintest.IsolationMode
 import io.kotlintest.Spec
@@ -24,7 +23,7 @@ import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 class TccGeneratorNodeTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-    private val clock: FakeClock = spy()
+    private val clock: FakeClock = FakeClock()
     private val tccPackets = mutableListOf<RtcpPacket>()
     private val onTccReady = { tccPacket: RtcpPacket -> tccPackets.add(tccPacket); Unit }
     private val streamInformationStore: StreamInformationStore = mock()
