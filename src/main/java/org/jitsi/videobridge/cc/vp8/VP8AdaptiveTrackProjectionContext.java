@@ -423,7 +423,7 @@ public class VP8AdaptiveTrackProjectionContext
 
         VP8Frame f1 = refFrame, f2;
         int refSeq;
-        if (RtpUtils.isOlderTimestampThan(refFrame.getLatestKnownSequenceNumber(), frame.getEarliestKnownSequenceNumber()))
+        if (RtpUtils.isOlderSequenceNumberThan(refFrame.getLatestKnownSequenceNumber(), frame.getEarliestKnownSequenceNumber()))
         {
             do
             {
