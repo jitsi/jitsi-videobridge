@@ -16,51 +16,60 @@
 
 package org.jitsi.videobridge.health.config
 
-import org.jitsi.config.legacyProperty
-import org.jitsi.config.newProperty
-import org.jitsi.config.simple
-import org.jitsi.utils.config.dsl.multiProperty
+import org.jitsi.config.LegacyFallbackConfigProperty
+import org.jitsi.config.legacyConfigAttributes
+import org.jitsi.config.newConfigAttributes
+import org.jitsi.utils.config.FallbackProperty
 import java.time.Duration
 
 class HealthConfig {
-    companion object {
-        private val interval = multiProperty<Long> {
-            legacyProperty {
-                name("org.jitsi.videobridge.health.INTERVAL")
-                readOnce()
-            }
-            newProperty {
-                name("videobridge.health.interval")
-                readOnce()
-                retrievedAs<Duration>() convertedBy { it.toMillis() }
-            }
+    class Config {
+        companion object {
+            class HealthIntervalProperty : FallbackProperty<Long>(
+                legacyConfigAttributes {
+                    name("org.jitsi.videobridge.health.INTERVAL")
+                    readOnce()
+                },
+                newConfigAttributes {
+                    name("videobridge.health.interval")
+                    readOnce()
+                    retrievedAs<Duration>() convertedBy { it.toMillis() }
+                }
+            )
+
+            private val interval = HealthIntervalProperty()
+
+            @JvmStatic
+            fun getInterval(): Long = interval.value
+
+            class TimeoutProperty : FallbackProperty<Long>(
+                legacyConfigAttributes {
+                    name("org.jitsi.videobridge.health.TIMEOUT")
+                    readOnce()
+                },
+                newConfigAttributes {
+                    name("videobridge.health.timeout")
+                    readOnce()
+                    retrievedAs<Duration>() convertedBy { it.toMillis() }
+                }
+            )
+
+            private val timeout = TimeoutProperty()
+
+            @JvmStatic
+            fun getTimeout(): Long = timeout.value
+
+            class StickyFailuresProperty : LegacyFallbackConfigProperty<Boolean>(
+                Boolean::class,
+                readOnce = true,
+                legacyName = "org.jitsi.videobridge.health.STICKY_FAILURES",
+                newName = "videobridge.health.sticky-failures"
+            )
+
+            private val stickyFailures = StickyFailuresProperty()
+
+            @JvmStatic
+            fun stickyFailures() = stickyFailures.value
         }
-
-        @JvmStatic
-        fun getInterval(): Long = interval.value
-
-        private val timeout = multiProperty<Long> {
-            legacyProperty {
-                name("org.jitsi.videobridge.health.TIMEOUT")
-                readOnce()
-            }
-            newProperty {
-                name("videobridge.health.timeout")
-                readOnce()
-                retrievedAs<Duration>() convertedBy { it.toMillis() }
-            }
-        }
-
-        @JvmStatic
-        fun getTimeout(): Long = timeout.value
-
-        private val stickyFailures = simple<Boolean>(
-            readOnce = true,
-            legacyName = "org.jitsi.videobridge.health.STICKY_FAILURES",
-            newName = "videobridge.health.sticky-failures"
-        )
-
-        @JvmStatic
-        fun stickyFailures() = stickyFailures.value
     }
 }

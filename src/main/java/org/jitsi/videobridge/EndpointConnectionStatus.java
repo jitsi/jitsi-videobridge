@@ -25,6 +25,7 @@ import java.time.*;
 import java.util.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
+import static org.jitsi.videobridge.EndpointConnectionStatusConfig.*;
 
 /**
  * This module monitors all endpoints across all conferences currently hosted
@@ -360,23 +361,5 @@ public class EndpointConnectionStatus
         inactiveEndpoints.stream()
             .filter(e -> e.getConference() == conference)
             .forEach(e -> sendEndpointConnectionStatus(e, false, endpoint));
-    }
-
-    /**
-     * We can no longer embed the config class here directly (because it's in
-     * kotlin) and this class is in the top-level package, so the config file
-     * had to get a specific (and long) name.  This class is a wrapper for
-     * convenience.
-     */
-    protected static class Config {
-        public static Duration getFirstTransferTimeout()
-        {
-            return EndpointConnectionStatusConfig.getFirstTransferTimeout();
-        }
-
-        public static Duration getMaxInactivityLimit()
-        {
-            return EndpointConnectionStatusConfig.getMaxInactivityLimit();
-        }
     }
 }
