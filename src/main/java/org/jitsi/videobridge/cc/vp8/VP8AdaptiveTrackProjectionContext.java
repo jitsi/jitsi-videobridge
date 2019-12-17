@@ -306,14 +306,15 @@ public class VP8AdaptiveTrackProjectionContext
                 }
             }
 
-            long nowMs = System.currentTimeMillis();
+            long receivedMs = packetInfo.getReceivedTime();
             boolean accepted = vp8QualityFilter
-                .acceptFrame(frame, incomingIndex, targetIndex, nowMs);
+                .acceptFrame(frame, incomingIndex, targetIndex, receivedMs);
             frame.setAccepted(accepted);
 
             if (accepted)
             {
-                VP8FrameProjection projection = createProjection(frame, vp8Packet);
+                VP8FrameProjection projection = createProjection(frame, vp8Packet,
+                    receivedMs);
                 frame.setProjection(projection);
 
                 if (RtpUtils.isNewerSequenceNumberThan(projection.getEarliestProjectedSequence(),
@@ -331,25 +332,24 @@ public class VP8AdaptiveTrackProjectionContext
      * Create a projection for this frame.
      */
     @NotNull
-    private VP8FrameProjection createProjection(@NotNull VP8Frame frame, @NotNull Vp8Packet initialPacket)
+    private VP8FrameProjection createProjection(@NotNull VP8Frame frame, @NotNull Vp8Packet initialPacket, long receivedMs)
     {
         if (frameIsNewSsrc(frame))
         {
-            return createLayerSwitchProjection(frame, initialPacket);
+            return createLayerSwitchProjection(frame, initialPacket, receivedMs);
         }
 
-        return createInLayerProjection(frame, initialPacket);
+        return createInLayerProjection(frame, initialPacket, receivedMs);
     }
 
     /**
      * Create a projection for this frame. It is the first frame sent for a layer.
      */
     @NotNull
-    private VP8FrameProjection createLayerSwitchProjection(@NotNull VP8Frame frame, @NotNull Vp8Packet initialPacket)
+    private VP8FrameProjection createLayerSwitchProjection(@NotNull VP8Frame frame, @NotNull Vp8Packet initialPacket, long receivedMs)
     {
         assert(frame.isKeyframe());
         assert(initialPacket.isStartOfFrame());
-        long nowMs = System.currentTimeMillis();
 
         int projectedSeqGap = 1;
 
@@ -374,7 +374,7 @@ public class VP8AdaptiveTrackProjectionContext
         long tsDelta;
         if (lastVP8FrameProjection.getCreatedMs() != 0)
         {
-            tsDelta = 3000 * Math.max(1, (nowMs - lastVP8FrameProjection.getCreatedMs()) / 33);
+            tsDelta = 3000 * Math.max(1, (receivedMs - lastVP8FrameProjection.getCreatedMs()) / 33);
         }
         else
         {
@@ -400,7 +400,7 @@ public class VP8AdaptiveTrackProjectionContext
             new VP8FrameProjection(diagnosticContext, logger,
                 frame, lastVP8FrameProjection.getSSRC(), projectedTs,
                 RtpUtils.getSequenceNumberDelta(projectedSeq, initialPacket.getSequenceNumber()),
-                picId, tl0PicIdx, nowMs
+                picId, tl0PicIdx, receivedMs
             );
 
         return projection;
@@ -411,10 +411,10 @@ public class VP8AdaptiveTrackProjectionContext
      * of this layer.
      */
     @NotNull
-    private VP8FrameProjection createInLayerProjection(@NotNull VP8Frame frame, @NotNull VP8Frame refFrame, @NotNull Vp8Packet initialPacket)
+    private VP8FrameProjection createInLayerProjection(@NotNull VP8Frame frame,
+        @NotNull VP8Frame refFrame, @NotNull Vp8Packet initialPacket,
+        long receivedMs)
     {
-        long nowMs = System.currentTimeMillis();
-
         long tsGap = RtpUtils.getTimestampDiff(frame.getTimestamp(), refFrame.getTimestamp());
         int tl0Gap = Vp8Utils.getTl0PicIdxDelta(frame.getTl0PICIDX(), refFrame.getTl0PICIDX());
         int seqGap = 0;
@@ -454,7 +454,7 @@ public class VP8AdaptiveTrackProjectionContext
             new VP8FrameProjection(diagnosticContext, logger,
                 frame, lastVP8FrameProjection.getSSRC(), projectedTs,
                 RtpUtils.getSequenceNumberDelta(projectedSeq, initialPacket.getSequenceNumber()),
-                projectedPicId, projectedTl0PicIdx, nowMs
+                projectedPicId, projectedTl0PicIdx, receivedMs
             );
 
         return projection;
@@ -465,25 +465,26 @@ public class VP8AdaptiveTrackProjectionContext
      * of this layer.
      */
     @NotNull
-    private VP8FrameProjection createInLayerProjection(@NotNull VP8Frame frame, @NotNull Vp8Packet initialPacket)
+    private VP8FrameProjection createInLayerProjection(@NotNull VP8Frame frame, @NotNull Vp8Packet initialPacket, long receivedMs)
     {
         VP8Frame prevFrame = findPrevAcceptedFrame(frame);
         if (prevFrame != null)
         {
-            return createInLayerProjection(frame, prevFrame, initialPacket);
+            return createInLayerProjection(frame, prevFrame, initialPacket, receivedMs);
         }
         /* prev frame has rolled off beginning of frame map, try next frame */
         VP8Frame nextFrame = findNextAcceptedFrame(frame);
         if (nextFrame != null)
         {
-            return createInLayerProjection(frame, nextFrame, initialPacket);
+            return createInLayerProjection(frame, nextFrame, initialPacket, receivedMs);
         }
 
         /* Neither previous or next is found. Very big frame? Use previous projected.
            (This must be valid because we don't execute this function unless
            frameIsNewSsrc has returned false.)
          */
-        return createInLayerProjection(frame, lastVP8FrameProjection.getVP8Frame(), initialPacket);
+        return createInLayerProjection(frame, lastVP8FrameProjection.getVP8Frame(),
+            initialPacket, receivedMs);
     }
 
     @Override

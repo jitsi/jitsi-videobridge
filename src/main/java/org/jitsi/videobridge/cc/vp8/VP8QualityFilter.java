@@ -105,13 +105,13 @@ class VP8QualityFilter
      * @param incomingIndex the quality index of the incoming RTP packet
      * @param externalTargetIndex the target quality index that the user of this
      * instance wants to achieve.
-     * @param nowMs the current time (in millis)
+     * @param receivedMs the current time (in millis)
      * @return true to accept the VP8 frame, otherwise false.
      */
     synchronized boolean acceptFrame(
         @NotNull VP8Frame frame,
         int incomingIndex,
-        int externalTargetIndex, long nowMs)
+        int externalTargetIndex, long receivedMs)
     {
         // We make local copies of the externalTemporalLayerIdTarget and the
         // externalSpatialLayerIdTarget (as they may be updated by some other
@@ -158,11 +158,11 @@ class VP8QualityFilter
         {
             logger.debug(() -> "Quality filter got keyframe for stream "
                     + frame.getSsrc());
-            return acceptKeyframe(spatialLayerId, nowMs);
+            return acceptKeyframe(spatialLayerId, receivedMs);
         }
         else if (currentSpatialLayerId > SUSPENDED_LAYER_ID)
         {
-            if (isOutOfSwitchingPhase(nowMs) && isPossibleToSwitch(spatialLayerId))
+            if (isOutOfSwitchingPhase(receivedMs) && isPossibleToSwitch(spatialLayerId))
             {
                 // XXX(george) i've noticed some "rogue" base layer keyframes
                 // that trigger this. what happens is the client sends a base
@@ -220,12 +220,12 @@ class VP8QualityFilter
      * Returns a boolean that indicates whether we are in layer switching phase
      * or not.
      *
-     * @param nowMs the current time (in millis)
+     * @param receivedMs the time the latest frame was received (in millis)
      * @return true if we're in layer switching phase, false otherwise.
      */
-    private synchronized boolean isOutOfSwitchingPhase(long nowMs)
+    private synchronized boolean isOutOfSwitchingPhase(long receivedMs)
     {
-        long deltaMs = nowMs - mostRecentKeyframeGroupArrivalTimeMs;
+        long deltaMs = receivedMs - mostRecentKeyframeGroupArrivalTimeMs;
         return deltaMs > MIN_KEY_FRAME_WAIT_MS;
     }
 
@@ -267,11 +267,11 @@ class VP8QualityFilter
      * synchronized keyword because there's only one thread accessing this
      * method at a time.
      *
-     * @param nowMs the current time (in millis)
+     * @param receivedMs the time the frame was received (in millis)
      * @return true to accept the VP8 keyframe, otherwise false.
      */
     private synchronized boolean acceptKeyframe(
-        int spatialLayerIdOfKeyframe, long nowMs)
+        int spatialLayerIdOfKeyframe, long receivedMs)
     {
         // This branch writes the {@link #currentSpatialLayerId} and it
         // determines whether or not we should switch to another simulcast
@@ -292,14 +292,14 @@ class VP8QualityFilter
         // whether we'll be able to achieve the internalSpatialLayerIdTarget.
         needsKeyframe = false;
 
-        if (isOutOfSwitchingPhase(nowMs))
+        if (isOutOfSwitchingPhase(receivedMs))
         {
             // During the switching phase we always project the first
             // keyframe because it may very well be the only one that we
             // receive (i.e. the endpoint is sending low quality only). Then
             // we try to approach the target.
 
-            mostRecentKeyframeGroupArrivalTimeMs = nowMs;
+            mostRecentKeyframeGroupArrivalTimeMs = receivedMs;
 
             logger.debug(() -> "First keyframe in this kf group " +
                 "currentSpatialLayerId: " + spatialLayerIdOfKeyframe +

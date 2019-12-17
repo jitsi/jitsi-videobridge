@@ -1,5 +1,6 @@
 package org.jitsi.videobridge.cc.vp8;
 
+import org.bouncycastle.util.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.codec.vp8.*;
 import org.jitsi.nlj.format.*;
@@ -604,8 +605,6 @@ public class VP8AdaptiveTrackProjectionTest
                 /* We leave a 2-packet gap for the layer 0 keyframe. */
                 expectedSeq += 2;
                 /* ts will advance by an extra 3000 samples for the extra frame. */
-                /* (N.B. this is adjusted by elapsed wall time; if you stop in a
-                  debugger this value will be more and the test will fail. */
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
                 /* pid id and tl0picidx will advance by 1 for the extra keyframe. */
                 expectedPicId = Vp8Utils.applyPictureIdDelta(expectedPicId, 1);
@@ -673,6 +672,7 @@ public class VP8AdaptiveTrackProjectionTest
         private boolean keyframeRequested = false;
         private int tidCycle = 0;
         private long ssrc = 0xcafebabeL;
+        private long receivedTime = 1577836800000L; /* 2020-01-01 00:00:00 UTC */
 
         public void setSsrc(long ssrc)
         {
@@ -744,6 +744,9 @@ public class VP8AdaptiveTrackProjectionTest
             vp8Packet.setPictureId(picId);
             vp8Packet.setTL0PICIDX(tl0picidx);
 
+            PacketInfo info = new PacketInfo(vp8Packet);
+            info.setReceivedTime(receivedTime);
+
             seq = RtpUtils.applySequenceNumberDelta(seq, 1);
             if (endOfFrame)
             {
@@ -757,13 +760,14 @@ public class VP8AdaptiveTrackProjectionTest
                 {
                     tidCycle = 0;
                 }
+                receivedTime += 33; /* 33 ms per frame */
             }
             else
             {
                 packetOfFrame++;
             }
 
-            return new PacketInfo(vp8Packet);
+            return info;
         }
 
         private void requestKeyframe()
