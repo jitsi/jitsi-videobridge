@@ -16,7 +16,7 @@
 package org.jitsi.videobridge.xmpp;
 
 import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.health.*;
 import org.jitsi.xmpp.mucclient.*;
@@ -25,6 +25,8 @@ import org.json.simple.*;
 import org.osgi.framework.*;
 
 import java.util.*;
+
+import static org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig.*;
 
 /**
  * Provides jitsi-videobridge functions through an XMPP client connection.
@@ -38,8 +40,8 @@ public class ClientConnectionImpl
      * The {@link Logger} used by the {@link ClientConnectionImpl}
      * class and its instances for logging output.
      */
-    private static final org.jitsi.utils.logging.Logger logger
-        =  org.jitsi.utils.logging.Logger.getLogger(ClientConnectionImpl.class);
+    private static final Logger logger
+        =  new LoggerImpl(ClientConnectionImpl.class.getName());
 
     /**
      * The prefix of the property names used to configure this bundle.
@@ -64,15 +66,6 @@ public class ClientConnectionImpl
     @Override
     public void start(BundleContext bundleContext)
     {
-        ConfigurationService config
-            = ServiceUtils2.getService(
-                bundleContext, ConfigurationService.class);
-        if (config == null)
-        {
-            logger.info("Not using XMPP user login; no config service.");
-            return;
-        }
-
         // Register this instance as an OSGi service.
         Collection<ClientConnectionImpl> userLoginBundles
             = ServiceUtils2.getServices(
@@ -94,10 +87,8 @@ public class ClientConnectionImpl
                 ShutdownIQ.createGracefulShutdownIQ());
             mucClientManager.setIQListener(this);
 
-            Collection<MucClientConfiguration> configurations
-                = MucClientConfiguration.loadFromConfigService(
-                    config, PREFIX, true);
-            configurations.forEach(c -> mucClientManager.addMucClient(c));
+            Config.getClientConfigs()
+                .forEach(cfg -> mucClientManager.addMucClient(cfg));
 
             bundleContext.registerService(
                 ClientConnectionImpl.class, this, null);

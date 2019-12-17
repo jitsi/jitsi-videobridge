@@ -25,6 +25,7 @@ import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 
+import java.time.*;
 import java.util.*;
 
 /**
@@ -102,7 +103,9 @@ public class ChannelShim
     private final long localSsrc;
 
     /**
-     * This channel's direction.
+     * This channel's direction from the perspective of the bridge.
+     * We expect it to be one of 'inactive', 'sendonly', 'recvonly', or
+     * 'sendrecv'.
      */
     private String direction = "sendrecv";
 
@@ -164,9 +167,9 @@ public class ChannelShim
      * Gets this channel's creation timestamp.
      * @return
      */
-    public long getCreationTimestampMs()
+    public Instant getCreationTimestamp()
     {
-        return creationTimestampMs;
+        return Instant.ofEpochMilli(creationTimestampMs);
     }
 
     /**
@@ -250,6 +253,10 @@ public class ChannelShim
                         .toArray();
 
                 iq.setSSRCs(ssrcs);
+            }
+
+            if (sourceGroups != null) {
+                sourceGroups.forEach(iq::addSourceGroup);
             }
         }
     }
@@ -366,12 +373,26 @@ public class ChannelShim
     }
 
     /**
-     * Sets the direction of this channel.
+     * Checks if this media channel allows media to be sent through it (from
+     * the perspective of the bridge).
+     */
+    public boolean allowsSendingMedia()
+    {
+        return "sendrecv".equalsIgnoreCase(direction) ||
+            "sendonly".equalsIgnoreCase(direction);
+    }
+
+    /**
+     * Sets the media direction of this channel.
      * @param direction the direction to set.
      */
     public void setDirection(String direction)
     {
-        this.direction = direction;
+        if (!Objects.equals(this.direction, direction))
+        {
+            this.direction = direction;
+            this.endpoint.updateAcceptedMediaTypes();
+        }
     }
 
     /**

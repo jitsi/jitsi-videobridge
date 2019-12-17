@@ -19,12 +19,13 @@ import org.ice4j.ice.harvest.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.health.config.*;
 import org.jitsi.videobridge.transport.*;
 import org.jitsi.videobridge.xmpp.*;
 
 import java.io.*;
 import java.util.*;
+
+import static org.jitsi.videobridge.health.config.HealthConfig.*;
 
 /**
  * Checks the health of {@link Videobridge}.
@@ -236,7 +237,7 @@ public class Health
      */
     public Health(Videobridge videobridge)
     {
-        super(videobridge, HealthConfig.getInterval(), true);
+        super(videobridge, Config.getInterval(), true);
 
         startMs = System.currentTimeMillis();
 
@@ -277,7 +278,7 @@ public class Health
         long duration = System.currentTimeMillis() - start;
         lastResultMs = start + duration;
 
-        if (HealthConfig.stickyFailures() && hasFailed && exception == null)
+        if (Config.stickyFailures() && hasFailed && exception == null)
         {
             // We didn't fail this last test, but we've failed before and
             // sticky failures are enabled.
@@ -292,7 +293,7 @@ public class Health
         {
             logger.info(
                 "Performed a successful health check in " + duration
-                    + "ms. Sticky failure: " + (HealthConfig.stickyFailures() && hasFailed));
+                    + "ms. Sticky failure: " + (Config.stickyFailures() && hasFailed));
         }
         else
         {
@@ -317,7 +318,7 @@ public class Health
         long lastResultMs = this.lastResultMs;
         long timeSinceLastResult = System.currentTimeMillis() - lastResultMs;
 
-        if (timeSinceLastResult > HealthConfig.getTimeout())
+        if (timeSinceLastResult > Config.getTimeout())
         {
             throw new Exception(
                 "No health checks performed recently, the last result was "

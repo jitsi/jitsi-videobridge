@@ -23,8 +23,7 @@ import org.jitsi.nlj.rtp.bandwidthestimation.*;
 import org.jitsi.nlj.srtp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.*;
-import org.jitsi.nlj.util.LocalSsrcAssociation;
-import org.jitsi.nlj.util.RemoteSsrcAssociation;
+import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
@@ -32,9 +31,7 @@ import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.*;
-import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
-import org.jitsi.utils.logging2.LoggerImpl;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
@@ -55,6 +52,7 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
+import java.util.function.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
@@ -102,6 +100,18 @@ public class Endpoint
     private SctpManager sctpManager;
 
     /**
+     * The time at which this endpoint was created (in millis since epoch)
+     */
+    private final Instant creationTime;
+
+    /**
+     * How long we'll give an endpoint to either successfully establish
+     * an ICE connection or fail before we expire it.
+     */
+    //TODO: make this configurable
+    private static final Duration EP_TIMEOUT = Duration.ofMinutes(2);
+
+    /**
      * TODO Brian
      */
     private final SctpHandler sctpHandler = new SctpHandler();
@@ -126,7 +136,7 @@ public class Endpoint
     /**
      * A count of how many endpoints have 'selected' this endpoint
      */
-    private AtomicInteger selectedCount = new AtomicInteger(0);
+    private final AtomicInteger selectedCount = new AtomicInteger(0);
 
     /**
      * The diagnostic context of this instance.
@@ -155,23 +165,31 @@ public class Endpoint
     private final Transceiver transceiver;
 
     /**
-     * The list of {@link ChannelShim}s associated with this endpoint. This
+     * The set of {@link ChannelShim}s associated with this endpoint. This
      * allows us to expire the endpoint once all of its 'channels' have been
-     * removed.
+     * removed. The set of channels shims allows to determine if endpoint
+     * can accept audio or video.
      */
-    final List<ChannelShim> channelShims = new LinkedList<>();
+    private final Set<ChannelShim> channelShims = ConcurrentHashMap.newKeySet();
 
     /**
      * Whether this endpoint should accept audio packets. We set this according
-     * to whether the endpoint has an audio Colibri channel.
+     * to whether the endpoint has an audio Colibri channel whose direction
+     * allows sending.
      */
-    private boolean acceptAudio = false;
+    private volatile boolean acceptAudio = false;
 
     /**
      * Whether this endpoint should accept video packets. We set this according
-     * to whether the endpoint has a video Colibri channel.
+     * to whether the endpoint has a video Colibri channel whose direction
+     * allows sending.
      */
-    private boolean acceptVideo = false;
+    private volatile boolean acceptVideo = false;
+
+    /**
+     * The clock used by this endpoint
+     */
+    private final Clock clock;
 
     /**
      * Whether or not the bridge should be the peer which opens the data channel
@@ -200,32 +218,37 @@ public class Endpoint
      * otherwise - {@code false}
      */
     public Endpoint(
-            String id,
-            Conference conference,
-            Logger parentLogger,
-            boolean iceControlling)
+        String id,
+        Conference conference,
+        Logger parentLogger,
+        boolean iceControlling,
+        Clock clock)
         throws IOException
     {
         super(conference, id, parentLogger);
 
+        this.clock = clock;
+
+        creationTime = clock.instant();
         diagnosticContext = conference.newDiagnosticContext();
-        transceiver
-                = new Transceiver(
-                id,
-                TaskPools.CPU_POOL,
-                TaskPools.CPU_POOL,
-                TaskPools.SCHEDULED_POOL,
-                diagnosticContext,
-                logger);
+        transceiver = new Transceiver(
+            id,
+            TaskPools.CPU_POOL,
+            TaskPools.CPU_POOL,
+            TaskPools.SCHEDULED_POOL,
+            diagnosticContext,
+            logger,
+            clock
+        );
         transceiver.setIncomingPacketHandler(
-                new ConsumerNode("receiver chain handler")
+            new ConsumerNode("receiver chain handler")
+            {
+                @Override
+                protected void consume(@NotNull PacketInfo packetInfo)
                 {
-                    @Override
-                    protected void consume(@NotNull PacketInfo packetInfo)
-                    {
-                        handleIncomingPacket(packetInfo);
-                    }
-                });
+                    handleIncomingPacket(packetInfo);
+                }
+            });
         bitrateController = new BitrateController(this, diagnosticContext, logger);
 
         messageTransport = new EndpointMessageTransport(this, logger);
@@ -245,7 +268,6 @@ public class Endpoint
             bitrateController.bandwidthChanged((long)newValueBps.getBps());
         });
         transceiver.onBandwidthEstimateChanged(bandwidthProbing);
-        conference.encodingsManager.subscribe(this);
 
         bandwidthProbing.enabled = true;
         recurringRunnableExecutor.registerRecurringRunnable(bandwidthProbing);
@@ -255,8 +277,18 @@ public class Endpoint
         if (conference.includeInStatistics())
         {
             conference.getVideobridge().getStatistics()
-                    .totalEndpoints.incrementAndGet();
+                .totalEndpoints.incrementAndGet();
         }
+
+    }
+    public Endpoint(
+        String id,
+        Conference conference,
+        Logger parentLogger,
+        boolean iceControlling)
+        throws IOException
+    {
+        this(id, conference, parentLogger, iceControlling, Clock.systemUTC());
     }
 
     /**
@@ -556,11 +588,11 @@ public class Endpoint
      * {@inheritDoc}
      */
     @Override
-    public long getLastActivity()
+    public Instant getLastIncomingActivity()
     {
         PacketIOActivity packetIOActivity
                 = this.transceiver.getPacketIOActivity();
-        return packetIOActivity.getLastOverallActivityTimestampMs();
+        return packetIOActivity.getLastOverallIncomingActivity();
     }
 
     /**
@@ -580,30 +612,31 @@ public class Endpoint
             return true;
         }
 
-        PacketIOActivity packetIOActivity
-                = this.transceiver.getPacketIOActivity();
-
-        int maxExpireTimeSecsFromChannelShims = channelShims.stream()
+        Duration maxExpireTimeFromChannelShims = channelShims.stream()
                 .map(ChannelShim::getExpire)
-                .mapToInt(exp -> exp)
-                .max()
-                .orElse(0);
+                .map(Duration::ofSeconds)
+                .max(Comparator.comparing(Function.identity()))
+                .orElse(Duration.ofSeconds(0));
 
-        long lastActivity
-                = packetIOActivity.getLastOverallActivityTimestampMs();
-        if (lastActivity <= 0)
+        Instant lastActivity = getLastIncomingActivity();
+        Instant now = clock.instant();
+        if (lastActivity == ClockUtils.NEVER)
         {
+            Duration timeSinceCreation = Duration.between(creationTime, now);
+            if (timeSinceCreation.compareTo(EP_TIMEOUT) > 0) {
+                logger.info("Endpoint's ICE connection has neither failed nor connected " +
+                    "after " + timeSinceCreation + ", expiring");
+                return true;
+            }
             // We haven't seen any activity yet. If this continues ICE will
             // eventually fail (which is handled above).
             return false;
         }
 
-        long now = System.currentTimeMillis();
-        if (Duration.ofMillis(now - lastActivity).getSeconds()
-                > maxExpireTimeSecsFromChannelShims)
+        if (Duration.between(lastActivity, now).compareTo(maxExpireTimeFromChannelShims) > 0)
         {
             logger.info("Allowing to expire because of no activity in over " +
-                    maxExpireTimeSecsFromChannelShims + " seconds.");
+                    maxExpireTimeFromChannelShims);
             return true;
         }
         return false;
@@ -1266,23 +1299,25 @@ public class Endpoint
     }
 
     /**
-     * Adds a channel to this enpoint.
+     * @return  the timestamp of the most recently created channel shim.
+     */
+    Instant getMostRecentChannelCreatedTime()
+    {
+        return channelShims.stream()
+            .map(ChannelShim::getCreationTimestamp)
+            .max(Comparator.comparing(Function.identity()))
+            .orElse(ClockUtils.NEVER);
+    }
+
+    /**
+     * Adds a channel to this endpoint.
      * @param channelShim
      */
     public void addChannel(ChannelShim channelShim)
     {
-        synchronized (channelShims)
+        if (channelShims.add(channelShim))
         {
-            switch (channelShim.getMediaType())
-            {
-                case AUDIO:
-                    acceptAudio = true;
-                    break;
-                case VIDEO:
-                    acceptVideo = true;
-                    break;
-            }
-            channelShims.add(channelShim);
+            updateAcceptedMediaTypes();
         }
     }
 
@@ -1292,24 +1327,48 @@ public class Endpoint
      */
     public void removeChannel(ChannelShim channelShim)
     {
-        synchronized (channelShims)
+        if (channelShims.remove(channelShim))
         {
-            switch (channelShim.getMediaType())
-            {
-                case AUDIO:
-                    acceptAudio = false;
-                    break;
-                case VIDEO:
-                    acceptVideo = false;
-                    break;
-            }
-
-            channelShims.remove(channelShim);
             if (channelShims.isEmpty())
             {
                 expire();
             }
+            else
+            {
+                updateAcceptedMediaTypes();
+            }
         }
+    }
+
+    /**
+     * Update accepted media types based on
+     * {@link ChannelShim} permission to receive
+     * media
+     */
+    public void updateAcceptedMediaTypes()
+    {
+        boolean acceptAudio = false;
+        boolean acceptVideo = false;
+        for (ChannelShim channelShim : channelShims)
+        {
+            // The endpoint accepts audio packets (in the sense of accepting
+            // packets from other endpoints being forwarded to it) if it has
+            // an audio channel whose direction allows sending packets.
+            if (channelShim.allowsSendingMedia())
+            {
+                switch (channelShim.getMediaType())
+                {
+                    case AUDIO:
+                        acceptAudio = true;
+                        break;
+                    case VIDEO:
+                        acceptVideo = true;
+                        break;
+                }
+            }
+        }
+        this.acceptAudio = acceptAudio;
+        this.acceptVideo = acceptVideo;
     }
 
     /**

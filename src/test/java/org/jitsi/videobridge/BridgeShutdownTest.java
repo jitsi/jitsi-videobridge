@@ -15,15 +15,12 @@
  */
 package org.jitsi.videobridge;
 
+import org.jitsi.config.*;
 import org.jitsi.meet.*;
-import org.jitsi.videobridge.util.config.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
-import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.util.*;
-
 import org.junit.*;
-
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
 import org.xmlpull.v1.*;
@@ -57,6 +54,7 @@ public class BridgeShutdownTest
         System.setProperty(
             Videobridge.SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME,
             "focus.*");
+        JitsiConfig.Companion.reload();
 
         osgiHandler.start();
 

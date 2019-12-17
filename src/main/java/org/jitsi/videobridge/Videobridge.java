@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import kotlin.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
+import org.jitsi.config.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.meet.*;
 import org.jitsi.nlj.*;
@@ -115,9 +116,16 @@ public class Videobridge
     /**
      * The (base) <tt>System</tt> and/or <tt>ConfigurationService</tt> property
      * of the REST-like HTTP/JSON API of Jitsi Videobridge.
+     *
+     * NOTE: Previously, the rest API name ("org.jitsi.videobridge.rest")
+     * conflicted with other values in the new config, since we have
+     * other properties scoped *under* "org.jitsi.videobridge.rest".   The
+     * long term solution will be to port the command-line args to new config,
+     * but for now we rename the property used to signal the rest API is
+     * enabled so it doesn't conflict.
      */
     public static final String REST_API_PNAME
-        = "org.jitsi.videobridge." + REST_API;
+        = "org.jitsi.videobridge." + REST_API + "_api_temp";
 
     /**
      * The property that specifies allowed entities for turning on graceful
@@ -979,7 +987,7 @@ public class Videobridge
         if (cfg != null)
         {
             List<String> ice4jPropertyNames
-                = cfg.getPropertyNamesByPrefix("org.ice4j.", false);
+                = cfg.getPropertyNamesByPrefix("org.ice4j", false);
 
             if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
             {
@@ -1015,6 +1023,8 @@ public class Videobridge
                     System.setProperty(newPropertyName, propertyValue);
                 }
             }
+            // Reload for all the new system properties to be seen
+            JitsiConfig.Companion.reload();
         }
 
         // Initialize the the host candidate interface filters in the ice4j
@@ -1084,7 +1094,7 @@ public class Videobridge
         if (cfg != null)
         {
             List<String> ice4jPropertyNames
-                = cfg.getPropertyNamesByPrefix("org.ice4j.", false);
+                = cfg.getPropertyNamesByPrefix("org.ice4j", false);
 
             if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
             {

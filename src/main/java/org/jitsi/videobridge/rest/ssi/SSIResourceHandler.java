@@ -19,7 +19,7 @@ import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.handler.*;
 import org.eclipse.jetty.util.resource.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 
@@ -28,7 +28,6 @@ import javax.servlet.http.*;
 import java.io.*;
 import java.nio.charset.*;
 import java.util.*;
-import java.util.Scanner;
 
 /**
  * ResourceHandler implementation which check a property to search for

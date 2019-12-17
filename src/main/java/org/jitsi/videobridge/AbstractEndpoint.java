@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.jitsi.nlj.util.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
@@ -23,6 +24,7 @@ import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
 import java.io.*;
+import java.time.*;
 import java.util.*;
 
 /**
@@ -84,6 +86,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         context.put("epId", id);
         logger = parentLogger.createChildLogger(this.getClass().getName(), context);
         this.id = Objects.requireNonNull(id, "id");
+
+        conference.encodingsManager.subscribe(this);
     }
 
     /**
@@ -224,6 +228,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         if (conference != null)
         {
             conference.endpointExpired(this);
+            conference.encodingsManager.unsubscribe(this);
         }
     }
 
@@ -241,12 +246,12 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public abstract boolean shouldExpire();
 
     /**
-     * Get the last 'activity' (packets received or packets sent) this endpoint has seen
+     * Get the last 'incoming activity' (packets received) this endpoint has seen
      * @return the timestamp, in milliseconds, of the last activity of this endpoint
      */
-    public long getLastActivity()
+    public Instant getLastIncomingActivity()
     {
-        return 0;
+        return ClockUtils.NEVER;
     }
 
     /**

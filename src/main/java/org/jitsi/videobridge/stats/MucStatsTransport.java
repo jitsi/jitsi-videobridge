@@ -16,8 +16,8 @@
 package org.jitsi.videobridge.stats;
 
 import org.jitsi.osgi.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.jitsi.utils.logging.*;
 
 /**
  * Implements a {@link StatsTransport} which publishes via Presence in an XMPP
@@ -33,7 +33,7 @@ public class MucStatsTransport
      * its instances to print debug information.
      */
     private static final Logger logger
-        = Logger.getLogger(MucStatsTransport.class);
+        = new LoggerImpl(MucStatsTransport.class.getName());
 
     /**
      * Gets the {@link ClientConnectionImpl} to be used to publish
@@ -56,10 +56,7 @@ public class MucStatsTransport
             = getUserConnectionBundleActivator();
         if (clientConnectionImpl != null)
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Publishing statistics through MUC: " + stats);
-            }
+            logger.debug(() -> "Publishing statistics through MUC: " + stats);
 
             clientConnectionImpl
                 .setPresenceExtension(Statistics.toXmppExtensionElement(stats));
