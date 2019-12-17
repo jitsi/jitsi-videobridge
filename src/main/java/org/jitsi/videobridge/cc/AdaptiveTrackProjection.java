@@ -192,8 +192,8 @@ public class AdaptiveTrackProjection
     /**
      * Determines whether an RTP packet needs to be accepted or not.
      *
-     * @param videoRtpPacket the video RTP packet to determine whether to accept
-     * or not.
+     * @param packetInfo packet info for the video RTP packet to determine
+     * whether to accept or not.
      * @return true if the packet is accepted, false otherwise.
      */
     public boolean accept(@NotNull PacketInfo packetInfo)
