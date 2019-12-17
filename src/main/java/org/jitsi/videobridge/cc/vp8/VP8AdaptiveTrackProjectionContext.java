@@ -515,10 +515,12 @@ public class VP8AdaptiveTrackProjectionContext
     {
         VP8FrameProjection lastVP8FrameProjectionCopy = lastVP8FrameProjection;
         if (lastVP8FrameProjectionCopy.getVP8Frame() == null
-            || rtcpSrPacket.getSenderSsrc() != lastVP8FrameProjectionCopy.getSSRC())
+            || rtcpSrPacket.getSenderSsrc() != lastVP8FrameProjectionCopy.getVP8Frame().getSsrc())
         {
             return false;
         }
+
+        rtcpSrPacket.setSenderSsrc(lastVP8FrameProjectionCopy.getSSRC());
 
         long srcTs = rtcpSrPacket.getSenderInfo().getRtpTimestamp();
         long delta = RtpUtils.getTimestampDiff(

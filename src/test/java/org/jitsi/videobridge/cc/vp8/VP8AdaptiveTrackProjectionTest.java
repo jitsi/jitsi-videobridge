@@ -5,6 +5,7 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.codec.vp8.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
+import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging.DiagnosticContext;
@@ -504,6 +505,7 @@ public class VP8AdaptiveTrackProjectionTest
         /* Start by wanting spatial layer 0 */
         for (int i = 0; i < 900; i++)
         {
+            RtcpSrPacket srPacket1 = generator1.getSrPacket();
             PacketInfo packetInfo1 = generator1.nextPacket();
             Vp8Packet packet1 = packetInfo1.packetAs();
 
@@ -516,9 +518,16 @@ public class VP8AdaptiveTrackProjectionTest
 
             context.rewriteRtp(packetInfo1);
 
+            assertTrue(context.rewriteRtcp(srPacket1));
+            assertEquals(packet1.getSsrc(), srPacket1.getSenderSsrc());
+            assertEquals(packet1.getTimestamp(), srPacket1.getSenderInfo().getRtpTimestamp());
+
+            RtcpSrPacket srPacket2 = generator2.getSrPacket();
             PacketInfo packetInfo2 = generator2.nextPacket();
             Vp8Packet packet2 = packetInfo2.packetAs();
+
             assertFalse(context.accept(packetInfo2, packet2.getTemporalLayerIndex() + 3, 2));
+            assertFalse(context.rewriteRtcp(srPacket2));
 
             assertEquals(expectedSeq, packet1.getSequenceNumber());
             assertEquals(expectedTs, packet1.getTimestamp());
@@ -536,6 +545,7 @@ public class VP8AdaptiveTrackProjectionTest
         /* Switch to wanting spatial layer 1, but don't send a keyframe. We should stay at the higher layer. */
         for (int i = 0; i < 90; i++)
         {
+            RtcpSrPacket srPacket1 = generator1.getSrPacket();
             PacketInfo packetInfo1 = generator1.nextPacket();
             Vp8Packet packet1 = packetInfo1.packetAs();
 
@@ -546,11 +556,18 @@ public class VP8AdaptiveTrackProjectionTest
 
             assertTrue(context.accept(packetInfo1, packet1.getTemporalLayerIndex(), 5));
 
+            context.rewriteRtp(packetInfo1);
+
+            assertTrue(context.rewriteRtcp(srPacket1));
+            assertEquals(packet1.getSsrc(), srPacket1.getSenderSsrc());
+            assertEquals(packet1.getTimestamp(), srPacket1.getSenderInfo().getRtpTimestamp());
+
+            RtcpSrPacket srPacket2 = generator2.getSrPacket();
             PacketInfo packetInfo2 = generator2.nextPacket();
             Vp8Packet packet2 = packetInfo2.packetAs();
-            assertFalse(context.accept(packetInfo2, packet2.getTemporalLayerIndex() + 3, 5));
 
-            context.rewriteRtp(packetInfo1);
+            assertFalse(context.accept(packetInfo2, packet2.getTemporalLayerIndex() + 3, 5));
+            assertFalse(context.rewriteRtcp(srPacket2));
 
             assertEquals(expectedSeq, packet1.getSequenceNumber());
             assertEquals(expectedTs, packet1.getTimestamp());
@@ -572,6 +589,7 @@ public class VP8AdaptiveTrackProjectionTest
         /* After a keyframe we should accept spatial layer 1 */
         for (int i = 0; i < 9000; i++)
         {
+            RtcpSrPacket srPacket1 = generator1.getSrPacket();
             PacketInfo packetInfo1 = generator1.nextPacket();
             Vp8Packet packet1 = packetInfo1.packetAs();
 
@@ -582,12 +600,16 @@ public class VP8AdaptiveTrackProjectionTest
 
             /* We will cut off the layer 0 keyframe after 1 packet, once we see the layer 1 keyframe. */
             assertEquals(i == 0, context.accept(packetInfo1, packet1.getTemporalLayerIndex(), 5));
+            assertEquals(i == 0, context.rewriteRtcp(srPacket1));
 
             if (i == 0)
             {
                 context.rewriteRtp(packetInfo1);
+                assertEquals(packet1.getSsrc(), srPacket1.getSenderSsrc());
+                assertEquals(packet1.getTimestamp(), srPacket1.getSenderInfo().getRtpTimestamp());
             }
 
+            RtcpSrPacket srPacket2 = generator2.getSrPacket();
             PacketInfo packetInfo2 = generator2.nextPacket();
             Vp8Packet packet2 = packetInfo2.packetAs();
 
@@ -599,6 +621,10 @@ public class VP8AdaptiveTrackProjectionTest
             assertTrue(context.accept(packetInfo2, packet2.getTemporalLayerIndex() + 3, 5));
 
             context.rewriteRtp(packetInfo2);
+
+            assertTrue(context.rewriteRtcp(srPacket2));
+            assertEquals(packet2.getSsrc(), srPacket2.getSenderSsrc());
+            assertEquals(packet2.getTimestamp(), srPacket2.getSenderInfo().getRtpTimestamp());
 
             if (i == 0)
             {
@@ -672,7 +698,13 @@ public class VP8AdaptiveTrackProjectionTest
         private boolean keyframeRequested = false;
         private int tidCycle = 0;
         private long ssrc = 0xcafebabeL;
-        private long receivedTime = 1577836800000L; /* 2020-01-01 00:00:00 UTC */
+
+        private int packetCount = 0;
+        private int octetCount = 0;
+        private int frameCount = 0;
+
+        private long baseReceivedTime = 1577836800000L; /* 2020-01-01 00:00:00 UTC */
+        private long receivedTime = baseReceivedTime;
 
         public void setSsrc(long ssrc)
         {
@@ -748,6 +780,9 @@ public class VP8AdaptiveTrackProjectionTest
             info.setReceivedTime(receivedTime);
 
             seq = RtpUtils.applySequenceNumberDelta(seq, 1);
+            packetCount++;
+            octetCount += vp8Packet.length;
+
             if (endOfFrame)
             {
                 packetOfFrame = 0;
@@ -760,7 +795,8 @@ public class VP8AdaptiveTrackProjectionTest
                 {
                     tidCycle = 0;
                 }
-                receivedTime += 33; /* 33 ms per frame */
+                frameCount++;
+                receivedTime = baseReceivedTime + frameCount * 100 / 3;
             }
             else
             {
@@ -782,6 +818,33 @@ public class VP8AdaptiveTrackProjectionTest
             {
                 keyframeRequested = true;
             }
+        }
+
+        /* TODO: move this to jitsi-rtp */
+        public static void setSIBuilderNtp(SenderInfoBuilder siBuilder, long wallTime)
+        {
+            final long JAVA_TO_NTP_EPOCH_OFFSET_SECS = 2208988800L;
+
+            long wallSecs = wallTime / 1000;
+            long wallMs = wallTime % 1000;
+
+            siBuilder.setNtpTimestampMsw(wallSecs + JAVA_TO_NTP_EPOCH_OFFSET_SECS);
+            siBuilder.setNtpTimestampLsw(wallMs * (1L << 32) / 1000);
+        }
+
+        public RtcpSrPacket getSrPacket()
+        {
+            RtcpSrPacketBuilder srPacketBuilder = new RtcpSrPacketBuilder();
+
+            srPacketBuilder.getRtcpHeader().setSenderSsrc(ssrc);
+
+            SenderInfoBuilder siBuilder = srPacketBuilder.getSenderInfo();
+            setSIBuilderNtp(srPacketBuilder.getSenderInfo(), receivedTime);
+            siBuilder.setRtpTimestamp(ts);
+            siBuilder.setSendersOctetCount(packetCount);
+            siBuilder.setSendersOctetCount(octetCount);
+
+            return srPacketBuilder.build();
         }
     }
 }
