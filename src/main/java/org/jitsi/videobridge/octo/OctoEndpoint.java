@@ -104,16 +104,6 @@ public class OctoEndpoint
         return l.toArray(new MediaStreamTrackDesc[0]);
     }
 
-    @Override
-    public void onNewSsrcAssociation(
-            String epId,
-            long primarySsrc,
-            long secondarySsrc,
-            SsrcAssociationType type)
-    {
-        /* Octo endpoints don't care about SSRC associations. */
-    }
-
     /**
      * {@inheritDoc}
      */

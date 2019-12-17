@@ -65,7 +65,8 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  * @author George Politis
  */
 public class Endpoint
-    extends AbstractEndpoint implements PotentialPacketHandler
+    extends AbstractEndpoint implements PotentialPacketHandler,
+    EncodingsManager.EncodingsUpdateListener
 {
     /**
      * The name of the <tt>Endpoint</tt> property <tt>pinnedEndpoint</tt> which
@@ -268,6 +269,7 @@ public class Endpoint
             bitrateController.bandwidthChanged((long)newValueBps.getBps());
         });
         transceiver.onBandwidthEstimateChanged(bandwidthProbing);
+        conference.encodingsManager.subscribe(this);
 
         bandwidthProbing.enabled = true;
         recurringRunnableExecutor.registerRecurringRunnable(bandwidthProbing);
@@ -690,6 +692,7 @@ public class Endpoint
         }
         bandwidthProbing.enabled = false;
         recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing);
+        getConference().encodingsManager.unsubscribe(this);
 
         dtlsTransport.close();
 
