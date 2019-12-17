@@ -16,7 +16,6 @@
 
 package org.jitsi.nlj.rtcp
 
-import com.nhaarman.mockitokotlin2.spy
 import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.collections.shouldBeEmpty
 import io.kotlintest.matchers.collections.shouldHaveSize
@@ -63,7 +62,7 @@ class KeyframeRequesterTest : ShouldSpec() {
         override fun getRemoteSecondarySsrc(primarySsrc: Long, associationType: SsrcAssociationType): Long? = null
     }
     private val logger = StdoutLogger()
-    private val clock: FakeClock = spy()
+    private val clock: FakeClock = FakeClock()
 
     private val keyframeRequester = KeyframeRequester(streamInformationStore, logger, clock)
     private val sentKeyframeRequests = mutableListOf<PacketInfo>()

@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
  */
 internal abstract class FakeScheduledExecutorService : ScheduledExecutorService {
     private var jobs = JobsTimeline()
-    val clock: FakeClock = stubOnlySpy()
+    val clock: FakeClock = FakeClock()
 
     override fun scheduleAtFixedRate(command: Runnable, initialDelay: Long, period: Long, unit: TimeUnit): ScheduledFuture<*> {
         val future: ScheduledFuture<Unit> = mock(stubOnly = true)
