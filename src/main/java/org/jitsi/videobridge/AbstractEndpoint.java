@@ -86,8 +86,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         context.put("epId", id);
         logger = parentLogger.createChildLogger(this.getClass().getName(), context);
         this.id = Objects.requireNonNull(id, "id");
-
-        conference.encodingsManager.subscribe(this);
     }
 
     /**
@@ -228,7 +226,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         if (conference != null)
         {
             conference.endpointExpired(this);
-            conference.encodingsManager.unsubscribe(this);
         }
     }
 

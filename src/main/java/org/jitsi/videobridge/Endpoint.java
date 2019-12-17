@@ -268,6 +268,7 @@ public class Endpoint
             bitrateController.bandwidthChanged((long)newValueBps.getBps());
         });
         transceiver.onBandwidthEstimateChanged(bandwidthProbing);
+        conference.encodingsManager.subscribe(this);
 
         bandwidthProbing.enabled = true;
         recurringRunnableExecutor.registerRecurringRunnable(bandwidthProbing);
@@ -690,6 +691,7 @@ public class Endpoint
         }
         bandwidthProbing.enabled = false;
         recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing);
+        getConference().encodingsManager.unsubscribe(this);
 
         dtlsTransport.close();
 

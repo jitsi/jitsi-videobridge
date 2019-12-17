@@ -111,7 +111,14 @@ public class OctoEndpoint
             long secondarySsrc,
             SsrcAssociationType type)
     {
-        /* Octo endpoints don't care about SSRC associations. */
+        if (epId.equalsIgnoreCase(getID()))
+        {
+            streamInformationStore.addSsrcAssociation(new LocalSsrcAssociation(primarySsrc, secondarySsrc, type));
+        }
+        else
+        {
+            streamInformationStore.addSsrcAssociation(new RemoteSsrcAssociation(primarySsrc, secondarySsrc, type));
+        }
     }
 
     /**
