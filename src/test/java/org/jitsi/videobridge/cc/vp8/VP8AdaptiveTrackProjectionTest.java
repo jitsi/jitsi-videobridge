@@ -130,7 +130,8 @@ public class VP8AdaptiveTrackProjectionTest
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
 
-        final long expectedTsOffset = RtpUtils.applyTimestampDelta(initialState.maxTimestamp, 3000);
+        final long expectedInitialTs = RtpUtils.applyTimestampDelta(initialState.maxTimestamp, 3000);
+        final long expectedTsOffset = RtpUtils.getTimestampDiff(expectedInitialTs, generator.ts);
 
         final int reorderSize = 64;
         ArrayList<Vp8Packet> buffer = new ArrayList<>(reorderSize);
@@ -629,6 +630,13 @@ public class VP8AdaptiveTrackProjectionTest
         Vp8PacketGenerator(int packetsPerFrame)
         {
             this.packetsPerFrame = packetsPerFrame;
+
+
+            long seed = System.currentTimeMillis();
+            Random random = new Random(seed);
+
+            seq = random.nextInt() % 0x10000;
+            ts = random.nextLong() % 0x100000000L;
         }
 
         private int seq = 0;
