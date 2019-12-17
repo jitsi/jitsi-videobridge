@@ -38,7 +38,6 @@ import java.util.*;
  * @author Brian Baldino
  */
 public abstract class AbstractEndpoint extends PropertyChangeNotifier
-    implements EncodingsManager.EncodingsUpdateListener
 {
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a
