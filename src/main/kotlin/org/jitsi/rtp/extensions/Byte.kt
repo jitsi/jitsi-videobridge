@@ -39,6 +39,19 @@ fun putBit(b: Byte, bitPos: Int, isSet: Boolean): Byte {
 }
 
 /**
+ * Set or unset the bit or bits specified by [mask] of byte [b] according to [isSet]
+ * Unfortunately we can't do this as an extension function because
+ * we can't modify the Byte via 'this' in an extension function.
+ */
+fun putBitWithMask(b: Byte, mask: Byte, isSet: Boolean): Byte {
+    return if (isSet) {
+        (b.toInt() or mask.toInt()).toByte()
+    } else {
+        (b.toInt() and mask.toInt().inv()).toByte()
+    }
+}
+
+/**
  * Puts the right-most [numBits] bits from [src] into [dest]  starting at
  * [bitStartPos]
  * [bitStartPos] is a 0 based index into the byte [dest], where the MSB
