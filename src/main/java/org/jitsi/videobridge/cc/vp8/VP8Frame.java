@@ -357,6 +357,6 @@ class VP8Frame
     boolean isImmediatelyAfter(@NotNull VP8Frame otherFrame)
     {
         return pictureId ==
-            Vp8Utils.applyPictureIdDelta(otherFrame.getPictureId(), 1);
+            Vp8Utils.applyExtendedPictureIdDelta(otherFrame.getPictureId(), 1);
     }
 }

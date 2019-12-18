@@ -1,6 +1,5 @@
 package org.jitsi.videobridge.cc.vp8;
 
-import org.bouncycastle.util.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.codec.vp8.*;
 import org.jitsi.nlj.format.*;
@@ -15,7 +14,6 @@ import org.jitsi_modified.impl.neomedia.codec.video.vp8.*;
 import org.junit.*;
 
 import javax.xml.bind.*;
-import java.text.*;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -99,7 +97,7 @@ public class VP8AdaptiveTrackProjectionTest
                 expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1);
                 if (packet.isEndOfFrame())
                 {
-                    expectedPicId = Vp8Utils.applyPictureIdDelta(expectedPicId, 1);
+                    expectedPicId = Vp8Utils.applyExtendedPictureIdDelta(expectedPicId, 1);
                 }
             }
             else
@@ -213,7 +211,7 @@ public class VP8AdaptiveTrackProjectionTest
                 assertTrue(RtpUtils.isNewerSequenceNumberThan(packet.origSeq, prevPacket.origSeq));
                 if (RtpUtils.isOlderTimestampThan(prevPacket.packet.getTimestamp(), packet.packet.getTimestamp()))
                 {
-                    assertTrue(Vp8Utils.getPictureIdDelta(prevPacket.packet.getPictureId(), packet.packet.getPictureId()) < 0);
+                    assertTrue(Vp8Utils.getExtendedPictureIdDelta(prevPacket.packet.getPictureId(), packet.packet.getPictureId()) < 0);
                 }
                 else
                 {
@@ -548,7 +546,7 @@ public class VP8AdaptiveTrackProjectionTest
             if (packet1.isEndOfFrame())
             {
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
-                expectedPicId = Vp8Utils.applyPictureIdDelta(expectedPicId, 1);
+                expectedPicId = Vp8Utils.applyExtendedPictureIdDelta(expectedPicId, 1);
             }
         }
 
@@ -589,7 +587,7 @@ public class VP8AdaptiveTrackProjectionTest
             if (packet1.isEndOfFrame())
             {
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
-                expectedPicId = Vp8Utils.applyPictureIdDelta(expectedPicId, 1);
+                expectedPicId = Vp8Utils.applyExtendedPictureIdDelta(expectedPicId, 1);
             }
         }
 
@@ -643,7 +641,7 @@ public class VP8AdaptiveTrackProjectionTest
                 /* ts will advance by an extra 3000 samples for the extra frame. */
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
                 /* pid id and tl0picidx will advance by 1 for the extra keyframe. */
-                expectedPicId = Vp8Utils.applyPictureIdDelta(expectedPicId, 1);
+                expectedPicId = Vp8Utils.applyExtendedPictureIdDelta(expectedPicId, 1);
             }
 
             assertEquals(expectedSeq, packet2.getSequenceNumber());
@@ -655,7 +653,7 @@ public class VP8AdaptiveTrackProjectionTest
             if (packet2.isEndOfFrame())
             {
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
-                expectedPicId = Vp8Utils.applyPictureIdDelta(expectedPicId, 1);
+                expectedPicId = Vp8Utils.applyExtendedPictureIdDelta(expectedPicId, 1);
             }
         }
     }
@@ -797,7 +795,7 @@ public class VP8AdaptiveTrackProjectionTest
             {
                 packetOfFrame = 0;
                 ts = RtpUtils.applyTimestampDelta(ts, 3000);
-                picId = Vp8Utils.applyPictureIdDelta(picId, 1);
+                picId = Vp8Utils.applyExtendedPictureIdDelta(picId, 1);
                 tidCycle++;
                 keyframe = keyframeRequested;
                 keyframeRequested = false;

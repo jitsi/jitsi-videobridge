@@ -244,7 +244,7 @@ public class VP8AdaptiveTrackProjectionContext
      */
     private int picGap(@NotNull VP8Frame frame1, @NotNull VP8Frame frame2)
     {
-        int picGap = Vp8Utils.getPictureIdDelta(frame2.getPictureId(), frame1.getPictureId());
+        int picGap = Vp8Utils.getExtendedPictureIdDelta(frame2.getPictureId(), frame1.getPictureId());
 
         if (!frame1.isAccepted() && picGap > 0)
         {
@@ -386,7 +386,7 @@ public class VP8AdaptiveTrackProjectionContext
         int tl0PicIdx;
         if (lastVP8FrameProjection.getVP8Frame() != null)
         {
-            picId = Vp8Utils.applyPictureIdDelta(lastVP8FrameProjection.getPictureId(),
+            picId = Vp8Utils.applyExtendedPictureIdDelta(lastVP8FrameProjection.getPictureId(),
                 1);
             tl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(lastVP8FrameProjection.getTl0PICIDX(),
                 1);
@@ -447,7 +447,7 @@ public class VP8AdaptiveTrackProjectionContext
 
         int projectedSeq = RtpUtils.applySequenceNumberDelta(refSeq, seqGap);
         long projectedTs = RtpUtils.applyTimestampDelta(refFrame.getProjection().getTimestamp(), tsGap);
-        int projectedPicId = Vp8Utils.applyPictureIdDelta(refFrame.getProjection().getPictureId(), picGap);
+        int projectedPicId = Vp8Utils.applyExtendedPictureIdDelta(refFrame.getProjection().getPictureId(), picGap);
         int projectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(refFrame.getProjection().getTl0PICIDX(), tl0Gap);
 
         VP8FrameProjection projection =
