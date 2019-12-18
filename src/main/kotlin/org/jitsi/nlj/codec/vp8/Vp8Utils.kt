@@ -52,15 +52,19 @@ class Vp8Utils {
             }
         }
 
-        fun getSpatialLayerIndexFromKeyFrame(vp8Packet: RtpPacket): Int {
-            // Copied from VP8QUalityFilter#getSpatialLayerIndexFromKeyframe
+        fun getHeightFromKeyFrame(vp8Packet: RtpPacket): Int {
             val payloadDescriptorLen =
                 DePacketizer.VP8PayloadDescriptor.getSize(
                     vp8Packet.buffer,
                     vp8Packet.payloadOffset,
                     vp8Packet.payloadLength)
-            val height = DePacketizer.VP8KeyframeHeader.getHeight(
+            return DePacketizer.VP8KeyframeHeader.getHeight(
                 vp8Packet.buffer, vp8Packet.payloadOffset + payloadDescriptorLen + VP8_PAYLOAD_HEADER_LEN)
+        }
+
+        fun getSpatialLayerIndexFromKeyFrame(vp8Packet: RtpPacket): Int {
+            // Copied from VP8QUalityFilter#getSpatialLayerIndexFromKeyframe
+            val height = getHeightFromKeyFrame(vp8Packet)
             return when {
                 height >= MIN_HD_HEIGHT -> HD_LAYER_ID
                 height >= MIN_SD_HEIGHT -> SD_LAYER_ID
@@ -75,6 +79,64 @@ class Vp8Utils {
 
         fun getTemporalLayerIdOfFrame(vp8Packet: RtpPacket) =
             DePacketizer.VP8PayloadDescriptor.getTemporalLayerIndex(
-                vp8Packet.buffer, vp8Packet.payloadOffset, vp8Packet.length)
+                vp8Packet.buffer, vp8Packet.payloadOffset, vp8Packet.payloadLength)
+
+        /**
+         * Returns the delta between two VP8 extended picture IDs, taking into account
+         * rollover.  This will return the 'shortest' delta between the two
+         * picture IDs in the form of the number you'd add to b to get a. e.g.:
+         * getExtendedPictureIdDelta(1, 10) -> -9 (10 + -9 = 1)
+         * getExtendedPictureIdDelta(1, 32760) -> 9 (32760 + 9 = 1)
+         * @return the delta between two extended picture IDs (modulo 2^15).
+         */
+        @JvmStatic
+        fun getExtendedPictureIdDelta(a: Int, b: Int): Int {
+            val diff = a - b
+            return when {
+                diff < -(1 shl 14) -> diff + (1 shl 15)
+                diff > (1 shl 14) -> diff - (1 shl 15)
+                else -> diff
+            }
+        }
+
+        /**
+         * Apply a delta to a given extended picture ID and return the result (taking
+         * rollover into account)
+         * @param start the starting extended picture ID
+         * @param delta the delta to be applied
+         * @return the extended picture ID resulting from doing "start + delta"
+         */
+        @JvmStatic
+        fun applyExtendedPictureIdDelta(start: Int, delta: Int): Int =
+            (start + delta) and DePacketizer.VP8PayloadDescriptor.EXTENDED_PICTURE_ID_MASK
+
+        /**
+         * Returns the delta between two VP8 Tl0PicIdx values, taking into account
+         * rollover.  This will return the 'shortest' delta between the two
+         * picture IDs in the form of the number you'd add to b to get a. e.g.:
+         * getTl0PicIdxDelta(1, 10) -> -9 (10 + -9 = 1)
+         * getTl0PicIdxDelta(1, 250) -> 7 (250 + 7 = 1)
+         * @return the delta between two extended picture IDs (modulo 2^8).
+         */
+        @JvmStatic
+        fun getTl0PicIdxDelta(a: Int, b: Int): Int {
+            val diff = a - b
+            return when {
+                diff < -(1 shl 7) -> diff + (1 shl 8)
+                diff > (1 shl 7) -> diff - (1 shl 8)
+                else -> diff
+            }
+        }
+
+        /**
+         * Apply a delta to a given Tl0PidIcx and return the result (taking
+         * rollover into account)
+         * @param start the starting Tl0PicIdx
+         * @param delta the delta to be applied
+         * @return the Tl0PicIdx resulting from doing "start + delta"
+         */
+        @JvmStatic
+        fun applyTl0PicIdxDelta(start: Int, delta: Int): Int =
+            (start + delta) and DePacketizer.VP8PayloadDescriptor.TL0PICIDX_MASK
     }
 }

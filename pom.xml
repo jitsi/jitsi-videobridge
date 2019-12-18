@@ -30,7 +30,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>rtp</artifactId>
-            <version>1.0-21-ge7a39be</version>
+            <version>1.0-22-g9ad0c2d</version>
         </dependency>
         <dependency>
             <groupId>org.jitsi</groupId>
