@@ -17,11 +17,10 @@
 package org.jitsi.videobridge
 
 import io.kotlintest.Spec
-import io.kotlintest.extensions.TopLevelTest
+import org.jitsi.config.ConfigSourceWrapper
 import org.jitsi.config.ConfigTest
 import org.jitsi.config.JitsiConfigFactory
 import org.jitsi.utils.config.ConfigSource
-import org.jitsi.videobridge.testutils.ConfigSourceWrapper
 
 /**
  * This class is/should be a duplicate of the one in jicoco-kotlin.  We can't
@@ -29,8 +28,6 @@ import org.jitsi.videobridge.testutils.ConfigSourceWrapper
  * dependency
  */
 abstract class JitsiConfigTest : ConfigTest() {
-    private val legacyConfigWrapper = ConfigSourceWrapper()
-    private val newConfigWrapper = ConfigSourceWrapper()
 
     override fun withLegacyConfig(configSource: ConfigSource) {
         legacyConfigWrapper.innerConfig = configSource
@@ -44,5 +41,10 @@ abstract class JitsiConfigTest : ConfigTest() {
         super.beforeSpec(spec)
         JitsiConfigFactory.legacyConfigSupplier = { legacyConfigWrapper }
         JitsiConfigFactory.newConfigSupplier = { newConfigWrapper }
+    }
+
+    companion object {
+        private val legacyConfigWrapper = ConfigSourceWrapper()
+        private val newConfigWrapper = ConfigSourceWrapper()
     }
 }

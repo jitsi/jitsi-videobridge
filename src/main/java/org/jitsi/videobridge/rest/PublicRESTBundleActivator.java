@@ -526,7 +526,7 @@ public class PublicRESTBundleActivator
 
         // Colibri WebSockets
         ColibriWebSocketService colibriWebSocketService
-            = new ColibriWebSocketService(bundleContext, isTls());
+            = new ColibriWebSocketService(isTls());
         servletHolder
             = colibriWebSocketService.initializeColibriWebSocketServlet(
                     bundleContext,
