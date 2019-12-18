@@ -39,25 +39,25 @@ class ByteExtensionsTest : ShouldSpec() {
         "Byte.putBit" {
             should("Set bits to true correctly") {
                 val b: Byte = 0x00
-                putBit(b, 0, true) shouldBe 0b10000000.toByte()
-                putBit(b, 3, true) shouldBe 0b00010000.toByte()
-                putBit(b, 7, true) shouldBe 0b00000001.toByte()
+                b.putBit(0, true) shouldBe 0b10000000.toByte()
+                b.putBit(3, true) shouldBe 0b00010000.toByte()
+                b.putBit(7, true) shouldBe 0b00000001.toByte()
             }
             should("Set bits to false correctly") {
                 val b: Byte = 0xFF.toByte()
-                putBit(b, 1, false) shouldBe 0b10111111.toByte()
-                putBit(b, 2, false) shouldBe 0b11011111.toByte()
-                putBit(b, 4, false) shouldBe 0b11110111.toByte()
-                putBit(b, 7, false) shouldBe 0b11111110.toByte()
+                b.putBit(1, false) shouldBe 0b10111111.toByte()
+                b.putBit(2, false) shouldBe 0b11011111.toByte()
+                b.putBit(4, false) shouldBe 0b11110111.toByte()
+                b.putBit(7, false) shouldBe 0b11111110.toByte()
             }
             should("Support a mix of sets/unsets") {
                 var b: Byte = 0x00
                 (0..7).forEach {
-                    b = putBit(b, it, true)
+                    b = b.putBit(it, true)
                 }
                 b shouldBe 0b11111111.toByte()
                 (0..7).forEach {
-                    b = putBit(b, it, false)
+                    b = b.putBit(it, false)
                 }
                 b shouldBe 0b00000000.toByte()
             }
@@ -67,21 +67,21 @@ class ByteExtensionsTest : ShouldSpec() {
                 val dest: Byte = 0b00000000
                 val src: Byte = 0b00000101
 
-                val result = putBits(dest, 0, 3, src)
+                val result = dest.putBits(0, 3, src)
                 result shouldBe 0b10100000.toByte()
             }
             should("overwrite existing values correctly") {
                 val dest: Byte = 0b11111111.toByte()
                 val src: Byte = 0b00000000
 
-                val result = putBits(dest, 0, 3, src)
+                val result = dest.putBits(0, 3, src)
                 result shouldBe 0b00011111.toByte()
             }
             should("work correctly with different offsets") {
                 val dest: Byte = 0b00000000
                 val src: Byte = 0b11001100.toByte()
 
-                val result = putBits(dest, 2, 4, src)
+                val result = dest.putBits(2, 4, src)
                 result shouldBe 0b00110000.toByte()
             }
         }

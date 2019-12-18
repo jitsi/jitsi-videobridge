@@ -34,7 +34,7 @@ import org.jitsi.utils.ByteArrayUtils.writeUint24
  */
 fun ByteArray.putBits(byteIndex: Int, destBitPos: Int, src: Byte, numBits: Int) {
     var byte = get(byteIndex)
-    byte = putBits(byte, destBitPos, numBits, src)
+    byte = byte.putBits(destBitPos, numBits, src)
     set(byteIndex, byte)
 }
 
@@ -43,7 +43,7 @@ fun ByteArray.getBitAsBool(byteOffset: Int, bitOffset: Int): Boolean =
 
 fun ByteArray.putBitAsBoolean(byteIndex: Int, destBitPos: Int, isSet: Boolean) {
     var byte = get(byteIndex)
-    byte = putBit(byte, destBitPos, isSet)
+    byte = byte.putBit(destBitPos, isSet)
     set(byteIndex, byte)
 }
 

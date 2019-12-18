@@ -87,13 +87,13 @@ fun ByteBuffer.get3Bytes(index: Int): Int {
  */
 fun ByteBuffer.putBits(byteIndex: Int, destBitPos: Int, src: Byte, numBits: Int) {
     var byte = get(byteIndex)
-    byte = putBits(byte, destBitPos, numBits, src)
+    byte = byte.putBits(destBitPos, numBits, src)
     put(byteIndex, byte)
 }
 
 fun ByteBuffer.putBitAsBoolean(byteIndex: Int, destBitPos: Int, isSet: Boolean) {
     var byte = get(byteIndex)
-    byte = putBit(byte, destBitPos, isSet)
+    byte = byte.putBit(destBitPos, isSet)
     put(byteIndex, byte)
 }
 

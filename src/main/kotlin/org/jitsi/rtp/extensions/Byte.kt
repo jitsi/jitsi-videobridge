@@ -26,34 +26,36 @@ fun Byte.getBit(bitPos: Int): Int {
 }
 
 /**
- * Set or unset the bit at [bitPos] of byte [b] according to [isSet]
- * Unfortunately we can't do this as an extension function because
+ * Return a byte setting or unsetting the bit at [bitPos] of a byte
+ * according to [isSet]
+ * Unfortunately we can't do this as an in-place modifier because
  * we can't modify the Byte via 'this' in an extension function.
  */
-fun putBit(b: Byte, bitPos: Int, isSet: Boolean): Byte {
+fun Byte.putBit(bitPos: Int, isSet: Boolean): Byte {
     return if (isSet) {
-        (b.toInt() or (0b10000000 ushr bitPos)).toByte()
+        (this.toInt() or (0b10000000 ushr bitPos)).toByte()
     } else {
-        (b.toInt() and (0b10000000 ushr bitPos).inv()).toByte()
+        (this.toInt() and (0b10000000 ushr bitPos).inv()).toByte()
     }
 }
 
 /**
- * Set or unset the bit or bits specified by [mask] of byte [b] according to [isSet]
- * Unfortunately we can't do this as an extension function because
+ * Return a byte setting or unsetting the bit or bits specified by [mask]
+ * of a byte according to [isSet]
+ * Unfortunately we can't do this as an in-place modifier because
  * we can't modify the Byte via 'this' in an extension function.
  */
-fun putBitWithMask(b: Byte, mask: Byte, isSet: Boolean): Byte {
+fun Byte.putBitWithMask(mask: Byte, isSet: Boolean): Byte {
     return if (isSet) {
-        (b.toInt() or mask.toInt()).toByte()
+        (this.toInt() or mask.toInt()).toByte()
     } else {
-        (b.toInt() and mask.toInt().inv()).toByte()
+        (this.toInt() and mask.toInt().inv()).toByte()
     }
 }
 
 /**
- * Puts the right-most [numBits] bits from [src] into [dest]  starting at
- * [bitStartPos]
+ * Return a byte with the right-most [numBits] bits from [src] put into [dest]
+ * starting at [bitStartPos]
  * [bitStartPos] is a 0 based index into the byte [dest], where the MSB
  * is position 0 and the LSB is position 7.
  * Given the values:
@@ -65,13 +67,13 @@ fun putBitWithMask(b: Byte, mask: Byte, isSet: Boolean): Byte {
  * The returned Byte will be:
  * 0b00001010
  */
-fun putBits(dest: Byte, bitStartPos: Int, numBits: Int, src: Byte): Byte {
+fun Byte.putBits(bitStartPos: Int, numBits: Int, src: Byte): Byte {
     // Start the position in src to the first bit we'll assign.
     val valueBitPosition = 7 - numBits + 1
-    var result = dest
+    var result = this
     for (i in 0 until numBits) {
         val isSet = src.getBitAsBool(valueBitPosition + i)
-        result = putBit(result, bitStartPos + i, isSet)
+        result = result.putBit(bitStartPos + i, isSet)
     }
     return result
 }
