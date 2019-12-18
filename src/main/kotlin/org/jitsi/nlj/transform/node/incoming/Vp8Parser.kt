@@ -34,7 +34,7 @@ class Vp8Parser(
     parentLogger: Logger
 ) : TransformerNode("Vp8 parser") {
     private val logger = parentLogger.createChildLogger(Vp8Parser::class)
-    private val ssrcToSpatialLayerQuality: MutableMap<Long, Int> = HashMap()
+    private val ssrcToHeight: MutableMap<Long, Int> = HashMap()
     // Stats
     private var numKeyframes: Int = 0
 
@@ -42,10 +42,12 @@ class Vp8Parser(
         val videoRtpPacket: VideoRtpPacket = packetInfo.packet as VideoRtpPacket
         if (videoRtpPacket is Vp8Packet) {
             // If this was part of a keyframe, it will have already had it set
-            if (videoRtpPacket.spatialLayerIndex > -1) {
-                ssrcToSpatialLayerQuality.putIfAbsent(videoRtpPacket.ssrc, videoRtpPacket.spatialLayerIndex)
+            if (videoRtpPacket.height > -1) {
+                // TODO: handle case where new height is from a packet older than the
+                // latest height we've seen.
+                ssrcToHeight.putIfAbsent(videoRtpPacket.ssrc, videoRtpPacket.height)
             } else {
-                videoRtpPacket.spatialLayerIndex = ssrcToSpatialLayerQuality[videoRtpPacket.ssrc] ?: -1
+                videoRtpPacket.height = ssrcToHeight[videoRtpPacket.ssrc] ?: -1
             }
             if (videoRtpPacket.isKeyframe) {
                 logger.cdebug { "Received a keyframe for ssrc ${videoRtpPacket.ssrc} ${videoRtpPacket.sequenceNumber}" }

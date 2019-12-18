@@ -17,21 +17,35 @@ package org.jitsi.nlj.rtp
 
 import org.jitsi.rtp.rtp.RtpPacket
 
-open class VideoRtpPacket(
+/**
+ * A packet which we know contains video, but we've not yet
+ * parsed (i.e. we don't know information gained from
+ * parsing codec-specific data).
+ */
+open class VideoRtpPacket protected constructor(
     buffer: ByteArray,
     offset: Int,
-    length: Int
+    length: Int,
+    qualityIndex: Int?
 ) : RtpPacket(buffer, offset, length) {
-    var isKeyframe = false
-    var qualityIndex = -1
+
+    constructor(
+        buffer: ByteArray,
+        offset: Int,
+        length: Int
+    ) : this(buffer, offset, length,
+        qualityIndex = null
+    )
+
+    /** The index of this packet relative to its track's RTPEncodings. */
+    var qualityIndex: Int = qualityIndex ?: -1
 
     override fun clone(): VideoRtpPacket {
-        val clone = VideoRtpPacket(
+        return VideoRtpPacket(
             cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
             BYTES_TO_LEAVE_AT_START_OF_PACKET,
-            length)
-        clone.isKeyframe = isKeyframe
-        clone.qualityIndex = qualityIndex
-        return clone
+            length,
+            qualityIndex = qualityIndex
+        )
     }
 }
