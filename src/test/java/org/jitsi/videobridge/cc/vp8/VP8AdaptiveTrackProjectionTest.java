@@ -658,6 +658,88 @@ public class VP8AdaptiveTrackProjectionTest
         }
     }
 
+    @Test
+    public void temporalLayerSwitchingTest() throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(3);
+
+        DiagnosticContext diagnosticContext = new DiagnosticContext();
+        diagnosticContext.put("test", Thread.currentThread().getStackTrace()[2].getMethodName());
+
+        RtpState initialState =
+            new RtpState(1, 10000, 1000000);
+
+        VP8AdaptiveTrackProjectionContext context =
+            new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
+                initialState, logger);
+
+        int targetIndex = 0;
+        int decodableIndex = 0;
+
+        int expectedSeq = 10001;
+        long expectedTs = 1003000;
+        int expectedPicId = 0;
+        int expectedTl0PicIdx = 0;
+
+        for (int i = 0; i < 10000; i++)
+        {
+            PacketInfo packetInfo = generator.nextPacket();
+            Vp8Packet packet = packetInfo.packetAs();
+
+            boolean accepted = context.accept(packetInfo, packet.getTemporalLayerIndex(), targetIndex);
+
+            if (packet.isStartOfFrame() && packet.getTemporalLayerIndex() == 0)
+            {
+                expectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(expectedTl0PicIdx, 1);
+            }
+
+            if (accepted)
+            {
+                if (decodableIndex < packet.getTemporalLayerIndex())
+                {
+                    decodableIndex = packet.getTemporalLayerIndex();
+                }
+            }
+            else {
+                if (decodableIndex > packet.getTemporalLayerIndex() - 1)
+                {
+                    decodableIndex = packet.getTemporalLayerIndex() - 1;
+                }
+            }
+
+            if (packet.getTemporalLayerIndex() <= decodableIndex)
+            {
+                assertTrue(accepted);
+
+                context.rewriteRtp(packetInfo);
+
+                assertEquals(expectedSeq, packet.getSequenceNumber());
+                assertEquals(expectedTs, packet.getTimestamp());
+                assertEquals(expectedPicId, packet.getPictureId());
+                assertEquals(expectedTl0PicIdx, packet.getTL0PICIDX());
+
+                expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1);
+                if (packet.isEndOfFrame())
+                {
+                    expectedPicId = Vp8Utils.applyExtendedPictureIdDelta(expectedPicId, 1);
+                }
+            }
+            else
+            {
+                assertFalse(accepted);
+            }
+            if (packet.isEndOfFrame())
+            {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
+
+                if (i % 97 == 0) /* Prime number so it's out of sync with packet cycles. */
+                {
+                    targetIndex = (targetIndex + 2) % 3;
+                }
+            }
+        }
+    }
+
     private static class Vp8PacketGenerator {
         private static final byte[] vp8PacketTemplate =
             DatatypeConverter.parseHexBinary(

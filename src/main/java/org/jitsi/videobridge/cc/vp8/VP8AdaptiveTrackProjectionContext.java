@@ -309,6 +309,12 @@ public class VP8AdaptiveTrackProjectionContext
             long receivedMs = packetInfo.getReceivedTime();
             boolean accepted = vp8QualityFilter
                 .acceptFrame(frame, incomingIndex, targetIndex, receivedMs);
+
+            if (accepted){
+                accepted = checkDecodability(frame);
+                accepted = accepted;
+            }
+
             frame.setAccepted(accepted);
 
             if (accepted)
@@ -326,6 +332,48 @@ public class VP8AdaptiveTrackProjectionContext
         }
 
         return frame.isAccepted() && frame.getProjection().accept(vp8Packet);
+    }
+
+    /**
+     * For a frame that's been accepted by the quality filter, verify that
+     * it's decodable given the projection decisions about previous frames
+     * (in case the targetIndex has changed).
+     */
+    private boolean checkDecodability(@NotNull VP8Frame frame)
+    {
+        if (frame.isKeyframe() || frame.getTemporalLayer() == 0)
+        {
+            /* We'll always project all TL0 frames, and TL0PICIDX lets the
+             * decoder know if it's missed something, so no need to check.
+             */
+            return true;
+        }
+
+        VP8Frame f = frame, prev;
+
+        while ((prev = prevFrame(f)) != null)
+        {
+            if (!f.isImmediatelyAfter(prev))
+            {
+                /* If we have a gap in the projection history, we don't know
+                 * what will be sent. Default to assuming it'll be decodable.
+                 */
+                return true;
+            }
+            if (prev.isKeyframe() || prev.getTemporalLayer() <= frame.getTemporalLayer())
+            {
+                /* Assume temporal nesting - if the previous frame of a lower
+                 * or equal layer was accepted, this frame is decodable, otherwise
+                 * it probably isn't.
+                 */
+                return prev.isAccepted();
+            }
+
+            f = prev;
+        }
+        /* If we ran off the beginning of our history, we don't know what was
+         * sent before; assume it'll be decodable. */
+        return true;
     }
 
     /**
