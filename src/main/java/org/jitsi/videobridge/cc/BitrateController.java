@@ -31,6 +31,8 @@ import org.json.simple.*;
 import java.util.*;
 import java.util.concurrent.*;
 
+import static org.jitsi.videobridge.cc.config.BitrateControllerConfig.*;
+
 /**
  * The {@link BitrateController} is attached to a destination {@link
  * Endpoint} and its purpose is 1st to selectively drop incoming packets
@@ -262,7 +264,7 @@ public class BitrateController
         // the risk of clogging the receiver's pipe.
 
         return deltaBwe > 0
-            ||  deltaBwe < -1 * previousBwe * BitrateControllerConfig.bweChangeThresholdPct() / 100;
+            ||  deltaBwe < -1 * previousBwe * Config.bweChangeThresholdPct() / 100;
     }
 
     /**
@@ -345,7 +347,7 @@ public class BitrateController
     {
         JSONObject debugState = new JSONObject();
         debugState.put("forwardedEndpoints", forwardedEndpointIds.toString());
-        debugState.put("trustBwe", BitrateControllerConfig.trustBwe());
+        debugState.put("trustBwe", Config.trustBwe());
         debugState.put("lastBwe", lastBwe);
         debugState.put("maxRxFrameHeightPx", maxRxFrameHeightPx);
         debugState.put("selectedEndpointIds", selectedEndpointIds.toString());
@@ -455,7 +457,7 @@ public class BitrateController
      */
     private long getAvailableBandwidth(long nowMs)
     {
-        boolean trustBwe = BitrateControllerConfig.trustBwe();
+        boolean trustBwe = Config.trustBwe();
         if (trustBwe)
         {
             // Ignore the bandwidth estimations in the first 10 seconds because
@@ -732,13 +734,21 @@ public class BitrateController
                 return adaptiveTrackProjection;
             }
 
+            // XXX the lambda keeps a reference to the trackBitrateAllocation
+            // (a short lived object under normal circumstances) which keeps
+            // a reference to the Endpoint object that it refers to. That
+            // can cause excessive object retention (i.e. the endpoint is expired
+            // but a reference persists in the adaptiveTrackProjectionMap). We're
+            // creating local final variables and pass that to the lambda function
+            // in order to avoid that.
+            final String endpointID = trackBitrateAllocation.endpointID;
+            final long targetSSRC = trackBitrateAllocation.targetSSRC;
             adaptiveTrackProjection
                 = new AdaptiveTrackProjection(
                     diagnosticContext,
                     trackBitrateAllocation.track, () ->
                         destinationEndpoint.getConference().requestKeyframe(
-                            trackBitrateAllocation.endpointID,
-                            trackBitrateAllocation.targetSSRC),
+                            endpointID, targetSSRC),
                     logger);
 
             for (PayloadType payloadType : payloadTypes.values())
@@ -1315,8 +1325,8 @@ public class BitrateController
                     // resolution. Basically what we want for the on-stage
                     // participant is 180p7.5fps, 180p15fps, 180p30fps,
                     // 360p30fps and 720p30fps.
-                    if (encoding.getHeight() < BitrateControllerConfig.onstagePreferredHeightPx()
-                        || encoding.getFrameRate() >= BitrateControllerConfig.onstagePreferredFramerate())
+                    if (encoding.getHeight() < Config.onstagePreferredHeightPx()
+                        || encoding.getFrameRate() >= Config.onstagePreferredFramerate())
                     {
                         long encodingBitrateBps = encoding.getBitrateBps(nowMs);
                         if (encodingBitrateBps > 0)
@@ -1327,12 +1337,12 @@ public class BitrateController
                             new RateSnapshot(encodingBitrateBps, encoding));
                     }
 
-                    if (encoding.getHeight() <= BitrateControllerConfig.onstagePreferredHeightPx())
+                    if (encoding.getHeight() <= Config.onstagePreferredHeightPx())
                     {
                         ratedPreferredIdx = ratesList.size() - 1;
                     }
                 }
-                else if (encoding.getHeight() <= BitrateControllerConfig.thumbnailMaxHeightPx())
+                else if (encoding.getHeight() <= Config.thumbnailMaxHeightPx())
                 {
                     // For the thumbnails, we consider all temporal layers of
                     // the low resolution stream.
@@ -1387,7 +1397,7 @@ public class BitrateController
 
             if (ratedTargetIdx == -1 && selected)
             {
-                if (!BitrateControllerConfig.enableOnstageVideoSuspend())
+                if (!Config.enableOnstageVideoSuspend())
                 {
                     ratedTargetIdx = 0;
                     oversending = ratedIndices[0].bps > maxBps;

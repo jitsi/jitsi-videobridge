@@ -15,12 +15,12 @@
  */
 package org.jitsi.videobridge.osgi;
 
-import java.util.*;
 import org.ice4j.*;
 import org.ice4j.ice.harvest.*;
 import org.jitsi.meet.*;
 import org.jitsi.stats.media.*;
-import org.jitsi.videobridge.xmpp.*;
+
+import java.util.*;
 
 /**
  * OSGi bundles description for the Jitsi Videobridge.
@@ -42,9 +42,6 @@ public class BundleConfig
         = {
         {
             "org/jitsi/eventadmin/Activator"
-        },
-        {
-            "org/jitsi/service/libjitsi/LibJitsiActivator"
         },
         {
             "org/jitsi/videobridge/osgi/ConfigurationActivator"

@@ -66,7 +66,8 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  * @author George Politis
  */
 public class Endpoint
-    extends AbstractEndpoint implements PotentialPacketHandler, PropertyChangeListener
+    extends AbstractEndpoint implements PotentialPacketHandler,
+    EncodingsManager.EncodingsUpdateListener
 {
     /**
      * The {@link SctpManager} instance we'll use to manage the SCTP connection
@@ -629,6 +630,7 @@ public class Endpoint
         }
         bandwidthProbing.enabled = false;
         recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing);
+        getConference().encodingsManager.unsubscribe(this);
 
         dtlsTransport.close();
 

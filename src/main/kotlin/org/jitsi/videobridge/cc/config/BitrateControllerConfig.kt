@@ -16,88 +16,104 @@
 
 package org.jitsi.videobridge.cc.config
 
-import org.jitsi.config.simple
+import org.jitsi.config.LegacyFallbackConfigProperty
 
 class BitrateControllerConfig {
-    companion object {
-        /**
-         * The property that holds the bandwidth estimation threshold.
-         *
-         * In order to limit the resolution changes due to bandwidth changes we
-         * react to bandwidth changes greater bweChangeThresholdPct / 100 of the
-         * last bandwidth estimation.
-         */
-        private val bweChangeThresholdPctProp = simple<Int>(
-            readOnce = true,
-            legacyName = "org.jitsi.videobridge.BWE_CHANGE_THRESHOLD_PCT",
-            newName = "videobridge.cc.bwe-change-threshold-pct"
-        )
+    class Config {
+        companion object {
+            /**
+             * The property that holds the bandwidth estimation threshold.
+             *
+             * In order to limit the resolution changes due to bandwidth changes we
+             * react to bandwidth changes greater bweChangeThresholdPct / 100 of the
+             * last bandwidth estimation.
+             */
+            class BweChangeThresholdPercentProperty : LegacyFallbackConfigProperty<Int>(
+                Int::class,
+                readOnce = true,
+                legacyName = "org.jitsi.videobridge.BWE_CHANGE_THRESHOLD_PCT",
+                newName = "videobridge.cc.bwe-change-threshold-pct"
+            )
+            private val bweChangeThresholdPctProp = BweChangeThresholdPercentProperty()
 
-        @JvmStatic
-        fun bweChangeThresholdPct() = bweChangeThresholdPctProp.value
+            @JvmStatic
+            fun bweChangeThresholdPct() = bweChangeThresholdPctProp.value
 
-        /**
-         * The property for the max resolution to allocate for the thumbnails.
-         */
-        private val thumbnailMaxHeightPxProp = simple<Int>(
-            readOnce = true,
-            legacyName = "org.jitsi.videobridge.THUMBNAIL_MAX_HEIGHT",
-            newName = "videobridge.cc.thumbnail-max-height-px"
-        )
+            /**
+             * The property for the max resolution to allocate for the thumbnails.
+             */
+            class ThumbnailMaxHeightPixelsProperty : LegacyFallbackConfigProperty<Int>(
+                Int::class,
+                readOnce = true,
+                legacyName = "org.jitsi.videobridge.THUMBNAIL_MAX_HEIGHT",
+                newName = "videobridge.cc.thumbnail-max-height-px"
+            )
 
-        @JvmStatic
-        fun thumbnailMaxHeightPx() = thumbnailMaxHeightPxProp.value
+            private val thumbnailMaxHeightPxProp = ThumbnailMaxHeightPixelsProperty()
 
-        /**
-         * The default preferred resolution to allocate for the onstage participant,
-         * before allocating bandwidth for the thumbnails.
-         */
-        private val onstagePreferredHeightPxProp = simple<Int>(
-            readOnce = true,
-            legacyName= "org.jitsi.videobridge.ONSTAGE_PREFERRED_HEIGHT",
-            newName = "videobridge.cc.onstage-preferred-height-px"
-        )
+            @JvmStatic
+            fun thumbnailMaxHeightPx() = thumbnailMaxHeightPxProp.value
 
-        @JvmStatic
-        fun onstagePreferredHeightPx() = onstagePreferredHeightPxProp.value
+            /**
+             * The default preferred resolution to allocate for the onstage participant,
+             * before allocating bandwidth for the thumbnails.
+             */
+            class OnstagePreferredHeightPixelsProperty : LegacyFallbackConfigProperty<Int>(
+                Int::class,
+                readOnce = true,
+                legacyName= "org.jitsi.videobridge.ONSTAGE_PREFERRED_HEIGHT",
+                newName = "videobridge.cc.onstage-preferred-height-px"
+            )
+            private val onstagePreferredHeightPxProp = OnstagePreferredHeightPixelsProperty()
 
-        /**
-         * The preferred frame rate to allocate for the onstage participant.
-         */
-        private val onstagePreferredFramerate = simple<Double>(
-            readOnce = true,
-            legacyName= "org.jitsi.videobridge.ONSTAGE_PREFERRED_FRAME_RATE",
-            newName = "videobridge.cc.onstage-preferred-framerate"
-        )
+            @JvmStatic
+            fun onstagePreferredHeightPx() = onstagePreferredHeightPxProp.value
 
-        @JvmStatic
-        fun onstagePreferredFramerate() = onstagePreferredFramerate.value
+            /**
+             * The preferred frame rate to allocate for the onstage participant.
+             */
+            class OnstagePreferredFramerateProperty : LegacyFallbackConfigProperty<Double>(
+                Double::class,
+                readOnce = true,
+                legacyName= "org.jitsi.videobridge.ONSTAGE_PREFERRED_FRAME_RATE",
+                newName = "videobridge.cc.onstage-preferred-framerate"
+            )
+            private val onstagePreferredFramerate = OnstagePreferredFramerateProperty()
 
-        /**
-         * Whether or not we're allowed to suspend the video of the
-         * on-stage participant.
-         */
-        private val enableOnstageVideoSuspendProp = simple<Boolean>(
-            readOnce = true,
-            legacyName = "org.jitsi.videobridge.ENABLE_ONSTAGE_VIDEO_SUSPEND",
-            newName = "videobridge.cc.enable-onstage-video-suspend"
-        )
+            @JvmStatic
+            fun onstagePreferredFramerate() = onstagePreferredFramerate.value
 
-        @JvmStatic
-        fun enableOnstageVideoSuspend() = enableOnstageVideoSuspendProp.value
+            /**
+             * Whether or not we're allowed to suspend the video of the
+             * on-stage participant.
+             */
+            class EnableOnstageVideoSuspendProperty : LegacyFallbackConfigProperty<Boolean>(
+                Boolean::class,
+                readOnce = true,
+                legacyName = "org.jitsi.videobridge.ENABLE_ONSTAGE_VIDEO_SUSPEND",
+                newName = "videobridge.cc.enable-onstage-video-suspend"
+            )
+            private val enableOnstageVideoSuspendProp = EnableOnstageVideoSuspendProperty()
 
-        /**
-         * Whether or not we should trust the bandwidth
-         * estimations. If this is se to false, then we assume a bandwidth
-         * estimation of Long.MAX_VALUE.
-         */
-        private val trustBweProp = simple<Boolean>(
-            readOnce = true,
-            legacyName= "org.jitsi.videobridge.TRUST_BWE",
-            newName = "videobridge.cc.trust-bwe"
-        )
+            @JvmStatic
+            fun enableOnstageVideoSuspend() = enableOnstageVideoSuspendProp.value
 
-        @JvmStatic
-        fun trustBwe() = trustBweProp.value
+            /**
+             * Whether or not we should trust the bandwidth
+             * estimations. If this is se to false, then we assume a bandwidth
+             * estimation of Long.MAX_VALUE.
+             */
+            class TrustBweProperty : LegacyFallbackConfigProperty<Boolean>(
+                Boolean::class,
+                readOnce = true,
+                legacyName= "org.jitsi.videobridge.TRUST_BWE",
+                newName = "videobridge.cc.trust-bwe"
+            )
+
+            private val trustBweProp = TrustBweProperty()
+
+            @JvmStatic
+            fun trustBwe() = trustBweProp.value
+        }
     }
 }

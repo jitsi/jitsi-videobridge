@@ -18,43 +18,46 @@ package org.jitsi.videobridge.xmpp.config
 
 import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValue
-import org.jitsi.config.legacyProperty
-import org.jitsi.config.newProperty
-import org.jitsi.utils.config.dsl.multiProperty
+import org.jitsi.config.legacyConfigAttributes
+import org.jitsi.config.newConfigAttributes
+import org.jitsi.utils.config.FallbackProperty
 import org.jitsi.xmpp.mucclient.MucClientConfiguration
 
 class XmppClientConnectionConfig {
-    companion object {
-        private val clientConnectionConfigs = multiProperty<List<MucClientConfiguration>> {
-            legacyProperty {
-                name("org.jitsi.videobridge.xmpp.user")
-                readOnce()
-                retrievedAs<ConfigObject>() convertedBy { cfg ->
-                    cfg.entries.map { it.toMucClientConfiguration() }
+    class Config {
+        companion object {
+            class ClientConnectionConfigsProperty : FallbackProperty<List<MucClientConfiguration>>(
+                legacyConfigAttributes {
+                    name("org.jitsi.videobridge.xmpp.user")
+                    readOnce()
+                    retrievedAs<ConfigObject>() convertedBy { cfg ->
+                        cfg.entries.map { it.toMucClientConfiguration() }
+                    }
+                },
+                newConfigAttributes {
+                    name("videobridge.apis.xmpp-client.configs")
+                    readOnce()
+                    retrievedAs<ConfigObject>() convertedBy { cfg ->
+                        cfg.entries.map { it.toMucClientConfiguration() }
+                    }
                 }
-            }
-            newProperty {
-                name("videobridge.apis.xmpp-client.configs")
-                readOnce()
-                retrievedAs<ConfigObject>() convertedBy { cfg ->
-                    cfg.entries.map { it.toMucClientConfiguration() }
-                }
-            }
-        }
+            )
+            private val clientConnectionConfigs = ClientConnectionConfigsProperty()
 
-        private fun MutableMap.MutableEntry<String, ConfigValue>.toMucClientConfiguration(): MucClientConfiguration {
-            val config = MucClientConfiguration(this.key)
-            (value as? ConfigObject)?.let {
-                it.forEach { (propName, propValue) ->
-                    config.setProperty(propName, propValue.unwrapped().toString())
-                }
-            } ?: run { throw Exception("Invalid muc client configuration. " +
-                    "Expected type ConfigObject but got ${value.unwrapped()::class.java}") }
-            return config
-        }
+            private fun MutableMap.MutableEntry<String, ConfigValue>.toMucClientConfiguration(): MucClientConfiguration {
+                val config = MucClientConfiguration(this.key)
+                (value as? ConfigObject)?.let {
+                    it.forEach { (propName, propValue) ->
+                        config.setProperty(propName, propValue.unwrapped().toString())
+                    }
+                } ?: run { throw Exception("Invalid muc client configuration. " +
+                        "Expected type ConfigObject but got ${value.unwrapped()::class.java}") }
+                return config
+            }
 
-        @JvmStatic
-        fun getClientConfigs(): List<MucClientConfiguration> =
-            clientConnectionConfigs.value
+            @JvmStatic
+            fun getClientConfigs(): List<MucClientConfiguration> =
+                clientConnectionConfigs.value
+        }
     }
 }
