@@ -65,6 +65,56 @@ reduce bandwidth based on this "false" packet loss; in particular, this means
 that senders operating on receiver-side REMB-based bandwidth estimation mustn't
 adjust the estimates based on received loss.)
 
+# Examples of projection
+
+## Scenario A: Happy path (target TL0)
+
+Sender sends: TL0 (1, 2, 3), TL2 (4, 5), TL1 (6, 7), TL2 (8), TL0 (9, 10, 11)
+
+Bridge receives: what the sender sends
+
+Bridge sends:  101, 102, 103, (9 -> 104), (10 -> 105), (11 -> 106)
+
+When packet 9 arrives, the bridge can determine that sequence numbers 4 - 8
+belong to non-routed packets and can be suppressed
+
+## Scenario B: packet loss (target TL2)
+
+Sender sends: TL0 (1, 2, 3), TL2 (4, 5), TL1 (6, 7), TL2 (8), TL0 (9, 10, 11)
+
+Bridge receives: 1, 2, 3, 4, _(X)_, 6, 7, 8, 9, 10, 11, 5
+
+Bridge sends:  101, 102, 103, 104, 106, 107, 108, 109, 110, 111, 105
+
+When packet 6 arrives, the bridge computes the gap from the previously projected
+frame.  Because it wants to route both the TL2 and TL1 frames, it leaves
+a gap in the outgoing sequence numbers, into which packet 5 can later be slotted.
+
+## Scenario C: packet loss 1 (target TL0)
+
+Sender sends: TL0 (1, 2, 3), TL2 (4, 5), TL1 (6, 7), TL2 (8), TL0 (9, 10, 11)
+
+Bridge receives: 1, 2, 3, 4, _(X)_, 6, 7, 8, 9, 10, 11, 5
+
+Bridge sends:  101, 102, 103, (9 -> 104), (10 -> 105), (11 -> 106)
+
+Similarly to Scenario A, when packet 9 arrives, the bridge can determine that
+sequence numbers 4-8 belong to non-routed packets.  The status of the
+unreceived packet 5 can be determined because packet 4 will not have its
+"end of frame" flag set.
+
+## Scenario C: packet loss 2 (target TL1)
+
+Sender sends: TL0 (1, 2, 3), TL2 (4, 5), TL1 (6, 7), TL2 (8), TL0 (9, 10, 11)
+
+Bridge receives: 1, 2, 3, 4, 5, 6, 7, _(X)_, 9, 10, 11, 8
+
+Bridge sends:  101, 102, 103, (6 -> 104), (7 -> 105), (9 -> 107), (10 -> 108), (11 -> 109)
+
+In this case, when packet 9 arrives, the bridge cannot determine what type of
+frame packet 8 was -- it could have been a TL1.  Therefore it must leave a gap in
+the outgoing sequence numbers.
+
 
 [simulcast]: https://ieeexplore.ieee.org/abstract/document/7992929
 [1]: https://groups.google.com/d/topic/discuss-webrtc/gik2VH4hUjk/discussion
