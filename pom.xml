@@ -10,6 +10,7 @@
   <properties>
     <assembly.skipAssembly>true</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
+
     <jetty.version>9.4.15.v20190215</jetty.version>
     <kotlin.version>1.3.21</kotlin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -265,93 +266,29 @@
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.2.1</version>
         <executions>
           <execution>
-            <id>assembly-native-libraries</id>
-            <phase>package</phase>
             <goals>
-              <goal>single</goal>
+              <goal>shade</goal>
             </goals>
             <configuration>
-              <appendAssemblyId>true</appendAssemblyId>
-              <descriptors>
-                <!-- The slightly odd artifact names help with backwards compatibility with the checkNatives() implementation. -->
-                <descriptor>src/assembly/native-linux-32.xml</descriptor>
-                <descriptor>src/assembly/native-linux-64.xml</descriptor>
-                <descriptor>src/assembly/native-macosx.xml</descriptor>
-                <descriptor>src/assembly/native-windows-32.xml</descriptor>
-                <descriptor>src/assembly/native-windows-64.xml</descriptor>
-              </descriptors>
-              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
-              <descriptorRefs>
-                <descriptorRef>jar-with-dependencies</descriptorRef>
-              </descriptorRefs>
-            </configuration>
-          </execution>
-          <execution>
-            <id>assembly-linux-x64-bin-archive</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <appendAssemblyId>false</appendAssemblyId>
-              <descriptor>src/assembly/linux-x64-bin-archive.xml</descriptor>
-              <finalName>${project.artifactId}-linux-x64-${project.version}</finalName>
-              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
-            </configuration>
-          </execution>
-          <execution>
-            <id>assembly-linux-x86-bin-archive</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <appendAssemblyId>false</appendAssemblyId>
-              <descriptor>src/assembly/linux-x86-bin-archive.xml</descriptor>
-              <finalName>${project.artifactId}-linux-x86-${project.version}</finalName>
-              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
-            </configuration>
-          </execution>
-          <execution>
-            <id>assembly-macosx-bin-archive</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <appendAssemblyId>false</appendAssemblyId>
-              <descriptor>src/assembly/macosx-bin-archive.xml</descriptor>
-              <finalName>${project.artifactId}-macosx-${project.version}</finalName>
-              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
-            </configuration>
-          </execution>
-          <execution>
-            <id>assembly-windows-x64-bin-archive</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <appendAssemblyId>false</appendAssemblyId>
-              <descriptor>src/assembly/windows-x64-bin-archive.xml</descriptor>
-              <finalName>${project.artifactId}-windows-x64-${project.version}</finalName>
-              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
-            </configuration>
-          </execution>
-          <execution>
-            <id>assembly-windows-x86-bin-archive</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <appendAssemblyId>false</appendAssemblyId>
-              <descriptor>src/assembly/windows-x86-bin-archive.xml</descriptor>
-              <finalName>${project.artifactId}-windows-x86-${project.version}</finalName>
-              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>reference.conf</resource>
+                </transformer>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
             </configuration>
           </execution>
         </executions>
