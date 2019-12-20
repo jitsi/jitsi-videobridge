@@ -67,7 +67,8 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  */
 public class Endpoint
     extends AbstractEndpoint implements PotentialPacketHandler,
-    EncodingsManager.EncodingsUpdateListener
+        PropertyChangeListener,
+        EncodingsManager.EncodingsUpdateListener
 {
     /**
      * The {@link SctpManager} instance we'll use to manage the SCTP connection
