@@ -187,6 +187,14 @@ class DtlsStack(
      */
     fun start() {
         roleSet.thenRun {
+            // There is a bit of a race here: It's technically possible the
+            // far side could finish the handshake and send a message before
+            // this side assigns dtlsTransport here.  If so, that message
+            // would be passed to #processIncomingProtocolData and put in
+            // incomingProtocolData, but, since dtlsTransport won't be set
+            // yet, we won't 'receive' it yet.  The message isn't lost, but
+            // won't be received until another message comes after
+            // dtlsTransport has been set.
             dtlsTransport = role?.start()
         }
     }
