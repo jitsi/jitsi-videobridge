@@ -19,6 +19,7 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.rest.root.colibri.debug.EndpointDebugFeatures;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
@@ -409,4 +410,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 
         return debugState;
     }
+
+    public abstract void setFeature(EndpointDebugFeatures feature, boolean b);
 }

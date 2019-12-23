@@ -36,6 +36,7 @@ import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.rest.root.colibri.debug.EndpointDebugFeatures;
 import org.jitsi.videobridge.sctp.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
@@ -1348,5 +1349,20 @@ public class Endpoint
         debugState.put("acceptVideo", acceptVideo);
 
         return debugState;
+    }
+
+    @Override
+    public void setFeature(EndpointDebugFeatures feature, boolean b) {
+
+        switch (feature)
+        {
+            case INGRESS_DUMP:
+                transceiver.setFeature(TranceiverFeatures.INGRESS_DUMP, b);
+                break;
+
+            case EGRESS_DUMP:
+                transceiver.setFeature(TranceiverFeatures.EGRESS_DUMP, b);
+                break;
+        }
     }
 }

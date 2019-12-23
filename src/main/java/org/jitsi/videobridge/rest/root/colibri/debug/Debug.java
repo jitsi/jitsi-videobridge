@@ -21,6 +21,8 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.queue.*;
+import org.jitsi.videobridge.AbstractEndpoint;
+import org.jitsi.videobridge.Conference;
 import org.jitsi.videobridge.rest.root.colibri.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
@@ -60,6 +62,32 @@ public class Debug extends ColibriResource
     {
         logger.info("Enabling " + feature.getValue());
         setFeature(feature, true);
+        return Response.ok().build();
+    }
+
+    @POST
+    @Path("/{confId}/{epId}/enable/{feature}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response enableEndpointFeature(
+            @PathParam("confId") String confId,
+            @PathParam("epId") String epId,
+            @PathParam("feature") EndpointDebugFeatures feature)
+    {
+        Conference conference = videobridgeProvider.get().getConference(confId, null);
+        if (conference == null)
+        {
+            throw new NotFoundException("No conference was found with the specified id.");
+        }
+
+        AbstractEndpoint endpoint = conference.getEndpoint(epId);
+        if (endpoint == null)
+        {
+            throw new NotFoundException("No endpoint was found with the specified id.");
+        }
+
+        logger.info("Enabling " + feature.getValue());
+        endpoint.setFeature(feature, true);
+
         return Response.ok().build();
     }
 
