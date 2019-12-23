@@ -152,7 +152,7 @@ class ColibriWebSocketServlet
         if (abstractEndpoint == null || !(abstractEndpoint instanceof Endpoint))
         {
             logger.warn("Received request for a nonexistent endpoint: "
-                            + ids[1] + "(conference " + conference.getID());
+                            + ids[2] + "(conference " + conference.getID());
             response.sendError(403, authFailed);
             return null;
         }

@@ -169,77 +169,16 @@ class EndpointMessageTransport
             .totalColibriWebSocketMessagesSent.incrementAndGet();
     }
 
+
     /**
      * {@inheritDoc}
      */
     @Override
-    protected void onPinnedEndpointChangedEvent(
-        Object src,
-        JSONObject jsonObject)
-    {
-        // Find the new pinned endpoint.
-        String newPinnedEndpointID = (String) jsonObject.get("pinnedEndpoint");
-
-        Set<String> newPinnedIDs = Collections.EMPTY_SET;
-        if (newPinnedEndpointID != null && !"".equals(newPinnedEndpointID))
-        {
-            newPinnedIDs = Collections.singleton(newPinnedEndpointID);
-        }
-
-        endpoint.pinnedEndpointsChanged(newPinnedIDs);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     protected void onPinnedEndpointsChangedEvent(
-        Object src,
-        JSONObject jsonObject)
+        JSONObject jsonObject, Set<String> newPinnedEndpoints)
     {
-        // Find the new pinned endpoint.
-        Object o = jsonObject.get("pinnedEndpoints");
-        if (!(o instanceof JSONArray))
-        {
-            logger.warn("Received invalid or unexpected JSON: " + jsonObject);
-            return;
-        }
-
-        JSONArray jsonArray = (JSONArray) o;
-        Set<String> newPinnedEndpoints = new HashSet<>();
-        for (Object endpointId : jsonArray)
-        {
-            if (endpointId != null && endpointId instanceof String)
-            {
-                newPinnedEndpoints.add((String)endpointId);
-            }
-        }
-
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Pinned " + newPinnedEndpoints);
-        }
         endpoint.pinnedEndpointsChanged(newPinnedEndpoints);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void onSelectedEndpointChangedEvent(
-        Object src,
-        JSONObject jsonObject)
-    {
-        // Find the new pinned endpoint.
-        String newSelectedEndpointID
-                = (String) jsonObject.get("selectedEndpoint");
-
-        Set<String> newSelectedIDs = Collections.EMPTY_SET;
-        if (newSelectedEndpointID != null && !"".equals(newSelectedEndpointID))
-        {
-            newSelectedIDs = Collections.singleton(newSelectedEndpointID);
-        }
-
-        endpoint.selectedEndpointsChanged(newSelectedIDs);
+        propagateJSONObject(jsonObject);
     }
 
     /**
@@ -247,28 +186,32 @@ class EndpointMessageTransport
      */
     @Override
     protected void onSelectedEndpointsChangedEvent(
-        Object src,
-        JSONObject jsonObject)
+        JSONObject jsonObject, Set<String> newSelectedEndpoints)
     {
-        // Find the new pinned endpoint.
-        Object o = jsonObject.get("selectedEndpoints");
-        if (!(o instanceof JSONArray))
+        endpoint.selectedEndpointsChanged(newSelectedEndpoints);
+        propagateJSONObject(jsonObject);
+    }
+
+    /**
+     * Propagates the specified JSON object to all proxies (i.e. octo endpoints) of
+     * {@link #endpoint} to all remote bridges.
+     *
+     * @param jsonObject the JSON object to propagate.
+     */
+    private void propagateJSONObject(JSONObject jsonObject)
+    {
+        Conference conference = getConference();
+        if (conference == null || conference.isExpired())
         {
-            logger.warn("Received invalid or unexpected JSON: " + jsonObject);
+            logger.warn(
+                "Unable to propagate a JSON object, the conference is null or expired.");
             return;
         }
 
-        JSONArray jsonArray = (JSONArray) o;
-        Set<String> newSelectedEndpoints = new HashSet<>();
-        for (Object endpointId : jsonArray)
-        {
-            if (endpointId != null && endpointId instanceof String)
-            {
-                newSelectedEndpoints.add((String)endpointId);
-            }
-        }
+        jsonObject.put(PROP_TARGET_OCTO_ENDPOINT_ID, endpoint.getID());
 
-        endpoint.selectedEndpointsChanged(newSelectedEndpoints);
+        // Notify Cthulhu and its minions about selected/pinned events.
+        conference.sendMessage(jsonObject.toString(), Collections.EMPTY_LIST, true);
     }
 
     @Override
