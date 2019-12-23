@@ -1166,33 +1166,22 @@ public class Endpoint
     @Override
     public void recreateMediaStreamTracks()
     {
-        ChannelShim videoChannel = getChannelOfMediaType(MediaType.VIDEO);
-        if (videoChannel != null)
-        {
+        final ArrayList<SourceGroupPacketExtension> sourceGroups = new ArrayList<>();
+        final ArrayList<SourcePacketExtension> sources = new ArrayList<>();
+        for (ChannelShim channelShim : channelShims) {
+            if (MediaType.VIDEO.equals(channelShim.getMediaType())) {
+                sourceGroups.addAll(channelShim.getSourceGroups());
+                sources.addAll(channelShim.getSources());
+            }
+        }
+
+        if (!sources.isEmpty() || !sourceGroups.isEmpty()) {
             MediaStreamTrackDesc[] tracks =
-                    MediaStreamTrackFactory.createMediaStreamTracks(
-                            videoChannel.getSources(),
-                            videoChannel.getSourceGroups());
+                MediaStreamTrackFactory.createMediaStreamTracks(
+                    sources,
+                    sourceGroups);
             setMediaStreamTracks(tracks);
         }
-    }
-
-    /**
-     * Gets this {@link AbstractEndpoint}'s channel of media type
-     * {@code mediaType} (although it's not strictly enforced, endpoints have
-     * at most one channel with a given media type).
-     *
-     * @param mediaType the media type of the channel.
-     *
-     * @return the channel.
-     */
-    private ChannelShim getChannelOfMediaType(MediaType mediaType)
-    {
-        return
-                channelShims.stream()
-                        .filter(c -> c.getMediaType().equals(mediaType))
-                        .findAny().orElse(null);
-
     }
 
     /**
