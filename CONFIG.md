@@ -53,3 +53,7 @@ This list will be updated as properties are migrated:
 | org.jitsi.videobridge.TRUST_BWE | videobridge.cc.trust-bwe | |
 | org.jitsi.videobridge.PADDING_PERIOD_MS | videobridge.cc.padding-period | The new config models this as a duration, rather than an amount of milliseconds |
 | org.jitsi.videobridge.DISABLE_RTX_PROBING | n/a | This property has been deprecated |
+| org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE | videobridge.websockets.enabled | The semantics of this property have been inverted (disable -> enable) |
+| org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN | videobridge.websockets.domain | |
+| org.jitsi.videobridge.rest.COLIBRI_WS_TLS | videobridge.websockets.tls | |
+| org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID | videobridge.websockets.server-id | |
