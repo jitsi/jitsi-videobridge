@@ -1170,8 +1170,16 @@ public class Endpoint
         final ArrayList<SourcePacketExtension> sources = new ArrayList<>();
         for (ChannelShim channelShim : channelShims) {
             if (MediaType.VIDEO.equals(channelShim.getMediaType())) {
-                sourceGroups.addAll(channelShim.getSourceGroups());
-                sources.addAll(channelShim.getSources());
+                final Collection<SourceGroupPacketExtension> channelSourceGroups
+                    = channelShim.getSourceGroups();
+                if (channelSourceGroups != null) {
+                    sourceGroups.addAll(channelSourceGroups);
+                }
+                final Collection<SourcePacketExtension> channelSources
+                    = channelShim.getSources();
+                if (channelSources != null) {
+                    sources.addAll(channelSources);
+                }
             }
         }
 
