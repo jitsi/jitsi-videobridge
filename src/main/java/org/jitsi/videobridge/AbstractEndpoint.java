@@ -411,5 +411,11 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         return debugState;
     }
 
-    public abstract void setFeature(EndpointDebugFeatures feature, boolean b);
+    /**
+     * Enables/disables the given feature, if the endpoint implementation supports it.
+     *
+     * @param feature the feature to enable or disable.
+     * @param enabled the state of the feature.
+     */
+    public abstract void setFeature(EndpointDebugFeatures feature, boolean enabled);
 }

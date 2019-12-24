@@ -16,23 +16,20 @@
 
 package org.jitsi.videobridge.rest.root.colibri.debug;
 
-public enum EndpointDebugFeatures
-{
-    EGRESS_DUMP("egress-dump"),
-    INGRESS_DUMP("ingress-dump");
+public enum FeatureState {
+    ENABLE(true),
+    DISABLE(false);
 
+    boolean value;
 
-    private final String value;
-
-    EndpointDebugFeatures(String value)
-    {
+    FeatureState(boolean value) {
         this.value = value;
     }
 
-    public String getValue()
-    {
-        return this.value;
+    public boolean getValue() {
+        return value;
     }
+
 
     /**
      * A custom 'fromString' implementation which allows creating an instance of
@@ -45,9 +42,8 @@ public enum EndpointDebugFeatures
      * @return an instance of the enum, if one can be derived by reversing the transformation
      * detailed above
      */
-    public static EndpointDebugFeatures fromString(String value)
+    public static FeatureState fromString(String value)
     {
-        String normalized = value.toUpperCase().replace("-", "_");
-        return EndpointDebugFeatures.valueOf(normalized);
+        return "enable".equalsIgnoreCase(value) ? ENABLE : DISABLE;
     }
 }

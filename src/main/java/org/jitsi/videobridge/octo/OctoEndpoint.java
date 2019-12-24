@@ -88,7 +88,7 @@ public class OctoEndpoint
     }
 
     @Override
-    public void setFeature(EndpointDebugFeatures feature, boolean b) {
+    public void setFeature(EndpointDebugFeatures feature, boolean enabled) {
 
     }
 

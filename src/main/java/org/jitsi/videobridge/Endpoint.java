@@ -1351,17 +1351,20 @@ public class Endpoint
         return debugState;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void setFeature(EndpointDebugFeatures feature, boolean b) {
+    public void setFeature(EndpointDebugFeatures feature, boolean enabled) {
 
         switch (feature)
         {
             case INGRESS_DUMP:
-                transceiver.setFeature(TranceiverFeatures.INGRESS_DUMP, b);
+                transceiver.setFeature(TranceiverFeatures.INGRESS_DUMP, enabled);
                 break;
 
             case EGRESS_DUMP:
-                transceiver.setFeature(TranceiverFeatures.EGRESS_DUMP, b);
+                transceiver.setFeature(TranceiverFeatures.EGRESS_DUMP, enabled);
                 break;
         }
     }

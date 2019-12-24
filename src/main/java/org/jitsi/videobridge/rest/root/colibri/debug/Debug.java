@@ -66,12 +66,13 @@ public class Debug extends ColibriResource
     }
 
     @POST
-    @Path("/{confId}/{epId}/enable/{feature}")
+    @Path("/{confId}/{epId}/{state}/{feature}")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response enableEndpointFeature(
             @PathParam("confId") String confId,
             @PathParam("epId") String epId,
-            @PathParam("feature") EndpointDebugFeatures feature)
+            @PathParam("feature") EndpointDebugFeatures feature,
+            @PathParam("state") FeatureState state)
     {
         Conference conference = videobridgeProvider.get().getConference(confId, null);
         if (conference == null)
@@ -85,8 +86,8 @@ public class Debug extends ColibriResource
             throw new NotFoundException("No endpoint was found with the specified id.");
         }
 
-        logger.info("Enabling " + feature.getValue());
-        endpoint.setFeature(feature, true);
+        logger.info("Setting feature state: feature=" + feature.getValue() + ", state=" + state.getValue());
+        endpoint.setFeature(feature, state.getValue());
 
         return Response.ok().build();
     }
