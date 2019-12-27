@@ -44,6 +44,11 @@ public class DebugTest extends JerseyTest
         videobridge = mock(Videobridge.class);
         when(videobridgeProvider.get()).thenReturn(videobridge);
 
+        Endpoint endpoint = mock(Endpoint.class);
+        Conference conference = mock(Conference.class);
+        when(videobridge.getConference("foo", null)).thenReturn(conference);
+        when(conference.getEndpoint("bar")).thenReturn(endpoint);
+
         enable(TestProperties.LOG_TRAFFIC);
         enable(TestProperties.DUMP_ENTITY);
         return new ResourceConfig() {
@@ -57,7 +62,16 @@ public class DebugTest extends JerseyTest
     @Test
     public void testEnableDebugFeature()
     {
-        Response resp = target("/colibri/debug/enable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
+        Response resp = target(BASE_URL + "/enable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
+                .request()
+                .post(Entity.json(null));
+        assertEquals(HttpStatus.OK_200, resp.getStatus());
+    }
+
+    @Test
+    public void testEnableEndpointDebugFeature()
+    {
+        Response resp = target(BASE_URL + "/foo/bar/enable/" + EndpointDebugFeatures.EGRESS_DUMP.getValue())
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
@@ -74,6 +88,15 @@ public class DebugTest extends JerseyTest
 
     @Test
     public void testDisableDebugFeature()
+    {
+        Response resp = target(BASE_URL + "/foo/bar/disable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
+                .request()
+                .post(Entity.json(null));
+        assertEquals(HttpStatus.OK_200, resp.getStatus());
+    }
+
+    @Test
+    public void testDisableEndpointDebugFeature()
     {
         Response resp = target(BASE_URL + "/disable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
                 .request()
