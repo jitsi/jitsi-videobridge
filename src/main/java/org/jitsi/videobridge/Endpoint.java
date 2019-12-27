@@ -1360,11 +1360,11 @@ public class Endpoint
         switch (feature)
         {
             case INGRESS_DUMP:
-                transceiver.setFeature(TranceiverFeatures.INGRESS_DUMP, enabled);
+                transceiver.setFeature(TransceiverFeatures.INGRESS_DUMP, enabled);
                 break;
 
             case EGRESS_DUMP:
-                transceiver.setFeature(TranceiverFeatures.EGRESS_DUMP, enabled);
+                transceiver.setFeature(TransceiverFeatures.EGRESS_DUMP, enabled);
                 break;
         }
     }
