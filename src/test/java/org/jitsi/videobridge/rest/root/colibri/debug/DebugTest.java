@@ -98,7 +98,7 @@ public class DebugTest extends JerseyTest
     @Test
     public void testDisableEndpointDebugFeature()
     {
-        Response resp = target(BASE_URL + "/disable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
+        Response resp = target(BASE_URL + "/disable/" + EndpointDebugFeatures.EGRESS_DUMP.getValue())
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
