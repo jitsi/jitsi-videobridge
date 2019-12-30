@@ -23,4 +23,13 @@ package org.jitsi.videobridge.cc;
 public class RewriteException
     extends Throwable
 {
+    public RewriteException()
+    {
+        super();
+    }
+
+    public RewriteException(String message)
+    {
+        super(message);
+    }
 }

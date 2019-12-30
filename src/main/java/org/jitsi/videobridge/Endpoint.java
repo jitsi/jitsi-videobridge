@@ -393,7 +393,7 @@ public class Endpoint
             if (packet instanceof VideoRtpPacket)
             {
                 return acceptVideo
-                        && bitrateController.accept((VideoRtpPacket) packet);
+                        && bitrateController.accept(packetInfo);
             }
             if (packet instanceof AudioRtpPacket)
             {
@@ -439,14 +439,8 @@ public class Endpoint
         Packet packet = packetInfo.getPacket();
         if (packet instanceof VideoRtpPacket)
         {
-            //TODO(brian): we lose all information in PacketInfo here,
-            // unfortunately, because the BitrateController can return more
-            // than/less than what was passed in (and in different order) so
-            // we can't just reassign a transformed packet back into its
-            // proper PacketInfo. Need to change those classes to work with
-            // the new packet types
-            VideoRtpPacket[] extras = bitrateController.transformRtp(packetInfo);
-            if (extras == null)
+            boolean accepted = bitrateController.transformRtp(packetInfo);
+            if (!accepted)
             {
                 logger.warn(
                     "Dropping a packet which was supposed to be accepted:"
@@ -455,13 +449,8 @@ public class Endpoint
             }
 
             // The original packet was transformed in place.
-            // TODO: should we send this *after* the extras?
             transceiver.sendPacket(packetInfo);
 
-            for (VideoRtpPacket videoRtpPacket : extras)
-            {
-                transceiver.sendPacket(new PacketInfo(videoRtpPacket));
-            }
             return;
         }
         else if (packet instanceof RtcpSrPacket)

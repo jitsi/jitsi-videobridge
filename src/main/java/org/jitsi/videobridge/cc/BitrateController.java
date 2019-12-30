@@ -276,8 +276,9 @@ public class BitrateController
      * written into the {@link Endpoint} that owns this {@link BitrateController}
      * ; otherwise, <tt>false</tt>
      */
-    public boolean accept(@NotNull VideoRtpPacket videoRtpPacket)
+    public boolean accept(@NotNull PacketInfo packetInfo)
     {
+        VideoRtpPacket videoRtpPacket = packetInfo.packetAs();
         long ssrc = videoRtpPacket.getSsrc();
 
         AdaptiveTrackProjection adaptiveTrackProjection
@@ -291,7 +292,7 @@ public class BitrateController
             return false;
         }
 
-        return adaptiveTrackProjection.accept(videoRtpPacket);
+        return adaptiveTrackProjection.accept(packetInfo);
     }
 
     /**
@@ -1102,12 +1103,11 @@ public class BitrateController
     /**
      * Transforms a video RTP packet.
      * @param packetInfo the video rtp packet
-     * @return
-     * {@null} to indicate that the given packet is not accepted and should
-     * be dropped. Otherwise, an array of extra packets to be sent, in addition
-     * to the input packet, which was transformed in place.
+     * @return true if the packet was successfully transformed in place; false if
+     * if the given packet is not accepted and should
+     * be dropped.
      */
-    public VideoRtpPacket[] transformRtp(@NotNull PacketInfo packetInfo)
+    public boolean transformRtp(@NotNull PacketInfo packetInfo)
     {
         VideoRtpPacket videoPacket = (VideoRtpPacket)packetInfo.getPacket();
         if (firstMediaMs == -1)
@@ -1121,13 +1121,12 @@ public class BitrateController
 
         if (adaptiveTrackProjection == null)
         {
-            return null;
+            return false;
         }
 
         try
         {
-            VideoRtpPacket[] extras
-                    = adaptiveTrackProjection.rewriteRtp(videoPacket);
+            adaptiveTrackProjection.rewriteRtp(packetInfo);
 
             // The rewriteRtp operation must not modify the VP8 payload.
             if (PacketInfo.Companion.getENABLE_PAYLOAD_VERIFICATION())
@@ -1142,12 +1141,12 @@ public class BitrateController
                 }
             }
 
-            return extras;
+            return true;
         }
         catch (RewriteException e)
         {
             logger.warn("Failed to rewrite a packet.", e);
-            return null;
+            return false;
         }
     }
 
