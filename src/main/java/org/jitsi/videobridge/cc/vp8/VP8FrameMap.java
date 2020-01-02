@@ -28,8 +28,13 @@ import java.util.function.*;
  */
 public class VP8FrameMap
 {
+    /** Map of timestamps to frames, used to find existing frames. */
+    private final HashMap<Long, VP8Frame>
+        vp8FrameMap = new HashMap<>();
+
+    /** Map of sequence numbers to frames, used to maintain decode order of frames. */
     private final TreeMap<Integer, VP8Frame>
-        vp8FrameMap = new TreeMap<>(
+        vp8OrderedFrameMap = new TreeMap<>(
         /* This is only a valid Comparator if seq number diffs of all
          * timestamps are within half the number space.  (This property is
          * assured by #cleanupFrameMap.)
@@ -47,7 +52,7 @@ public class VP8FrameMap
     public VP8FrameMap(
         @NotNull Logger parentLogger)
     {
-        this.logger = parentLogger.createChildLogger(VP8AdaptiveTrackProjectionContext.class.getName());
+        this.logger = parentLogger.createChildLogger(VP8FrameMap.class.getName());
     }
 
     /** Clean up old entries in the frame map.
@@ -66,18 +71,19 @@ public class VP8FrameMap
      * */
     private boolean cleanupFrameMap(int newSeq)
     {
-        if (vp8FrameMap.isEmpty())
+        if (vp8OrderedFrameMap.isEmpty())
         {
             return true;
         }
 
-        int latestSeq = vp8FrameMap.lastKey();
+        int latestSeq = vp8OrderedFrameMap.lastKey();
 
         /* If our sequence numbers have jumped by a quarter of the number space, reset the map. */
         int seqJump = RtpUtils.getSequenceNumberDelta(newSeq, latestSeq);
         if (seqJump >= 0x4000 || seqJump <= -0x4000)
         {
             vp8FrameMap.clear();
+            vp8OrderedFrameMap.clear();
             return true;
         }
 
@@ -88,12 +94,13 @@ public class VP8FrameMap
             return false;
         }
 
-        Iterator<Integer> it = vp8FrameMap.keySet().iterator();
+        Iterator<Map.Entry<Integer, VP8Frame>> it = vp8OrderedFrameMap.entrySet().iterator();
         while (it.hasNext())
         {
-            Integer key = it.next();
-            if (RtpUtils.isOlderSequenceNumberThan(key, threshold))
+            Map.Entry<Integer, VP8Frame> entry = it.next();
+            if (RtpUtils.isOlderSequenceNumberThan(entry.getKey(), threshold))
             {
+                vp8FrameMap.remove(entry.getValue().getTimestamp());
                 it.remove();
             }
             else {
@@ -108,32 +115,15 @@ public class VP8FrameMap
     /** Find a frame in the frame map, based on a packet. */
     public synchronized VP8Frame findFrame(@NotNull Vp8Packet packet)
     {
-        int seq = packet.getSequenceNumber();
+        long timestamp = packet.getTimestamp();
 
-        Map.Entry<Integer, VP8Frame> prevFrameEntry = vp8FrameMap.floorEntry(seq);
-        Map.Entry<Integer, VP8Frame> nextFrameEntry = vp8FrameMap.ceilingEntry(seq);
-
-        VP8Frame prevFrame =
-            prevFrameEntry != null ? prevFrameEntry.getValue() : null;
-        VP8Frame nextFrame =
-            nextFrameEntry != null ? nextFrameEntry.getValue() : null;
-
-        if (prevFrame != null && prevFrame.matchesFrame(packet))
-        {
-            return prevFrame;
-        }
-        if (nextFrame != null && nextFrame.matchesFrame(packet))
-        {
-            return nextFrame;
-        }
-
-        return null;
+        return vp8FrameMap.get(timestamp);
     }
 
     /** Get the current size of the map. */
     public int size()
     {
-        return vp8FrameMap.size();
+        return vp8OrderedFrameMap.size();
     }
 
     /** Helper function to insert a packet into an existing frame. */
@@ -157,28 +147,21 @@ public class VP8FrameMap
      */
     public synchronized FrameInsertionResult insertPacket(@NotNull Vp8Packet packet)
     {
+        Long timestamp = packet.getTimestamp();
+
+        VP8Frame frame = vp8FrameMap.get(timestamp);
+        if (frame != null) {
+            return doFrameInsert(frame, packet);
+        }
+
         int seq = packet.getSequenceNumber();
         if (!cleanupFrameMap(seq))
             return null;
 
-        Map.Entry<Integer, VP8Frame> prevFrameEntry = vp8FrameMap.floorEntry(seq);
-        Map.Entry<Integer, VP8Frame> nextFrameEntry = vp8FrameMap.ceilingEntry(seq);
+        frame = new VP8Frame(packet);
 
-        VP8Frame prevFrame = prevFrameEntry != null ? prevFrameEntry.getValue() : null;
-        if (prevFrame != null && prevFrame.matchesFrame(packet))
-        {
-            return doFrameInsert(prevFrame, packet);
-        }
-
-        VP8Frame nextFrame = nextFrameEntry != null ? nextFrameEntry.getValue() : null;
-        if (nextFrame != null && nextFrame.matchesFrame(packet))
-        {
-            return doFrameInsert(nextFrame, packet);
-        }
-
-        VP8Frame frame = new VP8Frame(packet);
-
-        vp8FrameMap.put(seq, frame);
+        vp8FrameMap.put(timestamp, frame);
+        vp8OrderedFrameMap.put(seq, frame);
 
         return new FrameInsertionResult(frame, true);
     }
@@ -186,23 +169,23 @@ public class VP8FrameMap
     @Nullable
     public synchronized VP8Frame nextFrame(@NotNull VP8Frame frame)
     {
-        Integer k = vp8FrameMap.higherKey(frame.getLatestKnownSequenceNumber());
+        Integer k = vp8OrderedFrameMap.higherKey(frame.getLatestKnownSequenceNumber());
         if (k == null)
         {
             return null;
         }
-        return vp8FrameMap.get(k);
+        return vp8OrderedFrameMap.get(k);
     }
 
     @Nullable
     public synchronized VP8Frame nextFrameWith(@NotNull VP8Frame frame, Predicate<VP8Frame> pred)
     {
         NavigableSet<Integer> tailSet =
-            vp8FrameMap.navigableKeySet().tailSet(frame.getLatestKnownSequenceNumber(), false);
+            vp8OrderedFrameMap.navigableKeySet().tailSet(frame.getLatestKnownSequenceNumber(), false);
 
         for (int seq : tailSet)
         {
-            VP8Frame f = vp8FrameMap.get(seq);
+            VP8Frame f = vp8OrderedFrameMap.get(seq);
             if (pred.test(f))
             {
                 return f;
@@ -226,23 +209,23 @@ public class VP8FrameMap
     @Nullable
     public synchronized VP8Frame prevFrame(@NotNull VP8Frame frame)
     {
-        Integer k = vp8FrameMap.lowerKey(frame.getEarliestKnownSequenceNumber());
+        Integer k = vp8OrderedFrameMap.lowerKey(frame.getEarliestKnownSequenceNumber());
         if (k == null)
         {
             return null;
         }
-        return vp8FrameMap.get(k);
+        return vp8OrderedFrameMap.get(k);
     }
 
     @Nullable
     public synchronized VP8Frame prevFrameWith(@NotNull VP8Frame frame, Predicate<VP8Frame> pred)
     {
         NavigableSet<Integer> revHeadSet =
-            vp8FrameMap.navigableKeySet().headSet(frame.getEarliestKnownSequenceNumber(), false).descendingSet();
+            vp8OrderedFrameMap.navigableKeySet().headSet(frame.getEarliestKnownSequenceNumber(), false).descendingSet();
 
         for (int seq : revHeadSet)
         {
-            VP8Frame f = vp8FrameMap.get(seq);
+            VP8Frame f = vp8OrderedFrameMap.get(seq);
             if (pred.test(f))
             {
                 return f;
