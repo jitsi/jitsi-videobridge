@@ -91,7 +91,7 @@ public class DePacketizer
         private static final byte L_BIT = (byte) 0x40;
 
         /**
-         * I bit from the I byte of the Payload Descriptor.
+         * M bit from the I byte of the Payload Descriptor.
          */
         private static final byte M_BIT = (byte) 0x80;
 
@@ -355,23 +355,13 @@ public class DePacketizer
         public static boolean setTL0PICIDX(byte[] buf, int off, int len,
             int val)
         {
-            if (!isValid(buf, off, len)
-                || (buf[off] & X_BIT) == 0 || (buf[off + 1] & L_BIT) == 0)
+            int offL = getLByteOffset(buf, off, len);
+            if (offL < 0)
             {
                 return false;
             }
 
-            int offTL0PICIDX = 2;
-            if ((buf[off + 1] & I_BIT) != 0)
-            {
-                offTL0PICIDX++;
-                if ((buf[off + 2] & M_BIT) != 0)
-                {
-                    offTL0PICIDX++;
-                }
-            }
-
-            buf[off + offTL0PICIDX] = (byte) val;
+            buf[off + offL] = (byte) val;
             return true;
         }
 
@@ -476,19 +466,46 @@ public class DePacketizer
          */
         public static int getTL0PICIDX(byte[] buf, int off, int len)
         {
-            int sz = getSize(buf, off, len);
-            if (sz < 1)
+            int offL = getLByteOffset(buf, off, len);
+            if (offL < 0)
             {
                 return -1;
             }
 
+            return buf[off + offL] & 0xff;
+        }
+
+        /**
+         * Return the offset of the {@code L} byte relative to the start of
+         * the payload descriptor, or -1 if the PR has no {@code L} byte.
+         *
+         * @param buf the byte buffer that holds the VP8 payload descriptor.
+         * @param off the offset in the byte buffer where the payload descriptor
+         *            starts.
+         * @param len the length of the payload descriptor in the byte buffer.
+         * @return
+         */
+        private static int getLByteOffset(byte[] buf, int off, int len)
+        {
             if (!isValid(buf, off, len)
-                || (buf[off] & X_BIT) == 0 || (buf[off + 1] & L_BIT) == 0)
+                    || (buf[off] & X_BIT) == 0 || (buf[off + 1] & L_BIT) == 0)
             {
                 return -1;
             }
 
-            return buf[off + sz - 2] & 0xff;
+            // We could use hasPictureId(), but it would unnecessarily repeat
+            // the isValid() check.
+            int offL = 2;
+            if ((buf[off + 1] & I_BIT) != 0)
+            {
+                offL++;
+                if ((buf[off + 2] & M_BIT) != 0)
+                {
+                    offL++;
+                }
+            }
+
+            return offL;
         }
     }
 
