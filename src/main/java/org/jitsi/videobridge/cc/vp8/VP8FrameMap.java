@@ -16,16 +16,11 @@
 package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
-import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.util.*;
-import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.utils.logging2.Logger;
 
 import java.util.*;
-import java.util.concurrent.*;
 import java.util.function.*;
 
 /**
