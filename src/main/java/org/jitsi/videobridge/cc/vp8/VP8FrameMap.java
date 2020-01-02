@@ -33,8 +33,8 @@ import java.util.function.*;
  */
 public class VP8FrameMap
 {
-    private final ConcurrentSkipListMap<Integer, VP8Frame>
-        vp8FrameMap = new ConcurrentSkipListMap<>(
+    private final TreeMap<Integer, VP8Frame>
+        vp8FrameMap = new TreeMap<>(
         /* This is only a valid Comparator if seq number diffs of all
          * timestamps are within half the number space.  (This property is
          * assured by #cleanupFrameMap.)
