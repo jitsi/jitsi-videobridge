@@ -94,13 +94,14 @@ public class VP8FrameMap
             return false;
         }
 
-        Iterator<Map.Entry<Integer, VP8Frame>> it = vp8OrderedFrameMap.entrySet().iterator();
+        Iterator<Integer> it = vp8OrderedFrameMap.keySet().iterator();
         while (it.hasNext())
         {
-            Map.Entry<Integer, VP8Frame> entry = it.next();
-            if (RtpUtils.isOlderSequenceNumberThan(entry.getKey(), threshold))
+            Integer key = it.next();
+            if (RtpUtils.isOlderSequenceNumberThan(key, threshold))
             {
-                vp8FrameMap.remove(entry.getValue().getTimestamp());
+                VP8Frame frame = vp8OrderedFrameMap.get(key);
+                vp8FrameMap.remove(frame.getTimestamp());
                 it.remove();
             }
             else {
