@@ -61,8 +61,8 @@ class RtpSequenceNumberTest : ShouldSpec() {
                 (RtpSequenceNumber(1) == RtpSequenceNumber(1)) shouldBe true
                 (RtpSequenceNumber(1) < RtpSequenceNumber(0)) shouldBe false
                 (RtpSequenceNumber(65534) < RtpSequenceNumber(0)) shouldBe true
-                (RtpSequenceNumber(32768) < RtpSequenceNumber(0)) shouldBe false
-                (RtpSequenceNumber(32769) < RtpSequenceNumber(0)) shouldBe true
+                (RtpSequenceNumber(32767) < RtpSequenceNumber(0)) shouldBe false
+                (RtpSequenceNumber(32768) < RtpSequenceNumber(0)) shouldBe true
             }
         }
         "rangeTo" {

@@ -82,14 +82,19 @@ class RtpUtils {
          * @return the delta between two RTP sequence numbers (modulo 2^16).
          */
         @JvmStatic
-        fun getSequenceNumberDelta(a: Int, b: Int): Int {
-            val diff = a - b
-            return when {
-                diff < -(1 shl 15) -> diff + (1 shl 16)
-                diff > (1 shl 15) -> diff - (1 shl 16)
-                else -> diff
-            }
-        }
+        fun getSequenceNumberDelta(a: Int, b: Int): Int =
+            getSequenceNumberDeltaAsShort(a, b).toInt()
+
+        /**
+         * Like [getSequenceNumberDelta], but returning the delta as a [Short].
+         *
+         * TODO: since [Short] can fully represent sequence number deltas,
+         *   change this to be the public API?
+         */
+        private inline fun getSequenceNumberDeltaAsShort(a: Int, b: Int): Short =
+            /* Coercing to short forces diff to the range -0x8000 - 0x7fff,
+               which is what we want. */
+            (a - b).toShort()
 
         /**
          * Apply a delta to a given sequence number and return the result (taking
@@ -115,35 +120,38 @@ class RtpUtils {
 
         @JvmStatic
         fun isNewerSequenceNumberThan(a: Int, b: Int): Boolean =
-            getSequenceNumberDelta(a, b) > 0
+            getSequenceNumberDeltaAsShort(a, b) > 0
 
         @JvmStatic
         fun isOlderSequenceNumberThan(a: Int, b: Int): Boolean =
-            getSequenceNumberDelta(a, b) < 0
+            getSequenceNumberDeltaAsShort(a, b) < 0
 
         @JvmStatic
         fun isNewerTimestampThan(a: Long, b: Long): Boolean =
-            getTimestampDiff(a, b) > 0
+            getTimestampDiffAsInt(a, b) > 0
 
         @JvmStatic
         fun isOlderTimestampThan(a: Long, b: Long): Boolean =
-            getTimestampDiff(a, b) < 0
+            getTimestampDiffAsInt(a, b) < 0
 
         /**
          * Returns the difference between two RTP timestamps.
          * @return the difference between two RTP timestamps.
          */
         @JvmStatic
-        fun getTimestampDiff(a: Long, b: Long): Long {
-            var diff = a - b
-            if (diff < -0x8000_0000L) {
-                diff += 0x1_0000_0000L
-            } else if (diff > 0x8000_0000L) {
-                diff -= 0x1_0000_0000L
-            }
+        fun getTimestampDiff(a: Long, b: Long): Long =
+            getTimestampDiffAsInt(a, b).toLong()
 
-            return diff
-        }
+        /**
+         * Returns the difference between two RTP timestamps as an [Int].
+         *
+         * TODO: since [Int] can fully represent timestamp deltas,
+         *   change this to be the public API?
+         */
+        private inline fun getTimestampDiffAsInt(a: Long, b: Long): Int =
+            /* Coercing to int forces diff to the range -0x8000_0000 - 0x7fff_ffff,
+              which is what we want. */
+            (a - b).toInt()
 
         /**
          * Returns a sequence of Ints from olderSeqNum (exclusive) to newerSeqNum (exclusive),
