@@ -175,9 +175,14 @@ public class VP8AdaptiveTrackProjectionTest
                 }
                 boolean accepted = context.accept(packetInfo, packet.getTemporalLayerIndex(), targetIndex);
 
-                if (RtpUtils.isOlderSequenceNumberThan(origSeq, RtpUtils.applySequenceNumberDelta(latestSeq, -VP8FrameMap.FRAME_MAP_SIZE)))
+                if (RtpUtils.isOlderSequenceNumberThan(origSeq,
+                        RtpUtils.applySequenceNumberDelta(latestSeq, -VP8FrameMap.FRAME_MAP_SIZE))
+                    && !accepted)
                 {
-                    assertFalse(accepted);
+                    /* This is fine; packets that are too old get ignored. */
+                    /* Note we don't want assertFalse(accepted) here because slightly-too-old packets
+                     * that are part of an existing accepted frame will be accepted.
+                     */
                 }
                 else if (packet.getTemporalLayerIndex() <= targetIndex)
                 {

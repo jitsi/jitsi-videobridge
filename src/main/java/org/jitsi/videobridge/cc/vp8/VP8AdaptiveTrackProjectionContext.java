@@ -96,7 +96,7 @@ public class VP8AdaptiveTrackProjectionContext
         this.payloadType = payloadType;
         this.vp8QualityFilter = new VP8QualityFilter(parentLogger);
 
-        lastVP8FrameProjection = new VP8FrameProjection(diagnosticContext, logger,
+        lastVP8FrameProjection = new VP8FrameProjection(diagnosticContext,
             rtpState.ssrc, rtpState.maxSequenceNumber, rtpState.maxTimestamp);
     }
 
@@ -445,7 +445,7 @@ public class VP8AdaptiveTrackProjectionContext
         }
 
         VP8FrameProjection projection =
-            new VP8FrameProjection(diagnosticContext, logger,
+            new VP8FrameProjection(diagnosticContext,
                 frame, lastVP8FrameProjection.getSSRC(), projectedTs,
                 RtpUtils.getSequenceNumberDelta(projectedSeq, initialPacket.getSequenceNumber()),
                 picId, tl0PicIdx, receivedMs
@@ -499,7 +499,7 @@ public class VP8AdaptiveTrackProjectionContext
         int projectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(refFrame.getProjection().getTl0PICIDX(), tl0Gap);
 
         VP8FrameProjection projection =
-            new VP8FrameProjection(diagnosticContext, logger,
+            new VP8FrameProjection(diagnosticContext,
                 frame, lastVP8FrameProjection.getSSRC(), projectedTs,
                 RtpUtils.getSequenceNumberDelta(projectedSeq, initialPacket.getSequenceNumber()),
                 projectedPicId, projectedTl0PicIdx, receivedMs

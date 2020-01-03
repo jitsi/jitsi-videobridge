@@ -36,26 +36,10 @@ import java.util.*;
 public class VP8FrameProjection
 {
     /**
-     * The {@link Logger} to be used by this instance to print debug
-     * information.
-     */
-    private final Logger logger;
-
-    /**
-     * The parent logger, so we can pass it to new instances of {@link VP8FrameProjection}
-     */
-    private final Logger parentLogger;
-
-    /**
      * The time series logger for this instance.
      */
     private static final TimeSeriesLogger timeSeriesLogger
         = TimeSeriesLogger.getTimeSeriesLogger(VP8FrameProjection.class);
-
-    /**
-     * An empty packet array.
-     */
-    private static final Vp8Packet[] EMPTY_PACKET_ARR = new Vp8Packet[0];
 
     /**
      * The diagnostic context for this instance.
@@ -115,10 +99,9 @@ public class VP8FrameProjection
      */
     VP8FrameProjection(
         @NotNull DiagnosticContext diagnosticContext,
-        @NotNull Logger parentLogger,
         long ssrc, int sequenceNumberDelta, long timestamp)
     {
-        this(diagnosticContext, parentLogger, null /* vp8Frame */, ssrc, timestamp,
+        this(diagnosticContext, null /* vp8Frame */, ssrc, timestamp,
             sequenceNumberDelta, 0 /* extendedPictureId */,
             0 /* tl0PICIDX */, 0 /* createdMs */);
     }
@@ -140,14 +123,11 @@ public class VP8FrameProjection
      */
     VP8FrameProjection(
         @NotNull DiagnosticContext diagnosticContext,
-        @NotNull Logger parentLogger,
         VP8Frame vp8Frame,
         long ssrc, long timestamp, int sequenceNumberDelta,
         int extendedPictureId, int tl0PICIDX, long createdMs)
     {
         this.diagnosticContext = diagnosticContext;
-        this.parentLogger = parentLogger;
-        this.logger = parentLogger.createChildLogger(VP8FrameProjection.class.getName());
         this.ssrc = ssrc;
         this.timestamp = timestamp;
         this.sequenceNumberDelta = sequenceNumberDelta;
