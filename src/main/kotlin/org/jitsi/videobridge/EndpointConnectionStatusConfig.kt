@@ -16,10 +16,10 @@
 
 package org.jitsi.videobridge
 
-import java.time.Duration
 import org.jitsi.config.legacyConfigAttributes
 import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.FallbackProperty
+import java.time.Duration
 
 class EndpointConnectionStatusConfig {
     class Config {

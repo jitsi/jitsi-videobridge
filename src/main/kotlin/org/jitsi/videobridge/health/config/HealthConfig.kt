@@ -16,11 +16,11 @@
 
 package org.jitsi.videobridge.health.config
 
-import java.time.Duration
 import org.jitsi.config.LegacyFallbackConfigProperty
 import org.jitsi.config.legacyConfigAttributes
 import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.FallbackProperty
+import java.time.Duration
 
 class HealthConfig {
     class Config {

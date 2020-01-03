@@ -16,8 +16,8 @@
 
 package org.jitsi.videobridge.config
 
-import kotlin.reflect.KClass
 import org.jitsi.utils.config.ConfigSource
+import kotlin.reflect.KClass
 
 class CommandLineArgsConfigSource(private val commandLineArgs: Array<String>) : ConfigSource {
     override val name: String = "command line args"

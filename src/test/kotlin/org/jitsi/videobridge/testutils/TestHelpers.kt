@@ -16,9 +16,9 @@
 
 package org.jitsi.videobridge.testutils
 
+import org.jitsi.videobridge.config.ResettableSingleton
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.jvm.isAccessible
-import org.jitsi.videobridge.config.ResettableSingleton
 
 /**
  * Call reset on a [ResettableSingleton] property named [propName]
