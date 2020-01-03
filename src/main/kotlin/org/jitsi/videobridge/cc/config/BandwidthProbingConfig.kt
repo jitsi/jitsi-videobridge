@@ -16,11 +16,11 @@
 
 package org.jitsi.videobridge.cc.config
 
+import java.time.Duration
 import org.jitsi.config.legacyConfigAttributes
 import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.FallbackProperty
 import org.jitsi.utils.config.SimpleProperty
-import java.time.Duration
 
 class BandwidthProbingConfig {
     class Config {

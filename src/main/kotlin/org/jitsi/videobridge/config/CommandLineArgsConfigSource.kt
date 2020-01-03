@@ -16,21 +16,21 @@
 
 package org.jitsi.videobridge.config
 
-import org.jitsi.utils.config.ConfigSource
 import kotlin.reflect.KClass
+import org.jitsi.utils.config.ConfigSource
 
 class CommandLineArgsConfigSource(private val commandLineArgs: Array<String>) : ConfigSource {
     override val name: String = "command line args"
 
     override fun <T : Any> getterFor(valueType: KClass<T>): (String) -> T {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun reload() {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun toStringMasked(): String {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 }

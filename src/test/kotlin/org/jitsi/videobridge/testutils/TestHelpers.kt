@@ -16,18 +16,19 @@
 
 package org.jitsi.videobridge.testutils
 
-import org.jitsi.videobridge.config.ResettableSingleton
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.jvm.isAccessible
+import org.jitsi.videobridge.config.ResettableSingleton
 
 /**
  * Call reset on a [ResettableSingleton] property named [propName]
  * inside of [receiver].
  */
 @Suppress("UNCHECKED_CAST")
-inline fun <reified T : Any>resetSingleton(propName: String, receiver: T) {
-    val prop = T::class.declaredMemberProperties.find { it.name == propName } ?:
-        throw Exception("No property found with name $propName")
+inline fun <reified T : Any> resetSingleton(propName: String, receiver: T) {
+    val prop =
+        T::class.declaredMemberProperties.find { it.name == propName }
+            ?: throw Exception("No property found with name $propName")
     prop.isAccessible = true
     val singleton = prop.get(receiver)
             as? ResettableSingleton<T> ?: throw Exception("Field $propName is not ResettableSingleton")
