@@ -18,22 +18,20 @@ package org.jitsi.nlj.rtp
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.ConcurrentSkipListMap
+import java.util.concurrent.atomic.AtomicInteger
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
+import org.jitsi.nlj.util.ArrayCache
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.NEVER
+import org.jitsi.nlj.util.Rfc3711IndexTracker
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.PacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.UnreceivedPacketReport
-import org.jitsi.rtp.util.RtpUtils.Companion.applySequenceNumberDelta
-import org.jitsi.rtp.util.RtpUtils.Companion.getSequenceNumberDelta
-import org.jitsi.rtp.util.RtpUtils.Companion.isOlderSequenceNumberThan
 import org.jitsi.utils.logging2.Logger
 import org.json.simple.JSONObject
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Implements transport-cc functionality.
@@ -54,11 +52,6 @@ class TransportCcEngine(
      * The [Logger] used by this instance for logging output.
      */
     private val logger: Logger = parentLogger.createChildLogger(javaClass.name)
-
-    /**
-     * Used to synchronize access to [.sentPacketDetails].
-     */
-    private val sentPacketsSyncRoot = Any()
 
     val numDuplicateReports = AtomicInteger()
     val numPacketsReportedAfterLost = AtomicInteger()
@@ -84,7 +77,7 @@ class TransportCcEngine(
      * Holds a key value pair of the packet sequence number and an object made
      * up of the packet send time and the packet size.
      */
-    private val sentPacketDetails = ConcurrentSkipListMap<Int, PacketDetail>(::getSequenceNumberDelta)
+    private val sentPacketDetails = PacketDetailTracker()
 
     private val missingPacketDetailSeqNums = mutableListOf<Int>()
 
@@ -112,9 +105,7 @@ class TransportCcEngine(
 
         for (packetReport in tccPacket) {
             val tccSeqNum = packetReport.seqNum
-            val packetDetail = synchronized(sentPacketsSyncRoot) {
-                sentPacketDetails.get(tccSeqNum)
-            }
+            val packetDetail = sentPacketDetails.get(tccSeqNum)
 
             if (packetDetail == null) {
                 if (packetReport is ReceivedPacketReport) {
@@ -157,72 +148,31 @@ class TransportCcEngine(
             }
         }
         if (missingPacketDetailSeqNums.isNotEmpty()) {
-            val oldestKnownSeqNum = synchronized(sentPacketsSyncRoot) { sentPacketDetails.firstKey() }
-
             logger.warn("TCC packet contained received sequence numbers: " +
                 "${tccPacket.iterator().asSequence()
                     .filterIsInstance<ReceivedPacketReport>()
                     .map(PacketReport::seqNum)
                     .joinToString()}. " +
                 "Couldn't find packet detail for the seq nums: ${missingPacketDetailSeqNums.joinToString()}. " +
-                (oldestKnownSeqNum?.let { "Oldest known seqNum was $it." } ?: run { "Sent packet details map was empty." }))
+                if (sentPacketDetails.empty) {
+                    "Sent packet details map was empty."
+                } else {
+                    "Latest seqNum was ${sentPacketDetails.lastIndex}, size is ${sentPacketDetails.size}."
+                })
             missingPacketDetailSeqNums.clear()
         }
     }
 
-    /** Trim old sent packet details from the map.  Caller should be synchronized on [sentPacketsSyncRoot].
-     * Return false if [newSeq] is too old to be put in the map (shouldn't happen for TCC unless something
-     * very weird has happened with threading).*/
-    private fun cleanupSentPacketDetails(newSeq: Int): Boolean {
-        if (sentPacketDetails.isEmpty()) {
-            return true
-        }
-
-        val latestSeq = sentPacketDetails.lastKey()
-
-        /* If our sequence numbers have jumped by a quarter of the number space, reset the map. */
-        val seqJump = getSequenceNumberDelta(newSeq, latestSeq)
-        if (seqJump >= 0x4000 || seqJump <= -0x4000) {
-            sentPacketDetails.clear()
-            return true
-        }
-
-        val threshold = applySequenceNumberDelta(latestSeq, -MAX_OUTGOING_PACKETS_HISTORY)
-
-        if (isOlderSequenceNumberThan(newSeq, threshold)) {
-            return false
-        }
-
-        with(sentPacketDetails.navigableKeySet().iterator()) {
-            while (hasNext()) {
-                val key = next()
-                if (isOlderSequenceNumberThan(key, threshold)) {
-                    if (sentPacketDetails.get(key)?.state == PacketDetailState.unreported) {
-                        numPacketsUnreported.getAndIncrement()
-                    }
-                    remove()
-                } else {
-                    break
-                }
-            }
-        }
-
-        return true
-    }
-
     fun mediaPacketSent(tccSeqNum: Int, length: DataSize) {
-        synchronized(sentPacketsSyncRoot) {
-            val now = clock.instant()
-            val seq = tccSeqNum and 0xFFFF
-            if (!cleanupSentPacketDetails(seq)) {
-                /* Very old seq? Something odd is happening with whatever is
-                 * generating tccSeqNum values.
-                 */
-                logger.warn("Not inserting very old TCC seq num $seq ($tccSeqNum), latest is " +
-                    "${sentPacketDetails.lastKey()}")
-                return
-            }
-            sentPacketDetails.put(seq, PacketDetail(length, now))
+        val now = clock.instant()
+        val seq = tccSeqNum and 0xFFFF
+        if (!sentPacketDetails.insert(seq, PacketDetail(length, now))) {
+            /* Very old seq? Something odd is happening with whatever is
+             * generating tccSeqNum values.
+             */
+            logger.warn("Not inserting very old TCC seq num $seq ($tccSeqNum), latest is " +
+                "${sentPacketDetails.lastIndex}, size is ${sentPacketDetails.size}")
+            return
         }
     }
 
@@ -273,6 +223,33 @@ class TransportCcEngine(
                 it.put("numPacketsUnreported", numPacketsUnreported)
                 it.put("numMissingPacketReports", numMissingPacketReports)
             }
+        }
+    }
+
+    private inner class PacketDetailTracker : ArrayCache<PacketDetail>(
+        MAX_OUTGOING_PACKETS_HISTORY,
+        /* We don't want to clone [PacketDetail] objects that get put in the tracker. */
+        { it }
+    ) {
+        override fun discardItem(item: PacketDetail) {
+            numPacketsUnreported.getAndIncrement()
+        }
+
+        private val rfc3711IndexTracker = Rfc3711IndexTracker()
+
+        /**
+         * Gets a packet with a given RTP sequence number from the cache.
+         */
+        fun get(sequenceNumber: Int): PacketDetail? {
+            // Note that we use [interpret] because we don't want the ROC to get out of sync because of funny requests
+            // (TCCs)
+            val index = rfc3711IndexTracker.interpret(sequenceNumber)
+            return super.getContainer(index)?.item
+        }
+
+        fun insert(seq: Int, packetDetail: PacketDetail): Boolean {
+            val index = rfc3711IndexTracker.update(seq)
+            return super.insertItem(packetDetail, index)
         }
     }
 

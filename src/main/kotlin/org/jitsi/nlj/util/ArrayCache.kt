@@ -54,8 +54,11 @@ open class ArrayCache<T>(
     val hitRate
         get() = _numHits.get() * 1.0 / max(1, _numHits.get() + _numMisses.get())
 
-    protected val lastIndex: Int
+    val lastIndex: Int
         get() = if (head == -1) -1 else cache[head].index
+
+    val empty: Boolean
+        get() = (head == -1)
 
     /**
      * Inserts an item with a specific index in the cache. Stores a copy.
