@@ -16,7 +16,6 @@
 
 package org.jitsi.videobridge.rest.config
 
-import io.kotlintest.TestCase
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldThrow
 import org.jitsi.config.BooleanMockConfigValueGenerator

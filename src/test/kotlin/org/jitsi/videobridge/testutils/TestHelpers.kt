@@ -25,9 +25,10 @@ import kotlin.reflect.jvm.isAccessible
  * inside of [receiver].
  */
 @Suppress("UNCHECKED_CAST")
-inline fun <reified T : Any>resetSingleton(propName: String, receiver: T) {
-    val prop = T::class.declaredMemberProperties.find { it.name == propName } ?:
-        throw Exception("No property found with name $propName")
+inline fun <reified T : Any> resetSingleton(propName: String, receiver: T) {
+    val prop =
+        T::class.declaredMemberProperties.find { it.name == propName }
+            ?: throw Exception("No property found with name $propName")
     prop.isAccessible = true
     val singleton = prop.get(receiver)
             as? ResettableSingleton<T> ?: throw Exception("Field $propName is not ResettableSingleton")

@@ -61,7 +61,7 @@ class BitrateControllerConfig {
             class OnstagePreferredHeightPixelsProperty : LegacyFallbackConfigProperty<Int>(
                 Int::class,
                 readOnce = true,
-                legacyName= "org.jitsi.videobridge.ONSTAGE_PREFERRED_HEIGHT",
+                legacyName = "org.jitsi.videobridge.ONSTAGE_PREFERRED_HEIGHT",
                 newName = "videobridge.cc.onstage-preferred-height-px"
             )
             private val onstagePreferredHeightPxProp = OnstagePreferredHeightPixelsProperty()
@@ -75,7 +75,7 @@ class BitrateControllerConfig {
             class OnstagePreferredFramerateProperty : LegacyFallbackConfigProperty<Double>(
                 Double::class,
                 readOnce = true,
-                legacyName= "org.jitsi.videobridge.ONSTAGE_PREFERRED_FRAME_RATE",
+                legacyName = "org.jitsi.videobridge.ONSTAGE_PREFERRED_FRAME_RATE",
                 newName = "videobridge.cc.onstage-preferred-framerate"
             )
             private val onstagePreferredFramerate = OnstagePreferredFramerateProperty()
@@ -106,7 +106,7 @@ class BitrateControllerConfig {
             class TrustBweProperty : LegacyFallbackConfigProperty<Boolean>(
                 Boolean::class,
                 readOnce = true,
-                legacyName= "org.jitsi.videobridge.TRUST_BWE",
+                legacyName = "org.jitsi.videobridge.TRUST_BWE",
                 newName = "videobridge.cc.trust-bwe"
             )
 
