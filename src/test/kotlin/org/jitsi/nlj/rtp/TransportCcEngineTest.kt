@@ -94,9 +94,8 @@ class TransportCcEngineTest : FunSpec() {
         }
         test("Packet unreported") {
             transportCcEngine.mediaPacketSent(4, 1300.bytes)
-            /* Force the report of sequence 4 to roll off the packet history */
-            transportCcEngine.mediaPacketSent(1005, 1300.bytes)
-            transportCcEngine.mediaPacketSent(1006, 1300.bytes)
+            /* Force the report of sequence 4 to be evicted from the packet history */
+            transportCcEngine.mediaPacketSent(1004, 1300.bytes)
 
             with(transportCcEngine.getStatistics()) {
                 numMissingPacketReports shouldBe 0
