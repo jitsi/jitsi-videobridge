@@ -18,8 +18,7 @@ package org.jitsi.videobridge.rest.root.colibri.debug;
 
 public enum EndpointDebugFeatures
 {
-    EGRESS_DUMP("egress-dump"),
-    INGRESS_DUMP("ingress-dump");
+    PCAP_DUMP("pcap-dump");
 
 
     private final String value;

@@ -71,7 +71,7 @@ public class DebugTest extends JerseyTest
     @Test
     public void testEnableEndpointDebugFeature()
     {
-        Response resp = target(BASE_URL + "/foo/bar/enable/" + EndpointDebugFeatures.EGRESS_DUMP.getValue())
+        Response resp = target(BASE_URL + "/foo/bar/enable/" + EndpointDebugFeatures.PCAP_DUMP.getValue())
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
@@ -89,7 +89,7 @@ public class DebugTest extends JerseyTest
     @Test
     public void testDisableDebugFeature()
     {
-        Response resp = target(BASE_URL + "/foo/bar/disable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
+        Response resp = target(BASE_URL + "/disable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
@@ -98,7 +98,7 @@ public class DebugTest extends JerseyTest
     @Test
     public void testDisableEndpointDebugFeature()
     {
-        Response resp = target(BASE_URL + "/disable/" + EndpointDebugFeatures.EGRESS_DUMP.getValue())
+        Response resp = target(BASE_URL + "/foo/bar/disable/" + EndpointDebugFeatures.PCAP_DUMP.getValue())
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
