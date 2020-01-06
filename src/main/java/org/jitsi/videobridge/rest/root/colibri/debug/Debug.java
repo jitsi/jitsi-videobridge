@@ -66,8 +66,7 @@ public class Debug extends ColibriResource
 
     @POST
     @Path("/{confId}/{epId}/{state}/{feature}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    public Response enableEndpointFeature(
+    public Response toggleEndpointFeature(
             @PathParam("confId") String confId,
             @PathParam("epId") String epId,
             @PathParam("feature") EndpointDebugFeatures feature,
