@@ -105,6 +105,24 @@ public class DebugTest extends JerseyTest
     }
 
     @Test
+    public void testInvalidEndpointDebugFeature()
+    {
+        Response resp = target(BASE_URL + "/foo/broken/disable/" + EndpointDebugFeatures.PCAP_DUMP.getValue())
+                .request()
+                .post(Entity.json(null));
+        assertEquals(HttpStatus.NOT_FOUND_404, resp.getStatus());
+    }
+
+    @Test
+    public void testInvalidEndpointDebugFeatureState()
+    {
+        Response resp = target(BASE_URL + "/foo/bar/broken/" + EndpointDebugFeatures.PCAP_DUMP.getValue())
+                .request()
+                .post(Entity.json(null));
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR_500, resp.getStatus());
+    }
+
+    @Test
     public void testDisableNonexistentDebugFeature()
     {
         Response resp = target(BASE_URL + "/disable/blah")

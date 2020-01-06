@@ -44,6 +44,17 @@ public enum FeatureState {
      */
     public static FeatureState fromString(String value)
     {
-        return "enable".equalsIgnoreCase(value) ? ENABLE : DISABLE;
+        if ("enable".equalsIgnoreCase(value))
+        {
+            return ENABLE;
+        }
+        else if ("disable".equalsIgnoreCase(value))
+        {
+            return DISABLE;
+        }
+        else
+        {
+            throw new IllegalArgumentException("feature state is either enabled or disabled.");
+        }
     }
 }

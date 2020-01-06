@@ -71,7 +71,7 @@ public class Debug extends ColibriResource
             @PathParam("confId") String confId,
             @PathParam("epId") String epId,
             @PathParam("feature") EndpointDebugFeatures feature,
-            @PathParam("state") FeatureState state)
+            @PathParam("state") String state)
     {
         Conference conference = videobridgeProvider.get().getConference(confId, null);
         if (conference == null)
@@ -85,8 +85,18 @@ public class Debug extends ColibriResource
             throw new NotFoundException("No endpoint was found with the specified id.");
         }
 
-        logger.info("Setting feature state: feature=" + feature.getValue() + ", state=" + state.getValue());
-        endpoint.setFeature(feature, state.getValue());
+        FeatureState featureState;
+        try
+        {
+            featureState = FeatureState.fromString(state);
+        }
+        catch (IllegalArgumentException ex)
+        {
+            return Response.serverError().build();
+        }
+
+        logger.info("Setting feature state: feature=" + feature.getValue() + ", state=" + featureState.getValue());
+        endpoint.setFeature(feature, featureState.getValue());
 
         return Response.ok().build();
     }
