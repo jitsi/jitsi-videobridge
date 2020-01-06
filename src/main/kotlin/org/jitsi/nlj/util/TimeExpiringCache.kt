@@ -16,9 +16,9 @@
 
 package org.jitsi.nlj.util
 
+import java.time.Clock
 import java.time.Duration
 import java.util.TreeMap
-import org.jitsi.utils.TimeProvider
 
 /**
  * A cache which holds an arbitrary [DataType] and stores it, as well
@@ -42,15 +42,15 @@ class TimeExpiringCache<IndexType, DataType>(
      * The maximum amount of elements we'll allow in the cache
      */
     private val maxNumElements: Int,
-    private val timeProvider: TimeProvider = TimeProvider()
+    private val clock: Clock = Clock.systemUTC()
 ) {
     private val cache: TreeMap<IndexType, Container<DataType>> = TreeMap()
 
     fun insert(index: IndexType, data: DataType) {
-        val container = Container(data, timeProvider.currentTimeMillis())
+        val container = Container(data, clock.millis())
         synchronized(cache) {
             cache[index] = container
-            clean(timeProvider.currentTimeMillis() - dataTimeout.toMillis())
+            clean(clock.millis() - dataTimeout.toMillis())
         }
     }
 
