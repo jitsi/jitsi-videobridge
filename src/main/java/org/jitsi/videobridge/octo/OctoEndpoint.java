@@ -18,7 +18,7 @@ package org.jitsi.videobridge.octo;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.rest.root.colibri.debug.EndpointDebugFeatures;
+import org.jitsi.videobridge.rest.root.colibri.debug.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
