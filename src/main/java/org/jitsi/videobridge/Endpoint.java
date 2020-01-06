@@ -1360,7 +1360,7 @@ public class Endpoint
         switch (feature)
         {
             case PCAP_DUMP:
-                transceiver.setFeature(Features.TRANCEIVER_PCAP_DUMP, enabled);
+                transceiver.setFeature(Features.TRANSCEIVER_PCAP_DUMP, enabled);
                 break;
         }
     }
