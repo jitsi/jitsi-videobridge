@@ -16,7 +16,7 @@
 package org.jitsi.test_helpers.matchers
 
 import io.kotlintest.Matcher
-import io.kotlintest.Result
+import io.kotlintest.MatcherResult
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.utils.ByteArrayBuffer
 
@@ -35,8 +35,8 @@ fun ByteArrayBuffer.hasSameContentAs(other: ByteArrayBuffer): Boolean {
 }
 
 fun haveSameContentAs(expected: ByteArrayBuffer) = object : Matcher<ByteArrayBuffer> {
-    override fun test(value: ByteArrayBuffer): Result {
-        return Result(value.hasSameContentAs(expected),
+    override fun test(value: ByteArrayBuffer): MatcherResult {
+        return MatcherResult(value.hasSameContentAs(expected),
             "\n${value.toHex()}\nwas supposed to be:\n${expected.toHex()}",
             "\n${value.toHex()}\nshould not have equaled \n${expected.toHex()}"
         )

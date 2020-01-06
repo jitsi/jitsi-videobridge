@@ -17,14 +17,14 @@
 package org.jitsi.test_helpers.matchers
 
 import io.kotlintest.Matcher
-import io.kotlintest.Result
+import io.kotlintest.MatcherResult
 import java.nio.ByteBuffer
 import org.jitsi.rtp.extensions.compareToFromBeginning
 import org.jitsi.rtp.extensions.toHex
 
 fun haveSameContentAs(expected: ByteBuffer) = object : Matcher<ByteBuffer> {
-    override fun test(value: ByteBuffer): Result {
-        return Result(value.compareToFromBeginning(expected) == 0,
+    override fun test(value: ByteBuffer): MatcherResult {
+        return MatcherResult(value.compareToFromBeginning(expected) == 0,
             "Buffer\n${value.toHex()}\nwas supposed to be:\n${expected.toHex()}",
             "Buffer\n${value.toHex()}\nshould not have equaled buffer\n${expected.toHex()}"
         )

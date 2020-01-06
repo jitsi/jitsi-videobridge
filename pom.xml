@@ -9,8 +9,8 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <kotlin.version>1.3.21</kotlin.version>
-        <kotlintest.version>3.3.0</kotlintest.version>
+        <kotlin.version>1.3.61</kotlin.version>
+        <kotlintest.version>3.4.2</kotlintest.version>
         <junit.version>5.2.0</junit.version>
     </properties>
 
@@ -33,7 +33,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-utils</artifactId>
-            <version>1.0-9-gb8d9bee</version>
+            <version>1.0-32-g37aa1b3</version>
         </dependency>
 
         <!--Testing dependencies-->

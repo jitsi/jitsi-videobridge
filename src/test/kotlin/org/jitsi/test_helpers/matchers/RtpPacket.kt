@@ -16,7 +16,7 @@
 package org.jitsi.test_helpers.matchers
 
 import io.kotlintest.Matcher
-import io.kotlintest.Result
+import io.kotlintest.MatcherResult
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
@@ -31,11 +31,11 @@ fun RtpPacket.getHeaderAsBAF(): ByteArrayBuffer {
 }
 
 fun haveSamePayload(expected: RtpPacket) = object : Matcher<RtpPacket> {
-    override fun test(value: RtpPacket): Result {
+    override fun test(value: RtpPacket): MatcherResult {
         val valuePayload = value.getPayload()
         val expectedPayload = expected.getPayload()
 
-        return Result(
+        return MatcherResult(
             valuePayload.hasSameContentAs(expectedPayload),
             "\n${valuePayload.toHex()}\nwas supposed to be:\n${expectedPayload.toHex()}",
             "\n${valuePayload.toHex()}\nshould not have equaled \n${expectedPayload.toHex()}"
@@ -44,11 +44,11 @@ fun haveSamePayload(expected: RtpPacket) = object : Matcher<RtpPacket> {
 }
 
 fun haveSameFixedHeader(expected: RtpPacket) = object : Matcher<RtpPacket> {
-    override fun test(value: RtpPacket): Result {
+    override fun test(value: RtpPacket): MatcherResult {
         val valueHeader = value.getHeaderAsBAF()
         val expectedHeader = expected.getHeaderAsBAF()
 
-        return Result(
+        return MatcherResult(
             valueHeader.hasSameContentAs(expectedHeader),
             "\n${valueHeader.toHex()}\nwas supposed to be:\n${expectedHeader.toHex()}",
 
