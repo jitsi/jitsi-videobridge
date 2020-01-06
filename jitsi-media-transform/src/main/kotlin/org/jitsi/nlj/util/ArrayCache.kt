@@ -17,10 +17,10 @@
 package org.jitsi.nlj.util
 
 import java.lang.Integer.max
+import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
-import org.jitsi.utils.TimeProvider
 
 /**
  * Implements a fixed-sized cache based on a pre-filled array. The main use-case is the outgoing RTP packet cache.
@@ -34,7 +34,7 @@ open class ArrayCache<T>(
     /**
      * The function to use to clone items. The cache always saves copies of the items that are inserted.
      */
-    private val timeProvider: TimeProvider = TimeProvider()
+    private val clock: Clock = Clock.systemUTC()
 ) : NodeStatsProducer {
     private val cache: Array<Container> = Array(size) { Container() }
     protected val syncRoot = Any()
@@ -63,16 +63,23 @@ open class ArrayCache<T>(
     /**
      * Inserts an item with a specific index in the cache. Stores a copy.
      */
-    fun insertItem(item: T, index: Int): Boolean =
+    fun insertItem(item: T, index: Int, timeAdded: Long): Boolean =
         if (synchronize) {
             synchronized(syncRoot) {
-                doInsert(item, index)
+                doInsert(item, index, timeAdded)
             }
         } else {
-            doInsert(item, index)
+            doInsert(item, index, timeAdded)
         }
 
-    private fun doInsert(item: T, index: Int): Boolean {
+    /**
+     * Inserts an item with a specific index in the cache, computing time
+     * from [clock]. Stores a copy.
+     */
+    fun insertItem(item: T, index: Int): Boolean =
+        insertItem(item, index, clock.millis())
+
+    private fun doInsert(item: T, index: Int, timeAdded: Long): Boolean {
         val diff = if (head == -1) -1 else index - cache[head].index
         val position = when {
             head == -1 -> {
@@ -95,7 +102,7 @@ open class ArrayCache<T>(
         cache[position].item?.let { discardItem(it) }
         cache[position].item = cloneItem(item)
         cache[position].index = index
-        cache[position].timeAdded = timeProvider.currentTimeMillis()
+        cache[position].timeAdded = timeAdded
         return true
     }
 

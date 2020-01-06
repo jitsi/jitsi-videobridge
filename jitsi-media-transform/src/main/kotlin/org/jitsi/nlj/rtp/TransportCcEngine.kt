@@ -77,7 +77,7 @@ class TransportCcEngine(
      * Holds a key value pair of the packet sequence number and an object made
      * up of the packet send time and the packet size.
      */
-    private val sentPacketDetails = PacketDetailTracker()
+    private val sentPacketDetails = PacketDetailTracker(clock)
 
     private val missingPacketDetailSeqNums = mutableListOf<Int>()
 
@@ -226,10 +226,11 @@ class TransportCcEngine(
         }
     }
 
-    private inner class PacketDetailTracker : ArrayCache<PacketDetail>(
+    private inner class PacketDetailTracker(clock: Clock) : ArrayCache<PacketDetail>(
         MAX_OUTGOING_PACKETS_HISTORY,
         /* We don't want to clone [PacketDetail] objects that get put in the tracker. */
-        { it }
+        { it },
+        clock = clock
     ) {
         override fun discardItem(item: PacketDetail) {
             numPacketsUnreported.getAndIncrement()
@@ -249,7 +250,7 @@ class TransportCcEngine(
 
         fun insert(seq: Int, packetDetail: PacketDetail): Boolean {
             val index = rfc3711IndexTracker.update(seq)
-            return super.insertItem(packetDetail, index)
+            return super.insertItem(packetDetail, index, packetDetail.packetSendTime.toEpochMilli())
         }
     }
 
