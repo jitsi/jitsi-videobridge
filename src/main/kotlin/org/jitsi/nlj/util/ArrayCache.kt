@@ -54,7 +54,7 @@ open class ArrayCache<T>(
     val hitRate
         get() = _numHits.get() * 1.0 / max(1, _numHits.get() + _numMisses.get())
 
-    val lastIndex: Int
+    protected val lastIndex: Int
         get() = if (head == -1) -1 else cache[head].index
 
     val empty: Boolean

@@ -157,7 +157,7 @@ class TransportCcEngine(
                 if (sentPacketDetails.empty) {
                     "Sent packet details map was empty."
                 } else {
-                    "Latest seqNum was ${sentPacketDetails.lastIndex}, size is ${sentPacketDetails.size}."
+                    "Latest seqNum was ${sentPacketDetails.lastSequence}, size is ${sentPacketDetails.size}."
                 })
             missingPacketDetailSeqNums.clear()
         }
@@ -171,7 +171,7 @@ class TransportCcEngine(
              * generating tccSeqNum values.
              */
             logger.warn("Not inserting very old TCC seq num $seq ($tccSeqNum), latest is " +
-                "${sentPacketDetails.lastIndex}, size is ${sentPacketDetails.size}")
+                "${sentPacketDetails.lastSequence}, size is ${sentPacketDetails.size}")
             return
         }
     }
@@ -252,6 +252,9 @@ class TransportCcEngine(
             val index = rfc3711IndexTracker.update(seq)
             return super.insertItem(packetDetail, index, packetDetail.packetSendTime.toEpochMilli())
         }
+
+        val lastSequence: Int
+            get() = if (lastIndex == -1) -1 else lastIndex and 0xFFFF
     }
 
     companion object {
