@@ -115,11 +115,13 @@ public class VP8AdaptiveTrackProjectionTest
     {
         final Vp8Packet packet;
         final int origSeq;
+        final boolean nearOldest;
 
-        ProjectedPacket(Vp8Packet p, int s)
+        ProjectedPacket(Vp8Packet p, int s, boolean o)
         {
             packet = p;
             origSeq = s;
+            nearOldest = o;
         }
     }
 
@@ -171,9 +173,9 @@ public class VP8AdaptiveTrackProjectionTest
             }
             boolean accepted = context.accept(packetInfo, packet.getTemporalLayerIndex(), targetIndex);
 
-            if (RtpUtils.isOlderSequenceNumberThan(origSeq,
-                RtpUtils.applySequenceNumberDelta(latestSeq, -VP8FrameMap.FRAME_MAP_SIZE))
-                && !accepted)
+            int oldestValidSeq = RtpUtils.applySequenceNumberDelta(latestSeq, -VP8FrameMap.FRAME_MAP_SIZE);
+
+            if (RtpUtils.isOlderSequenceNumberThan(origSeq, oldestValidSeq) && !accepted)
             {
                 /* This is fine; packets that are too old get ignored. */
                 /* Note we don't want assertFalse(accepted) here because slightly-too-old packets
@@ -184,13 +186,26 @@ public class VP8AdaptiveTrackProjectionTest
             {
                 assertTrue(accepted);
 
+                /* There's an edge condition in frame projection where a packet
+                   of a frame can be projected, then the frame can be forgotten
+                   for being too old, then a later packet of the frame (which is
+                   just barely not too old) can be projected, at which point it
+                   can potentially get assigned different sequence number/TL0PICIDX
+                   values.
+
+                   This is an unlikely enough case in real life that it's not worth
+                   worrying about; but the incredibly aggressive packet randomizer
+                   used by the unit tests can trigger it, so explicitly allow it.
+                 */
+                boolean nearOldest = RtpUtils.getSequenceNumberDelta(origSeq, oldestValidSeq) < generator.packetsPerFrame;
+
                 context.rewriteRtp(packetInfo);
 
                 assertEquals(RtpUtils.applyTimestampDelta(origTs, expectedTsOffset), packet.getTimestamp());
                 assertEquals(origTl0PicIdx, packet.getTL0PICIDX());
                 int newSeq = packet.getSequenceNumber();
                 assertFalse(projectedPackets.containsKey(newSeq));
-                projectedPackets.put(newSeq, new ProjectedPacket(packet, origSeq));
+                projectedPackets.put(newSeq, new ProjectedPacket(packet, origSeq, nearOldest));
             }
             else
             {
@@ -217,7 +232,7 @@ public class VP8AdaptiveTrackProjectionTest
             else
             {
                 assertEquals(prevPacket.packet.getTimestamp(), packet.packet.getTimestamp());
-                assertEquals(prevPacket.packet.getPictureId(), packet.packet.getPictureId());
+                assertTrue(prevPacket.packet.getPictureId() == packet.packet.getPictureId() || packet.nearOldest);
             }
 
             prevPacket = packet;
@@ -786,7 +801,7 @@ public class VP8AdaptiveTrackProjectionTest
                     "0050D002" /* 1280 × 720 (little-endian) */
             );
 
-        private final int packetsPerFrame;
+        final int packetsPerFrame;
 
         Vp8PacketGenerator(int packetsPerFrame)
         {
