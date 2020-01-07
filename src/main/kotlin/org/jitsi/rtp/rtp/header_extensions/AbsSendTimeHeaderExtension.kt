@@ -18,6 +18,9 @@ package org.jitsi.rtp.rtp.header_extensions
 
 import org.jitsi.rtp.extensions.bytearray.put3Bytes
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.rtp.util.getBitsAsInt
+import org.jitsi.rtp.util.getShortAsInt
+import java.time.Instant
 
 /**
  * https://webrtc.org/experiments/rtp-hdrext/abs-send-time/
@@ -46,6 +49,20 @@ class AbsSendTimeHeaderExtension {
             val timestamp = ((seconds shl 18) or fraction) and 0x00FFFFFF
 
             buf.put3Bytes(offset + RtpPacket.HEADER_EXT_HEADER_SIZE, timestamp.toInt())
+        }
+
+        /**
+         * Gets the timestamp converted to nanoseconds.
+         */
+        fun getTime(ext: RtpPacket.HeaderExtension): Instant = getTime(ext.currExtBuffer, ext.currExtOffset)
+        fun getTime(buf: ByteArray, baseOffset: Int): Instant {
+            val offset = baseOffset + RtpPacket.HEADER_EXT_HEADER_SIZE
+            val seconds = buf.getBitsAsInt(offset, 0, 6)
+            val fraction =
+                (buf.getBitsAsInt(offset, 6, 2) + buf.getShortAsInt(offset + 1)).toDouble() / 0x03ffff
+
+            val instantMillis = Instant.ofEpochSecond(seconds.toLong())
+            return instantMillis.plusNanos((fraction * b).toLong())
         }
     }
 }
