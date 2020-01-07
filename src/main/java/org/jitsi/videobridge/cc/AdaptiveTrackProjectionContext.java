@@ -15,9 +15,8 @@
  */
 package org.jitsi.videobridge.cc;
 
+import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
-import org.jitsi.nlj.rtp.*;
-import org.jitsi.nlj.util.PacketCache;
 import org.jitsi.rtp.rtcp.*;
 import org.json.simple.*;
 
@@ -40,12 +39,12 @@ public interface AdaptiveTrackProjectionContext
     /**
      * Determines whether an RTP packet should be accepted or not.
      *
-     * @param rtpPacket the RTP packet to determine whether to accept or not.
+     * @param packetInfo the RTP packet to determine whether to accept or not.
      * @param incomingIndex the quality index of the incoming RTP packet.
      * @param targetIndex the target quality index
      * @return true if the packet should be accepted, false otherwise.
      */
-    boolean accept(VideoRtpPacket rtpPacket, int incomingIndex, int targetIndex);
+    boolean accept(PacketInfo packetInfo, int incomingIndex, int targetIndex);
 
     /**
      * @return true if this stream context needs a keyframe in order to either
@@ -60,17 +59,11 @@ public interface AdaptiveTrackProjectionContext
      * video track needs to be invisible to the receiving endpoint so goal here
      * is to make the resulting rtp stream continuous.
      *
-     * @param rtpPacket the RTP packet to rewrite.
-     * @param incomingRawPacketCache the packet cache to pull piggy-backed
-     * packets from.
-     * @return null to reject the packet or an array of RTP packets to
-     * piggy-back. An empty array means accept the packet without any additional
-     * packets to piggy-back
+     * @param packetInfo the RTP packet info to rewrite.
      * @throws RewriteException the underlying code has failed to rewrite the
      * RTP packet that is specified as an argument.
      */
-    VideoRtpPacket[]
-    rewriteRtp(VideoRtpPacket rtpPacket, PacketCache incomingRawPacketCache)
+    void rewriteRtp(PacketInfo packetInfo)
         throws RewriteException;
 
     /**

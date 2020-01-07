@@ -19,7 +19,6 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
@@ -61,12 +60,6 @@ public class AdaptiveTrackProjection
      * parent?
      */
     private final Logger parentLogger;
-
-    /**
-     * An empty array that is used as a return value when no packets need to be
-     * piggy-backed.
-     */
-    public static final VideoRtpPacket[] EMPTY_PACKET_ARR = new VideoRtpPacket[0];
 
     /**
      * A {@link WeakReference} to the {@link MediaStreamTrackDesc} that owns
@@ -196,24 +189,21 @@ public class AdaptiveTrackProjection
      */
     private final Runnable keyframeRequester;
 
-    private final PacketCache packetCache
-            = new PacketCache(packet -> packet instanceof VideoRtpPacket);
-
     /**
      * Determines whether an RTP packet needs to be accepted or not.
      *
-     * @param videoRtpPacket the video RTP packet to determine whether to accept
-     * or not.
+     * @param packetInfo packet info for the video RTP packet to determine
+     * whether to accept or not.
      * @return true if the packet is accepted, false otherwise.
      */
-    public boolean accept(@NotNull VideoRtpPacket videoRtpPacket)
+    public boolean accept(@NotNull PacketInfo packetInfo)
     {
+        VideoRtpPacket videoRtpPacket = packetInfo.packetAs();
         AdaptiveTrackProjectionContext contextCopy = getContext(videoRtpPacket);
         if (contextCopy == null)
         {
             return false;
         }
-        packetCache.insert(videoRtpPacket);
 
         // XXX We want to let the context know that the stream has been
         // suspended so that it can raise the needsKeyframe flag and also allow
@@ -231,7 +221,7 @@ public class AdaptiveTrackProjection
 
         int targetIndexCopy = targetIndex;
         boolean accept = contextCopy.accept(
-            videoRtpPacket, videoRtpPacket.getQualityIndex(), targetIndexCopy);
+            packetInfo, videoRtpPacket.getQualityIndex(), targetIndexCopy);
 
         // We check if the context needs a keyframe regardless of whether or not
         // the packet was accepted.
@@ -362,23 +352,18 @@ public class AdaptiveTrackProjection
     }
 
     /**
-     * Rewrites an RTP packet and it returns any additional RTP packets that
-     * need to be piggy-backed.
+     * Rewrites an RTP packet for projection.
      *
-     * @param rtpPacket the RTP packet to rewrite.
-     * @return any piggy-backed packets to include with the packet.
-     * XXX unused?
+     * @param packetInfo the RTP packet to rewrite.
      */
-    VideoRtpPacket[] rewriteRtp(@NotNull VideoRtpPacket rtpPacket)
+   void rewriteRtp(@NotNull PacketInfo packetInfo)
         throws RewriteException
     {
         AdaptiveTrackProjectionContext contextCopy = context;
-        if (contextCopy == null)
+        if (contextCopy != null)
         {
-            return EMPTY_PACKET_ARR;
+            contextCopy.rewriteRtp(packetInfo);
         }
-
-        return contextCopy.rewriteRtp(rtpPacket, packetCache);
     }
 
     /**
@@ -446,7 +431,6 @@ public class AdaptiveTrackProjection
         debugState.put("contextPayloadType", contextPayloadType);
         debugState.put("idealIndex", idealIndex);
         debugState.put("targetIndex", targetIndex);
-        debugState.put("packetCache", packetCache.getNodeStats().toJson());
 
         return debugState;
     }
