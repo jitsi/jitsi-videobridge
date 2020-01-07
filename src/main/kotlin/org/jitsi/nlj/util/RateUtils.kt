@@ -37,5 +37,5 @@ infix fun DataSize.atRate(bw: Bandwidth): Duration {
 fun howMuchCanISendAtRate(bw: Bandwidth): Bandwidth = bw
 
 infix fun Bandwidth.`in`(time: Duration): DataSize {
-    return DataSize((bps * time.seconds).toLong())
+    return DataSize((bps * (time.seconds + time.nano / 1e9)).toLong())
 }

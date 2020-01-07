@@ -34,6 +34,10 @@ class RateUtilsKtTest : ShouldSpec() {
                 val size = howMuchCanISendAtRate(1.mbps).`in`(8.seconds)
                 size shouldBe 1.megabytes
             }
+            should("work correctly for fractional durations") {
+                val size = howMuchCanISendAtRate(1.mbps).`in`(800.milliseconds())
+                size shouldBe 100.kilobytes
+            }
         }
     }
 }
