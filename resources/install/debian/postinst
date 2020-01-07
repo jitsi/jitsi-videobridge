@@ -56,7 +56,7 @@ case "$1" in
             echo "JVB_SECRET=$JVB_SECRET" >> $CONFIG
             echo >> $CONFIG
             echo '# extra options to pass to the JVB daemon' >> $CONFIG
-            echo "JVB_OPTS=\"--apis=rest\"" >> $CONFIG
+            echo "JVB_OPTS=\"--apis=,\"" >> $CONFIG
             echo >> $CONFIG
 
         fi
@@ -111,8 +111,8 @@ case "$1" in
             echo "org.jitsi.videobridge.xmpp.user.shard.MUC_NICKNAME=$(uuidgen)" >> $NEW_JITSI_CONFIG
         fi
 
-        if ! grep -q "--apis=rest" "$CONFIG" ;then
-            sed -i 's/JVB_OPTS=\"\"/JVB_OPTS=\"--apis=rest\"/g' $CONFIG
+        if ! grep -q "--apis=," "$CONFIG" ;then
+            sed -i 's/JVB_OPTS=\"\"/JVB_OPTS=\"--apis=,\"/g' $CONFIG
         fi
 
         # we don't want to start the daemon as root
