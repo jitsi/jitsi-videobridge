@@ -15,7 +15,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <smack.version>4.2.4-47d17fc</smack.version>
     <jitsi.utils.version>1.0-32-g37aa1b3</jitsi.utils.version>
-    <jicoco.version>1.1-14-g1cd1c19</jicoco.version>
+    <jicoco.version>1.1-15-geecd377</jicoco.version>
   </properties>
   <dependencyManagement>
     <dependencies>
