@@ -124,121 +124,137 @@ public class VP8AdaptiveTrackProjectionTest
     }
 
     /** Run an out-of-order test on a single stream, randomized order except for the first packet. */
+    private void doRunOutOfOrderTest(Vp8PacketGenerator generator, int targetIndex,
+        long seed)
+        throws RewriteException
+    {
+        DiagnosticContext diagnosticContext = new DiagnosticContext();
+        diagnosticContext.put("test", Thread.currentThread().getStackTrace()[2].getMethodName());
+
+        RtpState initialState =
+            new RtpState(1, 10000, 1000000);
+
+        final long expectedInitialTs = RtpUtils.applyTimestampDelta(initialState.maxTimestamp, 3000);
+        final long expectedTsOffset = RtpUtils.getTimestampDiff(expectedInitialTs, generator.ts);
+
+        final int reorderSize = 64;
+        ArrayList<PacketInfo> buffer = new ArrayList<>(reorderSize);
+
+        for (int i = 0; i < reorderSize; i++)
+        {
+            buffer.add(generator.nextPacket());
+        }
+
+        Random random = new Random(seed);
+
+        VP8AdaptiveTrackProjectionContext context =
+            new VP8AdaptiveTrackProjectionContext(diagnosticContext,
+                payloadType,
+                initialState, logger);
+
+        int latestSeq = buffer.get(0).<Vp8Packet>packetAs().getSequenceNumber();
+
+        TreeMap<Integer, ProjectedPacket> projectedPackets = new TreeMap<>();
+
+        for (int i = 0; i < 10000; i++)
+        {
+            PacketInfo packetInfo = buffer.get(0);
+            Vp8Packet packet = packetInfo.packetAs();
+
+            int origSeq = packet.getSequenceNumber();
+            long origTs = packet.getTimestamp();
+            int origTl0PicIdx = packet.getTL0PICIDX();
+
+            if (RtpUtils.isOlderSequenceNumberThan(latestSeq, origSeq))
+            {
+                latestSeq = origSeq;
+            }
+            boolean accepted = context.accept(packetInfo, packet.getTemporalLayerIndex(), targetIndex);
+
+            if (RtpUtils.isOlderSequenceNumberThan(origSeq,
+                RtpUtils.applySequenceNumberDelta(latestSeq, -VP8FrameMap.FRAME_MAP_SIZE))
+                && !accepted)
+            {
+                /* This is fine; packets that are too old get ignored. */
+                /* Note we don't want assertFalse(accepted) here because slightly-too-old packets
+                 * that are part of an existing accepted frame will be accepted.
+                 */
+            }
+            else if (packet.getTemporalLayerIndex() <= targetIndex)
+            {
+                assertTrue(accepted);
+
+                context.rewriteRtp(packetInfo);
+
+                assertEquals(RtpUtils.applyTimestampDelta(origTs, expectedTsOffset), packet.getTimestamp());
+                assertEquals(origTl0PicIdx, packet.getTL0PICIDX());
+                int newSeq = packet.getSequenceNumber();
+                assertFalse(projectedPackets.containsKey(newSeq));
+                projectedPackets.put(newSeq, new ProjectedPacket(packet, origSeq));
+            }
+            else
+            {
+                assertFalse(accepted);
+            }
+
+            buffer.set(0, generator.nextPacket());
+            Collections.shuffle(buffer, random);
+        }
+
+        Iterator<Integer> iter = projectedPackets.keySet().iterator();
+
+        ProjectedPacket prevPacket = projectedPackets.get(iter.next());
+
+        while (iter.hasNext())
+        {
+            ProjectedPacket packet = projectedPackets.get(iter.next());
+
+            assertTrue(RtpUtils.isNewerSequenceNumberThan(packet.origSeq, prevPacket.origSeq));
+            if (RtpUtils.isOlderTimestampThan(prevPacket.packet.getTimestamp(), packet.packet.getTimestamp()))
+            {
+                assertTrue(Vp8Utils.getExtendedPictureIdDelta(prevPacket.packet.getPictureId(), packet.packet.getPictureId()) < 0);
+            }
+            else
+            {
+                assertEquals(prevPacket.packet.getTimestamp(), packet.packet.getTimestamp());
+                assertEquals(prevPacket.packet.getPictureId(), packet.packet.getPictureId());
+            }
+
+            prevPacket = packet;
+        }
+
+        /* Overall, we should not have expanded sequence numbers. */
+        ProjectedPacket firstPacket = projectedPackets.firstEntry().getValue();
+        ProjectedPacket lastPacket = projectedPackets.lastEntry().getValue();
+
+        int origDelta = RtpUtils.getSequenceNumberDelta(lastPacket.origSeq, firstPacket.origSeq);
+        int projDelta = RtpUtils.getSequenceNumberDelta(lastPacket.packet.getSequenceNumber(),
+            firstPacket.packet.getSequenceNumber());
+        assertTrue(projDelta <= origDelta);
+    }
+
+    /** Run multiple instances of out-of-order test on a single stream, with different
+     * random seeds. */
     private void runOutOfOrderTest(Vp8PacketGenerator generator, int targetIndex)
         throws RewriteException
     {
-        long seed = System.currentTimeMillis(); // Pass an explicit seed for reproducible tests
-        //  long seed = 1576267371838L;
+        /* Seeds that have triggered problems in the past, plus a random one. */
+        long[] seeds = { 1576267371838L, 1578347926155L, System.currentTimeMillis()};
 
-        try
+        for (long seed: seeds)
         {
-            DiagnosticContext diagnosticContext = new DiagnosticContext();
-            diagnosticContext.put("test", Thread.currentThread().getStackTrace()[2].getMethodName());
-
-            RtpState initialState =
-                new RtpState(1, 10000, 1000000);
-
-            final long expectedInitialTs = RtpUtils.applyTimestampDelta(initialState.maxTimestamp, 3000);
-            final long expectedTsOffset = RtpUtils.getTimestampDiff(expectedInitialTs, generator.ts);
-
-            final int reorderSize = 64;
-            ArrayList<PacketInfo> buffer = new ArrayList<>(reorderSize);
-
-            for (int i = 0; i < reorderSize; i++)
+            try
             {
-                buffer.add(generator.nextPacket());
+                doRunOutOfOrderTest(generator, targetIndex, seed);
+            }
+            catch (Throwable e)
+            {
+                logger.error(
+                    "Exception thrown in randomized test, seed = " + seed, e);
+                throw e;
             }
 
-            Random random = new Random(seed);
-
-            VP8AdaptiveTrackProjectionContext context =
-                new VP8AdaptiveTrackProjectionContext(diagnosticContext,
-                    payloadType,
-                    initialState, logger);
-
-            int latestSeq = buffer.get(0).<Vp8Packet>packetAs().getSequenceNumber();
-
-            TreeMap<Integer, ProjectedPacket> projectedPackets = new TreeMap<>();
-
-            for (int i = 0; i < 10000; i++)
-            {
-                PacketInfo packetInfo = buffer.get(0);
-                Vp8Packet packet = packetInfo.packetAs();
-
-                int origSeq = packet.getSequenceNumber();
-                long origTs = packet.getTimestamp();
-                int origTl0PicIdx = packet.getTL0PICIDX();
-
-                if (RtpUtils.isOlderSequenceNumberThan(latestSeq, origSeq))
-                {
-                    latestSeq = origSeq;
-                }
-                boolean accepted = context.accept(packetInfo, packet.getTemporalLayerIndex(), targetIndex);
-
-                if (RtpUtils.isOlderSequenceNumberThan(origSeq,
-                        RtpUtils.applySequenceNumberDelta(latestSeq, -VP8FrameMap.FRAME_MAP_SIZE))
-                    && !accepted)
-                {
-                    /* This is fine; packets that are too old get ignored. */
-                    /* Note we don't want assertFalse(accepted) here because slightly-too-old packets
-                     * that are part of an existing accepted frame will be accepted.
-                     */
-                }
-                else if (packet.getTemporalLayerIndex() <= targetIndex)
-                {
-                    assertTrue(accepted);
-
-                    context.rewriteRtp(packetInfo);
-
-                    assertEquals(RtpUtils.applyTimestampDelta(origTs, expectedTsOffset), packet.getTimestamp());
-                    assertEquals(origTl0PicIdx, packet.getTL0PICIDX());
-                    int newSeq = packet.getSequenceNumber();
-                    assertFalse(projectedPackets.containsKey(newSeq));
-                    projectedPackets.put(newSeq, new ProjectedPacket(packet, origSeq));
-                }
-                else
-                {
-                    assertFalse(accepted);
-                }
-
-                buffer.set(0, generator.nextPacket());
-                Collections.shuffle(buffer, random);
-            }
-
-            Iterator<Integer> iter = projectedPackets.keySet().iterator();
-
-            ProjectedPacket prevPacket = projectedPackets.get(iter.next());
-
-            while (iter.hasNext())
-            {
-                ProjectedPacket packet = projectedPackets.get(iter.next());
-
-                assertTrue(RtpUtils.isNewerSequenceNumberThan(packet.origSeq, prevPacket.origSeq));
-                if (RtpUtils.isOlderTimestampThan(prevPacket.packet.getTimestamp(), packet.packet.getTimestamp()))
-                {
-                    assertTrue(Vp8Utils.getExtendedPictureIdDelta(prevPacket.packet.getPictureId(), packet.packet.getPictureId()) < 0);
-                }
-                else
-                {
-                    assertEquals(prevPacket.packet.getPictureId(), packet.packet.getPictureId());
-                }
-
-                prevPacket = packet;
-            }
-
-            /* Overall, we should not have expanded sequence numbers. */
-            ProjectedPacket firstPacket = projectedPackets.firstEntry().getValue();
-            ProjectedPacket lastPacket = projectedPackets.lastEntry().getValue();
-
-            int origDelta = RtpUtils.getSequenceNumberDelta(lastPacket.origSeq, firstPacket.origSeq);
-            int projDelta = RtpUtils.getSequenceNumberDelta(lastPacket.packet.getSequenceNumber(),
-                    firstPacket.packet.getSequenceNumber());
-            assertTrue(projDelta <= origDelta);
-        }
-        catch (Throwable e)
-        {
-            logger.error("Exception thrown in randomized test, seed = " + seed, e);
-            throw e;
+            generator.reset();
         }
     }
 
@@ -776,30 +792,49 @@ public class VP8AdaptiveTrackProjectionTest
         {
             this.packetsPerFrame = packetsPerFrame;
 
+            reset();
+        }
 
+        private int seq;
+        private long ts;
+        private int picId ;
+        private int tl0picidx ;
+        private int packetOfFrame ;
+        private boolean keyframe;
+        private boolean keyframeRequested;
+        private int tidCycle;
+        private long ssrc;
+
+        private int packetCount;
+        private int octetCount;
+        private int frameCount;
+
+        private final long baseReceivedTime = 1577836800000L; /* 2020-01-01 00:00:00 UTC */
+        private long receivedTime;
+
+        void reset()
+        {
             long seed = System.currentTimeMillis();
             Random random = new Random(seed);
 
             seq = random.nextInt() % 0x10000;
             ts = random.nextLong() % 0x100000000L;
+
+            picId = 0;
+            tl0picidx = 0;
+            packetOfFrame = 0;
+            keyframe = true;
+            keyframeRequested = false;
+            tidCycle = 0;
+            ssrc = 0xcafebabeL;
+
+            packetCount = 0;
+            octetCount = 0;
+            frameCount = 0;
+
+            receivedTime = baseReceivedTime;
         }
 
-        private int seq = 0;
-        private long ts = 0;
-        private int picId = 0;
-        private int tl0picidx = 0;
-        private int packetOfFrame = 0;
-        private boolean keyframe = true;
-        private boolean keyframeRequested = false;
-        private int tidCycle = 0;
-        private long ssrc = 0xcafebabeL;
-
-        private int packetCount = 0;
-        private int octetCount = 0;
-        private int frameCount = 0;
-
-        private long baseReceivedTime = 1577836800000L; /* 2020-01-01 00:00:00 UTC */
-        private long receivedTime = baseReceivedTime;
 
         public void setSsrc(long ssrc)
         {
