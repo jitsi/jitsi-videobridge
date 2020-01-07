@@ -64,6 +64,17 @@ public class Debug extends ColibriResource
         return Response.ok().build();
     }
 
+    /**
+     *
+     * @param confId the conference id
+     * @param epId the endpoint id
+     * @param feature the Feature to enable or disable
+     * @param state the feature state in String form. Note that we don't rely on Jersey's automatic parsing here because
+     *              we want /colibri/debug/foo/bar/broken/ to return and HTTP 500 error and without the special handling
+     *              inside the method it returns 404.
+     * @return the Response
+     * @throws IllegalArgumentException when parsing the state fails.
+     */
     @POST
     @Path("/{confId}/{epId}/{state}/{feature}")
     public Response toggleEndpointFeature(
@@ -84,15 +95,9 @@ public class Debug extends ColibriResource
             throw new NotFoundException("No endpoint was found with the specified id.");
         }
 
-        FeatureState featureState;
-        try
-        {
-            featureState = FeatureState.fromString(state);
-        }
-        catch (IllegalArgumentException ex)
-        {
-            return Response.serverError().build();
-        }
+        // the only exception possible here is the IllegalArgumentException which comes with
+        // a handy error message and gets translated to a HTTP 500 error.
+        FeatureState featureState = FeatureState.fromString(state);
 
         logger.info("Setting feature state: feature=" + feature.getValue() + ", state=" + featureState.getValue());
         endpoint.setFeature(feature, featureState.getValue());
