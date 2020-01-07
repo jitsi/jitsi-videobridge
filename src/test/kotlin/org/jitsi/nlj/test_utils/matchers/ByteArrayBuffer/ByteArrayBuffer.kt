@@ -17,12 +17,12 @@
 package org.jitsi.nlj.test_utils.matchers.ByteArrayBuffer
 
 import io.kotlintest.Matcher
-import io.kotlintest.Result
+import io.kotlintest.MatcherResult
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.utils.ByteArrayBuffer
 
 fun haveSameContentAs(expected: ByteArrayBuffer) = object : Matcher<ByteArrayBuffer> {
-    override fun test(value: ByteArrayBuffer): Result {
+    override fun test(value: ByteArrayBuffer): MatcherResult {
         var matches = true
         if (expected.length != value.length) {
             matches = false
@@ -34,7 +34,7 @@ fun haveSameContentAs(expected: ByteArrayBuffer) = object : Matcher<ByteArrayBuf
                 }
             }
         }
-        return Result(matches,
+        return MatcherResult(matches,
             "\n${value.toHex()}\nwas supposed to be:\n${expected.toHex()}",
             "\n${value.toHex()}\nshould not have equaled \n${expected.toHex()}"
         )
