@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import ToggleablePcapWriter
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
@@ -86,6 +87,7 @@ class RtpSenderImpl(
 
     private val srtpEncryptWrapper = SrtpTransformerNode("SRTP encrypt")
     private val srtcpEncryptWrapper = SrtpTransformerNode("SRTCP encrypt")
+    private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-tx")
     private val outgoingPacketCache = PacketCacher()
     private val absSendTime = AbsSendTime(streamInformationStore)
     private val statsTracker = OutgoingStatisticsTracker()
@@ -114,6 +116,7 @@ class RtpSenderImpl(
             node(absSendTime)
             node(statsTracker)
             node(TccSeqNumTagger(transportCcEngine, streamInformationStore))
+            node(toggleablePcapWriter.newObserverNode())
             node(srtpEncryptWrapper)
             node(packetStreamStats.createNewNode())
             node(outputPipelineTerminationNode)
@@ -145,6 +148,7 @@ class RtpSenderImpl(
                 packetInfo
             }
             node(rtcpSrUpdater)
+            node(toggleablePcapWriter.newObserverNode())
             node(srtcpEncryptWrapper)
             node(packetStreamStats.createNewNode())
             node(outputPipelineTerminationNode)
@@ -160,7 +164,7 @@ class RtpSenderImpl(
     override fun onRttUpdate(newRtt: Double) {
         nackHandler.onRttUpdate(newRtt)
         keyframeRequester.onRttUpdate(newRtt)
-        transportCcEngine?.onRttUpdate(Duration.ofNanos((newRtt*1e6).toLong()))
+        transportCcEngine?.onRttUpdate(Duration.ofNanos((newRtt * 1e6).toLong()))
     }
 
     /**
@@ -244,6 +248,7 @@ class RtpSenderImpl(
 
     override fun tearDown() {
         NodeTeardownVisitor().reverseVisit(outputPipelineTerminationNode)
+        toggleablePcapWriter.disable()
     }
 
     companion object {
