@@ -45,6 +45,20 @@ class HarvestersConfig {
             fun tcpEnabled() = tcpEnabledProp.value
 
             /**
+             * The property that configures whether ICE/TCP should use "ssltcp" or not.
+             */
+            class IceSslTcpProperty : LegacyFallbackConfigProperty<Boolean>(
+                Boolean::class,
+                readOnce = true,
+                legacyName = "org.jitsi.videobridge.TCP_HARVESTER_SSLTCP",
+                newName = "videobridge.ice.tcp.ssltcp"
+            )
+            private val iceSslTcpProperty = IceSslTcpProperty()
+
+            @JvmStatic
+            fun iceSslTcp() = iceSslTcpProperty.value
+
+            /**
              * The property that configures the ICE port.
              */
             class IcePortProperty : LegacyFallbackConfigProperty<Int>(

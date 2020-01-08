@@ -77,19 +77,6 @@ public class Harvesters
             = "org.jitsi.videobridge.TCP_HARVESTER_PORT";
 
     /**
-     * The name of the property which controls the use of ssltcp candidates by
-     * <tt>TcpHarvester</tt>.
-     */
-    public static final String TCP_HARVESTER_SSLTCP
-            = "org.jitsi.videobridge.TCP_HARVESTER_SSLTCP";
-
-
-    /**
-     * The default value of the <tt>TCP_HARVESTER_SSLTCP</tt> property.
-     */
-    private static final boolean TCP_HARVESTER_SSLTCP_DEFAULT = true;
-
-    /**
      * The single <tt>TcpHarvester</tt> instance for the
      * application.
      */
@@ -136,8 +123,6 @@ public class Harvesters
             {
                 int port = cfg.getInt(TCP_HARVESTER_PORT, -1);
                 boolean fallback = false;
-                boolean ssltcp = cfg.getBoolean(TCP_HARVESTER_SSLTCP,
-                        TCP_HARVESTER_SSLTCP_DEFAULT);
 
                 if (port == -1)
                 {
@@ -147,7 +132,7 @@ public class Harvesters
 
                 try
                 {
-                    tcpHarvester = new TcpHarvester(port, ssltcp);
+                    tcpHarvester = new TcpHarvester(port, Config.iceSslTcp());
                 }
                 catch (IOException ioe)
                 {
@@ -172,7 +157,7 @@ public class Harvesters
                     try
                     {
                         tcpHarvester
-                                = new TcpHarvester(port, ssltcp);
+                                = new TcpHarvester(port, Config.iceSslTcp());
                     }
                     catch (IOException ioe)
                     {
@@ -186,7 +171,7 @@ public class Harvesters
                 if (classLogger.isInfoEnabled())
                 {
                     classLogger.info("Initialized TCP harvester on port " + port
-                            + ", using SSLTCP:" + ssltcp);
+                            + ", using SSLTCP:" + Config.iceSslTcp());
                 }
 
                 int mappedPort = cfg.getInt(TCP_HARVESTER_MAPPED_PORT, -1);
