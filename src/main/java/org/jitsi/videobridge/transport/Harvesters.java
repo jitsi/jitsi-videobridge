@@ -49,32 +49,11 @@ public class Harvesters
             = new LoggerImpl(Harvesters.class.getName());
 
     /**
-     * The default port that the <tt>TcpHarvester</tt> will
-     * bind to.
-     */
-    private static final int TCP_DEFAULT_PORT = 443;
-
-    /**
-     * The port on which the <tt>TcpHarvester</tt> will bind to
-     * if no port is specifically configured, and binding to
-     * <tt>DEFAULT_TCP_PORT</tt> fails (for example, if the process doesn't have
-     * the required privileges to bind to a port below 1024).
-     */
-    private static final int TCP_FALLBACK_PORT = 4443;
-
-    /**
      * The name of the property which specifies an additional port to be
      * advertised by the TCP harvester.
      */
     public static final String TCP_HARVESTER_MAPPED_PORT
             = "org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT";
-
-    /**
-     * The name of the property which controls the port to which the
-     * <tt>TcpHarvester</tt> will bind.
-     */
-    public static final String TCP_HARVESTER_PORT
-            = "org.jitsi.videobridge.TCP_HARVESTER_PORT";
 
     /**
      * The single <tt>TcpHarvester</tt> instance for the
@@ -121,57 +100,23 @@ public class Harvesters
 
             if (Config.tcpEnabled())
             {
-                int port = cfg.getInt(TCP_HARVESTER_PORT, -1);
-                boolean fallback = false;
-
-                if (port == -1)
+                for (int port : Config.tcpPortsToTry())
                 {
-                    port = TCP_DEFAULT_PORT;
-                    fallback = true;
-                }
-
-                try
-                {
-                    tcpHarvester = new TcpHarvester(port, Config.iceSslTcp());
-                }
-                catch (IOException ioe)
-                {
-                    classLogger.warn(
-                            "Failed to initialize TCP harvester on port " + port
-                                    + ": " + ioe
-                                    + (fallback
-                                    ? ". Retrying on port " + TCP_FALLBACK_PORT
-                                    : "")
-                                    + ".");
-                    // If no fallback is allowed, the method will return.
-                }
-                if (tcpHarvester == null)
-                {
-                    // If TCP_HARVESTER_PORT specified a port, then fallback was
-                    // disabled. However, if the binding on the port (above)
-                    // fails, then the method should return.
-                    if (!fallback)
-                        return;
-
-                    port = TCP_FALLBACK_PORT;
                     try
                     {
                         tcpHarvester
                                 = new TcpHarvester(port, Config.iceSslTcp());
+                        classLogger.info("Initialized TCP harvester on port "
+                                + port + ", ssltcp=" + Config.iceSslTcp());
+
+                        // We just want the first successful port.
+                        break;
                     }
                     catch (IOException ioe)
                     {
                         classLogger.warn(
-                                "Failed to initialize TCP harvester on fallback"
-                                        + " port " + port + ": " + ioe);
-                        return;
+                                "Failed to initialize TCP harvester on port " + port);
                     }
-                }
-
-                if (classLogger.isInfoEnabled())
-                {
-                    classLogger.info("Initialized TCP harvester on port " + port
-                            + ", using SSLTCP:" + Config.iceSslTcp());
                 }
 
                 int mappedPort = cfg.getInt(TCP_HARVESTER_MAPPED_PORT, -1);

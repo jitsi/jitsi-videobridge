@@ -59,5 +59,6 @@ This list will be updated as properties are migrated:
 | org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID | videobridge.websockets.server-id | |
 | org.jitsi.videobridge.DISABLE_TCP_HARVESTER | videobridge.ice.tcp.enabled | The semantics of this property have been inverted (disable -> enable) |
 | org.jitsi.videobridge.TCP_HARVESTER_SSLTCP | videobridge.ice.tcp.ssltcp | |
+| org.jitsi.videobridge.TCP_HARVESTER_PORT | videobridge.ice.tcp.port | |
 | org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT | videobridge.ice.port | |
 

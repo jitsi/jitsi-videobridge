@@ -15,16 +15,19 @@
  */
 package org.jitsi.videobridge.transport
 
+import org.jitsi.config.JitsiConfig
 import org.jitsi.config.LegacyFallbackConfigProperty
 import org.jitsi.config.legacyConfigAttributes
 import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.FallbackProperty
+import org.jitsi.utils.config.SimpleProperty
+import org.jitsi.utils.config.helpers.attributes
 
 class HarvestersConfig {
     class Config {
         companion object {
             /**
-             * The name of the property which enables ICE/TCP.
+             * The property which enables ICE/TCP.
              */
             class TcpEnabledProperty : FallbackProperty<Boolean>(
                 legacyConfigAttributes {
@@ -43,6 +46,38 @@ class HarvestersConfig {
 
             @JvmStatic
             fun tcpEnabled() = tcpEnabledProp.value
+
+            /**
+             * The property which configures the ICE/TCP port.
+             */
+            class TcpPortProperty : LegacyFallbackConfigProperty<Int>(
+                Int::class,
+                readOnce = true,
+                legacyName = "org.jitsi.videobridge.TCP_HARVESTER_PORT",
+                newName = "videobridge.ice.tcp.port"
+            )
+            private val tcpPortProperty = TcpPortProperty()
+
+            /**
+             * The property which configures the fallback ICE/TCP port.
+             */
+            class TcpFallbackPortProperty : SimpleProperty<Int>(
+                attributes {
+                    name("videobridge.ice.tcp.fallback-port")
+                    readOnce()
+                    fromConfig(JitsiConfig.newConfig)
+                }
+            )
+            private val tcpFallbackPortProperty = TcpFallbackPortProperty()
+
+            /**
+             * The list of ports to try. Fallback can be disabled by setting the fallback port to <=0.
+             */
+            @JvmStatic
+            fun tcpPortsToTry() = if (tcpFallbackPortProperty.value > 0)
+                listOf(tcpPortProperty.value, tcpFallbackPortProperty.value)
+                else listOf(tcpPortProperty.value)
+
 
             /**
              * The property that configures whether ICE/TCP should use "ssltcp" or not.
