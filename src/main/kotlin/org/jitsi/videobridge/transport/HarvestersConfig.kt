@@ -78,6 +78,28 @@ class HarvestersConfig {
                 listOf(tcpPortProperty.value, tcpFallbackPortProperty.value)
                 else listOf(tcpPortProperty.value)
 
+            /**
+             * The property which configures an additional port to advertise.
+             */
+            class TcpMappedPortProperty : LegacyFallbackConfigProperty<Int>(
+                Int::class,
+                readOnce = true,
+                legacyName = "org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT",
+                newName = "videobridge.ice.tcp.mapped-port"
+            )
+            private val tcpMappedPortProperty = TcpMappedPortProperty()
+
+            /**
+             * Returns the additional port to advertise, or [null] if none is configured.
+             */
+            @JvmStatic
+            fun tcpMappedPort(): Int? {
+                return try {
+                    tcpMappedPortProperty.value
+                } catch (e: Throwable) {
+                    null
+                }
+            }
 
             /**
              * The property that configures whether ICE/TCP should use "ssltcp" or not.

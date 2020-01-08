@@ -49,13 +49,6 @@ public class Harvesters
             = new LoggerImpl(Harvesters.class.getName());
 
     /**
-     * The name of the property which specifies an additional port to be
-     * advertised by the TCP harvester.
-     */
-    public static final String TCP_HARVESTER_MAPPED_PORT
-            = "org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT";
-
-    /**
      * The single <tt>TcpHarvester</tt> instance for the
      * application.
      */
@@ -119,10 +112,9 @@ public class Harvesters
                     }
                 }
 
-                int mappedPort = cfg.getInt(TCP_HARVESTER_MAPPED_PORT, -1);
-                if (mappedPort != -1)
+                if (Config.tcpMappedPort() != null)
                 {
-                    tcpHarvester.addMappedPort(mappedPort);
+                    tcpHarvester.addMappedPort(Config.tcpMappedPort());
                 }
             }
         }
