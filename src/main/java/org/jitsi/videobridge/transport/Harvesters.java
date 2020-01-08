@@ -82,7 +82,7 @@ public class Harvesters
 
 
             singlePortHarvesters
-                    = SinglePortUdpHarvester.createHarvesters(Config.icePort());
+                    = SinglePortUdpHarvester.createHarvesters(Config.port());
             if (singlePortHarvesters.isEmpty())
             {
                 singlePortHarvesters = null;
