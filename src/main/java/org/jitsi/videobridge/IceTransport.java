@@ -34,6 +34,8 @@ import org.jitsi.xmpp.extensions.jingle.CandidateType;
 import org.json.simple.*;
 import org.osgi.framework.*;
 
+import static org.jitsi.videobridge.transport.HarvestersConfig.*;
+
 /**
  * Implements the Jingle ICE-UDP transport.
  *
@@ -43,12 +45,6 @@ import org.osgi.framework.*;
  */
 public class IceTransport
 {
-    /**
-     * The name of the property that can be used to control the value of
-     * {@link #iceUfragPrefix}.
-     */
-    public static final String ICE_UFRAG_PREFIX_PNAME
-            = "org.jitsi.videobridge.ICE_UFRAG_PREFIX";
     /**
      * The optional prefix to use for generated ICE local username fragments.
      */
@@ -229,7 +225,7 @@ public class IceTransport
             logger.debug("Using component socket: " + useComponentSocket);
         }
 
-        iceUfragPrefix = cfg.getString(ICE_UFRAG_PREFIX_PNAME, null);
+        iceUfragPrefix = Config.ufragPrefix();
         String strategyName = cfg.getString(KEEP_ALIVE_STRATEGY_PNAME);
         KeepAliveStrategy strategy
                 = KeepAliveStrategy.fromString(strategyName);

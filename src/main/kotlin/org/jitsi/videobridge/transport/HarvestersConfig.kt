@@ -93,12 +93,10 @@ class HarvestersConfig {
              * Returns the additional port to advertise, or [null] if none is configured.
              */
             @JvmStatic
-            fun tcpMappedPort(): Int? {
-                return try {
-                    tcpMappedPortProperty.value
-                } catch (e: Throwable) {
-                    null
-                }
+            fun tcpMappedPort(): Int? = try {
+                tcpMappedPortProperty.value
+            } catch (e: Throwable) {
+                null
             }
 
             /**
@@ -128,6 +126,24 @@ class HarvestersConfig {
 
             @JvmStatic
             fun port() = portProperty.value
+
+            /**
+             * The property that configures the prefix to STUN username fragments we generate.
+             */
+            class UfragPrefixProperty : LegacyFallbackConfigProperty<String>(
+                String::class,
+                readOnce = true,
+                legacyName = "org.jitsi.videobridge.ICE_UFRAG_PREFIX",
+                newName = "videobridge.ice.ufrag-prefix"
+            )
+            private val ufragPrefixProperty = UfragPrefixProperty()
+
+            @JvmStatic
+            fun ufragPrefix(): String? = try {
+                ufragPrefixProperty.value
+            } catch (e: Throwable) {
+                null
+            }
         }
     }
 }
