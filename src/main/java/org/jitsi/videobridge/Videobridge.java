@@ -1002,27 +1002,6 @@ public class Videobridge
                 }
             }
 
-            // These properties are moved to ice4j. This is to make sure that we
-            // still support the old names.
-            String oldPrefix = "org.jitsi.videobridge";
-            String newPrefix = "org.ice4j.ice.harvest";
-            for (String propertyName : new String[]{
-                HarvesterConfiguration.NAT_HARVESTER_LOCAL_ADDRESS,
-                HarvesterConfiguration.NAT_HARVESTER_PUBLIC_ADDRESS,
-                HarvesterConfiguration.DISABLE_AWS_HARVESTER,
-                HarvesterConfiguration.FORCE_AWS_HARVESTER,
-                HarvesterConfiguration.STUN_MAPPING_HARVESTER_ADDRESSES})
-            {
-                String propertyValue = cfg.getString(propertyName);
-
-                if (propertyValue != null)
-                {
-                    String newPropertyName
-                        = newPrefix
-                                + propertyName.substring(oldPrefix.length());
-                    System.setProperty(newPropertyName, propertyValue);
-                }
-            }
             // Reload for all the new system properties to be seen
             JitsiConfig.Companion.reload();
         }
@@ -1101,28 +1080,6 @@ public class Videobridge
                 for (String propertyName : ice4jPropertyNames)
                 {
                     System.clearProperty(propertyName);
-                }
-            }
-
-            // These properties are moved to ice4j. This is to make sure that we
-            // still support the old names.
-            String oldPrefix = "org.jitsi.videobridge";
-            String newPrefix = "org.ice4j.ice.harvest";
-            for (String propertyName : new String[]{
-                HarvesterConfiguration.NAT_HARVESTER_LOCAL_ADDRESS,
-                HarvesterConfiguration.NAT_HARVESTER_PUBLIC_ADDRESS,
-                HarvesterConfiguration.DISABLE_AWS_HARVESTER,
-                HarvesterConfiguration.FORCE_AWS_HARVESTER,
-                HarvesterConfiguration.STUN_MAPPING_HARVESTER_ADDRESSES})
-            {
-                String propertyValue = cfg.getString(propertyName);
-
-                if (propertyValue != null)
-                {
-                    String newPropertyName
-                        = newPrefix
-                        + propertyName.substring(oldPrefix.length());
-                    System.clearProperty(newPropertyName);
                 }
             }
         }
