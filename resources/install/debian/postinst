@@ -116,7 +116,7 @@ case "$1" in
             echo "org.jitsi.videobridge.xmpp.user.shard.MUC_NICKNAME=$(uuidgen)" >> $NEW_JITSI_CONFIG
         fi
 
-        if ! grep -q "--apis=," "$CONFIG" ;then
+        if ! grep -q "\--apis=," "$CONFIG" ;then
             sed -i 's/JVB_OPTS=\"\"/JVB_OPTS=\"--apis=,\"/g' $CONFIG
         fi
 
