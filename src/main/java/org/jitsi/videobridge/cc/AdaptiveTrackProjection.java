@@ -264,6 +264,11 @@ public class AdaptiveTrackProjection
     {
         PayloadType payloadTypeObject;
         int payloadType = rtpPacket.getPayloadType();
+        RtpState rtpState = getRtpState();
+
+        if (rtpState == null) {
+            return null;
+        }
         if (context == null || contextPayloadType != payloadType)
         {
             logger.debug(() -> " adaptive track projection " +
@@ -303,14 +308,14 @@ public class AdaptiveTrackProjection
             {
                 // context switch
                 context = new VP8AdaptiveTrackProjectionContext(
-                    diagnosticContext, payloadTypeObject, getRtpState(), parentLogger);
+                    diagnosticContext, payloadTypeObject, rtpState, parentLogger);
                 contextPayloadType = payloadType;
             }
             else if (!hasTemporalLayerIndex
                 && !(context instanceof GenericAdaptiveTrackProjectionContext))
             {
                 // context switch
-                context = new GenericAdaptiveTrackProjectionContext(payloadTypeObject, getRtpState(), parentLogger);
+                context = new GenericAdaptiveTrackProjectionContext(payloadTypeObject, rtpState, parentLogger);
                 contextPayloadType = payloadType;
             }
 
@@ -319,7 +324,7 @@ public class AdaptiveTrackProjection
         }
         else if (context == null || contextPayloadType != payloadType)
         {
-            context = new GenericAdaptiveTrackProjectionContext(payloadTypeObject, getRtpState(), parentLogger);
+            context = new GenericAdaptiveTrackProjectionContext(payloadTypeObject, rtpState, parentLogger);
             contextPayloadType = payloadType;
             return context;
         }
@@ -337,9 +342,14 @@ public class AdaptiveTrackProjection
         if (context == null)
         {
             MediaStreamTrackDesc track = getSource();
+            if (track == null || track.getRTPEncodings().length == 0)
+            {
+                logger.error("No source or encoding information available, cannot create RTP state");
+                return null;
+            }
             long ssrc = track.getRTPEncodings()[0].getPrimarySSRC();
             // TODO If '1' are the starting seq number and timestamp, should
-            // we use random values?
+            //  we use random values?
             return new RtpState(
                 ssrc,
                 1 /* maxSequenceNumber */,
