@@ -51,6 +51,7 @@ import java.io.*;
 import java.nio.*;
 import java.time.*;
 import java.util.*;
+import java.util.stream.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.*;
@@ -1166,22 +1167,21 @@ public class Endpoint
     @Override
     public void recreateMediaStreamTracks()
     {
-        final ArrayList<SourceGroupPacketExtension> sourceGroups = new ArrayList<>();
-        final ArrayList<SourcePacketExtension> sources = new ArrayList<>();
-        for (ChannelShim channelShim : channelShims) {
-            if (MediaType.VIDEO.equals(channelShim.getMediaType())) {
-                final Collection<SourceGroupPacketExtension> channelSourceGroups
-                    = channelShim.getSourceGroups();
-                if (channelSourceGroups != null) {
-                    sourceGroups.addAll(channelSourceGroups);
-                }
-                final Collection<SourcePacketExtension> channelSources
-                    = channelShim.getSources();
-                if (channelSources != null) {
-                    sources.addAll(channelSources);
-                }
-            }
-        }
+        final Stream<ChannelShim> videoChannels = channelShims
+            .stream()
+            .filter(c -> MediaType.VIDEO.equals(c.getMediaType()));
+
+        final List<SourcePacketExtension> sources = videoChannels
+            .map(ChannelShim::getSources)
+            .filter(Objects::nonNull)
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
+
+        final List<SourceGroupPacketExtension> sourceGroups = videoChannels
+            .map(ChannelShim::getSourceGroups)
+            .filter(Objects::nonNull)
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
 
         if (!sources.isEmpty() || !sourceGroups.isEmpty()) {
             MediaStreamTrackDesc[] tracks =
