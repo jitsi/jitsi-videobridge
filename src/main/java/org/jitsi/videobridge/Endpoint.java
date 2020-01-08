@@ -1167,17 +1167,19 @@ public class Endpoint
     @Override
     public void recreateMediaStreamTracks()
     {
-        final Stream<ChannelShim> videoChannels = channelShims
+        final Supplier<Stream<ChannelShim>> videoChannels = () -> channelShims
             .stream()
             .filter(c -> MediaType.VIDEO.equals(c.getMediaType()));
 
         final List<SourcePacketExtension> sources = videoChannels
+            .get()
             .map(ChannelShim::getSources)
             .filter(Objects::nonNull)
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
 
         final List<SourceGroupPacketExtension> sourceGroups = videoChannels
+            .get()
             .map(ChannelShim::getSourceGroups)
             .filter(Objects::nonNull)
             .flatMap(Collection::stream)
