@@ -264,11 +264,7 @@ public class AdaptiveTrackProjection
     {
         PayloadType payloadTypeObject;
         int payloadType = rtpPacket.getPayloadType();
-        RtpState rtpState = getRtpState();
 
-        if (rtpState == null) {
-            return null;
-        }
         if (context == null || contextPayloadType != payloadType)
         {
             logger.debug(() -> " adaptive track projection " +
@@ -307,6 +303,10 @@ public class AdaptiveTrackProjection
                 && !(context instanceof VP8AdaptiveTrackProjectionContext))
             {
                 // context switch
+                RtpState rtpState = getRtpState();
+                if (rtpState == null) {
+                    return null;
+                }
                 context = new VP8AdaptiveTrackProjectionContext(
                     diagnosticContext, payloadTypeObject, rtpState, parentLogger);
                 contextPayloadType = payloadType;
@@ -314,6 +314,10 @@ public class AdaptiveTrackProjection
             else if (!hasTemporalLayerIndex
                 && !(context instanceof GenericAdaptiveTrackProjectionContext))
             {
+                RtpState rtpState = getRtpState();
+                if (rtpState == null) {
+                    return null;
+                }
                 // context switch
                 context = new GenericAdaptiveTrackProjectionContext(payloadTypeObject, rtpState, parentLogger);
                 contextPayloadType = payloadType;
@@ -324,6 +328,10 @@ public class AdaptiveTrackProjection
         }
         else if (context == null || contextPayloadType != payloadType)
         {
+            RtpState rtpState = getRtpState();
+            if (rtpState == null) {
+                return null;
+            }
             context = new GenericAdaptiveTrackProjectionContext(payloadTypeObject, rtpState, parentLogger);
             contextPayloadType = payloadType;
             return context;
