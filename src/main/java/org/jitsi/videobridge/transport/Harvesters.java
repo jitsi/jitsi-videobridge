@@ -42,20 +42,6 @@ public class Harvesters
     public static boolean healthy = true;
 
     /**
-     * The name of the property which controls the port number used for
-     * <tt>SinglePortUdpHarvester</tt>s.
-     */
-    public static final String SINGLE_PORT_HARVESTER_PORT
-            = "org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT";
-
-    /**
-    /**
-     * The default value of the port to be used for
-     * {@code SinglePortUdpHarvester}.
-     */
-    private static final int SINGLE_PORT_DEFAULT_VALUE = 10000;
-
-    /**
      * The {@link Logger} used by the {@link Harvesters} class to
      * print debug information.
      */
@@ -136,20 +122,15 @@ public class Harvesters
             staticConfigurationInitialized = true;
 
 
-            int singlePort = cfg.getInt(SINGLE_PORT_HARVESTER_PORT,
-                    SINGLE_PORT_DEFAULT_VALUE);
-            if (singlePort != -1)
+            singlePortHarvesters
+                    = SinglePortUdpHarvester.createHarvesters(Config.icePort());
+            if (singlePortHarvesters.isEmpty())
             {
-                singlePortHarvesters
-                        = SinglePortUdpHarvester.createHarvesters(singlePort);
-                if (singlePortHarvesters.isEmpty())
-                {
-                    singlePortHarvesters = null;
-                    classLogger.info("No single-port harvesters created.");
-                }
-
-                healthy = singlePortHarvesters != null;
+                singlePortHarvesters = null;
+                classLogger.info("No single-port harvesters created.");
             }
+
+            healthy = singlePortHarvesters != null;
 
             if (Config.tcpEnabled())
             {

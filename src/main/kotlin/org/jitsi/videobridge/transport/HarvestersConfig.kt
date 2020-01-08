@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.transport
 
+import org.jitsi.config.LegacyFallbackConfigProperty
 import org.jitsi.config.legacyConfigAttributes
 import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.FallbackProperty
@@ -42,6 +43,20 @@ class HarvestersConfig {
 
             @JvmStatic
             fun tcpEnabled() = tcpEnabledProp.value
+
+            /**
+             * The property that configures the ICE port.
+             */
+            class IcePortProperty : LegacyFallbackConfigProperty<Int>(
+                Int::class,
+                readOnce = true,
+                legacyName = "org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT",
+                newName = "videobridge.ice.port"
+            )
+            private val icePortProperty = IcePortProperty()
+
+            @JvmStatic
+            fun icePort() = icePortProperty.value
         }
     }
 }
