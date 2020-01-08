@@ -13,17 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.jitsi.nlj
 
-import org.jitsi.utils.MediaType
-import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
-
-interface Event
-
-class SetMediaStreamTracksEvent(val mediaStreamTrackDescs: Array<MediaStreamTrackDesc>) : Event
-
-class SetLocalSsrcEvent(val mediaType: MediaType, val ssrc: Long) : Event
-
-class BandwidthEstimationChangedEvent(val bandwidthBps: Long) : Event
-
-class FeatureToggleEvent(val feature: Features, val enable: Boolean) : Event
+enum class Features {
+    TRANSCEIVER_PCAP_DUMP
+}

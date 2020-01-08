@@ -39,13 +39,17 @@ class PcapWriter(
     filePath: String = "/tmp/${Random().nextLong()}.pcap}"
 ) : ObserverNode("PCAP writer") {
     private val logger = parentLogger.createChildLogger(PcapWriter::class)
-    private val handle by lazy {
+    private val lazyHandle = lazy {
         Pcaps.openDead(DataLinkType.EN10MB, 65536)
     }
-    private val writer by lazy {
+    private val handle by lazyHandle
+
+    private val lazyWriter = lazy {
         logger.cinfo { "Pcap writer writing to file $filePath" }
         handle.dumpOpen(filePath)
     }
+
+    private val writer by lazyWriter
 
     companion object {
         private val localhost = Inet4Address.getByName("127.0.0.1") as Inet4Address
@@ -85,5 +89,15 @@ class PcapWriter(
                 .build()
 
         writer.dump(eth)
+    }
+
+    fun close() {
+        if (lazyWriter.isInitialized() && writer.isOpen) {
+            writer.close()
+        }
+
+        if (lazyHandle.isInitialized() && handle.isOpen) {
+            handle.close()
+        }
     }
 }

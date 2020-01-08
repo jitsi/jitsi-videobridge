@@ -261,6 +261,7 @@ class TransportCcEngine(
         /**
          * The maximum number of received packets and their timestamps to save.
          *
+         * NOTE rtt + minimum amount
          * XXX this is an uninformed value.
          */
         private const val MAX_OUTGOING_PACKETS_HISTORY = 1000
