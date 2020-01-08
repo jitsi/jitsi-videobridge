@@ -40,11 +40,6 @@ public class Harvesters
     public static boolean healthy = true;
 
     /**
-     * The "mapped port" added to {@link #tcpHarvester}, or -1.
-     */
-    private static int tcpHarvesterMappedPort = -1;
-
-    /**
      * The name of the property which disables the use of a
      * <tt>TcpHarvester</tt>.
      */
@@ -221,7 +216,6 @@ public class Harvesters
                 int mappedPort = cfg.getInt(TCP_HARVESTER_MAPPED_PORT, -1);
                 if (mappedPort != -1)
                 {
-                    tcpHarvesterMappedPort = mappedPort;
                     tcpHarvester.addMappedPort(mappedPort);
                 }
             }
