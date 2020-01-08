@@ -100,6 +100,11 @@ case "$1" in
             sed -i 's/org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP/#org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP/g' $NEW_JITSI_CONFIG
         fi
 
+        # disables tcp harvester to make sure jvb will not take port 443
+        if [[ -f $NEW_JITSI_CONFIG ]] && ! grep -q "org.jitsi.videobridge.DISABLE_TCP_HARVESTER" "$NEW_JITSI_CONFIG"  ;then
+            echo "org.jitsi.videobridge.DISABLE_TCP_HARVESTER=true" >> $NEW_JITSI_CONFIG
+        fi
+
         if ! grep -q "org.jitsi.videobridge.xmpp.user.shard.MUC_JIDS" "$NEW_JITSI_CONFIG" ;then
             echo "org.jitsi.videobridge.ENABLE_STATISTICS=true" >> $NEW_JITSI_CONFIG
             echo "org.jitsi.videobridge.STATISTICS_TRANSPORT=muc" >> $NEW_JITSI_CONFIG
