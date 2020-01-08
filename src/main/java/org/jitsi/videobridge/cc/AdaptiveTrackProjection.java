@@ -20,6 +20,7 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.rtcp.*;
+import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.vp8.*;
@@ -133,7 +134,9 @@ public class AdaptiveTrackProjection
         targetSsrc = source.getRTPEncodings()[0].getPrimarySSRC();
         this.diagnosticContext = diagnosticContext;
         this.parentLogger = parentLogger;
-        this.logger = parentLogger.createChildLogger(AdaptiveTrackProjection.class.getName());
+        this.logger = parentLogger.createChildLogger(AdaptiveTrackProjection.class.getName(),
+            JMap.of("targetSsrc", Long.toString(targetSsrc),
+                "srcEpId", source.getOwner()));
         this.keyframeRequester = keyframeRequester;
     }
 
@@ -342,9 +345,14 @@ public class AdaptiveTrackProjection
         if (context == null)
         {
             MediaStreamTrackDesc track = getSource();
-            if (track == null || track.getRTPEncodings().length == 0)
+            if (track == null)
             {
-                logger.error("No source or encoding information available, cannot create RTP state");
+                logger.error("No source information available, cannot create RTP state");
+                return null;
+            }
+            if (track.getRTPEncodings().length == 0)
+            {
+                logger.error("No encoding information available, cannot create RTP state");
                 return null;
             }
             long ssrc = track.getRTPEncodings()[0].getPrimarySSRC();
