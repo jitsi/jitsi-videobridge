@@ -16,24 +16,15 @@
 
 package org.jitsi.rtp.rtcp
 
-class CompoundRtcpPacket(
-    buffer: ByteArray,
+/**
+ * Represents an RTCP packet whose packet types falls in the valid range
+ * (according to the spec), but isn't currently implemented/supported.
+ */
+class UnsupportedRtcpPacket(
+    buf: ByteArray,
     offset: Int,
-    length: Int
-) : RtcpPacket(buffer, offset, length) {
-
-    val packets: List<RtcpPacket> by lazy {
-        var bytesRemaining = length
-        var currOffset = offset
-        val rtcpPackets = mutableListOf<RtcpPacket>()
-        while (bytesRemaining >= RtcpHeader.SIZE_BYTES) {
-            val rtcpPacket = parse(buffer, currOffset)
-            rtcpPackets.add(rtcpPacket)
-            currOffset += rtcpPacket.length
-            bytesRemaining -= rtcpPacket.length
-        }
-        rtcpPackets
-    }
-
-    override fun clone(): RtcpPacket = CompoundRtcpPacket(cloneBuffer(0), 0, length)
+    packetLengthBytes: Int
+) : RtcpPacket(buf, offset, packetLengthBytes) {
+    override fun clone(): UnsupportedRtcpPacket =
+        UnsupportedRtcpPacket(cloneBuffer(0), 0, length)
 }

@@ -43,9 +43,9 @@ import org.jitsi.rtp.rtp.RtpHeader
  *
  * Note: Kotlin's ranges are implemented efficiently.
  */
-private val RTCP_PACKET_TYPE_RANGE = 200..211
 private val DTLS_RANGE = 20..63
 private val RTP_RTCP_RANGE = 128..191
+val RTCP_PACKET_TYPE_RANGE = 192..223
 
 fun Packet.looksLikeRtp(): Boolean {
     if (length < RtpHeader.FIXED_HEADER_SIZE_BYTES) {
