@@ -23,6 +23,8 @@ import org.jitsi.utils.logging2.*;
 import java.io.*;
 import java.util.*;
 
+import static org.jitsi.videobridge.transport.HarvestersConfig.*;
+
 public class Harvesters
 {
     /**
@@ -38,13 +40,6 @@ public class Harvesters
      * port we consider the bridge as unhealthy.
      */
     public static boolean healthy = true;
-
-    /**
-     * The name of the property which disables the use of a
-     * <tt>TcpHarvester</tt>.
-     */
-    public static final String DISABLE_TCP_HARVESTER
-            = "org.jitsi.videobridge.DISABLE_TCP_HARVESTER";
 
     /**
      * The name of the property which controls the port number used for
@@ -156,7 +151,7 @@ public class Harvesters
                 healthy = singlePortHarvesters != null;
             }
 
-            if (!cfg.getBoolean(DISABLE_TCP_HARVESTER, false))
+            if (Config.tcpEnabled())
             {
                 int port = cfg.getInt(TCP_HARVESTER_PORT, -1);
                 boolean fallback = false;
