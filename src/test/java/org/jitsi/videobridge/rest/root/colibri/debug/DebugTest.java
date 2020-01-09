@@ -44,6 +44,11 @@ public class DebugTest extends JerseyTest
         videobridge = mock(Videobridge.class);
         when(videobridgeProvider.get()).thenReturn(videobridge);
 
+        Endpoint endpoint = mock(Endpoint.class);
+        Conference conference = mock(Conference.class);
+        when(videobridge.getConference("foo", null)).thenReturn(conference);
+        when(conference.getEndpoint("bar")).thenReturn(endpoint);
+
         enable(TestProperties.LOG_TRAFFIC);
         enable(TestProperties.DUMP_ENTITY);
         return new ResourceConfig() {
@@ -57,7 +62,16 @@ public class DebugTest extends JerseyTest
     @Test
     public void testEnableDebugFeature()
     {
-        Response resp = target("/colibri/debug/enable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
+        Response resp = target(BASE_URL + "/enable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
+                .request()
+                .post(Entity.json(null));
+        assertEquals(HttpStatus.OK_200, resp.getStatus());
+    }
+
+    @Test
+    public void testEnableEndpointDebugFeature()
+    {
+        Response resp = target(BASE_URL + "/foo/bar/enable/" + EndpointDebugFeatures.PCAP_DUMP.getValue())
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
@@ -79,6 +93,33 @@ public class DebugTest extends JerseyTest
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
+    }
+
+    @Test
+    public void testDisableEndpointDebugFeature()
+    {
+        Response resp = target(BASE_URL + "/foo/bar/disable/" + EndpointDebugFeatures.PCAP_DUMP.getValue())
+                .request()
+                .post(Entity.json(null));
+        assertEquals(HttpStatus.OK_200, resp.getStatus());
+    }
+
+    @Test
+    public void testInvalidEndpointDebugFeature()
+    {
+        Response resp = target(BASE_URL + "/foo/broken/disable/" + EndpointDebugFeatures.PCAP_DUMP.getValue())
+                .request()
+                .post(Entity.json(null));
+        assertEquals(HttpStatus.NOT_FOUND_404, resp.getStatus());
+    }
+
+    @Test
+    public void testInvalidEndpointDebugFeatureState()
+    {
+        Response resp = target(BASE_URL + "/foo/bar/broken/" + EndpointDebugFeatures.PCAP_DUMP.getValue())
+                .request()
+                .post(Entity.json(null));
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR_500, resp.getStatus());
     }
 
     @Test

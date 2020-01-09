@@ -21,6 +21,7 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.queue.*;
+import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.root.colibri.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
@@ -60,6 +61,47 @@ public class Debug extends ColibriResource
     {
         logger.info("Enabling " + feature.getValue());
         setFeature(feature, true);
+        return Response.ok().build();
+    }
+
+    /**
+     *
+     * @param confId the conference id
+     * @param epId the endpoint id
+     * @param feature the Feature to enable or disable
+     * @param state the feature state in String form. Note that we don't rely on Jersey's automatic parsing here because
+     *              we want /colibri/debug/foo/bar/broken/ to return and HTTP 500 error and without the special handling
+     *              inside the method it returns 404.
+     * @return the Response
+     * @throws IllegalArgumentException when parsing the state fails.
+     */
+    @POST
+    @Path("/{confId}/{epId}/{state}/{feature}")
+    public Response toggleEndpointFeature(
+            @PathParam("confId") String confId,
+            @PathParam("epId") String epId,
+            @PathParam("feature") EndpointDebugFeatures feature,
+            @PathParam("state") String state)
+    {
+        Conference conference = videobridgeProvider.get().getConference(confId, null);
+        if (conference == null)
+        {
+            throw new NotFoundException("No conference was found with the specified id.");
+        }
+
+        AbstractEndpoint endpoint = conference.getEndpoint(epId);
+        if (endpoint == null)
+        {
+            throw new NotFoundException("No endpoint was found with the specified id.");
+        }
+
+        // the only exception possible here is the IllegalArgumentException which comes with
+        // a handy error message and gets translated to a HTTP 500 error.
+        FeatureState featureState = FeatureState.fromString(state);
+
+        logger.info("Setting feature state: feature=" + feature.getValue() + ", state=" + featureState.getValue());
+        endpoint.setFeature(feature, featureState.getValue());
+
         return Response.ok().build();
     }
 
