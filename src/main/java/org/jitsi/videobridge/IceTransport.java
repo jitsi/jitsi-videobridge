@@ -58,13 +58,7 @@ public class IceTransport
      * and the sockets from the individual candidate pairs should be used
      * directly.
      */
-    private static boolean useComponentSocket = true;
-
-    /**
-     * The name of the property which configures {@link #useComponentSocket}.
-     */
-    public static final String USE_COMPONENT_SOCKET_PNAME
-        = "org.jitsi.videobridge.USE_COMPONENT_SOCKET";
+    private static boolean useComponentSocket = Config.useComponentSocket();
 
     /**
      * The {@link KeepAliveStrategy} to configure for ice4j {@link Component}s,
@@ -164,17 +158,8 @@ public class IceTransport
         this.conferenceId = conference.getID();
         this.logger = parentLogger.createChildLogger(getClass().getName());
 
-        // We've seen some instances where the configuration service is not
-        // yet initialized. These are now fixed, but just in case this happens
-        // again we break early (otherwise we may initialize some of the static
-        // fields, and it will not be re-initialized when the configuration
-        // service is available).
-        ConfigurationService cfg
-                = Objects.requireNonNull(
-                        conference.getVideobridge().getConfigurationService(),
-                        "No configuration service.");
         String streamName = "stream-" + endpoint.getID();
-        iceAgent = createIceAgent(controlling, streamName, cfg);
+        iceAgent = createIceAgent(controlling, streamName);
         iceStream = iceAgent.getStream(streamName);
         iceComponent = iceStream.getComponent(Component.RTP);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
@@ -205,20 +190,8 @@ public class IceTransport
      * @param iceAgent the {@link Agent} that we'd like to append new harvesters
      * to.
      */
-    private void configureHarvesters(Agent iceAgent, ConfigurationService cfg)
+    private void configureHarvesters(Agent iceAgent)
     {
-        if (cfg != null)
-        {
-            useComponentSocket
-                    = cfg.getBoolean(
-                            USE_COMPONENT_SOCKET_PNAME,
-                            useComponentSocket);
-        }
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Using component socket: " + useComponentSocket);
-        }
-
         // TODO CandidateHarvesters may take (non-trivial) time to initialize so
         // initialize them as soon as possible, don't wait to initialize them
         // after a Channel is requested.
@@ -285,14 +258,14 @@ public class IceTransport
      * purposes of this <tt>TransportManager</tt> fails
      */
     private Agent createIceAgent(
-            boolean controlling, String streamName, ConfigurationService cfg)
+            boolean controlling, String streamName)
             throws IOException
     {
         Agent iceAgent = new Agent(iceUfragPrefix, logger);
 
         //add videobridge specific harvesters such as a mapping and an Amazon
         //AWS EC2 harvester
-        configureHarvesters(iceAgent, cfg);
+        configureHarvesters(iceAgent);
         iceAgent.setControlling(controlling);
         iceAgent.setPerformConsentFreshness(true);
 

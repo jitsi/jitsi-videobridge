@@ -166,6 +166,20 @@ class HarvestersConfig {
 
             @JvmStatic
             fun keepAliveStrategy() = keepAliveStrategyProperty.value
+
+            /**
+            * The property that configures whether the ice4j "component socket" mode is used.
+            */
+            class ComponentSocketProperty : LegacyFallbackConfigProperty<Boolean>(
+                Boolean::class,
+                readOnce = true,
+                legacyName = "org.jitsi.videobridge.USE_COMPONENT_SOCKET",
+                newName = "videobridge.ice.use-component-socket"
+            )
+            private val componentSocketProperty = ComponentSocketProperty()
+
+            @JvmStatic
+            fun useComponentSocket() = componentSocketProperty.value
         }
     }
 }
