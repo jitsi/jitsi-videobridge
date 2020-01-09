@@ -22,7 +22,7 @@ class CompoundRtcpPacket(
     length: Int
 ) : RtcpPacket(buffer, offset, length) {
 
-    val packets: List<RtcpPacket> by lazy {
+    val packets: List<RtcpPacket> = run {
         var bytesRemaining = length
         var currOffset = offset
         val rtcpPackets = mutableListOf<RtcpPacket>()
