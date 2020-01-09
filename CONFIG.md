@@ -61,7 +61,7 @@ This list will be updated as properties are migrated:
 | org.jitsi.videobridge.TCP_HARVESTER_SSLTCP | videobridge.ice.tcp.ssltcp | |
 | org.jitsi.videobridge.TCP_HARVESTER_PORT | videobridge.ice.tcp.port | |
 | org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT | videobridge.ice.tcp.mapped-port | |
-| org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT | videobridge.ice.port | |
+| org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT | videobridge.ice.udp.port | |
 | org.jitsi.videobridge.ICE_UFRAG_PREFIX | videobridge.ice.ufrag-prefix | |
 | org.jitsi.videobridge.KEEP_ALIVE_STRATEGY | videobridge.ice.keep-alive-strategy | |
 
