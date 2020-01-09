@@ -646,13 +646,14 @@ public class VP8AdaptiveTrackProjectionContext
                 "class",
                 VP8AdaptiveTrackProjectionContext.class.getSimpleName());
 
-        JSONObject[] mapSizes = new JSONObject[vp8FrameMaps.size()];
+        JSONArray mapSizes = new JSONArray();
         int i = 0;
         for (long ssrc: vp8FrameMaps.keySet())
         {
-            mapSizes[i] = new JSONObject();
-            mapSizes[i].put("ssrc", ssrc);
-            mapSizes[i].put("size", vp8FrameMaps.get(ssrc).size());
+            JSONObject sizeInfo = new JSONObject();
+            sizeInfo.put("ssrc", ssrc);
+            sizeInfo.put("size", vp8FrameMaps.get(ssrc).size());
+            mapSizes.add(sizeInfo);
         }
         debugState.put(
                 "vp8FrameMaps", mapSizes);
