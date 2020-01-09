@@ -124,7 +124,7 @@ class IceConfig {
                 Int::class,
                 readOnce = true,
                 legacyName = "org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT",
-                newName = "videobridge.ice.port"
+                newName = "videobridge.ice.udp.port"
             )
             private val portProperty = PortProperty()
 
