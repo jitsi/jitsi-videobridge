@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.transport;
+package org.jitsi.videobridge.ice;
 
 import org.ice4j.ice.harvest.*;
 import org.jitsi.service.configuration.*;
@@ -23,7 +23,7 @@ import org.jitsi.utils.logging2.*;
 import java.io.*;
 import java.util.*;
 
-import static org.jitsi.videobridge.transport.HarvestersConfig.*;
+import static org.jitsi.videobridge.ice.IceConfig.*;
 
 public class Harvesters
 {

@@ -24,20 +24,19 @@ import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.ice.*;
 import org.jitsi.videobridge.rest.*;
-import org.jitsi.videobridge.transport.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jingle.CandidateType;
 import org.json.simple.*;
 import org.osgi.framework.*;
 
-import static org.jitsi.videobridge.transport.HarvestersConfig.*;
+import static org.jitsi.videobridge.ice.IceConfig.*;
 
 /**
- * Implements the Jingle ICE-UDP transport.
+ * Implements the ICE transport.
  *
  * @author Lyubomir Marinov
  * @author Pawel Domas

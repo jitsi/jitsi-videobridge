@@ -19,7 +19,7 @@ import org.ice4j.ice.harvest.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.transport.*;
+import org.jitsi.videobridge.ice.*;
 import org.jitsi.videobridge.xmpp.*;
 
 import java.io.*;

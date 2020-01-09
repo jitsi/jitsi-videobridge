@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.transport
+package org.jitsi.videobridge.ice
 
 import org.ice4j.ice.KeepAliveStrategy
 import org.jitsi.config.JitsiConfig
@@ -25,7 +25,7 @@ import org.jitsi.utils.config.SimpleProperty
 import org.jitsi.utils.config.helpers.attributes
 import java.util.Objects
 
-class HarvestersConfig {
+class IceConfig {
     class Config {
         companion object {
             /**
