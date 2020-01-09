@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge;
+package org.jitsi.videobridge.ice;
 
 import java.beans.*;
 import java.io.*;
@@ -25,7 +25,7 @@ import org.ice4j.ice.harvest.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.ice.*;
+import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
@@ -148,7 +148,7 @@ public class IceTransport
      * @param controlling {@code true} if the new instance will initialized to
      * serve as a controlling ICE agent; otherwise, {@code false}
      */
-    IceTransport(Endpoint endpoint, boolean controlling, Logger parentLogger)
+    public IceTransport(Endpoint endpoint, boolean controlling, Logger parentLogger)
         throws IOException
     {
         Conference conference = endpoint.getConference();
@@ -304,7 +304,7 @@ public class IceTransport
     /**
      * Gets the ICE password.
      */
-    String getIcePassword()
+    public String getIcePassword()
     {
         Agent iceAgent = this.iceAgent;
         return iceAgent == null ? null : iceAgent.getLocalPassword();
@@ -677,7 +677,7 @@ public class IceTransport
     /**
      * @return {@code true} if ICE has run and failed.
      */
-    boolean hasIceFailed()
+    public boolean hasIceFailed()
     {
         return iceFailed;
     }
