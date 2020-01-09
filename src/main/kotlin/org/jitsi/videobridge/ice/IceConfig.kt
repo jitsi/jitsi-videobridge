@@ -76,9 +76,11 @@ class IceConfig {
              * The list of ports to try. Fallback can be disabled by setting the fallback port to <=0.
              */
             @JvmStatic
-            fun tcpPortsToTry() = if (tcpFallbackPortProperty.value > 0)
-                listOf(tcpPortProperty.value, tcpFallbackPortProperty.value)
-                else listOf(tcpPortProperty.value)
+            fun tcpPortsToTry() = when {
+                (tcpFallbackPortProperty.value > 0) ->
+                    listOf(tcpPortProperty.value, tcpFallbackPortProperty.value)
+                else -> listOf(tcpPortProperty.value)
+            }
 
             /**
              * The property which configures an additional port to advertise.
