@@ -48,7 +48,7 @@ public class IceTransport
     /**
      * The optional prefix to use for generated ICE local username fragments.
      */
-    private static String iceUfragPrefix;
+    private static String iceUfragPrefix = Config.ufragPrefix();
 
     /**
      * Whether the "component socket" feature of ice4j should be used. If this
@@ -67,18 +67,12 @@ public class IceTransport
         = "org.jitsi.videobridge.USE_COMPONENT_SOCKET";
 
     /**
-     * The name of the property used to control {@link #keepAliveStrategy}.
-     */
-    public static final String KEEP_ALIVE_STRATEGY_PNAME
-            = "org.jitsi.videobridge.KEEP_ALIVE_STRATEGY";
-
-    /**
      * The {@link KeepAliveStrategy} to configure for ice4j {@link Component}s,
      * which will dictate which candidate pairs to keep alive.
      * Default to keeping alive the selected pair and any TCP pairs.
      */
     private static KeepAliveStrategy keepAliveStrategy
-            = KeepAliveStrategy.SELECTED_AND_TCP;
+            = Config.keepAliveStrategy();
 
     /**
      * Whether this <tt>TransportManager</tt> has been closed.
@@ -225,28 +219,14 @@ public class IceTransport
             logger.debug("Using component socket: " + useComponentSocket);
         }
 
-        iceUfragPrefix = Config.ufragPrefix();
-        String strategyName = cfg.getString(KEEP_ALIVE_STRATEGY_PNAME);
-        KeepAliveStrategy strategy
-                = KeepAliveStrategy.fromString(strategyName);
-        if (strategyName != null && strategy == null)
-        {
-            logger.warn("Invalid keep alive strategy name: "
-                    + strategyName);
-        }
-        else if (strategy != null)
-        {
-            keepAliveStrategy = strategy;
-        }
-
         // TODO CandidateHarvesters may take (non-trivial) time to initialize so
-        // initialize them as soon as possible, don't wa it to initialize them
+        // initialize them as soon as possible, don't wait to initialize them
         // after a Channel is requested.
         // XXX Unfortunately, TcpHarvester binds to specific local addresses
         // while Jetty binds to all/any local addresses and, consequently, the
         // order of the binding is important at the time of this writing. That's
         // why TcpHarvester is left to initialize as late as possible right now.
-        Harvesters.initializeStaticConfiguration(cfg);
+        Harvesters.initializeStaticConfiguration();
 
         if (Harvesters.tcpHarvester != null)
         {

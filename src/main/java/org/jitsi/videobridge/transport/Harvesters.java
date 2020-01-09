@@ -70,7 +70,7 @@ public class Harvesters
      * configurable properties of the behavior/logic of the method
      * implementation
      */
-    public static void initializeStaticConfiguration(ConfigurationService cfg)
+    public static void initializeStaticConfiguration()
     {
         synchronized (Harvesters.class)
         {

@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.transport
 
+import org.ice4j.ice.KeepAliveStrategy
 import org.jitsi.config.JitsiConfig
 import org.jitsi.config.LegacyFallbackConfigProperty
 import org.jitsi.config.legacyConfigAttributes
@@ -22,6 +23,7 @@ import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.FallbackProperty
 import org.jitsi.utils.config.SimpleProperty
 import org.jitsi.utils.config.helpers.attributes
+import java.util.Objects
 
 class HarvestersConfig {
     class Config {
@@ -144,6 +146,26 @@ class HarvestersConfig {
             } catch (e: Throwable) {
                 null
             }
+
+            /**
+             * The property that configures the prefix to STUN username fragments we generate.
+             */
+            class KeepAliveStrategyProperty : FallbackProperty<KeepAliveStrategy>(
+                legacyConfigAttributes {
+                    name("org.jitsi.videobridge.KEEP_ALIVE_STRATEGY")
+                    readOnce()
+                    retrievedAs<String>() convertedBy { Objects.requireNonNull(KeepAliveStrategy.fromString(it)) }
+                },
+                newConfigAttributes {
+                    name("videobridge.ice.keep-alive-strategy")
+                    readOnce()
+                    retrievedAs<String>() convertedBy { Objects.requireNonNull(KeepAliveStrategy.fromString(it)) }
+                }
+            )
+            private val keepAliveStrategyProperty = KeepAliveStrategyProperty()
+
+            @JvmStatic
+            fun keepAliveStrategy() = keepAliveStrategyProperty.value
         }
     }
 }
