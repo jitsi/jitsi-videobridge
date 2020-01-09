@@ -183,13 +183,12 @@ public class IceTransport
     /**
      * Adds to {@link #iceAgent} the
      * {@link org.ice4j.ice.harvest.CandidateHarvester} instances managed by
-     * jitsi-videobridge (the TCP and SinglePort harvesters), and configures the
-     * use of the dynamic host harvester.
+     * jitsi-videobridge (the TCP and SinglePort harvesters).
      *
      * @param iceAgent the {@link Agent} that we'd like to append new harvesters
      * to.
      */
-    private void configureHarvesters(Agent iceAgent)
+    private void appendHarvesters(Agent iceAgent)
     {
         // TODO CandidateHarvesters may take (non-trivial) time to initialize so
         // initialize them as soon as possible, don't wait to initialize them
@@ -264,7 +263,7 @@ public class IceTransport
 
         //add videobridge specific harvesters such as a mapping and an Amazon
         //AWS EC2 harvester
-        configureHarvesters(iceAgent);
+        appendHarvesters(iceAgent);
         iceAgent.setControlling(controlling);
         iceAgent.setPerformConsentFreshness(true);
 
