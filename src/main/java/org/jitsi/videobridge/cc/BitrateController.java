@@ -30,6 +30,7 @@ import org.json.simple.*;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 import static org.jitsi.videobridge.cc.config.BitrateControllerConfig.*;
 
@@ -412,12 +413,17 @@ public class BitrateController
         List<Long> activeSsrcs = new ArrayList<>();
         long totalTargetBps = 0, totalIdealBps = 0;
         long nowMs = System.currentTimeMillis();
-        for (AdaptiveTrackProjection adaptiveTrackProjection
-                : adaptiveTrackProjections)
-        {
-            MediaStreamTrackDesc sourceTrack
-                    = adaptiveTrackProjection.getSource();
-            if (sourceTrack == null)
+        for (MediaStreamTrackDesc sourceTrack : destinationEndpoint.getConference().getEndpoints().stream()
+                .map(AbstractEndpoint::getMediaStreamTracks)
+                .flatMap(Arrays::stream)
+                .filter(t -> t.getRTPEncodings().length > 0)
+                .collect(Collectors.toList())) {
+
+            AdaptiveTrackProjection adaptiveTrackProjection
+                    = adaptiveTrackProjectionMap.getOrDefault(
+                            sourceTrack.getRTPEncodings()[0].getPrimarySSRC(), null);
+
+            if (adaptiveTrackProjection == null)
             {
                 continue;
             }

@@ -63,16 +63,6 @@ public class AdaptiveTrackProjection
     private final Logger parentLogger;
 
     /**
-     * A {@link WeakReference} to the {@link MediaStreamTrackDesc} that owns
-     * the packets that this instance filters.
-     *
-     * Note that we keep a {@link WeakReference} instead of a reference to allow
-     * the channel/stream/etc objects to be de-allocated in case the sending
-     * participant leaves the conference.
-     */
-    private final WeakReference<MediaStreamTrackDesc> weakSource;
-
-    /**
      * The main SSRC of the source track (if simulcast is used, this is the SSRC
      * of the low-quality layer). We use it as the SSRC of the track projection
      * and also request keyframes from this SSRC.
@@ -130,7 +120,6 @@ public class AdaptiveTrackProjection
         Logger parentLogger
     )
     {
-        weakSource = new WeakReference<>(source);
         targetSsrc = source.getRTPEncodings()[0].getPrimarySSRC();
         this.diagnosticContext = diagnosticContext;
         this.parentLogger = parentLogger;
@@ -138,15 +127,6 @@ public class AdaptiveTrackProjection
             JMap.of("targetSsrc", Long.toString(targetSsrc),
                 "srcEpId", source.getOwner()));
         this.keyframeRequester = keyframeRequester;
-    }
-
-    /**
-     * @return the {@link MediaStreamTrackDesc} that owns the packets that this
-     * instance filters. Note that this may return null.
-     */
-    public MediaStreamTrackDesc getSource()
-    {
-        return weakSource.get();
     }
 
     /**
@@ -214,11 +194,9 @@ public class AdaptiveTrackProjection
 
         if (videoRtpPacket.getQualityIndex() < 0)
         {
-            MediaStreamTrackDesc sourceTrack = getSource();
             logger.warn(
                 "Dropping an RTP packet, because egress was unable to find " +
-                "an associated encoding. sourceTrack=" + sourceTrack +
-                ", rtpPacket=" + videoRtpPacket);
+                "an associated encoding. rtpPacket=" + videoRtpPacket);
             return false;
         }
 
@@ -236,11 +214,7 @@ public class AdaptiveTrackProjection
         if (contextCopy.needsKeyframe()
             && targetIndexCopy > RTPEncodingDesc.SUSPENDED_INDEX)
         {
-            MediaStreamTrackDesc source = getSource();
-            if (source != null)
-            {
-                keyframeRequester.run();
-            }
+            keyframeRequester.run();
         }
 
         return accept;
@@ -352,22 +326,10 @@ public class AdaptiveTrackProjection
     {
         if (context == null)
         {
-            MediaStreamTrackDesc track = getSource();
-            if (track == null)
-            {
-                logger.error("No source information available, cannot create RTP state");
-                return null;
-            }
-            if (track.getRTPEncodings().length == 0)
-            {
-                logger.error("No encoding information available, cannot create RTP state");
-                return null;
-            }
-            long ssrc = track.getRTPEncodings()[0].getPrimarySSRC();
             // TODO If '1' are the starting seq number and timestamp, should
             //  we use random values?
             return new RtpState(
-                ssrc,
+                targetSsrc,
                 1 /* maxSequenceNumber */,
                 1 /* maxTimestamp */) ;
         }
@@ -432,23 +394,6 @@ public class AdaptiveTrackProjection
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
-        MediaStreamTrackDesc source = weakSource.get();
-        if (source == null)
-        {
-            debugState.put("source", null);
-        }
-        else
-        {
-            JSONObject sourceJson = new JSONObject();
-            sourceJson.put("owner", source.getOwner());
-            for (RTPEncodingDesc encodingDesc : source.getRTPEncodings())
-            {
-                sourceJson.put(
-                        encodingDesc.getPrimarySSRC(),
-                        MediaStreamTracksKt.getNodeStats(encodingDesc).toJson());
-            }
-            debugState.put("source", sourceJson);
-        }
 
         debugState.put("targetSsrc", targetSsrc);
         debugState.put(
