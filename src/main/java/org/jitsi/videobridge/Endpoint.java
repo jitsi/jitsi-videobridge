@@ -52,6 +52,7 @@ import java.io.*;
 import java.nio.*;
 import java.time.*;
 import java.util.*;
+import java.util.stream.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.*;
@@ -1156,33 +1157,31 @@ public class Endpoint
     @Override
     public void recreateMediaStreamTracks()
     {
-        ChannelShim videoChannel = getChannelOfMediaType(MediaType.VIDEO);
-        if (videoChannel != null)
-        {
+        final Supplier<Stream<ChannelShim>> videoChannels = () -> channelShims
+            .stream()
+            .filter(c -> MediaType.VIDEO.equals(c.getMediaType()));
+
+        final List<SourcePacketExtension> sources = videoChannels
+            .get()
+            .map(ChannelShim::getSources)
+            .filter(Objects::nonNull)
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
+
+        final List<SourceGroupPacketExtension> sourceGroups = videoChannels
+            .get()
+            .map(ChannelShim::getSourceGroups)
+            .filter(Objects::nonNull)
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
+
+        if (!sources.isEmpty() || !sourceGroups.isEmpty()) {
             MediaStreamTrackDesc[] tracks =
-                    MediaStreamTrackFactory.createMediaStreamTracks(
-                            videoChannel.getSources(),
-                            videoChannel.getSourceGroups());
+                MediaStreamTrackFactory.createMediaStreamTracks(
+                    sources,
+                    sourceGroups);
             setMediaStreamTracks(tracks);
         }
-    }
-
-    /**
-     * Gets this {@link AbstractEndpoint}'s channel of media type
-     * {@code mediaType} (although it's not strictly enforced, endpoints have
-     * at most one channel with a given media type).
-     *
-     * @param mediaType the media type of the channel.
-     *
-     * @return the channel.
-     */
-    private ChannelShim getChannelOfMediaType(MediaType mediaType)
-    {
-        return
-                channelShims.stream()
-                        .filter(c -> c.getMediaType().equals(mediaType))
-                        .findAny().orElse(null);
-
     }
 
     /**
