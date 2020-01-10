@@ -207,7 +207,7 @@ public class OctoTransceiver
         rtpRoot.attach(audioVideoDemuxer);
 
         // We currently only have single RTCP packets in Octo.
-        Node rtcpRoot = new SingleRtcpParser();
+        Node rtcpRoot = new SingleRtcpParser(logger);
         rtcpRoot.attach(terminationNode);
         DemuxerNode root
             = new ExclusivePathDemuxer("RTP/RTCP")
