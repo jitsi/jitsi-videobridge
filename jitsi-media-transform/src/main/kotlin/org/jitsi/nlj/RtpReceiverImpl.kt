@@ -188,7 +188,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     path = pipeline {
                         node(srtcpDecryptWrapper)
                         node(toggleablePcapWriter.newObserverNode())
-                        node(CompoundRtcpParser())
+                        node(CompoundRtcpParser(logger))
                         node(silenceDiscarder.rtcpNode)
                         node(rtcpTermination)
                         node(packetHandlerWrapper)
