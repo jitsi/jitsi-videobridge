@@ -48,7 +48,7 @@ class MediaStreamTracks : NodeStatsProducer {
                     cntMatched++
                     // TODO: update the old track instance with the
                     // configuration of the new one.
-                    oldTracks[j]
+                    return@Array oldTracks[j]
                 }
             }
             newTracks[i]
