@@ -221,17 +221,18 @@
                 <executions>
                     <execution>
                         <id>ktlint</id>
+                        <phase>verify</phase>
                         <configuration>
                             <target name="ktlint">
                                 <java taskname="ktlint" dir="${basedir}" fork="true" failonerror="true"
-                                      classpathref="maven.plugin.classpath" classname="com.pinterest.ktlint.Main">
+                                    classpathref="maven.plugin.classpath" classname="com.pinterest.ktlint.Main">
                                     <arg value="src/**/*.kt"/>
                                     <!-- to generate report in checkstyle format prepend following args: -->
-                                    <!--
+                                    <!-- 
                                     <arg value="[dash][dash]reporter=plain"/>
                                     <arg value="[dash][dash]reporter=checkstyle,output=${project.build.directory}/ktlint.xml"/>
                                     -->
-                                    <!-- see https://github.com/shyiko/ktlint#usage for more -->
+                                    <!-- see https://github.com/shyiko/ktlint#usage for more -->                    
                                 </java>
                             </target>
                         </configuration>
@@ -242,7 +243,7 @@
                         <configuration>
                             <target name="ktlint">
                                 <java taskname="ktlint" dir="${basedir}" fork="true" failonerror="true"
-                                      classpathref="maven.plugin.classpath" classname="com.pinterest.ktlint.Main">
+                                    classpathref="maven.plugin.classpath" classname="com.pinterest.ktlint.Main">
                                     <arg value="-F"/>
                                     <arg value="src/**/*.kt"/>
                                 </java>
@@ -255,7 +256,7 @@
                     <dependency>
                         <groupId>com.pinterest</groupId>
                         <artifactId>ktlint</artifactId>
-                        <version>[0.34.2,)</version>
+                        <version>0.36.0</version>
                     </dependency>
                     <!-- additional 3rd party ruleset(s) can be specified here -->
                 </dependencies>
