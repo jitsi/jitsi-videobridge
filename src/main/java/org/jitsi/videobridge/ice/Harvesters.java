@@ -93,23 +93,18 @@ public class Harvesters
 
             if (Config.tcpEnabled())
             {
-                for (int port : Config.tcpPortsToTry())
+                int port = Config.tcpPort();
+                try
                 {
-                    try
-                    {
-                        tcpHarvester
-                                = new TcpHarvester(port, Config.iceSslTcp());
-                        classLogger.info("Initialized TCP harvester on port "
-                                + port + ", ssltcp=" + Config.iceSslTcp());
+                    tcpHarvester = new TcpHarvester(port, Config.iceSslTcp());
+                    classLogger.info("Initialized TCP harvester on port "
+                            + port + ", ssltcp=" + Config.iceSslTcp());
 
-                        // We just want the first successful port.
-                        break;
-                    }
-                    catch (IOException ioe)
-                    {
-                        classLogger.warn(
-                                "Failed to initialize TCP harvester on port " + port);
-                    }
+                }
+                catch (IOException ioe)
+                {
+                    classLogger.warn(
+                        "Failed to initialize TCP harvester on port " + port);
                 }
 
                 if (Config.tcpMappedPort() != null)

@@ -60,27 +60,8 @@ class IceConfig {
             )
             private val tcpPortProperty = TcpPortProperty()
 
-            /**
-             * The property which configures the fallback ICE/TCP port.
-             */
-            class TcpFallbackPortProperty : SimpleProperty<Int>(
-                attributes {
-                    name("videobridge.ice.tcp.fallback-port")
-                    readOnce()
-                    fromConfig(JitsiConfig.newConfig)
-                }
-            )
-            private val tcpFallbackPortProperty = TcpFallbackPortProperty()
-
-            /**
-             * The list of ports to try. Fallback can be disabled by setting the fallback port to <=0.
-             */
             @JvmStatic
-            fun tcpPortsToTry() = when {
-                (tcpFallbackPortProperty.value > 0) ->
-                    listOf(tcpPortProperty.value, tcpFallbackPortProperty.value)
-                else -> listOf(tcpPortProperty.value)
-            }
+            fun tcpPort() = tcpPortProperty.value
 
             /**
              * The property which configures an additional port to advertise.
