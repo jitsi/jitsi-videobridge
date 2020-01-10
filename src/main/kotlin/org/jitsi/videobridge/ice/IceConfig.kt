@@ -16,13 +16,10 @@
 package org.jitsi.videobridge.ice
 
 import org.ice4j.ice.KeepAliveStrategy
-import org.jitsi.config.JitsiConfig
 import org.jitsi.config.LegacyFallbackConfigProperty
 import org.jitsi.config.legacyConfigAttributes
 import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.FallbackProperty
-import org.jitsi.utils.config.SimpleProperty
-import org.jitsi.utils.config.helpers.attributes
 import java.util.Objects
 
 class IceConfig {
