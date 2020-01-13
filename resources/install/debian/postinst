@@ -111,8 +111,13 @@ case "$1" in
             echo "org.jitsi.videobridge.xmpp.user.shard.MUC_NICKNAME=$(uuidgen)" >> $NEW_JITSI_CONFIG
         fi
 
-        if ! grep -q -e "--apis=," "$CONFIG" ;then
-            sed -i 's/JVB_OPTS=\"\"/JVB_OPTS=\"--apis=,\"/g' $CONFIG
+        APIS_VALUE=$(grep -oPe '--apis=\K(\w*,*\w*)' $CONFIG)
+        if [[ $APIS_VALUE == *"xmpp"* ]]; then
+            APIS_NEW_VALUE=${APIS_VALUE/xmpp/}
+            if [ -z "$APIS_NEW_VALUE" ]; then
+                APIS_NEW_VALUE=","
+            fi
+            sed -i "s/--apis=$APIS_VALUE/--apis=$APIS_NEW_VALUE/g" $CONFIG
         fi
 
         # we don't want to start the daemon as root
