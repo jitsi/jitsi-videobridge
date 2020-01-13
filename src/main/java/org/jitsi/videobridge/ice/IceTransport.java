@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge;
+package org.jitsi.videobridge.ice;
 
 import java.beans.*;
 import java.io.*;
@@ -24,18 +24,19 @@ import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
-import org.jitsi.videobridge.transport.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jingle.CandidateType;
 import org.json.simple.*;
 import org.osgi.framework.*;
 
+import static org.jitsi.videobridge.ice.IceConfig.*;
+
 /**
- * Implements the Jingle ICE-UDP transport.
+ * Implements the ICE transport.
  *
  * @author Lyubomir Marinov
  * @author Pawel Domas
@@ -44,15 +45,9 @@ import org.osgi.framework.*;
 public class IceTransport
 {
     /**
-     * The name of the property that can be used to control the value of
-     * {@link #iceUfragPrefix}.
-     */
-    public static final String ICE_UFRAG_PREFIX_PNAME
-            = "org.jitsi.videobridge.ICE_UFRAG_PREFIX";
-    /**
      * The optional prefix to use for generated ICE local username fragments.
      */
-    private static String iceUfragPrefix;
+    private static String iceUfragPrefix = Config.ufragPrefix();
 
     /**
      * Whether the "component socket" feature of ice4j should be used. If this
@@ -62,19 +57,7 @@ public class IceTransport
      * and the sockets from the individual candidate pairs should be used
      * directly.
      */
-    private static boolean useComponentSocket = true;
-
-    /**
-     * The name of the property which configures {@link #useComponentSocket}.
-     */
-    public static final String USE_COMPONENT_SOCKET_PNAME
-        = "org.jitsi.videobridge.USE_COMPONENT_SOCKET";
-
-    /**
-     * The name of the property used to control {@link #keepAliveStrategy}.
-     */
-    public static final String KEEP_ALIVE_STRATEGY_PNAME
-            = "org.jitsi.videobridge.KEEP_ALIVE_STRATEGY";
+    private static boolean useComponentSocket = Config.useComponentSocket();
 
     /**
      * The {@link KeepAliveStrategy} to configure for ice4j {@link Component}s,
@@ -82,7 +65,7 @@ public class IceTransport
      * Default to keeping alive the selected pair and any TCP pairs.
      */
     private static KeepAliveStrategy keepAliveStrategy
-            = KeepAliveStrategy.SELECTED_AND_TCP;
+            = Config.keepAliveStrategy();
 
     /**
      * Whether this <tt>TransportManager</tt> has been closed.
@@ -165,7 +148,7 @@ public class IceTransport
      * @param controlling {@code true} if the new instance will initialized to
      * serve as a controlling ICE agent; otherwise, {@code false}
      */
-    IceTransport(Endpoint endpoint, boolean controlling, Logger parentLogger)
+    public IceTransport(Endpoint endpoint, boolean controlling, Logger parentLogger)
         throws IOException
     {
         Conference conference = endpoint.getConference();
@@ -174,17 +157,8 @@ public class IceTransport
         this.conferenceId = conference.getID();
         this.logger = parentLogger.createChildLogger(getClass().getName());
 
-        // We've seen some instances where the configuration service is not
-        // yet initialized. These are now fixed, but just in case this happens
-        // again we break early (otherwise we may initialize some of the static
-        // fields, and it will not be re-initialized when the configuration
-        // service is available).
-        ConfigurationService cfg
-                = Objects.requireNonNull(
-                        conference.getVideobridge().getConfigurationService(),
-                        "No configuration service.");
         String streamName = "stream-" + endpoint.getID();
-        iceAgent = createIceAgent(controlling, streamName, cfg);
+        iceAgent = createIceAgent(controlling, streamName);
         iceStream = iceAgent.getStream(streamName);
         iceComponent = iceStream.getComponent(Component.RTP);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
@@ -209,48 +183,21 @@ public class IceTransport
     /**
      * Adds to {@link #iceAgent} the
      * {@link org.ice4j.ice.harvest.CandidateHarvester} instances managed by
-     * jitsi-videobridge (the TCP and SinglePort harvesters), and configures the
-     * use of the dynamic host harvester.
+     * jitsi-videobridge (the TCP and SinglePort harvesters).
      *
      * @param iceAgent the {@link Agent} that we'd like to append new harvesters
      * to.
      */
-    private void configureHarvesters(Agent iceAgent, ConfigurationService cfg)
+    private void appendHarvesters(Agent iceAgent)
     {
-        if (cfg != null)
-        {
-            useComponentSocket
-                    = cfg.getBoolean(
-                            USE_COMPONENT_SOCKET_PNAME,
-                            useComponentSocket);
-        }
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Using component socket: " + useComponentSocket);
-        }
-
-        iceUfragPrefix = cfg.getString(ICE_UFRAG_PREFIX_PNAME, null);
-        String strategyName = cfg.getString(KEEP_ALIVE_STRATEGY_PNAME);
-        KeepAliveStrategy strategy
-                = KeepAliveStrategy.fromString(strategyName);
-        if (strategyName != null && strategy == null)
-        {
-            logger.warn("Invalid keep alive strategy name: "
-                    + strategyName);
-        }
-        else if (strategy != null)
-        {
-            keepAliveStrategy = strategy;
-        }
-
         // TODO CandidateHarvesters may take (non-trivial) time to initialize so
-        // initialize them as soon as possible, don't wa it to initialize them
+        // initialize them as soon as possible, don't wait to initialize them
         // after a Channel is requested.
         // XXX Unfortunately, TcpHarvester binds to specific local addresses
         // while Jetty binds to all/any local addresses and, consequently, the
         // order of the binding is important at the time of this writing. That's
         // why TcpHarvester is left to initialize as late as possible right now.
-        Harvesters.initializeStaticConfiguration(cfg);
+        Harvesters.initializeStaticConfiguration();
 
         if (Harvesters.tcpHarvester != null)
         {
@@ -309,14 +256,14 @@ public class IceTransport
      * purposes of this <tt>TransportManager</tt> fails
      */
     private Agent createIceAgent(
-            boolean controlling, String streamName, ConfigurationService cfg)
+            boolean controlling, String streamName)
             throws IOException
     {
         Agent iceAgent = new Agent(iceUfragPrefix, logger);
 
         //add videobridge specific harvesters such as a mapping and an Amazon
         //AWS EC2 harvester
-        configureHarvesters(iceAgent, cfg);
+        appendHarvesters(iceAgent);
         iceAgent.setControlling(controlling);
         iceAgent.setPerformConsentFreshness(true);
 
@@ -356,7 +303,7 @@ public class IceTransport
     /**
      * Gets the ICE password.
      */
-    String getIcePassword()
+    public String getIcePassword()
     {
         Agent iceAgent = this.iceAgent;
         return iceAgent == null ? null : iceAgent.getLocalPassword();
@@ -729,7 +676,7 @@ public class IceTransport
     /**
      * @return {@code true} if ICE has run and failed.
      */
-    boolean hasIceFailed()
+    public boolean hasIceFailed()
     {
         return iceFailed;
     }
