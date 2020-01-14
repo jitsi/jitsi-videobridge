@@ -38,6 +38,9 @@ import java.time.Duration
 class StatsManagerBundleActivatorConfig {
     class Config {
         companion object {
+            /**
+             * Whether or not the stats are enabled
+             */
             class EnabledProperty : LegacyFallbackConfigProperty<Boolean>(
                 Boolean::class,
                 "org.jitsi.videobridge.ENABLE_STATISTICS",
@@ -50,6 +53,9 @@ class StatsManagerBundleActivatorConfig {
             @JvmStatic
             fun enabled() = enabledProp.get().value
 
+            /**
+             * The interval at which the stats are pushed
+             */
             class StatsIntervalProperty : ConditionalProperty<Duration>(
                 ::enabled,
                 StatsInterval(),
@@ -74,6 +80,9 @@ class StatsManagerBundleActivatorConfig {
                 }
             )
 
+            /**
+             * The enabled stat transports
+             */
             class StatsTransportsProperty : ConditionalProperty<List<StatsTransportConfig>>(
                 ::enabled,
                 StatsTransports(),

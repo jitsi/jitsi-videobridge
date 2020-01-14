@@ -131,7 +131,6 @@ public class StatsManagerBundleActivator
         // Add StatsTransports to StatsManager.
         Config.transportConfigs().forEach(transportConfig -> {
             statsMgr.addTransport(transportConfig.toStatsTransport(), transportConfig.getInterval().toMillis());
-
         });
 
         statsMgr.start(bundleContext);
