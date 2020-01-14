@@ -17,20 +17,20 @@
 package org.jitsi.videobridge.stats.config
 
 import com.typesafe.config.ConfigFactory
-import io.kotlintest.Matcher
-import io.kotlintest.MatcherResult
+import io.kotlintest.inspectors.forOne
 import io.kotlintest.matchers.collections.shouldHaveSize
-import io.kotlintest.should
 import io.kotlintest.shouldBe
 import org.jitsi.config.MockConfigSource
 import org.jitsi.config.TypesafeConfigSource
 import org.jitsi.utils.config.ConfigSource
 import org.jitsi.videobridge.JitsiConfigTest
+import org.jitsi.videobridge.testutils.resetSingleton
 import org.jxmpp.jid.impl.JidCreate
 import java.util.Properties
 import org.jitsi.videobridge.stats.config.StatsManagerBundleActivatorConfig.Config.Companion as Config
 
 class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
+
     init {
         "When only new config contains stats transport config" {
             val legacyConfig = createConfigFrom(Properties().apply {
@@ -43,6 +43,7 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                         """
                         videobridge {
                             stats {
+                                enabled=true
                                 transports = [
                                     {
                                         type="colibri"
@@ -65,13 +66,14 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                     )
                     should("parse the transport correctly") {
                         withNewConfig(config)
-                        val cfg = Config.StatsTransports()
+                        val cfg = Config.StatsTransportsProperty()
 
                         cfg.value shouldHaveSize 4
-                        cfg.value.shouldContainInstanceOf<StatsTransportConfig.ColibriStatsTransportConfig>()
-                        cfg.value.shouldContainInstanceOf<StatsTransportConfig.MucStatsTransportConfig>()
-                        cfg.value.shouldContainInstanceOf<StatsTransportConfig.CallStatsIoStatsTransportConfig>()
-                        cfg.value.shouldContainInstanceOf<StatsTransportConfig.PubSubStatsTransportConfig> {
+                        cfg.value.forOne { it as StatsTransportConfig.ColibriStatsTransportConfig }
+                        cfg.value.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
+                        cfg.value.forOne { it as StatsTransportConfig.CallStatsIoStatsTransportConfig }
+                        cfg.value.forOne {
+                            it as StatsTransportConfig.PubSubStatsTransportConfig
                             it.service shouldBe JidCreate.from("meet.jit.si")
                             it.node shouldBe "jvb"
                         }
@@ -82,6 +84,7 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                         """
                         videobridge {
                             stats {
+                                enabled=true
                                 transports = [
                                     {
                                         type="invalid"
@@ -96,29 +99,33 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                     )
                     should("ignore the invalid config and parse the valid transport correctly") {
                         withNewConfig(config)
-                        val cfg = Config.StatsTransports()
+                        resetEnabledProperty()
+                        println("Setting new config with invalid transport")
+                        val cfg = Config.StatsTransportsProperty()
 
                         cfg.value shouldHaveSize 1
-                        cfg.value.shouldContainInstanceOf<StatsTransportConfig.MucStatsTransportConfig>()
+                        cfg.value.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
                     }
                 }
             }
         }
         "When old and new config contain stats transport config" {
             val legacyConfig = createConfigFrom(Properties().apply {
+                setProperty("org.jitsi.videobridge.ENABLE_STATISTICS", "true")
                 setProperty("org.jitsi.videobridge.STATISTICS_TRANSPORT", "muc,colibri,callstats.io,pubsub")
                 setProperty("org.jitsi.videobridge.PUBSUB_SERVICE", "meet.jit.si")
                 setProperty("org.jitsi.videobridge.PUBSUB_NODE", "jvb")
             })
             withLegacyConfig(legacyConfig)
             withNewConfig(MockConfigSource("mock", mapOf()))
-            val cfg = Config.StatsTransports()
+            val cfg = Config.StatsTransportsProperty()
 
             cfg.value shouldHaveSize 4
-            cfg.value.shouldContainInstanceOf<StatsTransportConfig.ColibriStatsTransportConfig>()
-            cfg.value.shouldContainInstanceOf<StatsTransportConfig.MucStatsTransportConfig>()
-            cfg.value.shouldContainInstanceOf<StatsTransportConfig.CallStatsIoStatsTransportConfig>()
-            cfg.value.shouldContainInstanceOf<StatsTransportConfig.PubSubStatsTransportConfig> {
+            cfg.value.forOne { it as StatsTransportConfig.ColibriStatsTransportConfig }
+            cfg.value.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
+            cfg.value.forOne { it as StatsTransportConfig.CallStatsIoStatsTransportConfig }
+            cfg.value.forOne {
+                it as StatsTransportConfig.PubSubStatsTransportConfig
                 it.service shouldBe JidCreate.from("meet.jit.si")
                 it.node shouldBe "jvb"
             }
@@ -131,24 +138,10 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
     private fun createConfigFrom(configProps: Properties): ConfigSource =
         TypesafeConfigSource("testConfig") { ConfigFactory.parseProperties(configProps) }
 
-    private inline fun <reified U> containInstanceOf(crossinline block: (U) -> Unit) = object : Matcher<Collection<*>> {
-        override fun test(value: Collection<*>): MatcherResult {
-            var foundInstance = false
-            value.forEach {
-                if (it is U) {
-                    block(it)
-                    foundInstance = true
-                    return@forEach
-                }
-            }
-            return MatcherResult(
-                foundInstance,
-                { "No instances of type ${U::class} found " },
-                { "Instance of type ${U::class} found " }
-            )
-        }
+    private fun resetEnabledProperty() {
+        resetSingleton(
+            "enabledProp",
+            Config
+        )
     }
-
-    private inline fun <reified U> Collection<*>.shouldContainInstanceOf(crossinline block: (U) -> Unit = {}) =
-        this should containInstanceOf(block)
 }
