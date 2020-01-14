@@ -21,9 +21,11 @@ import io.kotlintest.TestCase
 import io.kotlintest.inspectors.forOne
 import io.kotlintest.matchers.collections.shouldHaveSize
 import io.kotlintest.shouldBe
+import io.kotlintest.shouldThrow
 import org.jitsi.config.TypesafeConfigSource
 import org.jitsi.utils.config.ConfigSource
 import org.jitsi.videobridge.JitsiConfigTest
+import org.jitsi.videobridge.config.ConditionalPropertyConditionNotMetException
 import org.jitsi.videobridge.testutils.resetSingleton
 import org.jxmpp.jid.impl.JidCreate
 import java.util.Properties
@@ -40,7 +42,7 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
             withLegacyConfig(legacyConfigNoStatsTransports)
             "A stats transport config" {
                 "with a multiple, valid stats transport configured" {
-                    withNewConfig(newConfigAllStatsTransports)
+                    withNewConfig(newConfigAllStatsTransports())
                     should("parse the transport correctly") {
                         val cfg = Config.StatsTransportsProperty()
 
@@ -56,7 +58,7 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                     }
                 }
                 "with an invalid stats transport configured" {
-                    withNewConfig(newConfigInvalidStatsTransports)
+                    withNewConfig(newConfigInvalidStatsTransports())
                     should("ignore the invalid config and parse the valid transport correctly") {
                         val cfg = Config.StatsTransportsProperty()
 
@@ -64,11 +66,18 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                         cfg.value.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
                     }
                 }
+                "which have valid transports but stats are disabled" {
+                    withNewConfig(newConfigAllStatsTransports(enabled = false))
+                    should("throw when trying to access the stats transports") {
+                        val cfg = Config.StatsTransportsProperty()
+                        shouldThrow<ConditionalPropertyConditionNotMetException> { cfg.value }
+                    }
+                }
             }
         }
         "When old and new config contain stats transport config" {
-            withLegacyConfig(legacyConfigAllStatsTransports)
-            withNewConfig(newConfigOneStatsTransport)
+            withLegacyConfig(legacyConfigAllStatsTransports())
+            withNewConfig(newConfigOneStatsTransport())
             should("use the values from the old config") {
                 val cfg = Config.StatsTransportsProperty()
 
@@ -80,6 +89,14 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                     it as StatsTransportConfig.PubSubStatsTransportConfig
                     it.service shouldBe JidCreate.from("meet.jit.si")
                     it.node shouldBe "jvb"
+                }
+            }
+            "and it's disabled in old config but enabled in new config" {
+                withLegacyConfig(legacyConfigStatsEnabled(enabled = false))
+                withNewConfig(newConfigOneStatsTransport())
+                should("throw when trying to access the stats transports") {
+                    val cfg = Config.StatsTransportsProperty()
+                    shouldThrow<ConditionalPropertyConditionNotMetException> { cfg.value }
                 }
             }
         }
@@ -98,10 +115,10 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
         )
     }
 
-    private val newConfigAllStatsTransports = createConfigFrom("""
+    private fun newConfigAllStatsTransports(enabled: Boolean = true) = createConfigFrom("""
         videobridge {
             stats {
-                enabled=true
+                enabled=$enabled
                 transports = [
                     {
                         type="colibri"
@@ -122,10 +139,10 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
         }
         """.trimIndent()
     )
-    private val newConfigOneStatsTransport = createConfigFrom("""
+    private fun newConfigOneStatsTransport(enabled: Boolean = true) = createConfigFrom("""
         videobridge {
             stats {
-                enabled=true
+                enabled=$enabled
                 transports = [
                     {
                         type="colibri"
@@ -135,10 +152,10 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
         }
         """.trimIndent()
     )
-    private val newConfigInvalidStatsTransports = createConfigFrom("""
+    private fun newConfigInvalidStatsTransports(enabled: Boolean = true) = createConfigFrom("""
         videobridge {
             stats {
-                enabled=true
+                enabled=$enabled
                 transports = [
                     {
                         type="invalid"
@@ -155,8 +172,12 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
         setProperty("org.jitsi.videobridge.some_other_prop=", "42")
     })
 
-    private val legacyConfigAllStatsTransports = createConfigFrom(Properties().apply {
-        setProperty("org.jitsi.videobridge.ENABLE_STATISTICS", "true")
+    private fun legacyConfigStatsEnabled(enabled: Boolean = true) = createConfigFrom(Properties().apply {
+        setProperty("org.jitsi.videobridge.ENABLE_STATISTICS", "$enabled")
+    })
+
+    private fun legacyConfigAllStatsTransports(enabled: Boolean = true) = createConfigFrom(Properties().apply {
+        setProperty("org.jitsi.videobridge.ENABLE_STATISTICS", "$enabled")
         setProperty("org.jitsi.videobridge.STATISTICS_TRANSPORT", "muc,colibri,callstats.io,pubsub")
         setProperty("org.jitsi.videobridge.PUBSUB_SERVICE", "meet.jit.si")
         setProperty("org.jitsi.videobridge.PUBSUB_NODE", "jvb")
