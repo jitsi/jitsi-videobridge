@@ -75,7 +75,6 @@ class StatsManagerBundleActivatorConfig {
                 },
                 newConfigAttributes {
                     name("videobridge.stats.interval")
-                    retrievedAs<Duration>() convertedBy { println("got stats interval: $it"); it }
                     readOnce()
                 }
             )
@@ -175,6 +174,9 @@ class StatsManagerBundleActivatorConfig {
     }
 }
 
+/**
+ * Helper classes which model the config parameters for each stats transport
+ */
 sealed class StatsTransportConfig(
     val interval: Duration
 ) {
