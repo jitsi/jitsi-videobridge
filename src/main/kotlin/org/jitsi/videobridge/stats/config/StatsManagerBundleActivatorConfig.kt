@@ -33,6 +33,7 @@ import org.jitsi.videobridge.stats.PubSubStatsTransport
 import org.jitsi.videobridge.stats.StatsTransport
 import org.jxmpp.jid.Jid
 import org.jxmpp.jid.impl.JidCreate
+import java.time.Duration
 
 class StatsManagerBundleActivatorConfig {
     class Config {
@@ -48,6 +49,30 @@ class StatsManagerBundleActivatorConfig {
 
             @JvmStatic
             fun enabled() = enabledProp.get().value
+
+            class StatsIntervalProperty : ConditionalProperty<Duration>(
+                ::enabled,
+                StatsInterval(),
+                "Stats interval property is only parsed when stats are enabled"
+            )
+
+            private val statsIntervalProp = ResettableSingleton { StatsIntervalProperty() }
+
+            @JvmStatic
+            fun statsInterval(): Duration = statsIntervalProp.get().value
+
+            private class StatsInterval : FallbackProperty<Duration>(
+                legacyConfigAttributes {
+                    name("org.jitsi.videobridge.STATISTICS_INTERVAL")
+                    readOnce()
+                    retrievedAs<Long>() convertedBy { Duration.ofMillis(it) }
+                },
+                newConfigAttributes {
+                    name("videobridge.stats.interval")
+                    retrievedAs<Duration>() convertedBy { println("got stats interval: $it"); it }
+                    readOnce()
+                }
+            )
 
             class StatsTransportsProperty : ConditionalProperty<List<StatsTransportConfig>>(
                 ::enabled,
@@ -141,29 +166,32 @@ class StatsManagerBundleActivatorConfig {
     }
 }
 
-sealed class StatsTransportConfig {
+sealed class StatsTransportConfig(
+    val interval: Duration
+) {
     abstract fun toStatsTransport(): StatsTransport?
 
-    object ColibriStatsTransportConfig : StatsTransportConfig() {
+    class ColibriStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval) {
         override fun toStatsTransport(): StatsTransport = ColibriStatsTransport()
     }
-    object MucStatsTransportConfig : StatsTransportConfig() {
+    class MucStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval) {
         override fun toStatsTransport(): StatsTransport = MucStatsTransport()
     }
-    object CallStatsIoStatsTransportConfig : StatsTransportConfig() {
+    class CallStatsIoStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval) {
         override fun toStatsTransport(): StatsTransport = CallStatsIOTransport()
     }
     class PubSubStatsTransportConfig(
         val service: Jid,
-        val node: String
-    ) : StatsTransportConfig() {
+        val node: String,
+        interval: Duration
+    ) : StatsTransportConfig(interval) {
         override fun toStatsTransport(): StatsTransport = PubSubStatsTransport(service, node)
 
         companion object {
-            operator fun invoke(serviceName: String, nodeName: String): PubSubStatsTransportConfig? {
+            operator fun invoke(serviceName: String, nodeName: String, interval: Duration): PubSubStatsTransportConfig? {
                 return try {
                     val service = JidCreate.from(serviceName)
-                    PubSubStatsTransportConfig(service, nodeName)
+                    PubSubStatsTransportConfig(service, nodeName, interval)
                 } catch (e: Exception) {
                     null
                 }
@@ -175,14 +203,19 @@ sealed class StatsTransportConfig {
          * [config] will represent an object within the "videobridge.stats.transports" list
          */
         fun fromNewConfig(config: com.typesafe.config.Config): StatsTransportConfig? {
+            val interval = if (config.hasPath("interval")) {
+                config.getDuration("interval")
+            } else {
+                StatsManagerBundleActivatorConfig.Config.statsInterval()
+            }
             return when (config.getString("type")) {
-                "colibri" -> ColibriStatsTransportConfig
-                "muc" -> MucStatsTransportConfig
-                "callstatsio" -> CallStatsIoStatsTransportConfig
+                "colibri" -> ColibriStatsTransportConfig(interval)
+                "muc" -> MucStatsTransportConfig(interval)
+                "callstatsio" -> CallStatsIoStatsTransportConfig(interval)
                 "pubsub" -> {
                     val serviceString = config.getString("service")
                     val nodeString = config.getString("node")
-                    PubSubStatsTransportConfig(JidCreate.from(serviceString), nodeString)
+                    PubSubStatsTransportConfig(JidCreate.from(serviceString), nodeString, interval)
                 }
                 else -> null
             }
@@ -194,17 +227,22 @@ sealed class StatsTransportConfig {
         fun fromLegacyConfig(config: com.typesafe.config.Config): List<StatsTransportConfig> {
             val transportStrings = config.getString("STATISTICS_TRANSPORT").split(",")
             return transportStrings.mapNotNull {
+                val interval = if (config.hasPath("STATISTICS_INTERVAL.$it")) {
+                    Duration.ofMillis(config.getLong("STATISTICS_INTERVAL.$it"))
+                } else {
+                    StatsManagerBundleActivatorConfig.Config.statsInterval()
+                }
                 when (it) {
-                    "colibri" -> ColibriStatsTransportConfig
-                    "muc" -> MucStatsTransportConfig
-                    "callstats.io" -> CallStatsIoStatsTransportConfig
+                    "colibri" -> ColibriStatsTransportConfig(interval)
+                    "muc" -> MucStatsTransportConfig(interval)
+                    "callstats.io" -> CallStatsIoStatsTransportConfig(interval)
                     "pubsub" -> {
                         // In keeping consistent to swallow all errors, we don't fail here
                         // if we can't find the pubsub service or not properties.
                         try {
                             val serviceString = config.getString("PUBSUB_SERVICE")
                             val nodeString = config.getString("PUBSUB_NODE")
-                            PubSubStatsTransportConfig(JidCreate.from(serviceString), nodeString)
+                            PubSubStatsTransportConfig(JidCreate.from(serviceString), nodeString, interval)
                         } catch (t: Throwable) {
                             null
                         }
