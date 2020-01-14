@@ -18,11 +18,14 @@ package org.jitsi.videobridge.stats.config
 
 import com.typesafe.config.ConfigList
 import com.typesafe.config.ConfigObject
+import org.jitsi.config.LegacyFallbackConfigProperty
 import org.jitsi.config.legacyConfigAttributes
 import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.FallbackProperty
 import org.jitsi.utils.config.SimpleProperty
 import org.jitsi.utils.config.exception.ConfigPropertyNotFoundException
+import org.jitsi.videobridge.config.ConditionalProperty
+import org.jitsi.videobridge.config.ResettableSingleton
 import org.jitsi.videobridge.stats.CallStatsIOTransport
 import org.jitsi.videobridge.stats.ColibriStatsTransport
 import org.jitsi.videobridge.stats.MucStatsTransport
@@ -34,6 +37,29 @@ import org.jxmpp.jid.impl.JidCreate
 class StatsManagerBundleActivatorConfig {
     class Config {
         companion object {
+            class EnabledProperty : LegacyFallbackConfigProperty<Boolean>(
+                Boolean::class,
+                "org.jitsi.videobridge.ENABLE_STATISTICS",
+                "videobridge.stats.enabled",
+                readOnce = true
+            )
+
+            private val enabledProp = ResettableSingleton { EnabledProperty() }
+
+            @JvmStatic
+            fun enabled() = enabledProp.get().value
+
+            class StatsTransportsProperty : ConditionalProperty<List<StatsTransportConfig>>(
+                ::enabled,
+                StatsTransports(),
+                "Stats transports property is only parsed when stats are enabled"
+            )
+
+            private val statsTransportsProp = StatsTransportsProperty()
+
+            @JvmStatic
+            fun transports() = statsTransportsProp.value
+
             /**
              * Note that if 'org.jitsi.videobridge.STATISTICS_TRANSPORT' is present at all
              * in the legacy config, we won't search the new config (we don't support merging
@@ -42,7 +68,7 @@ class StatsManagerBundleActivatorConfig {
             // TODO: currently we silently swallow all errors.  Can we propagate up in a useful way?  If
             //  we throw then I think things will be 'catastrophic' (prevent accessing this config at all), so
             //  not sure we want that.  Other option would be to create a logger here?
-            class StatsTransports : FallbackProperty<List<StatsTransportConfig>>(
+            private class StatsTransports : FallbackProperty<List<StatsTransportConfig>>(
                 // NOTE: Do NOT mark *these* legacy attributes as deprecated.  When we
                 //  want to mark the old stats transport config as deprecated, use the
                 //  classes defined below.
