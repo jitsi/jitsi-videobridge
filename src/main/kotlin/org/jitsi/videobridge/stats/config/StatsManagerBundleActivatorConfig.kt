@@ -83,7 +83,7 @@ class StatsManagerBundleActivatorConfig {
             private val statsTransportsProp = StatsTransportsProperty()
 
             @JvmStatic
-            fun transports() = statsTransportsProp.value
+            fun transportConfigs() = statsTransportsProp.value
 
             /**
              * Note that if 'org.jitsi.videobridge.STATISTICS_TRANSPORT' is present at all
