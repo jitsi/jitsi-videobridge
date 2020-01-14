@@ -15,10 +15,11 @@
  */
 package org.jitsi.videobridge.stats;
 
-import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
-import org.jitsi.utils.logging2.*;
-import org.osgi.framework.*;
+import org.jitsi.utils.logging2.Logger;
+import org.jitsi.utils.logging2.LoggerImpl;
+import org.osgi.framework.BundleActivator;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceRegistration;
 
 import static org.jitsi.videobridge.stats.config.StatsManagerBundleActivatorConfig.Config;
 
@@ -82,11 +83,6 @@ public class StatsManagerBundleActivator
     public void start(BundleContext bundleContext)
         throws Exception
     {
-        ConfigurationService cfg
-            = ServiceUtils2.getService(
-                    bundleContext,
-                    ConfigurationService.class);
-
         if (Config.enabled())
         {
             StatsManagerBundleActivator.bundleContext = bundleContext;
@@ -95,7 +91,7 @@ public class StatsManagerBundleActivator
 
             try
             {
-                start(cfg);
+                start();
                 started = true;
             }
             finally
@@ -114,12 +110,8 @@ public class StatsManagerBundleActivator
      * Starts the <tt>StatsManager</tt> OSGi bundle in a <tt>BundleContext</tt>.
      * Initializes and starts a new <tt>StatsManager</tt> instance and registers
      * it as an OSGi service in the specified <tt>bundleContext</tt>.
-     *
-     * @param cfg the <tt>ConfigurationService</tt> in the
-     * <tt>BundleContext</tt> in which the <tt>StatsManager</tt> OSGi is to
-     * start
      */
-    private void start(ConfigurationService cfg)
+    private void start()
         throws Exception
     {
         StatsManager statsMgr = new StatsManager();
