@@ -31,8 +31,8 @@ internal class CompoundRtcpPacketTest : ShouldSpec() {
             val remb = RtcpFbRembPacketBuilder(RtcpHeaderBuilder(), listOf(123), 12345).build()
             val pli = RtcpFbPliPacketBuilder(RtcpHeaderBuilder(), 456).build()
 
-            val packets = arrayOf(rr, remb, pli)
-            val compoundRtcpPacket = CompoundRtcpPacket(*packets)
+            val packets = listOf(rr, remb, pli)
+            val compoundRtcpPacket = CompoundRtcpPacket(packets)
             compoundRtcpPacket.packets.size shouldBe packets.size
             compoundRtcpPacket.packets.forEachIndexed { i, packet ->
                 packet.length shouldBe packets[i].length

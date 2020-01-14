@@ -41,7 +41,7 @@ class CompoundRtcpPacket(
             return rtcpPackets
         }
 
-        operator fun invoke(vararg packets: RtcpPacket): CompoundRtcpPacket {
+        operator fun invoke(packets: List<RtcpPacket>): CompoundRtcpPacket {
             val totalLength = packets.map { it.length }.sum()
             val buf = BufferPool.getArray(totalLength + BYTES_TO_LEAVE_AT_END_OF_PACKET)
 
