@@ -65,10 +65,6 @@ public class Harvesters
      * Initializes the static <tt>Harvester</tt> instances used by all
      * <tt>IceTransport</tt> instances, that is
      * {@link #tcpHarvester} and {@link #singlePortHarvesters}.
-     *
-     * @param cfg the {@link ConfigurationService} which provides values to
-     * configurable properties of the behavior/logic of the method
-     * implementation
      */
     public static void initializeStaticConfiguration()
     {
