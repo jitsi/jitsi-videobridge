@@ -40,7 +40,7 @@ class Bandwidth(bps: Double) : Comparable<Bandwidth> {
      * a normal number (not another bandwidth).  This allows
      * applying some factor to a given bandwidth, for example
      *
-     * currentBandwidth *= *.95
+     * currentBandwidth *= 0.95
      *
      * to reduce 'currentBandwidth' by 5%
      */

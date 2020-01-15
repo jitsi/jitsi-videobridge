@@ -1,20 +1,18 @@
 package org.jitsi.nlj.transform.node.incoming
 
-import com.nhaarman.mockitokotlin2.argumentCaptor
-import com.nhaarman.mockitokotlin2.doNothing
-import com.nhaarman.mockitokotlin2.eq
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.whenever
 import io.kotlintest.IsolationMode
 import io.kotlintest.Spec
 import io.kotlintest.matchers.numerics.shouldBeGreaterThan
+import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.resources.logging.StdoutLogger
+import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.test_utils.FakeClock
 import org.jitsi.nlj.test_utils.timeline
-import org.jitsi.nlj.util.StreamInformationStore
+import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.nlj.util.ms
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtp.RtpPacket
@@ -26,21 +24,33 @@ class TccGeneratorNodeTest : ShouldSpec() {
     private val clock: FakeClock = FakeClock()
     private val tccPackets = mutableListOf<RtcpPacket>()
     private val onTccReady = { tccPacket: RtcpPacket -> tccPackets.add(tccPacket); Unit }
-    private val streamInformationStore: StreamInformationStore = mock()
-    private val setTccExtId = argumentCaptor<(Int?) -> Unit>()
+    private val streamInformationStore = StreamInformationStoreImpl()
     private val tccExtensionId = 5
+    // TCC is enabled by having at least one payload type which has "transport-cc" signaled as a rtcp-fb.
+    private val vp8PayloadType = Vp8PayloadType(100, emptyMap(), setOf("transport-cc"))
 
     private lateinit var tccGenerator: TccGeneratorNode
 
     override fun beforeSpec(spec: Spec) {
         super.beforeSpec(spec)
-        doNothing().whenever(streamInformationStore).onRtpExtensionMapping(
-                eq(RtpExtensionType.TRANSPORT_CC), setTccExtId.capture())
+        streamInformationStore.addRtpExtensionMapping(RtpExtension(tccExtensionId.toByte(), RtpExtensionType.TRANSPORT_CC))
+        streamInformationStore.addRtpPayloadType(vp8PayloadType)
         tccGenerator = TccGeneratorNode(onTccReady, streamInformationStore, StdoutLogger(), clock)
-        setTccExtId.firstValue(tccExtensionId)
     }
 
     init {
+        "when TCC is not signaled" {
+            streamInformationStore.clearRtpPayloadTypes()
+            timeline(clock) {
+                repeat(100) { tccSeqNum ->
+                    run { tccGenerator.processPacket(PacketInfo(createPacket(tccSeqNum))) }
+                    elapse(10.ms())
+                }
+            }.run()
+            "no TCC packets should be sent" {
+                tccPackets.size shouldBe 0
+            }
+        }
         "when a series of packets (without marking) is received" {
             timeline(clock) {
                 repeat(11) { tccSeqNum ->

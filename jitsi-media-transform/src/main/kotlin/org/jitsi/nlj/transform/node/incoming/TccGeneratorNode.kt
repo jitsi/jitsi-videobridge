@@ -28,6 +28,7 @@ import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.nlj.util.milliseconds
+import org.jitsi.nlj.util.observableWhenChanged
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
@@ -61,14 +62,22 @@ class TccGeneratorNode(
     private var running = true
     private val tccFeedbackBitrate = RateStatistics(1000)
     private var numTccSent: Int = 0
+    private var enabled: Boolean by observableWhenChanged(false) {
+        _, _, newValue -> logger.debug("Setting enabled=$newValue")
+    }
 
     init {
         streamInformation.onRtpExtensionMapping(TRANSPORT_CC) {
             tccExtensionId = it
         }
+        streamInformation.onRtpPayloadTypesChanged {
+            enabled = streamInformation.supportsTcc
+        }
     }
 
     override fun observe(packetInfo: PacketInfo) {
+        if (!enabled) return
+
         tccExtensionId?.let { tccExtId ->
             val rtpPacket = packetInfo.packetAs<RtpPacket>()
             rtpPacket.getHeaderExtension(tccExtId)?.let { ext ->
@@ -163,6 +172,7 @@ class TccGeneratorNode(
             addNumber("num_tcc_packets_sent", numTccSent)
             addNumber("tcc_feedback_bitrate_bps", tccFeedbackBitrate.rate)
             addString("tcc_extension_id", tccExtensionId.toString())
+            addBoolean("enabled", enabled)
         }
     }
 }
