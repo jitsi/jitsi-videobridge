@@ -74,6 +74,24 @@ class OctoConfig {
                     -1
                 }
             }
+
+            class PublicAddressProperty : LegacyFallbackConfigProperty<String>(
+                String::class,
+                "org.jitsi.videobridge.octo.PUBLIC_ADDRESS",
+                "videobridge.octo.public-address",
+                readOnce = true
+            )
+
+            private val publicAddressProp = PublicAddressProperty()
+
+            @JvmStatic
+            fun publicAddress(): String? {
+                return try {
+                    publicAddressProp.value
+                } catch (t: Throwable) {
+                    null
+                }
+            }
         }
     }
 }

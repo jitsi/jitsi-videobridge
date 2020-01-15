@@ -15,8 +15,6 @@
  */
 package org.jitsi.videobridge.octo;
 
-import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.logging2.*;
 import org.osgi.framework.*;
 
@@ -80,12 +78,8 @@ public class OctoRelayService
     @Override
     public void start(BundleContext bundleContext)
     {
-        ConfigurationService cfg
-            = ServiceUtils2.getService(
-                    bundleContext, ConfigurationService.class);
-
         String address = Config.bindAddress();
-        String publicAddress = cfg.getString(PUBLIC_ADDRESS_PNAME, address);
+        String publicAddress = Config.publicAddress();
         int port = Config.bindPort();
 
         if (address != null && (1024 <= port && port <= 0xffff))
