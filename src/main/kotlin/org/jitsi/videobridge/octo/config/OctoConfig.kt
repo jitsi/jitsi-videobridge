@@ -99,13 +99,7 @@ class OctoConfig {
             private val bindAddressProp = BindAddressProperty()
 
             @JvmStatic
-            fun bindAddress(): String? {
-                return try {
-                    bindAddressProp.value
-                } catch (t: Throwable) {
-                    null
-                }
-            }
+            fun bindAddress(): String = bindAddressProp.value
 
             class BindPortProperty : ConditionalProperty<Int>(
                 ::enabled,
@@ -123,13 +117,7 @@ class OctoConfig {
             private val bindPortProp = BindPortProperty()
 
             @JvmStatic
-            fun bindPort(): Int {
-                return try {
-                    bindPortProp.value
-                } catch (t: Throwable) {
-                    -1
-                }
-            }
+            fun bindPort(): Int = bindPortProp.value
 
             class PublicAddressProperty : ConditionalProperty<String>(
                 ::enabled,
@@ -154,15 +142,11 @@ class OctoConfig {
              * from the legacy config file
              */
             @JvmStatic
-            fun publicAddress(): String? {
+            fun publicAddress(): String {
                 return try {
                     publicAddressProp.value
                 } catch (t: Throwable) {
-                    return try {
-                        bindAddressProp.value
-                    } catch (t: Throwable) {
-                        null
-                    }
+                    bindAddressProp.value
                 }
             }
         }
