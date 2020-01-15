@@ -202,12 +202,12 @@ public class RemoteBitrateEstimatorAbsSendTime
      */
     public void incomingPacketInfo(
         long nowMs,
-        long arrivalTimeMs,
         long sendTimeMs,
+        long arrivalTimeMs,
         int payloadSize)
     {
-        long sendTime24bits = convertMsTo24Bits(sendTimeMs);
 
+        long sendTime24bits = convertMsTo24Bits(sendTimeMs);
         // Shift up send time to use the full 32 bits that inter_arrival
         // works with, so wrapping works properly.
         long timestamp = sendTime24bits << kAbsSendTimeInterArrivalUpshift;
@@ -218,7 +218,7 @@ public class RemoteBitrateEstimatorAbsSendTime
                 .makeTimeSeriesPoint("in_pkt", nowMs)
                 .addField("rbe_id", hashCode())
                 .addField("recv_ts_ms", arrivalTimeMs)
-                .addField("send_ts_ms", sendTimeMs)
+                .addField("timestamp", timestamp)
                 .addField("pkt_sz_bytes", payloadSize));
         }
 

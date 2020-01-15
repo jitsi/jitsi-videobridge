@@ -46,7 +46,7 @@ class EndpointConnectionStats(
     private val clock: Clock = Clock.systemUTC()
 ) : RtcpListener {
     interface EndpointConnectionStatsListener {
-        fun onRttUpdate(newRtt: Double)
+        fun onRttUpdate(newRttMs: Double)
     }
     data class Snapshot(
         val rtt: Double

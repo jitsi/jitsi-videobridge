@@ -17,9 +17,11 @@ package org.jitsi.nlj.rtcp
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
 import org.jitsi.nlj.transform.node.incoming.IncomingSsrcStats
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
+import org.jitsi.nlj.util.milliseconds
+import org.jitsi.nlj.util.schedule
+import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
 import org.jitsi.rtp.rtcp.RtcpRrPacketBuilder
@@ -49,11 +51,15 @@ private data class SenderInfo(
 /**
  * Retrieves statistics about incoming streams and creates RTCP RR packets.  Since RR packets are created based on
  * time (and not on a number of incoming packets received, etc.) it does not live within the packet pipelines.
+ *
+ * @param additionalPacketSupplier A function which supplies additional RTCP packets (such as REMB) to be sent together
+ * with RRs.
  */
 class RtcpRrGenerator(
     private val backgroundExecutor: ScheduledExecutorService,
     private val rtcpSender: (RtcpPacket) -> Unit = {},
-    private val incomingStatisticsTracker: IncomingStatisticsTracker
+    private val incomingStatisticsTracker: IncomingStatisticsTracker,
+    private val additionalPacketSupplier: () -> List<RtcpPacket>
 ) : RtcpListener {
     var running: Boolean = true
 
@@ -99,11 +105,26 @@ class RtcpRrGenerator(
                     senderInfo.getDelaySinceLastSr(now)
                 ))
             }
+
+            val packets = mutableListOf<RtcpPacket>()
             if (reportBlocks.isNotEmpty()) {
-                val rrPacket = RtcpRrPacketBuilder(reportBlocks = reportBlocks).build()
-                rtcpSender(rrPacket)
+                packets.add(RtcpRrPacketBuilder(reportBlocks = reportBlocks).build())
             }
-            backgroundExecutor.schedule(this::doWork, 1, TimeUnit.SECONDS)
+            packets.addAll(additionalPacketSupplier())
+
+            when (packets.size) {
+                0 -> {}
+                1 -> rtcpSender(packets.first())
+                else -> rtcpSender(CompoundRtcpPacket(packets))
+            }
+            backgroundExecutor.schedule(this::doWork, reportingInterval)
         }
+    }
+
+    companion object {
+        /**
+         * The interval at which RRs and REMBs will be sent.
+         */
+        val reportingInterval = 500.milliseconds()
     }
 }

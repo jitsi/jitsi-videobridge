@@ -108,7 +108,8 @@ class Transceiver(
             backgroundExecutor,
             { rtpSender.getPacketStreamStats().bitrate },
             streamInformationStore,
-            logger
+            logger,
+            diagnosticContext
         )
 
     init {
@@ -117,6 +118,7 @@ class Transceiver(
         rtcpEventNotifier.addRtcpEventListener(transportCcEngine)
 
         endpointConnectionStats.addListener(rtpSender)
+        endpointConnectionStats.addListener(rtpReceiver)
     }
 
     fun onBandwidthEstimateChanged(listener: BandwidthEstimator.Listener) {

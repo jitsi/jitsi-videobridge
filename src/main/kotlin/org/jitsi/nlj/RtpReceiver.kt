@@ -17,12 +17,14 @@ package org.jitsi.nlj
 
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
+import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.PacketStreamStats
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 
 abstract class RtpReceiver :
-    StatsKeepingPacketHandler(), EventHandler, NodeStatsProducer, Stoppable {
+    StatsKeepingPacketHandler(), EventHandler, NodeStatsProducer, Stoppable,
+    EndpointConnectionStats.EndpointConnectionStatsListener {
     /**
      * The handler which will be invoked for each RTP/RTCP packet received
      * by this receiver (after it has gone through the receiver's

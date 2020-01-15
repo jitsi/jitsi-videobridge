@@ -1,3 +1,18 @@
+/*
+ * Copyright @ 2019 - present 8x8, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.jitsi.nlj.rtp.bandwidthestimation
 
 import java.time.Duration
@@ -56,7 +71,7 @@ class GoogleCcEstimator(diagnosticContext: DiagnosticContext, parentLogger: Logg
     override fun doProcessPacketArrival(now: Instant, sendTime: Instant?, recvTime: Instant?, seq: Int, size: DataSize, ecn: Byte) {
         if (sendTime != null && recvTime != null) {
             bitrateEstimatorAbsSendTime.incomingPacketInfo(now.toEpochMilli(),
-                    recvTime.toEpochMilli(), sendTime.toEpochMilli(), size.bytes.toInt())
+                    sendTime.toEpochMilli(), recvTime.toEpochMilli(), size.bytes.toInt())
         }
         sendSideBandwidthEstimation.updateReceiverEstimate(bitrateEstimatorAbsSendTime.latestEstimate)
         sendSideBandwidthEstimation.reportPacketArrived(now.toEpochMilli())

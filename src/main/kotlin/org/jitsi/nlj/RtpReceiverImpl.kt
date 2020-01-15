@@ -38,6 +38,7 @@ import org.jitsi.nlj.transform.node.SrtpTransformerNode
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.PaddingTermination
+import org.jitsi.nlj.transform.node.incoming.RemoteBandwidthEstimator
 import org.jitsi.nlj.transform.node.incoming.RetransmissionRequesterNode
 import org.jitsi.nlj.transform.node.incoming.RtcpTermination
 import org.jitsi.nlj.transform.node.incoming.RtxHandler
@@ -57,6 +58,7 @@ import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.looksLikeRtcp
 import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.queue.CountingErrorHandler
 
@@ -84,7 +86,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
      */
     getSendBitrate: () -> Long,
     streamInformationStore: ReadOnlyStreamInformationStore,
-    parentLogger: Logger
+    parentLogger: Logger,
+    diagnosticContext: DiagnosticContext = DiagnosticContext()
 ) : RtpReceiver() {
     private val logger = parentLogger.createChildLogger(RtpReceiverImpl::class)
     private var running: Boolean = true
@@ -94,11 +97,16 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val srtpDecryptWrapper = SrtpTransformerNode("SRTP Decrypt node")
     private val srtcpDecryptWrapper = SrtpTransformerNode("SRTCP Decrypt node")
     private val tccGenerator = TccGeneratorNode(rtcpSender, streamInformationStore, logger)
+    private val remoteBandwidthEstimator = RemoteBandwidthEstimator(streamInformationStore, logger, diagnosticContext)
     private val audioLevelReader = AudioLevelReader(streamInformationStore)
     private val silenceDiscarder = SilenceDiscarder()
     private val statsTracker = IncomingStatisticsTracker(streamInformationStore)
     private val packetStreamStats = PacketStreamStatsNode()
-    private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statsTracker)
+    private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statsTracker) {
+        remoteBandwidthEstimator.createRemb()?.let {
+            listOf(it)
+        } ?: emptyList()
+    }
     private val rtcpTermination = RtcpTermination(rtcpEventNotifier, logger)
     private val rembHandler = RembHandler(logger)
     private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-rx")
@@ -146,6 +154,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     path = pipeline {
                         node(RtpParser(streamInformationStore, logger))
                         node(tccGenerator)
+                        node(remoteBandwidthEstimator)
                         // TODO: temporarily putting the audioLevelReader node here such that we can determine whether
                         // or not a packet should be discarded before doing SRTP. audioLevelReader has been moved here
                         // (instead of introducing a different class to read audio levels) to avoid parsing the RTP
@@ -251,5 +260,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
     override fun tearDown() {
         NodeTeardownVisitor().visit(inputTreeRoot)
         toggleablePcapWriter.disable()
+    }
+
+    override fun onRttUpdate(newRtt: Double) {
+        remoteBandwidthEstimator.onRttUpdate(newRtt)
     }
 }

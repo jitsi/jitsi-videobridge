@@ -30,7 +30,6 @@ import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.createChildLogger
-import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacketBuilder
@@ -210,9 +209,9 @@ class KeyframeRequester @JvmOverloads constructor(
 
 private fun PacketInfo.getPliOrFirPacket(): RtcpFbPacket? {
     return when (val pkt = packet) {
-        is CompoundRtcpPacket -> {
-            pkt.packets.first { it is RtcpFbPliPacket || it is RtcpFbFirPacket } as RtcpFbPacket
-        }
+        // We intentionally ignore compound RTCP packets in order to avoid unnecessary parsing. We can do this because:
+        // 1. Compound packets coming from remote endpoint are terminated in RtcpTermination
+        // 2. Whenever a PLI or FIR is generated in our code, it is not part of a compound packet.
         is RtcpFbFirPacket -> pkt
         is RtcpFbPliPacket -> pkt
         else -> null
