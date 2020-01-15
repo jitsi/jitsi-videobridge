@@ -15,7 +15,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <smack.version>4.2.4-47d17fc</smack.version>
     <jitsi.utils.version>1.0-32-g37aa1b3</jitsi.utils.version>
-    <jicoco.version>1.1-15-geecd377</jicoco.version>
+    <jicoco.version>1.1-17-g0f9a752</jicoco.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -79,12 +79,12 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-media-transform</artifactId>
-      <version>1.0-89-g7231939</version>
+      <version>1.0-90-gd3a102b</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>rtp</artifactId>
-      <version>1.0-29-g61aed13</version>
+      <version>1.0-31-ge00c30a</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
