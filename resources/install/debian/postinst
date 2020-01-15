@@ -56,7 +56,7 @@ case "$1" in
             echo "JVB_SECRET=$JVB_SECRET" >> $CONFIG
             echo >> $CONFIG
             echo '# extra options to pass to the JVB daemon' >> $CONFIG
-            echo "JVB_OPTS=\"\"" >> $CONFIG
+            echo "JVB_OPTS=\"--apis=,\"" >> $CONFIG
             echo >> $CONFIG
 
         fi
@@ -96,8 +96,28 @@ case "$1" in
         # and this breaks startup script
         sed -i 's/\$JVB_EXTRA_JVM_PARAMS//g' $CONFIG
 
-        if ! grep -q "org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP" "$NEW_JITSI_CONFIG" ;then
-            echo "org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP=focus@auth.${JVB_HOSTNAME}/.*" >> $NEW_JITSI_CONFIG
+        if ! grep -q "#org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP" "$NEW_JITSI_CONFIG" ;then
+            sed -i 's/org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP/#org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP/g' $NEW_JITSI_CONFIG
+        fi
+
+        if ! grep -q "org.jitsi.videobridge.xmpp.user.shard.MUC_JIDS" "$NEW_JITSI_CONFIG" ;then
+            echo "org.jitsi.videobridge.ENABLE_STATISTICS=true" >> $NEW_JITSI_CONFIG
+            echo "org.jitsi.videobridge.STATISTICS_TRANSPORT=muc" >> $NEW_JITSI_CONFIG
+            echo "org.jitsi.videobridge.xmpp.user.shard.HOSTNAME=localhost" >> $NEW_JITSI_CONFIG
+            echo "org.jitsi.videobridge.xmpp.user.shard.DOMAIN=auth.$JVB_HOSTNAME" >> $NEW_JITSI_CONFIG
+            echo "org.jitsi.videobridge.xmpp.user.shard.USERNAME=jvb" >> $NEW_JITSI_CONFIG
+            echo "org.jitsi.videobridge.xmpp.user.shard.PASSWORD=$JVB_SECRET" >> $NEW_JITSI_CONFIG
+            echo "org.jitsi.videobridge.xmpp.user.shard.MUC_JIDS=JvbBrewery@internal.auth.$JVB_HOSTNAME" >> $NEW_JITSI_CONFIG
+            echo "org.jitsi.videobridge.xmpp.user.shard.MUC_NICKNAME=$(uuidgen)" >> $NEW_JITSI_CONFIG
+        fi
+
+        APIS_VALUE=$(grep -oPe '--apis=\K(\w*,*\w*)' $CONFIG)
+        if [[ $APIS_VALUE == *"xmpp"* ]]; then
+            APIS_NEW_VALUE=${APIS_VALUE/xmpp/}
+            if [ -z "$APIS_NEW_VALUE" ]; then
+                APIS_NEW_VALUE=","
+            fi
+            sed -i "s/--apis=$APIS_VALUE/--apis=$APIS_NEW_VALUE/g" $CONFIG
         fi
 
         # we don't want to start the daemon as root
