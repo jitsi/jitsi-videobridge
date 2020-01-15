@@ -38,27 +38,6 @@ public class OctoRelayService
         = new LoggerImpl(OctoRelayService.class.getName());
 
     /**
-     * The name of the configuration property which controls the address on
-     * which the Octo relay should bind.
-     */
-    public static final String ADDRESS_PNAME
-        = "org.jitsi.videobridge.octo.BIND_ADDRESS";
-        
-    /**
-     * The name of the configuration property which controls the public address
-     * which will be used as part of relayId.
-     */
-    public static final String PUBLIC_ADDRESS_PNAME
-        = "org.jitsi.videobridge.octo.PUBLIC_ADDRESS";
-
-    /**
-     * The name of the property which controls the port number which the Octo
-     * relay should use.
-     */
-    public static final String PORT_PNAME
-        = "org.jitsi.videobridge.octo.BIND_PORT";
-
-    /**
      * The Octo relay instance used by this {@link OctoRelayService}.
      */
     private OctoRelay relay;
