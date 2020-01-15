@@ -51,12 +51,17 @@ public class OctoRelayService
         return relay;
     }
 
+
     /**
      * {@inheritDoc}
      */
     @Override
     public void start(BundleContext bundleContext)
     {
+        if (!Config.enabled()) {
+            logger.info("Octo relay is disabled.");
+            return;
+        }
         String address = Config.bindAddress();
         String publicAddress = Config.publicAddress();
         int port = Config.bindPort();
