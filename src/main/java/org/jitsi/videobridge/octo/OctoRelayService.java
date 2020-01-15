@@ -82,25 +82,18 @@ public class OctoRelayService
         String publicAddress = Config.publicAddress();
         int port = Config.bindPort();
 
-        if (address != null && (1024 <= port && port <= 0xffff))
+        try
         {
-            try
-            {
-                relay = new OctoRelay(address, port);
-                relay.setPublicAddress(publicAddress);
-                bundleContext
-                    .registerService(OctoRelayService.class.getName(), this,
-                                     null);
-            }
-            catch (UnknownHostException | SocketException e)
-            {
-                logger.error("Failed to initialize Octo relay with address "
-                                 + address + ":" + port + ". ", e);
-            }
+            relay = new OctoRelay(address, port);
+            relay.setPublicAddress(publicAddress);
+            bundleContext
+                .registerService(OctoRelayService.class.getName(), this,
+                                 null);
         }
-        else
+        catch (UnknownHostException | SocketException e)
         {
-            logger.info("Octo relay not configured.");
+            logger.error("Failed to initialize Octo relay with address "
+                             + address + ":" + port + ". ", e);
         }
     }
 

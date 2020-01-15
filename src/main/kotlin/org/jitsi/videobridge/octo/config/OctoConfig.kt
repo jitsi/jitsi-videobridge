@@ -21,6 +21,7 @@ import org.jitsi.config.LegacyFallbackConfigProperty
 import org.jitsi.config.legacyConfigAttributes
 import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.FallbackProperty
+import org.jitsi.utils.config.exception.ConfigValueParsingException
 import org.jitsi.videobridge.config.ConditionalProperty
 
 class OctoConfig {
@@ -41,8 +42,7 @@ class OctoConfig {
                         if (cfg.hasPath("BIND_ADDRESS") && cfg.hasPath("BIND_PORT")) {
                             val bindAddress = cfg.getString("BIND_ADDRESS")
                             val bindPort = cfg.getInt("BIND_PORT")
-                            // TODO(brian): UnprivilegedPort helper class
-                            bindAddress != null && (bindPort in 1024..65535)
+                            bindAddress != null && (bindPort.isUnpriviligedPort())
                         } else {
                             false
                         }
@@ -107,11 +107,22 @@ class OctoConfig {
                 "Octo bind port is only parsed when Octo is enabled"
             )
 
-            private class BindPort : LegacyFallbackConfigProperty<Int>(
-                Int::class,
-                "org.jitsi.videobridge.octo.BIND_PORT",
-                "videobridge.octo.bind-port",
-                readOnce = true
+            private class BindPort : FallbackProperty<Int>(
+                legacyConfigAttributes {
+                    name("org.jitsi.videobridge.octo.BIND_PORT")
+                    readOnce()
+                    retrievedAs<Int>() convertedBy {
+                        if (!it.isUnpriviligedPort()) {
+                            throw ConfigValueParsingException("Octo bind port " +
+                                    "must be in the unprivileged port space")
+                        }
+                        it
+                    }
+                },
+                newConfigAttributes {
+                    name("videobridge.octo.bind-port")
+                    readOnce()
+                }
             )
 
             private val bindPortProp = BindPortProperty()
@@ -152,3 +163,5 @@ class OctoConfig {
         }
     }
 }
+
+private fun Int.isUnpriviligedPort(): Boolean = this in 1024..65535
