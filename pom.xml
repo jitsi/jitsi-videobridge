@@ -15,6 +15,7 @@
         <junit.version>5.2.0</junit.version>
         <bouncycastle.version>1.61</bouncycastle.version>
         <jitsi.utils.version>1.0-32-g37aa1b3</jitsi.utils.version>
+        <ktlint.skip>false</ktlint.skip>
     </properties>
     <dependencies>
         <dependency>
@@ -30,7 +31,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>rtp</artifactId>
-            <version>1.0-28-g370ff1b</version>
+            <version>1.0-31-ge00c30a</version>
         </dependency>
         <dependency>
             <groupId>org.jitsi</groupId>
@@ -223,6 +224,7 @@
                         <id>ktlint</id>
                         <phase>verify</phase>
                         <configuration>
+                            <skip>${ktlint.skip}</skip>
                             <target name="ktlint">
                                 <java taskname="ktlint" dir="${basedir}" fork="true" failonerror="true"
                                     classpathref="maven.plugin.classpath" classname="com.pinterest.ktlint.Main">

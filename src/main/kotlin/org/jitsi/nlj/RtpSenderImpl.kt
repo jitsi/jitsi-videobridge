@@ -70,7 +70,7 @@ class RtpSenderImpl(
     parentLogger: Logger,
     diagnosticContext: DiagnosticContext = DiagnosticContext()
 ) : RtpSender() {
-    protected val logger = parentLogger.createChildLogger(RtpSenderImpl::class)
+    private val logger = parentLogger.createChildLogger(RtpSenderImpl::class)
     private val outgoingRtpRoot: Node
     private val outgoingRtxRoot: Node
     private val outgoingRtcpRoot: Node

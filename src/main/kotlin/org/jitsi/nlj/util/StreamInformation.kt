@@ -20,6 +20,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.supportsPli
+import org.jitsi.nlj.format.supportsRemb
+import org.jitsi.nlj.format.supportsTcc
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
@@ -72,6 +74,8 @@ interface ReadOnlyStreamInformationStore {
 
     val supportsPli: Boolean
     val supportsFir: Boolean
+    val supportsRemb: Boolean
+    val supportsTcc: Boolean
 }
 
 /**
@@ -115,14 +119,19 @@ class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
     override val primaryVideoSsrcs: Set<Long>
         get() = receiveSsrcStore.primaryVideoSsrcs
 
+    // Support for FIR, PLI, REMB and TCC is declared per-payload type, but currently our code is not payload-type
+    // aware. So until this changes we will just check if any of the PTs supports the relevant feedback.
+    // We always assume support for FIR.
+    override var supportsFir: Boolean = true
+        private set
+
     override var supportsPli: Boolean = false
         private set
 
-    // Support for FIR and PLI is declared per-payload type, but currently
-    // our code which requests FIR and PLI is not payload-type aware. So
-    // until this changes we will just check if any of the PTs supports
-    // FIR and PLI. This means that we effectively always assume support for FIR.
-    override var supportsFir: Boolean = true
+    override var supportsRemb: Boolean = false
+        private set
+
+    override var supportsTcc: Boolean = false
         private set
 
     override fun addRtpExtensionMapping(rtpExtension: RtpExtension) {
@@ -150,6 +159,8 @@ class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
         synchronized(payloadTypesLock) {
             _rtpPayloadTypes[payloadType.pt] = payloadType
             supportsPli = rtpPayloadTypes.values.find { it.rtcpFeedbackSet.supportsPli() } != null
+            supportsRemb = rtpPayloadTypes.values.find { it.rtcpFeedbackSet.supportsRemb() } != null
+            supportsTcc = rtpPayloadTypes.values.find { it.rtcpFeedbackSet.supportsTcc() } != null
             payloadTypeHandlers.forEach { it(_rtpPayloadTypes) }
         }
     }
@@ -158,6 +169,8 @@ class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
         synchronized(payloadTypesLock) {
             _rtpPayloadTypes.clear()
             supportsPli = false
+            supportsRemb = false
+            supportsTcc = false
             payloadTypeHandlers.forEach { it(_rtpPayloadTypes) }
         }
     }

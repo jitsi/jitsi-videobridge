@@ -22,7 +22,10 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.logging2.Logger
 
 class CompoundRtcpParser(parentLogger: Logger) : PacketParser("Compound RTCP parser", parentLogger, {
-    CompoundRtcpPacket(it.buffer, it.offset, it.length)
+    CompoundRtcpPacket(it.buffer, it.offset, it.length).also { compoundPacket ->
+        // Force packets to be evaluated to trigger any parsing errors
+        compoundPacket.packets
+    }
 })
 
 class SingleRtcpParser(parentLogger: Logger) : PacketParser("Single RTCP parser", parentLogger, {
