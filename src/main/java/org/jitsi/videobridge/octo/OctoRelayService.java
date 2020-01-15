@@ -86,7 +86,7 @@ public class OctoRelayService
 
         String address = Config.bindAddress();
         String publicAddress = cfg.getString(PUBLIC_ADDRESS_PNAME, address);
-        int port = cfg.getInt(PORT_PNAME, -1);
+        int port = Config.bindPort();
 
         if (address != null && (1024 <= port && port <= 0xffff))
         {

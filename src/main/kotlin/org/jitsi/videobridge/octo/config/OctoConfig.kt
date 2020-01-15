@@ -56,6 +56,24 @@ class OctoConfig {
                     null
                 }
             }
+
+            class BindPortProperty : LegacyFallbackConfigProperty<Int>(
+                Int::class,
+                "org.jitsi.videobridge.octo.BIND_PORT",
+                "videobridge.octo.bind-port",
+                readOnce = true
+            )
+
+            private val bindPortProp = BindPortProperty()
+
+            @JvmStatic
+            fun bindPort(): Int {
+                return try {
+                    bindPortProp.value
+                } catch (t: Throwable) {
+                    -1
+                }
+            }
         }
     }
 }
