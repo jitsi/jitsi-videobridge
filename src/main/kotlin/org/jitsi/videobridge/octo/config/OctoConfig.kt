@@ -22,7 +22,6 @@ import org.jitsi.config.legacyConfigAttributes
 import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.FallbackProperty
 import org.jitsi.utils.config.exception.ConfigValueParsingException
-import org.jitsi.videobridge.config.ConditionalProperty
 
 class OctoConfig {
     class Config {
@@ -59,13 +58,7 @@ class OctoConfig {
             @JvmStatic
             fun enabled() = enabledProp.value
 
-            class RegionProperty : ConditionalProperty<String>(
-                ::enabled,
-                Region(),
-                "Octo region is only parsed when Octo is enabled"
-            )
-
-            private class Region : LegacyFallbackConfigProperty<String>(
+            class RegionProperty : LegacyFallbackConfigProperty<String>(
                 String::class,
                 "org.jitsi.videobridge.REGION",
                 "videobridge.octo.region",
@@ -83,13 +76,7 @@ class OctoConfig {
                 }
             }
 
-            class BindAddressProperty : ConditionalProperty<String>(
-                ::enabled,
-                BindAddress(),
-                "Octo bind address is only parsed when Octo is enabled"
-            )
-
-            private class BindAddress : LegacyFallbackConfigProperty<String>(
+            class BindAddressProperty : LegacyFallbackConfigProperty<String>(
                 String::class,
                 "org.jitsi.videobridge.octo.BIND_ADDRESS",
                 "videobridge.octo.bind-address",
@@ -101,13 +88,7 @@ class OctoConfig {
             @JvmStatic
             fun bindAddress(): String = bindAddressProp.value
 
-            class BindPortProperty : ConditionalProperty<Int>(
-                ::enabled,
-                BindPort(),
-                "Octo bind port is only parsed when Octo is enabled"
-            )
-
-            private class BindPort : FallbackProperty<Int>(
+            class BindPortProperty : FallbackProperty<Int>(
                 legacyConfigAttributes {
                     name("org.jitsi.videobridge.octo.BIND_PORT")
                     readOnce()
@@ -130,13 +111,7 @@ class OctoConfig {
             @JvmStatic
             fun bindPort(): Int = bindPortProp.value
 
-            class PublicAddressProperty : ConditionalProperty<String>(
-                ::enabled,
-                PublicAddress(),
-                "Octo public address is only parsed when Octo is enabled"
-            )
-
-            class PublicAddress : LegacyFallbackConfigProperty<String>(
+            class PublicAddressProperty : LegacyFallbackConfigProperty<String>(
                 String::class,
                 "org.jitsi.videobridge.octo.PUBLIC_ADDRESS",
                 "videobridge.octo.public-address",
