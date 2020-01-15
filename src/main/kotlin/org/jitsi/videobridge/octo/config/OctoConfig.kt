@@ -38,6 +38,24 @@ class OctoConfig {
                     null
                 }
             }
+
+            class BindAddressProperty : LegacyFallbackConfigProperty<String>(
+                String::class,
+                "org.jitsi.videobridge.octo.BIND_ADDRESS",
+                "videobridge.octo.bind-address",
+                readOnce = true
+            )
+
+            private val bindAddressProp = BindAddressProperty()
+
+            @JvmStatic
+            fun bindAddress(): String? {
+                return try {
+                    bindAddressProp.value
+                } catch (t: Throwable) {
+                    null
+                }
+            }
         }
     }
 }

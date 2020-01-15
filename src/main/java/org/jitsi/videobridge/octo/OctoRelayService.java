@@ -22,6 +22,8 @@ import org.osgi.framework.*;
 
 import java.net.*;
 
+import static org.jitsi.videobridge.octo.config.OctoConfig.*;
+
 /**
  * A {@link BundleActivator} for a bridge-to-bridge (Octo) relay.
  *
@@ -82,7 +84,7 @@ public class OctoRelayService
             = ServiceUtils2.getService(
                     bundleContext, ConfigurationService.class);
 
-        String address = cfg.getString(ADDRESS_PNAME, null);
+        String address = Config.bindAddress();
         String publicAddress = cfg.getString(PUBLIC_ADDRESS_PNAME, address);
         int port = cfg.getInt(PORT_PNAME, -1);
 
