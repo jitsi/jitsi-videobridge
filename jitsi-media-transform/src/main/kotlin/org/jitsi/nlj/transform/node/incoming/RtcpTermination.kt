@@ -29,6 +29,7 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSdesPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.rtp.rtcp.RtcpXrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbRembPacket
@@ -71,6 +72,11 @@ class RtcpTermination(
                 is RtcpByePacket, is RtcpFbTccPacket, is RtcpFbRembPacket -> {
                     // Supported, but no special handling here (any special handling will be in
                     // notifyRtcpReceived below
+                }
+                is RtcpXrPacket -> {
+                    // Unsupported, but we get them when chrome does screenshare and the
+                    // message below clouds up the logs.  They are still tracked as part
+                    // of the packetReceiveCount
                 }
                 else -> {
                     logger.cinfo { "TODO: not yet handling RTCP packet of type ${rtcpPacket.packetType} ${rtcpPacket.javaClass}" }
