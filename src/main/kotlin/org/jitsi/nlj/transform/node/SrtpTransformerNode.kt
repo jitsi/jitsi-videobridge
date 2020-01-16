@@ -40,6 +40,8 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
         packetInfos.forEach { packetInfo ->
             if (transformer?.transform(packetInfo) == true) {
                 transformedPackets.add(packetInfo)
+            } else {
+                packetDiscarded(packetInfo)
             }
         }
         return transformedPackets
@@ -69,7 +71,10 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
                     cachedPackets.clear()
                 } else {
                     outPackets = if (transformer.transform(packetInfo))
-                        listOf(packetInfo) else emptyList()
+                        listOf(packetInfo) else {
+                        packetDiscarded(packetInfo)
+                        emptyList()
+                    }
                 }
             }
             return outPackets
