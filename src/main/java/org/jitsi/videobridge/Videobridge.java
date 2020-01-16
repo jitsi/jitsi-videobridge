@@ -861,7 +861,7 @@ public class Videobridge
 
         ConfigurationService cfg = getConfigurationService();
 
-        videobridgeExpireThread.start(bundleContext);
+        videobridgeExpireThread.start();
         if (health != null)
         {
             health.stop();
