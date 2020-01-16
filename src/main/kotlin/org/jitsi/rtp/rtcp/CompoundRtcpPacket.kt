@@ -33,7 +33,7 @@ class CompoundRtcpPacket(
             var currOffset = offset
             val rtcpPackets = mutableListOf<RtcpPacket>()
             while (bytesRemaining >= RtcpHeader.SIZE_BYTES) {
-                val rtcpPacket = parse(buffer, currOffset)
+                val rtcpPacket = RtcpPacket.parse(buffer, currOffset, bytesRemaining)
                 rtcpPackets.add(rtcpPacket)
                 currOffset += rtcpPacket.length
                 bytesRemaining -= rtcpPacket.length

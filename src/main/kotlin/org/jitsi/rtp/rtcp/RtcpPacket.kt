@@ -74,10 +74,12 @@ abstract class RtcpPacket(
     abstract override fun clone(): RtcpPacket
 
     companion object {
-        // TODO we need to have a limit
-        fun parse(buf: ByteArray, offset: Int): RtcpPacket {
+        fun parse(buf: ByteArray, offset: Int, bytesRemaining: Int): RtcpPacket {
             val packetType = RtcpHeader.getPacketType(buf, offset)
             val packetLengthBytes = (RtcpHeader.getLength(buf, offset) + 1) * 4
+            if (packetLengthBytes > bytesRemaining) {
+                throw InvalidRtcpException(buf, offset, "length $packetLengthBytes > available $bytesRemaining")
+            }
             return when (packetType) {
                 RtcpByePacket.PT -> RtcpByePacket(buf, offset, packetLengthBytes)
                 RtcpRrPacket.PT -> RtcpRrPacket(buf, offset, packetLengthBytes)
@@ -88,7 +90,7 @@ abstract class RtcpPacket(
                 else -> {
                     return when (packetType) {
                         in RTCP_PACKET_TYPE_RANGE -> UnsupportedRtcpPacket(buf, offset, packetLengthBytes)
-                        else -> throw InvalidRtcpException(buf, offset)
+                        else -> throw InvalidRtcpException(buf, offset, "type $packetType")
                     }
                 }
             }
@@ -96,5 +98,5 @@ abstract class RtcpPacket(
     }
 }
 
-class InvalidRtcpException(buf: ByteArray, offset: Int) :
-    Exception("Invalid RTCP packet: ${buf.toHex(offset, RtcpHeader.SIZE_BYTES)}")
+class InvalidRtcpException(buf: ByteArray, offset: Int, reason: String) :
+    Exception("Invalid RTCP packet: $reason: ${buf.toHex(offset, RtcpHeader.SIZE_BYTES)}")

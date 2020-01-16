@@ -32,7 +32,7 @@ class RtcpPacketTest : ShouldSpec() {
                     0x00, 0x00, 0x00, 0x00
                 )
                 should("return UnsupportedRtcpPacket") {
-                    RtcpPacket.parse(unsupportedRtcpData, 0).shouldBeInstanceOf<UnsupportedRtcpPacket>()
+                    RtcpPacket.parse(unsupportedRtcpData, 0, unsupportedRtcpData.size).shouldBeInstanceOf<UnsupportedRtcpPacket>()
                 }
             }
             "an invalid RTCP packet" {
@@ -44,7 +44,20 @@ class RtcpPacketTest : ShouldSpec() {
                 )
                 should("throw an InvalidRtcpException") {
                     shouldThrow<InvalidRtcpException> {
-                        RtcpPacket.parse(invalidRtcpData, 0)
+                        RtcpPacket.parse(invalidRtcpData, 0, invalidRtcpData.size)
+                    }
+                }
+            }
+            "a packet with invalid length" {
+                val invalidRtcpLengthData = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+                    // V=2, PT=195, length = 8
+                    0x80, 0xC3, 0x00, 0x08,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00
+                )
+                should("throw an InvalidRtcpException") {
+                    shouldThrow<InvalidRtcpException> {
+                        RtcpPacket.parse(invalidRtcpLengthData, 0, invalidRtcpLengthData.size)
                     }
                 }
             }
