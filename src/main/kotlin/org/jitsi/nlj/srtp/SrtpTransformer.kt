@@ -110,7 +110,7 @@ abstract class SrtpTransformer(
 }
 
 /**
- * Implements methods common for the two SRTP transformer implementations.
+ * Implements methods common for the two SRTCP transformer implementations.
  */
 abstract class SrtcpTransformer(
     contextFactory: SrtpContextFactory,
@@ -137,9 +137,9 @@ class SrtcpDecryptTransformer(
     parentLogger: Logger
 ) : SrtcpTransformer(contextFactory, parentLogger.createChildLogger(SrtcpDecryptTransformer::class)) {
     override fun transform(packetInfo: PacketInfo, context: SrtcpCryptoContext): Boolean {
-        context.reverseTransformPacket(packetInfo.packet)
-        packetInfo.resetPayloadVerification()
-        return true
+        return context.reverseTransformPacket(packetInfo.packet).apply {
+            packetInfo.resetPayloadVerification()
+        }
     }
 }
 
