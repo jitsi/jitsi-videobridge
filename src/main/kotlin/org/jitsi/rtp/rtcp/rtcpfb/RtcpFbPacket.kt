@@ -77,7 +77,7 @@ abstract class RtcpFbPacket(
                     when (fmt) {
                         RtcpFbNackPacket.FMT -> RtcpFbNackPacket(buf, offset, length)
                         RtcpFbTccPacket.FMT -> RtcpFbTccPacket(buf, offset, length)
-                        else -> TODO("unimplemented transport layer rtcp packet fmt $fmt")
+                        else -> UnsupportedRtcpFbPacket(buf, offset, length)
                     }
                 }
                 PayloadSpecificRtcpFbPacket.PT -> {
@@ -85,7 +85,7 @@ abstract class RtcpFbPacket(
                         RtcpFbFirPacket.FMT -> RtcpFbFirPacket(buf, offset, length)
                         RtcpFbPliPacket.FMT -> RtcpFbPliPacket(buf, offset, length)
                         RtcpFbRembPacket.FMT -> RtcpFbRembPacket(buf, offset, length)
-                        else -> TODO("unimplemented payload specific rtcp packet fmt $fmt")
+                        else -> UnsupportedRtcpFbPacket(buf, offset, length)
                     }
                 }
                 else -> throw Exception("Unrecognized RTCPFB payload type: ${packetType.toString(16)}")
