@@ -98,5 +98,5 @@ abstract class RtcpPacket(
     }
 }
 
-class InvalidRtcpException(buf: ByteArray, offset: Int, reason: String) :
+class InvalidRtcpException(buf: ByteArray, offset: Int, val reason: String) :
     Exception("Invalid RTCP packet: $reason: ${buf.toHex(offset, RtcpHeader.SIZE_BYTES)}")

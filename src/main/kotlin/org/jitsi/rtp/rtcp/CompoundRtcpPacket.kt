@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp.rtcp
 
+import org.jitsi.rtp.extensions.bytearray.toHex
 import org.jitsi.rtp.util.BufferPool
 
 class CompoundRtcpPacket(
@@ -33,7 +34,11 @@ class CompoundRtcpPacket(
             var currOffset = offset
             val rtcpPackets = mutableListOf<RtcpPacket>()
             while (bytesRemaining >= RtcpHeader.SIZE_BYTES) {
-                val rtcpPacket = RtcpPacket.parse(buffer, currOffset, bytesRemaining)
+                val rtcpPacket = try {
+                    RtcpPacket.parse(buffer, currOffset, bytesRemaining)
+                } catch (e: InvalidRtcpException) {
+                    throw CompoundRtcpContainedInvalidDataException(buffer, offset, length, currOffset, e.reason)
+                }
                 rtcpPackets.add(rtcpPacket)
                 currOffset += rtcpPacket.length
                 bytesRemaining -= rtcpPacket.length
@@ -57,3 +62,13 @@ class CompoundRtcpPacket(
 
     override fun clone(): RtcpPacket = CompoundRtcpPacket(cloneBuffer(0), 0, length)
 }
+
+class CompoundRtcpContainedInvalidDataException(
+    compoundRtcpBuf: ByteArray,
+    compoundRtcpOffset: Int,
+    compoundRtcpLength: Int,
+    invalidDataOffset: Int,
+    invalidDataReason: String
+) : Exception("Compound RTCP contained invalid data.  Compound RTCP packet data is: " +
+    "${compoundRtcpBuf.toHex(compoundRtcpOffset, compoundRtcpLength)} Invalid data " +
+    "started at offset ${invalidDataOffset - compoundRtcpOffset} and failed due to '$invalidDataReason'")
