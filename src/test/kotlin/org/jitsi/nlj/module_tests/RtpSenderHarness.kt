@@ -46,7 +46,7 @@ fun main(args: Array<String>) {
     producer.subscribe { pkt ->
         val packetInfo = when {
             pkt.looksLikeRtp() -> PacketInfo(RtpPacket(pkt.buffer, pkt.offset, pkt.length))
-            else -> PacketInfo(RtcpPacket.parse(pkt.buffer, pkt.offset))
+            else -> PacketInfo(RtcpPacket.parse(pkt.buffer, pkt.offset, pkt.length))
         }
         senders.forEach { it.processPacket(packetInfo.clone()) }
     }

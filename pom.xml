@@ -31,7 +31,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>rtp</artifactId>
-            <version>1.0-31-ge00c30a</version>
+            <version>1.0-34-g787954c</version>
         </dependency>
         <dependency>
             <groupId>org.jitsi</groupId>
