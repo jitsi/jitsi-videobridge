@@ -140,7 +140,6 @@
             <arg value="-uc"/>
             <arg value="-b"/>
             <arg value="-d"/>
-            <arg value="-a${arch}"/>
         </exec>
 
         <!-- clean up the build folder -->
