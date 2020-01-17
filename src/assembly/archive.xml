@@ -19,14 +19,14 @@
   <files>
     <file>
         <source>${project.basedir}/target/${project.artifactId}-${project.version}.jar</source>
-        <outputDirectory>/</outputDirectory>
+        <outputDirectory>${file.separator}</outputDirectory>
         <destName>jitsi-videobridge.jar</destName>
     </file>
   </files>
   <fileSets>
     <fileSet>
       <directory>${project.build.directory}</directory>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory>${file.separator}</outputDirectory>
       <includes>
         <include>*.jar</include>
       </includes>
@@ -45,7 +45,7 @@
     </fileSet>
     <fileSet>
       <directory>${project.basedir}/resources/install/</directory>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory>${file.separator}</outputDirectory>
       <fileMode>755</fileMode>
       <includes>
         <include>jvb.sh</include>
