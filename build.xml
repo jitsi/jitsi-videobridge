@@ -276,82 +276,6 @@
         </javadoc>
     </target>
 
-    <target name="dist.win" depends="copy-runtime-dependencies-from-maven,make">
-        <zip destfile="${dist}/windows/${packname.win}.zip">
-            <zipfileset file="jitsi-videobridge.jar"
-                        prefix="${packname.win}" />
-            <zipfileset dir="lib" prefix="${packname.win}/lib">
-                <exclude name="native/windows-64/**"/>
-                <exclude name="native/linux/**"/>
-                <exclude name="native/linux-64/**"/>
-                <exclude name="native/macosx/**"/>
-            </zipfileset>
-            <zipfileset file="resources/install/windows/jvb.bat"
-                        prefix="${packname.win}" />
-        </zip>
-    </target>
-
-    <target name="dist.win64" depends="copy-runtime-dependencies-from-maven,make">
-        <zip destfile="${dist}/windows/${packname.win64}.zip">
-            <zipfileset file="jitsi-videobridge.jar"
-                        prefix="${packname.win64}" />
-            <zipfileset dir="lib" prefix="${packname.win64}/lib">
-                <exclude name="native/windows/**"/>
-                <exclude name="native/linux/**"/>
-                <exclude name="native/linux-64/**"/>
-                <exclude name="native/macosx/**"/>
-            </zipfileset>
-            <zipfileset file="resources/install/windows-64/jvb.bat"
-                        prefix="${packname.win64}" />
-        </zip>
-    </target>
-
-    <target name="dist.lin" depends="copy-runtime-dependencies-from-maven,make">
-        <zip destfile="${dist}/linux/${packname.lin}.zip">
-            <zipfileset file="jitsi-videobridge.jar"
-                        prefix="${packname.lin}" />
-            <zipfileset dir="lib" prefix="${packname.lin}/lib">
-                <exclude name="native/windows-64/**"/>
-                <exclude name="native/linux-64/**"/>
-                <exclude name="native/windows/**"/>
-                <exclude name="native/macosx/**"/>
-            </zipfileset>
-            <zipfileset file="resources/install/linux/jvb.sh"
-                        prefix="${packname.lin}" filemode="755"/>
-        </zip>
-    </target>
-
-    <target name="dist.lin64" depends="copy-runtime-dependencies-from-maven,make">
-        <zip destfile="${dist}/linux/${packname.lin64}.zip">
-            <zipfileset file="jitsi-videobridge.jar"
-                        prefix="${packname.lin64}" />
-            <zipfileset dir="lib" prefix="${packname.lin64}/lib">
-                <exclude name="native/windows-64/**"/>
-                <exclude name="native/linux/**"/>
-                <exclude name="native/windows/**"/>
-                <exclude name="native/macosx/**"/>
-            </zipfileset>
-            <zipfileset file="resources/install/linux-64/jvb.sh"
-                        prefix="${packname.lin64}" filemode="755"/>
-        </zip>
-    </target>
-
-    <target name="dist.macosx" depends="copy-runtime-dependencies-from-maven,make">
-        <mkdir dir="${dist}/macosx" />
-        <zip destfile="${dist}/macosx/${packname.macosx}.zip">
-            <zipfileset file="jitsi-videobridge.jar"
-                        prefix="${packname.macosx}" />
-            <zipfileset dir="lib" prefix="${packname.macosx}/lib">
-                <exclude name="native/windows-64/**"/>
-                <exclude name="native/linux/**"/>
-                <exclude name="native/linux-64/**"/>
-                <exclude name="native/windows/**"/>
-            </zipfileset>
-            <zipfileset file="resources/install/macosx/jvb.sh"
-                        prefix="${packname.macosx}" filemode="755"/>
-        </zip>
-    </target>
-
     <target name="dist.src" depends="make">
         <zip destfile="${dist}/src/${packname.src}.zip">
             <zipfileset dir="." prefix="${packname.src}">
@@ -363,10 +287,11 @@
         </zip>
     </target>
 
-    <!-- build all binaries and the jitsi-videobridge.jar
-        for all supported platforms -->
-    <target name="dist"
-            depends="dist.win,dist.win64,dist.lin,dist.lin64,dist.macosx,dist.src" />
+    <!-- This used to build zips for all platforms as well, but those
+         are no longer needed (the equivalent zip is built via 
+         'mvn package' with assembly).  Left it as an alias for dist.src 
+         for compatibility -->
+    <target name="dist" depends="dist.src" />
 
     <target name="copy-runtime-dependencies-from-maven">
         <delete failonerror="false" includeemptydirs="true">
