@@ -29,4 +29,4 @@ class CompoundRtcpParser(parentLogger: Logger) : PacketParser("Compound RTCP par
 })
 
 class SingleRtcpParser(parentLogger: Logger) : PacketParser("Single RTCP parser", parentLogger, {
-    RtcpPacket.parse(it.buffer, it.offset) })
+    RtcpPacket.parse(it.buffer, it.offset, it.length) })
