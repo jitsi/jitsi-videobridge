@@ -23,13 +23,6 @@
         <available file="${dpkg-scanpackages}"/>
     </condition>
 
-    <target name="deb">
-        <antcall target="make-deb">
-            <param name="arch" value="all"/>
-            <param name="system-arch" value="linux-x86"/>
-        </antcall>
-    </target>
-
     <!-- Outputs a warning notifying the user that a dpkg tool is missing. -->
     <target name="dpkg-build-warning" unless="dpkg.build.present">
         <echo message="Either the ${dpkg-buildpackage} tool or the debhelper tools was not found on your system."/>
@@ -69,7 +62,7 @@
     </target>
 
     <!-- Builds the debian package. -->
-    <target name="make-deb"
+    <target name="deb"
             depends="copy-runtime-dependencies-from-maven,make,dpkg-build-warning,deb-bump-version">
 
         <copy todir="${debian.dir}" includeEmptyDirs="Yes">
