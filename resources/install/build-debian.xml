@@ -23,21 +23,10 @@
         <available file="${dpkg-scanpackages}"/>
     </condition>
 
-    <target name="deb" depends="deb-32,deb-64"/>
-    <target name="deb-32">
+    <target name="deb">
         <antcall target="make-deb">
-            <param name="arch" value="i386"/>
+            <param name="arch" value="all"/>
             <param name="system-arch" value="linux-x86"/>
-            <param name="include-dir" value="linux"/>
-            <param name="exclude-dir" value="linux-64"/>
-        </antcall>
-    </target>
-    <target name="deb-64">
-        <antcall target="make-deb">
-            <param name="arch" value="amd64"/>
-            <param name="system-arch" value="linux-x64"/>
-            <param name="include-dir" value="linux-64"/>
-            <param name="exclude-dir" value="linux"/>
         </antcall>
     </target>
 
