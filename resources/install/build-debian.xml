@@ -96,9 +96,6 @@
               overwrite="true" includeEmptyDirs="No">
             <fileset dir="lib/">
                 <exclude name="logging.properties"/>
-                <exclude name="native/macos*/*"/>
-                <exclude name="native/windows*/*"/>
-                <exclude name="native/${exclude-dir}/*"/>
             </fileset>
         </copy>
         <copy file="jitsi-videobridge.jar"
@@ -218,8 +215,6 @@
                 <include name="build.xml"/>
                 <include name="resources/install/build-debian.xml"/>
                 <include name="resources/install/jvb.sh"/>
-                <exclude name="**/macosx/**"/>
-                <exclude name="**/windows/**"/>
             </fileset>
         </copy>
         <replace file="${debian.release}/resources/install/jvb.sh"
