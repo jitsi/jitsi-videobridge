@@ -49,6 +49,7 @@
       <fileMode>755</fileMode>
       <includes>
         <include>jvb.sh</include>
+        <include>jvb.bat</include>
       </includes>
     </fileSet>
   </fileSets>
