@@ -107,7 +107,7 @@
         <copy file="lib/logging.properties"
               todir="${debian.dir}/etc/jitsi/videobridge"
               overwrite="true"/>
-        <copy file="resources/install/${include-dir}/jvb.sh"
+        <copy file="resources/install/jvb.sh"
               todir="${debian.dir}/usr/share/jitsi-videobridge"
               overwrite="true"/>
         <chmod file="${debian.dir}/usr/share/jitsi-videobridge/jvb.sh"
@@ -217,17 +217,16 @@
                 <include name="lib/logging.properties"/>
                 <include name="build.xml"/>
                 <include name="resources/install/build-debian.xml"/>
-                <include name="resources/install/linux-64/jvb.sh"/>
-                <include name="resources/install/linux/jvb.sh"/>
+                <include name="resources/install/jvb.sh"/>
                 <exclude name="**/macosx/**"/>
                 <exclude name="**/windows/**"/>
             </fileset>
         </copy>
-        <replace file="${debian.release}/resources/install/linux/jvb.sh"
+        <replace file="${debian.release}/resources/install/jvb.sh"
                  token="$SCRIPT_DIR/lib/native/linux">
             <replacevalue>/usr/lib/jni</replacevalue>
         </replace>
-        <replace file="${debian.release}/resources/install/linux-64/jvb.sh"
+        <replace file="${debian.release}/resources/install/jvb.sh"
                  token="$SCRIPT_DIR/lib/native/linux-64">
             <replacevalue>/usr/lib/jni</replacevalue>
         </replace>
@@ -257,9 +256,9 @@ override_dh_auto_clean:
 
 override_dh_install-arch:
 ifeq ($(DEB_HOST_ARCH),amd64)
-&#009;dh_install resources/install/linux-64/jvb.sh usr/share/jitsi-videobridge
+&#009;dh_install resources/install/jvb.sh usr/share/jitsi-videobridge
 else
-&#009;dh_install resources/install/linux/jvb.sh usr/share/jitsi-videobridge
+&#009;dh_install resources/install/jvb.sh usr/share/jitsi-videobridge
 endif
 &#009;chmod +x debian/jitsi-videobridge/usr/share/jitsi-videobridge/jvb.sh
 
