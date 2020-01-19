@@ -44,7 +44,7 @@
       </excludes>
     </fileSet>
     <fileSet>
-      <directory>${project.basedir}/resources/install/</directory>
+      <directory>${project.basedir}/resources/</directory>
       <outputDirectory>${file.separator}</outputDirectory>
       <fileMode>755</fileMode>
       <includes>
