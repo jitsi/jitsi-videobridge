@@ -5,7 +5,7 @@
 #export DEB_VERBOSE_ALL=true
 
 %:
-	dh $@ --with systemd
+	dh $@
 
 override_dh_auto_clean:
 	mvn -Dmaven.repo.local=${HOME}/.m2/repository clean
@@ -32,5 +32,4 @@ override_dh_installinit:
 	dh_installinit --noscripts
 
 override_dh_auto_install:
-	dh_systemd_enable || true
-	dh_systemd_start || true
+	# do nothing
