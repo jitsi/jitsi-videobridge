@@ -18,6 +18,7 @@ package org.jitsi.nlj.transform.node
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.srtp.AbstractSrtpTransformer
 import org.jitsi.nlj.stats.NodeStatsBlock
+import org.jitsi.srtp.SrtpErrorStatus
 
 class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
     /**
@@ -34,13 +35,18 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
 
     /**
      * Transforms a list of packets using [#transformer]
+     *
+     * We pass it as an arg (rather than referencing it from the object) so Kotlin
+     * knows it's non-null here.
      */
-    private fun transformList(packetInfos: List<PacketInfo>): List<PacketInfo> {
+    private fun transformList(packetInfos: List<PacketInfo>, transformer: AbstractSrtpTransformer<*>): List<PacketInfo> {
         val transformedPackets = mutableListOf<PacketInfo>()
         packetInfos.forEach { packetInfo ->
-            if (transformer?.transform(packetInfo) == true) {
+            val err = transformer.transform(packetInfo)
+            if (err == SrtpErrorStatus.OK) {
                 transformedPackets.add(packetInfo)
             } else {
+                countErrorStatus(err)
                 packetDiscarded(packetInfo)
             }
         }
@@ -67,12 +73,14 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
             synchronized(cachedPackets) {
                 if (cachedPackets.isNotEmpty()) {
                     cachedPackets.add(packetInfo)
-                    outPackets = transformList(cachedPackets)
+                    outPackets = transformList(cachedPackets, transformer)
                     cachedPackets.clear()
                 } else {
-                    outPackets = if (transformer.transform(packetInfo))
+                    val err = transformer.transform(packetInfo)
+                    outPackets = if (err == SrtpErrorStatus.OK)
                         listOf(packetInfo) else {
                         packetDiscarded(packetInfo)
+                        countErrorStatus(err)
                         emptyList()
                     }
                 }
@@ -90,11 +98,36 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
         }
     }
 
+    private var num_srtp_fail = 0
+    private var num_srtp_auth_fail = 0
+    private var num_srtp_replay_fail = 0
+    private var num_srtp_replay_old = 0
+    private var num_srtp_invalid_packet = 0
+
+    private fun countErrorStatus(err: SrtpErrorStatus) {
+        when (err) {
+            SrtpErrorStatus.FAIL -> num_srtp_fail++
+            SrtpErrorStatus.AUTH_FAIL -> num_srtp_auth_fail++
+            SrtpErrorStatus.REPLAY_FAIL -> num_srtp_replay_fail++
+            SrtpErrorStatus.REPLAY_OLD -> num_srtp_replay_old++
+            SrtpErrorStatus.INVALID_PACKET -> num_srtp_invalid_packet++
+        }
+    }
+
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
             addNumber("num_cached_packets", numCachedPackets)
-            val timeBetweenReceivedAndForwarded = firstPacketForwardedTimestamp - firstPacketReceivedTimestamp
-            addNumber("time_initial_hold_ms", timeBetweenReceivedAndForwarded)
+            if (firstPacketReceivedTimestamp != -1L && firstPacketForwardedTimestamp != -1L) {
+                val timeBetweenReceivedAndForwarded = firstPacketForwardedTimestamp - firstPacketReceivedTimestamp
+                addNumber("time_initial_hold_ms", timeBetweenReceivedAndForwarded)
+            } else {
+                addString("state", "hold_for_transformer")
+            }
+            addNumber("num_srtp_fail", num_srtp_fail)
+            addNumber("num_srtp_auth_fail", num_srtp_auth_fail)
+            addNumber("num_srtp_replay_fail", num_srtp_replay_fail)
+            addNumber("num_srtp_replay_old", num_srtp_replay_old)
+            addNumber("num_srtp_invalid_packet", num_srtp_invalid_packet)
         }
     }
 
