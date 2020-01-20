@@ -14,7 +14,7 @@
     <kotlin.version>1.3.61</kotlin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <smack.version>4.2.4-47d17fc</smack.version>
-    <jitsi.utils.version>1.0-32-g37aa1b3</jitsi.utils.version>
+    <jitsi.utils.version>1.0-33-g2ed4090</jitsi.utils.version>
     <jicoco.version>1.1-17-g0f9a752</jicoco.version>
   </properties>
   <dependencyManagement>
