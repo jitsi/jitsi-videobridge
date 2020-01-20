@@ -116,11 +116,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         {
             this.pinnedEndpoints = newPinnedEndpoints;
 
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Pinned "
-                    + Arrays.toString(pinnedEndpoints.toArray()));
-            }
+            logger.debug(() -> "Pinned "
+                + Arrays.toString(pinnedEndpoints.toArray()));
 
             firePropertyChange(PINNED_ENDPOINTS_PROPERTY_NAME,
                 oldPinnedEndpoints, pinnedEndpoints);
@@ -142,11 +139,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         {
             this.selectedEndpoints = newSelectedEndpoints;
 
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Selected "
-                    + Arrays.toString(selectedEndpoints.toArray()));
-            }
+            logger.debug(() -> "Selected "
+                + Arrays.toString(selectedEndpoints.toArray()));
 
             firePropertyChange(SELECTED_ENDPOINTS_PROPERTY_NAME,
                 oldSelectedEndpoints, selectedEndpoints);
