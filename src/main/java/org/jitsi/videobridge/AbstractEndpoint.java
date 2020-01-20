@@ -268,6 +268,10 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public void setDisplayName(String displayName)
     {
         this.displayName = displayName;
+        if (displayName != null)
+        {
+            logger.addContext("display_name", displayName);
+        }
     }
 
     /**
@@ -278,6 +282,10 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public void setStatsId(String value)
     {
         this.statsId = value;
+        if (value != null)
+        {
+            logger.addContext("stats_id", value);
+        }
     }
 
     /**
