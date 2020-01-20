@@ -268,10 +268,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public void setDisplayName(String displayName)
     {
         this.displayName = displayName;
-        if (displayName != null)
-        {
-            logger.addContext("display_name", displayName);
-        }
     }
 
     /**
