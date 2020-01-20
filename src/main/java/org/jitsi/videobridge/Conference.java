@@ -227,7 +227,7 @@ public class Conference
         }
         if (name != null)
         {
-            context.put("name", name.toString());
+            context.put("conf_name", name.toString());
         }
         logger = new LoggerImpl(Conference.class.getName(), minLevel, new LogContext(context));
         this.shim = new ConferenceShim(this, logger);
