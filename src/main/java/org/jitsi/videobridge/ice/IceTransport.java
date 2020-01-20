@@ -346,10 +346,7 @@ public class IceTransport
     {
         if (iceAgent.getState().isEstablished())
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Connection already established.");
-            }
+            logger.debug(() -> "Connection already established.");
             return;
         }
 
@@ -372,11 +369,8 @@ public class IceTransport
                 = transportPacketExtension.getChildExtensionsOfType(
                         CandidatePacketExtension.class);
         if (iceAgentStateIsRunning && remoteCandidates.isEmpty()) {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Ignoring transport extension with no candidates, "
-                        + "the Agent is already running.");
-            }
+            logger.debug(() -> "Ignoring transport extension with no candidates, "
+                    + "the Agent is already running.");
             return;
         }
 
@@ -420,11 +414,8 @@ public class IceTransport
         }
         else
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug(" Not starting ICE, no ufrag and pwd yet. " +
-                        transportPacketExtension.toXML());
-            }
+            logger.debug(() -> " Not starting ICE, no ufrag and pwd yet. " +
+                    transportPacketExtension.toXML());
         }
 
     }
