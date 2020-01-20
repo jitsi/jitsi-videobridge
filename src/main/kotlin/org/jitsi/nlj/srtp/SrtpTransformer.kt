@@ -27,6 +27,7 @@ import org.jitsi.srtp.BaseSrtpCryptoContext
 import org.jitsi.srtp.SrtcpCryptoContext
 import org.jitsi.srtp.SrtpContextFactory
 import org.jitsi.srtp.SrtpCryptoContext
+import org.jitsi.srtp.SrtpErrorStatus
 import org.jitsi.utils.logging2.Logger
 
 /**
@@ -77,13 +78,13 @@ abstract class AbstractSrtpTransformer<CryptoContextType : BaseSrtpCryptoContext
     /**
      * Does the actual transformation of a packet, with a specific context.
      */
-    protected abstract fun transform(packetInfo: PacketInfo, context: CryptoContextType): Boolean
+    protected abstract fun transform(packetInfo: PacketInfo, context: CryptoContextType): SrtpErrorStatus
 
     /**
-     * Transforms a packet, returns [false] on failure.
+     * Transforms a packet, returns [SrtpErrorStatus.OK] on success or another [SrtpErrorStatus] on failure.
      */
-    fun transform(packetInfo: PacketInfo): Boolean {
-        val context = getContext(packetInfo) ?: return false
+    fun transform(packetInfo: PacketInfo): SrtpErrorStatus {
+        val context = getContext(packetInfo) ?: return SrtpErrorStatus.FAIL
 
         return transform(packetInfo, context)
     }
@@ -136,7 +137,7 @@ class SrtcpDecryptTransformer(
     contextFactory: SrtpContextFactory,
     parentLogger: Logger
 ) : SrtcpTransformer(contextFactory, parentLogger.createChildLogger(SrtcpDecryptTransformer::class)) {
-    override fun transform(packetInfo: PacketInfo, context: SrtcpCryptoContext): Boolean {
+    override fun transform(packetInfo: PacketInfo, context: SrtcpCryptoContext): SrtpErrorStatus {
         return context.reverseTransformPacket(packetInfo.packet).apply {
             packetInfo.resetPayloadVerification()
         }
@@ -152,17 +153,17 @@ class SrtcpEncryptTransformer(
     parentLogger: Logger
 ) : SrtcpTransformer(contextFactory, parentLogger.createChildLogger(SrtcpEncryptTransformer::class)) {
 
-    override fun transform(packetInfo: PacketInfo, context: SrtcpCryptoContext): Boolean {
-        context.transformPacket(packetInfo.packet)
-        // We convert the encrypted RTCP packet to an UnparsedPacket because
-        // we don't want any of the RTCP fields trying to parse the data
-        // (since it's now encrypted)
-        // TODO: better way we can do this?  it's not typically a problem
-        // in the pipeline's usage, but it's a bit of a landmine since by
-        // accessing the packet it can try and parse the fields.
-        packetInfo.packet = packetInfo.packet.toOtherType(::UnparsedPacket)
-        packetInfo.resetPayloadVerification()
-        return true
+    override fun transform(packetInfo: PacketInfo, context: SrtcpCryptoContext): SrtpErrorStatus {
+        return context.transformPacket(packetInfo.packet).apply {
+            // We convert the encrypted RTCP packet to an UnparsedPacket because
+            // we don't want any of the RTCP fields trying to parse the data
+            // (since it's now encrypted)
+            // TODO: better way we can do this?  it's not typically a problem
+            // in the pipeline's usage, but it's a bit of a landmine since by
+            // accessing the packet it can try and parse the fields.
+            packetInfo.packet = packetInfo.packet.toOtherType(::UnparsedPacket)
+            packetInfo.resetPayloadVerification()
+        }
     }
 }
 
@@ -175,7 +176,7 @@ class SrtpDecryptTransformer(
     parentLogger: Logger
 ) : SrtpTransformer(contextFactory, parentLogger.createChildLogger(SrtpDecryptTransformer::class)) {
 
-    override fun transform(packetInfo: PacketInfo, context: SrtpCryptoContext): Boolean {
+    override fun transform(packetInfo: PacketInfo, context: SrtpCryptoContext): SrtpErrorStatus {
         // For silence packets we update the ROC (if authentication passes), but don't decrypt
         return context.reverseTransformPacket(packetInfo.packetAs(), packetInfo.shouldDiscard).apply {
             packetInfo.resetPayloadVerification()
@@ -191,7 +192,7 @@ class SrtpEncryptTransformer(
     parentLogger: Logger
 ) : SrtpTransformer(contextFactory, parentLogger.createChildLogger(SrtpEncryptTransformer::class)) {
 
-    override fun transform(packetInfo: PacketInfo, context: SrtpCryptoContext): Boolean {
+    override fun transform(packetInfo: PacketInfo, context: SrtpCryptoContext): SrtpErrorStatus {
         return context.transformPacket(packetInfo.packetAs()).apply {
             packetInfo.packet = packetInfo.packet.toOtherType(::UnparsedPacket)
             packetInfo.resetPayloadVerification()
