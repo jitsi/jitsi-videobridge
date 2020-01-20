@@ -31,6 +31,7 @@ import org.jitsi.rtp.extensions.bytearray.toHex
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacketBuilder
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.TransportLayerRtcpFbPacket
+import org.jitsi.srtp.SrtpErrorStatus
 
 internal class SrtpEncryptTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -46,7 +47,7 @@ internal class SrtpEncryptTest : ShouldSpec() {
         "encrypting an RTCP packet" {
             "created from a buffer" {
                 val packetInfo = PacketInfo(SrtpSample.outgoingUnencryptedRtcpPacket.clone())
-                srtpTransformers.srtcpEncryptTransformer.transform(packetInfo) shouldBe true
+                srtpTransformers.srtcpEncryptTransformer.transform(packetInfo) shouldBe SrtpErrorStatus.OK
 
                 val encryptedPacket = packetInfo.packet
                 should("encrypt the data correctly") {
@@ -60,7 +61,7 @@ internal class SrtpEncryptTest : ShouldSpec() {
                     missingSeqNums = (10..20 step 2).toSortedSet()
                 ).build()
                 val packetInfo = PacketInfo(originalPacket.clone())
-                srtpTransformers.srtcpEncryptTransformer.transform(packetInfo) shouldBe true
+                srtpTransformers.srtcpEncryptTransformer.transform(packetInfo) shouldBe SrtpErrorStatus.OK
 
                 val encryptedPacket = packetInfo.packet
                 should("result in all header fields being correct") {
@@ -73,7 +74,7 @@ internal class SrtpEncryptTest : ShouldSpec() {
 
         "encrypting an RTP packet" {
             val packetInfo = PacketInfo(SrtpSample.outgoingUnencryptedRtpPacket.clone())
-            srtpTransformers.srtpEncryptTransformer.transform(packetInfo) shouldBe true
+            srtpTransformers.srtpEncryptTransformer.transform(packetInfo) shouldBe SrtpErrorStatus.OK
 
             val encryptedPacket = packetInfo.packet
             should("encrypt the data correctly") {

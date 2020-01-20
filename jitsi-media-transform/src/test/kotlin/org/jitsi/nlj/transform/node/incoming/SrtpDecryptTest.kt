@@ -26,6 +26,7 @@ import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.resources.srtp_samples.SrtpSample
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.test_utils.matchers.ByteArrayBuffer.haveSameContentAs
+import org.jitsi.srtp.SrtpErrorStatus
 
 internal class SrtpDecryptTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -40,7 +41,7 @@ internal class SrtpDecryptTest : ShouldSpec() {
 
         "decrypting an RTCP packet" {
             val packetInfo = PacketInfo(SrtpSample.incomingEncryptedRtcpPacket.clone())
-            srtpTransformers.srtcpDecryptTransformer.transform(packetInfo) shouldBe true
+            srtpTransformers.srtcpDecryptTransformer.transform(packetInfo) shouldBe SrtpErrorStatus.OK
             val decryptedPacket = packetInfo.packet
 
             should("decrypt the data correctly") {
@@ -51,7 +52,7 @@ internal class SrtpDecryptTest : ShouldSpec() {
 
         "decrypting an RTP packet" {
             val packetInfo = PacketInfo(SrtpSample.incomingEncryptedRtpPacket.clone())
-            srtpTransformers.srtpDecryptTransformer.transform(packetInfo) shouldBe true
+            srtpTransformers.srtpDecryptTransformer.transform(packetInfo) shouldBe SrtpErrorStatus.OK
 
             val decryptedPacket = packetInfo.packet
             should("decrypt the data correctly") {
