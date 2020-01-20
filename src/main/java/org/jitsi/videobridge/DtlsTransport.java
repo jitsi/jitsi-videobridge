@@ -127,8 +127,7 @@ public class DtlsTransport extends IceTransport
 
         dtlsStack.onHandshakeComplete((chosenSrtpProfile, tlsRole, keyingMaterial) -> {
             dtlsHandshakeComplete = true;
-            logger.info(logPrefix +
-                    "DTLS handshake complete. Got SRTP profile " +
+            logger.info("DTLS handshake complete. Got SRTP profile " +
                     chosenSrtpProfile);
             endpoint.setSrtpInformation(chosenSrtpProfile, tlsRole, keyingMaterial);
             dtlsConnectedSubscribers.forEach(Runnable::run);
@@ -164,8 +163,7 @@ public class DtlsTransport extends IceTransport
             }
             else
             {
-                logger.info(logPrefix +
-                        "Ignoring empty DtlsFingerprint extension: "
+                logger.info("Ignoring empty DtlsFingerprint extension: "
                                 + transportPacketExtension.toXML());
             }
         });
@@ -174,20 +172,17 @@ public class DtlsTransport extends IceTransport
             String setup = fingerprintExtensions.get(0).getSetup();
             if ("active".equalsIgnoreCase(setup))
             {
-                logger.info(logPrefix +
-                    "The remote side is acting as DTLS client, we'll act as server");
+                logger.info("The remote side is acting as DTLS client, we'll act as server");
                 dtlsStack.actAsServer();
             }
             else if ("passive".equalsIgnoreCase(setup))
             {
-                logger.info(logPrefix +
-                    "The remote side is acting as DTLS server, we'll act as client");
+                logger.info("The remote side is acting as DTLS server, we'll act as client");
                 dtlsStack.actAsClient();
             }
             else if (!StringUtils.isNullOrEmpty(setup))
             {
-                logger.error(logPrefix +
-                    "The remote side sent an unrecognized DTLS setup value: " +
+                logger.error("The remote side sent an unrecognized DTLS setup value: " +
                         setup);
             }
         }
@@ -209,8 +204,7 @@ public class DtlsTransport extends IceTransport
                 // hack(george) Jigasi sends a sha-1 dtls fingerprint without a
                 // setup attribute and it assumes a server role for the bridge.
 
-                logger.info(logPrefix +
-                    "Assume that the remote side is Jigasi, we'll act as server");
+                logger.info("Assume that the remote side is Jigasi, we'll act as server");
                 dtlsStack.actAsServer();
             }
         }
@@ -423,12 +417,12 @@ public class DtlsTransport extends IceTransport
                 }
                 catch (SocketClosedException e)
                 {
-                    logger.info(logPrefix + "Socket closed, stopping reader.");
+                    logger.info("Socket closed, stopping reader.");
                     break;
                 }
                 catch (IOException e)
                 {
-                    logger.warn(logPrefix + "Stopping reader: ", e);
+                    logger.warn("Stopping reader: ", e);
                     break;
                 }
             }
@@ -448,21 +442,19 @@ public class DtlsTransport extends IceTransport
         installIncomingPacketReader(socket);
 
         packetSender.socket = socket;
-        logger.info(logPrefix + "Starting DTLS.");
+        logger.info("Starting DTLS.");
         TaskPools.IO_POOL.submit(() -> {
             try
             {
                 if (dtlsStack.getRole() == null)
                 {
-                    logger.warn(logPrefix +
-                            "Starting the DTLS stack before it knows its role");
+                    logger.warn("Starting the DTLS stack before it knows its role");
                 }
                 dtlsStack.start();
             }
             catch (Throwable e)
             {
-                logger.error(logPrefix +
-                        "Error during DTLS negotiation: " + e.toString() +
+                logger.error("Error during DTLS negotiation: " + e.toString() +
                         ", closing this transport manager");
                 close();
             }
@@ -603,8 +595,7 @@ public class DtlsTransport extends IceTransport
                 }
                 catch (IOException e)
                 {
-                    logger.error(logPrefix +
-                            "Error sending packet: " + e.toString());
+                    logger.error("Error sending packet: " + e.toString());
                     throw new RuntimeException(e);
                 }
             }
