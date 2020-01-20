@@ -116,11 +116,6 @@ public class IceTransport
     protected final Logger logger;
 
     /**
-     * A string to add to log messages to identify the instance.
-     */
-    protected final String logPrefix;
-
-    /**
      * A flag which is raised if ICE has run and failed.
      */
     private boolean iceFailed = false;
@@ -163,13 +158,7 @@ public class IceTransport
         iceComponent = iceStream.getComponent(Component.RTP);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
 
-        //TODO(brian): this should be replaced by passing a log context
-        // when creating the child logger, but we don't have this
-        // value yet when creating the child logger, so we need to
-        // change the logger to allow adding context after creation,
-        // then we can get rid of the need for logPrefix here
-        this.logPrefix
-                = "[local_ufrag=" + iceAgent.getLocalUfrag() + "] ";
+        logger.addContext("local_ufrag", iceAgent.getLocalUfrag());
 
         EventAdmin eventAdmin = conference.getEventAdmin();
         if (eventAdmin != null)
@@ -357,10 +346,7 @@ public class IceTransport
     {
         if (iceAgent.getState().isEstablished())
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug(logPrefix + "Connection already established.");
-            }
+            logger.debug(() -> "Connection already established.");
             return;
         }
 
@@ -383,12 +369,8 @@ public class IceTransport
                 = transportPacketExtension.getChildExtensionsOfType(
                         CandidatePacketExtension.class);
         if (iceAgentStateIsRunning && remoteCandidates.isEmpty()) {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug(logPrefix +
-                        "Ignoring transport extension with no candidates, "
-                        + "the Agent is already running.");
-            }
+            logger.debug(() -> "Ignoring transport extension with no candidates, "
+                    + "the Agent is already running.");
             return;
         }
 
@@ -418,8 +400,7 @@ public class IceTransport
             // until we have at least one remote candidate per ICE Component.
             if (iceComponent.getRemoteCandidateCount() >= 1)
             {
-                logger.info(logPrefix +
-                        "Starting the agent with remote candidates.");
+                logger.info("Starting the agent with remote candidates.");
                 iceAgent.startConnectivityEstablishment();
             }
         }
@@ -428,18 +409,13 @@ public class IceTransport
         {
             // We don't have any remote candidates, but we already know the
             // remote ufrag and password, so we can start ICE.
-            logger.info(logPrefix +
-                    "Starting the Agent without remote candidates. ");
+            logger.info("Starting the Agent without remote candidates. ");
             iceAgent.startConnectivityEstablishment();
         }
         else
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug(logPrefix +
-                        " Not starting ICE, no ufrag and pwd yet. " +
-                        transportPacketExtension.toXML());
-            }
+            logger.debug(() -> " Not starting ICE, no ufrag and pwd yet. " +
+                    transportPacketExtension.toXML());
         }
 
     }
@@ -631,7 +607,7 @@ public class IceTransport
         IceProcessingState oldState = (IceProcessingState) ev.getOldValue();
         IceProcessingState newState = (IceProcessingState) ev.getNewValue();
 
-        logger.info(logPrefix + "ICE state changed old=" +
+        logger.info("ICE state changed old=" +
                 oldState + " new=" + newState);
 
         // We should be using newState.isEstablished() here, but we see
@@ -670,7 +646,7 @@ public class IceTransport
      */
     protected void onIceFailed()
     {
-        logger.warn(logPrefix + "ICE failed!");
+        logger.warn("ICE failed!");
     }
 
     /**
