@@ -23,24 +23,6 @@
         <available file="${dpkg-scanpackages}"/>
     </condition>
 
-    <target name="deb" depends="deb-32,deb-64"/>
-    <target name="deb-32">
-        <antcall target="make-deb">
-            <param name="arch" value="i386"/>
-            <param name="system-arch" value="linux-x86"/>
-            <param name="include-dir" value="linux"/>
-            <param name="exclude-dir" value="linux-64"/>
-        </antcall>
-    </target>
-    <target name="deb-64">
-        <antcall target="make-deb">
-            <param name="arch" value="amd64"/>
-            <param name="system-arch" value="linux-x64"/>
-            <param name="include-dir" value="linux-64"/>
-            <param name="exclude-dir" value="linux"/>
-        </antcall>
-    </target>
-
     <!-- Outputs a warning notifying the user that a dpkg tool is missing. -->
     <target name="dpkg-build-warning" unless="dpkg.build.present">
         <echo message="Either the ${dpkg-buildpackage} tool or the debhelper tools was not found on your system."/>
@@ -80,7 +62,7 @@
     </target>
 
     <!-- Builds the debian package. -->
-    <target name="make-deb"
+    <target name="deb"
             depends="copy-runtime-dependencies-from-maven,make,dpkg-build-warning,deb-bump-version">
 
         <copy todir="${debian.dir}" includeEmptyDirs="Yes">
@@ -96,9 +78,6 @@
               overwrite="true" includeEmptyDirs="No">
             <fileset dir="lib/">
                 <exclude name="logging.properties"/>
-                <exclude name="native/macos*/*"/>
-                <exclude name="native/windows*/*"/>
-                <exclude name="native/${exclude-dir}/*"/>
             </fileset>
         </copy>
         <copy file="jitsi-videobridge.jar"
@@ -107,7 +86,7 @@
         <copy file="lib/logging.properties"
               todir="${debian.dir}/etc/jitsi/videobridge"
               overwrite="true"/>
-        <copy file="resources/install/${include-dir}/jvb.sh"
+        <copy file="resources/install/jvb.sh"
               todir="${debian.dir}/usr/share/jitsi-videobridge"
               overwrite="true"/>
         <chmod file="${debian.dir}/usr/share/jitsi-videobridge/jvb.sh"
@@ -161,7 +140,6 @@
             <arg value="-uc"/>
             <arg value="-b"/>
             <arg value="-d"/>
-            <arg value="-a${arch}"/>
         </exec>
 
         <!-- clean up the build folder -->
@@ -217,17 +195,14 @@
                 <include name="lib/logging.properties"/>
                 <include name="build.xml"/>
                 <include name="resources/install/build-debian.xml"/>
-                <include name="resources/install/linux-64/jvb.sh"/>
-                <include name="resources/install/linux/jvb.sh"/>
-                <exclude name="**/macosx/**"/>
-                <exclude name="**/windows/**"/>
+                <include name="resources/install/jvb.sh"/>
             </fileset>
         </copy>
-        <replace file="${debian.release}/resources/install/linux/jvb.sh"
+        <replace file="${debian.release}/resources/install/jvb.sh"
                  token="$SCRIPT_DIR/lib/native/linux">
             <replacevalue>/usr/lib/jni</replacevalue>
         </replace>
-        <replace file="${debian.release}/resources/install/linux-64/jvb.sh"
+        <replace file="${debian.release}/resources/install/jvb.sh"
                  token="$SCRIPT_DIR/lib/native/linux-64">
             <replacevalue>/usr/lib/jni</replacevalue>
         </replace>
@@ -257,9 +232,9 @@ override_dh_auto_clean:
 
 override_dh_install-arch:
 ifeq ($(DEB_HOST_ARCH),amd64)
-&#009;dh_install resources/install/linux-64/jvb.sh usr/share/jitsi-videobridge
+&#009;dh_install resources/install/jvb.sh usr/share/jitsi-videobridge
 else
-&#009;dh_install resources/install/linux/jvb.sh usr/share/jitsi-videobridge
+&#009;dh_install resources/install/jvb.sh usr/share/jitsi-videobridge
 endif
 &#009;chmod +x debian/jitsi-videobridge/usr/share/jitsi-videobridge/jvb.sh
 
