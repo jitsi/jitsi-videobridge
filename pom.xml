@@ -16,7 +16,33 @@
     <smack.version>4.2.4-47d17fc</smack.version>
     <jitsi.utils.version>1.0-33-g2ed4090</jitsi.utils.version>
     <jicoco.version>1.1-17-g0f9a752</jicoco.version>
+    <maven-shade-plugin.version>3.2.1</maven-shade-plugin.version>
   </properties>
+
+  <profiles>
+    <profile>
+      <!-- Building a fat jar is disabled by default. To build it
+           pass '-P buildFatJar'
+      -->
+      <id>buildFatJar</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>${maven-shade-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>build-fat-jar</id>
+                <phase>package</phase>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
   <dependencyManagement>
     <dependencies>
     </dependencies>
@@ -260,31 +286,65 @@
   </dependencies>
   <build>
     <plugins>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-assembly-plugin</artifactId>
-          <version>3.2.0</version>
-          <executions>
-            <execution>
-              <id>assemble-archive</id>
-              <phase>package</phase>
-              <goals>
-                <goal>single</goal>
-              </goals>
-              <configuration>
-                <appendAssemblyId>true</appendAssemblyId>
-                <descriptors>
-                  <descriptor>src/assembly/archive.xml</descriptor>
-                </descriptors>
-                <skipAssembly>${assembly.skipAssembly}</skipAssembly>
-                <descriptorRefs>
-                  <descriptorRef>jar-with-dependencies</descriptorRef>
-                </descriptorRefs>
-              </configuration>
-            </execution>
-          </executions>
-
-        </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+         <version>3.2.0</version>
+         <executions>
+           <execution>
+             <id>assemble-archive</id>
+             <phase>package</phase>
+             <goals>
+               <goal>single</goal>
+             </goals>
+             <configuration>
+               <appendAssemblyId>true</appendAssemblyId>
+               <descriptors>
+                 <descriptor>src/assembly/archive.xml</descriptor>
+               </descriptors>
+               <skipAssembly>${assembly.skipAssembly}</skipAssembly>
+             </configuration>
+           </execution>
+         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>${maven-shade-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>build-fat-jar</id>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <!-- Building a fat jar is disabled by default.  See the note
+                 on the buildFatJar profile at the top of this file
+            -->
+            <phase>none</phase>
+            <configuration>
+              <finalName>${project.name}-${project.version}-jar-with-dependencies</finalName>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>reference.conf</resource>
+                </transformer>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <!-- Exclude signatures as they don't work correctly with a
+                       fat jar.
+                  -->
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
