@@ -173,7 +173,7 @@ public class VP8AdaptiveTrackProjectionTest
             }
             boolean accepted = context.accept(packetInfo, packet.getTemporalLayerIndex(), targetIndex);
 
-            int oldestValidSeq = RtpUtils.applySequenceNumberDelta(latestSeq, -VP8FrameMap.FRAME_MAP_SIZE);
+            int oldestValidSeq = RtpUtils.applySequenceNumberDelta(latestSeq, -((VP8FrameMap.FRAME_MAP_SIZE - 1) * generator.packetsPerFrame));
 
             if (RtpUtils.isOlderSequenceNumberThan(origSeq, oldestValidSeq) && !accepted)
             {
@@ -254,7 +254,7 @@ public class VP8AdaptiveTrackProjectionTest
         throws RewriteException
     {
         /* Seeds that have triggered problems in the past, plus a random one. */
-        long[] seeds = { 1576267371838L, 1578347926155L, System.currentTimeMillis()};
+        long[] seeds = { 1576267371838L, 1578347926155L, 1579620018479L, System.currentTimeMillis()};
 
         for (long seed: seeds)
         {
@@ -832,8 +832,8 @@ public class VP8AdaptiveTrackProjectionTest
             long seed = System.currentTimeMillis();
             Random random = new Random(seed);
 
-            seq = random.nextInt() % 0x10000;
-            ts = random.nextLong() % 0x100000000L;
+            seq = /* random.nextInt() % 0x10000 */ 0;
+            ts = /* random.nextLong() % 0x100000000L */ 0;
 
             picId = 0;
             tl0picidx = 0;
