@@ -46,7 +46,7 @@ mvn dependency:resolve
 mvn versions:set -DnewVersion="${VERSION}"
 
 # now build the deb
-dpkg-buildpackage -tc -us -uc -b -d
+dpkg-buildpackage -tc -us -uc -A
 
 # clean the current changes as dch had changed the change log
 git checkout debian/changelog
