@@ -9,5 +9,6 @@
 
   <modules>
     <module>jitsi-videobridge</module>
+    <module>jitsi-media-transform</module>
   </modules>
 </project>
