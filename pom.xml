@@ -454,6 +454,9 @@
         </dependencies>
       </plugin>
       <plugin>
+        <!-- Instructs the plugin to add the current package version in the jar manifest
+        So we can access it runtime with: .class.getPackage().getImplementationVersion()
+         -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.2.0</version>
@@ -461,7 +464,6 @@
           <archive>
             <manifest>
               <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-              <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
             </manifest>
           </archive>
         </configuration>
