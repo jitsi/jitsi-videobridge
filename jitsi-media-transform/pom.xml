@@ -297,5 +297,4 @@
             <url>https://github.com/jitsi/jitsi-maven-repository/raw/master/snapshots/</url>
         </repository>
     </repositories>
-
 </project>
