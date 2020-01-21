@@ -85,14 +85,17 @@ public class VP8FrameMap
         int pictureId = packet.getPictureId();
 
         VP8Frame frame = frameHistory.get(pictureId);
-        if (frame != null) {
+        if (frame != null)
+        {
             return doFrameInsert(frame, packet);
         }
 
         frame = new VP8Frame(packet);
 
         if (!frameHistory.insert(pictureId, frame))
+        {
             return null;
+        }
 
         return new FrameInsertionResult(frame, true);
     }
@@ -178,8 +181,6 @@ public class VP8FrameMap
         }
 
         PictureIdIndexTracker indexTracker = new PictureIdIndexTracker();
-
-        /* TODO: equivalent of rfc3711 tracker */
 
         /**
          * Gets a packet with a given VP8 picture ID from the cache.
