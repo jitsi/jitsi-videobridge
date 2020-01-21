@@ -10,5 +10,6 @@
   <modules>
     <module>jitsi-videobridge</module>
     <module>jitsi-media-transform</module>
+    <module>rtp</module>
   </modules>
 </project>
