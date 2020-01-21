@@ -175,16 +175,6 @@
       <artifactId>jersey-media-json-jackson</artifactId>
       <version>2.29</version>
     </dependency>
-    <!-- jersey relies on this version of javassist or we get hk2
-    errors, but other libs (Powermock, at this time) also rely on
-    it but an older version, and that version is getting selected
-    which breaks jersey, so we explicitly depend on this here to
-    force the version -->
-    <dependency>
-      <groupId>org.javassist</groupId>
-      <artifactId>javassist</artifactId>
-      <version>3.22.0-CR2</version>
-    </dependency>
     <dependency>
       <groupId>org.reflections</groupId>
       <artifactId>reflections</artifactId>
@@ -462,6 +452,21 @@
           </dependency>
           <!-- additional 3rd party ruleset(s) can be specified here -->
         </dependencies>
+      </plugin>
+      <plugin>
+        <!-- Instructs the plugin to add the current package version in the jar manifest
+        So we can access it runtime with: .class.getPackage().getImplementationVersion()
+         -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.2.0</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+            </manifest>
+          </archive>
+        </configuration>
       </plugin>
     </plugins>
   </build>

@@ -3,7 +3,7 @@ Section: net
 Priority: extra
 Maintainer: Jitsi Team <dev@jitsi.org>
 Uploaders: Emil Ivov <emcho@jitsi.org>, Damian Minkov <damencho@jitsi.org>
-Build-Depends: debhelper (>= 9), dh-systemd
+Build-Depends: debhelper (>= 9), dh-systemd, openjdk-8-jre-headless | openjdk-11-jre-headless, maven
 Standards-Version: 3.9.3
 Homepage: https://jitsi.org/videobridge
 

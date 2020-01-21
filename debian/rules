@@ -1,0 +1,35 @@
+#!/usr/bin/make -f
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+#export DEB_VERBOSE_ALL=true
+
+%:
+	dh $@
+
+override_dh_auto_clean:
+	mvn -Dmaven.repo.local=${HOME}/.m2/repository clean
+
+override_dh_auto_configure:
+	# do nothing
+
+override_dh_auto_test:
+	# do nothing
+
+override_dh_auto_build:
+	mvn -Dmaven.repo.local=${HOME}/.m2/repository -DskipTests -Dassembly.skipAssembly=true package
+	mvn -Dmaven.repo.local=${HOME}/.m2/repository dependency:copy-dependencies -DincludeScope=runtime
+
+override_dh_install:
+	mkdir debian/tmp
+	cp config/logrotate debian/tmp/jitsi-videobridge
+	cp config/log4j2.xml debian/tmp/
+	sed -i "s/logs/\/var\/log\/jitsi/g" debian/tmp/log4j2.xml
+	cp target/jitsi-videobridge*.jar debian/tmp/jitsi-videobridge.jar
+	dh_install
+
+override_dh_installinit:
+	dh_installinit --noscripts
+
+override_dh_auto_install:
+	# do nothing
