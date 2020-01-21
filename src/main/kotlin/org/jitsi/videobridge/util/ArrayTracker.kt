@@ -29,7 +29,7 @@ open class ArrayTracker<T>(
     val size: Int
 ) {
     private val cache: Array<Container> = Array(size) { Container() }
-    protected val syncRoot = Any()
+
     /**
      * The index in [cache] where the item with the highest index is stored.
      */
