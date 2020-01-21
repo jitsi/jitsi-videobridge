@@ -52,8 +52,6 @@ public class VP8FrameMap
     /** Find a frame in the frame map, based on a packet. */
     public synchronized VP8Frame findFrame(@NotNull Vp8Packet packet)
     {
-        long timestamp = packet.getTimestamp();
-
         return frameHistory.get(packet.getPictureId());
     }
 
@@ -213,7 +211,7 @@ public class VP8FrameMap
             {
                 return null;
             }
-           return c.getItem();
+            return c.getItem();
         }
 
         public VP8Frame findAfter(VP8Frame frame, Predicate<VP8Frame> pred)
