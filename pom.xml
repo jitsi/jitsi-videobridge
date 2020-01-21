@@ -22,7 +22,7 @@
   <profiles>
     <profile>
       <!-- Building a fat jar is disabled by default. To build it
-           pass '-P buildFarJar
+           pass '-P buildFatJar
       -->
       <id>buildFatJar</id>
       <build>
