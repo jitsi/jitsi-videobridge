@@ -98,7 +98,7 @@ open class ArrayTracker<T>(
 
     /**
      * Gets an item from the cache with a given index. Returns 'null' if there is no item with this index in the cache.
-     * The item is wrapped in a [Container].
+     * The item is wrapped in a [Container].  [index] is a monotonically-increasing value specified by the caller.
      */
     fun getContainer(index: Int): Container? {
         if (head == -1) {
