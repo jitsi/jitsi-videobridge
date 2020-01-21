@@ -116,7 +116,7 @@ open class ArrayTracker<T>(
         }
 
         val searchStartIndex = max(index + 1, lastIndex - size)
-        val indexRange = searchStartIndex .. lastIndex
+        val indexRange = searchStartIndex..lastIndex
         for (i in 0 until size) {
             val position = (searchStartIndex + i) floorMod size
             if (cache[position].index in indexRange) {
@@ -173,13 +173,12 @@ open class ArrayTracker<T>(
     /**
      * Flush entries between oldHead and newHead (non-inclusively)
      */
-    private fun flushBetween(oldHead: Int, newHead: Int)
-    {
-        if (newHead == oldHead + 1 || (oldHead == size -1 && newHead == 0))
+    private fun flushBetween(oldHead: Int, newHead: Int) {
+        if (newHead == oldHead + 1 || (oldHead == size - 1 && newHead == 0))
             return
         if (oldHead < newHead) {
-            for (i in oldHead + 1 .. newHead - 1) {
-                with (cache[i]) {
+            for (i in oldHead + 1..newHead - 1) {
+                with(cache[i]) {
                     index = -1
                     item?.let { numTracked--; discardItem(it) }
                     item = null
