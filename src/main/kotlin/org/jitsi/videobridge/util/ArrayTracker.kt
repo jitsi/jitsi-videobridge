@@ -38,6 +38,9 @@ open class ArrayTracker<T>(
     protected val lastIndex: Int
         get() = if (head == -1) -1 else cache[head].index
 
+    protected var firstIndex: Int = -1
+        private set
+
     val empty: Boolean
         get() = (head == -1)
 
@@ -61,10 +64,18 @@ open class ArrayTracker<T>(
             diff < 0 -> (head + diff) floorMod size
             else -> {
                 val newHead = (head + diff) floorMod size
-                flushBetween(head, newHead)
+                if (diff >= size) {
+                    flush()
+                } else {
+                    flushBetween(head, newHead)
+                }
                 head = newHead
                 head
             }
+        }
+
+        if (firstIndex == -1 || firstIndex > index) {
+            firstIndex = index
         }
 
         cache[position].item?.let { numTracked--; discardItem(it) }
@@ -115,11 +126,12 @@ open class ArrayTracker<T>(
             return null
         }
 
-        val searchStartIndex = max(index + 1, lastIndex - size)
-        val indexRange = searchStartIndex..lastIndex
-        for (i in 0 until size) {
-            val position = (searchStartIndex + i) floorMod size
-            if (cache[position].index in indexRange) {
+        val searchStartIndex = max(index + 1, max(lastIndex - size, firstIndex))
+
+        for (i in searchStartIndex..lastIndex) {
+            val iDiff = i - cache[head].index
+            val position = (head + iDiff) floorMod size
+            if (cache[position].index == i) {
                 // We maintain the invariant [index==-1 iff item==null]
                 if (predicate(cache[position].item!!)) {
                     return cache[position]
@@ -142,10 +154,12 @@ open class ArrayTracker<T>(
         }
 
         val searchStartIndex = min(index - 1, lastIndex)
-        val indexRange = searchStartIndex downTo max(lastIndex - size, 0)
-        for (i in 0 until size) {
-            val position = (searchStartIndex - i) floorMod size
-            if (cache[position].index in indexRange) {
+        val searchEndIndex = max(lastIndex - size, firstIndex)
+
+        for (i in searchStartIndex downTo searchEndIndex) {
+            val iDiff = i - cache[head].index
+            val position = (head + iDiff) floorMod size
+            if (cache[position].index == i) {
                 // We maintain the invariant [index==-1 iff item==null]
                 if (predicate(cache[position].item!!)) {
                     return cache[position]
@@ -174,10 +188,15 @@ open class ArrayTracker<T>(
      * Flush entries between oldHead and newHead (non-inclusively)
      */
     private fun flushBetween(oldHead: Int, newHead: Int) {
-        if (newHead == oldHead + 1 || (oldHead == size - 1 && newHead == 0))
+        if (newHead == (oldHead + 1) floorMod size)
             return
-        if (oldHead < newHead) {
-            for (i in oldHead + 1..newHead - 1) {
+        val ranges = if (oldHead < newHead) {
+            setOf(oldHead + 1..newHead - 1)
+        } else {
+            setOf(oldHead + 1..size - 1, 0..newHead - 1)
+        }
+        for (range in ranges) {
+            for (i in range) {
                 with(cache[i]) {
                     index = -1
                     item?.let { numTracked--; discardItem(it) }
