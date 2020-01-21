@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>rtp</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>${rtp.version}</version>
 
     <properties>
         <kotlin.version>1.3.61</kotlin.version>
