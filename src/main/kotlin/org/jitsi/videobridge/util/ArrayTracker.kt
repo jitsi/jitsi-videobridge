@@ -35,9 +35,15 @@ open class ArrayTracker<T>(
      */
     private var head = -1
 
+    /**
+     * The numerically highest index value seen, or -1.
+     */
     protected val lastIndex: Int
         get() = if (head == -1) -1 else cache[head].index
 
+    /**
+     * The numerically lowest index value seen, or -1.
+     */
     protected var firstIndex: Int = -1
         private set
 
@@ -48,7 +54,7 @@ open class ArrayTracker<T>(
         private set
 
     /**
-     * Inserts an item with a specific index in the cache. Stores a copy.
+     * Inserts an item with a specific index in the tracker.
      */
     fun insertItem(item: T, index: Int): Boolean {
         val diff = if (head == -1) -1 else index - cache[head].index
@@ -92,8 +98,7 @@ open class ArrayTracker<T>(
 
     /**
      * Gets an item from the cache with a given index. Returns 'null' if there is no item with this index in the cache.
-     * The item is wrapped in a [Container] to allow access to the time it was added to the cache, and we provide a
-     * copy.
+     * The item is wrapped in a [Container].
      */
     fun getContainer(index: Int): Container? {
         if (head == -1) {
@@ -191,9 +196,9 @@ open class ArrayTracker<T>(
         if (newHead == (oldHead + 1) floorMod size)
             return
         val ranges = if (oldHead < newHead) {
-            setOf(oldHead + 1..newHead - 1)
+            setOf(oldHead + 1 until newHead)
         } else {
-            setOf(oldHead + 1..size - 1, 0..newHead - 1)
+            setOf(oldHead + 1 until size, 0 until newHead)
         }
         for (range in ranges) {
             for (i in range) {
