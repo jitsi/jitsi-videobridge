@@ -601,6 +601,7 @@ public class Endpoint
             if (logger.isDebugEnabled() && getConference().includeInStatistics())
             {
                 logger.debug(transceiver.getNodeStats().prettyPrint(0));
+                logger.debug(bitrateController.getDebugState().toJSONString());
             }
 
             transceiver.teardown();
