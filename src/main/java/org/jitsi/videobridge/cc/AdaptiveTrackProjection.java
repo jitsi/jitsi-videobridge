@@ -113,26 +113,29 @@ public class AdaptiveTrackProjection
      */
     private int targetIndex = RTPEncodingDesc.SUSPENDED_INDEX;
 
-    //TODO(brian): we need this to know which frameprojectioncontext to make
-    // based on the payload type of a packet.  is there a better way?
-    private final Map<Byte, PayloadType> payloadTypes = new HashMap<>();
+    private final Map<Byte, PayloadType> payloadTypes;
 
     /**
      * Ctor.
      *
      * @param source the {@link MediaStreamTrackDesc} that owns the packets
      * that this instance filters.
+     *
+     * @param payloadTypes a reference to a map of payload types.  This map
+     *                     should be updated as the payload types change.
      */
     AdaptiveTrackProjection(
         @NotNull DiagnosticContext diagnosticContext,
         @NotNull MediaStreamTrackDesc source,
         Runnable keyframeRequester,
+        Map<Byte, PayloadType> payloadTypes,
         Logger parentLogger
     )
     {
         weakSource = new WeakReference<>(source);
         targetSsrc = source.getRTPEncodings()[0].getPrimarySSRC();
         this.diagnosticContext = diagnosticContext;
+        this.payloadTypes = payloadTypes;
         this.parentLogger = parentLogger;
         this.logger = parentLogger.createChildLogger(AdaptiveTrackProjection.class.getName(),
             JMap.of("targetSsrc", Long.toString(targetSsrc),
@@ -415,14 +418,6 @@ public class AdaptiveTrackProjection
     public long getTargetSsrc()
     {
         return targetSsrc;
-    }
-
-    /**
-     * Adds a payload type.
-     */
-    public void addPayloadType(PayloadType payloadType)
-    {
-        payloadTypes.put(payloadType.getPt(), payloadType);
     }
 
     /**
