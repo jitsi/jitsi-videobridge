@@ -30,6 +30,7 @@ import org.json.simple.*;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 
 import static org.jitsi.videobridge.cc.config.BitrateControllerConfig.*;
 
@@ -209,6 +210,9 @@ public class BitrateController
 
     private final Map<Byte, PayloadType> payloadTypes = new HashMap<>();
 
+    private final AtomicInteger numDroppedPacketsUnknownSsrc =
+        new AtomicInteger(0);
+
     /**
      * Initializes a new {@link BitrateController} instance which is to
      * belong to a particular {@link Endpoint}.
@@ -286,9 +290,10 @@ public class BitrateController
 
         if (adaptiveTrackProjection == null)
         {
-            logger.warn(
+            logger.debug(() ->
                 "Dropping an RTP packet, because the SSRC has not " +
                     "been signaled:" + ssrc);
+            numDroppedPacketsUnknownSsrc.incrementAndGet();
             return false;
         }
 
@@ -366,6 +371,9 @@ public class BitrateController
         debugState.put(
                 "adaptiveTrackProjectionMap",
                 adaptiveTrackProjectionsJson);
+        debugState.put(
+            "numDroppedPacketsUnknownSsrc",
+            numDroppedPacketsUnknownSsrc.intValue());
         return debugState;
     }
 
