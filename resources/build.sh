@@ -64,6 +64,10 @@ if [ ! -d "./rtp" ] || [ ! -d "./jitsi-media-transform" ] || [ ! -d "./jitsi-vid
   exit 1
 fi
 
+mvn clean
+
 setVersionForModule "RTP" "rtp.version" "rtp*" "rtp"
 setVersionForModule "JMT" "jmt.version" "jmt*" "jitsi-media-transform rtp"
 setVersionForModule "JVB" "jvb.version" "jvb*" "jitsi-videobridge jitsi-media-transform rtp"
+
+mvn package
