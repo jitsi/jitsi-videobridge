@@ -27,6 +27,9 @@ import java.time.*;
 import java.util.*;
 import java.util.function.*;
 
+import static java.lang.Integer.max;
+import static java.lang.Integer.min;
+
 /**
  * A history of recent frames on a VP8 stream.
  */
@@ -58,7 +61,7 @@ public class VP8FrameMap
     /** Get the current size of the map. */
     public int size()
     {
-        return frameHistory.getNumTracked();
+        return frameHistory.numCached;
     }
 
     /** Helper function to insert a packet into an existing frame. */
@@ -174,11 +177,14 @@ public class VP8FrameMap
         }
     }
 
-    private static class FrameHistory extends ArrayTracker<VP8Frame>
+    private static class FrameHistory extends ArrayCache<VP8Frame>
     {
         FrameHistory(int size) {
-            super(size);
+            super(size, (k) -> k, false, Clock.systemUTC());
         }
+
+        int numCached = 0;
+        int firstIndex = -1;
 
         PictureIdIndexTracker indexTracker = new PictureIdIndexTracker();
 
@@ -188,7 +194,7 @@ public class VP8FrameMap
         public VP8Frame get(int pictureId)
         {
             int index = indexTracker.interpret(pictureId);
-            ArrayTracker<VP8Frame>.Container c = super.getContainer(index);
+            ArrayCache<VP8Frame>.Container c = super.getContainer(index);
             if (c == null)
             {
                 return null;
@@ -199,32 +205,91 @@ public class VP8FrameMap
         public boolean insert(int pictureId, VP8Frame frame)
         {
             int index = indexTracker.update(pictureId);
-            return super.insertItem(frame, index);
+            boolean ret = super.insertItem(frame, index);
+            if (ret)
+            {
+                numCached++;
+                if (firstIndex == -1 || index < firstIndex)
+                {
+                    firstIndex = index;
+                }
+            }
+            return ret;
         }
 
+        /**
+         * Called when an item in the cache is replaced/discarded.
+         */
+        protected void discardItem(VP8Frame frame)
+        {
+            numCached--;
+        }
+
+        /**
+         * Called when the last index of the cache is advanced.
+         */
+        protected void lastIndexAdvanced(int oldlastIndex, int lastIndex)
+        {
+            if (oldlastIndex == -1 || lastIndex == oldlastIndex + 1)
+            {
+                return;
+            }
+            if (lastIndex - oldlastIndex >= getSize())
+            {
+                flush();
+            }
+            for (int i = oldlastIndex + 1; i < lastIndex; i++)
+            {
+                discard(i);
+            }
+        }
 
         public VP8Frame findBefore(VP8Frame frame, Predicate<VP8Frame> pred)
         {
-            int index = indexTracker.interpret(frame.getPictureId());
-            ArrayTracker<VP8Frame>.Container c =
-                super.findContainerBefore(index, pred::test);
-            if (c == null)
+            int lastIndex = getLastIndex();
+            if (lastIndex == -1)
             {
                 return null;
             }
-            return c.getItem();
+
+            int index = indexTracker.interpret(frame.getPictureId());
+
+            int searchStartIndex = min(index - 1, lastIndex);
+            int searchEndIndex = max(lastIndex - getSize(), firstIndex - 1);
+
+            return doFind(pred, searchStartIndex, searchEndIndex, -1);
         }
 
         public VP8Frame findAfter(VP8Frame frame, Predicate<VP8Frame> pred)
         {
-            int index = indexTracker.interpret(frame.getPictureId());
-            ArrayTracker<VP8Frame>.Container c =
-                super.findContainerAfter(index, pred::test);
-            if (c == null)
+            int lastIndex = getLastIndex();
+            if (lastIndex == -1)
             {
                 return null;
             }
-            return c.getItem();
+
+            int index = indexTracker.interpret(frame.getPictureId());
+
+            if (index >= lastIndex)
+            {
+                return null;
+            }
+
+            int searchStartIndex = max(index + 1, max(lastIndex - getSize(), firstIndex));
+
+            return doFind(pred, searchStartIndex, lastIndex + 1, 1);
+        }
+
+        private VP8Frame doFind(Predicate<VP8Frame> pred, int startIndex, int endIndex, int increment)
+        {
+            for (int index = startIndex; index != endIndex; index += increment)
+            {
+                ArrayCache<VP8Frame>.Container container = getContainer(index);
+                if (container != null && pred.test(container.getItem())) {
+                    return container.getItem();
+                }
+            }
+            return null;
         }
 
         /** Like Rfc3711IndexTracker, but for picture IDs (so with a rollover
