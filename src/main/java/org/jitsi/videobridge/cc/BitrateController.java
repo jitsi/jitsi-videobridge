@@ -207,7 +207,8 @@ public class BitrateController
     // is the main use case for wanting to disable adaptivity).
     private boolean supportsRtx = false;
 
-    private final Map<Byte, PayloadType> payloadTypes = new HashMap<>();
+    private final Map<Byte, PayloadType> payloadTypes =
+        new ConcurrentHashMap<>();
 
     /**
      * Initializes a new {@link BitrateController} instance which is to
@@ -750,12 +751,8 @@ public class BitrateController
                     trackBitrateAllocation.track, () ->
                         destinationEndpoint.getConference().requestKeyframe(
                             endpointID, targetSSRC),
+                    payloadTypes,
                     logger);
-
-            for (PayloadType payloadType : payloadTypes.values())
-            {
-                adaptiveTrackProjection.addPayloadType(payloadType);
-            }
 
             logger.debug(() -> "new track projection for " + trackBitrateAllocation.track);
 
@@ -1092,7 +1089,6 @@ public class BitrateController
     public void addPayloadType(PayloadType payloadType)
     {
         payloadTypes.put(payloadType.getPt(), payloadType);
-        adaptiveTrackProjections.forEach(atp -> atp.addPayloadType(payloadType));
 
         if (payloadType.getEncoding() == PayloadTypeEncoding.RTX)
         {
