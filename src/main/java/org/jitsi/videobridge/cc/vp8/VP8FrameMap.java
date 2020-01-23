@@ -194,6 +194,13 @@ public class VP8FrameMap
         public VP8Frame get(int pictureId)
         {
             int index = indexTracker.interpret(pictureId);
+            if (index <= getLastIndex() - getSize())
+            {
+                /* We don't want to remember old frames even if they're still
+                   tracked; their neighboring frames may have been evicted,
+                   so findBefore / findAfter will return bogus data. */
+                return null;
+            }
             ArrayCache<VP8Frame>.Container c = super.getContainer(index);
             if (c == null)
             {
@@ -223,25 +230,6 @@ public class VP8FrameMap
         protected void discardItem(VP8Frame frame)
         {
             numCached--;
-        }
-
-        /**
-         * Called when the last index of the cache is advanced.
-         */
-        protected void lastIndexAdvanced(int oldlastIndex, int lastIndex)
-        {
-            if (oldlastIndex == -1 || lastIndex == oldlastIndex + 1)
-            {
-                return;
-            }
-            if (lastIndex - oldlastIndex >= getSize())
-            {
-                flush();
-            }
-            for (int i = oldlastIndex + 1; i < lastIndex; i++)
-            {
-                discard(i);
-            }
         }
 
         public VP8Frame findBefore(VP8Frame frame, Predicate<VP8Frame> pred)
