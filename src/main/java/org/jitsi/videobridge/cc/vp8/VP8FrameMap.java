@@ -285,21 +285,6 @@ public class VP8FrameMap
          */
         private static class PictureIdIndexTracker
         {
-            private static boolean isOlderThan(int a, int b)
-            {
-                return Vp8Utils.getExtendedPictureIdDelta(a, b) < 0;
-            }
-
-            private static boolean isNewerThan(int a, int b)
-            {
-                return Vp8Utils.getExtendedPictureIdDelta(a, b) > 0;
-            }
-
-            private static boolean rolledOverTo(int a, int b)
-            {
-                return isOlderThan(a, b) && b < a;
-            }
-
             private int roc = 0;
             private int highestSeqNumReceived = -1;
 
@@ -312,13 +297,15 @@ public class VP8FrameMap
                     return seqNum;
                 }
 
+                int delta = Vp8Utils.getExtendedPictureIdDelta(seqNum, highestSeqNumReceived);
+
                 int v;
 
-                if (rolledOverTo(seqNum, highestSeqNumReceived))
+                if (delta < 0 && highestSeqNumReceived < seqNum)
                 {
                     v = roc - 1;
                 }
-                else if (rolledOverTo(highestSeqNumReceived, seqNum))
+                else if (delta > 0 && seqNum < highestSeqNumReceived)
                 {
                     v = roc + 1;
                     if (updateRoc)
@@ -328,7 +315,7 @@ public class VP8FrameMap
                     v = roc;
                 }
 
-                if (updateRoc && isNewerThan(seqNum, highestSeqNumReceived))
+                if (updateRoc && delta > 0)
                 {
                     highestSeqNumReceived = seqNum;
                 }
