@@ -22,6 +22,7 @@ import org.jitsi.nlj.util.cwarn
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
 import org.jitsi_modified.impl.neomedia.codec.video.vp8.DePacketizer
+import kotlin.properties.Delegates
 
 /**
  * If this [Vp8Packet] instance is being created via a clone,
@@ -38,7 +39,9 @@ class Vp8Packet private constructor (
     isKeyframe: Boolean?,
     isStartOfFrame: Boolean?,
     encodingIndex: Int?,
-    height: Int?
+    height: Int?,
+    pictureId: Int?,
+    TL0PICIDX: Int?
 ) : ParsedVideoPacket(buffer, offset, length, encodingIndex) {
 
     constructor(
@@ -49,7 +52,9 @@ class Vp8Packet private constructor (
         isKeyframe = null,
         isStartOfFrame = null,
         encodingIndex = null,
-        height = null
+        height = null,
+        pictureId = null,
+        TL0PICIDX = null
     )
 
     /** Due to the format of the VP8 payload, this value is only reliable for packets where [isStartOfFrame] is true. */
@@ -62,20 +67,18 @@ class Vp8Packet private constructor (
         /** This uses [get] rather than initialization because [isMarked] is a var. */
         get() = isMarked
 
-    var TL0PICIDX: Int
-        get() = DePacketizer.VP8PayloadDescriptor.getTL0PICIDX(buffer, payloadOffset, payloadLength)
-        set(value) {
+    var TL0PICIDX: Int by Delegates.observable(TL0PICIDX ?: DePacketizer.VP8PayloadDescriptor.getTL0PICIDX(buffer, payloadOffset, payloadLength)) {
+        _, _, newValue ->
             if (!DePacketizer.VP8PayloadDescriptor.setTL0PICIDX(
-                    buffer, payloadOffset, payloadLength, value)) {
+                    buffer, payloadOffset, payloadLength, newValue)) {
                 logger.cwarn { "Failed to set the TL0PICIDX of a VP8 packet." }
             }
         }
 
-    var pictureId: Int
-        get() = DePacketizer.VP8PayloadDescriptor.getPictureId(buffer, payloadOffset)
-        set(value) {
+    var pictureId: Int by Delegates.observable(pictureId ?: DePacketizer.VP8PayloadDescriptor.getPictureId(buffer, payloadOffset)) {
+        _, _, newValue ->
             if (!DePacketizer.VP8PayloadDescriptor.setExtendedPictureId(
-                    buffer, payloadOffset, payloadLength, value)) {
+                    buffer, payloadOffset, payloadLength, newValue)) {
                 logger.cwarn { "Failed to set the picture id of a VP8 packet." }
             }
         }
@@ -113,7 +116,9 @@ class Vp8Packet private constructor (
             isKeyframe = isKeyframe,
             isStartOfFrame = isStartOfFrame,
             encodingIndex = qualityIndex,
-            height = height
+            height = height,
+            pictureId = pictureId,
+            TL0PICIDX = TL0PICIDX
         )
     }
 
