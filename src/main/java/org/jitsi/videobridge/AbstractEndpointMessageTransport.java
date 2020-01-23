@@ -54,7 +54,7 @@ public abstract class AbstractEndpointMessageTransport
 
     /**
      * Initializes a new {@link AbstractEndpointMessageTransport} instance.
-     * @param endpoint
+     * @param endpoint the endpoint to which this transport belongs
      */
     public AbstractEndpointMessageTransport(AbstractEndpoint endpoint, Logger parentLogger)
     {
@@ -165,7 +165,7 @@ public abstract class AbstractEndpointMessageTransport
      */
     @SuppressWarnings("unchecked")
     protected void onClientEndpointMessage(
-        Object src,
+        @SuppressWarnings("unused") Object src,
         JSONObject jsonObject)
     {
         String to = (String)jsonObject.get("to");
@@ -262,13 +262,13 @@ public abstract class AbstractEndpointMessageTransport
      * {@code PinnedEndpointChangedEvent} which has been received.
      */
     protected void onPinnedEndpointChangedEvent(
-        Object src,
+        @SuppressWarnings("unused") Object src,
         JSONObject jsonObject)
     {
         // Find the new pinned endpoint.
         String newPinnedEndpointID = (String) jsonObject.get("pinnedEndpoint");
 
-        Set<String> newPinnedIDs = Collections.EMPTY_SET;
+        Set<String> newPinnedIDs = Collections.emptySet();
         if (newPinnedEndpointID != null && !"".equals(newPinnedEndpointID))
         {
             newPinnedIDs = Collections.singleton(newPinnedEndpointID);
@@ -287,7 +287,7 @@ public abstract class AbstractEndpointMessageTransport
      * {@code PinnedEndpointChangedEvent} which has been received.
      */
     protected void onPinnedEndpointsChangedEvent(
-        Object src,
+        @SuppressWarnings("unused") Object src,
         JSONObject jsonObject)
     {
         // Find the new pinned endpoint.
@@ -302,7 +302,7 @@ public abstract class AbstractEndpointMessageTransport
         Set<String> newPinnedEndpoints = new HashSet<>();
         for (Object endpointId : jsonArray)
         {
-            if (endpointId != null && endpointId instanceof String)
+            if (endpointId instanceof String)
             {
                 newPinnedEndpoints.add((String)endpointId);
             }
@@ -326,14 +326,14 @@ public abstract class AbstractEndpointMessageTransport
      * {@code SelectedEndpointChangedEvent} which has been received.
      */
     protected void onSelectedEndpointChangedEvent(
-        Object src,
+        @SuppressWarnings("unused") Object src,
         JSONObject jsonObject)
     {
         // Find the new pinned endpoint.
         String newSelectedEndpointID
             = (String) jsonObject.get("selectedEndpoint");
 
-        Set<String> newSelectedIDs = Collections.EMPTY_SET;
+        Set<String> newSelectedIDs = Collections.emptySet();
         if (newSelectedEndpointID != null && !"".equals(newSelectedEndpointID))
         {
             newSelectedIDs = Collections.singleton(newSelectedEndpointID);
@@ -352,7 +352,7 @@ public abstract class AbstractEndpointMessageTransport
      * {@code SelectedEndpointChangedEvent} which has been received.
      */
     protected void onSelectedEndpointsChangedEvent(
-        Object src,
+        @SuppressWarnings("unused") Object src,
         JSONObject jsonObject)
     {
         // Find the new pinned endpoint.
@@ -367,7 +367,7 @@ public abstract class AbstractEndpointMessageTransport
         Set<String> newSelectedEndpoints = new HashSet<>();
         for (Object endpointId : jsonArray)
         {
-            if (endpointId != null && endpointId instanceof String)
+            if (endpointId instanceof String)
             {
                 newSelectedEndpoints.add((String)endpointId);
             }
