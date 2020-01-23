@@ -14,7 +14,7 @@
         <kotlintest.version>3.4.2</kotlintest.version>
         <junit.version>5.2.0</junit.version>
         <bouncycastle.version>1.61</bouncycastle.version>
-        <jitsi.utils.version>1.0-32-g37aa1b3</jitsi.utils.version>
+        <jitsi.utils.version>1.0-34-gd8ac000</jitsi.utils.version>
         <ktlint.skip>false</ktlint.skip>
     </properties>
     <dependencies>

@@ -37,6 +37,14 @@ class StdoutLogger(
     override fun createChildLogger(name: String, context: MutableMap<String, String>): Logger =
         StdoutLogger(name, _level, context)
 
+    override fun addContext(key: String?, value: String?) {
+        context.addContext(key, value)
+    }
+
+    override fun addContext(addedContext: MutableMap<String, String>?) {
+        context.addContext(addedContext)
+    }
+
     private fun isLoggable(level: Level): Boolean = level.intValue() >= _level.intValue()
 
     private fun log(level: Level, msg: Any) {
