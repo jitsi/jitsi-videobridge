@@ -16,30 +16,24 @@
 package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.codec.vp8.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
-import org.jitsi.rtp.util.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
 
-import java.util.*;
+import java.time.*;
 import java.util.function.*;
+
+import static java.lang.Integer.max;
+import static java.lang.Integer.min;
 
 /**
  * A history of recent frames on a VP8 stream.
  */
 public class VP8FrameMap
 {
-    /** Map of timestamps to frames, used to find existing frames. */
-    private final HashMap<Long, VP8Frame>
-        vp8FrameMap = new HashMap<>();
-
-    /** Map of sequence numbers to frames, used to maintain decode order of frames. */
-    private final TreeMap<Integer, VP8Frame>
-        vp8OrderedFrameMap = new TreeMap<>(
-        /* This is only a valid Comparator if seq number diffs of all
-         * timestamps are within half the number space.  (This property is
-         * assured by #cleanupFrameMap.)
-         */
-        RtpUtils::getSequenceNumberDelta);
+    /** Cache mapping picture IDs to frames. */
+    private final FrameHistory frameHistory = new FrameHistory(FRAME_MAP_SIZE);
 
     private final Logger logger;
 
@@ -55,76 +49,16 @@ public class VP8FrameMap
         this.logger = parentLogger.createChildLogger(VP8FrameMap.class.getName());
     }
 
-    /** Clean up old entries in the frame map.
-     *
-     * The frame map is maintained as a sorted map; to clean it up,
-     * we walk entries from the oldest (in sequence number ordering), removing anything
-     * more than #FRAME_MAP_SIZE older than the newest seq.
-     *
-     * Because the map is ordered, we can stop searching entries when we reach
-     * one that is new enough not to be removed, so this is amortized constant
-     * time per frame.
-     *
-     * Caller should be synchronized.
-     *
-     * Return false if this sequence is too old.
-     * */
-    private boolean cleanupFrameMap(int newSeq)
-    {
-        if (vp8OrderedFrameMap.isEmpty())
-        {
-            return true;
-        }
-
-        int latestSeq = vp8OrderedFrameMap.lastKey();
-
-        /* If our sequence numbers have jumped by a quarter of the number space, reset the map. */
-        int seqJump = RtpUtils.getSequenceNumberDelta(newSeq, latestSeq);
-        if (seqJump >= 0x4000 || seqJump <= -0x4000)
-        {
-            vp8FrameMap.clear();
-            vp8OrderedFrameMap.clear();
-            return true;
-        }
-
-        int threshold = RtpUtils.applySequenceNumberDelta(latestSeq, -FRAME_MAP_SIZE);
-
-        if (RtpUtils.isOlderSequenceNumberThan(newSeq, threshold))
-        {
-            return false;
-        }
-
-        Iterator<Integer> it = vp8OrderedFrameMap.keySet().iterator();
-        while (it.hasNext())
-        {
-            Integer key = it.next();
-            if (RtpUtils.isOlderSequenceNumberThan(key, threshold))
-            {
-                VP8Frame frame = vp8OrderedFrameMap.get(key);
-                vp8FrameMap.remove(frame.getTimestamp());
-                it.remove();
-            }
-            else {
-                break;
-            }
-        }
-
-        return true;
-    }
-
-
     /** Find a frame in the frame map, based on a packet. */
     public synchronized VP8Frame findFrame(@NotNull Vp8Packet packet)
     {
-        long timestamp = packet.getTimestamp();
-
-        return vp8FrameMap.get(timestamp);
+        return frameHistory.get(packet.getPictureId());
     }
 
     /** Get the current size of the map. */
     public int size()
     {
-        return vp8OrderedFrameMap.size();
+        return frameHistory.numCached;
     }
 
     /** Helper function to insert a packet into an existing frame. */
@@ -148,21 +82,20 @@ public class VP8FrameMap
      */
     public synchronized FrameInsertionResult insertPacket(@NotNull Vp8Packet packet)
     {
-        Long timestamp = packet.getTimestamp();
+        int pictureId = packet.getPictureId();
 
-        VP8Frame frame = vp8FrameMap.get(timestamp);
-        if (frame != null) {
+        VP8Frame frame = frameHistory.get(pictureId);
+        if (frame != null)
+        {
             return doFrameInsert(frame, packet);
         }
 
-        int seq = packet.getSequenceNumber();
-        if (!cleanupFrameMap(seq))
-            return null;
-
         frame = new VP8Frame(packet);
 
-        vp8FrameMap.put(timestamp, frame);
-        vp8OrderedFrameMap.put(seq, frame);
+        if (!frameHistory.insert(pictureId, frame))
+        {
+            return null;
+        }
 
         return new FrameInsertionResult(frame, true);
     }
@@ -170,29 +103,13 @@ public class VP8FrameMap
     @Nullable
     public synchronized VP8Frame nextFrame(@NotNull VP8Frame frame)
     {
-        Integer k = vp8OrderedFrameMap.higherKey(frame.getLatestKnownSequenceNumber());
-        if (k == null)
-        {
-            return null;
-        }
-        return vp8OrderedFrameMap.get(k);
+        return frameHistory.findAfter(frame, (VP8Frame f) -> true );
     }
 
     @Nullable
     public synchronized VP8Frame nextFrameWith(@NotNull VP8Frame frame, Predicate<VP8Frame> pred)
     {
-        NavigableSet<Integer> tailSet =
-            vp8OrderedFrameMap.navigableKeySet().tailSet(frame.getLatestKnownSequenceNumber(), false);
-
-        for (int seq : tailSet)
-        {
-            VP8Frame f = vp8OrderedFrameMap.get(seq);
-            if (pred.test(f))
-            {
-                return f;
-            }
-        }
-        return null;
+        return frameHistory.findAfter(frame, pred);
     }
 
     @Nullable
@@ -210,29 +127,14 @@ public class VP8FrameMap
     @Nullable
     public synchronized VP8Frame prevFrame(@NotNull VP8Frame frame)
     {
-        Integer k = vp8OrderedFrameMap.lowerKey(frame.getEarliestKnownSequenceNumber());
-        if (k == null)
-        {
-            return null;
-        }
-        return vp8OrderedFrameMap.get(k);
+        return frameHistory.findBefore(frame, (VP8Frame f) -> true );
+
     }
 
     @Nullable
     public synchronized VP8Frame prevFrameWith(@NotNull VP8Frame frame, Predicate<VP8Frame> pred)
     {
-        NavigableSet<Integer> revHeadSet =
-            vp8OrderedFrameMap.navigableKeySet().headSet(frame.getEarliestKnownSequenceNumber(), false).descendingSet();
-
-        for (int seq : revHeadSet)
-        {
-            VP8Frame f = vp8OrderedFrameMap.get(seq);
-            if (pred.test(f))
-            {
-                return f;
-            }
-        }
-        return null;
+        return frameHistory.findBefore(frame, pred);
     }
 
     @Nullable
@@ -269,6 +171,164 @@ public class VP8FrameMap
         public boolean isNewFrame()
         {
             return newFrame;
+        }
+    }
+
+    private static class FrameHistory extends ArrayCache<VP8Frame>
+    {
+        FrameHistory(int size) {
+            super(size, (k) -> k, false, Clock.systemUTC());
+        }
+
+        int numCached = 0;
+        int firstIndex = -1;
+
+        PictureIdIndexTracker indexTracker = new PictureIdIndexTracker();
+
+        /**
+         * Gets a packet with a given VP8 picture ID from the cache.
+         */
+        public VP8Frame get(int pictureId)
+        {
+            int index = indexTracker.interpret(pictureId);
+            if (index <= getLastIndex() - getSize())
+            {
+                /* We don't want to remember old frames even if they're still
+                   tracked; their neighboring frames may have been evicted,
+                   so findBefore / findAfter will return bogus data. */
+                return null;
+            }
+            ArrayCache<VP8Frame>.Container c = super.getContainer(index);
+            if (c == null)
+            {
+                return null;
+            }
+            return c.getItem();
+        }
+
+        public boolean insert(int pictureId, VP8Frame frame)
+        {
+            int index = indexTracker.update(pictureId);
+            boolean ret = super.insertItem(frame, index);
+            if (ret)
+            {
+                numCached++;
+                if (firstIndex == -1 || index < firstIndex)
+                {
+                    firstIndex = index;
+                }
+            }
+            return ret;
+        }
+
+        /**
+         * Called when an item in the cache is replaced/discarded.
+         */
+        protected void discardItem(VP8Frame frame)
+        {
+            numCached--;
+        }
+
+        public VP8Frame findBefore(VP8Frame frame, Predicate<VP8Frame> pred)
+        {
+            int lastIndex = getLastIndex();
+            if (lastIndex == -1)
+            {
+                return null;
+            }
+
+            int index = indexTracker.interpret(frame.getPictureId());
+
+            int searchStartIndex = min(index - 1, lastIndex);
+            int searchEndIndex = max(lastIndex - getSize(), firstIndex - 1);
+
+            return doFind(pred, searchStartIndex, searchEndIndex, -1);
+        }
+
+        public VP8Frame findAfter(VP8Frame frame, Predicate<VP8Frame> pred)
+        {
+            int lastIndex = getLastIndex();
+            if (lastIndex == -1)
+            {
+                return null;
+            }
+
+            int index = indexTracker.interpret(frame.getPictureId());
+
+            if (index >= lastIndex)
+            {
+                return null;
+            }
+
+            int searchStartIndex = max(index + 1, max(lastIndex - getSize(), firstIndex));
+
+            return doFind(pred, searchStartIndex, lastIndex + 1, 1);
+        }
+
+        private VP8Frame doFind(Predicate<VP8Frame> pred, int startIndex, int endIndex, int increment)
+        {
+            for (int index = startIndex; index != endIndex; index += increment)
+            {
+                ArrayCache<VP8Frame>.Container container = getContainer(index);
+                if (container != null && pred.test(container.getItem())) {
+                    return container.getItem();
+                }
+            }
+            return null;
+        }
+
+        /** Like Rfc3711IndexTracker, but for picture IDs (so with a rollover
+         * of 0x8000).
+         */
+        private static class PictureIdIndexTracker
+        {
+            private int roc = 0;
+            private int highestSeqNumReceived = -1;
+
+            private int getIndex(int seqNum, boolean updateRoc)
+            {
+                if (highestSeqNumReceived == -1) {
+                    if (updateRoc) {
+                        highestSeqNumReceived = seqNum;
+                    }
+                    return seqNum;
+                }
+
+                int delta = Vp8Utils.getExtendedPictureIdDelta(seqNum, highestSeqNumReceived);
+
+                int v;
+
+                if (delta < 0 && highestSeqNumReceived < seqNum)
+                {
+                    v = roc - 1;
+                }
+                else if (delta > 0 && seqNum < highestSeqNumReceived)
+                {
+                    v = roc + 1;
+                    if (updateRoc)
+                        roc = v;
+                }
+                else {
+                    v = roc;
+                }
+
+                if (updateRoc && delta > 0)
+                {
+                    highestSeqNumReceived = seqNum;
+                }
+
+                return 0x8000 * v + seqNum;
+            }
+
+            public int update(int seq)
+            {
+                return getIndex(seq, true);
+            }
+
+            public int interpret(int seq)
+            {
+                return getIndex(seq, false);
+            }
         }
     }
 }
