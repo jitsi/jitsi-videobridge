@@ -230,7 +230,11 @@ public class Endpoint
             });
         bitrateController = new BitrateController(this, diagnosticContext, logger);
 
-        messageTransport = new EndpointMessageTransport(this, logger);
+        messageTransport = new EndpointMessageTransport(
+            this,
+            () -> getConference().getVideobridge().getStatistics(),
+            logger
+        );
 
         diagnosticContext.put("endpoint_id", id);
         bandwidthProbing
