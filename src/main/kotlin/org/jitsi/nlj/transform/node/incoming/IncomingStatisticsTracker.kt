@@ -61,6 +61,11 @@ class IncomingStatisticsTracker(
         }
     }
 
+    /**
+     * Don't aggregate the per-SSRC stats.
+     */
+    override fun getNodeStatsToAggregate() = super.getNodeStats()
+
     fun getSnapshot(): IncomingStatisticsSnapshot {
         return IncomingStatisticsSnapshot(
             ssrcStats.map { (ssrc, stats) ->

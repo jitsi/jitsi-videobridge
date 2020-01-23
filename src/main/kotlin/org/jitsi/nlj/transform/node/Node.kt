@@ -191,6 +191,11 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
         addMbps("throughput_mbps", "num_input_bytes", "duration_ms")
     }
 
+    /**
+     * Get the stats that should be aggregated per-class.
+     */
+    protected open fun getNodeStatsToAggregate() = getNodeStats()
+
     private fun onEntry(packetInfo: PacketInfo) {
         if (enableStatistics) {
             startTime = System.nanoTime()
@@ -254,7 +259,7 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
         if (enableStatistics && stats.numInputPackets > 0) {
             synchronized(globalStats) {
                 val classStats = globalStats.computeIfAbsent(name) { NodeStatsBlock(name) }
-                classStats.aggregate(getNodeStats())
+                classStats.aggregate(getNodeStatsToAggregate())
             }
         }
     }
