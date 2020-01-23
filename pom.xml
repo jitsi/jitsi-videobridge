@@ -12,6 +12,7 @@
         <kotlin.version>1.3.61</kotlin.version>
         <kotlintest.version>3.4.2</kotlintest.version>
         <junit.version>5.2.0</junit.version>
+        <jitsi.utils.version>1.0-35-g14f4ae3</jitsi.utils.version>
     </properties>
 
     <dependencies>
@@ -33,7 +34,12 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-utils</artifactId>
-            <version>1.0-32-g37aa1b3</version>
+            <version>${jitsi.utils.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jitsi</groupId>
+            <artifactId>jitsi-utils-kotlin</artifactId>
+            <version>${jitsi.utils.version}</version>
         </dependency>
 
         <!--Testing dependencies-->

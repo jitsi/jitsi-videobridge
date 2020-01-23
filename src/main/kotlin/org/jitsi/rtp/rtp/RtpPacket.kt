@@ -24,6 +24,7 @@ import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionHelpers
 import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.getByteAsInt
 import org.jitsi.rtp.util.isPadding
+import org.jitsi.utils.observableWhenChanged
 
 /**
  *
@@ -72,21 +73,26 @@ open class RtpPacket(
         get() = RtpHeader.getMarker(buffer, offset)
         set(value) = RtpHeader.setMarker(buffer, offset, value)
 
-    var payloadType: Int
-        get() = RtpHeader.getPayloadType(buffer, offset)
-        set(value) = RtpHeader.setPayloadType(buffer, offset, value)
+    /* The four values below (payloadType, sequenceNumber, timestamp, and ssrc)
+     * are very frequently accessed in our pipeline; store their values in
+     * delegated properties, rather than re-reading them from the buffer every time.
+     */
 
-    var sequenceNumber: Int
-        get() = RtpHeader.getSequenceNumber(buffer, offset)
-        set(value) = RtpHeader.setSequenceNumber(buffer, offset, value)
+    var payloadType: Int by observableWhenChanged(RtpHeader.getPayloadType(buffer, offset)) {
+        _, _, newValue -> RtpHeader.setPayloadType(buffer, offset, newValue)
+    }
 
-    var timestamp: Long
-        get() = RtpHeader.getTimestamp(buffer, offset)
-        set(value) = RtpHeader.setTimestamp(buffer, offset, value)
+    var sequenceNumber: Int by observableWhenChanged(RtpHeader.getSequenceNumber(buffer, offset)) {
+        _, _, newValue -> RtpHeader.setSequenceNumber(buffer, offset, newValue)
+    }
 
-    var ssrc: Long
-        get() = RtpHeader.getSsrc(buffer, offset)
-        set(value) = RtpHeader.setSsrc(buffer, offset, value)
+    var timestamp: Long by observableWhenChanged(RtpHeader.getTimestamp(buffer, offset)) {
+        _, _, newValue -> RtpHeader.setTimestamp(buffer, offset, newValue)
+    }
+
+    var ssrc: Long by observableWhenChanged(RtpHeader.getSsrc(buffer, offset)) {
+        _, _, newValue -> RtpHeader.setSsrc(buffer, offset, newValue)
+    }
 
     val csrcs: List<Long>
         get() = RtpHeader.getCsrcs(buffer, offset)
