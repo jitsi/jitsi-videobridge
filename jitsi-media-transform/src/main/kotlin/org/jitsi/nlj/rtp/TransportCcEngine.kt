@@ -30,6 +30,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.PacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.UnreceivedPacketReport
+import org.jitsi.utils.joinToRangedString
 import org.jitsi.utils.logging2.Logger
 import org.json.simple.JSONObject
 
@@ -152,8 +153,8 @@ class TransportCcEngine(
                 "${tccPacket.iterator().asSequence()
                     .filterIsInstance<ReceivedPacketReport>()
                     .map(PacketReport::seqNum)
-                    .joinToString()}. " +
-                "Couldn't find packet detail for the seq nums: ${missingPacketDetailSeqNums.joinToString()}. " +
+                    .joinToRangedString()}. " +
+                "Couldn't find packet detail for the seq nums: ${missingPacketDetailSeqNums.joinToRangedString()}. " +
                 if (sentPacketDetails.empty) {
                     "Sent packet details map was empty."
                 } else {
