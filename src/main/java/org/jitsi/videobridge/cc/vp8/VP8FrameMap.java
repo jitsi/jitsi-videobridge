@@ -19,12 +19,9 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.codec.vp8.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.util.*;
 
 import java.time.*;
-import java.util.*;
 import java.util.function.*;
 
 import static java.lang.Integer.max;
