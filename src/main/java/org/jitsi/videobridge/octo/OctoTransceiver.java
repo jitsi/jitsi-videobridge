@@ -32,6 +32,9 @@ import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
+import java.util.*;
+import java.util.concurrent.*;
+
 /**
  * Parses and handles incoming RTP/RTCP packets from an Octo source for a
  * specific {@link Conference}/{@link OctoTentacle}.
@@ -58,10 +61,8 @@ public class OctoTransceiver
      */
     private final OctoTentacle tentacle;
 
-    /**
-     * The queue which passes packets through the incoming chain/tree.
-     */
-    private PacketInfoQueue incomingPacketQueue;
+    private final Map<String, PacketInfoQueue> incomingPacketQueues =
+        new ConcurrentHashMap<>();
 
     /**
      * The tree of {@link Node}s which handles incoming packets.
@@ -86,12 +87,6 @@ public class OctoTransceiver
         this.tentacle = tentacle;
         this.logger = parentLogger.createChildLogger(this.getClass().getName());
         inputTreeRoot = createInputTree();
-        incomingPacketQueue = new PacketInfoQueue(
-                "octo-tranceiver-incoming-packet-queue",
-                TaskPools.CPU_POOL,
-                this::processPacket,
-                1024);
-        incomingPacketQueue.setErrorHandler(queueErrorCounter);
     }
 
     /**
@@ -140,7 +135,17 @@ public class OctoTransceiver
         PacketInfo packetInfo = new OctoPacketInfo(packet);
         packetInfo.setReceivedTime(System.currentTimeMillis());
         packetInfo.setEndpointId(sourceEndpointId);
-        incomingPacketQueue.add(packetInfo);
+        PacketInfoQueue packetInfoQueue = incomingPacketQueues.computeIfAbsent(sourceEndpointId, (epId) -> {
+            PacketInfoQueue piq = new PacketInfoQueue(
+                "octo-incoming-queue-" + epId,
+                TaskPools.CPU_POOL,
+                this::processPacket,
+                1024
+            );
+            piq.setErrorHandler(queueErrorCounter);
+            return piq;
+        });
+        packetInfoQueue.add(packetInfo);
     }
     @Override
     public void handleMessage(String message)
@@ -149,7 +154,7 @@ public class OctoTransceiver
     }
 
     /**
-     * Process a packet in the {@link #incomingPacketQueue} thread.
+     * Process a packet received by one of the {@link #incomingPacketQueues}.
      *
      * @param packetInfo the packet to process.
      *
@@ -264,7 +269,9 @@ public class OctoTransceiver
                         node.getName(),
                         node.getNodeStats().toJson()));
 
-        debugState.put("incomingPacketQueue", incomingPacketQueue.getDebugState());
+        incomingPacketQueues.forEach((epId, queue) -> {
+            debugState.put("incomingPacketQueue-" + epId, queue.getDebugState());
+        });
         debugState.put("mediaStreamTracks", mediaStreamTracks.getNodeStats().toJson());
         return debugState;
     }
