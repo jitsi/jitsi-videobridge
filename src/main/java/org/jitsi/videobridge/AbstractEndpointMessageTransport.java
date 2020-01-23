@@ -21,7 +21,6 @@ import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
-import java.io.*;
 import java.util.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
@@ -299,14 +298,7 @@ public abstract class AbstractEndpointMessageTransport
         }
 
         JSONArray jsonArray = (JSONArray) o;
-        Set<String> newPinnedEndpoints = new HashSet<>();
-        for (Object endpointId : jsonArray)
-        {
-            if (endpointId instanceof String)
-            {
-                newPinnedEndpoints.add((String)endpointId);
-            }
-        }
+        Set<String> newPinnedEndpoints = filterStringsToSet(jsonArray);
 
         if (logger.isDebugEnabled())
         {
@@ -364,16 +356,21 @@ public abstract class AbstractEndpointMessageTransport
         }
 
         JSONArray jsonArray = (JSONArray) o;
-        Set<String> newSelectedEndpoints = new HashSet<>();
-        for (Object endpointId : jsonArray)
+        Set<String> newSelectedEndpoints = filterStringsToSet(jsonArray);
+        onSelectedEndpointsChangedEvent(jsonObject, newSelectedEndpoints);
+    }
+
+    private Set<String> filterStringsToSet(JSONArray jsonArray)
+    {
+        Set<String> strings = new HashSet<>();
+        for (Object element : jsonArray)
         {
-            if (endpointId instanceof String)
+            if (element instanceof String)
             {
-                newSelectedEndpoints.add((String)endpointId);
+                strings.add((String)element);
             }
         }
-
-        onSelectedEndpointsChangedEvent(jsonObject, newSelectedEndpoints);
+        return strings;
     }
 
     /**
@@ -514,10 +511,8 @@ public abstract class AbstractEndpointMessageTransport
      * {@link EndpointMessageTransport}.
      *
      * @param msg message text to send.
-     * @throws IOException
      */
     protected void sendMessage(String msg)
-        throws IOException
     {
     }
 

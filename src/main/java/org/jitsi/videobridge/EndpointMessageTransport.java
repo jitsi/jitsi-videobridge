@@ -234,7 +234,6 @@ class EndpointMessageTransport
      */
     @Override
     protected void sendMessage(String msg)
-        throws IOException
     {
         Object dst = getActiveTransportChannel();
         if (dst == null)
