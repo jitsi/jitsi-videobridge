@@ -50,13 +50,13 @@ public abstract class AbstractEndpointMessageTransport
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
-    protected final Logger logger;
+    protected final @NotNull Logger logger;
 
     /**
      * Initializes a new {@link AbstractEndpointMessageTransport} instance.
      * @param endpoint the endpoint to which this transport belongs
      */
-    public AbstractEndpointMessageTransport(AbstractEndpoint endpoint, Logger parentLogger)
+    public AbstractEndpointMessageTransport(AbstractEndpoint endpoint, @NotNull Logger parentLogger)
     {
         this.endpoint = endpoint;
         this.logger = parentLogger.createChildLogger(getClass().getName());

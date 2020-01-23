@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.*;
@@ -39,13 +40,6 @@ class EndpointMessageTransport
     extends AbstractEndpointMessageTransport
     implements DataChannelStack.DataChannelMessageListener
 {
-    /**
-     * The {@link Endpoint} associated with this
-     * {@link EndpointMessageTransport}.
-     *
-     */
-    private final Endpoint endpoint;
-
     /**
      * The last accepted web-socket by this instance, if any.
      */
@@ -78,13 +72,12 @@ class EndpointMessageTransport
      *                      class
      */
     EndpointMessageTransport(
-        Endpoint endpoint,
+        @NotNull Endpoint endpoint,
         Supplier<Videobridge.Statistics> statisticsSupplier,
         EndpointMessageTransportEventHandler eventHandler,
         Logger parentLogger)
     {
         super(endpoint, parentLogger);
-        this.endpoint = endpoint;
         this.statisticsSupplier = statisticsSupplier;
         this.eventHandler = eventHandler;
     }
