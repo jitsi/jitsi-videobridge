@@ -482,7 +482,7 @@ public class DtlsTransport extends IceTransport
        endpoint
            .getTransceiver()
            .getPacketIOActivity()
-           .setLastIceActivity(Instant.ofEpochMilli(time));
+           .setLastIceActivityInstant(Instant.ofEpochMilli(time));
     }
 
     /**
