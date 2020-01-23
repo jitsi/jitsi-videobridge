@@ -22,7 +22,6 @@ import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.rest.*;
 import org.json.simple.*;
 
-import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
 
@@ -198,6 +197,7 @@ class EndpointMessageTransport
      *
      * @param jsonObject the JSON object to propagate.
      */
+    @SuppressWarnings("unchecked")
     private void propagateJSONObject(JSONObject jsonObject)
     {
         Conference conference = getConference();
@@ -211,7 +211,7 @@ class EndpointMessageTransport
         jsonObject.put(PROP_TARGET_OCTO_ENDPOINT_ID, endpoint.getID());
 
         // Notify Cthulhu and its minions about selected/pinned events.
-        conference.sendMessage(jsonObject.toString(), Collections.EMPTY_LIST, true);
+        conference.sendMessage(jsonObject.toString(), Collections.emptyList(), true);
     }
 
     @Override
@@ -386,7 +386,7 @@ class EndpointMessageTransport
 
     /**
      * Sets the data channel for this endpoint.
-     * @param dataChannel
+     * @param dataChannel the {@link DataChannel} to use for this transport
      */
     void setDataChannel(DataChannel dataChannel)
     {
