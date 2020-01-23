@@ -597,13 +597,13 @@ public class Endpoint
         try
         {
             updateStatsOnExpire();
-            this.transceiver.stop();
             if (logger.isDebugEnabled() && getConference().includeInStatistics())
             {
                 logger.debug(transceiver.getNodeStats().prettyPrint(0));
                 logger.debug(bitrateController.getDebugState().toJSONString());
             }
 
+            transceiver.stop();
             transceiver.teardown();
 
             AbstractEndpointMessageTransport messageTransport
