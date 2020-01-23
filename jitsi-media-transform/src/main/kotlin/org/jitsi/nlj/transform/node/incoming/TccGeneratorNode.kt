@@ -28,7 +28,7 @@ import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.nlj.util.milliseconds
-import org.jitsi.nlj.util.observableWhenChanged
+import org.jitsi.utils.observableWhenChanged
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
