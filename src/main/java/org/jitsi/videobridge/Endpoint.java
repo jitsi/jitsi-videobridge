@@ -233,6 +233,7 @@ public class Endpoint
         messageTransport = new EndpointMessageTransport(
             this,
             () -> getConference().getVideobridge().getStatistics(),
+            getConference(),
             logger
         );
 

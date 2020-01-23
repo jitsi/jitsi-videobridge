@@ -67,6 +67,8 @@ class EndpointMessageTransport
 
     private final Supplier<Videobridge.Statistics> statisticsSupplier;
 
+    private final EndpointMessageTransportEventHandler eventHandler;
+
     /**
      * Initializes a new {@link EndpointMessageTransport} instance.
      * @param endpoint the associated {@link Endpoint}.
@@ -78,11 +80,13 @@ class EndpointMessageTransport
     EndpointMessageTransport(
         Endpoint endpoint,
         Supplier<Videobridge.Statistics> statisticsSupplier,
+        EndpointMessageTransportEventHandler eventHandler,
         Logger parentLogger)
     {
         super(endpoint, parentLogger);
         this.endpoint = endpoint;
         this.statisticsSupplier = statisticsSupplier;
+        this.eventHandler = eventHandler;
     }
 
     /**
@@ -91,15 +95,7 @@ class EndpointMessageTransport
     @Override
     protected void notifyTransportChannelConnected()
     {
-        EventAdmin eventAdmin = endpoint.getConference().getEventAdmin();
-
-        if (eventAdmin != null)
-        {
-            eventAdmin.postEvent(
-                EventFactory.endpointMessageTransportReady(endpoint));
-        }
-
-        endpoint.getConference().endpointMessageTransportConnected(endpoint);
+        eventHandler.endpointMessageTransportConnected(endpoint);
     }
 
     /**

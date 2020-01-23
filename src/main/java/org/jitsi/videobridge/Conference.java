@@ -56,7 +56,9 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  */
 public class Conference
      extends PropertyChangeNotifier
-     implements PropertyChangeListener, Expireable
+     implements PropertyChangeListener,
+        Expireable,
+        AbstractEndpointMessageTransport.EndpointMessageTransportEventHandler
 {
     /**
      * The endpoints participating in this {@link Conference}. Although it's a
@@ -1003,8 +1005,17 @@ public class Conference
      * @param endpoint the {@link Endpoint} whose transport channel has become
      * available.
      */
-    void endpointMessageTransportConnected(@NotNull AbstractEndpoint endpoint)
+    @Override
+    public void endpointMessageTransportConnected(@NotNull AbstractEndpoint endpoint)
     {
+        EventAdmin eventAdmin = getEventAdmin();
+
+        if (eventAdmin != null)
+        {
+            eventAdmin.postEvent(
+                EventFactory.endpointMessageTransportReady(endpoint));
+        }
+
         if (!isExpired())
         {
             AbstractEndpoint dominantSpeaker
