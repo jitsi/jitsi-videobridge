@@ -42,6 +42,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.logging.*;
+import java.util.stream.*;
 
 import static org.jitsi.utils.collections.JMap.entry;
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
@@ -1146,6 +1147,11 @@ public class Conference
         return shim;
     }
 
+    /** The maximum number of packet handlers we want to execute in one task.
+     *   TODO: this number is pulled out of the air; tune it.
+     */
+    public static final int MAX_HANDLERS_PER_TASK = 5;
+
     /**
      * Broadcasts the packet to all endpoints and tentacles that want it.
      *
@@ -1154,35 +1160,68 @@ public class Conference
     private void sendOut(PacketInfo packetInfo)
     {
         String sourceEndpointId = packetInfo.getEndpointId();
+
+        Stream<PotentialPacketHandler> handlerStream =
+            endpointsCache.stream().
+                filter(e -> !e.getID().equals(sourceEndpointId)).
+                map(e -> (PotentialPacketHandler)e);
+
+        if (tentacle != null) {
+            handlerStream = Stream.concat(handlerStream, Stream.of(tentacle));
+        }
+
+        AtomicInteger counter = new AtomicInteger();
+
+        Collection<List<PotentialPacketHandler>> handlers =
+            handlerStream.
+                collect(Collectors.groupingBy(it -> (counter.getAndIncrement()) / MAX_HANDLERS_PER_TASK)).values();
+
+        PacketInfoDistributor distributor = new PacketInfoDistributor(packetInfo, handlers.size(), logger);
+
+        if (handlers.size() == 0)
+        {
+            return;
+        }
+        else if (handlers.size() == 1)
+        {
+            doSendOut(distributor, handlers.iterator().next());
+        }
+        else {
+            for (List<PotentialPacketHandler> handlerSet: handlers)
+            {
+                TaskPools.CPU_POOL.submit( () ->
+                    doSendOut(distributor, handlerSet)
+                );
+            }
+        }
+    }
+
+    /**
+     * Broadcasts a packet to a sent of packet handlers.
+     *
+     * @param distributor A distributor for the packet
+     * @param handlers the packet handlers to send it to
+     */
+    private static void doSendOut(PacketInfoDistributor distributor, List<PotentialPacketHandler> handlers)
+    {
         // We want to avoid calling 'clone' for the last receiver of this packet
         // since it's unnecessary.  To do so, we'll wait before we clone and send
         // to an interested handler until after we've determined another handler
         // is also interested in the packet.  We'll give the last handler the
         // original packet (without cloning).
         PotentialPacketHandler prevHandler = null;
-        for (Endpoint endpoint : endpointsCache)
+        PacketInfo packetInfoPreview = distributor.previewPacketInfo(), packetInfo = null;
+        for (PotentialPacketHandler handler : handlers)
         {
-            if (endpoint.getID().equals(sourceEndpointId))
-            {
-                continue;
-            }
-
-            if (endpoint.wants(packetInfo))
+            if (handler.wants(packetInfoPreview))
             {
                 if (prevHandler != null)
                 {
                     prevHandler.send(packetInfo.clone());
                 }
-                prevHandler = endpoint;
+                prevHandler = handler;
+                packetInfo = distributor.getPacketInfoReference();
             }
-        }
-        if (tentacle != null && tentacle.wants(packetInfo))
-        {
-            if (prevHandler != null)
-            {
-                prevHandler.send(packetInfo.clone());
-            }
-            prevHandler = tentacle;
         }
 
         if (prevHandler != null)
@@ -1191,8 +1230,8 @@ public class Conference
         }
         else
         {
-            // No one wanted the packet, so the buffer is now free!
-            ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
+            // No one wanted the packet, so the reference is unneeded!
+            distributor.releasePacketInfoReference();
         }
     }
 
