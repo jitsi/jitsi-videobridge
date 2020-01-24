@@ -35,17 +35,17 @@ class PacketIOActivityTest : ShouldSpec() {
             val oldTime = clock.instant()
             clock.elapse(1.minutes)
             val newTime = clock.instant()
-            packetIoActivity.lastRtpPacketSentTimestamp = newTime
-            packetIoActivity.lastRtpPacketReceivedTimestamp = newTime
-            packetIoActivity.lastIceActivityTimestamp = newTime
+            packetIoActivity.lastRtpPacketSentInstant = newTime
+            packetIoActivity.lastRtpPacketReceivedInstant = newTime
+            packetIoActivity.lastIceActivityInstant = newTime
             "when setting an older time" {
-                packetIoActivity.lastRtpPacketSentTimestamp = oldTime
-                packetIoActivity.lastRtpPacketReceivedTimestamp = oldTime
-                packetIoActivity.lastIceActivityTimestamp = oldTime
+                packetIoActivity.lastRtpPacketSentInstant = oldTime
+                packetIoActivity.lastRtpPacketReceivedInstant = oldTime
+                packetIoActivity.lastIceActivityInstant = oldTime
                 should("not allow going backwards") {
-                    packetIoActivity.lastRtpPacketSentTimestamp shouldBe newTime
-                    packetIoActivity.lastRtpPacketReceivedTimestamp shouldBe newTime
-                    packetIoActivity.lastIceActivityTimestamp shouldBe newTime
+                    packetIoActivity.lastRtpPacketSentInstant shouldBe newTime
+                    packetIoActivity.lastRtpPacketReceivedInstant shouldBe newTime
+                    packetIoActivity.lastIceActivityInstant shouldBe newTime
                 }
             }
         }
@@ -57,10 +57,10 @@ class PacketIOActivityTest : ShouldSpec() {
                 val rtpReceivedTime = clock.instant()
                 clock.elapse(10.seconds)
                 val iceTime = clock.instant()
-                packetIoActivity.lastRtpPacketSentTimestamp = rtpSentTime
-                packetIoActivity.lastRtpPacketReceivedTimestamp = rtpReceivedTime
-                packetIoActivity.lastIceActivityTimestamp = iceTime
-                packetIoActivity.lastOverallRtpActivity shouldBe rtpReceivedTime
+                packetIoActivity.lastRtpPacketSentInstant = rtpSentTime
+                packetIoActivity.lastRtpPacketReceivedInstant = rtpReceivedTime
+                packetIoActivity.lastIceActivityInstant = iceTime
+                packetIoActivity.lastRtpActivityInstant shouldBe rtpReceivedTime
             }
         }
         "lastOverallActivity" {
@@ -71,10 +71,10 @@ class PacketIOActivityTest : ShouldSpec() {
                 val iceTime = clock.instant()
                 clock.elapse(5.seconds)
                 val rtpReceivedTime = clock.instant()
-                packetIoActivity.lastRtpPacketSentTimestamp = rtpSentTime
-                packetIoActivity.lastRtpPacketReceivedTimestamp = rtpReceivedTime
-                packetIoActivity.lastIceActivityTimestamp = iceTime
-                packetIoActivity.lastOverallRtpActivity shouldBe rtpReceivedTime
+                packetIoActivity.lastRtpPacketSentInstant = rtpSentTime
+                packetIoActivity.lastRtpPacketReceivedInstant = rtpReceivedTime
+                packetIoActivity.lastIceActivityInstant = iceTime
+                packetIoActivity.lastRtpActivityInstant shouldBe rtpReceivedTime
             }
         }
     }

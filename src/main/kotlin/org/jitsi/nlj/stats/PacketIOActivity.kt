@@ -23,22 +23,40 @@ import java.time.Instant
 
 @Suppress("unused")
 class PacketIOActivity {
-    var lastRtpPacketReceivedTimestamp: Instant by threadSafeVetoable(NEVER) { _, oldValue, newValue ->
+    /**
+     * The last time an RTP or RTCP packet was received.
+     */
+    var lastRtpPacketReceivedInstant: Instant by threadSafeVetoable(NEVER) { _, oldValue, newValue ->
         newValue.isAfter(oldValue)
     }
-    var lastRtpPacketSentTimestamp: Instant by threadSafeVetoable(NEVER) { _, oldValue, newValue ->
+    /**
+     * The last time an RTP or RTCP packet was received.
+     */
+    var lastRtpPacketSentInstant: Instant by threadSafeVetoable(NEVER) { _, oldValue, newValue ->
         newValue.isAfter(oldValue)
     }
-    var lastIceActivityTimestamp: Instant by threadSafeVetoable(NEVER) { _, oldValue, newValue ->
+    /**
+     * The last time ICE consent was refreshed.
+     */
+    var lastIceActivityInstant: Instant by threadSafeVetoable(NEVER) { _, oldValue, newValue ->
         newValue.isAfter(oldValue)
     }
 
-    val lastOverallRtpActivity: Instant
-        get() = latest(lastRtpPacketReceivedTimestamp, lastRtpPacketSentTimestamp)
+    /**
+     * The last time an RTP or RTCP packet was sent or received.
+     */
+    val lastRtpActivityInstant: Instant
+        get() = latest(lastRtpPacketReceivedInstant, lastRtpPacketSentInstant)
 
-    val lastOverallIncomingActivity: Instant
-        get() = latest(lastRtpPacketReceivedTimestamp, lastIceActivityTimestamp)
+    /**
+     * The last time a packet was received (RTP, RTCP or ICE consent).
+     */
+    val lastIncomingActivityInstant: Instant
+        get() = latest(lastRtpPacketReceivedInstant, lastIceActivityInstant)
 
-    val latestOverallActivity: Instant
-        get() = latest(lastRtpPacketReceivedTimestamp, lastRtpPacketSentTimestamp, lastIceActivityTimestamp)
+    /**
+     * The last time a packet was sent or received.
+     */
+    val lastActivityInstant: Instant
+        get() = latest(lastRtpPacketReceivedInstant, lastRtpPacketSentInstant, lastIceActivityInstant)
 }
