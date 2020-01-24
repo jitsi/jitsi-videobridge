@@ -28,6 +28,20 @@ public class PacketInfoDistributor
     private int numClones;
     private final Logger logger;
 
+    /**
+     * Whether to enable or disable book keeping.
+     */
+    public static final Boolean ENABLE_BOOKKEEPING = true;
+
+    /**
+     * Gets the current thread ID.
+     */
+    private static long threadId()
+    {
+        return Thread.currentThread().getId();
+    }
+
+
     public PacketInfoDistributor(PacketInfo pi, int count, Logger parentLogger)
     {
         packetInfo = pi;
@@ -51,12 +65,22 @@ public class PacketInfoDistributor
         if (outstandingReferences < 0) {
             throw new IllegalStateException("Too many references taken");
         }
+        PacketInfo ret;
         if (outstandingReferences > 0)
         {
             numClones++;
-            return packetInfo.clone();
+            ret = packetInfo.clone();
         }
-        return packetInfo;
+        else
+        {
+            ret = packetInfo;
+        }
+        if (ENABLE_BOOKKEEPING)
+        {
+            logger.info("Thread " + threadId() + " was given buffer "
+                + System.identityHashCode(ret.getPacket().getBuffer()) + " for packet " + packetInfo.getPacket().toString());
+        }
+        return ret;
     }
 
     public synchronized void releasePacketInfoReference()
@@ -71,6 +95,11 @@ public class PacketInfoDistributor
             {
                 logger.debug(() -> ("Packet clone optimization failed (after " +
                     numClones + " clones among " + totalReferences + " references)"));
+            }
+            if (ENABLE_BOOKKEEPING)
+            {
+                logger.info("Thread " + threadId() +
+                    " returned its buffer reference for packet " + packetInfo.getPacket().toString());
             }
             ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
         }
