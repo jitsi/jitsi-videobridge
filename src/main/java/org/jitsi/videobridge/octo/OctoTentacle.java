@@ -145,7 +145,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      * {@inheritDoc}
      */
     @Override
-    public void send(PacketInfo packetInfo)
+    public synchronized void send(PacketInfo packetInfo)
     {
         Packet packet = packetInfo.getPacket();
         if (packet != null)
