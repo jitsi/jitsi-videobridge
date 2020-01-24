@@ -1098,7 +1098,7 @@ public class Videobridge
      * to include. If not specified, all of the conference's endpoints will be
      * included.
      */
-    public OrderedJsonObject getDebugState(String conferenceId, String endpointId)
+    public OrderedJsonObject getDebugState(String conferenceId, String endpointId, boolean full)
     {
         OrderedJsonObject debugState = new OrderedJsonObject();
         debugState.put("shutdownInProgress", shutdownInProgress);
@@ -1125,7 +1125,7 @@ public class Videobridge
             {
                 conferences.put(
                         conference.getID(),
-                        conference.getDebugState(false, null));
+                        conference.getDebugState(full, null));
             }
         }
         else
@@ -1140,7 +1140,7 @@ public class Videobridge
             conferences.put(
                     conferenceId,
                     conference == null
-                            ? "null" : conference.getDebugState(true, endpointId));
+                            ? "null" : conference.getDebugState(full, endpointId));
         }
 
         return debugState;
