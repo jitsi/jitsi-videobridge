@@ -48,7 +48,9 @@ public class PacketInfoDistributor
     public synchronized PacketInfo getPacketInfoReference()
     {
         outstandingReferences--;
-        assert(outstandingReferences >= 0);
+        if (outstandingReferences < 0) {
+            throw new IllegalStateException("Too many references taken");
+        }
         if (outstandingReferences > 0)
         {
             numClones++;
@@ -60,7 +62,9 @@ public class PacketInfoDistributor
     public synchronized void releasePacketInfoReference()
     {
         outstandingReferences--;
-        assert(outstandingReferences >= 0);
+        if (outstandingReferences < 0) {
+            throw new IllegalStateException("Too many references taken");
+        }
         if (outstandingReferences == 0)
         {
             if (numClones > 0)

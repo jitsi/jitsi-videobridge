@@ -1172,25 +1172,25 @@ public class Conference
 
         AtomicInteger counter = new AtomicInteger();
 
-        Collection<List<PotentialPacketHandler>> handlers =
+        Collection<List<PotentialPacketHandler>> handlerTasks =
             handlerStream.
                 collect(Collectors.groupingBy(it -> (counter.getAndIncrement()) / MAX_HANDLERS_PER_TASK)).values();
 
-        PacketInfoDistributor distributor = new PacketInfoDistributor(packetInfo, handlers.size(), logger);
+        PacketInfoDistributor distributor = new PacketInfoDistributor(packetInfo, handlerTasks.size(), logger);
 
-        if (handlers.size() == 0)
+        if (handlerTasks.size() == 0)
         {
             return;
         }
-        else if (handlers.size() == 1)
+        else if (handlerTasks.size() == 1)
         {
-            doSendOut(distributor, handlers.iterator().next());
+            doSendOut(distributor, handlerTasks.iterator().next());
         }
         else {
-            for (List<PotentialPacketHandler> handlerSet: handlers)
+            for (List<PotentialPacketHandler> handlers: handlerTasks)
             {
                 TaskPools.CPU_POOL.submit( () ->
-                    doSendOut(distributor, handlerSet)
+                    doSendOut(distributor, handlers)
                 );
             }
         }
