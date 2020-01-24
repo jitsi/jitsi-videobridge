@@ -2,5 +2,5 @@
 
 set -e
 
-cd $WORKSPACE
 ./resources/build.sh
+mvn install
