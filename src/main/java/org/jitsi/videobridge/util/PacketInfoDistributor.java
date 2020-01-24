@@ -38,7 +38,7 @@ public class PacketInfoDistributor
 
     public synchronized PacketInfo previewPacketInfo()
     {
-        if (outstandingReferences == 0)
+        if (outstandingReferences <= 0)
         {
             throw new IllegalStateException("Packet previewed after all references taken");
         }
@@ -48,6 +48,7 @@ public class PacketInfoDistributor
     public synchronized PacketInfo getPacketInfoReference()
     {
         outstandingReferences--;
+        assert(outstandingReferences >= 0);
         if (outstandingReferences > 0)
         {
             numClones++;
@@ -59,6 +60,7 @@ public class PacketInfoDistributor
     public synchronized void releasePacketInfoReference()
     {
         outstandingReferences--;
+        assert(outstandingReferences >= 0);
         if (outstandingReferences == 0)
         {
             if (numClones > 0)

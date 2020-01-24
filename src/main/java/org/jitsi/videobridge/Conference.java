@@ -1210,17 +1210,22 @@ public class Conference
         // is also interested in the packet.  We'll give the last handler the
         // original packet (without cloning).
         PotentialPacketHandler prevHandler = null;
-        PacketInfo packetInfoPreview = distributor.previewPacketInfo(), packetInfo = null;
+        PacketInfo packetInfoPreview = distributor.previewPacketInfo();
+        PacketInfo packetInfo = null;
+
         for (PotentialPacketHandler handler : handlers)
         {
             if (handler.wants(packetInfoPreview))
             {
+                if (packetInfo == null)
+                {
+                    packetInfo = distributor.getPacketInfoReference();
+                }
                 if (prevHandler != null)
                 {
                     prevHandler.send(packetInfo.clone());
                 }
                 prevHandler = handler;
-                packetInfo = distributor.getPacketInfoReference();
             }
         }
 
@@ -1228,9 +1233,9 @@ public class Conference
         {
             prevHandler.send(packetInfo);
         }
-        else
-        {
-            // No one wanted the packet, so the reference is unneeded!
+
+        if (packetInfo == null) {
+            // No one wanted the packet, so our reference is unneeded!
             distributor.releasePacketInfoReference();
         }
     }
