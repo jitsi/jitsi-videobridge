@@ -1220,6 +1220,7 @@ public class Conference
                 if (packetInfo == null)
                 {
                     packetInfo = distributor.getPacketInfoReference();
+                    packetInfoPreview = packetInfo;
                 }
                 if (prevHandler != null)
                 {
