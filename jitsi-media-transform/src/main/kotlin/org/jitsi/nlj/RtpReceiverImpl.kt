@@ -126,7 +126,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
      * its place in the receive pipeline.  To support both keeping it in the same
      * place and allowing it to be re-assigned, we wrap it with this.
      */
-    private val packetHandlerWrapper = object : ConsumerNode("Packet handler wrapper") {
+    private val packetHandlerWrapper = object : ConsumerNode("Input pipeline termination node") {
         override fun consume(packetInfo: PacketInfo) {
             // When there's no handler set we're effectively dropping packets, so their buffers
             // should be returned.
