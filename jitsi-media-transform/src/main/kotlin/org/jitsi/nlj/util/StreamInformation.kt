@@ -43,7 +43,7 @@ typealias RtpPayloadTypesChangedHandler = (Map<Byte, PayloadType>) -> Unit
  * etc.) available and allows interested parties to add handlers for when certain
  * information is available.
  */
-interface ReadOnlyStreamInformationStore {
+interface ReadOnlyStreamInformationStore : NodeStatsProducer {
     val rtpExtensions: List<RtpExtension>
     fun onRtpExtensionMapping(rtpExtensionType: RtpExtensionType, handler: RtpExtensionHandler)
 
@@ -94,7 +94,7 @@ interface StreamInformationStore : ReadOnlyStreamInformationStore {
     fun removeReceiveSsrc(ssrc: Long)
 }
 
-class StreamInformationStoreImpl : StreamInformationStore, NodeStatsProducer {
+class StreamInformationStoreImpl : StreamInformationStore {
     private val extensionsLock = Any()
     private val extensionHandlers =
         mutableMapOf<RtpExtensionType, MutableList<RtpExtensionHandler>>()
