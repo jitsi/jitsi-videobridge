@@ -25,6 +25,7 @@ import org.jitsi.nlj.util.ArrayCache
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.Rfc3711IndexTracker
+import org.jitsi.nlj.util.formatMilli
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.PacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
@@ -82,12 +83,15 @@ class TransportCcEngine(
 
     private val missingPacketDetailSeqNums = mutableListOf<Int>()
 
+    private var lastRtt: Duration? = null
+
     /**
      * Called when an RTP sender has a new round-trip time estimate.
      */
     fun onRttUpdate(rtt: Duration) {
         val now = clock.instant()
         bandwidthEstimator.onRttUpdate(now, rtt)
+        lastRtt = rtt
     }
 
     override fun rtcpPacketReceived(rtcpPacket: RtcpPacket, receivedTime: Long) {
@@ -159,7 +163,12 @@ class TransportCcEngine(
                     "Sent packet details map was empty."
                 } else {
                     "Latest seqNum was ${sentPacketDetails.lastSequence}, size is ${sentPacketDetails.size}."
-                })
+                } +
+                (lastRtt?.let {
+                    " Latest RTT is ${it.formatMilli()} ms."
+                } ?: run {
+                    ""
+                }))
             missingPacketDetailSeqNums.clear()
         }
     }
