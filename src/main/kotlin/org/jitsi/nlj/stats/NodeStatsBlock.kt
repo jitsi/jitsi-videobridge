@@ -195,7 +195,7 @@ class NodeStatsBlock(val name: String) {
          */
         fun fromJson(name: String, json: OrderedJsonObject): NodeStatsBlock = NodeStatsBlock(name).apply {
             json.keys.forEach {
-                addString(it!!.toString(), json[it].toString())
+                addString(it.toString(), json[it].toString())
             }
         }
     }

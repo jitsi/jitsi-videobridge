@@ -51,7 +51,6 @@ class ReceiverFactory {
                 rtcpEventNotifier = RtcpEventNotifier(),
                 executor = executor,
                 backgroundExecutor = backgroundExecutor,
-                getSendBitrate = { 0L },
                 streamInformationStore = streamInformationStore,
                 parentLogger = logger
             )

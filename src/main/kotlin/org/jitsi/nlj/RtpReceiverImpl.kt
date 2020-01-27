@@ -81,10 +81,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
      * background tasks, or tasks that need to execute at some fixed delay/rate
      */
     private val backgroundExecutor: ScheduledExecutorService,
-    /**
-     * Returns the current sending bitrate in bps.
-     */
-    getSendBitrate: () -> Long,
     streamInformationStore: ReadOnlyStreamInformationStore,
     parentLogger: Logger,
     diagnosticContext: DiagnosticContext = DiagnosticContext()
@@ -262,7 +258,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
         toggleablePcapWriter.disable()
     }
 
-    override fun onRttUpdate(newRtt: Double) {
-        remoteBandwidthEstimator.onRttUpdate(newRtt)
+    override fun onRttUpdate(newRttMs: Double) {
+        remoteBandwidthEstimator.onRttUpdate(newRttMs)
     }
 }
