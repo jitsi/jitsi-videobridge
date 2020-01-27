@@ -45,7 +45,7 @@ class VideoParser(
     // does this packet represent the end of a frame?
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        streamInformationStore.rtpPayloadTypes[rtpPacket.payloadType.toByte()]?.let { payloadType ->
+        return streamInformationStore.rtpPayloadTypes[rtpPacket.payloadType.toByte()]?.let { payloadType ->
             val videoRtpPacket = when (payloadType) {
                 is Vp8PayloadType -> {
                     val vp8Packet = rtpPacket.toOtherType(::Vp8Packet)
@@ -58,10 +58,11 @@ class VideoParser(
             }
             packetInfo.packet = videoRtpPacket
             packetInfo.resetPayloadVerification()
+            packetInfo
         } ?: run {
             logger.error("Unrecognized video payload type ${rtpPacket.payloadType}, cannot parse video information")
+            null
         }
-        return packetInfo
     }
 
     private fun findRtpEncodingDesc(packet: VideoRtpPacket): RTPEncodingDesc? {

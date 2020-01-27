@@ -42,7 +42,6 @@ class SilenceDiscarder(
                 .rewriteRtp(!packetInfo.shouldDiscard, packet)
 
             return if (packetInfo.shouldDiscard) {
-                packetDiscarded(packetInfo)
                 null
             } else {
                 packetInfo

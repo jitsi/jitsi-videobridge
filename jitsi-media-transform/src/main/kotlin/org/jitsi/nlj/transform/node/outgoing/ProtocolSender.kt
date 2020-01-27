@@ -20,6 +20,13 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.protocol.ProtocolStack
 import org.jitsi.nlj.transform.node.TransformerNode
 
+/**
+ * Note that [ProtocolSender] functions as a [TransformerNode]
+ * which always returns null from [transform]: this implies that
+ * all [ProtocolStack] implementations *must* make a copy of
+ * the packet in [ProtocolStack.sendApplicationData] if they need
+ * access to that data after the method is done.
+ */
 open class ProtocolSender @JvmOverloads constructor(
     private val stack: ProtocolStack,
     name: String = stack::class.toString()

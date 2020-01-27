@@ -33,7 +33,6 @@ open class PacketParser(
             packetInfo
         } catch (e: Exception) {
             logger.warn("Error parsing packet: $e")
-            packetDiscarded(packetInfo)
             null
         }
     }

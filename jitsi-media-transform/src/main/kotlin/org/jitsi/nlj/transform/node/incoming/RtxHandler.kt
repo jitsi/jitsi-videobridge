@@ -67,7 +67,6 @@ class RtxHandler(
         if (rtpPacket.payloadLength - rtpPacket.paddingSize < 2) {
             logger.cdebug { "RTX packet is padding, ignore" }
             numPaddingPacketsReceived++
-            packetDiscarded(packetInfo)
             return null
         }
         val originalSeqNum = RtxPacket.getOriginalSequenceNumber(rtpPacket)

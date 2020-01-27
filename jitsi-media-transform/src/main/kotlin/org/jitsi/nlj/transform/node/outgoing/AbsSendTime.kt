@@ -18,12 +18,14 @@ package org.jitsi.nlj.transform.node.outgoing
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.RtpExtensionType.ABS_SEND_TIME
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.TransformerNode
+import org.jitsi.nlj.transform.node.ModifierNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.AbsSendTimeHeaderExtension
 
-class AbsSendTime(streamInformationStore: ReadOnlyStreamInformationStore) : TransformerNode("Absolute send time") {
+class AbsSendTime(
+    streamInformationStore: ReadOnlyStreamInformationStore
+) : ModifierNode("Absolute send time") {
     private var extensionId: Int? = null
 
     init {
@@ -32,7 +34,7 @@ class AbsSendTime(streamInformationStore: ReadOnlyStreamInformationStore) : Tran
         }
     }
 
-    override fun transform(packetInfo: PacketInfo): PacketInfo? {
+    override fun modify(packetInfo: PacketInfo): PacketInfo {
         extensionId?.let { absSendTimeExtId ->
             val rtpPacket = packetInfo.packetAs<RtpPacket>()
             val ext = rtpPacket.getHeaderExtension(absSendTimeExtId)
