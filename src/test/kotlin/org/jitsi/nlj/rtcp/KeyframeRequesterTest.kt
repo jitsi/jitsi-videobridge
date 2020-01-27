@@ -31,6 +31,7 @@ import org.jitsi.nlj.resources.node.onOutput
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.test_utils.FakeClock
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.RtpExtensionHandler
@@ -62,6 +63,8 @@ class KeyframeRequesterTest : ShouldSpec() {
         override fun getLocalPrimarySsrc(secondarySsrc: Long): Long? = null
 
         override fun getRemoteSecondarySsrc(primarySsrc: Long, associationType: SsrcAssociationType): Long? = null
+
+        override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("dummy")
     }
     private val logger = StdoutLogger()
     private val clock: FakeClock = FakeClock()
