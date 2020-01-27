@@ -31,7 +31,7 @@ public class PacketInfoDistributor
     /**
      * Whether to enable or disable book keeping.
      */
-    public static final Boolean ENABLE_BOOKKEEPING = true;
+    public static final Boolean ENABLE_BOOKKEEPING = false;
 
     /**
      * Gets the current thread ID.
