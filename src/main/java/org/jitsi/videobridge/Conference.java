@@ -1164,10 +1164,16 @@ public class Conference
         Stream<PotentialPacketHandler> handlerStream =
             endpointsCache.stream().
                 filter(e -> !e.getID().equals(sourceEndpointId)).
-                map(e -> (PotentialPacketHandler)e);
+                map(e -> e); /* For some reason this is necessary to cast from Stream<Endpoint> to Stream<PotentialPacketHandler>. */
 
         if (tentacle != null) {
             handlerStream = Stream.concat(handlerStream, Stream.of(tentacle));
+        }
+
+        if (handlerStream.spliterator().estimateSize() < MAX_HANDLERS_PER_TASK) {
+            PacketInfoDistributor distributor = new PacketInfoDistributor(packetInfo, 1, logger);
+            doSendOut(distributor, handlerStream.collect(Collectors.toList()));
+            return;
         }
 
         AtomicInteger counter = new AtomicInteger();
@@ -1178,21 +1184,11 @@ public class Conference
 
         PacketInfoDistributor distributor = new PacketInfoDistributor(packetInfo, handlerTasks.size(), logger);
 
-        if (handlerTasks.size() == 0)
+        for (List<PotentialPacketHandler> handlers: handlerTasks)
         {
-            return;
-        }
-        else if (handlerTasks.size() == 1)
-        {
-            doSendOut(distributor, handlerTasks.iterator().next());
-        }
-        else {
-            for (List<PotentialPacketHandler> handlers: handlerTasks)
-            {
-                TaskPools.CPU_POOL.submit( () ->
-                    doSendOut(distributor, handlers)
-                );
-            }
+            TaskPools.CPU_POOL.submit( () ->
+                doSendOut(distributor, handlers)
+            );
         }
     }
 
