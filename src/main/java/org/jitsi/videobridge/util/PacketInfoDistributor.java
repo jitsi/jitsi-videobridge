@@ -47,7 +47,8 @@ public class PacketInfoDistributor
         packetInfo = pi;
         totalReferences = count;
         outstandingReferences = count;
-        logger = parentLogger.createChildLogger(getClass().toString());
+        /* We create a PacketInfoDistributor on each packet so we don't want to instantiate a new logger each time. */
+        logger = parentLogger;
     }
 
     public synchronized PacketInfo previewPacketInfo()
