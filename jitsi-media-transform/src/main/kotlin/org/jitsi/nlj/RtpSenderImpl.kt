@@ -161,10 +161,10 @@ class RtpSenderImpl(
         )
     }
 
-    override fun onRttUpdate(newRtt: Double) {
-        nackHandler.onRttUpdate(newRtt)
-        keyframeRequester.onRttUpdate(newRtt)
-        transportCcEngine?.onRttUpdate(Duration.ofNanos((newRtt * 1e6).toLong()))
+    override fun onRttUpdate(newRttMs: Double) {
+        nackHandler.onRttUpdate(newRttMs)
+        keyframeRequester.onRttUpdate(newRttMs)
+        transportCcEngine?.onRttUpdate(Duration.ofNanos((newRttMs * 1e6).toLong()))
     }
 
     /**

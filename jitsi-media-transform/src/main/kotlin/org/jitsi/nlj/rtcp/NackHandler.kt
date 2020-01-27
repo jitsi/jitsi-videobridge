@@ -82,8 +82,8 @@ class NackHandler(
         nackedPackets.forEach { onNackedPacketsReady.processPacket(PacketInfo(it)) }
     }
 
-    override fun onRttUpdate(newRtt: Double) {
-        currRtt = newRtt
+    override fun onRttUpdate(newRttMs: Double) {
+        currRtt = newRttMs
     }
 
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("Nack handler").apply {

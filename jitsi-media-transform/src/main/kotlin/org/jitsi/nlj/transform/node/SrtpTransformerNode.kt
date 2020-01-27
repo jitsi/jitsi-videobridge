@@ -98,19 +98,21 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
         }
     }
 
-    private var num_srtp_fail = 0
-    private var num_srtp_auth_fail = 0
-    private var num_srtp_replay_fail = 0
-    private var num_srtp_replay_old = 0
-    private var num_srtp_invalid_packet = 0
+    private var numSrtpProcessed = 0
+    private var numSrtpFail = 0
+    private var numSrtpAuthFail = 0
+    private var numSrtpReplayFail = 0
+    private var numSrtpReplayOld = 0
+    private var numSrtpInvalidPacket = 0
 
     private fun countErrorStatus(err: SrtpErrorStatus) {
         when (err) {
-            SrtpErrorStatus.FAIL -> num_srtp_fail++
-            SrtpErrorStatus.AUTH_FAIL -> num_srtp_auth_fail++
-            SrtpErrorStatus.REPLAY_FAIL -> num_srtp_replay_fail++
-            SrtpErrorStatus.REPLAY_OLD -> num_srtp_replay_old++
-            SrtpErrorStatus.INVALID_PACKET -> num_srtp_invalid_packet++
+            SrtpErrorStatus.OK -> numSrtpProcessed++
+            SrtpErrorStatus.FAIL -> numSrtpFail++
+            SrtpErrorStatus.AUTH_FAIL -> numSrtpAuthFail++
+            SrtpErrorStatus.REPLAY_FAIL -> numSrtpReplayFail++
+            SrtpErrorStatus.REPLAY_OLD -> numSrtpReplayOld++
+            SrtpErrorStatus.INVALID_PACKET -> numSrtpInvalidPacket++
         }
     }
 
@@ -123,11 +125,12 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
             } else {
                 addString("state", "hold_for_transformer")
             }
-            addNumber("num_srtp_fail", num_srtp_fail)
-            addNumber("num_srtp_auth_fail", num_srtp_auth_fail)
-            addNumber("num_srtp_replay_fail", num_srtp_replay_fail)
-            addNumber("num_srtp_replay_old", num_srtp_replay_old)
-            addNumber("num_srtp_invalid_packet", num_srtp_invalid_packet)
+            addNumber("num_srtp_processed", numSrtpProcessed)
+            addNumber("num_srtp_fail", numSrtpFail)
+            addNumber("num_srtp_auth_fail", numSrtpAuthFail)
+            addNumber("num_srtp_replay_fail", numSrtpReplayFail)
+            addNumber("num_srtp_replay_old", numSrtpReplayOld)
+            addNumber("num_srtp_invalid_packet", numSrtpInvalidPacket)
         }
     }
 

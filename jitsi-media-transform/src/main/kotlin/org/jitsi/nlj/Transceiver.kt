@@ -106,7 +106,6 @@ class Transceiver(
             rtcpEventNotifier,
             receiverExecutor,
             backgroundExecutor,
-            { rtpSender.getPacketStreamStats().bitrate },
             streamInformationStore,
             logger,
             diagnosticContext
