@@ -245,7 +245,7 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
         }
     }
 
-    protected fun packetDiscarded(packetInfo: PacketInfo) {
+    protected open fun packetDiscarded(packetInfo: PacketInfo) {
         stats.numDiscardedPackets++
         BufferPool.returnBuffer(packetInfo.packet.buffer)
     }
@@ -323,18 +323,52 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
 }
 
 /**
+ * A node which will always forward the [PacketInfo] it is given.
+ * NOTE that the [PacketInfo] instance may be modified, but only the original
+ * [PacketInfo] instance will be forwarded.
+ */
+abstract class NeverDiscardNode(name: String) : StatsKeepingNode(name) {
+    protected abstract fun handlePacket(packetInfo: PacketInfo)
+
+    final override fun doProcessPacket(packetInfo: PacketInfo) {
+        handlePacket(packetInfo)
+        doneProcessing(packetInfo)
+        next(packetInfo)
+    }
+}
+
+/**
  * A [Node] which transforms a single packet, possibly dropping it (by returning null).
+ * If null is returned, the [PacketInfo] instance given to [transform] will be
+ * discarded.
  */
 abstract class TransformerNode(name: String) : StatsKeepingNode(name) {
-
     protected abstract fun transform(packetInfo: PacketInfo): PacketInfo?
 
     override fun doProcessPacket(packetInfo: PacketInfo) {
         val transformedPacket = transform(packetInfo)
         doneProcessing(transformedPacket)
-        if (transformedPacket != null) {
-            next(transformedPacket)
+        when (transformedPacket) {
+            null -> super.packetDiscarded(packetInfo)
+            else -> next(transformedPacket)
         }
+    }
+
+    final override fun packetDiscarded(packetInfo: PacketInfo) {
+        throw Exception("No subclass of TransformerNode should call packetDiscarded, " +
+            "return null from 'transform' instead")
+    }
+}
+
+/**
+ * Unlike a [TransformerNode], [ModifierNode] modifies a packet in-place and never
+ * outright 'fails', meaning the original [PacketInfo] will *always* be forwarded.
+ */
+abstract class ModifierNode(name: String) : NeverDiscardNode(name) {
+    protected abstract fun modify(packetInfo: PacketInfo): PacketInfo
+
+    override fun handlePacket(packetInfo: PacketInfo) {
+        modify(packetInfo)
     }
 }
 
@@ -342,14 +376,12 @@ abstract class TransformerNode(name: String) : StatsKeepingNode(name) {
  * A [Node] which drops some of the packets (the ones which are not accepted).
  */
 abstract class FilterNode(name: String) : TransformerNode(name) {
-
     protected abstract fun accept(packetInfo: PacketInfo): Boolean
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         return if (accept(packetInfo)) {
             packetInfo
         } else {
-            packetDiscarded(packetInfo)
             null
         }
     }
@@ -368,26 +400,25 @@ abstract class PredicateFilterNode(
 /**
  * A [Node] which observes packets, but makes no modifications.
  */
-abstract class ObserverNode(name: String) : TransformerNode(name) {
+abstract class ObserverNode(name: String) : NeverDiscardNode(name) {
 
     protected abstract fun observe(packetInfo: PacketInfo)
 
-    override fun transform(packetInfo: PacketInfo): PacketInfo? {
+    override fun handlePacket(packetInfo: PacketInfo) {
         observe(packetInfo)
-        return packetInfo
     }
 }
 
 /**
  * A node which consumes all packets (i.e. does something with them, but does not forward them to another node).
  */
-abstract class ConsumerNode(name: String) : TransformerNode(name) {
+abstract class ConsumerNode(name: String) : StatsKeepingNode(name) {
 
     protected abstract fun consume(packetInfo: PacketInfo)
 
-    override fun transform(packetInfo: PacketInfo): PacketInfo? {
+    override fun doProcessPacket(packetInfo: PacketInfo) {
         consume(packetInfo)
-        return null
+        doneProcessing(packetInfo)
     }
 
     // Consumer nodes shouldn't have children, because they don't forward

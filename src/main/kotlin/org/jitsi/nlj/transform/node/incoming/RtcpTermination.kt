@@ -105,7 +105,6 @@ class RtcpTermination(
             packetInfo.packet = it
             packetInfo
         } ?: run {
-            packetDiscarded(packetInfo)
             null
         }
     }

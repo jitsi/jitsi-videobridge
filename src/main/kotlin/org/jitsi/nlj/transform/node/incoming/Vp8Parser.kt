@@ -20,7 +20,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.TransformerNode
+import org.jitsi.nlj.transform.node.ModifierNode
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.utils.logging2.Logger
@@ -29,16 +29,20 @@ import org.jitsi.utils.logging2.Logger
  * Some [Vp8Packet] fields are not able to be determined by looking at a single VP8 packet (for example the spatial
  * layer index can only be acquired from keyframes).  This class keeps a longer-running 'memory' of the information
  * needed to fill out fields like that in [Vp8Packet]s
+ *
+ * TODO(brian): This class shouldn't really be a [ModifierNode], but since we put it in-line in the video
+ * receive pipeline (as opposed to demuxing based on payload type and routing only known VP8 packets to
+ * it), it's the most appropriate node type for now.
  */
 class Vp8Parser(
     parentLogger: Logger
-) : TransformerNode("Vp8 parser") {
+) : ModifierNode("Vp8 parser") {
     private val logger = parentLogger.createChildLogger(Vp8Parser::class)
     private val ssrcToHeight: MutableMap<Long, Int> = HashMap()
     // Stats
     private var numKeyframes: Int = 0
 
-    override fun transform(packetInfo: PacketInfo): PacketInfo? {
+    override fun modify(packetInfo: PacketInfo): PacketInfo {
         val videoRtpPacket: VideoRtpPacket = packetInfo.packet as VideoRtpPacket
         if (videoRtpPacket is Vp8Packet) {
             // If this was part of a keyframe, it will have already had it set

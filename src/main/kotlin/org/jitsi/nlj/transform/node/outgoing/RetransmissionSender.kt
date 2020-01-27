@@ -15,24 +15,24 @@
  */
 package org.jitsi.nlj.transform.node.outgoing
 
-import java.util.concurrent.ConcurrentHashMap
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.rtp.RtxPacket
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.TransformerNode
+import org.jitsi.nlj.transform.node.ModifierNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.logging2.Logger
+import java.util.concurrent.ConcurrentHashMap
 
 class RetransmissionSender(
     private val streamInformationStore: ReadOnlyStreamInformationStore,
     parentLogger: Logger
-) : TransformerNode("Retransmission sender") {
+) : ModifierNode("Retransmission sender") {
     private val logger = parentLogger.createChildLogger(RetransmissionSender::class)
     /**
      * Maps an original payload type (Int) to its [RtxPayloadType]
@@ -61,7 +61,7 @@ class RetransmissionSender(
     /**
      * Transform an original RTP packet into an RTX-encapsulated form of that packet.
      */
-    override fun transform(packetInfo: PacketInfo): PacketInfo? {
+    override fun modify(packetInfo: PacketInfo): PacketInfo {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
         numRetransmissionsRequested++
         val rtxPt = origPtToRtxPayloadType[rtpPacket.payloadType.toPositiveInt()] ?: return retransmitPlain(packetInfo)

@@ -19,7 +19,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.TransformerNode
+import org.jitsi.nlj.transform.node.ModifierNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtp.RtpPacket
@@ -28,7 +28,7 @@ import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 class TccSeqNumTagger(
     private val transportCcEngine: TransportCcEngine? = null,
     streamInformationStore: ReadOnlyStreamInformationStore
-) : TransformerNode("TCC sequence number tagger") {
+) : ModifierNode("TCC sequence number tagger") {
     private var currTccSeqNum: Int = 1
     private var tccExtensionId: Int? = null
 
@@ -38,7 +38,7 @@ class TccSeqNumTagger(
         }
     }
 
-    override fun transform(packetInfo: PacketInfo): PacketInfo? {
+    override fun modify(packetInfo: PacketInfo): PacketInfo {
         tccExtensionId?.let { tccExtId ->
             val rtpPacket = packetInfo.packetAs<RtpPacket>()
             val ext = rtpPacket.getHeaderExtension(tccExtId)
