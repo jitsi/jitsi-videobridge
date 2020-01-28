@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.util;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
 import org.json.simple.*;
 
@@ -68,14 +69,14 @@ public class ByteBufferPool
      * A debug data structure which tracks outstanding buffers and tracks from where (via
      * a stack trace) they were requested and returned.
      */
-    private static final Map<Integer, StackTraceElement[]> bookkeeping
+    private static final Map<Integer, String> bookkeeping
             = new ConcurrentHashMap<>();
 
     private static class ReturnedBufferBookkeepingInfo
     {
-        final StackTraceElement[] allocTrace;
-        final StackTraceElement[] deallocTrace;
-        ReturnedBufferBookkeepingInfo(StackTraceElement[] a, StackTraceElement[] d)
+        final String allocTrace;
+        final String deallocTrace;
+        ReturnedBufferBookkeepingInfo(String a, String d)
         {
             allocTrace = a;
             deallocTrace = d;
@@ -120,33 +121,12 @@ public class ByteBufferPool
     }
 
     /**
-     * Gets the current stack trace.
-     */
-    private static StackTraceElement[] getStackTrace()
-    {
-        return Thread.currentThread().getStackTrace();
-    }
-
-    /**
      * Gets a stack trace as a multi-line string.
      */
     private static String stackTraceAsString(StackTraceElement[] stack)
     {
         StringBuilder sb = new StringBuilder();
         for (StackTraceElement ste : stack)
-        {
-            sb.append(ste.toString()).append("\n");
-        }
-        return sb.toString();
-    }
-
-    /**
-     * Gets the current stack trace as a multi-line string.
-     */
-    private static String getStackTraceAsString()
-    {
-        StringBuilder sb = new StringBuilder();
-        for (StackTraceElement ste : getStackTrace())
         {
             sb.append(ste.toString()).append("\n");
         }
@@ -188,7 +168,7 @@ public class ByteBufferPool
         {
             Integer arrayId = System.identityHashCode(buf);
 
-            bookkeeping.put(arrayId, getStackTrace());
+            bookkeeping.put(arrayId, UtilKt.getStackTrace());
             returnedBookkeeping.remove(arrayId);
             logger.info("Thread " + threadId() + " got array "
                     + arrayId);
@@ -233,22 +213,22 @@ public class ByteBufferPool
                     + arrayId);
             if (bookkeeping.containsKey(arrayId))
             {
-                returnedBookkeeping.put(arrayId, new ReturnedBufferBookkeepingInfo(bookkeeping.get(arrayId), getStackTrace()));
+                returnedBookkeeping.put(arrayId, new ReturnedBufferBookkeepingInfo(bookkeeping.get(arrayId), UtilKt.getStackTrace()));
                 bookkeeping.remove(arrayId);
             }
             else if (returnedBookkeeping.containsKey(arrayId))
             {
                 logger.info("Thread " + threadId()
                     + " returned a previously-returned buffer at\n"
-                    + getStackTraceAsString() +
+                    + UtilKt.getStackTrace() +
                     "previously returned at\n" +
-                    stackTraceAsString(returnedBookkeeping.get(arrayId).deallocTrace));
+                    returnedBookkeeping.get(arrayId).deallocTrace);
             }
             else
             {
                 logger.info("Thread " + threadId()
                         + " returned a buffer we didn't give out from\n"
-                        + getStackTraceAsString());
+                        + UtilKt.getStackTrace());
             }
         }
     }
