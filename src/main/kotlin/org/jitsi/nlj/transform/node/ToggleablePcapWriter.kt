@@ -18,6 +18,7 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.FeatureToggleEvent
 import org.jitsi.nlj.Features
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.transform.node.PcapWriter
 import org.jitsi.utils.logging2.Logger
@@ -46,21 +47,21 @@ class ToggleablePcapWriter(
         }
     }
 
-    fun newObserverNode(): ObserverNode {
-        return object : ObserverNode("Toggleable pcap writer: $prefix") {
-            override fun observe(packetInfo: PacketInfo) {
-                pcapWriter?.processPacket(packetInfo)
-            }
+    fun newObserverNode(): Node = PcapWriterNode("Toggleable pcap writer: $prefix")
 
-            override fun handleEvent(event: Event) {
-                when (event) {
-                    is FeatureToggleEvent -> {
-                        if (event.feature == Features.TRANSCEIVER_PCAP_DUMP) {
-                            if (event.enable) {
-                                enable()
-                            } else {
-                                disable()
-                            }
+    private inner class PcapWriterNode(name: String) : ObserverNode(name) {
+        override fun observe(packetInfo: PacketInfo) {
+            pcapWriter?.processPacket(packetInfo)
+        }
+
+        override fun handleEvent(event: Event) {
+            when (event) {
+                is FeatureToggleEvent -> {
+                    if (event.feature == Features.TRANSCEIVER_PCAP_DUMP) {
+                        if (event.enable) {
+                            enable()
+                        } else {
+                            disable()
                         }
                     }
                 }

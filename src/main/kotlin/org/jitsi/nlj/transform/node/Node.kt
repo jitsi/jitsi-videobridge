@@ -195,6 +195,7 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
      * Get the stats that should be aggregated per-class.
      */
     protected open fun getNodeStatsToAggregate() = getNodeStats()
+    protected open val aggregationKey: String = javaClass.name.split(".").last()
 
     private fun onEntry(packetInfo: PacketInfo) {
         if (enableStatistics) {
@@ -258,7 +259,7 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
 
         if (enableStatistics && stats.numInputPackets > 0) {
             synchronized(globalStats) {
-                val classStats = globalStats.computeIfAbsent(name) { NodeStatsBlock(name) }
+                val classStats = globalStats.computeIfAbsent(aggregationKey) { NodeStatsBlock(aggregationKey) }
                 classStats.aggregate(getNodeStatsToAggregate())
             }
         }
@@ -515,4 +516,5 @@ class ExclusivePathDemuxer(name: String) : DemuxerNode(name) {
         }
         packetDiscarded(packetInfo)
     }
+    override val aggregationKey = this.name
 }

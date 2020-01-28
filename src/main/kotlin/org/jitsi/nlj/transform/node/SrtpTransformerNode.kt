@@ -20,7 +20,7 @@ import org.jitsi.nlj.srtp.AbstractSrtpTransformer
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.srtp.SrtpErrorStatus
 
-class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
+abstract class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
     /**
      * The function to use to use protect or unprotect a single SRT(C)P packet.
      */
@@ -143,3 +143,8 @@ class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode(name) {
         transformer?.close()
     }
 }
+
+class SrtcpDecryptNode : SrtpTransformerNode("SRTCP Decrypt Node")
+class SrtcpEncryptNode : SrtpTransformerNode("SRTCP Encrypt Node")
+class SrtpDecryptNode : SrtpTransformerNode("SRTP Decrypt Node")
+class SrtpEncryptNode : SrtpTransformerNode("SRTP Encrypt Node")
