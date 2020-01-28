@@ -319,7 +319,7 @@ class PartitionedByteBufferPool
 
             if (ByteBufferPool.ENABLE_BOOKKEEPING)
             {
-                System.out.println("got buffer " + System.identityHashCode(buf)
+                logger.info("got buffer " + System.identityHashCode(buf)
                         + " from thread " + Thread.currentThread().getId()
                         + ", partition " + id + " now has size " + pool.size());
             }
@@ -334,7 +334,7 @@ class PartitionedByteBufferPool
         {
             if (ByteBufferPool.ENABLE_BOOKKEEPING)
             {
-                System.out.println("returned buffer " + System.identityHashCode(buf) +
+                logger.info("returned buffer " + System.identityHashCode(buf) +
                         " from thread " + Thread.currentThread().getId() + ", partition " + id +
                         " now has size " + pool.size());
 
