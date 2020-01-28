@@ -87,6 +87,7 @@ public class DtlsTransport extends IceTransport
     private final Endpoint endpoint;
 
     private final SocketSenderNode packetSender = new SocketSenderNode();
+    private final RtpSenderNode rtpPacketSender = new RtpSenderNode(packetSender);
     private final Node incomingPipelineRoot;
     private final Node outgoingDtlsPipelineRoot;
     private final Node outgoingSrtpPipelineRoot;
@@ -353,7 +354,7 @@ public class DtlsTransport extends IceTransport
     private Node createOutgoingSrtpPipeline()
     {
         PipelineBuilder builder = new PipelineBuilder();
-        builder.node(packetSender);
+        builder.node(rtpPacketSender);
         return builder.build();
     }
 
@@ -560,20 +561,55 @@ public class DtlsTransport extends IceTransport
         return debugState;
     }
 
+
     /**
-     * A terminating {@link Node}, which sends the packets through a
-     * datagram socket.
+     * A {@link ConsumerNode} which sends a packet out over a socket
      */
     private class SocketSenderNode extends ConsumerNode
     {
         public DatagramSocket socket = null;
 
-        /**
-         * Initializes a new {@link SocketSenderNode}.
-         */
         SocketSenderNode()
         {
             super("Socket sender");
+        }
+
+        @Override
+        protected void consume(@NotNull PacketInfo packetInfo)
+        {
+            if (socket != null)
+            {
+                try
+                {
+                    socket.send(
+                        new DatagramPacket(
+                            packetInfo.getPacket().getBuffer(),
+                            packetInfo.getPacket().getOffset(),
+                            packetInfo.getPacket().getLength()));
+                }
+                catch (IOException e)
+                {
+                    logger.error("Error sending packet: " + e.toString());
+                    throw new RuntimeException(e);
+                }
+            }
+
+        }
+    }
+
+    /**
+     * A terminating {@link Node}, to send out RTP packets whose buffer
+     * came from the pool.  It tracks certain RTP-related statistics
+     * (jitter, etc.)
+     */
+    private class RtpSenderNode extends ConsumerNode
+    {
+        private final SocketSenderNode socketSenderNode;
+
+        RtpSenderNode(SocketSenderNode socketSenderNode)
+        {
+            super("RTP Socket sender");
+            this.socketSenderNode = socketSenderNode;
         }
 
         /**
@@ -585,23 +621,14 @@ public class DtlsTransport extends IceTransport
             packetDelayStats.addPacket(packetInfo);
             bridgeJitterStats.packetSent(packetInfo);
             overallAverageBridgeJitter.addValue(bridgeJitterStats.getJitter());
-            if (socket != null)
-            {
-                try
-                {
-                    socket.send(
-                        new DatagramPacket(
-                                packetInfo.getPacket().getBuffer(),
-                                packetInfo.getPacket().getOffset(),
-                                packetInfo.getPacket().getLength()));
-                    ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
-                }
-                catch (IOException e)
-                {
-                    logger.error("Error sending packet: " + e.toString());
-                    throw new RuntimeException(e);
-                }
-            }
+            //TODO(brian): This fixes the issue of making sure we return
+            // RTP packet buffers (which came from our pool) but not
+            // DTLS packet buffers (which are allocated by BC).  But, it
+            // breaks the semantics we've defined of a ConsumerNode (that it
+            // takes ownership over what it is given), so we may want to tweak the
+            // details of this implementation.
+            socketSenderNode.consume(packetInfo);
+            ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
         }
     }
 }
