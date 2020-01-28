@@ -33,7 +33,8 @@ import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketCacher
 import org.jitsi.nlj.transform.node.PacketStreamStatsNode
-import org.jitsi.nlj.transform.node.SrtpTransformerNode
+import org.jitsi.nlj.transform.node.SrtcpEncryptNode
+import org.jitsi.nlj.transform.node.SrtpEncryptNode
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.transform.node.outgoing.ProbingDataSender
@@ -85,8 +86,8 @@ class RtpSenderImpl(
     // its handler (likely in another thread) grab the packet and send it out
     private var outgoingPacketHandler: PacketHandler? = null
 
-    private val srtpEncryptWrapper = SrtpTransformerNode("SRTP encrypt")
-    private val srtcpEncryptWrapper = SrtpTransformerNode("SRTCP encrypt")
+    private val srtpEncryptWrapper = SrtpEncryptNode()
+    private val srtcpEncryptWrapper = SrtcpEncryptNode()
     private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-tx")
     private val outgoingPacketCache = PacketCacher()
     private val absSendTime = AbsSendTime(streamInformationStore)
@@ -104,6 +105,8 @@ class RtpSenderImpl(
             // should be returned.
             outgoingPacketHandler?.processPacket(packetInfo) ?: packetDiscarded(packetInfo)
         }
+
+        override val aggregationKey = name
     }
 
     init {
