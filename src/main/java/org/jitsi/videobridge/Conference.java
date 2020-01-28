@@ -42,7 +42,6 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.logging.*;
-import java.util.stream.*;
 
 import static org.jitsi.utils.collections.JMap.entry;
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
@@ -1161,35 +1160,64 @@ public class Conference
     {
         String sourceEndpointId = packetInfo.getEndpointId();
 
-        Stream<PotentialPacketHandler> handlerStream =
-            endpointsCache.stream().
-                filter(e -> !e.getID().equals(sourceEndpointId)).
-                map(e -> e); /* For some reason this is necessary to cast from Stream<Endpoint> to Stream<PotentialPacketHandler>. */
+        List<PotentialPacketHandler> handlers = new ArrayList<>();
+        List<Runnable> tasks = new ArrayList<>();
+        PacketInfoDistributor distributor = new PacketInfoDistributor(packetInfo, 0, logger);
 
-        if (tentacle != null) {
-            handlerStream = Stream.concat(handlerStream, Stream.of(tentacle));
+        for (Endpoint e: endpointsCache)
+        {
+            if (e.getID().equals(sourceEndpointId))
+            {
+                continue;
+            }
+            handlers.add(e);
+            if (handlers.size() == MAX_HANDLERS_PER_TASK) {
+                final List<PotentialPacketHandler> theseHandlers = handlers;
+                tasks.add(() -> doSendOut(distributor, theseHandlers));
+                handlers = new ArrayList<>();
+            }
+        }
+        if (tentacle != null)
+        {
+            handlers.add(tentacle);
+        }
+        if (!handlers.isEmpty()) {
+            final List<PotentialPacketHandler> theseHandlers = handlers;
+            tasks.add(() -> doSendOut(distributor, theseHandlers));
         }
 
-        if (handlerStream.spliterator().estimateSize() < MAX_HANDLERS_PER_TASK) {
-            PacketInfoDistributor distributor = new PacketInfoDistributor(packetInfo, 1, logger);
-            doSendOut(distributor, handlerStream.collect(Collectors.toList()));
+        distributor.setCount(tasks.size());
+
+        if (tasks.isEmpty()) {
+            return;
+        }
+        else if (tasks.size() == 1) {
+            tasks.get(0).run();
             return;
         }
 
-        AtomicInteger counter = new AtomicInteger();
+        List<Future<?>> taskFutures = new ArrayList<>();
 
-        Collection<List<PotentialPacketHandler>> handlerTasks =
-            handlerStream.
-                collect(Collectors.groupingBy(it -> (counter.getAndIncrement()) / MAX_HANDLERS_PER_TASK)).values();
-
-        PacketInfoDistributor distributor = new PacketInfoDistributor(packetInfo, handlerTasks.size(), logger);
-
-        for (List<PotentialPacketHandler> handlers: handlerTasks)
+        for (Runnable task : tasks)
         {
-            TaskPools.CPU_POOL.submit( () ->
-                doSendOut(distributor, handlers)
-            );
+            taskFutures.add(TaskPools.CPU_POOL.submit(task));
         }
+
+        /* This doesn't work - these tasks will be on the same task pool as this
+           code, causing deadlocks. */
+        /*
+        for (Future<?> task: taskFutures)
+        {
+            try
+            {
+                task.get();
+            }
+            catch (InterruptedException | ExecutionException e)
+            {
+                logger.warn("Exception waiting for sendOut", e);
+            }
+        }
+        */
     }
 
     /**

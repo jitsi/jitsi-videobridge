@@ -23,7 +23,7 @@ import org.jitsi.utils.logging2.*;
 public class PacketInfoDistributor
 {
     private final PacketInfo packetInfo;
-    private final int totalReferences;
+    private int totalReferences;
     private int outstandingReferences;
     private int numClones;
     private final Logger logger;
@@ -49,6 +49,16 @@ public class PacketInfoDistributor
         outstandingReferences = count;
         /* We create a PacketInfoDistributor on each packet so we don't want to instantiate a new logger each time. */
         logger = parentLogger;
+    }
+
+    public void setCount(int count)
+    {
+        if (outstandingReferences < totalReferences)
+        {
+            throw new IllegalStateException("Count set after references have been taken");
+        }
+        totalReferences = count;
+        outstandingReferences = count;
     }
 
     public synchronized PacketInfo previewPacketInfo()
