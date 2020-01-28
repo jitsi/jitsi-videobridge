@@ -300,12 +300,15 @@ public class DtlsTransport extends IceTransport
         dtlsPath.setPredicate(DTLS_PREDICATE);
         PipelineBuilder dtlsPipelineBuilder = new PipelineBuilder();
         dtlsPipelineBuilder.node(dtlsReceiver);
-        dtlsPipelineBuilder.simpleNode(
-                "sctp app packet handler",
-                packetInfo -> {
-                    endpoint.dtlsAppPacketReceived(packetInfo);
-                    return null;
-        });
+        ConsumerNode sctpHandler = new ConsumerNode("sctp app packet handler")
+        {
+            @Override
+            protected void consume(@NotNull PacketInfo packetInfo)
+            {
+                endpoint.dtlsAppPacketReceived(packetInfo);
+            }
+        };
+        dtlsPipelineBuilder.node(sctpHandler);
         dtlsPath.setPath(dtlsPipelineBuilder.build());
         dtlsSrtpDemuxer.addPacketPath(dtlsPath);
 
