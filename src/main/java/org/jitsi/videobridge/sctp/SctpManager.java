@@ -22,8 +22,6 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.sctp4j.*;
 
-import java.nio.*;
-
 /**
  * Manages the SCTP connection and handles incoming and outgoing SCTP packets.
  *
