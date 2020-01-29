@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.util;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
 import org.json.simple.*;
 
@@ -68,8 +69,22 @@ public class ByteBufferPool
      * A debug data structure which tracks outstanding buffers and tracks from where (via
      * a stack trace) they were requested and returned.
      */
-    private static final Map<Integer, StackTraceElement[]> bookkeeping
+    private static final Map<Integer, String> bookkeeping
             = new ConcurrentHashMap<>();
+
+    private static class ReturnedBufferBookkeepingInfo
+    {
+        final String allocTrace;
+        final String deallocTrace;
+        ReturnedBufferBookkeepingInfo(String a, String d)
+        {
+            allocTrace = a;
+            deallocTrace = d;
+        }
+    }
+
+    private static final Map<Integer, ReturnedBufferBookkeepingInfo> returnedBookkeeping
+        = new ConcurrentHashMap<>();
 
     /**
      * Whether to enable keeping track of statistics.
@@ -106,20 +121,12 @@ public class ByteBufferPool
     }
 
     /**
-     * Gets the current stack trace.
+     * Gets a stack trace as a multi-line string.
      */
-    private static StackTraceElement[] getStackTrace()
-    {
-        return Thread.currentThread().getStackTrace();
-    }
-
-    /**
-     * Gets the current stack trace as a multi-line string.
-     */
-    private static String getStackTraceAsString()
+    private static String stackTraceAsString(StackTraceElement[] stack)
     {
         StringBuilder sb = new StringBuilder();
-        for (StackTraceElement ste : getStackTrace())
+        for (StackTraceElement ste : stack)
         {
             sb.append(ste.toString()).append("\n");
         }
@@ -159,9 +166,12 @@ public class ByteBufferPool
 
         if (ENABLE_BOOKKEEPING)
         {
-            bookkeeping.put(System.identityHashCode(buf), getStackTrace());
-            logger.info("Thread " + threadId() + " got array "
-                    + System.identityHashCode(buf));
+            Integer arrayId = System.identityHashCode(buf);
+
+            bookkeeping.put(arrayId, UtilKt.getStackTrace());
+            returnedBookkeeping.remove(arrayId);
+            logger.info("Thread " + threadId() + " got " + buf.length + "-byte buffer "
+                    + arrayId);
         }
         return buf;
     }
@@ -178,6 +188,34 @@ public class ByteBufferPool
         }
 
         int len = buf.length;
+
+        if (ENABLE_BOOKKEEPING)
+        {
+            Integer arrayId = System.identityHashCode(buf);
+            logger.info("Thread " + threadId() + " returned " + len + "-byte buffer "
+                + arrayId);
+            String s;
+            ReturnedBufferBookkeepingInfo b;
+            if ((s = bookkeeping.remove(arrayId)) != null)
+            {
+                returnedBookkeeping.put(arrayId, new ReturnedBufferBookkeepingInfo(s, UtilKt.getStackTrace()));
+            }
+            else if ((b = returnedBookkeeping.get(arrayId)) != null)
+            {
+                logger.info("Thread " + threadId()
+                    + " returned a previously-returned " + len + "-byte buffer at\n"
+                    + UtilKt.getStackTrace() +
+                    "previously returned at\n" +
+                    b.deallocTrace);
+            }
+            else
+            {
+                logger.info("Thread " + threadId()
+                    + " returned a " + len + "-byte buffer we didn't give out from\n"
+                    + UtilKt.getStackTrace());
+            }
+        }
+
         if (len <= T1)
         {
             pool1.returnBuffer(buf);
@@ -194,19 +232,6 @@ public class ByteBufferPool
         {
             logger.warn(
                 "Received a suspiciously large buffer (size = " + len + ")");
-        }
-
-        if (ENABLE_BOOKKEEPING)
-        {
-            logger.info("Thread " + threadId() + " returned array "
-                    + System.identityHashCode(buf));
-            Integer arrayId = System.identityHashCode(buf);
-            if (bookkeeping.remove(arrayId) == null)
-            {
-                logger.info("Thread " + threadId()
-                        + " returned a buffer we didn't give out from\n"
-                        + getStackTraceAsString());
-            }
         }
     }
 
