@@ -597,7 +597,7 @@ public class DtlsTransport extends IceTransport
                                 packetInfo.getPacket().getBuffer(),
                                 packetInfo.getPacket().getOffset(),
                                 packetInfo.getPacket().getLength()));
-                    packetDiscarded(packetInfo);
+                    ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
                 }
                 catch (IOException e)
                 {
