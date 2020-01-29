@@ -1032,10 +1032,7 @@ public class Endpoint
                 synchronized (sctpManagerLock)
                 {
                     this.sctpManager = sctpManager;
-                    cachedSctpPackets.forEach(cachedPacket -> {
-                        sctpManager.handleIncomingSctp(cachedPacket);
-                        ByteBufferPool.returnBuffer(cachedPacket.getPacket().getBuffer());
-                    });
+                    cachedSctpPackets.forEach(sctpManager::handleIncomingSctp);
                     cachedSctpPackets.clear();
                 }
             });
