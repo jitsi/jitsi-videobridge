@@ -18,6 +18,7 @@ package org.jitsi.videobridge.sctp;
 
 import org.jitsi.nlj.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.sctp4j.*;
 
 /**
@@ -70,13 +71,12 @@ public class SctpManager {
      */
     public void handleIncomingSctp(PacketInfo sctpPacket) {
         logger.debug(() -> "SCTP Socket " + socket.hashCode() + " receiving incoming SCTP data");
-//        ByteBuffer packetBuffer = sctpPacket.getPacket().getBuffer();
-        logger.info("TEMP: incoming SCTP has buffer " + System.identityHashCode(sctpPacket.getPacket().getBuffer()));
         //NOTE(brian): from what I can tell in usrsctp, we can assume that it will make a copy
         // of the buffer we pass it here (this ends up hitting usrsctp_conninput, and the sample
         // program for usrsctp re-uses the buffer that's passed here, and the code does appear
         // to make a copy).
         socket.onConnIn(sctpPacket.getPacket().getBuffer(), sctpPacket.getPacket().getOffset(), sctpPacket.getPacket().getLength());
+        ByteBufferPool.returnBuffer(sctpPacket.getPacket().getBuffer());
     }
 
     /**

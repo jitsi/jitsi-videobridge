@@ -1019,7 +1019,6 @@ public class Endpoint
                 else
                 {
                     sctpManager.handleIncomingSctp(packetInfo);
-                    ByteBufferPool.returnBuffer(packetInfo.getPacket().buffer);
                 }
             }
         }
