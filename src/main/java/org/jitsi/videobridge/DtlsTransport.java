@@ -322,12 +322,15 @@ public class DtlsTransport extends IceTransport
         // path here might be expensive.
         srtpPath.setPredicate(NON_DTLS_PREDICATE);
         PipelineBuilder srtpPipelineBuilder = new PipelineBuilder();
-        srtpPipelineBuilder.simpleNode(
-                "SRTP path",
-                packetInfo -> {
-                    endpoint.srtpPacketReceived(packetInfo);
-                    return null;
-        });
+        ConsumerNode srtpHandler = new ConsumerNode("SRTP path")
+        {
+            @Override
+            protected void consume(@NotNull PacketInfo packetInfo)
+            {
+                endpoint.srtpPacketReceived(packetInfo);
+            }
+        };
+        srtpPipelineBuilder.node(srtpHandler);
         srtpPath.setPath(srtpPipelineBuilder.build());
         dtlsSrtpDemuxer.addPacketPath(srtpPath);
 
