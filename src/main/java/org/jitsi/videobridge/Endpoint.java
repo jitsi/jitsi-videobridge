@@ -696,6 +696,7 @@ public class Endpoint
                 (data, offset, length) -> {
                     PacketInfo packet
                         = new PacketInfo(new UnparsedPacket(data, offset, length));
+                    logger.info("TEMP: outgoing SCTP has buffer " + System.identityHashCode(data));
                     dtlsTransport.sendDtlsData(packet);
                     return 0;
                 },
@@ -1012,6 +1013,7 @@ public class Endpoint
                 else
                 {
                     sctpManager.handleIncomingSctp(packetInfo);
+                    ByteBufferPool.returnBuffer(packetInfo.getPacket().buffer);
                 }
             }
         }
@@ -1032,7 +1034,10 @@ public class Endpoint
                 synchronized (sctpManagerLock)
                 {
                     this.sctpManager = sctpManager;
-                    cachedSctpPackets.forEach(sctpManager::handleIncomingSctp);
+                    cachedSctpPackets.forEach(cachedPacket -> {
+                        sctpManager.handleIncomingSctp(cachedPacket);
+                        ByteBufferPool.returnBuffer(cachedPacket.getPacket().getBuffer());
+                    });
                     cachedSctpPackets.clear();
                 }
             });
