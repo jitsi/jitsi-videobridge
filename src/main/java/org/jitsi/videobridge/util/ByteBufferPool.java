@@ -170,7 +170,7 @@ public class ByteBufferPool
 
             bookkeeping.put(arrayId, UtilKt.getStackTrace());
             returnedBookkeeping.remove(arrayId);
-            logger.info("Thread " + threadId() + " got array "
+            logger.info("Thread " + threadId() + " got " + buf.length + "-byte buffer "
                     + arrayId);
         }
         return buf;
@@ -209,25 +209,26 @@ public class ByteBufferPool
         if (ENABLE_BOOKKEEPING)
         {
             Integer arrayId = System.identityHashCode(buf);
-            logger.info("Thread " + threadId() + " returned array "
+            logger.info("Thread " + threadId() + " returned " + len + "-byte buffer "
                     + arrayId);
-            if (bookkeeping.containsKey(arrayId))
+            String s;
+            ReturnedBufferBookkeepingInfo b;
+            if ((s = bookkeeping.remove(arrayId)) != null)
             {
-                returnedBookkeeping.put(arrayId, new ReturnedBufferBookkeepingInfo(bookkeeping.get(arrayId), UtilKt.getStackTrace()));
-                bookkeeping.remove(arrayId);
+                returnedBookkeeping.put(arrayId, new ReturnedBufferBookkeepingInfo(s, UtilKt.getStackTrace()));
             }
-            else if (returnedBookkeeping.containsKey(arrayId))
+            else if ((b = returnedBookkeeping.get(arrayId)) != null)
             {
                 logger.info("Thread " + threadId()
-                    + " returned a previously-returned buffer at\n"
+                    + " returned a previously-returned " + len + "-byte buffer at\n"
                     + UtilKt.getStackTrace() +
                     "previously returned at\n" +
-                    returnedBookkeeping.get(arrayId).deallocTrace);
+                    b.deallocTrace);
             }
             else
             {
                 logger.info("Thread " + threadId()
-                        + " returned a buffer we didn't give out from\n"
+                        + " returned a " + len + "-byte buffer we didn't give out from\n"
                         + UtilKt.getStackTrace());
             }
         }
