@@ -28,9 +28,9 @@ import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
+import org.jitsi.utils.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
-import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
@@ -52,10 +52,10 @@ import java.io.*;
 import java.nio.*;
 import java.time.*;
 import java.util.*;
-import java.util.stream.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.*;
+import java.util.stream.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
@@ -694,15 +694,8 @@ public class Endpoint
         // Create the SctpManager and provide it a method for sending SCTP data
         this.sctpManager = new SctpManager(
                 (data, offset, length) -> {
-                    // The buffer we get here came from usrsctp, and therefore
-                    // shouldn't be returned to the pool.  We can either
-                    // never return any packets from this path, or copy here
-                    // (actually, ideally, closer to SCTP, since this is
-                    // usrsctp specific) into a pooled buffer.
-                    byte[] newBuf = ByteBufferPool.getBuffer(length);
-                    System.arraycopy(data, offset, newBuf, 0, length);
                     PacketInfo packet
-                        = new PacketInfo(new UnparsedPacket(newBuf, 0, length));
+                        = new PacketInfo(new UnparsedPacket(data, offset, length));
                     dtlsTransport.sendDtlsData(packet);
                     return 0;
                 },
