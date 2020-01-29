@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge;
 
+import kotlin.*;
+import kotlin.jvm.functions.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -52,6 +54,7 @@ import java.io.*;
 import java.nio.*;
 import java.time.*;
 import java.util.*;
+import java.util.function.Function;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.*;
@@ -226,6 +229,12 @@ public class Endpoint
                 protected void consume(@NotNull PacketInfo packetInfo)
                 {
                     handleIncomingPacket(packetInfo);
+                }
+
+                @Override
+                public void trace(@NotNull Function0<Unit> f)
+                {
+                    f.invoke();
                 }
             });
         bitrateController = new BitrateController(this, diagnosticContext, logger);
@@ -1037,6 +1046,12 @@ public class Endpoint
                 }
             });
         }
+
+        @Override
+        public void trace(@NotNull Function0<Unit> f)
+        {
+            f.invoke();
+        }
     }
 
     /**
@@ -1109,6 +1124,12 @@ public class Endpoint
                     });
                 }
             });
+        }
+
+        @Override
+        public void trace(@NotNull Function0<Unit> f)
+        {
+            f.invoke();
         }
     }
 

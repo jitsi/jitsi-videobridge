@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge.octo;
 
+import kotlin.*;
+import kotlin.jvm.functions.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -177,6 +179,12 @@ public class OctoTransceiver
             protected void consume(@NotNull PacketInfo packetInfo)
             {
                 tentacle.handleIncomingPacket(packetInfo);
+            }
+
+            @Override
+            public void trace(@NotNull Function0<Unit> f)
+            {
+                f.invoke();
             }
         };
 
