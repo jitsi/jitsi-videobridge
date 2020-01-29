@@ -188,29 +188,12 @@ public class ByteBufferPool
         }
 
         int len = buf.length;
-        if (len <= T1)
-        {
-            pool1.returnBuffer(buf);
-        }
-        else if (len <= T2)
-        {
-            pool2.returnBuffer(buf);
-        }
-        else if (len < 2000)
-        {
-            pool3.returnBuffer(buf);
-        }
-        else
-        {
-            logger.warn(
-                "Received a suspiciously large buffer (size = " + len + ")");
-        }
 
         if (ENABLE_BOOKKEEPING)
         {
             Integer arrayId = System.identityHashCode(buf);
             logger.info("Thread " + threadId() + " returned " + len + "-byte buffer "
-                    + arrayId);
+                + arrayId);
             String s;
             ReturnedBufferBookkeepingInfo b;
             if ((s = bookkeeping.remove(arrayId)) != null)
@@ -228,9 +211,27 @@ public class ByteBufferPool
             else
             {
                 logger.info("Thread " + threadId()
-                        + " returned a " + len + "-byte buffer we didn't give out from\n"
-                        + UtilKt.getStackTrace());
+                    + " returned a " + len + "-byte buffer we didn't give out from\n"
+                    + UtilKt.getStackTrace());
             }
+        }
+
+        if (len <= T1)
+        {
+            pool1.returnBuffer(buf);
+        }
+        else if (len <= T2)
+        {
+            pool2.returnBuffer(buf);
+        }
+        else if (len < 2000)
+        {
+            pool3.returnBuffer(buf);
+        }
+        else
+        {
+            logger.warn(
+                "Received a suspiciously large buffer (size = " + len + ")");
         }
     }
 
