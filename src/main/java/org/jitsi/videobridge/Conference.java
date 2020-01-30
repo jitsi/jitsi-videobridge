@@ -1160,9 +1160,8 @@ public class Conference
     {
         String sourceEndpointId = packetInfo.getEndpointId();
 
-        List<PotentialPacketHandler> handlers = new ArrayList<>();
         List<Runnable> tasks = new ArrayList<>();
-        PacketInfoDistributor distributor = new PacketInfoDistributor(packetInfo, 0, logger);
+        PacketInfoDistributor distributor = new PacketInfoDistributor(packetInfo, 0);
 
         for (Endpoint e: endpointsCache)
         {
@@ -1170,20 +1169,12 @@ public class Conference
             {
                 continue;
             }
-            handlers.add(e);
-            if (handlers.size() == MAX_HANDLERS_PER_TASK) {
-                final List<PotentialPacketHandler> theseHandlers = handlers;
-                tasks.add(() -> doSendOut(distributor, theseHandlers));
-                handlers = new ArrayList<>();
-            }
+
+            tasks.add(() -> doSendOut(distributor, e));
         }
         if (tentacle != null)
         {
-            handlers.add(tentacle);
-        }
-        if (!handlers.isEmpty()) {
-            final List<PotentialPacketHandler> theseHandlers = handlers;
-            tasks.add(() -> doSendOut(distributor, theseHandlers));
+            tasks.add(() -> doSendOut(distributor, tentacle));
         }
 
         distributor.setCount(tasks.size());
@@ -1221,46 +1212,19 @@ public class Conference
     }
 
     /**
-     * Broadcasts a packet to a sent of packet handlers.
+     * Handles a packet for one packet handler.
      *
      * @param distributor A distributor for the packet
-     * @param handlers the packet handlers to send it to
+     * @param handler the packet handlers to send it to
      */
-    private static void doSendOut(PacketInfoDistributor distributor, List<PotentialPacketHandler> handlers)
+    private static void doSendOut(PacketInfoDistributor distributor, PotentialPacketHandler handler)
     {
-        // We want to avoid calling 'clone' for the last receiver of this packet
-        // since it's unnecessary.  To do so, we'll wait before we clone and send
-        // to an interested handler until after we've determined another handler
-        // is also interested in the packet.  We'll give the last handler the
-        // original packet (without cloning).
-        PotentialPacketHandler prevHandler = null;
-        PacketInfo packetInfoPreview = distributor.previewPacketInfo();
-        PacketInfo packetInfo = null;
-
-        for (PotentialPacketHandler handler : handlers)
+        if (handler.wants(distributor.previewPacketInfo()))
         {
-            if (handler.wants(packetInfoPreview))
-            {
-                if (packetInfo == null)
-                {
-                    packetInfo = distributor.getPacketInfoReference();
-                    packetInfoPreview = packetInfo;
-                }
-                if (prevHandler != null)
-                {
-                    prevHandler.send(packetInfo.clone());
-                }
-                prevHandler = handler;
-            }
+            distributor.usePacketInfoReference(handler::send);
         }
-
-        if (prevHandler != null)
+        else
         {
-            prevHandler.send(packetInfo);
-        }
-
-        if (packetInfo == null) {
-            // No one wanted the packet, so our reference is unneeded!
             distributor.releasePacketInfoReference();
         }
     }

@@ -18,37 +18,23 @@
 package org.jitsi.videobridge.util;
 
 import org.jitsi.nlj.*;
-import org.jitsi.utils.logging2.*;
+
+import java.util.function.*;
 
 public class PacketInfoDistributor
 {
     private final PacketInfo packetInfo;
     private int totalReferences;
     private int outstandingReferences;
-    private int numClones;
-    private final Logger logger;
 
-    /**
-     * Whether to enable or disable book keeping.
-     */
-    public static final Boolean ENABLE_BOOKKEEPING = false;
+    private Consumer<PacketInfo> prevConsumer = null;
 
-    /**
-     * Gets the current thread ID.
-     */
-    private static long threadId()
-    {
-        return Thread.currentThread().getId();
-    }
-
-
-    public PacketInfoDistributor(PacketInfo pi, int count, Logger parentLogger)
+    public PacketInfoDistributor(PacketInfo pi, int count)
     {
         packetInfo = pi;
         totalReferences = count;
         outstandingReferences = count;
         /* We create a PacketInfoDistributor on each packet so we don't want to instantiate a new logger each time. */
-        logger = parentLogger;
     }
 
     public void setCount(int count)
@@ -70,49 +56,70 @@ public class PacketInfoDistributor
         return packetInfo;
     }
 
-    public synchronized PacketInfo getPacketInfoReference()
+    public void usePacketInfoReference(Consumer<PacketInfo> consumer)
     {
-        outstandingReferences--;
-        if (outstandingReferences < 0) {
-            throw new IllegalStateException("Too many references taken");
+        // We want to avoid calling 'clone' for the last receiver of this packet
+        // since it's unnecessary.  To do so, we'll wait before we clone and send
+        // to an interested handler until after we've determined another handler
+        // is also interested in the packet.  We'll give the last handler the
+        // original packet (without cloning).
+        Consumer<PacketInfo> c1 = null, c2 = null;
+        PacketInfo p1 = null, p2 = null;
+        synchronized(this) {
+            outstandingReferences--;
+            if (outstandingReferences < 0)
+            {
+                throw new IllegalStateException("Too many references taken");
+            }
+            if (prevConsumer != null) {
+                c1 = prevConsumer;
+                p1 = packetInfo.clone();
+            }
+            prevConsumer = consumer;
+            if (outstandingReferences == 0)
+            {
+                c2 = prevConsumer;
+                p2 = packetInfo;
+            }
         }
-        PacketInfo ret;
-        if (outstandingReferences > 0)
+
+        if (c1 != null)
         {
-            numClones++;
-            ret = packetInfo.clone();
+            c1.accept(p1);
         }
-        else
+        if (c2 != null)
         {
-            ret = packetInfo;
+            c2.accept(p2);
         }
-        if (ENABLE_BOOKKEEPING)
-        {
-            logger.info("Thread " + threadId() + " was given buffer "
-                + System.identityHashCode(ret.getPacket().getBuffer()) + " for packet " + packetInfo.getPacket().toString());
-        }
-        return ret;
     }
 
-    public synchronized void releasePacketInfoReference()
+    public void releasePacketInfoReference()
     {
-        outstandingReferences--;
-        if (outstandingReferences < 0) {
-            throw new IllegalStateException("Too many references taken");
-        }
-        if (outstandingReferences == 0)
+        Consumer<PacketInfo> c = null;
+        PacketInfo p = null;
+        synchronized (this)
         {
-            if (numClones > 0)
+            outstandingReferences--;
+            if (outstandingReferences < 0)
             {
-                logger.debug(() -> ("Packet clone optimization failed (after " +
-                    numClones + " clones among " + totalReferences + " references)"));
+                throw new IllegalStateException("Too many references taken");
             }
-            if (ENABLE_BOOKKEEPING)
+            if (outstandingReferences == 0)
             {
-                logger.info("Thread " + threadId() +
-                    " returned its buffer reference for packet " + packetInfo.getPacket().toString());
+                if (prevConsumer != null)
+                {
+                    c = prevConsumer;
+                    p = packetInfo;
+                }
+                else
+                {
+                    ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
+                }
             }
-            ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
+        }
+        if (c != null)
+        {
+            c.accept(p);
         }
     }
 }
