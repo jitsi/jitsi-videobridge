@@ -16,8 +16,10 @@
 
 package org.jitsi.videobridge.sctp;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.sctp4j.*;
 
 /**
@@ -59,7 +61,7 @@ public class SctpManager {
      */
     public SctpManager(SctpDataSender dataSender, Logger parentLogger)
     {
-        this.dataSender = dataSender;
+        this.dataSender = new BufferCopyingSctpDataSender(dataSender);
         this.logger = parentLogger.createChildLogger(SctpManager.class.getName());
     }
 
@@ -70,8 +72,12 @@ public class SctpManager {
      */
     public void handleIncomingSctp(PacketInfo sctpPacket) {
         logger.debug(() -> "SCTP Socket " + socket.hashCode() + " receiving incoming SCTP data");
-//        ByteBuffer packetBuffer = sctpPacket.getPacket().getBuffer();
+        //NOTE(brian): from what I can tell in usrsctp, we can assume that it will make a copy
+        // of the buffer we pass it here (this ends up hitting usrsctp_conninput, and the sample
+        // program for usrsctp re-uses the buffer that's passed here, and the code does appear
+        // to make a copy).
         socket.onConnIn(sctpPacket.getPacket().getBuffer(), sctpPacket.getPacket().getOffset(), sctpPacket.getPacket().getLength());
+        ByteBufferPool.returnBuffer(sctpPacket.getPacket().getBuffer());
     }
 
     /**
@@ -118,6 +124,27 @@ public class SctpManager {
             {
                 logger.debug("No SCTP socket to close");
             }
+        }
+    }
+
+    /**
+     * We set an instance of this as the {@link SctpSocket#outgoingDataSender}
+     * in order to change from a buffer that was allocated by jitsi-sctp
+     * to one from our pool, this way it can be returned later in the pipeline.
+     */
+    private static class BufferCopyingSctpDataSender implements SctpDataSender {
+        private final SctpDataSender innerSctpDataSender;
+        BufferCopyingSctpDataSender(@NotNull SctpDataSender sctpDataSender)
+        {
+            this.innerSctpDataSender = sctpDataSender;
+        }
+
+        @Override
+        public int send(byte[] data, int offset, int length)
+        {
+            byte[] newBuf = ByteBufferPool.getBuffer(length);
+            System.arraycopy(data, offset, newBuf, 0, length);
+            return innerSctpDataSender.send(newBuf, 0, length);
         }
     }
 }

@@ -300,12 +300,15 @@ public class DtlsTransport extends IceTransport
         dtlsPath.setPredicate(DTLS_PREDICATE);
         PipelineBuilder dtlsPipelineBuilder = new PipelineBuilder();
         dtlsPipelineBuilder.node(dtlsReceiver);
-        dtlsPipelineBuilder.simpleNode(
-                "sctp app packet handler",
-                packetInfo -> {
-                    endpoint.dtlsAppPacketReceived(packetInfo);
-                    return null;
-        });
+        ConsumerNode sctpHandler = new ConsumerNode("sctp app packet handler")
+        {
+            @Override
+            protected void consume(@NotNull PacketInfo packetInfo)
+            {
+                endpoint.dtlsAppPacketReceived(packetInfo);
+            }
+        };
+        dtlsPipelineBuilder.node(sctpHandler);
         dtlsPath.setPath(dtlsPipelineBuilder.build());
         dtlsSrtpDemuxer.addPacketPath(dtlsPath);
 
@@ -318,12 +321,15 @@ public class DtlsTransport extends IceTransport
         // path here might be expensive.
         srtpPath.setPredicate(NON_DTLS_PREDICATE);
         PipelineBuilder srtpPipelineBuilder = new PipelineBuilder();
-        srtpPipelineBuilder.simpleNode(
-                "SRTP path",
-                packetInfo -> {
-                    endpoint.srtpPacketReceived(packetInfo);
-                    return null;
-        });
+        ConsumerNode srtpHandler = new ConsumerNode("SRTP path")
+        {
+            @Override
+            protected void consume(@NotNull PacketInfo packetInfo)
+            {
+                endpoint.srtpPacketReceived(packetInfo);
+            }
+        };
+        srtpPipelineBuilder.node(srtpHandler);
         srtpPath.setPath(srtpPipelineBuilder.build());
         dtlsSrtpDemuxer.addPacketPath(srtpPath);
 
