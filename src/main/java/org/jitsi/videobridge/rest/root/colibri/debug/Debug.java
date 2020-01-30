@@ -131,7 +131,7 @@ public class Debug extends ColibriResource
                 break;
             }
             case QUEUE_STATS: {
-                PacketQueue.setEnableStatisticsDefault(true);
+                PacketQueue.setEnableStatisticsDefault(enabled);
                 break;
             }
             case TRANSIT_STATS: {
