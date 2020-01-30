@@ -46,9 +46,9 @@ abstract class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode
             if (err == SrtpErrorStatus.OK) {
                 transformedPackets.add(packetInfo)
             } else {
-                countErrorStatus(err)
                 packetDiscarded(packetInfo)
             }
+            countErrorStatus(err)
         }
         return transformedPackets
     }
