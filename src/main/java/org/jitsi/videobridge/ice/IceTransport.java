@@ -17,17 +17,22 @@ package org.jitsi.videobridge.ice;
 
 import java.beans.*;
 import java.io.*;
+import java.net.*;
+import java.time.*;
 import java.util.*;
 
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
 import org.jitsi.eventadmin.*;
+import org.jitsi.nlj.stats.*;
 import org.jitsi.osgi.*;
+import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jingle.CandidateType;
@@ -81,7 +86,6 @@ public class IceTransport
     /**
      * Whether ICE connectivity has been established.
      */
-//    protected boolean iceConnected = false;
     public Outcome iceConnection = new Outcome();
 
     /**
@@ -141,6 +145,11 @@ public class IceTransport
 
     private final Videobridge.Statistics videobridgeStats;
 
+    private final PacketIOActivity packetIoActivity;
+
+    //TODO: probably will pass this in and have it be NonNull & final
+    DataHandler dataHandler = null;
+
     /**
      * Initializes a new <tt>IceTransport</tt> instance.
      *
@@ -152,7 +161,8 @@ public class IceTransport
     public IceTransport(
         Endpoint endpoint,
         boolean controlling,
-        Logger parentLogger)
+        Logger parentLogger
+    )
         throws IOException
     {
         Conference conference = endpoint.getConference();
@@ -161,6 +171,7 @@ public class IceTransport
         this.conferenceId = conference.getID();
         this.conferenceStats = conference.getStatistics();
         this.videobridgeStats = conference.getVideobridge().getStatistics();
+        this.packetIoActivity = endpoint.getTransceiver().getPacketIOActivity();
         this.logger = parentLogger.createChildLogger(getClass().getName());
 
         String streamName = "stream-" + endpoint.getID();
@@ -337,6 +348,7 @@ public class IceTransport
      */
     protected void onIceConsentUpdated(long time)
     {
+        packetIoActivity.setLastIceActivityInstant(Instant.ofEpochMilli(time));
     }
 
     /**
@@ -651,6 +663,44 @@ public class IceTransport
     protected void onIceConnected()
     {
         updateIceConnectedStats();
+
+        startReadingData(iceComponent.getSocket());
+    }
+
+    private void startReadingData(DatagramSocket socket)
+    {
+        TaskPools.IO_POOL.submit(() -> {
+            byte[] receiveBuf = ByteBufferPool.getBuffer(1500);
+            DatagramPacket p = new DatagramPacket(receiveBuf, 0, 1500);
+
+            while (!closed)
+            {
+                try
+                {
+                    socket.receive(p);
+                } catch (IOException e) {
+                    logger.warn("Stopping reader: ", e);
+                    break;
+                }
+                dataHandler.dataReceived(receiveBuf, p.getOffset(), p.getLength());
+                p.setData(receiveBuf, 0, receiveBuf.length);
+            }
+        });
+    }
+
+    public void sendData(byte[] buf, int offset, int len)
+    {
+        try
+        {
+            iceComponent.getSocket().send(
+                new DatagramPacket(buf, offset, len)
+            );
+        }
+        catch (IOException e)
+        {
+            logger.error("Error sending packet: " + e.toString());
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -745,5 +795,9 @@ public class IceTransport
             debugState.put("controlling", iceAgent.isControlling());
         }
         return debugState;
+    }
+
+    public interface DataHandler {
+        void dataReceived(byte[] buf, int offset, int len);
     }
 }

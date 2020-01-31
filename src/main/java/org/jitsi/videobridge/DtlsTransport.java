@@ -50,7 +50,7 @@ import java.util.function.*;
  * @author Brian Baldino
  * @author Boris Grozev
  */
-public class DtlsTransport
+public class DtlsTransport implements IceTransport.DataHandler
 {
     /**
      * A predicate which is true for DTLS packets. See
@@ -86,7 +86,7 @@ public class DtlsTransport
     private final PacketInfoQueue outgoingPacketQueue;
     private final Endpoint endpoint;
 
-    private final SocketSenderNode packetSender = new SocketSenderNode();
+    private final SocketSenderNode packetSender;
     private final Node incomingPipelineRoot;
     private final Node outgoingDtlsPipelineRoot;
     private final Node outgoingSrtpPipelineRoot;
@@ -120,6 +120,7 @@ public class DtlsTransport
             onIceConnected();
             return Unit.INSTANCE;
         });
+        packetSender = new SocketSenderNode(iceTransport);
         this.endpoint = endpoint;
 
         outgoingPacketQueue
@@ -380,16 +381,35 @@ public class DtlsTransport
         return true;
     }
 
+    @Override
+    public void dataReceived(byte[] buf, int offset, int len)
+    {
+        //TODO(brian): This code is now divorced from the socket read, so we
+        // should look at transitioning to the CPU pool here
+        byte[] newBuf
+            = ByteBufferPool.getBuffer(
+            len +
+                RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET +
+                RtpPacket.BYTES_TO_LEAVE_AT_END_OF_PACKET);
+        System.arraycopy(
+            buf, offset,
+            newBuf, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
+            len);
+        Packet pkt = new UnparsedPacket(
+            newBuf,
+            RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
+            len);
+        PacketInfo pktInfo = new PacketInfo(pkt);
+        pktInfo.setReceivedTime(System.currentTimeMillis());
+        incomingPipelineRoot.processPacket(pktInfo);
+    }
+
     /**
      * Read packets from the given socket and process them in the incoming pipeline
      * @param socket the socket to read from
      */
     private void installIncomingPacketReader(DatagramSocket socket)
     {
-        //TODO(brian): this does a bit more than just read from the iceSocket
-        // (does a bit of processing for each packet) but I think it's little
-        // enough (it'll only be a bit of the DTLS path) that running it in the
-        // IO pool is fine
         TaskPools.IO_POOL.submit(() -> {
             // We need this buffer to be 1500 bytes because we don't know how
             // big the received packet will be. But we don't want to allocate
@@ -439,15 +459,8 @@ public class DtlsTransport
 
     protected void onIceConnected()
     {
-        DatagramSocket socket = iceComponent.getSocket();
-
         endpoint.setOutgoingSrtpPacketHandler(outgoingPacketQueue::add);
 
-        // Socket reader thread. Read from the underlying iceSocket and pass
-        // to the incoming module chain.
-        installIncomingPacketReader(socket);
-
-        packetSender.socket = socket;
         logger.info("Starting DTLS.");
         TaskPools.IO_POOL.submit(() -> {
             try
@@ -465,19 +478,6 @@ public class DtlsTransport
                 iceTransport.close();
             }
         });
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void onIceConsentUpdated(long time)
-    {
-       super.onIceConsentUpdated(time);
-       endpoint
-           .getTransceiver()
-           .getPacketIOActivity()
-           .setLastIceActivityInstant(Instant.ofEpochMilli(time));
     }
 
     /**
@@ -528,14 +528,17 @@ public class DtlsTransport
      */
     private class SocketSenderNode extends ConsumerNode
     {
-        public DatagramSocket socket = null;
+        //TODO: eventually we'll have a standard 'transport'
+        // interface we can pass here.  Or even just a 'Transmitter'
+        private final @NotNull IceTransport iceTransport;
 
         /**
          * Initializes a new {@link SocketSenderNode}.
          */
-        SocketSenderNode()
+        SocketSenderNode(@NotNull IceTransport iceTransport)
         {
             super("Socket sender");
+            this.iceTransport = iceTransport;
         }
 
         /**
@@ -547,23 +550,12 @@ public class DtlsTransport
             packetDelayStats.addPacket(packetInfo);
             bridgeJitterStats.packetSent(packetInfo);
             overallAverageBridgeJitter.addValue(bridgeJitterStats.getJitter());
-            if (socket != null)
-            {
-                try
-                {
-                    socket.send(
-                        new DatagramPacket(
-                                packetInfo.getPacket().getBuffer(),
-                                packetInfo.getPacket().getOffset(),
-                                packetInfo.getPacket().getLength()));
-                    ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
-                }
-                catch (IOException e)
-                {
-                    logger.error("Error sending packet: " + e.toString());
-                    throw new RuntimeException(e);
-                }
-            }
+            iceTransport.sendData(
+                packetInfo.getPacket().getBuffer(),
+                packetInfo.getPacket().getOffset(),
+                packetInfo.getPacket().getLength()
+            );
+            ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
         }
     }
 }
