@@ -22,11 +22,11 @@ import org.jitsi.nlj.rtp.RtxPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
-import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.cdebug
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
 
 /**
  * Handle incoming RTX packets to strip the RTX information and make them
@@ -37,7 +37,7 @@ class RtxHandler(
     private val streamInformationStore: ReadOnlyStreamInformationStore,
     parentLogger: Logger
 ) : TransformerNode("RTX handler") {
-    private val logger = parentLogger.createChildLogger(RtxHandler::class)
+    private val logger = createChildLogger(parentLogger)
     private var numPaddingPacketsReceived = 0
     private var numRtxPacketsReceived = 0
     /**

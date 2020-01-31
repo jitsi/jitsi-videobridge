@@ -21,7 +21,7 @@ import kotlin.properties.Delegates
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bps
-import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.mbps
 import org.jitsi.utils.logging.DiagnosticContext
@@ -52,7 +52,7 @@ class GoogleCcEstimator(diagnosticContext: DiagnosticContext, parentLogger: Logg
         sendSideBandwidthEstimation.setMinMaxBitrate(minBw.bps.toInt(), newValue.bps.toInt())
     }
 
-    private val logger = parentLogger.createChildLogger(GoogleCcEstimator::class)
+    private val logger = createChildLogger(parentLogger)
 
     /**
      * Implements the delay-based part of Google CC.

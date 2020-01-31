@@ -21,8 +21,8 @@ import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.CopyOnWriteArrayList
 import org.jitsi.nlj.rtcp.RtcpListener
-import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.nlj.util.toDoubleMillis
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
@@ -56,7 +56,7 @@ class EndpointConnectionStats(
     // Per-SSRC, maps the compacted NTP timestamp found in an SR SenderInfo to
     //  the clock time at which it was transmitted
     private val srSentTimes: MutableMap<SsrcAndTimestamp, Instant> = LRUCache(MAX_SR_TIMESTAMP_HISTORY)
-    private val logger = parentLogger.createChildLogger(EndpointConnectionStats::class)
+    private val logger = createChildLogger(parentLogger)
 
     /**
      * The calculated RTT, in milliseconds, between the bridge and the endpoint

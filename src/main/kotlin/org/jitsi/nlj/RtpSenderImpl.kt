@@ -44,8 +44,8 @@ import org.jitsi.nlj.transform.node.outgoing.TccSeqNumTagger
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.StreamInformationStore
-import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging.DiagnosticContext
@@ -71,7 +71,7 @@ class RtpSenderImpl(
     parentLogger: Logger,
     diagnosticContext: DiagnosticContext = DiagnosticContext()
 ) : RtpSender() {
-    private val logger = parentLogger.createChildLogger(RtpSenderImpl::class)
+    private val logger = createChildLogger(parentLogger)
     private val outgoingRtpRoot: Node
     private val outgoingRtxRoot: Node
     private val outgoingRtcpRoot: Node

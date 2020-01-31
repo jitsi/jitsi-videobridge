@@ -33,6 +33,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.UnreceivedPacketReport
 import org.jitsi.utils.joinToRangedString
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
 import org.json.simple.JSONObject
 
 /**
@@ -53,7 +54,7 @@ class TransportCcEngine(
     /**
      * The [Logger] used by this instance for logging output.
      */
-    private val logger: Logger = parentLogger.createChildLogger(javaClass.name)
+    private val logger: Logger = createChildLogger(parentLogger)
 
     val numDuplicateReports = AtomicInteger()
     val numPacketsReportedAfterLost = AtomicInteger()

@@ -28,8 +28,8 @@ import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.BufferPool
-import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.utils.logging2.Logger
 
@@ -62,7 +62,7 @@ import org.jitsi.utils.logging2.Logger
 class DtlsStack(
     parentLogger: Logger
 ) : ProtocolStack, DatagramTransport, NodeStatsProducer {
-    private val logger = parentLogger.createChildLogger(DtlsStack::class)
+    private val logger = createChildLogger(parentLogger)
     private val roleSet = CompletableFuture<Unit>()
 
     /**

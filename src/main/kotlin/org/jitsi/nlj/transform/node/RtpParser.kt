@@ -19,17 +19,17 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
-import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.cdebug
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
 
 class RtpParser(
     private val streamInformationStore: ReadOnlyStreamInformationStore,
     parentLogger: Logger
 ) : TransformerNode("RTP Parser") {
-    private val logger = parentLogger.createChildLogger(RtpParser::class)
+    private val logger = createChildLogger(parentLogger)
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val packet = packetInfo.packet

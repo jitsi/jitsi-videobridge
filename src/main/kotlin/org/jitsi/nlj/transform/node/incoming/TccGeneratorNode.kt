@@ -25,8 +25,7 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
-import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.cdebug
 import org.jitsi.nlj.util.milliseconds
 import org.jitsi.utils.observableWhenChanged
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -37,6 +36,7 @@ import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.isOlderThan
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.stats.RateStatistics
 
 /**
@@ -49,7 +49,7 @@ class TccGeneratorNode(
     parentLogger: Logger,
     private val clock: Clock = Clock.systemDefaultZone()
 ) : ObserverNode("TCC generator") {
-    private val logger = parentLogger.createChildLogger(TccGeneratorNode::class)
+    private val logger = createChildLogger(parentLogger)
     private var tccExtensionId: Int? = null
     private var currTccSeqNum: Int = 0
     private var lastTccSentTime: Instant = NEVER

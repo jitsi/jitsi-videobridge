@@ -21,9 +21,9 @@ import org.bouncycastle.tls.DTLSServerProtocol
 import org.bouncycastle.tls.DTLSTransport
 import org.bouncycastle.tls.DatagramTransport
 import org.jitsi.nlj.srtp.TlsRole
-import org.jitsi.nlj.util.cerror
-import org.jitsi.nlj.util.cinfo
-import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.cerror
+import org.jitsi.utils.logging2.cinfo
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.logging2.Logger
 
 class DtlsServer(
@@ -34,7 +34,7 @@ class DtlsServer(
     parentLogger: Logger,
     private val dtlsServerProtocol: DTLSServerProtocol = DTLSServerProtocol()
 ) : DtlsRole {
-    private val logger = parentLogger.createChildLogger(DtlsServer::class)
+    private val logger = createChildLogger(parentLogger)
 
     private val tlsServer: TlsServerImpl = TlsServerImpl(certificateInfo, verifyAndValidateRemoteCertificate, logger)
 

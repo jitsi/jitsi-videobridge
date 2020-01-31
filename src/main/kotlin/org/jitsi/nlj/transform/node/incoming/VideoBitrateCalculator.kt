@@ -21,9 +21,9 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetMediaStreamTracksEvent
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.transform.node.ObserverNode
-import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
 
@@ -36,7 +36,7 @@ import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
 class VideoBitrateCalculator(
     parentLogger: Logger
 ) : ObserverNode("Video bitrate calculator") {
-    private val logger = parentLogger.createChildLogger(VideoBitrateCalculator::class)
+    private val logger = createChildLogger(parentLogger)
     private var mediaStreamTrackDescs: Array<MediaStreamTrackDesc> = arrayOf()
 
     override fun observe(packetInfo: PacketInfo) {

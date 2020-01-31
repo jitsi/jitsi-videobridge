@@ -26,7 +26,7 @@ import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
-import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.observableWhenChanged
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbRembPacket
@@ -50,7 +50,7 @@ class RemoteBandwidthEstimator(
     diagnosticContext: DiagnosticContext = DiagnosticContext(),
     private val clock: Clock = Clock.systemUTC()
 ) : ObserverNode("Remote Bandwidth Estimator") {
-    private val logger = parentLogger.createChildLogger(RemoteBandwidthEstimator::class)
+    private val logger = createChildLogger(parentLogger)
     /**
      * The remote bandwidth estimation is enabled when REMB support is signaled, but TCC is not signaled.
      */

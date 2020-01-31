@@ -18,9 +18,9 @@ package org.jitsi.nlj.rtp.codec.vp8
 
 import org.jitsi.nlj.codec.vp8.Vp8Utils
 import org.jitsi.nlj.rtp.ParsedVideoPacket
-import org.jitsi.nlj.util.cwarn
-import org.jitsi.nlj.util.getLogger
+import org.jitsi.utils.logging2.cwarn
 import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
+import org.jitsi.utils.logging2.createLogger
 import org.jitsi_modified.impl.neomedia.codec.video.vp8.DePacketizer
 import kotlin.properties.Delegates
 
@@ -123,6 +123,6 @@ class Vp8Packet private constructor (
     }
 
     companion object {
-        private val logger = getLogger(Vp8Packet::class)
+        private val logger = createLogger()
     }
 }
