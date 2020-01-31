@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -55,6 +56,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.*;
+import java.util.function.Function;
 import java.util.stream.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
@@ -550,10 +552,9 @@ public class Endpoint
     @Override
     public boolean shouldExpire()
     {
-        boolean iceFailed = dtlsTransport.hasIceFailed();
-        if (iceFailed)
+        if (dtlsTransport.dtlsHandshake.hasFailed)
         {
-            logger.warn("Allowing to expire because ICE failed.");
+            logger.warn("Allowing to expire because connection failed.");
             return true;
         }
 
@@ -760,7 +761,7 @@ public class Endpoint
         };
         socket.listen();
 
-        dtlsTransport.onDtlsHandshakeComplete(() -> {
+        dtlsTransport.dtlsHandshake.onSuccess(() -> {
             // We don't want to block the thread calling
             // onDtlsHandshakeComplete so run the socket acceptance in an IO
             // pool thread
@@ -794,6 +795,7 @@ public class Endpoint
                             " accepted connection.");
                 }
             });
+            return Unit.INSTANCE;
         });
     }
 

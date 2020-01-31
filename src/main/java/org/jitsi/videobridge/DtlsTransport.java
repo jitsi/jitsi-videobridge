@@ -37,6 +37,7 @@ import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.ice.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
+import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.json.simple.*;
 
@@ -82,7 +83,6 @@ public class DtlsTransport implements IceTransport.DataHandler
     private final DtlsStack dtlsStack;
     private final ProtocolReceiver dtlsReceiver;
     private final ProtocolSender dtlsSender;
-    private List<Runnable> dtlsConnectedSubscribers = new ArrayList<>();
     private final PacketInfoQueue outgoingPacketQueue;
     private final Endpoint endpoint;
 
@@ -90,7 +90,7 @@ public class DtlsTransport implements IceTransport.DataHandler
     private final Node incomingPipelineRoot;
     private final Node outgoingDtlsPipelineRoot;
     private final Node outgoingSrtpPipelineRoot;
-    private boolean dtlsHandshakeComplete = false;
+    Outcome dtlsHandshake = new Outcome();
     /**
      * Measures the jitter introduced by the bridge itself (i.e. jitter calculated between
      * packets based on the time they were received by the bridge and the time they
@@ -136,11 +136,10 @@ public class DtlsTransport implements IceTransport.DataHandler
         dtlsSender = new ProtocolSender(dtlsStack);
 
         dtlsStack.onHandshakeComplete((chosenSrtpProfile, tlsRole, keyingMaterial) -> {
-            dtlsHandshakeComplete = true;
             logger.info("DTLS handshake complete. Got SRTP profile " +
                     chosenSrtpProfile);
             endpoint.setSrtpInformation(chosenSrtpProfile, tlsRole, keyingMaterial);
-            dtlsConnectedSubscribers.forEach(Runnable::run);
+            dtlsHandshake.succeeded();
             return Unit.INSTANCE;
         });
 
@@ -229,7 +228,19 @@ public class DtlsTransport implements IceTransport.DataHandler
      */
     public boolean isConnected()
     {
-        return iceTransport.isConnected() && dtlsHandshakeComplete;
+        return iceTransport.isConnected() && dtlsHandshake.hasSucceeded;
+    }
+
+    public void describe(ColibriConferenceIQ.ChannelBundle channelBundle)
+    {
+        IceUdpTransportPacketExtension pe = channelBundle.getTransport();
+        if (pe == null)
+        {
+            pe = new IceUdpTransportPacketExtension();
+            channelBundle.setTransport(pe);
+        }
+
+        describe(pe);
     }
 
     protected void describe(IceUdpTransportPacketExtension pe)
@@ -267,25 +278,6 @@ public class DtlsTransport implements IceTransport.DataHandler
             throw new IllegalStateException("Can not describe role " + role);
         }
         fingerprintPE.setSetup(setupRole);
-    }
-
-    /**
-     * Installs a handler to be executed when the DTLS handshake
-     * is completed (or immediately if the DTLS handshake has
-     * already completed).  Multiple handlers can be installed
-     * and will be run in the order they are added.
-     * @param handler the handler to be executed
-     */
-    public void onDtlsHandshakeComplete(Runnable handler)
-    {
-        if (dtlsHandshakeComplete)
-        {
-            handler.run();
-        }
-        else
-        {
-            dtlsConnectedSubscribers.add(handler);
-        }
     }
 
     /**
@@ -404,64 +396,11 @@ public class DtlsTransport implements IceTransport.DataHandler
         incomingPipelineRoot.processPacket(pktInfo);
     }
 
-    /**
-     * Read packets from the given socket and process them in the incoming pipeline
-     * @param socket the socket to read from
-     */
-    private void installIncomingPacketReader(DatagramSocket socket)
-    {
-        TaskPools.IO_POOL.submit(() -> {
-            // We need this buffer to be 1500 bytes because we don't know how
-            // big the received packet will be. But we don't want to allocate
-            // large buffers for all packets.
-            byte[] receiveBuf = ByteBufferPool.getBuffer(1500);
-            DatagramPacket p = new DatagramPacket(receiveBuf, 0, 1500);
-
-            while (!iceTransport.isClosed())
-            {
-                try
-                {
-                    socket.receive(p);
-                    int len = p.getLength();
-                    byte[] buf
-                        = ByteBufferPool.getBuffer(
-                                len +
-                                RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET +
-                                RtpPacket.BYTES_TO_LEAVE_AT_END_OF_PACKET);
-                    System.arraycopy(
-                            receiveBuf, p.getOffset(),
-                            buf, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
-                            len);
-                    Packet pkt
-                        = new UnparsedPacket(
-                                buf,
-                                RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
-                                len);
-                    PacketInfo pktInfo = new PacketInfo(pkt);
-                    pktInfo.setReceivedTime(System.currentTimeMillis());
-                    incomingPipelineRoot.processPacket(pktInfo);
-
-                    p.setData(receiveBuf, 0, receiveBuf.length);
-                }
-                catch (SocketClosedException e)
-                {
-                    logger.info("Socket closed, stopping reader.");
-                    break;
-                }
-                catch (IOException e)
-                {
-                    logger.warn("Stopping reader: ", e);
-                    break;
-                }
-            }
-        });
-    }
-
     protected void onIceConnected()
     {
+        logger.info("ICE connected, Starting DTLS.");
         endpoint.setOutgoingSrtpPacketHandler(outgoingPacketQueue::add);
 
-        logger.info("Starting DTLS.");
         TaskPools.IO_POOL.submit(() -> {
             try
             {
@@ -520,6 +459,16 @@ public class DtlsTransport implements IceTransport.DataHandler
         }
 
         return debugState;
+    }
+
+    void close()
+    {
+        iceTransport.close();
+    }
+
+    String getIcePassword()
+    {
+        return iceTransport.getIcePassword();
     }
 
     /**
