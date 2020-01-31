@@ -23,9 +23,9 @@ import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
-import org.jitsi.nlj.util.createChildLogger
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
 
@@ -36,7 +36,7 @@ class VideoParser(
     private val streamInformationStore: ReadOnlyStreamInformationStore,
     parentLogger: Logger
 ) : TransformerNode("Video parser") {
-    private val logger = parentLogger.createChildLogger(VideoParser::class)
+    private val logger = createChildLogger(parentLogger)
     private var tracks: Array<MediaStreamTrackDesc> = arrayOf()
 
     // TODO: things we want to detect here:

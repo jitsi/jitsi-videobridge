@@ -16,7 +16,6 @@
 
 package org.jitsi.nlj.transform.node.outgoing
 
-import java.util.Random
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.EventHandler
 import org.jitsi.nlj.PacketHandler
@@ -29,14 +28,15 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.PacketCache
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
-import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.cdebug
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
+import java.util.Random
 
 /**
  * [ProbingDataSender] currently supports probing via 2 methods:
@@ -55,7 +55,7 @@ class ProbingDataSender(
 ) : EventHandler, NodeStatsProducer {
 
     private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(this.javaClass)
-    private val logger = parentLogger.createChildLogger(ProbingDataSender::class)
+    private val logger = createChildLogger(parentLogger)
 
     private var rtxSupported = false
     private val videoPayloadTypes = mutableSetOf<VideoPayloadType>()

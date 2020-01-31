@@ -16,11 +16,6 @@
 
 package org.jitsi.nlj.rtcp
 
-import java.time.Clock
-import java.time.Duration
-import java.time.Instant
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.min
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetLocalSsrcEvent
@@ -28,8 +23,7 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
-import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.cdebug
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacketBuilder
@@ -37,6 +31,12 @@ import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacketBuilder
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.min
 
 /**
  * [KeyframeRequester] handles a few things around keyframes:
@@ -51,7 +51,7 @@ class KeyframeRequester @JvmOverloads constructor(
     parentLogger: Logger,
     private val clock: Clock = Clock.systemDefaultZone()
 ) : TransformerNode("Keyframe Requester") {
-    private val logger = parentLogger.createChildLogger(KeyframeRequester::class)
+    private val logger = createChildLogger(parentLogger)
 
     // Map a SSRC to the timestamp (represented as an [Instant]) of when we last requested a keyframe for it
     private val keyframeRequests = mutableMapOf<Long, Instant>()

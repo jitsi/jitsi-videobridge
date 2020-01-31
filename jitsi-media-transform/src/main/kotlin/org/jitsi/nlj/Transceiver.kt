@@ -34,9 +34,9 @@ import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.SsrcAssociation
 import org.jitsi.nlj.util.StreamInformationStoreImpl
-import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.cinfo
-import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.cinfo
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
@@ -69,7 +69,7 @@ class Transceiver(
     parentLogger: Logger,
     private val clock: Clock = Clock.systemUTC()
 ) : Stoppable, NodeStatsProducer {
-    private val logger = parentLogger.createChildLogger(Transceiver::class)
+    private val logger = createChildLogger(parentLogger)
     val packetIOActivity = PacketIOActivity()
     private val endpointConnectionStats = EndpointConnectionStats(logger)
     private val streamInformationStore = StreamInformationStoreImpl()

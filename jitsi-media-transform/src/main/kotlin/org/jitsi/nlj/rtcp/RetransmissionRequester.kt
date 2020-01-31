@@ -24,9 +24,9 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.createChildLogger
-import org.jitsi.nlj.util.cwarn
+import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.utils.logging2.cwarn
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacketBuilder
 import org.jitsi.rtp.util.RtpUtils
@@ -41,7 +41,7 @@ class RetransmissionRequester(
     parentLogger: Logger,
     private val clock: Clock = Clock.systemUTC()
 ) {
-    private val logger = parentLogger.createChildLogger(RetransmissionRequester::class)
+    private val logger = createChildLogger(parentLogger)
     private val streamPacketRequesters: MutableMap<Long, StreamPacketRequester> = HashMap()
 
     fun packetReceived(ssrc: Long, seqNum: Int) {
@@ -76,7 +76,7 @@ class RetransmissionRequester(
         }
         private var running: AtomicBoolean = AtomicBoolean(true)
         private val logger =
-            parentLogger.createChildLogger(StreamPacketRequester::class, context = mapOf("ssrc" to ssrc.toString()))
+            createChildLogger(parentLogger, mapOf("ssrc" to ssrc.toString()))
         private var highestReceivedSeqNum = -1
         private val requests: MutableMap<Int, PacketRetransmissionRequest> = HashMap()
         private val taskHandleLock = Any()

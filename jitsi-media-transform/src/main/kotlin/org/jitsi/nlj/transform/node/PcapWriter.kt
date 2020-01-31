@@ -18,8 +18,8 @@ package org.jitsi.nlj.transform.node
 import java.net.Inet4Address
 import java.util.Random
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.util.cinfo
-import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.cinfo
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.logging2.Logger
 import org.pcap4j.core.Pcaps
 import org.pcap4j.packet.EthernetPacket
@@ -38,7 +38,7 @@ class PcapWriter(
     parentLogger: Logger,
     filePath: String = "/tmp/${Random().nextLong()}.pcap}"
 ) : ObserverNode("PCAP writer") {
-    private val logger = parentLogger.createChildLogger(PcapWriter::class)
+    private val logger = createChildLogger(parentLogger)
     private val lazyHandle = lazy {
         Pcaps.openDead(DataLinkType.EN10MB, 65536)
     }

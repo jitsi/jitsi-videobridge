@@ -21,8 +21,8 @@ import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.PacketCache
-import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacket
 import org.jitsi.rtp.rtp.RtpPacket
@@ -42,7 +42,7 @@ class NackHandler(
     private var numRetransmittedPackets = 0
     private var numPacketsNotResentDueToDelay = 0
     private var numCacheMisses = 0
-    private val logger = parentLogger.createChildLogger(NackHandler::class)
+    private val logger = createChildLogger(parentLogger)
     private var currRtt: Double = -1.0
 
     override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Long) {

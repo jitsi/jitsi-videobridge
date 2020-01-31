@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.NodePlugin
-import org.jitsi.nlj.util.getLogger
+import org.jitsi.utils.logging2.createLogger
 
 /**
  * Verifies that the payload verification string of the packet hasn't changed.
@@ -29,7 +29,7 @@ import org.jitsi.nlj.util.getLogger
  */
 class PayloadVerificationPlugin {
     companion object : NodePlugin {
-        private val logger = getLogger(PayloadVerificationPlugin::class)
+        private val logger = createLogger()
 
         val numFailures = AtomicInteger()
 

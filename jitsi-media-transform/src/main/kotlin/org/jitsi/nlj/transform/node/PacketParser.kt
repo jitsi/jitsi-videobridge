@@ -18,13 +18,14 @@ package org.jitsi.nlj.transform.node
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.Packet
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
 
 open class PacketParser(
     name: String,
     parentLogger: Logger,
     private val action: (Packet) -> Packet
 ) : TransformerNode(name) {
-    private val logger = parentLogger.createChildLogger(javaClass.name)
+    private val logger = createChildLogger(parentLogger)
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         return try {

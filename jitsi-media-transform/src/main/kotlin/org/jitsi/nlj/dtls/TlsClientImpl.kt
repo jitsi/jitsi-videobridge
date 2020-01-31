@@ -41,10 +41,10 @@ import org.bouncycastle.tls.crypto.TlsCryptoParameters
 import org.bouncycastle.tls.crypto.impl.bc.BcDefaultTlsCredentialedSigner
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto
 import org.jitsi.nlj.srtp.SrtpUtil
-import org.jitsi.nlj.util.cdebug
-import org.jitsi.nlj.util.cerror
-import org.jitsi.nlj.util.cinfo
-import org.jitsi.nlj.util.createChildLogger
+import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.cerror
+import org.jitsi.utils.logging2.cinfo
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.utils.logging2.Logger
 
@@ -60,7 +60,7 @@ class TlsClientImpl(
     parentLogger: Logger
 ) : DefaultTlsClient(BC_TLS_CRYPTO) {
 
-    private val logger = parentLogger.createChildLogger(TlsClientImpl::class)
+    private val logger = createChildLogger(parentLogger)
 
     private var session: TlsSession? = null
 
