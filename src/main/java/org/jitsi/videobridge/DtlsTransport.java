@@ -115,9 +115,13 @@ public class DtlsTransport implements IceTransport.DataHandler
             throws IOException
     {
         logger = parentLogger.createChildLogger(getClass().getName());
-        iceTransport = new IceTransport(endpoint, controlling, logger);
+        iceTransport = new IceTransport(endpoint, controlling, this, logger);
         iceTransport.iceConnection.onSuccess(() -> {
             onIceConnected();
+            return Unit.INSTANCE;
+        });
+        iceTransport.iceConnection.onFailure(() -> {
+            dtlsHandshake.failed();
             return Unit.INSTANCE;
         });
         packetSender = new SocketSenderNode(iceTransport);
@@ -228,7 +232,7 @@ public class DtlsTransport implements IceTransport.DataHandler
      */
     public boolean isConnected()
     {
-        return iceTransport.isConnected() && dtlsHandshake.hasSucceeded;
+        return iceTransport.isConnected() && dtlsHandshake.hasSucceeded();
     }
 
     public void describe(ColibriConferenceIQ.ChannelBundle channelBundle)
@@ -376,8 +380,12 @@ public class DtlsTransport implements IceTransport.DataHandler
     @Override
     public void dataReceived(byte[] buf, int offset, int len)
     {
-        //TODO(brian): This code is now divorced from the socket read, so we
+        // TODO(brian): This code is now divorced from the socket read, so we
         // should look at transitioning to the CPU pool here
+        // TODO(brian): maybe the space at front/end of packet should
+        // be even further back?  If we synchronously call ahead, we can
+        // delay copying the buffer until later (where we know when it's
+        // DTLS or SRTP)
         byte[] newBuf
             = ByteBufferPool.getBuffer(
             len +

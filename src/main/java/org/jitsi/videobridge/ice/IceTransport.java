@@ -15,29 +15,30 @@
  */
 package org.jitsi.videobridge.ice;
 
-import java.beans.*;
-import java.io.*;
-import java.net.*;
-import java.time.*;
-import java.util.*;
-
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
+import org.ice4j.socket.*;
+import org.jetbrains.annotations.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.osgi.*;
-import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
-import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jingle.CandidateType;
+import org.jitsi.xmpp.extensions.jingle.*;
 import org.json.simple.*;
 import org.osgi.framework.*;
+
+import java.beans.*;
+import java.io.*;
+import java.net.*;
+import java.time.*;
+import java.util.*;
 
 import static org.jitsi.videobridge.ice.IceConfig.*;
 
@@ -122,11 +123,6 @@ public class IceTransport
     protected final Logger logger;
 
     /**
-     * A flag which is raised if ICE has run and failed.
-     */
-    private boolean iceFailed = false;
-
-    /**
      * The OSGi bundle context.
      */
     private final BundleContext bundleContext;
@@ -147,8 +143,7 @@ public class IceTransport
 
     private final PacketIOActivity packetIoActivity;
 
-    //TODO: probably will pass this in and have it be NonNull & final
-    DataHandler dataHandler = null;
+    private final DataHandler dataHandler;
 
     /**
      * Initializes a new <tt>IceTransport</tt> instance.
@@ -161,6 +156,7 @@ public class IceTransport
     public IceTransport(
         Endpoint endpoint,
         boolean controlling,
+        @NotNull DataHandler dataHandler,
         Logger parentLogger
     )
         throws IOException
@@ -172,7 +168,9 @@ public class IceTransport
         this.conferenceStats = conference.getStatistics();
         this.videobridgeStats = conference.getVideobridge().getStatistics();
         this.packetIoActivity = endpoint.getTransceiver().getPacketIOActivity();
+        this.dataHandler = dataHandler;
         this.logger = parentLogger.createChildLogger(getClass().getName());
+
 
         String streamName = "stream-" + endpoint.getID();
         iceAgent = createIceAgent(controlling, streamName);
@@ -357,7 +355,7 @@ public class IceTransport
      */
     public boolean isConnected()
     {
-        return iceConnection.hasSucceeded;
+        return iceConnection.hasSucceeded();
     }
 
     /**
@@ -639,7 +637,7 @@ public class IceTransport
         // case separately below.
         if (IceProcessingState.COMPLETED.equals(newState))
         {
-            if (!iceConnection.hasSucceeded)
+            if (!iceConnection.hasSucceeded())
             {
                 iceConnection.succeeded();
                 onIceConnected();
@@ -649,11 +647,7 @@ public class IceTransport
             || (IceProcessingState.RUNNING.equals(oldState)
                     && IceProcessingState.TERMINATED.equals(newState)))
         {
-            if (!iceFailed)
-            {
-                iceFailed = true;
-                onIceFailed();
-            }
+            iceConnection.failed();
         }
     }
 
@@ -678,7 +672,14 @@ public class IceTransport
                 try
                 {
                     socket.receive(p);
-                } catch (IOException e) {
+                }
+                catch (SocketClosedException e)
+                {
+                    logger.info("Socket closed, stopping reader");
+                    break;
+                }
+                 catch (IOException e)
+                {
                     logger.warn("Stopping reader: ", e);
                     break;
                 }
@@ -740,51 +741,18 @@ public class IceTransport
     }
 
     /**
-     * @return {@code true} if ICE has run and failed.
-     */
-    public boolean hasIceFailed()
-    {
-        return iceFailed;
-    }
-
-    /**
-     * Sets the values of the properties of a specific
-     * <tt>ColibriConferenceIQ.ChannelBundle</tt>
-     * to the values of the respective properties of this instance. Thus, the
-     * specified <tt>iq</tt> may be thought of as containing a description of
-     * this instance.
-     *
-     * @param iq the <tt>ColibriConferenceIQ.Channel</tt> on which to set the
-     * values of the properties of this instance
-     */
-    public void describe(ColibriConferenceIQ.ChannelBundle iq)
-    {
-        IceUdpTransportPacketExtension pe = iq.getTransport();
-        if (pe == null)
-        {
-            pe = new IceUdpTransportPacketExtension();
-            iq.setTransport(pe);
-        }
-
-        describe(pe);
-    }
-
-    public boolean isClosed()
-    {
-        return closed;
-    }
-    /**
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
+    @SuppressWarnings("unchecked")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
         debugState.put("useComponentSocket", useComponentSocket);
         debugState.put("keepAliveStrategy", keepAliveStrategy.toString());
         debugState.put("closed", closed);
-        debugState.put("iceConnected", iceConnection.hasSucceeded);
-        debugState.put("iceFailed", iceFailed);
+        debugState.put("iceConnected", iceConnection.hasSucceeded());
+        debugState.put("iceFailed", iceConnection.hasFailed());
 
         final Agent iceAgent = this.iceAgent;
         if (iceAgent != null)

@@ -552,7 +552,7 @@ public class Endpoint
     @Override
     public boolean shouldExpire()
     {
-        if (dtlsTransport.dtlsHandshake.hasFailed)
+        if (dtlsTransport.dtlsHandshake.hasFailed())
         {
             logger.warn("Allowing to expire because connection failed.");
             return true;
