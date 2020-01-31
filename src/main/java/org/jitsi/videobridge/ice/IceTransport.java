@@ -504,7 +504,7 @@ public class IceTransport
     /**
      * Describes this {@link IceTransport} in a {@code transport} XML extension.
      */
-    protected void describe(IceUdpTransportPacketExtension pe)
+    public void describe(IceUdpTransportPacketExtension pe)
     {
         pe.setPassword(iceAgent.getLocalPassword());
         pe.setUfrag(iceAgent.getLocalUfrag());
@@ -679,6 +679,10 @@ public class IceTransport
         describe(pe);
     }
 
+    public boolean isClosed()
+    {
+        return closed;
+    }
     /**
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.

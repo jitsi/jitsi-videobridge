@@ -50,7 +50,7 @@ import java.util.function.*;
  * @author Brian Baldino
  * @author Boris Grozev
  */
-public class DtlsTransport extends IceTransport
+public class DtlsTransport
 {
     /**
      * A predicate which is true for DTLS packets. See
@@ -100,6 +100,10 @@ public class DtlsTransport extends IceTransport
      */
     private final BridgeJitterStats bridgeJitterStats = new BridgeJitterStats();
 
+    private final Logger logger;
+
+    private final IceTransport iceTransport;
+
     /**
      * Initializes a new {@link DtlsTransport} instance for a specific endpoint.
      * @param endpoint the endpoint with which this {@link DtlsTransport} is
@@ -110,7 +114,8 @@ public class DtlsTransport extends IceTransport
     public DtlsTransport(Endpoint endpoint, boolean controlling, Logger parentLogger)
             throws IOException
     {
-        super(endpoint, controlling, parentLogger);
+        logger = parentLogger.createChildLogger(getClass().getName());
+        iceTransport = new IceTransport(endpoint, controlling, logger);
         this.endpoint = endpoint;
 
         outgoingPacketQueue
@@ -144,7 +149,6 @@ public class DtlsTransport extends IceTransport
      * passing it over to the ICE transport manager.
      * @param transportPacketExtension
      */
-    @Override
     public void startConnectivityEstablishment(
             IceUdpTransportPacketExtension transportPacketExtension)
     {
@@ -209,7 +213,7 @@ public class DtlsTransport extends IceTransport
             }
         }
 
-        super.startConnectivityEstablishment(transportPacketExtension);
+        iceTransport.startConnectivityEstablishment(transportPacketExtension);
     }
 
     /**
@@ -218,19 +222,14 @@ public class DtlsTransport extends IceTransport
      * established and the DTLS session has been established.
      * @return
      */
-    @Override
     public boolean isConnected()
     {
-        return super.isConnected() && dtlsHandshakeComplete;
+        return iceTransport.isConnected() && dtlsHandshakeComplete;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     protected void describe(IceUdpTransportPacketExtension pe)
     {
-        super.describe(pe);
+        iceTransport.describe(pe);
 
         // Describe dtls
         DtlsFingerprintPacketExtension fingerprintPE
@@ -388,14 +387,13 @@ public class DtlsTransport extends IceTransport
         // enough (it'll only be a bit of the DTLS path) that running it in the
         // IO pool is fine
         TaskPools.IO_POOL.submit(() -> {
-
             // We need this buffer to be 1500 bytes because we don't know how
             // big the received packet will be. But we don't want to allocate
             // large buffers for all packets.
             byte[] receiveBuf = ByteBufferPool.getBuffer(1500);
             DatagramPacket p = new DatagramPacket(receiveBuf, 0, 1500);
 
-            while (!closed)
+            while (!iceTransport.isClosed())
             {
                 try
                 {
@@ -523,10 +521,9 @@ public class DtlsTransport extends IceTransport
     /**
      * {@inheritDoc}
      */
-    @Override
     public JSONObject getDebugState()
     {
-        JSONObject debugState = super.getDebugState();
+        JSONObject debugState = iceTransport.getDebugState();
         debugState.put("bridge_jitter", bridgeJitterStats.getJitter());
         debugState.put("dtlsStack", dtlsStack.getNodeStats().toJson());
         //debugState.put("dtlsReceiver"
