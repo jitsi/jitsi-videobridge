@@ -116,6 +116,10 @@ public class DtlsTransport
     {
         logger = parentLogger.createChildLogger(getClass().getName());
         iceTransport = new IceTransport(endpoint, controlling, logger);
+        iceTransport.iceConnection.onSuccess(() -> {
+            onIceConnected();
+            return Unit.INSTANCE;
+        });
         this.endpoint = endpoint;
 
         outgoingPacketQueue
@@ -433,10 +437,8 @@ public class DtlsTransport
         });
     }
 
-    @Override
     protected void onIceConnected()
     {
-        updateIceConnectedStats();
         DatagramSocket socket = iceComponent.getSocket();
 
         endpoint.setOutgoingSrtpPacketHandler(outgoingPacketQueue::add);
@@ -460,20 +462,9 @@ public class DtlsTransport
             {
                 logger.error("Error during DTLS negotiation: " + e.toString() +
                         ", closing this transport manager");
-                close();
+                iceTransport.close();
             }
         });
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void onIceFailed()
-    {
-        endpoint.getConference().getVideobridge().getStatistics()
-                .totalIceFailed.incrementAndGet();
-        endpoint.getConference().getStatistics().hasIceFailedEndpoint = true;
     }
 
     /**
@@ -487,35 +478,6 @@ public class DtlsTransport
            .getTransceiver()
            .getPacketIOActivity()
            .setLastIceActivityInstant(Instant.ofEpochMilli(time));
-    }
-
-    /**
-     * Bumps the counters of the number of time ICE succeeded in the
-     * {@link Videobridge} statistics.
-     */
-    private void updateIceConnectedStats()
-    {
-        endpoint.getConference().getStatistics().hasIceSucceededEndpoint = true;
-
-        Videobridge.Statistics stats
-                = endpoint.getConference().getVideobridge().getStatistics();
-        stats.totalIceSucceeded.incrementAndGet();
-
-        CandidatePair selectedPair = iceComponent.getSelectedPair();
-        RemoteCandidate remoteCandidate =
-                selectedPair == null ? null : selectedPair.getRemoteCandidate();
-
-        if (remoteCandidate == null)
-        {
-            return;
-        }
-
-
-        if (remoteCandidate.getTransport() == Transport.TCP
-            || remoteCandidate.getTransport() == Transport.SSLTCP)
-        {
-            stats.totalIceSucceededTcp.incrementAndGet();
-        }
     }
 
     /**

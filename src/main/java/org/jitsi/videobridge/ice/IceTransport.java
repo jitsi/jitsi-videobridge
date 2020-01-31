@@ -24,6 +24,7 @@ import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.osgi.*;
+import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
@@ -80,7 +81,8 @@ public class IceTransport
     /**
      * Whether ICE connectivity has been established.
      */
-    protected boolean iceConnected = false;
+//    protected boolean iceConnected = false;
+    public Outcome iceConnection = new Outcome();
 
     /**
      * The <tt>IceMediaStream</tt> of {@link #iceAgent} associated with the
@@ -135,6 +137,10 @@ public class IceTransport
      */
     private final String conferenceId;
 
+    private final Conference.Statistics conferenceStats;
+
+    private final Videobridge.Statistics videobridgeStats;
+
     /**
      * Initializes a new <tt>IceTransport</tt> instance.
      *
@@ -143,13 +149,18 @@ public class IceTransport
      * @param controlling {@code true} if the new instance will initialized to
      * serve as a controlling ICE agent; otherwise, {@code false}
      */
-    public IceTransport(Endpoint endpoint, boolean controlling, Logger parentLogger)
+    public IceTransport(
+        Endpoint endpoint,
+        boolean controlling,
+        Logger parentLogger)
         throws IOException
     {
         Conference conference = endpoint.getConference();
         this.bundleContext = conference.getBundleContext();
         this.endpointId = endpoint.getID();
         this.conferenceId = conference.getID();
+        this.conferenceStats = conference.getStatistics();
+        this.videobridgeStats = conference.getVideobridge().getStatistics();
         this.logger = parentLogger.createChildLogger(getClass().getName());
 
         String streamName = "stream-" + endpoint.getID();
@@ -334,7 +345,7 @@ public class IceTransport
      */
     public boolean isConnected()
     {
-        return iceConnected;
+        return iceConnection.hasSucceeded;
     }
 
     /**
@@ -616,9 +627,9 @@ public class IceTransport
         // case separately below.
         if (IceProcessingState.COMPLETED.equals(newState))
         {
-            if (!iceConnected)
+            if (!iceConnection.hasSucceeded)
             {
-                iceConnected = true;
+                iceConnection.succeeded();
                 onIceConnected();
             }
         }
@@ -639,14 +650,43 @@ public class IceTransport
      */
     protected void onIceConnected()
     {
+        updateIceConnectedStats();
     }
 
+    /**
+     * Bumps the counters of the number of time ICE succeeded in the
+     * {@link Videobridge} statistics.
+     */
+    private void updateIceConnectedStats()
+    {
+        conferenceStats.hasIceSucceededEndpoint = true;
+
+        videobridgeStats.totalIceSucceeded.incrementAndGet();
+
+        CandidatePair selectedPair = iceComponent.getSelectedPair();
+        RemoteCandidate remoteCandidate =
+            selectedPair == null ? null : selectedPair.getRemoteCandidate();
+
+        if (remoteCandidate == null)
+        {
+            return;
+        }
+
+
+        if (remoteCandidate.getTransport() == Transport.TCP
+            || remoteCandidate.getTransport() == Transport.SSLTCP)
+        {
+            videobridgeStats.totalIceSucceededTcp.incrementAndGet();
+        }
+    }
     /**
      * Called once if the ICE agent fails.
      */
     protected void onIceFailed()
     {
         logger.warn("ICE failed!");
+        videobridgeStats.totalIceFailed.incrementAndGet();
+        conferenceStats.hasIceFailedEndpoint = true;
     }
 
     /**
@@ -693,7 +733,7 @@ public class IceTransport
         debugState.put("useComponentSocket", useComponentSocket);
         debugState.put("keepAliveStrategy", keepAliveStrategy.toString());
         debugState.put("closed", closed);
-        debugState.put("iceConnected", iceConnected);
+        debugState.put("iceConnected", iceConnection.hasSucceeded);
         debugState.put("iceFailed", iceFailed);
 
         final Agent iceAgent = this.iceAgent;

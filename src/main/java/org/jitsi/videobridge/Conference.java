@@ -1350,13 +1350,13 @@ public class Conference
         /**
          * Whether at least one endpoint in this conference failed ICE.
          */
-        boolean hasIceFailedEndpoint = false;
+        public boolean hasIceFailedEndpoint = false;
 
         /**
          * Whether at least one endpoint in this conference completed ICE
          * successfully.
          */
-        boolean hasIceSucceededEndpoint = false;
+        public boolean hasIceSucceededEndpoint = false;
 
         /**
          * Gets a snapshot of this object's state as JSON.
