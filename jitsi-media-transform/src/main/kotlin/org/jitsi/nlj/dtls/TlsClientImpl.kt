@@ -18,7 +18,6 @@ package org.jitsi.nlj.dtls
 import java.nio.ByteBuffer
 import java.util.Hashtable
 import org.bouncycastle.crypto.util.PrivateKeyFactory
-import org.bouncycastle.tls.AlertDescription
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.CertificateRequest
 import org.bouncycastle.tls.CipherSuite
@@ -42,7 +41,6 @@ import org.bouncycastle.tls.crypto.impl.bc.BcDefaultTlsCredentialedSigner
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.utils.logging2.cdebug
-import org.jitsi.utils.logging2.cerror
 import org.jitsi.utils.logging2.cinfo
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.rtp.extensions.toHex
@@ -170,36 +168,9 @@ class TlsClientImpl(
     override fun getSupportedVersions(): Array<ProtocolVersion> =
         ProtocolVersion.DTLSv12.downTo(ProtocolVersion.DTLSv10)
 
-    override fun notifyAlertRaised(alertLevel: Short, alertDescription: Short, message: String?, cause: Throwable?) {
-        when (alertDescription) {
-            AlertDescription.close_notify -> {
-                logger.info("close_notify raised, connection closing")
-            }
-            else -> {
-                logger.cerror {
-                    StringBuffer().apply {
-                        appendln("Alert raised: $alertLevel $alertDescription " +
-                            "(${AlertDescription.getName(alertDescription)}). Message: $message " +
-                            "Cause: $cause")
-                        val e = Exception()
-                        for (el in e.stackTrace) {
-                            appendln(el.toString())
-                        }
-                    }.toString()
-                }
-            }
-        }
-    }
+    override fun notifyAlertRaised(alertLevel: Short, alertDescription: Short, message: String?, cause: Throwable?) =
+        logger.notifyAlertRaised(alertLevel, alertDescription, message, cause)
 
-    override fun notifyAlertReceived(alertLevel: Short, alertDescription: Short) {
-        when (alertDescription) {
-            AlertDescription.close_notify -> {
-                logger.info("close_notify received, connection closing")
-            }
-            else -> {
-                logger.cerror { "TLS Client alert received: $alertLevel $alertDescription" +
-                    "(${AlertDescription.getName(alertDescription)})" }
-            }
-        }
-    }
+    override fun notifyAlertReceived(alertLevel: Short, alertDescription: Short) =
+        logger.notifyAlertReceived(alertLevel, alertDescription)
 }

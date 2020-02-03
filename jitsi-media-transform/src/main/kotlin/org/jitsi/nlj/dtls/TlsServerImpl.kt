@@ -42,7 +42,6 @@ import org.bouncycastle.tls.crypto.impl.bc.BcDefaultTlsCredentialedDecryptor
 import org.bouncycastle.tls.crypto.impl.bc.BcDefaultTlsCredentialedSigner
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto
 import org.jitsi.nlj.srtp.SrtpUtil
-import org.jitsi.utils.logging2.cerror
 import org.jitsi.utils.logging2.cinfo
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.rtp.extensions.toHex
@@ -194,20 +193,11 @@ class TlsServerImpl(
         logger.cinfo { "Negotiated DTLS version $clientVersion" }
     }
 
-    override fun notifyAlertRaised(alertLevel: Short, alertDescription: Short, message: String?, cause: Throwable?) {
-        val stack = with(StringBuffer()) {
-            val e = Exception()
-            for (el in e.stackTrace) {
-                appendln(el.toString())
-            }
-            toString()
-        }
-        logger.info(stack)
-    }
+    override fun notifyAlertRaised(alertLevel: Short, alertDescription: Short, message: String?, cause: Throwable?) =
+        logger.notifyAlertRaised(alertLevel, alertDescription, message, cause)
 
-    override fun notifyAlertReceived(alertLevel: Short, alertDescription: Short) {
-        logger.cerror { "TLS Server alert received: $alertLevel $alertDescription" }
-    }
+    override fun notifyAlertReceived(alertLevel: Short, alertDescription: Short) =
+        logger.notifyAlertReceived(alertLevel, alertDescription)
 
     override fun getSupportedVersions(): Array<ProtocolVersion> =
         ProtocolVersion.DTLSv12.downTo(ProtocolVersion.DTLSv10)
