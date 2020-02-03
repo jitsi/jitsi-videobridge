@@ -205,7 +205,7 @@ class InterArrival
                         arrivalTimeDeltaMs - systemTimeDeltaMs >=
                     kArrivalTimeOffsetThresholdMs) {
                     logger.warn( "The arrival time clock offset has changed (diff = "
-                            + String.valueOf(arrivalTimeDeltaMs - systemTimeDeltaMs)
+                            + (arrivalTimeDeltaMs - systemTimeDeltaMs)
                             +  " ms), resetting.");
                     Reset();
                     return false;

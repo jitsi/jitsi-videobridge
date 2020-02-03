@@ -577,11 +577,16 @@ public class SendSideBandwidthEstimation
      */
     private synchronized long getRttMs()
     {
-        if (rttMs < 0 || rttMs > 1000)
+        if (rttMs < 0)
         {
-            logger.warn("RTT not calculated, or has a suspiciously high value ("
-                + rttMs + "). Using the default of 100ms.");
+            logger.warn("RTT not calculated, using the default of 100ms.");
             rttMs = 100;
+        }
+        else if (rttMs > 1000)
+        {
+            logger.warn(
+                "RTT suspiciously high (" + rttMs + "ms), capping to 1000ms.");
+            rttMs = 1000;
         }
 
         return rttMs;
