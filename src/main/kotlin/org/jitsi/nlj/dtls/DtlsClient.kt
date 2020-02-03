@@ -22,9 +22,9 @@ import org.bouncycastle.tls.DTLSTransport
 import org.bouncycastle.tls.DatagramTransport
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.utils.logging2.cerror
-import org.jitsi.utils.logging2.cinfo
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.cdebug
 
 class DtlsClient(
     private val datagramTransport: DatagramTransport,
@@ -43,7 +43,7 @@ class DtlsClient(
     fun connect(): DTLSTransport {
         try {
             return dtlsClientProtocol.connect(this.tlsClient, datagramTransport).also {
-                logger.cinfo { "DTLS handshake finished" }
+                logger.cdebug { "DTLS handshake finished" }
                 handshakeCompleteHandler(tlsClient.chosenSrtpProtectionProfile, TlsRole.CLIENT, tlsClient.srtpKeyingMaterial)
             }
         } catch (e: Exception) {

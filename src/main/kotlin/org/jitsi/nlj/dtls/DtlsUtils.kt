@@ -34,11 +34,16 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder
 import org.bouncycastle.operator.bc.BcDefaultDigestProvider
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
+import org.bouncycastle.tls.AlertDescription
 import org.bouncycastle.tls.TlsContext
 import org.bouncycastle.tls.TlsUtils
 import org.bouncycastle.tls.crypto.TlsSecret
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCertificate
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto
+import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.cerror
+import org.jitsi.utils.logging2.cinfo
 
 val SECURE_RANDOM = SecureRandom()
 val BC_TLS_CRYPTO = BcTlsCrypto(SECURE_RANDOM)
@@ -304,4 +309,28 @@ class DtlsUtils {
     }
 
     class DtlsException(msg: String) : Exception(msg)
+}
+
+inline fun Logger.notifyAlertRaised(alertLevel: Short, alertDescription: Short, message: String?, cause: Throwable?) {
+    when (alertDescription) {
+        AlertDescription.close_notify -> cdebug { "close_notify raised, connection closing" }
+        else -> {
+            val stack = with(StringBuffer()) {
+                val e = Exception()
+                for (el in e.stackTrace) {
+                    appendln(el.toString())
+                }
+                toString()
+            }
+            cinfo { "Alert raised: level=$alertLevel, description=$alertDescription, message=$message cause=$cause $stack" }
+        }
+    }
+}
+
+inline fun Logger.notifyAlertReceived(alertLevel: Short, alertDescription: Short) {
+    when (alertDescription) {
+        AlertDescription.close_notify -> cinfo { "close_notify received, connection closing" }
+        else -> cerror {
+            "Alert received: level=$alertLevel, description=$alertDescription (${AlertDescription.getName(alertDescription)})" }
+    }
 }
