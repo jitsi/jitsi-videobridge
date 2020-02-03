@@ -104,7 +104,6 @@ class RtcpFbTccPacketBuilder(
         val delta = delta_full.toShort()
         // If larger than 16bit signed, we can't represent it - need new fb packet.
         if (delta.toLong() != delta_full) {
-            println("Delta value too large! ( >= 2^16 ticks )")
             return false
         }
         var next_seq_no = base_seq_no_ + num_seq_no_
