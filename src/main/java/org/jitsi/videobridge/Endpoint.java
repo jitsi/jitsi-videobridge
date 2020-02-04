@@ -314,14 +314,11 @@ public class Endpoint
      * this <tt>Endpoint</tt>.
      *
      * @param msg message text to send.
-     * @throws IOException
      */
     @Override
     public void sendMessage(String msg)
-        throws IOException
     {
-        EndpointMessageTransport messageTransport
-            = getMessageTransport();
+        EndpointMessageTransport messageTransport = getMessageTransport();
         if (messageTransport != null)
         {
             messageTransport.sendMessage(msg);
@@ -882,14 +879,7 @@ public class Endpoint
             {
                 logger.debug("Is now selected, sending message: " + selectedUpdate);
             }
-            try
-            {
-                sendMessage(selectedUpdate);
-            }
-            catch (IOException e)
-            {
-                logger.error("Error sending SelectedUpdate message: " + e);
-            }
+            sendMessage(selectedUpdate);
         }
     }
 
@@ -908,14 +898,7 @@ public class Endpoint
                 logger.debug("Is no longer selected, sending message: " +
                         selectedUpdate);
             }
-            try
-            {
-                sendMessage(selectedUpdate);
-            }
-            catch (IOException e)
-            {
-                logger.error("Error sending SelectedUpdate message: " + e);
-            }
+            sendMessage(selectedUpdate);
         }
     }
 
@@ -957,14 +940,7 @@ public class Endpoint
         String msg = createLastNEndpointsChangeEvent(
             forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints);
 
-        try
-        {
-            sendMessage(msg);
-        }
-        catch (IOException e)
-        {
-            logger.error("Failed to send message on data channel.", e);
-        }
+        sendMessage(msg);
     }
 
     /**
