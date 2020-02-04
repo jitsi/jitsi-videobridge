@@ -78,6 +78,8 @@ public class Conference
      */
     private List<Endpoint> endpointsCache = Collections.emptyList();
 
+    private final Object endpointsCacheLock = new Object();
+
     /**
      * The {@link EventAdmin} instance (to be) used by this {@code Conference}
      * and all instances (of {@code Content}, {@code Channel}, etc.) created by
@@ -722,7 +724,7 @@ public class Conference
      */
     private void updateEndpointsCache()
     {
-        synchronized (endpoints)
+        synchronized (endpointsCacheLock)
         {
             ArrayList<Endpoint>
                     endpointsList
@@ -948,13 +950,10 @@ public class Conference
     void endpointExpired(AbstractEndpoint endpoint)
     {
         final AbstractEndpoint removedEndpoint;
-        synchronized (endpoints)
+        removedEndpoint = endpoints.remove(endpoint.getID());
+        if (removedEndpoint != null)
         {
-            removedEndpoint = endpoints.remove(endpoint.getID());
-            if (removedEndpoint != null)
-            {
-                updateEndpointsCache();
-            }
+            updateEndpointsCache();
         }
 
         if (removedEndpoint != null)
@@ -983,11 +982,8 @@ public class Conference
         }
 
         final AbstractEndpoint replacedEndpoint;
-        synchronized (endpoints)
-        {
-            replacedEndpoint = endpoints.put(endpoint.getID(), endpoint);
-            updateEndpointsCache();
-        }
+        replacedEndpoint = endpoints.put(endpoint.getID(), endpoint);
+        updateEndpointsCache();
 
         endpointsChanged();
 
