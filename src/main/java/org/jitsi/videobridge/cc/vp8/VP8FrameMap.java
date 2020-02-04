@@ -91,6 +91,26 @@ public class VP8FrameMap
         VP8Frame frame = frameHistory.get(pictureId);
         if (frame != null)
         {
+            if (!frame.matchesFrame(packet))
+            {
+                if (frame.getPictureId() != pictureId)
+                {
+                    throw new IllegalStateException("Frame map returned frame with picture ID " +
+                        frame.getPictureId() +
+                        " when asked for frame with picture ID " + pictureId);
+                }
+                logger.warn("Cannot insert packet in frame map: " +
+                    "frame with ssrc " + frame.getSsrc() +
+                    ", timestamp " + frame.getTemporalLayer() +
+                    ", and sequence numnber range " + frame.getEarliestKnownSequenceNumber() +
+                    "-" + frame.getLatestKnownSequenceNumber() +
+                    ", and packet " + packet.getSequenceNumber() +
+                    " with ssrc " + packet.getSsrc() +
+                    ", timestamp " + packet.getTimestamp() +
+                    ", and sequence number " + packet.getTimestamp() +
+                    " both have picture ID " + pictureId);
+                return null;
+            }
             return doFrameInsert(frame, packet);
         }
 
