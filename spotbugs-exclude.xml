@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+
+<Match>
+  <!-- Our Packet hierarchy intentionally uses clone() without calling super.clone(). -->
+  <Bug pattern="CN_IDIOM_NO_SUPER_CALL"/>
+</Match>
+
+<Match>
+  <!-- Internationalization is not a concern. -->
+  <Bug pattern="DM_DEFAULT_ENCODING"/>
+</Match>
+
+<Match>
+  <!-- This seems to get triggered by certain kotlin constructs though they look safe -->
+  <Bug pattern="BC_BAD_CAST_TO_ABSTRACT_COLLECTION"/>
+  <Source name="~.*\.kt" />
+</Match>
+</FindBugsFilter>
