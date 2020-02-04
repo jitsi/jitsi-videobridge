@@ -24,7 +24,6 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.cc.config.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
@@ -350,6 +349,7 @@ public class BitrateController
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
+    @SuppressWarnings("unchecked")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
@@ -381,19 +381,19 @@ public class BitrateController
     /**
      * TODO Document
      */
-    public static class StatusSnapshot
+    static class StatusSnapshot
     {
         final long currentTargetBps;
         final long currentIdealBps;
         final Collection<Long> activeSsrcs;
 
-        public StatusSnapshot()
+        StatusSnapshot()
         {
             currentTargetBps = -1L;
             currentIdealBps = -1L;
             activeSsrcs = Collections.emptyList();
         }
-        public StatusSnapshot(
+        StatusSnapshot(
                 Long currentTargetBps,
                 Long currentIdealBps,
                 Collection<Long> activeSsrcs)
@@ -411,7 +411,7 @@ public class BitrateController
      * 3) The ssrcs we're currently forwarding
      * @return the snapshot containing that info
      */
-    public StatusSnapshot getStatusSnapshot()
+    StatusSnapshot getStatusSnapshot()
     {
         if (adaptiveTrackProjections == null
             || adaptiveTrackProjections.isEmpty())
@@ -741,7 +741,7 @@ public class BitrateController
 
             if (ArrayUtils.isNullOrEmpty(rtpEncodings))
             {
-                return adaptiveTrackProjection;
+                return null;
             }
 
             // XXX the lambda keeps a reference to the trackBitrateAllocation
@@ -887,12 +887,6 @@ public class BitrateController
     private TrackBitrateAllocation[] prioritize(
         List<AbstractEndpoint> conferenceEndpoints)
     {
-        StringBuilder sb = new StringBuilder();
-        for (AbstractEndpoint ep : conferenceEndpoints)
-        {
-            sb.append(ep.getID()).append(" ");
-        }
-
         // Init.
         List<TrackBitrateAllocation> trackBitrateAllocations
             = new ArrayList<>();

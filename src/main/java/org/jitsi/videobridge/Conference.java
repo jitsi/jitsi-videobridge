@@ -898,6 +898,7 @@ public class Conference
      * property
      */
     @Override
+    @SuppressWarnings("unchecked")
     public void propertyChange(PropertyChangeEvent ev)
     {
         Object source = ev.getSource();
@@ -1283,6 +1284,7 @@ public class Conference
      * @param endpointId the ID of the endpoint to include. If set to
      * {@code null}, all endpoints will be included.
      */
+    @SuppressWarnings("unchecked")
     public JSONObject getDebugState(boolean full, String endpointId)
     {
         JSONObject debugState = new JSONObject();
@@ -1361,6 +1363,7 @@ public class Conference
         /**
          * Gets a snapshot of this object's state as JSON.
          */
+        @SuppressWarnings("unchecked")
         private JSONObject getJson()
         {
             JSONObject jsonObject = new JSONObject();

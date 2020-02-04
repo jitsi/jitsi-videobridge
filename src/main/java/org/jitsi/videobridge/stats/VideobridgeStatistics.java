@@ -56,7 +56,7 @@ public class VideobridgeStatistics
     /**
      * The currently configured region.
      */
-    public static final String region = OctoConfig.Config.region();
+    private static final String region = OctoConfig.Config.region();
 
     static
     {
@@ -87,9 +87,6 @@ public class VideobridgeStatistics
      */
     public VideobridgeStatistics()
     {
-        BundleContext bundleContext
-            = StatsManagerBundleActivator.getBundleContext();
-
         // Is it necessary to set initial values for all of these?
         unlockedSetStat(BITRATE_DOWNLOAD, 0);
         unlockedSetStat(BITRATE_UPLOAD, 0);
@@ -164,7 +161,8 @@ public class VideobridgeStatistics
      * Generates/updates the statistics represented by this instance outside a
      * synchronized block.
      */
-    protected void generate0()
+    @SuppressWarnings("unchecked")
+    private void generate0()
     {
         BundleContext bundleContext
                 = StatsManagerBundleActivator.getBundleContext();
@@ -282,7 +280,7 @@ public class VideobridgeStatistics
                 // Assume we're sending one video stream to this endpoint
                 // for each other endpoint in the conference unless there's
                 // a limit imposed by lastN.
-                Integer lastN = endpoint.getLastN();
+                int lastN = endpoint.getLastN();
                 endpointStreams
                    += lastN == -1
                        ? numConferenceEndpoints - 1

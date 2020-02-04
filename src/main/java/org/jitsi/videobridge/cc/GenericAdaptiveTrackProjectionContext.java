@@ -338,6 +338,7 @@ class GenericAdaptiveTrackProjectionContext
      * @return
      */
     @Override
+    @SuppressWarnings("unchecked")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();

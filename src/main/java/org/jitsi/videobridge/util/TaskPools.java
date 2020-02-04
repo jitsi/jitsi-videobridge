@@ -44,6 +44,7 @@ public class TaskPools
     public static ScheduledExecutorService SCHEDULED_POOL =
             Executors.newSingleThreadScheduledExecutor(new NameableThreadFactory("Global scheduled pool"));
 
+    @SuppressWarnings("unchecked")
     public static JSONObject getStatsJson(ExecutorService es)
     {
         JSONObject debugState = new JSONObject();
@@ -65,6 +66,7 @@ public class TaskPools
         return debugState;
     }
 
+    @SuppressWarnings("unchecked")
     public static JSONObject getStatsJson()
     {
         JSONObject debugState = new JSONObject();

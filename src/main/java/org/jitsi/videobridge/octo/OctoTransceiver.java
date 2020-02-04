@@ -252,6 +252,7 @@ public class OctoTransceiver
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
+    @SuppressWarnings("unchecked")
     JSONObject getDebugState()
     {
 

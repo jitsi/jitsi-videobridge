@@ -238,6 +238,7 @@ public class ByteBufferPool
     /**
      * Gets a JSON representation of the statistics about the pool.
      */
+    @SuppressWarnings("unchecked")
     public static JSONObject getStatsJson()
     {
         JSONObject stats = new JSONObject();

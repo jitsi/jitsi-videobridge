@@ -54,7 +54,6 @@ import org.osgi.framework.*;
 
 import java.util.*;
 import java.util.concurrent.atomic.*;
-import java.util.function.*;
 import java.util.regex.*;
 
 /**
@@ -1098,6 +1097,7 @@ public class Videobridge
      * to include. If not specified, all of the conference's endpoints will be
      * included.
      */
+    @SuppressWarnings("unchecked")
     public OrderedJsonObject getDebugState(String conferenceId, String endpointId, boolean full)
     {
         OrderedJsonObject debugState = new OrderedJsonObject();
@@ -1151,6 +1151,7 @@ public class Videobridge
      * uses.
      * TODO: is there a better place for this?
      */
+    @SuppressWarnings("unchecked")
     public JSONObject getQueueStats()
     {
         JSONObject queueStats = new JSONObject();
@@ -1173,6 +1174,7 @@ public class Videobridge
         return queueStats;
     }
 
+    @SuppressWarnings("unchecked")
     private JSONObject getJsonFromQueueErrorHandler(
             CountingErrorHandler countingErrorHandler)
     {

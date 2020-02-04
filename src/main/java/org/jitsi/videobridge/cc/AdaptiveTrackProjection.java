@@ -401,7 +401,7 @@ public class AdaptiveTrackProjection
      * @param rtcpSrPacket the RTCP SR packet to rewrite.
      * @return true to let the RTCP packet through, false to drop.
      */
-    public boolean rewriteRtcp(@NotNull RtcpSrPacket rtcpSrPacket)
+    boolean rewriteRtcp(@NotNull RtcpSrPacket rtcpSrPacket)
     {
         AdaptiveTrackProjectionContext contextCopy = context;
         if (contextCopy == null)
@@ -415,7 +415,7 @@ public class AdaptiveTrackProjection
     /**
      * @return the SSRC of the track projection.
      */
-    public long getTargetSsrc()
+    long getTargetSsrc()
     {
         return targetSsrc;
     }
@@ -424,6 +424,7 @@ public class AdaptiveTrackProjection
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
+    @SuppressWarnings("unchecked")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();

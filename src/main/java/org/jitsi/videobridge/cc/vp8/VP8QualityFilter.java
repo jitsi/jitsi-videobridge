@@ -16,9 +16,7 @@
 package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi_modified.impl.neomedia.codec.video.vp8.*;
 import org.json.simple.*;
 
 /**
@@ -382,6 +380,7 @@ class VP8QualityFilter
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
+    @SuppressWarnings("unchecked")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
