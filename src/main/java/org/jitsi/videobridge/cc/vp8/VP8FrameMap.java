@@ -128,7 +128,6 @@ public class VP8FrameMap
     public synchronized VP8Frame prevFrame(@NotNull VP8Frame frame)
     {
         return frameHistory.findBefore(frame, (VP8Frame f) -> true );
-
     }
 
     @Nullable
@@ -146,7 +145,8 @@ public class VP8FrameMap
     /**
      * The result of calling {@link #insertPacket(Vp8Packet).}
      */
-    public static class FrameInsertionResult {
+    public static class FrameInsertionResult
+    {
 
         /** The frame corresponding to the packet that was inserted. */
         private VP8Frame frame;
@@ -176,7 +176,8 @@ public class VP8FrameMap
 
     private static class FrameHistory extends ArrayCache<VP8Frame>
     {
-        FrameHistory(int size) {
+        FrameHistory(int size)
+        {
             super(size, (k) -> k, false, Clock.systemUTC());
         }
 
@@ -198,7 +199,7 @@ public class VP8FrameMap
                    so findBefore / findAfter will return bogus data. */
                 return null;
             }
-            ArrayCache<VP8Frame>.Container c = super.getContainer(index);
+            ArrayCache<VP8Frame>.Container c = getContainer(index);
             if (c == null)
             {
                 return null;
@@ -224,6 +225,7 @@ public class VP8FrameMap
         /**
          * Called when an item in the cache is replaced/discarded.
          */
+        @Override
         protected void discardItem(VP8Frame frame)
         {
             numCached--;
@@ -288,8 +290,10 @@ public class VP8FrameMap
 
             private int getIndex(int seqNum, boolean updateRoc)
             {
-                if (highestSeqNumReceived == -1) {
-                    if (updateRoc) {
+                if (highestSeqNumReceived == -1)
+                {
+                    if (updateRoc)
+                    {
                         highestSeqNumReceived = seqNum;
                     }
                     return seqNum;
@@ -309,7 +313,8 @@ public class VP8FrameMap
                     if (updateRoc)
                         roc = v;
                 }
-                else {
+                else
+                {
                     v = roc;
                 }
 
