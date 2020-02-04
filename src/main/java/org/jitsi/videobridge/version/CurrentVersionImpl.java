@@ -35,7 +35,7 @@ public class CurrentVersionImpl
      * Default version values can be overwritten by the manifest Implementation
      * Version in the format 2.1-build-id.
      */
-    private static int parsedMajor = 0;
+    private static int parsedMajor = 2;
     private static int parsedMinor = 1;
     private static String parsedBuildId = null;
 
@@ -56,7 +56,7 @@ public class CurrentVersionImpl
 
                 try
                 {
-                    parsedMajor = Integer.parseInt(m.group(2));
+                    parsedMinor = Integer.parseInt(m.group(2));
                 }
                 catch (NumberFormatException nfe) {}
 
