@@ -332,25 +332,23 @@ class VP8Frame
     }
 
     /**
-     * Checks whether the specified RTP packet consistently matches all the
+     * Validates that the specified RTP packet consistently matches all the
      * parameters of this frame.
      *
-     * This can be useful for diagnosing invalid streams if this is false when
+     * This can be useful for diagnosing invalid streams if this fails when
      * {@link #matchesFrame(Vp8Packet)} is true.
      *
      * @param pkt the RTP packet to check whether its parameters match this frame.
-     * @return null if the specified RTP packet is consistent with this frame; a string
-     *  describing the problem otherwise
+     * @throws RuntimeException if the specified RTP packet is inconsistent with this frame
      */
-    @Nullable
-    String matchesFrameConsistently(@NotNull Vp8Packet pkt)
+    void validateConsistent(@NotNull Vp8Packet pkt)
     {
         if (temporalLayer == pkt.getTemporalLayerIndex() &&
             tl0PICIDX == pkt.getTL0PICIDX() &&
             pictureId == pkt.getPictureId())
             /* TODO: also check start, end, seq nums? */
         {
-            return null;
+            return;
         }
 
         StringBuilder s = new StringBuilder().append("Packet ")
@@ -392,7 +390,7 @@ class VP8Frame
                 .append(" != frame PictureID ")
                 .append(pictureId);
         }
-        return s.toString();
+        throw new RuntimeException(s.toString());
     }
 
     /**
