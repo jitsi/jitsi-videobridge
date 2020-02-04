@@ -192,6 +192,14 @@ public class VP8FrameMap
         public VP8Frame get(int pictureId)
         {
             int index = indexTracker.interpret(pictureId);
+            return getIndex(index);
+        }
+
+        /**
+         * Gets a packet with a given VP8 picture ID index from the cache.
+         */
+        private VP8Frame getIndex(int index)
+        {
             if (index <= getLastIndex() - getSize())
             {
                 /* We don't want to remember old frames even if they're still
@@ -271,7 +279,7 @@ public class VP8FrameMap
         {
             for (int index = startIndex; index != endIndex; index += increment)
             {
-                VP8Frame frame = get(index);
+                VP8Frame frame = getIndex(index);
                 if (frame != null && pred.test(frame))
                 {
                     return frame;
