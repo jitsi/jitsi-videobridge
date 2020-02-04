@@ -66,9 +66,10 @@ public class VP8FrameMap
     @Contract("_, _ -> new")
     private FrameInsertionResult doFrameInsert(@NotNull VP8Frame frame, Vp8Packet packet)
     {
-        if (!frame.matchesFrameConsistently(packet))
+        String s = frame.matchesFrameConsistently(packet);
+        if (s != null)
         {
-            logger.warn("Packet " + packet.getSequenceNumber() + " is not consistent with frame");
+            logger.warn(s);
         }
         frame.addPacket(packet);
         return new FrameInsertionResult(frame, false);
