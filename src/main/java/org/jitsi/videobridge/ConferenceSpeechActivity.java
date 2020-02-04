@@ -193,13 +193,21 @@ public class ConferenceSpeechActivity
             AbstractEndpoint endpoint
                 = conference.findEndpointByReceiveSSRC(ssrc);
 
+            if (endpoint == null)
+            {
+                logger.warn("Unable to find endpoint corresponding to active" +
+                    "speaker SSRC " + ssrc);
+                return;
+            }
+
             synchronized (syncRoot)
             {
                 // Move this endpoint to the top of our sorted list
                 if (!endpoints.remove(endpoint))
                 {
                     logger.warn("Got active speaker notification for an unknown"
-                            + " endpoint! Ignoring");
+                            + " endpoint (ssrc: " + ssrc + ", epId "
+                            + endpoint.getID() + ")! Ignoring");
                     return;
                 }
                 endpoints.add(0, endpoint);
