@@ -195,8 +195,8 @@ public class ConferenceSpeechActivity
 
             if (endpoint == null)
             {
-                logger.warn("Unable to find endpoint corresponding to active" +
-                    "speaker SSRC " + ssrc);
+                logger.warn("Unable to find endpoint corresponding to "
+                    + "active speaker SSRC " + ssrc);
                 return;
             }
 
