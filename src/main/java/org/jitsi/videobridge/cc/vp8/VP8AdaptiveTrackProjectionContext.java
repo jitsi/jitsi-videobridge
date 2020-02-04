@@ -319,8 +319,19 @@ public class VP8AdaptiveTrackProjectionContext
 
             if (accepted)
             {
-                VP8FrameProjection projection = createProjection(frame, vp8Packet,
-                    receivedMs);
+                VP8FrameProjection projection;
+                try
+                {
+                    projection = createProjection(frame, vp8Packet,
+                        receivedMs);
+                }
+                catch (Exception e)
+                {
+                    logger.warn("Failed to create frame projection", e);
+                    /* Make sure we don't have an accepted frame without a projection in the map. */
+                    frame.setAccepted(false);
+                    return false;
+                }
                 frame.setProjection(projection);
 
                 if (RtpUtils.isNewerSequenceNumberThan(projection.getEarliestProjectedSequence(),
