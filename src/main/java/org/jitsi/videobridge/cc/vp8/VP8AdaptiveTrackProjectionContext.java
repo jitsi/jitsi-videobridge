@@ -475,6 +475,11 @@ public class VP8AdaptiveTrackProjectionContext
             do
             {
                 f2 = nextFrame(f1);
+                if (f2 == null)
+                {
+                    throw new IllegalStateException("No next frame found after frame with picId " + f1.getPictureId() +
+                        ", even though refFrame " + refFrame.getPictureId() + " is before frame " + frame.getPictureId() + "!");
+                }
                 seqGap += seqGap(f1, f2);
                 picGap += picGap(f1, f2);
                 f1 = f2;
@@ -486,6 +491,11 @@ public class VP8AdaptiveTrackProjectionContext
         {
             do {
                 f2 = prevFrame(f1);
+                if (f2 == null)
+                {
+                    throw new IllegalStateException("No next frame found before frame with picId " + f1.getPictureId() +
+                        ", even though refFrame " + refFrame.getPictureId() + " is after frame " + frame.getPictureId() + "!");
+                }
                 seqGap += -seqGap(f2, f1);
                 picGap += -picGap(f2, f1);
                 f1 = f2;
