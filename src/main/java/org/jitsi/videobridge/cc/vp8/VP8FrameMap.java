@@ -269,9 +269,10 @@ public class VP8FrameMap
         {
             for (int index = startIndex; index != endIndex; index += increment)
             {
-                ArrayCache<VP8Frame>.Container container = getContainer(index);
-                if (container != null && pred.test(container.getItem())) {
-                    return container.getItem();
+                VP8Frame frame = get(index);
+                if (frame != null && pred.test(frame))
+                {
+                    return frame;
                 }
             }
             return null;
