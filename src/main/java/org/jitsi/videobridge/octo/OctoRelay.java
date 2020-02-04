@@ -227,10 +227,18 @@ public class OctoRelay
         packetsReceived.incrementAndGet();
         receiveBitrate.update(len, System.currentTimeMillis());
 
-        String conferenceId = OctoPacket.readConferenceId(buf, off, len);
-        if (conferenceId == null)
+        String conferenceId;
+        MediaType mediaType;
+        String sourceEndpointId;
+        try
         {
-            logger.warn("Invalid Octo packet, can not read conference ID.");
+            conferenceId = OctoPacket.readConferenceId(buf, off, len);
+            mediaType = OctoPacket.readMediaType(buf, off, len);
+            sourceEndpointId = OctoPacket.readEndpointId(buf, off, len);
+        }
+        catch (IllegalArgumentException iae)
+        {
+            logger.warn("Invalid Octo packet, len=" + len, iae);
             packetsDropped.incrementAndGet();
             return;
         }
@@ -244,8 +252,6 @@ public class OctoRelay
             return;
         }
 
-        MediaType mediaType = OctoPacket.readMediaType(buf, off, len);
-        String sourceEndpointId = OctoPacket.readEndpointId(buf, off, len);
 
         switch (mediaType)
         {
@@ -306,7 +312,7 @@ public class OctoRelay
          {
              String[] addressAndPort = relayId.split(":");
              return new InetSocketAddress(
-                 addressAndPort[0], Integer.valueOf(addressAndPort[1]));
+                 addressAndPort[0], Integer.parseInt(addressAndPort[1]));
          }
          catch (NumberFormatException nfe)
          {

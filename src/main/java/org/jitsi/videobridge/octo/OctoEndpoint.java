@@ -106,9 +106,8 @@ public class OctoEndpoint
     @Override
     public MediaStreamTrackDesc[] getMediaStreamTracks()
     {
-        List<MediaStreamTrackDesc> l = Arrays.stream(getConference().getTentacle().transceiver.getMediaStreamTracks())
-                .filter(t -> t.getOwner() == getID()).collect(Collectors.toList());
-        return l.toArray(new MediaStreamTrackDesc[0]);
+        return Arrays.stream(getConference().getTentacle().transceiver.getMediaStreamTracks())
+                .filter(t -> t.getOwner().equals(getID())).toArray(MediaStreamTrackDesc[]::new);
     }
 
     /**

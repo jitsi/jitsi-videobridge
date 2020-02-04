@@ -25,13 +25,14 @@ import org.osgi.framework.*;
  *
  * @author Boris Grozev
  */
+@SuppressWarnings("unused")
 public class ConfigurationActivator
         implements BundleActivator
 {
     /**
      * The logger instance used by this class.
      */
-    private final static Logger logger
+    private static final Logger logger
             = new LoggerImpl(ConfigurationActivator.class.getName());
 
     @Override

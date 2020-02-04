@@ -15,7 +15,9 @@
  */
 package org.jitsi.videobridge;
 
+import edu.umd.cs.findbugs.annotations.*;
 import org.jetbrains.annotations.*;
+import org.jetbrains.annotations.Nullable;
 import org.jitsi.eventadmin.*;
 import org.jitsi.nlj.*;
 import org.jitsi.rtp.*;
@@ -38,6 +40,8 @@ import org.osgi.framework.*;
 
 import java.beans.*;
 import java.io.*;
+import java.lang.*;
+import java.lang.SuppressWarnings;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -91,6 +95,10 @@ public class Conference
      * The indicator which determines whether {@link #expire()} has been called
      * on this <tt>Conference</tt>.
      */
+    @SuppressFBWarnings(
+            value = "IS2_INCONSISTENT_SYNC",
+            justification = "The value is deemed safe to read without " +
+                "synchronization.")
     private boolean expired = false;
 
     /**
@@ -123,6 +131,10 @@ public class Conference
      * <tt>Conference</tt>. In the time interval between the last activity and
      * now, this <tt>Conference</tt> is considered inactive.
      */
+    @SuppressFBWarnings(
+            value = "IS2_INCONSISTENT_SYNC",
+            justification = "The value is deemed safe to read without " +
+                    "synchronization.")
     private long lastActivityTime;
 
     /**
@@ -885,9 +897,6 @@ public class Conference
      */
     public boolean isExpired()
     {
-        // Conference starts with expired equal to false and the only assignment
-        // to expired is to set it to true so there is no need to synchronize
-        // the reading of expired.
         return expired;
     }
 
@@ -1319,7 +1328,7 @@ public class Conference
     /**
      * Holds conference statistics.
      */
-    public class Statistics
+    public static class Statistics
     {
         /**
          * The total number of bytes received in RTP packets in channels in this

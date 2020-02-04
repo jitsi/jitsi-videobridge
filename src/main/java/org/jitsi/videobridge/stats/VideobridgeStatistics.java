@@ -46,7 +46,7 @@ public class VideobridgeStatistics
      * The <tt>DateFormat</tt> to be utilized by <tt>VideobridgeStatistics</tt>
      * in order to represent time and date as <tt>String</tt>.
      */
-    private static final DateFormat dateFormat;
+    private static final DateFormat timestampFormat;
 
     /**
      * The number of buckets to use for conference sizes.
@@ -60,17 +60,8 @@ public class VideobridgeStatistics
 
     static
     {
-        dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-    }
-
-    /**
-     * Returns the current time stamp as a (formatted) <tt>String</tt>.
-     * @return the current time stamp as a (formatted) <tt>String</tt>.
-     */
-    public static String currentTimeMillis()
-    {
-        return dateFormat.format(new Date());
+        timestampFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        timestampFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
     }
 
     /**
@@ -103,7 +94,7 @@ public class VideobridgeStatistics
         unlockedSetStat(LARGEST_CONFERENCE, 0);
         unlockedSetStat(CONFERENCE_SIZES, "[]");
 
-        unlockedSetStat(TIMESTAMP, currentTimeMillis());
+        unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
     }
 
     /**
@@ -320,9 +311,6 @@ public class VideobridgeStatistics
         // THREADS
         int threadCount = ManagementFactory.getThreadMXBean().getThreadCount();
 
-        // TIMESTAMP
-        String timestamp = currentTimeMillis();
-
         // Now that (the new values of) the statistics have been calculated and
         // the risks of the current thread hanging have been reduced as much as
         // possible, commit (the new values of) the statistics.
@@ -434,7 +422,7 @@ public class VideobridgeStatistics
                     octoRelay == null
                             ? 0 : (octoRelay.getSendBitrate() + 500) / 1000);
 
-            unlockedSetStat(TIMESTAMP, timestamp);
+            unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
             if (octoRelay != null)
             {
                 unlockedSetStat(RELAY_ID, octoRelay.getId());

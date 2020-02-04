@@ -63,20 +63,13 @@ public class ConferenceSpeechActivity
         {
             String s = obj.toString();
 
-            if (s == null)
+            try
+            {
+                l = Long.parseLong(s);
+            }
+            catch (NumberFormatException ex)
             {
                 l = -1L;
-            }
-            else
-            {
-                try
-                {
-                    l = Long.parseLong(s);
-                }
-                catch (NumberFormatException ex)
-                {
-                    l = -1L;
-                }
             }
         }
         return l;

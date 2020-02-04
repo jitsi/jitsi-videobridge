@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc;
 
+import edu.umd.cs.findbugs.annotations.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -27,6 +28,8 @@ import org.jitsi.videobridge.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
+import java.lang.*;
+import java.lang.SuppressWarnings;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -350,6 +353,10 @@ public class BitrateController
      * are deemed useful for debugging.
      */
     @SuppressWarnings("unchecked")
+    @SuppressFBWarnings(
+            value = "IS2_INCONSISTENT_SYNC",
+            justification = "We intentionally avoid synchronizing while reading" +
+                    " fields only used in debug output.")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
@@ -537,7 +544,7 @@ public class BitrateController
      * this method SHOULD be invoked when those things change; they will be
      * taken into account in this flow)
      */
-    public void endpointOrderingChanged(List<String> conferenceEndpoints)
+    public synchronized void endpointOrderingChanged(List<String> conferenceEndpoints)
     {
         logger.debug(() -> " endpoint ordering has changed, updating");
 

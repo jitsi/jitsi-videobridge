@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc;
 
+import edu.umd.cs.findbugs.annotations.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -28,6 +29,8 @@ import org.jitsi_modified.impl.neomedia.codec.video.vp8.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
+import java.lang.*;
+import java.lang.SuppressWarnings;
 import java.lang.ref.*;
 import java.util.*;
 
@@ -96,6 +99,10 @@ public class AdaptiveTrackProjection
      * payload type (could be VP9, could be H264, could be VP8) so it has to be
      * created on packet arrival.
      */
+    @SuppressFBWarnings(
+            value = "IS2_INCONSISTENT_SYNC",
+            justification = "The value is deemed safe to read without " +
+                    "synchronization.")
     private AdaptiveTrackProjectionContext context;
 
     /**
@@ -425,6 +432,10 @@ public class AdaptiveTrackProjection
      * are deemed useful for debugging.
      */
     @SuppressWarnings("unchecked")
+    @SuppressFBWarnings(
+            value = "IS2_INCONSISTENT_SYNC",
+            justification = "We intentionally avoid synchronizing while reading" +
+                    " fields only used in debug output.")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();

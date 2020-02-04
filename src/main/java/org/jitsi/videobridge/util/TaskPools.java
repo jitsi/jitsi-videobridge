@@ -28,20 +28,20 @@ public class TaskPools
     /**
      * A global executor service which can be used for non-CPU-intensive tasks.
      */
-    public static ExecutorService IO_POOL =
+    public static final ExecutorService IO_POOL =
             Executors.newCachedThreadPool(new NameableThreadFactory("Global IO pool"));
 
     /**
      * An executor to be used for CPU-intensive tasks.  NOTE that tasks which block should
      * NOT use this pool!
      */
-    public static ExecutorService CPU_POOL =
+    public static final ExecutorService CPU_POOL =
             Executors.newFixedThreadPool(
                     Runtime.getRuntime().availableProcessors(),
                     new NameableThreadFactory("Global CPU pool")
             );
 
-    public static ScheduledExecutorService SCHEDULED_POOL =
+    public static final ScheduledExecutorService SCHEDULED_POOL =
             Executors.newSingleThreadScheduledExecutor(new NameableThreadFactory("Global scheduled pool"));
 
     @SuppressWarnings("unchecked")

@@ -282,13 +282,6 @@ public class VideobridgeShim
                                 focus,
                                 conferenceIQ.getName(),
                                 conferenceIQ.getGID());
-                if (conference == null)
-                {
-                    return IQUtils.createError(
-                            conferenceIQ,
-                            XMPPError.Condition.internal_server_error,
-                            "Failed to create new conference");
-                }
             }
         }
         else

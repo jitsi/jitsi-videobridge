@@ -38,15 +38,17 @@ import static org.jitsi.videobridge.cc.config.BandwidthProbingConfig.*;
      private static final TimeSeriesLogger timeSeriesLogger
          = TimeSeriesLogger.getTimeSeriesLogger(BandwidthProbing.class);
 
+     private static Random random = new Random();
+
      /**
       * The sequence number to use if probing with the JVB's SSRC.
       */
-     private int seqNum = new Random().nextInt(0xFFFF);
+     private int seqNum = random.nextInt(0xFFFF);
 
      /**
       * The RTP timestamp to use if probing with the JVB's SSRC.
       */
-     private long ts = new Random().nextInt() & 0xFFFFFFFFL;
+     private long ts = random.nextInt() & 0xFFFFFFFFL;
 
      /**
       * Whether or not probing is currently enabled

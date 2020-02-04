@@ -1282,6 +1282,8 @@ public class Endpoint
                     case VIDEO:
                         acceptVideo = true;
                         break;
+                    default:
+                        break;
                 }
             }
         }

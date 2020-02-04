@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.rest;
 
+import edu.umd.cs.findbugs.annotations.*;
 import org.eclipse.jetty.websocket.servlet.*;
 import org.jitsi.osgi.*;
 import org.jitsi.videobridge.*;
@@ -26,6 +27,7 @@ import java.io.*;
 /**
  * @author Boris Grozev
  */
+@SuppressFBWarnings("SE_BAD_FIELD")
 class ColibriWebSocketServlet
     extends WebSocketServlet
 {

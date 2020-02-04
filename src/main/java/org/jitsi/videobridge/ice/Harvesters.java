@@ -39,7 +39,12 @@ public class Harvesters
      * By default we consider healthy, if we fail to bind to the single port
      * port we consider the bridge as unhealthy.
      */
-    public static boolean healthy = true;
+    private static boolean healthy = true;
+
+    public static boolean isHealthy()
+    {
+        return healthy;
+    }
 
     /**
      * The {@link Logger} used by the {@link Harvesters} class to
@@ -52,13 +57,13 @@ public class Harvesters
      * The single <tt>TcpHarvester</tt> instance for the
      * application.
      */
-    public static TcpHarvester tcpHarvester = null;
+    static TcpHarvester tcpHarvester = null;
 
     /**
      * The <tt>SinglePortUdpHarvester</tt>s which will be appended to ICE
      * <tt>Agent</tt>s managed by <tt>IceTransport</tt> instances.
      */
-    public static List<SinglePortUdpHarvester> singlePortHarvesters = null;
+    static List<SinglePortUdpHarvester> singlePortHarvesters = null;
 
 
     /**
@@ -66,7 +71,7 @@ public class Harvesters
      * <tt>IceTransport</tt> instances, that is
      * {@link #tcpHarvester} and {@link #singlePortHarvesters}.
      */
-    public static void initializeStaticConfiguration()
+    static void initializeStaticConfiguration()
     {
         synchronized (Harvesters.class)
         {
@@ -103,9 +108,10 @@ public class Harvesters
                         "Failed to initialize TCP harvester on port " + port);
                 }
 
-                if (Config.tcpMappedPort() != null)
+                Integer mappedPort = Config.tcpMappedPort();
+                if (mappedPort != null)
                 {
-                    tcpHarvester.addMappedPort(Config.tcpMappedPort());
+                    tcpHarvester.addMappedPort(mappedPort);
                 }
             }
         }
