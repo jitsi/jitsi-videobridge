@@ -310,9 +310,9 @@ public class VP8AdaptiveTrackProjectionContext
             boolean accepted = vp8QualityFilter
                 .acceptFrame(frame, incomingIndex, targetIndex, receivedMs);
 
-            if (accepted){
+            if (accepted)
+            {
                 accepted = checkDecodability(frame);
-                accepted = accepted;
             }
 
             frame.setAccepted(accepted);
