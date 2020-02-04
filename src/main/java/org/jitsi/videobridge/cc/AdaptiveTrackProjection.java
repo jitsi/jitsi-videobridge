@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.cc;
 
-import edu.umd.cs.findbugs.annotations.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -30,7 +29,6 @@ import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
 import java.lang.*;
-import java.lang.SuppressWarnings;
 import java.lang.ref.*;
 import java.util.*;
 
@@ -99,10 +97,6 @@ public class AdaptiveTrackProjection
      * payload type (could be VP9, could be H264, could be VP8) so it has to be
      * created on packet arrival.
      */
-    @SuppressFBWarnings(
-            value = "IS2_INCONSISTENT_SYNC",
-            justification = "The value is deemed safe to read without " +
-                    "synchronization.")
     private AdaptiveTrackProjectionContext context;
 
     /**
@@ -263,16 +257,14 @@ public class AdaptiveTrackProjection
      * new adaptive track projection context is created that is appropriate for
      * the new payload type.
      *
-     * Note that, at the time of this writing, there's no practical need for a
-     * synchronized keyword because there's only one thread (the translator
-     * thread) accessing this method at a time.
+     * We make no attempt for thread safety, assuming no concurrent access.
      *
      * @param rtpPacket the RTP packet of the adaptive track projection context
      * to get or create.
      * @return the adaptive track projection context that corresponds to
      * the payload type of the RTP packet that is specified as a parameter.
      */
-    private synchronized
+    private
     AdaptiveTrackProjectionContext getContext(@NotNull VideoRtpPacket rtpPacket)
     {
         PayloadType payloadTypeObject;
@@ -432,10 +424,6 @@ public class AdaptiveTrackProjection
      * are deemed useful for debugging.
      */
     @SuppressWarnings("unchecked")
-    @SuppressFBWarnings(
-            value = "IS2_INCONSISTENT_SYNC",
-            justification = "We intentionally avoid synchronizing while reading" +
-                    " fields only used in debug output.")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
@@ -458,9 +446,10 @@ public class AdaptiveTrackProjection
         }
 
         debugState.put("targetSsrc", targetSsrc);
+        AdaptiveTrackProjectionContext contextCopy = context;
         debugState.put(
                 "context",
-                context == null ? null : context.getDebugState());
+                contextCopy == null ? null : contextCopy.getDebugState());
         debugState.put("contextPayloadType", contextPayloadType);
         debugState.put("idealIndex", idealIndex);
         debugState.put("targetIndex", targetIndex);

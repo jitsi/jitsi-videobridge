@@ -16,4 +16,9 @@
   <Bug pattern="BC_BAD_CAST_TO_ABSTRACT_COLLECTION"/>
   <Source name="~.*\.kt" />
 </Match>
+
+<Match>
+  <!-- Serialization -->
+  <Bug pattern="SE_BAD_FIELD"/>
+</Match>
 </FindBugsFilter>
