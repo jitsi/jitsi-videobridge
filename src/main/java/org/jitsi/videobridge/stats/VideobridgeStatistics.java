@@ -46,7 +46,7 @@ public class VideobridgeStatistics
      * The <tt>DateFormat</tt> to be utilized by <tt>VideobridgeStatistics</tt>
      * in order to represent time and date as <tt>String</tt>.
      */
-    private static final DateFormat timestampFormat;
+    private final DateFormat timestampFormat;
 
     /**
      * The number of buckets to use for conference sizes.
@@ -58,11 +58,6 @@ public class VideobridgeStatistics
      */
     private static final String region = OctoConfig.Config.region();
 
-    static
-    {
-        timestampFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-        timestampFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-    }
 
     /**
      * The indicator which determines whether {@link #generate()} is executing
@@ -78,6 +73,9 @@ public class VideobridgeStatistics
      */
     public VideobridgeStatistics()
     {
+        timestampFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        timestampFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+
         // Is it necessary to set initial values for all of these?
         unlockedSetStat(BITRATE_DOWNLOAD, 0);
         unlockedSetStat(BITRATE_UPLOAD, 0);
