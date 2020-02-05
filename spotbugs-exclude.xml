@@ -21,4 +21,9 @@
   <!-- Serialization -->
   <Bug pattern="SE_BAD_FIELD"/>
 </Match>
+
+<Match>
+  <!-- Serialization -->
+  <Bug pattern="SE_BAD_FIELD_STORE"/>
+</Match>
 </FindBugsFilter>
