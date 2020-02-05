@@ -121,7 +121,7 @@ class DtlsStack(
     /**
      * A buffer we'll use to receive data from [dtlsTransport].
      */
-    private val dtlsAppDataBuf = BufferPool.getBuffer(1500)
+    private val dtlsAppDataBuf = ByteArray(1500)
 
     /**
      * Install a handler to be invoked when the DTLS handshake is finished.
@@ -231,7 +231,15 @@ class DtlsStack(
      * in and read them.
      */
     override fun send(buf: ByteArray, off: Int, length: Int) {
-        val packet = PacketInfo(UnparsedPacket(buf, off, length))
+        // The buf coming from here will belong to usrsctp, so make sure we copy
+        // into a buffer of our own before forwarding.
+        // NOTE: the reason we have to copy into our own before before forwarding
+        // is that this packet will end up in the same place as a packet that
+        // came from the pool which has to be returned.  Since we can't tell if
+        // a buffer came from the pool or not, we'll need to always return it.
+        val newBuf = BufferPool.getBuffer(length)
+        System.arraycopy(buf, off, newBuf, 0, length)
+        val packet = PacketInfo(UnparsedPacket(newBuf, 0, length))
         onOutgoingProtocolData(listOf(packet))
     }
 
