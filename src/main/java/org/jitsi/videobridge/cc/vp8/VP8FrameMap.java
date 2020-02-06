@@ -263,6 +263,7 @@ public class VP8FrameMap
             numCached--;
         }
 
+        @Nullable
         public VP8Frame findBefore(VP8Frame frame, Predicate<VP8Frame> pred)
         {
             int lastIndex = getLastIndex();
@@ -279,6 +280,7 @@ public class VP8FrameMap
             return doFind(pred, searchStartIndex, searchEndIndex, -1);
         }
 
+        @Nullable
         public VP8Frame findAfter(VP8Frame frame, Predicate<VP8Frame> pred)
         {
             int lastIndex = getLastIndex();
@@ -294,11 +296,12 @@ public class VP8FrameMap
                 return null;
             }
 
-            int searchStartIndex = max(index + 1, max(lastIndex - getSize(), firstIndex));
+            int searchStartIndex = max(index + 1, max(lastIndex - getSize() + 1, firstIndex));
 
             return doFind(pred, searchStartIndex, lastIndex + 1, 1);
         }
 
+        @Nullable
         private VP8Frame doFind(Predicate<VP8Frame> pred, int startIndex, int endIndex, int increment)
         {
             for (int index = startIndex; index != endIndex; index += increment)
