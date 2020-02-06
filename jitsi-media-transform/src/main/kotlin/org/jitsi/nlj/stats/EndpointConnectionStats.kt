@@ -19,6 +19,7 @@ package org.jitsi.nlj.stats
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.Collections
 import java.util.concurrent.CopyOnWriteArrayList
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.utils.logging2.cdebug
@@ -55,7 +56,7 @@ class EndpointConnectionStats(
 
     // Per-SSRC, maps the compacted NTP timestamp found in an SR SenderInfo to
     //  the clock time at which it was transmitted
-    private val srSentTimes: MutableMap<SsrcAndTimestamp, Instant> = LRUCache(MAX_SR_TIMESTAMP_HISTORY)
+    private val srSentTimes: MutableMap<SsrcAndTimestamp, Instant> = Collections.synchronizedMap(LRUCache(MAX_SR_TIMESTAMP_HISTORY))
     private val logger = createChildLogger(parentLogger)
 
     /**
