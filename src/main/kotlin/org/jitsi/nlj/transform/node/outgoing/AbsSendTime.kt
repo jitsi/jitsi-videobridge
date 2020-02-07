@@ -50,4 +50,6 @@ class AbsSendTime(
             addString("abs_send_time_ext_id", extensionId.toString())
         }
     }
+
+    override fun trace(f: () -> Unit) = f.invoke()
 }

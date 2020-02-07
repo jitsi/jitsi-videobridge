@@ -61,6 +61,7 @@ class PipelineBuilder {
             }
 
             override val aggregationKey = this.name
+            override fun trace(f: () -> Unit) = f.invoke()
         }
         addNode(node)
     }

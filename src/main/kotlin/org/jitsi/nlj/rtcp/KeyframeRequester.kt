@@ -183,6 +183,8 @@ class KeyframeRequester @JvmOverloads constructor(
         }
     }
 
+    override fun trace(f: () -> Unit) = f.invoke()
+
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
             addString("wait_interval_ms", waitInterval.toMillis().toString())

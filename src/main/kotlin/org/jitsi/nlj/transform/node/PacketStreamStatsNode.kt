@@ -30,6 +30,8 @@ class PacketStreamStatsNode(private val packetStreamStats: PacketStreamStats = P
         packetStreamStats.update(packetInfo.packet.length)
     }
 
+    override fun trace(f: () -> Unit) = f.invoke()
+
     fun snapshot() = packetStreamStats.snapshot()
 
     fun getBitrate() = snapshot().bitrate

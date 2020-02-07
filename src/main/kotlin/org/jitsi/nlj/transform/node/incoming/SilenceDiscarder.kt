@@ -47,6 +47,8 @@ class SilenceDiscarder(
                 packetInfo
             }
         }
+
+        override fun trace(f: () -> Unit) = f.invoke()
     }
 
     inner class RtcpTransformer : TransformerNode("Silence discarder RTCP") {
@@ -63,5 +65,7 @@ class SilenceDiscarder(
 
             return packetInfo
         }
+
+        override fun trace(f: () -> Unit) = f.invoke()
     }
 }

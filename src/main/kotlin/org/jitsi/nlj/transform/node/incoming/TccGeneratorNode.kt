@@ -167,6 +167,8 @@ class TccGeneratorNode(
         running = false
     }
 
+    override fun trace(f: () -> Unit) = f.invoke()
+
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
             addNumber("num_tcc_packets_sent", numTccSent)

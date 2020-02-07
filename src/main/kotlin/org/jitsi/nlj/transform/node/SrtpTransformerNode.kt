@@ -144,7 +144,18 @@ abstract class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode
     }
 }
 
-class SrtcpDecryptNode : SrtpTransformerNode("SRTCP Decrypt Node")
-class SrtcpEncryptNode : SrtpTransformerNode("SRTCP Encrypt Node")
-class SrtpDecryptNode : SrtpTransformerNode("SRTP Decrypt Node")
-class SrtpEncryptNode : SrtpTransformerNode("SRTP Encrypt Node")
+class SrtcpDecryptNode : SrtpTransformerNode("SRTCP Decrypt Node") {
+    override fun trace(f: () -> Unit) = f.invoke()
+}
+
+class SrtcpEncryptNode : SrtpTransformerNode("SRTCP Encrypt Node") {
+    override fun trace(f: () -> Unit) = f.invoke()
+}
+
+class SrtpDecryptNode : SrtpTransformerNode("SRTP Decrypt Node") {
+    override fun trace(f: () -> Unit) = f.invoke()
+}
+
+class SrtpEncryptNode : SrtpTransformerNode("SRTP Encrypt Node") {
+    override fun trace(f: () -> Unit) = f.invoke()
+}

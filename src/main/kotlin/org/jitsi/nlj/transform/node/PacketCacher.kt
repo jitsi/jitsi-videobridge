@@ -31,6 +31,8 @@ class PacketCacher : ObserverNode("Packet cache") {
         super.stop()
     }
 
+    override fun trace(f: () -> Unit) = f.invoke()
+
     fun getPacketCache(): PacketCache = packetCache
 
     override fun getNodeStats(): NodeStatsBlock {

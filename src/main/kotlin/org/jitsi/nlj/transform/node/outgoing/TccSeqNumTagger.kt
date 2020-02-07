@@ -57,4 +57,6 @@ class TccSeqNumTagger(
             addString("tcc_ext_id", tccExtensionId.toString())
         }
     }
+
+    override fun trace(f: () -> Unit) = f.invoke()
 }

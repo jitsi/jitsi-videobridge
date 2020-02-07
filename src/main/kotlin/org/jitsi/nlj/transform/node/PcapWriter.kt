@@ -91,6 +91,8 @@ class PcapWriter(
         writer.dump(eth)
     }
 
+    override fun trace(f: () -> Unit) = f.invoke()
+
     fun close() {
         if (lazyWriter.isInitialized() && writer.isOpen) {
             writer.close()

@@ -26,7 +26,11 @@ class CompoundRtcpParser(parentLogger: Logger) : PacketParser("Compound RTCP par
         // Force packets to be evaluated to trigger any parsing errors
         compoundPacket.packets
     }
-})
+}) {
+    override fun trace(f: () -> Unit) = f.invoke()
+}
 
 class SingleRtcpParser(parentLogger: Logger) : PacketParser("Single RTCP parser", parentLogger, {
-    RtcpPacket.parse(it.buffer, it.offset, it.length) })
+    RtcpPacket.parse(it.buffer, it.offset, it.length) }) {
+    override fun trace(f: () -> Unit) = f.invoke()
+}

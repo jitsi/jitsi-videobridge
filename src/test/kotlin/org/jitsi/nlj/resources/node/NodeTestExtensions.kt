@@ -25,5 +25,7 @@ internal fun Node.onOutput(func: (PacketInfo) -> Unit) {
         override fun consume(packetInfo: PacketInfo) {
             func(packetInfo)
         }
+
+        override fun trace(f: () -> Unit) = f.invoke()
     })
 }

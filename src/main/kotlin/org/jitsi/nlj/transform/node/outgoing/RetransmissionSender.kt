@@ -110,4 +110,6 @@ class RetransmissionSender(
             addString("rtx_payload_types(orig -> rtx)", this@RetransmissionSender.origPtToRtxPayloadType.toString())
         }
     }
+
+    override fun trace(f: () -> Unit) = f.invoke()
 }

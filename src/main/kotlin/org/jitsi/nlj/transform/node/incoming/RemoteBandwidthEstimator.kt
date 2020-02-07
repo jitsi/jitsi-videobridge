@@ -88,6 +88,8 @@ class RemoteBandwidthEstimator(
         }
     }
 
+    override fun trace(f: () -> Unit) = f.invoke()
+
     override fun observe(packetInfo: PacketInfo) {
         if (!enabled) return
 

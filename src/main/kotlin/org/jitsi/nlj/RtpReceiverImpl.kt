@@ -135,6 +135,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
         }
 
         override val aggregationKey: String = name
+
+        override fun trace(f: () -> Unit) = f.invoke()
     }
 
     init {
