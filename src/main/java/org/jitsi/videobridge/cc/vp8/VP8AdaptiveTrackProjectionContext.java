@@ -520,7 +520,8 @@ public class VP8AdaptiveTrackProjectionContext
 
         VP8Frame f1 = refFrame, f2;
         int refSeq;
-        if (RtpUtils.isOlderSequenceNumberThan(refFrame.getLatestKnownSequenceNumber(), frame.getEarliestKnownSequenceNumber()))
+        int picIdDelta = Vp8Utils.getExtendedPictureIdDelta(refFrame.getPictureId(), frame.getPictureId());
+        if (picIdDelta < 0)
         {
             do
             {
