@@ -795,6 +795,18 @@ public class Endpoint
                             " accepted connection.");
                 }
             });
+            TaskPools.SCHEDULED_POOL.schedule(() -> {
+                if (!isExpired()) {
+                    AbstractEndpointMessageTransport t = getMessageTransport();
+                    if (t != null)
+                    {
+                        if (!t.isConnected())
+                        {
+                            logger.error("EndpointMessageTransport still not connected.");
+                        }
+                    }
+                }
+            }, 30, TimeUnit.SECONDS);
         });
     }
 
