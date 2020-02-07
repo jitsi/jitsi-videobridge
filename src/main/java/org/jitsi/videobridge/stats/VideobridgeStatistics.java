@@ -73,6 +73,9 @@ public class VideobridgeStatistics
         return dateFormat.format(new Date());
     }
 
+    public static final String EPS_NO_MSG_TRANSPORT_AFTER_DELAY =
+        "num_eps_no_msg_transport_after_delay";
+
     /**
      * The indicator which determines whether {@link #generate()} is executing
      * on this <tt>VideobridgeStatistics</tt>. If <tt>true</tt>, invocations of
@@ -387,6 +390,10 @@ public class VideobridgeStatistics
                     TOTAL_LOSS_DEGRADED_PARTICIPANT_SECONDS,
                    jvbStats.totalLossDegradedParticipantMs.get() / 1000);
             unlockedSetStat(TOTAL_PARTICIPANTS, jvbStats.totalEndpoints.get());
+            unlockedSetStat(
+                EPS_NO_MSG_TRANSPORT_AFTER_DELAY,
+                jvbStats.numEndpointsNoMessageTransportAfterDelay.get()
+            );
             unlockedSetStat(CONFERENCES, conferences);
             unlockedSetStat(PARTICIPANTS, endpoints);
             unlockedSetStat(VIDEO_CHANNELS, videoChannels);

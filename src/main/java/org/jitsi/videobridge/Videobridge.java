@@ -1323,5 +1323,12 @@ public class Videobridge
          * The total number of endpoints created.
          */
         public AtomicInteger totalEndpoints = new AtomicInteger();
+
+        /**
+         * The number of endpoints which had not established an endpoint
+         * message transport even after some delay.
+         */
+        public AtomicInteger numEndpointsNoMessageTransportAfterDelay =
+            new AtomicInteger();
     }
 }

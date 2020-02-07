@@ -803,6 +803,10 @@ public class Endpoint
                         if (!t.isConnected())
                         {
                             logger.error("EndpointMessageTransport still not connected.");
+                            getConference()
+                                .getVideobridge()
+                                .getStatistics()
+                                .numEndpointsNoMessageTransportAfterDelay.incrementAndGet();
                         }
                     }
                 }
