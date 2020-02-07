@@ -64,4 +64,6 @@ class AudioLevelReader(
             addString("audio_level_ext_id", audioLevelExtId.toString())
         }
     }
+
+    override fun trace(f: () -> Unit) = f.invoke()
 }

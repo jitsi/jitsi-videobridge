@@ -64,4 +64,6 @@ class VideoBitrateCalculator(
             }
         }
     }
+
+    override fun trace(f: () -> Unit) = f.invoke()
 }

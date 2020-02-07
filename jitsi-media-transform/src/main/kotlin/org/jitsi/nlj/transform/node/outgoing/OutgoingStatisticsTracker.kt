@@ -35,6 +35,8 @@ class OutgoingStatisticsTracker : ObserverNode("Outgoing statistics tracker") {
         stats.packetSent(rtpPacket.length, rtpPacket.timestamp)
     }
 
+    override fun trace(f: () -> Unit) = f.invoke()
+
     fun getSnapshot(): OutgoingStatisticsSnapshot {
         return OutgoingStatisticsSnapshot(
             ssrcStats.map { (ssrc, stats) ->

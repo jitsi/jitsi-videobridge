@@ -66,6 +66,8 @@ class IncomingStatisticsTracker(
      */
     override fun getNodeStatsToAggregate() = super.getNodeStats()
 
+    override fun trace(f: () -> Unit) = f.invoke()
+
     fun getSnapshot(): IncomingStatisticsSnapshot {
         return IncomingStatisticsSnapshot(
             ssrcStats.map { (ssrc, stats) ->

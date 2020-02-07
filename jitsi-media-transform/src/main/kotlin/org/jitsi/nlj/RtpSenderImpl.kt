@@ -107,6 +107,8 @@ class RtpSenderImpl(
         }
 
         override val aggregationKey = name
+
+        override fun trace(f: () -> Unit) = f.invoke()
     }
 
     init {

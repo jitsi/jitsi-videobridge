@@ -33,6 +33,8 @@ internal class ExclusivePathDemuxerTest : ShouldSpec() {
         override fun consume(packetInfo: PacketInfo) {
             numReceived++
         }
+
+        override fun trace(f: () -> Unit) = f.invoke()
     }
 
     private class DummyRtcpPacket : RtcpPacket(ByteArray(50), 0, 50) {

@@ -67,5 +67,7 @@ class ToggleablePcapWriter(
                 }
             }
         }
+
+        override fun trace(f: () -> Unit) = f.invoke()
     }
 }

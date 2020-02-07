@@ -28,4 +28,6 @@ class ProtocolReceiver @JvmOverloads constructor(
     override fun transform(packetInfo: PacketInfo): List<PacketInfo> {
         return stack.processIncomingProtocolData(packetInfo)
     }
+
+    override fun trace(f: () -> Unit) = f.invoke()
 }

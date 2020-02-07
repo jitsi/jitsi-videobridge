@@ -45,6 +45,8 @@ class PacketLoss(private val lossRate: Double) : FilterNode("Packet loss") {
             addRatio("actual_drop_rate", "packetsDropped", "packetsSeen")
         }
     }
+
+    override fun trace(f: () -> Unit) = f.invoke()
 }
 
 class BurstPacketLoss(
@@ -73,4 +75,6 @@ class BurstPacketLoss(
             true
         }
     }
+
+    override fun trace(f: () -> Unit) = f.invoke()
 }

@@ -114,8 +114,21 @@ sealed class Node(
             nextNode?.processPacket(packetInfo)
         }
     }
+    /**
+     * This function must be implemented by leaf nodes, as
+     * ```
+     *     override fun trace(f: () -> Unit) = f.invoke()
+     * ```
+     * or the Java equivalent.  When [NODE_TRACING] is
+     * turned on, this ensures that call stacks always include an method from
+     * the derived class, rather than one of the parent classes.  This can greatly
+     * aid debugging and profiling.
+     */
+
+    abstract fun trace(f: () -> Unit)
 
     companion object {
+        var TRACE_ENABLED = false
         var PLUGINS_ENABLED = false
         // 'Plugins' are observers which, when enabled, will be passed every packet that passes through
         // every node
@@ -131,6 +144,10 @@ sealed class Node(
                 PLUGINS_ENABLED = plugins.isNotEmpty()
                 PacketInfo.ENABLE_PAYLOAD_VERIFICATION = false
             }
+        }
+
+        fun enableNodeTracing(enable: Boolean) {
+            TRACE_ENABLED = enable
         }
     }
 }
@@ -178,7 +195,11 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
 
     override fun processPacket(packetInfo: PacketInfo) {
         onEntry(packetInfo)
-        doProcessPacket(packetInfo)
+        if (TRACE_ENABLED) {
+            trace { doProcessPacket(packetInfo) }
+        } else {
+            doProcessPacket(packetInfo)
+        }
     }
 
     override fun getNodeStats() = NodeStatsBlock("Node $name ${hashCode()}").apply {
@@ -517,4 +538,6 @@ class ExclusivePathDemuxer(name: String) : DemuxerNode(name) {
         packetDiscarded(packetInfo)
     }
     override val aggregationKey = this.name
+
+    override fun trace(f: () -> Unit) = f.invoke()
 }

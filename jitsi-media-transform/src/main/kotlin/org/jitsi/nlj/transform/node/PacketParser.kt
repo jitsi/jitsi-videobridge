@@ -37,4 +37,6 @@ open class PacketParser(
             null
         }
     }
+
+    override fun trace(f: () -> Unit) = f.invoke()
 }

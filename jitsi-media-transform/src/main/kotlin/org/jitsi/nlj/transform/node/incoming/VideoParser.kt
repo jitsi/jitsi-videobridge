@@ -82,4 +82,6 @@ class VideoParser(
         }
         super.handleEvent(event)
     }
+
+    override fun trace(f: () -> Unit) = f.invoke()
 }

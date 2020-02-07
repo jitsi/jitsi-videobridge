@@ -39,4 +39,6 @@ class RtcpSrUpdater(
 
         return packetInfo
     }
+
+    override fun trace(f: () -> Unit) = f.invoke()
 }
