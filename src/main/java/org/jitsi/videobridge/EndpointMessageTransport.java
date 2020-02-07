@@ -292,6 +292,12 @@ class EndpointMessageTransport
         return dst;
     }
 
+    @Override
+    public boolean isConnected()
+    {
+        return getActiveTransportChannel() != null;
+    }
+
     /**
      * Notifies this {@link EndpointMessageTransport} that a specific
      * {@link ColibriWebSocket} instance associated with its {@link Endpoint}

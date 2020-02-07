@@ -63,6 +63,12 @@ public abstract class AbstractEndpointMessageTransport
     }
 
     /**
+     *
+     * @return true if this message transport is 'connected', false otherwise
+     */
+    public abstract boolean isConnected();
+
+    /**
      * Fires the message transport ready event for the associated endpoint.
      */
     protected void notifyTransportChannelConnected()
