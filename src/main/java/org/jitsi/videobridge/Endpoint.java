@@ -1328,6 +1328,7 @@ public class Endpoint
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("unchecked")
     @Override
     public JSONObject getDebugState()
     {
@@ -1342,6 +1343,7 @@ public class Endpoint
         debugState.put("transceiver", transceiver.getNodeStats().toJson());
         debugState.put("acceptAudio", acceptAudio);
         debugState.put("acceptVideo", acceptVideo);
+        debugState.put("messageTransport", messageTransport.getDebugState());
 
         return debugState;
     }
