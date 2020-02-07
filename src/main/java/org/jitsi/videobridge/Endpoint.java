@@ -770,6 +770,7 @@ public class Endpoint
             TaskPools.IO_POOL.submit(() -> {
                 // FIXME: This runs forever once the socket is closed (
                 // accept never returns true).
+                logger.info("Attempting to establish SCTP socket connection");
                 int attempts = 0;
                 while (!socket.accept())
                 {
@@ -794,6 +795,22 @@ public class Endpoint
                             " accepted connection.");
                 }
             });
+            TaskPools.SCHEDULED_POOL.schedule(() -> {
+                if (!isExpired()) {
+                    AbstractEndpointMessageTransport t = getMessageTransport();
+                    if (t != null)
+                    {
+                        if (!t.isConnected())
+                        {
+                            logger.error("EndpointMessageTransport still not connected.");
+                            getConference()
+                                .getVideobridge()
+                                .getStatistics()
+                                .numEndpointsNoMessageTransportAfterDelay.incrementAndGet();
+                        }
+                    }
+                }
+            }, 30, TimeUnit.SECONDS);
         });
     }
 
@@ -1327,6 +1344,7 @@ public class Endpoint
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("unchecked")
     @Override
     public JSONObject getDebugState()
     {
@@ -1341,6 +1359,7 @@ public class Endpoint
         debugState.put("transceiver", transceiver.getNodeStats().toJson());
         debugState.put("acceptAudio", acceptAudio);
         debugState.put("acceptVideo", acceptVideo);
+        debugState.put("messageTransport", messageTransport.getDebugState());
 
         return debugState;
     }
