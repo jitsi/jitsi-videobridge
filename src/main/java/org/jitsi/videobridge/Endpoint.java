@@ -770,6 +770,7 @@ public class Endpoint
             TaskPools.IO_POOL.submit(() -> {
                 // FIXME: This runs forever once the socket is closed (
                 // accept never returns true).
+                logger.info("Attempting to establish SCTP socket connection");
                 int attempts = 0;
                 while (!socket.accept())
                 {
