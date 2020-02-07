@@ -150,7 +150,6 @@ class OctoEndpointMessageTransport
     @Override
     public boolean isConnected()
     {
-        //TODO(before merge): is this correct?
         return true;
     }
 
