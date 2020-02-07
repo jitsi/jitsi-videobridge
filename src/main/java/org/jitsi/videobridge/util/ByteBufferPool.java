@@ -231,7 +231,8 @@ public class ByteBufferPool
         else
         {
             logger.warn(
-                "Received a suspiciously large buffer (size = " + len + ")");
+                "Received a suspiciously large buffer (size = " + len + ")\n +" +
+                    UtilKt.getStackTrace());
         }
     }
 
