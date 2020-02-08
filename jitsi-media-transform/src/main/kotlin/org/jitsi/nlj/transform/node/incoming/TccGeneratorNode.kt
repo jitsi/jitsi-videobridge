@@ -164,6 +164,8 @@ class TccGeneratorNode(
     }
 
     override fun stop() {
+        super.stop()
+
         running = false
     }
 
