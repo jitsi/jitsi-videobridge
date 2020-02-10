@@ -102,7 +102,7 @@ public class VP8FrameMap
                 logger.warn("Cannot insert packet in frame map: " +
                     "frame with ssrc " + frame.getSsrc() +
                     ", timestamp " + frame.getTemporalLayer() +
-                    ", and sequence numnber range " + frame.getEarliestKnownSequenceNumber() +
+                    ", and sequence number range " + frame.getEarliestKnownSequenceNumber() +
                     "-" + frame.getLatestKnownSequenceNumber() +
                     ", and packet " + packet.getSequenceNumber() +
                     " with ssrc " + packet.getSsrc() +
