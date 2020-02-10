@@ -193,5 +193,10 @@ class RtpHeaderTest : ShouldSpec() {
                 }
             }
         }
+        "total length" {
+            should("be correct") {
+                RtpHeader.getTotalLength(headerData, 0) shouldBe 28
+            }
+        }
     }
 }

@@ -143,8 +143,7 @@ class RtpHeader {
          */
         fun getTotalLength(buf: ByteArray, baseOffset: Int): Int {
             val length =
-                FIXED_HEADER_SIZE_BYTES
-                    + getCsrcCount(buf, baseOffset) * 4
+                FIXED_HEADER_SIZE_BYTES + getCsrcCount(buf, baseOffset) * 4
 
             val extLength = if (hasExtensions(buf, baseOffset)) {
                 // Length points to where the ext header would start
