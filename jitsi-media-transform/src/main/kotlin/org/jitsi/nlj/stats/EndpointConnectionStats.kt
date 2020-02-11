@@ -112,13 +112,12 @@ class EndpointConnectionStats(
             val remoteProcessingDelay = Duration.ofNanos((reportBlock.delaySinceLastSr / .000065536).toLong())
             rtt = (Duration.between(srSentTime, receivedTime) - remoteProcessingDelay).toDoubleMillis()
             if (rtt > Duration.ofSeconds(7).toMillis()) {
-                logger.warn("Suspiciously high rtt value: $rtt, remote processing delay was " +
-                    "$remoteProcessingDelay, srSentTime was $srSentTime, received time was $receivedTime")
-            } else if (rtt < 0) {
-                // Should we allow a small slop here, in case the reporter's clock is running faster
-                // than ours? If so, how much?
-                logger.warn("Negative rtt value: $rtt, remote processing delay was " +
-                    "$remoteProcessingDelay, srSentTime was $srSentTime, received time was $receivedTime")
+                logger.warn("Suspiciously high rtt value: $rtt ms, remote processing delay was " +
+                    "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, received time was $receivedTime")
+            } else if (rtt < -1.0) {
+                // Allow some small slop here, since receivedTime and srSentTime are only accurate to the nearest millisecond.
+                logger.warn("Negative rtt value: $rtt ms, remote processing delay was " +
+                    "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, received time was $receivedTime")
             }
             endpointConnectionStatsListeners.forEach { it.onRttUpdate(rtt) }
         } ?: run {
