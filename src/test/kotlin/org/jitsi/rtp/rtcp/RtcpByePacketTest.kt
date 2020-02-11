@@ -28,7 +28,7 @@ import org.jitsi.test_helpers.matchers.haveSameContentAs
 internal class RtcpByePacketTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-    val rtcpByeNoReason = RtcpHeaderBuilder(
+    private val rtcpByeNoReason = RtcpHeaderBuilder(
         packetType = RtcpByePacket.PT,
         reportCount = 1,
         senderSsrc = 12345L,
@@ -41,9 +41,9 @@ internal class RtcpByePacketTest : ShouldSpec() {
         byeReasonData.size.toByte(), *byeReasonData.toTypedArray()
     )
     private val reasonSize = 1 + byeReasonData.size
-    val padding = byteArrayOf(0x00, 0x00)
+    private val padding = byteArrayOf(0x00, 0x00)
 
-    val rtcpByeWithReason = RtcpHeaderBuilder(
+    private val rtcpByeWithReason = RtcpHeaderBuilder(
         packetType = RtcpByePacket.PT,
         hasPadding = true,
         reportCount = 1,

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+
+<Match>
+  <Or>
+    <!-- Our Packet hierarchy intentionally uses clone() without calling super.clone(). -->
+    <Bug pattern="CN_IDIOM_NO_SUPER_CALL"/>
+    <!-- This seems to get triggered by certain kotlin constructs though they look safe -->
+    <Bug pattern="BC_BAD_CAST_TO_ABSTRACT_COLLECTION"/>
+    <!-- Serialization -->
+    <Bug pattern="SE_BAD_FIELD"/>
+    <!-- Serialization -->
+    <Bug pattern="SE_BAD_FIELD_STORE"/>
+    <!-- False positives with lazy vals -->
+    <Bug pattern="NP_NULL_ON_SOME_PATH"/>
+  </Or>
+</Match>
+
+<Match>
+  <!-- Tests have a valid reason to ignore return values (expecting exceptions, etc). -->
+  <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+  <Or>
+    <Source name="~.*\.*Test.kt" />
+    <Source name="~.*\.*Test.java" />
+  </Or>
+</Match>
+
+
+</FindBugsFilter>

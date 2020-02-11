@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp.rtp
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import kotlin.experimental.or
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
@@ -46,6 +47,9 @@ import org.jitsi.utils.observableWhenChanged
  * |                   payload                                     |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
+@SuppressFBWarnings(
+    value = ["EI_EXPOSE_REP2"],
+    justification = "We intentionally pass a reference to our buffer when using observableWhenChanged.")
 open class RtpPacket(
     buffer: ByteArray,
     offset: Int,

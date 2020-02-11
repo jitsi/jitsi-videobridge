@@ -32,7 +32,7 @@ import org.jitsi.test_helpers.matchers.haveSamePayload
 
 class RtpPacketTest : ShouldSpec() {
 
-    val rtpHeaderWithExtensions = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+    private val rtpHeaderWithExtensions = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
         // V=2,P=false,X=true,CC=0,M=false,PT=111,SeqNum=5807
         0x90, 0x6f, 0x16, 0xaf,
         // Timestamp: 1710483662
@@ -45,7 +45,7 @@ class RtpPacketTest : ShouldSpec() {
         0x10, 0xff, 0x00, 0x00
     )
 
-    val rtpHeaderWithExtensionsPaddingBetween = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+    private val rtpHeaderWithExtensionsPaddingBetween = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
         // V=2,P=false,X=true,CC=0,M=false,PT=111,SeqNum=5807
         0x90, 0x6f, 0x16, 0xaf,
         // Timestamp: 1710483662
@@ -60,7 +60,7 @@ class RtpPacketTest : ShouldSpec() {
         0x20, 0xff, 0x00, 0x00
     )
 
-    val rtpHeaderWithNoExtensions = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+    private val rtpHeaderWithNoExtensions = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
         // V=2,P=false,X=false,CC=0,M=false,PT=111,SeqNum=5807
         0x80, 0x6f, 0x16, 0xaf,
         // Timestamp: 1710483662
@@ -69,7 +69,7 @@ class RtpPacketTest : ShouldSpec() {
         0x48, 0x0f, 0x22, 0x3a
     )
 
-    val dummyRtpPayload = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+    private val dummyRtpPayload = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
         0x42, 0x42, 0x42, 0x42,
         0x42, 0x42, 0x42, 0x42,
         0x42, 0x42, 0x42, 0x42,
@@ -77,9 +77,9 @@ class RtpPacketTest : ShouldSpec() {
         0x42, 0x42, 0x42, 0x42
     )
 
-    val rtpPacketWithExtensions = RtpPacket(rtpHeaderWithExtensions + dummyRtpPayload)
-    val rtpPacketNoExtensions = RtpPacket(rtpHeaderWithNoExtensions + dummyRtpPayload)
-    val rtpPacketWithExtensionsWithPaddingBetween = RtpPacket(rtpHeaderWithExtensionsPaddingBetween + dummyRtpPayload)
+    private val rtpPacketWithExtensions = RtpPacket(rtpHeaderWithExtensions + dummyRtpPayload)
+    private val rtpPacketNoExtensions = RtpPacket(rtpHeaderWithNoExtensions + dummyRtpPayload)
+    private val rtpPacketWithExtensionsWithPaddingBetween = RtpPacket(rtpHeaderWithExtensionsPaddingBetween + dummyRtpPayload)
 
     init {
         "An RTP packet with header extensions" {

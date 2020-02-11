@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import org.jitsi.rtp.extensions.bytearray.put3Bytes
@@ -62,6 +63,9 @@ class ReceivedPacketReport(seqNum: Int, val deltaTicks: Short) : PacketReport(se
  * Chrome code as closely as possible in an effort to make
  * future updates easier.
  */
+@SuppressFBWarnings(
+    value = ["NM_METHOD_NAMING_CONVENTION"],
+    justification = "This class is a port and use the original names.")
 class RtcpFbTccPacketBuilder(
     val rtcpHeader: RtcpHeaderBuilder = RtcpHeaderBuilder(),
     var mediaSourceSsrc: Long = -1,
@@ -255,6 +259,9 @@ class RtcpFbTccPacketBuilder(
  *  feedback packet sent.  Used to detect feedback packet
  *  losses.
  */
+@SuppressFBWarnings(
+    value = ["NM_METHOD_NAMING_CONVENTION"],
+    justification = "This class is a port and use the original names.")
 class RtcpFbTccPacket(
     buffer: ByteArray,
     offset: Int,

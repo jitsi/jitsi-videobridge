@@ -58,7 +58,7 @@ class RtcpByePacket(
 
         if (hasReason) {
             val reasonLengthOffset = offset + headerAndSsrcsLengthBytes
-            val reasonLength = buffer.get(reasonLengthOffset).toInt()
+            val reasonLength = buffer[reasonLengthOffset].toInt()
             val reasonStr = String(buffer, reasonLengthOffset + 1, reasonLength)
             reasonStr
         } else {

@@ -94,11 +94,11 @@ class LastChunk {
 
     // // Encode all stored delta_sizes into single chunk, pad with 0s if needed.
     fun EncodeLast(): Chunk {
-        if (all_same_)
-            return EncodeRunLength()
-        if (size_ <= kMaxTwoBitCapacity)
-            EncodeTwoBit(size_)
-        return EncodeOneBit()
+        return when {
+            all_same_ -> EncodeRunLength()
+            size_ <= kMaxTwoBitCapacity -> EncodeTwoBit(size_)
+            else -> EncodeOneBit()
+        }
     }
 
     // Decode up to |max_size| delta sizes from |chunk|.

@@ -149,6 +149,9 @@ abstract class SdesItem(
             buf.getByteAsInt(baseOffset + LENGTH_OFFSET)
 
         fun copyData(buf: ByteArray, baseOffset: Int, dataLength: Int): ByteArray {
+            if (dataLength <= 0) {
+                return ByteArrayUtils.emptyByteArray
+            }
             val copy = BufferPool.getArray(dataLength)
             System.arraycopy(buf, baseOffset + DATA_OFFSET, copy, 0, dataLength)
             return copy
@@ -165,14 +168,9 @@ abstract class SdesItem(
                 SdesItemType.EMPTY -> EmptySdesItem
                 else -> {
                     val length = getLength(buf, offset)
-                    val dataBuf = if (length > 0) {
-                        copyData(buf, offset, length)
-                    } else {
-                        ByteArrayUtils.emptyByteArray
-                    }
                     return when (type) {
-                        SdesItemType.CNAME -> CnameSdesItem(dataBuf)
-                        else -> UnknownSdesItem(typeValue, dataBuf)
+                        SdesItemType.CNAME -> CnameSdesItem(buf, offset, length)
+                        else -> UnknownSdesItem(typeValue, buf, offset, length)
                     }
                 }
             }
@@ -182,9 +180,11 @@ abstract class SdesItem(
 
 class UnknownSdesItem(
     private val sdesTypeValue: Int,
-    private val dataField: ByteArray
+    buf: ByteArray,
+    offset: Int,
+    length: Int
 ) : SdesItem(SdesItemType.UNKNOWN) {
-
+    private val dataField = copyData(buf, offset, length)
     override val sizeBytes: Int = SDES_ITEM_HEADER_SIZE + dataField.size
 
     override fun toString(): String {
@@ -204,10 +204,9 @@ object EmptySdesItem : SdesItem(SdesItemType.EMPTY) {
  * |    CNAME=1    |     length    | user and domain name        ...
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-class CnameSdesItem(
-    private val dataField: ByteArray
-) : SdesItem(SdesItemType.CNAME) {
+class CnameSdesItem(buf: ByteArray, offset: Int, length: Int) : SdesItem(SdesItemType.CNAME) {
 
+    private val dataField: ByteArray = copyData(buf, offset, length)
     override val sizeBytes: Int = SDES_ITEM_HEADER_SIZE + dataField.size
 
     val cname: String by lazy {

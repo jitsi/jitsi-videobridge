@@ -13,6 +13,7 @@
         <kotlintest.version>3.4.2</kotlintest.version>
         <junit.version>5.2.0</junit.version>
         <jitsi.utils.version>1.0-35-g14f4ae3</jitsi.utils.version>
+        <spotbugs.version>4.0.0-RC1</spotbugs.version>
     </properties>
 
     <dependencies>
@@ -40,6 +41,12 @@
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-utils-kotlin</artifactId>
             <version>${jitsi.utils.version}</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/com.github.spotbugs/spotbugs-annotations -->
+        <dependency>
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>spotbugs-annotations</artifactId>
+            <version>${spotbugs.version}</version>
         </dependency>
 
         <!--Testing dependencies-->
@@ -196,42 +203,64 @@
                         <configuration>
                             <target name="ktlint">
                                 <java taskname="ktlint" dir="${basedir}" fork="true" failonerror="true"
-                                    classpathref="maven.plugin.classpath" classname="com.pinterest.ktlint.Main">
+                                      classpathref="maven.plugin.classpath" classname="com.pinterest.ktlint.Main">
                                     <arg value="src/**/*.kt"/>
                                     <!-- to generate report in checkstyle format prepend following args: -->
                                     <!-- 
                                 <arg value="[dash][dash]reporter=plain"/>
                                 <arg value="[dash][dash]reporter=checkstyle,output=${project.build.directory}/ktlint.xml"/>
                                 -->
-                                <!-- see https://github.com/shyiko/ktlint#usage for more -->                    
-                            </java>
-                        </target>
-                    </configuration>
-                    <goals><goal>run</goal></goals>
-                </execution>
-                <execution>
-                    <id>ktlint-format</id>
-                    <configuration>
-                        <target name="ktlint">
-                            <java taskname="ktlint" dir="${basedir}" fork="true" failonerror="true"
-                                classpathref="maven.plugin.classpath" classname="com.pinterest.ktlint.Main">
-                                <arg value="-F"/>
-                                <arg value="src/**/*.kt"/>
-                            </java>
-                        </target>
-                    </configuration>
-                    <goals><goal>run</goal></goals>
-                </execution>
-            </executions>
-            <dependencies>
-                <dependency>
-                    <groupId>com.pinterest</groupId>
-                    <artifactId>ktlint</artifactId>
-                    <version>0.36.0</version>
-                </dependency>
-                <!-- additional 3rd party ruleset(s) can be specified here -->
-            </dependencies>
-        </plugin>
+                                    <!-- see https://github.com/shyiko/ktlint#usage for more -->
+                                </java>
+                            </target>
+                        </configuration>
+                        <goals><goal>run</goal></goals>
+                    </execution>
+                    <execution>
+                        <id>ktlint-format</id>
+                        <configuration>
+                            <target name="ktlint">
+                                <java taskname="ktlint" dir="${basedir}" fork="true" failonerror="true"
+                                      classpathref="maven.plugin.classpath" classname="com.pinterest.ktlint.Main">
+                                    <arg value="-F"/>
+                                    <arg value="src/**/*.kt"/>
+                                </java>
+                            </target>
+                        </configuration>
+                        <goals><goal>run</goal></goals>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.pinterest</groupId>
+                        <artifactId>ktlint</artifactId>
+                        <version>0.36.0</version>
+                    </dependency>
+                    <!-- additional 3rd party ruleset(s) can be specified here -->
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>3.1.12.2</version>
+                <configuration>
+                    <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+                    <includeTests>true</includeTests>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>verify</phase>
+                        <goals><goal>check</goal></goals>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.github.spotbugs</groupId>
+                        <artifactId>spotbugs</artifactId>
+                        <version>${spotbugs.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
         </plugins>
     </build>
     <repositories>
