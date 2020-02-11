@@ -21,8 +21,12 @@ import org.jitsi.rtp.util.RtpUtils
 /**
  * An inline class representing an RTP sequence number.  The class operates just like
  * an Int but takes rollover into account for all operations.
+ *
+ * This constructor assumes that the value is already coerced. It MUST NOT be used outside this class, but it can not
+ * be marked private. Use [Int.toRtpSequenceNumber] to create instances.
  */
-inline class RtpSequenceNumber(val value: Int) : Comparable<RtpSequenceNumber> {
+@Suppress("NON_PUBLIC_PRIMARY_CONSTRUCTOR_OF_INLINE_CLASS")
+inline class RtpSequenceNumber internal constructor(val value: Int) : Comparable<RtpSequenceNumber> {
     // These are intentionally not implemented, because using them as operators leads to inconsistent results. The
     // following code:
     // var n1 = RtpSequenceNumber(65535)
@@ -40,9 +44,8 @@ inline class RtpSequenceNumber(val value: Int) : Comparable<RtpSequenceNumber> {
     // operator fun inc(): RtpSequenceNumber = plus(1)
     // operator fun dec(): RtpSequenceNumber = minus(1)
 
-    operator fun plus(num: Int): RtpSequenceNumber = RtpSequenceNumber((value + num) and 0xFFFF)
-    operator fun plus(seqNum: RtpSequenceNumber): RtpSequenceNumber =
-        RtpSequenceNumber((value + seqNum.value) and 0xFFFF)
+    operator fun plus(num: Int): RtpSequenceNumber = (value + num).toRtpSequenceNumber()
+    operator fun plus(seqNum: RtpSequenceNumber): RtpSequenceNumber = (value + seqNum.value).toRtpSequenceNumber()
 
     operator fun minus(num: Int): RtpSequenceNumber = plus(-num)
     operator fun minus(seqNum: RtpSequenceNumber): RtpSequenceNumber = plus(-seqNum.value)
@@ -56,6 +59,8 @@ inline class RtpSequenceNumber(val value: Int) : Comparable<RtpSequenceNumber> {
         val INVALID = RtpSequenceNumber(-1)
     }
 }
+
+fun Int.toRtpSequenceNumber() = RtpSequenceNumber(this and 0xffff)
 
 // Copied mostly from IntProgression.
 // NOTE(brian): technically this should probably inherit from ClosedRange, but

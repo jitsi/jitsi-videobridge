@@ -26,63 +26,63 @@ class RtpSequenceNumberTest : ShouldSpec() {
 
     init {
         "rollover" {
-            var num = RtpSequenceNumber(65535)
+            var num = 65535.toRtpSequenceNumber()
             "via add-and-assign" {
                 should("work correctly") {
                     num += 1
-                    num shouldBe RtpSequenceNumber(0)
+                    num shouldBe 0.toRtpSequenceNumber()
                 }
             }
             "via plus" {
                 should("work correctly") {
-                    (num + 1) shouldBe RtpSequenceNumber(0)
+                    (num + 1) shouldBe 0.toRtpSequenceNumber()
                 }
             }
         }
         "reverse rollover" {
-            var num = RtpSequenceNumber(0)
+            var num = 0.toRtpSequenceNumber()
             "via subtract-and-assign" {
                 should("work correctly") {
                     num -= 1
-                    num shouldBe RtpSequenceNumber(65535)
+                    num shouldBe 65535.toRtpSequenceNumber()
                 }
             }
             "via minus" {
                 should("work correctly") {
-                    (num - 1) shouldBe RtpSequenceNumber(65535)
+                    (num - 1) shouldBe 65535.toRtpSequenceNumber()
                 }
             }
         }
         "comparison" {
             should("work correctly") {
-                (RtpSequenceNumber(1) < RtpSequenceNumber(2)) shouldBe true
-                (RtpSequenceNumber(1) <= RtpSequenceNumber(2)) shouldBe true
-                (RtpSequenceNumber(1) <= RtpSequenceNumber(1)) shouldBe true
-                (RtpSequenceNumber(1) == RtpSequenceNumber(1)) shouldBe true
-                (RtpSequenceNumber(1) < RtpSequenceNumber(0)) shouldBe false
-                (RtpSequenceNumber(65534) < RtpSequenceNumber(0)) shouldBe true
-                (RtpSequenceNumber(32767) < RtpSequenceNumber(0)) shouldBe false
-                (RtpSequenceNumber(32768) < RtpSequenceNumber(0)) shouldBe true
+                (1.toRtpSequenceNumber() < 2.toRtpSequenceNumber()) shouldBe true
+                (1.toRtpSequenceNumber() <= 2.toRtpSequenceNumber()) shouldBe true
+                (1.toRtpSequenceNumber() <= 1.toRtpSequenceNumber()) shouldBe true
+                (1.toRtpSequenceNumber() == 1.toRtpSequenceNumber()) shouldBe true
+                (1.toRtpSequenceNumber() < 0.toRtpSequenceNumber()) shouldBe false
+                (65534.toRtpSequenceNumber() < 0.toRtpSequenceNumber()) shouldBe true
+                (32767.toRtpSequenceNumber() < 0.toRtpSequenceNumber()) shouldBe false
+                (32768.toRtpSequenceNumber() < 0.toRtpSequenceNumber()) shouldBe true
             }
         }
         "rangeTo" {
             should("work correctly") {
-                (RtpSequenceNumber(65533)..RtpSequenceNumber(2)).asSequence().shouldContainInOrder(
-                    RtpSequenceNumber(65533),
-                    RtpSequenceNumber(65534),
-                    RtpSequenceNumber(65535),
-                    RtpSequenceNumber(0),
-                    RtpSequenceNumber(1),
-                    RtpSequenceNumber(2)
+                (65533.toRtpSequenceNumber()..2.toRtpSequenceNumber()).asSequence().shouldContainInOrder(
+                    65533.toRtpSequenceNumber(),
+                    65534.toRtpSequenceNumber(),
+                    65535.toRtpSequenceNumber(),
+                    0.toRtpSequenceNumber(),
+                    1.toRtpSequenceNumber(),
+                    2.toRtpSequenceNumber()
                 )
 
-                (RtpSequenceNumber(2) downTo RtpSequenceNumber(65533)).asSequence().shouldContainInOrder(
-                    RtpSequenceNumber(2),
-                    RtpSequenceNumber(1),
-                    RtpSequenceNumber(0),
-                    RtpSequenceNumber(65535),
-                    RtpSequenceNumber(65534),
-                    RtpSequenceNumber(65533)
+                (2.toRtpSequenceNumber() downTo 65533.toRtpSequenceNumber()).asSequence().shouldContainInOrder(
+                    2.toRtpSequenceNumber(),
+                    1.toRtpSequenceNumber(),
+                    0.toRtpSequenceNumber(),
+                    65535.toRtpSequenceNumber(),
+                    65534.toRtpSequenceNumber(),
+                    65533.toRtpSequenceNumber()
                 )
             }
         }
