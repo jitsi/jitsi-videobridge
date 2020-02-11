@@ -16,7 +16,6 @@
 
 package org.jitsi.videobridge.rest.config
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldThrow
 import org.jitsi.config.BooleanMockConfigValueGenerator
@@ -28,9 +27,6 @@ import org.jitsi.videobridge.JitsiConfigTest
 import org.jitsi.videobridge.config.ConditionalPropertyConditionNotMetException
 import org.jitsi.videobridge.testutils.resetSingleton
 
-@SuppressFBWarnings(
-    value = ["RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"],
-    justification = "The return of [Property.value] shouldn't be ignored, but we test for an expected exception.")
 class WebsocketServiceConfigTest : JitsiConfigTest() {
     // By default install config sources which can be modified later
     private val legacyConfig = MockConfigSource("legacy", mapOf())

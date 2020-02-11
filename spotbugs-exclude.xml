@@ -26,4 +26,14 @@
   <!-- Serialization -->
   <Bug pattern="SE_BAD_FIELD_STORE"/>
 </Match>
+
+<Match>
+  <!-- Tests have a valid reason to ignore return values (expecting exceptions, etc). -->
+  <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+  <Or>
+    <Source name="~.*\.*Test.kt" />
+    <Source name="~.*\.*Test.java" />
+  </Or>
+</Match>
+
 </FindBugsFilter>
