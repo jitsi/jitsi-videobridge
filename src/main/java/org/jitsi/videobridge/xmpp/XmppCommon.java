@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.xmpp;
 
+import org.jitsi.nlj.stats.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.version.*;
@@ -24,6 +25,7 @@ import org.jitsi.xmpp.extensions.health.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smackx.iqversion.packet.Version;
+import org.json.simple.*;
 import org.osgi.framework.*;
 
 /**
@@ -34,7 +36,7 @@ import org.osgi.framework.*;
  *
  * @author Boris Grozev
  */
-class XmppCommon
+public class XmppCommon
 {
     /**
      * The {@link Logger} used by the {@link XmppCommon} class and its
@@ -42,6 +44,25 @@ class XmppCommon
      */
     private static final Logger logger
         =  new LoggerImpl(XmppCommon.class.getName());
+
+    private static final long[] thresholds
+            = new long[] { 5, 50, 100, 1000 };
+
+    private static final DelayStats colibriDelayStats = new DelayStats(thresholds);
+    private static final DelayStats healthDelayStats = new DelayStats(thresholds);
+    private static final DelayStats versionDelayStats = new DelayStats(thresholds);
+    private static final DelayStats responseDelayStats = new DelayStats(thresholds);
+
+    public static JSONObject getStatsJson()
+    {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("colibri", colibriDelayStats.toJson());
+        jsonObject.put("health", healthDelayStats.toJson());
+        jsonObject.put("version", versionDelayStats.toJson());
+        jsonObject.put("response", responseDelayStats.toJson());
+
+        return jsonObject;
+    }
 
     static final String[] FEATURES
         = new String[]
@@ -176,15 +197,6 @@ class XmppCommon
      */
     private IQ handleIQRequest(IQ request)
     {
-        // Requests can be categorized in pieces of Videobridge functionality
-        // based on the org.jivesoftware.smack.packet.IQ runtime type (of their
-        // child element) and forwarded to specialized Videobridge methods for
-        // convenience.
-        if (request instanceof Version)
-        {
-            return handleVersionIQ((Version) request);
-        }
-
         Videobridge videobridge = getVideobridge();
         if (videobridge == null)
         {
@@ -195,16 +207,29 @@ class XmppCommon
         }
 
         IQ response;
+        long start = System.currentTimeMillis();
+        DelayStats delayStats = null;
 
-        if (request instanceof ColibriConferenceIQ)
+        // Requests can be categorized in pieces of Videobridge functionality
+        // based on the org.jivesoftware.smack.packet.IQ runtime type (of their
+        // child element) and forwarded to specialized Videobridge methods for
+        // convenience.
+        if (request instanceof Version)
+        {
+            response = handleVersionIQ((Version) request);
+            delayStats = versionDelayStats;
+        }
+        else if (request instanceof ColibriConferenceIQ)
         {
             response
                 = videobridge.handleColibriConferenceIQ(
                     (ColibriConferenceIQ) request);
+            delayStats = colibriDelayStats;
         }
         else if (request instanceof HealthCheckIQ)
         {
             response = videobridge.handleHealthCheckIQ((HealthCheckIQ) request);
+            delayStats = healthDelayStats;
         }
         else if (request instanceof ShutdownIQ)
         {
@@ -213,6 +238,16 @@ class XmppCommon
         else
         {
             response = null;
+        }
+
+        if (delayStats != null)
+        {
+            long delay = System.currentTimeMillis() - start;
+            if (delay > 100)
+            {
+                logger.warn("Took " + delay + "ms to handle IQ: " + request.toXML());
+            }
+            delayStats.addDelay(delay);
         }
         return response;
     }
@@ -270,7 +305,9 @@ class XmppCommon
 
         if (videobridge != null)
         {
+            long start = System.currentTimeMillis();
             videobridge.handleIQResponse(response);
+            responseDelayStats.addDelay(System.currentTimeMillis() - start);
         }
     }
 }

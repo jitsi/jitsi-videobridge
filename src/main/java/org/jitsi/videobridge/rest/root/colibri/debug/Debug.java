@@ -25,6 +25,7 @@ import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.root.colibri.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.xmpp.*;
 
 import javax.inject.*;
 import javax.ws.rs.*;
@@ -191,6 +192,9 @@ public class Debug extends ColibriResource
             }
             case TASK_POOL_STATS: {
                 return TaskPools.getStatsJson().toJSONString();
+            }
+            case XMPP_DELAY_STATS: {
+                return XmppCommon.getStatsJson().toJSONString();
             }
             default: {
                 throw new NotFoundException();
