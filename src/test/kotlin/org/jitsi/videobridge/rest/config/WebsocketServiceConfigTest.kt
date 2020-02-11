@@ -75,7 +75,8 @@ class WebsocketServiceConfigTest : JitsiConfigTest() {
                 legacyConfig["org.jitsi.videobridge.rest.COLIBRI_WS_TLS"] = true
                 val prop = propCreator()
                 shouldThrow<ConditionalPropertyConditionNotMetException> {
-                    prop.value
+                    val ignore = prop.value
+                    ignore
                 }
             }
             "when websockets are enabled" {

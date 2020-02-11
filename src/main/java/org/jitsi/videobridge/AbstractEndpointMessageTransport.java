@@ -38,7 +38,7 @@ public abstract class AbstractEndpointMessageTransport
      * The name of the JSON property that indicates the target Octo endpoint id
      * of a propagated JSON message.
      */
-    public final String PROP_TARGET_OCTO_ENDPOINT_ID = "targetOctoEndpointId";
+    public static final String PROP_TARGET_OCTO_ENDPOINT_ID = "targetOctoEndpointId";
 
     /**
      * The {@link Endpoint} associated with this

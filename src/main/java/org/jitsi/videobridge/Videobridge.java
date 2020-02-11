@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import kotlin.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
+import org.jetbrains.annotations.*;
 import org.jitsi.config.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.meet.*;
@@ -54,7 +55,6 @@ import org.osgi.framework.*;
 
 import java.util.*;
 import java.util.concurrent.atomic.*;
-import java.util.function.*;
 import java.util.regex.*;
 
 /**
@@ -253,7 +253,7 @@ public class Videobridge
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public Conference createConference(Jid focus, Localpart name, String gid)
+    public @NotNull Conference createConference(Jid focus, Localpart name, String gid)
     {
         return this.createConference(focus, name, /* enableLogging */ true, gid);
     }
@@ -267,7 +267,7 @@ public class Videobridge
      * @param gid
      * @return
      */
-    private Conference doCreateConference(Jid focus, Localpart name, boolean enableLogging, String gid)
+    private @NotNull Conference doCreateConference(Jid focus, Localpart name, boolean enableLogging, String gid)
     {
         Conference conference = null;
         do
@@ -315,7 +315,7 @@ public class Videobridge
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public Conference createConference(
+    public @NotNull Conference createConference(
             Jid focus, Localpart name, boolean enableLogging, String gid)
     {
         final Conference conference = doCreateConference(focus, name, enableLogging, gid);
@@ -1098,6 +1098,7 @@ public class Videobridge
      * to include. If not specified, all of the conference's endpoints will be
      * included.
      */
+    @SuppressWarnings("unchecked")
     public OrderedJsonObject getDebugState(String conferenceId, String endpointId, boolean full)
     {
         OrderedJsonObject debugState = new OrderedJsonObject();
@@ -1151,6 +1152,7 @@ public class Videobridge
      * uses.
      * TODO: is there a better place for this?
      */
+    @SuppressWarnings("unchecked")
     public JSONObject getQueueStats()
     {
         JSONObject queueStats = new JSONObject();
@@ -1173,6 +1175,7 @@ public class Videobridge
         return queueStats;
     }
 
+    @SuppressWarnings("unchecked")
     private JSONObject getJsonFromQueueErrorHandler(
             CountingErrorHandler countingErrorHandler)
     {

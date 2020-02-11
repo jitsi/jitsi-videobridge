@@ -32,12 +32,12 @@ import static java.lang.Integer.min;
  */
 public class VP8FrameMap
 {
+    static final int FRAME_MAP_SIZE = 500; /* Matches PacketCache default size. */
+
     /** Cache mapping picture IDs to frames. */
     private final FrameHistory frameHistory = new FrameHistory(FRAME_MAP_SIZE);
 
     private final Logger logger;
-
-    final static int FRAME_MAP_SIZE = 500; /* Matches PacketCache default size. */
 
     /**
      * Ctor.

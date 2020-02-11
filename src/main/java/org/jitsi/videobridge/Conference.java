@@ -15,7 +15,9 @@
  */
 package org.jitsi.videobridge;
 
+import edu.umd.cs.findbugs.annotations.*;
 import org.jetbrains.annotations.*;
+import org.jetbrains.annotations.Nullable;
 import org.jitsi.eventadmin.*;
 import org.jitsi.nlj.*;
 import org.jitsi.rtp.*;
@@ -38,6 +40,8 @@ import org.osgi.framework.*;
 
 import java.beans.*;
 import java.io.*;
+import java.lang.*;
+import java.lang.SuppressWarnings;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -78,6 +82,8 @@ public class Conference
      */
     private List<Endpoint> endpointsCache = Collections.emptyList();
 
+    private final Object endpointsCacheLock = new Object();
+
     /**
      * The {@link EventAdmin} instance (to be) used by this {@code Conference}
      * and all instances (of {@code Content}, {@code Channel}, etc.) created by
@@ -89,6 +95,10 @@ public class Conference
      * The indicator which determines whether {@link #expire()} has been called
      * on this <tt>Conference</tt>.
      */
+    @SuppressFBWarnings(
+            value = "IS2_INCONSISTENT_SYNC",
+            justification = "The value is deemed safe to read without " +
+                "synchronization.")
     private boolean expired = false;
 
     /**
@@ -121,6 +131,10 @@ public class Conference
      * <tt>Conference</tt>. In the time interval between the last activity and
      * now, this <tt>Conference</tt> is considered inactive.
      */
+    @SuppressFBWarnings(
+            value = "IS2_INCONSISTENT_SYNC",
+            justification = "The value is deemed safe to read without " +
+                    "synchronization.")
     private long lastActivityTime;
 
     /**
@@ -722,7 +736,7 @@ public class Conference
      */
     private void updateEndpointsCache()
     {
-        synchronized (endpoints)
+        synchronized (endpointsCacheLock)
         {
             ArrayList<Endpoint>
                     endpointsList
@@ -883,9 +897,8 @@ public class Conference
      */
     public boolean isExpired()
     {
-        // Conference starts with expired equal to false and the only assignment
-        // to expired is to set it to true so there is no need to synchronize
-        // the reading of expired.
+        // this.expired starts as 'false' and only ever changes to 'true',
+        // so there is no need to synchronize while reading.
         return expired;
     }
 
@@ -898,6 +911,7 @@ public class Conference
      * property
      */
     @Override
+    @SuppressWarnings("unchecked")
     public void propertyChange(PropertyChangeEvent ev)
     {
         Object source = ev.getSource();
@@ -947,13 +961,10 @@ public class Conference
     void endpointExpired(AbstractEndpoint endpoint)
     {
         final AbstractEndpoint removedEndpoint;
-        synchronized (endpoints)
+        removedEndpoint = endpoints.remove(endpoint.getID());
+        if (removedEndpoint != null)
         {
-            removedEndpoint = endpoints.remove(endpoint.getID());
-            if (removedEndpoint != null)
-            {
-                updateEndpointsCache();
-            }
+            updateEndpointsCache();
         }
 
         if (removedEndpoint != null)
@@ -982,11 +993,8 @@ public class Conference
         }
 
         final AbstractEndpoint replacedEndpoint;
-        synchronized (endpoints)
-        {
-            replacedEndpoint = endpoints.put(endpoint.getID(), endpoint);
-            updateEndpointsCache();
-        }
+        replacedEndpoint = endpoints.put(endpoint.getID(), endpoint);
+        updateEndpointsCache();
 
         endpointsChanged();
 
@@ -1283,6 +1291,7 @@ public class Conference
      * @param endpointId the ID of the endpoint to include. If set to
      * {@code null}, all endpoints will be included.
      */
+    @SuppressWarnings("unchecked")
     public JSONObject getDebugState(boolean full, String endpointId)
     {
         JSONObject debugState = new JSONObject();
@@ -1321,7 +1330,7 @@ public class Conference
     /**
      * Holds conference statistics.
      */
-    public class Statistics
+    public static class Statistics
     {
         /**
          * The total number of bytes received in RTP packets in channels in this
@@ -1361,6 +1370,7 @@ public class Conference
         /**
          * Gets a snapshot of this object's state as JSON.
          */
+        @SuppressWarnings("unchecked")
         private JSONObject getJson()
         {
             JSONObject jsonObject = new JSONObject();

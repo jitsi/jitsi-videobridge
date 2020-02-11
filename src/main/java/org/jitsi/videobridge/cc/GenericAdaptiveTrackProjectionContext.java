@@ -239,7 +239,7 @@ class GenericAdaptiveTrackProjectionContext
      * already.
      * @param sourceTimestamp
      */
-    private void maybeInitializeTimestampDelta(long sourceTimestamp)
+    private synchronized void maybeInitializeTimestampDelta(long sourceTimestamp)
     {
         if (timestampDeltaInitialized)
         {
@@ -338,6 +338,7 @@ class GenericAdaptiveTrackProjectionContext
      * @return
      */
     @Override
+    @SuppressWarnings("unchecked")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();

@@ -63,20 +63,13 @@ public class ConferenceSpeechActivity
         {
             String s = obj.toString();
 
-            if (s == null)
+            try
+            {
+                l = Long.parseLong(s);
+            }
+            catch (NumberFormatException ex)
             {
                 l = -1L;
-            }
-            else
-            {
-                try
-                {
-                    l = Long.parseLong(s);
-                }
-                catch (NumberFormatException ex)
-                {
-                    l = -1L;
-                }
             }
         }
         return l;
@@ -448,6 +441,7 @@ public class ConferenceSpeechActivity
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
+    @SuppressWarnings("unchecked")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();

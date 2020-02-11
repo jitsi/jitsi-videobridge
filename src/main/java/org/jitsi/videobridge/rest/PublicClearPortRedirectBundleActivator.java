@@ -104,11 +104,11 @@ public class PublicClearPortRedirectBundleActivator
         List<Handler> handlers = new ArrayList<>();
 
         handlers.add(
-            new RedirectHandler(
-                cfg.getInt(
-                    PublicRESTBundleActivator.JETTY_PROPERTY_PREFIX
-                        + JETTY_TLS_PORT_PNAME,
-                    443)));
+                new RedirectHandler(
+                        cfg.getInt(
+                                PublicRESTBundleActivator.JETTY_PROPERTY_PREFIX
+                                        + JETTY_TLS_PORT_PNAME,
+                                443)));
 
         return initializeHandlerList(handlers);
     }
@@ -136,7 +136,7 @@ public class PublicClearPortRedirectBundleActivator
     /**
      * Redirects requests to the https location using the specific port.
      */
-    private class RedirectHandler extends AbstractHandler
+    private static class RedirectHandler extends AbstractHandler
     {
         /**
          * The port of the target location.

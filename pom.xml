@@ -17,6 +17,7 @@
     <jitsi.utils.version>1.0-36-ge6eda64</jitsi.utils.version>
     <jicoco.version>1.1-17-g0f9a752</jicoco.version>
     <maven-shade-plugin.version>3.2.1</maven-shade-plugin.version>
+    <spotbugs.version>4.0.0-RC1</spotbugs.version>
   </properties>
 
   <profiles>
@@ -100,6 +101,12 @@
       <groupId>org.jetbrains</groupId>
       <artifactId>annotations</artifactId>
       <version>15.0</version>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/com.github.spotbugs/spotbugs-annotations -->
+    <dependency>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-annotations</artifactId>
+        <version>${spotbugs.version}</version>
     </dependency>
     <!-- org.jitsi -->
     <dependency>
@@ -465,6 +472,22 @@
         <configuration>
           <reuseForks>false</reuseForks>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <version>3.1.12.2</version>
+        <configuration>
+          <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+          <includeTests>true</includeTests>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>spotbugs</artifactId>
+            <version>${spotbugs.version}</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

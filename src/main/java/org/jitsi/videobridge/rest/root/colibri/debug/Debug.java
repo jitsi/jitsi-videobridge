@@ -43,6 +43,7 @@ import javax.ws.rs.core.*;
 public class Debug extends ColibriResource
 {
     @Inject
+    @SuppressWarnings("unused")
     private VideobridgeProvider videobridgeProvider;
 
     private Logger logger = new LoggerImpl(Debug.class.getName());

@@ -46,7 +46,7 @@ public class VideobridgeStatistics
      * The <tt>DateFormat</tt> to be utilized by <tt>VideobridgeStatistics</tt>
      * in order to represent time and date as <tt>String</tt>.
      */
-    private static final DateFormat dateFormat;
+    private final DateFormat timestampFormat;
 
     /**
      * The number of buckets to use for conference sizes.
@@ -56,22 +56,8 @@ public class VideobridgeStatistics
     /**
      * The currently configured region.
      */
-    public static final String region = OctoConfig.Config.region();
+    private static final String region = OctoConfig.Config.region();
 
-    static
-    {
-        dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-    }
-
-    /**
-     * Returns the current time stamp as a (formatted) <tt>String</tt>.
-     * @return the current time stamp as a (formatted) <tt>String</tt>.
-     */
-    public static String currentTimeMillis()
-    {
-        return dateFormat.format(new Date());
-    }
 
     public static final String EPS_NO_MSG_TRANSPORT_AFTER_DELAY =
         "num_eps_no_msg_transport_after_delay";
@@ -90,8 +76,8 @@ public class VideobridgeStatistics
      */
     public VideobridgeStatistics()
     {
-        BundleContext bundleContext
-            = StatsManagerBundleActivator.getBundleContext();
+        timestampFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        timestampFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 
         // Is it necessary to set initial values for all of these?
         unlockedSetStat(BITRATE_DOWNLOAD, 0);
@@ -109,7 +95,7 @@ public class VideobridgeStatistics
         unlockedSetStat(LARGEST_CONFERENCE, 0);
         unlockedSetStat(CONFERENCE_SIZES, "[]");
 
-        unlockedSetStat(TIMESTAMP, currentTimeMillis());
+        unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
     }
 
     /**
@@ -167,7 +153,8 @@ public class VideobridgeStatistics
      * Generates/updates the statistics represented by this instance outside a
      * synchronized block.
      */
-    protected void generate0()
+    @SuppressWarnings("unchecked")
+    private void generate0()
     {
         BundleContext bundleContext
                 = StatsManagerBundleActivator.getBundleContext();
@@ -285,7 +272,7 @@ public class VideobridgeStatistics
                 // Assume we're sending one video stream to this endpoint
                 // for each other endpoint in the conference unless there's
                 // a limit imposed by lastN.
-                Integer lastN = endpoint.getLastN();
+                int lastN = endpoint.getLastN();
                 endpointStreams
                    += lastN == -1
                        ? numConferenceEndpoints - 1
@@ -324,9 +311,6 @@ public class VideobridgeStatistics
 
         // THREADS
         int threadCount = ManagementFactory.getThreadMXBean().getThreadCount();
-
-        // TIMESTAMP
-        String timestamp = currentTimeMillis();
 
         // Now that (the new values of) the statistics have been calculated and
         // the risks of the current thread hanging have been reduced as much as
@@ -443,7 +427,7 @@ public class VideobridgeStatistics
                     octoRelay == null
                             ? 0 : (octoRelay.getSendBitrate() + 500) / 1000);
 
-            unlockedSetStat(TIMESTAMP, timestamp);
+            unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
             if (octoRelay != null)
             {
                 unlockedSetStat(RELAY_ID, octoRelay.getId());
