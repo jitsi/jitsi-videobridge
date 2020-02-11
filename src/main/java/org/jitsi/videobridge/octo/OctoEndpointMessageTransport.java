@@ -147,6 +147,12 @@ class OctoEndpointMessageTransport
         logUnexpectedMessage(jsonObject.toJSONString());
     }
 
+    @Override
+    public boolean isConnected()
+    {
+        return true;
+    }
+
     /**
      * Logs a warning about an unexpected message received through Octo.
      * @param msg the received message.

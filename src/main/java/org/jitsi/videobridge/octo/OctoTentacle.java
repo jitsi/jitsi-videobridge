@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge.octo;
 
+import kotlin.*;
+import kotlin.jvm.functions.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -114,6 +116,12 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
                 {
                     relay.sendPacket(packetInfo.getPacket(), targets,
                         conference.getGid(), packetInfo.getEndpointId());
+                }
+
+                @Override
+                public void trace(@NotNull Function0<Unit> f)
+                {
+                    f.invoke();
                 }
             });
         }

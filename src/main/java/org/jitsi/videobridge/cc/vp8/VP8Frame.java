@@ -332,22 +332,65 @@ class VP8Frame
     }
 
     /**
-     * Checks whether the specified RTP packet consistently matches all the
+     * Validates that the specified RTP packet consistently matches all the
      * parameters of this frame.
      *
-     * This can be useful for diagnosing invalid streams if this is false when
+     * This can be useful for diagnosing invalid streams if this fails when
      * {@link #matchesFrame(Vp8Packet)} is true.
      *
      * @param pkt the RTP packet to check whether its parameters match this frame.
-     * @return true if the specified RTP packet is consistent with this frame, false
-     * otherwise.
+     * @throws RuntimeException if the specified RTP packet is inconsistent with this frame
      */
-    boolean matchesFrameConsistently(@NotNull Vp8Packet pkt)
+    void validateConsistent(@NotNull Vp8Packet pkt)
     {
-            return (temporalLayer == (pkt.getTemporalLayerIndex())) &&
-                (tl0PICIDX == pkt.getTL0PICIDX()) &&
-                (pictureId == pkt.getPictureId());
-        /* TODO: also check start, end, seq nums? */
+        if (temporalLayer == pkt.getTemporalLayerIndex() &&
+            tl0PICIDX == pkt.getTL0PICIDX() &&
+            pictureId == pkt.getPictureId())
+            /* TODO: also check start, end, seq nums? */
+        {
+            return;
+        }
+
+        StringBuilder s = new StringBuilder().append("Packet ")
+            .append(pkt.getSequenceNumber())
+            .append(" is not consistent with frame with timestamp ")
+            .append(timestamp)
+            .append(":");
+
+        boolean complained = false;
+
+        if (temporalLayer != pkt.getTemporalLayerIndex())
+        {
+            s.append("packet temporal layer")
+                .append(pkt.getTemporalLayerIndex())
+                .append(" != frame temporal layer ")
+                .append(temporalLayer);
+            complained = true;
+        }
+        if (tl0PICIDX != pkt.getTL0PICIDX())
+        {
+            if (complained)
+            {
+                s.append("; ");
+            }
+            s.append("packet TL0PICIDX")
+                .append(pkt.getTL0PICIDX())
+                .append(" != frame TL0PICIDX ")
+                .append(tl0PICIDX);
+            complained = true;
+        }
+        if (pictureId != pkt.getPictureId())
+        {
+            if (complained)
+            {
+                s.append("; ");
+            }
+            s.append("packet PictureID")
+                .append(pkt.getPictureId())
+                .append(" != frame PictureID ")
+                .append(pictureId);
+        }
+        throw new RuntimeException(s.toString());
     }
 
     /**

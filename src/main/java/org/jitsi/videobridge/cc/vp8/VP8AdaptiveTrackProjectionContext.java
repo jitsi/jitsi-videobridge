@@ -278,7 +278,8 @@ public class VP8AdaptiveTrackProjectionContext
 
         if (result == null)
         {
-            /* Very old frame, more than Vp8FrameMap.FRAME_MAP_SIZE old. */
+            /* Very old frame, more than Vp8FrameMap.FRAME_MAP_SIZE old,
+               or something wrong with the stream. */
             return false;
         }
 

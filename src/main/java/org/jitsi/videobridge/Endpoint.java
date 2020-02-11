@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge;
 
+import kotlin.*;
+import kotlin.jvm.functions.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -52,6 +54,7 @@ import java.io.*;
 import java.nio.*;
 import java.time.*;
 import java.util.*;
+import java.util.function.Function;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.*;
@@ -226,6 +229,12 @@ public class Endpoint
                 protected void consume(@NotNull PacketInfo packetInfo)
                 {
                     handleIncomingPacket(packetInfo);
+                }
+
+                @Override
+                public void trace(@NotNull Function0<Unit> f)
+                {
+                    f.invoke();
                 }
             });
         bitrateController = new BitrateController(this, diagnosticContext, logger);
@@ -764,6 +773,7 @@ public class Endpoint
             TaskPools.IO_POOL.submit(() -> {
                 // FIXME: This runs forever once the socket is closed (
                 // accept never returns true).
+                logger.info("Attempting to establish SCTP socket connection");
                 int attempts = 0;
                 while (!socket.accept())
                 {
@@ -788,6 +798,22 @@ public class Endpoint
                             " accepted connection.");
                 }
             });
+            TaskPools.SCHEDULED_POOL.schedule(() -> {
+                if (!isExpired()) {
+                    AbstractEndpointMessageTransport t = getMessageTransport();
+                    if (t != null)
+                    {
+                        if (!t.isConnected())
+                        {
+                            logger.error("EndpointMessageTransport still not connected.");
+                            getConference()
+                                .getVideobridge()
+                                .getStatistics()
+                                .numEndpointsNoMessageTransportAfterDelay.incrementAndGet();
+                        }
+                    }
+                }
+            }, 30, TimeUnit.SECONDS);
         });
     }
 
@@ -1010,6 +1036,12 @@ public class Endpoint
                 }
             });
         }
+
+        @Override
+        public void trace(@NotNull Function0<Unit> f)
+        {
+            f.invoke();
+        }
     }
 
     /**
@@ -1082,6 +1114,12 @@ public class Endpoint
                     });
                 }
             });
+        }
+
+        @Override
+        public void trace(@NotNull Function0<Unit> f)
+        {
+            f.invoke();
         }
     }
 
@@ -1317,6 +1355,7 @@ public class Endpoint
         debugState.put("transceiver", transceiver.getNodeStats().toJson());
         debugState.put("acceptAudio", acceptAudio);
         debugState.put("acceptVideo", acceptVideo);
+        debugState.put("messageTransport", messageTransport.getDebugState());
 
         return debugState;
     }

@@ -66,9 +66,13 @@ public class VP8FrameMap
     @Contract("_, _ -> new")
     private FrameInsertionResult doFrameInsert(@NotNull VP8Frame frame, Vp8Packet packet)
     {
-        if (!frame.matchesFrameConsistently(packet))
+        try
         {
-            logger.warn("Packet " + packet.getSequenceNumber() + " is not consistent with frame");
+            frame.validateConsistent(packet);
+        }
+        catch (Exception e)
+        {
+            logger.warn(e);
         }
         frame.addPacket(packet);
         return new FrameInsertionResult(frame, false);
@@ -87,6 +91,26 @@ public class VP8FrameMap
         VP8Frame frame = frameHistory.get(pictureId);
         if (frame != null)
         {
+            if (!frame.matchesFrame(packet))
+            {
+                if (frame.getPictureId() != pictureId)
+                {
+                    throw new IllegalStateException("Frame map returned frame with picture ID " +
+                        frame.getPictureId() +
+                        " when asked for frame with picture ID " + pictureId);
+                }
+                logger.warn("Cannot insert packet in frame map: " +
+                    "frame with ssrc " + frame.getSsrc() +
+                    ", timestamp " + frame.getTimestamp() +
+                    ", and sequence number range " + frame.getEarliestKnownSequenceNumber() +
+                    "-" + frame.getLatestKnownSequenceNumber() +
+                    ", and packet " + packet.getSequenceNumber() +
+                    " with ssrc " + packet.getSsrc() +
+                    ", timestamp " + packet.getTimestamp() +
+                    ", and sequence number " + packet.getSequenceNumber() +
+                    " both have picture ID " + pictureId);
+                return null;
+            }
             return doFrameInsert(frame, packet);
         }
 

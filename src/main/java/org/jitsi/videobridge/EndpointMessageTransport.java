@@ -16,7 +16,6 @@
 package org.jitsi.videobridge;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.eventadmin.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
@@ -25,6 +24,7 @@ import org.json.simple.*;
 
 import java.lang.ref.*;
 import java.util.*;
+import java.util.concurrent.atomic.*;
 import java.util.function.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
@@ -62,6 +62,8 @@ class EndpointMessageTransport
     private final Supplier<Videobridge.Statistics> statisticsSupplier;
 
     private final EndpointMessageTransportEventHandler eventHandler;
+
+    private final AtomicInteger numOutgoingMessagesDropped = new AtomicInteger(0);
 
     /**
      * Initializes a new {@link EndpointMessageTransport} instance.
@@ -235,7 +237,8 @@ class EndpointMessageTransport
         Object dst = getActiveTransportChannel();
         if (dst == null)
         {
-            logger.info("No available transport channel, can't send a message");
+            logger.debug("No available transport channel, can't send a message");
+            numOutgoingMessagesDropped.incrementAndGet();
         }
         else
         {
@@ -287,6 +290,12 @@ class EndpointMessageTransport
         }
 
         return dst;
+    }
+
+    @Override
+    public boolean isConnected()
+    {
+        return getActiveTransportChannel() != null;
     }
 
     /**
@@ -410,6 +419,15 @@ class EndpointMessageTransport
         else {
             throw new Error("Overwriting a previous data channel!");
         }
+    }
 
+    @SuppressWarnings("unchecked")
+    @Override
+    public JSONObject getDebugState()
+    {
+        JSONObject debugState = super.getDebugState();
+        debugState.put("numOutgoingMessagesDropped", numOutgoingMessagesDropped.get());
+
+        return debugState;
     }
 }

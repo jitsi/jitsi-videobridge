@@ -135,6 +135,9 @@ public class Debug extends ColibriResource
                 PacketQueue.setEnableStatisticsDefault(enabled);
                 break;
             }
+            case NODE_TRACING: {
+                Node.Companion.enableNodeTracing(enabled);
+            }
             case TRANSIT_STATS: {
                 //TODO
                 break;

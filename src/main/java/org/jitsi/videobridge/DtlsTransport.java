@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import kotlin.*;
+import kotlin.jvm.functions.*;
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.ice4j.socket.*;
@@ -307,6 +308,12 @@ public class DtlsTransport extends IceTransport
             {
                 endpoint.dtlsAppPacketReceived(packetInfo);
             }
+
+            @Override
+            public void trace(@NotNull Function0<Unit> f)
+            {
+                f.invoke();
+            }
         };
         dtlsPipelineBuilder.node(sctpHandler);
         dtlsPath.setPath(dtlsPipelineBuilder.build());
@@ -327,6 +334,12 @@ public class DtlsTransport extends IceTransport
             protected void consume(@NotNull PacketInfo packetInfo)
             {
                 endpoint.srtpPacketReceived(packetInfo);
+            }
+
+            @Override
+            public void trace(@NotNull Function0<Unit> f)
+            {
+                f.invoke();
             }
         };
         srtpPipelineBuilder.node(srtpHandler);
@@ -604,6 +617,12 @@ public class DtlsTransport extends IceTransport
                     throw new RuntimeException(e);
                 }
             }
+        }
+
+        @Override
+        public void trace(@NotNull Function0<Unit> f)
+        {
+            f.invoke();
         }
     }
 }
