@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.stats
 
+import java.util.Arrays
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.LongAdder
 import org.jitsi.nlj.PacketInfo
@@ -27,6 +28,10 @@ open class DelayStats {
         get() = totalDelayMs.sum() / totalCount.sum().toDouble()
     val maxDelayMs = AtomicLong(0)
 
+    /* TODO: make thresholds configurable */
+    val thresholds = longArrayOf(2, 5, 20, 50, 200, 500, 1000)
+    val thresholdCounts = Array(thresholds.size + 1) { LongAdder() }
+
     fun addDelay(delayMs: Long) {
         if (delayMs >= 0) {
             totalDelayMs.add(delayMs)
@@ -34,6 +39,10 @@ open class DelayStats {
                 maxDelayMs.set(delayMs)
             }
             totalCount.increment()
+
+            val searchResult = Arrays.binarySearch(thresholds, delayMs)
+            val bucket = if (searchResult < 0) { - searchResult - 1 } else { searchResult }
+            thresholdCounts[bucket].increment()
         }
     }
 }
