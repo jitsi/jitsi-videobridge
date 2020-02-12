@@ -351,12 +351,12 @@ class VP8Frame
             return;
         }
 
-        StringBuilder s = new StringBuilder().append("Packet ")
+        StringBuilder s = new StringBuilder().append("Packet")
             .append(" ssrc ").append(pkt.getSsrc())
             .append(", seq ").append(pkt.getSequenceNumber())
             .append(", picture id ").append(pkt.getPictureId())
             .append(", timestamp ").append(pkt.getTimestamp())
-            .append(" is not consistent with frame ")
+            .append(" is not consistent with frame")
             .append(" ssrc ").append(ssrc)
             .append(", seq ").append(earliestKnownSequenceNumber).append("-").append(latestKnownSequenceNumber)
             .append(", picture id ").append(pictureId)
