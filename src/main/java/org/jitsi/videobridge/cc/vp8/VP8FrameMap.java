@@ -19,6 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.codec.vp8.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.nlj.util.*;
+import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging2.*;
 
 import java.time.*;
@@ -75,9 +76,47 @@ public class VP8FrameMap
             logger.warn(e);
         }
         frame.addPacket(packet);
-        return new FrameInsertionResult(frame, false);
+        return new FrameInsertionResult(frame, false, false);
     }
 
+    /** Check whether this is a large jump from previous state, so the map should be reset. */
+    private boolean isLargeJump(@NotNull Vp8Packet packet)
+    {
+        VP8Frame latestFrame = frameHistory.getLatestFrame();
+        if (latestFrame == null)
+        {
+            return false;
+        }
+
+        int picDelta = Vp8Utils.getExtendedPictureIdDelta(packet.getPictureId(), latestFrame.getPictureId());
+        if (picDelta > FRAME_MAP_SIZE)
+        {
+            return true;
+        }
+
+        long tsDelta = RtpUtils.getTimestampDiff(packet.getTimestamp(), latestFrame.getTimestamp());
+
+        if (picDelta < 0)
+        {
+            /* if picDelta is negative but timestamp or sequence delta is positive, we've cycled. */
+            if (tsDelta > 0)
+            {
+                return true;
+            }
+            if (RtpUtils.getSequenceNumberDelta(packet.getSequenceNumber(), latestFrame.getLatestKnownSequenceNumber()) > 0)
+            {
+                return true;
+            }
+        }
+
+        /* If tsDelta is more than twice the frame map size at 1 fps, we've cycled. */
+        if (tsDelta > FRAME_MAP_SIZE * 90000 * 2)
+        {
+            return true;
+        }
+
+        return false;
+    }
 
     /** Insert a packet into the frame map.  Return a FrameInsertionResult
      *  describing what happened.
@@ -87,6 +126,20 @@ public class VP8FrameMap
     public synchronized FrameInsertionResult insertPacket(@NotNull Vp8Packet packet)
     {
         int pictureId = packet.getPictureId();
+
+        if (isLargeJump(packet))
+        {
+            frameHistory.indexTracker.resetAt(pictureId);
+
+            VP8Frame frame = new VP8Frame(packet);
+
+            if (!frameHistory.insert(pictureId, frame))
+            {
+                return null;
+            }
+
+            return new FrameInsertionResult(frame, true, true);
+        }
 
         VP8Frame frame = frameHistory.get(pictureId);
         if (frame != null)
@@ -121,7 +174,7 @@ public class VP8FrameMap
             return null;
         }
 
-        return new FrameInsertionResult(frame, true);
+        return new FrameInsertionResult(frame, true, false);
     }
 
     @Nullable
@@ -171,18 +224,21 @@ public class VP8FrameMap
      */
     public static class FrameInsertionResult
     {
-
         /** The frame corresponding to the packet that was inserted. */
         private VP8Frame frame;
 
         /** Whether inserting the frame created a new frame. */
         private boolean newFrame;
 
+        /** Whether inserting the frame caused a reset */
+        private boolean reset;
+
         /** Construct a FrameInsertionResult. */
-        private FrameInsertionResult(VP8Frame frame, boolean newFrame)
+        private FrameInsertionResult(VP8Frame frame, boolean newFrame, boolean reset)
         {
             this.frame = frame;
             this.newFrame = newFrame;
+            this.reset = reset;
         }
 
         /** Get the frame corresponding to the packet that was inserted. */
@@ -195,6 +251,12 @@ public class VP8FrameMap
         public boolean isNewFrame()
         {
             return newFrame;
+        }
+
+        /** Get whether inserting the frame caused a reset. */
+        public boolean isReset()
+        {
+            return reset;
         }
     }
 
@@ -239,6 +301,12 @@ public class VP8FrameMap
             return c.getItem();
         }
 
+        /** Get the latest frame in the tracker. */
+        private VP8Frame getLatestFrame()
+        {
+            return getIndex(getLastIndex());
+        }
+
         public boolean insert(int pictureId, VP8Frame frame)
         {
             int index = indexTracker.update(pictureId);
@@ -263,6 +331,7 @@ public class VP8FrameMap
             numCached--;
         }
 
+        @Nullable
         public VP8Frame findBefore(VP8Frame frame, Predicate<VP8Frame> pred)
         {
             int lastIndex = getLastIndex();
@@ -279,6 +348,7 @@ public class VP8FrameMap
             return doFind(pred, searchStartIndex, searchEndIndex, -1);
         }
 
+        @Nullable
         public VP8Frame findAfter(VP8Frame frame, Predicate<VP8Frame> pred)
         {
             int lastIndex = getLastIndex();
@@ -294,11 +364,12 @@ public class VP8FrameMap
                 return null;
             }
 
-            int searchStartIndex = max(index + 1, max(lastIndex - getSize(), firstIndex));
+            int searchStartIndex = max(index + 1, max(lastIndex - getSize() + 1, firstIndex));
 
             return doFind(pred, searchStartIndex, lastIndex + 1, 1);
         }
 
+        @Nullable
         private VP8Frame doFind(Predicate<VP8Frame> pred, int startIndex, int endIndex, int increment)
         {
             for (int index = startIndex; index != endIndex; index += increment)
@@ -366,6 +437,20 @@ public class VP8FrameMap
             public int interpret(int seq)
             {
                 return getIndex(seq, false);
+            }
+
+            /** Force this sequence to be interpreted as the new highest, regardless
+             * of its rollover state.
+             */
+            public void resetAt(int seq)
+            {
+                int delta = Vp8Utils.getExtendedPictureIdDelta(seq, highestSeqNumReceived);
+                if (delta < 0)
+                {
+                    roc++;
+                    highestSeqNumReceived = seq;
+                }
+                getIndex(seq, true);
             }
         }
     }

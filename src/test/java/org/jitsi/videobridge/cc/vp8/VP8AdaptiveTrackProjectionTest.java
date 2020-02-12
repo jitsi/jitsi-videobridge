@@ -706,7 +706,7 @@ public class VP8AdaptiveTrackProjectionTest
         Vp8PacketGenerator generator = new Vp8PacketGenerator(3);
 
         DiagnosticContext diagnosticContext = new DiagnosticContext();
-        diagnosticContext.put("test", Thread.currentThread().getStackTrace()[2].getMethodName());
+        diagnosticContext.put("test", "temporalLayerSwitchingTest");
 
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
@@ -742,7 +742,8 @@ public class VP8AdaptiveTrackProjectionTest
                     decodableIndex = packet.getTemporalLayerIndex();
                 }
             }
-            else {
+            else
+            {
                 if (decodableIndex > packet.getTemporalLayerIndex() - 1)
                 {
                     decodableIndex = packet.getTemporalLayerIndex() - 1;
@@ -781,6 +782,181 @@ public class VP8AdaptiveTrackProjectionTest
             }
         }
     }
+
+    private void runLargeDropoutTest(Vp8PacketGenerator generator,
+        int targetIndex)
+        throws RewriteException
+    {
+        DiagnosticContext diagnosticContext = new DiagnosticContext();
+        diagnosticContext.put("test", Thread.currentThread().getStackTrace()[2].getMethodName());
+
+        RtpState initialState =
+            new RtpState(1, 10000, 1000000);
+
+        VP8AdaptiveTrackProjectionContext context =
+            new VP8AdaptiveTrackProjectionContext(diagnosticContext,
+                payloadType,
+                initialState, logger);
+
+        int expectedSeq = 10001;
+        long expectedTs = 1003000;
+        int expectedPicId = 0;
+        int expectedTl0PicIdx = 0;
+
+        for (int i = 0; i < 1000; i++)
+        {
+            PacketInfo packetInfo = generator.nextPacket();
+            Vp8Packet packet = packetInfo.packetAs();
+
+            boolean accepted =
+                context.accept(packetInfo, packet.getTemporalLayerIndex(), targetIndex);
+
+            if (packet.isStartOfFrame() && packet.getTemporalLayerIndex() == 0)
+            {
+                expectedTl0PicIdx =
+                    Vp8Utils.applyTl0PicIdxDelta(expectedTl0PicIdx, 1);
+            }
+
+            if (packet.getTemporalLayerIndex() <= targetIndex)
+            {
+                assertTrue(accepted);
+
+                context.rewriteRtp(packetInfo);
+
+                assertEquals(expectedSeq, packet.getSequenceNumber());
+                assertEquals(expectedTs, packet.getTimestamp());
+                assertEquals(expectedPicId, packet.getPictureId());
+                assertEquals(expectedTl0PicIdx, packet.getTL0PICIDX());
+
+                expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1);
+                if (packet.isEndOfFrame())
+                {
+                    expectedPicId =
+                        Vp8Utils.applyExtendedPictureIdDelta(expectedPicId, 1);
+                }
+            }
+            else
+            {
+                assertFalse(accepted);
+            }
+            if (packet.isEndOfFrame())
+            {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
+            }
+        }
+
+        for (int gap = 64; gap < 65536; gap *= 2)
+        {
+            for (int i = 0; i < gap; i++)
+            {
+                generator.nextPacket();
+            }
+
+            PacketInfo packetInfo;
+            Vp8Packet packet;
+
+            do
+            {
+                packetInfo = generator.nextPacket();
+                packet = packetInfo.packetAs();
+            }
+            while (packet.getTemporalLayerIndex() > targetIndex);
+
+            assertTrue(context.accept(packetInfo, packet.getTemporalLayerIndex(), targetIndex));
+            context.rewriteRtp(packetInfo);
+
+            /* Allow any values after a gap. */
+            expectedSeq =
+                RtpUtils.applySequenceNumberDelta(packet.getSequenceNumber(), 1);
+            expectedTs = packet.getTimestamp();
+            expectedPicId = packet.getPictureId();
+            expectedTl0PicIdx = packet.getTL0PICIDX();
+
+            if (packet.isEndOfFrame())
+            {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
+                expectedPicId = Vp8Utils
+                    .applyExtendedPictureIdDelta(expectedPicId, 1);
+            }
+
+            for (int i = 0; i < 1000; i++)
+            {
+                packetInfo = generator.nextPacket();
+                packet = packetInfo.packetAs();
+
+                boolean accepted = context
+                    .accept(packetInfo, packet.getTemporalLayerIndex(), targetIndex);
+
+                if (packet.isStartOfFrame()
+                    && packet.getTemporalLayerIndex() == 0)
+                {
+                    expectedTl0PicIdx =
+                        Vp8Utils.applyTl0PicIdxDelta(expectedTl0PicIdx, 1);
+                }
+
+                if (packet.getTemporalLayerIndex() <= targetIndex)
+                {
+                    assertTrue(accepted);
+
+                    context.rewriteRtp(packetInfo);
+
+                    assertEquals(expectedSeq, packet.getSequenceNumber());
+                    assertEquals(expectedTs, packet.getTimestamp());
+                    assertEquals(expectedPicId, packet.getPictureId());
+                    assertEquals(expectedTl0PicIdx, packet.getTL0PICIDX());
+
+                    expectedSeq =
+                        RtpUtils.applySequenceNumberDelta(expectedSeq, 1);
+                    if (packet.isEndOfFrame())
+                    {
+                        expectedPicId = Vp8Utils
+                            .applyExtendedPictureIdDelta(expectedPicId, 1);
+                    }
+                }
+                else
+                {
+                    assertFalse(accepted);
+                }
+                if (packet.isEndOfFrame())
+                {
+                    expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void largeDropoutTest()
+        throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(1);
+        runLargeDropoutTest(generator, 2);
+    }
+
+    @Test
+    public void filteredLargeDropoutTest()
+        throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(1);
+        runLargeDropoutTest(generator, 0);
+    }
+
+    @Test
+    public void largeFrameDropoutTest()
+        throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(3);
+        runLargeDropoutTest(generator, 2);
+    }
+
+    @Test
+    public void filteredLargeFrameDropoutTest()
+        throws RewriteException
+    {
+        Vp8PacketGenerator generator = new Vp8PacketGenerator(3);
+        runLargeDropoutTest(generator, 0);
+    }
+
 
     private static class Vp8PacketGenerator {
         private static final byte[] vp8PacketTemplate =

@@ -317,7 +317,7 @@ public class VP8AdaptiveTrackProjectionContext
                 VP8FrameProjection projection;
                 try
                 {
-                    projection = createProjection(frame, vp8Packet,
+                    projection = createProjection(frame, vp8Packet, result.isReset(),
                         receivedMs);
                 }
                 catch (Exception e)
@@ -386,11 +386,16 @@ public class VP8AdaptiveTrackProjectionContext
      * Create a projection for this frame.
      */
     @NotNull
-    private VP8FrameProjection createProjection(@NotNull VP8Frame frame, @NotNull Vp8Packet initialPacket, long receivedMs)
+    private VP8FrameProjection createProjection(@NotNull VP8Frame frame, @NotNull Vp8Packet initialPacket, boolean isReset, long receivedMs)
     {
         if (frameIsNewSsrc(frame))
         {
             return createLayerSwitchProjection(frame, initialPacket, receivedMs);
+        }
+
+        else if (isReset)
+        {
+            return createResetProjection(frame, initialPacket, receivedMs);
         }
 
         return createInLayerProjection(frame, initialPacket, receivedMs);
@@ -461,6 +466,39 @@ public class VP8AdaptiveTrackProjectionContext
     }
 
     /**
+     * Create a projection for this frame.  It follows a large gap in the stream's projected frames.
+     */
+    @NotNull
+    private VP8FrameProjection createResetProjection(@NotNull VP8Frame frame,
+        @NotNull Vp8Packet initialPacket, long receivedMs)
+    {
+        VP8Frame lastFrame = lastVP8FrameProjection.getVP8Frame();
+
+        /* Apply the latest projected frame's projections out, linearly. */
+        int seqDelta = RtpUtils.getSequenceNumberDelta(lastVP8FrameProjection.getLatestProjectedSequence(),
+            lastFrame.getLatestKnownSequenceNumber());
+        long tsDelta = RtpUtils.getTimestampDiff(lastVP8FrameProjection.getTimestamp(),
+            lastFrame.getTimestamp());
+        int picIdDelta = Vp8Utils.getExtendedPictureIdDelta(lastVP8FrameProjection.getPictureId(),
+            lastFrame.getPictureId());
+        int tl0PicIdxDelta = Vp8Utils.getTl0PicIdxDelta(lastVP8FrameProjection.getTl0PICIDX(),
+            lastFrame.getTl0PICIDX());
+
+        long projectedTs = RtpUtils.applyTimestampDelta(frame.getTimestamp(), tsDelta);
+        int projectedPicId = Vp8Utils.applyExtendedPictureIdDelta(frame.getPictureId(), picIdDelta);
+        int projectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(frame.getTl0PICIDX(), tl0PicIdxDelta);
+
+        VP8FrameProjection projection =
+            new VP8FrameProjection(diagnosticContext,
+                frame, lastVP8FrameProjection.getSSRC(), projectedTs,
+                seqDelta,
+                projectedPicId, projectedTl0PicIdx, receivedMs
+            );
+
+        return projection;
+    }
+
+    /**
      * Create a projection for this frame. It is being sent subsequent to other projected frames
      * of this layer.
      */
@@ -476,7 +514,8 @@ public class VP8AdaptiveTrackProjectionContext
 
         VP8Frame f1 = refFrame, f2;
         int refSeq;
-        if (RtpUtils.isOlderSequenceNumberThan(refFrame.getLatestKnownSequenceNumber(), frame.getEarliestKnownSequenceNumber()))
+        int picIdDelta = Vp8Utils.getExtendedPictureIdDelta(refFrame.getPictureId(), frame.getPictureId());
+        if (picIdDelta < 0)
         {
             do
             {
@@ -500,7 +539,7 @@ public class VP8AdaptiveTrackProjectionContext
                 f2 = prevFrame(f1);
                 if (f2 == null)
                 {
-                    throw new IllegalStateException("No next frame found before frame with picId " + f1.getPictureId() +
+                    throw new IllegalStateException("No previous frame found before frame with picId " + f1.getPictureId() +
                         ", even though refFrame " + refFrame.getPictureId() + " is after frame " + frame.getPictureId() + "!");
                 }
                 seqGap += -seqGap(f2, f1);
