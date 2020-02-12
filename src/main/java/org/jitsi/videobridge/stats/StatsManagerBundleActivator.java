@@ -126,7 +126,13 @@ public class StatsManagerBundleActivator
         //
         // XXX Consequently, the default Statistics instance is to be added to
         // StatsManager before adding any StatsTransport instances.
-        statsMgr.addStatistics(new VideobridgeStatistics(), Config.statsInterval().toMillis());
+
+        JvmStats jvmStats = new JvmStats();
+        VideobridgeStatistics videobridgeStatistics = new VideobridgeStatistics();
+        jvmStats.addCpuUsageConsumer(videobridgeStatistics::setCpuUsage);
+
+        statsMgr.addStatistics(videobridgeStatistics, Config.statsInterval().toMillis());
+        statsMgr.addStatistics(jvmStats, 1000);
 
         // Add StatsTransports to StatsManager.
         Config.transportConfigs().forEach(transportConfig -> {

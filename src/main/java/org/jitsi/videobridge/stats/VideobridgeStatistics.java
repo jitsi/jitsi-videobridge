@@ -63,6 +63,13 @@ public class VideobridgeStatistics
         "num_eps_no_msg_transport_after_delay";
 
     /**
+     * We consider 80% to be the max cpu usage, so we normalize by that amount.
+     */
+    private static final float MAX_CPU_USAGE = 80f;
+
+    private float cpuUsage;
+
+    /**
      * The indicator which determines whether {@link #generate()} is executing
      * on this <tt>VideobridgeStatistics</tt>. If <tt>true</tt>, invocations of
      * <tt>generate()</tt> will do nothing. Introduced in order to mitigate an
@@ -382,6 +389,7 @@ public class VideobridgeStatistics
             unlockedSetStat(PARTICIPANTS, endpoints);
             unlockedSetStat(VIDEO_CHANNELS, videoChannels);
             unlockedSetStat(VIDEO_STREAMS, videoStreams);
+            unlockedSetStat(STRESS_LEVEL, getStressLevel());
             unlockedSetStat(LARGEST_CONFERENCE, largestConferenceSize);
             unlockedSetStat(CONFERENCE_SIZES, conferenceSizesJson);
             unlockedSetStat(THREADS, threadCount);
@@ -441,6 +449,19 @@ public class VideobridgeStatistics
         finally
         {
             lock.unlock();
+        }
+    }
+
+    private float getStressLevel()
+    {
+        return cpuUsage / MAX_CPU_USAGE;
+    }
+
+    public void setCpuUsage(Float cpuUsage)
+    {
+        if (cpuUsage != null)
+        {
+            this.cpuUsage = cpuUsage;
         }
     }
 }
