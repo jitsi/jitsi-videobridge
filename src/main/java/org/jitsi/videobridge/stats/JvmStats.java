@@ -19,6 +19,7 @@ import com.sun.management.OperatingSystemMXBean;
 
 import java.lang.management.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.function.*;
 
 public class JvmStats
@@ -26,7 +27,8 @@ public class JvmStats
 {
     public static final String CPU_USAGE = "cpu_usage";
 
-    private final Collection<Consumer<Float>> cpuUsageConsumers = new ArrayList<>();
+    private final Collection<Consumer<Float>> cpuUsageConsumers
+        = new CopyOnWriteArrayList<>();
 
     private long prevProcessCpuTime;
 
