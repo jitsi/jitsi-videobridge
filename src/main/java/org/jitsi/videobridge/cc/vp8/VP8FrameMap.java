@@ -442,7 +442,7 @@ public class VP8FrameMap
             /** Force this sequence to be interpreted as the new highest, regardless
              * of its rollover state.
              */
-            public int resetAt(int seq)
+            public void resetAt(int seq)
             {
                 int delta = Vp8Utils.getExtendedPictureIdDelta(seq, highestSeqNumReceived);
                 if (delta < 0)
@@ -450,7 +450,7 @@ public class VP8FrameMap
                     roc++;
                     highestSeqNumReceived = seq;
                 }
-                return getIndex(seq, true);
+                getIndex(seq, true);
             }
         }
     }
