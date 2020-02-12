@@ -311,6 +311,7 @@ class DtlsUtils {
     class DtlsException(msg: String) : Exception(msg)
 }
 
+@Suppress("NOTHING_TO_INLINE") // Avoid adding to the trace in the log file
 inline fun Logger.notifyAlertRaised(alertLevel: Short, alertDescription: Short, message: String?, cause: Throwable?) {
     when (alertDescription) {
         AlertDescription.close_notify -> cdebug { "close_notify raised, connection closing" }
@@ -327,6 +328,7 @@ inline fun Logger.notifyAlertRaised(alertLevel: Short, alertDescription: Short, 
     }
 }
 
+@Suppress("NOTHING_TO_INLINE") // Avoid adding to the trace in the log file
 inline fun Logger.notifyAlertReceived(alertLevel: Short, alertDescription: Short) {
     when (alertDescription) {
         AlertDescription.close_notify -> cinfo { "close_notify received, connection closing" }

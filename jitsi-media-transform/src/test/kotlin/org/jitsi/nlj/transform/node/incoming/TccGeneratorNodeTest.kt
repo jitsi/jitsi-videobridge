@@ -3,6 +3,7 @@ package org.jitsi.nlj.transform.node.incoming
 import io.kotlintest.IsolationMode
 import io.kotlintest.Spec
 import io.kotlintest.matchers.numerics.shouldBeGreaterThan
+import io.kotlintest.matchers.numerics.shouldBeLessThan
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
@@ -17,6 +18,7 @@ import org.jitsi.nlj.util.ms
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
+import java.util.Random
 
 class TccGeneratorNodeTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -75,6 +77,30 @@ class TccGeneratorNodeTest : ShouldSpec() {
             "a TCC packet" {
                 should("be sent after 20ms") {
                     tccPackets.size shouldBeGreaterThan 0
+                }
+            }
+        }
+        "when random packets are added" {
+            val random = Random(1234)
+            for (i in 1..10000) {
+                tccGenerator.processPacket(PacketInfo(createPacket(random.nextInt(0xffff))))
+                clock.elapse(10.ms())
+
+                tccPackets.lastOrNull()?.let {
+                    it.length shouldBeLessThan 1500
+                }
+            }
+        }
+        "when a few packets covering the seq num space are added" {
+            for (i in listOf(0, 10000, 20000, 30000, 40000, 50000, 60000)) {
+                tccGenerator.processPacket(PacketInfo(createPacket(i)))
+            }
+            for (i in 2..5000) {
+                tccGenerator.processPacket(PacketInfo(createPacket(i and 0xffff)))
+                clock.elapse(10.ms())
+
+                tccPackets.lastOrNull()?.let {
+                    it.length shouldBeLessThan 1500
                 }
             }
         }
