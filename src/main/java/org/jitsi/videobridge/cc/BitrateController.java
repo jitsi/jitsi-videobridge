@@ -32,6 +32,7 @@ import java.lang.*;
 import java.lang.SuppressWarnings;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 import java.util.concurrent.atomic.*;
 
 import static org.jitsi.videobridge.cc.config.BitrateControllerConfig.*;
@@ -428,13 +429,23 @@ public class BitrateController
         List<Long> activeSsrcs = new ArrayList<>();
         long totalTargetBps = 0, totalIdealBps = 0;
         long nowMs = System.currentTimeMillis();
-        for (AdaptiveTrackProjection adaptiveTrackProjection
-                : adaptiveTrackProjections)
+        for (MediaStreamTrackDesc sourceTrack : destinationEndpoint
+            .getConference().getEndpoints().stream()
+            .map(AbstractEndpoint::getMediaStreamTracks)
+            .flatMap(Arrays::stream)
+            .filter(t -> t.getRTPEncodings().length > 0)
+            .collect(Collectors.toList()))
         {
-            MediaStreamTrackDesc sourceTrack
-                    = adaptiveTrackProjection.getSource();
-            if (sourceTrack == null)
+
+            long primarySsrc = sourceTrack.getRTPEncodings()[0].getPrimarySSRC();
+            AdaptiveTrackProjection adaptiveTrackProjection
+                = adaptiveTrackProjectionMap.getOrDefault(primarySsrc, null);
+
+            if (adaptiveTrackProjection == null)
             {
+                logger.debug(destinationEndpoint.getID() + " is missing " +
+                    "an adaptive track projection for endpoint=" +
+                    sourceTrack.getOwner() + ", ssrc=" + primarySsrc);
                 continue;
             }
 
