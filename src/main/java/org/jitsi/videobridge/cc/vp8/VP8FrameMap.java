@@ -79,7 +79,7 @@ public class VP8FrameMap
         return new FrameInsertionResult(frame, false, false);
     }
 
-    /** Check whether this is a large jump from previous state; if so, reset the map. */
+    /** Check whether this is a large jump from previous state, so the map should be reset. */
     private boolean isLargeJump(@NotNull Vp8Packet packet)
     {
         VP8Frame latestFrame = frameHistory.getLatestFrame();
@@ -253,7 +253,7 @@ public class VP8FrameMap
             return newFrame;
         }
 
-        /** Get whether inserting the frame created a new frame. */
+        /** Get whether inserting the frame caused a reset. */
         public boolean isReset()
         {
             return reset;
