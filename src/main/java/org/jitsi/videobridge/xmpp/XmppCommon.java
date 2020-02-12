@@ -245,7 +245,7 @@ public class XmppCommon
             long delay = System.currentTimeMillis() - start;
             if (delay > 100)
             {
-                logger.warn("Took " + delay + "ms to handle IQ: " + request.toXML());
+                logger.warn("Took " + delay + " ms to handle IQ: " + request.toXML());
             }
             delayStats.addDelay(delay);
         }
