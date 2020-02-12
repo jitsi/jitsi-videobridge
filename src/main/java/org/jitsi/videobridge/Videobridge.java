@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import kotlin.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
+import org.jetbrains.annotations.*;
 import org.jitsi.config.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.meet.*;
@@ -31,11 +32,11 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.Version;
 import org.jitsi.videobridge.health.*;
+import org.jitsi.videobridge.ice.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
-import org.jitsi.videobridge.transport.*;
 import org.jitsi.videobridge.version.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.*;
@@ -54,7 +55,6 @@ import org.osgi.framework.*;
 
 import java.util.*;
 import java.util.concurrent.atomic.*;
-import java.util.function.*;
 import java.util.regex.*;
 
 /**
@@ -253,7 +253,7 @@ public class Videobridge
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public Conference createConference(Jid focus, Localpart name, String gid)
+    public @NotNull Conference createConference(Jid focus, Localpart name, String gid)
     {
         return this.createConference(focus, name, /* enableLogging */ true, gid);
     }
@@ -267,7 +267,7 @@ public class Videobridge
      * @param gid
      * @return
      */
-    private Conference doCreateConference(Jid focus, Localpart name, boolean enableLogging, String gid)
+    private @NotNull Conference doCreateConference(Jid focus, Localpart name, boolean enableLogging, String gid)
     {
         Conference conference = null;
         do
@@ -315,7 +315,7 @@ public class Videobridge
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public Conference createConference(
+    public @NotNull Conference createConference(
             Jid focus, Localpart name, boolean enableLogging, String gid)
     {
         final Conference conference = doCreateConference(focus, name, enableLogging, gid);
@@ -861,7 +861,7 @@ public class Videobridge
 
         ConfigurationService cfg = getConfigurationService();
 
-        videobridgeExpireThread.start(bundleContext);
+        videobridgeExpireThread.start();
         if (health != null)
         {
             health.stop();
@@ -1002,27 +1002,6 @@ public class Videobridge
                 }
             }
 
-            // These properties are moved to ice4j. This is to make sure that we
-            // still support the old names.
-            String oldPrefix = "org.jitsi.videobridge";
-            String newPrefix = "org.ice4j.ice.harvest";
-            for (String propertyName : new String[]{
-                HarvesterConfiguration.NAT_HARVESTER_LOCAL_ADDRESS,
-                HarvesterConfiguration.NAT_HARVESTER_PUBLIC_ADDRESS,
-                HarvesterConfiguration.DISABLE_AWS_HARVESTER,
-                HarvesterConfiguration.FORCE_AWS_HARVESTER,
-                HarvesterConfiguration.STUN_MAPPING_HARVESTER_ADDRESSES})
-            {
-                String propertyValue = cfg.getString(propertyName);
-
-                if (propertyValue != null)
-                {
-                    String newPropertyName
-                        = newPrefix
-                                + propertyName.substring(oldPrefix.length());
-                    System.setProperty(newPropertyName, propertyValue);
-                }
-            }
             // Reload for all the new system properties to be seen
             JitsiConfig.Companion.reload();
         }
@@ -1103,28 +1082,6 @@ public class Videobridge
                     System.clearProperty(propertyName);
                 }
             }
-
-            // These properties are moved to ice4j. This is to make sure that we
-            // still support the old names.
-            String oldPrefix = "org.jitsi.videobridge";
-            String newPrefix = "org.ice4j.ice.harvest";
-            for (String propertyName : new String[]{
-                HarvesterConfiguration.NAT_HARVESTER_LOCAL_ADDRESS,
-                HarvesterConfiguration.NAT_HARVESTER_PUBLIC_ADDRESS,
-                HarvesterConfiguration.DISABLE_AWS_HARVESTER,
-                HarvesterConfiguration.FORCE_AWS_HARVESTER,
-                HarvesterConfiguration.STUN_MAPPING_HARVESTER_ADDRESSES})
-            {
-                String propertyValue = cfg.getString(propertyName);
-
-                if (propertyValue != null)
-                {
-                    String newPropertyName
-                        = newPrefix
-                        + propertyName.substring(oldPrefix.length());
-                    System.clearProperty(newPropertyName);
-                }
-            }
         }
     }
 
@@ -1141,7 +1098,8 @@ public class Videobridge
      * to include. If not specified, all of the conference's endpoints will be
      * included.
      */
-    public OrderedJsonObject getDebugState(String conferenceId, String endpointId)
+    @SuppressWarnings("unchecked")
+    public OrderedJsonObject getDebugState(String conferenceId, String endpointId, boolean full)
     {
         OrderedJsonObject debugState = new OrderedJsonObject();
         debugState.put("shutdownInProgress", shutdownInProgress);
@@ -1168,7 +1126,7 @@ public class Videobridge
             {
                 conferences.put(
                         conference.getID(),
-                        conference.getDebugState(false, null));
+                        conference.getDebugState(full, null));
             }
         }
         else
@@ -1183,7 +1141,7 @@ public class Videobridge
             conferences.put(
                     conferenceId,
                     conference == null
-                            ? "null" : conference.getDebugState(true, endpointId));
+                            ? "null" : conference.getDebugState(full, endpointId));
         }
 
         return debugState;
@@ -1194,6 +1152,7 @@ public class Videobridge
      * uses.
      * TODO: is there a better place for this?
      */
+    @SuppressWarnings("unchecked")
     public JSONObject getQueueStats()
     {
         JSONObject queueStats = new JSONObject();
@@ -1216,6 +1175,7 @@ public class Videobridge
         return queueStats;
     }
 
+    @SuppressWarnings("unchecked")
     private JSONObject getJsonFromQueueErrorHandler(
             CountingErrorHandler countingErrorHandler)
     {
@@ -1366,5 +1326,12 @@ public class Videobridge
          * The total number of endpoints created.
          */
         public AtomicInteger totalEndpoints = new AtomicInteger();
+
+        /**
+         * The number of endpoints which had not established an endpoint
+         * message transport even after some delay.
+         */
+        public AtomicInteger numEndpointsNoMessageTransportAfterDelay =
+            new AtomicInteger();
     }
 }

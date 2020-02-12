@@ -27,7 +27,8 @@ public enum DebugFeatures
     POOL_STATS("pool-stats"),
     QUEUE_STATS("queue-stats"),
     TRANSIT_STATS("transit-stats"),
-    TASK_POOL_STATS("task-pool-stats");
+    TASK_POOL_STATS("task-pool-stats"),
+    NODE_TRACING("node-tracing");
 
     private final String value;
 

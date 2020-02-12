@@ -4,6 +4,7 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.codec.vp8.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.rtp.util.*;
@@ -71,7 +72,7 @@ public class VP8AdaptiveTrackProjectionTest
         int expectedPicId = 0;
         int expectedTl0PicIdx = 0;
 
-        for (int i = 0; i < 10000; i++)
+        for (int i = 0; i < 100000; i++)
         {
             PacketInfo packetInfo = generator.nextPacket();
             Vp8Packet packet = packetInfo.packetAs();
@@ -115,12 +116,14 @@ public class VP8AdaptiveTrackProjectionTest
     {
         final Vp8Packet packet;
         final int origSeq;
+        final int extOrigSeq;
         final boolean nearOldest;
 
-        ProjectedPacket(Vp8Packet p, int s, boolean o)
+        ProjectedPacket(Vp8Packet p, int s, int e, boolean o)
         {
             packet = p;
             origSeq = s;
+            extOrigSeq = e;
             nearOldest = o;
         }
     }
@@ -157,8 +160,10 @@ public class VP8AdaptiveTrackProjectionTest
         int latestSeq = buffer.get(0).<Vp8Packet>packetAs().getSequenceNumber();
 
         TreeMap<Integer, ProjectedPacket> projectedPackets = new TreeMap<>();
+        Rfc3711IndexTracker origSeqIdxTracker = new Rfc3711IndexTracker();
+        Rfc3711IndexTracker newSeqIdxTracker = new Rfc3711IndexTracker();
 
-        for (int i = 0; i < 10000; i++)
+        for (int i = 0; i < 100000; i++)
         {
             PacketInfo packetInfo = buffer.get(0);
             Vp8Packet packet = packetInfo.packetAs();
@@ -173,7 +178,7 @@ public class VP8AdaptiveTrackProjectionTest
             }
             boolean accepted = context.accept(packetInfo, packet.getTemporalLayerIndex(), targetIndex);
 
-            int oldestValidSeq = RtpUtils.applySequenceNumberDelta(latestSeq, -VP8FrameMap.FRAME_MAP_SIZE);
+            int oldestValidSeq = RtpUtils.applySequenceNumberDelta(latestSeq, -((VP8FrameMap.FRAME_MAP_SIZE - 1) * generator.packetsPerFrame));
 
             if (RtpUtils.isOlderSequenceNumberThan(origSeq, oldestValidSeq) && !accepted)
             {
@@ -204,8 +209,10 @@ public class VP8AdaptiveTrackProjectionTest
                 assertEquals(RtpUtils.applyTimestampDelta(origTs, expectedTsOffset), packet.getTimestamp());
                 assertEquals(origTl0PicIdx, packet.getTL0PICIDX());
                 int newSeq = packet.getSequenceNumber();
-                assertFalse(projectedPackets.containsKey(newSeq));
-                projectedPackets.put(newSeq, new ProjectedPacket(packet, origSeq, nearOldest));
+                int extNewSeq = newSeqIdxTracker.update(newSeq);
+                int extOrigSeq = origSeqIdxTracker.update(origSeq);
+                assertFalse(projectedPackets.containsKey(extNewSeq));
+                projectedPackets.put(extNewSeq, new ProjectedPacket(packet, origSeq, extOrigSeq, nearOldest));
             }
             else
             {
@@ -242,9 +249,8 @@ public class VP8AdaptiveTrackProjectionTest
         ProjectedPacket firstPacket = projectedPackets.firstEntry().getValue();
         ProjectedPacket lastPacket = projectedPackets.lastEntry().getValue();
 
-        int origDelta = RtpUtils.getSequenceNumberDelta(lastPacket.origSeq, firstPacket.origSeq);
-        int projDelta = RtpUtils.getSequenceNumberDelta(lastPacket.packet.getSequenceNumber(),
-            firstPacket.packet.getSequenceNumber());
+        int origDelta = lastPacket.extOrigSeq - firstPacket.extOrigSeq;
+        int projDelta = projectedPackets.lastKey() - projectedPackets.firstKey();
         assertTrue(projDelta <= origDelta);
     }
 
@@ -254,7 +260,7 @@ public class VP8AdaptiveTrackProjectionTest
         throws RewriteException
     {
         /* Seeds that have triggered problems in the past, plus a random one. */
-        long[] seeds = { 1576267371838L, 1578347926155L, System.currentTimeMillis()};
+        long[] seeds = { 1576267371838L, 1578347926155L, 1579620018479L, System.currentTimeMillis()};
 
         for (long seed: seeds)
         {
@@ -824,16 +830,17 @@ public class VP8AdaptiveTrackProjectionTest
         private int octetCount;
         private int frameCount;
 
-        private final long baseReceivedTime = 1577836800000L; /* 2020-01-01 00:00:00 UTC */
+        private static final long baseReceivedTime = 1577836800000L; /* 2020-01-01 00:00:00 UTC */
         private long receivedTime;
 
         void reset()
         {
+            boolean useRandom = true; // switch off to ease debugging
             long seed = System.currentTimeMillis();
             Random random = new Random(seed);
 
-            seq = random.nextInt() % 0x10000;
-            ts = random.nextLong() % 0x100000000L;
+            seq = useRandom ? random.nextInt() % 0x10000 : 0;
+            ts = useRandom ? random.nextLong() % 0x100000000L : 0;
 
             picId = 0;
             tl0picidx = 0;

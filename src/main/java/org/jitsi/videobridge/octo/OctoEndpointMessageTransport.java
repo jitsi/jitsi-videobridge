@@ -60,7 +60,7 @@ class OctoEndpointMessageTransport
     @Override
     protected String getId(Object id)
     {
-        if (id == null || !(id instanceof String))
+        if (!(id instanceof String))
         {
             return null;
         }
@@ -145,6 +145,12 @@ class OctoEndpointMessageTransport
             JSONObject jsonObject)
     {
         logUnexpectedMessage(jsonObject.toJSONString());
+    }
+
+    @Override
+    public boolean isConnected()
+    {
+        return true;
     }
 
     /**

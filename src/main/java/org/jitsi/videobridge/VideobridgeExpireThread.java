@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -23,6 +24,8 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging2.*;
 import org.osgi.framework.*;
+
+import static org.jitsi.videobridge.VideobridgeExpireThreadConfig.*;
 
 /**
  * Implements a <tt>Thread</tt> which expires the {@link AbstractEndpoint}s and
@@ -56,25 +59,6 @@ public class VideobridgeExpireThread
             true, VideobridgeExpireThread.class.getSimpleName() + "-channel");
 
     /**
-     * The name of the property which specifies the interval in seconds at which
-     * a {@link VideobridgeExpireThread} instance should run.
-     */
-    public static final String EXPIRE_CHECK_SLEEP_SEC
-            = "org.jitsi.videobridge.EXPIRE_CHECK_SLEEP_SEC";
-    /**
-     * The default number of seconds of inactivity after which <tt>Channel</tt>s
-     * expire.
-     * NOTE(brian): move from Channel
-     */
-    public static final int DEFAULT_EXPIRE = 60;
-
-    /**
-     * The default value of the {@link #EXPIRE_CHECK_SLEEP_SEC} property.
-     */
-    private static final int EXPIRE_CHECK_SLEEP_SEC_DEFAULT =
-            DEFAULT_EXPIRE;
-
-    /**
      * The {@link PeriodicRunnable} registered with {@link #EXECUTOR} which is
      * to run the expire task for this {@link VideobridgeExpireThread} instance.
      */
@@ -101,25 +85,14 @@ public class VideobridgeExpireThread
     /**
      * Starts this {@link VideobridgeExpireThread} in a specific
      * {@link BundleContext}.
-     * @param bundleContext the <tt>BundleContext</tt> in which this
-     * {@link VideobridgeExpireThread} is to start.
      */
-    void start(final BundleContext bundleContext)
+    void start()
     {
-        ConfigurationService cfg
-                = ServiceUtils2.getService(
-                bundleContext,
-                ConfigurationService.class);
-
-        int expireCheckSleepSec
-                = (cfg == null)
-                    ? EXPIRE_CHECK_SLEEP_SEC_DEFAULT
-                    : cfg.getInt(
-                        EXPIRE_CHECK_SLEEP_SEC, EXPIRE_CHECK_SLEEP_SEC_DEFAULT);
+        Duration expireCheckSleepDuration = Config.interval();
         logger.info(
-            "Starting with " + expireCheckSleepSec + " second interval.");
+            "Starting with " + expireCheckSleepDuration.getSeconds() + " second interval.");
 
-        expireRunnable = new PeriodicRunnable(expireCheckSleepSec * 1000)
+        expireRunnable = new PeriodicRunnable(expireCheckSleepDuration.toMillis())
         {
             @Override
             public void run()

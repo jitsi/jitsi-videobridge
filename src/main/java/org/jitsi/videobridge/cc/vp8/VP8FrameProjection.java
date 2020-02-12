@@ -16,14 +16,9 @@
 package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
-import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging.*;
-import org.jitsi.utils.logging2.Logger;
-
-import java.util.*;
 
 /**
  * Represents a VP8 frame projection. It puts together all the necessary bits

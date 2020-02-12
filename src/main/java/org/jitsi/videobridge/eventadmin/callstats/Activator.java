@@ -21,7 +21,11 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.stats.media.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.stats.*;
+import org.jitsi.videobridge.stats.config.StatsManagerBundleActivatorConfig;
+import org.jitsi.videobridge.stats.config.StatsTransportConfig;
 import org.osgi.framework.*;
+
+import java.time.Duration;
 
 /**
  * OSGi {@code BundleActivator} implementation for the CallStats client
@@ -126,18 +130,14 @@ public class Activator
                 cfg,
                 CallStatsIOTransport.PNAME_CALLSTATS_IO_BRIDGE_ID,
                 CallStatsIOTransport.DEFAULT_BRIDGE_ID);
-            int interval = ConfigUtils.getInt(
-                cfg,
-                StatsManagerBundleActivator.STATISTICS_INTERVAL_PNAME,
-                StatsManagerBundleActivator.DEFAULT_STAT_INTERVAL);
 
             // Update with per stats transport interval if available.
-            interval = ConfigUtils.getInt(
-                cfg,
-                StatsManagerBundleActivator.STATISTICS_INTERVAL_PNAME
-                    + "."
-                    + StatsManagerBundleActivator.STAT_TRANSPORT_CALLSTATS_IO,
-                interval);
+            Duration intervalDuration = StatsManagerBundleActivatorConfig.Config.transportConfigs().stream()
+                    .filter(tc -> tc instanceof StatsTransportConfig.CallStatsIoStatsTransportConfig)
+                    .map(StatsTransportConfig::getInterval)
+                    .findFirst()
+                    .orElse(StatsManagerBundleActivatorConfig.Config.statsInterval());
+            int interval = (int)intervalDuration.toMillis();
             String conferenceIDPrefix = ConfigUtils.getString(
                 cfg,
                 CallStatsIOTransport.PNAME_CALLSTATS_IO_CONF_PREFIX,
@@ -164,6 +164,8 @@ public class Activator
                 conferenceStatsHandler.stop();
                 conferenceStatsHandler = null;
             }
+            break;
+        default:
             break;
         }
     }

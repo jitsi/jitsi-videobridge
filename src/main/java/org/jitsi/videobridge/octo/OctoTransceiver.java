@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge.octo;
 
+import kotlin.*;
+import kotlin.jvm.functions.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -178,6 +180,12 @@ public class OctoTransceiver
             {
                 tentacle.handleIncomingPacket(packetInfo);
             }
+
+            @Override
+            public void trace(@NotNull Function0<Unit> f)
+            {
+                f.invoke();
+            }
         };
 
         Node videoRoot = new VideoParser(streamInformationStore, logger);
@@ -252,6 +260,7 @@ public class OctoTransceiver
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
+    @SuppressWarnings("unchecked")
     JSONObject getDebugState()
     {
 

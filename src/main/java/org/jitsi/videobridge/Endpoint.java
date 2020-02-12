@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge;
 
+import kotlin.*;
+import kotlin.jvm.functions.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -28,9 +30,9 @@ import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
+import org.jitsi.utils.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
-import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
@@ -52,10 +54,11 @@ import java.io.*;
 import java.nio.*;
 import java.time.*;
 import java.util.*;
-import java.util.stream.*;
+import java.util.function.Function;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.*;
+import java.util.stream.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
@@ -227,10 +230,21 @@ public class Endpoint
                 {
                     handleIncomingPacket(packetInfo);
                 }
+
+                @Override
+                public void trace(@NotNull Function0<Unit> f)
+                {
+                    f.invoke();
+                }
             });
         bitrateController = new BitrateController(this, diagnosticContext, logger);
 
-        messageTransport = new EndpointMessageTransport(this, logger);
+        messageTransport = new EndpointMessageTransport(
+            this,
+            () -> getConference().getVideobridge().getStatistics(),
+            getConference(),
+            logger
+        );
 
         diagnosticContext.put("endpoint_id", id);
         bandwidthProbing
@@ -282,6 +296,7 @@ public class Endpoint
 
 
     @Override
+    @SuppressWarnings("unchecked")
     public void propertyChange(PropertyChangeEvent evt)
     {
         if (SELECTED_ENDPOINTS_PROPERTY_NAME.equals(evt.getPropertyName()))
@@ -308,14 +323,11 @@ public class Endpoint
      * this <tt>Endpoint</tt>.
      *
      * @param msg message text to send.
-     * @throws IOException
      */
     @Override
     public void sendMessage(String msg)
-        throws IOException
     {
-        EndpointMessageTransport messageTransport
-            = getMessageTransport();
+        EndpointMessageTransport messageTransport = getMessageTransport();
         if (messageTransport != null)
         {
             messageTransport.sendMessage(msg);
@@ -357,10 +369,6 @@ public class Endpoint
     public void setLocalSsrc(MediaType mediaType, long ssrc)
     {
         transceiver.setLocalSsrc(mediaType, ssrc);
-        if (MediaType.VIDEO.equals(mediaType))
-        {
-            bandwidthProbing.senderSsrc = ssrc;
-        }
     }
 
     /**
@@ -532,7 +540,7 @@ public class Endpoint
     {
         PacketIOActivity packetIOActivity
                 = this.transceiver.getPacketIOActivity();
-        return packetIOActivity.getLastOverallIncomingActivity();
+        return packetIOActivity.getLastIncomingActivityInstant();
     }
 
     /**
@@ -601,6 +609,7 @@ public class Endpoint
             if (logger.isDebugEnabled() && getConference().includeInStatistics())
             {
                 logger.debug(transceiver.getNodeStats().prettyPrint(0));
+                logger.debug(bitrateController.getDebugState().toJSONString());
             }
 
             transceiver.teardown();
@@ -764,6 +773,7 @@ public class Endpoint
             TaskPools.IO_POOL.submit(() -> {
                 // FIXME: This runs forever once the socket is closed (
                 // accept never returns true).
+                logger.info("Attempting to establish SCTP socket connection");
                 int attempts = 0;
                 while (!socket.accept())
                 {
@@ -788,6 +798,22 @@ public class Endpoint
                             " accepted connection.");
                 }
             });
+            TaskPools.SCHEDULED_POOL.schedule(() -> {
+                if (!isExpired()) {
+                    AbstractEndpointMessageTransport t = getMessageTransport();
+                    if (t != null)
+                    {
+                        if (!t.isConnected())
+                        {
+                            logger.error("EndpointMessageTransport still not connected.");
+                            getConference()
+                                .getVideobridge()
+                                .getStatistics()
+                                .numEndpointsNoMessageTransportAfterDelay.incrementAndGet();
+                        }
+                    }
+                }
+            }, 30, TimeUnit.SECONDS);
         });
     }
 
@@ -879,14 +905,7 @@ public class Endpoint
             {
                 logger.debug("Is now selected, sending message: " + selectedUpdate);
             }
-            try
-            {
-                sendMessage(selectedUpdate);
-            }
-            catch (IOException e)
-            {
-                logger.error("Error sending SelectedUpdate message: " + e);
-            }
+            sendMessage(selectedUpdate);
         }
     }
 
@@ -905,14 +924,7 @@ public class Endpoint
                 logger.debug("Is no longer selected, sending message: " +
                         selectedUpdate);
             }
-            try
-            {
-                sendMessage(selectedUpdate);
-            }
-            catch (IOException e)
-            {
-                logger.error("Error sending SelectedUpdate message: " + e);
-            }
+            sendMessage(selectedUpdate);
         }
     }
 
@@ -954,14 +966,7 @@ public class Endpoint
         String msg = createLastNEndpointsChangeEvent(
             forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints);
 
-        try
-        {
-            sendMessage(msg);
-        }
-        catch (IOException e)
-        {
-            logger.error("Failed to send message on data channel.", e);
-        }
+        sendMessage(msg);
     }
 
     /**
@@ -979,7 +984,7 @@ public class Endpoint
      * A node which can be placed in the pipeline to cache SCTP packets until
      * the SCTPManager is ready to handle them.
      */
-    private class SctpHandler extends ConsumerNode
+    private static class SctpHandler extends ConsumerNode
     {
         private final Object sctpManagerLock = new Object();
         public SctpManager sctpManager = null;
@@ -995,7 +1000,7 @@ public class Endpoint
         }
 
         @Override
-        protected void consume(PacketInfo packetInfo)
+        protected void consume(@NotNull PacketInfo packetInfo)
         {
             synchronized (sctpManagerLock)
             {
@@ -1031,13 +1036,19 @@ public class Endpoint
                 }
             });
         }
+
+        @Override
+        public void trace(@NotNull Function0<Unit> f)
+        {
+            f.invoke();
+        }
     }
 
     /**
      * A node which can be placed in the pipeline to cache Data channel packets
      * until the DataChannelStack is ready to handle them.
      */
-    private class DataChannelHandler extends ConsumerNode
+    private static class DataChannelHandler extends ConsumerNode
     {
         private final Object dataChannelStackLock = new Object();
         public DataChannelStack dataChannelStack = null;
@@ -1103,6 +1114,12 @@ public class Endpoint
                     });
                 }
             });
+        }
+
+        @Override
+        public void trace(@NotNull Function0<Unit> f)
+        {
+            f.invoke();
         }
     }
 
@@ -1303,6 +1320,8 @@ public class Endpoint
                     case VIDEO:
                         acceptVideo = true;
                         break;
+                    default:
+                        break;
                 }
             }
         }
@@ -1322,6 +1341,7 @@ public class Endpoint
      * {@inheritDoc}
      */
     @Override
+    @SuppressWarnings("unchecked")
     public JSONObject getDebugState()
     {
         JSONObject debugState = super.getDebugState();
@@ -1335,6 +1355,7 @@ public class Endpoint
         debugState.put("transceiver", transceiver.getNodeStats().toJson());
         debugState.put("acceptAudio", acceptAudio);
         debugState.put("acceptVideo", acceptVideo);
+        debugState.put("messageTransport", messageTransport.getDebugState());
 
         return debugState;
     }

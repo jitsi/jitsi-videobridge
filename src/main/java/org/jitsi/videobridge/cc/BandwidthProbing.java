@@ -38,24 +38,24 @@ import static org.jitsi.videobridge.cc.config.BandwidthProbingConfig.*;
      private static final TimeSeriesLogger timeSeriesLogger
          = TimeSeriesLogger.getTimeSeriesLogger(BandwidthProbing.class);
 
+     private static Random random = new Random();
+
      /**
       * The sequence number to use if probing with the JVB's SSRC.
       */
-     private int seqNum = new Random().nextInt(0xFFFF);
+     private int seqNum = random.nextInt(0xFFFF);
 
      /**
       * The RTP timestamp to use if probing with the JVB's SSRC.
       */
-     private long ts = new Random().nextInt() & 0xFFFFFFFFL;
+     private long ts = random.nextInt() & 0xFFFFFFFFL;
 
      /**
       * Whether or not probing is currently enabled
       */
      public boolean enabled = false;
 
-     public Long senderSsrc = null;
-
-     public Long latestBwe = -1L;
+     private Long latestBwe = -1L;
 
      private DiagnosticContext diagnosticContext;
 
@@ -181,28 +181,16 @@ import static org.jitsi.videobridge.cc.config.BandwidthProbingConfig.*;
      }
 
      /**
-      * (attempts) to get the local SSRC that will be used in the media sender
-      * SSRC field of the RTCP reports. TAG(cat4-local-ssrc-hurricane)
-      *
-      * @return get the local SSRC that will be used in the media sender SSRC
-      * field of the RTCP reports.
-      */
-     private long getSenderSSRC()
-     {
-         return senderSsrc == null ? -1 : senderSsrc;
-     }
-
-     /**
       * Gets a JSON representation of the parts of this object's state that
       * are deemed useful for debugging.
       */
+     @SuppressWarnings("unchecked")
      public JSONObject getDebugState()
      {
          JSONObject debugState = new JSONObject();
          debugState.put("seqNum", seqNum);
          debugState.put("ts", ts);
          debugState.put("enabled", enabled);
-         debugState.put("senderSsrc", senderSsrc);
          debugState.put("latestBwe", latestBwe);
 
          return debugState;

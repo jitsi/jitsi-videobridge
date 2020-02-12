@@ -44,15 +44,19 @@ public class UlimitCheck
         ProcessBuilder pb = new ProcessBuilder("bash", "-c", command);
         pb.redirectErrorStream(true);
 
-        try {
+        try
+        {
             Process p = pb.start();
 
             BufferedReader br
                 = new BufferedReader(
                     new InputStreamReader(p.getInputStream()));
-            return br.lines().reduce(String::concat).orElse("null?");
+            String output =  br.lines().reduce(String::concat).orElse("null?");
+            br.close();
+            return output;
         }
-        catch (IOException e) {
+        catch (IOException e)
+        {
             return null;
         }
     }

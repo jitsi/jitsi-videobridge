@@ -436,8 +436,8 @@ public class PublicRESTBundleActivator
         if (privatePort > 0)
         {
             return new RedirectHandler(
-                privateSslContextFactoryKeyStorePath == null ? "http" : "https",
-                privatePort);
+                    privateSslContextFactoryKeyStorePath == null ? "http" : "https",
+                    privatePort);
         }
 
         return null;
@@ -593,7 +593,7 @@ public class PublicRESTBundleActivator
      * through the public HTTP interface to their new location (via the
      * private interface).
      */
-    private class RedirectHandler extends AbstractHandler
+    private static class RedirectHandler extends AbstractHandler
     {
         /**
          * The protocol ("http" or "https") of the target location.

@@ -124,8 +124,8 @@ class PartitionedByteBufferPool
 
     /**
      * Adds statistics for this pool to the given JSON object.
-     * @param stats the JSON object to add stats to.
      */
+    @SuppressWarnings("unchecked")
     JSONObject getStats()
     {
         JSONObject stats = new JSONObject();
@@ -141,7 +141,6 @@ class PartitionedByteBufferPool
 
     /**
      * Gets the total number of times a new byte[] was allocated.
-     * @return
      */
     long getNumAllocations()
     {
@@ -319,7 +318,7 @@ class PartitionedByteBufferPool
 
             if (ByteBufferPool.ENABLE_BOOKKEEPING)
             {
-                System.out.println("got buffer " + System.identityHashCode(buf)
+                logger.info("got buffer " + System.identityHashCode(buf)
                         + " from thread " + Thread.currentThread().getId()
                         + ", partition " + id + " now has size " + pool.size());
             }
@@ -334,7 +333,7 @@ class PartitionedByteBufferPool
         {
             if (ByteBufferPool.ENABLE_BOOKKEEPING)
             {
-                System.out.println("returned buffer " + System.identityHashCode(buf) +
+                logger.info("returned buffer " + System.identityHashCode(buf) +
                         " from thread " + Thread.currentThread().getId() + ", partition " + id +
                         " now has size " + pool.size());
 
@@ -363,6 +362,7 @@ class PartitionedByteBufferPool
         /**
          * Gets a snapshot of the statistics of this partition in JSON format.
          */
+        @SuppressWarnings("unchecked")
         private JSONObject getStatsJson()
         {
             long now = System.currentTimeMillis();

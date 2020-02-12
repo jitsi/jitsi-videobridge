@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge.octo;
 
+import kotlin.*;
+import kotlin.jvm.functions.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -114,6 +116,12 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
                 {
                     relay.sendPacket(packetInfo.getPacket(), targets,
                         conference.getGid(), packetInfo.getEndpointId());
+                }
+
+                @Override
+                public void trace(@NotNull Function0<Unit> f)
+                {
+                    f.invoke();
                 }
             });
         }
@@ -336,6 +344,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
+    @SuppressWarnings("unchecked")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();

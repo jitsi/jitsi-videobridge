@@ -28,6 +28,7 @@ import org.jitsi_modified.impl.neomedia.codec.video.vp8.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
+import java.lang.*;
 import java.lang.ref.*;
 import java.util.*;
 
@@ -103,25 +104,28 @@ public class AdaptiveTrackProjection
      */
     private int targetIndex = RTPEncodingDesc.SUSPENDED_INDEX;
 
-    //TODO(brian): we need this to know which frameprojectioncontext to make
-    // based on the payload type of a packet.  is there a better way?
-    private final Map<Byte, PayloadType> payloadTypes = new HashMap<>();
+    private final Map<Byte, PayloadType> payloadTypes;
 
     /**
      * Ctor.
      *
      * @param source the {@link MediaStreamTrackDesc} that owns the packets
      * that this instance filters.
+     *
+     * @param payloadTypes a reference to a map of payload types.  This map
+     *                     should be updated as the payload types change.
      */
     AdaptiveTrackProjection(
         @NotNull DiagnosticContext diagnosticContext,
         @NotNull MediaStreamTrackDesc source,
         Runnable keyframeRequester,
+        Map<Byte, PayloadType> payloadTypes,
         Logger parentLogger
     )
     {
         targetSsrc = source.getRTPEncodings()[0].getPrimarySSRC();
         this.diagnosticContext = diagnosticContext;
+        this.payloadTypes = payloadTypes;
         this.parentLogger = parentLogger;
         this.logger = parentLogger.createChildLogger(AdaptiveTrackProjection.class.getName(),
             JMap.of("targetSsrc", Long.toString(targetSsrc),
@@ -227,16 +231,14 @@ public class AdaptiveTrackProjection
      * new adaptive track projection context is created that is appropriate for
      * the new payload type.
      *
-     * Note that, at the time of this writing, there's no practical need for a
-     * synchronized keyword because there's only one thread (the translator
-     * thread) accessing this method at a time.
+     * We make no attempt for thread safety, assuming no concurrent access.
      *
      * @param rtpPacket the RTP packet of the adaptive track projection context
      * to get or create.
      * @return the adaptive track projection context that corresponds to
      * the payload type of the RTP packet that is specified as a parameter.
      */
-    private synchronized
+    private
     AdaptiveTrackProjectionContext getContext(@NotNull VideoRtpPacket rtpPacket)
     {
         PayloadType payloadTypeObject;
@@ -360,7 +362,7 @@ public class AdaptiveTrackProjection
      * @param rtcpSrPacket the RTCP SR packet to rewrite.
      * @return true to let the RTCP packet through, false to drop.
      */
-    public boolean rewriteRtcp(@NotNull RtcpSrPacket rtcpSrPacket)
+    boolean rewriteRtcp(@NotNull RtcpSrPacket rtcpSrPacket)
     {
         AdaptiveTrackProjectionContext contextCopy = context;
         if (contextCopy == null)
@@ -374,31 +376,25 @@ public class AdaptiveTrackProjection
     /**
      * @return the SSRC of the track projection.
      */
-    public long getTargetSsrc()
+    long getTargetSsrc()
     {
         return targetSsrc;
-    }
-
-    /**
-     * Adds a payload type.
-     */
-    public void addPayloadType(PayloadType payloadType)
-    {
-        payloadTypes.put(payloadType.getPt(), payloadType);
     }
 
     /**
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
+    @SuppressWarnings("unchecked")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
 
         debugState.put("targetSsrc", targetSsrc);
+        AdaptiveTrackProjectionContext contextCopy = context;
         debugState.put(
                 "context",
-                context == null ? null : context.getDebugState());
+                contextCopy == null ? null : contextCopy.getDebugState());
         debugState.put("contextPayloadType", contextPayloadType);
         debugState.put("idealIndex", idealIndex);
         debugState.put("targetIndex", targetIndex);

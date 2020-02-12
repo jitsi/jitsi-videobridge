@@ -280,11 +280,11 @@ public class ConferenceShim
         {
             for (ColibriConferenceIQ.Channel channel : content.getChannels())
             {
-                final String endpoint = channel.getEndpoint();
-                if (endpoint != null)
+                final String endpointId = channel.getEndpoint();
+                if (endpointId != null)
                 {
                     ensureEndpointCreated(
-                        channel.getEndpoint(),
+                        endpointId,
                         Boolean.TRUE.equals(channel.isInitiator()));
                 }
             }
@@ -292,11 +292,11 @@ public class ConferenceShim
             for (ColibriConferenceIQ.SctpConnection channel
                 : content.getSctpConnections())
             {
-                final String endpoint = channel.getEndpoint();
-                if (endpoint != null)
+                final String endpointId = channel.getEndpoint();
+                if (endpointId != null)
                 {
                     ensureEndpointCreated(
-                        channel.getEndpoint(),
+                        endpointId,
                         Boolean.TRUE.equals(channel.isInitiator()));
                 }
             }

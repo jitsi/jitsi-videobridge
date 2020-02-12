@@ -8,15 +8,42 @@
   <name>jitsi-videobridge</name>
   <url>https://github.com/jitsi/jitsi-videobridge</url>
   <properties>
-    <assembly.skipAssembly>true</assembly.skipAssembly>
+    <assembly.skipAssembly>false</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
     <jetty.version>9.4.15.v20190215</jetty.version>
     <kotlin.version>1.3.61</kotlin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <smack.version>4.2.4-47d17fc</smack.version>
-    <jitsi.utils.version>1.0-32-g37aa1b3</jitsi.utils.version>
-    <jicoco.version>1.1-15-geecd377</jicoco.version>
+    <jitsi.utils.version>1.0-36-ge6eda64</jitsi.utils.version>
+    <jicoco.version>1.1-17-g0f9a752</jicoco.version>
+    <maven-shade-plugin.version>3.2.1</maven-shade-plugin.version>
+    <spotbugs.version>4.0.0-RC1</spotbugs.version>
   </properties>
+
+  <profiles>
+    <profile>
+      <!-- Building a fat jar is disabled by default. To build it
+           pass '-P buildFatJar'
+      -->
+      <id>buildFatJar</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>${maven-shade-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>build-fat-jar</id>
+                <phase>package</phase>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
   <dependencyManagement>
     <dependencies>
     </dependencies>
@@ -75,16 +102,22 @@
       <artifactId>annotations</artifactId>
       <version>15.0</version>
     </dependency>
+    <!-- https://mvnrepository.com/artifact/com.github.spotbugs/spotbugs-annotations -->
+    <dependency>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-annotations</artifactId>
+        <version>${spotbugs.version}</version>
+    </dependency>
     <!-- org.jitsi -->
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-media-transform</artifactId>
-      <version>1.0-89-g7231939</version>
+      <version>1.0-117-g269ebe9</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>rtp</artifactId>
-      <version>1.0-29-g61aed13</version>
+      <version>1.0-37-gac3fbeb</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -175,16 +208,6 @@
       <artifactId>jersey-media-json-jackson</artifactId>
       <version>2.29</version>
     </dependency>
-    <!-- jersey relies on this version of javassist or we get hk2
-    errors, but other libs (Powermock, at this time) also rely on
-    it but an older version, and that version is getting selected
-    which breaks jersey, so we explicitly depend on this here to
-    force the version -->
-    <dependency>
-      <groupId>org.javassist</groupId>
-      <artifactId>javassist</artifactId>
-      <version>3.22.0-CR2</version>
-    </dependency>
     <dependency>
       <groupId>org.reflections</groupId>
       <artifactId>reflections</artifactId>
@@ -273,92 +296,58 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
+         <version>3.2.0</version>
+         <executions>
+           <execution>
+             <id>assemble-archive</id>
+             <phase>package</phase>
+             <goals>
+               <goal>single</goal>
+             </goals>
+             <configuration>
+               <appendAssemblyId>true</appendAssemblyId>
+               <descriptors>
+                 <descriptor>src/assembly/archive.xml</descriptor>
+               </descriptors>
+               <skipAssembly>${assembly.skipAssembly}</skipAssembly>
+             </configuration>
+           </execution>
+         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>${maven-shade-plugin.version}</version>
         <executions>
           <execution>
-            <id>assembly-native-libraries</id>
-            <phase>package</phase>
+            <id>build-fat-jar</id>
             <goals>
-              <goal>single</goal>
+              <goal>shade</goal>
             </goals>
+            <!-- Building a fat jar is disabled by default.  See the note
+                 on the buildFatJar profile at the top of this file
+            -->
+            <phase>none</phase>
             <configuration>
-              <appendAssemblyId>true</appendAssemblyId>
-              <descriptors>
-                <!-- The slightly odd artifact names help with backwards compatibility with the checkNatives() implementation. -->
-                <descriptor>src/assembly/native-linux-32.xml</descriptor>
-                <descriptor>src/assembly/native-linux-64.xml</descriptor>
-                <descriptor>src/assembly/native-macosx.xml</descriptor>
-                <descriptor>src/assembly/native-windows-32.xml</descriptor>
-                <descriptor>src/assembly/native-windows-64.xml</descriptor>
-              </descriptors>
-              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
-              <descriptorRefs>
-                <descriptorRef>jar-with-dependencies</descriptorRef>
-              </descriptorRefs>
-            </configuration>
-          </execution>
-          <execution>
-            <id>assembly-linux-x64-bin-archive</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <appendAssemblyId>false</appendAssemblyId>
-              <descriptor>src/assembly/linux-x64-bin-archive.xml</descriptor>
-              <finalName>${project.artifactId}-linux-x64-${project.version}</finalName>
-              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
-            </configuration>
-          </execution>
-          <execution>
-            <id>assembly-linux-x86-bin-archive</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <appendAssemblyId>false</appendAssemblyId>
-              <descriptor>src/assembly/linux-x86-bin-archive.xml</descriptor>
-              <finalName>${project.artifactId}-linux-x86-${project.version}</finalName>
-              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
-            </configuration>
-          </execution>
-          <execution>
-            <id>assembly-macosx-bin-archive</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <appendAssemblyId>false</appendAssemblyId>
-              <descriptor>src/assembly/macosx-bin-archive.xml</descriptor>
-              <finalName>${project.artifactId}-macosx-${project.version}</finalName>
-              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
-            </configuration>
-          </execution>
-          <execution>
-            <id>assembly-windows-x64-bin-archive</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <appendAssemblyId>false</appendAssemblyId>
-              <descriptor>src/assembly/windows-x64-bin-archive.xml</descriptor>
-              <finalName>${project.artifactId}-windows-x64-${project.version}</finalName>
-              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
-            </configuration>
-          </execution>
-          <execution>
-            <id>assembly-windows-x86-bin-archive</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <appendAssemblyId>false</appendAssemblyId>
-              <descriptor>src/assembly/windows-x86-bin-archive.xml</descriptor>
-              <finalName>${project.artifactId}-windows-x86-${project.version}</finalName>
-              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
+              <finalName>${project.name}-${project.version}-jar-with-dependencies</finalName>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>reference.conf</resource>
+                </transformer>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <!-- Exclude signatures as they don't work correctly with a
+                       fat jar.
+                  -->
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
             </configuration>
           </execution>
         </executions>
@@ -485,6 +474,22 @@
         </configuration>
       </plugin>
       <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <version>3.1.12.2</version>
+        <configuration>
+          <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+          <includeTests>true</includeTests>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>spotbugs</artifactId>
+            <version>${spotbugs.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
         <version>1.8</version>
@@ -530,6 +535,21 @@
           </dependency>
           <!-- additional 3rd party ruleset(s) can be specified here -->
         </dependencies>
+      </plugin>
+      <plugin>
+        <!-- Instructs the plugin to add the current package version in the jar manifest
+        So we can access it runtime with: .class.getPackage().getImplementationVersion()
+         -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.2.0</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+            </manifest>
+          </archive>
+        </configuration>
       </plugin>
     </plugins>
   </build>

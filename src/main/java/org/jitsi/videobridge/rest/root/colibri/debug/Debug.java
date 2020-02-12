@@ -43,15 +43,16 @@ import javax.ws.rs.core.*;
 public class Debug extends ColibriResource
 {
     @Inject
+    @SuppressWarnings("unused")
     private VideobridgeProvider videobridgeProvider;
 
     private Logger logger = new LoggerImpl(Debug.class.getName());
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public String bridgeDebug()
+    public String bridgeDebug(@DefaultValue("false") @QueryParam("full") boolean full)
     {
-        OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(null, null);
+        OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(null, null, full);
         return confJson.toJSONString();
     }
 
@@ -131,8 +132,11 @@ public class Debug extends ColibriResource
                 break;
             }
             case QUEUE_STATS: {
-                PacketQueue.setEnableStatisticsDefault(true);
+                PacketQueue.setEnableStatisticsDefault(enabled);
                 break;
+            }
+            case NODE_TRACING: {
+                Node.Companion.enableNodeTracing(enabled);
             }
             case TRANSIT_STATS: {
                 //TODO
@@ -153,7 +157,7 @@ public class Debug extends ColibriResource
     @Produces(MediaType.APPLICATION_JSON)
     public String confDebug(@PathParam("confId") String confId)
     {
-        OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(confId, null);
+        OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(confId, null, true);
         return confJson.toJSONString();
     }
 
@@ -162,7 +166,7 @@ public class Debug extends ColibriResource
     @Produces(MediaType.APPLICATION_JSON)
     public String epDebug(@PathParam("confId") String confId, @PathParam("epId") String epId)
     {
-        OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(confId, epId);
+        OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(confId, epId, true);
         return confJson.toJSONString();
     }
 

@@ -31,6 +31,7 @@ import org.json.simple.*;
  *
  * @author Lyubomir Marinov
  */
+@SuppressWarnings("unchecked")
 public final class JSONDeserializer
 {
     /**

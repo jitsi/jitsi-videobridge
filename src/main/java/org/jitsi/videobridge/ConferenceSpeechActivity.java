@@ -63,20 +63,13 @@ public class ConferenceSpeechActivity
         {
             String s = obj.toString();
 
-            if (s == null)
+            try
+            {
+                l = Long.parseLong(s);
+            }
+            catch (NumberFormatException ex)
             {
                 l = -1L;
-            }
-            else
-            {
-                try
-                {
-                    l = Long.parseLong(s);
-                }
-                catch (NumberFormatException ex)
-                {
-                    l = -1L;
-                }
             }
         }
         return l;
@@ -193,13 +186,21 @@ public class ConferenceSpeechActivity
             AbstractEndpoint endpoint
                 = conference.findEndpointByReceiveSSRC(ssrc);
 
+            if (endpoint == null)
+            {
+                logger.warn("Unable to find endpoint corresponding to "
+                    + "active speaker SSRC " + ssrc);
+                return;
+            }
+
             synchronized (syncRoot)
             {
                 // Move this endpoint to the top of our sorted list
                 if (!endpoints.remove(endpoint))
                 {
                     logger.warn("Got active speaker notification for an unknown"
-                            + " endpoint! Ignoring");
+                            + " endpoint (ssrc: " + ssrc + ", epId "
+                            + endpoint.getID() + ")! Ignoring");
                     return;
                 }
                 endpoints.add(0, endpoint);
@@ -440,6 +441,7 @@ public class ConferenceSpeechActivity
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
+    @SuppressWarnings("unchecked")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();

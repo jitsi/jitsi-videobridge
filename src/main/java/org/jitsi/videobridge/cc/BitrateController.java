@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc;
 
+import edu.umd.cs.findbugs.annotations.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -24,13 +25,15 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.cc.config.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
+import java.lang.*;
+import java.lang.SuppressWarnings;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
+import java.util.concurrent.atomic.*;
 
 import static org.jitsi.videobridge.cc.config.BitrateControllerConfig.*;
 
@@ -208,7 +211,11 @@ public class BitrateController
     // is the main use case for wanting to disable adaptivity).
     private boolean supportsRtx = false;
 
-    private final Map<Byte, PayloadType> payloadTypes = new HashMap<>();
+    private final Map<Byte, PayloadType> payloadTypes =
+        new ConcurrentHashMap<>();
+
+    private final AtomicInteger numDroppedPacketsUnknownSsrc =
+        new AtomicInteger(0);
 
     /**
      * Initializes a new {@link BitrateController} instance which is to
@@ -287,9 +294,10 @@ public class BitrateController
 
         if (adaptiveTrackProjection == null)
         {
-            logger.warn(
+            logger.debug(() ->
                 "Dropping an RTP packet, because the SSRC has not " +
                     "been signaled:" + ssrc);
+            numDroppedPacketsUnknownSsrc.incrementAndGet();
             return false;
         }
 
@@ -345,6 +353,11 @@ public class BitrateController
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
+    @SuppressWarnings("unchecked")
+    @SuppressFBWarnings(
+            value = "IS2_INCONSISTENT_SYNC",
+            justification = "We intentionally avoid synchronizing while reading" +
+                    " fields only used in debug output.")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
@@ -367,25 +380,28 @@ public class BitrateController
         debugState.put(
                 "adaptiveTrackProjectionMap",
                 adaptiveTrackProjectionsJson);
+        debugState.put(
+            "numDroppedPacketsUnknownSsrc",
+            numDroppedPacketsUnknownSsrc.intValue());
         return debugState;
     }
 
     /**
      * TODO Document
      */
-    public static class StatusSnapshot
+    static class StatusSnapshot
     {
         final long currentTargetBps;
         final long currentIdealBps;
         final Collection<Long> activeSsrcs;
 
-        public StatusSnapshot()
+        StatusSnapshot()
         {
             currentTargetBps = -1L;
             currentIdealBps = -1L;
             activeSsrcs = Collections.emptyList();
         }
-        public StatusSnapshot(
+        StatusSnapshot(
                 Long currentTargetBps,
                 Long currentIdealBps,
                 Collection<Long> activeSsrcs)
@@ -403,7 +419,7 @@ public class BitrateController
      * 3) The ssrcs we're currently forwarding
      * @return the snapshot containing that info
      */
-    public StatusSnapshot getStatusSnapshot()
+    StatusSnapshot getStatusSnapshot()
     {
         if (adaptiveTrackProjections == null
             || adaptiveTrackProjections.isEmpty())
@@ -539,7 +555,7 @@ public class BitrateController
      * this method SHOULD be invoked when those things change; they will be
      * taken into account in this flow)
      */
-    public void endpointOrderingChanged(List<String> conferenceEndpoints)
+    public synchronized void endpointOrderingChanged(List<String> conferenceEndpoints)
     {
         logger.debug(() -> " endpoint ordering has changed, updating");
 
@@ -743,7 +759,7 @@ public class BitrateController
 
             if (ArrayUtils.isNullOrEmpty(rtpEncodings))
             {
-                return adaptiveTrackProjection;
+                return null;
             }
 
             // XXX the lambda keeps a reference to the trackBitrateAllocation
@@ -761,12 +777,8 @@ public class BitrateController
                     trackBitrateAllocation.track, () ->
                         destinationEndpoint.getConference().requestKeyframe(
                             endpointID, targetSSRC),
+                    payloadTypes,
                     logger);
-
-            for (PayloadType payloadType : payloadTypes.values())
-            {
-                adaptiveTrackProjection.addPayloadType(payloadType);
-            }
 
             logger.debug(() -> "new track projection for " + trackBitrateAllocation.track);
 
@@ -893,12 +905,6 @@ public class BitrateController
     private TrackBitrateAllocation[] prioritize(
         List<AbstractEndpoint> conferenceEndpoints)
     {
-        StringBuilder sb = new StringBuilder();
-        for (AbstractEndpoint ep : conferenceEndpoints)
-        {
-            sb.append(ep.getID()).append(" ");
-        }
-
         // Init.
         List<TrackBitrateAllocation> trackBitrateAllocations
             = new ArrayList<>();
@@ -1103,7 +1109,6 @@ public class BitrateController
     public void addPayloadType(PayloadType payloadType)
     {
         payloadTypes.put(payloadType.getPt(), payloadType);
-        adaptiveTrackProjections.forEach(atp -> atp.addPayloadType(payloadType));
 
         if (payloadType.getEncoding() == PayloadTypeEncoding.RTX)
         {
