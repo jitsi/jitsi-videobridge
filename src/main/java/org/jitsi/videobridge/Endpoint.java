@@ -1351,7 +1351,7 @@ public class Endpoint
             case "recvonly":
             case "inactive": {
                 for (ChannelShim channelShim : channelShims) {
-                    if (Objects.equals(channelShim.getMediaType(), type)) {
+                    if (channelShim.getMediaType() == type) {
                         channelShim.setDirection(direction);
                     }
                 }
