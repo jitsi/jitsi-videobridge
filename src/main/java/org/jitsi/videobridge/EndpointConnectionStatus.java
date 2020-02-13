@@ -313,7 +313,7 @@ public class EndpointConnectionStatus
                 }
             }
 
-            return conference.isExpired() || endpointReplaced;
+            return conference.isExpired() || e.isExpired() || endpointReplaced;
         });
         if (logger.isDebugEnabled())
         {
