@@ -205,7 +205,7 @@ public class Health
      */
     private static String generateEndpointID()
     {
-        return Long.toHexString(System.currentTimeMillis() + RANDOM.nextLong());
+        return String.format("%08x", RANDOM.nextInt());
     }
 
     /**
