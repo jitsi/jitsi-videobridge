@@ -1297,6 +1297,45 @@ public class Endpoint
     }
 
     /**
+     * Update media direction of {@link ChannelShim}s associated
+     * with this Endpoint.
+     *
+     * When media direction is set to 'sendrecv' JVB will
+     * accept incoming media from endpoint and forward it to
+     * other endpoints in a conference. Other endpoint's media
+     * will also be forwarded to current endpoint.
+     * When media direction is set to 'sendonly' JVB will
+     * NOT accept incoming media from this endpoint (not yet implemented), but
+     * media from other endpoints will be forwarded to this endpoint.
+     * When media direction is set to 'recvonly' JVB will
+     * accept incoming media from this endpoint, but will not forward
+     * other endpoint's media to this endpoint.
+     * When media direction is set to 'inactive' JVB will
+     * neither accept incoming media nor forward media from other endpoints.
+     *
+     * @param type media type.
+     * @param direction desired media direction:
+     *                       'sendrecv', 'sendonly', 'recvonly', 'inactive'
+     */
+    public void updateMediaDirection(MediaType type, String direction) {
+        switch (direction) {
+            case "sendrecv":
+            case "sendonly":
+            case "recvonly":
+            case "inactive": {
+                for (ChannelShim channelShim : channelShims) {
+                    if (channelShim.getMediaType() == type) {
+                        channelShim.setDirection(direction);
+                    }
+                }
+                break;
+            }
+            default:
+                throw new IllegalArgumentException("Media direction unknown: " + direction);
+        }
+    }
+
+    /**
      * Update accepted media types based on
      * {@link ChannelShim} permission to receive
      * media
