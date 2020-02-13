@@ -351,17 +351,23 @@ class VP8Frame
             return;
         }
 
-        StringBuilder s = new StringBuilder().append("Packet ")
-            .append(pkt.getSequenceNumber())
-            .append(" is not consistent with frame with timestamp ")
-            .append(timestamp)
-            .append(":");
+        StringBuilder s = new StringBuilder().append("Packet")
+            .append(" ssrc ").append(pkt.getSsrc())
+            .append(", seq ").append(pkt.getSequenceNumber())
+            .append(", picture id ").append(pkt.getPictureId())
+            .append(", timestamp ").append(pkt.getTimestamp())
+            .append(" is not consistent with frame")
+            .append(" ssrc ").append(ssrc)
+            .append(", seq ").append(earliestKnownSequenceNumber).append("-").append(latestKnownSequenceNumber)
+            .append(", picture id ").append(pictureId)
+            .append(", timestamp ").append(timestamp)
+            .append(": ");
 
         boolean complained = false;
 
         if (temporalLayer != pkt.getTemporalLayerIndex())
         {
-            s.append("packet temporal layer")
+            s.append("packet temporal layer ")
                 .append(pkt.getTemporalLayerIndex())
                 .append(" != frame temporal layer ")
                 .append(temporalLayer);
@@ -373,7 +379,7 @@ class VP8Frame
             {
                 s.append("; ");
             }
-            s.append("packet TL0PICIDX")
+            s.append("packet TL0PICIDX ")
                 .append(pkt.getTL0PICIDX())
                 .append(" != frame TL0PICIDX ")
                 .append(tl0PICIDX);
@@ -385,7 +391,7 @@ class VP8Frame
             {
                 s.append("; ");
             }
-            s.append("packet PictureID")
+            s.append("packet PictureID ")
                 .append(pkt.getPictureId())
                 .append(" != frame PictureID ")
                 .append(pictureId);
