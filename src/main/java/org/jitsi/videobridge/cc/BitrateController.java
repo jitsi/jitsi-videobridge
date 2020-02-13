@@ -431,7 +431,6 @@ public class BitrateController
         long nowMs = System.currentTimeMillis();
         for (MediaStreamTrackDesc sourceTrack : destinationEndpoint
             .getConference().getEndpoints().stream()
-            .filter(e -> !destinationEndpoint.equals(e))
             .map(AbstractEndpoint::getMediaStreamTracks)
             .flatMap(Arrays::stream)
             .filter(t -> t.getRTPEncodings().length > 0)
