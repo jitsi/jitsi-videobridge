@@ -285,7 +285,7 @@ public class ConferenceShim
                                 content.getChannels().stream(),
                                 content.getSctpConnections().stream()))
                 .flatMap(Function.identity())
-                .filter(c -> c.getEndpoint() != null && c.getExpire() > 0)
+                .filter(c -> c.getEndpoint() != null && c.getExpire() != 0)
                 .collect(Collectors.toList());
 
         for (ColibriConferenceIQ.ChannelCommon c : nonExpiredChannels)
