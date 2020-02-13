@@ -16,7 +16,6 @@
 
 package org.jitsi.videobridge.stats;
 
-import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.videobridge.*;
 
@@ -26,7 +25,7 @@ public class PacketTransitStats
     {
         OrderedJsonObject stats = new OrderedJsonObject();
 
-        stats.put("e2e_packet_delay", JsonStats.toJson(DtlsTransport.packetDelayStats));
+        stats.put("e2e_packet_delay", DtlsTransport.packetDelayStats.toJson());
         stats.put(DtlsTransport.overallAverageBridgeJitter.name, DtlsTransport.overallAverageBridgeJitter.get());
 
         return stats;
