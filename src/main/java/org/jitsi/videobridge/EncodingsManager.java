@@ -124,7 +124,7 @@ public class EncodingsManager
     /**
      * Represents an SSRC association.
      */
-    private static class SsrcAssociation
+    private class SsrcAssociation
     {
         /**
          * The primary SSRC.

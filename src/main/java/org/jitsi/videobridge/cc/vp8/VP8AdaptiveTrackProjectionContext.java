@@ -42,6 +42,12 @@ public class VP8AdaptiveTrackProjectionContext
     private final Logger logger;
 
     /**
+     * The time series logger for this instance.
+     */
+    private static final TimeSeriesLogger timeSeriesLogger
+        = TimeSeriesLogger.getTimeSeriesLogger(VP8AdaptiveTrackProjectionContext.class);
+
+    /**
      * A map that stores the per-encoding VP8 frame maps.
      */
     private final Map<Long, VP8FrameMap>
@@ -121,7 +127,7 @@ public class VP8AdaptiveTrackProjectionContext
      * Find the previous frame before the given one.
      */
     @Nullable
-    private synchronized VP8Frame prevFrame(@NotNull VP8Frame frame)
+    public synchronized VP8Frame prevFrame(@NotNull VP8Frame frame)
     {
         VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
         if (frameMap == null)
@@ -136,7 +142,7 @@ public class VP8AdaptiveTrackProjectionContext
      * Find the next frame after the given one.
      */
     @Nullable
-    private synchronized VP8Frame nextFrame(@NotNull VP8Frame frame)
+    public synchronized VP8Frame nextFrame(@NotNull VP8Frame frame)
     {
         VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
         if (frameMap == null)
@@ -151,7 +157,7 @@ public class VP8AdaptiveTrackProjectionContext
      * Find the previous accepted frame before the given one.
      */
     @Nullable
-    private VP8Frame findPrevAcceptedFrame(@NotNull VP8Frame frame)
+    public VP8Frame findPrevAcceptedFrame(@NotNull VP8Frame frame)
     {
         VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
         if (frameMap == null)
@@ -166,7 +172,7 @@ public class VP8AdaptiveTrackProjectionContext
      * Find the next accepted frame after the given one.
      */
     @Nullable
-    private VP8Frame findNextAcceptedFrame(@NotNull VP8Frame frame)
+    public VP8Frame findNextAcceptedFrame(@NotNull VP8Frame frame)
     {
         VP8FrameMap frameMap = vp8FrameMaps.get(frame.getSsrc());
         if (frameMap == null)
@@ -534,8 +540,7 @@ public class VP8AdaptiveTrackProjectionContext
         }
         else
         {
-            do
-            {
+            do {
                 f2 = prevFrame(f1);
                 if (f2 == null)
                 {
@@ -545,8 +550,7 @@ public class VP8AdaptiveTrackProjectionContext
                 seqGap += -seqGap(f2, f1);
                 picGap += -picGap(f2, f1);
                 f1 = f2;
-            }
-            while (f2 != frame);
+            } while (f2 != frame);
             refSeq = refFrame.getProjection().getEarliestProjectedSequence();
         }
 
@@ -696,7 +700,6 @@ public class VP8AdaptiveTrackProjectionContext
      * {@inheritDoc}
      */
     @Override
-    @SuppressWarnings("unchecked")
     public synchronized JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
@@ -705,6 +708,7 @@ public class VP8AdaptiveTrackProjectionContext
                 VP8AdaptiveTrackProjectionContext.class.getSimpleName());
 
         JSONArray mapSizes = new JSONArray();
+        int i = 0;
         for (Map.Entry<Long, VP8FrameMap> entry: vp8FrameMaps.entrySet())
         {
             JSONObject sizeInfo = new JSONObject();

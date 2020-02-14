@@ -683,7 +683,6 @@ public class IceTransport
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
-    @SuppressWarnings("unchecked")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();

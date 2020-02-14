@@ -30,9 +30,9 @@ public class DataChannelProtocolMessage extends DataChannelMessage
     /**
      * The only common field is the message type, so we'll call that the 'header'
      */
-    private static final int HEADER_SIZE_BYTES = 1;
-    static final int MAX_LABEL_LENGTH = 0xFFFF;
-    static final int MAX_PROTOCOL_LENGTH = 0xFFFF;
+    private static int HEADER_SIZE_BYTES = 1;
+    protected static int MAX_LABEL_LENGTH = 0xFFFF;
+    protected static int MAX_PROTOCOL_LENGTH = 0xFFFF;
 
     private final int messageType;
 

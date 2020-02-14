@@ -53,13 +53,13 @@ public class EndpointConnectionStatus
     /**
      * The logger instance used by this class.
      */
-    private static final Logger logger
+    private final static Logger logger
         = new LoggerImpl(EndpointConnectionStatus.class.getName());
 
     /**
      * How often connectivity status is being probed. Value in milliseconds.
      */
-    private static final long PROBE_INTERVAL = 500L;
+    private final static long PROBE_INTERVAL = 500L;
 
     /**
      * OSGi BC for this module.

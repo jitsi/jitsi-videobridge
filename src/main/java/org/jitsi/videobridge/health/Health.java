@@ -72,7 +72,7 @@ public class Health
     private static void check(Conference conference)
     {
         final int numEndpoints = 2;
-        //ArrayList<Endpoint> endpoints = new ArrayList<>(numEndpoints);
+        ArrayList<Endpoint> endpoints = new ArrayList<>(numEndpoints);
 
         for (int i = 0; i < numEndpoints; ++i)
         {
@@ -88,7 +88,7 @@ public class Health
                 throw new RuntimeException(ioe);
             }
 
-            //endpoints.add(endpoint);
+            endpoints.add(endpoint);
 
             endpoint.createSctpConnection();
         }
@@ -138,7 +138,7 @@ public class Health
             throw new Exception("Address discovery through STUN failed");
         }
 
-        if (!Harvesters.isHealthy())
+        if (!Harvesters.healthy)
         {
             throw new Exception("Failed to bind single-port");
         }

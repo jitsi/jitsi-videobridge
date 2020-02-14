@@ -1006,17 +1006,16 @@ public class VP8AdaptiveTrackProjectionTest
         private int octetCount;
         private int frameCount;
 
-        private static final long baseReceivedTime = 1577836800000L; /* 2020-01-01 00:00:00 UTC */
+        private final long baseReceivedTime = 1577836800000L; /* 2020-01-01 00:00:00 UTC */
         private long receivedTime;
 
         void reset()
         {
-            boolean useRandom = true; // switch off to ease debugging
             long seed = System.currentTimeMillis();
             Random random = new Random(seed);
 
-            seq = useRandom ? random.nextInt() % 0x10000 : 0;
-            ts = useRandom ? random.nextLong() % 0x100000000L : 0;
+            seq = /* random.nextInt() % 0x10000 */ 0;
+            ts = /* random.nextLong() % 0x100000000L */ 0;
 
             picId = 0;
             tl0picidx = 0;

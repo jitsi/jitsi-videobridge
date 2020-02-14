@@ -296,7 +296,6 @@ public class Endpoint
 
 
     @Override
-    @SuppressWarnings("unchecked")
     public void propertyChange(PropertyChangeEvent evt)
     {
         if (SELECTED_ENDPOINTS_PROPERTY_NAME.equals(evt.getPropertyName()))
@@ -323,11 +322,14 @@ public class Endpoint
      * this <tt>Endpoint</tt>.
      *
      * @param msg message text to send.
+     * @throws IOException
      */
     @Override
     public void sendMessage(String msg)
+        throws IOException
     {
-        EndpointMessageTransport messageTransport = getMessageTransport();
+        EndpointMessageTransport messageTransport
+            = getMessageTransport();
         if (messageTransport != null)
         {
             messageTransport.sendMessage(msg);
@@ -369,6 +371,10 @@ public class Endpoint
     public void setLocalSsrc(MediaType mediaType, long ssrc)
     {
         transceiver.setLocalSsrc(mediaType, ssrc);
+        if (MediaType.VIDEO.equals(mediaType))
+        {
+            bandwidthProbing.senderSsrc = ssrc;
+        }
     }
 
     /**
@@ -905,7 +911,14 @@ public class Endpoint
             {
                 logger.debug("Is now selected, sending message: " + selectedUpdate);
             }
-            sendMessage(selectedUpdate);
+            try
+            {
+                sendMessage(selectedUpdate);
+            }
+            catch (IOException e)
+            {
+                logger.error("Error sending SelectedUpdate message: " + e);
+            }
         }
     }
 
@@ -924,7 +937,14 @@ public class Endpoint
                 logger.debug("Is no longer selected, sending message: " +
                         selectedUpdate);
             }
-            sendMessage(selectedUpdate);
+            try
+            {
+                sendMessage(selectedUpdate);
+            }
+            catch (IOException e)
+            {
+                logger.error("Error sending SelectedUpdate message: " + e);
+            }
         }
     }
 
@@ -966,7 +986,14 @@ public class Endpoint
         String msg = createLastNEndpointsChangeEvent(
             forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints);
 
-        sendMessage(msg);
+        try
+        {
+            sendMessage(msg);
+        }
+        catch (IOException e)
+        {
+            logger.error("Failed to send message on data channel.", e);
+        }
     }
 
     /**
@@ -984,7 +1011,7 @@ public class Endpoint
      * A node which can be placed in the pipeline to cache SCTP packets until
      * the SCTPManager is ready to handle them.
      */
-    private static class SctpHandler extends ConsumerNode
+    private class SctpHandler extends ConsumerNode
     {
         private final Object sctpManagerLock = new Object();
         public SctpManager sctpManager = null;
@@ -1000,7 +1027,7 @@ public class Endpoint
         }
 
         @Override
-        protected void consume(@NotNull PacketInfo packetInfo)
+        protected void consume(PacketInfo packetInfo)
         {
             synchronized (sctpManagerLock)
             {
@@ -1048,7 +1075,7 @@ public class Endpoint
      * A node which can be placed in the pipeline to cache Data channel packets
      * until the DataChannelStack is ready to handle them.
      */
-    private static class DataChannelHandler extends ConsumerNode
+    private class DataChannelHandler extends ConsumerNode
     {
         private final Object dataChannelStackLock = new Object();
         public DataChannelStack dataChannelStack = null;
@@ -1359,8 +1386,6 @@ public class Endpoint
                     case VIDEO:
                         acceptVideo = true;
                         break;
-                    default:
-                        break;
                 }
             }
         }
@@ -1379,8 +1404,8 @@ public class Endpoint
     /**
      * {@inheritDoc}
      */
-    @Override
     @SuppressWarnings("unchecked")
+    @Override
     public JSONObject getDebugState()
     {
         JSONObject debugState = super.getDebugState();

@@ -24,6 +24,8 @@ import org.osgi.framework.*;
 
 public class Application extends ResourceConfig
 {
+    protected Logger logger = new LoggerImpl(getClass().getName());
+
     public Application(BundleContext bundleContext)
     {
         // Register the resource binder for injecting OSGI services

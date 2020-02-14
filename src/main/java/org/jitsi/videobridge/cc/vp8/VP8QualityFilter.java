@@ -15,13 +15,11 @@
  */
 package org.jitsi.videobridge.cc.vp8;
 
-import edu.umd.cs.findbugs.annotations.*;
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi_modified.impl.neomedia.codec.video.vp8.*;
 import org.json.simple.*;
-
-import java.lang.*;
-import java.lang.SuppressWarnings;
 
 /**
  * This class is responsible for dropping VP8 simulcast/svc packets based on
@@ -384,11 +382,6 @@ class VP8QualityFilter
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
-    @SuppressWarnings("unchecked")
-    @SuppressFBWarnings(
-            value = "IS2_INCONSISTENT_SYNC",
-            justification = "We intentionally avoid synchronizing while reading" +
-                    " fields only used in debug output.")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();

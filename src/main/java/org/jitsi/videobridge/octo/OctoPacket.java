@@ -145,7 +145,7 @@ class OctoPacket
         case OCTO_MEDIA_TYPE_DATA:
             return MediaType.DATA;
         default:
-            throw new IllegalArgumentException("Invalid media type value: " + mediaType);
+            return null;
         }
     }
 

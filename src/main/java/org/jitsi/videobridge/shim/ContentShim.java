@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.shim;
 
-import org.jetbrains.annotations.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging2.*;
@@ -61,7 +60,7 @@ public class ContentShim
     /**
      * The parent conference.
      */
-    @NotNull private final Conference conference;
+    private final Conference conference;
 
     /**
      * This {@link ContentShim}'s channels.
@@ -82,7 +81,7 @@ public class ContentShim
      * @param conference the parent conference.
      * @param mediaType the media type (audio/video).
      */
-    public ContentShim(@NotNull Conference conference, MediaType mediaType, Logger parentLogger)
+    public ContentShim(Conference conference, MediaType mediaType, Logger parentLogger)
     {
         this.mediaType = mediaType;
         this.conference = conference;

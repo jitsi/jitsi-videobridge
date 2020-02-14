@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.xmpp;
 
-import edu.umd.cs.findbugs.annotations.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -43,6 +42,11 @@ public class ClientConnectionImpl
      */
     private static final Logger logger
         =  new LoggerImpl(ClientConnectionImpl.class.getName());
+
+    /**
+     * The prefix of the property names used to configure this bundle.
+     */
+    private static final String PREFIX = "org.jitsi.videobridge.xmpp.user.";
 
     /**
      * The {@link MucClientManager} which manages the XMPP user connections
@@ -168,7 +172,6 @@ public class ClientConnectionImpl
      * is in the required format and either a new {@link MucClient} was added
      * or a client with the same ID already existed).
      */
-    @SuppressFBWarnings(value = "WMI_WRONG_MAP_ITERATOR")
     public boolean addMucClient(JSONObject jsonObject)
     {
         if (jsonObject == null || !(jsonObject.get("id") instanceof String))

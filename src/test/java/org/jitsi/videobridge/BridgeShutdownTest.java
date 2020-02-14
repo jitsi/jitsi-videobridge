@@ -206,7 +206,7 @@ public class BridgeShutdownTest
                 ColibriConferenceIQ.GracefulShutdown.NAMESPACE));
     }
 
-    static class TestShutdownService implements ShutdownService
+    class TestShutdownService implements ShutdownService
     {
         boolean shutdownStarted = false;
 

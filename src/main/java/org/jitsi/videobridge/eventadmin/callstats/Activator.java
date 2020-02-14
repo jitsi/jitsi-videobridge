@@ -165,8 +165,6 @@ public class Activator
                 conferenceStatsHandler = null;
             }
             break;
-        default:
-            break;
         }
     }
 }

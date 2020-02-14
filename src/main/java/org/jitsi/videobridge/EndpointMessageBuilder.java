@@ -191,7 +191,6 @@ public class EndpointMessageBuilder
      * selected endpoint
      * @return a JSON string serialization of the created message
      */
-    @SuppressWarnings("unchecked")
     public static String createSelectedUpdateMessage(boolean isSelected)
     {
         JSONObject selectedUpdate = new JSONObject();
@@ -204,7 +203,6 @@ public class EndpointMessageBuilder
     /**
      * Returns a JSON array representation of a collection of strings.
      */
-    @SuppressWarnings("unchecked")
     private static String getJsonString(Collection<String> strings)
     {
         JSONArray array = new JSONArray();

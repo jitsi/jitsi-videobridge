@@ -316,8 +316,6 @@ public class CallStatsIOTransport
             case ServiceEvent.UNREGISTERING:
                 statsService = null;
                 break;
-            default:
-                break;
             }
         }
     }
