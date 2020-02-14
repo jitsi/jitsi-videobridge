@@ -22,11 +22,11 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.*;
 
+import static org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.*;
+
 public class JvmStats
     extends Statistics
 {
-    public static final String CPU_USAGE = "cpu_usage";
-
     private final Collection<Consumer<Float>> cpuUsageConsumers
         = new CopyOnWriteArrayList<>();
 
