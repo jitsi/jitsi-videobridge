@@ -313,7 +313,10 @@ public class EndpointConnectionStatus
                 }
             }
 
-            return conference.isExpired() || e.isExpired() || endpointReplaced;
+            // We intentionally keep endpoints that have expire in order to
+            // keep other endpoints in the conference notified about their
+            // failed state.
+            return conference.isExpired() || endpointReplaced;
         });
         if (logger.isDebugEnabled())
         {
