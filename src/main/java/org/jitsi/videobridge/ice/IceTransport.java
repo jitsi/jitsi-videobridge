@@ -353,17 +353,22 @@ public class IceTransport
         // Set the remote ufrag/password
         if (transportPacketExtension.getUfrag() != null)
         {
+            logger.warn("Setting remote ufrag");
             iceStream.setRemoteUfrag(transportPacketExtension.getUfrag());
         }
         if (transportPacketExtension.getPassword() != null)
         {
+            logger.warn("Setting remote password");
             iceStream.setRemotePassword(transportPacketExtension.getPassword());
         }
+        logger.warn("ufrag and password set");
 
         // If ICE is running already, we try to update the checklists with the
         // candidates. Note that this is a best effort.
+        IceProcessingState state = iceAgent.getState();
         boolean iceAgentStateIsRunning
-                = IceProcessingState.RUNNING.equals(iceAgent.getState());
+                = IceProcessingState.RUNNING.equals(state);
+        logger.warn("the agent is "+state);
 
         List<CandidatePacketExtension> remoteCandidates
                 = transportPacketExtension.getChildExtensionsOfType(
@@ -376,6 +381,7 @@ public class IceTransport
 
         int remoteCandidateCount
                 = addRemoteCandidates(remoteCandidates, iceAgentStateIsRunning);
+        logger.warn("Remote candidate count " + remoteCandidateCount);
 
         if (iceAgentStateIsRunning)
         {
@@ -387,6 +393,7 @@ public class IceTransport
             }
             else
             {
+                logger.warn("Calling updateRemoteCandidates");
                 iceComponent.updateRemoteCandidates();
             }
         }
