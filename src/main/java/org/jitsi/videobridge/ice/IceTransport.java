@@ -444,15 +444,20 @@ public class IceTransport
         int generation = iceAgent.getGeneration();
         int remoteCandidateCount = 0;
 
+        logger.warn("Adding "+candidates.size() +" remote candidates, gen="+generation);
         for (CandidatePacketExtension candidate : candidates)
         {
             // Is the remote candidate from the current generation of the
             // iceAgent?
             if (candidate.getGeneration() != generation)
+            {
+                logger.warn("Generetaion mismatch");
                 continue;
+            }
 
             Component component
                     = iceStream.getComponent(candidate.getComponent());
+            logger.warn("Component= "+component);
             String relAddr;
             int relPort;
             TransportAddress relatedAddress = null;
@@ -469,6 +474,7 @@ public class IceTransport
 
             RemoteCandidate relatedCandidate
                     = component.findRemoteCandidate(relatedAddress);
+            logger.warn("relatedCandidate= "+relatedCandidate);
             RemoteCandidate remoteCandidate
                     = new RemoteCandidate(
                     new TransportAddress(
@@ -481,6 +487,7 @@ public class IceTransport
                     candidate.getFoundation(),
                     candidate.getPriority(),
                     relatedCandidate);
+            logger.warn("remoteCandidate= "+remoteCandidate);
 
             // XXX IceTransport harvests host candidates only and the
             // ICE Components utilize the UDP protocol/transport only at the
@@ -491,18 +498,22 @@ public class IceTransport
             // value.
             if (!TransportUtils.canReach(component, remoteCandidate))
             {
+                logger.warn("unreachable");
                 continue;
             }
 
             if (iceAgentStateIsRunning)
             {
+                logger.warn("addUpdateCandidates");
                 component.addUpdateRemoteCandidates(remoteCandidate);
             }
             else
             {
+                logger.warn("addRemoteCandidate");
                 component.addRemoteCandidate(remoteCandidate);
             }
             remoteCandidateCount++;
+            logger.warn("added a remote candidate");
         }
 
         return remoteCandidateCount;
