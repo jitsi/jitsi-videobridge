@@ -32,6 +32,7 @@ import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jingle.CandidateType;
 import org.json.simple.*;
 import org.osgi.framework.*;
+import sun.net.util.*;
 
 import static org.jitsi.videobridge.ice.IceConfig.*;
 
@@ -444,6 +445,16 @@ public class IceTransport
             if (candidate.getGeneration() != generation)
                 continue;
 
+            String address = candidate.getIP();
+            boolean needsResolution
+                    = !IPAddressUtil.isIPv4LiteralAddress(address)
+                        && !IPAddressUtil.isIPv6LiteralAddress(address);
+            if (needsResolution && !Config.resolveRemoteCandidates())
+            {
+                logger.debug(() -> "Ignoring remote candidate with non-literal address: " + address);
+                continue;
+            }
+
             Component component
                     = iceStream.getComponent(candidate.getComponent());
             String relAddr;
@@ -453,6 +464,14 @@ public class IceTransport
             if ((relAddr = candidate.getRelAddr()) != null
                     && (relPort = candidate.getRelPort()) != -1)
             {
+                boolean relAddrNeedsResolution
+                        = !IPAddressUtil.isIPv4LiteralAddress(relAddr)
+                            && !IPAddressUtil.isIPv6LiteralAddress(relAddr);
+                if (relAddrNeedsResolution && !Config.resolveRemoteCandidates())
+                {
+                    logger.debug(() -> "Ignoring remote candidate with non-literal related address: " + address);
+                    continue;
+                }
                 relatedAddress
                         = new TransportAddress(
                         relAddr,
