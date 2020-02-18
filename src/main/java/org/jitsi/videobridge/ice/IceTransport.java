@@ -467,16 +467,15 @@ public class IceTransport
                 boolean relAddrNeedsResolution
                         = !IPAddressUtil.isIPv4LiteralAddress(relAddr)
                             && !IPAddressUtil.isIPv6LiteralAddress(relAddr);
-                if (relAddrNeedsResolution && !Config.resolveRemoteCandidates())
-                {
-                    logger.debug(() -> "Ignoring remote candidate with non-literal related address: " + address);
-                    continue;
-                }
+                // If the related address is a DNS name, just ignore it (but
+                // continue proceessing the candidate).
                 relatedAddress
-                        = new TransportAddress(
-                        relAddr,
-                        relPort,
-                        Transport.parse(candidate.getProtocol()));
+                        = relAddrNeedsResolution
+                            ? null
+                            : new TransportAddress(
+                                    relAddr,
+                                    relPort,
+                                    Transport.parse(candidate.getProtocol()));
             }
 
             RemoteCandidate relatedCandidate
