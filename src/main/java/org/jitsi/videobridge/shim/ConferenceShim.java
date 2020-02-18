@@ -29,6 +29,8 @@ import org.jivesoftware.smack.packet.*;
 
 import java.io.*;
 import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
 
 /**
  * Handles Colibri-related logic for a {@link Conference}, e.g.
@@ -270,36 +272,27 @@ public class ConferenceShim
 
     /**
      * Process whole {@link ColibriConferenceIQ} and initialize all signaled
-     * endpoints which has not been initialized before.
+     * endpoints that have not been initialized before.
      * @param conferenceIQ conference IQ having endpoints
      */
     void initializeSignaledEndpoints(ColibriConferenceIQ conferenceIQ)
         throws VideobridgeShim.IqProcessingException
     {
-        for (ColibriConferenceIQ.Content content : conferenceIQ.getContents())
-        {
-            for (ColibriConferenceIQ.Channel channel : content.getChannels())
-            {
-                final String endpointId = channel.getEndpoint();
-                if (endpointId != null)
-                {
-                    ensureEndpointCreated(
-                        endpointId,
-                        Boolean.TRUE.equals(channel.isInitiator()));
-                }
-            }
+        List<ColibriConferenceIQ.ChannelCommon> nonExpiredChannels
+            = conferenceIQ.getContents().stream()
+                .map(content ->
+                        Stream.concat(
+                                content.getChannels().stream(),
+                                content.getSctpConnections().stream()))
+                .flatMap(Function.identity())
+                .filter(c -> c.getEndpoint() != null && c.getExpire() != 0)
+                .collect(Collectors.toList());
 
-            for (ColibriConferenceIQ.SctpConnection channel
-                : content.getSctpConnections())
-            {
-                final String endpointId = channel.getEndpoint();
-                if (endpointId != null)
-                {
-                    ensureEndpointCreated(
-                        endpointId,
-                        Boolean.TRUE.equals(channel.isInitiator()));
-                }
-            }
+        for (ColibriConferenceIQ.ChannelCommon c : nonExpiredChannels)
+        {
+            ensureEndpointCreated(
+                c.getEndpoint(),
+                Boolean.TRUE.equals(c.isInitiator()));
         }
 
         for (ColibriConferenceIQ.ChannelBundle channelBundle
