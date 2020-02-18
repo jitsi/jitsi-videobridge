@@ -17,17 +17,18 @@ package org.jitsi.test_helpers.matchers
 
 import io.kotlintest.Matcher
 import io.kotlintest.MatcherResult
+import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.ByteArrayBuffer
 
 fun RtpPacket.getPayload(): ByteArrayBuffer {
-    return RtpPacket(buffer, payloadOffset, payloadLength)
+    return UnparsedPacket(buffer, payloadOffset, payloadLength)
 }
 
-fun RtpPacket.getHeaderAsBAF(): ByteArrayBuffer {
-    return RtpPacket(buffer, offset, RtpHeader.FIXED_HEADER_SIZE_BYTES)
+fun RtpPacket.getFixedHeaderAsBAB(): ByteArrayBuffer {
+    return UnparsedPacket(buffer, offset, RtpHeader.FIXED_HEADER_SIZE_BYTES)
 }
 
 fun haveSamePayload(expected: RtpPacket) = object : Matcher<RtpPacket> {
@@ -45,8 +46,8 @@ fun haveSamePayload(expected: RtpPacket) = object : Matcher<RtpPacket> {
 
 fun haveSameFixedHeader(expected: RtpPacket) = object : Matcher<RtpPacket> {
     override fun test(value: RtpPacket): MatcherResult {
-        val valueHeader = value.getHeaderAsBAF()
-        val expectedHeader = expected.getHeaderAsBAF()
+        val valueHeader = value.getFixedHeaderAsBAB()
+        val expectedHeader = expected.getFixedHeaderAsBAB()
 
         return MatcherResult(
             valueHeader.hasSameContentAs(expectedHeader),

@@ -106,6 +106,11 @@ open class RtpPacket(
      */
     var headerLength: Int = RtpHeader.getTotalLength(buffer, offset)
         protected set
+    init {
+        if (headerLength > length) {
+            throw IllegalArgumentException("RTP packet header length $headerLength > length $length")
+        }
+    }
 
     val payloadLength: Int
         get() = length - headerLength
