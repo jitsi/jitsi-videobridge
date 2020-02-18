@@ -457,29 +457,6 @@ public class IceTransport
 
             Component component
                     = iceStream.getComponent(candidate.getComponent());
-            String relAddr;
-            int relPort;
-            TransportAddress relatedAddress = null;
-
-            if ((relAddr = candidate.getRelAddr()) != null
-                    && (relPort = candidate.getRelPort()) != -1)
-            {
-                boolean relAddrNeedsResolution
-                        = !IPAddressUtil.isIPv4LiteralAddress(relAddr)
-                            && !IPAddressUtil.isIPv6LiteralAddress(relAddr);
-                // If the related address is a DNS name, just ignore it (but
-                // continue proceessing the candidate).
-                relatedAddress
-                        = relAddrNeedsResolution
-                            ? null
-                            : new TransportAddress(
-                                    relAddr,
-                                    relPort,
-                                    Transport.parse(candidate.getProtocol()));
-            }
-
-            RemoteCandidate relatedCandidate
-                    = component.findRemoteCandidate(relatedAddress);
             RemoteCandidate remoteCandidate
                     = new RemoteCandidate(
                     new TransportAddress(
@@ -491,7 +468,7 @@ public class IceTransport
                             candidate.getType().toString()),
                     candidate.getFoundation(),
                     candidate.getPriority(),
-                    relatedCandidate);
+                    null);
 
             // XXX IceTransport harvests host candidates only and the
             // ICE Components utilize the UDP protocol/transport only at the
