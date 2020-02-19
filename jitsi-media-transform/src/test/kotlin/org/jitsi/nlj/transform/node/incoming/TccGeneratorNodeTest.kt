@@ -2,8 +2,10 @@ package org.jitsi.nlj.transform.node.incoming
 
 import io.kotlintest.IsolationMode
 import io.kotlintest.Spec
-import io.kotlintest.matchers.numerics.shouldBeGreaterThan
+import io.kotlintest.matchers.beInstanceOf
 import io.kotlintest.matchers.numerics.shouldBeLessThan
+import io.kotlintest.matchers.numerics.shouldBeLessThanOrEqual
+import io.kotlintest.should
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
@@ -12,10 +14,12 @@ import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.test_utils.FakeClock
-import org.jitsi.nlj.test_utils.timeline
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.nlj.util.ms
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.UnreceivedPacketReport
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import java.util.Random
@@ -43,47 +47,55 @@ class TccGeneratorNodeTest : ShouldSpec() {
     init {
         "when TCC is not signaled" {
             streamInformationStore.clearRtpPayloadTypes()
-            timeline(clock) {
+            with(clock) {
                 repeat(100) { tccSeqNum ->
-                    run { tccGenerator.processPacket(PacketInfo(createPacket(tccSeqNum))) }
+                    tccGenerator.processPacket(PacketInfo(createPacket(tccSeqNum)).apply { receivedTime = clock.millis() })
                     elapse(10.ms())
                 }
-            }.run()
+            }
             "no TCC packets should be sent" {
                 tccPackets.size shouldBe 0
             }
         }
         "when a series of packets (without marking) is received" {
-            timeline(clock) {
+            with(clock) {
                 repeat(11) { tccSeqNum ->
-                    run { tccGenerator.processPacket(PacketInfo(createPacket(tccSeqNum))) }
+                    tccGenerator.processPacket(PacketInfo(createPacket(tccSeqNum)).apply { receivedTime = clock.millis() })
                     elapse(10.ms())
                 }
-            }.run()
-            "a TCC packet" {
+            }
+            "one TCC packet" {
                 should("be sent after 100ms") {
-                    tccPackets.size shouldBeGreaterThan 0
+                    tccPackets.size shouldBe 1
+                }
+                should("contain the right number of reports") {
+                    tccPackets[0] should beInstanceOf<RtcpFbTccPacket>()
+                    with(tccPackets[0] as RtcpFbTccPacket) {
+                        iterator().asSequence().count() shouldBe 11
+                    }
                 }
             }
         }
         "when a series of packets (where one is marked) is received" {
-            timeline(clock) {
-                run { tccGenerator.processPacket(PacketInfo(createPacket(1))) }
+            with(clock) {
+                tccGenerator.processPacket(PacketInfo(createPacket(1)).apply { receivedTime = clock.millis() })
                 elapse(10.ms())
-                run { tccGenerator.processPacket(PacketInfo(createPacket(2))) }
+                tccGenerator.processPacket(PacketInfo(createPacket(2)).apply { receivedTime = clock.millis() })
                 elapse(10.ms())
-                run { tccGenerator.processPacket(PacketInfo(createPacket(3).apply { isMarked = true })) }
-            }.run()
-            "a TCC packet" {
-                should("be sent after 20ms") {
-                    tccPackets.size shouldBeGreaterThan 0
+                tccGenerator.processPacket(PacketInfo(createPacket(3).apply { isMarked = true }).apply { receivedTime = clock.millis() })
+                elapse(100.ms())
+                tccGenerator.processPacket(PacketInfo(createPacket(4)).apply { receivedTime = clock.millis() })
+            }
+            "two TCC packets" {
+                should("be sent") {
+                    tccPackets.size shouldBe 2
                 }
             }
         }
         "when random packets are added" {
             val random = Random(1234)
             for (i in 1..10000) {
-                tccGenerator.processPacket(PacketInfo(createPacket(random.nextInt(0xffff))))
+                tccGenerator.processPacket(PacketInfo(createPacket(random.nextInt(0xffff))).apply { receivedTime = clock.millis() })
                 clock.elapse(10.ms())
 
                 tccPackets.lastOrNull()?.let {
@@ -93,14 +105,100 @@ class TccGeneratorNodeTest : ShouldSpec() {
         }
         "when a few packets covering the seq num space are added" {
             for (i in listOf(0, 10000, 20000, 30000, 40000, 50000, 60000)) {
-                tccGenerator.processPacket(PacketInfo(createPacket(i)))
+                tccGenerator.processPacket(PacketInfo(createPacket(i % 0xffff)).apply { receivedTime = clock.millis() })
             }
             for (i in 2..5000) {
-                tccGenerator.processPacket(PacketInfo(createPacket(i and 0xffff)))
+                tccGenerator.processPacket(PacketInfo(createPacket(i % 0xffff)).apply { receivedTime = clock.millis() })
                 clock.elapse(10.ms())
 
                 tccPackets.lastOrNull()?.let {
                     it.length shouldBeLessThan 1500
+                }
+            }
+        }
+        "when sequence numbers cycle" {
+            var prevSize = tccPackets.size
+            repeat(100000) { tccSeqNum ->
+                if (tccSeqNum > 0xffff) {
+                    val x = 1
+                }
+                val pi = PacketInfo(createPacket(tccSeqNum % 0xffff)).apply { receivedTime = clock.millis() }
+                tccGenerator.processPacket(pi)
+                clock.elapse(10.ms())
+
+                tccPackets.size shouldBeLessThanOrEqual prevSize + 1
+                prevSize = tccPackets.size
+            }
+            "an appropriate number of TCC packets" {
+                should("be sent") {
+                    tccPackets.size shouldBe 9999
+                }
+            }
+        }
+        "when sequence numbers cycle with losses" {
+            var prevSize = tccPackets.size
+            repeat(50000) { tccSeqNum ->
+                val pi = PacketInfo(createPacket((tccSeqNum * 2) % 0xffff)).apply { receivedTime = clock.millis() }
+                tccGenerator.processPacket(pi)
+                clock.elapse(20.ms())
+
+                tccPackets.size shouldBeLessThanOrEqual prevSize + 1
+                prevSize = tccPackets.size
+            }
+            "an appropriate number of TCC packets" {
+                should("be sent") {
+                    tccPackets.size shouldBe 9999
+                }
+            }
+        }
+        "when there is a loss after a TCC packet is sent" {
+            with(clock) {
+                repeat(11) { tccSeqNum ->
+                    tccGenerator.processPacket(PacketInfo(createPacket(tccSeqNum)).apply { receivedTime = clock.millis() })
+                    elapse(10.ms())
+                }
+                elapse(100.ms())
+                tccGenerator.processPacket(PacketInfo(createPacket(20)).apply { receivedTime = clock.millis() })
+            }
+            "two TCC packets" {
+                should("be sent") {
+                    tccPackets.size shouldBe 2
+                }
+            }
+            "last TCC packet" {
+                should("have a base of the lost packet") {
+                    val lastTcc = tccPackets[1] as RtcpFbTccPacket
+                    val firstReport = lastTcc.iterator().next()
+                    firstReport should beInstanceOf<UnreceivedPacketReport>()
+                    firstReport.seqNum shouldBe 11
+                }
+            }
+        }
+        "when there is a packet reordering after a TCC packet is sent" {
+            with(clock) {
+                repeat(9) { tccSeqNum ->
+                    tccGenerator.processPacket(PacketInfo(createPacket(tccSeqNum)).apply { receivedTime = clock.millis() })
+                    elapse(10.ms())
+                }
+                elapse(10.ms())
+                tccGenerator.processPacket(PacketInfo(createPacket(10)).apply { receivedTime = clock.millis() })
+
+                tccGenerator.processPacket(PacketInfo(createPacket(9)).apply { receivedTime = clock.millis() - 10 })
+
+                elapse(100.ms())
+                tccGenerator.processPacket(PacketInfo(createPacket(20)).apply { receivedTime = clock.millis() })
+            }
+            "two TCC packets" {
+                should("be sent") {
+                    tccPackets.size shouldBe 2
+                }
+            }
+            "last TCC packet" {
+                should("have a base of the reordered packet") {
+                    val lastTcc = tccPackets[1] as RtcpFbTccPacket
+                    val firstReport = lastTcc.iterator().next()
+                    firstReport should beInstanceOf<ReceivedPacketReport>()
+                    firstReport.seqNum shouldBe 9
                 }
             }
         }
