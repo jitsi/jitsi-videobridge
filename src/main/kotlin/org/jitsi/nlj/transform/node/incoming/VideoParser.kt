@@ -24,6 +24,7 @@ import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
+import org.jitsi.rtp.extensions.bytearray.toHex
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
@@ -58,13 +59,18 @@ class VideoParser(
             numPacketsDroppedNoEncoding.incrementAndGet()
             return null
         }
-        when (payloadType) {
-            is Vp8PayloadType -> {
-                val vp8Packet = videoPacket.toOtherType(::Vp8Packet)
-                vp8Packet.qualityIndex = encodingDesc.index
-                packetInfo.packet = vp8Packet
-                packetInfo.resetPayloadVerification()
+        try {
+            when (payloadType) {
+                is Vp8PayloadType -> {
+                    val vp8Packet = videoPacket.toOtherType(::Vp8Packet)
+                    vp8Packet.qualityIndex = encodingDesc.index
+                    packetInfo.packet = vp8Packet
+                    packetInfo.resetPayloadVerification()
+                }
             }
+        } catch (e: Exception) {
+            logger.error("Exception parsing video packet.  Packet data is: ${videoPacket.buffer.toHex(videoPacket.offset, Math.min(videoPacket.length, 80))}", e)
+            return null
         }
         return packetInfo
     }
