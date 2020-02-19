@@ -20,6 +20,7 @@ import org.jitsi.config.LegacyFallbackConfigProperty
 import org.jitsi.config.legacyConfigAttributes
 import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.FallbackProperty
+import org.jitsi.utils.config.SimpleProperty
 import java.util.Objects
 
 class IceConfig {
@@ -160,6 +161,16 @@ class IceConfig {
 
             @JvmStatic
             fun useComponentSocket() = componentSocketProperty.value
+
+            class ResolveRemoteCandidatesProperty : SimpleProperty<Boolean>(
+                newConfigAttributes {
+                    name("videobridge.ice.resolve-remote-candidates")
+                    readOnce()
+            })
+            private val resolveRemoteCandidatesProperty = ResolveRemoteCandidatesProperty()
+
+            @JvmStatic
+            fun resolveRemoteCandidates() = resolveRemoteCandidatesProperty.value
         }
     }
 }

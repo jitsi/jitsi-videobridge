@@ -32,6 +32,7 @@ import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jingle.CandidateType;
 import org.json.simple.*;
 import org.osgi.framework.*;
+import sun.net.util.*;
 
 import static org.jitsi.videobridge.ice.IceConfig.*;
 
@@ -444,24 +445,18 @@ public class IceTransport
             if (candidate.getGeneration() != generation)
                 continue;
 
-            Component component
-                    = iceStream.getComponent(candidate.getComponent());
-            String relAddr;
-            int relPort;
-            TransportAddress relatedAddress = null;
-
-            if ((relAddr = candidate.getRelAddr()) != null
-                    && (relPort = candidate.getRelPort()) != -1)
+            String address = candidate.getIP();
+            boolean needsResolution
+                    = !IPAddressUtil.isIPv4LiteralAddress(address)
+                        && !IPAddressUtil.isIPv6LiteralAddress(address);
+            if (needsResolution && !Config.resolveRemoteCandidates())
             {
-                relatedAddress
-                        = new TransportAddress(
-                        relAddr,
-                        relPort,
-                        Transport.parse(candidate.getProtocol()));
+                logger.debug(() -> "Ignoring remote candidate with non-literal address: " + address);
+                continue;
             }
 
-            RemoteCandidate relatedCandidate
-                    = component.findRemoteCandidate(relatedAddress);
+            Component component
+                    = iceStream.getComponent(candidate.getComponent());
             RemoteCandidate remoteCandidate
                     = new RemoteCandidate(
                     new TransportAddress(
@@ -473,7 +468,7 @@ public class IceTransport
                             candidate.getType().toString()),
                     candidate.getFoundation(),
                     candidate.getPriority(),
-                    relatedCandidate);
+                    null);
 
             // XXX IceTransport harvests host candidates only and the
             // ICE Components utilize the UDP protocol/transport only at the
