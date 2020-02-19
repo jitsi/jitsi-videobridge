@@ -244,7 +244,8 @@ class TransportCcEngine(
         clock = clock
     ) {
         override fun discardItem(item: PacketDetail) {
-            numPacketsUnreported.getAndIncrement()
+            if (item.state == PacketDetailState.unreported)
+                numPacketsUnreported.getAndIncrement()
         }
 
         private val rfc3711IndexTracker = Rfc3711IndexTracker()
