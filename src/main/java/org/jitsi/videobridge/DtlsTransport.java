@@ -31,6 +31,7 @@ import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.extensions.*;
+import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
@@ -67,7 +68,18 @@ public class DtlsTransport extends IceTransport
     private static final Predicate<Packet> NON_DTLS_PREDICATE
             = DTLS_PREDICATE.negate();
 
-    public static final PacketDelayStats packetDelayStats = new PacketDelayStats();
+    private static final PacketDelayStats rtpPacketDelayStats = new PacketDelayStats();
+    private static final PacketDelayStats rtcpPacketDelayStats = new PacketDelayStats();
+
+    public static OrderedJsonObject getPacketDelayStats()
+    {
+        OrderedJsonObject packetDelayStats = new OrderedJsonObject();
+        packetDelayStats.put("rtp", DtlsTransport.rtpPacketDelayStats.toJson());
+        packetDelayStats.put("rtcp", DtlsTransport.rtcpPacketDelayStats.toJson());
+
+        return packetDelayStats;
+    }
+
     /**
      * An average of all of the individual bridge jitter values calculated by the
      * {@link DtlsTransport#bridgeJitterStats} instance variables below
@@ -597,7 +609,17 @@ public class DtlsTransport extends IceTransport
         @Override
         protected void consume(@NotNull PacketInfo packetInfo)
         {
-            packetDelayStats.addPacket(packetInfo);
+            Packet packet = packetInfo.getPacket();
+
+            if (PacketExtensionsKt.looksLikeRtp(packet))
+            {
+                rtpPacketDelayStats.addPacket(packetInfo);
+            }
+            else if (PacketExtensionsKt.looksLikeRtcp(packet))
+            {
+                rtcpPacketDelayStats.addPacket(packetInfo);
+            }
+
             bridgeJitterStats.packetSent(packetInfo);
             overallAverageBridgeJitter.addValue(bridgeJitterStats.getJitter());
             if (socket != null)
@@ -606,10 +628,10 @@ public class DtlsTransport extends IceTransport
                 {
                     socket.send(
                         new DatagramPacket(
-                                packetInfo.getPacket().getBuffer(),
-                                packetInfo.getPacket().getOffset(),
-                                packetInfo.getPacket().getLength()));
-                    ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
+                                packet.getBuffer(),
+                                packet.getOffset(),
+                                packet.getLength()));
+                    ByteBufferPool.returnBuffer(packet.getBuffer());
                 }
                 catch (IOException e)
                 {
