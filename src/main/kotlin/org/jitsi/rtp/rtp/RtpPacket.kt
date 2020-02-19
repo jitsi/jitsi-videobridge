@@ -83,19 +83,19 @@ open class RtpPacket(
      */
 
     var payloadType: Int by observableWhenChanged(RtpHeader.getPayloadType(buffer, offset)) {
-        _, _, newValue -> RtpHeader.setPayloadType(buffer, offset, newValue)
+        _, _, newValue -> RtpHeader.setPayloadType(this.buffer, this.offset, newValue)
     }
 
     var sequenceNumber: Int by observableWhenChanged(RtpHeader.getSequenceNumber(buffer, offset)) {
-        _, _, newValue -> RtpHeader.setSequenceNumber(buffer, offset, newValue)
+        _, _, newValue -> RtpHeader.setSequenceNumber(this.buffer, this.offset, newValue)
     }
 
     var timestamp: Long by observableWhenChanged(RtpHeader.getTimestamp(buffer, offset)) {
-        _, _, newValue -> RtpHeader.setTimestamp(buffer, offset, newValue)
+        _, _, newValue -> RtpHeader.setTimestamp(this.buffer, this.offset, newValue)
     }
 
     var ssrc: Long by observableWhenChanged(RtpHeader.getSsrc(buffer, offset)) {
-        _, _, newValue -> RtpHeader.setSsrc(buffer, offset, newValue)
+        _, _, newValue -> RtpHeader.setSsrc(this.buffer, this.offset, newValue)
     }
 
     val csrcs: List<Long>
