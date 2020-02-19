@@ -70,14 +70,12 @@ public class DtlsTransport extends IceTransport
 
     private static final PacketDelayStats rtpPacketDelayStats = new PacketDelayStats();
     private static final PacketDelayStats rtcpPacketDelayStats = new PacketDelayStats();
-    private static final PacketDelayStats dtlsPacketDelayStats = new PacketDelayStats();
 
     public static OrderedJsonObject getPacketDelayStats()
     {
         OrderedJsonObject packetDelayStats = new OrderedJsonObject();
         packetDelayStats.put("rtp", DtlsTransport.rtpPacketDelayStats.toJson());
         packetDelayStats.put("rtcp", DtlsTransport.rtcpPacketDelayStats.toJson());
-        packetDelayStats.put("dtls", DtlsTransport.dtlsPacketDelayStats.toJson());
 
         return packetDelayStats;
     }
@@ -620,14 +618,6 @@ public class DtlsTransport extends IceTransport
             else if (PacketExtensionsKt.looksLikeRtcp(packet))
             {
                 rtcpPacketDelayStats.addPacket(packetInfo);
-            }
-            else if (PacketExtensionsKt.looksLikeDtls(packet))
-            {
-                dtlsPacketDelayStats.addPacket(packetInfo);
-            }
-            else
-            {
-                logger.info("Sending un unknown packet type: " + packet);
             }
 
             bridgeJitterStats.packetSent(packetInfo);
