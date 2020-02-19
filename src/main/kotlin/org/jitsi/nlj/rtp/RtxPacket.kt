@@ -46,6 +46,8 @@ class RtxPacket {
          */
         fun removeOriginalSequenceNumber(rtxPacket: RtpPacket) = rtxPacket.apply {
             // Remove the original sequence number by moving the RTP header 2 bytes to the right
+            // Note this changes the buffer underlying the RtpPacket -- this is safe (but fragile)
+            // because we leave header values (which are cached) unchanged.
             System.arraycopy(buffer, offset, buffer, offset + 2, headerLength)
             offset += 2
             length -= 2
