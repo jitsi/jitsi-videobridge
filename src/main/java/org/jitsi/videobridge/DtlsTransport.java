@@ -70,14 +70,14 @@ public class DtlsTransport extends IceTransport
 
     private static final PacketDelayStats rtpPacketDelayStats = new PacketDelayStats();
     private static final PacketDelayStats rtcpPacketDelayStats = new PacketDelayStats();
-    private static final PacketDelayStats otherPacketDelayStats = new PacketDelayStats();
+    private static final PacketDelayStats dtlsPacketDelayStats = new PacketDelayStats();
 
     public static OrderedJsonObject getPacketDelayStats()
     {
         OrderedJsonObject packetDelayStats = new OrderedJsonObject();
         packetDelayStats.put("rtp", DtlsTransport.rtpPacketDelayStats.toJson());
         packetDelayStats.put("rtcp", DtlsTransport.rtcpPacketDelayStats.toJson());
-        packetDelayStats.put("other", DtlsTransport.otherPacketDelayStats.toJson());
+        packetDelayStats.put("dtls", DtlsTransport.dtlsPacketDelayStats.toJson());
 
         return packetDelayStats;
     }
@@ -611,18 +611,25 @@ public class DtlsTransport extends IceTransport
         @Override
         protected void consume(@NotNull PacketInfo packetInfo)
         {
-            if (packetInfo.getPacket() instanceof RtpPacket)
+            Packet packet = packetInfo.getPacket();
+
+            if (PacketExtensionsKt.looksLikeRtp(packet))
             {
                 rtpPacketDelayStats.addPacket(packetInfo);
             }
-            else if (packetInfo.getPacket() instanceof RtcpPacket)
+            else if (PacketExtensionsKt.looksLikeRtcp(packet))
             {
                 rtcpPacketDelayStats.addPacket(packetInfo);
             }
+            else if (PacketExtensionsKt.looksLikeDtls(packet))
+            {
+                dtlsPacketDelayStats.addPacket(packetInfo);
+            }
             else
             {
-                otherPacketDelayStats.addPacket(packetInfo);
+                logger.info("Sending un unknown packet type: " + packet);
             }
+
             bridgeJitterStats.packetSent(packetInfo);
             overallAverageBridgeJitter.addValue(bridgeJitterStats.getJitter());
             if (socket != null)
@@ -631,10 +638,10 @@ public class DtlsTransport extends IceTransport
                 {
                     socket.send(
                         new DatagramPacket(
-                                packetInfo.getPacket().getBuffer(),
-                                packetInfo.getPacket().getOffset(),
-                                packetInfo.getPacket().getLength()));
-                    ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
+                                packet.getBuffer(),
+                                packet.getOffset(),
+                                packet.getLength()));
+                    ByteBufferPool.returnBuffer(packet.getBuffer());
                 }
                 catch (IOException e)
                 {
