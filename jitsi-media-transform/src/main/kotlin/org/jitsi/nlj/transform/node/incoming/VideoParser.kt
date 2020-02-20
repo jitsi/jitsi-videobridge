@@ -55,7 +55,7 @@ class VideoParser(
             return null
         }
         val encodingDesc = findRtpEncodingDesc(videoPacket) ?: run {
-            logger.warn("Unable to find encoding matching packet! encodings=$tracks, packet=$videoPacket")
+            logger.warn("Unable to find encoding matching packet! packet=$videoPacket, encodings=${tracks.joinToString(separator = "\n")}")
             numPacketsDroppedNoEncoding.incrementAndGet()
             return null
         }
@@ -81,7 +81,6 @@ class VideoParser(
                 return it
             }
         }
-        logger.warn("Unable to find encoding matching packet! packet=$packet, encodings=\n${tracks.joinToString(separator = "\n")}")
         return null
     }
 
