@@ -183,6 +183,10 @@ public class ConferenceShim
 
             for (ChannelShim channelShim : contentShim.getChannelShims())
             {
+                if (channelShim.isExpired() || channelShim.getEndpoint().isExpired())
+                {
+                    continue;
+                }
                 if (channelShim instanceof SctpConnectionShim)
                 {
                     ColibriConferenceIQ.SctpConnection sctpConnectionIQ
