@@ -604,15 +604,17 @@ public class Endpoint
 
         try
         {
+            final ChannelShim[] channelShims = this.channelShims.toArray(new ChannelShim[0]);
+            this.channelShims.clear();
+
             for (ChannelShim channelShim : channelShims)
             {
                 if (!channelShim.isExpired())
                 {
-                    // Last expired channel will also trigger Endpoint.expire()
-                    // causing recursive call. But it will be stopped by `super.isExpired` check
                     channelShim.setExpire(0);
                 }
             }
+
             updateStatsOnExpire();
             this.transceiver.stop();
             if (logger.isDebugEnabled() && getConference().includeInStatistics())
