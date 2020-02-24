@@ -77,10 +77,10 @@ abstract class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode
                     cachedPackets.clear()
                 } else {
                     val err = transformer.transform(packetInfo)
+                    countErrorStatus(err)
                     outPackets = if (err == SrtpErrorStatus.OK)
                         listOf(packetInfo) else {
                         packetDiscarded(packetInfo)
-                        countErrorStatus(err)
                         emptyList()
                     }
                 }
