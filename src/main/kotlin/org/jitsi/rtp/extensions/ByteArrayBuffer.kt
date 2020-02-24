@@ -16,25 +16,29 @@
 
 package org.jitsi.rtp.extensions
 
-import java.lang.Integer.min
 import org.jitsi.utils.ByteArrayBuffer
 
-fun ByteArrayBuffer.toHex(): String {
+@JvmOverloads
+fun ByteArrayBuffer.toHex(maxBytes: Int = Int.MAX_VALUE): String {
     val HEX_CHARS = "0123456789ABCDEF"
 
+    val numBytes = minOf(maxBytes, length, buffer.size - offset)
+
     val sb = StringBuilder()
-    for (i in offset until min(offset + length, buffer.size)) {
-        val octet: Int = buffer[i].toInt()
-        val firstIndex = (octet and 0xF0) shr 4
-        val secondIndex = octet and 0x0F
+    for (i in offset until offset + numBytes) {
+        val position = i - offset
+        if (position != 0) {
+            if (position % 16 == 0) {
+                sb.append("\n")
+            } else if (position % 4 == 0) {
+                sb.append(" ")
+            }
+        }
+        val byte: Int = buffer[i].toInt()
+        val firstIndex = (byte and 0xF0) shr 4
+        val secondIndex = byte and 0x0F
         sb.append(HEX_CHARS[firstIndex])
         sb.append(HEX_CHARS[secondIndex])
-        val position = i - offset
-        if ((position + 1) % 16 == 0) {
-            sb.append("\n")
-        } else if ((position + 1) % 4 == 0) {
-            sb.append(" ")
-        }
     }
 
     return sb.toString()
