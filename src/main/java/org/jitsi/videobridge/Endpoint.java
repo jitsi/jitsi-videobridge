@@ -604,6 +604,17 @@ public class Endpoint
 
         try
         {
+            final ChannelShim[] channelShims = this.channelShims.toArray(new ChannelShim[0]);
+            this.channelShims.clear();
+
+            for (ChannelShim channelShim : channelShims)
+            {
+                if (!channelShim.isExpired())
+                {
+                    channelShim.setExpire(0);
+                }
+            }
+
             updateStatsOnExpire();
             this.transceiver.stop();
             if (logger.isDebugEnabled() && getConference().includeInStatistics())
