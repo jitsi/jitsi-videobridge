@@ -30,6 +30,7 @@ import org.jitsi.rtp.extensions.*;
 import org.jitsi.rtp.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
+import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
@@ -92,7 +93,7 @@ public class OctoTransceiver
                 "octo-tranceiver-incoming-packet-queue",
                 TaskPools.CPU_POOL,
                 this::processPacket,
-                1024);
+                OctoConfig.Config.queueSize());
         incomingPacketQueue.setErrorHandler(queueErrorCounter);
     }
 

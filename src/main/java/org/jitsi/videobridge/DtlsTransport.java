@@ -131,7 +131,7 @@ public class DtlsTransport extends IceTransport
                         getClass().getSimpleName() + "-outgoing-packet-queue",
                         TaskPools.IO_POOL,
                         this::handleOutgoingPacket,
-                        1024);
+                        DtlsTransportConfig.Config.queueSize());
         outgoingPacketQueue.setErrorHandler(queueErrorCounter);
 
         dtlsStack = new DtlsStack(logger);
