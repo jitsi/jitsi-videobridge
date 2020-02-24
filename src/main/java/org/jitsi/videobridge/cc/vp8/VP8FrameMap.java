@@ -19,6 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.codec.vp8.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.nlj.util.*;
+import org.jitsi.rtp.extensions.*;
 import org.jitsi.rtp.extensions.bytearray.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging2.*;
@@ -131,8 +132,7 @@ public class VP8FrameMap
         if (pictureId == -1)
         {
             /* Frame map indexes by picture ID.  All supported browsers should currently be setting it. */
-            logger.info("VP8 packet does not have picture ID, cannot track in frame map.  Packet data is: " +
-                ByteArrayExtensionsKt.toHex(packet.buffer, packet.offset, Math.min(packet.length, 80)));
+            /* Log message will have been logged by Vp8Parser in jmt. */
             return null;
         }
 
