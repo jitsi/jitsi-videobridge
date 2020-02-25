@@ -30,7 +30,7 @@ class OctoConfig {
 
             class QueueSizeProperty : SimpleProperty<Int>(
                     newConfigAttributes {
-                        name("videobridge.octo.q-size")
+                        name("videobridge.octo.recv-queue-size")
                         readOnce()
                     }
             )

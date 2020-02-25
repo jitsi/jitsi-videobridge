@@ -48,6 +48,8 @@ import java.time.*;
 import java.util.*;
 import java.util.function.*;
 
+import static org.jitsi.videobridge.DtlsTransportConfig.*;
+
 /**
  * @author Brian Baldino
  * @author Boris Grozev
@@ -131,7 +133,7 @@ public class DtlsTransport extends IceTransport
                         getClass().getSimpleName() + "-outgoing-packet-queue",
                         TaskPools.IO_POOL,
                         this::handleOutgoingPacket,
-                        DtlsTransportConfig.Config.queueSize());
+                        Config.queueSize());
         outgoingPacketQueue.setErrorHandler(queueErrorCounter);
 
         dtlsStack = new DtlsStack(logger);

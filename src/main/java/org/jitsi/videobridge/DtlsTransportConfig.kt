@@ -24,7 +24,7 @@ class DtlsTransportConfig {
 
             class QueueSizeProperty : SimpleProperty<Int>(
                     newConfigAttributes {
-                        name("videobridge.dtls.q-size")
+                        name("videobridge.dtls.queue-size")
                         readOnce()
                     }
             )
