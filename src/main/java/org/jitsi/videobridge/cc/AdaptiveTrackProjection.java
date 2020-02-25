@@ -271,10 +271,6 @@ public class AdaptiveTrackProjection
             // scalability, conversely if temporal scalability is disabled
             // then simulcast is disabled.
 
-            byte[] buf = rtpPacket.getBuffer();
-            int payloadOffset = rtpPacket.getPayloadOffset(),
-                payloadLen = rtpPacket.getPayloadLength();
-
             /* Check whether this stream is projectable by the VP8AdaptiveTrackProjectionContext. */
             boolean projectable = rtpPacket instanceof Vp8Packet &&
                 ((Vp8Packet)rtpPacket).getHasTemporalLayerIndex() &&
