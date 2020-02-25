@@ -19,12 +19,12 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.vp8.*;
-import org.jitsi_modified.impl.neomedia.codec.video.vp8.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
@@ -275,10 +275,12 @@ public class AdaptiveTrackProjection
             int payloadOffset = rtpPacket.getPayloadOffset(),
                 payloadLen = rtpPacket.getPayloadLength();
 
-            boolean hasTemporalLayerIndex = DePacketizer.VP8PayloadDescriptor
-                .getTemporalLayerIndex(buf, payloadOffset, payloadLen) > -1;
+            /* Check whether this stream is projectable by the VP8AdaptiveTrackProjectionContext. */
+            boolean projectable = rtpPacket instanceof Vp8Packet &&
+                ((Vp8Packet)rtpPacket).getHasTemporalLayerIndex() &&
+                ((Vp8Packet)rtpPacket).getHasPictureId();
 
-            if (hasTemporalLayerIndex
+            if (projectable
                 && !(context instanceof VP8AdaptiveTrackProjectionContext))
             {
                 // context switch
@@ -290,7 +292,7 @@ public class AdaptiveTrackProjection
                     diagnosticContext, payloadTypeObject, rtpState, parentLogger);
                 contextPayloadType = payloadType;
             }
-            else if (!hasTemporalLayerIndex
+            else if (!projectable
                 && !(context instanceof GenericAdaptiveTrackProjectionContext))
             {
                 RtpState rtpState = getRtpState();
