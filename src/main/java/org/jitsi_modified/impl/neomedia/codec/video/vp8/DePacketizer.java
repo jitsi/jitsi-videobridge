@@ -121,6 +121,19 @@ public class DePacketizer
         private static final byte N_BIT = (byte) 0x20;
 
         /**
+         * Gets whether a VP8 payload has a temporal layer index (TID).
+         *
+         * @param buf the byte buffer that holds the VP8 packet.
+         * @param off the offset in the byte buffer where the VP8 payload starts.
+         * @param len the length of the VP8 payload.
+         * @return true if the VP8 payload has a temporal layer index, false if not.
+         */
+        public static boolean hasTemporalLayerIndex(byte[] buf, int off, int len)
+        {
+            return getTemporalLayerIndex(buf, off, len) != -1;
+        }
+
+        /**
          * Gets the temporal layer index (TID), if that's set.
          *
          * @param buf the byte buffer that holds the VP8 packet.
@@ -291,6 +304,22 @@ public class DePacketizer
         public static boolean hasExtendedPictureId(byte[] buf, int off, int len)
         {
             return hasPictureId(buf, off, len) && (buf[off + 2] & M_BIT) != 0;
+        }
+
+        /**
+         * Determines whether the VP8 payload specified in the buffer that is
+         * passed as an argument has a TL0PICIDX or not.
+         *
+         * @param buf the byte buffer that contains the VP8 payload.
+         * @param off the offset in the byte buffer where the VP8 payload
+         *            starts.
+         * @param len the length of the VP8 payload in the byte buffer.
+         * @return true if the VP8 payload contains a TL0PICIDX,
+         * false otherwise.
+         */
+        public static boolean hasTL0PICIDX(byte[] buf, int off, int len)
+        {
+            return getLByteOffset(buf, off, len) >= 0;
         }
 
         /**
