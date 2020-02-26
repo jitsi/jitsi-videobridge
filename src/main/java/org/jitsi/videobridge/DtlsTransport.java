@@ -31,7 +31,6 @@ import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.extensions.*;
-import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
@@ -48,7 +47,7 @@ import java.time.*;
 import java.util.*;
 import java.util.function.*;
 
-import static org.jitsi.videobridge.DtlsTransportConfig.*;
+import static org.jitsi.videobridge.TransportConfig.*;
 
 /**
  * @author Brian Baldino

@@ -18,7 +18,7 @@ package org.jitsi.videobridge
 import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.SimpleProperty
 
-class DtlsTransportConfig {
+class TransportConfig {
     class Config {
         companion object {
 
