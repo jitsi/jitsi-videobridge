@@ -71,7 +71,7 @@ public class EndpointConnectionStatus
      * The list of <tt>Endpoint</tt>s which have current their connection status
      * classified as inactive.
      */
-    private final List<Endpoint> inactiveEndpoints = new LinkedList<>();
+    private final Set<Endpoint> inactiveEndpoints = new HashSet<>();
 
     /**
      * The timer which runs the periodical connection status probing operation.
