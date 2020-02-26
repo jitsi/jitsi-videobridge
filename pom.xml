@@ -112,12 +112,12 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-media-transform</artifactId>
-      <version>1.0-128-gdc66434</version>
+      <version>1.0-133-g9c6e608</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>rtp</artifactId>
-      <version>1.0-42-gc2cd0a2</version>
+      <version>1.0-43-g1ee1a7c</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>

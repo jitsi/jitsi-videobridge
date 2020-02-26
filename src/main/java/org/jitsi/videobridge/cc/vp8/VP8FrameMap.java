@@ -127,6 +127,13 @@ public class VP8FrameMap
     {
         int pictureId = packet.getPictureId();
 
+        if (pictureId == -1)
+        {
+            /* Frame map indexes by picture ID.  All supported browsers should currently be setting it. */
+            /* Log message will have been logged by Vp8Parser in jmt. */
+            return null;
+        }
+
         if (isLargeJump(packet))
         {
             frameHistory.indexTracker.resetAt(pictureId);
@@ -273,7 +280,7 @@ public class VP8FrameMap
         PictureIdIndexTracker indexTracker = new PictureIdIndexTracker();
 
         /**
-         * Gets a packet with a given VP8 picture ID from the cache.
+         * Gets a frame with a given VP8 picture ID from the cache.
          */
         public VP8Frame get(int pictureId)
         {
@@ -282,7 +289,7 @@ public class VP8FrameMap
         }
 
         /**
-         * Gets a packet with a given VP8 picture ID index from the cache.
+         * Gets a frame with a given VP8 picture ID index from the cache.
          */
         private VP8Frame getIndex(int index)
         {
