@@ -23,6 +23,7 @@ import org.osgi.framework.*;
 
 import java.time.*;
 import java.util.*;
+import java.util.stream.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 import static org.jitsi.videobridge.EndpointConnectionStatusConfig.*;
@@ -229,25 +230,29 @@ public class EndpointConnectionStatus
 
         Duration noActivityTime = Duration.between(lastActivity, now);
         boolean inactive = noActivityTime.compareTo(Config.getMaxInactivityLimit()) > 0;
+        boolean changed = false;
         synchronized (inactiveEndpoints)
         {
-            boolean inInactiveList = inactiveEndpoints.contains(endpoint);
-            if (inactive && !inInactiveList)
+            if (inactive && !inactiveEndpoints.contains(endpoint))
             {
                 logger.debug(endpointId + " is considered disconnected");
 
                 inactiveEndpoints.add(endpoint);
-                // Broadcast connection "inactive" message over data channels
-                sendEndpointConnectionStatus(endpoint, false, null);
+                changed = true;
             }
-            else if (!inactive && inInactiveList)
+            else if (!inactive && inactiveEndpoints.contains(endpoint))
             {
                 logger.debug(endpointId + " has reconnected");
 
                 inactiveEndpoints.remove(endpoint);
-                // Broadcast connection "active" message over data channels
-                sendEndpointConnectionStatus(endpoint, true, null);
+                changed = true;
             }
+        }
+
+        if (changed)
+        {
+            // Broadcast connection "active/inactive" message over data channels
+            sendEndpointConnectionStatus(endpoint, !inactive, null);
         }
 
         if (inactive && logger.isDebugEnabled())
@@ -303,6 +308,7 @@ public class EndpointConnectionStatus
      */
     private void cleanupExpiredEndpointsStatus()
     {
+        List<Endpoint> replacements = new ArrayList<>();
         synchronized (inactiveEndpoints)
         {
             inactiveEndpoints.removeIf(e -> {
@@ -319,8 +325,7 @@ public class EndpointConnectionStatus
                 {
                     if (replacement instanceof Endpoint)
                     {
-                        sendEndpointConnectionStatus(
-                            (Endpoint) replacement, true, null);
+                        replacements.add((Endpoint)replacement);
                     }
                 }
 
@@ -338,6 +343,11 @@ public class EndpointConnectionStatus
                             logger.debug("Endpoint has expired: " + e.getID()
                                 + ", but is still on the list"));
             }
+        }
+
+        for (Endpoint replacement: replacements)
+        {
+            sendEndpointConnectionStatus(replacement, true, null);
         }
     }
 
@@ -373,11 +383,17 @@ public class EndpointConnectionStatus
         //
         // Looping over all inactive endpoints of all conferences maybe is not
         // the most efficient, but it should not be extremely large number.
+        List<Endpoint> endpoints;
         synchronized (inactiveEndpoints)
         {
-            inactiveEndpoints.stream()
+            endpoints = inactiveEndpoints.stream()
                 .filter(e -> e.getConference() == conference)
-                .forEach(e -> sendEndpointConnectionStatus(e, false, endpoint));
+                .collect(Collectors.toList());
+        }
+
+        for (Endpoint e: endpoints)
+        {
+            sendEndpointConnectionStatus(e, false, endpoint);
         }
     }
 }
