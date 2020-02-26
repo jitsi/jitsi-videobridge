@@ -129,7 +129,7 @@ public class AdaptiveTrackProjection
         this.parentLogger = parentLogger;
         this.logger = parentLogger.createChildLogger(AdaptiveTrackProjection.class.getName(),
             JMap.of("targetSsrc", Long.toString(targetSsrc),
-                "srcEpId", source.getOwner()));
+                "srcEpId", Objects.toString(source.getOwner(), "")));
         this.keyframeRequester = keyframeRequester;
     }
 
