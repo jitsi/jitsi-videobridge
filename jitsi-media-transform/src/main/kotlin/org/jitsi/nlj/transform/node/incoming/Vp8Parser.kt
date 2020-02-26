@@ -21,7 +21,9 @@ import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ModifierNode
+import org.jitsi.rtp.extensions.toHex
 import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.cinfo
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 
@@ -56,6 +58,16 @@ class Vp8Parser(
             if (videoRtpPacket.isKeyframe) {
                 logger.cdebug { "Received a keyframe for ssrc ${videoRtpPacket.ssrc} ${videoRtpPacket.sequenceNumber}" }
                 numKeyframes++
+            }
+
+            if (!videoRtpPacket.hasPictureId) {
+                logger.cinfo { "Packet $videoRtpPacket does not have picture ID.  Packet data: ${videoRtpPacket.toHex(80)}" }
+            } else if (!videoRtpPacket.hasExtendedPictureId) {
+                logger.cinfo { "Packet $videoRtpPacket has 7-bit (short) picture ID.  Packet data: ${videoRtpPacket.toHex(80)}" }
+            }
+
+            if (videoRtpPacket.hasTemporalLayerIndex && !videoRtpPacket.hasTL0PICIDX) {
+                logger.cinfo { "Packet $videoRtpPacket has TID but does not have TL0PICIDX.  Packet data: ${videoRtpPacket.toHex(80)}" }
             }
         }
 
