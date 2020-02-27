@@ -1225,6 +1225,10 @@ public class Conference
         return tentacle;
     }
 
+    public boolean isOctoEnabled()
+    {
+        return tentacle != null;
+    }
 
     /**
      * Handles an RTP/RTCP packet coming from a specific endpoint.

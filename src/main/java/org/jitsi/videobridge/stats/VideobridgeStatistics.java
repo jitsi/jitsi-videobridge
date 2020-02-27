@@ -168,6 +168,7 @@ public class VideobridgeStatistics
 
         int videoChannels = 0;
         int conferences = 0;
+        int octoConferences = 0;
         int endpoints = 0;
         int videoStreams = 0;
         double fractionLostSum = 0d; // TODO verify
@@ -197,6 +198,10 @@ public class VideobridgeStatistics
                 continue;
             }
             conferences++;
+            if (conference.isOctoEnabled())
+            {
+                octoConferences++;
+            }
             int numConferenceEndpoints = conference.getLocalEndpointCount();
             if (numConferenceEndpoints > largestConferenceSize)
             {
@@ -379,6 +384,7 @@ public class VideobridgeStatistics
                 jvbStats.numEndpointsNoMessageTransportAfterDelay.get()
             );
             unlockedSetStat(CONFERENCES, conferences);
+            unlockedSetStat(OCTO_CONFERENCES, octoConferences);
             unlockedSetStat(PARTICIPANTS, endpoints);
             unlockedSetStat(VIDEO_CHANNELS, videoChannels);
             unlockedSetStat(VIDEO_STREAMS, videoStreams);
