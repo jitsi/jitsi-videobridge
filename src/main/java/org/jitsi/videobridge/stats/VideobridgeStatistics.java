@@ -432,6 +432,9 @@ public class VideobridgeStatistics
                     OCTO_SEND_BITRATE,
                     octoRelay == null
                             ? 0 : (octoRelay.getSendBitrate() + 500) / 1000);
+            unlockedSetStat(
+                    TOTAL_DOMINANT_SPEAKER_CHANGES,
+                    jvbStats.totalDominantSpeakerChanges.get());
 
             unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
             if (octoRelay != null)
