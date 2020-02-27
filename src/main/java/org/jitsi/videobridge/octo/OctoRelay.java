@@ -57,6 +57,12 @@ public class OctoRelay
     private static final int SO_RCVBUF = 10 * 1024 * 1024;
 
     /**
+     * The interval over which average packet and bit rates will be calculated
+     * in milliseconds.
+     */
+    private static final int RATE_INTERVAL = 60000;
+
+    /**
      * The socket used to send and receive Octo packets.
      */
     private DatagramSocket socket;
@@ -108,22 +114,22 @@ public class OctoRelay
     /**
      * The average send bitrate in the last 1 second (bps).
      */
-    private RateStatistics sendBitrate = new RateStatistics(1000);
+    private RateStatistics sendBitrate = new RateStatistics(RATE_INTERVAL);
 
     /**
      * The average send packet rate in the last 1 second (pps).
      */
-    private RateStatistics sendPacketRate = new RateStatistics(1000, 1000f);
+    private RateStatistics sendPacketRate = new RateStatistics(RATE_INTERVAL, 1000f);
 
     /**
      * The average receive bitrate in the last 1 second (bps).
      */
-    private RateStatistics receiveBitrate = new RateStatistics(1000);
+    private RateStatistics receiveBitrate = new RateStatistics(RATE_INTERVAL);
 
     /**
      * The average receive packet rate in the last 1 second (pps).
      */
-    private RateStatistics receivePacketRate = new RateStatistics(1000, 1000f);
+    private RateStatistics receivePacketRate = new RateStatistics(RATE_INTERVAL, 1000f);
 
     /**
      * Maps a conference ID (as contained in Octo packets) to a packet handler.
