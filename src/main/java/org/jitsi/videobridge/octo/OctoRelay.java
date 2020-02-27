@@ -106,14 +106,24 @@ public class OctoRelay
     private AtomicLong packetsDropped = new AtomicLong();
 
     /**
-     * The average send bitrate in the last 1 second.
+     * The average send bitrate in the last 1 second (bps).
      */
     private RateStatistics sendBitrate = new RateStatistics(1000);
 
     /**
-     * The average receive bitrate in the last 1 second.
+     * The average send packet rate in the last 1 second (pps).
+     */
+    private RateStatistics sendPacketRate = new RateStatistics(1000, 1000f);
+
+    /**
+     * The average receive bitrate in the last 1 second (bps).
      */
     private RateStatistics receiveBitrate = new RateStatistics(1000);
+
+    /**
+     * The average receive packet rate in the last 1 second (pps).
+     */
+    private RateStatistics receivePacketRate = new RateStatistics(1000, 1000f);
 
     /**
      * Maps a conference ID (as contained in Octo packets) to a packet handler.
@@ -225,7 +235,9 @@ public class OctoRelay
     {
         bytesReceived.addAndGet(len);
         packetsReceived.incrementAndGet();
-        receiveBitrate.update(len, System.currentTimeMillis());
+        long now = System.currentTimeMillis();
+        receiveBitrate.update(len, now);
+        receivePacketRate.update(1, now);
 
         String conferenceId;
         MediaType mediaType;
@@ -422,7 +434,9 @@ public class OctoRelay
             {
                 bytesSent.addAndGet(octoPacketLength);
                 packetsSent.incrementAndGet();
-                sendBitrate.update(octoPacketLength, System.currentTimeMillis());
+                long now = System.currentTimeMillis();
+                sendBitrate.update(octoPacketLength, now);
+                sendPacketRate.update(1, now);
                 socket.send(datagramPacket);
             }
             catch (IOException ioe)
@@ -548,11 +562,27 @@ public class OctoRelay
     }
 
     /**
+     * @return the send packet rate in packets per second
+     */
+    public long getSendPacketRate()
+    {
+        return sendPacketRate.getRate();
+    }
+
+    /**
      * @return the receive bitrate in bits per second
      */
     public long getReceiveBitrate()
     {
         return receiveBitrate.getRate();
+    }
+
+    /**
+     * @return the receive packet rate in packets per second
+     */
+    public long getReceivePacketRate()
+    {
+        return receivePacketRate.getRate();
     }
 
     /**
