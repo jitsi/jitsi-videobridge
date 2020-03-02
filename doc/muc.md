@@ -30,7 +30,11 @@ org.jitsi.jicofo.BRIDGE_MUC=JvbBrewery@internal.auth.example.net
 ```
 
 # Videobridge configuration
-Using the new videobrige configuration, MUC mode can be enabled by adding the following to the `videobridge` section of the config file:
+This section is applies only to the new configuration scheme. If you are using the
+old configuration scheme (`sip-communicator.properties`), or if you are
+uncertain, use the section on legacy configuration below.
+
+To enable the MUC mode add the following to the `videobridge` section of the config file:
 ```
 stats {
   # Enable broadcasting stats/presence in a MUC
