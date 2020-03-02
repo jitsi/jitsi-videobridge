@@ -1333,6 +1333,27 @@ public class Conference
     }
 
     /**
+     * Whether this looks like a conference in which the two endpoints are
+     * using a peer-to-peer connection (i.e. none of them are sending audio
+     * or video).
+     * This has false positives when e.g. an endpoint doesn't support p2p
+     * (firefox) and both are audio/video muted.
+     */
+    public boolean isP2p()
+    {
+        return isInactive() && getEndpointCount() == 2;
+    }
+
+    /**
+     * Whether the conference is inactive, in the sense that none of its
+     * endpoints are sending audio or video.
+     */
+    public boolean isInactive()
+    {
+        return getEndpoints().stream().noneMatch(e -> e.isSendingAudio() || e.isSendingVideo());
+    }
+
+    /**
      * Holds conference statistics.
      */
     public static class Statistics
