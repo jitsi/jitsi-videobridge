@@ -172,6 +172,7 @@ public class Endpoint
     /**
      * The bitrate controller.
      */
+    @NotNull
     private final BitrateController bitrateController;
 
     /**
@@ -304,6 +305,18 @@ public class Endpoint
                 }
             });
         bitrateController = new BitrateController(this, diagnosticContext, logger);
+        bitrateController.addEventHandler(new BitrateController.EventHandler() {
+            @Override
+            public void forwardedEndpointsChanged(
+                Collection<String> forwardedEndpoints,
+                Collection<String> endpointsEnteringLastN,
+                Collection<String> conferenceEndpoints) {
+                sendLastNEndpointsChangeEvent(
+                    forwardedEndpoints,
+                    endpointsEnteringLastN,
+                    conferenceEndpoints);
+            }
+        });
 
         outgoingSrtpPacketQueue = new PacketInfoQueue(
             getClass().getSimpleName() + "-outgoing-packet-queue",
@@ -1112,7 +1125,7 @@ public class Endpoint
      * @param conferenceEndpoints the collection of all endpoints in the
      * conference.
      */
-    public void sendLastNEndpointsChangeEvent(
+    private void sendLastNEndpointsChangeEvent(
         Collection<String> forwardedEndpoints,
         Collection<String> endpointsEnteringLastN,
         Collection<String> conferenceEndpoints)
@@ -1606,6 +1619,15 @@ public class Endpoint
     public Transceiver getTransceiver()
     {
         return transceiver;
+    }
+
+    /**
+     * @return this {@link Endpoint}'s bitrate controller
+     */
+    @NotNull
+    public BitrateController getBitrateController()
+    {
+        return bitrateController;
     }
 
     /**
