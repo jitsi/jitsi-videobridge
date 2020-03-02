@@ -189,6 +189,11 @@ public class BitrateController
     private Set<String> pinnedEndpointIds = Collections.emptySet();
 
     /**
+     * Set of event listeners of current {@code BitrateController}
+     */
+    private final Set<BitrateControllerListener> listeners = ConcurrentHashMap.newKeySet();
+
+    /**
      * The last-n value for the endpoint to which this {@link BitrateController}
      * belongs
      */
@@ -722,7 +727,7 @@ public class BitrateController
         {
             // TODO(george) bring back sending this message on message transport
             //  connect
-            destinationEndpoint.sendLastNEndpointsChangeEvent(
+            notifyForwardedEndpointsChanged(
                 newForwardedEndpointIds,
                 endpointsEnteringLastNIds,
                 conferenceEndpointIds);
@@ -1182,6 +1187,54 @@ public class BitrateController
         }
     }
 
+    /**
+     * Subscribe to {@link BitrateController}'s events.
+     * @param listener event listener
+     */
+    public void subscribe(BitrateControllerListener listener) {
+        listeners.add(listener);
+    }
+
+    /**
+     * Unsubscribe from {@link BitrateController}'s events.
+     * @param listener event listener
+     */
+    public void unsubscribe(BitrateControllerListener listener) {
+        listeners.remove(listener);
+    }
+
+    private void notifyForwardedEndpointsChanged(
+        Collection<String> forwardedEndpoints,
+        Collection<String> endpointsEnteringLastN,
+        Collection<String> conferenceEndpoints) {
+        for (BitrateControllerListener listener : listeners) {
+            listener.onForwardedEndpointsChanged(
+                forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints);
+        }
+    }
+    /**
+     * Interface for listeners of events generated
+     * by {@code BitrateController}
+     */
+    public interface BitrateControllerListener {
+
+        /**
+         * Notify listener that the collection of forwarded endpoints by
+         * current {@link BitrateController} has changed.
+         *
+         * @param forwardedEndpoints the collection of forwarded endpoints.
+         * @param endpointsEnteringLastN the <tt>Endpoint</tt>s which are entering
+         * the list of <tt>Endpoint</tt>s defined by <tt>lastN</tt>
+         * @param conferenceEndpoints the collection of all endpoints in the
+         * conference.
+         */
+        default void onForwardedEndpointsChanged(
+            Collection<String> forwardedEndpoints,
+            Collection<String> endpointsEnteringLastN,
+            Collection<String> conferenceEndpoints) {
+
+        }
+    }
 
     /**
      * A snapshot of the bitrate for a given {@link RTPEncodingDesc}.

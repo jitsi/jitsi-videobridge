@@ -55,6 +55,7 @@ import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi_modified.sctp4j.*;
 import org.json.simple.*;
 
+import javax.annotation.*;
 import java.beans.*;
 import java.io.*;
 import java.nio.*;
@@ -79,7 +80,8 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 public class Endpoint
     extends AbstractEndpoint implements PotentialPacketHandler,
         PropertyChangeListener,
-        EncodingsManager.EncodingsUpdateListener
+        EncodingsManager.EncodingsUpdateListener,
+        BitrateController.BitrateControllerListener
 {
     /**
      * Track how long it takes for all RTP and RTCP packets to make their way through the bridge.
@@ -172,6 +174,7 @@ public class Endpoint
     /**
      * The bitrate controller.
      */
+    @Nonnull
     private final BitrateController bitrateController;
 
     /**
@@ -299,6 +302,7 @@ public class Endpoint
                 }
             });
         bitrateController = new BitrateController(this, diagnosticContext, logger);
+        bitrateController.subscribe(this);
 
         outgoingSrtpPacketQueue = new PacketInfoQueue(
             getClass().getSimpleName() + "-outgoing-packet-queue",
@@ -1096,6 +1100,20 @@ public class Endpoint
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void onForwardedEndpointsChanged(
+        Collection<String> forwardedEndpoints,
+        Collection<String> endpointsEnteringLastN,
+        Collection<String> conferenceEndpoints) {
+        sendLastNEndpointsChangeEvent(
+            forwardedEndpoints,
+            endpointsEnteringLastN,
+            conferenceEndpoints);
+    }
+
+    /**
      * Sends a message to this {@link Endpoint} in order to notify it that the
      * list/set of {@code lastN} has changed.
      *
@@ -1105,7 +1123,7 @@ public class Endpoint
      * @param conferenceEndpoints the collection of all endpoints in the
      * conference.
      */
-    public void sendLastNEndpointsChangeEvent(
+    private void sendLastNEndpointsChangeEvent(
         Collection<String> forwardedEndpoints,
         Collection<String> endpointsEnteringLastN,
         Collection<String> conferenceEndpoints)
@@ -1597,6 +1615,15 @@ public class Endpoint
     public Transceiver getTransceiver()
     {
         return transceiver;
+    }
+
+    /**
+     * @return this {@link Endpoint}'s bitrate controller
+     */
+    @Nonnull
+    public BitrateController getBitrateController()
+    {
+        return bitrateController;
     }
 
     /**
