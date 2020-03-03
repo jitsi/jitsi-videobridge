@@ -37,6 +37,7 @@ import org.jitsi.nlj.transform.node.RtpParser
 import org.jitsi.nlj.transform.node.SrtcpDecryptNode
 import org.jitsi.nlj.transform.node.SrtpDecryptNode
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
+import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.PaddingTermination
 import org.jitsi.nlj.transform.node.incoming.RemoteBandwidthEstimator
@@ -109,6 +110,11 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val rtcpTermination = RtcpTermination(rtcpEventNotifier, logger)
     private val rembHandler = RembHandler(logger)
     private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-rx")
+    private val videoBitrateCalculator = VideoBitrateCalculator(parentLogger)
+    private val audioBitrateCalculator = BitrateCalculator("Audio bitrate calculator")
+    override fun isReceivingAudio() = audioBitrateCalculator.packetRatePps >= 5
+    // Screen sharing static content can result in very low packet/bit rates, hence the low threshold.
+    override fun isReceivingVideo() = videoBitrateCalculator.packetRatePps >= 1
 
     companion object {
         val queueErrorCounter = CountingErrorHandler()
@@ -175,6 +181,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 predicate = PacketPredicate { it is AudioRtpPacket }
                                 path = pipeline {
                                     node(silenceDiscarder.rtpNode)
+                                    node(audioBitrateCalculator)
                                     node(packetHandlerWrapper)
                                 }
                             }
@@ -186,7 +193,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                     node(PaddingTermination())
                                     node(VideoParser(streamInformationStore, logger))
                                     node(Vp8Parser(logger))
-                                    node(VideoBitrateCalculator(logger))
+                                    node(videoBitrateCalculator)
                                     node(RetransmissionRequesterNode(rtcpSender, backgroundExecutor, logger))
                                     node(packetHandlerWrapper)
                                 }
