@@ -20,10 +20,14 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetMediaStreamTracksEvent
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
+import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.bps
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.utils.stats.RateStatistics
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
 
@@ -35,11 +39,13 @@ import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
  */
 class VideoBitrateCalculator(
     parentLogger: Logger
-) : ObserverNode("Video bitrate calculator") {
+) : BitrateCalculator("Video bitrate calculator") {
     private val logger = createChildLogger(parentLogger)
     private var mediaStreamTrackDescs: Array<MediaStreamTrackDesc> = arrayOf()
 
     override fun observe(packetInfo: PacketInfo) {
+        super.observe(packetInfo)
+
         val videoRtpPacket: VideoRtpPacket = packetInfo.packet as VideoRtpPacket
         findRtpEncodingDesc(videoRtpPacket)?.let {
             val now = System.currentTimeMillis()
@@ -66,4 +72,31 @@ class VideoBitrateCalculator(
     }
 
     override fun trace(f: () -> Unit) = f.invoke()
+}
+
+open class BitrateCalculator(name: String = "Bitrate calculator") : ObserverNode(name) {
+    private val bitrateStatistics = RateStatistics(5000, 8000f)
+    private val packetRateStatistics = RateStatistics(5000, 1000f)
+    val bitrate: Bandwidth
+        get() = bitrateStatistics.rate.bps
+    val packetRatePps: Long
+        get() = packetRateStatistics.rate
+
+    override fun observe(packetInfo: PacketInfo) {
+        val now = System.currentTimeMillis()
+        bitrateStatistics.update(packetInfo.packet.length, now)
+        packetRateStatistics.update(1, now)
+    }
+
+    override fun trace(f: () -> Unit) = f.invoke()
+
+    override fun getNodeStats(): NodeStatsBlock {
+        return super.getNodeStats().apply {
+            addNumber("bitrate_bps", bitrate.bps)
+        }
+    }
+
+    override fun getNodeStatsToAggregate(): NodeStatsBlock {
+        return super.getNodeStats()
+    }
 }

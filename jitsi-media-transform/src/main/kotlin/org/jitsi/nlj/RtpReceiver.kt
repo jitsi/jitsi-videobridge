@@ -50,4 +50,7 @@ abstract class RtpReceiver :
     abstract fun getPacketStreamStats(): PacketStreamStats.Snapshot
 
     abstract fun tearDown()
+
+    abstract fun isReceivingAudio(): Boolean
+    abstract fun isReceivingVideo(): Boolean
 }
