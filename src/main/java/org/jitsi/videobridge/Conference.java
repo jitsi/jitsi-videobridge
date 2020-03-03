@@ -444,7 +444,7 @@ public class Conference
             String id
                 = dominantSpeaker == null ? "null" : dominantSpeaker.getID();
             logger.info("ds_change ds_id=" + id);
-            getVideobridge().getStatistics().totalDominantSpeakerChanges.incrementAndGet();
+            getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
         }
 
         if (dominantSpeaker != null)

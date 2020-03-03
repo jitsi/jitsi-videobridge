@@ -502,7 +502,7 @@ public class VideobridgeStatistics
                             ? 0 : octoRelay.getSendPacketRate());
             unlockedSetStat(
                     TOTAL_DOMINANT_SPEAKER_CHANGES,
-                    jvbStats.totalDominantSpeakerChanges.get());
+                    jvbStats.totalDominantSpeakerChanges.sum());
 
             unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
             if (octoRelay != null)

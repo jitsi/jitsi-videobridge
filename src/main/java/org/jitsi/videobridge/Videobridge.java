@@ -1338,6 +1338,6 @@ public class Videobridge
          * The total number of times the dominant speaker in any conference
          * changed.
          */
-        public AtomicInteger totalDominantSpeakerChanges = new AtomicInteger();
+        public LongAdder totalDominantSpeakerChanges = new LongAdder();
     }
 }
