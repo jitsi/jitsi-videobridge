@@ -52,6 +52,8 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.queue.CountingErrorHandler
 
+import org.jitsi.nlj.RtpSenderConfig.Config
+
 class RtpSenderImpl(
     val id: String,
     val transportCcEngine: TransportCcEngine? = null,
@@ -75,7 +77,7 @@ class RtpSenderImpl(
     private val outgoingRtpRoot: Node
     private val outgoingRtxRoot: Node
     private val outgoingRtcpRoot: Node
-    private val incomingPacketQueue = PacketInfoQueue("rtp-sender-incoming-packet-queue", executor, this::handlePacket)
+    private val incomingPacketQueue = PacketInfoQueue("rtp-sender-incoming-packet-queue", executor, this::handlePacket, Config.queueSize())
     var running = true
     private var localVideoSsrc: Long? = null
     private var localAudioSsrc: Long? = null
