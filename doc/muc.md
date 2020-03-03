@@ -19,7 +19,7 @@ prosodyctl register jvb $DOMAIN $PASSWORD
 
 We recommend using a separate XMPP domain, not accessible by anonymous users.
 See the [jitsi-meet-prosody postinst
-script](https://github.com/jitsi/jitsi-meet/blob/master/debian/jitsi-meet-prosody.postinst#L130)
+script](https://github.com/jitsi/jitsi-meet/blob/master/debian/jitsi-meet-prosody.postinst)
 for a full example.
 
 # Jicofo configuration
