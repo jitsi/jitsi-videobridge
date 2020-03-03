@@ -31,7 +31,6 @@ import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.extensions.*;
-import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
@@ -47,6 +46,8 @@ import java.net.*;
 import java.time.*;
 import java.util.*;
 import java.util.function.*;
+
+import static org.jitsi.videobridge.TransportConfig.*;
 
 /**
  * @author Brian Baldino
@@ -131,7 +132,7 @@ public class DtlsTransport extends IceTransport
                         getClass().getSimpleName() + "-outgoing-packet-queue",
                         TaskPools.IO_POOL,
                         this::handleOutgoingPacket,
-                        1024);
+                        Config.queueSize());
         outgoingPacketQueue.setErrorHandler(queueErrorCounter);
 
         dtlsStack = new DtlsStack(logger);
