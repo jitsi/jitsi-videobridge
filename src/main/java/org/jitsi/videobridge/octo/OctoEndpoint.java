@@ -153,4 +153,18 @@ public class OctoEndpoint
             ssrcs.forEach(ssrc -> streamInformationStore.addReceiveSsrc(ssrc, mediaType));
         });
     }
+
+    @Override
+    public boolean isSendingAudio()
+    {
+        // TODO implement detection
+        return true;
+    }
+
+    @Override
+    public boolean isSendingVideo()
+    {
+        // TODO implement detection
+        return true;
+    }
 }
