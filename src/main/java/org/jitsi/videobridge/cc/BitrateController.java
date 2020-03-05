@@ -922,6 +922,14 @@ public class BitrateController
             // of the conference.
             adjustedLastN = Math.min(lastN, conferenceEndpoints.size() - 1);
         }
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Prioritizing endpoints, adjusted last-n: " + adjustedLastN +
+                ", sorted endpoint list: " +
+                conferenceEndpoints.stream().map(AbstractEndpoint::getID).collect(Collectors.joining(", ")) +
+                ". Selected endpoints: " + String.join(", ", selectedEndpointIds) +
+                ". Pinned endpoints: " + String.join(", ", pinnedEndpointIds));
+        }
 
         int endpointPriority = 0;
 
@@ -935,6 +943,8 @@ public class BitrateController
                     || sourceEndpoint.getID().equals(destinationEndpoint.getID())
                     || !selectedEndpointIds.contains(sourceEndpoint.getID()))
             {
+                logger.trace(() -> "Endpoint " + sourceEndpoint.getID() + " is expired, is this destination, or " +
+                    "is not selected; ignoring");
                 continue;
             }
 
@@ -954,6 +964,7 @@ public class BitrateController
                             true /* selected */,
                             maxRxFrameHeightPx));
                 }
+                logger.trace(() -> "Adding endpoint " + sourceEndpoint.getID() + " to allocations");
 
                 endpointPriority++;
             }
@@ -972,6 +983,8 @@ public class BitrateController
                     || sourceEndpoint.getID().equals(destinationEndpoint.getID())
                     || !pinnedEndpointIds.contains(sourceEndpoint.getID()))
                 {
+                    logger.trace(() -> "Endpoint " + sourceEndpoint.getID() + " is expired, is this destination, or " +
+                        "is not pinned; ignoring");
                     continue;
                 }
 
@@ -991,6 +1004,7 @@ public class BitrateController
                                 maxRxFrameHeightPx));
                     }
 
+                    logger.trace(() -> "Adding endpoint " + sourceEndpoint.getID() + " to allocations");
                     endpointPriority++;
                 }
 
@@ -1025,6 +1039,7 @@ public class BitrateController
                                 maxRxFrameHeightPx));
                     }
 
+                    logger.debug(() -> "Adding endpoint " + sourceEndpoint.getID() + " to allocations");
                     endpointPriority++;
                 }
             }
