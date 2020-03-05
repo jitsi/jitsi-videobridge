@@ -964,7 +964,7 @@ public class BitrateController
                             true /* selected */,
                             maxRxFrameHeightPx));
                 }
-                logger.trace(() -> "Adding endpoint " + sourceEndpoint.getID() + " to allocations");
+                logger.trace(() -> "Adding selected endpoint " + sourceEndpoint.getID() + " to allocations");
 
                 endpointPriority++;
             }
@@ -1004,7 +1004,7 @@ public class BitrateController
                                 maxRxFrameHeightPx));
                     }
 
-                    logger.trace(() -> "Adding endpoint " + sourceEndpoint.getID() + " to allocations");
+                    logger.trace(() -> "Adding pinned endpoint " + sourceEndpoint.getID() + " to allocations");
                     endpointPriority++;
                 }
 
@@ -1039,7 +1039,7 @@ public class BitrateController
                                 maxRxFrameHeightPx));
                     }
 
-                    logger.debug(() -> "Adding endpoint " + sourceEndpoint.getID() + " to allocations");
+                    logger.trace(() -> "Adding endpoint " + sourceEndpoint.getID() + " to allocations");
                     endpointPriority++;
                 }
             }

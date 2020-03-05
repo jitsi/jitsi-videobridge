@@ -448,7 +448,6 @@ public class Conference
         }
 
         List<String> sortedEndpointIds = speechActivity.getEndpointIds();
-        //TODO: submit to IO pool?
         endpointsCache.stream()
             .filter(Objects::nonNull)
             .forEach(ep -> ep.speechActivityEndpointsChanged(sortedEndpointIds));
