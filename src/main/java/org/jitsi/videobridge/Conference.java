@@ -447,6 +447,12 @@ public class Conference
             getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
         }
 
+        List<String> sortedEndpointIds = speechActivity.getEndpointIds();
+        //TODO: submit to IO pool?
+        endpointsCache.stream()
+            .filter(Objects::nonNull)
+            .forEach(ep -> ep.speechActivityEndpointsChanged(sortedEndpointIds));
+
         if (dominantSpeaker != null)
         {
             broadcastMessage(
