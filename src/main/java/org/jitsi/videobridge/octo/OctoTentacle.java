@@ -23,12 +23,16 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtcp.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.transform.node.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.octo.config.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
@@ -89,6 +93,17 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
             = Collections.unmodifiableSet(new HashSet<>());
 
     /**
+     * Count the number of dropped packets and exceptions.
+     */
+    public static final CountingErrorHandler queueErrorCounter
+        = new CountingErrorHandler();
+
+    /**
+     * The queue which passes packets to be sent.
+     */
+    private PacketInfoQueue outgoingPacketQueue;
+
+    /**
      * Initializes a new {@link OctoTentacle} instance.
      * @param conference the conference.
      */
@@ -124,6 +139,12 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
                     f.invoke();
                 }
             });
+            outgoingPacketQueue = new PacketInfoQueue(
+                "octo-tentacle-outgoing-packet-queue",
+                TaskPools.IO_POOL,
+                this::doSend,
+                OctoConfig.Config.sendQueueSize());
+            outgoingPacketQueue.setErrorHandler(queueErrorCounter);
         }
         else
         {
@@ -155,6 +176,14 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
     @Override
     public void send(PacketInfo packetInfo)
     {
+        outgoingPacketQueue.add(packetInfo);
+    }
+
+    /**
+     * Send Octo packet out.
+     */
+    private boolean doSend(PacketInfo packetInfo)
+    {
         Packet packet = packetInfo.getPacket();
         if (packet != null)
         {
@@ -164,6 +193,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
                 conference.getGid(),
                 packetInfo.getEndpointId());
         }
+        return true;
     }
 
     /**
@@ -352,6 +382,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         debugState.put("transceiver", transceiver.getDebugState());
         debugState.put("relay", relay.getDebugState());
         debugState.put("targets", targets.toString());
+        debugState.put("outgoingPacketQueue", outgoingPacketQueue.getDebugState());
 
         return debugState;
     }
