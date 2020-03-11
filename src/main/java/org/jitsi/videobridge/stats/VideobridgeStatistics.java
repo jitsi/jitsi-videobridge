@@ -88,11 +88,10 @@ public class VideobridgeStatistics
         unlockedSetStat(CONFERENCES, 0);
         unlockedSetStat(PARTICIPANTS, 0);
         unlockedSetStat(THREADS, 0);
-        unlockedSetStat(RTP_LOSS, 0d);
         unlockedSetStat(VIDEO_CHANNELS, 0);
         unlockedSetStat(VIDEO_STREAMS, 0);
         unlockedSetStat(LOSS_RATE_DOWNLOAD, 0d);
-        unlockedSetStat(LOSS_RATE_UPLOAD, 0d);
+        unlockedSetStat(TCC_REPORTED_LOSS, 0d);
         unlockedSetStat(JITTER_AGGREGATE, 0d);
         unlockedSetStat(RTT_AGGREGATE, 0d);
         unlockedSetStat(LARGEST_CONFERENCE, 0);
