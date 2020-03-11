@@ -63,6 +63,8 @@ public class VideobridgeStatistics
     public static final String EPS_NO_MSG_TRANSPORT_AFTER_DELAY =
         "num_eps_no_msg_transport_after_delay";
 
+    public static final String TCC_REPORTED_LOSS = "tcc_reported_loss";
+
     /**
      * The indicator which determines whether {@link #generate()} is executing
      * on this <tt>VideobridgeStatistics</tt>. If <tt>true</tt>, invocations of
@@ -331,7 +333,7 @@ public class VideobridgeStatistics
             = (packetsReceived + packetsReceivedLost > 0)
             ? ((double) packetsReceivedLost) / (packetsReceived + packetsReceivedLost)
             : 0d;
-        double lossRateReported
+        double tccReportedLoss
             = (tccReports > 0)
             ? ((double) tccLossReports / tccReports)
             : 0d;
@@ -383,14 +385,9 @@ public class VideobridgeStatistics
                     (bitrateUploadBps + 500) / 1000 /* kbps */);
             unlockedSetStat(PACKET_RATE_DOWNLOAD, packetRateDownload);
             unlockedSetStat(PACKET_RATE_UPLOAD, packetRateUpload);
-            // Keep for backward compatibility
-            unlockedSetStat(
-                    RTP_LOSS,
-                    lossRateDownload + lossRateUpload);
             // TODO verify
             unlockedSetStat(LOSS_RATE_DOWNLOAD, lossRateDownload);
-            // TODO verify
-            unlockedSetStat(LOSS_RATE_UPLOAD, lossRateReported);
+            unlockedSetStat(TCC_REPORTED_LOSS, tccReportedLoss);
             // TODO seems broken (I see values of > 11 seconds)
             unlockedSetStat(JITTER_AGGREGATE, jitterAggregate);
             unlockedSetStat(RTT_AGGREGATE, rttAggregate);
