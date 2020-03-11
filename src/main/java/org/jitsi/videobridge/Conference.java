@@ -447,10 +447,7 @@ public class Conference
             getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
         }
 
-        List<String> sortedEndpointIds = speechActivity.getEndpointIds();
-        endpointsCache.stream()
-            .filter(Objects::nonNull)
-            .forEach(ep -> ep.speechActivityEndpointsChanged(sortedEndpointIds));
+        speechActivityEndpointsChanged(speechActivity.getEndpointIds());
 
         if (dominantSpeaker != null)
         {
@@ -1067,11 +1064,10 @@ public class Conference
     /**
      * Notifies this instance that the list of ordered endpoints has changed
      */
-    void speechActivityEndpointsChanged()
+    void speechActivityEndpointsChanged(List<String> newEndpointIds)
     {
-        List<String> endpoints = speechActivity.getEndpointIds();
         endpointsCache.forEach(
-                e ->  e.speechActivityEndpointsChanged(endpoints));
+                e ->  e.speechActivityEndpointsChanged(newEndpointIds));
     }
 
     /**
