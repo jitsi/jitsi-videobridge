@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.stats;
 
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.osgi.*;
@@ -172,14 +173,15 @@ public class VideobridgeStatistics
         int endpoints = 0;
         int octoEndpoints = 0;
         int videoStreams = 0;
-        double fractionLostSum = 0d; // TODO verify
-        int fractionLostCount = 0;
         long packetsReceived = 0; // TODO verify (Transceiver)
         long packetsReceivedLost = 0; // TODO verify
         long bitrateDownloadBps = 0;
         long bitrateUploadBps = 0;
         int packetRateUpload = 0;
         int packetRateDownload = 0;
+
+        long tccReports = 0;
+        long tccLossReports = 0;
 
         // Average jitter and RTT across MediaStreams which report a valid value.
         double jitterSumMs = 0; // TODO verify
@@ -274,14 +276,6 @@ public class VideobridgeStatistics
 
                     packetsReceivedLost += ssrcStats.getCumulativePacketsLost();
 
-                    fractionLostCount++;
-                    // note(george) this computes the fraction of lost packets
-                    // since beginning of reception, which is different from the
-                    // rfc 3550 sense.
-                    double fractionLost = ssrcStats.getCumulativePacketsLost()
-                        / (double) ssrcStats.getNumReceivedPackets();
-                    fractionLostSum += fractionLost;
-
                     double ssrcJitter = ssrcStats.getJitter();
                     if (ssrcJitter != 0)
                     {
@@ -297,6 +291,11 @@ public class VideobridgeStatistics
                         = transceiverStats.getOutgoingPacketStreamStats();
                 bitrateUploadBps += outgoingStats.getBitrate();
                 packetRateUpload += outgoingStats.getPacketRate();
+
+                TransportCcEngine.StatisticsSnapshot transportCcStats = transceiverStats.getTccEngineStats();
+
+                tccReports += transportCcStats.getNumPacketsReported();
+                tccLossReports += transportCcStats.getNumPacketsReportedLost();
 
                 Double endpointRtt
                         = transceiverStats.getEndpointConnectionStats().getRtt();
@@ -332,9 +331,9 @@ public class VideobridgeStatistics
             = (packetsReceived + packetsReceivedLost > 0)
             ? ((double) packetsReceivedLost) / (packetsReceived + packetsReceivedLost)
             : 0d;
-        double lossRateUpload
-            = (fractionLostCount > 0)
-            ? fractionLostSum / fractionLostCount
+        double lossRateReported
+            = (tccReports > 0)
+            ? ((double) tccLossReports / tccReports)
             : 0d;
 
         // JITTER_AGGREGATE
@@ -391,7 +390,7 @@ public class VideobridgeStatistics
             // TODO verify
             unlockedSetStat(LOSS_RATE_DOWNLOAD, lossRateDownload);
             // TODO verify
-            unlockedSetStat(LOSS_RATE_UPLOAD, lossRateUpload);
+            unlockedSetStat(LOSS_RATE_UPLOAD, lossRateReported);
             // TODO seems broken (I see values of > 11 seconds)
             unlockedSetStat(JITTER_AGGREGATE, jitterAggregate);
             unlockedSetStat(RTT_AGGREGATE, rttAggregate);
