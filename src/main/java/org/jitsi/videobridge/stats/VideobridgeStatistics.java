@@ -62,6 +62,9 @@ public class VideobridgeStatistics
     public static final String EPS_NO_MSG_TRANSPORT_AFTER_DELAY =
         "num_eps_no_msg_transport_after_delay";
 
+    public static final String TOTAL_ICE_SUCCEEDED_RELAYED =
+        "total_ice_succeeded_relayed";
+
     /**
      * The indicator which determines whether {@link #generate()} is executing
      * on this <tt>VideobridgeStatistics</tt>. If <tt>true</tt>, invocations of
@@ -416,6 +419,9 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     TOTAL_ICE_SUCCEEDED_TCP,
                     jvbStats.totalIceSucceededTcp.get());
+            unlockedSetStat(
+                    TOTAL_ICE_SUCCEEDED_RELAYED,
+                    jvbStats.totalIceSucceededRelayed.get());
             unlockedSetStat(
                     TOTAL_CONFERENCE_SECONDS,
                     jvbStats.totalConferenceSeconds.get());
