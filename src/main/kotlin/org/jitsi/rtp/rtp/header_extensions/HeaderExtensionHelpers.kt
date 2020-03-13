@@ -20,6 +20,7 @@ import kotlin.experimental.and
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.util.getShortAsInt
 import unsigned.ushr
+import kotlin.experimental.or
 
 class HeaderExtensionHelpers {
     companion object {
@@ -31,6 +32,12 @@ class HeaderExtensionHelpers {
 
         fun getId(buf: ByteArray, offset: Int): Int =
             ((buf.get(offset) and 0xF0.toByte()) ushr 4).toPositiveInt()
+
+        fun setId(id: Int, buf: ByteArray, offset: Int) {
+            // Clear the old extension ID
+            buf[offset] = buf[offset] and 0x0F
+            buf[offset] = buf[offset] or (id shl 4).toByte()
+        }
 
         /**
          * Return the entire size, in bytes, of the extension in [buf] whose header

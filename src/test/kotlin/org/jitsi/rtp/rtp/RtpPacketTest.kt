@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp.rtp
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.should
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldNotBe
@@ -31,6 +32,7 @@ import org.jitsi.test_helpers.matchers.haveSameFixedHeader
 import org.jitsi.test_helpers.matchers.haveSamePayload
 
 class RtpPacketTest : ShouldSpec() {
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val rtpHeaderWithExtensions = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
         // V=2,P=false,X=true,CC=0,M=false,PT=111,SeqNum=5807
@@ -103,6 +105,14 @@ class RtpPacketTest : ShouldSpec() {
 
                 rtpPacket.payloadLength shouldBe dummyRtpPayload.size
                 rtpPacket.getPayload() should haveSameContentAs(UnparsedPacket(dummyRtpPayload))
+            }
+            should("allow changing the ID of a header extension") {
+                val ext = rtpPacket.getHeaderExtension(1)
+                ext shouldNotBe null
+                ext as RtpPacket.HeaderExtension
+                ext.id = 12
+                rtpPacket.getHeaderExtension(1) shouldBe null
+                rtpPacket.getHeaderExtension(12) shouldNotBe null
             }
         }
         "An RTP packet with header extensions with padding between them" {

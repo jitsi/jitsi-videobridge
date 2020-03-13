@@ -375,12 +375,18 @@ open class RtpPacket(
             currExtLength = nextHeaderExtLength
         }
 
-        val id: Int
+        var id: Int
             get() {
                 if (currExtLength <= 0) {
                     return -1
                 }
                 return HeaderExtensionHelpers.getId(currExtBuffer, currExtOffset)
+            }
+            set(newId) {
+                if (currExtLength <= 0) {
+                    throw IllegalStateException("Can't set ID on header extension with no length")
+                }
+                HeaderExtensionHelpers.setId(newId, currExtBuffer, currExtOffset)
             }
 
         val dataLengthBytes: Int
