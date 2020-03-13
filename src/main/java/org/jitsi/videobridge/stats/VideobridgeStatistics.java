@@ -66,18 +66,22 @@ public class VideobridgeStatistics
     /**
      * Number of configured MUC clients.
      */
-    public static final String MUC_CLIENTS_TOTAL = "muc_clients_total";
+    public static final String MUC_CLIENTS_CONFIGURED = "muc_clients_configured";
 
     /**
      * Number of configured MUC clients that are connected to XMPP.
      */
-    public static final String MUC_CLIENTS_CONNECTED = "muc_clients_connected";
+    public static final String MUC_CLIENTS_CONNECTED = "muc_clients";
 
     /**
-     * Number of configured MUC clients that are connected to XMPP and joined
-     * their MUCs.
+     * Number of MUCs that are configured
      */
-    public static final String MUC_CLIENTS_JOINED = "muc_clients_joined";
+    public static final String MUCS_CONFIGURED = "mucs_configured";
+
+    /**
+     * Number of MUCs that are joined.
+     */
+    public static final String MUCS_JOINED = "mucs_joined";
 
     /**
      * The indicator which determines whether {@link #generate()} is executing
@@ -537,14 +541,17 @@ public class VideobridgeStatistics
             if (clientConnection != null)
             {
                 unlockedSetStat(
-                        MUC_CLIENTS_TOTAL,
+                        MUC_CLIENTS_CONFIGURED,
                         clientConnection.getMucClientManager().getClientCount());
                 unlockedSetStat(
                         MUC_CLIENTS_CONNECTED,
-                        clientConnection.getMucClientManager().getConnectedClientCount());
+                        clientConnection.getMucClientManager().getClientConnectedCount());
                 unlockedSetStat(
-                        MUC_CLIENTS_JOINED,
-                        clientConnection.getMucClientManager().getJoinedClientCount());
+                        MUCS_CONFIGURED,
+                        clientConnection.getMucClientManager().getMucCount());
+                unlockedSetStat(
+                        MUCS_JOINED,
+                        clientConnection.getMucClientManager().getMucJoinedCount());
             }
         }
         finally
