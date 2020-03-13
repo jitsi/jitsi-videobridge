@@ -74,7 +74,7 @@ public class VideobridgeStatistics
     /**
      * Number of configured MUC clients that are connected to XMPP.
      */
-    public static final String MUC_CLIENTS_CONNECTED = "muc_clients";
+    public static final String MUC_CLIENTS_CONNECTED = "muc_clients_connected";
 
     /**
      * Number of MUCs that are configured
