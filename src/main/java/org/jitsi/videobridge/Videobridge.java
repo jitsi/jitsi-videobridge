@@ -1271,6 +1271,12 @@ public class Videobridge
         public AtomicInteger totalIceSucceededTcp = new AtomicInteger();
 
         /**
+         * The total number of times an ICE Agent succeeded and the selected
+         * candidate pair included a relayed candidate.
+         */
+        public AtomicInteger totalIceSucceededRelayed = new AtomicInteger();
+
+        /**
          * The total number of messages received from the data channels of
          * the {@link Endpoint}s of this conference.
          */
