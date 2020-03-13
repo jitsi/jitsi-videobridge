@@ -133,7 +133,7 @@ public class Debug extends ColibriResource
                 break;
             }
             case QUEUE_STATS: {
-                PacketQueue.setEnableStatisticsDefault(enabled);
+                // Keep for compatibility?
                 break;
             }
             case NODE_TRACING: {
