@@ -16,9 +16,8 @@
 
 package org.jitsi.videobridge.stats;
 
-import org.jitsi.nlj.util.*;
+import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
-import org.json.simple.*;
 
 public class PacketTransitStats
 {
