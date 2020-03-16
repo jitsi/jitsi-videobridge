@@ -235,4 +235,10 @@ public class ClientConnectionImpl
 
         return mucClientManager.removeMucClient((String) jsonObject.get("id"));
     }
+
+    public MucClientManager getMucClientManager()
+    {
+        return mucClientManager;
+    }
+
 }

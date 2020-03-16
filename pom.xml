@@ -15,7 +15,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <smack.version>4.2.4-47d17fc</smack.version>
     <jitsi.utils.version>1.0-SNAPSHOT</jitsi.utils.version>
-    <jicoco.version>1.1-17-g0f9a752</jicoco.version>
+    <jicoco.version>1.1-19-g16fe589</jicoco.version>
     <maven-shade-plugin.version>3.2.1</maven-shade-plugin.version>
     <spotbugs.version>4.0.0-RC1</spotbugs.version>
   </properties>
@@ -117,7 +117,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>rtp</artifactId>
-      <version>1.0-43-g1ee1a7c</version>
+      <version>1.0-44-g1895474</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
