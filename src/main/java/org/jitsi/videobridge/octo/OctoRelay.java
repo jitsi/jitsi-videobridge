@@ -134,7 +134,14 @@ public class OctoRelay
     /**
      * Maps a conference ID (as contained in Octo packets) to a packet handler.
      */
-    private Map<String, PacketHandler> packetHandlers
+    private final Map<String, PacketHandler> packetHandlers
+            = new ConcurrentHashMap<>();
+
+    /**
+     * Maps how many Octo packets are received for unknown conference IDs, to avoid
+     * spamming the error logs.
+     */
+    private final Map<String, AtomicLong> unknownConferences
             = new ConcurrentHashMap<>();
 
     /**
@@ -264,8 +271,29 @@ public class OctoRelay
         PacketHandler handler = packetHandlers.get(conferenceId);
         if (handler == null)
         {
-            logger.warn("Received an Octo packet for an unknown conference: "
-                    + conferenceId);
+            AtomicLong adder = unknownConferences.get(conferenceId);
+            if (adder != null)
+            {
+                long value = adder.incrementAndGet();
+                /* Only print log on exact powers of 10 packets received. */
+                double logValue = Math.log10(value);
+                if (logValue > 0 && logValue == Math.floor(logValue))
+                {
+                    logger.warn("Received " + value + " Octo packets for an unknown conference: "
+                        + conferenceId);
+                }
+            }
+            else
+            {
+                /* Potentially a race here if more than one packet arrives at once
+                 * for the same unknown conference? This will just result in a few
+                 * duplicate logs, though, so not a big deal.
+                 */
+                unknownConferences.put(conferenceId, new AtomicLong(1));
+                logger
+                    .warn("Received an Octo packet for an unknown conference: "
+                        + conferenceId);
+            }
             packetsDropped.incrementAndGet();
             return;
         }
@@ -475,6 +503,7 @@ public class OctoRelay
                         + conferenceId);
             }
             packetHandlers.put(conferenceId, handler);
+            unknownConferences.remove(conferenceId);
         }
     }
 
