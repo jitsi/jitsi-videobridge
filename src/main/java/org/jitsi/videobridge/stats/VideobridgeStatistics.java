@@ -23,6 +23,7 @@ import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.shim.*;
+import org.jitsi.videobridge.xmpp.*;
 import org.json.simple.*;
 import org.osgi.framework.*;
 
@@ -61,6 +62,29 @@ public class VideobridgeStatistics
 
     public static final String EPS_NO_MSG_TRANSPORT_AFTER_DELAY =
         "num_eps_no_msg_transport_after_delay";
+
+    public static final String TOTAL_ICE_SUCCEEDED_RELAYED =
+        "total_ice_succeeded_relayed";
+
+    /**
+     * Number of configured MUC clients.
+     */
+    public static final String MUC_CLIENTS_CONFIGURED = "muc_clients_configured";
+
+    /**
+     * Number of configured MUC clients that are connected to XMPP.
+     */
+    public static final String MUC_CLIENTS_CONNECTED = "muc_clients_connected";
+
+    /**
+     * Number of MUCs that are configured
+     */
+    public static final String MUCS_CONFIGURED = "mucs_configured";
+
+    /**
+     * Number of MUCs that are joined.
+     */
+    public static final String MUCS_JOINED = "mucs_joined";
 
     /**
      * The indicator which determines whether {@link #generate()} is executing
@@ -417,6 +441,9 @@ public class VideobridgeStatistics
                     TOTAL_ICE_SUCCEEDED_TCP,
                     jvbStats.totalIceSucceededTcp.get());
             unlockedSetStat(
+                    TOTAL_ICE_SUCCEEDED_RELAYED,
+                    jvbStats.totalIceSucceededRelayed.get());
+            unlockedSetStat(
                     TOTAL_CONFERENCE_SECONDS,
                     jvbStats.totalConferenceSeconds.get());
 
@@ -514,6 +541,24 @@ public class VideobridgeStatistics
                 unlockedSetStat(REGION, region);
             }
             unlockedSetStat(VERSION, videobridge.getVersion().toString());
+
+            ClientConnectionImpl clientConnection
+                    = ServiceUtils2.getService(bundleContext, ClientConnectionImpl.class);
+            if (clientConnection != null)
+            {
+                unlockedSetStat(
+                        MUC_CLIENTS_CONFIGURED,
+                        clientConnection.getMucClientManager().getClientCount());
+                unlockedSetStat(
+                        MUC_CLIENTS_CONNECTED,
+                        clientConnection.getMucClientManager().getClientConnectedCount());
+                unlockedSetStat(
+                        MUCS_CONFIGURED,
+                        clientConnection.getMucClientManager().getMucCount());
+                unlockedSetStat(
+                        MUCS_JOINED,
+                        clientConnection.getMucClientManager().getMucJoinedCount());
+            }
         }
         finally
         {

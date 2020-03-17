@@ -19,6 +19,7 @@ import kotlin.*;
 import kotlin.jvm.functions.*;
 import org.ice4j.*;
 import org.ice4j.ice.*;
+import org.ice4j.ice.CandidateType;
 import org.ice4j.socket.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
@@ -538,11 +539,24 @@ public class DtlsTransport extends IceTransport
             return;
         }
 
-
         if (remoteCandidate.getTransport() == Transport.TCP
             || remoteCandidate.getTransport() == Transport.SSLTCP)
         {
             stats.totalIceSucceededTcp.incrementAndGet();
+        }
+
+        LocalCandidate localCandidate =
+            selectedPair.getLocalCandidate();
+
+        if (localCandidate == null)
+        {
+            return;
+        }
+
+        if (remoteCandidate.getType() == CandidateType.RELAYED_CANDIDATE ||
+            localCandidate.getType() == CandidateType.RELAYED_CANDIDATE)
+        {
+            stats.totalIceSucceededRelayed.incrementAndGet();
         }
     }
 
