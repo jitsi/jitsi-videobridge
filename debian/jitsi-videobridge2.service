@@ -1,6 +1,6 @@
 [Unit]
 Description=Jitsi Videobridge
-After=network.target
+After=network.target nginx.service
 
 [Service]
 # allow bind to 80 and 443
