@@ -210,34 +210,50 @@ public class XmppCommon
         long start = System.currentTimeMillis();
         DelayStats delayStats = null;
 
-        // Requests can be categorized in pieces of Videobridge functionality
-        // based on the org.jivesoftware.smack.packet.IQ runtime type (of their
-        // child element) and forwarded to specialized Videobridge methods for
-        // convenience.
-        if (request instanceof Version)
+        try
         {
-            response = handleVersionIQ((Version) request);
-            delayStats = versionDelayStats;
-        }
-        else if (request instanceof ColibriConferenceIQ)
-        {
-            response
-                = videobridge.handleColibriConferenceIQ(
+            // Requests can be categorized in pieces of Videobridge functionality
+            // based on the org.jivesoftware.smack.packet.IQ runtime type (of their
+            // child element) and forwarded to specialized Videobridge methods for
+            // convenience.
+            if (request instanceof Version)
+            {
+                response = handleVersionIQ((Version) request);
+                delayStats = versionDelayStats;
+            }
+            else if (request instanceof ColibriConferenceIQ)
+            {
+                response
+                    = videobridge.handleColibriConferenceIQ(
                     (ColibriConferenceIQ) request);
-            delayStats = colibriDelayStats;
+                delayStats = colibriDelayStats;
+            }
+            else if (request instanceof HealthCheckIQ)
+            {
+                response = videobridge.handleHealthCheckIQ((HealthCheckIQ) request);
+                delayStats = healthDelayStats;
+            }
+            else if (request instanceof ShutdownIQ)
+            {
+                response = videobridge.handleShutdownIQ((ShutdownIQ) request);
+            }
+            else
+            {
+                logger.error("Unsupported IQ request " + request.getChildElementName() + " received");
+                response = IQUtils.createError(
+                    request,
+                    XMPPError.Condition.service_unavailable,
+                    "Unsupported IQ request " + request.getChildElementName());
+            }
         }
-        else if (request instanceof HealthCheckIQ)
+        catch (Exception e)
         {
-            response = videobridge.handleHealthCheckIQ((HealthCheckIQ) request);
-            delayStats = healthDelayStats;
-        }
-        else if (request instanceof ShutdownIQ)
-        {
-            response = videobridge.handleShutdownIQ((ShutdownIQ) request);
-        }
-        else
-        {
-            response = null;
+            logger.error("Exception handling IQ request", e);
+            response = IQUtils.createError(
+                request,
+                XMPPError.Condition.internal_server_error,
+                e.getMessage()
+            );
         }
 
         if (delayStats != null)
