@@ -218,20 +218,20 @@ public class XmppCommon
             // convenience.
             if (request instanceof Version)
             {
-                response = handleVersionIQ((Version) request);
                 delayStats = versionDelayStats;
+                response = handleVersionIQ((Version) request);
             }
             else if (request instanceof ColibriConferenceIQ)
             {
+                delayStats = colibriDelayStats;
                 response
                     = videobridge.handleColibriConferenceIQ(
                     (ColibriConferenceIQ) request);
-                delayStats = colibriDelayStats;
             }
             else if (request instanceof HealthCheckIQ)
             {
-                response = videobridge.handleHealthCheckIQ((HealthCheckIQ) request);
                 delayStats = healthDelayStats;
+                response = videobridge.handleHealthCheckIQ((HealthCheckIQ) request);
             }
             else if (request instanceof ShutdownIQ)
             {
