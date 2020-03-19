@@ -67,6 +67,9 @@ class VideoParser(
                     packetInfo.packet = vp8Packet
                     packetInfo.resetPayloadVerification()
                 }
+                else -> {
+                    videoPacket.qualityIndex = encodingDesc.index
+                }
             }
         } catch (e: Exception) {
             logger.error("Exception parsing video packet.  Packet data is: ${videoPacket.buffer.toHex(videoPacket.offset, Math.min(videoPacket.length, 80))}", e)
