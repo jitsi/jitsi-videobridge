@@ -46,7 +46,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jicoco-kotlin</artifactId>
-            <version>1.1-15-geecd377</version>
+            <version>1.1-22-gbec9167</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
