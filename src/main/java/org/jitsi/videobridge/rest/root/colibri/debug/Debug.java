@@ -133,7 +133,11 @@ public class Debug extends ColibriResource
                 break;
             }
             case QUEUE_STATS: {
-                // Keep for compatibility?
+                QueueStatistics.Companion.setDebug(enabled);
+                break;
+            }
+            case QUEUE_TIMING_STATS: {
+                QueueStatistics.Companion.setTrackTimes(enabled);
                 break;
             }
             case NODE_TRACING: {
