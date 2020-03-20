@@ -42,6 +42,7 @@ import org.osgi.framework.*;
 
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.*;
 
 /**
@@ -99,9 +100,10 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         = new CountingErrorHandler();
 
     /**
-     * The queue which passes packets to be sent.
+     * The queues which pass packets to be sent.
      */
-    private PacketInfoQueue outgoingPacketQueue;
+    private Map<String, PacketInfoQueue> outgoingPacketQueues =
+        new ConcurrentHashMap<>();
 
     /**
      * Initializes a new {@link OctoTentacle} instance.
@@ -139,12 +141,6 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
                     f.invoke();
                 }
             });
-            outgoingPacketQueue = new PacketInfoQueue(
-                "octo-tentacle-outgoing-packet-queue",
-                TaskPools.IO_POOL,
-                this::doSend,
-                OctoConfig.Config.sendQueueSize());
-            outgoingPacketQueue.setErrorHandler(queueErrorCounter);
         }
         else
         {
@@ -171,12 +167,34 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
     }
 
     /**
+     * Creates a PacketInfoQueue for an endpoint.
+     */
+    private PacketInfoQueue createQueue(String epId)
+    {
+        PacketInfoQueue q = new PacketInfoQueue(
+            "octo-tentacle-outgoing-packet-queue",
+            TaskPools.IO_POOL,
+            this::doSend,
+            OctoConfig.Config.sendQueueSize());
+        q.setErrorHandler(queueErrorCounter);
+        return q;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
     public void send(PacketInfo packetInfo)
     {
-        outgoingPacketQueue.add(packetInfo);
+        /* We queue packets separately by their *source* endpoint.
+         * This achieves parallelization while guaranteeing that we don't
+         * reorder things that shouldn't be reordered.
+         */
+        PacketInfoQueue queue =
+            outgoingPacketQueues.computeIfAbsent(packetInfo.getEndpointId(),
+             this::createQueue);
+
+        queue.add(packetInfo);
     }
 
     /**
@@ -298,6 +316,14 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
     }
 
     /**
+     * Called when a local endpoint is expired.
+     */
+    void endpointExpired(String endpointId)
+    {
+        outgoingPacketQueues.remove(endpointId);
+    }
+
+    /**
      * Handles and RTP packet coming from a remote Octo relay after it has
      * been parsed and handled by our {@link #transceiver}.
      * @param packetInfo the packet to handle.
@@ -382,7 +408,13 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         debugState.put("transceiver", transceiver.getDebugState());
         debugState.put("relay", relay.getDebugState());
         debugState.put("targets", targets.toString());
-        debugState.put("outgoingPacketQueue", outgoingPacketQueue.getDebugState());
+
+        /* TODO: do we really want to dump debug state for all the queues? */
+        JSONObject queueDebugState = new JSONObject();
+        for (Map.Entry<String, PacketInfoQueue> entry: outgoingPacketQueues.entrySet()) {
+            queueDebugState.put(entry.getKey(), entry.getValue().getDebugState());
+        }
+        debugState.put("outgoingPacketQueues", queueDebugState);
 
         return debugState;
     }
