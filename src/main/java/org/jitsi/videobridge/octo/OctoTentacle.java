@@ -318,7 +318,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
     /**
      * Called when a local endpoint is expired.
      */
-    void endpointExpired(String endpointId)
+    public void endpointExpired(String endpointId)
     {
         outgoingPacketQueues.remove(endpointId);
     }
