@@ -409,13 +409,6 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         debugState.put("relay", relay.getDebugState());
         debugState.put("targets", targets.toString());
 
-        /* TODO: do we really want to dump debug state for all the queues? */
-        JSONObject queueDebugState = new JSONObject();
-        for (Map.Entry<String, PacketInfoQueue> entry: outgoingPacketQueues.entrySet()) {
-            queueDebugState.put(entry.getKey(), entry.getValue().getDebugState());
-        }
-        debugState.put("outgoingPacketQueues", queueDebugState);
-
         return debugState;
     }
 
