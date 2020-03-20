@@ -282,7 +282,7 @@ public class OctoTransceiver
                         node.getName(),
                         node.getNodeStats().toJson()));
 
-        debugState.put("incomingPacketQueue", incomingPacketQueue.getDebugState().put("statistics", queueStatistics.getStats()));
+        debugState.put("incomingPacketQueue", queueStatistics.getQueueDebugState());
         debugState.put("mediaStreamTracks", mediaStreamTracks.getNodeStats().toJson());
         return debugState;
     }

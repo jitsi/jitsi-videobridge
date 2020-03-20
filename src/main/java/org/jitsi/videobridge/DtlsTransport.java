@@ -574,9 +574,7 @@ public class DtlsTransport extends IceTransport
         debugState.put("bridge_jitter", bridgeJitterStats.getJitter());
         debugState.put("dtlsStack", dtlsStack.getNodeStats().toJson());
 
-        debugState.put(
-                "outgoingPacketQueue",
-                outgoingPacketQueue.getDebugState().put("statistics", queueStatistics.getStats()));
+        debugState.put("outgoingPacketQueue", queueStatistics.getQueueDebugState());
         debugState.put("packetSender", packetSender.getNodeStats().toJson());
 
         NodeSetVisitor nodeSetVisitor = new NodeSetVisitor();
