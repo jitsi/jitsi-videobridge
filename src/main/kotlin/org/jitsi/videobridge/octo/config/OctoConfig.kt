@@ -42,7 +42,7 @@ class OctoConfig {
 
             class EnabledProperty : FallbackProperty<Boolean>(
                 // The legacy config file doesn't have an 'enabled' property,
-                // instead it was based on the values of the paremeters.  Here,
+                // instead it was based on the values of the parameters.  Here,
                 // we simulate a legacy 'enabled' value based on the results
                 // of validating the other properties in the legacy config
                 // file.
