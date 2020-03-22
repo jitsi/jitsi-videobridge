@@ -91,7 +91,7 @@ public class OctoTransceiver
         this.logger = parentLogger.createChildLogger(this.getClass().getName());
         inputTreeRoot = createInputTree();
         incomingPacketQueue = new PacketInfoQueue(
-                "octo-tranceiver-incoming-packet-queue",
+                "octo-transceiver-incoming-packet-queue",
                 TaskPools.CPU_POOL,
                 this::processPacket,
                 Config.queueSize());
