@@ -69,7 +69,7 @@ public class CurrentVersionImpl
      * The version major of the current application version. In an example
      * 2.3.1 version string 2 is the version major. The version major number
      * changes when a relatively extensive set of new features and possibly
-     * rearchitecturing have been applied to the Jitsi Videobridge.
+     * architecting have been applied to the Jitsi Videobridge.
      */
     public static final int VERSION_MAJOR = parsedMajor;
 
