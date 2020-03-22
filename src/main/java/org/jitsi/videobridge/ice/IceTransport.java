@@ -331,7 +331,7 @@ public class IceTransport
 
     /**
      * Returns {@code true} if this {@link IceTransport} has connected. It is
-     * considered connected once the ICE connection is extablished.
+     * considered connected once the ICE connection is established.
      */
     public boolean isConnected()
     {
