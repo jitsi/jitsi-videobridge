@@ -268,7 +268,7 @@ public class BitrateController
         // if, on the other hand, the bwe has decreased, we require a 15%
         // (configurable) drop at last in order to update the bitrate
         // allocation. This is an ugly hack to prevent too many resolution/UI
-        // changes in case the bridge produces too low bandwdith estimate, at
+        // changes in case the bridge produces too low bandwidth estimate, at
         // the risk of clogging the receiver's pipe.
 
         return deltaBwe > 0
