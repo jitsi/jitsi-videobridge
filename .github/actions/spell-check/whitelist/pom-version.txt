@@ -1,0 +1,4 @@
+# these entries come from pom.xml <..version>here</..version>
+# there's a patterns.txt rule to exclude them, but it isn't working
+gf
+gfcf
