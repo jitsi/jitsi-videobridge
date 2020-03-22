@@ -181,7 +181,7 @@ public class Endpoint
     /**
      * The executor which runs bandwidth probing.
      *
-     * TODO (brian): align the recurringrunnable stuff with whatever we end up
+     * TODO (brian): align the recurringRunnable stuff with whatever we end up
      * doing with all the other executors.
      */
     private static final RecurringRunnableExecutor recurringRunnableExecutor =
