@@ -680,7 +680,7 @@ public class VP8AdaptiveTrackProjectionContext
         {
             /* Should have been rejected in accept(). */
             logger.info("VP8 packet does not have picture ID, cannot track in frame map.");
-            throw new RewriteException("VP8 packet without picture ID in VP8 track projeciton");
+            throw new RewriteException("VP8 packet without picture ID in VP8 track projection");
         }
 
         VP8Frame vp8Frame = lookupVP8Frame(vp8Packet);
