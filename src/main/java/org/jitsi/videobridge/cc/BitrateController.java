@@ -259,7 +259,7 @@ public class BitrateController
         // if the bwe has increased, we should act upon it, otherwise
         // we may end up in this broken situation: Suppose that the target
         // bitrate is 2.5Mbps, and that the last bitrate allocation was
-        // performed with a 2.4Mbps bandwidth esitmate.  The bridge keeps
+        // performed with a 2.4Mbps bandwidth estimate.  The bridge keeps
         // probing and, suppose that, eventually the bandwidth estimate reaches
         // 2.6Mbps, which is plenty to accomodate the target bitrate; but the
         // minimum bandwidth estimate that would trigger a new bitrate
