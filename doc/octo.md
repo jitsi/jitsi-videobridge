@@ -7,7 +7,7 @@ enable support for Octo:
 org.jitsi.videobridge.octo.BIND_ADDRESS=10.0.0.1 # the address to bind to locally
 org.jitsi.videobridge.octo.PUBLIC_ADDRESS=1.2.3.4 # the address to advertise (in case BIND_ADDRESS is not accessible)
 org.jitsi.videobridge.octo.BIND_PORT=4096 # the port to bind to
-org.jitsi.videobridge.REGION=region1 # the region that the jitsi-videbridge instance is in
+org.jitsi.videobridge.REGION=region1 # the region that the jitsi-videobridge instance is in
 ```
 
 You need to make sure that all of the bridges can communicate via the socket

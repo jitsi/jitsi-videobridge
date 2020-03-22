@@ -2,7 +2,7 @@
 Using an XMPP client connection and advertising presence in a Multi User Chat
 (MUC) is the now preferred alternative to an XMPP component connection.
 
-With this mode a jitsi-videobrige instance can connect to a set of XMPP servers, and new servers 
+With this mode a jitsi-videobridge instance can connect to a set of XMPP servers, and new servers 
 can be added [at runtime](https://github.com/jitsi/jitsi-videobridge/blob/master/doc/rest-muc-client.md).
 
 The default installation on debian now uses an XMPP client
