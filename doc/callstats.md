@@ -1,4 +1,4 @@
-To enable callsstats on JVB, the following properties needs to be set 
+To enable callstats on JVB, the following properties needs to be set 
 in /etc/jitsi/videobridge/sip-communicator.properties
 
     # the callstats credentials
