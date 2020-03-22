@@ -823,13 +823,13 @@ public class BitrateController
 
         int oldStateLen = 0;
         int[] oldRatedTargetIndices = new int[trackBitrateAllocations.length];
-        int[] newRatedTargetIndicies = new int[trackBitrateAllocations.length];
-        Arrays.fill(newRatedTargetIndicies, -1);
+        int[] newRatedTargetIndices = new int[trackBitrateAllocations.length];
+        Arrays.fill(newRatedTargetIndices, -1);
 
         while (oldMaxBandwidth != maxBandwidth)
         {
             oldMaxBandwidth = maxBandwidth;
-            System.arraycopy(newRatedTargetIndicies, 0,
+            System.arraycopy(newRatedTargetIndices, 0,
                 oldRatedTargetIndices, 0, oldRatedTargetIndices.length);
 
             int newStateLen = 0;
@@ -851,7 +851,7 @@ public class BitrateController
                 trackBitrateAllocation.improve(maxBandwidth);
                 maxBandwidth -= trackBitrateAllocation.getTargetBitrate();
 
-                newRatedTargetIndicies[i]
+                newRatedTargetIndices[i]
                     = trackBitrateAllocation.ratedTargetIdx;
                 if (trackBitrateAllocation.getTargetIndex() > -1)
                 {
