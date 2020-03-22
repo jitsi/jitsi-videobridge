@@ -9,7 +9,7 @@ by other components of the infrastructure, e.g. a signaling server), such as:
 * The health-check interface (```/about/health```)
 * The version interface (```/about/version```)
 
-The _public_ interface inludes:
+The _public_ interface includes:
 
 * Support for serving static files (e.g. the HTML/js for jitsi-meet)
 * Support for proxying (for e.g. proxying BOSH connections to a prosody instance)
