@@ -42,7 +42,7 @@ dch -D unstable -r ""
 # the debian package
 mvn dependency:resolve
 
-# sets the version in the pom file so it will propagte to resulting jar
+# sets the version in the pom file so it will propagate to resulting jar
 mvn versions:set -DnewVersion="${VERSION}"
 
 # now build the deb
