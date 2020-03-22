@@ -49,7 +49,7 @@ generated (in UTC).
  * **total_data_channel_messages_received / total_data_channel_messages_sent** - The total number messages received and sent through data channels.
  * **total_colibri_web_socket_messages_received / total_colibri_web_socket_messages_sent** - The total number messages received and sent through COLIBRI web sockets.
 
-The statistics are available through the `/colibri/stats` endpoint on the [private REST intefrace](rest.md) (if it has been enabled) in JSON format:
+The statistics are available through the `/colibri/stats` endpoint on the [private REST interface](rest.md) (if it has been enabled) in JSON format:
 ```json
 {
   "audiochannels": 0,
