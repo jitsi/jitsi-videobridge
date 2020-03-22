@@ -232,7 +232,7 @@ public class Health
     private boolean hasFailed = false;
 
     /**
-     * Iniatializes a new {@link Health} instance for a specific
+     * Initializes a new {@link Health} instance for a specific
      * {@link Videobridge}.
      */
     public Health(Videobridge videobridge)
