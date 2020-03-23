@@ -96,6 +96,12 @@ case "$1" in
         # and this breaks startup script
         sed -i 's/\$JVB_EXTRA_JVM_PARAMS//g' $CONFIG
 
+        if ! grep -q "org.ice4j.ice.harvest.STUN_MAPPING_HARVESTER_ADDRESSES" "$NEW_JITSI_CONFIG" \
+          && ! grep -q "org.ice4j.ice.harvest.NAT_HARVESTER_PUBLIC_ADDRESS" "$NEW_JITSI_CONFIG" ;then
+            echo "org.ice4j.ice.harvest.DISABLE_AWS_HARVESTER=true" >> $NEW_JITSI_CONFIG
+            echo "org.ice4j.ice.harvest.STUN_MAPPING_HARVESTER_ADDRESSES=meet-jit-si-turnrelay.jitsi.net:443" >> $NEW_JITSI_CONFIG
+        fi
+
         if ! grep -q "#org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP" "$NEW_JITSI_CONFIG" ;then
             sed -i 's/org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP/#org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP/g' $NEW_JITSI_CONFIG
         fi
