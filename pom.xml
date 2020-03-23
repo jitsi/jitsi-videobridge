@@ -16,8 +16,8 @@
     <smack.version>4.2.4-47d17fc</smack.version>
     <jitsi.utils.version>1.0-38-g5badf5f</jitsi.utils.version>
     <jicoco.version>1.1-22-gbec9167</jicoco.version>
-    <maven-shade-plugin.version>3.2.1</maven-shade-plugin.version>
-    <spotbugs.version>4.0.0-RC1</spotbugs.version>
+    <maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
+    <spotbugs.version>4.0.1</spotbugs.version>
   </properties>
 
   <profiles>
@@ -295,6 +295,26 @@
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.0.0-M3</version>
+        <executions>
+          <execution>
+            <id>enforce-maven</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>3.5.0</version>
+                </requireMavenVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
          <version>3.2.0</version>
          <executions>
@@ -355,7 +375,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <version>1.4.0</version>
+        <version>1.6.0</version>
         <executions>
           <execution>
             <id>exec-exec</id>
@@ -430,7 +450,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.5.1</version>
+        <version>3.8.1</version>
         <executions>
           <!-- Replacing default-compile as it is treated specially by maven -->
           <execution>
@@ -476,7 +496,7 @@
       <plugin>
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
-        <version>3.1.12.2</version>
+        <version>4.0.0</version>
         <configuration>
           <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
           <includeTests>true</includeTests>
