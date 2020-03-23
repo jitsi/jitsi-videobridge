@@ -469,9 +469,9 @@ public class Endpoint
             RtcpSrPacket rtcpSrPacket = (RtcpSrPacket) packet;
             bitrateController.transformRtcp(rtcpSrPacket);
 
-            if (logger.isDebugEnabled())
+            if (logger.isTraceEnabled())
             {
-                logger.debug(
+                logger.trace(
                     "relaying an sr from ssrc="
                         + rtcpSrPacket.getSenderSsrc()
                         + ", timestamp="
