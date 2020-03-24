@@ -22,7 +22,7 @@ fi
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/share/jitsi-videobridge/jvb.sh
-NAME=jvb
+NAME=jvb2
 USER=jvb
 # A tmpfs backed directory just for the JVB process. This is introduced
 # to hold packet arrival times, but it may be otherwise useful in the future.
