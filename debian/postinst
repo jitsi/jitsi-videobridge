@@ -169,7 +169,7 @@ case "$1" in
 
         # ensure videobridge is not running - it will be started at the end
         if [ -d /run/systemd/system ]; then
-            systemctl stop jitsi-videobridge.service >/dev/null || true
+            systemctl stop jitsi-videobridge2.service >/dev/null || true
         fi
 
         # clean up old jvb group
