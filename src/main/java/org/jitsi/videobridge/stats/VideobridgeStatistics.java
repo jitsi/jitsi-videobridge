@@ -514,7 +514,7 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     OCTO_RECEIVE_BITRATE,
                     octoRelay == null
-                            ? 0 : (octoRelay.getReceiveBitrate() + 500) / 1000);
+                            ? 0 : octoRelay.getReceiveBitrate());
             unlockedSetStat(
                     OCTO_RECEIVE_PACKET_RATE,
                     octoRelay == null
@@ -522,7 +522,7 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     OCTO_SEND_BITRATE,
                     octoRelay == null
-                            ? 0 : (octoRelay.getSendBitrate() + 500) / 1000);
+                            ? 0 : octoRelay.getSendBitrate());
             unlockedSetStat(
                     OCTO_SEND_PACKET_RATE,
                     octoRelay == null
