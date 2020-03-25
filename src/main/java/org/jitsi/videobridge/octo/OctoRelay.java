@@ -57,6 +57,11 @@ public class OctoRelay
     private static final int SO_RCVBUF = 10 * 1024 * 1024;
 
     /**
+     * The send buffer size to set of the socket.
+     */
+    private static final int SO_SNDBUF = 10 * 1024 * 1024;
+
+    /**
      * The interval over which average packet and bit rates will be calculated
      * in milliseconds.
      */
@@ -161,9 +166,11 @@ public class OctoRelay
                 = new InetSocketAddress(InetAddress.getByName(address), port);
         socket = new DatagramSocket(addr);
         socket.setReceiveBufferSize(SO_RCVBUF);
+        socket.setSendBufferSize(SO_SNDBUF);
         logger.info("Initialized OctoRelay with address " + addr +
                 ". Receive buffer size " + socket.getReceiveBufferSize() +
-                " (asked for " + SO_RCVBUF + ").");
+                " (asked for " + SO_RCVBUF + "). Send buffer size " + socket.getSendBufferSize() +
+                " (asked for " + SO_SNDBUF + ").");
 
         this.port = port;
         String id = address + ":" + port;
