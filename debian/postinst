@@ -182,6 +182,7 @@ case "$1" in
         # OpenVZ containers do not typically allow permission to modify the
         # kernel with sysctl config values.
         sysctl --system || true
+
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
