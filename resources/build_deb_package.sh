@@ -31,7 +31,7 @@ fi
 VERSION_FULL=$(git describe --match "v[0-9\.]*" --long)
 echo "Full version: ${VERSION_FULL}"
 
-VERSION=${VERSION_FULL:1}
+export VERSION=${VERSION_FULL:1}
 echo "Package version: ${VERSION}"
 
 REV=$(git log --pretty=format:'%h' -n 1)
@@ -59,4 +59,4 @@ echo "-----"
 
 # Let's try deploying
 cd ..
-([ ! -x deploy.sh ] || ./deploy.sh)
+([ ! -x deploy.sh ] || ./deploy.sh "jvb" $VERSION )
