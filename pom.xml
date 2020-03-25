@@ -14,8 +14,8 @@
     <kotlin.version>1.3.61</kotlin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <smack.version>4.2.4-47d17fc</smack.version>
-    <jitsi.utils.version>1.0-38-g5badf5f</jitsi.utils.version>
-    <jicoco.version>1.1-22-gbec9167</jicoco.version>
+    <jitsi.utils.version>1.0-40-g3244250</jitsi.utils.version>
+    <jicoco.version>1.1-25-g0328114</jicoco.version>
     <maven-shade-plugin.version>3.2.1</maven-shade-plugin.version>
     <spotbugs.version>4.0.0-RC1</spotbugs.version>
   </properties>
