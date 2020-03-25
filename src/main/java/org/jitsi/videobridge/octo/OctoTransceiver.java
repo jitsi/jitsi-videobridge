@@ -94,7 +94,7 @@ public class OctoTransceiver
                 "octo-tranceiver-incoming-packet-queue",
                 TaskPools.CPU_POOL,
                 this::processPacket,
-                Config.queueSize());
+                Config.recvQueueSize());
         incomingPacketQueue.setErrorHandler(queueErrorCounter);
     }
 

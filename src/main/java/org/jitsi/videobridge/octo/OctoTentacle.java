@@ -23,12 +23,16 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtcp.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.transform.node.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.octo.config.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
@@ -38,6 +42,7 @@ import org.osgi.framework.*;
 
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.*;
 
 /**
@@ -87,6 +92,18 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      */
     private Set<SocketAddress> targets
             = Collections.unmodifiableSet(new HashSet<>());
+
+    /**
+     * Count the number of dropped packets and exceptions.
+     */
+    public static final CountingErrorHandler queueErrorCounter
+        = new CountingErrorHandler();
+
+    /**
+     * The queues which pass packets to be sent.
+     */
+    private Map<String, PacketInfoQueue> outgoingPacketQueues =
+        new ConcurrentHashMap<>();
 
     /**
      * Initializes a new {@link OctoTentacle} instance.
@@ -150,10 +167,40 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
     }
 
     /**
+     * Creates a PacketInfoQueue for an endpoint.
+     */
+    private PacketInfoQueue createQueue(String epId)
+    {
+        PacketInfoQueue q = new PacketInfoQueue(
+            "octo-tentacle-outgoing-packet-queue",
+            TaskPools.IO_POOL,
+            this::doSend,
+            OctoConfig.Config.sendQueueSize());
+        q.setErrorHandler(queueErrorCounter);
+        return q;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
     public void send(PacketInfo packetInfo)
+    {
+        /* We queue packets separately by their *source* endpoint.
+         * This achieves parallelization while guaranteeing that we don't
+         * reorder things that shouldn't be reordered.
+         */
+        PacketInfoQueue queue =
+            outgoingPacketQueues.computeIfAbsent(packetInfo.getEndpointId(),
+             this::createQueue);
+
+        queue.add(packetInfo);
+    }
+
+    /**
+     * Send Octo packet out.
+     */
+    private boolean doSend(PacketInfo packetInfo)
     {
         Packet packet = packetInfo.getPacket();
         if (packet != null)
@@ -164,6 +211,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
                 conference.getGid(),
                 packetInfo.getEndpointId());
         }
+        return true;
     }
 
     /**
@@ -265,6 +313,14 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
                 logger.warn("No OctoEndpoint for SSRCs");
             }
         });
+    }
+
+    /**
+     * Called when a local endpoint is expired.
+     */
+    public void endpointExpired(String endpointId)
+    {
+        outgoingPacketQueues.remove(endpointId);
     }
 
     /**

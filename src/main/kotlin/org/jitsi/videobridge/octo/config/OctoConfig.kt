@@ -28,17 +28,29 @@ class OctoConfig {
     class Config {
         companion object {
 
-            class QueueSizeProperty : SimpleProperty<Int>(
+            class RecvQueueSizeProperty : SimpleProperty<Int>(
                     newConfigAttributes {
                         name("videobridge.octo.recv-queue-size")
                         readOnce()
                     }
             )
 
-            private val queueSizeProperty = QueueSizeProperty()
+            private val recvQueueSizeProperty = RecvQueueSizeProperty()
 
             @JvmStatic
-            fun queueSize() = queueSizeProperty.value
+            fun recvQueueSize() = recvQueueSizeProperty.value
+
+            class SendQueueSizeProperty : SimpleProperty<Int>(
+                newConfigAttributes {
+                    name("videobridge.octo.send-queue-size")
+                    readOnce()
+                }
+            )
+
+            private val sendQueueSizeProperty = SendQueueSizeProperty()
+
+            @JvmStatic
+            fun sendQueueSize() = sendQueueSizeProperty.value
 
             class EnabledProperty : FallbackProperty<Boolean>(
                 // The legacy config file doesn't have an 'enabled' property,

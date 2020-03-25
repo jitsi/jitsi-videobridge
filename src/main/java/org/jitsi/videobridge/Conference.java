@@ -962,10 +962,16 @@ public class Conference
     void endpointExpired(AbstractEndpoint endpoint)
     {
         final AbstractEndpoint removedEndpoint;
-        removedEndpoint = endpoints.remove(endpoint.getID());
+        String id = endpoint.getID();
+        removedEndpoint = endpoints.remove(id);
         if (removedEndpoint != null)
         {
             updateEndpointsCache();
+        }
+
+        if (tentacle != null)
+        {
+            tentacle.endpointExpired(id);
         }
 
         if (removedEndpoint != null)
