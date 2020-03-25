@@ -23,8 +23,6 @@ import org.jitsi.config.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.meet.*;
 import org.jitsi.nlj.*;
-import org.jitsi.nlj.stats.*;
-import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.utils.*;
@@ -1175,7 +1173,7 @@ public class Videobridge
         /* TODO: combine these stats with the ones above? */
         queueStats.put(
                 "by_id",
-                QueueStatistics.Companion.getStatistics());
+                QueueObserver.Companion.getStatistics());
 
         return queueStats;
     }

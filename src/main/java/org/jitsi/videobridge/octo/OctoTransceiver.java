@@ -70,7 +70,7 @@ public class OctoTransceiver
     /**
      * Statistics observer for the incoming packet queue.
      */
-    private final QueueStatistics queueStatistics;
+    private final QueueObserver queueObserver;
 
     /**
      * The tree of {@link Node}s which handles incoming packets.
@@ -100,9 +100,9 @@ public class OctoTransceiver
                 TaskPools.CPU_POOL,
                 this::processPacket,
                 Config.queueSize());
-        queueStatistics = new QueueStatistics(incomingPacketQueue);
+        queueObserver = new QueueObserver(incomingPacketQueue);
         incomingPacketQueue.setErrorHandler(queueErrorCounter);
-        incomingPacketQueue.setObserver(queueStatistics);
+        incomingPacketQueue.setObserver(queueObserver);
     }
 
     /**
@@ -282,7 +282,7 @@ public class OctoTransceiver
                         node.getName(),
                         node.getNodeStats().toJson()));
 
-        debugState.put("incomingPacketQueue", queueStatistics.getQueueDebugState());
+        debugState.put("incomingPacketQueue", queueObserver.getQueueDebugState());
         debugState.put("mediaStreamTracks", mediaStreamTracks.getNodeStats().toJson());
         return debugState;
     }

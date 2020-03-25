@@ -99,7 +99,7 @@ public class DtlsTransport extends IceTransport
     private final ProtocolSender dtlsSender;
     private List<Runnable> dtlsConnectedSubscribers = new ArrayList<>();
     private final PacketInfoQueue outgoingPacketQueue;
-    private final QueueStatistics queueStatistics;
+    private final QueueObserver queueObserver;
     private final Endpoint endpoint;
 
     private final SocketSenderNode packetSender = new SocketSenderNode();
@@ -135,9 +135,9 @@ public class DtlsTransport extends IceTransport
                         TaskPools.IO_POOL,
                         this::handleOutgoingPacket,
                         Config.queueSize());
-        queueStatistics = new QueueStatistics(outgoingPacketQueue);
+        queueObserver = new QueueObserver(outgoingPacketQueue);
         outgoingPacketQueue.setErrorHandler(queueErrorCounter);
-        outgoingPacketQueue.setObserver(queueStatistics);
+        outgoingPacketQueue.setObserver(queueObserver);
 
         dtlsStack = new DtlsStack(logger);
         dtlsReceiver = new ProtocolReceiver(dtlsStack);
@@ -574,7 +574,7 @@ public class DtlsTransport extends IceTransport
         debugState.put("bridge_jitter", bridgeJitterStats.getJitter());
         debugState.put("dtlsStack", dtlsStack.getNodeStats().toJson());
 
-        debugState.put("outgoingPacketQueue", queueStatistics.getQueueDebugState());
+        debugState.put("outgoingPacketQueue", queueObserver.getQueueDebugState());
         debugState.put("packetSender", packetSender.getNodeStats().toJson());
 
         NodeSetVisitor nodeSetVisitor = new NodeSetVisitor();
