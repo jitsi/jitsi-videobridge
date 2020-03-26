@@ -176,6 +176,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
             TaskPools.IO_POOL,
             this::doSend,
             OctoConfig.Config.sendQueueSize());
+        q.setObserver(new QueueObserver(q));
         q.setErrorHandler(queueErrorCounter);
         return q;
     }
@@ -408,6 +409,18 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         debugState.put("transceiver", transceiver.getDebugState());
         debugState.put("relay", relay.getDebugState());
         debugState.put("targets", targets.toString());
+
+        /* Only include queues' debug state if queue debugging is enabled. */
+        if (QueueObserver.Companion.getDEBUG())
+        {
+            JSONObject queueDebugState = new JSONObject();
+            for (Map.Entry<String, PacketInfoQueue> entry: outgoingPacketQueues.entrySet())
+            {
+                QueueObserver o = (QueueObserver)entry.getValue().getObserver();
+                queueDebugState.put(entry.getKey(), o.getQueueDebugState());
+            }
+            debugState.put("outgoingPacketQueues", queueDebugState);
+        }
 
         return debugState;
     }
