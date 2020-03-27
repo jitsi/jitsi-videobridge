@@ -133,11 +133,11 @@ public class Debug extends ColibriResource
                 break;
             }
             case QUEUE_STATS: {
-                QueueObserver.Companion.setDEBUG(enabled);
+                QueueObserver.Companion.setDebug(enabled);
                 break;
             }
             case QUEUE_TIMING_STATS: {
-                QueueObserver.Companion.setTRACK_TIMES(enabled);
+                QueueObserver.Companion.setTrackTimes(enabled);
                 break;
             }
             case NODE_TRACING: {
