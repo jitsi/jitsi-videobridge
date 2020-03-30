@@ -221,6 +221,12 @@
       <version>0.4</version>
       <scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>io.sentry</groupId>
+      <artifactId>sentry</artifactId>
+      <version>1.7.30</version>
+      <scope>runtime</scope>
+    </dependency>
     <!-- test -->
     <dependency>
       <groupId>org.mockito</groupId>
