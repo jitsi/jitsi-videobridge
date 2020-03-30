@@ -411,7 +411,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         debugState.put("targets", targets.toString());
 
         /* Only include queues' debug state if queue debugging is enabled. */
-        if (QueueObserver.Companion.getDebug())
+        if (QueueObserver.DEBUG)
         {
             JSONObject queueDebugState = new JSONObject();
             for (Map.Entry<String, PacketInfoQueue> entry: outgoingPacketQueues.entrySet())
