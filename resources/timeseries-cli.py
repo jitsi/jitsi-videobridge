@@ -103,7 +103,7 @@ def plot_endpoint(df, series, endpoint_id, remote_endpoint_id):
     if 'in_pkt' in series and 'in_pkt' in df_series:
         df_pkt = df[df['series'] == 'in_pkt']
 
-        if len(df_pkt['rbe_id'].unique()) is not 1:
+        if len(df_pkt['rbe_id'].unique()) != 1:
             raise Exception('There cannot be multiple remote bitrate estimators')
 
         df_sz = pd.DataFrame(
