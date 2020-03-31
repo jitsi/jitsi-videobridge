@@ -57,9 +57,6 @@ public class ColibriWebSocketService
      */
     public ColibriWebSocketService(boolean tls)
     {
-        String baseUrl = null;
-        String serverId = null;
-
         // The domain name is currently a required property.
         if (Config.enabled())
         {
@@ -74,12 +71,16 @@ public class ColibriWebSocketService
             // unless configured.
             serverId = Config.serverId();
 
-            baseUrl = tls ? "wss://" : "ws://";
-            baseUrl += domain + COLIBRI_WS_PATH + serverId + "/";
+            String scheme = tls ? "wss://" : "ws://";
+            baseUrl = scheme + domain + COLIBRI_WS_PATH + serverId + "/";
+            logger.info("Using base URL: " + baseUrl);
         }
-
-        this.baseUrl = baseUrl;
-        this.serverId = serverId;
+        else
+        {
+            logger.info("Disabled.");
+            baseUrl = null;
+            serverId = null;
+        }
     }
 
     /**
