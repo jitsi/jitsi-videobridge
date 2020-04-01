@@ -641,6 +641,7 @@ public class DtlsTransport extends IceTransport
             {
                 try
                 {
+                    packetInfo.sent();
                     socket.send(
                         new DatagramPacket(
                                 packet.getBuffer(),

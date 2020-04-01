@@ -131,6 +131,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
                 @Override
                 protected void consume(@NotNull PacketInfo packetInfo)
                 {
+                    packetInfo.sent();
                     relay.sendPacket(packetInfo.getPacket(), targets,
                         conference.getGid(), packetInfo.getEndpointId());
                 }
