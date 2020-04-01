@@ -124,8 +124,6 @@ The respective response could look like:
 		200 OK with a JSON object which represents the statistics report.
 <pre>
 {
-    "cpu_usage":"0.03015",
-    "used_memory":3732,
     "rtp_loss":"0",
     "bit_rate_download":"0",
     "audiochannels":0,
@@ -134,7 +132,6 @@ The respective response could look like:
     "participants":0,
     "current_timestamp":"2014-08-14 23:26:14.782",
     "threads":17,
-    "total_memory":4051,
     "videochannels":0
 }</pre>
 		(Make sure <a href="using_statistics.md#configuration">statistics are enabled</a>.)
