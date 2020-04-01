@@ -15,46 +15,53 @@
  */
 package org.jitsi.videobridge;
 
-import kotlin.*;
-import kotlin.jvm.functions.*;
-import org.ice4j.*;
-import org.ice4j.ice.*;
-import org.ice4j.ice.CandidateType;
-import org.ice4j.socket.*;
-import org.jetbrains.annotations.*;
-import org.jitsi.nlj.*;
-import org.jitsi.nlj.dtls.*;
-import org.jitsi.nlj.stats.*;
-import org.jitsi.nlj.transform.*;
+import kotlin.Unit;
+import kotlin.jvm.functions.Function0;
+import org.jetbrains.annotations.NotNull;
+import org.jitsi.nlj.PacketInfo;
+import org.jitsi.nlj.dtls.DtlsClient;
+import org.jitsi.nlj.dtls.DtlsRole;
+import org.jitsi.nlj.dtls.DtlsServer;
+import org.jitsi.nlj.dtls.DtlsStack;
+import org.jitsi.nlj.stats.BridgeJitterStats;
+import org.jitsi.nlj.stats.NodeStatsBlock;
+import org.jitsi.nlj.stats.PacketDelayStats;
+import org.jitsi.nlj.transform.NodeSetVisitor;
+import org.jitsi.nlj.transform.PipelineBuilder;
 import org.jitsi.nlj.transform.node.*;
-import org.jitsi.nlj.transform.node.incoming.*;
-import org.jitsi.nlj.transform.node.outgoing.*;
-import org.jitsi.nlj.util.*;
-import org.jitsi.rtp.*;
-import org.jitsi.rtp.extensions.*;
-import org.jitsi.rtp.rtp.*;
-import org.jitsi.utils.*;
-import org.jitsi.utils.logging2.*;
-import org.jitsi.utils.queue.*;
-import org.jitsi.videobridge.ice.*;
-import org.jitsi.videobridge.stats.*;
-import org.jitsi.videobridge.util.*;
-import org.jitsi.xmpp.extensions.jingle.*;
-import org.json.simple.*;
+import org.jitsi.nlj.transform.node.incoming.ProtocolReceiver;
+import org.jitsi.nlj.transform.node.outgoing.ProtocolSender;
+import org.jitsi.nlj.util.OrderedJsonObject;
+import org.jitsi.nlj.util.PacketInfoQueue;
+import org.jitsi.rtp.Packet;
+import org.jitsi.rtp.UnparsedPacket;
+import org.jitsi.rtp.extensions.PacketExtensionsKt;
+import org.jitsi.rtp.rtp.RtpPacket;
+import org.jitsi.utils.StringUtils;
+import org.jitsi.utils.logging2.Logger;
+import org.jitsi.utils.queue.CountingErrorHandler;
+import org.jitsi.videobridge.stats.DoubleAverage;
+import org.jitsi.videobridge.util.ByteBufferPool;
+import org.jitsi.videobridge.util.TaskPools;
+import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension;
+import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension;
+import org.json.simple.JSONObject;
 
-import java.io.*;
-import java.net.*;
-import java.time.*;
-import java.util.*;
-import java.util.function.*;
+import java.net.DatagramPacket;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
-import static org.jitsi.videobridge.TransportConfig.*;
+import static org.jitsi.videobridge.TransportConfig.Config;
 
 /**
  * @author Brian Baldino
  * @author Boris Grozev
  */
-public class DtlsTransport extends IceTransport
+public class DtlsTransport
 {
     /**
      * A predicate which is true for DTLS packets. See
@@ -94,18 +101,22 @@ public class DtlsTransport extends IceTransport
     static final CountingErrorHandler queueErrorCounter
             = new CountingErrorHandler();
 
+    private final Logger logger;
     private final DtlsStack dtlsStack;
     private final ProtocolReceiver dtlsReceiver;
     private final ProtocolSender dtlsSender;
     private List<Runnable> dtlsConnectedSubscribers = new ArrayList<>();
     private final PacketInfoQueue outgoingPacketQueue;
     private final Endpoint endpoint;
+    private final AtomicBoolean running = new AtomicBoolean(true);
 
     private final SocketSenderNode packetSender = new SocketSenderNode();
     private final Node incomingPipelineRoot;
     private final Node outgoingDtlsPipelineRoot;
     private final Node outgoingSrtpPipelineRoot;
     private boolean dtlsHandshakeComplete = false;
+
+    private final PacketStats packetStats = new PacketStats();
     /**
      * Measures the jitter introduced by the bridge itself (i.e. jitter calculated between
      * packets based on the time they were received by the bridge and the time they
@@ -119,20 +130,17 @@ public class DtlsTransport extends IceTransport
      * Initializes a new {@link DtlsTransport} instance for a specific endpoint.
      * @param endpoint the endpoint with which this {@link DtlsTransport} is
      *                 associated.
-     * @param controlling {@code true} if the new instance will be initialized
-     * to serve as a controlling ICE agent; otherwise, {@code false}
      */
-    public DtlsTransport(Endpoint endpoint, boolean controlling, Logger parentLogger)
-            throws IOException
+    public DtlsTransport(Endpoint endpoint, Logger parentLogger)
     {
-        super(endpoint, controlling, parentLogger);
+        logger = parentLogger.createChildLogger(getClass().getName());
         this.endpoint = endpoint;
 
         outgoingPacketQueue
                 = new PacketInfoQueue(
                         getClass().getSimpleName() + "-outgoing-packet-queue",
                         TaskPools.IO_POOL,
-                        this::handleOutgoingPacket,
+                        this::handleOutgoingSrtpData,
                         Config.queueSize());
         outgoingPacketQueue.setErrorHandler(queueErrorCounter);
 
@@ -154,54 +162,27 @@ public class DtlsTransport extends IceTransport
         outgoingSrtpPipelineRoot = createOutgoingSrtpPipeline();
     }
 
-    /**
-     * Reads the DTLS fingerprints from, the transport extension before
-     * passing it over to the ICE transport manager.
-     * @param transportPacketExtension
-     */
-    @Override
-    public void startConnectivityEstablishment(
-            IceUdpTransportPacketExtension transportPacketExtension)
+    void setSetupAttribute(String setupAttr)
     {
-        List<DtlsFingerprintPacketExtension> fingerprintExtensions
-                = transportPacketExtension.getChildExtensionsOfType(
-                        DtlsFingerprintPacketExtension.class);
-
-        Map<String, String> remoteFingerprints = new HashMap<>();
-        fingerprintExtensions.forEach(fingerprintExtension -> {
-            if (fingerprintExtension.getHash() != null
-                    && fingerprintExtension.getFingerprint() != null)
-            {
-                remoteFingerprints.put(
-                        fingerprintExtension.getHash(),
-                        fingerprintExtension.getFingerprint());
-            }
-            else
-            {
-                logger.info("Ignoring empty DtlsFingerprint extension: "
-                                + transportPacketExtension.toXML());
-            }
-        });
-        if (dtlsStack.getRole() == null && !fingerprintExtensions.isEmpty())
+        if ("active".equalsIgnoreCase(setupAttr))
         {
-            String setup = fingerprintExtensions.get(0).getSetup();
-            if ("active".equalsIgnoreCase(setup))
-            {
-                logger.info("The remote side is acting as DTLS client, we'll act as server");
-                dtlsStack.actAsServer();
-            }
-            else if ("passive".equalsIgnoreCase(setup))
-            {
-                logger.info("The remote side is acting as DTLS server, we'll act as client");
-                dtlsStack.actAsClient();
-            }
-            else if (!StringUtils.isNullOrEmpty(setup))
-            {
-                logger.error("The remote side sent an unrecognized DTLS setup value: " +
-                        setup);
-            }
+            logger.info("The remote side is acting as DTLS client, we'll act as server");
+            dtlsStack.actAsServer();
         }
+        else if ("passive".equalsIgnoreCase(setupAttr))
+        {
+            logger.info("The remote side is acting as DTLS server, we'll act as client");
+            dtlsStack.actAsClient();
+        }
+        else if (!StringUtils.isNullOrEmpty(setupAttr))
+        {
+            logger.error("The remote side sent an unrecognized DTLS setup value: " +
+                    setupAttr);
+        }
+    }
 
+    void setRemoteFingerprints(Map<String, String> remoteFingerprints)
+    {
         // Don't pass an empty list to the stack in order to avoid wiping
         // certificates that were contained in a previous request.
         if (!remoteFingerprints.isEmpty())
@@ -209,12 +190,12 @@ public class DtlsTransport extends IceTransport
             dtlsStack.setRemoteFingerprints(remoteFingerprints);
 
             final boolean hasSha1Hash = remoteFingerprints
-                .keySet()
-                .stream()
-                .anyMatch(hash -> hash.equalsIgnoreCase("sha-1"));
+                    .keySet()
+                    .stream()
+                    .anyMatch(hash -> hash.equalsIgnoreCase("sha-1"));
 
             if (dtlsStack.getRole() == null
-                && hasSha1Hash)
+                    && hasSha1Hash)
             {
                 // hack(george) Jigasi sends a sha-1 dtls fingerprint without a
                 // setup attribute and it assumes a server role for the bridge.
@@ -223,30 +204,50 @@ public class DtlsTransport extends IceTransport
                 dtlsStack.actAsServer();
             }
         }
+    }
 
-        super.startConnectivityEstablishment(transportPacketExtension);
+    public void startDtlsHandshake()
+    {
+        logger.info("Starting DTLS.");
+        try
+        {
+            if (dtlsStack.getRole() == null)
+            {
+                logger.warn("Starting the DTLS stack before it knows its role");
+            }
+            dtlsStack.start();
+        }
+        catch (Throwable e)
+        {
+            logger.error("Error during DTLS negotiation: " + e.toString() +
+                    ", closing this transport manager");
+        }
     }
 
     /**
      * Returns {@code true} if this {@link DtlsTransport} is connected. It is
      * considered connected if the underlying ICE connection has been
      * established and the DTLS session has been established.
-     * @return
+     * @return true if the DTLS handshake has completed, false otherwise
      */
-    @Override
     public boolean isConnected()
     {
-        return super.isConnected() && dtlsHandshakeComplete;
+        return dtlsHandshakeComplete;
+    }
+
+    public void stop()
+    {
+        if (running.compareAndSet(true, false))
+        {
+            dtlsStack.close();
+        }
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override
     protected void describe(IceUdpTransportPacketExtension pe)
     {
-        super.describe(pe);
-
         // Describe dtls
         DtlsFingerprintPacketExtension fingerprintPE
                 = pe.getFirstChildOfType(DtlsFingerprintPacketExtension.class);
@@ -389,185 +390,80 @@ public class DtlsTransport extends IceTransport
 
     /**
      * Sends a DTLS packet through the outgoing DTLS pipeline.
+     *
+     * TODO(brian): once SRTP data is no longer going through this class,
+     * we can rename this to 'send' (and probably take a type other than
+     * PacketInfo)
      */
     public void sendDtlsData(PacketInfo packetInfo)
     {
+        packetStats.numOutgoingDtlsPackets++;
         outgoingDtlsPipelineRoot.processPacket(packetInfo);
     }
 
     /**
      * Handles a packet after it has passed through the Transceiver.
+     * Note that the packet is added to a queue and further processed
+     * in a different context.
+     *
+     * TODO(brian): this method will go away entirely once SRTP
+     * is no longer going through this class
      */
-    private boolean handleOutgoingPacket(PacketInfo packetInfo)
+    public void sendSrtpData(PacketInfo packetInfo)
     {
+        outgoingPacketQueue.add(packetInfo);
+    }
+
+    /**
+     * Handle an outgoing SRTP packet in the context of the queue handler
+     *
+     * TODO(brian): this method will go away entirely once SRTP
+     * is no longer going through this class
+     */
+    private boolean handleOutgoingSrtpData(PacketInfo packetInfo)
+    {
+        packetStats.numOutgoingSrtpPackets++;
         outgoingSrtpPipelineRoot.processPacket(packetInfo);
         return true;
     }
 
     /**
-     * Read packets from the given socket and process them in the incoming pipeline
-     * @param socket the socket to read from
+     * Notify this [DtlsTransport] that data has been received (from a lower transport layer).
+     * @param data the buffer
+     * @param off the offset
+     * @param len the length
+     *
+     * TODO(brian): once this class is no longer handling SRTP data, we won't have to
+     *            leave the extra space at the beginning and end of the copied buffer
+     *            (and may not have to copy at all?)
      */
-    private void installIncomingPacketReader(DatagramSocket socket)
+    public void dataReceived(byte[] data, int off, int len)
     {
-        //TODO(brian): this does a bit more than just read from the iceSocket
-        // (does a bit of processing for each packet) but I think it's little
-        // enough (it'll only be a bit of the DTLS path) that running it in the
-        // IO pool is fine
-        TaskPools.IO_POOL.submit(() -> {
-
-            // We need this buffer to be 1500 bytes because we don't know how
-            // big the received packet will be. But we don't want to allocate
-            // large buffers for all packets.
-            byte[] receiveBuf = ByteBufferPool.getBuffer(1500);
-            DatagramPacket p = new DatagramPacket(receiveBuf, 0, 1500);
-
-            while (!closed)
-            {
-                try
-                {
-                    socket.receive(p);
-                    int len = p.getLength();
-                    byte[] buf
-                        = ByteBufferPool.getBuffer(
-                                len +
-                                RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET +
-                                RtpPacket.BYTES_TO_LEAVE_AT_END_OF_PACKET);
-                    System.arraycopy(
-                            receiveBuf, p.getOffset(),
-                            buf, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
-                            len);
-                    Packet pkt
-                        = new UnparsedPacket(
-                                buf,
-                                RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
-                                len);
-                    PacketInfo pktInfo = new PacketInfo(pkt);
-                    pktInfo.setReceivedTime(System.currentTimeMillis());
-                    incomingPipelineRoot.processPacket(pktInfo);
-
-                    p.setData(receiveBuf, 0, receiveBuf.length);
-                }
-                catch (SocketClosedException e)
-                {
-                    logger.info("Socket closed, stopping reader.");
-                    break;
-                }
-                catch (IOException e)
-                {
-                    logger.warn("Stopping reader: ", e);
-                    break;
-                }
-            }
-        });
+        packetStats.numReceivedPackets++;
+        byte[] copy = ByteBufferPool.getBuffer(
+                len +
+                        RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET +
+                        RtpPacket.BYTES_TO_LEAVE_AT_END_OF_PACKET
+        );
+        System.arraycopy(data, off, copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, len);
+        Packet pkt = new UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, len);
+        PacketInfo pktInfo = new PacketInfo(pkt);
+        pktInfo.setReceivedTime(System.currentTimeMillis());
+        incomingPipelineRoot.processPacket(pktInfo);
     }
 
-    @Override
-    protected void onIceConnected()
+    public void setSender(Consumer<DatagramPacket> sender)
     {
-        updateIceConnectedStats();
-        DatagramSocket socket = iceComponent.getSocket();
-
-        endpoint.setOutgoingSrtpPacketHandler(outgoingPacketQueue::add);
-
-        // Socket reader thread. Read from the underlying iceSocket and pass
-        // to the incoming module chain.
-        installIncomingPacketReader(socket);
-
-        packetSender.socket = socket;
-        logger.info("Starting DTLS.");
-        TaskPools.IO_POOL.submit(() -> {
-            try
-            {
-                if (dtlsStack.getRole() == null)
-                {
-                    logger.warn("Starting the DTLS stack before it knows its role");
-                }
-                dtlsStack.start();
-            }
-            catch (Throwable e)
-            {
-                logger.error("Error during DTLS negotiation: " + e.toString() +
-                        ", closing this transport manager");
-                close();
-            }
-        });
+        packetSender.sender = sender;
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    protected void onIceFailed()
-    {
-        endpoint.getConference().getVideobridge().getStatistics()
-                .totalIceFailed.incrementAndGet();
-        endpoint.getConference().getStatistics().hasIceFailedEndpoint = true;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void onIceConsentUpdated(long time)
-    {
-       super.onIceConsentUpdated(time);
-       endpoint
-           .getTransceiver()
-           .getPacketIOActivity()
-           .setLastIceActivityInstant(Instant.ofEpochMilli(time));
-    }
-
-    /**
-     * Bumps the counters of the number of time ICE succeeded in the
-     * {@link Videobridge} statistics.
-     */
-    private void updateIceConnectedStats()
-    {
-        endpoint.getConference().getStatistics().hasIceSucceededEndpoint = true;
-
-        Videobridge.Statistics stats
-                = endpoint.getConference().getVideobridge().getStatistics();
-        stats.totalIceSucceeded.incrementAndGet();
-
-        CandidatePair selectedPair = iceComponent.getSelectedPair();
-        RemoteCandidate remoteCandidate =
-                selectedPair == null ? null : selectedPair.getRemoteCandidate();
-
-        if (remoteCandidate == null)
-        {
-            return;
-        }
-
-        if (remoteCandidate.getTransport() == Transport.TCP
-            || remoteCandidate.getTransport() == Transport.SSLTCP)
-        {
-            stats.totalIceSucceededTcp.incrementAndGet();
-        }
-
-        LocalCandidate localCandidate =
-            selectedPair.getLocalCandidate();
-
-        if (localCandidate == null)
-        {
-            return;
-        }
-
-        if (remoteCandidate.getType() == CandidateType.RELAYED_CANDIDATE ||
-            localCandidate.getType() == CandidateType.RELAYED_CANDIDATE)
-        {
-            stats.totalIceSucceededRelayed.incrementAndGet();
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     @SuppressWarnings("unchecked")
     public JSONObject getDebugState()
     {
-        JSONObject debugState = super.getDebugState();
+        JSONObject debugState = new JSONObject();
         debugState.put("bridge_jitter", bridgeJitterStats.getJitter());
         debugState.put("dtlsStack", dtlsStack.getNodeStats().toJson());
 
@@ -608,7 +504,7 @@ public class DtlsTransport extends IceTransport
      */
     private class SocketSenderNode extends ConsumerNode
     {
-        public DatagramSocket socket = null;
+        public Consumer<DatagramPacket> sender = null;
 
         /**
          * Initializes a new {@link SocketSenderNode}.
@@ -637,30 +533,48 @@ public class DtlsTransport extends IceTransport
 
             bridgeJitterStats.packetSent(packetInfo);
             overallAverageBridgeJitter.addValue(bridgeJitterStats.getJitter());
-            if (socket != null)
+            if (sender != null)
             {
-                try
-                {
-                    packetInfo.sent();
-                    socket.send(
+                packetInfo.sent();
+                sender.accept(
                         new DatagramPacket(
                                 packet.getBuffer(),
                                 packet.getOffset(),
                                 packet.getLength()));
-                    ByteBufferPool.returnBuffer(packet.getBuffer());
-                }
-                catch (IOException e)
-                {
-                    logger.error("Error sending packet: " + e.toString());
-                    throw new RuntimeException(e);
-                }
+                packetStats.numSentPackets++;
             }
+            else
+            {
+                logger.warn("Sender is null, dropping outgoing data");
+                packetStats.numOutgoingPacketsDroppedNoSender++;
+            }
+            ByteBufferPool.returnBuffer(packet.getBuffer());
         }
 
         @Override
         public void trace(@NotNull Function0<Unit> f)
         {
             f.invoke();
+        }
+    }
+
+    private static class PacketStats
+    {
+        int numReceivedPackets = 0;
+        int numOutgoingSrtpPackets = 0;
+        int numOutgoingDtlsPackets = 0;
+        int numSentPackets = 0;
+        int numOutgoingPacketsDroppedNoSender = 0;
+
+        OrderedJsonObject toJson()
+        {
+            OrderedJsonObject json = new OrderedJsonObject();
+            json.put("num_received_packets", numReceivedPackets);
+            json.put("num_outgoing_srtp_packets", numOutgoingSrtpPackets);
+            json.put("num_outgoing_dtls_packets", numOutgoingDtlsPackets);
+            json.put("num_sent_packets", numSentPackets);
+            json.put("num_outgoing_packets_dropped_no_sender", numOutgoingPacketsDroppedNoSender);
+            return json;
         }
     }
 }
