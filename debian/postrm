@@ -28,6 +28,9 @@ case "$1" in
         rm -f /etc/jitsi/videobridge/logging.properties
         rm -rf /usr/share/jitsi-videobridge/.java
         rm -rf /usr/share/jitsi-videobridge/.sip-communicator
+
+        # make sure we remove keys we used ('jitsi-videobridge/jvb-hostname')
+        echo PURGE | debconf-communicate jitsi-videobridge  > /dev/null || true
     ;;
 
     remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
