@@ -48,6 +48,7 @@ import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension;
 import org.json.simple.JSONObject;
 
 import java.net.DatagramPacket;
+import java.time.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -437,7 +438,7 @@ public class DtlsTransport
      *            leave the extra space at the beginning and end of the copied buffer
      *            (and may not have to copy at all?)
      */
-    public void dataReceived(byte[] data, int off, int len)
+    public void dataReceived(byte[] data, int off, int len, Instant receivedTime)
     {
         packetStats.numReceivedPackets++;
         byte[] copy = ByteBufferPool.getBuffer(
@@ -448,7 +449,7 @@ public class DtlsTransport
         System.arraycopy(data, off, copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, len);
         Packet pkt = new UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, len);
         PacketInfo pktInfo = new PacketInfo(pkt);
-        pktInfo.setReceivedTime(System.currentTimeMillis());
+        pktInfo.setReceivedTime(receivedTime.toEpochMilli());
         incomingPipelineRoot.processPacket(pktInfo);
     }
 

@@ -307,12 +307,12 @@ public class Endpoint
     {
         iceTransport.incomingDataHandler = new IceTransportK.IncomingDataHandler() {
             @Override
-            public void dataReceived(@NotNull byte[] data, int offset, int length) {
+            public void dataReceived(@NotNull byte[] data, int offset, int length, Instant receivedTime) {
                 // TODO: In the future we'd split DTLS and SRTP here.  SRTP
                 //  can have a buffer allocated with space and be sent directly
                 //  to the transceiver, DTLS can go through the DTLS transport
                 //  (which will be adapted to only handle DTLS packets)
-                dtlsTransport.dataReceived(data, offset, length);
+                dtlsTransport.dataReceived(data, offset, length, receivedTime);
             }
         };
         iceTransport.eventHandler = new IceTransportK.EventHandler() {

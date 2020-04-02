@@ -2,7 +2,12 @@ package org.jitsi.videobridge.transport.ice
 
 import org.ice4j.Transport
 import org.ice4j.TransportAddress
-import org.ice4j.ice.*
+import org.ice4j.ice.Agent
+import org.ice4j.ice.CandidateType
+import org.ice4j.ice.IceMediaStream
+import org.ice4j.ice.IceProcessingState
+import org.ice4j.ice.LocalCandidate
+import org.ice4j.ice.RemoteCandidate
 import org.ice4j.socket.SocketClosedException
 import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
@@ -19,17 +24,19 @@ import sun.net.util.IPAddressUtil
 import java.beans.PropertyChangeEvent
 import java.io.IOException
 import java.net.DatagramPacket
+import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicBoolean
 
-class IceTransportK(
-        id: String,
-        /**
-         * Whether or not the ICE agent created by this transport should be the
-         * 'controlling' role.
-         */
-        controlling: Boolean,
-        parentLogger: Logger
+class IceTransportK @JvmOverloads constructor(
+    id: String,
+    /**
+     * Whether or not the ICE agent created by this transport should be the
+     * 'controlling' role.
+     */
+    controlling: Boolean,
+    parentLogger: Logger,
+    private val clock: Clock = Clock.systemUTC()
 ) {
     private val logger = createChildLogger(parentLogger)
 
@@ -168,10 +175,12 @@ class IceTransportK(
         val socket = iceComponent.socket
         val receiveBuf = ByteBufferPool.getBuffer(1500)
         val packet = DatagramPacket(receiveBuf, 0, receiveBuf.size)
+        var receivedTime: Instant
 
         while (running.get()) {
             try {
                 socket.receive(packet)
+                receivedTime = clock.instant()
             } catch (e: SocketClosedException) {
                 logger.info("Socket closed, stopping reader")
                 break
@@ -180,7 +189,7 @@ class IceTransportK(
                 break
             }
             packetStats.numPacketsReceived++
-            incomingDataHandler?.dataReceived(receiveBuf, 0, packet.length) ?: run {
+            incomingDataHandler?.dataReceived(receiveBuf, 0, packet.length, receivedTime) ?: run {
                 logger.cdebug { "Data handler is null, dropping data" }
                 packetStats.numIncomingPacketsDroppedNoHandler++
             }
@@ -240,8 +249,8 @@ class IceTransportK(
      * the given list of candidates.
      */
     private fun addRemoteCandidates(
-            remoteCandidates: List<CandidatePacketExtension>,
-            iceAgentIsRunning: Boolean
+        remoteCandidates: List<CandidatePacketExtension>,
+        iceAgentIsRunning: Boolean
     ): Int {
         var remoteCandidateCount = 0
         // Sort the remote candidates (host < reflexive < relayed) in order to
@@ -332,9 +341,9 @@ class IceTransportK(
     }
 
     private data class PacketStats(
-            var numPacketsReceived: Int = 0,
-            var numIncomingPacketsDroppedNoHandler: Int = 0,
-            var numPacketsSent: Int = 0
+        var numPacketsReceived: Int = 0,
+        var numIncomingPacketsDroppedNoHandler: Int = 0,
+        var numPacketsSent: Int = 0
     ) {
         fun toJson(): OrderedJsonObject = OrderedJsonObject().apply {
             put("num_packets_received", numPacketsReceived)
@@ -344,12 +353,25 @@ class IceTransportK(
     }
 
     interface IncomingDataHandler {
-        fun dataReceived(data: ByteArray, offset: Int, length: Int)
+        /**
+         * Notify the handler that data was received (contained
+         * within [data] at [offset] with [length]) at [receivedTime]
+         */
+        fun dataReceived(data: ByteArray, offset: Int, length: Int, receivedTime: Instant)
     }
 
     interface EventHandler {
+        /**
+         * Notify the event handler that ICE connected successfully
+         */
         fun connected()
+        /**
+         * Notify the event handler that ICE failed to connect
+         */
         fun failed()
+        /**
+         * Notify the event handler that ICE consent was updated
+         */
         fun consentUpdated(time: Instant)
     }
 }
@@ -359,8 +381,8 @@ class IceTransportK(
  * functions to test the transition.
  */
 private data class IceProcessingStateTransition(
-        val oldState: IceProcessingState,
-        val newState: IceProcessingState
+    val oldState: IceProcessingState,
+    val newState: IceProcessingState
 ) {
     // We should be using newState.isEstablished() here, but we see
     // transitions from RUNNING to COMPLETED, which should not happen and
@@ -419,4 +441,3 @@ private fun LocalCandidate.toCandidatePacketExtension(): CandidatePacketExtensio
 
     return cpe
 }
-
