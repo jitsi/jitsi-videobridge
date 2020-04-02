@@ -28,7 +28,7 @@ import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicBoolean
 
-class IceTransportK @JvmOverloads constructor(
+class IceTransport @JvmOverloads constructor(
     id: String,
     /**
      * Whether or not the ICE agent created by this transport should be the
@@ -85,14 +85,14 @@ class IceTransportK @JvmOverloads constructor(
         appendHarvesters(this)
         isControlling = controlling
         performConsentFreshness = true
-        addStateChangeListener(this@IceTransportK::iceStateChanged)
+        addStateChangeListener(this@IceTransport::iceStateChanged)
     }.also {
         logger.addContext("local_ufrag", it.localUfrag)
     }
 
     // TODO: Do we still need the id here now that we have logContext?
     private val iceStream = iceAgent.createMediaStream("stream-$id").apply {
-        addPairChangeListener(this@IceTransportK::iceStreamPairChanged)
+        addPairChangeListener(this@IceTransport::iceStreamPairChanged)
     }
 
     private val iceComponent = iceAgent.createComponent(

@@ -137,7 +137,7 @@ public class Endpoint
     private final BandwidthProbing bandwidthProbing;
 
     @NotNull
-    private final IceTransportK iceTransport;
+    private final IceTransport iceTransport;
 
     /**
      * This {@link Endpoint}'s DTLS transport.
@@ -271,7 +271,7 @@ public class Endpoint
         bandwidthProbing.enabled = true;
         recurringRunnableExecutor.registerRecurringRunnable(bandwidthProbing);
 
-        iceTransport = new IceTransportK(getID(), iceControlling, logger);
+        iceTransport = new IceTransport(getID(), iceControlling, logger);
         setupIceTransport();
         dtlsTransport = new DtlsTransport(this, logger);
 
@@ -304,7 +304,7 @@ public class Endpoint
 
     private void setupIceTransport()
     {
-        iceTransport.incomingDataHandler = new IceTransportK.IncomingDataHandler() {
+        iceTransport.incomingDataHandler = new IceTransport.IncomingDataHandler() {
             @Override
             public void dataReceived(@NotNull byte[] data, int offset, int length, Instant receivedTime) {
                 // TODO: In the future we'd split DTLS and SRTP here.  SRTP
@@ -314,7 +314,7 @@ public class Endpoint
                 dtlsTransport.dataReceived(data, offset, length, receivedTime);
             }
         };
-        iceTransport.eventHandler = new IceTransportK.EventHandler() {
+        iceTransport.eventHandler = new IceTransport.EventHandler() {
             @Override
             public void connected() {
                 logger.info("ICE connected");
