@@ -226,9 +226,8 @@ public class DtlsTransport
     }
 
     /**
-     * Returns {@code true} if this {@link DtlsTransport} is connected. It is
-     * considered connected if the underlying ICE connection has been
-     * established and the DTLS session has been established.
+     * Returns {@code true} if this {@link DtlsTransport} has completed
+     * the DTLS handshake.
      * @return true if the DTLS handshake has completed, false otherwise
      */
     public boolean isConnected()

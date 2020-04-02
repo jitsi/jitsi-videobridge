@@ -1051,7 +1051,8 @@ public class Endpoint
             dtlsTransport.setSetupAttribute(setup);
         }
 
-        iceTransport.startConnectivityEstablishment(transportInfo);    }
+        iceTransport.startConnectivityEstablishment(transportInfo);
+    }
 
     /**
      * A node which can be placed in the pipeline to cache SCTP packets until
