@@ -187,6 +187,7 @@ public class ByteBufferPool
             numReturns.incrementAndGet();
         }
 
+        Arrays.fill(buf, (byte) 0);
         int len = buf.length;
 
         if (ENABLE_BOOKKEEPING)
