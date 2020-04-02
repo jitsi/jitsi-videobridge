@@ -196,7 +196,7 @@ public class DtlsTransport
                     .anyMatch(hash -> hash.equalsIgnoreCase("sha-1"));
 
             if (dtlsStack.getRole() == null
-                    && hasSha1Hash)
+                && hasSha1Hash)
             {
                 // hack(george) Jigasi sends a sha-1 dtls fingerprint without a
                 // setup attribute and it assumes a server role for the bridge.
