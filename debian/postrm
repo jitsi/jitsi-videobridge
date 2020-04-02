@@ -30,7 +30,7 @@ case "$1" in
         rm -rf /usr/share/jitsi-videobridge/.sip-communicator
 
         # make sure we remove keys we used ('jitsi-videobridge/jvb-hostname')
-        echo PURGE | debconf-communicate jitsi-videobridge  > /dev/null || true
+        db_unregister jitsi-videobridge/jvb-hostname
     ;;
 
     remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
