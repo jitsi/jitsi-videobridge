@@ -36,6 +36,7 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
+import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
@@ -51,7 +52,6 @@ import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
-import org.jitsi_modified.sctp4j.*;
 import org.json.simple.*;
 
 import java.beans.*;
@@ -103,6 +103,12 @@ public class Endpoint
 
         return packetDelayStats;
     }
+
+    /**
+     * Count the number of dropped packets and exceptions.
+     */
+    static final CountingErrorHandler queueErrorCounter
+        = new CountingErrorHandler();
 
     /**
      * Measures the jitter introduced by the bridge itself (i.e. jitter calculated between
@@ -229,6 +235,12 @@ public class Endpoint
             new RecurringRunnableExecutor(Endpoint.class.getSimpleName());
 
     /**
+     * The queue we put outgoing SRTP packets onto so they can be sent
+     * out via the {@link IceTransport} on an IO thread.
+     */
+    private final PacketInfoQueue outgoingPacketQueue;
+
+    /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
      * identifier/ID of the endpoint of a participant in a <tt>Conference</tt>.
      *
@@ -279,6 +291,14 @@ public class Endpoint
                 }
             });
         bitrateController = new BitrateController(this, diagnosticContext, logger);
+
+        outgoingPacketQueue = new PacketInfoQueue(
+            getClass().getSimpleName() + "-outgoing-packet-queue",
+            TaskPools.IO_POOL,
+            this::doSendSrtp,
+            TransportConfig.Config.queueSize()
+        );
+        outgoingPacketQueue.setErrorHandler(queueErrorCounter);
 
         messageTransport = new EndpointMessageTransport(
             this,
@@ -372,24 +392,7 @@ public class Endpoint
                 logger.info("ICE connected");
                 getConference().getStatistics().hasIceSucceededEndpoint = true;
                 getConference().getVideobridge().getStatistics().totalIceSucceeded.incrementAndGet();
-                transceiver.setOutgoingPacketHandler(packetInfo ->
-                {
-                    if (PacketExtensionsKt.looksLikeRtp(packetInfo.getPacket()))
-                    {
-                        rtpPacketDelayStats.addPacket(packetInfo);
-                        bridgeJitterStats.packetSent(packetInfo);
-                    }
-                    else if (PacketExtensionsKt.looksLikeRtcp(packetInfo.getPacket()))
-                    {
-                        rtcpPacketDelayStats.addPacket(packetInfo);
-                    }
-                    packetInfo.sent();
-                    iceTransport.send(
-                        packetInfo.getPacket().buffer,
-                        packetInfo.getPacket().offset,
-                        packetInfo.getPacket().length
-                    );
-                });
+                transceiver.setOutgoingPacketHandler(outgoingPacketQueue::add);
                 TaskPools.IO_POOL.submit(iceTransport::startReadingData);
                 TaskPools.IO_POOL.submit(dtlsTransport::startDtlsHandshake);
             }
@@ -434,6 +437,27 @@ public class Endpoint
                 // TODO: Start SCTP connection
             }
         };
+    }
+
+    private boolean doSendSrtp(PacketInfo packetInfo)
+    {
+        if (PacketExtensionsKt.looksLikeRtp(packetInfo.getPacket()))
+        {
+            rtpPacketDelayStats.addPacket(packetInfo);
+            bridgeJitterStats.packetSent(packetInfo);
+        }
+        else if (PacketExtensionsKt.looksLikeRtcp(packetInfo.getPacket()))
+        {
+            rtcpPacketDelayStats.addPacket(packetInfo);
+        }
+        packetInfo.sent();
+        iceTransport.send(
+            packetInfo.getPacket().buffer,
+            packetInfo.getPacket().offset,
+            packetInfo.getPacket().length
+        );
+        ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
+        return true;
     }
 
     @Override
@@ -814,129 +838,130 @@ public class Endpoint
      */
     public void createSctpConnection()
     {
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Creating SCTP manager.");
-        }
-        // Create the SctpManager and provide it a method for sending SCTP data
-        this.sctpManager = new SctpManager(
-                (data, offset, length) -> {
-                    dtlsTransport.sendDtlsData(data, offset, length);
-                    return 0;
-                },
-                logger
-        );
-        sctpHandler.setSctpManager(sctpManager);
-        // NOTE(brian): as far as I know we always act as the 'server' for sctp
-        // connections, but if not we can make which type we use dynamic
-        SctpServerSocket socket = sctpManager.createServerSocket();
-        socket.eventHandler = new SctpSocket.SctpSocketEventHandler()
-        {
-            @Override
-            public void onReady()
-            {
-                logger.info("SCTP connection is ready, creating the Data channel stack");
-                dataChannelStack
-                    = new DataChannelStack(
-                        (data, sid, ppid) -> socket.send(data, true, sid, ppid),
-                        logger
-                    );
-                dataChannelStack.onDataChannelStackEvents(dataChannel ->
-                {
-                    logger.info("Remote side opened a data channel.");
-                    Endpoint.this.messageTransport.setDataChannel(dataChannel);
-                });
-                dataChannelHandler.setDataChannelStack(dataChannelStack);
-                if (OPEN_DATA_LOCALLY)
-                {
-                    logger.info("Will open the data channel.");
-                    DataChannel dataChannel
-                        = dataChannelStack.createDataChannel(
-                            DataChannelProtocolConstants.RELIABLE,
-                            0,
-                            0,
-                            0,
-                            "default");
-                    Endpoint.this.messageTransport.setDataChannel(dataChannel);
-                    dataChannel.open();
-                }
-                else
-                {
-                    logger.info("Will wait for the remote side to open the data channel.");
-                }
-            }
-
-            @Override
-            public void onDisconnected()
-            {
-                logger.info("SCTP connection is disconnected.");
-            }
-        };
-        socket.dataCallback = (data, sid, ssn, tsn, ppid, context, flags) -> {
-            // We assume all data coming over SCTP will be datachannel data
-            DataChannelPacket dcp
-                    = new DataChannelPacket(data, 0, data.length, sid, (int)ppid);
-            // Post the rest of the task here because the current context is
-            // holding a lock inside the SctpSocket which can cause a deadlock
-            // if two endpoints are trying to send datachannel messages to one
-            // another (with stats broadcasting it can happen often)
-            TaskPools.IO_POOL.execute(
-                    () -> dataChannelHandler.consume(new PacketInfo(dcp)));
-        };
-        socket.listen();
-
-        dtlsTransport.onDtlsHandshakeComplete(() -> {
-            // We don't want to block the thread calling
-            // onDtlsHandshakeComplete so run the socket acceptance in an IO
-            // pool thread
-            //TODO(brian): we should have a common 'notifier'/'publisher'
-            // interface that has notify/notifyAsync logic so we don't have
-            // to worry about this everywhere
-            TaskPools.IO_POOL.submit(() -> {
-                // FIXME: This runs forever once the socket is closed (
-                // accept never returns true).
-                logger.info("Attempting to establish SCTP socket connection");
-                int attempts = 0;
-                while (!socket.accept())
-                {
-                    attempts++;
-                    try
-                    {
-                        Thread.sleep(100);
-                    }
-                    catch (InterruptedException e)
-                    {
-                        break;
-                    }
-
-                    if (attempts > 100)
-                    {
-                        break;
-                    }
-                }
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug("SCTP socket " + socket.hashCode() +
-                            " accepted connection.");
-                }
-            });
-            TaskPools.SCHEDULED_POOL.schedule(() -> {
-                if (!isExpired()) {
-                    AbstractEndpointMessageTransport t = getMessageTransport();
-                    if (t != null)
-                    {
-                        if (!t.isConnected())
-                        {
-                            logger.error("EndpointMessageTransport still not connected.");
-                            getConference()
-                                .getVideobridge()
-                                .getStatistics()
-                                .numEndpointsNoMessageTransportAfterDelay.incrementAndGet();
-                        }
-                    }
-                }
-            }, 30, TimeUnit.SECONDS);
-        });
+        //TODO: need to refactor all this
+//        if (logger.isDebugEnabled())
+//        {
+//            logger.debug("Creating SCTP manager.");
+//        }
+//        // Create the SctpManager and provide it a method for sending SCTP data
+//        this.sctpManager = new SctpManager(
+//                (data, offset, length) -> {
+//                    dtlsTransport.sendDtlsData(data, offset, length);
+//                    return 0;
+//                },
+//                logger
+//        );
+//        sctpHandler.setSctpManager(sctpManager);
+//        // NOTE(brian): as far as I know we always act as the 'server' for sctp
+//        // connections, but if not we can make which type we use dynamic
+//        SctpServerSocket socket = sctpManager.createServerSocket();
+//        socket.eventHandler = new SctpSocket.SctpSocketEventHandler()
+//        {
+//            @Override
+//            public void onReady()
+//            {
+//                logger.info("SCTP connection is ready, creating the Data channel stack");
+//                dataChannelStack
+//                    = new DataChannelStack(
+//                        (data, sid, ppid) -> socket.send(data, true, sid, ppid),
+//                        logger
+//                    );
+//                dataChannelStack.onDataChannelStackEvents(dataChannel ->
+//                {
+//                    logger.info("Remote side opened a data channel.");
+//                    Endpoint.this.messageTransport.setDataChannel(dataChannel);
+//                });
+//                dataChannelHandler.setDataChannelStack(dataChannelStack);
+//                if (OPEN_DATA_LOCALLY)
+//                {
+//                    logger.info("Will open the data channel.");
+//                    DataChannel dataChannel
+//                        = dataChannelStack.createDataChannel(
+//                            DataChannelProtocolConstants.RELIABLE,
+//                            0,
+//                            0,
+//                            0,
+//                            "default");
+//                    Endpoint.this.messageTransport.setDataChannel(dataChannel);
+//                    dataChannel.open();
+//                }
+//                else
+//                {
+//                    logger.info("Will wait for the remote side to open the data channel.");
+//                }
+//            }
+//
+//            @Override
+//            public void onDisconnected()
+//            {
+//                logger.info("SCTP connection is disconnected.");
+//            }
+//        };
+//        socket.dataCallback = (data, sid, ssn, tsn, ppid, context, flags) -> {
+//            // We assume all data coming over SCTP will be datachannel data
+//            DataChannelPacket dcp
+//                    = new DataChannelPacket(data, 0, data.length, sid, (int)ppid);
+//            // Post the rest of the task here because the current context is
+//            // holding a lock inside the SctpSocket which can cause a deadlock
+//            // if two endpoints are trying to send datachannel messages to one
+//            // another (with stats broadcasting it can happen often)
+//            TaskPools.IO_POOL.execute(
+//                    () -> dataChannelHandler.consume(new PacketInfo(dcp)));
+//        };
+//        socket.listen();
+//
+//        dtlsTransport.onDtlsHandshakeComplete(() -> {
+//            // We don't want to block the thread calling
+//            // onDtlsHandshakeComplete so run the socket acceptance in an IO
+//            // pool thread
+//            //TODO(brian): we should have a common 'notifier'/'publisher'
+//            // interface that has notify/notifyAsync logic so we don't have
+//            // to worry about this everywhere
+//            TaskPools.IO_POOL.submit(() -> {
+//                // FIXME: This runs forever once the socket is closed (
+//                // accept never returns true).
+//                logger.info("Attempting to establish SCTP socket connection");
+//                int attempts = 0;
+//                while (!socket.accept())
+//                {
+//                    attempts++;
+//                    try
+//                    {
+//                        Thread.sleep(100);
+//                    }
+//                    catch (InterruptedException e)
+//                    {
+//                        break;
+//                    }
+//
+//                    if (attempts > 100)
+//                    {
+//                        break;
+//                    }
+//                }
+//                if (logger.isDebugEnabled())
+//                {
+//                    logger.debug("SCTP socket " + socket.hashCode() +
+//                            " accepted connection.");
+//                }
+//            });
+//            TaskPools.SCHEDULED_POOL.schedule(() -> {
+//                if (!isExpired()) {
+//                    AbstractEndpointMessageTransport t = getMessageTransport();
+//                    if (t != null)
+//                    {
+//                        if (!t.isConnected())
+//                        {
+//                            logger.error("EndpointMessageTransport still not connected.");
+//                            getConference()
+//                                .getVideobridge()
+//                                .getStatistics()
+//                                .numEndpointsNoMessageTransportAfterDelay.incrementAndGet();
+//                        }
+//                    }
+//                }
+//            }, 30, TimeUnit.SECONDS);
+//        });
     }
 
     /**

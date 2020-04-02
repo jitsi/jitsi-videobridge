@@ -1158,8 +1158,8 @@ public class Videobridge
         JSONObject queueStats = new JSONObject();
 
         queueStats.put(
-                "dtls_send_queue",
-                getJsonFromQueueErrorHandler(DtlsTransport.queueErrorCounter));
+                "srtp_send_queue",
+                getJsonFromQueueErrorHandler(Endpoint.queueErrorCounter));
         queueStats.put(
                 "octo_receive_queue",
                 getJsonFromQueueErrorHandler(OctoTransceiver.queueErrorCounter));
