@@ -771,6 +771,27 @@ public class BitrateController
             // creating local final variables and pass that to the lambda function
             // in order to avoid that.
             final String endpointID = trackBitrateAllocation.endpointID;
+
+            final Endpoint endpointOwningTrack = destinationEndpoint.getConference().getLocalEndpoint(endpointID);
+            if (endpointOwningTrack == null)
+            {
+                return null;
+            }
+
+            // Populate payload types from endpoint which owns the track.
+            // In JVB scenarios (Jitsi Meet) where all payload type assignments are guaranteed
+            // to be the same across all endpoints it would be the same set of payload types
+            // as of current endpoint payload types.
+            // In JVB scenarios where payload types might be different across different endpoints
+            // the payload types would be populated from endpoint which originates track, i.e.
+            // sending endpoint, rather than payload types of receiving endpoint. This allows
+            // having endpoints with Unified Plan SDP semantics in the same conference and not
+            // restrict them to use same payload types for same codecs.
+            final Map<Byte, PayloadType> endpointOwningTrackPayloadTypes = endpointOwningTrack
+                .getTransceiver()
+                .getReadOnlyStreamInformationStore()
+                .getRtpPayloadTypes();
+
             final long targetSSRC = trackBitrateAllocation.targetSSRC;
             adaptiveTrackProjection
                 = new AdaptiveTrackProjection(
@@ -778,7 +799,7 @@ public class BitrateController
                     trackBitrateAllocation.track, () ->
                         destinationEndpoint.getConference().requestKeyframe(
                             endpointID, targetSSRC),
-                    payloadTypes,
+                    endpointOwningTrackPayloadTypes,
                     logger);
 
             logger.debug(() -> "new track projection for " + trackBitrateAllocation.track);
