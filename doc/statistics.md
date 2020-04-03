@@ -120,7 +120,7 @@ The statistics can also be published periodically via XMPP (which allows jicofo 
 The statistics reporting functionality can be configured with the following properties:
 
  * **org.jitsi.videobridge.ENABLE_STATISTICS** - boolean property.
-The default value is `false`
+The default value is `true`
  * **org.jitsi.videobridge.STATISTICS_TRANSPORT** - string property.
 A comma-separated list of transports. The supported transports are "muc",
 "pubsub", "callstats.io", and "colibri".
