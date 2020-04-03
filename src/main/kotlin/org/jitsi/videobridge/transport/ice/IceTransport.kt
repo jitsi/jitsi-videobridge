@@ -220,6 +220,7 @@ class IceTransport @JvmOverloads constructor(
         if (running.compareAndSet(true, false)) {
             iceAgent.removeStateChangeListener(this::iceStateChanged)
             iceStream.removePairStateChangeListener(this::iceStreamPairChanged)
+            iceAgent.free()
         }
     }
 
