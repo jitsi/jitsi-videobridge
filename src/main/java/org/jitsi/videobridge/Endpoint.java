@@ -186,7 +186,7 @@ public class Endpoint
      * This {@link Endpoint}'s DTLS transport.
      */
     @NotNull
-    private final DtlsTransportk dtlsTransport;
+    private final DtlsTransport dtlsTransport;
 
     /**
      * The {@link Transceiver} which handles receiving and sending of (S)RTP.
@@ -337,7 +337,7 @@ public class Endpoint
 
         iceTransport = new IceTransport(getID(), iceControlling, logger);
         setupIceTransport();
-        dtlsTransport = new DtlsTransportk(logger);
+        dtlsTransport = new DtlsTransport(logger);
         setupDtlsTransport();
 
         if (conference.includeInStatistics())
@@ -420,7 +420,7 @@ public class Endpoint
 
     private void setupDtlsTransport()
     {
-        dtlsTransport.incomingDataHandler = new DtlsTransportk.IncomingDataHandler()
+        dtlsTransport.incomingDataHandler = new DtlsTransport.IncomingDataHandler()
         {
             @Override
             public void dtlsAppDataReceived(@NotNull byte[] buf, int off, int len)
@@ -428,7 +428,7 @@ public class Endpoint
                 dtlsAppPacketReceived(buf, off, len);
             }
         };
-        dtlsTransport.outgoingDataHandler = new DtlsTransportk.OutgoingDataHandler()
+        dtlsTransport.outgoingDataHandler = new DtlsTransport.OutgoingDataHandler()
         {
             @Override
             public void sendData(@NotNull byte[] buf, int off, int len)
@@ -436,7 +436,7 @@ public class Endpoint
                 iceTransport.send(buf, off, len);
             }
         };
-        dtlsTransport.eventHandler = new DtlsTransportk.EventHandler()
+        dtlsTransport.eventHandler = new DtlsTransport.EventHandler()
         {
             @Override
             public void handshakeComplete(int chosenSrtpProtectionProfile, @NotNull TlsRole tlsRole, @NotNull byte[] keyingMaterial)

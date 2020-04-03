@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * be passed to the [outgoingDataHandler], which should be set by an
  * interested party.
  */
-class DtlsTransportk(parentLogger: Logger) {
+class DtlsTransport(parentLogger: Logger) {
     private val logger = createChildLogger(parentLogger)
 
     private val running = AtomicBoolean(true)
@@ -145,7 +145,7 @@ class DtlsTransportk(parentLogger: Logger) {
     }
 
     /**
-     * Describe the properties of this [DtlsTransportk] into the given
+     * Describe the properties of this [DtlsTransport] into the given
      * [IceUdpTransportPacketExtension]
      */
     fun describe(iceUdpTransportPacketExtension: IceUdpTransportPacketExtension) {
@@ -197,7 +197,7 @@ class DtlsTransportk(parentLogger: Logger) {
     }
 
     /**
-     * A handler for when [DtlsTransportk] wants to send data out
+     * A handler for when [DtlsTransport] wants to send data out
      * onto the network
      */
     interface OutgoingDataHandler {
@@ -205,7 +205,7 @@ class DtlsTransportk(parentLogger: Logger) {
     }
 
     /**
-     * A handler for when [DtlsTransportk] has received DTLS application
+     * A handler for when [DtlsTransport] has received DTLS application
      * data
      */
     interface IncomingDataHandler {
@@ -213,7 +213,7 @@ class DtlsTransportk(parentLogger: Logger) {
     }
 
     /**
-     * A handler for [DtlsTransportk] events
+     * A handler for [DtlsTransport] events
      */
     interface EventHandler {
         fun handshakeComplete(chosenSrtpProtectionProfile: Int, tlsRole: TlsRole, keyingMaterial: ByteArray)
