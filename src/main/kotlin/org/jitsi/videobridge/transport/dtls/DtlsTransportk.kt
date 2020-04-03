@@ -27,9 +27,19 @@ import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import java.util.concurrent.atomic.AtomicBoolean
 
-class DtlsTransportk(
-    parentLogger: Logger
-) {
+/**
+ * Transport layer which negotiates a DTLS connection and supports
+ * decrypting and encrypting data.
+ *
+ * Incoming DTLS data should be fed into this layer via [dtlsDataReceived],
+ * and decrypted DTLS application data will be passed to the
+ * [incomingDataHandler], which should be set by an interested party.
+ *
+ * Outgoing data can be sent via [sendDtlsData] and the encrypted data will
+ * be passed to the [outgoingDataHandler], which should be set by an
+ * interested party.
+ */
+class DtlsTransportk(parentLogger: Logger) {
     private val logger = createChildLogger(parentLogger)
 
     private val running = AtomicBoolean(true)
@@ -46,7 +56,11 @@ class DtlsTransportk(
 
     private val stats = Stats()
 
+    /**
+     * The DTLS stack instance
+     */
     private val dtlsStack = DtlsStack(logger).also {
+        // Install a handler for when the DTLS stack has decrypted application data available
         it.incomingDataHandler = object : DtlsStack.IncomingDataHandler {
             override fun dataReceived(data: ByteArray, off: Int, len: Int) {
                 stats.numPacketsReceived++
@@ -56,6 +70,7 @@ class DtlsTransportk(
             }
         }
 
+        // Install a handler to allow the DTLS stack to send out encrypted data
         it.outgoingDataHandler = object : DtlsStack.OutgoingDataHandler {
             override fun sendData(data: ByteArray, off: Int, len: Int) {
                 outgoingDataHandler?.let { outgoingDataHandler ->
@@ -65,11 +80,29 @@ class DtlsTransportk(
             }
         }
 
+        // Handle DTLS stack events
         it.eventHandler = object : DtlsStack.EventHandler {
             override fun handshakeComplete(chosenSrtpProtectionProfile: Int, tlsRole: TlsRole, keyingMaterial: ByteArray) {
                 dtlsHandshakeComplete = true
                 eventHandler?.handshakeComplete(chosenSrtpProtectionProfile, tlsRole, keyingMaterial)
             }
+        }
+    }
+
+    /**
+     * Start a DTLS handshake.  The 'role' should have been set before calling this
+     * (via [setSetupAttribute]
+     */
+    fun startDtlsHandshake() {
+        logger.info("Starting DTLS handshake")
+        if (dtlsStack.role == null) {
+            logger.warn("Staring the DTLS stack before it knows its role")
+        }
+        try {
+            dtlsStack.start()
+        } catch (t: Throwable) {
+            // TODO: we're not doing anything here, should we? or change the log?
+            logger.error("Error during DTLS negotiation, closing this transport manager", t)
         }
     }
 
@@ -111,19 +144,10 @@ class DtlsTransportk(
         }
     }
 
-    fun startDtlsHandshake() {
-        logger.info("Starting DTLS handshake")
-        if (dtlsStack.role == null) {
-            logger.warn("Staring the DTLS stack before it knows its role")
-        }
-        try {
-            dtlsStack.start()
-        } catch (t: Throwable) {
-            // TODO: we're not doing anything here, should we? or change the log?
-            logger.error("Error during DTLS negotiation, closing this transport manager", t)
-        }
-    }
-
+    /**
+     * Describe the properties of this [DtlsTransportk] into the given
+     * [IceUdpTransportPacketExtension]
+     */
     fun describe(iceUdpTransportPacketExtension: IceUdpTransportPacketExtension) {
         val fingerprintPE = iceUdpTransportPacketExtension.getFirstChildOfType(DtlsFingerprintPacketExtension::class.java) ?: run {
             DtlsFingerprintPacketExtension().also { iceUdpTransportPacketExtension.addChildExtension(it) }
@@ -138,9 +162,15 @@ class DtlsTransportk(
         fingerprintPE.hash = dtlsStack.localFingerprintHashFunction
     }
 
+    /**
+     * Notify this layer that DTLS data has been received from the network
+     */
     fun dtlsDataReceived(data: ByteArray, off: Int, len: Int) =
         dtlsStack.processIncomingProtocolData(data, off, len)
 
+    /**
+     * Send out DTLS data
+     */
     fun sendDtlsData(data: ByteArray, off: Int, len: Int) =
         dtlsStack.sendApplicationData(data, off, len)
 
@@ -182,6 +212,9 @@ class DtlsTransportk(
         fun dtlsAppDataReceived(buf: ByteArray, off: Int, len: Int)
     }
 
+    /**
+     * A handler for [DtlsTransportk] events
+     */
     interface EventHandler {
         fun handshakeComplete(chosenSrtpProtectionProfile: Int, tlsRole: TlsRole, keyingMaterial: ByteArray)
     }
