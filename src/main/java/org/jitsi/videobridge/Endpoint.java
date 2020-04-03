@@ -441,6 +441,7 @@ public class Endpoint
             @Override
             public void handshakeComplete(int chosenSrtpProtectionProfile, @NotNull TlsRole tlsRole, @NotNull byte[] keyingMaterial)
             {
+                logger.info("DTLS handshake complete");
                 transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial);
                 //TODO(brian): the old code would work even if the sctp connection was created after
                 // the handshake had completed, but this won't (since this is a one-time event).  do

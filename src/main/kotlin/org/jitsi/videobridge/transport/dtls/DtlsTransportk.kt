@@ -67,6 +67,7 @@ class DtlsTransportk(
 
         it.eventHandler = object : DtlsStack.EventHandler {
             override fun handshakeComplete(chosenSrtpProtectionProfile: Int, tlsRole: TlsRole, keyingMaterial: ByteArray) {
+                dtlsHandshakeComplete = true
                 eventHandler?.handshakeComplete(chosenSrtpProtectionProfile, tlsRole, keyingMaterial)
             }
         }
