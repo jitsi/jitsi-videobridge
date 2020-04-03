@@ -72,8 +72,8 @@ class DtlsTransportk(
         }
     }
 
-    fun setSetupAttribute(setupAttr: String) {
-        if (setupAttr.isEmpty()) {
+    fun setSetupAttribute(setupAttr: String?) {
+        if (setupAttr.isNullOrEmpty()) {
             return
         }
         when (setupAttr.toLowerCase()) {
