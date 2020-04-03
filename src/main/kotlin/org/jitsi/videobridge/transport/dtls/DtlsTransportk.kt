@@ -133,6 +133,8 @@ class DtlsTransportk(
             null -> "actpass"
             else -> throw IllegalStateException("Cannot describe role ${dtlsStack.role}")
         }
+        fingerprintPE.fingerprint = dtlsStack.localFingerprint
+        fingerprintPE.hash = dtlsStack.localFingerprintHashFunction
     }
 
     fun dtlsDataReceived(data: ByteArray, off: Int, len: Int) =
