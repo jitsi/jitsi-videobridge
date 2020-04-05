@@ -185,7 +185,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      * {@inheritDoc}
      */
     @Override
-    public void send(PacketInfo packetInfo)
+    public synchronized void send(PacketInfo packetInfo)
     {
         /* We queue packets separately by their *source* endpoint.
          * This achieves parallelization while guaranteeing that we don't

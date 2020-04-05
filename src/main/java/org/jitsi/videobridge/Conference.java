@@ -1162,6 +1162,11 @@ public class Conference
         return shim;
     }
 
+    /** The maximum number of packet handlers we want to execute in one task.
+     *   TODO: this number is pulled out of the air; tune it.
+     */
+    public static final int MAX_HANDLERS_PER_TASK = 5;
+
     /**
      * Broadcasts the packet to all endpoints and tentacles that want it.
      *
@@ -1170,45 +1175,73 @@ public class Conference
     private void sendOut(PacketInfo packetInfo)
     {
         String sourceEndpointId = packetInfo.getEndpointId();
-        // We want to avoid calling 'clone' for the last receiver of this packet
-        // since it's unnecessary.  To do so, we'll wait before we clone and send
-        // to an interested handler until after we've determined another handler
-        // is also interested in the packet.  We'll give the last handler the
-        // original packet (without cloning).
-        PotentialPacketHandler prevHandler = null;
-        for (Endpoint endpoint : endpointsCache)
+
+        List<Runnable> tasks = new ArrayList<>();
+        PacketInfoDistributor distributor = new PacketInfoDistributor(packetInfo, 0);
+
+        for (Endpoint e: endpointsCache)
         {
-            if (endpoint.getID().equals(sourceEndpointId))
+            if (e.getID().equals(sourceEndpointId))
             {
                 continue;
             }
 
-            if (endpoint.wants(packetInfo))
-            {
-                if (prevHandler != null)
-                {
-                    prevHandler.send(packetInfo.clone());
-                }
-                prevHandler = endpoint;
-            }
+            tasks.add(() -> doSendOut(distributor, e));
         }
-        if (tentacle != null && tentacle.wants(packetInfo))
+        if (tentacle != null)
         {
-            if (prevHandler != null)
-            {
-                prevHandler.send(packetInfo.clone());
-            }
-            prevHandler = tentacle;
+            tasks.add(() -> doSendOut(distributor, tentacle));
         }
 
-        if (prevHandler != null)
+        distributor.setCount(tasks.size());
+
+        if (tasks.isEmpty()) {
+            return;
+        }
+        else if (tasks.size() == 1) {
+            tasks.get(0).run();
+            return;
+        }
+
+        List<Future<?>> taskFutures = new ArrayList<>();
+
+        for (Runnable task : tasks)
         {
-            prevHandler.send(packetInfo);
+            taskFutures.add(TaskPools.CPU_POOL.submit(task));
+        }
+
+        /* This doesn't work - these tasks will be on the same task pool as this
+           code, causing deadlocks. */
+        /*
+        for (Future<?> task: taskFutures)
+        {
+            try
+            {
+                task.get();
+            }
+            catch (InterruptedException | ExecutionException e)
+            {
+                logger.warn("Exception waiting for sendOut", e);
+            }
+        }
+        */
+    }
+
+    /**
+     * Handles a packet for one packet handler.
+     *
+     * @param distributor A distributor for the packet
+     * @param handler the packet handlers to send it to
+     */
+    private static void doSendOut(PacketInfoDistributor distributor, PotentialPacketHandler handler)
+    {
+        if (handler.wants(distributor.previewPacketInfo()))
+        {
+            distributor.usePacketInfoReference(handler::send);
         }
         else
         {
-            // No one wanted the packet, so the buffer is now free!
-            ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
+            distributor.releasePacketInfoReference();
         }
     }
 

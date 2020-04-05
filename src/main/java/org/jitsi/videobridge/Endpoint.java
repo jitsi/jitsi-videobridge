@@ -389,7 +389,7 @@ public class Endpoint
      * {@inheritDoc}
      */
     @Override
-    public boolean wants(PacketInfo packetInfo)
+    public synchronized boolean wants(PacketInfo packetInfo)
     {
         if (!isTransportConnected())
         {
@@ -444,7 +444,7 @@ public class Endpoint
      * TODO Brian
      */
     @Override
-    public void send(PacketInfo packetInfo)
+    public synchronized void send(PacketInfo packetInfo)
     {
         Packet packet = packetInfo.getPacket();
         if (packet instanceof VideoRtpPacket)
