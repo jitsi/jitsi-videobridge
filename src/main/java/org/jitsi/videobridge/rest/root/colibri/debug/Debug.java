@@ -30,6 +30,7 @@ import org.jitsi.videobridge.xmpp.*;
 import javax.inject.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
+import java.security.*;
 
 /**
  * A REST interface for retrieving debug information about the bridge.
@@ -102,7 +103,14 @@ public class Debug extends ColibriResource
         FeatureState featureState = FeatureState.fromString(state);
 
         logger.info("Setting feature state: feature=" + feature.getValue() + ", state=" + featureState.getValue());
-        endpoint.setFeature(feature, featureState.getValue());
+        try
+        {
+            endpoint.setFeature(feature, featureState.getValue());
+        }
+        catch (AccessControlException e)
+        {
+            return Response.status(403, e.getMessage()).build();
+        }
 
         return Response.ok().build();
     }
