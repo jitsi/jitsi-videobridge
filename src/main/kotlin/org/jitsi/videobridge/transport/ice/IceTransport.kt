@@ -1,3 +1,19 @@
+/*
+ * Copyright @ 2018 - present 8x8, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.jitsi.videobridge.transport.ice
 
 import org.ice4j.Transport
@@ -189,7 +205,7 @@ class IceTransport @JvmOverloads constructor(
                 break
             }
             packetStats.numPacketsReceived++
-            incomingDataHandler?.dataReceived(receiveBuf, 0, packet.length, receivedTime) ?: run {
+            incomingDataHandler?.dataReceived(receiveBuf, packet.offset, packet.length, receivedTime) ?: run {
                 logger.cdebug { "Data handler is null, dropping data" }
                 packetStats.numIncomingPacketsDroppedNoHandler++
             }
@@ -386,9 +402,8 @@ private data class IceProcessingStateTransition(
     val newState: IceProcessingState
 ) {
     // We should be using newState.isEstablished() here, but we see
-    // transitions from RUNNING to COMPLETED, which should not happen and
-    // when they happen the connection is not successful. So we handle that
-    // case separately below.
+    // transitions from RUNNING to TERMINATED, which can happen if the Agent is
+    // free prior to being started, so we handle that case separately below.
     fun completed(): Boolean = newState == IceProcessingState.COMPLETED
 
     fun failed(): Boolean {
