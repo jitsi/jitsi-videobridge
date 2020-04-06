@@ -2,7 +2,7 @@ Template: jitsi-videobridge/jvb-hostname
 Type: string
 Default: localhost
 _Description: Hostname:
- The jisti-videobridge package needs the DNS hostname of your instance.
+ The jitsi-videobridge package needs the DNS hostname of your instance.
 
 Template: jitsi-videobridge/jvbsecret
 Type: password
