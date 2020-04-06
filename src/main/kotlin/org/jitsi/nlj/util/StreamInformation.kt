@@ -18,6 +18,7 @@ package org.jitsi.nlj.util
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.Collections
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.supportsPli
 import org.jitsi.nlj.format.supportsRemb
@@ -105,8 +106,7 @@ class StreamInformationStoreImpl : StreamInformationStore {
     private val payloadTypesLock = Any()
     private val payloadTypeHandlers = mutableListOf<RtpPayloadTypesChangedHandler>()
     private val _rtpPayloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
-    override val rtpPayloadTypes: Map<Byte, PayloadType>
-        get() = _rtpPayloadTypes
+    override val rtpPayloadTypes: Map<Byte, PayloadType> = Collections.unmodifiableMap(_rtpPayloadTypes)
 
     private val localSsrcAssociations = SsrcAssociationStore("Local SSRC Associations")
     private val remoteSsrcAssociations = SsrcAssociationStore("Remote SSRC Associations")
