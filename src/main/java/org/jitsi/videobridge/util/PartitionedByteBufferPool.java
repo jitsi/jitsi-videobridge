@@ -147,7 +147,7 @@ class PartitionedByteBufferPool
         long allocations = 0;
         for (int i = 0; i < NUM_PARTITIONS; i++)
         {
-            allocations += partitions[i].numAllocations.get();
+            allocations += partitions[i].numAllocations.sum();
         }
 
         return allocations;
@@ -173,51 +173,51 @@ class PartitionedByteBufferPool
          * The number of times a request was satisfied with a buffer from the
          * pool.
          */
-        private final AtomicLong numNoAllocationNeeded = new AtomicLong(0);
+        private final LongAdder numNoAllocationNeeded = new LongAdder();
 
         /**
          * The number of times a new {@code byte[]} had to be allocated.
          */
-        private final AtomicLong numAllocations = new AtomicLong(0);
+        private final LongAdder numAllocations = new LongAdder();
 
         /**
          * The number of times a new {@code byte[]} had to be allocated because
          * the pool was empty.
          */
-        private final AtomicLong numEmptyPoolAllocations = new AtomicLong(0);
+        private final LongAdder numEmptyPoolAllocations = new LongAdder();
 
         /**
          * The number of times a new {@code byte[]} had to be allocated because
          * the pool did not have a buffer with the required size (but it was
          * not empty).
          */
-        private final AtomicLong numWrongSizeAllocations = new AtomicLong(0);
+        private final LongAdder numWrongSizeAllocations = new LongAdder();
 
         /**
          * Total number of requests.
          */
-        private final AtomicLong numRequests = new AtomicLong(0);
+        private final LongAdder numRequests = new LongAdder();
 
         /**
          * Total number of returned buffers.
          */
-        private final AtomicLong numReturns = new AtomicLong(0);
+        private final LongAdder numReturns = new LongAdder();
 
         /**
          * The number of times a small buffer (<1500 bytes) was returned.
          */
-        private final AtomicLong numSmallReturns = new AtomicLong(0);
+        private final LongAdder numSmallReturns = new LongAdder();
 
         /**
          * The number of times a buffer from the pool was discarded because it
          * was too small to satisfy a request.
          */
-        private final AtomicLong numSmallBuffersDiscarded = new AtomicLong(0);
+        private final LongAdder numSmallBuffersDiscarded = new LongAdder();
 
         /**
          * The number of times a large buffer (>1500 bytes) was requested.
          */
-        private final AtomicLong numLargeRequests = new AtomicLong(0);
+        private final LongAdder numLargeRequests = new LongAdder();
 
         /**
          * Request rate in requests per second over the last 10 seconds.
@@ -256,17 +256,17 @@ class PartitionedByteBufferPool
             if (ByteBufferPool.ENABLE_BOOKKEEPING)
             {
                 logger.info("partition " + id + " request number "
-                        + (numRequests.get() + 1) + ", pool has size "
+                        + (numRequests.sum() + 1) + ", pool has size "
                         + pool.size());
             }
 
             if (enableStatistics)
             {
-                numRequests.incrementAndGet();
+                numRequests.increment();
                 requestRate.update(1, System.currentTimeMillis());
                 if (requiredSize > defaultBufferSize)
                 {
-                    numLargeRequests.incrementAndGet();
+                    numLargeRequests.increment();
                 }
             }
 
@@ -276,8 +276,8 @@ class PartitionedByteBufferPool
                 buf = new byte[Math.max(defaultBufferSize, requiredSize)];
                 if (enableStatistics)
                 {
-                    numAllocations.incrementAndGet();
-                    numEmptyPoolAllocations.incrementAndGet();
+                    numAllocations.increment();
+                    numEmptyPoolAllocations.increment();
                 }
             }
             else if (buf.length < requiredSize)
@@ -301,19 +301,19 @@ class PartitionedByteBufferPool
                 }
                 else if (enableStatistics)
                 {
-                    numSmallBuffersDiscarded.incrementAndGet();
+                    numSmallBuffersDiscarded.increment();
                 }
 
                 buf = new byte[Math.max(defaultBufferSize, requiredSize)];
                 if (enableStatistics)
                 {
-                    numAllocations.incrementAndGet();
-                    numWrongSizeAllocations.incrementAndGet();
+                    numAllocations.increment();
+                    numWrongSizeAllocations.increment();
                 }
             }
             else if (enableStatistics)
             {
-                numNoAllocationNeeded.incrementAndGet();
+                numNoAllocationNeeded.increment();
             }
 
             if (ByteBufferPool.ENABLE_BOOKKEEPING)
@@ -341,7 +341,7 @@ class PartitionedByteBufferPool
 
             if (enableStatistics)
             {
-                numReturns.incrementAndGet();
+                numReturns.increment();
                 returnRate.update(1, System.currentTimeMillis());
             }
 
@@ -349,7 +349,7 @@ class PartitionedByteBufferPool
             {
                 if (enableStatistics)
                 {
-                    numSmallReturns.incrementAndGet();
+                    numSmallReturns.increment();
                 }
                 if (ACCEPT_SMALL_BUFFERS)
                 {
@@ -372,22 +372,25 @@ class PartitionedByteBufferPool
             JSONObject stats = new JSONObject();
             stats.put("id", id);
 
-            stats.put("num_requests", numRequests.get());
-            stats.put("num_returns", numReturns.get());
+            long numRequestsSum = numRequests.sum();
+            long numAllocationsSum = numAllocations.sum();
+
+            stats.put("num_requests", numRequestsSum);
+            stats.put("num_returns", numReturns.sum());
             stats.put("requests_rate_rps", requestRate.getRate(now));
             stats.put("returns_rate_rps", returnRate.getRate(now));
             stats.put("current_size", pool.size());
 
-            stats.put("num_allocations", numAllocations.get());
-            stats.put("num_allocations_empty_pool", numEmptyPoolAllocations.get());
-            stats.put("num_allocations_wrong_size", numWrongSizeAllocations.get());
-            stats.put("num_no_allocation_needed", numNoAllocationNeeded.get());
+            stats.put("num_allocations", numAllocationsSum);
+            stats.put("num_allocations_empty_pool", numEmptyPoolAllocations.sum());
+            stats.put("num_allocations_wrong_size", numWrongSizeAllocations.sum());
+            stats.put("num_no_allocation_needed", numNoAllocationNeeded.sum());
             stats.put(
                     "allocation_percent",
-                    100D * numAllocations.get() / Math.max(1, numRequests.get()));
-            stats.put("num_small_returns", numSmallReturns.get());
-            stats.put("num_large_requests", numLargeRequests.get());
-            stats.put("num_small_discarded", numSmallBuffersDiscarded.get());
+                    100D * numAllocationsSum / Math.max(1, numRequestsSum));
+            stats.put("num_small_returns", numSmallReturns.sum());
+            stats.put("num_large_requests", numLargeRequests.sum());
+            stats.put("num_small_discarded", numSmallBuffersDiscarded.sum());
 
             return stats;
         }
