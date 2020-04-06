@@ -32,7 +32,6 @@ import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.ice.IceConfig.Config
 import org.jitsi.videobridge.ice.TransportUtils
-import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.xmpp.extensions.jingle.CandidatePacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import org.jitsi.xmpp.extensions.jingle.RtcpmuxPacketExtension
@@ -189,7 +188,7 @@ class IceTransport @JvmOverloads constructor(
     fun startReadingData() {
         logger.cdebug { "Starting to read incoming data" }
         val socket = iceComponent.socket
-        val receiveBuf = ByteBufferPool.getBuffer(1500)
+        val receiveBuf = ByteArray(1500)
         val packet = DatagramPacket(receiveBuf, 0, receiveBuf.size)
         var receivedTime: Instant
 
