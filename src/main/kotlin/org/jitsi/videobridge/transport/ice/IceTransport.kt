@@ -219,8 +219,13 @@ class IceTransport @JvmOverloads constructor(
      * TODO: should we ensure that we're running before sending?
      */
     fun send(data: ByteArray, off: Int, length: Int) {
-        iceComponent.socket.send(DatagramPacket(data, off, length))
-        packetStats.numPacketsSent++
+        try {
+            iceComponent.socket.send(DatagramPacket(data, off, length))
+            packetStats.numPacketsSent++
+        } catch (e: IOException) {
+            logger.error("Error sending packet", e)
+            throw RuntimeException()
+        }
     }
 
     /**
