@@ -274,9 +274,9 @@ class PartitionedByteBufferPool
             if (buf == null)
             {
                 buf = new byte[Math.max(defaultBufferSize, requiredSize)];
-                numAllocations.incrementAndGet();
                 if (enableStatistics)
                 {
+                    numAllocations.incrementAndGet();
                     numEmptyPoolAllocations.incrementAndGet();
                 }
             }
@@ -299,15 +299,15 @@ class PartitionedByteBufferPool
                 {
                     pool.offer(buf);
                 }
-                else
+                else if (enableStatistics)
                 {
                     numSmallBuffersDiscarded.incrementAndGet();
                 }
 
                 buf = new byte[Math.max(defaultBufferSize, requiredSize)];
-                numAllocations.incrementAndGet();
                 if (enableStatistics)
                 {
+                    numAllocations.incrementAndGet();
                     numWrongSizeAllocations.incrementAndGet();
                 }
             }
@@ -347,7 +347,10 @@ class PartitionedByteBufferPool
 
             if (buf.length < defaultBufferSize)
             {
-                numSmallReturns.incrementAndGet();
+                if (enableStatistics)
+                {
+                    numSmallReturns.incrementAndGet();
+                }
                 if (ACCEPT_SMALL_BUFFERS)
                 {
                     pool.offer(buf);

@@ -161,7 +161,10 @@ public class ByteBufferPool
         else
         {
             buf = new byte[size];
-            numLargeRequests.incrementAndGet();
+            if (enableStatistics)
+            {
+                numLargeRequests.incrementAndGet();
+            }
         }
 
         if (ENABLE_BOOKKEEPING)
