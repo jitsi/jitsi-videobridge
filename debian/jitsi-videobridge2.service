@@ -17,7 +17,7 @@ TasksMax=65000
 # allow more open files for this process
 LimitNPROC=65000
 LimitNOFILE=65000
-ExecStart=/bin/bash -c "exec /usr/share/jitsi-videobridge/jvb.sh --host=$${JVB_HOST:-localhost} --domain=${JVB_HOSTNAME} --port=${JVB_PORT} --secret=${JVB_SECRET} ${JVB_OPTS} < /dev/null >> ${LOGFILE} 2>&1"
+ExecStart=/bin/bash -c "exec /usr/share/jitsi-videobridge/jvb.sh --host=${JVB_HOST:-localhost} --domain=${JVB_HOSTNAME} --port=${JVB_PORT} --secret=${JVB_SECRET} ${JVB_OPTS} < /dev/null >> ${LOGFILE} 2>&1"
 ExecStartPost=/bin/bash -c "echo $MAINPID > /var/run/jitsi-videobridge/jitsi-videobridge.pid"
 
 [Install]
