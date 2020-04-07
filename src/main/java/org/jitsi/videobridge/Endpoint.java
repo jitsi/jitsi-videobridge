@@ -239,7 +239,7 @@ public class Endpoint
      * The queue we put outgoing SRTP packets onto so they can be sent
      * out via the {@link IceTransport} on an IO thread.
      */
-    private final PacketInfoQueue outgoingPacketQueue;
+    private final PacketInfoQueue outgoingSrtpPacketQueue;
 
     /**
      * The {@link SctpSocket} for this endpoint, if an SCTP connection was
@@ -300,13 +300,13 @@ public class Endpoint
             });
         bitrateController = new BitrateController(this, diagnosticContext, logger);
 
-        outgoingPacketQueue = new PacketInfoQueue(
+        outgoingSrtpPacketQueue = new PacketInfoQueue(
             getClass().getSimpleName() + "-outgoing-packet-queue",
             TaskPools.IO_POOL,
             this::doSendSrtp,
             TransportConfig.Config.queueSize()
         );
-        outgoingPacketQueue.setErrorHandler(queueErrorCounter);
+        outgoingSrtpPacketQueue.setErrorHandler(queueErrorCounter);
 
         messageTransport = new EndpointMessageTransport(
             this,
@@ -375,8 +375,8 @@ public class Endpoint
                 // straight to the transceiver
                 if (UtilKt.looksLikeDtls(data, offset, length))
                 {
-                    // No copy is needed her, as the call chain will be done with
-                    // the buffer by the time it returns
+                    // DTLS transport is responsible for making its own copy, because it will manage its own
+                    // buffers
                     dtlsTransport.dtlsDataReceived(data, offset, length);
                 }
                 else
@@ -400,7 +400,7 @@ public class Endpoint
                 logger.info("ICE connected");
                 getConference().getStatistics().hasIceSucceededEndpoint = true;
                 getConference().getVideobridge().getStatistics().totalIceSucceeded.incrementAndGet();
-                transceiver.setOutgoingPacketHandler(outgoingPacketQueue::add);
+                transceiver.setOutgoingPacketHandler(outgoingSrtpPacketQueue::add);
                 TaskPools.IO_POOL.submit(iceTransport::startReadingData);
                 TaskPools.IO_POOL.submit(dtlsTransport::startDtlsHandshake);
             }
