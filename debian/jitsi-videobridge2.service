@@ -5,7 +5,7 @@ After=network.target
 [Service]
 SuccessExitStatus=143
 # allow bind to 80 and 443
-AmbientCapabilities=CAP_NET_BIND_SERVICE
+#AmbientCapabilities=CAP_NET_BIND_SERVICE
 EnvironmentFile=/etc/jitsi/videobridge/config
 Environment=LOGFILE=/var/log/jitsi/jvb.log
 User=jvb
