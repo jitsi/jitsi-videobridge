@@ -239,6 +239,7 @@ class IceTransport @JvmOverloads constructor(
 
     fun stop() {
         if (running.compareAndSet(true, false)) {
+            logger.info("Stopping")
             iceAgent.removeStateChangeListener(this::iceStateChanged)
             iceStream.removePairStateChangeListener(this::iceStreamPairChanged)
             iceAgent.free()
