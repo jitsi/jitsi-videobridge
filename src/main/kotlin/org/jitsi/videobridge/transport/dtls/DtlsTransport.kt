@@ -73,10 +73,11 @@ class DtlsTransport(parentLogger: Logger) {
         // Install a handler to allow the DTLS stack to send out encrypted data
         it.outgoingDataHandler = object : DtlsStack.OutgoingDataHandler {
             override fun sendData(data: ByteArray, off: Int, len: Int) {
-                outgoingDataHandler?.let { outgoingDataHandler ->
-                    outgoingDataHandler.sendData(data, off, len)
+                outgoingDataHandler?.sendData(data, off, len)?.also {
                     stats.numPacketsSent++
-                } ?: run { stats.numOutgoingPacketsDroppedNoHandler++ }
+                } ?: run {
+                    stats.numOutgoingPacketsDroppedNoHandler++
+                }
             }
         }
 
@@ -176,6 +177,7 @@ class DtlsTransport(parentLogger: Logger) {
 
     fun stop() {
         if (running.compareAndSet(true, false)) {
+            logger.info("Stopping")
             // Should we be doing some cleanup here?
         }
     }
