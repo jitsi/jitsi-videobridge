@@ -34,14 +34,15 @@ class AudioLevelReader(
     private var audioLevelExtId: Int? = null
     var audioLevelListener: AudioLevelListener? = null
 
+    /**
+     * Whether or not we should forcibly mute this audio stream (by setting shouldDiscard to true)
+     */
+    var forceMute: Boolean = false
+
     init {
         streamInformationStore.onRtpExtensionMapping(SSRC_AUDIO_LEVEL) {
             audioLevelExtId = it
         }
-    }
-
-    companion object {
-        const val MUTED_LEVEL = 127
     }
 
     override fun observe(packetInfo: PacketInfo) {
@@ -50,10 +51,10 @@ class AudioLevelReader(
         audioLevelExtId?.let { audioLevelId ->
             audioRtpPacket.getHeaderExtension(audioLevelId)?.let { ext ->
                 val level = AudioLevelHeaderExtension.getAudioLevel(ext)
-                if (level != MUTED_LEVEL) {
-                    audioLevelListener?.onLevelReceived(audioRtpPacket.ssrc, (127 - level).toPositiveLong())
-                } else {
+                if (level == MUTED_LEVEL || this.forceMute) {
                     packetInfo.shouldDiscard = true
+                } else {
+                    audioLevelListener?.onLevelReceived(audioRtpPacket.ssrc, (127 - level).toPositiveLong())
                 }
             }
         }
@@ -66,4 +67,8 @@ class AudioLevelReader(
     }
 
     override fun trace(f: () -> Unit) = f.invoke()
+
+    companion object {
+        const val MUTED_LEVEL = 127
+    }
 }
