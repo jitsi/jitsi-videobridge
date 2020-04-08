@@ -176,7 +176,7 @@ public class Endpoint
      * Whether or not the bridge should be the peer which opens the data channel
      * (as opposed to letting the far peer/client open it).
      */
-    private static final boolean OPEN_DATA_LOCALLY = false;
+    private static final boolean OPEN_DATA_LOCALLY = true;
 
     /**
      * The executor which runs bandwidth probing.
