@@ -1463,6 +1463,27 @@ public class Endpoint
         this.acceptVideo = acceptVideo;
     }
 
+    public void updateForceMute()
+    {
+        boolean audioForcedMuted = false;
+        for (ChannelShim channelShim : channelShims)
+        {
+            if (!channelShim.allowIncomingMedia())
+            {
+                switch (channelShim.getMediaType())
+                {
+                    case AUDIO:
+                        audioForcedMuted = true;
+                        break;
+                    case VIDEO:
+                        logger.warn(() -> "Tried to mute the incoming video stream, but that is not currently supported");
+                        break;
+                }
+            }
+        }
+        transceiver.forceMuteAudio(audioForcedMuted);
+    }
+
     /**
      * @return this {@link Endpoint}'s transceiver.
      */
