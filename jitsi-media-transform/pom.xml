@@ -24,27 +24,27 @@
             <version>${kotlin.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.jitsi</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>jitsi-srtp</artifactId>
             <version>1.0-20-g513e4e3</version>
         </dependency>
         <dependency>
-            <groupId>org.jitsi</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>rtp</artifactId>
             <version>1.0-44-g1895474</version>
         </dependency>
         <dependency>
-            <groupId>org.jitsi</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>jitsi-utils</artifactId>
             <version>${jitsi.utils.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.jitsi</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>jitsi-utils-kotlin</artifactId>
             <version>${jitsi.utils.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.jitsi</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>jicoco-kotlin</artifactId>
             <version>1.1-22-gbec9167</version>
         </dependency>
