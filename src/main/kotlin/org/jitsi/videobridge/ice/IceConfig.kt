@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.ice
 
 import org.ice4j.ice.KeepAliveStrategy
+import org.ice4j.ice.NominationStrategy
 import org.jitsi.config.LegacyFallbackConfigProperty
 import org.jitsi.config.legacyConfigAttributes
 import org.jitsi.config.newConfigAttributes
@@ -171,6 +172,20 @@ class IceConfig {
 
             @JvmStatic
             fun resolveRemoteCandidates() = resolveRemoteCandidatesProperty.value
+
+            /**
+             * The property that configures the ice4j nomination strategy policy.
+             */
+            class NominationStrategyProperty : SimpleProperty<NominationStrategy>(
+                newConfigAttributes {
+                    name("videobridge.ice.nomination-strategy")
+                    readOnce()
+                    retrievedAs<String>() convertedBy { Objects.requireNonNull(NominationStrategy.fromString(it)) }
+                })
+            private val nominationStrategyProperty = NominationStrategyProperty()
+
+            @JvmStatic
+            fun nominationStrategy() = nominationStrategyProperty.value
         }
     }
 }

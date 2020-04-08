@@ -100,6 +100,7 @@ class IceTransport @JvmOverloads constructor(
         appendHarvesters(this)
         isControlling = controlling
         performConsentFreshness = true
+        nominationStrategy = Config.nominationStrategy()
         addStateChangeListener(this@IceTransport::iceStateChanged)
     }.also {
         logger.addContext("local_ufrag", it.localUfrag)
