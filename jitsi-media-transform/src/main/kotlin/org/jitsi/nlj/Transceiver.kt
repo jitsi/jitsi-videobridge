@@ -268,6 +268,17 @@ class Transceiver(
     }
 
     /**
+     * Forcibly mute or unmute the incoming audio stream
+     */
+    fun forceMuteAudio(shouldMute: Boolean) {
+        when (shouldMute) {
+            true -> logger.info("Muting incoming audio")
+            false -> logger.info("Unmuting incoming audio")
+        }
+        rtpReceiver.forceMuteAudio(shouldMute)
+    }
+
+    /**
      * Get stats about this transceiver's pipeline nodes
      */
     override fun getNodeStats(): NodeStatsBlock {
