@@ -17,8 +17,8 @@
 package org.jitsi.videobridge.health.config
 
 import org.jitsi.config.BooleanMockConfigValueGenerator
-import org.jitsi.config.DurationToLongMockConfigValueGenerator
-import org.jitsi.config.LongMockConfigValueGenerator
+import org.jitsi.config.DurationMockConfigValueGenerator
+import org.jitsi.config.LongToDurationMockConfigValueGenerator
 import org.jitsi.config.runBasicTests
 import org.jitsi.videobridge.JitsiConfigTest
 
@@ -27,18 +27,18 @@ class HealthConfigTest : JitsiConfigTest() {
         "health interval" {
             runBasicTests(
                 legacyConfigName = "org.jitsi.videobridge.health.INTERVAL",
-                legacyValueGenerator = LongMockConfigValueGenerator,
+                legacyValueGenerator = LongToDurationMockConfigValueGenerator,
                 newConfigName = "videobridge.health.interval",
-                newConfigValueGenerator = DurationToLongMockConfigValueGenerator,
+                newConfigValueGenerator = DurationMockConfigValueGenerator,
                 propCreator = { HealthConfig.Config.Companion.HealthIntervalProperty() }
             )
         }
         "health timeout" {
             runBasicTests(
                 legacyConfigName = "org.jitsi.videobridge.health.TIMEOUT",
-                legacyValueGenerator = LongMockConfigValueGenerator,
+                legacyValueGenerator = LongToDurationMockConfigValueGenerator,
                 newConfigName = "videobridge.health.timeout",
-                newConfigValueGenerator = DurationToLongMockConfigValueGenerator,
+                newConfigValueGenerator = DurationMockConfigValueGenerator,
                 propCreator = { HealthConfig.Config.Companion.TimeoutProperty() }
             )
         }

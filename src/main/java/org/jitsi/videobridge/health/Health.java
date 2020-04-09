@@ -16,11 +16,12 @@
 package org.jitsi.videobridge.health;
 
 import org.ice4j.ice.harvest.*;
-import org.jitsi.utils.concurrent.*;
-import org.jitsi.utils.logging2.*;
+import org.jitsi.health.*;
+import org.jitsi.osgi.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.ice.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.osgi.framework.*;
 
 import java.io.*;
 import java.util.*;
@@ -33,30 +34,13 @@ import static org.jitsi.videobridge.health.config.HealthConfig.*;
  * @author Lyubomir Marinov
  */
 public class Health
-    extends PeriodicRunnableWithObject<Videobridge>
+    extends AbstractHealthCheckService
 {
-    /**
-     * The {@link Logger} used by the {@link Health} class and its
-     * instances to print debug information.
-     */
-    private static final Logger logger = new LoggerImpl(Health.class.getName());
-
     /**
      * The pseudo-random generator used to generate random input for
      * {@link Videobridge} such as {@link Endpoint} IDs.
      */
     private static Random RANDOM = Videobridge.RANDOM;
-
-    /**
-     * The executor used to perform periodic health checks.
-     */
-    private static final RecurringRunnableExecutor executor
-        = new RecurringRunnableExecutor(Health.class.getName());
-
-    /**
-     * Failures in the first 5 minutes are never sticky.
-     */
-    private static final long STICKY_FAILURES_GRACE_PERIOD = 300_000;
 
     /**
      * Checks the health (status) of the {@link Videobridge} associated with a
@@ -208,98 +192,33 @@ public class Health
         return String.format("%08x", RANDOM.nextInt());
     }
 
-    /**
-     * The exception resulting from the last health check performed on this
-     * videobridge. When the health check is successful, this is
-     * {@code null}.
-     */
-    private Exception lastResult = null;
-
-    /**
-     * The time the last health check finished being performed. A value of
-     * {@code -1} indicates that no health check has been performed yet.
-     */
-    private long lastResultMs = -1;
-
-    /**
-     * The time when this instance was started.
-     */
-    private final long startMs;
-
-    /**
-     * Whether we've seen a health check failure.
-     */
-    private boolean hasFailed = false;
+    private Videobridge videobridge;
 
     /**
      * Iniatializes a new {@link Health} instance for a specific
      * {@link Videobridge}.
      */
-    public Health(Videobridge videobridge)
+    public Health()
     {
-        super(videobridge, Config.getInterval(), true);
-
-        startMs = System.currentTimeMillis();
-
-        executor.registerRecurringRunnable(this);
+        super(Config.getInterval(), Config.getTimeout(), Config.getMaxCheckDuration(), Config.stickyFailures());
     }
 
-    /**
-     * Stops running health checks for this {@link Videobridge}.
-     */
-    public void stop()
-    {
-        executor.deRegisterRecurringRunnable(this);
-    }
-
-    /**
-     * Performs a health check and updates this instance's state.
-     */
     @Override
-    protected void doRun()
+    public void start(BundleContext bundleContext)
+        throws Exception
     {
-        long start = System.currentTimeMillis();
-        Exception exception = null;
+        videobridge = ServiceUtils2.getService(bundleContext, Videobridge.class);
 
-        try
-        {
-            Health.doCheck(this.o);
-        }
-        catch (Exception e)
-        {
-            exception = e;
-            if (System.currentTimeMillis() - this.startMs
-                > STICKY_FAILURES_GRACE_PERIOD)
-            {
-                hasFailed = true;
-            }
-        }
+        super.start(bundleContext);
+    }
 
-        long duration = System.currentTimeMillis() - start;
-        lastResultMs = start + duration;
+    @Override
+    public void stop(BundleContext bundleContext)
+        throws Exception
+    {
+        videobridge = null;
 
-        if (Config.stickyFailures() && hasFailed && exception == null)
-        {
-            // We didn't fail this last test, but we've failed before and
-            // sticky failures are enabled.
-            lastResult = new Exception("Sticky failure.");
-        }
-        else
-        {
-            lastResult = exception;
-        }
-
-        if (exception == null)
-        {
-            logger.info(
-                "Performed a successful health check in " + duration
-                    + "ms. Sticky failure: " + (Config.stickyFailures() && hasFailed));
-        }
-        else
-        {
-            logger.error(
-                "Health check failed in " + duration + "ms:", exception);
-        }
+        super.stop(bundleContext);
     }
 
     /**
@@ -311,26 +230,11 @@ public class Health
      * of {@code videobridge} or the check determines that {@code videobridge}
      * is not healthy.
      */
-    public void check()
+    @Override
+    protected void performCheck()
         throws Exception
     {
-        Exception lastResult = this.lastResult;
-        long lastResultMs = this.lastResultMs;
-        long timeSinceLastResult = System.currentTimeMillis() - lastResultMs;
-
-        if (timeSinceLastResult > Config.getTimeout())
-        {
-            throw new Exception(
-                "No health checks performed recently, the last result was "
-                    + timeSinceLastResult + "ms ago.");
-        }
-
-        if (lastResult != null)
-        {
-            throw new Exception(lastResult);
-        }
-
-        // We've had a recent result, and it is successful (no exception).
+        doCheck(videobridge);
     }
 
 }

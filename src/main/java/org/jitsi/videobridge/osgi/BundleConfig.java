@@ -65,6 +65,9 @@ public class BundleConfig
             "org/jitsi/videobridge/VideobridgeBundleActivator"
         },
         {
+            "org/jitsi/videobridge/health/Health"
+        },
+        {
             "org/jitsi/videobridge/xmpp/ClientConnectionImpl"
         },
         {
