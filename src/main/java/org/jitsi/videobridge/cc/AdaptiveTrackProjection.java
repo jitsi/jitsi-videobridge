@@ -246,8 +246,6 @@ public class AdaptiveTrackProjection
 
         if (context == null || contextPayloadType != payloadType)
         {
-            logger.debug(() -> " adaptive track projection " +
-                    " creating context for payload type " + payloadType);
             payloadTypeObject = payloadTypes.get((byte)payloadType);
             if (payloadTypeObject == null)
             {
@@ -284,6 +282,11 @@ public class AdaptiveTrackProjection
                 if (rtpState == null) {
                     return null;
                 }
+                logger.debug(() -> "adaptive track projection " +
+                    (context == null ? "creating new" : "changing to") +
+                    " VP8 context for payload type "
+                    + payloadType +
+                    ", source packet ssrc " + rtpPacket.getSsrc());
                 context = new VP8AdaptiveTrackProjectionContext(
                     diagnosticContext, payloadTypeObject, rtpState, parentLogger);
                 contextPayloadType = payloadType;
@@ -296,6 +299,19 @@ public class AdaptiveTrackProjection
                     return null;
                 }
                 // context switch
+                logger.debug(() -> {
+                    boolean hasTemporalLayer = rtpPacket instanceof Vp8Packet &&
+                        ((Vp8Packet)rtpPacket).getHasTemporalLayerIndex();
+                    boolean hasPictureId = rtpPacket instanceof Vp8Packet &&
+                        ((Vp8Packet)rtpPacket).getHasPictureId();
+                    return "adaptive track projection " +
+                        (context == null ? "creating new" : "changing to") +
+                        " generic context for non-scalable VP8 payload type "
+                        + payloadType +
+                        " (packet is " + rtpPacket.getClass().getSimpleName() +
+                        ", ssrc " + rtpPacket.getSsrc() +
+                        ", hasTL=" + hasTemporalLayer + ", hasPID=" + hasPictureId + ")";
+                });
                 context = new GenericAdaptiveTrackProjectionContext(payloadTypeObject, rtpState, parentLogger);
                 contextPayloadType = payloadType;
             }
@@ -309,6 +325,9 @@ public class AdaptiveTrackProjection
             if (rtpState == null) {
                 return null;
             }
+            logger.debug(() -> "adaptive track projection "  +
+                (context == null ? "creating new" : "changing to") +
+                " generic context for payload type " + payloadType);
             context = new GenericAdaptiveTrackProjectionContext(payloadTypeObject, rtpState, parentLogger);
             contextPayloadType = payloadType;
             return context;
