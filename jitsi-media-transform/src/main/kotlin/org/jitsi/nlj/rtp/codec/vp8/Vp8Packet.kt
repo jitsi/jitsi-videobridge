@@ -77,7 +77,7 @@ class Vp8Packet private constructor (
 
     var TL0PICIDX: Int by Delegates.observable(TL0PICIDX ?: DePacketizer.VP8PayloadDescriptor.getTL0PICIDX(buffer, payloadOffset, payloadLength)) {
         _, _, newValue ->
-            if (!DePacketizer.VP8PayloadDescriptor.setTL0PICIDX(
+            if (newValue != -1 && !DePacketizer.VP8PayloadDescriptor.setTL0PICIDX(
                     buffer, payloadOffset, payloadLength, newValue)) {
                 logger.cwarn { "Failed to set the TL0PICIDX of a VP8 packet." }
             }
