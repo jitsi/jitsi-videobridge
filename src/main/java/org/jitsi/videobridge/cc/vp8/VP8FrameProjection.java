@@ -168,7 +168,10 @@ public class VP8FrameProjection
 
         pkt.setSequenceNumber(sequenceNumber);
 
-        pkt.setTL0PICIDX(tl0PICIDX);
+        if (pkt.getTL0PICIDX() != -1)
+        {
+            pkt.setTL0PICIDX(tl0PICIDX);
+        }
         pkt.setPictureId(extendedPictureId);
 
     }

@@ -147,10 +147,7 @@ class VP8QualityFilter
 
         if (temporalLayerIdOfFrame < 0)
         {
-            // This is strange; If temporal scalability is enabled the TID is
-            // included in every packet (keyframe, interframe, continuation). So
-            // it seems like the encoder has disabled (or maybe it has never
-            // enabled?) temporal scalability.. For now we will pretend that
+            // temporal scalability is not enabled. Pretend that
             // this is the base temporal layer.
             temporalLayerIdOfFrame = 0;
         }
