@@ -240,6 +240,7 @@ public class DtlsTransport
         if (running.compareAndSet(true, false))
         {
             dtlsStack.close();
+            outgoingPacketQueue.close();
         }
     }
 
