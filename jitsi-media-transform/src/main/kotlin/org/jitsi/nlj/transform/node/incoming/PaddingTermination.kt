@@ -15,37 +15,51 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import java.util.Collections
-import java.util.TreeMap
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.FilterNode
+import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.utils.LRUCache
+import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
+import kotlin.math.max
 
-class PaddingTermination : FilterNode("Padding termination") {
-    private val replayContexts: MutableMap<Long, MutableSet<Int>> = TreeMap()
-    private var numPaddingPacketsSeen = 0
+/**
+ * A node which removes padding from RTP packets.
+ * Padding-only packets are marked as shouldDiscard in their PacketInfo.
+ */
+class PaddingTermination(parentLogger: Logger) : TransformerNode("Padding termination") {
+    private val logger = createChildLogger(parentLogger)
+    private var numPaddedPacketsSeen = 0
+    private var numPaddingOnlyPacketsSeen = 0
 
-    override fun accept(packetInfo: PacketInfo): Boolean {
+    override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        val replayContext = replayContexts.computeIfAbsent(rtpPacket.ssrc) {
-            Collections.newSetFromMap(LRUCache(1500))
+
+        if (rtpPacket.hasPadding) {
+            rtpPacket.removePadding()
+            packetInfo.resetPayloadVerification()
+            numPaddedPacketsSeen++
+            if (rtpPacket.payloadLength == 0) {
+                numPaddingOnlyPacketsSeen++
+                packetInfo.shouldDiscard = true
+            }
         }
 
-        return if (replayContext.add(rtpPacket.sequenceNumber)) {
-            true
-        } else {
-            numPaddingPacketsSeen++
-            false
-        }
+        return packetInfo
     }
 
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
-            addNumber("num_padding_packets_seen", numPaddingPacketsSeen)
+            addNumber("num_padded_packets_seen", numPaddedPacketsSeen)
+            addNumber("num_padding_only_packets_seen", numPaddingOnlyPacketsSeen)
         }
     }
 
     override fun trace(f: () -> Unit) = f.invoke()
+}
+
+fun RtpPacket.removePadding() {
+    val paddingSize = paddingSize
+    length = max(length - paddingSize, headerLength)
+    hasPadding = false
 }

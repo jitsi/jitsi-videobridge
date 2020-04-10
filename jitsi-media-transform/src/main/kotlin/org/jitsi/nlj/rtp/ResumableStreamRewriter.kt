@@ -15,11 +15,10 @@
  */
 package org.jitsi.nlj.rtp
 
-import org.jitsi.rtp.extensions.bytearray.putInt
-import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.nlj.util.ArrayCache
+import org.jitsi.nlj.util.Rfc3711IndexTracker
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.isNewerThan
-import org.jitsi.rtp.util.isNewerTimestampThan
 
 /**
  * Rewrites sequence numbers for RTP streams by hiding any gaps caused by
@@ -31,10 +30,9 @@ import org.jitsi.rtp.util.isNewerTimestampThan
  * @author Maryam Daneshi
  * @author George Politis
  * @author Boris Grozev
+ * @author Jonathan Lennox
  */
-class ResumableStreamRewriter(
-    private val rewriteTimestamps: Boolean
-) {
+class ResumableStreamRewriter(val keepHistory: Boolean = false) {
     /**
      * The sequence number delta between what's been accepted and what's been
      * received, mod 2^16.
@@ -42,22 +40,13 @@ class ResumableStreamRewriter(
     var seqnumDelta = 0
         private set
 
-    /**
-     * The timestamp delta between what's been accepted and what's been
-     * received, mod 2^32.
-     */
-    private var timestampDelta: Long = 0
+    private var history: StreamRewriteHistory? = null
 
     /**
      * The highest sequence number that got accepted, mod 2^16.
      */
     var highestSequenceNumberSent = -1
         private set
-
-    /**
-     * The highest timestamp that got accepted, mod 2^32.
-     */
-    private var highestTimestampSent: Long = -1
 
     /**
      * Rewrites the sequence number of the given RTP packet hiding any gaps caused by drops.
@@ -70,32 +59,6 @@ class ResumableStreamRewriter(
         if (sequenceNumber != newSequenceNumber) {
             rtpPacket.sequenceNumber = newSequenceNumber
         }
-
-        if (rewriteTimestamps) {
-            val timestamp = rtpPacket.timestamp
-            val newTimestamp = rewriteTimestamp(accept, timestamp)
-
-            if (timestamp != newTimestamp) {
-                rtpPacket.timestamp = newTimestamp
-            }
-        }
-    }
-
-    /**
-     * Restores the RTP timestamp of the RTCP SR packet in the buffer.
-     *
-     */
-    fun rewriteRtcpSr(rtcpPacket: RtcpSrPacket) {
-        if (!rewriteTimestamps || timestampDelta == 0L) {
-            return
-        }
-
-        val timestamp = rtcpPacket.senderInfo.rtpTimestamp
-        val newTimestamp = (timestamp - timestampDelta) and 0xffffffffL
-
-        // TODO: what's the right way to do this?
-        // rtcpPacket.senderInfo.rtpTimestamp = newTimestamp
-        rtcpPacket.buffer.putInt(rtcpPacket.offset + 16, newTimestamp.toInt())
     }
 
     /**
@@ -107,6 +70,15 @@ class ResumableStreamRewriter(
      * @return a rewritten sequence number that hides any gaps caused by drops.
      */
     fun rewriteSequenceNumber(accept: Boolean, sequenceNumber: Int): Int {
+        if (keepHistory && !accept && history == null) {
+            /* Don't instantiate history until it's needed; many streams never discard. */
+            history = StreamRewriteHistory(highestSequenceNumberSent)
+        }
+
+        history?.let {
+            return it.rewriteSequenceNumber(accept, sequenceNumber)
+        }
+
         if (accept) {
             // overwrite the sequence number (if needed)
             val newSequenceNumber = (sequenceNumber - seqnumDelta) and 0xffff
@@ -131,36 +103,154 @@ class ResumableStreamRewriter(
         }
     }
 
-    /**
-     * Rewrites the timestamp passed as a parameter, hiding any gaps caused by
-     * drops.
-     *
-     * @param accept true if the packet is accepted, false otherwise
-     * @param timestamp the timestamp to rewrite
-     * @return a rewritten timestamp that hides any gaps caused by drops.
-     */
-    private fun rewriteTimestamp(accept: Boolean, timestamp: Long): Long {
-        if (accept) {
-            // overwrite the timestamp (if needed)
-            val newTimestamp: Long = (timestamp - timestampDelta) and 0xffff_ffffL
+    val gapsLeft: Int
+        get() = history?.gapsLeft ?: 0
 
-            // init or update the highest sent timestamp (if needed)
-            if (highestTimestampSent == -1L || newTimestamp isNewerTimestampThan highestTimestampSent) {
-                highestTimestampSent = newTimestamp
+    private class RewriteHistoryItem(
+        var accept: Boolean?,
+        val newIndex: Int
+    )
+
+    private class StreamRewriteHistory(highestSeqSent: Int) : ArrayCache<RewriteHistoryItem>(
+        MAX_REWRITE_HISTORY,
+        /* We don't want to clone objects that get put in the tracker. */
+        { it },
+        /* Caller should have this object synchronized if needed. */
+        synchronize = false
+        ) {
+        var firstIndex: Int = -1
+
+        var gapsLeft = 0
+            private set
+
+        private val rfc3711IndexTracker = Rfc3711IndexTracker()
+
+        private fun fillBetween(start: Int, end: Int, firstNewIndex: Int) {
+            if (end <= lastIndex - size + 1)
+                return
+            val actualStart = if (start <= lastIndex - size) {
+                lastIndex - size + 1
+            } else {
+                start
             }
 
-            return newTimestamp
-        } else {
-            // update the timestamp delta (if needed)
-            if (highestTimestampSent != -1L) {
-                val newDelta = (timestamp - highestTimestampSent) and 0xffff_ffffL
+            var newIndex = firstNewIndex
 
-                if (newDelta isNewerTimestampThan timestampDelta) {
-                    timestampDelta = newDelta
+            for (i in actualStart..end) {
+                insertItem(RewriteHistoryItem(null, newIndex), i)
+                newIndex++
+            }
+        }
+
+        fun rewriteSequenceNumber(accept: Boolean, sequenceNumber: Int): Int {
+            val index = rfc3711IndexTracker.update(sequenceNumber)
+
+            val newIndex: Int
+
+            when {
+                (firstIndex == -1) -> {
+                    /* First index seen. */
+                    insertItem(RewriteHistoryItem(accept, index), index)
+
+                    firstIndex = index
+
+                    newIndex = index
+                }
+
+                (index > lastIndex) -> {
+                    /* New.  Roll forward, filling in gap if necessary. */
+
+                    val newestIndex = lastIndex
+
+                    val newest = getContainer(newestIndex)
+                        ?: throw IllegalStateException("No newest container found")
+
+                    val newestNewIndex = newest.item!!.newIndex
+
+                    val indexGap = index - newestIndex
+
+                    val newGap = indexGap - if (accept) 0 else 1
+
+                    newIndex = newestNewIndex + newGap
+
+                    insertItem(RewriteHistoryItem(accept, newIndex), index)
+
+                    fillBetween(newestIndex + 1, index - 1, newestNewIndex + 1)
+                }
+
+                (index > lastIndex - size && index >= firstIndex) -> {
+                    /* In history.  Retrieve. */
+
+                    val container = getContainer(index)
+                        ?: throw IllegalStateException("No container found for index $index in history")
+                    val item = container.item!!
+
+                    if (item.accept == null) {
+                        item.accept = accept
+                        if (!accept)
+                            gapsLeft++
+                    }
+
+                    newIndex = item.newIndex
+                }
+
+                (index > lastIndex - size && index < firstIndex) -> {
+                    /* Older than previous oldest, but still in range of the map.
+                       Project map backwards. */
+
+                    val oldestIndex = Math.max(index - size, firstIndex)
+                    val oldest = getContainer(oldestIndex)
+                        ?: throw IllegalStateException("No oldest container found")
+
+                    val oldestNewIndex = oldest.item!!.newIndex
+
+                    val indexGap = index - oldestIndex /* Negative */
+
+                    val newGap = indexGap + if (accept) 0 else 1
+
+                    newIndex = oldestNewIndex + newGap
+
+                    insertItem(RewriteHistoryItem(accept, newIndex), index)
+
+                    fillBetween(index + 1, oldestIndex - 1, newIndex + 1)
+
+                    firstIndex = index
+                }
+
+                else -> {
+                    /* Older than the map. */
+
+                    val oldestIndex = Math.max(index - size, firstIndex)
+                    val oldest = getContainer(oldestIndex)
+                        ?: throw IllegalStateException("No oldest container found")
+                    val oldestDelta = oldestIndex - oldest.item!!.newIndex
+
+                    newIndex = index - oldestDelta
                 }
             }
 
-            return timestamp
+            if (accept) return toSequenceNumber(newIndex)
+            return sequenceNumber /* Don't care about sequence numbers for non-accepted packets,
+              so make sure rewriteRtp does nothing. */
+        }
+
+        init {
+            if (highestSeqSent != -1) {
+                rewriteSequenceNumber(true, highestSeqSent)
+            }
+        }
+
+        companion object {
+            /**
+             * The maximum number of packets to save history for.
+             *
+             * NOTE rtt + minimum amount
+             * XXX this is an uninformed value.
+             */
+            private const val MAX_REWRITE_HISTORY = 1000
+
+            /** Map an index back to a sequence number. */
+            private fun toSequenceNumber(index: Int): Int = index and 0xffff
         }
     }
 }
