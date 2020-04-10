@@ -116,10 +116,13 @@ class Vp8Utils {
          * picture IDs in the form of the number you'd add to b to get a. e.g.:
          * getTl0PicIdxDelta(1, 10) -> -9 (10 + -9 = 1)
          * getTl0PicIdxDelta(1, 250) -> 7 (250 + 7 = 1)
+         *
+         * If either value is -1 (meaning tl0picidx not found) return 0.
          * @return the delta between two extended picture IDs (modulo 2^8).
          */
         @JvmStatic
         fun getTl0PicIdxDelta(a: Int, b: Int): Int {
+            if (a < 0 || b < 0) return 0
             val diff = a - b
             return when {
                 diff < -(1 shl 7) -> diff + (1 shl 8)
