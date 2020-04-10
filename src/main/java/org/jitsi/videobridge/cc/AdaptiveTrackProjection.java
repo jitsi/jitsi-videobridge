@@ -271,7 +271,8 @@ public class AdaptiveTrackProjection
 
             /* Check whether this stream is projectable by the VP8AdaptiveTrackProjectionContext. */
             boolean projectable = rtpPacket instanceof Vp8Packet &&
-                ((Vp8Packet)rtpPacket).getHasTemporalLayerIndex() &&
+                /* Work around Firefox 75 bug - https://bugzilla.mozilla.org/show_bug.cgi?id=1628851 */
+                /* ((Vp8Packet)rtpPacket).getHasTemporalLayerIndex() && */
                 ((Vp8Packet)rtpPacket).getHasPictureId();
 
             if (projectable
