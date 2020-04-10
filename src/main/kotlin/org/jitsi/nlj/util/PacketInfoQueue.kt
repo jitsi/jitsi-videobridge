@@ -16,9 +16,9 @@
 
 package org.jitsi.nlj.util
 
-import java.util.concurrent.ExecutorService
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.utils.queue.PacketQueue
+import java.util.concurrent.ExecutorService
 
 /**
  * A [PacketInfo] queue. We do not want to use the copy functionality, which is why the related
@@ -30,6 +30,10 @@ class PacketInfoQueue(
     handler: (PacketInfo) -> Boolean,
     capacity: Int = 1024
 ) : PacketQueue<PacketInfo>(capacity, false, null, id, handler, executor) {
+    override fun releasePacket(pkt: PacketInfo) {
+        BufferPool.returnBuffer(pkt.packet.buffer)
+    }
+
     override fun getBuffer(packetInfo: PacketInfo): ByteArray =
         throw NotImplementedError("copy=true is not supported")
 

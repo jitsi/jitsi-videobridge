@@ -15,9 +15,6 @@
  */
 package org.jitsi.nlj
 
-import java.time.Clock
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.ScheduledExecutorService
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
@@ -35,13 +32,16 @@ import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.SsrcAssociation
 import org.jitsi.nlj.util.StreamInformationStoreImpl
-import org.jitsi.utils.logging2.cdebug
-import org.jitsi.utils.logging2.cinfo
-import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.cinfo
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
+import java.time.Clock
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.ScheduledExecutorService
 
 // This is an API class, so its usages will largely be outside of this library
 @Suppress("unused")
@@ -312,6 +312,7 @@ class Transceiver(
     }
 
     fun teardown() {
+        logger.info("Tearing down")
         rtpReceiver.tearDown()
         rtpSender.tearDown()
     }

@@ -53,6 +53,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.queue.CountingErrorHandler
 
 import org.jitsi.nlj.RtpSenderConfig.Config
+import org.jitsi.nlj.util.BufferPool
 
 class RtpSenderImpl(
     val id: String,
@@ -206,7 +207,7 @@ class RtpSenderImpl(
      * through the sender pipeline
      */
     private fun handlePacket(packetInfo: PacketInfo): Boolean {
-        if (running) {
+        return if (running) {
             packetInfo.addEvent(PACKET_QUEUE_EXIT_EVENT)
 
             val root = when (packetInfo.packet) {
@@ -214,9 +215,11 @@ class RtpSenderImpl(
                 else -> outgoingRtpRoot
             }
             root.processPacket(packetInfo)
-            return true
+            true
+        } else {
+            BufferPool.returnBuffer(packetInfo.packet.buffer)
+            false
         }
-        return false
     }
 
     override fun getStreamStats() = statsTracker.getSnapshot()
@@ -254,6 +257,7 @@ class RtpSenderImpl(
     }
 
     override fun tearDown() {
+        logger.info("Tearing down")
         NodeTeardownVisitor().reverseVisit(outputPipelineTerminationNode)
         toggleablePcapWriter.disable()
     }
