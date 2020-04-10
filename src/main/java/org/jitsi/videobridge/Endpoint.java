@@ -798,6 +798,8 @@ public class Endpoint
         dtlsTransport.stop();
         iceTransport.stop();
 
+        outgoingSrtpPacketQueue.close();
+
         logger.info("Expired.");
     }
 
