@@ -68,7 +68,8 @@ class PacketCache(
     fun get(ssrc: Long, seqNum: Int): ArrayCache<RtpPacket>.Container? = getCache(ssrc).get(seqNum)
 
     /**
-     * Gets copies of the latest packets in the cache. Tries to get at least [numBytes] bytes total.
+     * Gets copies of the latest packets in the cache. Returns packets which add up to no more than
+     * [numBytes] bytes.
      */
     fun getMany(ssrc: Long, numBytes: Int): Set<RtpPacket> = getCache(ssrc).getMany(numBytes)
 
@@ -126,9 +127,13 @@ class RtpPacketCache(size: Int) : ArrayCache<RtpPacket>(size, RtpPacket::clone) 
         val packets = mutableSetOf<RtpPacket>()
 
         forEachDescending {
-            packets.add(it)
-            bytesRemaining -= it.length
-            bytesRemaining > 0
+            if (it.length <= bytesRemaining) {
+                packets.add(it.clone())
+                bytesRemaining -= it.length
+                true
+            } else {
+                false
+            }
         }
 
         return packets

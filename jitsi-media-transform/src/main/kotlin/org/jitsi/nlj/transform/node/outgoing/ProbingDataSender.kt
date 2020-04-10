@@ -118,41 +118,15 @@ class ProbingDataSender(
      */
     private fun sendRedundantDataOverRtx(mediaSsrc: Long, numBytes: Int): Int {
         var bytesSent = 0
-        val lastNPackets = packetCache.getMany(mediaSsrc, numBytes)
-
-        if (lastNPackets.isEmpty()) {
-            return bytesSent
-        }
-
-        // XXX this constant (2) is not great, however the final place of the stream
-        // protection strategy is not clear at this point so I expect the code
-        // will change before taking its final form.
-        val packetsToResend = mutableListOf<PacketInfo>()
-        for (i in 0 until 2) {
-            val lastNPacketIter = lastNPackets.iterator()
-
-            while (lastNPacketIter.hasNext()) {
-                val packet = lastNPacketIter.next()
-                val packetLen = packet.length
-                if (bytesSent + packetLen > numBytes) {
-                    // We don't have enough 'room' to send this packet; we're done
-                    break
-                }
-                bytesSent += packetLen
-                // The node after this one will be the RetransmissionSender, which handles
-                // encapsulating packets as RTX (with the proper ssrc and payload type) so we
-                // just need to find the packets to retransmit and forward them to the next node
-                // TODO(brian): do we need to clone it here?
-                packetsToResend.add(PacketInfo(packet.clone()))
-            }
-        }
         // TODO(brian): we're in a thread context mess here.  we'll be sending these out from the bandwidthprobing
         // context (or whoever calls this) which i don't think we want.  Need look at getting all the pipeline
         // work posted to one thread so we don't have to worry about concurrency nightmares
-        if (packetsToResend.isNotEmpty()) {
-            packetsToResend.forEach { rtxDataSender.processPacket(it) }
-        }
 
+        // Get the most recent packets whose length add up to no more than numBytes.
+        packetCache.getMany(mediaSsrc, numBytes).forEach {
+            bytesSent += it.length
+            rtxDataSender.processPacket(PacketInfo(it))
+        }
         return bytesSent
     }
 
