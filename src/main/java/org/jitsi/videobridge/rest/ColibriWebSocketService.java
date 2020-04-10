@@ -15,10 +15,12 @@
  */
 package org.jitsi.videobridge.rest;
 
-import net.java.sip.communicator.util.*;
 import org.eclipse.jetty.servlet.*;
-import org.jitsi.service.configuration.*;
+import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.rest.config.*;
 import org.osgi.framework.*;
+
+import static org.jitsi.videobridge.rest.config.WebsocketServiceConfig.Config;
 
 /**
  * @author Boris Grozev
@@ -26,38 +28,12 @@ import org.osgi.framework.*;
 public class ColibriWebSocketService
 {
     /**
-     * The name of the property which controls the domain name used in URLs
-     * advertised for COLIBRI WebSockets.
-     */
-    public static final String DOMAIN_PNAME
-        = "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN";
-
-    /**
-     * The name of the property which controls the server ID used in URLs
-     * advertised for COLIBRI WebSockets.
-     */
-    public static final String SERVER_ID_PNAME
-        = "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID";
-
-    /**
-     * The name of the property which controls whether URLs advertised for
-     * COLIBRI WebSockets should use the "ws" (if false) or "wss" (if true)
-     * schema.
-     */
-    public static final String TLS_PNAME
-        = "org.jitsi.videobridge.rest.COLIBRI_WS_TLS";
-
-    /**
-     * The name of the property which disables the
-     * {@link ColibriWebSocketService}.
-     */
-    public static final String DISABLE_PNAME
-        = "org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE";
-
-    /**
      * The root path of the HTTP endpoint for COLIBRI WebSockets.
      */
     public static final String COLIBRI_WS_PATH = "/colibri-ws/";
+
+    private static final Logger logger
+        = new LoggerImpl(ColibriWebSocketService.class.getName());
 
     /**
      * The common prefix which URLs advertised for all conferences and endpoints
@@ -75,41 +51,36 @@ public class ColibriWebSocketService
      * Initializes a {@link ColibriWebSocketService} in a specific
      * {@link BundleContext}.
      *
-     * @param bundleContext the bundle context.
      * @param tls whether to use "ws" or "wss" in advertised URLs in the absence
-     * of configuration which overrides it (see {@link #TLS_PNAME}).
+     * of configuration which overrides it (see
+     * {@link WebsocketServiceConfig.Config#useTls()}).
      */
-    public ColibriWebSocketService(
-        BundleContext bundleContext, boolean tls)
+    public ColibriWebSocketService(boolean tls)
     {
-        ConfigurationService cfg
-            = ServiceUtils.getService(bundleContext, ConfigurationService.class);
-
-        String baseUrl = null;
-        String serverId = null;
-
         // The domain name is currently a required property.
-        if (cfg != null && !cfg.getBoolean(DISABLE_PNAME, false))
+        if (Config.enabled())
         {
-            String domain = cfg.getString(DOMAIN_PNAME, null);
-            if (domain != null)
-            {
-                // We default to matching the protocol used by the local jetty
-                // instance, but we allow for the configuration via properties
-                // to override it since certain use-cases require it.
-                tls = cfg.getBoolean(TLS_PNAME, tls);
+            String domain = Config.domain();
+            // We default to matching the protocol used by the local jetty
+            // instance, but we allow for the configuration via properties
+            // to override it since certain use-cases require it.
+            Boolean tlsProp = Config.useTls();
+            tls = tlsProp != null ? tlsProp : tls;
 
-                // The server ID is not critical, just use a default string
-                // unless configured.
-                serverId = cfg.getString(SERVER_ID_PNAME, "default-id");
+            // The server ID is not critical, just use a default string
+            // unless configured.
+            serverId = Config.serverId();
 
-                baseUrl = tls ? "wss://" : "ws://";
-                baseUrl += domain + COLIBRI_WS_PATH + serverId + "/";
-            }
+            String scheme = tls ? "wss://" : "ws://";
+            baseUrl = scheme + domain + COLIBRI_WS_PATH + serverId + "/";
+            logger.info("Using base URL: " + baseUrl);
         }
-
-        this.baseUrl = baseUrl;
-        this.serverId = serverId;
+        else
+        {
+            logger.info("Disabled.");
+            baseUrl = null;
+            serverId = null;
+        }
     }
 
     /**
@@ -159,11 +130,10 @@ public class ColibriWebSocketService
     {
         ServletHolder holder = null;
 
-        ConfigurationService cfg
-            = ServiceUtils.getService(bundleContext, ConfigurationService.class);
-        if (baseUrl != null &&
-            (cfg == null || !cfg.getBoolean(DISABLE_PNAME, false)))
+        if (baseUrl != null && Config.enabled())
         {
+            logger.info("Starting colibri websocket service with baseUrl: "
+                + baseUrl);
             holder = new ServletHolder();
 
             holder.setServlet(new ColibriWebSocketServlet(bundleContext, this));

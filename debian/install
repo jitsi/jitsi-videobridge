@@ -1,0 +1,14 @@
+target/dependency/*		usr/share/jitsi-videobridge/lib
+lib/videobridge.rc		usr/share/jitsi-videobridge/lib
+lib/logging.properties		etc/jitsi/videobridge
+jitsi-videobridge.jar		usr/share/jitsi-videobridge
+resources/jvb.sh	usr/share/jitsi-videobridge
+resources/graceful_shutdown.sh	usr/share/jitsi-videobridge
+resources/collect-dump-logs.sh	usr/share/jitsi-videobridge
+
+# callstats-java-sdk
+log4j2.xml			etc/jitsi/videobridge
+config/callstats-java-sdk.properties	etc/jitsi/videobridge
+
+jitsi-videobridge			etc/logrotate.d
+config/20-jvb-udp-buffers.conf		etc/sysctl.d

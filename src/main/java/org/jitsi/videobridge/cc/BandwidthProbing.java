@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,286 +15,195 @@
  */
 package org.jitsi.videobridge.cc;
 
-import org.jitsi.impl.neomedia.*;
-import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.impl.neomedia.transform.*;
-import org.jitsi.service.configuration.*;
-import org.jitsi.service.libjitsi.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.codec.*;
-import org.jitsi.util.*;
-import org.jitsi.util.concurrent.*;
-import org.jitsi.videobridge.*;
+import org.jitsi.nlj.rtp.bandwidthestimation.*;
+import org.jitsi.nlj.util.*;
+import org.jitsi.utils.concurrent.*;
+import org.jitsi.utils.logging.*;
+import org.json.simple.*;
 
 import java.util.*;
 
+import static org.jitsi.videobridge.cc.config.BandwidthProbingConfig.*;
+
 /**
- * @author George Politis
- */
-public class BandwidthProbing
-    extends PeriodicRunnable
-{
-    /**
-     * The system property name that holds a boolean that determines whether or
-     * not to activate the RTX bandwidth probing mechanism that implements
-     * stream protection.
-     */
-    public static final String
-        DISABLE_RTX_PROBING_PNAME = "org.jitsi.videobridge.DISABLE_RTX_PROBING";
+  * @author George Politis
+  */
+ public class BandwidthProbing
+     extends PeriodicRunnable implements BandwidthEstimator.Listener
+ {
+     /**
+      * The {@link TimeSeriesLogger} to be used by this instance to print time
+      * series.
+      */
+     private static final TimeSeriesLogger timeSeriesLogger
+         = TimeSeriesLogger.getTimeSeriesLogger(BandwidthProbing.class);
 
-    /**
-     * The system property name that holds the interval/period in milliseconds
-     * at which {@link #run()} is to be invoked.
-     */
-    public static final String
-        PADDING_PERIOD_MS_PNAME = "org.jitsi.videobridge.PADDING_PERIOD_MS";
+     private static Random random = new Random();
 
-    /**
-     * The {@link Logger} to be used by this instance to print debug
-     * information.
-     */
-    private static final Logger logger
-        = Logger.getLogger(BandwidthProbing.class);
+     /**
+      * The sequence number to use if probing with the JVB's SSRC.
+      */
+     private int seqNum = random.nextInt(0xFFFF);
 
-    /**
-     * The {@link TimeSeriesLogger} to be used by this instance to print time
-     * series.
-     */
-    private static final TimeSeriesLogger timeSeriesLogger
-        = TimeSeriesLogger.getTimeSeriesLogger(BandwidthProbing.class);
+     /**
+      * The RTP timestamp to use if probing with the JVB's SSRC.
+      */
+     private long ts = random.nextInt() & 0xFFFFFFFFL;
 
-    /**
-     * The ConfigurationService to get config values from.
-     */
-    private static final ConfigurationService
-        cfg = LibJitsi.getConfigurationService();
+     /**
+      * Whether or not probing is currently enabled
+      */
+     public boolean enabled = false;
 
-    /**
-     * the interval/period in milliseconds at which {@link #run()} is to be
-     * invoked.
-     */
-    private static final long PADDING_PERIOD_MS =
-        cfg != null ? cfg.getInt(PADDING_PERIOD_MS_PNAME, 15) : 15;
+     private Long latestBwe = -1L;
 
-    /**
-     * A boolean that determines whether or not to activate the RTX bandwidth
-     * probing mechanism that implements stream protection.
-     */
-    private static final boolean DISABLE_RTX_PROBING =
-        cfg != null && cfg.getBoolean(DISABLE_RTX_PROBING_PNAME, false);
+     private DiagnosticContext diagnosticContext;
 
-    /**
-     * The {@link VideoChannel} to probe for available send bandwidth.
-     */
-    private final VideoChannel dest;
+     private BitrateController bitrateController;
 
-    /**
-     * The VP8 payload type to use when probing with the SSRC of the bridge.
-     */
-    private int vp8PT = -1;
+     private ProbingDataSender probingDataSender;
 
-    /**
-     * The sequence number to use if probing with the JVB's SSRC.
-     */
-    private int seqNum = new Random().nextInt(0xFFFF);
+     /**
+      * Ctor.
+      *
+      */
+     public BandwidthProbing(ProbingDataSender probingDataSender)
+     {
+         super(Config.paddingPeriodMs());
+         this.probingDataSender = probingDataSender;
+     }
 
-    /**
-     * The RTP timestamp to use if probing with the JVB's SSRC.
-     */
-    private long ts = new Random().nextInt() & 0xFFFFFFFFL;
+     /**
+      * Sets the diagnostic context.
+      */
+     public void setDiagnosticContext(DiagnosticContext diagnosticContext)
+     {
+         this.diagnosticContext = diagnosticContext;
+     }
 
-    /**
-     * Ctor.
-     *
-     * @param dest the {@link VideoChannel} to probe for available send
-     * bandwidth.
-     */
-    public BandwidthProbing(VideoChannel dest)
-    {
-        super(PADDING_PERIOD_MS);
-        this.dest = dest;
-    }
+     /**
+      * TODO(brian): there's data we need from bitratecontroller that may be
+      * tough to get another way. for now, i've tried to at least minimize the
+      * dependency by creating the #getStatusSnapshot method inside
+      * bitratecontroller that this can use (so it doesn't have to depend on
+      * accessing the track projections
+      */
+     public void setBitrateController(BitrateController bitrateController)
+     {
+        this.bitrateController = bitrateController;
+     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void run()
-    {
-        super.run();
+     /**
+      * {@inheritDoc}
+      */
+     @Override
+     public void run()
+     {
+         super.run();
 
-        MediaStream destStream = dest.getStream();
-        if (destStream == null
-            || (destStream.getDirection() != null
-                && !destStream.getDirection().allowsSending())
-            || !(destStream instanceof VideoMediaStreamImpl))
-        {
-            return;
-        }
+         if (!enabled)
+         {
+             return;
+         }
 
-        VideoMediaStreamImpl videoStreamImpl
-            = (VideoMediaStreamImpl) destStream;
+         // We calculate how much to probe for based on the total target bps
+         // (what we're able to reach), the total ideal bps (what we want to
+         // be able to reach) and the total current bps (what we currently send).
+         BitrateController.StatusSnapshot bitrateControllerStatus = bitrateController.getStatusSnapshot();
 
-        List<AdaptiveTrackProjection> adaptiveTrackProjectionList
-            = dest.getBitrateController().getAdaptiveTrackProjections();
+         // How much padding do we need?
+         long totalNeededBps = bitrateControllerStatus.currentIdealBps - bitrateControllerStatus.currentTargetBps;
+         if (totalNeededBps < 1)
+         {
+             // Not much.
+             return;
+         }
 
-        if (adaptiveTrackProjectionList == null || adaptiveTrackProjectionList.isEmpty())
-        {
-            return;
-        }
+         long latestBweCopy = latestBwe;
 
-        // We calculate how much to probe for based on the total target bps
-        // (what we're able to reach), the total ideal bps (what we want to
-        // be able to reach) and the total current bps (what we currently send).
+         if (bitrateControllerStatus.currentIdealBps <= latestBweCopy)
+         {
+             // it seems like the ideal bps fits in the bandwidth estimation,
+             // let's update the bitrate controller.
+             //TODO(brian): this trigger for a bitratecontroller update seems awkward and may not be obsolete
+             // since i now update it every time we get an updated estimate from bandwidth estimator
+//             dest.getBitrateController().update(bweBps);
+             return;
+         }
 
-        long totalTargetBps = 0, totalIdealBps = 0;
+         // How much padding can we afford?
+         long maxPaddingBps = latestBweCopy - bitrateControllerStatus.currentTargetBps;
+         long paddingBps = Math.min(totalNeededBps, maxPaddingBps);
 
-        List<Long> ssrcsToProtect = new ArrayList<>();
-        for (AdaptiveTrackProjection
-            adaptiveTrackProjection : adaptiveTrackProjectionList)
-        {
-            MediaStreamTrackDesc sourceTrack
-                = adaptiveTrackProjection.getSource();
-            if (sourceTrack == null)
-            {
-                continue;
-            }
+         if (timeSeriesLogger.isTraceEnabled() && diagnosticContext != null)
+         {
+             timeSeriesLogger.trace(diagnosticContext
+                     .makeTimeSeriesPoint("sent_padding")
+                     .addField("padding_bps", paddingBps)
+                     .addField("total_ideal_bps", bitrateControllerStatus.currentIdealBps)
+                     .addField("total_target_bps", bitrateControllerStatus.currentTargetBps)
+                     .addField("needed_bps", totalNeededBps)
+                     .addField("max_padding_bps", maxPaddingBps)
+                     .addField("bwe_bps", latestBweCopy));
+         }
 
-            long targetBps = sourceTrack.getBps(
-                adaptiveTrackProjection.getTargetIndex());
-            if (targetBps > 0)
-            {
-                // Do not protect SSRC if it's not streaming.
-                long ssrc = adaptiveTrackProjection.getSSRC();
-                if (ssrc > -1)
-                {
-                    ssrcsToProtect.add(ssrc);
-                }
-            }
-
-            totalTargetBps += targetBps;
-            totalIdealBps += sourceTrack.getBps(
-                    adaptiveTrackProjection.getIdealIndex());
-        }
-
-        // How much padding do we need?
-        long totalNeededBps = totalIdealBps - totalTargetBps;
-        if (totalNeededBps < 1)
-        {
-            // Not much.
-            return;
-        }
-
-        long bweBps = videoStreamImpl
-            .getOrCreateBandwidthEstimator().getLatestEstimate();
-
-        if (totalIdealBps <= bweBps)
-        {
-            // it seems like the ideal bps fits in the bandwidth estimation,
-            // let's update the bitrate controller.
-            dest.getBitrateController().update(bweBps);
-            return;
-        }
-
-        // How much padding can we afford?
-        long maxPaddingBps = bweBps - totalTargetBps;
-        long paddingBps = Math.min(totalNeededBps, maxPaddingBps);
-
-        if (timeSeriesLogger.isTraceEnabled())
-        {
-            DiagnosticContext diagnosticContext
-                = videoStreamImpl.getDiagnosticContext();
-            timeSeriesLogger.trace(diagnosticContext
-                    .makeTimeSeriesPoint("out_padding")
-                    .addField("padding_bps", paddingBps)
-                    .addField("total_ideal_bps", totalIdealBps)
-                    .addField("total_target_bps", totalTargetBps)
-                    .addField("needed_bps", totalNeededBps)
-                    .addField("max_padding_bps", maxPaddingBps)
-                    .addField("bwe_bps", bweBps));
-        }
-
-        if (paddingBps < 1)
-        {
-            // Not much.
-            return;
-        }
+         if (paddingBps < 1)
+         {
+             // Not much.
+             return;
+         }
 
 
-        MediaStreamImpl stream = (MediaStreamImpl) destStream;
+         // XXX a signed int is practically sufficient, as it can represent up to
+         // ~ 2GB
+         int bytes = (int) (Config.paddingPeriodMs() * paddingBps / 1000 / 8);
 
-        // XXX a signed int is practically sufficient, as it can represent up to
-        // ~ 2GB
-        int bytes = (int) (PADDING_PERIOD_MS * paddingBps / 1000 / 8);
-        RtxTransformer rtxTransformer = stream.getRtxTransformer();
+         if (!bitrateControllerStatus.activeSsrcs.isEmpty())
+         {
+             // stream protection with padding.
+             for (Long ssrc : bitrateControllerStatus.activeSsrcs)
+             {
+                 long bytesSent = probingDataSender.sendProbing(ssrc, bytes);
+                 bytes -= bytesSent;
+                 if (bytes < 1)
+                 {
+                     // We're done.
+                     return;
+                 }
+             }
+         }
+     }
 
-        if (!DISABLE_RTX_PROBING)
-        {
-            if (!ssrcsToProtect.isEmpty())
-            {
-                // stream protection with padding.
-                for (Long ssrc : ssrcsToProtect)
-                {
-                    bytes = rtxTransformer.sendPadding(ssrc, bytes);
-                    if (bytes < 1)
-                    {
-                        // We're done.
-                        return;
-                    }
-                }
-            }
-        }
+     @Override
+     public void bandwidthEstimationChanged(Bandwidth newBw)
+     {
+         this.latestBwe = (long)newBw.getBps();
+     }
 
-        // Send crap with the JVB's SSRC.
-        long mediaSSRC = getSenderSSRC();
-        if (vp8PT == -1)
-        {
-            vp8PT = stream.getDynamicRTPPayloadType(Constants.VP8);
-            if (vp8PT == -1)
-            {
-                logger.warn("The VP8 payload type is undefined. Failed to "
-                        + "probe with the SSRC of the bridge.");
-                return;
-            }
-        }
+     /**
+      * Gets a JSON representation of the parts of this object's state that
+      * are deemed useful for debugging.
+      */
+     @SuppressWarnings("unchecked")
+     public JSONObject getDebugState()
+     {
+         JSONObject debugState = new JSONObject();
+         debugState.put("seqNum", seqNum);
+         debugState.put("ts", ts);
+         debugState.put("enabled", enabled);
+         debugState.put("latestBwe", latestBwe);
 
-        ts += 3000;
+         return debugState;
+     }
 
-        int pktLen = RawPacket.FIXED_HEADER_SIZE + 0xFF;
-        int len = (bytes / pktLen) + 1 /* account for the mod */;
-
-        for (int i = 0; i < len; i++)
-        {
-            try
-            {
-                // These packets should not be cached.
-                RawPacket pkt
-                    = RawPacket.makeRTP(mediaSSRC, vp8PT, seqNum++, ts, pktLen);
-
-                stream.injectPacket(pkt, /* data */ true, rtxTransformer);
-            }
-            catch (TransmissionFailedException tfe)
-            {
-                logger.warn("Failed to retransmit a packet.");
-            }
-        }
-    }
-
-    /**
-     * (attempts) to get the local SSRC that will be used in the media sender
-     * SSRC field of the RTCP reports. TAG(cat4-local-ssrc-hurricane)
-     *
-     * @return get the local SSRC that will be used in the media sender SSRC
-     * field of the RTCP reports.
-     */
-    private long getSenderSSRC()
-    {
-        StreamRTPManager streamRTPManager = dest.getStream().getStreamRTPManager();
-        if (streamRTPManager == null)
-        {
-            return -1;
-        }
-
-        return dest.getStream().getStreamRTPManager().getLocalSSRC();
-    }
-}
+     public interface ProbingDataSender
+     {
+         /**
+          * Sends a specific number of bytes with a specific SSRC.
+          * @param mediaSsrc the SSRC
+          * @param numBytes the number of probing bytes we want to send
+          * @return the number of bytes of probing data actually sent
+          */
+         int sendProbing(long mediaSsrc, int numBytes);
+     }
+ }

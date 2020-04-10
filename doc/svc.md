@@ -33,7 +33,7 @@ well if the SFU wants to leverage VP8 temporal scalability. We start our
 analysis by exploring the implications of the first guideline and, as we will 
 see, 2 and 3 follow naturally.
 
-With VP8 temporal scalability [2], where the SFU can drop packets to achieve
+With temporal scalability in VP8 (and other codecs)[2], where the SFU can drop frames to achieve
 lower frame rates, applying a fixed delta would leave gaps in the sequence
 numbers (because of the packets that the SFU drops). So the SFU needs to keep
 track of what it's sent and manage the sequence number space of the
@@ -42,72 +42,79 @@ frame). This mode of operation has several implications.
 
 First, it means that if the SFU decides to skip a frame for whatever reason,
 it cannot go back and change that decision because there would be no space left
-in the sequence numbers. So decisions about if and how to forward a frame apply
-only on _new_ and the _top_ frames respectively, where the top frame is the
-frame that is currently being forwarded and new frames are frames subsequent to
-the top.
+in the sequence numbers.  Furthermore, if packet re-ordering or loss has occurred,
+a decision must be made immediately as to how much of a gap to leave in the
+sequence numbers so delayed packets have a place to be transmitted.
 
-When the SFU sees a new frame, it can decide whether to forward it, drop it or
-not process it (which effectively postpones the decision at a later time upon
-reception of a subsequent packet of that frame). If the SFU decides to forward
-it, then it becomes the top frame and the previous top frame (if there was one)
-gets _finalized_ and its transformations are stored for re-application on
-re-transmissions.
+When a frame arrives and it is to be forwarded, the SFU needs to determine how to
+assign its projected sequence numbers.  Decisions on how to assign sequence numbers
+are done by comparing the _new_ frame with an _existing_ (previously-projected) frame.
+(In most cases this existing frame will be the previous projected frame, in sequence number
+ordering to the new frame, though in some corner cases involving very old frames
+a different existing frame is chosen.)
 
-Another complication arises because of packet re-ordering and loss. In order to
-better illustrate the problem we go through a series of examples that will help
-explain a set of rules that are implemented in our SFU. For context, the TL
-pattern that Google Chrome uses is TL0, TL2, TL1, TL2 [2]. These frames all have
-the same TL0PICIDX [3] value.
-  
-EX1: Suppose that the SFU is in the middle of forwarding a TL0 (reference)
-frame and that it (the SFU) either doesn't know or it cannot guess its ending
-sequence number (due to packet loss or re-ordering). And suppose that the SFU
-starts receiving the next TL2 frame (non-reference) that it wants to forward
-because it (the SFU) is configured to forward high frame rate.
-  
-The problem in this case is that the SFU needs to leave enough space in the
-sequence numbers for the TL0 frame to be forwarded after its fully received or
-after its boundaries become known, otherwise there may either be gaps in the
-sequence numbers or not enough space to squeeze in the TL0 frame (which would
-render any subsequent frame undecodable at the receiver).
-  
-The correct thing to do in this case is to not forward the TL2, at least not
-until the TL0 frame boundaries become known. More generally, no new frames can
-be forwarded until the TL0 frame boundaries become known, unless a keyframe is
-received (which can fully refresh the jitter buffer of receiving endpoint). 
+If there is a gap in receive sequence numbers between the existing and the new frame,
+the SFU can determine the worst-case gap size of projected sequence numbers to
+leave such that any not-yet-received packets can be forwarded correctly.
+However, the SFU can't (in general) know the temporal layer of frames it has
+not yet received. If it turns out that the not-yet-received frames were in fact
+not ones that the SFU wanted to forward, this will result in sequence number
+gaps in the projected packet sequence, which the receiver may interpret as packet
+loss.  (Care must be taken in bandwidth estimation algorithms not to incorrectly
+reduce bandwidth based on this "false" packet loss; in particular, this means
+that senders operating on receiver-side REMB-based bandwidth estimation mustn't
+adjust the estimates based on received loss.)
 
-EX2: Now suppose that the SFU has discovered the boundaries of the current
-TL0 and that it (the SFU) has started sending the TL2 but its ending sequence
-number is unknown (due to packet loss or re-ordering). Also suppose that the
-next TL1 frame (reference) is received by the SFU. In this particular case we
-have two options: either to not forward the TL1 until the TL2 frame boundaries
-become known (delay the TL1) or "corrupt" the TL2 and immediately start sending
-out the TL1. Corrupt in this context means stop forwarding an incomplete frame,
-rendering it undecodable at the receiving endpoint. In our SFU implementation
-we have implemented the second approach in order to minimize the delay. 
+# Examples of projection
 
-EX3: Going back to EX1, now suppose that the SFU starts receiving the next TL0
-while the SFU is still trying to deduce the current TL0 frame boundaries. TL0
-frames are important so the SFU cannot "corrupt" the current TL0 that is
-forwarding and immediately start sending the next TL0 frame because that would
-make the stream undecodable at the receiving endpoint. In order to simplify we
-ask for a keyframe in this case.
+## Scenario A: Happy path (target TL0)
 
-The above 3 examples can be summarized in the following 3 rules:
+Sender sends: TL0 (1, 2, 3), TL2 (4, 5), TL1 (6, 7), TL2 (8), TL0 (9, 10, 11)
 
-1) TL0 reference frames MUST NOT be skipped nor corrupt, unless the new frame
-is a keyframe. If the SFU starts receiving the next TL0 and if the current TL0
-is incomplete, the SFU SHOULD ask for a keyframe.
+Bridge receives: what the sender sends
 
-2) non-TL0 reference frames MUST NOT be skipped nor corrupt, unless the new 
-frame is the next TL0.
+Bridge sends:  101, 102, 103, (9 -> 104), (10 -> 105), (11 -> 106)
 
-3) non-reference frames MAY be skipped and/or become corrupt (in order to
-minimize delay) at any time.
+When packet 9 arrives, the bridge can determine that sequence numbers 4 - 8
+belong to non-routed packets and can be suppressed
 
-NOTES: there may be something to write here about implementing a protection
-mode that minimizes the afformentioned problems.
+## Scenario B: packet loss (target TL2)
+
+Sender sends: TL0 (1, 2, 3), TL2 (4, 5), TL1 (6, 7), TL2 (8), TL0 (9, 10, 11)
+
+Bridge receives: 1, 2, 3, 4, _(X)_, 6, 7, 8, 9, 10, 11, 5
+
+Bridge sends:  101, 102, 103, 104, 106, 107, 108, 109, 110, 111, 105
+
+When packet 6 arrives, the bridge computes the gap from the previously projected
+frame.  Because it wants to route both the TL2 and TL1 frames, it leaves
+a gap in the outgoing sequence numbers, into which packet 5 can later be slotted.
+
+## Scenario C: packet loss 1 (target TL0)
+
+Sender sends: TL0 (1, 2, 3), TL2 (4, 5), TL1 (6, 7), TL2 (8), TL0 (9, 10, 11)
+
+Bridge receives: 1, 2, 3, 4, _(X)_, 6, 7, 8, 9, 10, 11, 5
+
+Bridge sends:  101, 102, 103, (9 -> 104), (10 -> 105), (11 -> 106)
+
+Similarly to Scenario A, when packet 9 arrives, the bridge can determine that
+sequence numbers 4-8 belong to non-routed packets.  The status of the
+unreceived packet 5 can be determined because packet 4 will not have its
+"end of frame" flag set.
+
+## Scenario C: packet loss 2 (target TL1)
+
+Sender sends: TL0 (1, 2, 3), TL2 (4, 5), TL1 (6, 7), TL2 (8), TL0 (9, 10, 11)
+
+Bridge receives: 1, 2, 3, 4, 5, 6, 7, _(X)_, 9, 10, 11, 8
+
+Bridge sends:  101, 102, 103, (6 -> 104), (7 -> 105), (9 -> 107), (10 -> 108), (11 -> 109)
+
+In this case, when packet 9 arrives, the bridge cannot determine what type of
+frame packet 8 was -- it could have been a TL1.  Therefore it must leave a gap in
+the outgoing sequence numbers.
+
 
 [simulcast]: https://ieeexplore.ieee.org/abstract/document/7992929
 [1]: https://groups.google.com/d/topic/discuss-webrtc/gik2VH4hUjk/discussion

@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2018 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package org.jitsi.videobridge.util;
 
-import org.jitsi.util.*;
+import org.jitsi.utils.logging2.*;
 
 import java.lang.ref.*;
 import java.util.*;
@@ -54,8 +54,7 @@ public class ExpireableImpl
      * The {@link Logger} to be used by the {@link ExpireableImpl} class
      * and its instances to print debug information.
      */
-    private static final Logger logger
-        = Logger.getLogger(ExpireableImpl.class);
+    private final Logger logger;
 
     /**
      * A weak reference to the thread currently running {@link #safeExpire()}
@@ -77,23 +76,18 @@ public class ExpireableImpl
     private final Object syncRoot = new Object();
 
     /**
-     * A name for this {@link ExpireableImpl}, to be used for logging.
-     */
-    private final String name;
-
-    /**
      * The {@link Runnable} which will do the actual expiration.
      */
     private final Runnable expireRunnable;
 
     /**
      * Initializes a new {@link ExpireableImpl} instance.
-     * @param name the name of the {@link ExpireableImpl}, used for logging.
+     * @param parentLogger the parent logger from which this instance can create its own logger
      * @param expireRunnable the {@link Runnable} to execute.
      */
-    public ExpireableImpl(String name, Runnable expireRunnable)
+    public ExpireableImpl(Logger parentLogger, Runnable expireRunnable)
     {
-        this.name = name;
+        this.logger = parentLogger.createChildLogger(ExpireableImpl.class.getName());
         this.expireRunnable = Objects.requireNonNull(expireRunnable);
     }
 
@@ -123,7 +117,7 @@ public class ExpireableImpl
         {
             if (logger.isDebugEnabled())
             {
-                logger.debug("Expiring " + name);
+                logger.debug("Expiring");
             }
 
             long now = System.currentTimeMillis();
@@ -142,7 +136,7 @@ public class ExpireableImpl
                         = this.expireThread == null
                             ? null : this.expireThread.get();
                     logger.warn(
-                        "A thread has been running safeExpire() on " + name
+                        "A thread has been running safeExpire() "
                             + "for " + duration +"ms: "
                             + getStackTraceAsString(expireThread));
                 }
@@ -160,13 +154,13 @@ public class ExpireableImpl
         }
         catch (Throwable t)
         {
-            logger.error("Failed to expire " + name, t);
+            logger.error("Failed to expire ", t);
         }
         finally
         {
             if (logger.isDebugEnabled())
             {
-                logger.debug("Expired " + name);
+                logger.debug("Expired ");
             }
 
             synchronized (syncRoot)

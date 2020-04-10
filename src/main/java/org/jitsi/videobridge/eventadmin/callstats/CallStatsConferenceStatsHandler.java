@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@ import java.util.concurrent.*;
 
 import org.jitsi.eventadmin.*;
 import org.jitsi.stats.media.*;
-import org.jitsi.util.*;
-import org.jitsi.util.concurrent.*;
+import org.jitsi.utils.concurrent.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 
 /**
@@ -38,7 +38,7 @@ class CallStatsConferenceStatsHandler
      * class and its instances to print debug information.
      */
     private static final Logger logger
-        = Logger.getLogger(CallStatsConferenceStatsHandler.class);
+        = new LoggerImpl(CallStatsConferenceStatsHandler.class.getName());
 
     /**
      * The {@link RecurringRunnableExecutor} which periodically invokes
@@ -117,7 +117,7 @@ class CallStatsConferenceStatsHandler
     {
         if (event == null)
         {
-            logger.debug("Could not handle an event because it was null.");
+            logger.debug(() -> "Could not handle an event because it was null.");
             return;
         }
 
@@ -143,9 +143,8 @@ class CallStatsConferenceStatsHandler
     {
         if (conference == null)
         {
-            logger.debug(
-                    "Could not log conference created event because the"
-                        + " conference is null.");
+            logger.debug(() -> "Could not log conference created event because " +
+                "the conference is null.");
             return;
         }
 
@@ -172,9 +171,8 @@ class CallStatsConferenceStatsHandler
     {
         if (conference == null)
         {
-            logger.debug(
-                    "Could not log conference expired event because the"
-                        + " conference is null.");
+            logger.debug(() -> "Could not log conference expired event " +
+                "because the conference is null.");
             return;
         }
 

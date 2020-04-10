@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2018 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,19 @@
  */
 package org.jitsi.videobridge.xmpp;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.health.*;
-import net.java.sip.communicator.util.*;
+import edu.umd.cs.findbugs.annotations.*;
 import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
+import org.jitsi.utils.logging2.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.health.*;
 import org.jitsi.xmpp.mucclient.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
 import org.osgi.framework.*;
 
 import java.util.*;
+
+import static org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig.*;
 
 /**
  * Provides jitsi-videobridge functions through an XMPP client connection.
@@ -39,13 +41,8 @@ public class ClientConnectionImpl
      * The {@link Logger} used by the {@link ClientConnectionImpl}
      * class and its instances for logging output.
      */
-    private static final org.jitsi.util.Logger logger
-        =  org.jitsi.util.Logger.getLogger(ClientConnectionImpl.class);
-
-    /**
-     * The prefix of the property names used to configure this bundle.
-     */
-    private static final String PREFIX = "org.jitsi.videobridge.xmpp.user.";
+    private static final Logger logger
+        =  new LoggerImpl(ClientConnectionImpl.class.getName());
 
     /**
      * The {@link MucClientManager} which manages the XMPP user connections
@@ -65,15 +62,6 @@ public class ClientConnectionImpl
     @Override
     public void start(BundleContext bundleContext)
     {
-        ConfigurationService config
-            = ServiceUtils.getService(
-                bundleContext, ConfigurationService.class);
-        if (config == null)
-        {
-            logger.info("Not using XMPP user login; no config service.");
-            return;
-        }
-
         // Register this instance as an OSGi service.
         Collection<ClientConnectionImpl> userLoginBundles
             = ServiceUtils2.getServices(
@@ -95,10 +83,8 @@ public class ClientConnectionImpl
                 ShutdownIQ.createGracefulShutdownIQ());
             mucClientManager.setIQListener(this);
 
-            Collection<MucClientConfiguration> configurations
-                = MucClientConfiguration.loadFromConfigService(
-                    config, PREFIX, true);
-            configurations.forEach(c -> mucClientManager.addMucClient(c));
+            Config.getClientConfigs()
+                .forEach(cfg -> mucClientManager.addMucClient(cfg));
 
             bundleContext.registerService(
                 ClientConnectionImpl.class, this, null);
@@ -182,6 +168,7 @@ public class ClientConnectionImpl
      * is in the required format and either a new {@link MucClient} was added
      * or a client with the same ID already existed).
      */
+    @SuppressFBWarnings(value = "WMI_WRONG_MAP_ITERATOR")
     public boolean addMucClient(JSONObject jsonObject)
     {
         if (jsonObject == null || !(jsonObject.get("id") instanceof String))
@@ -233,9 +220,10 @@ public class ClientConnectionImpl
      * }
      * }</pre>
      *
-     * @return {@code false} if this instance has not been initialized, or the
-     * JSON is not in the expected format. Otherwise (regardless of whether
-     * a client with the specified ID existed or not), returns {@code true}.
+     * @return {@code true} if the MUC client with the specified ID was removed.
+     * Otherwise (if instance has not been initialized, if the JSON is not in
+     * the expected format, or if no MUC client with the specified ID exists),
+     * returns {@code false}.
      */
     public boolean removeMucClient(JSONObject jsonObject)
     {
@@ -245,7 +233,12 @@ public class ClientConnectionImpl
             return false;
         }
 
-        mucClientManager.removeMucClient((String) jsonObject.get("id"));
-        return true;
+        return mucClientManager.removeMucClient((String) jsonObject.get("id"));
     }
+
+    public MucClientManager getMucClientManager()
+    {
+        return mucClientManager;
+    }
+
 }

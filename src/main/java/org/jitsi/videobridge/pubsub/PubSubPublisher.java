@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,9 @@ package org.jitsi.videobridge.pubsub;
 import java.util.*;
 import java.util.concurrent.*;
 
-import net.java.sip.communicator.util.*;
-
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.utils.logging2.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.packet.id.*;
 import org.jivesoftware.smackx.pubsub.*;
@@ -51,7 +50,7 @@ public class PubSubPublisher
      * instances to print debug information.
      */
     private static final Logger logger
-        = Logger.getLogger(PubSubPublisher.class);
+        = new LoggerImpl(PubSubPublisher.class.getName());
 
     /**
      * The default timeout of the packets in milliseconds.

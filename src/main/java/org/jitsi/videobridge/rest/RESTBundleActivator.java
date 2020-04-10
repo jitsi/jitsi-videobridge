@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,11 @@ package org.jitsi.videobridge.rest;
 import java.util.*;
 
 import org.eclipse.jetty.server.*;
+import org.eclipse.jetty.servlet.*;
+import org.glassfish.jersey.servlet.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.rest.root.*;
 import org.osgi.framework.*;
 
 /**
@@ -38,20 +41,6 @@ import org.osgi.framework.*;
 public class RESTBundleActivator
     extends AbstractJettyBundleActivator
 {
-    /**
-     * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
-     * boolean property which enables graceful shutdown through REST API.
-     * It is disabled by default.
-     */
-    public static final String ENABLE_REST_SHUTDOWN_PNAME
-        = "org.jitsi.videobridge.ENABLE_REST_SHUTDOWN";
-
-    /**
-     * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
-     * boolean property which enables <tt>/colibri/*</tt> REST API endpoints.
-     */
-    public static final String ENABLE_REST_COLIBRI_PNAME
-      = "org.jitsi.videobridge.ENABLE_REST_COLIBRI";
 
     /**
      * The prefix of the property names for the Jetty instance managed by
@@ -69,7 +58,7 @@ public class RESTBundleActivator
     }
 
     /**
-     * {@inheritDoc} 
+     * {@inheritDoc}
      */
     @Override
     protected void doStop(BundleContext bundleContext)
@@ -87,46 +76,18 @@ public class RESTBundleActivator
     }
 
     /**
-     * Initializes a new {@link Handler} instance which is to handle the
-     * &quot;/colibri&quot; target for a specific {@code Server} instance.
-     *
-     * @param bundleContext the {@code BundleContext} in which the new instance
-     * is to be initialized
-     * @param server the {@code Server} for which the new instance is to handle
-     * the &quot;/colibri&quot; target
-     * @return a new {@code Handler} instance which is to handle the
-     * &quot;/colibri&quot; target for {@code server}
-     */
-    private Handler initializeColibriHandler(
-            BundleContext bundleContext,
-            Server server)
-    {
-        return
-            new HandlerImpl(
-                    bundleContext,
-                    getCfgBoolean(ENABLE_REST_SHUTDOWN_PNAME, false),
-                    getCfgBoolean(ENABLE_REST_COLIBRI_PNAME, true));
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
     protected Handler initializeHandlerList(
             BundleContext bundleContext,
             Server server)
-        throws Exception
     {
-        List<Handler> handlers = new ArrayList<>();
+        ServletContextHandler appHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
+        appHandler.setContextPath("/");
+        appHandler.addServlet(new ServletHolder(new ServletContainer(new Application(bundleContext))), "/*");
 
-        // The /colibri target of the REST API.
-        Handler colibriHandler
-            = initializeColibriHandler(bundleContext, server);
-
-        if (colibriHandler != null)
-            handlers.add(colibriHandler);
-
-        return initializeHandlerList(handlers);
+        return appHandler;
     }
 
     /**

@@ -1,11 +1,26 @@
+/*
+ * Jicofo, the Jitsi Conference Focus.
+ *
+ * Copyright @ 2018 - present 8x8, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.util.*;
 import org.jitsi.meet.*;
+import org.jitsi.osgi.*;
 import org.jitsi.videobridge.osgi.*;
 import org.osgi.framework.*;
-
-import java.lang.reflect.*;
 
 /**
  *
@@ -24,8 +39,8 @@ public class OSGiHandler
         System.setProperty(
             "net.java.sip.communicator.impl.configuration.USE_PROPFILE_CONFIG",
             "true");
-        OSGi.setBundleConfig(new JvbBundleConfig());
-        OSGi.setClassLoader(getPlatformClassLoader());
+        OSGi.setBundleConfig(new BundleConfig());
+        OSGi.setClassLoader(ClassLoader.getSystemClassLoader());
 
         activator =
             new BundleActivator()
@@ -79,31 +94,8 @@ public class OSGiHandler
         }
     }
 
-    public BundleContext getBundleContext()
-    {
-        return bc;
-    }
-
-    private ClassLoader getPlatformClassLoader() {
-        ClassLoader cl;
-        //JDK 9
-        try
-        {
-            Method getPlatformClassLoader =
-                    ClassLoader.class.getMethod("getPlatformClassLoader");
-            cl = (ClassLoader) getPlatformClassLoader.invoke(null);
-        }
-        catch (NoSuchMethodException | IllegalAccessException |
-                InvocationTargetException t)
-        {
-        // pre-JDK9
-            cl = ClassLoader.getSystemClassLoader();
-        }
-        return cl;
-    }
-
     public <T> T getService(Class<T> serviceClass)
     {
-        return ServiceUtils.getService(bc, serviceClass);
+        return ServiceUtils2.getService(bc, serviceClass);
     }
 }

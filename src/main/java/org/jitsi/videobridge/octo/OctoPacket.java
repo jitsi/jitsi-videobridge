@@ -15,8 +15,9 @@
  */
 package org.jitsi.videobridge.octo;
 
-import org.jitsi.service.neomedia.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.*;
+
+import static org.jitsi.utils.ByteArrayUtils.*;
 
 /**
  * A utility class which handles the on-the-wire Octo format. Octo encapsulates
@@ -39,27 +40,27 @@ import org.jitsi.util.*;
  *
  * @author Boris Grozev
  */
-public class OctoPacket
+class OctoPacket
 {
     /**
      * The fixed length of the Octo header.
      */
-    public static final int OCTO_HEADER_LENGTH = 8;
+    static final int OCTO_HEADER_LENGTH = 8;
 
     /**
      * The integer which identifies the "audio" media type in Octo.
      */
-    public static final int OCTO_MEDIA_TYPE_AUDIO = 0;
+    private static final int OCTO_MEDIA_TYPE_AUDIO = 0;
 
     /**
      * The integer which identifies the "video" media type in Octo.
      */
-    public static final int OCTO_MEDIA_TYPE_VIDEO = 1;
+    private static final int OCTO_MEDIA_TYPE_VIDEO = 1;
 
     /**
      * The integer which identifies the "data" media type in Octo.
      */
-    public static final int OCTO_MEDIA_TYPE_DATA = 2;
+    private static final int OCTO_MEDIA_TYPE_DATA = 2;
 
     /**
      * @return the integer used to identify the particular {@link MediaType}
@@ -90,10 +91,11 @@ public class OctoPacket
      * @param conferenceId the Octo ID of the conference.
      * @param endpointId the Octo ID of the endpoint.
      */
-    public static void writeHeaders(byte[] buf, int off,
-                                    boolean r, MediaType mediaType, int s,
-                                    String conferenceId,
-                                    String endpointId)
+    static void writeHeaders(
+            byte[] buf, int off,
+            boolean r, MediaType mediaType, int s,
+            String conferenceId,
+            String endpointId)
     {
         buf[off] = 0;
         if (r)
@@ -114,11 +116,11 @@ public class OctoPacket
      * @param len the length of the buffer.
      * @return the Octo conference ID read from the buffer.
      */
-    public static String readConferenceId(byte[] buf, int off, int len)
+    static String readConferenceId(byte[] buf, int off, int len)
     {
         assertMinLen(buf, off, len);
 
-        int cid = RTPUtils.readUint24AsInt(buf, off + 1);
+        int cid = readUint24(buf, off + 1);
         return Integer.toHexString(cid);
     }
 
@@ -129,7 +131,7 @@ public class OctoPacket
      * @param len the length of the buffer.
      * @return the {@link MediaType} from the given Octo header.
      */
-    public static MediaType readMediaType(byte[] buf, int off, int len)
+    static MediaType readMediaType(byte[] buf, int off, int len)
     {
         assertMinLen(buf, off, len);
 
@@ -143,7 +145,7 @@ public class OctoPacket
         case OCTO_MEDIA_TYPE_DATA:
             return MediaType.DATA;
         default:
-            return null;
+            throw new IllegalArgumentException("Invalid media type value: " + mediaType);
         }
     }
 
@@ -154,7 +156,7 @@ public class OctoPacket
      * @param len the length of the buffer.
      * @return the {@code r} flag from the given Octo header.
      */
-    public static boolean readRflag(byte[] buf, int off, int len)
+    private static boolean readRflag(byte[] buf, int off, int len)
     {
         assertMinLen(buf, off, len);
 
@@ -168,12 +170,12 @@ public class OctoPacket
      * @param len the length of the buffer.
      * @return the endpoint ID from the given Octo header.
      */
-    public static String readEndpointId(byte[] buf, int off, int len)
+    static String readEndpointId(byte[] buf, int off, int len)
     {
         assertMinLen(buf, off, len);
 
-        long eid = RTPUtils.readUint32AsLong(buf, off + 4);
-        return Long.toHexString(eid);
+        long eid = readUint32(buf, off + 4);
+        return String.format("%08x", eid);
     }
 
     /**
@@ -183,13 +185,13 @@ public class OctoPacket
      * @param off the offset in {@code buf} at which the Octo header begins.
      * @param len the length of the buffer.
      */
-    public static void writeConferenceId(
+    private static void writeConferenceId(
             String conferenceId, byte[] buf, int off, int len)
     {
         assertMinLen(buf, off, len);
 
         int cid = Integer.parseInt(conferenceId, 16);
-        RTPUtils.writeUint24(buf, off + 1, cid);
+        writeUint24(buf, off + 1, cid);
     }
 
     /**
@@ -199,13 +201,13 @@ public class OctoPacket
      * @param off the offset in {@code buf} at which the Octo header begins.
      * @param len the length of the buffer.
      */
-    public static void writeEndpointId(
-        String endpointId, byte[] buf, int off, int len)
+    private static void writeEndpointId(
+            String endpointId, byte[] buf, int off, int len)
     {
         assertMinLen(buf, off, len);
 
         long eid = Long.parseLong(endpointId, 16);
-        RTPUtils.writeInt(buf, off + 4, (int) eid);
+        writeInt(buf, off + 4, (int) eid);
     }
 
     /**

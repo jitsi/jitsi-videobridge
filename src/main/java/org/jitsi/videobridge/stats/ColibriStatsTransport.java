@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@ package org.jitsi.videobridge.stats;
 
 import java.util.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.util.*;
-
+import org.jitsi.osgi.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.utils.logging2.*;
+import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 import org.jxmpp.jid.*;
 import org.osgi.framework.*;
@@ -39,7 +39,7 @@ public class ColibriStatsTransport
      * its instances to print debug information.
      */
     private static final Logger logger
-        = Logger.getLogger(ColibriStatsTransport.class);
+        = new LoggerImpl(ColibriStatsTransport.class.getName());
 
     /**
      * Builds the IQ packet that will be sent.
@@ -63,43 +63,39 @@ public class ColibriStatsTransport
 
         if (bundleContext != null)
         {
-            Collection<Videobridge> videobridges
-                = Videobridge.getVideobridges(bundleContext);
+            Videobridge videobridge
+                    = ServiceUtils2.getService(bundleContext, Videobridge.class);
+            Collection<ComponentImpl> components
+                = videobridge.getComponents();
             IQ statsIQ = null;
 
-            for (Videobridge videobridge : videobridges)
+            if (!components.isEmpty())
             {
-                Collection<ComponentImpl> components
-                    = videobridge.getComponents();
+                Conference[] conferences = videobridge.getConferences();
 
-                if (!components.isEmpty())
+                if (conferences.length != 0)
                 {
-                    Conference[] conferences = videobridge.getConferences();
+                    if (statsIQ == null)
+                        statsIQ = buildStatsIQ(stats);
 
-                    if (conferences.length != 0)
+                    for (Conference conference : conferences)
                     {
-                        if (statsIQ == null)
-                            statsIQ = buildStatsIQ(stats);
+                        Jid focus = conference.getLastKnowFocus();
 
-                        for (Conference conference : conferences)
+                        if (focus != null)
                         {
-                            Jid focus = conference.getLastKnowFocus();
-
-                            if (focus != null)
+                            statsIQ.setTo(focus);
+                            for (ComponentImpl component : components)
                             {
-                                statsIQ.setTo(focus);
-                                for (ComponentImpl component : components)
+                                try
                                 {
-                                    try
-                                    {
-                                        component.send(statsIQ);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        logger.error(
-                                                "Failed to publish"
-                                                    + " statistics.");
-                                    }
+                                    component.send(statsIQ);
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger.error(
+                                            "Failed to publish"
+                                                + " statistics.");
                                 }
                             }
                         }

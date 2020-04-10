@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,9 @@
  */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.health.*;
-import net.java.sip.communicator.util.*;
-
+import org.jitsi.utils.logging2.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.health.*;
 import org.jivesoftware.smack.packet.*;
 import org.junit.*;
 import org.junit.Test;
@@ -46,6 +45,9 @@ public class FocusControlTest
 
     private static OSGiHandler osgiHandler = new OSGiHandler();
 
+    private static Logger logger
+            = new LoggerImpl(FocusControlTest.class.getName());
+
     /**
      * Initializes OSGi and the videobridge.
      */
@@ -68,8 +70,9 @@ public class FocusControlTest
         osgiHandler.stop();
     }
 
-    private static void expectResult(ColibriConferenceIQ confIq,
-                                     int processingOptions)
+    private static void expectResult(
+            ColibriConferenceIQ confIq,
+            int processingOptions)
         throws Exception
     {
         IQ respIq = bridge.handleColibriConferenceIQ(confIq, processingOptions);
@@ -84,7 +87,7 @@ public class FocusControlTest
     {
         IQ respIq = bridge.handleColibriConferenceIQ(confIq, processingOptions);
 
-        Logger.getLogger(FocusControlTest.class).info(respIq.toXML());
+        logger.info(respIq.toXML());
 
         assertNotNull(respIq);
         assertEquals(IQ.Type.error, respIq.getType());
@@ -98,7 +101,7 @@ public class FocusControlTest
     {
         IQ respIq = bridge.handleHealthCheckIQ(healthIq);
 
-        Logger.getLogger(FocusControlTest.class).info(respIq.toXML());
+        logger.info(respIq.toXML());
 
         assertNotNull(respIq);
         assertEquals(IQ.Type.error, respIq.getType());
@@ -133,6 +136,9 @@ public class FocusControlTest
         respIq = bridge.handleColibriConferenceIQ(confIq);
         assertNotNull(respIq);
         XMPPError error = respIq.getError();
+        //TODO(brian): this test fails, because we no longer hit the access control in Videobridge#getConference which
+        // would set the error (we instead get the conference from the ColibriShim.ConferenceShim which stores a reference
+        // directly.  fix that one way or another.
         assertNotNull(error);
         // Should be 'not-allowed', but not easy to distinguish between
         // "conference not found"and "invalid focus" errors in the Videobridge

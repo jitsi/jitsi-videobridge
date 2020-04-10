@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,19 +57,21 @@ public class ProxyServletImpl
      * {@inheritDoc}
      *
      * If Jetty's transparent {@code ProxyServlet} introduces a / at the end of
-     * the request path, removes it (because such behavior is incorrect). 
+     * the request path, removes it (because such behavior is incorrect).
      */
     @Override
-    protected URI rewriteURI(HttpServletRequest request)
+    protected String rewriteTarget(HttpServletRequest request)
     {
-        URI rewrittenURI = super.rewriteURI(request);
+        String rewrittenURIStr = super.rewriteTarget(request);
 
-        if (proxyTo != null)
+        if (proxyTo != null && rewrittenURIStr != null)
         {
             String requestPath = request.getRequestURI();
 
             if (requestPath != null && !requestPath.endsWith("/"))
             {
+                URI rewrittenURI
+                    = URI.create(rewrittenURIStr).normalize();
                 String rewrittenPath = rewrittenURI.getPath();
                 int len;
 
@@ -93,8 +95,9 @@ public class ProxyServletImpl
                     {
                     }
                 }
+                rewrittenURIStr = rewrittenURI.toString();
             }
         }
-        return rewrittenURI;
+        return rewrittenURIStr;
     }
 }

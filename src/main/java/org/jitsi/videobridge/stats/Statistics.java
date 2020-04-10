@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,11 @@
 package org.jitsi.videobridge.stats;
 
 import java.util.*;
+import java.util.concurrent.atomic.*;
 import java.util.concurrent.locks.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+import org.jitsi.utils.logging2.*;
+import org.jitsi.xmpp.extensions.colibri.*;
 
 /**
  * Abstract class that defines common interface for a collection of statistics.
@@ -28,6 +30,12 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
  */
 public abstract class Statistics
 {
+    /**
+     * The {@link Logger} used by the {@link Endpoint} class to print debug
+     * information.
+     */
+    private static final Logger logger = new LoggerImpl(Statistics.class.getName());
+
     /**
      * Formats statistics in <tt>ColibriStatsExtension</tt> object
      * @param statistics the statistics instance
@@ -300,6 +308,11 @@ public abstract class Statistics
      */
     protected void unlockedSetStat(String stat, Object value)
     {
+        if (value instanceof AtomicLong || value instanceof AtomicInteger)
+        {
+            logger.warn(
+                "Using an Atomic number as a stat, probably not what we want.");
+        }
         if (value == null)
             stats.remove(stat);
         else

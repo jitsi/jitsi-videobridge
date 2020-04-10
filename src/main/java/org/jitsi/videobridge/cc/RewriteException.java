@@ -21,6 +21,15 @@ package org.jitsi.videobridge.cc;
  * @author George Politis
  */
 public class RewriteException
-    extends Throwable
+    extends Exception
 {
+    public RewriteException()
+    {
+        super();
+    }
+
+    public RewriteException(String message)
+    {
+        super(message);
+    }
 }

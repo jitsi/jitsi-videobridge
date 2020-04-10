@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,17 @@
  */
 package org.jitsi.videobridge.eventadmin.callstats;
 
-import net.java.sip.communicator.util.*;
 import org.jitsi.eventadmin.*;
+import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.stats.media.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.*;
 import org.jitsi.videobridge.stats.*;
+import org.jitsi.videobridge.stats.config.StatsManagerBundleActivatorConfig;
+import org.jitsi.videobridge.stats.config.StatsTransportConfig;
 import org.osgi.framework.*;
+
+import java.time.Duration;
 
 /**
  * OSGi {@code BundleActivator} implementation for the CallStats client
@@ -120,24 +124,20 @@ public class Activator
         switch (ev.getType())
         {
         case ServiceEvent.REGISTERED:
-            ConfigurationService cfg = ServiceUtils.getService(
+            ConfigurationService cfg = ServiceUtils2.getService(
                 bundleContext, ConfigurationService.class);
             String bridgeId = ConfigUtils.getString(
                 cfg,
                 CallStatsIOTransport.PNAME_CALLSTATS_IO_BRIDGE_ID,
                 CallStatsIOTransport.DEFAULT_BRIDGE_ID);
-            int interval = ConfigUtils.getInt(
-                cfg,
-                StatsManagerBundleActivator.STATISTICS_INTERVAL_PNAME,
-                StatsManagerBundleActivator.DEFAULT_STAT_INTERVAL);
 
             // Update with per stats transport interval if available.
-            interval = ConfigUtils.getInt(
-                cfg,
-                StatsManagerBundleActivator.STATISTICS_INTERVAL_PNAME
-                    + "."
-                    + StatsManagerBundleActivator.STAT_TRANSPORT_CALLSTATS_IO,
-                interval);
+            Duration intervalDuration = StatsManagerBundleActivatorConfig.Config.transportConfigs().stream()
+                    .filter(tc -> tc instanceof StatsTransportConfig.CallStatsIoStatsTransportConfig)
+                    .map(StatsTransportConfig::getInterval)
+                    .findFirst()
+                    .orElse(StatsManagerBundleActivatorConfig.Config.statsInterval());
+            int interval = (int)intervalDuration.toMillis();
             String conferenceIDPrefix = ConfigUtils.getString(
                 cfg,
                 CallStatsIOTransport.PNAME_CALLSTATS_IO_CONF_PREFIX,
@@ -164,6 +164,8 @@ public class Activator
                 conferenceStatsHandler.stop();
                 conferenceStatsHandler = null;
             }
+            break;
+        default:
             break;
         }
     }

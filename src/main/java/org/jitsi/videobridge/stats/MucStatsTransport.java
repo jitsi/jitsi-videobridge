@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2018 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
  */
 package org.jitsi.videobridge.stats;
 
-import net.java.sip.communicator.util.*;
-
+import org.jitsi.osgi.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.xmpp.*;
 
 /**
@@ -33,7 +33,7 @@ public class MucStatsTransport
      * its instances to print debug information.
      */
     private static final Logger logger
-        = Logger.getLogger(MucStatsTransport.class);
+        = new LoggerImpl(MucStatsTransport.class.getName());
 
     /**
      * Gets the {@link ClientConnectionImpl} to be used to publish
@@ -42,7 +42,7 @@ public class MucStatsTransport
      */
     private ClientConnectionImpl getUserConnectionBundleActivator()
     {
-        return ServiceUtils.getService(
+        return ServiceUtils2.getService(
             getBundleContext(), ClientConnectionImpl.class);
     }
 
@@ -56,10 +56,7 @@ public class MucStatsTransport
             = getUserConnectionBundleActivator();
         if (clientConnectionImpl != null)
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Publishing statistics through MUC: " + stats);
-            }
+            logger.debug(() -> "Publishing statistics through MUC: " + stats);
 
             clientConnectionImpl
                 .setPresenceExtension(Statistics.toXmppExtensionElement(stats));

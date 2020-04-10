@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,17 @@
  */
 package org.jitsi.videobridge.health;
 
-import java.util.*;
-
 import org.ice4j.ice.harvest.*;
-import org.jitsi.service.configuration.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.util.Logger;
-import org.jitsi.util.concurrent.*;
+import org.jitsi.utils.concurrent.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.ice.*;
 import org.jitsi.videobridge.xmpp.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import java.io.*;
+import java.util.*;
+
+import static org.jitsi.videobridge.health.config.HealthConfig.*;
 
 /**
  * Checks the health of {@link Videobridge}.
@@ -40,16 +39,7 @@ public class Health
      * The {@link Logger} used by the {@link Health} class and its
      * instances to print debug information.
      */
-    private static final Logger logger = Logger.getLogger(Health.class);
-
-    /**
-     * The {@link MediaType}s of {@link RtpChannel}s supported by
-     * {@link Videobridge}. For example, {@link MediaType#DATA} is not supported
-     * by {@link
-     * Content#createRtpChannel(String, String, Boolean, RTPLevelRelayType)}.
-     */
-    private static final MediaType[] MEDIA_TYPES
-        = { MediaType.AUDIO, MediaType.VIDEO };
+    private static final Logger logger = new LoggerImpl(Health.class.getName());
 
     /**
      * The pseudo-random generator used to generate random input for
@@ -62,43 +52,6 @@ public class Health
      */
     private static final RecurringRunnableExecutor executor
         = new RecurringRunnableExecutor(Health.class.getName());
-
-    /**
-     * The default interval between health checks.
-     */
-    private static final int PERIOD_DEFAULT = 10000;
-
-    /**
-     * The name of the property which configures the interval between health
-     * checks.
-     */
-    public static final String PERIOD_PNAME
-        = "org.jitsi.videobridge.health.INTERVAL";
-
-    /**
-     * The default timeout for health checks.
-     */
-    private static final int TIMEOUT_DEFAULT = 30000;
-
-    /**
-     * The name of the property which configures the timeout for health checks.
-     * The {@link #check()} API will return failure unless a there was a health
-     * check performed in the last that many milliseconds.
-     */
-    public static final String TIMEOUT_PNAME
-        = "org.jitsi.videobridge.health.TIMEOUT";
-
-    /**
-     * The name of the property which makes any failures sticky (i.e. once the
-     * bridge becomes unhealthy it will never go back to a healthy state).
-     */
-    public static final String STICKY_FAILURES_PNAME
-        = "org.jitsi.videobridge.health.STICKY_FAILURES";
-
-    /**
-     * The default value for the {@code STICKY_FAILURES} property.
-     */
-    private static final boolean STICKY_FAILURES_DEFAULT = false;
 
     /**
      * Failures in the first 5 minutes are never sticky.
@@ -114,90 +67,58 @@ public class Health
      * {@code Videobridge} to check the health (status) of
      * @throws Exception if an error occurs while checking the health (status)
      * of the {@code videobridge} associated with {@code conference} or the
-     * check determines that the {@code Videobridge} is not healthy 
+     * check determines that the {@code Videobridge} is not healthy
      */
     private static void check(Conference conference)
-        throws Exception
     {
-        // Initialize the Endpoints, Contents, RtpChannels, SctpConnections.
+        final int numEndpoints = 2;
+        //ArrayList<Endpoint> endpoints = new ArrayList<>(numEndpoints);
 
-        // Endpoint
-        Endpoint[] endpoints = new Endpoint[2];
-
-        for (int i = 0; i < endpoints.length; ++i)
+        for (int i = 0; i < numEndpoints; ++i)
         {
-            Endpoint endpoint
-                = (Endpoint) conference.getOrCreateEndpoint(generateEndpointID());
-
-            // Fail as quickly as possible.
-            if (endpoint == null)
+            final Endpoint endpoint;
+            try
             {
-                throw new NullPointerException("Failed to create an endpoint.");
+                final boolean iceControlling = i % 2 == 0;
+                endpoint = conference.createLocalEndpoint(
+                    generateEndpointID(), iceControlling);
+            }
+            catch (IOException ioe)
+            {
+                throw new RuntimeException(ioe);
             }
 
-            endpoints[i] = endpoint;
+            //endpoints.add(endpoint);
 
-            String channelBundleId = null;
-            // Since Endpoints will connect between themselves, they should be
-            // opposite in initiator terms.
-            Boolean initiator = i % 2 == 0;
-
-            for (MediaType mediaType : MEDIA_TYPES)
-            {
-                // Content
-                Content content
-                    = conference.getOrCreateContent(mediaType.toString());
-                // RtpChannel
-                RtpChannel rtpChannel
-                    = content.createRtpChannel(
-                            channelBundleId,
-                            /* transportNamespace */ null,
-                            initiator,
-                            null);
-
-                // FIXME: Without the call to setEndpoint() the channel is not
-                // added to the endpoint and as a result the channels of the two
-                // endpoints will not be connected as part of the health check.
-                // We are now intentionally not doing the call because:
-                // 1. The code has been running like this for a long time
-                //     without any known failures to detect issues.
-                // 2. Connecting a pair of audio channels and a pair of video
-                //     channels with the current code will result in 4
-                //     additional ICE Agents being instantiated, which is a
-                //     significant use of resources.
-                // 3. We have a longer-term solution of refactoring the code to
-                //     use channel bundles which will also solve this problem.
-
-                // rtpChannel.setEndpoint(endpoint);
-
-                // Fail as quickly as possible.
-                if (rtpChannel == null)
-                {
-                    throw new NullPointerException(
-                        "Failed to create a channel.");
-                }
-            }
-
-            // SctpConnection
-            Content dataContent = conference.getOrCreateContent("data");
-            SctpConnection sctpConnection
-                = dataContent.createSctpConnection(
-                        endpoint,
-                        /* sctpPort */ RANDOM.nextInt(),
-                        channelBundleId,
-                        initiator);
-
-            // Fail as quickly as possible.
-            if (sctpConnection == null)
-            {
-                throw new NullPointerException(
-                    "Failed to create SCTP connection.");
-            }
+            endpoint.createSctpConnection();
         }
 
-        // Connect the Endpoints (i.e. RtpChannels and SctpConnections) between
-        // themselves.
-        interconnect(endpoints);
+
+        // NOTE(brian): The below connection won't work with single port mode.  I think this is because both agent's
+        // bind to the single port and we can't demux the ice packets correctly.  Forcing non-single port mode (via
+        // hardcoding rtcpmux to false elsewhere) works, but causes other problems since we don't properly support
+        // non-rtcpmux.
+
+//        Endpoint ep0 = endpoints.get(0);
+//        TransportManager ep0TransportManager =
+//                conferenceShim.conference.getTransportManager(ep0.getID(), false, false);
+//
+//        Endpoint ep1 = endpoints.get(1);
+//        TransportManager ep1TransportManager =
+//                conferenceShim.conference.getTransportManager(ep1.getID(), false, false);
+//
+//        // Connect endpoint 0 to endpoint 1
+//        ColibriConferenceIQ.ChannelBundle channelBundle0Iq = new ColibriConferenceIQ.ChannelBundle(ep0.getID());
+//        ColibriShim.ChannelBundleShim channelBundle0Shim = conferenceShim.getChannelBundle(ep0.getID());
+//        channelBundle0Shim.describe(channelBundle0Iq);
+//        IceUdpTransportPacketExtension tpe = channelBundle0Iq.getTransport();
+//        ep1TransportManager.start(channelBundle0Iq.getTransport());
+//
+//        // Connect endpoint 1 to endpoint 0
+//        ColibriConferenceIQ.ChannelBundle channelBundle1Iq = new ColibriConferenceIQ.ChannelBundle(ep1.getID());
+//        ColibriShim.ChannelBundleShim channelBundle1Shim = conferenceShim.getChannelBundle(ep1.getID());
+//        channelBundle1Shim.describe(channelBundle1Iq);
+//        ep0TransportManager.start(channelBundle1Iq.getTransport());
     }
 
     /**
@@ -207,7 +128,7 @@ public class Health
      * of
      * @throws Exception if an error occurs while checking the health (status)
      * of {@code videobridge} or the check determines that {@code videobridge}
-     * is not healthy 
+     * is not healthy
      */
     private static void doCheck(Videobridge videobridge)
         throws Exception
@@ -217,7 +138,7 @@ public class Health
             throw new Exception("Address discovery through STUN failed");
         }
 
-        if (!IceUdpTransportManager.healthy)
+        if (!Harvesters.isHealthy())
         {
             throw new Exception("Failed to bind single-port");
         }
@@ -225,12 +146,8 @@ public class Health
         checkXmppConnection(videobridge);
 
         // Conference
-        Conference conference
-            = videobridge.createConference(
-                    /* focus */ null,
-                    /* name */ null,
-                    /* enableLogging */ false,
-                    /* gid */ null);
+        Conference conference =
+                videobridge.createConference(null, null, false, null);
 
         // Fail as quickly as possible.
         if (conference == null)
@@ -245,7 +162,7 @@ public class Health
             }
             finally
             {
-                conference.expire();
+                videobridge.expireConference(conference);
             }
         }
     }
@@ -280,112 +197,6 @@ public class Health
     }
 
     /**
-     * Connects a pair of {@link Endpoint}s between themselves.
-     *
-     * @param a the {@code Endpoint} to connect to {@code b}
-     * @param b the {@code Endpoint} to connect to {@code a}
-     * @throws Exception
-     */
-    private static void connect(Endpoint a, Endpoint b)
-        throws Exception
-    {
-        // RtpChannel
-        for (MediaType mediaType : MEDIA_TYPES)
-        {
-            List<RtpChannel> aRtpChannels = a.getChannels(mediaType);
-            int count = aRtpChannels.size();
-            List<RtpChannel> bRtpChannels = b.getChannels(mediaType);
-
-            // Fail as quickly as possible
-            if (count != bRtpChannels.size())
-            {
-                throw new IllegalStateException(
-                        "Endpoint#getChannels(MediaType)");
-            }
-            else
-            {
-                // Note that the channel count is 0 because we don't add the
-                // channels we create to the endpoint (see the FIXME in
-                // check(Conference conference))
-                for (int i = 0; i < count; ++i)
-                {
-                    connect(aRtpChannels.get(i), bRtpChannels.get(i));
-                }
-            }
-        }
-
-        // SctpConnection
-        SctpConnection aSctpConnection = a.getSctpConnection();
-
-        // Fail as quickly as possible.
-        if (aSctpConnection == null)
-        {
-            throw new NullPointerException("aSctpConnection is null");
-        }
-
-        SctpConnection bSctpConnection = b.getSctpConnection();
-
-        // Fail as quickly as possible.
-        if (bSctpConnection == null)
-        {
-            throw new NullPointerException("bSctpConnection is null");
-        }
-
-        connect(aSctpConnection, bSctpConnection);
-    }
-
-    /**
-     * Connects a pair of {@link Channel}s between themselves.
-     *
-     * @param a the {@code Channel} to connect to {@code b}
-     * @param b the {@code Channel} to connect to {@code a}
-     * @throws Exception
-     */
-    private static void connect(Channel a, Channel b)
-        throws Exception
-    {
-        IceUdpTransportPacketExtension aTransport = describeTransportManager(a);
-
-        // Fail as quickly as possible.
-        if (aTransport == null)
-        {
-            throw new NullPointerException("Failed to describe transport.");
-        }
-
-        IceUdpTransportPacketExtension bTransport = describeTransportManager(b);
-
-        // Fail as quickly as possible.
-        if (bTransport == null)
-        {
-            throw new NullPointerException("Failed to describe transport.");
-        }
-
-        b.setTransport(aTransport);
-        a.setTransport(bTransport);
-    }
-
-    /**
-     * Builds a {@link IceUdpTransportPacketExtension} representation of the
-     * {@link TransportManager} of a specific {@link Channel}.
-     *
-     * @param channel the {@code Channel} whose {@code TransportManager} is to
-     * be represented as a {@code IceUdpTransportPacketExtension}
-     * @return a {@code IceUdpTransportPacketExtension} representation of the
-     * {@code TransportManager} of {@code channel}
-     */
-    private static IceUdpTransportPacketExtension describeTransportManager(
-            Channel channel)
-    {
-        ColibriConferenceIQ.ChannelCommon iq
-            = (channel instanceof SctpConnection)
-                ? new ColibriConferenceIQ.SctpConnection()
-                : new ColibriConferenceIQ.Channel();
-
-        channel.getTransportManager().describe(iq);
-        return iq.getTransport();
-    }
-
-    /**
      * Generates a pseudo-random {@code Endpoint} ID which is not guaranteed to
      * be unique.
      *
@@ -394,24 +205,7 @@ public class Health
      */
     private static String generateEndpointID()
     {
-        return Long.toHexString(System.currentTimeMillis() + RANDOM.nextLong());
-    }
-
-    /**
-     * Connects a specific list of {@link Endpoint}s between themselves (in
-     * consecutive pairs).
-     *
-     * @param endpoints the list of {@code Endpoint}s to connect between
-     * themselves (in consecutive pairs)
-     * @throws Exception
-     */
-    private static void interconnect(Endpoint[] endpoints)
-        throws Exception
-    {
-        for (int i = 0; i < endpoints.length;)
-        {
-            connect(endpoints[i++], endpoints[i++]);
-        }
+        return String.format("%08x", RANDOM.nextInt());
     }
 
     /**
@@ -428,19 +222,6 @@ public class Health
     private long lastResultMs = -1;
 
     /**
-     * The timeout in milliseconds after which this videobridge will be
-     * considered unhealthy; i.e. if no health check has been completed in the
-     * last {@code timeout} milliseconds the bridge is unhealthy.
-     */
-    private final int timeout;
-
-    /**
-     * Whether failures are sticky, i.e. once the bridge becomes unhealthy it
-     * will never go back to a healthy state.
-     */
-    private final boolean stickyFailures;
-
-    /**
      * The time when this instance was started.
      */
     private final long startMs;
@@ -450,23 +231,13 @@ public class Health
      */
     private boolean hasFailed = false;
 
-    public Health(Videobridge videobridge, ConfigurationService cfg)
+    /**
+     * Iniatializes a new {@link Health} instance for a specific
+     * {@link Videobridge}.
+     */
+    public Health(Videobridge videobridge)
     {
-        super(videobridge, PERIOD_DEFAULT, true);
-
-        int period =
-            cfg == null ? PERIOD_DEFAULT
-                : cfg.getInt(PERIOD_PNAME, PERIOD_DEFAULT);
-        setPeriod(period);
-
-        timeout =
-            cfg == null ? TIMEOUT_DEFAULT
-                : cfg.getInt(TIMEOUT_PNAME, TIMEOUT_DEFAULT);
-
-        stickyFailures
-            = cfg == null ? STICKY_FAILURES_DEFAULT
-                : cfg.getBoolean(
-                    STICKY_FAILURES_PNAME, STICKY_FAILURES_DEFAULT);
+        super(videobridge, Config.getInterval(), true);
 
         startMs = System.currentTimeMillis();
 
@@ -507,7 +278,7 @@ public class Health
         long duration = System.currentTimeMillis() - start;
         lastResultMs = start + duration;
 
-        if (stickyFailures && hasFailed && exception == null)
+        if (Config.stickyFailures() && hasFailed && exception == null)
         {
             // We didn't fail this last test, but we've failed before and
             // sticky failures are enabled.
@@ -522,7 +293,7 @@ public class Health
         {
             logger.info(
                 "Performed a successful health check in " + duration
-                    + "ms. Sticky failure: " + (stickyFailures && hasFailed));
+                    + "ms. Sticky failure: " + (Config.stickyFailures() && hasFailed));
         }
         else
         {
@@ -547,7 +318,7 @@ public class Health
         long lastResultMs = this.lastResultMs;
         long timeSinceLastResult = System.currentTimeMillis() - lastResultMs;
 
-        if (timeSinceLastResult > timeout)
+        if (timeSinceLastResult > Config.getTimeout())
         {
             throw new Exception(
                 "No health checks performed recently, the last result was "

@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,13 @@
  */
 package org.jitsi.videobridge.stats;
 
-import net.java.sip.communicator.util.*;
+import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.stats.media.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.*;
 import org.osgi.framework.*;
+
+import static org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.*;
 
 /**
  * Implements {@code StatsTransport} for
@@ -39,7 +41,7 @@ public class CallStatsIOTransport
     /**
      * Shared Secret for authentication on Callstats.io
      */
-    private static final String PNAME_CALLSTATS_IO_APP_SECRET 
+    private static final String PNAME_CALLSTATS_IO_APP_SECRET
         = "io.callstats.sdk.CallStats.appSecret";
 
     /**
@@ -143,7 +145,7 @@ public class CallStatsIOTransport
     private void init(BundleContext bundleContext)
     {
         ConfigurationService cfg
-            = ServiceUtils.getService(
+            = ServiceUtils2.getService(
                     bundleContext,
                     ConfigurationService.class);
 
@@ -178,7 +180,7 @@ public class CallStatsIOTransport
         bundleContext.addServiceListener(serviceListener);
 
         StatsServiceFactory.getInstance().createStatsService(
-            bundleContext, appId, appSecret, keyId, keyPath, bridgeId);
+            bundleContext, appId, appSecret, keyId, keyPath, bridgeId, false);
     }
 
     /**
@@ -197,40 +199,28 @@ public class CallStatsIOTransport
             Statistics s,
             long measurementInterval)
     {
-        bsib.audioFabricCount(
-                s.getStatAsInt(VideobridgeStatistics.AUDIOCHANNELS));
-        bsib.avgIntervalJitter(
-            s.getStatAsInt(VideobridgeStatistics.JITTER_AGGREGATE));
-        bsib.avgIntervalRtt(
-            s.getStatAsInt(VideobridgeStatistics.RTT_AGGREGATE));
-        bsib.conferenceCount(s.getStatAsInt(VideobridgeStatistics.CONFERENCES));
-        bsib.cpuUsage(
-                (float) s.getStatAsDouble(VideobridgeStatistics.CPU_USAGE));
+        bsib.audioFabricCount(s.getStatAsInt(PARTICIPANTS));
+        bsib.avgIntervalJitter(s.getStatAsInt(JITTER_AGGREGATE));
+        bsib.avgIntervalRtt(s.getStatAsInt(RTT_AGGREGATE));
+        bsib.conferenceCount(s.getStatAsInt(CONFERENCES));
+        bsib.cpuUsage((float) s.getStatAsDouble(CPU_USAGE));
         bsib.intervalDownloadBitRate(
-                (int)
-                    Math.round(
-                            s.getStatAsDouble(
-                                    VideobridgeStatistics.BITRATE_DOWNLOAD)));
+            (int) Math.round(s.getStatAsDouble(BITRATE_DOWNLOAD)));
         // TODO intervalReceivedBytes
         // uses download loss rate, as the upload is not properly measured
         // currently and vary a lot, which also breaks RTP_LOSS value.
         bsib.intervalRtpFractionLoss(
-            (float)s.getStatAsDouble(VideobridgeStatistics.LOSS_RATE_DOWNLOAD));
+            (float)s.getStatAsDouble(LOSS_RATE_DOWNLOAD));
         // TODO intervalSentBytes
         bsib.intervalUploadBitRate(
-                (int)
-                    Math.round(
-                            s.getStatAsDouble(
-                                    VideobridgeStatistics.BITRATE_UPLOAD)));
+            (int) Math.round(s.getStatAsDouble(BITRATE_UPLOAD)));
         bsib.measurementInterval((int) measurementInterval);
-        bsib.memoryUsage(s.getStatAsInt(VideobridgeStatistics.USED_MEMORY));
-        bsib.participantsCount(
-                s.getStatAsInt(VideobridgeStatistics.NUMBEROFPARTICIPANTS));
-        bsib.threadCount(s.getStatAsInt(VideobridgeStatistics.NUMBEROFTHREADS));
+        bsib.memoryUsage(s.getStatAsInt(USED_MEMORY));
+        bsib.participantsCount(s.getStatAsInt(PARTICIPANTS));
+        bsib.threadCount(s.getStatAsInt(THREADS));
         // TODO totalLoss
-        bsib.totalMemory(s.getStatAsInt(VideobridgeStatistics.TOTAL_MEMORY));
-        bsib.videoFabricCount(
-                s.getStatAsInt(VideobridgeStatistics.VIDEOCHANNELS));
+        bsib.totalMemory(s.getStatAsInt(TOTAL_MEMORY));
+        bsib.videoFabricCount(s.getStatAsInt(VIDEO_CHANNELS));
     }
 
     /**
@@ -325,6 +315,8 @@ public class CallStatsIOTransport
                 break;
             case ServiceEvent.UNREGISTERING:
                 statsService = null;
+                break;
+            default:
                 break;
             }
         }

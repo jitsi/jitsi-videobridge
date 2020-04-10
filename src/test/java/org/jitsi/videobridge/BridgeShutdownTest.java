@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,12 @@
  */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.service.shutdown.*;
-
+import org.jitsi.config.*;
+import org.jitsi.meet.*;
+import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
-import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.util.*;
-
 import org.junit.*;
-
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
 import org.xmlpull.v1.*;
@@ -57,6 +54,7 @@ public class BridgeShutdownTest
         System.setProperty(
             Videobridge.SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME,
             "focus.*");
+        JitsiConfig.Companion.reload();
 
         osgiHandler.start();
 
@@ -84,8 +82,8 @@ public class BridgeShutdownTest
             = new TestShutdownService();
 
         bridge.getBundleContext().registerService(
-            ShutdownService.class,
-            testShutdownService, null);
+                ShutdownService.class,
+                testShutdownService, null);
 
         Jid focusJid = JidCreate.from("focusJid");
 
@@ -208,8 +206,7 @@ public class BridgeShutdownTest
                 ColibriConferenceIQ.GracefulShutdown.NAMESPACE));
     }
 
-    class TestShutdownService
-        implements ShutdownService
+    static class TestShutdownService implements ShutdownService
     {
         boolean shutdownStarted = false;
 

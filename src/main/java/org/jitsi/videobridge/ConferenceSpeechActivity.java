@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,13 @@
  */
 package org.jitsi.videobridge;
 
-import java.beans.*;
-import java.lang.ref.*;
-import java.util.*;
-import java.util.concurrent.*;
-
-import org.jitsi.impl.neomedia.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.event.*;
-import org.jitsi.util.*;
-import org.jitsi.util.event.*;
+import org.jitsi.utils.dsi.*;
+import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
+
+import java.util.*;
+import java.util.stream.*;
 
 /**
  * Represents the speech activity of the <tt>Endpoint</tt>s in a
@@ -37,37 +33,12 @@ import org.json.simple.*;
  * @author Lyubomir Marinov
  */
 public class ConferenceSpeechActivity
-    extends PropertyChangeNotifier
-    implements PropertyChangeListener
 {
-    /**
-     * The name of the <tt>ConferenceSpeechActivity</tt> property
-     * <tt>dominantEndpoint</tt> which identifies the dominant speaker in a
-     * multipoint conference.
-     */
-    public static final String DOMINANT_ENDPOINT_PROPERTY_NAME
-        = ConferenceSpeechActivity.class.getName() + ".dominantEndpoint";
-
-    /**
-     * The name of the <tt>ConferenceSpeechActivity</tt> property
-     * <tt>endpoints</tt> which lists the <tt>Endpoint</tt>s
-     * participating in/contributing to a <tt>Conference</tt>.
-     */
-    public static final String ENDPOINTS_PROPERTY_NAME
-        = ConferenceSpeechActivity.class.getName() + ".endpoints";
-
-    /**
-     * The pool of threads utilized by <tt>ConferenceSpeechActivity</tt>.
-     */
-    private static final ExecutorService executorService
-        = ExecutorUtils.newCachedThreadPool(true, "ConferenceSpeechActivity");
-
     /**
      * The <tt>Logger</tt> used by the <tt>ConferenceSpeechActivity</tt> class
      * and its instances to print debug information.
      */
-    private static final Logger logger
-        = Logger.getLogger(ConferenceSpeechActivity.class);
+    private final Logger logger;
 
     /**
      * Parses an <tt>Object</tt> as a synchronization source identifier (SSRC).
@@ -92,20 +63,13 @@ public class ConferenceSpeechActivity
         {
             String s = obj.toString();
 
-            if (s == null)
+            try
+            {
+                l = Long.parseLong(s);
+            }
+            catch (NumberFormatException ex)
             {
                 l = -1L;
-            }
-            else
-            {
-                try
-                {
-                    l = Long.parseLong(s);
-                }
-                catch (NumberFormatException ex)
-                {
-                    l = -1L;
-                }
             }
         }
         return l;
@@ -135,7 +99,7 @@ public class ConferenceSpeechActivity
         if (ssrc != -1)
         {
             AbstractEndpoint endpoint
-                = conference.findEndpointByReceiveSSRC(ssrc, MediaType.AUDIO);
+                = conference.findEndpointByReceiveSSRC(ssrc);
 
             if (endpoint != null)
             {
@@ -146,23 +110,18 @@ public class ConferenceSpeechActivity
 
     /**
      * The <tt>ActiveSpeakerChangedListener</tt> which listens to
-     * {@link #activeSpeakerDetector} about changes in the active/dominant
-     * speaker in this multipoint conference.
+     * {@link #dominantSpeakerIdentification} about changes in the
+     * active/dominant speaker in this multipoint conference.
      */
     private final ActiveSpeakerChangedListener activeSpeakerChangedListener
         = ConferenceSpeechActivity.this::activeSpeakerChanged;
 
     /**
-     * The <tt>ActiveSpeakerDetector</tt> which detects/identifies the
-     * active/dominant speaker in {@link #conference}. 
+     * The <tt>DominantSpeakerIdentification</tt> instance which
+     * detects/identifies the active/dominant speaker in {@link #conference}.
      */
-    private ActiveSpeakerDetector activeSpeakerDetector;
-
-    /**
-     * The <tt>Object</tt> which synchronizes the access to
-     * {@link #activeSpeakerDetector}. 
-     */
-    private final Object activeSpeakerDetectorSyncRoot = new Object();
+    private DominantSpeakerIdentification dominantSpeakerIdentification
+            = new DominantSpeakerIdentification();
 
     /**
      * The <tt>Conference</tt> for which this instance represents the speech
@@ -174,63 +133,11 @@ public class ConferenceSpeechActivity
     private Conference conference;
 
     /**
-     * The <tt>Endpoint</tt> which is the dominant speaker in
-     * {@link #conference}.
-     */
-    private AbstractEndpoint dominantEndpoint;
-
-    /**
-     * The indicator which signals to {@link #eventDispatcher} that
-     * {@link #dominantEndpoint} was changed and <tt>eventDispatcher</tt> may
-     * have to fire an event.
-     */
-    private boolean dominantEndpointChanged = false;
-
-    /**
-     * The <tt>DominantSpeakerIdentification</tt> instance, if any, employed by
-     * {@link #activeSpeakerDetector}.
-     */
-    private DominantSpeakerIdentification dominantSpeakerIdentification;
-
-    /**
      * The ordered list of <tt>Endpoint</tt>s participating in
      * {@link #conference} with the dominant (speaker) <tt>Endpoint</tt> at the
      * beginning of the list i.e. the dominant speaker history.
      */
-    private List<AbstractEndpoint> endpoints;
-
-    /**
-     * The indicator which signals to {@link #eventDispatcher} that the
-     * <tt>endpoints</tt> set of {@link #conference} was changed and
-     * <tt>eventDispatcher</tt> may have to fire an event.
-     */
-    private boolean endpointsChanged = false;
-
-    /**
-     * The background/daemon thread which fires <tt>PropertyChangeEvent</tt>s to
-     * notify registered <tt>PropertyChangeListener</tt>s about changes of the
-     * values of the <tt>dominantEndpoint</tt> and <tt>endpoints</tt> properties
-     * of this instance.
-     */
-    private EventDispatcher eventDispatcher;
-
-    /**
-     * The time in milliseconds of the last execution of
-     * {@link #eventDispatcher}.
-     */
-    private long eventDispatcherTime;
-
-    /**
-     * The <tt>PropertyChangeListener</tt> implementation employed by this
-     * instance to listen to changes in the values of properties of interest to
-     * this instance. For example, listens to {@link #conference} in order to
-     * notify about changes in the list of <tt>Endpoint</tt>s participating in
-     * the multipoint conference. The implementation keeps a
-     * <tt>WeakReference</tt> to this instance and automatically removes itself
-     * from <tt>PropertyChangeNotifier</tt>s. 
-     */
-    private final PropertyChangeListener propertyChangeListener
-        = new WeakReferencePropertyChangeListener(this);
+    private final List<AbstractEndpoint> endpoints = new ArrayList<>();
 
     /**
      * The <tt>Object</tt> used to synchronize the access to the state of this
@@ -248,12 +155,10 @@ public class ConferenceSpeechActivity
     public ConferenceSpeechActivity(Conference conference)
     {
         this.conference = Objects.requireNonNull(conference, "conference");
+        logger = conference.getLogger().createChildLogger(ConferenceSpeechActivity.class.getName());
 
-        /*
-         * The PropertyChangeListener will weakly reference this instance and
-         * will unregister itself from the conference sooner or later.
-         */
-        conference.addPropertyChangeListener(propertyChangeListener);
+        dominantSpeakerIdentification
+                .addActiveSpeakerChangedListener(activeSpeakerChangedListener);
     }
 
     /**
@@ -266,7 +171,7 @@ public class ConferenceSpeechActivity
      */
     private void activeSpeakerChanged(long ssrc)
     {
-        Conference conference = getConference();
+        Conference conference = this.conference;
 
         if (conference != null)
         {
@@ -279,42 +184,41 @@ public class ConferenceSpeechActivity
             }
 
             AbstractEndpoint endpoint
-                = conference.findEndpointByReceiveSSRC(ssrc, MediaType.AUDIO);
-            boolean maybeStartEventDispatcher = false;
+                = conference.findEndpointByReceiveSSRC(ssrc);
+
+            if (endpoint == null)
+            {
+                logger.warn("Unable to find endpoint corresponding to "
+                    + "active speaker SSRC " + ssrc);
+                return;
+            }
 
             synchronized (syncRoot)
             {
-                if (endpoint == null)
+                // Move this endpoint to the top of our sorted list
+                if (!endpoints.remove(endpoint))
                 {
-                    /*
-                     * We will NOT automatically elect a new dominant speaker
-                     * HERE.
-                     */
-                    maybeStartEventDispatcher = true;
+                    logger.warn("Got active speaker notification for an unknown"
+                            + " endpoint (ssrc: " + ssrc + ", epId "
+                            + endpoint.getID() + ")! Ignoring");
+                    return;
                 }
-                else
-                {
-                    AbstractEndpoint dominantEndpoint = getDominantEndpoint();
+                endpoints.add(0, endpoint);
 
-                    if (!endpoint.equals(dominantEndpoint))
-                    {
-                        this.dominantEndpoint = endpoint;
-                        maybeStartEventDispatcher = true;
-                    }
-                }
-                if (maybeStartEventDispatcher)
+                TaskPools.IO_POOL.submit(() ->
                 {
-                    dominantEndpointChanged = true;
-                    maybeStartEventDispatcher();
-                }
+                    if (conference != null)
+                    {
+                        conference.dominantSpeakerChanged();
+                    }
+                });
             }
         }
     }
 
     /**
-     * Retrieves a JSON representation of
-     * {@link #dominantSpeakerIdentification} for the purposes of the REST API
-     * of Videobridge.
+     * Retrieves a JSON representation of the dominant speaker
+     * for the purposes of the REST API of Videobridge.
      *
      * @return a <tt>JSONObject</tt> which represents
      * <tt>dominantSpeakerIdentification</tt> for the purposes of the REST API
@@ -323,7 +227,7 @@ public class ConferenceSpeechActivity
     public JSONObject doGetDominantSpeakerIdentificationJSON()
     {
         DominantSpeakerIdentification dominantSpeakerIdentification
-            = getDominantSpeakerIdentification();
+            = this.dominantSpeakerIdentification;
         JSONObject jsonObject;
 
         if (dominantSpeakerIdentification == null)
@@ -335,7 +239,7 @@ public class ConferenceSpeechActivity
         }
         else
         {
-            Conference conference = getConference();
+            Conference conference = this.conference;
 
             if (conference == null)
             {
@@ -393,137 +297,19 @@ public class ConferenceSpeechActivity
         return jsonObject;
     }
 
-    /**
-     * Notifies this <tt>ConferenceSpeechActivity</tt> that an
-     * <tt>EventDispatcher</tt> has permanently stopped executing in its
-     * associated background thread. If the specified <tt>EventDispatcher</tt>
-     * is {@link #eventDispatcher}, this instance will note that it no longer
-     * has an associated (executing) <tt>EventDispatcher</tt>.
-     *
-     * @param eventDispatcher the <tt>EventDispatcher</tt> which has exited
-     */
-    private void eventDispatcherExited(EventDispatcher eventDispatcher)
+    void expire()
     {
         synchronized (syncRoot)
         {
-            if (this.eventDispatcher == eventDispatcher)
-            {
-                this.eventDispatcher = eventDispatcher;
-                eventDispatcherTime = 0;
-            }
-        }
-    }
-
-    /**
-     * Gets the <tt>ActiveSpeakerDetector</tt> which detects/identifies the
-     * active/dominant speaker in this <tt>Conference</tt>.
-     *
-     * @return the <tt>ActiveSpeakerDetector</tt> which detects/identifies the
-     * active/dominant speaker in this <tt>Conference</tt>
-     */
-    private ActiveSpeakerDetector getActiveSpeakerDetector()
-    {
-        ActiveSpeakerDetector activeSpeakerDetector;
-        boolean addActiveSpeakerChangedListener = false;
-
-        synchronized (activeSpeakerDetectorSyncRoot)
-        {
-            activeSpeakerDetector = this.activeSpeakerDetector;
-            if (activeSpeakerDetector == null)
-            {
-                ActiveSpeakerDetectorImpl asdi
-                    = new ActiveSpeakerDetectorImpl();
-
-                this.activeSpeakerDetector = activeSpeakerDetector = asdi;
-                addActiveSpeakerChangedListener = true;
-
-                /*
-                 * Find the DominantSpeakerIdentification instance employed by
-                 * activeSpeakerDetector, if possible, in order to enable
-                 * additional functionality (e.g. debugging).
-                 */
-                ActiveSpeakerDetector impl = asdi.getImpl();
-
-                if (impl instanceof DominantSpeakerIdentification)
-                {
-                    dominantSpeakerIdentification
-                        = (DominantSpeakerIdentification) impl;
-                }
-                else
-                {
-                    dominantSpeakerIdentification = null;
-                }
-            }
-        }
-
-        /*
-         * Listen to the activeSpeakerDetector about speaker switches in order
-         * to track the dominant speaker in the multipoint conference. 
-         */
-        if (addActiveSpeakerChangedListener)
-        {
-            Conference conference = getConference();
-
-            if (conference != null)
-            {
-                activeSpeakerDetector.addActiveSpeakerChangedListener(
-                        activeSpeakerChangedListener);
-
-                DominantSpeakerIdentification dominantSpeakerIdentification
-                    = this.dominantSpeakerIdentification;
-
-                if (dominantSpeakerIdentification != null)
-                {
-                    dominantSpeakerIdentification.addPropertyChangeListener(
-                            propertyChangeListener);
-                }
-            }
-        }
-
-        return activeSpeakerDetector;
-    }
-
-    /**
-     * Gets the <tt>Conference</tt> whose speech activity is represented by this
-     * instance.
-     *
-     * @return the <tt>Conference</tt> whose speech activity is represented by
-     * this instance or <tt>null</tt> if the <tt>Conference</tt> has expired.
-     */
-    private Conference getConference()
-    {
-        Conference conference = this.conference;
-
-        if ((conference != null) && conference.isExpired())
-        {
-            this.conference = conference = null;
-
-            /*
-             * The Conference has expired so there is no point to listen to
-             * ActiveSpeakerDetector. Remove the activeSpeakerChangedListener
-             * for the purposes of completeness, not because it is strictly
-             * necessary.
-             */
-            ActiveSpeakerDetector activeSpeakerDetector
-                = this.activeSpeakerDetector;
-
-            if (activeSpeakerDetector != null)
-            {
-                activeSpeakerDetector.removeActiveSpeakerChangedListener(
-                        activeSpeakerChangedListener);
-            }
-
-            DominantSpeakerIdentification dominantSpeakerIdentification
-                = this.dominantSpeakerIdentification;
-
             if (dominantSpeakerIdentification != null)
             {
-                dominantSpeakerIdentification.removePropertyChangeListener(
-                        propertyChangeListener);
+                dominantSpeakerIdentification
+                        .removeActiveSpeakerChangedListener(
+                                activeSpeakerChangedListener);
             }
+            this.conference = null;
+            this.dominantSpeakerIdentification = null;
         }
-
-        return conference;
     }
 
     /**
@@ -535,39 +321,10 @@ public class ConferenceSpeechActivity
      */
     public AbstractEndpoint getDominantEndpoint()
     {
-        AbstractEndpoint dominantEndpoint;
-
         synchronized (syncRoot)
         {
-            if (this.dominantEndpoint == null)
-            {
-                dominantEndpoint = null;
-            }
-            else
-            {
-                dominantEndpoint = this.dominantEndpoint;
-                if (dominantEndpoint.isExpired())
-                {
-                    this.dominantEndpoint = null;
-                }
-            }
+            return endpoints.isEmpty() ? null : endpoints.get(0);
         }
-        return dominantEndpoint;
-    }
-
-    /**
-     * Gets the <tt>DominantSpeakerIdentification</tt> instance, if any,
-     * employed by {@link #activeSpeakerDetector}.
-     *
-     * @return the <tt>DominantSpeakerIdentification</tt> instance, if any,
-     * employed by <tt>activeSpeakerDetector</tt>
-     */
-    private DominantSpeakerIdentification getDominantSpeakerIdentification()
-    {
-        // Make sure that dominantSpeakerIdentification is initialized.
-        getActiveSpeakerDetector();
-
-        return dominantSpeakerIdentification;
     }
 
     /**
@@ -582,48 +339,29 @@ public class ConferenceSpeechActivity
      */
     public List<AbstractEndpoint> getEndpoints()
     {
-        List<AbstractEndpoint> ret;
+        synchronized (syncRoot)
+        {
+            //TODO(brian): make a copy?
+            return endpoints;
+        }
+    }
+
+    public List<String> getEndpointIds()
+    {
 
         synchronized (syncRoot)
         {
-            /*
-             * The list of Endpoints of this instance is ordered by recentness
-             * of speaker domination and/or speech activity. The list of
-             * Endpoints of Conference is ordered by recentness of Endpoint
-             * instance initialization. The list of Endpoints of this instance
-             * is initially populated with the Endpoints of the conference. 
-             */
-            if (endpoints == null)
-            {
-                Conference conference = getConference();
-
-                if (conference == null)
-                {
-                    endpoints = new ArrayList<>();
-                }
-                else
-                {
-                    List<AbstractEndpoint> conferenceEndpoints
-                        = conference.getEndpoints();
-
-                    endpoints = new ArrayList<>(conferenceEndpoints);
-                }
-            }
-
-            // The return value is the list of Endpoints of this instance.
-            ret = new ArrayList<>(endpoints);
-            ret.removeIf(Objects::isNull);
+           return endpoints.stream()
+                .map(AbstractEndpoint::getID)
+                .collect(Collectors.toList());
         }
-        return ret;
     }
 
     /**
      * Notifies this instance that a new audio level was received or measured by
-     * a <tt>Channel</tt> for an RTP stream with a specific synchronization
+     * an <tt>Endpoint</tt> for an RTP stream with a specific synchronization
      * source identifier/SSRC.
      *
-     * @param channel the <tt>Channel</tt> which received or measured the new
-     * audio level for the RTP stream identified by the specified <tt>ssrc</tt>
      * @param ssrc the synchronization source identifier/SSRC of the RTP stream
      * for which a new audio level was received or measured by the specified
      * <tt>channel</tt>
@@ -631,280 +369,94 @@ public class ConferenceSpeechActivity
      * specified <tt>channel</tt> for the RTP stream with the specified
      * <tt>ssrc</tt> 
      */
-    public void levelChanged(Channel channel, long ssrc, int level)
+    public void levelChanged(long ssrc, int level)
     {
-        // ActiveSpeakerDetector
-        ActiveSpeakerDetector activeSpeakerDetector
-            = getActiveSpeakerDetector();
-
-        if (activeSpeakerDetector != null)
+        DominantSpeakerIdentification dsi = this.dominantSpeakerIdentification;
+        if (dsi != null)
         {
-            activeSpeakerDetector.levelChanged(ssrc, level);
+            dominantSpeakerIdentification.levelChanged(ssrc, level);
         }
     }
 
     /**
-     * Starts a new <tt>EventDispatcher</tt> or notifies an existing one to fire
-     * events to registered listeners about changes of the values of the
-     * <tt>dominantEndpoint</tt> and <tt>endpoints</tt> properties of this
-     * instance.
+     * Notifies this instance that the
      */
-    private void maybeStartEventDispatcher()
+    public void endpointsChanged()
     {
+        boolean endpointsListChanged = false;
+        boolean dominantSpeakerChanged = false;
+        // The list of endpoints may have changed, sync our list to make
+        // sure it matches.
+        List<AbstractEndpoint> conferenceEndpointsCopy
+                = conference.getEndpoints();
         synchronized (syncRoot)
         {
-            if (this.eventDispatcher == null)
+            // Remove any endpoints we have that are no longer in the
+            // conference
+            String previousDominantSpeaker
+                = endpoints.isEmpty() ? null : endpoints.get(0).getID();
+            endpointsListChanged
+                = endpoints.removeIf(
+                        ep -> !conferenceEndpointsCopy.contains(ep));
+            // Add any endpoints from the conf we don't have to the end
+            // of our list
+            for (AbstractEndpoint ep : conferenceEndpointsCopy)
             {
-                EventDispatcher eventDispatcher = new EventDispatcher(this);
-                boolean scheduled = false;
+                if (!endpoints.contains(ep))
+                {
+                    endpoints.add(ep);
+                    endpointsListChanged = true;
+                }
+            }
+            String newDominantSpeaker
+                = endpoints.isEmpty() ? null : endpoints.get(0).getID();
+            dominantSpeakerChanged
+                = !Objects.equals(previousDominantSpeaker, newDominantSpeaker);
+        }
 
-                this.eventDispatcher = eventDispatcher;
-                eventDispatcherTime = 0;
-                try
+        if (dominantSpeakerChanged || endpointsListChanged)
+        {
+            final boolean finalDominantSpeakerChanged = dominantSpeakerChanged;
+            final boolean finalEndpointsChanged = endpointsListChanged;
+            final List<String> finalNewEndpointIds = getEndpointIds();
+            TaskPools.IO_POOL.submit(() -> {
+                final Conference conference = this.conference;
+                if (conference == null)
                 {
-                    executorService.execute(eventDispatcher);
-                    scheduled = true;
+                    return;
                 }
-                finally
+                if (finalDominantSpeakerChanged)
                 {
-                    if (!scheduled && (this.eventDispatcher == eventDispatcher))
-                    {
-                        this.eventDispatcher = null;
-                        eventDispatcherTime = 0;
-                    }
+                    conference.dominantSpeakerChanged();
                 }
-            }
-            else
-            {
-                syncRoot.notify();
-            }
+                // Dominant speaker changed implies that the list changed.
+                if (finalEndpointsChanged && !finalDominantSpeakerChanged)
+                {
+                    conference.speechActivityEndpointsChanged(finalNewEndpointIds);
+                }
+
+            });
         }
     }
 
     /**
-     * Notifies this instance that there was a change in the value of a property
-     * of an object in which this instance is interested.
-     *
-     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the object of
-     * interest, the name of the property and the old and new values of that
-     * property
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
      */
-    @Override
-    public void propertyChange(PropertyChangeEvent ev)
+    @SuppressWarnings("unchecked")
+    public JSONObject getDebugState()
     {
-        // Cease to execute as soon as the Conference expires.
-        Conference conference = getConference();
+        JSONObject debugState = new JSONObject();
 
-        if (conference == null)
-        {
-            return;
-        }
+        AbstractEndpoint dominantEndpoint = getDominantEndpoint();
+        debugState.put(
+                "dominantEndpoint",
+                dominantEndpoint == null ? null : dominantEndpoint.getID());
+        DominantSpeakerIdentification dsi = this.dominantSpeakerIdentification;
+        debugState.put(
+                "dominantSpeakerIdentification",
+                dsi == null ? null : dsi.doGetJSON());
 
-        String propertyName = ev.getPropertyName();
-
-        if (Conference.ENDPOINTS_PROPERTY_NAME.equals(propertyName))
-        {
-            if (conference.equals(ev.getSource()))
-            {
-                synchronized (syncRoot)
-                {
-                    endpointsChanged = true;
-                    maybeStartEventDispatcher();
-                }
-            }
-        }
-    }
-
-    /**
-     * Runs in the background thread of {@link #eventDispatcher} to possibly
-     * fire events.
-     *
-     * @param eventDispatcher the <tt>EventDispatcher</tt> which is calling back
-     * to this instance
-     * @return <tt>true</tt> if the specified <tt>eventDispatcher</tt> is to
-     * continue with its next iteration and call back to this instance again or
-     * <tt>false</tt> to have the specified <tt>eventDispatcher</tt> break out
-     * of its loop  and not call back to this instance again
-     */
-    private boolean runInEventDispatcher(EventDispatcher eventDispatcher)
-    {
-        boolean endpointsChanged = false;
-        boolean dominantEndpointChanged = false;
-
-        synchronized (syncRoot)
-        {
-            /*
-             * Most obviously, an EventDispatcher should cease to execute as
-             * soon as this ConferenceSpeechActivity stops employing it.
-             */
-            if (this.eventDispatcher != eventDispatcher)
-            {
-                return false;
-            }
-
-            /*
-             * As soon as the Conference associated with this instance expires,
-             * kill all background threads.
-             */
-            Conference conference = getConference();
-
-            if (conference == null)
-            {
-                return false;
-            }
-
-            long now = System.currentTimeMillis();
-
-            if (!this.dominantEndpointChanged && !this.endpointsChanged)
-            {
-                long wait = 100 - (now - eventDispatcherTime);
-
-                if (wait > 0)
-                {
-                    try
-                    {
-                        syncRoot.wait(wait);
-                    }
-                    catch (InterruptedException ie)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
-                    return true;
-                }
-            }
-            eventDispatcherTime = now;
-
-            /*
-             * Synchronize the set of Endpoints of this instance with the set of
-             * Endpoints of the conference.
-             */
-            List<AbstractEndpoint> conferenceEndpoints = conference.getEndpoints();
-
-            if (endpoints == null)
-            {
-                endpoints = new ArrayList<>(conferenceEndpoints);
-                endpointsChanged = true;
-            }
-            else
-            {
-                /*
-                 * Remove the Endpoints of this instance which are no longer in
-                 * the conference.
-                 */
-                endpointsChanged
-                    = endpoints.removeIf(
-                        e -> e.isExpired() || !conferenceEndpoints.contains(e));
-                conferenceEndpoints.removeAll(endpoints);
-
-                /*
-                 * Add the Endpoints of the conference which are not in this
-                 * instance yet.
-                 */
-                endpointsChanged |= endpoints.addAll(conferenceEndpoints);
-            }
-            this.endpointsChanged = false;
-
-            /*
-             * Make sure that the dominantEndpoint is at the top of the list of
-             * the Endpoints of this instance.
-             */
-            AbstractEndpoint dominantEndpoint = getDominantEndpoint();
-
-            if (dominantEndpoint != null)
-            {
-                endpoints.remove(dominantEndpoint);
-                endpoints.add(0, dominantEndpoint);
-            }
-
-            /*
-             * The activeSpeakerDetector decides when the dominantEndpoint
-             * changes at the time of this writing.
-             */
-            if (this.dominantEndpointChanged)
-            {
-                dominantEndpointChanged = true;
-                this.dominantEndpointChanged = false;
-            }
-        }
-
-        if (endpointsChanged)
-        {
-            firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
-        }
-        if (dominantEndpointChanged)
-        {
-            firePropertyChange(DOMINANT_ENDPOINT_PROPERTY_NAME, null, null);
-        }
-
-        return true;
-    }
-
-    /**
-     * Represents a background/daemon thread which fires events to registered
-     * listeners notifying about changes in the values of the
-     * <tt>dominantEndpoint</tt> and <tt>endpoints</tt> properties of a specific
-     * <tt>ConferenceSpeechActivity</tt>. Because <tt>EventDispatcher</tt> runs
-     * in a background/daemon <tt>Thread</tt> which is a garbage collection
-     * root, it keeps a <tt>WeakReference</tt> to the specified
-     * <tt>ConferenceSpeechActivity</tt> in order to not accidentally prevent
-     * its garbage collection.
-     */
-    private static class EventDispatcher
-        implements Runnable
-    {
-        /**
-         * The <tt>ConferenceSpeechActivity</tt> which has initialized this
-         * instance and on behalf of which this instance is to fire events to
-         * registered listeners in the background.
-         */
-        private final WeakReference<ConferenceSpeechActivity> owner;
-
-        /**
-         * Initializes a new <tt>EventDispatcher</tt> instance which is to fire
-         * events in the background to registered listeners on behalf of a
-         * specific <tt>ConferenceSpeechActivity</tt>.
-         *
-         * @param owner the <tt>ConferenceSpeechActivity</tt> which is
-         * initializing the new instance
-         */
-        public EventDispatcher(ConferenceSpeechActivity owner)
-        {
-            this.owner = new WeakReference<>(owner);
-        }
-
-        /**
-         * Runs in a background/daemon thread and notifies registered listeners
-         * about changes in the values of the <tt>dominantEndpoint</tt> and
-         * <tt>endpoints</tt> properties of {@link #owner}.
-         */
-        @Override
-        public void run()
-        {
-            try
-            {
-                do
-                {
-                    ConferenceSpeechActivity owner = this.owner.get();
-
-                    if ((owner == null) || !owner.runInEventDispatcher(this))
-                    {
-                        break;
-                    }
-                }
-                while (true);
-            }
-            finally
-            {
-                /*
-                 * Notify the ConferenceSpeechActivity that this EventDispatcher
-                 * has exited in order to allow the former to forget about the
-                 * latter.
-                 */
-                ConferenceSpeechActivity owner = this.owner.get();
-
-                if (owner != null)
-                    owner.eventDispatcherExited(this);
-            }
-        }
+        return debugState;
     }
 }

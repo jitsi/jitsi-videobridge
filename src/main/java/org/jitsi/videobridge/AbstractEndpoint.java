@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015-2018 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,18 @@
  */
 package org.jitsi.videobridge;
 
-import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.util.event.*;
+import org.jitsi.nlj.util.*;
+import org.jitsi.utils.*;
+import org.jitsi.utils.event.*;
+import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.rest.root.colibri.debug.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
+import org.json.simple.*;
 
 import java.io.*;
-import java.lang.ref.*;
+import java.time.*;
 import java.util.*;
-import java.util.stream.*;
 
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
@@ -32,9 +36,26 @@ import java.util.stream.*;
  * same conference (if Octo is being used).
  *
  * @author Boris Grozev
+ * @author Brian Baldino
  */
 public abstract class AbstractEndpoint extends PropertyChangeNotifier
 {
+    /**
+     * The name of the <tt>Endpoint</tt> property <tt>pinnedEndpoint</tt> which
+     * specifies the ID of the currently pinned <tt>Endpoint</tt> of this
+     * <tt>Endpoint</tt>.
+     */
+    public static final String PINNED_ENDPOINTS_PROPERTY_NAME
+        = Endpoint.class.getName() + ".pinnedEndpoints";
+
+    /**
+     * The name of the <tt>Endpoint</tt> property <tt>selectedEndpoint</tt>
+     * which specifies the ID of the currently selected <tt>Endpoint</tt> of
+     * this <tt>Endpoint</tt>.
+     */
+    public static final String SELECTED_ENDPOINTS_PROPERTY_NAME
+        = Endpoint.class.getName() + ".selectedEndpoints";
+
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt>.
@@ -42,19 +63,15 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     private final String id;
 
     /**
-     * The string used to identify this endpoint for the purposes of logging.
+     * The {@link Logger} used by the {@link Endpoint} class to print debug
+     * information.
      */
-    private final String loggingId;
+    protected final Logger logger;
 
     /**
      * A reference to the <tt>Conference</tt> this <tt>Endpoint</tt> belongs to.
      */
     private final Conference conference;
-
-    /**
-     * The list of <tt>Channel</tt>s associated with this <tt>Endpoint</tt>.
-     */
-    private final List<WeakReference<RtpChannel>> channels = new LinkedList<>();
 
     /**
      * The (human readable) display name of this <tt>Endpoint</tt>.
@@ -73,17 +90,109 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     private boolean expired = false;
 
     /**
+     * The set of IDs of the pinned endpoints of this {@code Endpoint}.
+     */
+    private Set<String> pinnedEndpoints = new HashSet<>();
+
+    /**
+     * The set of currently selected <tt>Endpoint</tt>s at this
+     * <tt>Endpoint</tt>.
+     */
+    private Set<String> selectedEndpoints = new HashSet<>();
+
+
+    /**
+     * Sets the list of pinned endpoints for this endpoint.
+     * @param newPinnedEndpoints the set of pinned endpoints.
+     * @return true if the underlying set of pinned endpoints has changed, false
+     * otherwise. The return value was introduced to enable overrides to
+     * act upon the underlying set changing.
+     */
+    public void pinnedEndpointsChanged(Set<String> newPinnedEndpoints)
+    {
+        // Check if that's different to what we think the pinned endpoints are.
+        Set<String> oldPinnedEndpoints = this.pinnedEndpoints;
+        if (!oldPinnedEndpoints.equals(newPinnedEndpoints))
+        {
+            this.pinnedEndpoints = newPinnedEndpoints;
+
+            logger.debug(() -> "Pinned "
+                + Arrays.toString(pinnedEndpoints.toArray()));
+
+            firePropertyChange(PINNED_ENDPOINTS_PROPERTY_NAME,
+                oldPinnedEndpoints, pinnedEndpoints);
+        }
+    }
+
+    /**
+     * Sets the list of selected endpoints for this endpoint.
+     * @param newSelectedEndpoints the set of selected endpoints.
+     * @return true if the underlying set of selected endpoints has changed,
+     * false otherwise. The return value was introduced to enable overrides to
+     * act upon the underlying set changing.
+     */
+    public void selectedEndpointsChanged(Set<String> newSelectedEndpoints)
+    {
+        // Check if that's different to what we think the pinned endpoints are.
+        Set<String> oldSelectedEndpoints = this.selectedEndpoints;
+        if (!oldSelectedEndpoints.equals(newSelectedEndpoints))
+        {
+            this.selectedEndpoints = newSelectedEndpoints;
+
+            logger.debug(() -> "Selected "
+                + Arrays.toString(selectedEndpoints.toArray()));
+
+            firePropertyChange(SELECTED_ENDPOINTS_PROPERTY_NAME,
+                oldSelectedEndpoints, selectedEndpoints);
+        }
+    }
+
+
+    /**
      * Initializes a new {@link AbstractEndpoint} instance.
      * @param conference the {@link Conference} which this endpoint is to be a
      * part of.
      * @param id the ID of the endpoint.
      */
-    protected AbstractEndpoint(Conference conference, String id)
+    protected AbstractEndpoint(Conference conference, String id, Logger parentLogger)
     {
         this.conference = Objects.requireNonNull(conference, "conference");
+        Map<String, String> context = new HashMap<>();
+        context.put("epId", id);
+        logger = parentLogger.createChildLogger(this.getClass().getName(), context);
         this.id = Objects.requireNonNull(id, "id");
-        loggingId = conference.getLoggingId() + ",endp_id=" + id;
     }
+
+    /**
+     * Sets the last-n value for this endpoint.
+     * @param lastN
+     */
+    public void setLastN(Integer lastN)
+    {
+    }
+
+    /**
+     * Set the maximum frame height, in pixels, of video streams that can be
+     * forwarded to this participant.
+     *
+     * @param maxReceiveFrameHeightPx the maximum frame height, in pixels, of
+     * video streams that can be forwarded to this participant.
+     */
+    public void setMaxReceiveFrameHeightPx(int maxReceiveFrameHeightPx) { }
+
+    /**
+     * Checks whether a specific SSRC belongs to this endpoint.
+     * @param ssrc
+     * @return
+     */
+    public abstract boolean receivesSsrc(long ssrc);
+
+    /**
+     * Adds an SSRC to this endpoint.
+     * @param ssrc the receive SSRC being added
+     * @param mediaType the {@link MediaType} of the added SSRC
+     */
+    public abstract void addReceiveSsrc(long ssrc, MediaType mediaType);
 
     /**
      * @return the {@link AbstractEndpointMessageTransport} associated with
@@ -95,132 +204,9 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     }
 
     /**
-     * Adds a specific {@link RtpChannel} to the list of channels
-     * associated with this {@link AbstractEndpoint}.
-     *
-     * @param channel the {@link RtpChannel }to add.
-     * @return {@code true} if the list of {@link RtpChannel}s associated with
-     * this endpoint changed as a result of the method invocation; otherwise,
-     * {@code false}.
+     * Gets the list of media stream tracks that belong to this endpoint.
      */
-    public boolean addChannel(RtpChannel channel)
-    {
-        Objects.requireNonNull(channel, "channel");
-
-        // The expire state of Channel is final. Adding an expired Channel to
-        // an Endpoint is a no-op.
-        if (channel.isExpired())
-        {
-            return false;
-        }
-
-        boolean added = false;
-        boolean removed = false;
-
-        synchronized (channels)
-        {
-            boolean add = true;
-
-            for (Iterator<WeakReference<RtpChannel>> i = channels.iterator();
-                 i.hasNext();)
-            {
-                RtpChannel c = i.next().get();
-
-                if (c == null)
-                {
-                    i.remove();
-                    removed = true;
-                }
-                else if (c.equals(channel))
-                {
-                    add = false;
-                }
-                else if (c.isExpired())
-                {
-                    i.remove();
-                    removed = true;
-                }
-            }
-            if (add)
-            {
-                channels.add(new WeakReference<>(channel));
-                added = true;
-            }
-        }
-
-        if (removed)
-        {
-            maybeExpire();
-        }
-
-        return added;
-    }
-
-    /**
-     * Gets the number of {@link RtpChannel}s of this endpoint which,
-     * optionally, are of a specific {@link MediaType}.
-     *
-     * @param mediaType the {@link MediaType} of the {@link RtpChannel}s to
-     * count or {@code null} to count all {@link RtpChannel}s.
-     * @return the number of {@link RtpChannel}s of this endpoint which,
-     * , optionally, are of the specified {@link MediaType}.
-     */
-    int getChannelCount(MediaType mediaType)
-    {
-        return getChannels(mediaType).size();
-    }
-
-    /**
-     * @return a list with all {@link RtpChannel}s of this {@link Endpoint}.
-     */
-    public List<RtpChannel> getChannels()
-    {
-        return getChannels(null);
-    }
-
-    /**
-     * Gets a list with the {@link RtpChannel}s of this {@link Endpoint} with a
-     * particular {@link MediaType} (or all of them, if {@code mediaType} is
-     * {@code null}).
-     *
-     * @param mediaType the {@link MediaType} to match. If {@code null}, all
-     * channels of this endpoint will be returned.
-     * @return a <tt>List</tt> with the channels of this <tt>Endpoint</tt> with
-     * a particular <tt>MediaType</tt>.
-     */
-    public List<RtpChannel> getChannels(MediaType mediaType)
-    {
-        boolean removed = false;
-        List<RtpChannel> channels = new LinkedList<>();
-
-        synchronized (this.channels)
-        {
-            for (Iterator<WeakReference<RtpChannel>> i
-                        = this.channels.iterator();
-                    i.hasNext();)
-            {
-                RtpChannel c = i.next().get();
-
-                if ((c == null) || c.isExpired())
-                {
-                    i.remove();
-                    removed = true;
-                }
-                else if ((mediaType == null)
-                        || mediaType.equals(c.getContent().getMediaType()))
-                {
-                    channels.add(c);
-                }
-            }
-        }
-
-        if (removed)
-        {
-            maybeExpire();
-        }
-
-        return channels;
-    }
+    abstract public MediaStreamTrackDesc[] getMediaStreamTracks();
 
     /**
      * Returns the display name of this <tt>Endpoint</tt>.
@@ -275,41 +261,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     }
 
     /**
-     * Removes a specific <tt>Channel</tt> from the list of <tt>Channel</tt>s
-     * associated with this <tt>Endpoint</tt>.
-     *
-     * @param channel the <tt>Channel</tt> to remove from the list of
-     * <tt>Channel</tt>s associated with this <tt>Endpoint</tt>
-     * @return <tt>true</tt> if the list of <tt>Channel</tt>s associated with
-     * this <tt>Endpoint</tt> changed as a result of the method invocation;
-     * otherwise, <tt>false</tt>
-     */
-    public boolean removeChannel(RtpChannel channel)
-    {
-        if (channel == null)
-        {
-            return false;
-        }
-
-        boolean removed;
-
-        synchronized (channels)
-        {
-            removed = channels.removeIf(w -> {
-                Channel c = w.get();
-                return c == null || c.equals(channel) || c.isExpired();
-            });
-        }
-
-        if (removed)
-        {
-            maybeExpire();
-        }
-
-        return removed;
-    }
-
-    /**
      * Sets the display name of this <tt>Endpoint</tt>.
      *
      * @param displayName the display name to set on this <tt>Endpoint</tt>.
@@ -327,6 +278,10 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public void setStatsId(String value)
     {
         this.statsId = value;
+        if (value != null)
+        {
+            logger.addContext("stats_id", value);
+        }
     }
 
     /**
@@ -343,89 +298,37 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     public void expire()
     {
+        logger.info("Expiring.");
         this.expired = true;
-        getConference().endpointExpired(this);
-    }
 
-    /**
-     * @return a string which identifies this {@link Endpoint} for the
-     * purposes of logging. The string is a comma-separated list of "key=value"
-     * pairs.
-     */
-    public String getLoggingId()
-    {
-        return loggingId;
-    }
-
-    /**
-     * Expires this {@link Endpoint} if it has no channels and no SCTP
-     * connection.
-     */
-    protected void maybeExpire()
-    {}
-
-    /**
-     * @return the {@link Set} of selected endpoints, represented as a set of
-     * endpoint IDs.
-     */
-    public Set<String> getSelectedEndpoints()
-    {
-        return Collections.EMPTY_SET;
-    }
-
-    /**
-     * @return the {@link Set} of pinned endpoints, represented as a set of
-     * endpoint IDs.
-     */
-    public Set<String> getPinnedEndpoints()
-    {
-        return Collections.EMPTY_SET;
-    }
-
-    /**
-     * Gets an array that contains all the {@link MediaStreamTrackDesc} of the
-     * specified media type associated with this {@link Endpoint}.
-     *
-     * @param mediaType the media type of the {@link MediaStreamTrackDesc} to
-     * get.
-     * @return an array that contains all the {@link MediaStreamTrackDesc} of
-     * the specified media type associated with this {@link Endpoint}, or null.
-     */
-    public MediaStreamTrackDesc[] getMediaStreamTracks(MediaType mediaType)
-    {
-        return
-            getAllMediaStreamTracks(mediaType)
-                .toArray(new MediaStreamTrackDesc[0]);
-    }
-
-    /**
-     * @return all {@link MediaStreamTrackDesc} of all channels of type
-     * {@code mediaType} associated with this endpoint. Note that this may
-     * include {@link MediaStreamTrackDesc}s which do not belong to this
-     * endpoint.
-     * @param mediaType the media type of the {@link MediaStreamTrackDesc} to
-     * get.
-     */
-    protected List<MediaStreamTrackDesc> getAllMediaStreamTracks(
-        MediaType mediaType)
-    {
-        List<RtpChannel> channels = getChannels(mediaType);
-
-        if (channels == null || channels.isEmpty())
+        Conference conference = getConference();
+        if (conference != null)
         {
-            return Collections.EMPTY_LIST;
+            conference.endpointExpired(this);
         }
-
-        List<MediaStreamTrackDesc> allTracks = new LinkedList<>();
-        channels.stream()
-            .map(channel -> channel.getStream().getMediaStreamTrackReceiver())
-            .filter(Objects::nonNull)
-            .forEach(
-                trackReceiver -> allTracks.addAll(
-                    Arrays.asList(trackReceiver.getMediaStreamTracks())));
-        return allTracks;
     }
 
+    /**
+     * Return true if this endpoint should expire (based on whatever logic is
+     * appropriate for that endpoint implementation.
+     *
+     * NOTE(brian): Currently the bridge will automatically expire an endpoint
+     * if all of its channel shims are removed. Maybe we should instead have
+     * this logic always be called before expiring instead? But that would mean
+     * that expiration in the case of channel removal would take longer.
+     *
+     * @return true if this endpoint should expire, false otherwise
+     */
+    public abstract boolean shouldExpire();
+
+    /**
+     * Get the last 'incoming activity' (packets received) this endpoint has seen
+     * @return the timestamp, in milliseconds, of the last activity of this endpoint
+     */
+    public Instant getLastIncomingActivity()
+    {
+        return ClockUtils.NEVER;
+    }
 
     /**
      * Sends a specific {@link String} {@code msg} to the remote end of this
@@ -435,6 +338,23 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     public abstract void sendMessage(String msg)
         throws IOException;
+
+
+    /**
+     * Requests a keyframe from this endpoint for the specified media SSRC.
+     *
+     * @param mediaSsrc the media SSRC to request a keyframe from.
+     */
+    public abstract void requestKeyframe(long mediaSsrc);
+
+    /**
+     * Requests a keyframe from this endpoint on the first video SSRC
+     * it finds.  Being able to request a  keyframe without passing a specific
+     * SSRC is useful for things like requesting a pre-emptive keyframes when a new
+     * active speaker is detected (where it isn't convenient to try and look up
+     * a particular SSRC).
+     */
+    public abstract void requestKeyframe();
 
     /**
      * Notify this endpoint that another endpoint has set it
@@ -454,4 +374,57 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     {
         // No-op
     }
+
+    /**
+     * Recreates this {@link AbstractEndpoint}'s media stream tracks based
+     * on the sources (and source groups) described in it's video channel.
+     */
+    public void recreateMediaStreamTracks()
+    {
+    }
+
+    /**
+     * Describes this endpoint's transport in the given channel bundle XML
+     * element.
+     *
+     * @param channelBundle the channel bundle element to describe in.
+     */
+    public void describe(ColibriConferenceIQ.ChannelBundle channelBundle)
+    {
+    }
+
+    /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
+     */
+    @SuppressWarnings("unchecked")
+    public JSONObject getDebugState()
+    {
+        JSONObject debugState = new JSONObject();
+        debugState.put("displayName", displayName);
+        debugState.put("expired", expired);
+        debugState.put("statsId", statsId);
+        debugState.put("selectedEndpoints", selectedEndpoints.toString());
+        debugState.put("pinnedEndpoints", pinnedEndpoints.toString());
+
+        return debugState;
+    }
+
+    /**
+     * Enables/disables the given feature, if the endpoint implementation supports it.
+     *
+     * @param feature the feature to enable or disable.
+     * @param enabled the state of the feature.
+     */
+    public abstract void setFeature(EndpointDebugFeatures feature, boolean enabled);
+
+    /**
+     * Whether the remote endpoint is currently sending (non-silence) audio.
+     */
+    public abstract boolean isSendingAudio();
+
+    /**
+     * Whether the remote endpoint is currently sending video.
+     */
+    public abstract boolean isSendingVideo();
 }

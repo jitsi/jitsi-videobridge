@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,11 @@ package org.jitsi.videobridge.rest;
 
 import java.util.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-
 import org.jetbrains.annotations.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.stats.*;
+import org.jitsi.xmpp.extensions.*;
+import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.jingle.*;
 import org.json.simple.*;
 
 /**
@@ -33,7 +31,7 @@ import org.json.simple.*;
  * @author Lyubomir Marinov
  */
 @SuppressWarnings("unchecked")
-final class JSONSerializer
+public final class JSONSerializer
 {
     /**
      * The name of the JSON pair which specifies the value of the
@@ -168,7 +166,7 @@ final class JSONSerializer
             /*
              * The JSON.simple library that is in use at the time of this
              * writing will fail to encode Enum values as JSON strings so
-             * convert the Enum value to a Java String. 
+             * convert the Enum value to a Java String.
              */
             if (value instanceof Enum)
                 value = value.toString();
@@ -226,7 +224,7 @@ final class JSONSerializer
         }
         else
         {
-            MediaDirection direction = channel.getDirection();
+            String direction = channel.getDirection();
             Integer lastN = channel.getLastN();
             List<PayloadTypePacketExtension> payloadTypes
                 = channel.getPayloadTypes();
@@ -246,11 +244,11 @@ final class JSONSerializer
                 /*
                  * The JSON.simple library that is in use at the time of this
                  * writing will fail to encode Enum values as JSON strings so
-                 * convert the Enum value to a Java String. 
+                 * convert the Enum value to a Java String.
                  */
                 jsonObject.put(
                         ColibriConferenceIQ.Channel.DIRECTION_ATTR_NAME,
-                        direction.toString());
+                        direction);
             }
             // lastN
             if (lastN != null)
@@ -279,7 +277,7 @@ final class JSONSerializer
                 /*
                  * The JSON.simple library that is in use at the time of this
                  * writing will fail to encode Enum values as JSON strings so
-                 * convert the Enum value to a Java String. 
+                 * convert the Enum value to a Java String.
                  */
                 jsonObject.put(
                         ColibriConferenceIQ.Channel
@@ -522,7 +520,6 @@ final class JSONSerializer
                 = conference.getChannelBundles();
             List<ColibriConferenceIQ.Endpoint> endpoints
                 = conference.getEndpoints();
-            ColibriConferenceIQ.Recording recording = conference.getRecording();
             boolean isGracefulShutdown = conference.isGracefulShutdown();
 
             jsonObject = new JSONObject();
@@ -545,12 +542,6 @@ final class JSONSerializer
                 jsonObject.put(
                         ENDPOINTS,
                         serializeEndpoints(endpoints));
-            }
-            // recording
-            if (recording != null)
-            {
-                jsonObject.put(ColibriConferenceIQ.Recording.ELEMENT_NAME,
-                               serializeRecording(recording));
             }
             // shutdown
             if (isGracefulShutdown)
@@ -786,30 +777,6 @@ final class JSONSerializer
             }
         }
         return payloadTypeJSONObject;
-    }
-
-    public static JSONObject serializeRecording(
-            ColibriConferenceIQ.Recording recording)
-    {
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.put(ColibriConferenceIQ.Recording.STATE_ATTR_NAME,
-                       recording.getState().toString());
-
-        String token = recording.getToken();
-        if (token != null)
-        {
-            jsonObject.put(ColibriConferenceIQ.Recording.TOKEN_ATTR_NAME,
-                           token);
-        }
-
-        String directory = recording.getDirectory();
-        if (directory != null)
-        {
-            jsonObject.put(ColibriConferenceIQ.Recording.DIRECTORY_ATTR_NAME,
-                    directory);
-        }
-
-        return jsonObject;
     }
 
     public static JSONArray serializePayloadTypes(

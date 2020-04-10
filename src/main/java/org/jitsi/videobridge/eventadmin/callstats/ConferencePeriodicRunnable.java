@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,10 @@
  */
 package org.jitsi.videobridge.eventadmin.callstats;
 
-import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.stats.*;
+import org.jitsi.nlj.stats.*;
+import org.jitsi.nlj.transform.node.incoming.*;
+import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.stats.media.*;
-import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 
 import java.util.*;
@@ -32,19 +32,6 @@ import java.util.*;
 public class ConferencePeriodicRunnable
     extends AbstractStatsPeriodicRunnable<Conference>
 {
-    /**
-     * The <tt>Logger</tt> used by the <tt>ConferencePeriodicRunnable</tt>
-     * class and its instances to print debug information.
-     */
-    private static final Logger logger
-        = Logger.getLogger(ConferencePeriodicRunnable.class);
-
-    /**
-     * The {@link MediaType}s for which we will report to callstats.
-     */
-    private static final MediaType[] MEDIA_TYPES
-        = { MediaType.AUDIO, MediaType.VIDEO };
-
     /**
      * Constructs <tt>ConferencePeriodicRunnable</tt>.
      * @param conference the conference.
@@ -69,87 +56,66 @@ public class ConferencePeriodicRunnable
             initiatorID);
     }
 
-    @Override
-    protected Map<String, Collection<? extends ReceiveTrackStats>>
-        getReceiveTrackStats()
-    {
-        return getTrackStats(true);
-    }
-
-    @Override
-    protected Map<String, Collection<? extends SendTrackStats>>
-        getSendTrackStats()
-    {
-        return getTrackStats(false);
-    }
-
     /**
-     * Get stats receive or send from current conference.
-     *
-     * @param receive whether to get receive if <tt>true</tt> or
-     * send statistics otherwise.
-     * @param <T> the type of result stats Collection, ReceiveTrackStats
-     * or SendTrackStats.
-     * @return the result collection of stats grouped by endpointID.
+     * {@inheritDoc}
      */
-    private <T extends Collection> Map<String, T> getTrackStats(boolean receive)
+    @Override
+    protected List<EndpointStats> getEndpointStats()
     {
-        Map<String, T> resultStats = new HashMap<>();
+        List<EndpointStats> allEndpointStats = new LinkedList<>();
 
-        for (AbstractEndpoint endpoint : o.getEndpoints())
+        for (Endpoint endpoint : o.getLocalEndpoints())
         {
-            for (MediaType mediaType : MEDIA_TYPES)
+            String id = endpoint.getStatsId();
+            if (id == null)
             {
-                for (RtpChannel channel : endpoint.getChannels(mediaType))
-                {
-                    if (channel == null)
-                    {
-                        logger.debug("Could not log the channel expired event "
-                            + "because the channel is null.");
-                        continue;
-                    }
-
-                    if (channel.getReceiveSSRCs().length == 0)
-                    {
-                        continue;
-                    }
-
-                    MediaStream stream = channel.getStream();
-                    if (stream == null)
-                    {
-                        continue;
-                    }
-
-                    MediaStreamStats2 stats = stream.getMediaStreamStats();
-                    if (stats == null)
-                    {
-                        continue;
-                    }
-
-                    // uses statsId if it is available
-                    String endpointID
-                        = endpoint.getStatsId()
-                            != null ? endpoint.getStatsId(): endpoint.getID();
-
-                    Collection newStats
-                        = receive
-                            ? stats.getAllReceiveStats()
-                            : stats.getAllSendStats();
-
-                    T previousResults = resultStats.get(endpointID);
-                    if (previousResults != null)
-                    {
-                        previousResults.addAll(newStats);
-                    }
-                    else
-                    {
-                        resultStats.put(
-                            endpointID, (T)new ArrayList<>(newStats));
-                    }
-                }
+                id = endpoint.getID();
             }
+            EndpointStats endpointStats = new EndpointStats(id);
+
+            TransceiverStats transceiverStats
+                    = endpoint.getTransceiver().getTransceiverStats();
+            int rttMs
+                    = (int) transceiverStats.getEndpointConnectionStats().getRtt();
+
+            Map<Long, IncomingSsrcStats.Snapshot> incomingStats
+                    = transceiverStats.getIncomingStats().getSsrcStats();
+            incomingStats.forEach((ssrc, stats) ->
+            {
+                SsrcStats receiveStats = new SsrcStats();
+                receiveStats.ssrc = ssrc;
+                receiveStats.bytes = stats.getNumReceivedBytes();
+                receiveStats.packets = stats.getNumReceivedPackets();
+                receiveStats.packetsLost = stats.getCumulativePacketsLost();
+                receiveStats.rtt_ms = rttMs;
+                // TODO: the incoming stats don't have the fractional packet
+                //  loss, it has to be computed between snapshots.
+                //receiveStats.fractionalPacketLoss = TODO;
+                receiveStats.jitter_ms = stats.getJitter();
+                endpointStats.addReceiveStats(receiveStats);
+            });
+
+            Map<Long, OutgoingSsrcStats.Snapshot> outgoingStats
+                    = transceiverStats.getOutgoingStats().getSsrcStats();
+            outgoingStats.forEach((ssrc, stats) ->
+            {
+                SsrcStats sendStats = new SsrcStats();
+                sendStats.ssrc = ssrc;
+                sendStats.bytes = stats.getOctetCount();
+                sendStats.packets = stats.getPacketCount();
+                // TODO: we don't keep track of outgoing loss per ssrc.
+                //sendStats.packetsLost = TODO
+                sendStats.rtt_ms = rttMs;
+                // TODO: we don't keep track of outgoing loss per ssrc.
+                //sendStats.fractionalPacketLoss = TODO
+                // TODO: we don't keep track of outgoing loss per ssrc.
+                //sendStats.jitter_ms = TODO
+                endpointStats.addSendStats(sendStats);
+            });
+
+            allEndpointStats.add(endpointStats);
         }
 
-        return resultStats;
+        return allEndpointStats;
     }
 }

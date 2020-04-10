@@ -15,14 +15,15 @@
  */
 package org.jitsi.videobridge.cc;
 
-import net.sf.fmj.media.rtp.*;
 import org.jetbrains.annotations.*;
-import org.jitsi.impl.neomedia.rtcp.*;
-import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.codec.*;
-import org.jitsi.service.neomedia.format.*;
-import org.jitsi.util.*;
+import org.jitsi.nlj.*;
+import org.jitsi.nlj.format.*;
+import org.jitsi.nlj.rtp.*;
+import org.jitsi.rtp.rtcp.*;
+import org.jitsi.rtp.util.*;
+import org.jitsi.utils.logging2.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
+import org.json.simple.*;
 
 /**
  * A generic implementation of an adaptive track projection context that can be
@@ -59,8 +60,7 @@ class GenericAdaptiveTrackProjectionContext
      * <tt>GenericAdaptiveTrackProjectionContext</tt> class and its instances to
      * log debug information.
      */
-    private static final Logger logger
-        = Logger.getLogger(GenericAdaptiveTrackProjectionContext.class);
+    private final Logger logger;
 
     private final long ssrc;
 
@@ -72,7 +72,7 @@ class GenericAdaptiveTrackProjectionContext
     /**
      * Useful to determine whether a packet is a "keyframe".
      */
-    private final MediaFormat format;
+    private final PayloadType payloadType;
 
     /**
      * The maximum sequence number that we have sent.
@@ -104,38 +104,21 @@ class GenericAdaptiveTrackProjectionContext
     private int sequenceNumberDelta;
 
     /**
-     * The synchronization root of {@link #transmittedBytes} and
-     * {@link #transmittedPackets}.
-     */
-    private final Object transmittedSyncRoot = new Object();
-
-    /**
-     * Keeps track of the number of transmitted bytes. This is used in RTCP SR
-     * rewriting.
-     */
-    private long transmittedBytes;
-
-    /**
-     * Keeps track of the number of transmitted packets. This is used in RTCP SR
-     * rewriting.
-     */
-    private long transmittedPackets;
-
-    /**
      * Ctor.
      *
-     * @param format the media format to expect
+     * @param payloadType the media format to expect
      * @param rtpState the RTP state (i.e. seqnum, timestamp to start with, etc).
      */
     GenericAdaptiveTrackProjectionContext(
-        @NotNull MediaFormat format, @NotNull RtpState rtpState)
+            @NotNull PayloadType payloadType,
+            @NotNull RtpState rtpState,
+            @NotNull Logger parentLogger)
     {
-        this.format = format;
+        this.payloadType = payloadType;
         this.ssrc = rtpState.ssrc;
-        this.transmittedBytes = rtpState.transmittedBytes;
-        this.transmittedPackets = rtpState.transmittedPackets;
         this.maxDestinationSequenceNumber = rtpState.maxSequenceNumber;
         this.maxDestinationTimestamp = rtpState.maxTimestamp;
+        this.logger = parentLogger.createChildLogger(GenericAdaptiveTrackProjectionContext.class.getName());
     }
 
     /**
@@ -147,14 +130,16 @@ class GenericAdaptiveTrackProjectionContext
      * synchronized keyword because there's only one thread (the translator
      * thread) accessing this method at a time.
      *
-     * @param rtpPacket the RTP packet to determine whether to accept or not.
+     * @param packetInfo the RTP packet to determine whether to accept or not.
+     * @param incomingIndex the quality index of the
      * @param targetIndex the target quality index
      * @return true if the packet should be accepted, false otherwise.
      */
     @Override
     public synchronized boolean
-    accept(@NotNull RawPacket rtpPacket, int targetIndex)
+    accept(@NotNull PacketInfo packetInfo, int incomingIndex, int targetIndex)
     {
+        VideoRtpPacket rtpPacket = packetInfo.packetAs();
         if (targetIndex == RTPEncodingDesc.SUSPENDED_INDEX)
         {
             // suspend the stream.
@@ -167,7 +152,17 @@ class GenericAdaptiveTrackProjectionContext
         boolean accept;
         if (needsKeyframe)
         {
-            if (isKeyframe(rtpPacket, format))
+            if (!(rtpPacket instanceof ParsedVideoPacket))
+            {
+                /* We don't know how to parse this packet's codec type, so
+                 * isKeyframe will never be true.  The best we can do is
+                 * to start forwarding it immediately.  Hopefully the receiver
+                 * will send a PLI/FIR if it needs a keyframe.
+                 */
+                needsKeyframe = false;
+                accept = true;
+            }
+            else if (((ParsedVideoPacket)rtpPacket).isKeyframe())
             {
                 needsKeyframe = false;
                 // resume after being suspended, we compute the new seqnum delta
@@ -178,17 +173,16 @@ class GenericAdaptiveTrackProjectionContext
                 // "destination = source + delta".
                 int destinationSequenceNumber
                     = maxDestinationSequenceNumber + 1;
-                sequenceNumberDelta = RTPUtils.getSequenceNumberDelta(
-                    destinationSequenceNumber, sourceSequenceNumber);
+                sequenceNumberDelta
+                    = RtpUtils.getSequenceNumberDelta(
+                            destinationSequenceNumber,
+                            sourceSequenceNumber);
 
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug("delta ssrc=" + rtpPacket.getSSRCAsLong()
-                        + ",src_sequence=" + sourceSequenceNumber
-                        + ",dst_sequence=" + destinationSequenceNumber
-                        + ",max_sequence=" + maxDestinationSequenceNumber
-                        + ",delta=" + sequenceNumberDelta);
-                }
+                logger.debug(() -> "delta ssrc=" + rtpPacket.getSsrc()
+                    + ",src_sequence=" + sourceSequenceNumber
+                    + ",dst_sequence=" + destinationSequenceNumber
+                    + ",max_sequence=" + maxDestinationSequenceNumber
+                    + ",delta=" + sequenceNumberDelta);
 
                 accept = true;
             }
@@ -207,90 +201,63 @@ class GenericAdaptiveTrackProjectionContext
             maybeInitializeTimestampDelta(rtpPacket.getTimestamp());
 
             int destinationSequenceNumber
-                = computeDestinationSequenceNumber(sourceSequenceNumber);
+                = RtpUtils.applySequenceNumberDelta(
+                        sourceSequenceNumber, sequenceNumberDelta);
 
             long destinationTimestamp
-                = computeDestinationTimestamp(rtpPacket.getTimestamp());
+                = RtpUtils.applyTimestampDelta(
+                        rtpPacket.getTimestamp(), timestampDelta);
 
-            if (RTPUtils.isOlderSequenceNumberThan(
+            if (RtpUtils.isOlderSequenceNumberThan(
                 maxDestinationSequenceNumber, destinationSequenceNumber))
             {
                 maxDestinationSequenceNumber = destinationSequenceNumber;
             }
 
-            if (RTPUtils.isNewerTimestampThan(
+            if (RtpUtils.isNewerTimestampThan(
                 destinationSequenceNumber, maxDestinationTimestamp))
             {
                 maxDestinationTimestamp = destinationTimestamp;
             }
 
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("accept ssrc=" + rtpPacket.getSSRCAsLong()
+                logger.debug(() -> "accept ssrc=" + rtpPacket.getSsrc()
                 + ",src_sequence=" + sourceSequenceNumber
                 + ",dst_sequence=" + destinationSequenceNumber
                 + ",max_sequence=" + maxDestinationSequenceNumber);
-            }
         }
         else
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("reject ssrc=" + rtpPacket.getSSRCAsLong()
-                    + ",src_sequence=" + sourceSequenceNumber);
-            }
+            logger.debug(() -> "reject ssrc=" + rtpPacket.getSsrc()
+                + ",src_sequence=" + sourceSequenceNumber);
         }
 
         return accept;
     }
 
-    private void maybeInitializeTimestampDelta(long sourceTimestamp)
+    /**
+     * Initializes {@link #timestampDelta} if it hasn't been initialized
+     * already.
+     * @param sourceTimestamp
+     */
+    private synchronized void maybeInitializeTimestampDelta(long sourceTimestamp)
     {
         if (timestampDeltaInitialized)
         {
             return;
         }
 
-        if (RTPUtils.isNewerTimestampThan(
+        if (RtpUtils.isNewerTimestampThan(
             maxDestinationSequenceNumber, sourceTimestamp))
         {
             long destinationTimestamp =
-                (maxDestinationTimestamp + 3000) & RawPacket.TIMESTAMP_MASK;
+                    RtpUtils.applyTimestampDelta(maxDestinationTimestamp, 3000);
 
             timestampDelta
-                = RTPUtils.rtpTimestampDiff(destinationTimestamp, sourceTimestamp);
+                = RtpUtils.getTimestampDiff(
+                        destinationTimestamp, sourceTimestamp);
         }
 
         timestampDeltaInitialized = true;
-    }
-
-    private static boolean isKeyframe(
-        @NotNull RawPacket rtpPacket, @NotNull MediaFormat format)
-    {
-        // XXX merge with MediaStream.isKeyframe().
-        byte[] buf = rtpPacket.getBuffer();
-        int payloadOff = rtpPacket.getPayloadOffset(),
-            payloadLen = rtpPacket.getPayloadLength();
-
-        if (Constants.VP8.equalsIgnoreCase(format.getEncoding()))
-        {
-            return org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer
-                .isKeyFrame(buf, payloadOff, payloadLen);
-        }
-        else if (Constants.H264.equalsIgnoreCase(format.getEncoding()))
-        {
-            return org.jitsi.impl.neomedia.codec.video.h264.DePacketizer
-                .isKeyFrame(buf, payloadOff, payloadLen);
-        }
-        else if (Constants.VP9.equalsIgnoreCase(format.getEncoding()))
-        {
-            return org.jitsi.impl.neomedia.codec.video.vp9.DePacketizer
-                .isKeyFrame(buf, payloadOff, payloadLen);
-        }
-        else
-        {
-            return false;
-        }
     }
 
     /**
@@ -307,19 +274,17 @@ class GenericAdaptiveTrackProjectionContext
      * specified as an argument in order to make suspending/resuming of the
      * source track transparent at the RTP level.
      *
-     * @param rtpPacket the RTP packet to rewrite.
-     * @param incomingRawPacketCache the packet cache to pull piggy-backed
-     * packets from. It can be left null because piggybacking is not
-     * implemented.
-     * @return {@link #EMPTY_PACKET_ARR}
+     * @param packetInfo the RTP packet info to rewrite.
      */
     @Override
-    public RawPacket[] rewriteRtp(
-        @NotNull RawPacket rtpPacket, RawPacketCache incomingRawPacketCache)
+    public void rewriteRtp(
+        @NotNull PacketInfo packetInfo)
     {
+        VideoRtpPacket rtpPacket = packetInfo.packetAs();
         int sourceSequenceNumber = rtpPacket.getSequenceNumber();
         int destinationSequenceNumber
-            = computeDestinationSequenceNumber(sourceSequenceNumber);
+            = RtpUtils.applySequenceNumberDelta(
+                    sourceSequenceNumber, sequenceNumberDelta);
 
         if (sourceSequenceNumber != destinationSequenceNumber)
         {
@@ -328,42 +293,17 @@ class GenericAdaptiveTrackProjectionContext
 
         long sourceTimestamp = rtpPacket.getTimestamp();
         long destinationTimestamp
-            = computeDestinationTimestamp(sourceTimestamp);
+            = RtpUtils.applyTimestampDelta(sourceTimestamp, timestampDelta);
 
         if (sourceTimestamp != destinationTimestamp)
         {
             rtpPacket.setTimestamp(destinationTimestamp);
         }
 
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("rewrite ssrc=" + rtpPacket.getSSRCAsLong()
-                + ",src_sequence=" + sourceSequenceNumber
-                + ",dst_sequence=" + destinationSequenceNumber
-                + ",max_sequence=" + maxDestinationSequenceNumber);
-        }
-
-        synchronized (transmittedSyncRoot)
-        {
-            transmittedBytes += rtpPacket.getLength();
-            transmittedPackets++;
-        }
-
-        return EMPTY_PACKET_ARR;
-    }
-
-    private int computeDestinationSequenceNumber(int sourceSequenceNumber)
-    {
-        return sequenceNumberDelta != 0
-            ? (sourceSequenceNumber + sequenceNumberDelta)
-            & RawPacket.SEQUENCE_NUMBER_MASK : sourceSequenceNumber;
-    }
-
-    private long computeDestinationTimestamp(long sourceTimestamp)
-    {
-        return timestampDelta != 0
-            ? (sourceTimestamp + timestampDelta) & RawPacket.TIMESTAMP_MASK
-            : sourceTimestamp;
+        logger.debug(() -> "rewrite ssrc=" + rtpPacket.getSsrc()
+            + ",src_sequence=" + sourceSequenceNumber
+            + ",dst_sequence=" + destinationSequenceNumber
+            + ",max_sequence=" + maxDestinationSequenceNumber);
     }
 
     /**
@@ -371,41 +311,42 @@ class GenericAdaptiveTrackProjectionContext
      * a parameter is an SR, then this method updates the transmitted bytes and
      * transmitted packets of that first SR.
      *
-     * @param rtcpPacket the compound RTCP packet to rewrite.
+     * @param rtcpSrPacket the compound RTCP packet to rewrite.
      * @return true.
      */
     @Override
-    public boolean rewriteRtcp(@NotNull RawPacket rtcpPacket)
+    public boolean rewriteRtcp(@NotNull RtcpSrPacket rtcpSrPacket)
     {
-        if (RTCPUtils.getPacketType(rtcpPacket) == RTCPPacket.SR)
-        {
-            synchronized (transmittedSyncRoot)
-            {
-                // Rewrite packet/octet count.
-                RTCPSenderInfoUtils
-                    .setOctetCount(rtcpPacket, (int) transmittedBytes);
-                RTCPSenderInfoUtils
-                    .setPacketCount(rtcpPacket, (int) transmittedPackets);
-            }
-        }
-
         return true;
     }
 
     @Override
     public RtpState getRtpState()
     {
-        synchronized (transmittedSyncRoot)
-        {
-            return new RtpState(
-                transmittedBytes, transmittedPackets,
+        return new RtpState(
                 ssrc, maxDestinationSequenceNumber, maxDestinationTimestamp);
-        }
     }
 
     @Override
-    public MediaFormat getFormat()
+    public PayloadType getPayloadType()
     {
-        return format;
+        return payloadType;
+    }
+
+    /**
+     * {@inheritDoc}
+     * @return
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public JSONObject getDebugState()
+    {
+        JSONObject debugState = new JSONObject();
+        debugState.put(
+                "class",
+                GenericAdaptiveTrackProjectionContext.class.getSimpleName());
+        debugState.put("TODO", "export more state (or refactor)");
+
+        return debugState;
     }
 }

@@ -15,9 +15,10 @@
  */
 package org.jitsi.videobridge.rest;
 
-import net.java.sip.communicator.util.*;
 import org.eclipse.jetty.websocket.servlet.*;
+import org.jitsi.osgi.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.utils.logging2.*;
 import org.osgi.framework.*;
 
 import java.io.*;
@@ -31,8 +32,7 @@ class ColibriWebSocketServlet
     /**
      * The logger instance used by this {@link ColibriWebSocketServlet}.
      */
-    private static final Logger logger
-        = Logger.getLogger(ColibriWebSocketServlet.class);
+    private static final Logger logger = new LoggerImpl(ColibriWebSocketServlet.class.getName());
 
     /**
      * The {@link BundleContext} in which this instance is running.
@@ -103,25 +103,17 @@ class ColibriWebSocketServlet
         if (path == null
             || !path.startsWith(ColibriWebSocketService.COLIBRI_WS_PATH))
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Received request for an invalid path: " + path);
-            }
+            logger.debug(() -> "Received request for an invalid path: " + path);
             response.sendError(404, "invalid path");
             return null;
         }
 
-        path
-            = path.substring(
-            ColibriWebSocketService.COLIBRI_WS_PATH.length(),
-            path.length());
-        String[] ids = path.split("/");
+        String wsPath
+            = path.substring(ColibriWebSocketService.COLIBRI_WS_PATH.length());
+        String[] ids = wsPath.split("/");
         if (ids.length < 3)
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Received request for an invalid path: " + path);
-            }
+            logger.debug(() -> "Received request for an invalid path: " + wsPath);
             response.sendError(404, "invalid path");
             return null;
         }
@@ -160,7 +152,7 @@ class ColibriWebSocketServlet
         if (abstractEndpoint == null || !(abstractEndpoint instanceof Endpoint))
         {
             logger.warn("Received request for a nonexistent endpoint: "
-                            + ids[1] + "(conference " + conference.getID());
+                            + ids[2] + "(conference " + conference.getID());
             response.sendError(403, authFailed);
             return null;
         }
@@ -209,6 +201,6 @@ class ColibriWebSocketServlet
      */
     Videobridge getVideobridge()
     {
-       return ServiceUtils.getService(bundleContext, Videobridge.class);
+       return ServiceUtils2.getService(bundleContext, Videobridge.class);
     }
 }

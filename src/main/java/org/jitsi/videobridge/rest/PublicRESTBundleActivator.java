@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,14 +22,14 @@ import org.eclipse.jetty.servlet.*;
 import org.eclipse.jetty.servlets.*;
 import org.eclipse.jetty.util.resource.*;
 import org.jitsi.rest.*;
-import org.jitsi.util.*;
+import org.jitsi.utils.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.rest.ssi.*;
 import org.osgi.framework.*;
 
 import javax.servlet.*;
 import javax.servlet.http.*;
 import java.io.*;
-import java.net.*;
 import java.util.*;
 
 /**
@@ -42,6 +42,12 @@ import java.util.*;
 public class PublicRESTBundleActivator
     extends AbstractJettyBundleActivator
 {
+    /**
+     * The logger instance used by this
+     * {@link PublicClearPortRedirectBundleActivator}.
+     */
+    private static final Logger logger = new LoggerImpl(PublicRESTBundleActivator.class.getName());
+
     /**
      * The prefix of the property names for the Jetty instance managed by
      * this {@link AbstractJettyBundleActivator}.
@@ -205,8 +211,7 @@ public class PublicRESTBundleActivator
         // The rules for mappings of the Servlet specification do not allow path
         // matching in the middle of the path.
         servletContextHandler.addServlet(
-                holder,
-                HandlerImpl.COLIBRI_TARGET + "*");
+                holder, "/colibri/*");
 
         return holder;
     }
@@ -361,11 +366,9 @@ public class PublicRESTBundleActivator
                  *
                  * @param path the path to check
                  * @return the resource to server.
-                 * @throws MalformedURLException
                  */
                 @Override
                 public Resource getResource(String path)
-                    throws MalformedURLException
                 {
                     String property
                         = JETTY_RESOURCE_HANDLER_ALIAS_PREFIX + "." + path;
@@ -375,7 +378,16 @@ public class PublicRESTBundleActivator
                             JETTY_PROPERTY_PREFIX + property,
                             null);
 
-                    return (value == null) ? null : Resource.newResource(value);
+                    try
+                    {
+                        return (value == null)
+                            ? null : Resource.newResource(value);
+                    }
+                    catch(IOException e)
+                    {
+                        logger.error("Error constructing resource.", e);
+                        return null;
+                    }
                 }
             };
     }
@@ -424,8 +436,8 @@ public class PublicRESTBundleActivator
         if (privatePort > 0)
         {
             return new RedirectHandler(
-                privateSslContextFactoryKeyStorePath == null ? "http" : "https",
-                privatePort);
+                    privateSslContextFactoryKeyStorePath == null ? "http" : "https",
+                    privatePort);
         }
 
         return null;
@@ -514,7 +526,7 @@ public class PublicRESTBundleActivator
 
         // Colibri WebSockets
         ColibriWebSocketService colibriWebSocketService
-            = new ColibriWebSocketService(bundleContext, isTls());
+            = new ColibriWebSocketService(isTls());
         servletHolder
             = colibriWebSocketService.initializeColibriWebSocketServlet(
                     bundleContext,
@@ -581,7 +593,7 @@ public class PublicRESTBundleActivator
      * through the public HTTP interface to their new location (via the
      * private interface).
      */
-    private class RedirectHandler extends AbstractHandler
+    private static class RedirectHandler extends AbstractHandler
     {
         /**
          * The protocol ("http" or "https") of the target location.
@@ -593,6 +605,9 @@ public class PublicRESTBundleActivator
          */
         private final int targetPort;
 
+        /**
+         * Initializes a new {@link RedirectHandler}.
+         */
         RedirectHandler(String targetProtocol, int targetPort)
         {
             this.targetProtocol = targetProtocol;

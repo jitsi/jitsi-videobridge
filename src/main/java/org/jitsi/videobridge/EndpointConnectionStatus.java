@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2015 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,18 @@
  */
 package org.jitsi.videobridge;
 
-import java.util.*;
-
-import net.java.sip.communicator.util.*;
 import org.jitsi.eventadmin.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
+import org.jitsi.utils.logging2.*;
 import org.osgi.framework.*;
 
+import java.time.*;
+import java.util.*;
+import java.util.stream.*;
+
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
+import static org.jitsi.videobridge.EndpointConnectionStatusConfig.*;
 
 /**
  * This module monitors all endpoints across all conferences currently hosted
@@ -31,19 +34,16 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  * the data channel.
  *
  * An endpoint's connectivity status is considered connected as long as there
- * is any traffic activity seen on any of it's channels as defined in
- * {@link Channel#lastTransportActivityTime}. When there is no activity for
- * longer than {@link #maxInactivityLimit} it will be assumed that
- * the endpoint is having some connectivity issues. Those may be temporary or
- * permanent. When that happens there will be a Colibri message broadcast
- * to all conference endpoints. The Colibri class name of the message is defined
- * in {@link EndpointMessageBuilder#COLIBRI_CLASS_ENDPOINT_CONNECTIVITY_STATUS}
+ * is any traffic activity seen on any of its endpoints. When there is no
+ * activity for longer than the value of {@link Config#getMaxInactivityLimit()}, it
+ * will be assumed that the endpoint is having some connectivity issues. Those
+ * may be temporary or permanent. When that happens there will be a Colibri
+ * message broadcast to all conference endpoints. The Colibri class name of
+ * the message is defined in
+ * {@link EndpointMessageBuilder#COLIBRI_CLASS_ENDPOINT_CONNECTIVITY_STATUS}
  * and it will contain "active" attribute set to "false". If those problems turn
  * out to be temporary and the traffic is restored another message is sent with
  * "active" set to "true".
- *
- * The module is started by OSGi as configured in
- * {@link org.jitsi.videobridge.osgi.JvbBundleConfig}
  *
  * @author Pawel Domas
  */
@@ -52,57 +52,15 @@ public class EndpointConnectionStatus
     extends EventHandlerActivator
 {
     /**
-     * The base for config property names constants.
-     */
-    private final static String CFG_PNAME_BASE
-        = "org.jitsi.videobridge.EndpointConnectionStatus";
-
-    /**
-     * The name of the configuration property which configures
-     * {@link #firstTransferTimeout}.
-     */
-    public final static String CFG_PNAME_FIRST_TRANSFER_TIMEOUT
-        = CFG_PNAME_BASE + ".FIRST_TRANSFER_TIMEOUT";
-
-    /**
-     * The name of the configuration property which configures
-     * {@link #maxInactivityLimit}.
-     */
-    public static final String CFG_PNAME_MAX_INACTIVITY_LIMIT
-        = CFG_PNAME_BASE + ".MAX_INACTIVITY_LIMIT";
-
-    /**
-     * The default value for {@link #firstTransferTimeout}.
-     */
-    private final static long DEFAULT_FIRST_TRANSFER_TIMEOUT = 15000L;
-
-    /**
-     * The default value for {@link #maxInactivityLimit}.
-     */
-    private final static long DEFAULT_MAX_INACTIVITY_LIMIT = 3000L;
-
-    /**
      * The logger instance used by this class.
      */
-    private final static Logger logger
-        = Logger.getLogger(EndpointConnectionStatus.class);
-
-    /**
-     * How long it can take an endpoint to send first data, before it will
-     * be marked as inactive.
-     */
-    private long firstTransferTimeout;
-
-    /**
-     * How long an endpoint can be inactive before it wil be considered
-     * disconnected.
-     */
-    private long maxInactivityLimit;
+    private static final Logger logger
+        = new LoggerImpl(EndpointConnectionStatus.class.getName());
 
     /**
      * How often connectivity status is being probed. Value in milliseconds.
      */
-    private final static long PROBE_INTERVAL = 500L;
+    private static final long PROBE_INTERVAL = 500L;
 
     /**
      * OSGi BC for this module.
@@ -113,7 +71,7 @@ public class EndpointConnectionStatus
      * The list of <tt>Endpoint</tt>s which have current their connection status
      * classified as inactive.
      */
-    private List<Endpoint> inactiveEndpoints = new LinkedList<>();
+    private final Set<Endpoint> inactiveEndpoints = new HashSet<>();
 
     /**
      * The timer which runs the periodical connection status probing operation.
@@ -121,11 +79,22 @@ public class EndpointConnectionStatus
     private Timer timer;
 
     /**
+     * The {@link Clock} used by this class
+     */
+    private final Clock clock;
+
+    public EndpointConnectionStatus(Clock clock)
+    {
+        super(new String[] { EventFactory.MSG_TRANSPORT_READY_TOPIC});
+        this.clock = clock;
+    }
+
+    /**
      * Creates new instance of <tt>EndpointConnectionStatus</tt>
      */
     public EndpointConnectionStatus()
     {
-        super(new String[] { EventFactory.MSG_TRANSPORT_READY_TOPIC});
+        this(Clock.systemUTC());
     }
 
     /**
@@ -154,23 +123,12 @@ public class EndpointConnectionStatus
             logger.error("Endpoint connection monitoring is already running");
         }
 
-        ConfigurationService config = ServiceUtils.getService(
-                bundleContext, ConfigurationService.class);
-
-        firstTransferTimeout = config.getLong(
-                CFG_PNAME_FIRST_TRANSFER_TIMEOUT,
-                DEFAULT_FIRST_TRANSFER_TIMEOUT);
-
-        maxInactivityLimit = config.getLong(
-                CFG_PNAME_MAX_INACTIVITY_LIMIT,
-                DEFAULT_MAX_INACTIVITY_LIMIT);
-
-        if (firstTransferTimeout <= maxInactivityLimit)
+        if (Config.getFirstTransferTimeout().compareTo(Config.getMaxInactivityLimit()) <= 0)
         {
             throw new IllegalArgumentException(
-                String.format("FIRST_TRANSFER_TIMEOUT(%s) must be greater"
-                            + " than MAX_INACTIVITY_LIMIT(%s)",
-                        firstTransferTimeout, maxInactivityLimit));
+                String.format("first transfer timeout(%s) must be greater"
+                            + " than max inactivity limit(%s)",
+                        Config.getFirstTransferTimeout(), Config.getMaxInactivityLimit()));
         }
 
         super.start(bundleContext);
@@ -191,7 +149,10 @@ public class EndpointConnectionStatus
             timer = null;
         }
 
-        inactiveEndpoints.clear();
+        synchronized (inactiveEndpoints)
+        {
+            inactiveEndpoints.clear();
+        }
 
         this.bundleContext = null;
     }
@@ -205,22 +166,23 @@ public class EndpointConnectionStatus
         BundleContext bundleContext = this.bundleContext;
         if (bundleContext != null)
         {
-            Collection<Videobridge> jvbs
-                = Videobridge.getVideobridges(bundleContext);
-            for (Videobridge videobridge : jvbs)
-            {
-                cleanupExpiredEndpointsStatus();
+            Videobridge videobridge
+                = ServiceUtils2.getService(bundleContext, Videobridge.class);
+            cleanupExpiredEndpointsStatus();
 
-                Conference[] conferences = videobridge.getConferences();
-                Arrays.stream(conferences)
-                    .forEachOrdered(
-                        conference ->
-                            conference.getEndpoints()
-                                .forEach(this::monitorEndpointActivity));
-            }
+            Conference[] conferences = videobridge.getConferences();
+            Arrays.stream(conferences)
+                .forEachOrdered(
+                    conference ->
+                        conference.getEndpoints()
+                            .forEach(this::monitorEndpointActivity));
         }
     }
 
+    /**
+     * Checks the activity for a specific {@link Endpoint}.
+     * @param abstractEndpoint the endpoint.
+     */
     private void monitorEndpointActivity(AbstractEndpoint abstractEndpoint)
     {
         if (!(abstractEndpoint instanceof Endpoint))
@@ -233,42 +195,19 @@ public class EndpointConnectionStatus
         Endpoint endpoint = (Endpoint) abstractEndpoint;
         String endpointId = endpoint.getID();
 
-        // Go over all RTP channels to get the latest timestamp
-        List<RtpChannel> rtpChannels = endpoint.getChannels();
-        long lastActivity
-            = rtpChannels.stream()
-                .mapToLong(RtpChannel::getLastTransportActivityTime)
-                .max().orElse(0);
-        long mostRecentChannelCreated
-            = rtpChannels.stream()
-                .mapToLong(RtpChannel::getCreationTimestamp)
-                .max().orElse(0);
-
-        // Also check SctpConnection
-        SctpConnection sctpConnection = endpoint.getSctpConnection();
-        if (sctpConnection != null)
-        {
-            long lastSctpActivity
-                = sctpConnection.getLastTransportActivityTime();
-            if (lastSctpActivity > lastActivity)
-            {
-                lastActivity = lastSctpActivity;
-            }
-            long creationTimestamp = sctpConnection.getCreationTimestamp();
-            if (creationTimestamp > mostRecentChannelCreated)
-            {
-                mostRecentChannelCreated = creationTimestamp;
-            }
-        }
+        Instant now = clock.instant();
+        Instant mostRecentChannelCreated
+                = endpoint.getMostRecentChannelCreatedTime();
+        Instant lastActivity = endpoint.getLastIncomingActivity();
 
         // Transport not initialized yet
-        if (lastActivity == 0)
+        if (lastActivity == ClockUtils.NEVER)
         {
             // Here we check if it's taking too long for the endpoint to connect
             // We're doing that by checking how much time has elapsed since
             // the first endpoint's channel has been created.
-            if (System.currentTimeMillis() - mostRecentChannelCreated
-                    > firstTransferTimeout)
+            Duration timeSinceCreated = Duration.between(mostRecentChannelCreated, now);
+            if (timeSinceCreated.compareTo(Config.getFirstTransferTimeout()) > 0)
             {
                 if (logger.isDebugEnabled())
                     logger.debug(
@@ -289,33 +228,49 @@ public class EndpointConnectionStatus
             }
         }
 
-        long noActivityForMs = System.currentTimeMillis() - lastActivity;
-        boolean inactive = noActivityForMs > maxInactivityLimit;
-        if (inactive && !inactiveEndpoints.contains(endpoint))
+        Duration noActivityTime = Duration.between(lastActivity, now);
+        boolean inactive = noActivityTime.compareTo(Config.getMaxInactivityLimit()) > 0;
+        boolean changed = false;
+        synchronized (inactiveEndpoints)
         {
-            logger.debug(endpointId + " is considered disconnected");
+            if (inactive && !inactiveEndpoints.contains(endpoint))
+            {
+                logger.debug(endpointId + " is considered disconnected");
 
-            inactiveEndpoints.add(endpoint);
-            // Broadcast connection "inactive" message over data channels
-            sendEndpointConnectionStatus(endpoint, false, null);
+                inactiveEndpoints.add(endpoint);
+                changed = true;
+            }
+            else if (!inactive && inactiveEndpoints.contains(endpoint))
+            {
+                logger.debug(endpointId + " has reconnected");
+
+                inactiveEndpoints.remove(endpoint);
+                changed = true;
+            }
         }
-        else if (!inactive && inactiveEndpoints.contains(endpoint))
-        {
-            logger.debug(endpointId + " has reconnected");
 
-            inactiveEndpoints.remove(endpoint);
-            // Broadcast connection "active" message over data channels
-            sendEndpointConnectionStatus(endpoint, true, null);
+        if (changed)
+        {
+            // Broadcast connection "active/inactive" message over data channels
+            sendEndpointConnectionStatus(endpoint, !inactive, null);
         }
 
         if (inactive && logger.isDebugEnabled())
         {
             logger.debug(String.format(
                     "No activity on %s for %s",
-                    endpointId, (( (double) noActivityForMs) / 1000d )));
+                    endpointId, noActivityTime));
         }
     }
 
+    /**
+     * Sends a Colibri message about the status of an endpoint to a specific
+     * target endpoint or to all endpoints.
+     * @param subjectEndpoint the endpoint which the message concerns
+     * @param isConnected whether the subject endpoint is connected
+     * @param msgReceiver the target endpoint, or {@code null} to broadcast
+     * to all endpoints.
+     */
     private void sendEndpointConnectionStatus(
         Endpoint subjectEndpoint, boolean isConnected, Endpoint msgReceiver)
     {
@@ -348,35 +303,51 @@ public class EndpointConnectionStatus
         }
     }
 
+    /**
+     * Prunes the {@link #inactiveEndpoints} list.
+     */
     private void cleanupExpiredEndpointsStatus()
     {
-        inactiveEndpoints.removeIf(e -> {
-            Conference conference = e.getConference();
-            AbstractEndpoint replacement = conference.getEndpoint(e.getID());
-            boolean endpointReplaced = replacement != null && replacement != e;
-
-            // If an Endpoint from the inactive list has been re-created it
-            // means that at this point all participants currently have it in
-            // the "inactive" state, so broadcast "active" in order to reset.
-            if (endpointReplaced)
-            {
-                if (replacement instanceof Endpoint)
-                {
-                    sendEndpointConnectionStatus(
-                        (Endpoint) replacement, true, null);
-                }
-            }
-
-            return conference.isExpired() || endpointReplaced;
-        });
-        if (logger.isDebugEnabled())
+        List<Endpoint> replacements = new ArrayList<>();
+        synchronized (inactiveEndpoints)
         {
-            inactiveEndpoints.stream()
-                .filter(Endpoint::isExpired)
-                .forEach(
-                    e ->
-                        logger.debug("Endpoint has expired: " + e.getID()
-                            + ", but is still on the list"));
+            inactiveEndpoints.removeIf(e -> {
+                Conference conference = e.getConference();
+                AbstractEndpoint replacement =
+                    conference.getEndpoint(e.getID());
+                boolean endpointReplaced =
+                    replacement != null && replacement != e;
+
+                // If an Endpoint from the inactive list has been re-created it
+                // means that at this point all participants currently have it in
+                // the "inactive" state, so broadcast "active" in order to reset.
+                if (endpointReplaced)
+                {
+                    if (replacement instanceof Endpoint)
+                    {
+                        replacements.add((Endpoint)replacement);
+                    }
+                }
+
+                // We intentionally keep endpoints that have expire in order to
+                // keep other endpoints in the conference notified about their
+                // failed state.
+                return conference.isExpired() || endpointReplaced;
+            });
+            if (logger.isDebugEnabled())
+            {
+                inactiveEndpoints.stream()
+                    .filter(Endpoint::isExpired)
+                    .forEach(
+                        e ->
+                            logger.debug("Endpoint has expired: " + e.getID()
+                                + ", but is still on the list"));
+            }
+        }
+
+        for (Endpoint replacement: replacements)
+        {
+            sendEndpointConnectionStatus(replacement, true, null);
         }
     }
 
@@ -412,8 +383,17 @@ public class EndpointConnectionStatus
         //
         // Looping over all inactive endpoints of all conferences maybe is not
         // the most efficient, but it should not be extremely large number.
-        inactiveEndpoints.stream()
-            .filter(e -> e.getConference() == conference)
-            .forEach(e -> sendEndpointConnectionStatus(e, false, endpoint));
+        List<Endpoint> endpoints;
+        synchronized (inactiveEndpoints)
+        {
+            endpoints = inactiveEndpoints.stream()
+                .filter(e -> e.getConference() == conference)
+                .collect(Collectors.toList());
+        }
+
+        for (Endpoint e: endpoints)
+        {
+            sendEndpointConnectionStatus(e, false, endpoint);
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 Atlassian Pty Ltd
+ * Copyright @ 2018 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package org.jitsi.videobridge.util;
 
-import org.jitsi.util.*;
+import org.jitsi.utils.logging2.*;
 
 import java.io.*;
 
@@ -31,8 +31,7 @@ public class UlimitCheck
      * The {@link Logger} to be used by the {@link UlimitCheck} class
      * and its instances to print debug information.
      */
-    private static final Logger logger
-        = Logger.getLogger(UlimitCheck.class);
+    private static final Logger logger = new LoggerImpl(UlimitCheck.class.getName());
 
     /**
      * Executes a command in {@code bash} and returns the output ({@code stdin}
@@ -45,15 +44,19 @@ public class UlimitCheck
         ProcessBuilder pb = new ProcessBuilder("bash", "-c", command);
         pb.redirectErrorStream(true);
 
-        try {
+        try
+        {
             Process p = pb.start();
 
             BufferedReader br
                 = new BufferedReader(
                     new InputStreamReader(p.getInputStream()));
-            return br.lines().reduce(String::concat).orElse("null?");
+            String output =  br.lines().reduce(String::concat).orElse("null?");
+            br.close();
+            return output;
         }
-        catch (IOException e) {
+        catch (IOException e)
+        {
             return null;
         }
     }
