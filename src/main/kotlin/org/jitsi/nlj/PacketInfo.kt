@@ -133,6 +133,7 @@ open class PacketInfo @JvmOverloads constructor(
         }
         clone.receivedTime = receivedTime
         clone.payloadVerification = payloadVerification
+        @Suppress("UNCHECKED_CAST") /* ArrayList.clone() really does return ArrayList, not Object. */
         clone.onSentActions = onSentActions?.clone() as ArrayList<()->Unit>?
         return clone
     }

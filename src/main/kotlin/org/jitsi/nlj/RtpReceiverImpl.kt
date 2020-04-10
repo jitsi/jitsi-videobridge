@@ -38,13 +38,14 @@ import org.jitsi.nlj.transform.node.SrtcpDecryptNode
 import org.jitsi.nlj.transform.node.SrtpDecryptNode
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
 import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
+import org.jitsi.nlj.transform.node.incoming.DuplicateTermination
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.PaddingTermination
 import org.jitsi.nlj.transform.node.incoming.RemoteBandwidthEstimator
 import org.jitsi.nlj.transform.node.incoming.RetransmissionRequesterNode
 import org.jitsi.nlj.transform.node.incoming.RtcpTermination
 import org.jitsi.nlj.transform.node.incoming.RtxHandler
-import org.jitsi.nlj.transform.node.incoming.SilenceDiscarder
+import org.jitsi.nlj.transform.node.incoming.DiscardableDiscarder
 import org.jitsi.nlj.transform.node.incoming.TccGeneratorNode
 import org.jitsi.nlj.transform.node.incoming.VideoBitrateCalculator
 import org.jitsi.nlj.transform.node.incoming.VideoParser
@@ -100,7 +101,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val tccGenerator = TccGeneratorNode(rtcpSender, streamInformationStore, logger)
     private val remoteBandwidthEstimator = RemoteBandwidthEstimator(streamInformationStore, logger, diagnosticContext)
     private val audioLevelReader = AudioLevelReader(streamInformationStore)
-    private val silenceDiscarder = SilenceDiscarder()
+    private val silenceDiscarder = DiscardableDiscarder("Silence discarder", false)
+    private val paddingOnlyDiscarder = DiscardableDiscarder("Padding-only discarder", true)
     private val statsTracker = IncomingStatisticsTracker(streamInformationStore)
     private val packetStreamStats = PacketStreamStatsNode()
     private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statsTracker) {
@@ -178,12 +180,13 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(srtpDecryptWrapper)
                         node(toggleablePcapWriter.newObserverNode())
                         node(statsTracker)
+                        node(PaddingTermination(logger))
                         demux("Media Type") {
                             packetPath {
                                 name = "Audio path"
                                 predicate = PacketPredicate { it is AudioRtpPacket }
                                 path = pipeline {
-                                    node(silenceDiscarder.rtpNode)
+                                    node(silenceDiscarder)
                                     node(audioBitrateCalculator)
                                     node(packetHandlerWrapper)
                                 }
@@ -193,11 +196,12 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 predicate = PacketPredicate { it is VideoRtpPacket }
                                 path = pipeline {
                                     node(RtxHandler(streamInformationStore, logger))
-                                    node(PaddingTermination())
+                                    node(DuplicateTermination())
+                                    node(RetransmissionRequesterNode(rtcpSender, backgroundExecutor, logger))
+                                    node(paddingOnlyDiscarder)
                                     node(VideoParser(streamInformationStore, logger))
                                     node(Vp8Parser(logger))
                                     node(videoBitrateCalculator)
-                                    node(retransmissionRequester)
                                     node(packetHandlerWrapper)
                                 }
                             }
@@ -211,7 +215,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(srtcpDecryptWrapper)
                         node(toggleablePcapWriter.newObserverNode())
                         node(CompoundRtcpParser(logger))
-                        node(silenceDiscarder.rtcpNode)
                         node(rtcpTermination)
                         node(packetHandlerWrapper)
                     }
