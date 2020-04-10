@@ -172,8 +172,9 @@ open class ArrayCache<T>(
 
     /**
      * Iterates from the last index added to the cache down at most [size] elements. For each item, if it is in the
-     * last 'window', applies [predicate] on a clone of the item. If [predicate] returns [false] for any item, stops the
-     * iteration and returns.
+     * last 'window', calls [predicate] with the item.  If [predicate] returns [false] for any item, stops the
+     * iteration and returns.  Note that if the caller must clone the item on their own if they want to keep or modify
+     * it in any way.
      */
     fun forEachDescending(predicate: (T) -> Boolean) =
         if (synchronize) {
@@ -192,7 +193,7 @@ open class ArrayCache<T>(
             val position = (head - i) floorMod size
             if (cache[position].index in indexRange) {
                 // We maintain the invariant [index==-1 iff item==null]
-                if (!predicate(cloneItem(cache[position].item!!))) {
+                if (!predicate(cache[position].item!!)) {
                     return
                 }
             }
