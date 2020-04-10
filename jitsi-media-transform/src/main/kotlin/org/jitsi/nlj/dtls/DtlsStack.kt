@@ -199,7 +199,11 @@ class DtlsStack(
         }
     }
 
-    override fun close() {}
+    override fun close() {
+        incomingProtocolData.forEach {
+            BufferPool.returnBuffer(it.packet.buffer)
+        }
+    }
 
     /**
      * Receive limit computation copied from [org.bouncycastle.crypto.tls.UDPTransport]

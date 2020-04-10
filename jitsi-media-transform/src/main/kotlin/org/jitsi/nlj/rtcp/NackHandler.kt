@@ -20,6 +20,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
+import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.PacketCache
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
@@ -72,6 +73,7 @@ class NackHandler(
                     packetCache.updateTimestamp(ssrc, missingSeqNum, now)
                     numRetransmittedPackets++
                 } else {
+                    BufferPool.returnBuffer(container.item!!.buffer)
                     numPacketsNotResentDueToDelay++
                 }
             } ?: run {

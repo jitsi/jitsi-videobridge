@@ -65,6 +65,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.queue.CountingErrorHandler
 
 import org.jitsi.nlj.RtpReceiverConfig.Config
+import org.jitsi.nlj.util.BufferPool
 
 class RtpReceiverImpl @JvmOverloads constructor(
     val id: String,
@@ -108,6 +109,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
         } ?: emptyList()
     }
     private val rtcpTermination = RtcpTermination(rtcpEventNotifier, logger)
+    private val retransmissionRequester = RetransmissionRequesterNode(rtcpSender, backgroundExecutor, logger)
     private val rembHandler = RembHandler(logger)
     private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-rx")
     private val videoBitrateCalculator = VideoBitrateCalculator(parentLogger)
@@ -195,7 +197,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                     node(VideoParser(streamInformationStore, logger))
                                     node(Vp8Parser(logger))
                                     node(videoBitrateCalculator)
-                                    node(RetransmissionRequesterNode(rtcpSender, backgroundExecutor, logger))
+                                    node(retransmissionRequester)
                                     node(packetHandlerWrapper)
                                 }
                             }
@@ -219,12 +221,14 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
 
     private fun handleIncomingPacket(packet: PacketInfo): Boolean {
-        if (running) {
+        return if (running) {
             packet.addEvent(PACKET_QUEUE_EXIT_EVENT)
             processPacket(packet)
-            return true
+            true
+        } else {
+            BufferPool.returnBuffer(packet.packet.buffer)
+            false
         }
-        return false
     }
 
     override fun doProcessPacket(packetInfo: PacketInfo) = inputTreeRoot.processPacket(packetInfo)
@@ -237,8 +241,12 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun enqueuePacket(p: PacketInfo) {
 //        logger.cinfo { "Receiver $id enqueing data" }
-        p.addEvent(PACKET_QUEUE_ENTRY_EVENT)
-        incomingPacketQueue.add(p)
+        if (running) {
+            p.addEvent(PACKET_QUEUE_ENTRY_EVENT)
+            incomingPacketQueue.add(p)
+        } else {
+            BufferPool.returnBuffer(p.packet.buffer)
+        }
     }
 
     override fun setSrtpTransformers(srtpTransformers: SrtpTransformers) {
@@ -269,11 +277,13 @@ class RtpReceiverImpl @JvmOverloads constructor(
     override fun stop() {
         running = false
         rtcpRrGenerator.running = false
-        incomingPacketQueue.close()
+        retransmissionRequester.stop()
     }
 
     override fun tearDown() {
+        logger.info("Tearing down")
         NodeTeardownVisitor().visit(inputTreeRoot)
+        incomingPacketQueue.close()
         toggleablePcapWriter.disable()
     }
 
