@@ -106,52 +106,6 @@ public class Health
     }
 
     /**
-     * Performs a health check on a specific {@link Videobridge}.
-     *
-     * @param videobridge the {@code Videobridge} to check the health (status)
-     * of
-     * @throws Exception if an error occurs while checking the health (status)
-     * of {@code videobridge} or the check determines that {@code videobridge}
-     * is not healthy
-     */
-    private static void doCheck(Videobridge videobridge)
-        throws Exception
-    {
-        if (MappingCandidateHarvesters.stunDiscoveryFailed)
-        {
-            throw new Exception("Address discovery through STUN failed");
-        }
-
-        if (!Harvesters.isHealthy())
-        {
-            throw new Exception("Failed to bind single-port");
-        }
-
-        checkXmppConnection(videobridge);
-
-        // Conference
-        Conference conference =
-                videobridge.createConference(null, null, false, null);
-
-        // Fail as quickly as possible.
-        if (conference == null)
-        {
-            throw new NullPointerException("Failed to create a conference");
-        }
-        else
-        {
-            try
-            {
-                check(conference);
-            }
-            finally
-            {
-                videobridge.expireConference(conference);
-            }
-        }
-    }
-
-    /**
      * Checks if this {@link Videobridge} has an XMPP component and its
      * connection is alive. Throws an exception if this isn't the case.
      * an XMPP component,
@@ -234,7 +188,31 @@ public class Health
     protected void performCheck()
         throws Exception
     {
-        doCheck(videobridge);
-    }
+        Objects.requireNonNull(videobridge, "No Videobridge service available");
 
+        if (MappingCandidateHarvesters.stunDiscoveryFailed)
+        {
+            throw new Exception("Address discovery through STUN failed");
+        }
+
+        if (!Harvesters.isHealthy())
+        {
+            throw new Exception("Failed to bind single-port");
+        }
+
+        checkXmppConnection(videobridge);
+
+        // Conference
+        Conference conference =
+                videobridge.createConference(null, null, false, null);
+
+        try
+        {
+            check(conference);
+        }
+        finally
+        {
+            videobridge.expireConference(conference);
+        }
+    }
 }
