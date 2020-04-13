@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.rest.binders;
 
 import org.glassfish.hk2.utilities.binding.*;
+import org.jitsi.health.*;
 import org.jitsi.osgi.*;
 import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
@@ -44,6 +45,7 @@ public class OsgiServiceBinder extends AbstractBinder
         bind(new StatsManagerProvider((bundleContext))).to(StatsManagerProvider.class);
         bind(new VideobridgeProvider((bundleContext))).to(VideobridgeProvider.class);
         bind(new VersionServiceProvider((bundleContext))).to(VersionServiceProvider.class);
+        bind(new HealthCheckServiceProvider(bundleContext)).to(HealthCheckServiceProvider.class);
         bind(new ClientConnectionProvider((bundleContext))).to(ClientConnectionProvider.class);
         bind(new ConfigProvider(bundleContext)).to(ConfigProvider.class);
     }

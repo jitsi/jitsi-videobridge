@@ -23,7 +23,6 @@ import org.jitsi.config.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.meet.*;
 import org.jitsi.nlj.*;
-import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
@@ -200,12 +199,6 @@ public class Videobridge
      * execute expire procedure for any of them.
      */
     private VideobridgeExpireThread videobridgeExpireThread;
-
-    /**
-     * The {@link Health} instance responsible for periodically performing
-     * health checks on this videobridge.
-     */
-    private Health health;
 
     /**
      * The shim which handles Colibri-related logic for this
@@ -688,13 +681,16 @@ public class Videobridge
     public void healthCheck()
         throws Exception
     {
+        Health health = ServiceUtils2.getService(bundleContext, Health.class);
         if (health == null)
         {
             throw new Exception("No health checks running");
         }
-        else
+
+        Exception result = health.getResult();
+        if (result != null)
         {
-            health.check();
+            throw result;
         }
     }
 
@@ -862,11 +858,6 @@ public class Videobridge
         ConfigurationService cfg = getConfigurationService();
 
         videobridgeExpireThread.start();
-        if (health != null)
-        {
-            health.stop();
-        }
-        health = new Health(this);
 
         defaultProcessingOptions
             = (cfg == null)
@@ -1036,12 +1027,6 @@ public class Videobridge
     {
         try
         {
-            if (health != null)
-            {
-                health.stop();
-                health = null;
-            }
-
             ConfigurationService cfg = getConfigurationService();
             stopIce4j(bundleContext, cfg);
         }
