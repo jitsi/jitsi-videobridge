@@ -13,55 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.jitsi.nlj.dtls
 
-import java.time.Duration
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.DTLSTransport
 import org.bouncycastle.tls.DatagramTransport
-import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.protocol.ProtocolStack
 import org.jitsi.nlj.srtp.TlsRole
-import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.BufferPool
+import org.jitsi.nlj.util.OrderedJsonObject
+import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
-import org.jitsi.rtp.UnparsedPacket
-import org.jitsi.utils.logging2.Logger
+import java.nio.ByteBuffer
+import java.time.Duration
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
+import kotlin.math.min
 
 /**
- * Represents a single instance of a DTLS stack for a given connection.  This class also acts as the [DatagramTransport]
- * used by the underlying DTLS library in order to send and receive DTLS packets.  Users of this class need to handle
- * passing incoming DTLS packets into the stack, as well as handling packets the stack wants to send out.  The passing
- * of incoming packets is done via calling [DtlsStack.processIncomingProtocolData].  The handling of outgoing packets is done by
- * assigning a handler to the [DtlsStack.onOutgoingProtocolData] member.  Incoming packets may be either control packets
- * (terminated by the stack itself) or app packets which have been sent over DTLS (SCTP packets, for example).  After
- * passing incoming packets to the stack via [DtlsStack.processIncomingProtocolData], any app packets ready for further processing
- * will be returned.  Outgoing packets can be sent via [DtlsStack.sendApplicationData].
+ * A DTLS stack implementation, which can act as either the DTLS server or DTLS client, and can be used
+ * for negotiating the DTLS connection and sending and receiving data over that connection.
  *
- * An example of passing incoming DTLS packets through the stack:
+ * This class does not directly communicate with the network in any way.  Raw DTLS packets must be fed into
+ * this stack via the [processIncomingProtocolData] method.  [incomingDataHandler] will be invoked with the
+ * decrypted, application data sent over the connection.
  *
- *  --> Recv 'dtlsPacket' from the network and pass it into the stack:
- *  val appPackets = dtlsStack.processIncomingProtocolData(listOf(dtlsPacket))
- *  if (appPackets.isNotEmpty()) {
- *    // Process the app packets
- *  }
+ * Data can be sent through the DTLS connection via [sendApplicationData]; it will be encrypted by the stack and
+ * then sent out via the [outgoingDataHandler], which must be set to have the data go anywhere interesting :)
  *
- *  An example of sending app packets out via the DTLS stack:
- *  dtlsStack.onOutgoingData = { outgoingDtlsPacket ->
- *    // Work to send the packets out
- *  }
- *  val dtlsAppPacket = ...
- *  dtlsStack.sendApplicationData(dtlsAppPacket)
+ * [eventHandler] will be invoked when any events occur.
  *
+ * After wiring up all the handlers, to start a connection the stack must be told which role to fullfil: client
+ * or server.  This can be done by calling either the [actAsClient] or [actAsServer] methods.  Once the role has
+ * been set, [start] can be called to start the negotiation.
  */
 class DtlsStack(
     parentLogger: Logger
-) : ProtocolStack, DatagramTransport, NodeStatsProducer {
+) {
     private val logger = createChildLogger(parentLogger)
     private val roleSet = CompletableFuture<Unit>()
 
@@ -83,32 +74,22 @@ class DtlsStack(
     var remoteFingerprints: Map<String, String> = HashMap()
 
     /**
-     * Checks that a specific [Certificate] matches the remote fingerprints sent to us over the signaling path.
+     * A handler which will be invoked when DTLS application data is received
      */
-    protected fun verifyAndValidateRemoteCertificate(remoteCertificate: Certificate?) {
-        remoteCertificate?.let {
-            DtlsUtils.verifyAndValidateCertificate(it, remoteFingerprints)
-            // The above throws an exception if the checks fail.
-            logger.cdebug { "Fingerprints verified." }
-        }
-    }
+    var incomingDataHandler: IncomingDataHandler? = null
 
     /**
-     * Incoming DTLS packets received from the network are stored here via [processIncomingProtocolData].  They are read
-     * by the underlying DTLS library via the [receive] method, which the library calls to receive incoming data.
+     * The method [DtlsStack] will invoke when it wants to send DTLS data out onto the network.
      */
-    private val incomingProtocolData = LinkedBlockingQueue<PacketInfo>()
-    // TODO convert to single packet?
-    private var onOutgoingProtocolData: (List<PacketInfo>) -> Unit = {}
-
-    override fun onOutgoingProtocolData(handler: (List<PacketInfo>) -> Unit) {
-        onOutgoingProtocolData = handler
-    }
+    var outgoingDataHandler: OutgoingDataHandler? = null
 
     /**
-     * The negotiated DTLS transport.  This is used to read and write DTLS app data.
+     * Handle to be invoked when events occur
      */
-    private var dtlsTransport: DTLSTransport? = null
+    var eventHandler: EventHandler? = null
+
+    private val incomingProtocolData = ArrayBlockingQueue<ByteBuffer>(50)
+    private var numPacketDropsQueueFull = 0
 
     /**
      * The [DtlsRole] 'plugin' that will determine how this stack operates (as a client
@@ -124,20 +105,20 @@ class DtlsStack(
     private val dtlsAppDataBuf = ByteArray(1500)
 
     /**
-     * Install a handler to be invoked when the DTLS handshake is finished.
-     *
-     * NOTE this MUST be called before calling either [actAsServer] or
-     * [actAsClient]!
+     * The negotiated DTLS transport.  This is used to read and write DTLS application data.
      */
-    fun onHandshakeComplete(handler: (Int, TlsRole, ByteArray) -> Unit) {
-        handshakeCompleteHandler = handler
-    }
+    private var dtlsTransport: DTLSTransport? = null
+
+    /**
+     * The [DatagramTransport] implementation we use for this stack.
+     */
+    private val datagramTransport: DatagramTransport = DatagramTransportImpl(logger)
 
     fun actAsServer() {
         role = DtlsServer(
-            this,
+            datagramTransport,
             certificateInfo,
-            handshakeCompleteHandler,
+            { chosenSrtpProfile, tlsRole, keyingMaterial -> eventHandler?.handshakeComplete(chosenSrtpProfile, tlsRole, keyingMaterial) },
             this::verifyAndValidateRemoteCertificate,
             logger
         )
@@ -146,40 +127,14 @@ class DtlsStack(
 
     fun actAsClient() {
         role = DtlsClient(
-            this,
+            datagramTransport,
             certificateInfo,
-            handshakeCompleteHandler,
+            { chosenSrtpProfile, tlsRole, keyingMaterial -> eventHandler?.handshakeComplete(chosenSrtpProfile, tlsRole, keyingMaterial) },
             this::verifyAndValidateRemoteCertificate,
             logger
         )
         roleSet.complete(Unit)
     }
-
-    /**
-     * The handler to be invoked when the DTLS handshake is complete.  A [ByteArray]
-     * containing the SRTP keying material is passed
-     */
-    private var handshakeCompleteHandler: (Int, TlsRole, ByteArray) -> Unit = { _, _, _ -> }
-
-    override fun processIncomingProtocolData(packetInfo: PacketInfo): List<PacketInfo> {
-        incomingProtocolData.add(packetInfo)
-        var bytesReceived: Int
-        val outPackets = mutableListOf<PacketInfo>()
-        do {
-            bytesReceived = dtlsTransport?.receive(dtlsAppDataBuf, 0, 1500, 1) ?: -1
-            if (bytesReceived > 0) {
-                val bufCopy = BufferPool.getBuffer(bytesReceived)
-                System.arraycopy(dtlsAppDataBuf, 0, bufCopy, 0, bytesReceived)
-                outPackets.add(PacketInfo(DtlsProtocolPacket(bufCopy, 0, bytesReceived)))
-            }
-        } while (bytesReceived > 0)
-        return outPackets
-    }
-
-    override fun sendApplicationData(packetInfo: PacketInfo) {
-        dtlsTransport?.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
-    }
-
     /**
      * 'start' this stack, in whatever role it has been told to operate (client or server).  If a role
      * has not yet been yet (via [actAsServer] or [actAsClient]), then it will block until the role
@@ -199,62 +154,70 @@ class DtlsStack(
         }
     }
 
-    override fun close() {
+    fun close() {
+        datagramTransport.close()
         incomingProtocolData.forEach {
-            BufferPool.returnBuffer(it.packet.buffer)
+            BufferPool.returnBuffer(it.array())
         }
     }
 
     /**
-     * Receive limit computation copied from [org.bouncycastle.crypto.tls.UDPTransport]
+     * Checks that a specific [Certificate] matches the remote fingerprints sent to us over the signaling path.
      */
-    override fun getReceiveLimit(): Int = 1500 - 20 - 8
+    private fun verifyAndValidateRemoteCertificate(remoteCertificate: Certificate?) {
+        remoteCertificate?.let {
+            DtlsUtils.verifyAndValidateCertificate(it, remoteFingerprints)
+            // The above throws an exception if the checks fail.
+            logger.cdebug { "Fingerprints verified." }
+        } ?: run {
+            throw DtlsUtils.DtlsException("Remote certificate was null")
+        }
+    }
 
-    /**
-     * Send limit computation copied from [org.bouncycastle.crypto.tls.UDPTransport]
-     */
-    override fun getSendLimit(): Int = 1500 - 84 - 8
-
-    override fun receive(buf: ByteArray, off: Int, length: Int, waitMillis: Int): Int {
-        val packetInfo = incomingProtocolData.poll(waitMillis.toLong(), TimeUnit.MILLISECONDS) ?: return -1
-        val packet = packetInfo.packet
-        System.arraycopy(packet.buffer, packet.offset, buf, off, packet.length)
-
-        BufferPool.returnBuffer(packetInfo.packet.buffer)
-
-        return packet.length
+    fun sendApplicationData(data: ByteArray, off: Int, len: Int) {
+        dtlsTransport?.send(data, off, len)
     }
 
     /**
-     * Send an outgoing DTLS packet (already processed by the DTLS stack) out via invoking
-     * a handler.
+     * We get 'pushed' the data from a lower transport layer, but bouncycastle wants to 'pull' the data
+     * itself.  To mimic this, we put the received data into a queue, and then 'pull' it through ourselves by
+     * calling 'receive' on the negotiated [DTLSTransport].
      *
-     * We have to use a synchronous callback approach here, as some packets originate
-     * from within the stack itself (e.g. during connect) and if we put the packets in,
-     * for example, a queue, we'd still have to fire some trigger for something to come
-     * in and read them.
+     * Note: the data we get here may be a DTLS protocol packet and therefore won't generate anything
+     * to be received by [dtlsTransport] or a DTLS app packet (data sent over DTLS after the handshake has
+     * completed) and will result in data being received through [dtlsTransport].  It's possible, though,
+     * that the handshake has finished and the far end has sent application data but we've not yet set
+     * [dtlsTransport], so we "miss" it.  We don't lose this data, but it will sit inside of [incomingProtocolData]
+     * until the next packet comes through.  This means that we must make a copy of the buffer we receive, as we
+     * won't necessarily be done with it by the time this method completes.
      */
-    override fun send(buf: ByteArray, off: Int, length: Int) {
-        // The buf coming from here will belong to usrsctp, so make sure we copy
-        // into a buffer of our own before forwarding.
-        // NOTE: the reason we have to copy into our own before before forwarding
-        // is that this packet will end up in the same place as a packet that
-        // came from the pool which has to be returned.  Since we can't tell if
-        // a buffer came from the pool or not, we'll need to always return it.
-        val newBuf = BufferPool.getBuffer(length)
-        System.arraycopy(buf, off, newBuf, 0, length)
-        val packet = PacketInfo(UnparsedPacket(newBuf, 0, length))
-        onOutgoingProtocolData(listOf(packet))
+    fun processIncomingProtocolData(data: ByteArray, off: Int, len: Int) {
+        val bufCopy = BufferPool.getBuffer(len).apply {
+            System.arraycopy(data, off, this, 0, len)
+        }
+        if (!incomingProtocolData.offer(ByteBuffer.wrap(bufCopy, 0, len))) {
+            logger.warn("DTLS stack queue full, dropping packet")
+            BufferPool.returnBuffer(bufCopy)
+            numPacketDropsQueueFull++
+        }
+        var bytesReceived: Int
+        do {
+            bytesReceived = dtlsTransport?.receive(dtlsAppDataBuf, 0, 1500, 1) ?: -1
+            if (bytesReceived > 0) {
+                // Copy again to copy out of dtlsAppDataBuf, which we re-use.
+                val bufCopy2 = BufferPool.getBuffer(bytesReceived).apply {
+                    System.arraycopy(dtlsAppDataBuf, 0, this, 0, bytesReceived)
+                }
+                incomingDataHandler?.dataReceived(bufCopy2, 0, bytesReceived)
+            }
+        } while (bytesReceived > 0)
     }
 
-    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("DtlsStack").apply {
-        addBlock(NodeStatsBlock("localFingerprint").apply {
-            addString(certificateInfo.localFingerprintHashFunction, certificateInfo.localFingerprint)
-        })
-        addBlock(NodeStatsBlock("remoteFingerprints").apply {
-            remoteFingerprints.forEach { (hash, fp) -> addString(hash, fp) }
-        })
-        addString("role", (role?.javaClass ?: "null").toString())
+    fun getDebugState(): OrderedJsonObject = OrderedJsonObject().apply {
+        put("localFingerprintHashFunction", certificateInfo.localFingerprint)
+        put("remoteFingerprints", remoteFingerprints.map { (hash, fp) -> "$hash: $fp" }.joinToString())
+        put("role", (role?.javaClass ?: "null").toString())
+        put("num_packet_drops_queue_full", numPacketDropsQueueFull)
     }
 
     companion object {
@@ -269,9 +232,61 @@ class DtlsStack(
                 val expirationPeriodMs = Duration.ofDays(1).toMillis()
                 if (field.creationTimestampMs + expirationPeriodMs < System.currentTimeMillis()) {
                     // TODO: avoid creating our own thread
-                    Thread { field = DtlsUtils.generateCertificateInfo() }.start()
+                    thread { field = DtlsUtils.generateCertificateInfo() }
                 }
                 return field
             }
+    }
+
+    /**
+     * An implementation of [DatagramTransport] which 'receives' from the queue in [DtlsStack] and sends out
+     * via [DtlsStack]'s [outgoingDataHandler]
+     */
+    inner class DatagramTransportImpl(parentLogger: Logger) : DatagramTransport {
+        private val logger = createChildLogger(parentLogger)
+
+        override fun receive(buf: ByteArray, off: Int, len: Int, waitMillis: Int): Int {
+            val data = this@DtlsStack.incomingProtocolData.poll(waitMillis.toLong(), TimeUnit.MILLISECONDS) ?: return -1
+            val length = min(len, data.limit())
+            if (length < data.limit()) {
+                logger.warn("Passed buffer size ($len) was too small to hold incoming data size (${data.limit()}); " +
+                    "data was truncated")
+            }
+            System.arraycopy(data.array(), data.arrayOffset(), buf, off, length)
+            BufferPool.returnBuffer(data.array())
+            return length
+        }
+
+        override fun send(buf: ByteArray, off: Int, len: Int) {
+            this@DtlsStack.outgoingDataHandler?.sendData(buf, off, len)
+        }
+
+        /**
+         * Receive limit computation copied from [org.bouncycastle.crypto.tls.UDPTransport]
+         */
+        override fun getReceiveLimit(): Int = 1500 - 20 - 8
+
+        /**
+         * Send limit computation copied from [org.bouncycastle.crypto.tls.UDPTransport]
+         */
+        override fun getSendLimit(): Int = 1500 - 84 - 8
+
+        override fun close() {}
+    }
+
+    interface IncomingDataHandler {
+        /**
+         * Notify the handler that data has been received.  The handler takes ownership of the passed
+         * buffer, and it should be returned to the buffer pool when done with it.
+         */
+        fun dataReceived(data: ByteArray, off: Int, len: Int)
+    }
+
+    interface OutgoingDataHandler {
+        fun sendData(data: ByteArray, off: Int, len: Int)
+    }
+
+    interface EventHandler {
+        fun handshakeComplete(chosenSrtpProtectionProfile: Int, tlsRole: TlsRole, keyingMaterial: ByteArray)
     }
 }
