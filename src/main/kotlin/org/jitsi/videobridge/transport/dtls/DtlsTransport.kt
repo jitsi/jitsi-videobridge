@@ -178,7 +178,7 @@ class DtlsTransport(parentLogger: Logger) {
     fun stop() {
         if (running.compareAndSet(true, false)) {
             logger.info("Stopping")
-            // Should we be doing some cleanup here?
+            dtlsStack.close()
         }
     }
 
