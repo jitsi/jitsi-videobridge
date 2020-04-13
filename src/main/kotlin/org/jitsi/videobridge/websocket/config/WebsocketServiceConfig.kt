@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.config
+package org.jitsi.videobridge.websocket.config
 
 import org.jitsi.config.LegacyFallbackConfigProperty
 import org.jitsi.config.legacyConfigAttributes
@@ -29,7 +29,7 @@ class WebsocketServiceConfig {
         companion object {
             /**
              * The name of the property which enables the
-             * [org.jitsi.videobridge.rest.ColibriWebSocketService]
+             * [org.jitsi.videobridge.websocket.ColibriWebSocketService]
              */
             class EnabledProperty : FallbackProperty<Boolean>(
                 legacyConfigAttributes {
@@ -54,7 +54,7 @@ class WebsocketServiceConfig {
              * advertised for COLIBRI WebSockets.
              */
             class DomainProperty : ConditionalProperty<String>(
-                ::enabled,
+                Companion::enabled,
                 object : LegacyFallbackConfigProperty<String>(
                     String::class,
                     readOnce = true,
@@ -64,7 +64,8 @@ class WebsocketServiceConfig {
                 "Websocket domain property is only parsed when websockets are enabled"
             )
 
-            private val domainProp = DomainProperty()
+            private val domainProp =
+                DomainProperty()
 
             /**
              * Note, should only be accessed after verifying [enabled] is true
@@ -78,7 +79,7 @@ class WebsocketServiceConfig {
              * schema.
              */
             class TlsProperty : ConditionalProperty<Boolean>(
-                ::enabled,
+                Companion::enabled,
                 object : LegacyFallbackConfigProperty<Boolean>(
                     Boolean::class,
                     readOnce = true,
@@ -87,7 +88,8 @@ class WebsocketServiceConfig {
                 ) {},
                 "Websocket TLS property is only parsed when websockets are enabled"
             )
-            private val tlsProp = TlsProperty()
+            private val tlsProp =
+                TlsProperty()
 
             /**
              * Note, should only be accessed after verifying [enabled] is true.
@@ -110,7 +112,7 @@ class WebsocketServiceConfig {
              * advertised for COLIBRI WebSockets.
              */
             class ServerIdProperty : ConditionalProperty<String>(
-                ::enabled,
+                Companion::enabled,
                 object : LegacyFallbackConfigProperty<String>(
                     String::class,
                     readOnce = true,
@@ -119,7 +121,8 @@ class WebsocketServiceConfig {
                 ) {},
                 "Websocket server ID property is only parsed when websockets are enabled"
             )
-            private val serverIdProp = ServerIdProperty()
+            private val serverIdProp =
+                ServerIdProperty()
 
             /**
              * Note, should only be accessed after verifying [enabled] is true

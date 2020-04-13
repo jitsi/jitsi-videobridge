@@ -17,11 +17,9 @@ package org.jitsi.videobridge.websocket;
 
 import org.eclipse.jetty.servlet.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.rest.*;
-import org.jitsi.videobridge.rest.config.*;
 import org.osgi.framework.*;
 
-import static org.jitsi.videobridge.rest.config.WebsocketServiceConfig.Config;
+import static org.jitsi.videobridge.websocket.config.WebsocketServiceConfig.Config;
 
 /**
  * @author Boris Grozev
