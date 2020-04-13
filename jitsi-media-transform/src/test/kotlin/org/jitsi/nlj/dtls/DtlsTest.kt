@@ -21,22 +21,20 @@ import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.logging.StdoutLogger
-import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.PcapWriter
-import org.jitsi.nlj.transform.node.incoming.ProtocolReceiver
-import org.jitsi.nlj.transform.node.outgoing.ProtocolSender
 import org.jitsi.rtp.UnparsedPacket
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
+import java.util.logging.Level
 import kotlin.concurrent.thread
 
 class DtlsTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
     private val debugEnabled = true
     private val pcapEnabled = false
-    private val logger = StdoutLogger()
+    private val logger = StdoutLogger(_level = Level.OFF)
 
     fun debug(s: String) {
         if (debugEnabled) {
@@ -47,66 +45,52 @@ class DtlsTest : ShouldSpec() {
     init {
         val dtlsServer = DtlsStack(logger).apply { actAsServer() }
         val dtlsClient = DtlsStack(logger).apply { actAsClient() }
+        val pcapWriter = if (pcapEnabled) PcapWriter(logger, "/tmp/dtls-test.pcap") else null
 
         dtlsClient.remoteFingerprints = mapOf(
             dtlsServer.localFingerprintHashFunction to dtlsServer.localFingerprint)
         dtlsServer.remoteFingerprints = mapOf(
             dtlsClient.localFingerprintHashFunction to dtlsClient.localFingerprint)
 
-        val serverSender = ProtocolSender(dtlsServer)
-        val serverReceiver = ProtocolReceiver(dtlsServer)
-
-        val clientSender = ProtocolSender(dtlsClient)
-        val clientReceiver = ProtocolReceiver(dtlsClient)
-
-        val pcapWriter = if (pcapEnabled) PcapWriter(logger, "/tmp/dtls-test.pcap") else null
-
-        // The server and client senders are connected directly to their
-        // peer's receiver
-        serverSender.attach(object : ConsumerNode("server network") {
-            override fun consume(packetInfo: PacketInfo) {
-                pcapWriter?.processPacket(packetInfo)
-                clientReceiver.processPacket(packetInfo)
+        // The DTLS server's send is wired directly to the DTLS client's receive
+        dtlsServer.outgoingDataHandler = object : DtlsStack.OutgoingDataHandler {
+            override fun sendData(data: ByteArray, off: Int, len: Int) {
+                pcapWriter?.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
+                dtlsClient.processIncomingProtocolData(data, off, len)
             }
+        }
 
-            override fun trace(f: () -> Unit) = f.invoke()
-        })
-        clientSender.attach(object : ConsumerNode("client network") {
-            override fun consume(packetInfo: PacketInfo) {
-                pcapWriter?.processPacket(packetInfo)
-                serverReceiver.processPacket(packetInfo)
-            }
-
-            override fun trace(f: () -> Unit) = f.invoke()
-        })
-
-        // We attach a consumer to each peer's receiver to consume the DTLS app packet
-        // messages
         val serverReceivedData = CompletableFuture<String>()
         val serverToClientMessage = "Goodbye, world"
-        serverReceiver.attach(object : ConsumerNode("server incoming app packets") {
-            override fun consume(packetInfo: PacketInfo) {
-                val packetData = ByteBuffer.wrap(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
+        dtlsServer.incomingDataHandler = object : DtlsStack.IncomingDataHandler {
+            override fun dataReceived(data: ByteArray, off: Int, len: Int) {
+                val packetData = ByteBuffer.wrap(data, off, len)
                 val receivedStr = StandardCharsets.UTF_8.decode(packetData).toString()
                 debug("Server received message: '$receivedStr'")
                 serverReceivedData.complete(receivedStr)
-                serverSender.processPacket(PacketInfo(UnparsedPacket(serverToClientMessage.toByteArray())))
-            }
+                val serverToClientData = serverToClientMessage.toByteArray()
 
-            override fun trace(f: () -> Unit) = f.invoke()
-        })
+                dtlsServer.sendApplicationData(serverToClientData, 0, serverToClientData.size)
+            }
+        }
+
+        // The DTLS client's send is wired directly to the DTLS server's receive
+        dtlsClient.outgoingDataHandler = object : DtlsStack.OutgoingDataHandler {
+            override fun sendData(data: ByteArray, off: Int, len: Int) {
+                pcapWriter?.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
+                dtlsServer.processIncomingProtocolData(data, off, len)
+            }
+        }
 
         val clientReceivedData = CompletableFuture<String>()
-        clientReceiver.attach(object : ConsumerNode("client incoming app packets") {
-            override fun consume(packetInfo: PacketInfo) {
-                val packetData = ByteBuffer.wrap(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
+        dtlsClient.incomingDataHandler = object : DtlsStack.IncomingDataHandler {
+            override fun dataReceived(data: ByteArray, off: Int, len: Int) {
+                val packetData = ByteBuffer.wrap(data, off, len)
                 val receivedStr = StandardCharsets.UTF_8.decode(packetData).toString()
                 debug("Client received message: '$receivedStr'")
                 clientReceivedData.complete(receivedStr)
             }
-
-            override fun trace(f: () -> Unit) = f.invoke()
-        })
+        }
 
         val serverThread = thread {
             debug("Server accepting")
@@ -116,12 +100,13 @@ class DtlsTest : ShouldSpec() {
 
         debug("Client connecting")
         dtlsClient.start()
-        debug("Client connected, sending message")
         // Ensure the server has fully established things on its side as well before we send the
         // message by waiting for the server accept thread to finish
         serverThread.join()
+        debug("Client connected, sending message")
         val clientToServerMessage = "Hello, world"
-        dtlsClient.sendApplicationData(PacketInfo(UnparsedPacket(clientToServerMessage.toByteArray())))
+        val clientToServerData = clientToServerMessage.toByteArray()
+        dtlsClient.sendApplicationData(clientToServerData, 0, clientToServerData.size)
 
         serverReceivedData.get(5, TimeUnit.SECONDS) shouldBe clientToServerMessage
         clientReceivedData.get(5, TimeUnit.SECONDS) shouldBe serverToClientMessage

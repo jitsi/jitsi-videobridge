@@ -179,12 +179,16 @@ class RtpSenderImpl(
      * Insert packets into the incoming packet queue
      */
     override fun doProcessPacket(packetInfo: PacketInfo) {
-        val packet = packetInfo.packet
-        if (packet is RtcpPacket) {
-            rtcpEventNotifier.notifyRtcpSent(packet)
+        if (running) {
+            val packet = packetInfo.packet
+            if (packet is RtcpPacket) {
+                rtcpEventNotifier.notifyRtcpSent(packet)
+            }
+            packetInfo.addEvent(PACKET_QUEUE_ENTRY_EVENT)
+            incomingPacketQueue.add(packetInfo)
+        } else {
+            BufferPool.returnBuffer(packetInfo.packet.buffer)
         }
-        packetInfo.addEvent(PACKET_QUEUE_ENTRY_EVENT)
-        incomingPacketQueue.add(packetInfo)
     }
 
     override fun sendProbing(mediaSsrc: Long, numBytes: Int): Int = probingDataSender.sendProbing(mediaSsrc, numBytes)
@@ -253,12 +257,12 @@ class RtpSenderImpl(
 
     override fun stop() {
         running = false
-        incomingPacketQueue.close()
     }
 
     override fun tearDown() {
         logger.info("Tearing down")
         NodeTeardownVisitor().reverseVisit(outputPipelineTerminationNode)
+        incomingPacketQueue.close()
         toggleablePcapWriter.disable()
     }
 
