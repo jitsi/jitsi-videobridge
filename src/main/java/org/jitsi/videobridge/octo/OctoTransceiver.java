@@ -34,6 +34,8 @@ import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
+import static org.jitsi.videobridge.octo.config.OctoConfig.*;
+
 /**
  * Parses and handles incoming RTP/RTCP packets from an Octo source for a
  * specific {@link Conference}/{@link OctoTentacle}.
@@ -92,7 +94,7 @@ public class OctoTransceiver
                 "octo-tranceiver-incoming-packet-queue",
                 TaskPools.CPU_POOL,
                 this::processPacket,
-                1024);
+                Config.recvQueueSize());
         incomingPacketQueue.setErrorHandler(queueErrorCounter);
     }
 

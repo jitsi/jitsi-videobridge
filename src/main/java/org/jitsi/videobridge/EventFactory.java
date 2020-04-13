@@ -64,25 +64,6 @@ public class EventFactory
         = "org/jitsi/videobridge/Endpoint/MSG_TRANSPORT_READY_TOPIC";
 
     /**
-     * The name of the topic of a "transport connected" event.
-     */
-    public static final String TRANSPORT_CONNECTED_TOPIC
-        = "org/jitsi/videobridge/IceTransport/"
-            + "TRANSPORT_CHANNEL_CONNECTED";
-
-    /**
-     * The name of the topic of a "transport created" event.
-     */
-    public static final String TRANSPORT_CREATED_TOPIC
-        = "org/jitsi/videobridge/IceTransport/CREATED";
-
-    /**
-     * The name of the topic of a "transport state changed" event.
-     */
-    public static final String TRANSPORT_STATE_CHANGED_TOPIC
-        = "org/jitsi/videobridge/IceTransport/TRANSPORT_CHANGED";
-
-    /**
      * Creates a new "conference created" <tt>Event</tt>, which indicates the
      * creation of a new COLIBRI conference.
      * @param conference the newly created COLIBRI conference.
@@ -146,59 +127,5 @@ public class EventFactory
 
         properties.put(EVENT_SOURCE, endpoint);
         return new Event(MSG_TRANSPORT_READY_TOPIC, properties);
-    }
-
-    /**
-     * Creates a new "transport connected" <tt>Event</tt>, which indicates
-     * that a Jitsi Videobridge TransportManager has changed its state to
-     * connected.
-     * @param transportManager the connected transport manager object.
-     *
-     * @return the <tt>Event</tt> which was created.
-     */
-    public static Event transportConnected(
-            IceTransport transportManager)
-    {
-        return
-            new Event(
-                    TRANSPORT_CONNECTED_TOPIC,
-                    makeProperties(transportManager));
-    }
-
-    /**
-     * Creates a new "transport created" <tt>Event</tt>, which indicates the
-     * creation of a new Jitsi Videobridge TransportManager.
-     * @param transportManager the newly created transport manager object.
-     *
-     * @return the <tt>Event</tt> which was created.
-     */
-    public static Event transportCreated(
-            IceTransport transportManager)
-    {
-        return
-            new Event(
-                    TRANSPORT_CREATED_TOPIC,
-                    makeProperties(transportManager));
-    }
-
-    /**
-     * Creates a new "transport manager state changed" <tt>Event</tt>, which
-     * indicates that a Jitsi Videobridge TransportManager has changed its
-     * state.
-     * @param transportManager the changed transport manager object
-     *
-     * @return the <tt>Event</tt> which was created.
-     */
-    public static Event transportStateChanged(
-            IceTransport transportManager,
-            IceProcessingState oldState,
-            IceProcessingState newState)
-    {
-        Dictionary<String, Object> properties = new Hashtable<>(3);
-
-        properties.put(EVENT_SOURCE, transportManager);
-        properties.put("oldState", oldState);
-        properties.put("newState", newState);
-        return new Event(TRANSPORT_STATE_CHANGED_TOPIC, properties);
     }
 }

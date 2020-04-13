@@ -347,9 +347,9 @@ public class VP8AdaptiveTrackProjectionContext
      */
     private boolean checkDecodability(@NotNull VP8Frame frame)
     {
-        if (frame.isKeyframe() || frame.getTemporalLayer() == 0)
+        if (frame.isKeyframe() || frame.getTemporalLayer() <= 0)
         {
-            /* We'll always project all TL0 frames, and TL0PICIDX lets the
+            /* We'll always project all TL0 or unknown-TL frames, and TL0PICIDX lets the
              * decoder know if it's missed something, so no need to check.
              */
             return true;
@@ -675,6 +675,13 @@ public class VP8AdaptiveTrackProjectionContext
             throw new RewriteException("Non-VP8 packet in VP8 track projection");
         }
         Vp8Packet vp8Packet = packetInfo.packetAs();
+
+        if (vp8Packet.getPictureId() == -1)
+        {
+            /* Should have been rejected in accept(). */
+            logger.info("VP8 packet does not have picture ID, cannot track in frame map.");
+            throw new RewriteException("VP8 packet without picture ID in VP8 track projeciton");
+        }
 
         VP8Frame vp8Frame = lookupVP8Frame(vp8Packet);
         if (vp8Frame == null)

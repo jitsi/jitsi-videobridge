@@ -417,4 +417,14 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * @param enabled the state of the feature.
      */
     public abstract void setFeature(EndpointDebugFeatures feature, boolean enabled);
+
+    /**
+     * Whether the remote endpoint is currently sending (non-silence) audio.
+     */
+    public abstract boolean isSendingAudio();
+
+    /**
+     * Whether the remote endpoint is currently sending video.
+     */
+    public abstract boolean isSendingVideo();
 }

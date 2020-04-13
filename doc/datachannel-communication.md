@@ -1,6 +1,6 @@
-#Messages by COLIBRI class:
+# Messages by COLIBRI class:
 
-##EndpointMessage:
+## EndpointMessage:
 
 
 This type of messages could be used by the clients for sending JSON objects to the other clients in the conference. A client can send a message to specific endpoint or a broadcast message.

@@ -3,7 +3,6 @@ Introduction
 **Jitsi Videobridge implements reports for the following statistics (and more):**
 
  * Number of threads used by the JVM.
- * Current CPU and memory usage.
  * Current bitrate, packet rate, and packet loss rate.
  * Current number of audio and video channels, and conferences.
  * Current estimated number of video streams.
@@ -22,9 +21,6 @@ Implementation
  * **current_timestamp** - The value is the date and time when the statistics are
 generated (in UTC).
  * **threads** - The number of Java threads that the video bridge is using.
- * **used_memory** - Total used memory on the machine (i.e. what 'free' would return) in megabytes (10^6 B).
- * **total_memory** - The total memory of the machine in megabytes.
- * **cpu_usage** - CPU usage for the machine. The value is between 0 and 1 and is the fraction of the last interval that the CPU spent in either user, nice, system or iowait state (what would appear in the 'cpu' line in 'top').
  * **bit_rate_download / bit_rate_upload** - the total incoming and outgoing (respectively) bitrate for the video bridge in kilobits per second.
  * **packet_rate_download / packet_rate_upload** - the total incoming and outgoing (respectively) packet rate for the video bridge in packets per second.
  * **loss_rate_download** - The fraction of lost incoming RTP packets. This is based on RTP sequence numbers and is relatively accurate.
@@ -49,7 +45,7 @@ generated (in UTC).
  * **total_data_channel_messages_received / total_data_channel_messages_sent** - The total number messages received and sent through data channels.
  * **total_colibri_web_socket_messages_received / total_colibri_web_socket_messages_sent** - The total number messages received and sent through COLIBRI web sockets.
 
-The statistics are available through the `/colibri/stats` endpoint on the [private REST intefrace](rest.md) (if it has been enabled) in JSON format:
+The statistics are available through the `/colibri/stats` endpoint on the [private REST interface](rest.md) (if it has been enabled) in JSON format:
 ```json
 {
   "audiochannels": 0,
@@ -57,7 +53,6 @@ The statistics are available through the `/colibri/stats` endpoint on the [priva
   "bit_rate_upload": 0,
   "conference_sizes": [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
   "conferences": 0,
-  "cpu_usage": 0.2358490566037736,
   "current_timestamp": "2019-03-14 11:02:15.184",
   "graceful_shutdown": false,
   "jitter_aggregate": 0,
@@ -90,7 +85,6 @@ The statistics are available through the `/colibri/stats` endpoint on the [priva
   "total_loss_controlled_participant_seconds": 847,
   "total_loss_degraded_participant_seconds": 1,
   "total_loss_limited_participant_seconds": 0,
-  "total_memory": 8257,
   "total_packets_dropped_octo": 0,
   "total_packets_received": 266644,
   "total_packets_received_octo": 0,
@@ -98,7 +92,6 @@ The statistics are available through the `/colibri/stats` endpoint on the [priva
   "total_packets_sent_octo": 0,
   "total_partially_failed_conferences": 0,
   "total_participants": 2,
-  "used_memory": 4404,
   "videochannels": 0,
   "videostreams": 0
 }
@@ -109,12 +102,9 @@ The statistics can also be published periodically via XMPP (which allows jicofo 
 <stats xmlns=' http://jitsi.org/protocol/colibri'>
 	<stat value='2014-07-30 10:13:11.595' name='current_timestamp'/>
 	<stat value='229' name='threads'/>
-	<stat value='702' name='used_memory'/>
-	<stat value='0.1506' name='cpu_usage'/>
 	<stat value='689.0096' name='bit_rate_download'/>
 	<stat value='0.00299' name='rtp_loss'/>
 	<stat value='4' name='audiochannels'/>
-	<stat value='1042' name='total_memory'/>
 	<stat value='700.9024' name='bit_rate_upload'/>
 	<stat value='2' name='conferences'/>
 	<stat value='4' name='videochannels'/>

@@ -1164,6 +1164,9 @@ public class Videobridge
                 "octo_receive_queue",
                 getJsonFromQueueErrorHandler(OctoTransceiver.queueErrorCounter));
         queueStats.put(
+                "octo_send_queue",
+                getJsonFromQueueErrorHandler(OctoTentacle.queueErrorCounter));
+        queueStats.put(
                 "rtp_receiver_queue",
                 getJsonFromQueueErrorHandler(
                         RtpReceiverImpl.Companion.getQueueErrorCounter()));
@@ -1271,6 +1274,12 @@ public class Videobridge
         public AtomicInteger totalIceSucceededTcp = new AtomicInteger();
 
         /**
+         * The total number of times an ICE Agent succeeded and the selected
+         * candidate pair included a relayed candidate.
+         */
+        public AtomicInteger totalIceSucceededRelayed = new AtomicInteger();
+
+        /**
          * The total number of messages received from the data channels of
          * the {@link Endpoint}s of this conference.
          */
@@ -1333,5 +1342,11 @@ public class Videobridge
          */
         public AtomicInteger numEndpointsNoMessageTransportAfterDelay =
             new AtomicInteger();
+
+        /**
+         * The total number of times the dominant speaker in any conference
+         * changed.
+         */
+        public LongAdder totalDominantSpeakerChanges = new LongAdder();
     }
 }

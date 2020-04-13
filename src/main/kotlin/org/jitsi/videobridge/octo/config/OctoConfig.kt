@@ -21,11 +21,36 @@ import org.jitsi.config.LegacyFallbackConfigProperty
 import org.jitsi.config.legacyConfigAttributes
 import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.FallbackProperty
+import org.jitsi.utils.config.SimpleProperty
 import org.jitsi.utils.config.exception.ConfigValueParsingException
 
 class OctoConfig {
     class Config {
         companion object {
+
+            class RecvQueueSizeProperty : SimpleProperty<Int>(
+                    newConfigAttributes {
+                        name("videobridge.octo.recv-queue-size")
+                        readOnce()
+                    }
+            )
+
+            private val recvQueueSizeProperty = RecvQueueSizeProperty()
+
+            @JvmStatic
+            fun recvQueueSize() = recvQueueSizeProperty.value
+
+            class SendQueueSizeProperty : SimpleProperty<Int>(
+                newConfigAttributes {
+                    name("videobridge.octo.send-queue-size")
+                    readOnce()
+                }
+            )
+
+            private val sendQueueSizeProperty = SendQueueSizeProperty()
+
+            @JvmStatic
+            fun sendQueueSize() = sendQueueSizeProperty.value
 
             class EnabledProperty : FallbackProperty<Boolean>(
                 // The legacy config file doesn't have an 'enabled' property,
