@@ -1115,8 +1115,8 @@ public class Videobridge
             health = e.getMessage();
         }
         debugState.put("health", health);
-        debugState.put("e2e_packet_delay", DtlsTransport.getPacketDelayStats());
-        debugState.put(DtlsTransport.overallAverageBridgeJitter.name, DtlsTransport.overallAverageBridgeJitter.get());
+        debugState.put("e2e_packet_delay", Endpoint.getPacketDelayStats());
+        debugState.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
 
         JSONObject conferences = new JSONObject();
         debugState.put("conferences", conferences);
@@ -1158,8 +1158,8 @@ public class Videobridge
         JSONObject queueStats = new JSONObject();
 
         queueStats.put(
-                "dtls_send_queue",
-                getJsonFromQueueErrorHandler(DtlsTransport.queueErrorCounter));
+                "srtp_send_queue",
+                getJsonFromQueueErrorHandler(Endpoint.queueErrorCounter));
         queueStats.put(
                 "octo_receive_queue",
                 getJsonFromQueueErrorHandler(OctoTransceiver.queueErrorCounter));

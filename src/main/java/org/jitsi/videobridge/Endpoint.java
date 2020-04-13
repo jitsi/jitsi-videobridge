@@ -28,6 +28,7 @@ import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.rtp.*;
+import org.jitsi.rtp.extensions.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
@@ -35,6 +36,7 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
+import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
@@ -42,6 +44,8 @@ import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.root.colibri.debug.*;
 import org.jitsi.videobridge.sctp.*;
 import org.jitsi.videobridge.shim.*;
+import org.jitsi.videobridge.stats.*;
+import org.jitsi.videobridge.transport.dtls.*;
 import org.jitsi.videobridge.transport.ice.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -77,6 +81,45 @@ public class Endpoint
         PropertyChangeListener,
         EncodingsManager.EncodingsUpdateListener
 {
+    /**
+     * Track how long it takes for all RTP and RTCP packets to make their way through the bridge.
+     * Since {@link Endpoint} is the 'last place' that is aware of {@link PacketInfo} in the outgoing
+     * chain, we track this stats here.  Since they're static, these members will track the delay
+     * for packets going out to all endpoints.
+     */
+    private static final PacketDelayStats rtpPacketDelayStats = new PacketDelayStats();
+    private static final PacketDelayStats rtcpPacketDelayStats = new PacketDelayStats();
+
+    /**
+     * An average of all of the individual bridge jitter values calculated by the
+     * {@link Endpoint#bridgeJitterStats} instance variables below
+     */
+    public static final DoubleAverage overallAverageBridgeJitter = new DoubleAverage("overall_bridge_jitter");
+
+    public static OrderedJsonObject getPacketDelayStats()
+    {
+        OrderedJsonObject packetDelayStats = new OrderedJsonObject();
+        packetDelayStats.put("rtp", Endpoint.rtpPacketDelayStats.toJson());
+        packetDelayStats.put("rtcp", Endpoint.rtcpPacketDelayStats.toJson());
+
+        return packetDelayStats;
+    }
+
+    /**
+     * Count the number of dropped packets and exceptions.
+     */
+    static final CountingErrorHandler queueErrorCounter
+        = new CountingErrorHandler();
+
+    /**
+     * Measures the jitter introduced by the bridge itself (i.e. jitter calculated between
+     * packets based on the time they were received by the bridge and the time they
+     * are sent).  This jitter value is calculated independently, per packet, by every
+     * individual {@link Endpoint} and their jitter values are averaged together
+     * in this static member.
+     */
+    private final BridgeJitterStats bridgeJitterStats = new BridgeJitterStats();
+
     /**
      * The {@link SctpManager} instance we'll use to manage the SCTP connection
      */
@@ -193,6 +236,19 @@ public class Endpoint
             new RecurringRunnableExecutor(Endpoint.class.getSimpleName());
 
     /**
+     * The queue we put outgoing SRTP packets onto so they can be sent
+     * out via the {@link IceTransport} on an IO thread.
+     */
+    private final PacketInfoQueue outgoingSrtpPacketQueue;
+
+    /**
+     * The {@link SctpSocket} for this endpoint, if an SCTP connection was
+     * negotiated.
+     */
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    private Optional<SctpServerSocket> sctpSocket = Optional.empty();
+
+    /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
      * identifier/ID of the endpoint of a participant in a <tt>Conference</tt>.
      *
@@ -244,6 +300,14 @@ public class Endpoint
             });
         bitrateController = new BitrateController(this, diagnosticContext, logger);
 
+        outgoingSrtpPacketQueue = new PacketInfoQueue(
+            getClass().getSimpleName() + "-outgoing-packet-queue",
+            TaskPools.IO_POOL,
+            this::doSendSrtp,
+            TransportConfig.Config.queueSize()
+        );
+        outgoingSrtpPacketQueue.setErrorHandler(queueErrorCounter);
+
         messageTransport = new EndpointMessageTransport(
             this,
             () -> getConference().getVideobridge().getStatistics(),
@@ -273,14 +337,14 @@ public class Endpoint
 
         iceTransport = new IceTransport(getID(), iceControlling, logger);
         setupIceTransport();
-        dtlsTransport = new DtlsTransport(this, logger);
+        dtlsTransport = new DtlsTransport(logger);
+        setupDtlsTransport();
 
         if (conference.includeInStatistics())
         {
             conference.getVideobridge().getStatistics()
                 .totalEndpoints.incrementAndGet();
         }
-
     }
 
     public Endpoint(
@@ -307,11 +371,27 @@ public class Endpoint
         iceTransport.incomingDataHandler = new IceTransport.IncomingDataHandler() {
             @Override
             public void dataReceived(@NotNull byte[] data, int offset, int length, @NotNull Instant receivedTime) {
-                // TODO: In the future we'd split DTLS and SRTP here.  SRTP
-                //  can have a buffer allocated with space and be sent directly
-                //  to the transceiver, DTLS can go through the DTLS transport
-                //  (which will be adapted to only handle DTLS packets)
-                dtlsTransport.dataReceived(data, offset, length, receivedTime);
+                // DTLS data will be handled by the DtlsTransport, but SRTP data can go
+                // straight to the transceiver
+                if (PacketUtils.looksLikeDtls(data, offset, length))
+                {
+                    // DTLS transport is responsible for making its own copy, because it will manage its own
+                    // buffers
+                    dtlsTransport.dtlsDataReceived(data, offset, length);
+                }
+                else
+                {
+                    byte[] copy = ByteBufferPool.getBuffer(
+                        length +
+                            RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET +
+                            RtpPacket.BYTES_TO_LEAVE_AT_END_OF_PACKET
+                    );
+                    System.arraycopy(data, offset, copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length);
+                    Packet pkt = new UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length);
+                    PacketInfo pktInfo = new PacketInfo(pkt);
+                    pktInfo.setReceivedTime(receivedTime.toEpochMilli());
+                    transceiver.handleIncomingPacket(pktInfo);
+                }
             }
         };
         iceTransport.eventHandler = new IceTransport.EventHandler() {
@@ -320,8 +400,7 @@ public class Endpoint
                 logger.info("ICE connected");
                 getConference().getStatistics().hasIceSucceededEndpoint = true;
                 getConference().getVideobridge().getStatistics().totalIceSucceeded.incrementAndGet();
-                dtlsTransport.setSender(iceTransport::send);
-                setOutgoingSrtpPacketHandler(dtlsTransport::sendSrtpData);
+                transceiver.setOutgoingPacketHandler(outgoingSrtpPacketQueue::add);
                 TaskPools.IO_POOL.submit(iceTransport::startReadingData);
                 TaskPools.IO_POOL.submit(dtlsTransport::startDtlsHandshake);
             }
@@ -337,9 +416,64 @@ public class Endpoint
                 getTransceiver().getPacketIOActivity().setLastIceActivityInstant(time);
             }
         };
-
     }
 
+    private void setupDtlsTransport()
+    {
+        dtlsTransport.incomingDataHandler = new DtlsTransport.IncomingDataHandler()
+        {
+            @Override
+            public void dtlsAppDataReceived(@NotNull byte[] buf, int off, int len)
+            {
+                dtlsAppPacketReceived(buf, off, len);
+            }
+        };
+        dtlsTransport.outgoingDataHandler = new DtlsTransport.OutgoingDataHandler()
+        {
+            @Override
+            public void sendData(@NotNull byte[] buf, int off, int len)
+            {
+                iceTransport.send(buf, off, len);
+            }
+        };
+        dtlsTransport.eventHandler = new DtlsTransport.EventHandler()
+        {
+            @Override
+            public void handshakeComplete(int chosenSrtpProtectionProfile, @NotNull TlsRole tlsRole, @NotNull byte[] keyingMaterial)
+            {
+                logger.info("DTLS handshake complete");
+                transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial);
+                //TODO(brian): the old code would work even if the sctp connection was created after
+                // the handshake had completed, but this won't (since this is a one-time event).  do
+                // we need to worry about that case?
+                sctpSocket.ifPresent(socket -> {
+                    acceptSctpConnection(socket);
+                });
+                scheduleEndpointMessageTransportTimeout();
+            }
+        };
+    }
+
+    private boolean doSendSrtp(PacketInfo packetInfo)
+    {
+        if (PacketExtensionsKt.looksLikeRtp(packetInfo.getPacket()))
+        {
+            rtpPacketDelayStats.addPacket(packetInfo);
+            bridgeJitterStats.packetSent(packetInfo);
+        }
+        else if (PacketExtensionsKt.looksLikeRtcp(packetInfo.getPacket()))
+        {
+            rtcpPacketDelayStats.addPacket(packetInfo);
+        }
+        packetInfo.sent();
+        iceTransport.send(
+            packetInfo.getPacket().buffer,
+            packetInfo.getPacket().offset,
+            packetInfo.getPacket().length
+        );
+        ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
+        return true;
+    }
 
     @Override
     @SuppressWarnings("unchecked")
@@ -529,44 +663,13 @@ public class Endpoint
     }
 
     /**
-     * Handle an SRTP packet which has just been received (i.e. not processed
-     * by the incoming pipeline)
-     * @param srtpPacket
-     */
-    void srtpPacketReceived(PacketInfo srtpPacket)
-    {
-        transceiver.handleIncomingPacket(srtpPacket);
-    }
-
-    /**
      * Handle a DTLS app packet (that is, a packet of some other protocol sent
      * over DTLS) which has just been received.
-     * @param dtlsAppPacket
      */
-    void dtlsAppPacketReceived(PacketInfo dtlsAppPacket)
+    private void dtlsAppPacketReceived(byte[] data, int off, int len)
     {
-        sctpHandler.consume(dtlsAppPacket);
-    }
-
-    /**
-     * Set the handler which will send packets ready to go out onto the network
-     * @param handler
-     */
-    public void setOutgoingSrtpPacketHandler(PacketHandler handler)
-    {
-        transceiver.setOutgoingPacketHandler(handler);
-    }
-
-    /**
-     * TODO Brian
-     */
-    public void setSrtpInformation(
-            int chosenSrtpProtectionProfile,
-            TlsRole tlsRole,
-            byte[] keyingMaterial)
-    {
-        transceiver.setSrtpInformation(
-                chosenSrtpProtectionProfile, tlsRole, keyingMaterial);
+        //TODO(brian): change sctp handler to take buf, off, len
+        sctpHandler.consume(new PacketInfo(new UnparsedPacket(data, off, len)));
     }
 
     /**
@@ -695,6 +798,8 @@ public class Endpoint
         dtlsTransport.stop();
         iceTransport.stop();
 
+        outgoingSrtpPacketQueue.close();
+
         logger.info("Expired.");
     }
 
@@ -750,19 +855,14 @@ public class Endpoint
      */
     public void createSctpConnection()
     {
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Creating SCTP manager.");
-        }
+        logger.debug(() -> "Creating SCTP mananger");
         // Create the SctpManager and provide it a method for sending SCTP data
         this.sctpManager = new SctpManager(
-                (data, offset, length) -> {
-                    PacketInfo packet
-                        = new PacketInfo(new UnparsedPacket(data, offset, length));
-                    dtlsTransport.sendDtlsData(packet);
-                    return 0;
-                },
-                logger
+            (data, offset, length) -> {
+                dtlsTransport.sendDtlsData(data, offset, length);
+                return 0;
+            },
+            logger
         );
         sctpHandler.setSctpManager(sctpManager);
         // NOTE(brian): as far as I know we always act as the 'server' for sctp
@@ -822,59 +922,66 @@ public class Endpoint
                     () -> dataChannelHandler.consume(new PacketInfo(dcp)));
         };
         socket.listen();
+        sctpSocket = Optional.of(socket);
+    }
 
-        dtlsTransport.onDtlsHandshakeComplete(() -> {
+    private void acceptSctpConnection(SctpServerSocket sctpServerSocket)
+    {
+        TaskPools.IO_POOL.submit(() -> {
             // We don't want to block the thread calling
             // onDtlsHandshakeComplete so run the socket acceptance in an IO
             // pool thread
-            //TODO(brian): we should have a common 'notifier'/'publisher'
-            // interface that has notify/notifyAsync logic so we don't have
-            // to worry about this everywhere
-            TaskPools.IO_POOL.submit(() -> {
-                // FIXME: This runs forever once the socket is closed (
-                // accept never returns true).
-                logger.info("Attempting to establish SCTP socket connection");
-                int attempts = 0;
-                while (!socket.accept())
+            // FIXME: This runs forever once the socket is closed (
+            // accept never returns true).
+            logger.info("Attempting to establish SCTP socket connection");
+            int attempts = 0;
+            while (!sctpServerSocket.accept())
+            {
+                attempts++;
+                try
                 {
-                    attempts++;
-                    try
-                    {
-                        Thread.sleep(100);
-                    }
-                    catch (InterruptedException e)
-                    {
-                        break;
-                    }
+                    Thread.sleep(100);
+                }
+                catch (InterruptedException e)
+                {
+                    break;
+                }
 
-                    if (attempts > 100)
-                    {
-                        break;
-                    }
-                }
-                if (logger.isDebugEnabled())
+                if (attempts > 100)
                 {
-                    logger.debug("SCTP socket " + socket.hashCode() +
-                            " accepted connection.");
+                    break;
                 }
-            });
-            TaskPools.SCHEDULED_POOL.schedule(() -> {
-                if (!isExpired()) {
-                    AbstractEndpointMessageTransport t = getMessageTransport();
-                    if (t != null)
+            }
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("SCTP socket " + sctpServerSocket.hashCode() +
+                    " accepted connection.");
+            }
+        });
+    }
+
+    /**
+     * Schedule a timeout to fire log a message and track a stat if we don't
+     * have an endpoint message transport connected within the timeout.
+     */
+    private void scheduleEndpointMessageTransportTimeout()
+    {
+        TaskPools.SCHEDULED_POOL.schedule(() -> {
+            if (!isExpired()) {
+                AbstractEndpointMessageTransport t = getMessageTransport();
+                if (t != null)
+                {
+                    if (!t.isConnected())
                     {
-                        if (!t.isConnected())
-                        {
-                            logger.error("EndpointMessageTransport still not connected.");
-                            getConference()
-                                .getVideobridge()
-                                .getStatistics()
-                                .numEndpointsNoMessageTransportAfterDelay.incrementAndGet();
-                        }
+                        logger.error("EndpointMessageTransport still not connected.");
+                        getConference()
+                            .getVideobridge()
+                            .getStatistics()
+                            .numEndpointsNoMessageTransportAfterDelay.incrementAndGet();
                     }
                 }
-            }, 30, TimeUnit.SECONDS);
-        });
+            }
+        }, 30, TimeUnit.SECONDS);
     }
 
     /**
