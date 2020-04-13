@@ -15,7 +15,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <smack.version>4.2.4-47d17fc</smack.version>
     <jitsi.utils.version>1.0-40-g3244250</jitsi.utils.version>
-    <jicoco.version>1.1-25-g0328114</jicoco.version>
+    <jicoco.version>1.1-26-g22d54ec</jicoco.version>
     <maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
     <spotbugs.version>4.0.1</spotbugs.version>
     <jersey.version>2.30.1</jersey.version>
