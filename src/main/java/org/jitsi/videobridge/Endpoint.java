@@ -373,7 +373,7 @@ public class Endpoint
             public void dataReceived(@NotNull byte[] data, int offset, int length, @NotNull Instant receivedTime) {
                 // DTLS data will be handled by the DtlsTransport, but SRTP data can go
                 // straight to the transceiver
-                if (UtilKt.looksLikeDtls(data, offset, length))
+                if (PacketUtils.looksLikeDtls(data, offset, length))
                 {
                     // DTLS transport is responsible for making its own copy, because it will manage its own
                     // buffers

@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge
+@file:JvmName("PacketUtils")
+
+package org.jitsi.videobridge.util
 
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 
