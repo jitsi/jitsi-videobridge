@@ -102,7 +102,14 @@ public class Debug extends ColibriResource
         FeatureState featureState = FeatureState.fromString(state);
 
         logger.info("Setting feature state: feature=" + feature.getValue() + ", state=" + featureState.getValue());
-        endpoint.setFeature(feature, featureState.getValue());
+        try
+        {
+            endpoint.setFeature(feature, featureState.getValue());
+        }
+        catch (IllegalStateException e)
+        {
+            return Response.status(403, e.getMessage()).build();
+        }
 
         return Response.ok().build();
     }
