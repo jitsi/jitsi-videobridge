@@ -262,12 +262,12 @@ class DtlsStack(
         }
 
         /**
-         * Receive limit computation copied from [org.bouncycastle.crypto.tls.UDPTransport]
+         * Receive limit computation copied from [org.bouncycastle.tls.UDPTransport]
          */
         override fun getReceiveLimit(): Int = 1500 - 20 - 8
 
         /**
-         * Send limit computation copied from [org.bouncycastle.crypto.tls.UDPTransport]
+         * Send limit computation copied from [org.bouncycastle.tls.UDPTransport]
          */
         override fun getSendLimit(): Int = 1500 - 84 - 8
 

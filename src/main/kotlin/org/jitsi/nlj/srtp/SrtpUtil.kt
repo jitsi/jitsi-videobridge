@@ -15,11 +15,7 @@
  */
 package org.jitsi.nlj.srtp
 
-import org.bouncycastle.crypto.tls.ExporterLabel
-import org.bouncycastle.crypto.tls.SRTPProtectionProfile
-import org.bouncycastle.crypto.tls.TlsClientContext
-import org.bouncycastle.crypto.tls.TlsContext
-import org.bouncycastle.crypto.tls.TlsServerContext
+import org.bouncycastle.tls.SRTPProtectionProfile
 import org.jitsi.srtp.SrtpContextFactory
 import org.jitsi.srtp.SrtpPolicy
 import org.jitsi.utils.logging2.Logger
@@ -27,16 +23,6 @@ import org.jitsi.utils.logging2.Logger
 enum class TlsRole {
     CLIENT,
     SERVER;
-
-    companion object {
-        fun fromTlsContext(tlsContext: TlsContext): TlsRole {
-            return when (tlsContext) {
-                is TlsClientContext -> CLIENT
-                is TlsServerContext -> SERVER
-                else -> throw Exception("Unsupported tls role: ${tlsContext::class}")
-            }
-        }
-    }
 }
 
 class SrtpUtil {
@@ -89,14 +75,6 @@ class SrtpUtil {
                 }
                 else -> throw IllegalArgumentException("Unsupported SRTP protection profile: $srtpProtectionProfile")
             }
-        }
-
-        fun getKeyingMaterial(tlsContext: TlsContext, srtpProfileInformation: SrtpProfileInformation): ByteArray {
-            return tlsContext.exportKeyingMaterial(
-                ExporterLabel.dtls_srtp,
-                null,
-                2 * (srtpProfileInformation.cipherKeyLength + srtpProfileInformation.cipherSaltLength)
-            )
         }
 
         fun initializeTransformer(
