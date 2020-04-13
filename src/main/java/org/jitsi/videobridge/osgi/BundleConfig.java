@@ -47,19 +47,14 @@ public class BundleConfig
             "org/jitsi/videobridge/osgi/ConfigurationActivator"
         },
         {
-            "org/jitsi/videobridge/eventadmin/callstats/Activator"
-        },
-        {
             "org/jitsi/videobridge/version/VersionActivator"
         },
         {
-            // The HTTP/JSON API of Videobridge is started before Videobridge
-            // because Jetty needs to bind to its port before the ice4j
-            // TCP harvester (started as part of Videobridge) does.
             "org/jitsi/videobridge/rest/RESTBundleActivator",
-            "org/jitsi/videobridge/rest/PublicRESTBundleActivator",
-            "org/jitsi/videobridge/rest/PublicClearPortRedirectBundleActivator",
             "org/jitsi/videobridge/stats/StatsManagerBundleActivator",
+        },
+        {
+            "org/jitsi/videobridge/websocket/WebSocketBundleActivator"
         },
         {
             "org/jitsi/videobridge/VideobridgeBundleActivator"
