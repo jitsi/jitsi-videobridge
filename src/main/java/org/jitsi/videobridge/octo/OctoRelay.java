@@ -223,7 +223,7 @@ public class OctoRelay
     @Override
     public void run()
     {
-        byte[] buf = ByteBufferPool.getBuffer(1500);
+        byte[] buf = new byte[1500];
         DatagramPacket p = new DatagramPacket(buf, 0, 1500);
         while (true)
         {

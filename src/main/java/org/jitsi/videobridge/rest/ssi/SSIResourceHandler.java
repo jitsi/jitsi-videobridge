@@ -301,12 +301,11 @@ public class SSIResourceHandler
                     fileToInclude = aliasValue;
             }
 
-            Resource r = Resource.newResource(fileToInclude);
-
-            if (r.exists())
-            {
-                r.writeTo(out, 0, r.length());
-                return true;
+            try (Resource r = Resource.newResource(fileToInclude)) {
+                if (r.exists()) {
+                    r.writeTo(out, 0, r.length());
+                    return true;
+                }
             }
         }
         else
