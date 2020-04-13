@@ -14,21 +14,19 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.stats;
+@file:JvmName("PacketUtils")
 
-import org.jitsi.nlj.util.*;
-import org.jitsi.videobridge.*;
-import org.json.simple.*;
+package org.jitsi.videobridge.util
 
-public class PacketTransitStats
-{
-    public static OrderedJsonObject getStatsJson()
-    {
-        OrderedJsonObject stats = new OrderedJsonObject();
+import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 
-        stats.put("e2e_packet_delay", Endpoint.getPacketDelayStats());
-        stats.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
+private val DTLS_RANGE = 20..63
 
-        return stats;
+// TODO(brian): move this to RTP, and have the Packet extension
+// function leverage it
+fun looksLikeDtls(buf: ByteArray, off: Int, len: Int): Boolean {
+    if (len < 1) {
+        return false
     }
+    return buf[off].toPositiveInt() in DTLS_RANGE
 }

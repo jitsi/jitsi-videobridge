@@ -184,10 +184,11 @@ class VP8Frame
 
     /**
      * @return true if this is a base temporal layer frame, false otherwise
+     * @note We treat unknown temporal layer frames as TL0.
      */
     boolean isTL0()
     {
-        return temporalLayer == 0;
+        return temporalLayer <= 0;
     }
 
     /**

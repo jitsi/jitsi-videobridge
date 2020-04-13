@@ -26,5 +26,5 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../templates:1001
-msgid "The jisti-videobridge package needs the DNS hostname of your instance."
+msgid "The jitsi-videobridge package needs the DNS hostname of your instance."
 msgstr ""

@@ -383,6 +383,19 @@ public class ChannelShim
     }
 
     /**
+     * Checks if incoming media (from the endpoint to the bridge) is being
+     * forcibly "muted"
+     * @return true if media for this channel is allowed, false if it should
+     * be forcibly "muted" (dropped)
+     */
+    public boolean allowIncomingMedia()
+    {
+        return "sendrecv".equalsIgnoreCase(direction) ||
+            "recvonly".equalsIgnoreCase(direction);
+
+    }
+
+    /**
      * Sets the media direction of this channel.
      * @param direction the direction to set.
      */
@@ -392,6 +405,7 @@ public class ChannelShim
         {
             this.direction = direction;
             this.endpoint.updateAcceptedMediaTypes();
+            this.endpoint.updateForceMute();
         }
     }
 
