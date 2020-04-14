@@ -9,10 +9,10 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <kotlin.version>1.3.61</kotlin.version>
+        <kotlin.version>1.3.71</kotlin.version>
         <kotlintest.version>3.4.2</kotlintest.version>
         <junit.version>5.2.0</junit.version>
-        <jitsi.utils.version>1.0-35-g14f4ae3</jitsi.utils.version>
+        <jitsi.utils.version>1.0-47-gdb30505</jitsi.utils.version>
         <spotbugs.version>4.0.0-RC1</spotbugs.version>
     </properties>
 
