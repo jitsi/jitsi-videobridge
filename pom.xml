@@ -11,7 +11,7 @@
     <assembly.skipAssembly>false</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
     <jetty.version>9.4.15.v20190215</jetty.version>
-    <kotlin.version>1.3.61</kotlin.version>
+    <kotlin.version>1.3.71</kotlin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <smack.version>4.2.4-47d17fc</smack.version>
     <jicoco.version>1.1-27-g9223c3d</jicoco.version>
