@@ -79,7 +79,7 @@ The respective response could look like:
 </tr>
 <tr>
 		<td>GET</td>
-		<td>/colibri/conferences{id}</td>
+		<td>/colibri/conferences/{id}</td>
 		<td>
 			200 OK with a JSON object which represents the conference with the specified <code>id</code>. <br />
 			For example: 
@@ -112,7 +112,7 @@ The respective response could look like:
 	</tr>
 	<tr>
 		<td>PATCH</td>
-		<td>/colibri/conferences{id}</td>
+		<td>/colibri/conferences/{id}</td>
 		<td>
 			200 OK with a JSON object which represents the modified conference if the request was with <code>Content-Type: application/json</code> and was a JSON object which represented a conference without <code>id</code> or with the specified <code>id</code> and, optionally, with contents and channels with or without <code>id</code>s.
 		</td>
