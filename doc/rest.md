@@ -9,11 +9,7 @@ by other components of the infrastructure, e.g. a signaling server), such as:
 * The health-check interface (```/about/health```)
 * The version interface (```/about/version```)
 
-The _public_ interface inludes:
-
-* Support for serving static files (e.g. the HTML/js for jitsi-meet)
-* Support for proxying (for e.g. proxying BOSH connections to a prosody instance)
-* A WebSocket API for communication with conference endpoints (```/colibri-ws/```)
+The _public_ interface is used for Colibri Web Sockets that clients connect to.
 
 **For any of the HTTP interfaces to be enabled, jitsi-videobridge needs to be started with the ```--apis=rest```
 parameter (or ```--apis=rest,xmpp``` to also enable the XMPP interface to COLIBRI).** This is enough to enable the
@@ -54,26 +50,6 @@ For the _public_ interface:
  Specifies whether client certificate authentication is to be required when HTTPS is enabled. The default value is ```false```.
  * ```org.jitsi.videobridge.rest.jetty.host``` - 
  Specifies the server host.
- * ```org.jitsi.videobridge.clearport.redirect.jetty.port``` -
- Specifies a non-TLS port which should be redirected to the TLS port (or -1 to disable it). The default value is ```80```
-
-Specific parts of the _public_ interface can be configured with the following additional properties:
- ```
- # Configure a proxy 
- org.jitsi.videobridge.rest.jetty.ProxyServlet.hostHeader=example.com
- org.jitsi.videobridge.rest.jetty.ProxyServlet.pathSpec=/http-bind
- org.jitsi.videobridge.rest.jetty.ProxyServlet.proxyTo=http://localhost:5280/http-bind
-
- # Configure serving of static content (tuned for jitsi-meet)
- org.jitsi.videobridge.rest.jetty.ResourceHandler.resourceBase=/usr/share/jitsi-meet
- org.jitsi.videobridge.rest.jetty.ResourceHandler.alias./config.js=/etc/jitsi/meet/example.com-config.js
- org.jitsi.videobridge.rest.jetty.ResourceHandler.alias./interface_config.js=/usr/share/jitsi-meet/interface_config.js
- org.jitsi.videobridge.rest.jetty.ResourceHandler.alias./logging_config.js=/usr/share/jitsi-meet/logging_config.js
- org.jitsi.videobridge.rest.jetty.RewriteHandler.regex=^/([a-zA-Z0-9]+)$
- org.jitsi.videobridge.rest.jetty.RewriteHandler.replacement=/
- org.jitsi.videobridge.rest.jetty.SSIResourceHandler.paths=/
- ```
-
 
 Examples
 ==============

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.rest;
+package org.jitsi.videobridge.websocket;
 
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.servlet.*;
@@ -29,7 +29,8 @@ import java.util.*;
  * @author Lyubomir Marinov
  * @author Boris Grozev
  */
-public class PublicRESTBundleActivator
+@SuppressWarnings("unused")
+public class WebSocketBundleActivator
     extends AbstractJettyBundleActivator
 {
     /**
@@ -46,9 +47,9 @@ public class PublicRESTBundleActivator
     private ColibriWebSocketService colibriWebSocketService;
 
     /**
-     * Initializes a new {@link PublicRESTBundleActivator}.
+     * Initializes a new {@link WebSocketBundleActivator}.
      */
-    public PublicRESTBundleActivator()
+    public WebSocketBundleActivator()
     {
         super(JETTY_PROPERTY_PREFIX);
     }

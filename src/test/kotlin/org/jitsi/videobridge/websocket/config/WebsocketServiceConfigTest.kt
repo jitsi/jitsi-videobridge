@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.config
+package org.jitsi.videobridge.websocket.config
 
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldThrow
