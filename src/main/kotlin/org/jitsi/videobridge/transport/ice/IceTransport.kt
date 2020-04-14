@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.transport.ice
 
+import com.google.common.net.InetAddresses
 import org.ice4j.Transport
 import org.ice4j.TransportAddress
 import org.ice4j.ice.Agent
@@ -35,7 +36,6 @@ import org.jitsi.videobridge.ice.TransportUtils
 import org.jitsi.xmpp.extensions.jingle.CandidatePacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import org.jitsi.xmpp.extensions.jingle.RtcpmuxPacketExtension
-import sun.net.util.IPAddressUtil
 import java.beans.PropertyChangeEvent
 import java.io.IOException
 import java.net.DatagramPacket
@@ -422,7 +422,7 @@ private fun IceMediaStream.remoteUfragAndPasswordKnown(): Boolean =
         remoteUfrag != null && remotePassword != null
 
 private fun CandidatePacketExtension.ipNeedsResolution(): Boolean =
-        !IPAddressUtil.isIPv4LiteralAddress(ip) && !IPAddressUtil.isIPv6LiteralAddress(ip)
+        !InetAddresses.isInetAddress(ip)
 
 private fun Transport.isTcpType(): Boolean = this == Transport.TCP || this == Transport.SSLTCP
 
