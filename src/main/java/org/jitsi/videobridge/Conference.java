@@ -1187,7 +1187,7 @@ public class Conference
             {
                 if (prevHandler != null)
                 {
-                    prevHandler.send(packetInfo.clone());
+                    prevHandler.processPacket(packetInfo.clone());
                 }
                 prevHandler = endpoint;
             }
@@ -1196,14 +1196,14 @@ public class Conference
         {
             if (prevHandler != null)
             {
-                prevHandler.send(packetInfo.clone());
+                prevHandler.processPacket(packetInfo.clone());
             }
             prevHandler = tentacle;
         }
 
         if (prevHandler != null)
         {
-            prevHandler.send(packetInfo);
+            prevHandler.processPacket(packetInfo);
         }
         else
         {
@@ -1284,7 +1284,7 @@ public class Conference
             }
             else if (pph.wants(packetInfo))
             {
-                pph.send(packetInfo);
+                pph.processPacket(packetInfo);
             }
         }
         else

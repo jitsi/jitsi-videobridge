@@ -624,7 +624,7 @@ public class Endpoint
      * TODO Brian
      */
     @Override
-    public void send(PacketInfo packetInfo)
+    public void processPacket(PacketInfo packetInfo)
     {
         Packet packet = packetInfo.getPacket();
         if (packet instanceof VideoRtpPacket)
