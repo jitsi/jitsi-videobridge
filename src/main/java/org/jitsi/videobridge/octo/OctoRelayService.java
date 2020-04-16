@@ -92,4 +92,20 @@ public class OctoRelayService
             relay.stop();
         }
     }
+
+    public OctoRelayServiceStats getStats()
+    {
+        return new OctoRelayServiceStats(
+            relay.getBytesReceived(),
+            relay.getBytesSent(),
+            relay.getPacketsReceived(),
+            relay.getPacketsSent(),
+            relay.getPacketsDropped(),
+            relay.getReceiveBitrate(),
+            relay.getReceivePacketRate(),
+            relay.getSendBitrate(),
+            relay.getSendPacketRate(),
+            relay.getId()
+        );
+    }
 }
