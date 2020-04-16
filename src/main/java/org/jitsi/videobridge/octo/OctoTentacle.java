@@ -32,6 +32,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.octo.config.*;
+import org.jitsi.videobridge.transport.octo.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -76,9 +77,9 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
     final OctoTransceiver transceiver;
 
     /**
-     * The {@link OctoRelay} used to actually send and receive Octo packets.
+     * The {@link OctoTransport} used to actually send and receive Octo packets.
      */
-    private final OctoRelay relay;
+    private final OctoTransport octoTransport;
 
     /**
      * The instance that will request keyframes on behalf of this tentable. Note
@@ -124,7 +125,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
 
         if (octoRelayService != null)
         {
-            relay = octoRelayService.getRelay();
+            octoTransport = octoRelayService.getOctoTransport();
             keyframeRequester = new KeyframeRequester(transceiver.getStreamInformationStore(), logger);
             keyframeRequester.attach(new ConsumerNode("octo keyframe relay node")
             {
@@ -132,8 +133,14 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
                 protected void consume(@NotNull PacketInfo packetInfo)
                 {
                     packetInfo.sent();
-                    relay.sendPacket(packetInfo.getPacket(), targets,
-                        conference.getGid(), packetInfo.getEndpointId());
+                    octoTransport.sendMediaData(
+                        packetInfo.getPacket().getBuffer(),
+                        packetInfo.getPacket().getOffset(),
+                        packetInfo.getPacket().getLength(),
+                        targets,
+                        conference.getGid(),
+                        packetInfo.getEndpointId()
+                    );
                 }
 
                 @Override
@@ -145,7 +152,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         }
         else
         {
-            relay = null;
+            octoTransport = null;
             keyframeRequester = null;
         }
     }
@@ -206,8 +213,10 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         Packet packet = packetInfo.getPacket();
         if (packet != null)
         {
-            relay.sendPacket(
-                packet,
+            octoTransport.sendMediaData(
+                packet.getBuffer(),
+                packet.getOffset(),
+                packet.getLength(),
                 targets,
                 conference.getGid(),
                 packetInfo.getEndpointId());
@@ -218,18 +227,18 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
     /**
      * Sets the list of remote relays to send packets to.
      * @param relays the list of relay IDs, which are converted to addresses
-     * using the logic in {@link OctoRelay}.
+     * using the logic in {@link OctoUtils}.
      */
     public void setRelays(Collection<String> relays)
     {
         Objects.requireNonNull(
-                relay,
+                octoTransport,
                 "Octo requested but not configured");
 
         Set<SocketAddress> socketAddresses = new HashSet<>();
         for (String relay : relays)
         {
-            SocketAddress socketAddress = OctoRelay.relayIdToSocketAddress(relay);
+            SocketAddress socketAddress = OctoUtils.Companion.relayIdToSocketAddress(relay);
             if (socketAddress != null)
             {
                 socketAddresses.add(socketAddress);
@@ -355,11 +364,11 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
 
             if (targets.isEmpty())
             {
-                relay.removeHandler(conference.getGid(), transceiver);
+                octoTransport.removeHandler(conference.getGid(), transceiver);
             }
             else
             {
-                relay.addHandler(conference.getGid(), transceiver);
+                octoTransport.addHandler(conference.getGid(), transceiver);
             }
         }
     }
@@ -390,11 +399,11 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      */
     public void sendMessage(String message)
     {
-        relay.sendString(
-                message,
-                targets,
-                conference.getGid(),
-                null);
+        octoTransport.sendString(
+            message,
+            targets,
+            conference.getGid()
+        );
     }
 
     /**
@@ -407,7 +416,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         JSONObject debugState = new JSONObject();
         debugState.put("octoEndpoints", octoEndpoints.getDebugState());
         debugState.put("transceiver", transceiver.getDebugState());
-        debugState.put("relay", relay.getDebugState());
+        debugState.put("octoTransport", octoTransport.getStats());
         debugState.put("targets", targets.toString());
 
         return debugState;

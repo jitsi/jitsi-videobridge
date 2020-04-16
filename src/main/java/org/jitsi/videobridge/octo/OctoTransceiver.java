@@ -30,6 +30,7 @@ import org.jitsi.rtp.extensions.*;
 import org.jitsi.rtp.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
+import org.jitsi.videobridge.transport.octo.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
@@ -43,7 +44,7 @@ import static org.jitsi.videobridge.octo.config.OctoConfig.*;
  * @author Boris Grozev
  */
 public class OctoTransceiver
-        implements OctoRelay.PacketHandler
+        implements OctoTransport.IncomingOctoPacketHandler
 {
     /**
      * The {@link Logger} used by the {@link OctoTransceiver} class to print
@@ -133,21 +134,14 @@ public class OctoTransceiver
         return mediaStreamTracks.getMediaStreamTracks();
     }
 
-    /**
-     * Handles a packet for this conference coming from a remote Octo relay.
-     *
-     * @param packet the packet.
-     */
     @Override
-    public void handlePacket(Packet packet, String sourceEndpointId)
+    public void handleMediaPacket(@NotNull OctoPacketInfo packetInfo)
     {
-        PacketInfo packetInfo = new OctoPacketInfo(packet);
-        packetInfo.setReceivedTime(System.currentTimeMillis());
-        packetInfo.setEndpointId(sourceEndpointId);
         incomingPacketQueue.add(packetInfo);
     }
+
     @Override
-    public void handleMessage(String message)
+    public void handleMessagePacket(@NotNull String message, @NotNull String sourceEpId)
     {
         tentacle.handleMessage(message);
     }
