@@ -40,12 +40,12 @@ import static org.jitsi.utils.ByteArrayUtils.*;
  *
  * @author Boris Grozev
  */
-class OctoPacket
+public class OctoPacket
 {
     /**
      * The fixed length of the Octo header.
      */
-    static final int OCTO_HEADER_LENGTH = 8;
+    public static final int OCTO_HEADER_LENGTH = 8;
 
     /**
      * The integer which identifies the "audio" media type in Octo.
@@ -91,7 +91,7 @@ class OctoPacket
      * @param conferenceId the Octo ID of the conference.
      * @param endpointId the Octo ID of the endpoint.
      */
-    static void writeHeaders(
+    public static void writeHeaders(
             byte[] buf, int off,
             boolean r, MediaType mediaType, int s,
             String conferenceId,
@@ -116,7 +116,7 @@ class OctoPacket
      * @param len the length of the buffer.
      * @return the Octo conference ID read from the buffer.
      */
-    static String readConferenceId(byte[] buf, int off, int len)
+    public static String readConferenceId(byte[] buf, int off, int len)
     {
         assertMinLen(buf, off, len);
 
@@ -131,7 +131,7 @@ class OctoPacket
      * @param len the length of the buffer.
      * @return the {@link MediaType} from the given Octo header.
      */
-    static MediaType readMediaType(byte[] buf, int off, int len)
+    public static MediaType readMediaType(byte[] buf, int off, int len)
     {
         assertMinLen(buf, off, len);
 
@@ -170,7 +170,7 @@ class OctoPacket
      * @param len the length of the buffer.
      * @return the endpoint ID from the given Octo header.
      */
-    static String readEndpointId(byte[] buf, int off, int len)
+    public static String readEndpointId(byte[] buf, int off, int len)
     {
         assertMinLen(buf, off, len);
 
