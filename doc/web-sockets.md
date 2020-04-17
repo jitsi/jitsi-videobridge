@@ -74,7 +74,7 @@ ports `9090` and `9091` without TLS, and are configured with
 This configuration allows two jitsi-videobridge instances to run on the same
 machine, which is useful while testing Octo.
 
-# Client confiruation
+# Client configuration
 With the above configuration the bridge will advertise a Colibri WebSocket URL,
 and will be ready to accept connections on it, but whether this is used instead of
 WebRTC DataChannels depends on the client.
