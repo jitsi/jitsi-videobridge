@@ -34,6 +34,8 @@ import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.math.floor
+import kotlin.math.log10
 
 /**
  * [OctoTransport] handles *all* incoming and outgoing Octo traffic for a
@@ -123,8 +125,22 @@ class OctoTransport(
             return
         }
         val handler = incomingPacketHandlers[conferenceId] ?: run {
-            logger.warn("No conference found for Octo packet with conference id $conferenceId")
             stats.noHandlerFound()
+            unknownConferences[conferenceId]?.let { unknownConfEventAdder ->
+                val value = unknownConfEventAdder.incrementAndGet()
+                // Only print log on exact powers of 10 packets received
+                val logValue = log10(value.toFloat())
+                if (logValue > 0 && logValue == floor(logValue)) {
+                    logger.warn("Received $value Octo packets for unknown conference $conferenceId")
+                }
+            } ?: run {
+                /* Potentially a race here if more than one packet arrives at once
+                 * for the same unknown conference? This will just result in a few
+                 * duplicate logs, though, so not a big deal.
+                 */
+                unknownConferences[conferenceId] = AtomicLong(1)
+                logger.warn("Received an Octo packet for an unknown conference: $conferenceId")
+            }
             return
         }
         when (mediaType) {
