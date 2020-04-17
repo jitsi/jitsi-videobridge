@@ -96,7 +96,6 @@ public class OctoRelayService
         }
 
         octoTransport = new OctoTransport(publicAddress + ":" + port, logger);
-        logger.info("Created OctoTransport");
 
         // Wire the data coming from the UdpTransport to the OctoTransport
         udpTransport.setIncomingDataHandler(octoTransport::dataReceived);

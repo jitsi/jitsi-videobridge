@@ -48,7 +48,7 @@ class OctoTransport(
     val relayId: String,
     parentLogger: Logger
 ) {
-    private val logger = createChildLogger(parentLogger)
+    private val logger = createChildLogger(parentLogger, mapOf("relayId" to relayId))
 
     private val stats = Stats()
 
@@ -69,6 +69,10 @@ class OctoTransport(
      * send data.
      */
     var outgoingDataHandler: OutgoingOctoPacketHandler? = null
+
+    init {
+        logger.info("Created OctoTransport")
+    }
 
     /**
      * Registers a [PacketHandler] for the given [conferenceId]
