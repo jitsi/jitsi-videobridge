@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import kotlin.*;
+import org.apache.commons.lang3.StringUtils;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jetbrains.annotations.*;
@@ -27,7 +28,6 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.Version;
@@ -817,7 +817,7 @@ public class Videobridge
      */
     public void setAuthorizedSourceRegExp(String authorizedSourceRegExp)
     {
-        if (!StringUtils.isNullOrEmpty(authorizedSourceRegExp))
+        if (!StringUtils.isBlank(authorizedSourceRegExp))
         {
             authorizedSourcePattern
                 = Pattern.compile(authorizedSourceRegExp);
@@ -868,7 +868,7 @@ public class Videobridge
                 ? null
                 : cfg.getString(SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME);
 
-        if (!StringUtils.isNullOrEmpty(shutdownSourcesRegexp))
+        if (!StringUtils.isBlank(shutdownSourcesRegexp))
         {
             try
             {
@@ -885,7 +885,7 @@ public class Videobridge
         String authorizedSourceRegexp
             = (cfg == null)
                     ? null : cfg.getString(AUTHORIZED_SOURCE_REGEXP_PNAME);
-        if (!StringUtils.isNullOrEmpty(authorizedSourceRegexp))
+        if (!StringUtils.isBlank(authorizedSourceRegexp))
         {
             try
             {
@@ -1093,7 +1093,7 @@ public class Videobridge
 
         JSONObject conferences = new JSONObject();
         debugState.put("conferences", conferences);
-        if (StringUtils.isNullOrEmpty(conferenceId))
+        if (StringUtils.isBlank(conferenceId))
         {
             for (Conference conference : getConferences())
             {

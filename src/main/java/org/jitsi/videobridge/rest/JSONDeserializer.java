@@ -19,7 +19,7 @@ import java.lang.reflect.*;
 import java.net.*;
 import java.util.*;
 
-import org.jitsi.utils.*;
+import org.apache.commons.lang3.StringUtils;
 import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
@@ -477,7 +477,7 @@ public final class JSONDeserializer
                         .RTCPTerminationStrategy.NAME_ATTR_NAME);
 
             String name = Objects.toString(attrName, null);
-            if (StringUtils.isNullOrEmpty(name))
+            if (StringUtils.isBlank(name))
             {
                 return;
             }
