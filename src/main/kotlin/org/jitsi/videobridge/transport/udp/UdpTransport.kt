@@ -82,16 +82,15 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
             packet.setData(buf, 0, 1500)
             try {
                 socket.receive(packet)
-                clock.instant().also { now ->
-                    stats.packetReceived(packet.length, now)
-                    incomingDataHandler?.dataReceived(buf, packet.offset, packet.length, now) ?: stats.incomingPacketDropped()
-                }
             } catch (sce: SocketClosedException) {
                 logger.info("Socket closed, stopping reader")
                 break
             } catch (e: IOException) {
                 logger.warn("Exception while reading ", e)
             }
+            val now = clock.instant()
+            stats.packetReceived(packet.length, now)
+            incomingDataHandler?.dataReceived(buf, packet.offset, packet.length, now) ?: stats.incomingPacketDropped()
         }
     }
 
