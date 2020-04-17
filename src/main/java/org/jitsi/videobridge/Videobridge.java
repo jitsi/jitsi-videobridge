@@ -33,6 +33,7 @@ import org.jitsi.utils.version.Version;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.ice.*;
 import org.jitsi.videobridge.octo.*;
+import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
@@ -1147,10 +1148,10 @@ public class Videobridge
                 getJsonFromQueueErrorHandler(Endpoint.queueErrorCounter));
         queueStats.put(
                 "octo_receive_queue",
-                getJsonFromQueueErrorHandler(OctoTransceiver.queueErrorCounter));
+                getJsonFromQueueErrorHandler(OctoRtpSender.queueErrorCounter));
         queueStats.put(
                 "octo_send_queue",
-                getJsonFromQueueErrorHandler(OctoTentacle.queueErrorCounter));
+                getJsonFromQueueErrorHandler(OctoRtpReceiver.queueErrorCounter));
         queueStats.put(
                 "rtp_receiver_queue",
                 getJsonFromQueueErrorHandler(

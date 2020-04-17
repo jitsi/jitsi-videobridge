@@ -68,7 +68,7 @@ class OctoEndpoint(
         streamInformationStore.receiveSsrcs.isEmpty()
 
     override fun getMediaStreamTracks(): Array<MediaStreamTrackDesc> {
-        return conference.tentacle.transceiver.mediaStreamTracks.filter { it.owner == id }.toTypedArray()
+        return conference.tentacle.mediaStreamTracks.filter { it.owner == id }.toTypedArray()
     }
 
     override fun receivesSsrc(ssrc: Long): Boolean =
