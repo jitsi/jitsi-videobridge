@@ -128,16 +128,22 @@ public class OctoRelayService
 
     public OctoRelayServiceStats getStats()
     {
+        UdpTransport.StatsSnapshot octoUdpTransportStats = udpTransport.getStats();
+        OctoTransport.StatsSnapshot octoTransportStats = octoTransport.getStats();
         return new OctoRelayServiceStats.Builder()
-            .bytesReceived(udpTransport.getStats().getBytesReceived())
-            .bytesSent(udpTransport.getStats().getBytesSent())
-            .packetsReceived(udpTransport.getStats().getPacketsReceived())
-            .packetsSent(udpTransport.getStats().getPacketsSent())
-            .packetsDropped(udpTransport.getStats().getIncomingPacketsDropped())
-            .receiveBitrate(udpTransport.getStats().getReceiveBitRate().getRate())
-            .receivePacketRate(udpTransport.getStats().getReceivePacketRate().getRate())
-            .sendBitrate(udpTransport.getStats().getSendBitRate().getRate())
-            .sendPacketRate(udpTransport.getStats().getSendPacketRate().getRate())
+            .packetsReceived(octoUdpTransportStats.getPacketsReceived())
+            .receivePacketRate(octoUdpTransportStats.getReceivePacketRate())
+            .packetsDropped(
+                octoUdpTransportStats.getIncomingPacketsDropped() +
+                    octoTransportStats.getNumInvalidPackets() +
+                    octoTransportStats.getNumIncomingDroppedNoHandler()
+            )
+            .packetsSent(octoUdpTransportStats.getPacketsSent())
+            .sendPacketRate(octoUdpTransportStats.getSendPacketRate())
+            .bytesReceived(octoUdpTransportStats.getBytesReceived())
+            .receiveBitrate(octoUdpTransportStats.getReceiveBitRate())
+            .sendBitrate(octoUdpTransportStats.getSendBitRate())
+            .bytesSent(octoUdpTransportStats.getBytesSent())
             .relayId(octoTransport.getRelayId())
             .build();
     }

@@ -34,6 +34,7 @@ import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.LongAdder
 import kotlin.math.floor
 import kotlin.math.log10
 
@@ -210,10 +211,12 @@ class OctoTransport(
         outgoingDataHandler?.sendData(newBuf, newOff, octoPacketLength, targets) ?: stats.noOutgoingHandler()
     }
 
-    fun getStats(): OrderedJsonObject = OrderedJsonObject().apply {
+    fun getStatsJson(): OrderedJsonObject = OrderedJsonObject().apply {
         put("relay_id", relayId)
-        putAll(stats.toJson())
+        putAll(getStats().toJson())
     }
+
+    fun getStats(): StatsSnapshot = stats.toSnapshot()
 
     private fun createPacketInfo(sourceEpId: String, buf: ByteArray, off: Int, len: Int, receivedTime: Instant): OctoPacketInfo {
         val rtpLen = len - OCTO_HEADER_LENGTH
@@ -243,22 +246,34 @@ class OctoTransport(
     }
 
     private class Stats {
-        private var numInvalidPackets = 0
-        private var numIncomingDroppedNoHandler = 0
-        private var numOutgoingDroppedNoHandler = 0
+        private val numInvalidPackets = LongAdder()
+        private val numIncomingDroppedNoHandler = LongAdder()
+        private val numOutgoingDroppedNoHandler = LongAdder()
 
         fun invalidPacketReceived() {
-            numInvalidPackets++
+            numInvalidPackets.increment()
         }
 
         fun noHandlerFound() {
-            numIncomingDroppedNoHandler++
+            numIncomingDroppedNoHandler.increment()
         }
 
         fun noOutgoingHandler() {
-            numOutgoingDroppedNoHandler++
+            numOutgoingDroppedNoHandler.increment()
         }
 
+        fun toSnapshot(): StatsSnapshot = StatsSnapshot(
+            numInvalidPackets = numInvalidPackets.sum(),
+            numIncomingDroppedNoHandler = numIncomingDroppedNoHandler.sum(),
+            numOutgoingDroppedNoHandler = numOutgoingDroppedNoHandler.sum()
+        )
+    }
+
+    class StatsSnapshot(
+        val numInvalidPackets: Long,
+        val numIncomingDroppedNoHandler: Long,
+        val numOutgoingDroppedNoHandler: Long
+    ) {
         fun toJson(): OrderedJsonObject = OrderedJsonObject().apply {
             put("num_invalid_packets_rx", numInvalidPackets)
             put("num_incoming_packets_dropped_no_handler", numIncomingDroppedNoHandler)

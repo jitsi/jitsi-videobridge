@@ -32,6 +32,7 @@ import java.net.UnknownHostException
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.LongAdder
 
 /**
  * A transport which allows sending and receiving data over UDP.  The transport
@@ -66,7 +67,7 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
                 "Send buffer size ${socket.sendBufferSize}${soSndBuf?.let { " (asked for $it)"} ?: ""}.")
     }
 
-    val stats = Stats()
+    private val stats = Stats()
 
     var incomingDataHandler: IncomingDataHandler? = null
 
@@ -129,35 +130,23 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
         }
     }
 
-    /**
-     * Get the stats for this transport
-     */
-    fun getStatsJson(): OrderedJsonObject = OrderedJsonObject().apply {
-        put("bind_address", bindAddress)
-        put("bind_port", bindPort)
-        putAll(stats.toJson())
-    }
+    fun getStats(): StatsSnapshot = stats.toSnapshot()
 
     class Stats {
-        var packetsReceived: Int = 0
-            private set
-        var bytesReceived: Int = 0
-            private set
-        var incomingPacketsDropped: Int = 0
-            private set
-        var packetsSent: Int = 0
-            private set
-        var bytesSent: Int = 0
-            private set
-        var outgoingPacketsDropped: Int = 0
-        val receivePacketRate: RateStatistics = RateStatistics(RATE_INTERVAL, SCALE)
-        val receiveBitRate: RateStatistics = RateStatistics(RATE_INTERVAL)
-        val sendPacketRate: RateStatistics = RateStatistics(RATE_INTERVAL, SCALE)
-        val sendBitRate: RateStatistics = RateStatistics(RATE_INTERVAL)
+        private val packetsReceived = LongAdder()
+        private val bytesReceived = LongAdder()
+        private val incomingPacketsDropped = LongAdder()
+        private val packetsSent = LongAdder()
+        private val bytesSent = LongAdder()
+        private val outgoingPacketsDropped = LongAdder()
+        private val receivePacketRate: RateStatistics = RateStatistics(RATE_INTERVAL, SCALE)
+        private val receiveBitRate: RateStatistics = RateStatistics(RATE_INTERVAL)
+        private val sendPacketRate: RateStatistics = RateStatistics(RATE_INTERVAL, SCALE)
+        private val sendBitRate: RateStatistics = RateStatistics(RATE_INTERVAL)
 
         fun packetReceived(numBytes: Int, time: Instant) {
-            packetsReceived++
-            bytesReceived += numBytes
+            packetsReceived.increment()
+            bytesReceived.add(numBytes.toLong())
             time.toEpochMilli().also { timeMs ->
                 receivePacketRate.update(1, timeMs)
                 receiveBitRate.update(numBytes, timeMs)
@@ -165,8 +154,8 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
         }
 
         fun packetSent(numBytes: Int, time: Instant) {
-            packetsSent++
-            bytesSent += numBytes
+            packetsSent.increment()
+            bytesSent.add(numBytes.toLong())
             time.toEpochMilli().also { timeMs ->
                 sendPacketRate.update(1, timeMs)
                 sendBitRate.update(numBytes, timeMs)
@@ -174,29 +163,55 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
         }
 
         fun incomingPacketDropped() {
-            incomingPacketsDropped++
+            incomingPacketsDropped.increment()
         }
 
         fun outgoingPacketDropped() {
-            outgoingPacketsDropped++
+            outgoingPacketsDropped.increment()
         }
 
         fun toJson(): OrderedJsonObject = OrderedJsonObject().apply {
-            put("packets_received", packetsReceived)
+            put("packets_received", packetsReceived.sum())
             put("receive_packet_rate_pps", receivePacketRate.rate)
-            put("incoming_packets_dropped", incomingPacketsDropped)
-            put("bytes_received", bytesReceived)
-            put("packets_sent", packetsSent)
+            put("incoming_packets_dropped", incomingPacketsDropped.sum())
+            put("bytes_received", bytesReceived.sum())
+            put("packets_sent", packetsSent.sum())
             put("send_packet_rate_pps", sendPacketRate.rate)
-            put("outgoing_packets_dropped", outgoingPacketsDropped)
-            put("bytes_sent", bytesSent)
+            put("outgoing_packets_dropped", outgoingPacketsDropped.sum())
+            put("bytes_sent", bytesSent.sum())
         }
+
+        fun toSnapshot(): StatsSnapshot = StatsSnapshot(
+            packetsReceived = packetsReceived.sum(),
+            bytesReceived = bytesReceived.sum(),
+            incomingPacketsDropped = incomingPacketsDropped.sum(),
+            packetsSent = packetsSent.sum(),
+            bytesSent = bytesSent.sum(),
+            outgoingPacketsDropped = outgoingPacketsDropped.sum(),
+            receivePacketRate = receivePacketRate.rate,
+            receiveBitRate = receiveBitRate.rate,
+            sendPacketRate = sendPacketRate.rate,
+            sendBitRate = sendBitRate.rate
+        )
 
         companion object {
             const val RATE_INTERVAL: Int = 60000
             const val SCALE: Float = 1000f
         }
     }
+
+    data class StatsSnapshot(
+        val packetsReceived: Long,
+        val bytesReceived: Long,
+        val incomingPacketsDropped: Long,
+        val packetsSent: Long,
+        val bytesSent: Long,
+        val outgoingPacketsDropped: Long,
+        val receivePacketRate: Long,
+        val receiveBitRate: Long,
+        val sendPacketRate: Long,
+        val sendBitRate: Long
+    )
 
     interface IncomingDataHandler {
         /**

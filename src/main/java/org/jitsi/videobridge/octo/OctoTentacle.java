@@ -416,7 +416,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         JSONObject debugState = new JSONObject();
         debugState.put("octoEndpoints", octoEndpoints.getDebugState());
         debugState.put("transceiver", transceiver.getDebugState());
-        debugState.put("octoTransport", octoTransport.getStats());
+        debugState.put("octoTransport", octoTransport.getStatsJson());
         debugState.put("targets", targets.toString());
 
         return debugState;
