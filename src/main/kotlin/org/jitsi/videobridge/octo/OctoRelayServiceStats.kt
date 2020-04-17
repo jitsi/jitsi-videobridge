@@ -27,4 +27,44 @@ class OctoRelayServiceStats(
     val sendBitrate: Long,
     val sendPacketRate: Long,
     val relayId: String
-)
+) {
+
+    /**
+     * For java
+     */
+    data class Builder(
+        var bytesReceived: Long? = null,
+        var bytesSent: Long? = null,
+        var packetsReceived: Long? = null,
+        var packetsSent: Long? = null,
+        var packetsDropped: Long? = null,
+        var receiveBitrate: Long? = null,
+        var receivePacketRate: Long? = null,
+        var sendBitrate: Long? = null,
+        var sendPacketRate: Long? = null,
+        var relayId: String? = null
+    ) {
+        fun bytesReceived(bytesReceived: Long) = apply { this.bytesReceived = bytesReceived }
+        fun bytesSent(bytesSent: Long) = apply { this.bytesSent = bytesSent }
+        fun packetsReceived(packetsReceived: Long) = apply { this.packetsReceived = packetsReceived }
+        fun packetsSent(packetsSent: Long) = apply { this.packetsSent = packetsSent }
+        fun packetsDropped(packetsDropped: Long) = apply { this.packetsDropped = packetsDropped }
+        fun receiveBitrate(receiveBitrate: Long) = apply { this.receiveBitrate = receiveBitrate }
+        fun receivePacketRate(receivePacketRate: Long) = apply { this.receivePacketRate = receivePacketRate }
+        fun sendBitrate(sendBitrate: Long) = apply { this.sendBitrate = sendBitrate }
+        fun sendPacketRate(sendPacketRate: Long) = apply { this.sendPacketRate = sendPacketRate }
+        fun relayId(relayId: String) = apply { this.relayId = relayId }
+        fun build(): OctoRelayServiceStats = OctoRelayServiceStats(
+            bytesReceived = bytesReceived!!,
+            bytesSent = bytesSent!!,
+            packetsReceived = packetsReceived!!,
+            packetsSent = packetsSent!!,
+            packetsDropped = packetsDropped!!,
+            receiveBitrate = receiveBitrate!!,
+            receivePacketRate = receivePacketRate!!,
+            sendBitrate = sendBitrate!!,
+            sendPacketRate = sendPacketRate!!,
+            relayId = relayId!!
+        )
+    }
+}

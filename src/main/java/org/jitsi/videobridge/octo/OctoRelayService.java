@@ -129,17 +129,17 @@ public class OctoRelayService
 
     public OctoRelayServiceStats getStats()
     {
-        return new OctoRelayServiceStats(
-            udpTransport.getStats().getBytesReceived(),
-            udpTransport.getStats().getBytesSent(),
-            udpTransport.getStats().getPacketsReceived(),
-            udpTransport.getStats().getPacketsSent(),
-            udpTransport.getStats().getIncomingPacketsDropped(),
-            udpTransport.getStats().getReceiveBitRate().getRate(),
-            udpTransport.getStats().getReceivePacketRate().getRate(),
-            udpTransport.getStats().getSendBitRate().getRate(),
-            udpTransport.getStats().getSendPacketRate().getRate(),
-            octoTransport.getRelayId()
-        );
+        return new OctoRelayServiceStats.Builder()
+            .bytesReceived(udpTransport.getStats().getBytesReceived())
+            .bytesSent(udpTransport.getStats().getBytesSent())
+            .packetsReceived(udpTransport.getStats().getPacketsReceived())
+            .packetsSent(udpTransport.getStats().getPacketsSent())
+            .packetsDropped(udpTransport.getStats().getIncomingPacketsDropped())
+            .receiveBitrate(udpTransport.getStats().getReceiveBitRate().getRate())
+            .receivePacketRate(udpTransport.getStats().getReceivePacketRate().getRate())
+            .sendBitrate(udpTransport.getStats().getSendBitRate().getRate())
+            .sendPacketRate(udpTransport.getStats().getSendPacketRate().getRate())
+            .relayId(octoTransport.getRelayId())
+            .build();
     }
 }
