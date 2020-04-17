@@ -114,17 +114,20 @@ class OctoTransport(
     }
 
     fun dataReceived(buf: ByteArray, off: Int, len: Int, receivedTime: Instant) {
-        val (conferenceId, mediaType, sourceEndpointId) = try {
-            Triple(
-                OctoPacket.readConferenceId(buf, off, len),
-                OctoPacket.readMediaType(buf, off, len),
-                OctoPacket.readEndpointId(buf, off, len)
-            )
+        var conferenceId = ""
+        var mediaType = MediaType.VIDEO // a random default value to put something
+        var sourceEpId = ""
+
+        try {
+            conferenceId = OctoPacket.readConferenceId(buf, off, len)
+            mediaType = OctoPacket.readMediaType(buf, off, len)
+            sourceEpId = OctoPacket.readEndpointId(buf, off, len)
         } catch (iae: IllegalArgumentException) {
             logger.warn("Invalid Octo packet, len=$len", iae)
             stats.invalidPacketReceived()
             return
         }
+
         val handler = incomingPacketHandlers[conferenceId] ?: run {
             stats.noHandlerFound()
             unknownConferences[conferenceId]?.let { unknownConfEventAdder ->
@@ -146,10 +149,10 @@ class OctoTransport(
         }
         when (mediaType) {
             MediaType.AUDIO, MediaType.VIDEO -> {
-                handler.handleMediaPacket(createPacketInfo(sourceEndpointId, buf, off, len, receivedTime))
+                handler.handleMediaPacket(createPacketInfo(sourceEpId, buf, off, len, receivedTime))
             }
             MediaType.DATA -> {
-                handler.handleMessagePacket(createMessageString(buf, off, len), sourceEndpointId)
+                handler.handleMessagePacket(createMessageString(buf, off, len), sourceEpId)
             }
             else -> {
                 logger.warn("Unsupported media type $mediaType")
