@@ -17,7 +17,6 @@ package org.jitsi.videobridge.stats;
 
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
-import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
@@ -495,7 +494,7 @@ public class VideobridgeStatistics
 
             OctoRelayService relayService
                 = ServiceUtils2.getService(bundleContext, OctoRelayService.class);
-            OctoRelayServiceStats octoRelayServiceStats
+            OctoRelayService.Stats octoRelayServiceStats
                 = relayService == null ? null : relayService.getStats();
 
             unlockedSetStat(
