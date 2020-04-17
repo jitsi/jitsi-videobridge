@@ -10,14 +10,14 @@
   <properties>
     <assembly.skipAssembly>false</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
-    <jetty.version>9.4.15.v20190215</jetty.version>
-    <kotlin.version>1.3.71</kotlin.version>
+    <jetty.version>9.4.28.v20200408</jetty.version>
+    <kotlin.version>1.3.72</kotlin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <smack.version>4.2.4-47d17fc</smack.version>
-    <jicoco.version>1.1-28-gf83a3d3</jicoco.version>
+    <jicoco.version>1.1-29-g2e64779</jicoco.version>
     <jitsi.utils.version>1.0-47-gdb30505</jitsi.utils.version>
     <maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
-    <spotbugs.version>4.0.1</spotbugs.version>
+    <spotbugs.version>4.0.2</spotbugs.version>
     <jersey.version>2.30.1</jersey.version>
   </properties>
 
@@ -64,14 +64,14 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>dom4j</groupId>
+      <groupId>org.dom4j</groupId>
       <artifactId>dom4j</artifactId>
-      <version>1.6.1</version>
+      <version>2.1.3</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>28.2-jre</version>
+      <version>29.0-jre</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
@@ -106,7 +106,7 @@
     <dependency>
       <groupId>org.jetbrains</groupId>
       <artifactId>annotations</artifactId>
-      <version>15.0</version>
+      <version>19.0.0</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.github.spotbugs/spotbugs-annotations -->
     <dependency>
@@ -166,7 +166,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-xmpp-extensions</artifactId>
-      <version>1.0-8-g340be56</version>
+      <version>1.0-10-g822e97e</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -181,7 +181,7 @@
     <dependency>
       <groupId>org.osgi</groupId>
       <artifactId>org.osgi.core</artifactId>
-      <version>4.3.1</version>
+      <version>6.0.0</version>
     </dependency>
     <dependency>
       <groupId>xpp3</groupId>
@@ -217,7 +217,7 @@
     <dependency>
       <groupId>org.reflections</groupId>
       <artifactId>reflections</artifactId>
-      <version>0.9.11</version>
+      <version>0.9.12</version>
     </dependency>
     <!-- runtime -->
     <dependency>
@@ -236,28 +236,28 @@
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
-      <version>4.0.2</version>
+      <version>4.2</version>
       <scope>test</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.powermock/powermock-core -->
     <dependency>
       <groupId>org.powermock</groupId>
       <artifactId>powermock-core</artifactId>
-      <version>2.0.6</version>
+      <version>2.0.7</version>
       <scope>test</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.powermock/powermock-api-easymock -->
     <dependency>
       <groupId>org.powermock</groupId>
       <artifactId>powermock-api-easymock</artifactId>
-      <version>2.0.6</version>
+      <version>2.0.7</version>
       <scope>test</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.powermock/powermock-module-junit4 -->
     <dependency>
       <groupId>org.powermock</groupId>
       <artifactId>powermock-module-junit4</artifactId>
-      <version>2.0.6</version>
+      <version>2.0.7</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -280,14 +280,14 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.12</version>
+      <version>4.13</version>
       <scope>test</scope>
     </dependency>
     <!-- We need this so that maven-surefire-plugin can run junit4 tests -->
     <dependency>
       <groupId>org.junit.vintage</groupId>
       <artifactId>junit-vintage-engine</artifactId>
-      <version>5.5.2</version>
+      <version>5.6.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
