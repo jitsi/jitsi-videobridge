@@ -100,7 +100,7 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
      */
     fun send(data: ByteArray, off: Int, length: Int, remoteAddress: SocketAddress) {
         if (!running.get()) {
-            stats.outgoingPacketsDropped()
+            stats.outgoingPacketDropped()
             return
         }
         try {
@@ -177,7 +177,7 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
             incomingPacketsDropped++
         }
 
-        fun outgoingPacketsDropped() {
+        fun outgoingPacketDropped() {
             outgoingPacketsDropped++
         }
 
