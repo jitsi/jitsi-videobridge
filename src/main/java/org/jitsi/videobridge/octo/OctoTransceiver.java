@@ -23,7 +23,6 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.octo.config.*;
-import org.jitsi.videobridge.transport.octo.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
@@ -33,18 +32,12 @@ import org.json.simple.*;
  *
  * @author Boris Grozev
  */
-public class OctoTransceiver
-        implements OctoTransport.IncomingOctoPacketHandler
-{
+public class OctoTransceiver {
     /**
      * The {@link Logger} used by the {@link OctoTransceiver} class to print
      * debug information.
      */
     private final Logger logger;
-    /**
-     * The owning tentacle.
-     */
-    private final OctoTentacle tentacle;
 
     /**
      * The set of media stream tracks that have been signaled to us.
@@ -60,12 +53,9 @@ public class OctoTransceiver
 
     /**
      * Initializes a new {@link OctoTransceiver} instance.
-     *
-     * @param tentacle
      */
-    OctoTransceiver(OctoTentacle tentacle, Logger parentLogger)
+    OctoTransceiver(Logger parentLogger)
     {
-        this.tentacle = tentacle;
         this.logger = parentLogger.createChildLogger(this.getClass().getName());
         this.octoReceiver = new OctoRtpReceiver(streamInformationStore, logger);
         this.octoSender = new OctoRtpSender(streamInformationStore, logger);
@@ -121,16 +111,9 @@ public class OctoTransceiver
         return mediaStreamTracks.getMediaStreamTracks();
     }
 
-    @Override
-    public void handleMediaPacket(@NotNull OctoPacketInfo packetInfo)
+    public void handleIncomingPacket(@NotNull OctoPacketInfo packetInfo)
     {
         octoReceiver.enqueuePacket(packetInfo);
-    }
-
-    @Override
-    public void handleMessagePacket(@NotNull String message, @NotNull String sourceEpId)
-    {
-        tentacle.handleMessage(message);
     }
 
     void sendPacket(PacketInfo packetInfo)
@@ -149,7 +132,7 @@ public class OctoTransceiver
     /**
      * Adds a payload type to this transceiver.
      *
-     * @param payloadType
+     * @param payloadType the payload type to add
      */
     void addPayloadType(PayloadType payloadType)
     {
@@ -158,8 +141,7 @@ public class OctoTransceiver
 
     /**
      * Adds an RTP header extension to this transceiver.
-     * @param extensionId
-     * @param rtpExtension
+     * @param rtpExtension the extension to add
      */
     void addRtpExtension(RtpExtension rtpExtension)
     {

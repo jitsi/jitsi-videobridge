@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.octo;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
@@ -42,7 +43,7 @@ import java.util.stream.*;
  * @author Boris Grozev
  */
 public class OctoTentacle extends PropertyChangeNotifier
-    implements PotentialPacketHandler
+    implements PotentialPacketHandler, OctoTransport.IncomingOctoPacketHandler
 {
     /**
      * The {@link Logger} used by the {@link OctoTentacle} class and its
@@ -102,7 +103,7 @@ public class OctoTentacle extends PropertyChangeNotifier
         }
 
         octoEndpoints = new OctoEndpoints(conference);
-        transceiver = new OctoTransceiver(this, logger);
+        transceiver = new OctoTransceiver(logger);
 
         transceiver.setAudioLevelListener(conference.getAudioLevelListener());
         transceiver.setIncomingPacketHandler(conference::handleIncomingPacket);
@@ -170,6 +171,18 @@ public class OctoTentacle extends PropertyChangeNotifier
     public void send(PacketInfo packetInfo)
     {
         transceiver.sendPacket(packetInfo);
+    }
+
+    @Override
+    public void handleMediaPacket(@NotNull OctoPacketInfo packetInfo)
+    {
+        transceiver.handleIncomingPacket(packetInfo);
+    }
+
+    @Override
+    public void handleMessagePacket(@NotNull String message, @NotNull String sourceEpId)
+    {
+        octoEndpoints.messageTransport.onMessage(null /* source */ , message);
     }
 
     /**
@@ -252,15 +265,6 @@ public class OctoTentacle extends PropertyChangeNotifier
     }
 
     /**
-     * Handles a message received from an Octo relay.
-     * @param message the incoming message
-     */
-    public void handleMessage(String message)
-    {
-        octoEndpoints.messageTransport.onMessage(null /* source */ , message);
-    }
-
-    /**
      * Sets the list of remote addresses to send Octo packets to.
      * @param targets the list of addresses.
      */
@@ -272,11 +276,11 @@ public class OctoTentacle extends PropertyChangeNotifier
 
             if (targets.isEmpty())
             {
-                octoTransport.removeHandler(conference.getGid(), transceiver);
+                octoTransport.removeHandler(conference.getGid(), this);
             }
             else
             {
-                octoTransport.addHandler(conference.getGid(), transceiver);
+                octoTransport.addHandler(conference.getGid(), this);
             }
         }
     }
