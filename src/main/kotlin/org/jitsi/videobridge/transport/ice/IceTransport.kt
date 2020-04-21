@@ -215,26 +215,19 @@ class IceTransport @JvmOverloads constructor(
 
     /**
      * Send data out via this transport
-     *
-     * TODO: should we ensure that we're running before sending?
      */
     fun send(data: ByteArray, off: Int, length: Int) {
-        try {
-            iceComponent.socket.send(DatagramPacket(data, off, length))
-            packetStats.numPacketsSent++
-        } catch (e: IOException) {
-            logger.error("Error sending packet", e)
-            throw RuntimeException()
+        if (running.get()) {
+            try {
+                iceComponent.socket.send(DatagramPacket(data, off, length))
+                packetStats.numPacketsSent++
+            } catch (e: IOException) {
+                logger.error("Error sending packet", e)
+                throw RuntimeException()
+            }
+        } else {
+            packetStats.numOutgoingPacketsDroppedStopped++
         }
-    }
-
-    /**
-     * NOTE(brian): this method only exists because we want to use a Consumer<T> in
-     * SocketSenderNode in DtlsTransport.  When that gets ported to Kotlin it will be easier to
-     * make the T a function type (which can take multiple arguments), but until then we provide this.
-     */
-    fun send(packet: DatagramPacket) {
-        send(packet.data, packet.offset, packet.length)
     }
 
     fun stop() {
@@ -366,12 +359,14 @@ class IceTransport @JvmOverloads constructor(
     private data class PacketStats(
         var numPacketsReceived: Int = 0,
         var numIncomingPacketsDroppedNoHandler: Int = 0,
-        var numPacketsSent: Int = 0
+        var numPacketsSent: Int = 0,
+        var numOutgoingPacketsDroppedStopped: Int = 0
     ) {
         fun toJson(): OrderedJsonObject = OrderedJsonObject().apply {
             put("num_packets_received", numPacketsReceived)
             put("num_incoming_packets_dropped_no_handler", numIncomingPacketsDroppedNoHandler)
             put("num_packets_sent", numPacketsSent)
+            put("num_outgoing_packets_dropped_stopped", numOutgoingPacketsDroppedStopped)
         }
     }
 
