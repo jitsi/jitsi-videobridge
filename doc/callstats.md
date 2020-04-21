@@ -1,4 +1,4 @@
-To enable callsstats on JVB, the following properties needs to be set 
+To enable callstats on JVB, the following properties needs to be set 
 in /etc/jitsi/videobridge/sip-communicator.properties
 
     # the callstats credentials
@@ -9,13 +9,14 @@ in /etc/jitsi/videobridge/sip-communicator.properties
 
     # the id of the videobridge
     io.callstats.sdk.CallStats.bridgeId=
+    io.callstats.sdk.CallStats.conferenceIDPrefix=
 
     # enable statistics and callstats statistics and the report interval
     org.jitsi.videobridge.ENABLE_STATISTICS=true
     org.jitsi.videobridge.STATISTICS_INTERVAL.callstats.io=30000
     org.jitsi.videobridge.STATISTICS_TRANSPORT=callstats.io
 
-Callstats.io supports authentication via shared secret and public/private keys.
+callstats.io supports authentication via shared secret and public/private keys.
 
 You can use [pem-to-jwk](https://www.npmjs.com/package/pem-to-jwk) to convert PEM encoded EC private key to JWK.  
 To generate a jwk file that needs to be supplied as
