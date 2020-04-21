@@ -153,6 +153,13 @@ public class OctoTransceiver {
         octoReceiver.setAudioLevelListener(audioLevelListener);
     }
 
+    void stop() {
+        octoReceiver.stop();
+        octoReceiver.tearDown();
+        octoSender.stop();
+        octoSender.tearDown();
+    }
+
     /**
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.

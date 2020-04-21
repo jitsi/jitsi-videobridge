@@ -50,7 +50,9 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.videobridge.octo.config.OctoConfig.Config
+import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * An [RtpReceiver] for all data that comes in over the Octo link.
@@ -60,6 +62,8 @@ class OctoRtpReceiver(
     parentLogger: Logger
 ) : RtpReceiver() {
     private val logger = createChildLogger(parentLogger)
+
+    private val running = AtomicBoolean(true)
 
     private val incomingPacketQueue = PacketInfoQueue(
         "octo-transceiver-incoming-packet-queue",
@@ -125,7 +129,11 @@ class OctoRtpReceiver(
     }
 
     override fun enqueuePacket(p: PacketInfo) {
-        incomingPacketQueue.add(p)
+        if (running.get()) {
+            incomingPacketQueue.add(p)
+        } else {
+            ByteBufferPool.returnBuffer(p.packet.buffer)
+        }
     }
 
     private fun handleIncomingPacket(packetInfo: PacketInfo): Boolean {
@@ -173,7 +181,9 @@ class OctoRtpReceiver(
 
     override fun setSrtpTransformers(srtpTransformers: SrtpTransformers) {}
 
-    override fun stop() {}
+    override fun stop() {
+        running.set(false)
+    }
 
     override fun tearDown() {
         incomingPacketQueue.close()

@@ -31,8 +31,10 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.videobridge.octo.config.OctoConfig.Config
+import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * An [RtpSender] for all data we want to send out over the Octo link(s).
@@ -42,6 +44,8 @@ class OctoRtpSender(
     parentLogger: Logger
 ) : RtpSender() {
     private val logger = createChildLogger(parentLogger)
+
+    private val running = AtomicBoolean(true)
 
     /**
      * The queues which pass packets to be sent, indexed by source endpoint ID
@@ -74,24 +78,28 @@ class OctoRtpSender(
     }
 
     override fun doProcessPacket(packetInfo: PacketInfo) {
-        packetInfo.endpointId?.let { epId ->
-            val queue = outgoingPacketQueues.computeIfAbsent(epId) {
-                PacketInfoQueue(
-                    "octo-tentacle-outgoing-packet-queue",
-                    TaskPools.IO_POOL,
-                    this::doSend,
-                    Config.sendQueueSize()
-                ).apply {
-                    setErrorHandler(queueErrorCounter)
+        if (running.get()) {
+            packetInfo.endpointId?.let { epId ->
+                val queue = outgoingPacketQueues.computeIfAbsent(epId) {
+                    PacketInfoQueue(
+                        "octo-tentacle-outgoing-packet-queue",
+                        TaskPools.IO_POOL,
+                        this::doSend,
+                        Config.sendQueueSize()
+                    ).apply {
+                        setErrorHandler(queueErrorCounter)
+                    }
                 }
+                queue.add(packetInfo)
+            } ?: run {
+                // Some packets may not have the source endpoint ID set, these are
+                // packets that originate within the bridge itself (right now
+                // this only happens for RTCP).  We don't queue these packets,
+                // but instead send them directly
+                doSend(packetInfo)
             }
-            queue.add(packetInfo)
-        } ?: run {
-            // Some packets may not have the source endpoint ID set, these are
-            // packets that originate within the bridge itself (right now
-            // this only happens for RTCP).  We don't queue these packets,
-            // but instead send them directly
-            doSend(packetInfo)
+        } else {
+            ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
         }
     }
 
@@ -105,7 +113,7 @@ class OctoRtpSender(
     }
 
     fun endpointExpired(epId: String) {
-        outgoingPacketQueues.remove(epId)
+        outgoingPacketQueues.remove(epId)?.close()
     }
 
     override fun sendProbing(mediaSsrc: Long, numBytes: Int): Int = 0
@@ -113,12 +121,11 @@ class OctoRtpSender(
     override fun setSrtpTransformers(srtpTransformers: SrtpTransformers) {}
 
     override fun stop() {
-        // TODO: we need a 'running' flag here so we can stop creating new
-        // queue and close out the ones we have
+        running.set(false)
     }
 
     override fun tearDown() {
-        // TODO: close all queues here
+        outgoingPacketQueues.values.forEach(PacketInfoQueue::close)
     }
 
     override fun handleEvent(event: Event) {}

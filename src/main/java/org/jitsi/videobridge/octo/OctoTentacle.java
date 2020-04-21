@@ -302,6 +302,7 @@ public class OctoTentacle extends PropertyChangeNotifier
         logger.info("Expiring");
         setRelays(new LinkedList<>());
         octoEndpoints.setEndpoints(Collections.emptySet());
+        transceiver.stop();
     }
 
     /**
