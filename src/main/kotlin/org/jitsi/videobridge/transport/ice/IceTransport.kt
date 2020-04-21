@@ -228,15 +228,6 @@ class IceTransport @JvmOverloads constructor(
         }
     }
 
-    /**
-     * NOTE(brian): this method only exists because we want to use a Consumer<T> in
-     * SocketSenderNode in DtlsTransport.  When that gets ported to Kotlin it will be easier to
-     * make the T a function type (which can take multiple arguments), but until then we provide this.
-     */
-    fun send(packet: DatagramPacket) {
-        send(packet.data, packet.offset, packet.length)
-    }
-
     fun stop() {
         if (running.compareAndSet(true, false)) {
             logger.info("Stopping")
