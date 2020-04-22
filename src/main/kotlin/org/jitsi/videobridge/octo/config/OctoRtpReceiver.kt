@@ -123,6 +123,7 @@ class OctoRtpReceiver(
                 path = pipeline {
                     // We currently only have single RTCP packets in Octo
                     node(SingleRtcpParser(logger))
+                    node(pipelineTerminationNode)
                 }
             }
         }
