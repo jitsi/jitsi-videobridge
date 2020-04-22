@@ -149,6 +149,7 @@ class OctoRtpReceiver(
     }
 
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("Octo receiver").apply {
+        addBlock(super.getNodeStats())
         NodeStatsVisitor(this).visit(inputTreeRoot)
     }
 

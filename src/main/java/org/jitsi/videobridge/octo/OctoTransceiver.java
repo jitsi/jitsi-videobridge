@@ -167,9 +167,9 @@ public class OctoTransceiver {
     @SuppressWarnings("unchecked")
     JSONObject getDebugState()
     {
-
         JSONObject debugState = new JSONObject();
         debugState.put("octoReceiver", octoReceiver.getDebugState());
+        debugState.put("octoSender", octoSender.getDebugState());
         debugState.put("mediaStreamTracks", mediaStreamTracks.getNodeStats().toJson());
         return debugState;
     }

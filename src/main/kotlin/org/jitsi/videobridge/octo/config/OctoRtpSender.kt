@@ -22,9 +22,12 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpSender
 import org.jitsi.nlj.rtcp.KeyframeRequester
 import org.jitsi.nlj.srtp.SrtpTransformers
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.stats.PacketStreamStats
+import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
+import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.utils.logging2.Logger
@@ -57,17 +60,19 @@ class OctoRtpSender(
      */
     private var outgoingPacketHandler: PacketHandler? = null
 
+    private val outputPipelineTerminationNode = object : ConsumerNode("Octo sender termination node") {
+        override fun consume(packetInfo: PacketInfo) {
+            outgoingPacketHandler?.processPacket(packetInfo) ?: packetDiscarded(packetInfo)
+        }
+
+        override fun trace(f: () -> Unit) = f.invoke()
+    }
+
     /**
      * The [KeyframeRequester] used for all remote Octo endpoints
      */
     private val keyframeRequester = KeyframeRequester(readOnlyStreamInformationStore, logger).apply {
-        attach(object : ConsumerNode("Octo sender termination node") {
-            override fun consume(packetInfo: PacketInfo) {
-                outgoingPacketHandler?.processPacket(packetInfo) ?: packetDiscarded(packetInfo)
-            }
-
-            override fun trace(f: () -> Unit) = f.invoke()
-        })
+        attach(outputPipelineTerminationNode)
     }
 
     /**
@@ -137,6 +142,15 @@ class OctoRtpSender(
 
     override fun getStreamStats(): OutgoingStatisticsSnapshot =
         OutgoingStatisticsSnapshot(mapOf())
+
+    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("Octo sender").apply {
+        addBlock(super.getNodeStats())
+        NodeStatsVisitor(this).reverseVisit(outputPipelineTerminationNode)
+    }
+
+    fun getDebugState(): OrderedJsonObject = OrderedJsonObject().apply {
+        putAll(getNodeStats().toJson())
+    }
 
     companion object {
         @JvmField
