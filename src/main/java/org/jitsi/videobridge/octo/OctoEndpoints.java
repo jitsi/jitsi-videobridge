@@ -28,7 +28,7 @@ import java.util.*;
  *
  * @author Boris Grozev
  */
- class OctoEndpoints
+ public class OctoEndpoints
  {
      /**
       * The owning conference.

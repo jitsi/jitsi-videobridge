@@ -15,25 +15,16 @@
  */
 package org.jitsi.videobridge.octo;
 
-import kotlin.*;
-import kotlin.jvm.functions.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
-import org.jitsi.nlj.rtcp.*;
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.nlj.transform.node.*;
-import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
-import org.jitsi.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.transport.octo.*;
-import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
@@ -43,7 +34,6 @@ import org.osgi.framework.*;
 
 import java.net.*;
 import java.util.*;
-import java.util.concurrent.*;
 import java.util.stream.*;
 
 /**
@@ -52,7 +42,8 @@ import java.util.stream.*;
  *
  * @author Boris Grozev
  */
-public class OctoTentacle extends PropertyChangeNotifier implements PotentialPacketHandler
+public class OctoTentacle extends PropertyChangeNotifier
+    implements PotentialPacketHandler, OctoTransport.IncomingOctoPacketHandler
 {
     /**
      * The {@link Logger} used by the {@link OctoTentacle} class and its
@@ -74,7 +65,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
     /**
      * The {@link OctoTransceiver} instance which handles RTP/RTCP processing.
      */
-    final OctoTransceiver transceiver;
+    private final OctoTransceiver transceiver;
 
     /**
      * The {@link OctoTransport} used to actually send and receive Octo packets.
@@ -82,29 +73,10 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
     private final OctoTransport octoTransport;
 
     /**
-     * The instance that will request keyframes on behalf of this tentable. Note
-     * that we don't have bridge-to-bridge rtt measurements atm so we use a
-     * default value of 100ms.
-     */
-    private final KeyframeRequester keyframeRequester;
-
-    /**
      * The list of remote Octo targets.
      */
     private Set<SocketAddress> targets
             = Collections.unmodifiableSet(new HashSet<>());
-
-    /**
-     * Count the number of dropped packets and exceptions.
-     */
-    public static final CountingErrorHandler queueErrorCounter
-        = new CountingErrorHandler();
-
-    /**
-     * The queues which pass packets to be sent.
-     */
-    private Map<String, PacketInfoQueue> outgoingPacketQueues =
-        new ConcurrentHashMap<>();
 
     /**
      * Initializes a new {@link OctoTentacle} instance.
@@ -114,56 +86,39 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
     {
         this.conference = conference;
         this.logger = conference.getLogger().createChildLogger(this.getClass().getName());
-        octoEndpoints = new OctoEndpoints(conference);
-        transceiver = new OctoTransceiver(this, logger);
-
         BundleContext bundleContext = conference.getBundleContext();
         OctoRelayService octoRelayService
             = bundleContext == null ? null :
-                ServiceUtils2.getService(bundleContext, OctoRelayService.class);
+            ServiceUtils2.getService(bundleContext, OctoRelayService.class);
 
-
-        if (octoRelayService != null)
+        if (octoRelayService == null)
         {
-            octoTransport = octoRelayService.getOctoTransport();
-            keyframeRequester = new KeyframeRequester(transceiver.getStreamInformationStore(), logger);
-            keyframeRequester.attach(new ConsumerNode("octo keyframe relay node")
-            {
-                @Override
-                protected void consume(@NotNull PacketInfo packetInfo)
-                {
-                    packetInfo.sent();
-                    octoTransport.sendMediaData(
-                        packetInfo.getPacket().getBuffer(),
-                        packetInfo.getPacket().getOffset(),
-                        packetInfo.getPacket().getLength(),
-                        targets,
-                        conference.getGid(),
-                        packetInfo.getEndpointId()
-                    );
-                }
-
-                @Override
-                public void trace(@NotNull Function0<Unit> f)
-                {
-                    f.invoke();
-                }
-            });
+            throw new IllegalStateException("Couldn't get OctoRelayService");
         }
-        else
+
+        octoTransport = octoRelayService.getOctoTransport();
+        if (octoTransport == null)
         {
-            octoTransport = null;
-            keyframeRequester = null;
+            throw new IllegalStateException("Couldn't get OctoTransport");
         }
-    }
 
-    /**
-     * Gets the audio level listener.
-     * @return
-     */
-    AudioLevelListener getAudioLevelListener()
-    {
-        return conference.getAudioLevelListener();
+        octoEndpoints = new OctoEndpoints(conference);
+        transceiver = new OctoTransceiver(logger);
+
+        transceiver.setAudioLevelListener(conference.getAudioLevelListener());
+        transceiver.setIncomingPacketHandler(conference::handleIncomingPacket);
+        transceiver.setOutgoingPacketHandler(packetInfo ->
+        {
+            packetInfo.sent();
+            octoTransport.sendMediaData(
+                packetInfo.getPacket().getBuffer(),
+                packetInfo.getPacket().getOffset(),
+                packetInfo.getPacket().getLength(),
+                targets,
+                conference.getGid(),
+                packetInfo.getEndpointId()
+            );
+        });
     }
 
     /**
@@ -172,56 +127,6 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
     public void addPayloadType(PayloadType payloadType)
     {
         transceiver.addPayloadType(payloadType);
-    }
-
-    /**
-     * Creates a PacketInfoQueue for an endpoint.
-     */
-    private PacketInfoQueue createQueue(String epId)
-    {
-        PacketInfoQueue q = new PacketInfoQueue(
-            "octo-tentacle-outgoing-packet-queue",
-            TaskPools.IO_POOL,
-            this::doSend,
-            OctoConfig.Config.sendQueueSize());
-        q.setErrorHandler(queueErrorCounter);
-        return q;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void send(PacketInfo packetInfo)
-    {
-        /* We queue packets separately by their *source* endpoint.
-         * This achieves parallelization while guaranteeing that we don't
-         * reorder things that shouldn't be reordered.
-         */
-        PacketInfoQueue queue =
-            outgoingPacketQueues.computeIfAbsent(packetInfo.getEndpointId(),
-             this::createQueue);
-
-        queue.add(packetInfo);
-    }
-
-    /**
-     * Send Octo packet out.
-     */
-    private boolean doSend(PacketInfo packetInfo)
-    {
-        Packet packet = packetInfo.getPacket();
-        if (packet != null)
-        {
-            octoTransport.sendMediaData(
-                packet.getBuffer(),
-                packet.getOffset(),
-                packet.getLength(),
-                targets,
-                conference.getGid(),
-                packetInfo.getEndpointId());
-        }
-        return true;
     }
 
     /**
@@ -260,6 +165,27 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void send(PacketInfo packetInfo)
+    {
+        transceiver.sendPacket(packetInfo);
+    }
+
+    @Override
+    public void handleMediaPacket(@NotNull OctoPacketInfo packetInfo)
+    {
+        transceiver.handleIncomingPacket(packetInfo);
+    }
+
+    @Override
+    public void handleMessagePacket(@NotNull String message, @NotNull String sourceEpId)
+    {
+        octoEndpoints.messageTransport.onMessage(null /* source */ , message);
+    }
+
+    /**
      * Sets the list of sources and source groups which describe the RTP streams
      * we expect to receive from remote Octo relays.
      *
@@ -285,7 +211,7 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         // nulls here.
         Set<String> endpointIds
                 = allSources.stream()
-                    .map(source -> MediaStreamTrackFactory.getOwner(source))
+                    .map(MediaStreamTrackFactory::getOwner)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
 
@@ -330,26 +256,12 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
      */
     public void endpointExpired(String endpointId)
     {
-        outgoingPacketQueues.remove(endpointId);
+        transceiver.endpointExpired(endpointId);
     }
 
-    /**
-     * Handles and RTP packet coming from a remote Octo relay after it has
-     * been parsed and handled by our {@link #transceiver}.
-     * @param packetInfo the packet to handle.
-     */
-    void handleIncomingPacket(PacketInfo packetInfo)
+    public MediaStreamTrackDesc[] getMediaStreamTracks()
     {
-        conference.handleIncomingPacket(packetInfo);
-    }
-
-    /**
-     * Handles a message received from an Octo relay.
-     * @param message
-     */
-    public void handleMessage(String message)
-    {
-        octoEndpoints.messageTransport.onMessage(null /* source */ , message);
+        return transceiver.getMediaStreamTracks();
     }
 
     /**
@@ -364,19 +276,18 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
 
             if (targets.isEmpty())
             {
-                octoTransport.removeHandler(conference.getGid(), transceiver);
+                octoTransport.removeHandler(conference.getGid(), this);
             }
             else
             {
-                octoTransport.addHandler(conference.getGid(), transceiver);
+                octoTransport.addHandler(conference.getGid(), this);
             }
         }
     }
 
     /**
      * Adds an RTP header extension.
-     * @param extensionId
-     * @param rtpExtension
+     * @param rtpExtension the {@link RtpExtension} to add
      */
     public void addRtpExtension(RtpExtension rtpExtension)
     {
@@ -391,11 +302,12 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
         logger.info("Expiring");
         setRelays(new LinkedList<>());
         octoEndpoints.setEndpoints(Collections.emptySet());
+        transceiver.stop();
     }
 
     /**
      * Sends a data message through the Octo relay.
-     * @param message
+     * @param message the message to send
      */
     public void sendMessage(String message)
     {
@@ -424,13 +336,6 @@ public class OctoTentacle extends PropertyChangeNotifier implements PotentialPac
 
     public void requestKeyframe(long mediaSsrc)
     {
-        if (keyframeRequester != null)
-        {
-            keyframeRequester.requestKeyframe(mediaSsrc);
-        }
-        else
-        {
-            logger.warn("Failed to request a keyframe from a foreign endpoint.");
-        }
+        transceiver.requestKeyframe(mediaSsrc);
     }
 }

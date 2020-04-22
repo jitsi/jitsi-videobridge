@@ -15,27 +15,16 @@
  */
 package org.jitsi.videobridge.octo;
 
-import kotlin.*;
-import kotlin.jvm.functions.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
-import org.jitsi.nlj.rtcp.*;
 import org.jitsi.nlj.rtp.*;
-import org.jitsi.nlj.transform.*;
-import org.jitsi.nlj.transform.node.*;
-import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.rtp.extensions.*;
-import org.jitsi.rtp.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.utils.queue.*;
-import org.jitsi.videobridge.transport.octo.*;
-import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.octo.config.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
-
-import static org.jitsi.videobridge.octo.config.OctoConfig.*;
 
 /**
  * Parses and handles incoming RTP/RTCP packets from an Octo source for a
@@ -43,35 +32,12 @@ import static org.jitsi.videobridge.octo.config.OctoConfig.*;
  *
  * @author Boris Grozev
  */
-public class OctoTransceiver
-        implements OctoTransport.IncomingOctoPacketHandler
-{
+public class OctoTransceiver {
     /**
      * The {@link Logger} used by the {@link OctoTransceiver} class to print
      * debug information.
      */
     private final Logger logger;
-
-    /**
-     * Count the number of dropped packets and exceptions.
-     */
-    public static final CountingErrorHandler queueErrorCounter
-            = new CountingErrorHandler();
-
-    /**
-     * The owning tentacle.
-     */
-    private final OctoTentacle tentacle;
-
-    /**
-     * The queue which passes packets through the incoming chain/tree.
-     */
-    private PacketInfoQueue incomingPacketQueue;
-
-    /**
-     * The tree of {@link Node}s which handles incoming packets.
-     */
-    private final Node inputTreeRoot;
 
     /**
      * The set of media stream tracks that have been signaled to us.
@@ -81,22 +47,33 @@ public class OctoTransceiver
     private final StreamInformationStore streamInformationStore
             = new StreamInformationStoreImpl();
 
+    private final OctoRtpReceiver octoReceiver;
+
+    private final OctoRtpSender octoSender;
+
     /**
      * Initializes a new {@link OctoTransceiver} instance.
-     *
-     * @param tentacle
      */
-    OctoTransceiver(OctoTentacle tentacle, Logger parentLogger)
+    OctoTransceiver(Logger parentLogger)
     {
-        this.tentacle = tentacle;
         this.logger = parentLogger.createChildLogger(this.getClass().getName());
-        inputTreeRoot = createInputTree();
-        incomingPacketQueue = new PacketInfoQueue(
-                "octo-tranceiver-incoming-packet-queue",
-                TaskPools.CPU_POOL,
-                this::processPacket,
-                Config.recvQueueSize());
-        incomingPacketQueue.setErrorHandler(queueErrorCounter);
+        this.octoReceiver = new OctoRtpReceiver(streamInformationStore, logger);
+        this.octoSender = new OctoRtpSender(streamInformationStore, logger);
+    }
+
+    void setIncomingPacketHandler(PacketHandler handler)
+    {
+        octoReceiver.setPacketHandler(handler);
+    }
+
+    void setOutgoingPacketHandler(PacketHandler handler)
+    {
+        octoSender.onOutgoingPacket(handler);
+    }
+
+    void requestKeyframe(long mediaSsrc)
+    {
+        octoSender.requestKeyframe(mediaSsrc);
     }
 
     /**
@@ -120,7 +97,7 @@ public class OctoTransceiver
             SetMediaStreamTracksEvent setMediaStreamTracksEvent
                     = new SetMediaStreamTracksEvent(getMediaStreamTracks());
 
-            new NodeEventVisitor(setMediaStreamTracksEvent).visit(inputTreeRoot);
+            octoReceiver.handleEvent(setMediaStreamTracksEvent);
         }
 
         return changed;
@@ -134,122 +111,53 @@ public class OctoTransceiver
         return mediaStreamTracks.getMediaStreamTracks();
     }
 
-    @Override
-    public void handleMediaPacket(@NotNull OctoPacketInfo packetInfo)
+    public void handleIncomingPacket(@NotNull OctoPacketInfo packetInfo)
     {
-        incomingPacketQueue.add(packetInfo);
+        octoReceiver.enqueuePacket(packetInfo);
     }
 
-    @Override
-    public void handleMessagePacket(@NotNull String message, @NotNull String sourceEpId)
+    void sendPacket(PacketInfo packetInfo)
     {
-        tentacle.handleMessage(message);
-    }
-
-    /**
-     * Process a packet in the {@link #incomingPacketQueue} thread.
-     *
-     * @param packetInfo the packet to process.
-     *
-     * @return
-     */
-    private boolean processPacket(PacketInfo packetInfo)
-    {
-        inputTreeRoot.processPacket(packetInfo);
-        return true; // what are the semantics of the PacketQueue handler?
+        octoSender.processPacket(packetInfo);
     }
 
     /**
-     * Creates the tree of {@link Node} to use for processing incoming packets.
-     *
-     * @return
+     * Called when a local endpoint is expired.
      */
-    private Node createInputTree()
+    public void endpointExpired(String endpointId)
     {
-        // TODO: we need a better scheme for creating these in Java. Luckily
-        // the tree for Octo is not very complex.
-        Node terminationNode = new ConsumerNode("Octo termination node")
-        {
-            @NotNull
-            @Override
-            protected void consume(@NotNull PacketInfo packetInfo)
-            {
-                tentacle.handleIncomingPacket(packetInfo);
-            }
-
-            @Override
-            public void trace(@NotNull Function0<Unit> f)
-            {
-                f.invoke();
-            }
-        };
-
-        Node videoRoot = new VideoParser(streamInformationStore, logger);
-        videoRoot.attach(new Vp8Parser(logger))
-            .attach(new VideoBitrateCalculator(logger))
-            .attach(terminationNode);
-
-        AudioLevelReader audioLevelReader
-                = new AudioLevelReader(streamInformationStore);
-        audioLevelReader.setAudioLevelListener(tentacle.getAudioLevelListener());
-
-        Node audioRoot = audioLevelReader;
-        audioRoot.attach(terminationNode);
-
-        DemuxerNode audioVideoDemuxer
-                = new ExclusivePathDemuxer("Audio/Video")
-                .addPacketPath(
-                        "Video",
-                        pkt -> pkt instanceof VideoRtpPacket,
-                        videoRoot)
-                .addPacketPath(
-                        "Audio",
-                        pkt -> pkt instanceof AudioRtpPacket,
-                        audioRoot);
-
-        Node rtpRoot = new RtpParser(streamInformationStore, logger);
-        rtpRoot.attach(audioVideoDemuxer);
-
-        // We currently only have single RTCP packets in Octo.
-        Node rtcpRoot = new SingleRtcpParser(logger);
-        rtcpRoot.attach(terminationNode);
-        DemuxerNode root
-            = new ExclusivePathDemuxer("RTP/RTCP")
-                .addPacketPath(
-                        "RTP",
-                        PacketExtensionsKt::looksLikeRtp,
-                        rtpRoot)
-                .addPacketPath(
-                        "RTCP",
-                        PacketExtensionsKt::looksLikeRtcp,
-                        rtcpRoot);
-
-        return root;
+        octoSender.endpointExpired(endpointId);
     }
 
     /**
      * Adds a payload type to this transceiver.
      *
-     * @param payloadType
+     * @param payloadType the payload type to add
      */
     void addPayloadType(PayloadType payloadType)
     {
         streamInformationStore.addRtpPayloadType(payloadType);
     }
 
-    StreamInformationStore getStreamInformationStore()
-    {
-        return streamInformationStore;
-    }
-
     /**
      * Adds an RTP header extension to this transceiver.
-     * @param extensionId
-     * @param rtpExtension
+     * @param rtpExtension the extension to add
      */
     void addRtpExtension(RtpExtension rtpExtension)
     {
         streamInformationStore.addRtpExtensionMapping(rtpExtension);
+    }
+
+    void setAudioLevelListener(AudioLevelListener audioLevelListener)
+    {
+        octoReceiver.setAudioLevelListener(audioLevelListener);
+    }
+
+    void stop() {
+        octoReceiver.stop();
+        octoReceiver.tearDown();
+        octoSender.stop();
+        octoSender.tearDown();
     }
 
     /**
@@ -259,17 +167,9 @@ public class OctoTransceiver
     @SuppressWarnings("unchecked")
     JSONObject getDebugState()
     {
-
         JSONObject debugState = new JSONObject();
-        NodeSetVisitor nodeSetVisitor = new NodeSetVisitor();
-        nodeSetVisitor.visit(inputTreeRoot);
-
-        nodeSetVisitor.getNodeSet().forEach(
-                node -> debugState.put(
-                        node.getName(),
-                        node.getNodeStats().toJson()));
-
-        debugState.put("incomingPacketQueue", incomingPacketQueue.getDebugState());
+        debugState.put("octoReceiver", octoReceiver.getDebugState());
+        debugState.put("octoSender", octoSender.getDebugState());
         debugState.put("mediaStreamTracks", mediaStreamTracks.getNodeStats().toJson());
         return debugState;
     }
