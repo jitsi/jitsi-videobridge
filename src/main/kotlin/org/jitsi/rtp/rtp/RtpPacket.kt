@@ -25,8 +25,6 @@ import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionHelpers
 import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.getByteAsInt
 import org.jitsi.rtp.util.isPadding
-import org.jitsi.utils.observableWhenChanged
-
 /**
  *
  * https://tools.ietf.org/html/rfc3550#section-5.1
@@ -82,21 +80,45 @@ open class RtpPacket(
      * delegated properties, rather than re-reading them from the buffer every time.
      */
 
-    var payloadType: Int by observableWhenChanged(RtpHeader.getPayloadType(buffer, offset)) {
-        _, _, newValue -> RtpHeader.setPayloadType(this.buffer, this.offset, newValue)
-    }
+    private var _payloadType: Int = RtpHeader.getPayloadType(buffer, offset)
+    var payloadType: Int
+        get() = _payloadType
+        set(newValue) {
+            if (newValue != _payloadType) {
+                RtpHeader.setPayloadType(this.buffer, this.offset, newValue)
+                _payloadType = newValue
+            }
+        }
 
-    var sequenceNumber: Int by observableWhenChanged(RtpHeader.getSequenceNumber(buffer, offset)) {
-        _, _, newValue -> RtpHeader.setSequenceNumber(this.buffer, this.offset, newValue)
-    }
+    private var _sequenceNumber: Int = RtpHeader.getSequenceNumber(buffer, offset)
+    var sequenceNumber: Int
+        get() = _sequenceNumber
+        set(newValue) {
+            if (newValue != _sequenceNumber) {
+                RtpHeader.setSequenceNumber(this.buffer, this.offset, newValue)
+                _sequenceNumber = newValue
+            }
+        }
 
-    var timestamp: Long by observableWhenChanged(RtpHeader.getTimestamp(buffer, offset)) {
-        _, _, newValue -> RtpHeader.setTimestamp(this.buffer, this.offset, newValue)
-    }
+    private var _timestamp: Long = RtpHeader.getTimestamp(buffer, offset)
+    var timestamp: Long
+        get() = _timestamp
+        set(newValue) {
+            if (newValue != _timestamp) {
+                RtpHeader.setTimestamp(this.buffer, this.offset, newValue)
+                _timestamp = newValue
+            }
+        }
 
-    var ssrc: Long by observableWhenChanged(RtpHeader.getSsrc(buffer, offset)) {
-        _, _, newValue -> RtpHeader.setSsrc(this.buffer, this.offset, newValue)
-    }
+    private var _ssrc: Long = RtpHeader.getSsrc(buffer, offset)
+    var ssrc: Long
+        get() = _ssrc
+        set(newValue) {
+            if (newValue != _ssrc) {
+                RtpHeader.setSsrc(this.buffer, this.offset, newValue)
+                _ssrc = newValue
+            }
+        }
 
     val csrcs: List<Long>
         get() = RtpHeader.getCsrcs(buffer, offset)
