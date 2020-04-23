@@ -18,7 +18,7 @@ package org.jitsi.videobridge.octo
 
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.octo.config.OctoConfig.Config
-import org.jitsi.videobridge.transport.octo.OctoTransport
+import org.jitsi.videobridge.transport.octo.BridgeOctoTransport
 import org.jitsi.videobridge.transport.udp.UdpTransport
 import org.jitsi.videobridge.util.TaskPools
 import org.osgi.framework.BundleActivator
@@ -35,9 +35,9 @@ class OctoRelayService : BundleActivator {
     private var udpTransport: UdpTransport? = null
 
     /**
-     * The [OctoTransport] for handling incoming and outgoing Octo data
+     * The [BridgeOctoTransport] for handling incoming and outgoing Octo data
      */
-    var octoTransport: OctoTransport? = null
+    var bridgeOctoTransport: BridgeOctoTransport? = null
         private set
 
     override fun start(bundleContext: BundleContext) {
@@ -63,16 +63,16 @@ class OctoRelayService : BundleActivator {
                 else -> throw e
             }
         }
-        octoTransport = OctoTransport("$publicAddress:$port", logger)
+        bridgeOctoTransport = BridgeOctoTransport("$publicAddress:$port", logger)
 
         // Wire the data coming from the UdpTransport to the OctoTransport
         udpTransport!!.incomingDataHandler = object : UdpTransport.IncomingDataHandler {
             override fun dataReceived(data: ByteArray, offset: Int, length: Int, receivedTime: Instant) {
-                octoTransport!!.dataReceived(data, offset, length, receivedTime)
+                bridgeOctoTransport!!.dataReceived(data, offset, length, receivedTime)
             }
         }
         // Wire the data going out of OctoTransport to UdpTransport
-        octoTransport!!.outgoingDataHandler = object : OctoTransport.OutgoingOctoPacketHandler {
+        bridgeOctoTransport!!.outgoingDataHandler = object : BridgeOctoTransport.OutgoingOctoPacketHandler {
             override fun sendData(data: ByteArray, off: Int, length: Int, remoteAddresses: Set<SocketAddress>) {
                 udpTransport!!.send(data, off, length, remoteAddresses)
             }
@@ -88,12 +88,12 @@ class OctoRelayService : BundleActivator {
 
     override fun stop(context: BundleContext?) {
         udpTransport?.stop()
-        octoTransport?.stop()
+        bridgeOctoTransport?.stop()
     }
 
     fun getStats(): Stats {
         val octoUdpTransportStats = udpTransport!!.getStats()
-        val octoTransportStats = octoTransport!!.getStats()
+        val octoTransportStats = bridgeOctoTransport!!.getStats()
         return Stats(
             bytesReceived = octoUdpTransportStats.bytesReceived,
             bytesSent = octoUdpTransportStats.bytesSent,
@@ -104,7 +104,7 @@ class OctoRelayService : BundleActivator {
             packetsDropped = octoUdpTransportStats.incomingPacketsDropped + octoTransportStats.numInvalidPackets + octoTransportStats.numIncomingDroppedNoHandler,
             sendBitrate = octoUdpTransportStats.sendBitRate,
             sendPacketRate = octoUdpTransportStats.sendPacketRate,
-            relayId = octoTransport!!.relayId
+            relayId = bridgeOctoTransport!!.relayId
         )
     }
 

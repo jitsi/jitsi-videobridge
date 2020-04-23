@@ -43,7 +43,7 @@ import java.util.stream.*;
  * @author Boris Grozev
  */
 public class OctoTentacle extends PropertyChangeNotifier
-    implements PotentialPacketHandler, OctoTransport.IncomingOctoPacketHandler
+    implements PotentialPacketHandler, BridgeOctoTransport.IncomingOctoPacketHandler
 {
     /**
      * The {@link Logger} used by the {@link OctoTentacle} class and its
@@ -68,9 +68,9 @@ public class OctoTentacle extends PropertyChangeNotifier
     private final OctoTransceiver transceiver;
 
     /**
-     * The {@link OctoTransport} used to actually send and receive Octo packets.
+     * The {@link BridgeOctoTransport} used to actually send and receive Octo packets.
      */
-    private final OctoTransport octoTransport;
+    private final BridgeOctoTransport bridgeOctoTransport;
 
     /**
      * The list of remote Octo targets.
@@ -96,8 +96,8 @@ public class OctoTentacle extends PropertyChangeNotifier
             throw new IllegalStateException("Couldn't get OctoRelayService");
         }
 
-        octoTransport = octoRelayService.getOctoTransport();
-        if (octoTransport == null)
+        bridgeOctoTransport = octoRelayService.getBridgeOctoTransport();
+        if (bridgeOctoTransport == null)
         {
             throw new IllegalStateException("Couldn't get OctoTransport");
         }
@@ -110,7 +110,7 @@ public class OctoTentacle extends PropertyChangeNotifier
         transceiver.setOutgoingPacketHandler(packetInfo ->
         {
             packetInfo.sent();
-            octoTransport.sendMediaData(
+            bridgeOctoTransport.sendMediaData(
                 packetInfo.getPacket().getBuffer(),
                 packetInfo.getPacket().getOffset(),
                 packetInfo.getPacket().getLength(),
@@ -137,7 +137,7 @@ public class OctoTentacle extends PropertyChangeNotifier
     public void setRelays(Collection<String> relays)
     {
         Objects.requireNonNull(
-                octoTransport,
+            bridgeOctoTransport,
                 "Octo requested but not configured");
 
         Set<SocketAddress> socketAddresses = new HashSet<>();
@@ -276,11 +276,11 @@ public class OctoTentacle extends PropertyChangeNotifier
 
             if (targets.isEmpty())
             {
-                octoTransport.removeHandler(conference.getGid(), this);
+                bridgeOctoTransport.removeHandler(conference.getGid(), this);
             }
             else
             {
-                octoTransport.addHandler(conference.getGid(), this);
+                bridgeOctoTransport.addHandler(conference.getGid(), this);
             }
         }
     }
@@ -311,7 +311,7 @@ public class OctoTentacle extends PropertyChangeNotifier
      */
     public void sendMessage(String message)
     {
-        octoTransport.sendString(
+        bridgeOctoTransport.sendString(
             message,
             targets,
             conference.getGid()
@@ -328,7 +328,7 @@ public class OctoTentacle extends PropertyChangeNotifier
         JSONObject debugState = new JSONObject();
         debugState.put("octoEndpoints", octoEndpoints.getDebugState());
         debugState.put("transceiver", transceiver.getDebugState());
-        debugState.put("octoTransport", octoTransport.getStatsJson());
+        debugState.put("bridgeOctoTransport", bridgeOctoTransport.getStatsJson());
         debugState.put("targets", targets.toString());
 
         return debugState;
