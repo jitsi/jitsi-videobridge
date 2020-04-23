@@ -25,7 +25,7 @@ import java.util.concurrent.*;
 
 /**
  * Utilities to deserialize {@link PayloadTypePacketExtension} into a
- * {PayloadType}. This is currently in {@code jitsi-videbridge} in order to
+ * {PayloadType}. This is currently in {@code jitsi-videobridge} in order to
  * avoid adding the XML extensions as a dependency to
  * {@code jitsi-media-transform}.
  *

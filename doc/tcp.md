@@ -93,7 +93,7 @@ the local address configured. See the full documentation in
 Some of the networking-related behavior of jitsi-videobridge can be configured 
 through properties for the ICE library -- [ice4j](https://github.com/jitsi/ice4j).
 These properties can also be set in the jitsi-videobridge properties file. See 
-[the documenation of ice4j](https://github.com/jitsi/ice4j/blob/master/doc/configuration.md)
+[the documentation of ice4j](https://github.com/jitsi/ice4j/blob/master/doc/configuration.md)
 for details.
 
 

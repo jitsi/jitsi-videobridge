@@ -103,7 +103,7 @@ own PLI request (which is throttled), if the receiving endpoint supports PLIs,
 or an FIR otherwise. The JVB may also decide to send a PLI/FIR when specific
 events happen, such as a participant A has gone on-stage on a participant B.
 
-Negative ACKnoledgements (NACKs) [[RFC4585]] are intercepted in 
+Negative ACKnowledgements (NACKs) [[RFC4585]] are intercepted in 
 `RTXTransformer#reverseTransform`. Once a NACK packet is handled (i.e. the 
 reportedly missing packets have been re-transmitted, if they're in the egress 
 packet cache), it's removed from the RTCP compound packet and the compound 

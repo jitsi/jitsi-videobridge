@@ -65,7 +65,7 @@ public class StatsManager
      * Adds a specific (set of) <tt>Statistics</tt> to be periodically
      * generated/updated by this <tt>StatsManager</tt>.
      * <p>
-     * Warning: {@code Statistics} added to this {@code StatsMamanager} after
+     * Warning: {@code Statistics} added to this {@code StatsManager} after
      * {@link #start(BundleContext)} has been invoked will not be updated.
      * </p>
      *

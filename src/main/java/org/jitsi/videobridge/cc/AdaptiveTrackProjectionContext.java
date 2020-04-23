@@ -54,7 +54,7 @@ public interface AdaptiveTrackProjectionContext
     boolean needsKeyframe();
 
     /**
-     * Rewrites the timestamp, sequence number, ssrc and other codec dependend
+     * Rewrites the timestamp, sequence number, ssrc and other codec dependent
      * fields of the RTP packet that is specified as an argument. Projecting a
      * video track needs to be invisible to the receiving endpoint so goal here
      * is to make the resulting rtp stream continuous.

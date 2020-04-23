@@ -86,7 +86,7 @@ class GenericAdaptiveTrackProjectionContext
     private long timestampDelta;
 
     /**
-     * A boolean that indicates whether or not the timestap delta has been
+     * A boolean that indicates whether or not the timestamp delta has been
      * initialized. This is only necessary upon adaptive track projection
      * context switches.
      */

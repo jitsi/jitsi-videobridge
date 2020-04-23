@@ -73,7 +73,7 @@ public class LastNFilter
     }
 
     /**
-     * Checks whether thi {@link LastNFilter} should accept packets from a
+     * Checks whether this {@link LastNFilter} should accept packets from a
      * specific endpoint.
      * @param packetSourceEndpointId the ID of the endpoint.
      */

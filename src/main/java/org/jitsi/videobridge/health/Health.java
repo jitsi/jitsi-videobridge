@@ -149,7 +149,7 @@ public class Health
     private Videobridge videobridge;
 
     /**
-     * Iniatializes a new {@link Health} instance for a specific
+     * Initializes a new {@link Health} instance for a specific
      * {@link Videobridge}.
      */
     public Health()

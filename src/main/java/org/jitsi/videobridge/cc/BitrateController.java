@@ -259,16 +259,16 @@ public class BitrateController
         // if the bwe has increased, we should act upon it, otherwise
         // we may end up in this broken situation: Suppose that the target
         // bitrate is 2.5Mbps, and that the last bitrate allocation was
-        // performed with a 2.4Mbps bandwidth esitmate.  The bridge keeps
+        // performed with a 2.4Mbps bandwidth estimate.  The bridge keeps
         // probing and, suppose that, eventually the bandwidth estimate reaches
-        // 2.6Mbps, which is plenty to accomodate the target bitrat; but the
+        // 2.6Mbps, which is plenty to accomodate the target bitrate; but the
         // minimum bandwidth estimate that would trigger a new bitrate
         // allocation is 2.4Mbps + 2.4Mbps * 15% = 2.76Mbps.
         //
         // if, on the other hand, the bwe has decreased, we require a 15%
         // (configurable) drop at last in order to update the bitrate
         // allocation. This is an ugly hack to prevent too many resolution/UI
-        // changes in case the bridge produces too low bandwdith estimate, at
+        // changes in case the bridge produces too low bandwidth estimate, at
         // the risk of clogging the receiver's pipe.
 
         return deltaBwe > 0
@@ -823,13 +823,13 @@ public class BitrateController
 
         int oldStateLen = 0;
         int[] oldRatedTargetIndices = new int[trackBitrateAllocations.length];
-        int[] newRatedTargetIndicies = new int[trackBitrateAllocations.length];
-        Arrays.fill(newRatedTargetIndicies, -1);
+        int[] newRatedTargetIndices = new int[trackBitrateAllocations.length];
+        Arrays.fill(newRatedTargetIndices, -1);
 
         while (oldMaxBandwidth != maxBandwidth)
         {
             oldMaxBandwidth = maxBandwidth;
-            System.arraycopy(newRatedTargetIndicies, 0,
+            System.arraycopy(newRatedTargetIndices, 0,
                 oldRatedTargetIndices, 0, oldRatedTargetIndices.length);
 
             int newStateLen = 0;
@@ -851,7 +851,7 @@ public class BitrateController
                 trackBitrateAllocation.improve(maxBandwidth);
                 maxBandwidth -= trackBitrateAllocation.getTargetBitrate();
 
-                newRatedTargetIndicies[i]
+                newRatedTargetIndices[i]
                     = trackBitrateAllocation.ratedTargetIdx;
                 if (trackBitrateAllocation.getTargetIndex() > -1)
                 {

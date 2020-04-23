@@ -62,7 +62,7 @@ case "$1" in
         fi
 
         # Store it, so we can use it if xmpp server is on same machine
-        # we are currently doing this on every upgrade in order to be able to succesfully upgrade
+        # we are currently doing this on every upgrade in order to be able to successfully upgrade
         # from old packages, otherwise we can do it only when secret is first time generated
         db_set jitsi-videobridge/jvbsecret $JVB_SECRET
 

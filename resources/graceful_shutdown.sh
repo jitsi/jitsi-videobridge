@@ -3,9 +3,9 @@
 # 1. The script issues shutdown command to the bridge over REST API.
 #    If HTTP status code other than 200 is returned then it exits with 1.
 # 2. If the code is ok then it checks if the bridge has exited.
-# 3. If not then it polls bridge statisctics until conference count drops to 0.
+# 3. If not then it polls bridge statistics until conference count drops to 0.
 # 4. Gives some time for the bridge to shutdown. If it does not quit after that
-#    time then it kills the process. If the process was sucessfully killed 0 is
+#    time then it kills the process. If the process was successfully killed 0 is
 #    returned and 1 otherwise.
 #
 #   Arguments:

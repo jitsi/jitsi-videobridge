@@ -295,7 +295,7 @@ public class OctoTentacle extends PropertyChangeNotifier
     }
 
     /**
-     * Expires the Octo-related parts of a confence.
+     * Expires the Octo-related parts of a conference.
      */
     public void expire()
     {

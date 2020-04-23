@@ -24,9 +24,9 @@ import java.util.*;
 /**
  * Extends {@link AbstractEndpointMessageTransport} for the purposes of Octo.
  *
- * Most {@code on*Event} methods are overriden as no-ops because they don't make
+ * Most {@code on*Event} methods are overridden as no-ops because they don't make
  * sense for Octo and are never used. The single exception is
- * {@link #onClientEndpointMessage(Object, JSONObject)} which is not overriden
+ * {@link #onClientEndpointMessage(Object, JSONObject)} which is not overridden
  * and the logic in the super class applies.
  */
 class OctoEndpointMessageTransport
