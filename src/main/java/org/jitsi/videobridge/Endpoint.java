@@ -79,7 +79,8 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 public class Endpoint
     extends AbstractEndpoint implements PotentialPacketHandler,
         PropertyChangeListener,
-        EncodingsManager.EncodingsUpdateListener
+        EncodingsManager.EncodingsUpdateListener,
+        ColibriWebSocket.EventHandler
 {
     /**
      * Track how long it takes for all RTP and RTCP packets to make their way through the bridge.
@@ -1004,11 +1005,10 @@ public class Endpoint
     }
 
     /**
-     * Notifies this {@link Endpoint} that a specific {@link ColibriWebSocket}
-     * instance associated with it has connected.
-     * @param ws the {@link ColibriWebSocket} which has connected.
+     * {@inheritDoc}
      */
-    public void onWebSocketConnect(ColibriWebSocket ws)
+    @Override
+    public void webSocketConnected(ColibriWebSocket ws)
     {
         EndpointMessageTransport messageTransport
             = getMessageTransport();
@@ -1019,12 +1019,10 @@ public class Endpoint
     }
 
     /**
-     * Notifies this {@link Endpoint} that a specific {@link ColibriWebSocket}
-     * instance associated with it has been closed.
-     * @param ws the {@link ColibriWebSocket} which has been closed.
+     * {@inheritDoc}
      */
-    public void onWebSocketClose(
-            ColibriWebSocket ws, int statusCode, String reason)
+    @Override
+    public void webSocketClosed(ColibriWebSocket ws, int statusCode, String reason)
     {
         EndpointMessageTransport messageTransport
             = getMessageTransport();
@@ -1035,11 +1033,10 @@ public class Endpoint
     }
 
     /**
-     * Notifies this {@link Endpoint} that a message has been received from a
-     * specific {@link ColibriWebSocket} instance associated with it.
-     * @param ws the {@link ColibriWebSocket} from which a message was received.
+     * {@inheritDoc}
      */
-    public void onWebSocketText(ColibriWebSocket ws, String message)
+    @Override
+    public void webSocketTextReceived(ColibriWebSocket ws, String message)
     {
         EndpointMessageTransport messageTransport
             = getMessageTransport();
