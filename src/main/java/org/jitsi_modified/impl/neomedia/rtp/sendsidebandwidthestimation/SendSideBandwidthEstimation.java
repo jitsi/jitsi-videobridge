@@ -196,7 +196,7 @@ public class SendSideBandwidthEstimation
     /**
      * send_side_bandwidth_estimation.h
      */
-    private Deque<Pair<Long>> min_bitrate_history_ = new LinkedList<>();
+    private Deque<BitrateHistoryRecord> min_bitrate_history_ = new LinkedList<>();
 
     /**
      * The {@link DiagnosticContext} of this instance.
@@ -307,7 +307,7 @@ public class SendSideBandwidthEstimation
         {
             setBitrate(capBitrateToThresholds(bwe_incoming_));
             min_bitrate_history_.clear();
-            min_bitrate_history_.addLast(new Pair<>(now, bitrate_));
+            min_bitrate_history_.addLast(new BitrateHistoryRecord(now, bitrate_));
             return;
         }
         updateMinHistory(now);
@@ -341,7 +341,7 @@ public class SendSideBandwidthEstimation
                 //   whenever a receiver report is received with lower packet loss.
                 //   If instead one would do: bitrate_ *= 1.08^(delta time), it would
                 //   take over one second since the lower packet loss to achieve 108kbps.
-                bitrate = (long) (min_bitrate_history_.getFirst().second * 1.08 + 0.5);
+                bitrate = (long) (min_bitrate_history_.getFirst().bitrate * 1.08 + 0.5);
 
                 // Add 1 kbps extra, just to make sure that we do not get stuck
                 // (gives a little extra increase at low rates, negligible at higher
@@ -470,7 +470,7 @@ public class SendSideBandwidthEstimation
         // Since history precision is in ms, add one so it is able to increase
         // bitrate if it is off by as little as 0.5ms.
         while (!min_bitrate_history_.isEmpty() &&
-                now_ms - min_bitrate_history_.getFirst().first + 1 >
+                now_ms - min_bitrate_history_.getFirst().timestampMs + 1 >
                         kBweIncreaseIntervalMs)
         {
             min_bitrate_history_.removeFirst();
@@ -479,12 +479,12 @@ public class SendSideBandwidthEstimation
         // Typical minimum sliding-window algorithm: Pop values higher than current
         // bitrate before pushing it.
         while (!min_bitrate_history_.isEmpty() &&
-                bitrate_ <= min_bitrate_history_.getLast().second)
+                bitrate_ <= min_bitrate_history_.getLast().bitrate)
         {
             min_bitrate_history_.removeLast();
         }
 
-        min_bitrate_history_.addLast(new Pair<>(now_ms, bitrate_));
+        min_bitrate_history_.addLast(new BitrateHistoryRecord(now_ms, bitrate_));
     }
 
     /**
@@ -592,14 +592,15 @@ public class SendSideBandwidthEstimation
         return rttMs;
     }
 
-    private class Pair<T>
+    private static final class BitrateHistoryRecord
     {
-        T first;
-        T second;
-        Pair(T a, T b)
+        final long timestampMs;
+        final long bitrate;
+
+        BitrateHistoryRecord(long now, long br)
         {
-            first = a;
-            second = b;
+            timestampMs = now;
+            bitrate = br;
         }
     }
 
