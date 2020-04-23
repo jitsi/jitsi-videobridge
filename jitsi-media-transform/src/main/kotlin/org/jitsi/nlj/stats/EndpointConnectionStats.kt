@@ -37,8 +37,7 @@ import org.jitsi.utils.logging2.Logger
  */
 private const val MAX_SR_TIMESTAMP_HISTORY = 200
 
-private typealias SsrcAndTimestamp = Pair<Long, Long>
-
+private data class SsrcAndTimestamp(val ssrc: Long, val timestamp: Long)
 /**
  * Tracks stats which are not necessarily tied to send or receive but the endpoint overall
  */
@@ -93,7 +92,7 @@ class EndpointConnectionStats(
         when (packet) {
             is RtcpSrPacket -> {
                 logger.cdebug { "Tracking sent SR packet with compacted timestamp ${packet.senderInfo.compactedNtpTimestamp}" }
-                srSentTimes[Pair(packet.senderSsrc, packet.senderInfo.compactedNtpTimestamp)] = clock.instant()
+                srSentTimes[SsrcAndTimestamp(packet.senderSsrc, packet.senderInfo.compactedNtpTimestamp)] = clock.instant()
             }
         }
     }
