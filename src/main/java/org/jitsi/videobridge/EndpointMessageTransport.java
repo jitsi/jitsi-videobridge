@@ -19,7 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
-import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.websocket.*;
 import org.json.simple.*;
 
 import java.lang.ref.*;

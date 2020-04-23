@@ -79,7 +79,7 @@ The respective response could look like:
 </tr>
 <tr>
 		<td>GET</td>
-		<td>/colibri/conferences{id}</td>
+		<td>/colibri/conferences/{id}</td>
 		<td>
 			200 OK with a JSON object which represents the conference with the specified <code>id</code>. <br />
 			For example: 
@@ -112,7 +112,7 @@ The respective response could look like:
 	</tr>
 	<tr>
 		<td>PATCH</td>
-		<td>/colibri/conferences{id}</td>
+		<td>/colibri/conferences/{id}</td>
 		<td>
 			200 OK with a JSON object which represents the modified conference if the request was with <code>Content-Type: application/json</code> and was a JSON object which represented a conference without <code>id</code> or with the specified <code>id</code> and, optionally, with contents and channels with or without <code>id</code>s.
 		</td>
@@ -124,8 +124,6 @@ The respective response could look like:
 		200 OK with a JSON object which represents the statistics report.
 <pre>
 {
-    "cpu_usage":"0.03015",
-    "used_memory":3732,
     "rtp_loss":"0",
     "bit_rate_download":"0",
     "audiochannels":0,
@@ -134,7 +132,6 @@ The respective response could look like:
     "participants":0,
     "current_timestamp":"2014-08-14 23:26:14.782",
     "threads":17,
-    "total_memory":4051,
     "videochannels":0
 }</pre>
 		(Make sure <a href="using_statistics.md#configuration">statistics are enabled</a>.)

@@ -99,18 +99,18 @@ public class ByteBufferPool
     /**
      * Total number of buffers requested.
      */
-    private static final AtomicInteger numRequests = new AtomicInteger(0);
+    private static final LongAdder numRequests = new LongAdder();
 
     /**
      * The number of requests which were larger than our threshold and were
      * allocated from java instead.
      */
-    private static final AtomicInteger numLargeRequests = new AtomicInteger(0);
+    private static final LongAdder numLargeRequests = new LongAdder();
 
     /**
      * Total number of buffers returned.
      */
-    private static final AtomicInteger numReturns = new AtomicInteger(0);
+    private static final LongAdder numReturns = new LongAdder();
 
     /**
      * Gets the current thread ID.
@@ -142,7 +142,7 @@ public class ByteBufferPool
     {
         if (enableStatistics)
         {
-            numRequests.incrementAndGet();
+            numRequests.increment();
         }
 
         byte[] buf;
@@ -161,7 +161,10 @@ public class ByteBufferPool
         else
         {
             buf = new byte[size];
-            numLargeRequests.incrementAndGet();
+            if (enableStatistics)
+            {
+                numLargeRequests.increment();
+            }
         }
 
         if (ENABLE_BOOKKEEPING)
@@ -184,7 +187,7 @@ public class ByteBufferPool
     {
         if (enableStatistics)
         {
-            numReturns.incrementAndGet();
+            numReturns.increment();
         }
 
         int len = buf.length;
@@ -243,10 +246,12 @@ public class ByteBufferPool
     public static JSONObject getStatsJson()
     {
         JSONObject stats = new JSONObject();
+        long numRequestsSum = numRequests.sum();
+        long numLargeRequestsSum = numLargeRequests.sum();
         stats.put("outstanding_buffers", bookkeeping.size());
-        stats.put("num_requests", numRequests.get());
-        stats.put("num_large_requests", numLargeRequests.get());
-        stats.put("num_returns", numReturns.get());
+        stats.put("num_requests", numRequestsSum);
+        stats.put("num_large_requests", numLargeRequestsSum);
+        stats.put("num_returns", numReturns.sum());
         if (enableStatistics)
         {
             stats.put("pool1", pool1.getStats());
@@ -254,12 +259,12 @@ public class ByteBufferPool
             stats.put("pool3", pool3.getStats());
         }
 
-        long allAllocations = numLargeRequests.get() + pool1.getNumAllocations()
+        long allAllocations = numLargeRequestsSum + pool1.getNumAllocations()
                 + pool2.getNumAllocations() + pool3.getNumAllocations();
 
         stats.put(
                 "allocation_percent",
-                (100.0 * allAllocations) / numRequests.get());
+                (100.0 * allAllocations) / numRequestsSum);
 
         return stats;
     }

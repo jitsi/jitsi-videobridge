@@ -16,24 +16,25 @@
 package org.jitsi.videobridge;
 
 import kotlin.*;
+import org.apache.commons.lang3.StringUtils;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.config.*;
 import org.jitsi.eventadmin.*;
+import org.jitsi.health.*;
 import org.jitsi.meet.*;
 import org.jitsi.nlj.*;
-import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.Version;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.ice.*;
 import org.jitsi.videobridge.octo.*;
+import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
@@ -200,12 +201,6 @@ public class Videobridge
      * execute expire procedure for any of them.
      */
     private VideobridgeExpireThread videobridgeExpireThread;
-
-    /**
-     * The {@link Health} instance responsible for periodically performing
-     * health checks on this videobridge.
-     */
-    private Health health;
 
     /**
      * The shim which handles Colibri-related logic for this
@@ -678,24 +673,23 @@ public class Videobridge
     }
 
     /**
-     * Checks the health of this {@link Videobridge}. If it is healthy it just
-     * returns silently, otherwise it throws an exception. Note that this
-     * method does not perform any tests, but only checks the cached value
-     * provided by the bridge's {@link Health} instance.
+     * Returns a string representing the health of this {@link Videobridge}.
+     * Note that this method does not perform any tests, but only checks the
+     * cached value provided by the {@link org.jitsi.health.HealthCheckService}.
      *
      * @throws Exception if the videobridge is not healthy.
      */
-    public void healthCheck()
-        throws Exception
+    private String getHealthStatus()
     {
+        HealthCheckService health
+                = ServiceUtils2.getService(bundleContext, HealthCheckService.class);
         if (health == null)
         {
-            throw new Exception("No health checks running");
+            return "No health check service running";
         }
-        else
-        {
-            health.check();
-        }
+
+        Exception result = health.getResult();
+        return result == null ? "OK" : result.getMessage();
     }
 
     /**
@@ -824,7 +818,7 @@ public class Videobridge
      */
     public void setAuthorizedSourceRegExp(String authorizedSourceRegExp)
     {
-        if (!StringUtils.isNullOrEmpty(authorizedSourceRegExp))
+        if (!StringUtils.isBlank(authorizedSourceRegExp))
         {
             authorizedSourcePattern
                 = Pattern.compile(authorizedSourceRegExp);
@@ -862,11 +856,6 @@ public class Videobridge
         ConfigurationService cfg = getConfigurationService();
 
         videobridgeExpireThread.start();
-        if (health != null)
-        {
-            health.stop();
-        }
-        health = new Health(this);
 
         defaultProcessingOptions
             = (cfg == null)
@@ -880,7 +869,7 @@ public class Videobridge
                 ? null
                 : cfg.getString(SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME);
 
-        if (!StringUtils.isNullOrEmpty(shutdownSourcesRegexp))
+        if (!StringUtils.isBlank(shutdownSourcesRegexp))
         {
             try
             {
@@ -897,7 +886,7 @@ public class Videobridge
         String authorizedSourceRegexp
             = (cfg == null)
                     ? null : cfg.getString(AUTHORIZED_SOURCE_REGEXP_PNAME);
-        if (!StringUtils.isNullOrEmpty(authorizedSourceRegexp))
+        if (!StringUtils.isBlank(authorizedSourceRegexp))
         {
             try
             {
@@ -1036,12 +1025,6 @@ public class Videobridge
     {
         try
         {
-            if (health != null)
-            {
-                health.stop();
-                health = null;
-            }
-
             ConfigurationService cfg = getConfigurationService();
             stopIce4j(bundleContext, cfg);
         }
@@ -1105,22 +1088,13 @@ public class Videobridge
         debugState.put("shutdownInProgress", shutdownInProgress);
         debugState.put("time", System.currentTimeMillis());
 
-        String health = "OK";
-        try
-        {
-            healthCheck();
-        }
-        catch (Exception e)
-        {
-            health = e.getMessage();
-        }
-        debugState.put("health", health);
-        debugState.put("e2e_packet_delay", DtlsTransport.getPacketDelayStats());
-        debugState.put(DtlsTransport.overallAverageBridgeJitter.name, DtlsTransport.overallAverageBridgeJitter.get());
+        debugState.put("health", getHealthStatus());
+        debugState.put("e2e_packet_delay", Endpoint.getPacketDelayStats());
+        debugState.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
 
         JSONObject conferences = new JSONObject();
         debugState.put("conferences", conferences);
-        if (StringUtils.isNullOrEmpty(conferenceId))
+        if (StringUtils.isBlank(conferenceId))
         {
             for (Conference conference : getConferences())
             {
@@ -1158,11 +1132,14 @@ public class Videobridge
         JSONObject queueStats = new JSONObject();
 
         queueStats.put(
-                "dtls_send_queue",
-                getJsonFromQueueErrorHandler(DtlsTransport.queueErrorCounter));
+                "srtp_send_queue",
+                getJsonFromQueueErrorHandler(Endpoint.queueErrorCounter));
         queueStats.put(
                 "octo_receive_queue",
-                getJsonFromQueueErrorHandler(OctoTransceiver.queueErrorCounter));
+                getJsonFromQueueErrorHandler(OctoRtpSender.queueErrorCounter));
+        queueStats.put(
+                "octo_send_queue",
+                getJsonFromQueueErrorHandler(OctoRtpReceiver.queueErrorCounter));
         queueStats.put(
                 "rtp_receiver_queue",
                 getJsonFromQueueErrorHandler(

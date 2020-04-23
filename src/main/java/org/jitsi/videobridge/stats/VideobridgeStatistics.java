@@ -182,10 +182,6 @@ public class VideobridgeStatistics
     {
         BundleContext bundleContext
                 = StatsManagerBundleActivator.getBundleContext();
-        OctoRelayService relayService
-                = ServiceUtils2.getService(bundleContext, OctoRelayService.class);
-        OctoRelay octoRelay
-                = relayService == null ? null : relayService.getRelay();
         Videobridge videobridge
                 = ServiceUtils2.getService(bundleContext, Videobridge.class);
         Videobridge.Statistics jvbStats = videobridge.getStatistics();
@@ -496,45 +492,50 @@ public class VideobridgeStatistics
                     TOTAL_PACKETS_RECEIVED, jvbStats.totalPacketsReceived.get());
             unlockedSetStat(TOTAL_PACKETS_SENT, jvbStats.totalPacketsSent.get());
 
+            OctoRelayService relayService
+                = ServiceUtils2.getService(bundleContext, OctoRelayService.class);
+            OctoRelayService.Stats octoRelayServiceStats
+                = relayService == null ? null : relayService.getStats();
+
             unlockedSetStat(
                     TOTAL_BYTES_RECEIVED_OCTO,
-                    octoRelay == null ? 0 : octoRelay.getBytesReceived());
+                    octoRelayServiceStats == null ? 0 : octoRelayServiceStats.getBytesReceived());
             unlockedSetStat(
                     TOTAL_BYTES_SENT_OCTO,
-                    octoRelay == null ? 0 : octoRelay.getBytesSent());
+                    octoRelayServiceStats == null ? 0 : octoRelayServiceStats.getBytesSent());
             unlockedSetStat(
                     TOTAL_PACKETS_RECEIVED_OCTO,
-                    octoRelay == null ? 0 : octoRelay.getPacketsReceived());
+                    octoRelayServiceStats == null ? 0 : octoRelayServiceStats.getPacketsReceived());
             unlockedSetStat(
                     TOTAL_PACKETS_SENT_OCTO,
-                    octoRelay == null ? 0 : octoRelay.getPacketsSent());
+                    octoRelayServiceStats == null ? 0 : octoRelayServiceStats.getPacketsSent());
             unlockedSetStat(
                     TOTAL_PACKETS_DROPPED_OCTO,
-                    octoRelay == null ? 0 : octoRelay.getPacketsDropped());
+                    octoRelayServiceStats == null ? 0 : octoRelayServiceStats.getPacketsDropped());
             unlockedSetStat(
                     OCTO_RECEIVE_BITRATE,
-                    octoRelay == null
-                            ? 0 : (octoRelay.getReceiveBitrate() + 500) / 1000);
+                    octoRelayServiceStats == null
+                            ? 0 : octoRelayServiceStats.getReceiveBitrate());
             unlockedSetStat(
                     OCTO_RECEIVE_PACKET_RATE,
-                    octoRelay == null
-                            ? 0 : octoRelay.getReceivePacketRate());
+                    octoRelayServiceStats == null
+                            ? 0 : octoRelayServiceStats.getReceivePacketRate());
             unlockedSetStat(
                     OCTO_SEND_BITRATE,
-                    octoRelay == null
-                            ? 0 : (octoRelay.getSendBitrate() + 500) / 1000);
+                    octoRelayServiceStats == null
+                            ? 0 : octoRelayServiceStats.getSendBitrate());
             unlockedSetStat(
                     OCTO_SEND_PACKET_RATE,
-                    octoRelay == null
-                            ? 0 : octoRelay.getSendPacketRate());
+                    octoRelayServiceStats == null
+                            ? 0 : octoRelayServiceStats.getSendPacketRate());
             unlockedSetStat(
                     TOTAL_DOMINANT_SPEAKER_CHANGES,
                     jvbStats.totalDominantSpeakerChanges.sum());
 
             unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
-            if (octoRelay != null)
+            if (octoRelayServiceStats != null)
             {
-                unlockedSetStat(RELAY_ID, octoRelay.getId());
+                unlockedSetStat(RELAY_ID, octoRelayServiceStats.getRelayId());
             }
             if (region != null)
             {

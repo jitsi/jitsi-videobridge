@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.rest;
+package org.jitsi.videobridge.websocket;
 
 import org.eclipse.jetty.websocket.api.*;
 import org.jitsi.utils.logging2.*;

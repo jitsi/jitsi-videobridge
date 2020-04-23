@@ -447,6 +447,8 @@ public class Conference
             getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
         }
 
+        speechActivityEndpointsChanged(speechActivity.getEndpointIds());
+
         if (dominantSpeaker != null)
         {
             broadcastMessage(
@@ -962,10 +964,16 @@ public class Conference
     void endpointExpired(AbstractEndpoint endpoint)
     {
         final AbstractEndpoint removedEndpoint;
-        removedEndpoint = endpoints.remove(endpoint.getID());
+        String id = endpoint.getID();
+        removedEndpoint = endpoints.remove(id);
         if (removedEndpoint != null)
         {
             updateEndpointsCache();
+        }
+
+        if (tentacle != null)
+        {
+            tentacle.endpointExpired(id);
         }
 
         if (removedEndpoint != null)
@@ -1062,11 +1070,10 @@ public class Conference
     /**
      * Notifies this instance that the list of ordered endpoints has changed
      */
-    void speechActivityEndpointsChanged()
+    void speechActivityEndpointsChanged(List<String> newEndpointIds)
     {
-        List<String> endpoints = speechActivity.getEndpointIds();
         endpointsCache.forEach(
-                e ->  e.speechActivityEndpointsChanged(endpoints));
+                e ->  e.speechActivityEndpointsChanged(newEndpointIds));
     }
 
     /**

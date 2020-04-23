@@ -347,9 +347,9 @@ public class VP8AdaptiveTrackProjectionContext
      */
     private boolean checkDecodability(@NotNull VP8Frame frame)
     {
-        if (frame.isKeyframe() || frame.getTemporalLayer() == 0)
+        if (frame.isKeyframe() || frame.getTemporalLayer() <= 0)
         {
-            /* We'll always project all TL0 frames, and TL0PICIDX lets the
+            /* We'll always project all TL0 or unknown-TL frames, and TL0PICIDX lets the
              * decoder know if it's missed something, so no need to check.
              */
             return true;

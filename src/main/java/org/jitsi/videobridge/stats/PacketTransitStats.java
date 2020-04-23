@@ -26,8 +26,8 @@ public class PacketTransitStats
     {
         OrderedJsonObject stats = new OrderedJsonObject();
 
-        stats.put("e2e_packet_delay", DtlsTransport.getPacketDelayStats());
-        stats.put(DtlsTransport.overallAverageBridgeJitter.name, DtlsTransport.overallAverageBridgeJitter.get());
+        stats.put("e2e_packet_delay", Endpoint.getPacketDelayStats());
+        stats.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
 
         return stats;
     }

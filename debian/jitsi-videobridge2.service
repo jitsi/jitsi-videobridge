@@ -3,6 +3,7 @@ Description=Jitsi Videobridge
 After=network.target
 
 [Service]
+SuccessExitStatus=143
 # allow bind to 80 and 443
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 EnvironmentFile=/etc/jitsi/videobridge/config
@@ -21,5 +22,3 @@ ExecStartPost=/bin/bash -c "echo $MAINPID > /var/run/jitsi-videobridge/jitsi-vid
 
 [Install]
 WantedBy=multi-user.target
-Alias=jvb.service
-Alias=jitsi-videobridge.service

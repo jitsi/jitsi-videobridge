@@ -1,8 +1,7 @@
 # General
 Jitsi Videobridge can accept and route RTP traffic over ICE/TCP. 
-The feature is on by default and TCP addresses will 
-automatically be returned as ICE candidates via 
-COLIBRI.
+The feature is off by default. When turned on, the bridge will listen
+on a TCP port and advertise ICE candidates of type TCP via COLIBRI.
 
 # Warning
 ICE/TCP is not the recommended way to deal with clients connecting

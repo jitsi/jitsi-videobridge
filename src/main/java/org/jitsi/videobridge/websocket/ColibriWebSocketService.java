@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.rest;
+package org.jitsi.videobridge.websocket;
 
 import org.eclipse.jetty.servlet.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.rest.config.*;
 import org.osgi.framework.*;
 
-import static org.jitsi.videobridge.rest.config.WebsocketServiceConfig.Config;
+import static org.jitsi.videobridge.websocket.config.WebsocketServiceConfig.Config;
 
 /**
  * @author Boris Grozev
@@ -57,9 +56,6 @@ public class ColibriWebSocketService
      */
     public ColibriWebSocketService(boolean tls)
     {
-        String baseUrl = null;
-        String serverId = null;
-
         // The domain name is currently a required property.
         if (Config.enabled())
         {
@@ -74,12 +70,16 @@ public class ColibriWebSocketService
             // unless configured.
             serverId = Config.serverId();
 
-            baseUrl = tls ? "wss://" : "ws://";
-            baseUrl += domain + COLIBRI_WS_PATH + serverId + "/";
+            String scheme = tls ? "wss://" : "ws://";
+            baseUrl = scheme + domain + COLIBRI_WS_PATH + serverId + "/";
+            logger.info("Using base URL: " + baseUrl);
         }
-
-        this.baseUrl = baseUrl;
-        this.serverId = serverId;
+        else
+        {
+            logger.info("Disabled.");
+            baseUrl = null;
+            serverId = null;
+        }
     }
 
     /**
