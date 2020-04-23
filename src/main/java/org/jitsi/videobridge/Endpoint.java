@@ -79,8 +79,7 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 public class Endpoint
     extends AbstractEndpoint implements PotentialPacketHandler,
         PropertyChangeListener,
-        EncodingsManager.EncodingsUpdateListener,
-        ColibriWebSocket.EventHandler
+        EncodingsManager.EncodingsUpdateListener
 {
     /**
      * Track how long it takes for all RTP and RTCP packets to make their way through the bridge.
@@ -158,6 +157,7 @@ public class Endpoint
      * The instance which manages the Colibri messaging (over a data channel
      * or web sockets).
      */
+    @NotNull
     private final EndpointMessageTransport messageTransport;
 
     /**
@@ -1002,48 +1002,6 @@ public class Endpoint
         }
 
         return true;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void webSocketConnected(ColibriWebSocket ws)
-    {
-        EndpointMessageTransport messageTransport
-            = getMessageTransport();
-        if (messageTransport != null)
-        {
-            messageTransport.onWebSocketConnect(ws);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void webSocketClosed(ColibriWebSocket ws, int statusCode, String reason)
-    {
-        EndpointMessageTransport messageTransport
-            = getMessageTransport();
-        if (messageTransport != null)
-        {
-            messageTransport.onWebSocketClose(ws, statusCode, reason);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void webSocketTextReceived(ColibriWebSocket ws, String message)
-    {
-        EndpointMessageTransport messageTransport
-            = getMessageTransport();
-        if (messageTransport != null)
-        {
-            messageTransport.onWebSocketText(ws, message);
-        }
     }
 
     /**

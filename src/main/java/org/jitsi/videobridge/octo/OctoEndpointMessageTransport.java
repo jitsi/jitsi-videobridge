@@ -17,6 +17,7 @@ package org.jitsi.videobridge.octo;
 
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.websocket.*;
 import org.json.simple.*;
 
 import java.util.*;
@@ -145,6 +146,24 @@ class OctoEndpointMessageTransport
             JSONObject jsonObject)
     {
         logUnexpectedMessage(jsonObject.toJSONString());
+    }
+
+    @Override
+    public void webSocketConnected(ColibriWebSocket ws)
+    {
+
+    }
+
+    @Override
+    public void webSocketClosed(ColibriWebSocket ws, int statusCode, String reason)
+    {
+
+    }
+
+    @Override
+    public void webSocketTextReceived(ColibriWebSocket ws, String message)
+    {
+
     }
 
     @Override
