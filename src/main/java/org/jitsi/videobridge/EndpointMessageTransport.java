@@ -38,7 +38,8 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  */
 class EndpointMessageTransport
     extends AbstractEndpointMessageTransport
-    implements DataChannelStack.DataChannelMessageListener
+    implements DataChannelStack.DataChannelMessageListener,
+        ColibriWebSocket.EventHandler
 {
     /**
      * The last accepted web-socket by this instance, if any.
@@ -298,13 +299,12 @@ class EndpointMessageTransport
         return getActiveTransportChannel() != null;
     }
 
+
     /**
-     * Notifies this {@link EndpointMessageTransport} that a specific
-     * {@link ColibriWebSocket} instance associated with its {@link Endpoint}
-     * has connected.
-     * @param ws the {@link ColibriWebSocket} which has connected.
+     * {@inheritDoc}
      */
-    void onWebSocketConnect(ColibriWebSocket ws)
+    @Override
+    public void webSocketConnected(ColibriWebSocket ws)
     {
         synchronized (webSocketSyncRoot)
         {
@@ -323,13 +323,10 @@ class EndpointMessageTransport
     }
 
     /**
-     * Notifies this {@link EndpointMessageTransport} that a specific
-     * {@link ColibriWebSocket} instance associated with its {@link Endpoint}
-     * has been closed.
-     * @param ws the {@link ColibriWebSocket} which has been closed.
+     * {@inheritDoc}
      */
-    public void onWebSocketClose(
-            ColibriWebSocket ws, int statusCode, String reason)
+    @Override
+    public void webSocketClosed(ColibriWebSocket ws, int statusCode, String reason)
     {
         synchronized (webSocketSyncRoot)
         {
@@ -370,12 +367,10 @@ class EndpointMessageTransport
     }
 
     /**
-     * Notifies this {@link EndpointMessageTransport} that a message has been
-     * received from a specific {@link ColibriWebSocket} instance associated
-     * with its {@link Endpoint}.
-     * @param ws the {@link ColibriWebSocket} from which a message was received.
+     * {@inheritDoc}
      */
-    public void onWebSocketText(ColibriWebSocket ws, String message)
+    @Override
+    public void webSocketTextReceived(ColibriWebSocket ws, String message)
     {
         if (ws == null || !ws.equals(webSocket))
         {

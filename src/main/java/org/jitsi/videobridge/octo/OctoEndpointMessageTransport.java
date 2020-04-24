@@ -17,6 +17,7 @@ package org.jitsi.videobridge.octo;
 
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.websocket.*;
 import org.json.simple.*;
 
 import java.util.*;

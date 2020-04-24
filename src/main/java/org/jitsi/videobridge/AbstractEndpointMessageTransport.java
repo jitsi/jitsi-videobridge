@@ -19,6 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.websocket.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 

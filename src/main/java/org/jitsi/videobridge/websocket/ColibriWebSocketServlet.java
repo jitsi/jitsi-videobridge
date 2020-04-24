@@ -165,7 +165,7 @@ class ColibriWebSocketServlet
             return null;
         }
 
-        return new ColibriWebSocket(this, endpoint);
+        return new ColibriWebSocket(ids[2], this, endpoint.getMessageTransport());
     }
 
     /**

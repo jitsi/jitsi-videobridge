@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.websocket;
 
 import org.eclipse.jetty.websocket.api.*;
+import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 
@@ -29,7 +30,7 @@ public class ColibriWebSocket extends WebSocketAdapter
     /**
      * The logger instance used by this {@link ColibriWebSocket}.
      */
-    private static final Logger logger = new LoggerImpl(ColibriWebSocket.class.getName());
+    private final Logger logger;
 
     /**
      * The {@link ColibriWebSocketServlet} which created this web socket.
@@ -39,17 +40,22 @@ public class ColibriWebSocket extends WebSocketAdapter
     /**
      * The {@link Endpoint}, if any, associated with this web socket.
      */
-    private final Endpoint endpoint;
+    private final EventHandler eventHandler;
 
     /**
      * Initializes a new {@link ColibriWebSocket} instance.
      * @param servlet the {@link ColibriWebSocketServlet} which created the
      * instance.
      */
-    ColibriWebSocket(ColibriWebSocketServlet servlet, Endpoint endpoint)
+    ColibriWebSocket(
+        String id,
+        ColibriWebSocketServlet servlet,
+        EventHandler eventHandler
+    )
     {
+        this.logger = new LoggerImpl(getClass().getName(), new LogContext(JMap.of("id", id)));
         this.servlet = servlet;
-        this.endpoint = Objects.requireNonNull(endpoint, "endpoint");
+        this.eventHandler = Objects.requireNonNull(eventHandler, "eventHandler");
     }
 
     /**
@@ -59,9 +65,8 @@ public class ColibriWebSocket extends WebSocketAdapter
     @Override
     public void onWebSocketText(String message)
     {
-        logger.debug(() -> "Received text from " + endpoint.getID() + ": "
-                + message);
-        endpoint.onWebSocketText(this, message);
+        logger.debug(() -> "Received text: " + message);
+        eventHandler.webSocketTextReceived(this, message);
     }
 
     /**
@@ -76,7 +81,7 @@ public class ColibriWebSocket extends WebSocketAdapter
     {
         super.onWebSocketConnect(sess);
 
-        endpoint.onWebSocketConnect(this);
+        eventHandler.webSocketConnected(this);
     }
 
     /**
@@ -85,6 +90,27 @@ public class ColibriWebSocket extends WebSocketAdapter
     @Override
     public void onWebSocketClose(int statusCode, String reason)
     {
-        endpoint.onWebSocketClose(this, statusCode, reason);
+        eventHandler.webSocketClosed(this, statusCode, reason);
+    }
+
+    public interface EventHandler {
+        /**
+         * Notifies that a specific {@link ColibriWebSocket}
+         * instance associated with it has been closed.
+         * @param ws the {@link ColibriWebSocket} which has been closed.
+         */
+        void webSocketClosed(ColibriWebSocket ws, int statusCode, String reason);
+        /**
+         * Notifies that a specific {@link ColibriWebSocket}
+         * instance associated with it has connected.
+         * @param ws the {@link ColibriWebSocket} which has connected.
+         */
+        void webSocketConnected(ColibriWebSocket ws);
+        /**
+         * Notifies this {@link Endpoint} that a message has been received from a
+         * specific {@link ColibriWebSocket} instance associated with it.
+         * @param ws the {@link ColibriWebSocket} from which a message was received.
+         */
+        void webSocketTextReceived(ColibriWebSocket ws, String message);
     }
 }
