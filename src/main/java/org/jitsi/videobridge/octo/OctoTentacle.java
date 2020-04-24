@@ -19,12 +19,16 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.transport.octo.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
@@ -34,6 +38,7 @@ import org.osgi.framework.*;
 
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.*;
 
 /**
@@ -79,6 +84,18 @@ public class OctoTentacle extends PropertyChangeNotifier
             = Collections.unmodifiableSet(new HashSet<>());
 
     /**
+     * Count the number of dropped packets and exceptions.
+     */
+    public static final CountingErrorHandler queueErrorCounter
+        = new CountingErrorHandler();
+
+    /**
+     * The queues which pass packets to be sent.
+     */
+    private final Map<String, PacketInfoQueue> outgoingPacketQueues =
+        new ConcurrentHashMap<>();
+
+    /**
      * Initializes a new {@link OctoTentacle} instance.
      * @param conference the conference.
      */
@@ -107,18 +124,45 @@ public class OctoTentacle extends PropertyChangeNotifier
 
         transceiver.setAudioLevelListener(conference.getAudioLevelListener());
         transceiver.setIncomingPacketHandler(conference::handleIncomingPacket);
-        transceiver.setOutgoingPacketHandler(packetInfo ->
+        transceiver.setOutgoingPacketHandler(this::sendMedia);
+    }
+
+    private void sendMedia(PacketInfo packetInfo)
+    {
+        if (packetInfo.getEndpointId() != null)
         {
-            packetInfo.sent();
-            bridgeOctoTransport.sendMediaData(
-                packetInfo.getPacket().getBuffer(),
-                packetInfo.getPacket().getOffset(),
-                packetInfo.getPacket().getLength(),
-                targets,
-                conference.getGid(),
-                packetInfo.getEndpointId()
-            );
-        });
+            /* We queue packets separately by their *source* endpoint.
+             * This achieves parallelization while guaranteeing that we don't
+             * reorder things that shouldn't be reordered.
+             */
+            PacketInfoQueue queue =
+                outgoingPacketQueues.computeIfAbsent(packetInfo.getEndpointId(),
+                    this::createQueue);
+
+            queue.add(packetInfo);
+        }
+        else
+        {
+            // Packets without an endpoint ID originalted from within the bridge
+            // itself and, in practice, are things like keyframe requests.  We
+            // send them out directly (without queueing).
+            doSend(packetInfo);
+        }
+    }
+
+    private boolean doSend(PacketInfo packetInfo)
+    {
+        packetInfo.sent();
+        bridgeOctoTransport.sendMediaData(
+            packetInfo.getPacket().getBuffer(),
+            packetInfo.getPacket().getOffset(),
+            packetInfo.getPacket().getLength(),
+            targets,
+            conference.getGid(),
+            packetInfo.getEndpointId()
+        );
+
+        return true;
     }
 
     /**
@@ -256,7 +300,11 @@ public class OctoTentacle extends PropertyChangeNotifier
      */
     public void endpointExpired(String endpointId)
     {
-        transceiver.endpointExpired(endpointId);
+        PacketInfoQueue removed = outgoingPacketQueues.remove(endpointId);
+        if (removed != null)
+        {
+            removed.close();
+        }
     }
 
     public MediaStreamTrackDesc[] getMediaStreamTracks()
@@ -303,6 +351,8 @@ public class OctoTentacle extends PropertyChangeNotifier
         setRelays(new LinkedList<>());
         octoEndpoints.setEndpoints(Collections.emptySet());
         transceiver.stop();
+        outgoingPacketQueues.values().forEach(PacketInfoQueue::close);
+        outgoingPacketQueues.clear();
     }
 
     /**
@@ -316,6 +366,20 @@ public class OctoTentacle extends PropertyChangeNotifier
             targets,
             conference.getGid()
         );
+    }
+
+    /**
+     * Creates a PacketInfoQueue for an endpoint.
+     */
+    private PacketInfoQueue createQueue(String epId)
+    {
+        PacketInfoQueue q = new PacketInfoQueue(
+            "octo-tentacle-outgoing-packet-queue",
+            TaskPools.IO_POOL,
+            this::doSend,
+            OctoConfig.Config.sendQueueSize());
+        q.setErrorHandler(queueErrorCounter);
+        return q;
     }
 
     /**

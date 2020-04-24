@@ -122,14 +122,6 @@ public class OctoTransceiver {
     }
 
     /**
-     * Called when a local endpoint is expired.
-     */
-    public void endpointExpired(String endpointId)
-    {
-        octoSender.endpointExpired(endpointId);
-    }
-
-    /**
      * Adds a payload type to this transceiver.
      *
      * @param payloadType the payload type to add

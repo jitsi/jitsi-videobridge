@@ -1136,7 +1136,7 @@ public class Videobridge
                 getJsonFromQueueErrorHandler(Endpoint.queueErrorCounter));
         queueStats.put(
                 "octo_receive_queue",
-                getJsonFromQueueErrorHandler(OctoRtpSender.queueErrorCounter));
+                getJsonFromQueueErrorHandler(OctoTentacle.queueErrorCounter));
         queueStats.put(
                 "octo_send_queue",
                 getJsonFromQueueErrorHandler(OctoRtpReceiver.queueErrorCounter));

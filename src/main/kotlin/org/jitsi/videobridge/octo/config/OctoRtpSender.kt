@@ -28,15 +28,10 @@ import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
 import org.jitsi.nlj.util.OrderedJsonObject
-import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
-import org.jitsi.utils.queue.CountingErrorHandler
-import org.jitsi.videobridge.octo.config.OctoConfig.Config
 import org.jitsi.videobridge.util.ByteBufferPool
-import org.jitsi.videobridge.util.TaskPools
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -49,11 +44,6 @@ class OctoRtpSender(
     private val logger = createChildLogger(parentLogger)
 
     private val running = AtomicBoolean(true)
-
-    /**
-     * The queues which pass packets to be sent, indexed by source endpoint ID
-     */
-    private val outgoingPacketQueues: MutableMap<String, PacketInfoQueue> = ConcurrentHashMap()
 
     /**
      * A handler for packets to be sent out onto the network
@@ -84,25 +74,7 @@ class OctoRtpSender(
 
     override fun doProcessPacket(packetInfo: PacketInfo) {
         if (running.get()) {
-            packetInfo.endpointId?.let { epId ->
-                val queue = outgoingPacketQueues.computeIfAbsent(epId) {
-                    PacketInfoQueue(
-                        "octo-tentacle-outgoing-packet-queue",
-                        TaskPools.IO_POOL,
-                        this::doSend,
-                        Config.sendQueueSize()
-                    ).apply {
-                        setErrorHandler(queueErrorCounter)
-                    }
-                }
-                queue.add(packetInfo)
-            } ?: run {
-                // Some packets may not have the source endpoint ID set, these are
-                // packets that originate within the bridge itself (right now
-                // this only happens for RTCP).  We don't queue these packets,
-                // but instead send them directly
-                doSend(packetInfo)
-            }
+            outgoingPacketHandler?.processPacket(packetInfo)
         } else {
             ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
         }
@@ -117,10 +89,6 @@ class OctoRtpSender(
         keyframeRequester.requestKeyframe(mediaSsrc)
     }
 
-    fun endpointExpired(epId: String) {
-        outgoingPacketQueues.remove(epId)?.close()
-    }
-
     override fun sendProbing(mediaSsrc: Long, numBytes: Int): Int = 0
 
     override fun setSrtpTransformers(srtpTransformers: SrtpTransformers) {}
@@ -130,7 +98,6 @@ class OctoRtpSender(
     }
 
     override fun tearDown() {
-        outgoingPacketQueues.values.forEach(PacketInfoQueue::close)
     }
 
     override fun handleEvent(event: Event) {}
@@ -150,10 +117,5 @@ class OctoRtpSender(
 
     fun getDebugState(): OrderedJsonObject = OrderedJsonObject().apply {
         putAll(getNodeStats().toJson())
-    }
-
-    companion object {
-        @JvmField
-        val queueErrorCounter = CountingErrorHandler()
     }
 }
