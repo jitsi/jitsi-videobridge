@@ -16,6 +16,8 @@
 
 package org.jitsi.videobridge.octo
 
+import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.utils.MediaType
@@ -76,6 +78,12 @@ class OctoEndpoint(
 
     override fun addReceiveSsrc(ssrc: Long, mediaType: MediaType?) {
         // This is controlled through setReceiveSsrcs.
+    }
+
+    override fun addPayloadType(payloadType: PayloadType?) {
+    }
+
+    override fun addRtpExtension(rtpExtension: RtpExtension?) {
     }
 
     override fun expire() {

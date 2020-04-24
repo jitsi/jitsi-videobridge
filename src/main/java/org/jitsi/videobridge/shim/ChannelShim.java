@@ -363,7 +363,7 @@ public class ChannelShim
             RtpExtension rtpExtension = createRtpExtension(ext);
             if (rtpExtension != null)
             {
-                endpoint.getTransceiver().addRtpExtension(rtpExtension);
+                endpoint.addRtpExtension(rtpExtension);
             }
             else
             {
