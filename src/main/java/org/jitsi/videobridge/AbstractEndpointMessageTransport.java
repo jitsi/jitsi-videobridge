@@ -34,7 +34,6 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  * @author Boris Grozev
  */
 public abstract class AbstractEndpointMessageTransport
-    implements ColibriWebSocket.EventHandler
 {
     /**
      * The name of the JSON property that indicates the target Octo endpoint id

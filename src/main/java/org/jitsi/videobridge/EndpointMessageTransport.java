@@ -38,7 +38,8 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  */
 class EndpointMessageTransport
     extends AbstractEndpointMessageTransport
-    implements DataChannelStack.DataChannelMessageListener
+    implements DataChannelStack.DataChannelMessageListener,
+        ColibriWebSocket.EventHandler
 {
     /**
      * The last accepted web-socket by this instance, if any.

@@ -149,24 +149,6 @@ class OctoEndpointMessageTransport
     }
 
     @Override
-    public void webSocketConnected(ColibriWebSocket ws)
-    {
-
-    }
-
-    @Override
-    public void webSocketClosed(ColibriWebSocket ws, int statusCode, String reason)
-    {
-
-    }
-
-    @Override
-    public void webSocketTextReceived(ColibriWebSocket ws, String message)
-    {
-
-    }
-
-    @Override
     public boolean isConnected()
     {
         return true;
