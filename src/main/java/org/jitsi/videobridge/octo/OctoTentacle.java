@@ -27,6 +27,7 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
+import org.jitsi.utils.stats.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.transport.octo.*;
@@ -39,13 +40,20 @@ import org.json.simple.*;
 import org.osgi.framework.*;
 
 import java.net.*;
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 import java.util.stream.*;
+
+import static org.jitsi.videobridge.transport.octo.OctoUtils.JVB_EP_ID;
 
 /**
  * The single class in the octo package which serves as a link between a
- * {@link Conference} and its Octo-related functionality.
+ * {@link Conference} and its Octo-related functionality.  The Tentacle
+ * acts as a handler for all of the Octo packets for a given conference, and
+ * gives a place for {@link OctoEndpoint}s to register as handlers for the
+ * packets coming from their remote counterparts.
  *
  * @author Boris Grozev
  */
@@ -101,13 +109,23 @@ public class OctoTentacle extends PropertyChangeNotifier
      */
     private final OctoTransceiver octoTransceiver;
 
+    private final Stats stats = new Stats();
+
+    private final Clock clock;
+
     /**
      * Initializes a new {@link OctoTentacle} instance.
      * @param conference the conference.
      */
     public OctoTentacle(Conference conference)
     {
+        this(conference, Clock.systemUTC());
+    }
+
+    public OctoTentacle(Conference conference, Clock clock)
+    {
         this.conference = conference;
+        this.clock = clock;
         this.logger = conference.getLogger().createChildLogger(this.getClass().getName());
         BundleContext bundleContext = conference.getBundleContext();
         OctoRelayService octoRelayService
@@ -128,18 +146,14 @@ public class OctoTentacle extends PropertyChangeNotifier
         octoEndpoints = new OctoEndpoints(conference);
         octoTransceiver = new OctoTransceiver("tentacle-" + conference.getGid(), logger);
         octoTransceiver.setIncomingPacketHandler(conference::handleIncomingPacket);
-        octoTransceiver.setOutgoingPacketHandler(new PacketHandler()
+        octoTransceiver.setOutgoingPacketHandler(packetInfo ->
         {
-            @Override
-            public void processPacket(@NotNull PacketInfo packetInfo)
-            {
-                throw new RuntimeException("This should not be used for sending");
-            }
+            throw new RuntimeException("This should not be used for sending");
         });
 
         // Some remote packets didn't originate from an endpoint, but from
         // the bridge (like keyframe requests).
-        addHandler("ffffffff", new IncomingOctoEpPacketHandler()
+        addHandler(JVB_EP_ID, new IncomingOctoEpPacketHandler()
         {
             @Override
             public void handleIncomingPacket(@NotNull OctoPacketInfo packetInfo)
@@ -218,6 +232,7 @@ public class OctoTentacle extends PropertyChangeNotifier
 
     private boolean doSend(PacketInfo packetInfo)
     {
+        stats.packetSent(packetInfo.getPacket().getLength(), clock.instant());
         packetInfo.sent();
         bridgeOctoTransport.sendMediaData(
             packetInfo.getPacket().getBuffer(),
@@ -234,6 +249,7 @@ public class OctoTentacle extends PropertyChangeNotifier
     @Override
     public void handleMediaPacket(@NotNull OctoPacketInfo packetInfo)
     {
+        stats.packetReceived(packetInfo.getPacket().length, clock.instant());
         IncomingOctoEpPacketHandler handler = incomingPacketHandlers.get(packetInfo.getEndpointId());
         if (handler != null)
         {
@@ -241,8 +257,7 @@ public class OctoTentacle extends PropertyChangeNotifier
         }
         else
         {
-            // TODO: stats
-            logger.info("TEMP: NO EP HANDLER FOR ID " + packetInfo.getEndpointId());
+            stats.incomingPacketDropped();
         }
     }
 
@@ -419,10 +434,11 @@ public class OctoTentacle extends PropertyChangeNotifier
      * are deemed useful for debugging.
      */
     @SuppressWarnings("unchecked")
-    public JSONObject getDebugState()
+    public OrderedJsonObject getDebugState()
     {
-        JSONObject debugState = new JSONObject();
+        OrderedJsonObject debugState = new OrderedJsonObject();
         debugState.put("octoEndpoints", octoEndpoints.getDebugState());
+        debugState.putAll(stats.toJson());
         debugState.put("bridgeOctoTransport", bridgeOctoTransport.getStatsJson());
         debugState.put("targets", targets.toString());
 
@@ -431,11 +447,60 @@ public class OctoTentacle extends PropertyChangeNotifier
 
     static class Stats
     {
-        void packetReceived()
-        {
+        // RX
+        private Long packetsReceived = 0L;
+        private final RateStatistics receivePacketRate =
+            new RateStatistics(60000, 1000.0f);
+        private Long bytesReceived = 0L;
+        private final RateStatistics receiveBitRate = new RateStatistics(60000);
+        private long incomingPacketsDropped = 0;
 
+        // TX
+        private final LongAdder packetsSent = new LongAdder();
+        private final RateStatistics sendPacketRate =
+            new RateStatistics(60000, 1000.0f);
+        private final LongAdder bytesSent = new LongAdder();
+        private final RateStatistics sendBitRate = new RateStatistics(60000);
+
+        void packetReceived(int size, Instant time)
+        {
+            long timeMs = time.toEpochMilli();
+            packetsReceived++;
+            receivePacketRate.update(1, timeMs);
+            bytesReceived += size;
+            receiveBitRate.update(size, timeMs);
         }
 
+        void incomingPacketDropped()
+        {
+            incomingPacketsDropped++;
+        }
+
+        void packetSent(int size, Instant time)
+        {
+            long timeMs = time.toEpochMilli();
+            packetsSent.increment();
+            sendPacketRate.update(1, timeMs);
+            bytesSent.add(size);
+            sendBitRate.update(size, timeMs);
+        }
+
+        OrderedJsonObject toJson()
+        {
+            OrderedJsonObject debugState = new OrderedJsonObject();
+            debugState.put("packets_received", packetsReceived);
+            debugState.put("receive_packet_rate_pps", receivePacketRate.getRate());
+            debugState.put("bytes_received", bytesReceived);
+            debugState.put("receive_bitrate_bps", receiveBitRate.getRate());
+            debugState.put("incoming_packets_dropped", incomingPacketsDropped);
+
+            debugState.put("packets_sent", packetsSent.sum());
+            debugState.put("send_packet_rate_pps", sendPacketRate.getRate());
+            debugState.put("bytes_sent", bytesSent);
+            debugState.put("send_bitrate_bps", sendBitRate.getRate());
+
+            return debugState;
+        }
     }
 
     interface IncomingOctoEpPacketHandler {

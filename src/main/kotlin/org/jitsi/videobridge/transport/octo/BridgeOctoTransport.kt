@@ -28,6 +28,7 @@ import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.octo.OctoPacket
 import org.jitsi.videobridge.octo.OctoPacket.OCTO_HEADER_LENGTH
 import org.jitsi.videobridge.octo.OctoPacketInfo
+import org.jitsi.videobridge.transport.octo.OctoUtils.Companion.JVB_EP_ID
 import org.jitsi.videobridge.util.ByteBufferPool
 import java.net.SocketAddress
 import java.nio.charset.StandardCharsets
@@ -182,7 +183,7 @@ class BridgeOctoTransport(
         val octoPacketLength = len + OCTO_HEADER_LENGTH
 
         // Not all packets originate from an endpoint (e.g. some come from the bridge)
-        val epId = sourceEpId ?: "ffffffff"
+        val epId = sourceEpId ?: JVB_EP_ID
 
         val (newBuf, newOff) = when {
             off >= OCTO_HEADER_LENGTH -> {
