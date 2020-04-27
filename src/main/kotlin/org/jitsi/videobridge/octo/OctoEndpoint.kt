@@ -16,6 +16,8 @@
 
 package org.jitsi.videobridge.octo
 
+import org.jitsi.nlj.PacketHandler
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.util.StreamInformationStore
@@ -39,12 +41,37 @@ class OctoEndpoint(
     id: String,
     private val octoEndpoints: OctoEndpoints,
     parentLogger: Logger
-) : AbstractEndpoint(conference, id, parentLogger) {
+) : AbstractEndpoint(conference, id, parentLogger), OctoTentacle.IncomingOctoEpPacketHandler {
 
     /**
      * Information about the streams belonging to this [OctoEndpoint]
      */
     private val streamInformationStore: StreamInformationStore = StreamInformationStoreImpl()
+
+    private val transceiver = OctoTransceiver(id, logger).apply {
+        setAudioLevelListener(conference.audioLevelListener)
+        setIncomingPacketHandler(object : PacketHandler {
+            override fun processPacket(packetInfo: PacketInfo) {
+                packetInfo.endpointId = id
+                conference.handleIncomingPacket(packetInfo)
+            }
+        })
+        // This handler will be used for all packets that come out of
+        // the transceiver, but this is only used for RTCP (keyframe requests)
+        setOutgoingPacketHandler(object : PacketHandler {
+            override fun processPacket(packetInfo: PacketInfo) {
+                conference.tentacle.send(packetInfo)
+            }
+        })
+    }
+
+    init {
+        conference.tentacle.addHandler(id, this)
+    }
+
+    override fun handleIncomingPacket(packetInfo: OctoPacketInfo) {
+        transceiver.handleIncomingPacket(packetInfo)
+    }
 
     override fun sendMessage(msg: String?) {
         // This is intentionally a no-op. Since a conference can have
@@ -55,7 +82,7 @@ class OctoEndpoint(
 
     override fun requestKeyframe(mediaSsrc: Long) {
         // just making sure the tentacle hasn't expired
-        conference.tentacle?.requestKeyframe(mediaSsrc)
+        transceiver.requestKeyframe(mediaSsrc)
     }
 
     override fun requestKeyframe() {
@@ -70,7 +97,7 @@ class OctoEndpoint(
         streamInformationStore.receiveSsrcs.isEmpty()
 
     override fun getMediaStreamTracks(): Array<MediaStreamTrackDesc> {
-        return conference.tentacle.mediaStreamTracks.filter { it.owner == id }.toTypedArray()
+        return transceiver.mediaStreamTracks
     }
 
     override fun receivesSsrc(ssrc: Long): Boolean =
@@ -81,15 +108,24 @@ class OctoEndpoint(
     }
 
     override fun addPayloadType(payloadType: PayloadType?) {
+        transceiver.addPayloadType(payloadType)
     }
 
     override fun addRtpExtension(rtpExtension: RtpExtension?) {
+        transceiver.addRtpExtension(rtpExtension)
+    }
+
+    fun setMediaStreamTracks(tracks: Array<MediaStreamTrackDesc>) {
+        transceiver.mediaStreamTracks = tracks
     }
 
     override fun expire() {
         if (super.isExpired()) {
             return
         }
+        transceiver.stop()
+        logger.debug { transceiver.getNodeStats().prettyPrint() }
+        conference.tentacle.removeHandler(id, this)
         octoEndpoints.endpointExpired(this)
     }
 

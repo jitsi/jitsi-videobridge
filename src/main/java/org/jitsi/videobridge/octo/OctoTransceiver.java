@@ -19,7 +19,10 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.stats.*;
+import org.jitsi.nlj.transform.*;
 import org.jitsi.nlj.util.*;
+import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.octo.config.*;
@@ -32,12 +35,15 @@ import org.json.simple.*;
  *
  * @author Boris Grozev
  */
-public class OctoTransceiver {
+public class OctoTransceiver implements Stoppable, NodeStatsProducer
+{
     /**
      * The {@link Logger} used by the {@link OctoTransceiver} class to print
      * debug information.
      */
     private final Logger logger;
+
+    private final String id;
 
     /**
      * The set of media stream tracks that have been signaled to us.
@@ -54,9 +60,10 @@ public class OctoTransceiver {
     /**
      * Initializes a new {@link OctoTransceiver} instance.
      */
-    OctoTransceiver(Logger parentLogger)
+    OctoTransceiver(String id, Logger parentLogger)
     {
         this.logger = parentLogger.createChildLogger(this.getClass().getName());
+        this.id = id;
         this.octoReceiver = new OctoRtpReceiver(streamInformationStore, logger);
         this.octoSender = new OctoRtpSender(streamInformationStore, logger);
     }
@@ -145,11 +152,25 @@ public class OctoTransceiver {
         octoReceiver.setAudioLevelListener(audioLevelListener);
     }
 
-    void stop() {
+    @Override
+    public void stop() {
         octoReceiver.stop();
         octoReceiver.tearDown();
         octoSender.stop();
         octoSender.tearDown();
+    }
+
+    @NotNull
+    @Override
+    public NodeStatsBlock getNodeStats()
+    {
+        NodeStatsBlock nodeStats = new NodeStatsBlock("OctoTransceiver " + id);
+        nodeStats.addBlock(streamInformationStore.getNodeStats());
+        nodeStats.addBlock(octoReceiver.getNodeStats());
+        nodeStats.addBlock(octoSender.getNodeStats());
+        nodeStats.addBlock(mediaStreamTracks.getNodeStats());
+
+        return nodeStats;
     }
 
     /**

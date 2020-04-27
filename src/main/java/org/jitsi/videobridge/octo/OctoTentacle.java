@@ -21,6 +21,8 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
+import org.jitsi.rtp.*;
+import org.jitsi.rtp.rtcp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
@@ -68,11 +70,6 @@ public class OctoTentacle extends PropertyChangeNotifier
     private final OctoEndpoints octoEndpoints;
 
     /**
-     * The {@link OctoTransceiver} instance which handles RTP/RTCP processing.
-     */
-    private final OctoTransceiver transceiver;
-
-    /**
      * The {@link BridgeOctoTransport} used to actually send and receive Octo packets.
      */
     private final BridgeOctoTransport bridgeOctoTransport;
@@ -82,6 +79,9 @@ public class OctoTentacle extends PropertyChangeNotifier
      */
     private Set<SocketAddress> targets
             = Collections.unmodifiableSet(new HashSet<>());
+
+    private final Map<String, IncomingOctoEpPacketHandler> incomingPacketHandlers =
+        new ConcurrentHashMap<>();
 
     /**
      * Count the number of dropped packets and exceptions.
@@ -94,6 +94,12 @@ public class OctoTentacle extends PropertyChangeNotifier
      */
     private final Map<String, PacketInfoQueue> outgoingPacketQueues =
         new ConcurrentHashMap<>();
+
+    /**
+     * An {@link OctoTransceiver} to handle packets which originate from
+     * a remote bridge (and have a special 'source endpoint ID').
+     */
+    private final OctoTransceiver octoTransceiver;
 
     /**
      * Initializes a new {@link OctoTentacle} instance.
@@ -120,49 +126,27 @@ public class OctoTentacle extends PropertyChangeNotifier
         }
 
         octoEndpoints = new OctoEndpoints(conference);
-        transceiver = new OctoTransceiver(logger);
-
-        transceiver.setAudioLevelListener(conference.getAudioLevelListener());
-        transceiver.setIncomingPacketHandler(conference::handleIncomingPacket);
-        transceiver.setOutgoingPacketHandler(this::sendMedia);
-    }
-
-    private void sendMedia(PacketInfo packetInfo)
-    {
-        if (packetInfo.getEndpointId() != null)
+        octoTransceiver = new OctoTransceiver("tentacle-" + conference.getGid(), logger);
+        octoTransceiver.setIncomingPacketHandler(conference::handleIncomingPacket);
+        octoTransceiver.setOutgoingPacketHandler(new PacketHandler()
         {
-            /* We queue packets separately by their *source* endpoint.
-             * This achieves parallelization while guaranteeing that we don't
-             * reorder things that shouldn't be reordered.
-             */
-            PacketInfoQueue queue =
-                outgoingPacketQueues.computeIfAbsent(packetInfo.getEndpointId(),
-                    this::createQueue);
+            @Override
+            public void processPacket(@NotNull PacketInfo packetInfo)
+            {
+                throw new RuntimeException("This should not be used for sending");
+            }
+        });
 
-            queue.add(packetInfo);
-        }
-        else
+        // Some remote packets didn't originate from an endpoint, but from
+        // the bridge (like keyframe requests).
+        addHandler("ffffffff", new IncomingOctoEpPacketHandler()
         {
-            // Packets without an endpoint ID originalted from within the bridge
-            // itself and, in practice, are things like keyframe requests.  We
-            // send them out directly (without queueing).
-            doSend(packetInfo);
-        }
-    }
-
-    private boolean doSend(PacketInfo packetInfo)
-    {
-        packetInfo.sent();
-        bridgeOctoTransport.sendMediaData(
-            packetInfo.getPacket().getBuffer(),
-            packetInfo.getPacket().getOffset(),
-            packetInfo.getPacket().getLength(),
-            targets,
-            conference.getGid(),
-            packetInfo.getEndpointId()
-        );
-
-        return true;
+            @Override
+            public void handleIncomingPacket(@NotNull OctoPacketInfo packetInfo)
+            {
+                octoTransceiver.handleIncomingPacket(packetInfo);
+            }
+        });
     }
 
     /**
@@ -170,7 +154,7 @@ public class OctoTentacle extends PropertyChangeNotifier
      */
     public void addPayloadType(PayloadType payloadType)
     {
-        transceiver.addPayloadType(payloadType);
+        octoEndpoints.addPayloadType(payloadType);
     }
 
     /**
@@ -208,19 +192,58 @@ public class OctoTentacle extends PropertyChangeNotifier
         return !(packetInfo instanceof OctoPacketInfo) && !targets.isEmpty();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void send(PacketInfo packetInfo)
+    public void send(PacketInfo packet)
     {
-        transceiver.sendPacket(packetInfo);
+        if (packet.getEndpointId() != null)
+        {
+            /* We queue packets separately by their *source* endpoint.
+             * This achieves parallelization while guaranteeing that we don't
+             * reorder things that shouldn't be reordered.
+             */
+            PacketInfoQueue queue =
+                outgoingPacketQueues.computeIfAbsent(packet.getEndpointId(),
+                    this::createQueue);
+
+            queue.add(packet);
+        }
+        else
+        {
+            // Packets without an endpoint ID originalted from within the bridge
+            // itself and, in practice, are things like keyframe requests.  We
+            // send them out directly (without queueing).
+            doSend(packet);
+        }
+    }
+
+    private boolean doSend(PacketInfo packetInfo)
+    {
+        packetInfo.sent();
+        bridgeOctoTransport.sendMediaData(
+            packetInfo.getPacket().getBuffer(),
+            packetInfo.getPacket().getOffset(),
+            packetInfo.getPacket().getLength(),
+            targets,
+            conference.getGid(),
+            packetInfo.getEndpointId()
+        );
+
+        return true;
     }
 
     @Override
     public void handleMediaPacket(@NotNull OctoPacketInfo packetInfo)
     {
-        transceiver.handleIncomingPacket(packetInfo);
+        IncomingOctoEpPacketHandler handler = incomingPacketHandlers.get(packetInfo.getEndpointId());
+        if (handler != null)
+        {
+            handler.handleIncomingPacket(packetInfo);
+        }
+        else
+        {
+            // TODO: stats
+            logger.info("TEMP: NO EP HANDLER FOR ID " + packetInfo.getEndpointId());
+        }
     }
 
     @Override
@@ -242,11 +265,6 @@ public class OctoTentacle extends PropertyChangeNotifier
             List<SourcePacketExtension> videoSources,
             List<SourceGroupPacketExtension> videoSourceGroups)
     {
-        MediaStreamTrackDesc[] tracks =
-            MediaStreamTrackFactory.createMediaStreamTracks(
-                    videoSources, videoSourceGroups);
-        transceiver.setMediaStreamTracks(tracks);
-
         List<SourcePacketExtension> allSources = new LinkedList<>(audioSources);
         allSources.addAll(videoSources);
 
@@ -260,6 +278,12 @@ public class OctoTentacle extends PropertyChangeNotifier
                     .collect(Collectors.toSet());
 
         octoEndpoints.setEndpoints(endpointIds);
+
+        // Create the tracks after creating the endpoints
+        MediaStreamTrackDesc[] tracks =
+            MediaStreamTrackFactory.createMediaStreamTracks(
+                videoSources, videoSourceGroups);
+        octoEndpoints.setMediaStreamTracks(tracks);
 
         // We only need to call this if the tracks of any endpoint actually
         // changed, but that's not easy to detect. It's safe to call it more
@@ -307,11 +331,6 @@ public class OctoTentacle extends PropertyChangeNotifier
         }
     }
 
-    public MediaStreamTrackDesc[] getMediaStreamTracks()
-    {
-        return transceiver.getMediaStreamTracks();
-    }
-
     /**
      * Sets the list of remote addresses to send Octo packets to.
      * @param targets the list of addresses.
@@ -339,7 +358,7 @@ public class OctoTentacle extends PropertyChangeNotifier
      */
     public void addRtpExtension(RtpExtension rtpExtension)
     {
-        transceiver.addRtpExtension(rtpExtension);
+        octoEndpoints.addRtpExtension(rtpExtension);
     }
 
     /**
@@ -350,7 +369,6 @@ public class OctoTentacle extends PropertyChangeNotifier
         logger.info("Expiring");
         setRelays(new LinkedList<>());
         octoEndpoints.setEndpoints(Collections.emptySet());
-        transceiver.stop();
         outgoingPacketQueues.values().forEach(PacketInfoQueue::close);
         outgoingPacketQueues.clear();
     }
@@ -366,6 +384,20 @@ public class OctoTentacle extends PropertyChangeNotifier
             targets,
             conference.getGid()
         );
+    }
+
+    public void addHandler(String epId, IncomingOctoEpPacketHandler handler)
+    {
+        logger.info("Adding handler for ep ID " + epId);
+        incomingPacketHandlers.put(epId, handler);
+    }
+
+    public void removeHandler(String epId, IncomingOctoEpPacketHandler handler)
+    {
+        if (incomingPacketHandlers.remove(epId, handler))
+        {
+            logger.info("Removing handler for ep ID " + epId);
+        }
     }
 
     /**
@@ -391,15 +423,22 @@ public class OctoTentacle extends PropertyChangeNotifier
     {
         JSONObject debugState = new JSONObject();
         debugState.put("octoEndpoints", octoEndpoints.getDebugState());
-        debugState.put("transceiver", transceiver.getDebugState());
         debugState.put("bridgeOctoTransport", bridgeOctoTransport.getStatsJson());
         debugState.put("targets", targets.toString());
 
         return debugState;
     }
 
-    public void requestKeyframe(long mediaSsrc)
+    static class Stats
     {
-        transceiver.requestKeyframe(mediaSsrc);
+        void packetReceived()
+        {
+
+        }
+
+    }
+
+    interface IncomingOctoEpPacketHandler {
+        void handleIncomingPacket(@NotNull OctoPacketInfo packetInfo);
     }
 }
