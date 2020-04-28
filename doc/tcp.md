@@ -39,7 +39,7 @@ The file is usually located at
 ### *org.jitsi.videobridge.DISABLE_TCP_HARVESTER*
 Type: boolean
 
-Default: false
+Default: true
 
 Disables TCP support.
 
