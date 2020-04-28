@@ -88,6 +88,10 @@ public class OctoTentacle extends PropertyChangeNotifier
     private Set<SocketAddress> targets
             = Collections.unmodifiableSet(new HashSet<>());
 
+    /**
+     * Handlers for incoming Octo media packets, looked up by the
+     * source endpoint ID field in the Octo header.
+     */
     private final Map<String, IncomingOctoEpPacketHandler> incomingPacketHandlers =
         new ConcurrentHashMap<>();
 
@@ -98,7 +102,7 @@ public class OctoTentacle extends PropertyChangeNotifier
         = new CountingErrorHandler();
 
     /**
-     * The queues which pass packets to be sent.
+     * We queue up outgoing packets by their *source* endpoint ID.
      */
     private final Map<String, PacketInfoQueue> outgoingPacketQueues =
         new ConcurrentHashMap<>();
