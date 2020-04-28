@@ -115,6 +115,11 @@ public class ConfOctoTransport extends PropertyChangeNotifier
     private final Clock clock;
 
     /**
+     * Whether or not this {@link ConfOctoTransport} is currently active
+     */
+    private final AtomicBoolean running = new AtomicBoolean(true);
+
+    /**
      * Initializes a new {@link ConfOctoTransport} instance.
      * @param conference the conference.
      */
@@ -169,7 +174,10 @@ public class ConfOctoTransport extends PropertyChangeNotifier
      */
     public void addPayloadType(PayloadType payloadType)
     {
-        octoEndpoints.addPayloadType(payloadType);
+        if (running.get())
+        {
+            octoEndpoints.addPayloadType(payloadType);
+        }
     }
 
     /**
@@ -179,9 +187,13 @@ public class ConfOctoTransport extends PropertyChangeNotifier
      */
     public void setRelays(Collection<String> relays)
     {
+        if (!running.get())
+        {
+            return;
+        }
         Objects.requireNonNull(
             bridgeOctoTransport,
-                "Octo requested but not configured");
+            "Octo requested but not configured");
 
         Set<SocketAddress> socketAddresses = new HashSet<>();
         for (String relay : relays)
@@ -204,12 +216,20 @@ public class ConfOctoTransport extends PropertyChangeNotifier
     {
         // Cthulhu devours everything (as long as it's not coming from
         // itself, and we have targets).
-        return !(packetInfo instanceof OctoPacketInfo) && !targets.isEmpty();
+        return running.get() &&
+            !(packetInfo instanceof OctoPacketInfo) &&
+            !targets.isEmpty();
     }
 
     @Override
     public void send(PacketInfo packet)
     {
+        if (!running.get())
+        {
+            ByteBufferPool.returnBuffer(packet.getPacket().getBuffer());
+            return;
+        }
+
         if (packet.getEndpointId() != null)
         {
             /* We queue packets separately by their *source* endpoint.
@@ -250,6 +270,11 @@ public class ConfOctoTransport extends PropertyChangeNotifier
     @Override
     public void handleMediaPacket(@NotNull OctoPacketInfo packetInfo)
     {
+        if (!running.get())
+        {
+            ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
+            return;
+        }
         stats.packetReceived(packetInfo.getPacket().length, clock.instant());
         IncomingOctoEpPacketHandler handler = incomingPacketHandlers.get(packetInfo.getEndpointId());
         if (handler != null)
@@ -265,6 +290,10 @@ public class ConfOctoTransport extends PropertyChangeNotifier
     @Override
     public void handleMessagePacket(@NotNull String message, @NotNull String sourceEpId)
     {
+        if (!running.get())
+        {
+            return;
+        }
         octoEndpoints.messageTransport.onMessage(null /* source */ , message);
     }
 
@@ -281,6 +310,10 @@ public class ConfOctoTransport extends PropertyChangeNotifier
             List<SourcePacketExtension> videoSources,
             List<SourceGroupPacketExtension> videoSourceGroups)
     {
+        if (!running.get())
+        {
+            return;
+        }
         List<SourcePacketExtension> allSources = new LinkedList<>(audioSources);
         allSources.addAll(videoSources);
 
@@ -374,6 +407,11 @@ public class ConfOctoTransport extends PropertyChangeNotifier
      */
     public void addRtpExtension(RtpExtension rtpExtension)
     {
+        if (!running.get())
+        {
+            return;
+        }
+
         octoEndpoints.addRtpExtension(rtpExtension);
     }
 
@@ -382,11 +420,14 @@ public class ConfOctoTransport extends PropertyChangeNotifier
      */
     public void expire()
     {
-        logger.info("Expiring");
-        setRelays(Collections.emptyList());
-        octoEndpoints.setEndpoints(Collections.emptySet());
-        outgoingPacketQueues.values().forEach(PacketInfoQueue::close);
-        outgoingPacketQueues.clear();
+        if (running.compareAndSet(true, false))
+        {
+            logger.info("Expiring");
+            setTargets(Collections.emptySet());
+            octoEndpoints.setEndpoints(Collections.emptySet());
+            outgoingPacketQueues.values().forEach(PacketInfoQueue::close);
+            outgoingPacketQueues.clear();
+        }
     }
 
     /**
@@ -395,6 +436,11 @@ public class ConfOctoTransport extends PropertyChangeNotifier
      */
     public void sendMessage(String message)
     {
+        if (!running.get())
+        {
+            return;
+        }
+
         bridgeOctoTransport.sendString(
             message,
             targets,
@@ -404,6 +450,11 @@ public class ConfOctoTransport extends PropertyChangeNotifier
 
     public void addHandler(String epId, IncomingOctoEpPacketHandler handler)
     {
+        if (!running.get())
+        {
+            return;
+        }
+
         logger.info("Adding handler for ep ID " + epId);
         incomingPacketHandlers.put(epId, handler);
     }
