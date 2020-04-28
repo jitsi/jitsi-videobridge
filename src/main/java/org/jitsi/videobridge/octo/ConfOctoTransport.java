@@ -224,7 +224,7 @@ public class ConfOctoTransport extends PropertyChangeNotifier
         }
         else
         {
-            // Packets without an endpoint ID originalted from within the bridge
+            // Packets without an endpoint ID originated from within the bridge
             // itself and, in practice, are things like keyframe requests.  We
             // send them out directly (without queueing).
             doSend(packet);
@@ -383,7 +383,7 @@ public class ConfOctoTransport extends PropertyChangeNotifier
     public void expire()
     {
         logger.info("Expiring");
-        setRelays(new LinkedList<>());
+        setRelays(Collections.emptyList());
         octoEndpoints.setEndpoints(Collections.emptySet());
         outgoingPacketQueues.values().forEach(PacketInfoQueue::close);
         outgoingPacketQueues.clear();

@@ -81,7 +81,6 @@ class OctoEndpoint(
     }
 
     override fun requestKeyframe(mediaSsrc: Long) {
-        // just making sure the tentacle hasn't expired
         transceiver.requestKeyframe(mediaSsrc)
     }
 
