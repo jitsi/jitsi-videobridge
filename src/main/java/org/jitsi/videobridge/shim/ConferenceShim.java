@@ -210,7 +210,7 @@ public class ConferenceShim
                 @NotNull ColibriConferenceIQ.Channel audioChannel,
                 @NotNull ColibriConferenceIQ.Channel videoChannel)
     {
-        OctoTentacle tentacle = conference.getTentacle();
+        ConfOctoTransport tentacle = conference.getTentacle();
 
         int expire
                 = Math.min(audioChannel.getExpire(), videoChannel.getExpire());

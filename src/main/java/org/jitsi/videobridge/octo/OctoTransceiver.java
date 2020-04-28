@@ -22,7 +22,6 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.octo.config.*;
@@ -31,7 +30,7 @@ import org.json.simple.*;
 
 /**
  * Parses and handles incoming RTP/RTCP packets from an Octo source for a
- * specific {@link Conference}/{@link OctoTentacle}.
+ * specific {@link Conference}/{@link ConfOctoTransport}.
  *
  * @author Boris Grozev
  */

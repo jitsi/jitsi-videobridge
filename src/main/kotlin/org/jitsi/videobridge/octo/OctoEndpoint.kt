@@ -41,7 +41,7 @@ class OctoEndpoint(
     id: String,
     private val octoEndpoints: OctoEndpoints,
     parentLogger: Logger
-) : AbstractEndpoint(conference, id, parentLogger), OctoTentacle.IncomingOctoEpPacketHandler {
+) : AbstractEndpoint(conference, id, parentLogger), ConfOctoTransport.IncomingOctoEpPacketHandler {
 
     /**
      * Information about the streams belonging to this [OctoEndpoint]

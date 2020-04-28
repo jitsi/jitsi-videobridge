@@ -21,8 +21,6 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
-import org.jitsi.rtp.*;
-import org.jitsi.rtp.rtcp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
@@ -36,7 +34,6 @@ import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
-import org.json.simple.*;
 import org.osgi.framework.*;
 
 import java.net.*;
@@ -57,17 +54,17 @@ import static org.jitsi.videobridge.transport.octo.OctoUtils.JVB_EP_ID;
  *
  * @author Boris Grozev
  */
-public class OctoTentacle extends PropertyChangeNotifier
+public class ConfOctoTransport extends PropertyChangeNotifier
     implements PotentialPacketHandler, BridgeOctoTransport.IncomingOctoPacketHandler
 {
     /**
-     * The {@link Logger} used by the {@link OctoTentacle} class and its
+     * The {@link Logger} used by the {@link ConfOctoTransport} class and its
      * instances to print debug information.
      */
     private final Logger logger;
 
     /**
-     * The conference for this {@link OctoTentacle}.
+     * The conference for this {@link ConfOctoTransport}.
      */
     private final Conference conference;
 
@@ -118,15 +115,15 @@ public class OctoTentacle extends PropertyChangeNotifier
     private final Clock clock;
 
     /**
-     * Initializes a new {@link OctoTentacle} instance.
+     * Initializes a new {@link ConfOctoTransport} instance.
      * @param conference the conference.
      */
-    public OctoTentacle(Conference conference)
+    public ConfOctoTransport(Conference conference)
     {
         this(conference, Clock.systemUTC());
     }
 
-    public OctoTentacle(Conference conference, Clock clock)
+    public ConfOctoTransport(Conference conference, Clock clock)
     {
         this.conference = conference;
         this.clock = clock;
