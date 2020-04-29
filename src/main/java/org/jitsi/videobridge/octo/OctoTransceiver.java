@@ -22,11 +22,14 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.*;
 import org.jitsi.nlj.util.*;
+import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
+
+import java.util.*;
 
 /**
  * Parses and handles incoming RTP/RTCP packets from an Octo source for a
@@ -80,6 +83,31 @@ public class OctoTransceiver implements Stoppable, NodeStatsProducer
     void requestKeyframe(long mediaSsrc)
     {
         octoSender.requestKeyframe(mediaSsrc);
+    }
+
+    void requestKeyframe()
+    {
+        octoSender.requestKeyframe(null);
+    }
+
+    boolean receivesSsrc(long ssrc)
+    {
+        return streamInformationStore.getReceiveSsrcs().contains(ssrc);
+    }
+
+    void setReceiveSsrcs(Map<MediaType, Set<Long>> ssrcsByMediaType)
+    {
+        streamInformationStore.getReceiveSsrcs().forEach(streamInformationStore::removeReceiveSsrc);
+        ssrcsByMediaType.forEach((mediaType, ssrcs) -> {
+            ssrcs.forEach(ssrc -> {
+                streamInformationStore.addReceiveSsrc(ssrc, mediaType);
+            });
+        });
+    }
+
+    boolean hasReceiveSsrcs()
+    {
+        return !streamInformationStore.getReceiveSsrcs().isEmpty();
     }
 
     /**
