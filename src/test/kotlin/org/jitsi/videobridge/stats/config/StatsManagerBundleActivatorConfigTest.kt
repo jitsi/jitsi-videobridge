@@ -47,7 +47,7 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                     should("parse the transport correctly") {
                         val cfg = Config.StatsTransportsProperty()
 
-                        cfg.value shouldHaveSize 4
+                        cfg.value shouldHaveSize 3
                         cfg.value.forOne {
                             it as StatsTransportConfig.ColibriStatsTransportConfig
                             it.interval shouldBe 5.seconds
