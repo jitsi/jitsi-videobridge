@@ -284,6 +284,7 @@ public class ConfOctoTransport extends PropertyChangeNotifier
         else
         {
             stats.incomingPacketDropped();
+            ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
         }
     }
 
