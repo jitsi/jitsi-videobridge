@@ -8,7 +8,7 @@ several advanced features such as RTCP termination [[RTCPT]], bandwidth
 estimations [[BWE]] and bandwidth distributions [[BWD]].
 
 With RTCP termination the endpoints of a group call are "tricked" to believe
-that that are in a one-on-one call with the JVB. This has the notable desirable
+that they are in a one-on-one call with the JVB. This has the notable desirable
 property that _bad_ down-link conditions at a particular receiver do not
 typically affect the sending bitrate of the senders because, from their
 perspective, there is only one receiver (the JVB) with a presumably good
