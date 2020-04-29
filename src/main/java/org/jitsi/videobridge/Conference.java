@@ -205,7 +205,7 @@ public class Conference
     /**
      * This {@link Conference}'s link to Octo.
      */
-    private OctoTentacle tentacle;
+    private ConfOctoTransport tentacle;
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
@@ -1221,13 +1221,13 @@ public class Conference
     }
 
     /**
-     * @return The {@link OctoTentacle} for this conference.
+     * @return The {@link ConfOctoTransport} for this conference.
      */
-    public OctoTentacle getTentacle()
+    public ConfOctoTransport getTentacle()
     {
         if (tentacle == null)
         {
-            tentacle = new OctoTentacle(this);
+            tentacle = new ConfOctoTransport(this);
             tentacle.addPropertyChangeListener(propertyChangeListener);
         }
         return tentacle;
@@ -1320,7 +1320,7 @@ public class Conference
             debugState.put("includeInStatistics", includeInStatistics);
             debugState.put("statistics", statistics.getJson());
             //debugState.put("encodingsManager", encodingsManager.getDebugState());
-            OctoTentacle tentacle = this.tentacle;
+            ConfOctoTransport tentacle = this.tentacle;
             debugState.put(
                     "tentacle",
                     tentacle == null ? null : tentacle.getDebugState());

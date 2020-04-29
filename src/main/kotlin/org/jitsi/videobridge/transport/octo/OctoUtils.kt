@@ -22,6 +22,7 @@ import java.net.SocketAddress
 
 class OctoUtils {
     companion object {
+        const val JVB_EP_ID = "ffffffff"
         fun relayIdToSocketAddress(relayId: String): SocketAddress? {
             if (!relayId.contains(":")) {
                 return null

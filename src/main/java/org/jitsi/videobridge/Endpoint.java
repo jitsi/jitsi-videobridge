@@ -676,10 +676,17 @@ public class Endpoint
     /**
      * Adds a payload type to this endpoint.
      */
+    @Override
     public void addPayloadType(PayloadType payloadType)
     {
         transceiver.addPayloadType(payloadType);
         bitrateController.addPayloadType(payloadType);
+    }
+
+    @Override
+    public void addRtpExtension(RtpExtension rtpExtension)
+    {
+        transceiver.addRtpExtension(rtpExtension);
     }
 
     /**

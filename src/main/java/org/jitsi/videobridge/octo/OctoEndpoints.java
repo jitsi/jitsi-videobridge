@@ -16,11 +16,15 @@
 package org.jitsi.videobridge.octo;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.format.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
 import java.util.*;
+import java.util.stream.*;
 
 /**
  * Manages the list of remote/foreign/Octo endpoints for a specific
@@ -48,6 +52,18 @@ import java.util.*;
       * information.
       */
      private final Logger logger;
+
+     /**
+      * A cache of the signaled payload types, since these are only signaled
+      * at the top level but apply to all Octo endpoints
+      */
+     private final List<PayloadType> payloadTypes = new ArrayList<>();
+
+     /**
+      * A cache of the signaled rtp extensions, since these are only signaled
+      * at the top level but apply to all Octo endpoints
+      */
+     private final List<RtpExtension> rtpExtensions = new ArrayList<>();
 
      /**
       * Initializes a new {@link OctoEndpoints} instance for a specific
@@ -91,7 +107,6 @@ import java.util.*;
              }
          });
 
-
          octoEndpointIds = new HashSet<>(endpointIds);
 
          return !toCreate.isEmpty() || !toExpire.isEmpty();
@@ -106,6 +121,35 @@ import java.util.*;
         octoEndpointIds.remove(endpoint.getID());
      }
 
+     void addPayloadType(PayloadType payloadType)
+     {
+         payloadTypes.add(payloadType);
+         octoEndpointIds.stream()
+             .map(epId -> conference.getEndpoint(epId))
+             .filter(Objects::nonNull)
+             .forEach(ep -> ep.addPayloadType(payloadType));
+     }
+
+     void addRtpExtension(RtpExtension rtpExtension)
+     {
+         rtpExtensions.add(rtpExtension);
+         octoEndpointIds.stream()
+             .map(epId -> conference.getEndpoint(epId))
+             .filter(Objects::nonNull)
+             .forEach(ep -> ep.addRtpExtension(rtpExtension));
+     }
+
+     void setMediaStreamTracks(MediaStreamTrackDesc[] tracks) {
+         // Split the tracks up by owner
+         Map<String, List<MediaStreamTrackDesc>> tracksByOwner =
+             Arrays.stream(tracks).collect(Collectors.groupingBy(MediaStreamTrackDesc::getOwner));
+
+         tracksByOwner.forEach((epId, epTracks) -> {
+             OctoEndpoint ep = (OctoEndpoint)conference.getEndpoint(epId);
+             ep.setMediaStreamTracks(epTracks.toArray(new MediaStreamTrackDesc[0]));
+         });
+     }
+
      /**
       * Creates a new {@link OctoEndpoint} instance and adds it to the
       * conference.
@@ -114,7 +158,11 @@ import java.util.*;
       */
      private OctoEndpoint addEndpoint(String id, Logger parentLogger)
      {
+         logger.info("Creating Octo endpoint " + id);
          OctoEndpoint endpoint = new OctoEndpoint(conference, id, this, parentLogger);
+
+         payloadTypes.forEach(endpoint::addPayloadType);
+         rtpExtensions.forEach(endpoint::addRtpExtension);
 
          conference.addEndpoint(endpoint);
 

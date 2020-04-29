@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge;
 
+import org.jitsi.nlj.format.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
@@ -427,4 +429,14 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * Whether the remote endpoint is currently sending video.
      */
     public abstract boolean isSendingVideo();
+
+    /**
+     * Adds a payload type to this endpoint.
+     */
+    public abstract void addPayloadType(PayloadType payloadType);
+
+    /**
+     * Adds an RTP extension to this endpoint
+     */
+    public abstract void addRtpExtension(RtpExtension rtpExtension);
 }

@@ -28,6 +28,7 @@ import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.octo.OctoPacket
 import org.jitsi.videobridge.octo.OctoPacket.OCTO_HEADER_LENGTH
 import org.jitsi.videobridge.octo.OctoPacketInfo
+import org.jitsi.videobridge.transport.octo.OctoUtils.Companion.JVB_EP_ID
 import org.jitsi.videobridge.util.ByteBufferPool
 import java.net.SocketAddress
 import java.nio.charset.StandardCharsets
@@ -39,7 +40,7 @@ import kotlin.math.floor
 import kotlin.math.log10
 
 /**
- * [OctoTransport] handles *all* incoming and outgoing Octo traffic for a
+ * [BridgeOctoTransport] handles *all* incoming and outgoing Octo traffic for a
  * given bridge.
  *
  * [relayId] is the Octo relay ID which will be advertised by this JVB.
@@ -47,7 +48,7 @@ import kotlin.math.log10
  * this bridge is accessible on.  With the current implementation the ID just
  * encodes a pre-configured IP address and port, e.g. "10.0.0.1:20000"
  */
-class OctoTransport(
+class BridgeOctoTransport(
     val relayId: String,
     parentLogger: Logger
 ) {
@@ -68,7 +69,7 @@ class OctoTransport(
     private val unknownConferences: MutableMap<String, AtomicLong> = ConcurrentHashMap()
 
     /**
-     * The handler which will be invoked when this [OctoTransport] wants to
+     * The handler which will be invoked when this [BridgeOctoTransport] wants to
      * send data.
      */
     var outgoingDataHandler: OutgoingOctoPacketHandler? = null
@@ -182,7 +183,7 @@ class OctoTransport(
         val octoPacketLength = len + OCTO_HEADER_LENGTH
 
         // Not all packets originate from an endpoint (e.g. some come from the bridge)
-        val epId = sourceEpId ?: "ffffffff"
+        val epId = sourceEpId ?: JVB_EP_ID
 
         val (newBuf, newOff) = when {
             off >= OCTO_HEADER_LENGTH -> {
