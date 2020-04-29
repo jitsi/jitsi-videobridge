@@ -549,7 +549,7 @@ public class ConfOctoTransport extends PropertyChangeNotifier
 
             debugState.put("packets_sent", packetsSent.sum());
             debugState.put("send_packet_rate_pps", sendPacketRate.getRate());
-            debugState.put("bytes_sent", bytesSent);
+            debugState.put("bytes_sent", bytesSent.sum());
             debugState.put("send_bitrate_bps", sendBitRate.getRate());
 
             return debugState;
