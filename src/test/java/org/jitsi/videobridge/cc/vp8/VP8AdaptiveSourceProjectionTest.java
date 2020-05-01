@@ -20,7 +20,7 @@ import java.util.concurrent.*;
 
 import static org.junit.Assert.*;
 
-public class VP8AdaptiveTrackProjectionTest
+public class VP8AdaptiveSourceProjectionTest
 {
     private final Logger logger = new LoggerImpl(getClass().getName());
     private final PayloadType payloadType = new Vp8PayloadType((byte)96,
@@ -35,8 +35,8 @@ public class VP8AdaptiveTrackProjectionTest
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
 
-        VP8AdaptiveTrackProjectionContext context =
-            new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
+        VP8AdaptiveSourceProjectionContext context =
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
                 initialState, logger);
 
         Vp8PacketGenerator generator = new Vp8PacketGenerator(1);
@@ -63,8 +63,8 @@ public class VP8AdaptiveTrackProjectionTest
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
 
-        VP8AdaptiveTrackProjectionContext context =
-            new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
+        VP8AdaptiveSourceProjectionContext context =
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
                 initialState, logger);
 
         int expectedSeq = 10001;
@@ -152,8 +152,8 @@ public class VP8AdaptiveTrackProjectionTest
 
         Random random = new Random(seed);
 
-        VP8AdaptiveTrackProjectionContext context =
-            new VP8AdaptiveTrackProjectionContext(diagnosticContext,
+        VP8AdaptiveSourceProjectionContext context =
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext,
                 payloadType,
                 initialState, logger);
 
@@ -362,8 +362,8 @@ public class VP8AdaptiveTrackProjectionTest
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
 
-        VP8AdaptiveTrackProjectionContext context =
-            new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
+        VP8AdaptiveSourceProjectionContext context =
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
                 initialState, logger);
 
         PacketInfo firstPacketInfo = generator.nextPacket();
@@ -401,8 +401,8 @@ public class VP8AdaptiveTrackProjectionTest
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
 
-        VP8AdaptiveTrackProjectionContext context =
-            new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
+        VP8AdaptiveSourceProjectionContext context =
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
                 initialState, logger);
 
         PacketInfo firstPacketInfo = generator.nextPacket();
@@ -449,8 +449,8 @@ public class VP8AdaptiveTrackProjectionTest
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
 
-        VP8AdaptiveTrackProjectionContext context =
-            new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
+        VP8AdaptiveSourceProjectionContext context =
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
                 initialState, logger);
 
         PacketInfo firstPacketInfo = generator.nextPacket();
@@ -499,8 +499,8 @@ public class VP8AdaptiveTrackProjectionTest
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
 
-        VP8AdaptiveTrackProjectionContext context =
-            new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
+        VP8AdaptiveSourceProjectionContext context =
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
                 initialState, logger);
 
         int expectedSeq = 10001;
@@ -543,8 +543,8 @@ public class VP8AdaptiveTrackProjectionTest
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
 
-        VP8AdaptiveTrackProjectionContext context =
-            new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
+        VP8AdaptiveSourceProjectionContext context =
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
                 initialState, logger);
 
         int expectedSeq = 10001;
@@ -711,8 +711,8 @@ public class VP8AdaptiveTrackProjectionTest
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
 
-        VP8AdaptiveTrackProjectionContext context =
-            new VP8AdaptiveTrackProjectionContext(diagnosticContext, payloadType,
+        VP8AdaptiveSourceProjectionContext context =
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
                 initialState, logger);
 
         int targetIndex = 0;
@@ -793,8 +793,8 @@ public class VP8AdaptiveTrackProjectionTest
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
 
-        VP8AdaptiveTrackProjectionContext context =
-            new VP8AdaptiveTrackProjectionContext(diagnosticContext,
+        VP8AdaptiveSourceProjectionContext context =
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext,
                 payloadType,
                 initialState, logger);
 

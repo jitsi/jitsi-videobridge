@@ -50,7 +50,7 @@ public class OctoTransceiver implements Stoppable, NodeStatsProducer
     /**
      * The set of media stream tracks that have been signaled to us.
      */
-    private final MediaStreamTracks mediaStreamTracks = new MediaStreamTracks();
+    private final MediaSources mediaSources = new MediaSources();
 
     private final StreamInformationStore streamInformationStore
             = new StreamInformationStoreImpl();
@@ -113,7 +113,7 @@ public class OctoTransceiver implements Stoppable, NodeStatsProducer
     /**
      * Sets the list of media stream tracks that is signalled to us. Note that
      * because of quirks in the underlying implementation, a subsequent call to
-     * {@link #getMediaStreamTracks()} is necessary to get the currently used
+     * {@link #getMediaSources()} is necessary to get the currently used
      * tracks.
      *
      * @param tracks the tracks to set
@@ -121,17 +121,17 @@ public class OctoTransceiver implements Stoppable, NodeStatsProducer
      * @return {@code true} if the call resulted in any changes in our list of
      * tracks, and {@code false} otherwise.
      */
-    boolean setMediaStreamTracks(MediaStreamTrackDesc[] tracks)
+    boolean setMediaSources(MediaSourceDesc[] tracks)
     {
-        boolean changed = mediaStreamTracks.setMediaStreamTracks(tracks);
+        boolean changed = mediaSources.setMediaSources(tracks);
 
         if (changed)
         {
 
-            SetMediaStreamTracksEvent setMediaStreamTracksEvent
-                    = new SetMediaStreamTracksEvent(getMediaStreamTracks());
+            SetMediaSourcesEvent setMediaSourcesEvent
+                    = new SetMediaSourcesEvent(getMediaSources());
 
-            octoReceiver.handleEvent(setMediaStreamTracksEvent);
+            octoReceiver.handleEvent(setMediaSourcesEvent);
         }
 
         return changed;
@@ -140,9 +140,9 @@ public class OctoTransceiver implements Stoppable, NodeStatsProducer
     /**
      * @return the current list of media stream tracks.
      */
-    MediaStreamTrackDesc[] getMediaStreamTracks()
+    MediaSourceDesc[] getMediaSources()
     {
-        return mediaStreamTracks.getMediaStreamTracks();
+        return mediaSources.getMediaSources();
     }
 
     public void handleIncomingPacket(@NotNull OctoPacketInfo packetInfo)
@@ -195,7 +195,7 @@ public class OctoTransceiver implements Stoppable, NodeStatsProducer
         nodeStats.addBlock(streamInformationStore.getNodeStats());
         nodeStats.addBlock(octoReceiver.getNodeStats());
         nodeStats.addBlock(octoSender.getNodeStats());
-        nodeStats.addBlock(mediaStreamTracks.getNodeStats());
+        nodeStats.addBlock(mediaSources.getNodeStats());
 
         return nodeStats;
     }
@@ -210,7 +210,7 @@ public class OctoTransceiver implements Stoppable, NodeStatsProducer
         JSONObject debugState = new JSONObject();
         debugState.put("octoReceiver", octoReceiver.getDebugState());
         debugState.put("octoSender", octoSender.getDebugState());
-        debugState.put("mediaStreamTracks", mediaStreamTracks.getNodeStats().toJson());
+        debugState.put("mediaSources", mediaSources.getNodeStats().toJson());
         return debugState;
     }
 }

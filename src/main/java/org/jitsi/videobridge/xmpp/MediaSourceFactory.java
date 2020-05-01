@@ -26,18 +26,18 @@ import java.util.*;
 import java.util.stream.*;
 
 /**
- * A factory of {@link MediaStreamTrackDesc}s from jingle signaling.
+ * A factory of {@link MediaSourceDesc}s from jingle signaling.
  *
  * @author George Politis
  */
-public class MediaStreamTrackFactory
+public class MediaSourceFactory
 {
     /**
-     * The {@link Logger} used by the {@link MediaStreamTrackDesc} class and its
+     * The {@link Logger} used by the {@link MediaSourceDesc} class and its
      * instances for logging output.
      */
     private static final Logger logger
-        = new LoggerImpl(MediaStreamTrackFactory.class.getName());
+        = new LoggerImpl(MediaSourceFactory.class.getName());
 
     /**
      * The system property name that for a boolean that's controlling whether or
@@ -122,21 +122,21 @@ public class MediaStreamTrackFactory
     /**
      * Creates encodings.
      *
-     * @param track the track that will own the temporal encodings.
+     * @param source the source that will own the temporal encodings.
      * @param primary the array of the primary SSRCs for the simulcast streams.
      * @param spatialLen the number of spatial encodings per simulcast stream.
      * @param temporalLen the number of temporal encodings per simulcast stream.
      * @param secondarySsrcs a map of primary ssrc -> list of pairs, where each
      * pair has the secondary ssrc as its key, and the type (rtx, etc.) as its
      * value
-     * @return an array that holds the simulcast encodings.
+     * @return an array that holds the layer descriptions.
      */
-    private static RTPEncodingDesc[] createRTPEncodings(
-        MediaStreamTrackDesc track, TrackSsrcs primary,
+    private static RtpLayerDesc[] createRTPLayerDescs(
+        MediaSourceDesc source, SourceSsrcs primary,
         int spatialLen, int temporalLen, Map<Long, SecondarySsrcs> secondarySsrcs)
     {
-        RTPEncodingDesc[] rtpEncodings
-            = new RTPEncodingDesc[primary.size() * spatialLen * temporalLen];
+        RtpLayerDesc[] rtpLayers
+            = new RtpLayerDesc[primary.size() * spatialLen * temporalLen];
 
         // this loop builds a subjective quality index array that looks like
         // this:
@@ -160,15 +160,15 @@ public class MediaStreamTrackFactory
                     int idx = qid(streamIdx, spatialIdx, temporalIdx,
                         spatialLen, temporalLen);
 
-                    RTPEncodingDesc[] dependencies;
+                    RtpLayerDesc[] dependencies;
                     if (spatialIdx > 0 && temporalIdx > 0)
                     {
                         // this layer depends on spatialIdx-1 and temporalIdx-1.
-                        dependencies = new RTPEncodingDesc[]{
-                            rtpEncodings[
+                        dependencies = new RtpLayerDesc[]{
+                            rtpLayers[
                                 qid(streamIdx, spatialIdx, temporalIdx - 1,
                                     spatialLen, temporalLen)],
-                            rtpEncodings[
+                            rtpLayers[
                                 qid(streamIdx, spatialIdx - 1, temporalIdx,
                                     spatialLen, temporalLen)]
                         };
@@ -176,16 +176,16 @@ public class MediaStreamTrackFactory
                     else if (spatialIdx > 0)
                     {
                         // this layer depends on spatialIdx-1.
-                        dependencies = new RTPEncodingDesc[]
-                            {rtpEncodings[
+                        dependencies = new RtpLayerDesc[]
+                            {rtpLayers[
                                 qid(streamIdx, spatialIdx - 1, temporalIdx,
                                     spatialLen, temporalLen)]};
                     }
                     else if (temporalIdx > 0)
                     {
                         // this layer depends on temporalIdx-1.
-                        dependencies = new RTPEncodingDesc[]
-                            {rtpEncodings[
+                        dependencies = new RtpLayerDesc[]
+                            {rtpLayers[
                                 qid(streamIdx, spatialIdx, temporalIdx - 1,
                                     spatialLen, temporalLen)]};
                     }
@@ -198,8 +198,8 @@ public class MediaStreamTrackFactory
                     int temporalId = temporalLen > 1 ? temporalIdx : -1;
                     int spatialId = spatialLen > 1 ? spatialIdx : -1;
 
-                    rtpEncodings[idx]
-                        = new RTPEncodingDesc(track, idx,
+                    rtpLayers[idx]
+                        = new RtpLayerDesc(source, idx,
                         primary.get(streamIdx),
                         temporalId, spatialId, height, frameRate, dependencies);
                     SecondarySsrcs ssrcSecondarySsrcs
@@ -220,7 +220,7 @@ public class MediaStreamTrackFactory
                             }
                             else
                             {
-                                rtpEncodings[idx].addSecondarySsrc(
+                                rtpLayers[idx].addSecondarySsrc(
                                     ssrcSecondarySsrc.ssrc, type);
                             }
                         });
@@ -232,7 +232,7 @@ public class MediaStreamTrackFactory
 
             height *= 2;
         }
-        return rtpEncodings;
+        return rtpLayers;
 
     }
 
@@ -277,7 +277,7 @@ public class MediaStreamTrackFactory
      * type
      */
     private static Map<Long, SecondarySsrcs> getAllSecondarySsrcs(
-            TrackSsrcs ssrcs, Collection<SourceGroupPacketExtension> sourceGroups)
+            SourceSsrcs ssrcs, Collection<SourceGroupPacketExtension> sourceGroups)
     {
         Map<Long, SecondarySsrcs> allSecondarySsrcs = new HashMap<>();
 
@@ -305,44 +305,44 @@ public class MediaStreamTrackFactory
     }
 
     /**
-     * Removes all sources which correspond to an ssrc in trackSsrcs, or any
-     * groups with a primary ssrc in trackSsrcs.  NOTE: modifies
+     * Removes all sources which correspond to an ssrc in sourceSsrcs, or any
+     * groups with a primary ssrc in sourceSsrcs.  NOTE: modifies
      * sources and sourceGroups in place
-     * @param trackSsrcs the primary ssrcs for which all corresponding ssrcs
+     * @param sourceSsrcs the primary ssrcs for which all corresponding ssrcs
      * will be removed from the given sources and groups
      * @param sources the set of sources
      * @param sourceGroups the set of groups
      */
     private static void removeReferences(
-            TrackSsrcs trackSsrcs,
+            SourceSsrcs sourceSsrcs,
             List<SourcePacketExtension> sources,
             List<SourceGroupPacketExtension> sourceGroups)
     {
-        // Remove any groups to which any of the ssrcs of this track belong
+        // Remove any groups to which any of the ssrcs of this source belong
         List<SourceGroupPacketExtension> groupsToRemove
             = sourceGroups.stream()
                 .filter(
                     group -> group.getSources().stream().anyMatch(
-                        source -> trackSsrcs.contains(source.getSSRC())))
+                        source -> sourceSsrcs.contains(source.getSSRC())))
                 .collect(Collectors.toList());
 
         sourceGroups.removeAll(groupsToRemove);
 
         /*
-         * Remove not only the ssrcs in the track itself, but any ssrcs that
-         * were in groups along with ssrcs from the track. E.g. if we have:`
+         * Remove not only the ssrcs in the source itself, but any ssrcs that
+         * were in groups along with ssrcs from the source. E.g. if we have:`
          * SIM 1 2 3
          * RTX 1 10
          * RTX 2 20
          * RTX 3 30
-         * then we need to make sure ssrcs 10, 20 and 30 don't create tracks of
-         * their own and are removed along with the processing of the track
+         * then we need to make sure ssrcs 10, 20 and 30 don't create sources of
+         * their own and are removed along with the processing of the source
          * with ssrcs 1, 2 and 3.
          */
         Set<Long> ssrcsToRemove = extractSsrcs(groupsToRemove);
         sources.removeIf(
             source ->
-                trackSsrcs.contains(source.getSSRC())
+                sourceSsrcs.contains(source.getSSRC())
                     || ssrcsToRemove.contains(source.getSSRC()));
     }
 
@@ -363,20 +363,20 @@ public class MediaStreamTrackFactory
 
     /**
      * Given the sources and groups, return a list of the ssrcs for each
-     * unique track
+     * unique source
      * @param sources the set of sources
      * @param sourceGroups the set of source groups
-     * @return a list of {@link TrackSsrcs}. Each TrackSsrc object represents
-     * a set of primary video ssrcs belonging to a single track (video source)
+     * @return a list of {@link SourceSsrcs}. Each SourceSsrc object represents
+     * a set of primary video ssrcs belonging to a single source (video source)
      */
-    private static List<TrackSsrcs> getTrackSsrcs(
+    private static List<SourceSsrcs> getSourceSsrcs(
             Collection<SourcePacketExtension> sources,
             Collection<SourceGroupPacketExtension> sourceGroups)
     {
-        //FIXME: determining the individual tracks should be done via msid,
+        //FIXME: determining the individual sources should be done via msid,
         // but somewhere along the line we seem to lose the msid information
         // in the packet extensions
-        List<TrackSsrcs> trackSsrcsList = new ArrayList<>();
+        List<SourceSsrcs> sourceSsrcsList = new ArrayList<>();
         // We'll need to keep track of which sources and groups have been
         // processed, so make copies of the lists we've been given so we can
         // modify them.
@@ -422,12 +422,12 @@ public class MediaStreamTrackFactory
                     ssrcs = Arrays.asList(group.getSources().get(0).getSSRC());
                 }
 
-                TrackSsrcs trackSsrcs = new TrackSsrcs(ssrcs);
+                SourceSsrcs sourceSsrcs = new SourceSsrcs(ssrcs);
                 // Now we need to remove any groups with these ssrcs as their
                 // primary, or sources that correspond to one of these ssrcs
-                removeReferences(trackSsrcs, sourcesCopy, sourceGroupsCopy);
+                removeReferences(sourceSsrcs, sourcesCopy, sourceGroupsCopy);
 
-                trackSsrcsList.add(trackSsrcs);
+                sourceSsrcsList.add(sourceSsrcs);
             });
         });
 
@@ -439,7 +439,7 @@ public class MediaStreamTrackFactory
                         .reduce(String::concat));
         }
 
-        // The remaining sources are not part of any group. Add them as tracks
+        // The remaining sources are not part of any group. Add them as sources
         // with their own primary SSRC.
         // NOTE: we need to ignore sources with an ssrc of -1, because the
         // ColibriBuilder will use that as a signal to remove sources
@@ -447,7 +447,7 @@ public class MediaStreamTrackFactory
         sourcesCopy.forEach(source -> {
             if (source.getSSRC() != -1)
             {
-                trackSsrcsList.add(new TrackSsrcs(source.getSSRC()));
+                sourceSsrcsList.add(new SourceSsrcs(source.getSSRC()));
             }
             else
             {
@@ -460,36 +460,36 @@ public class MediaStreamTrackFactory
             }
         });
 
-        setOwners(sources, trackSsrcsList);
+        setOwners(sources, sourceSsrcsList);
 
-        return trackSsrcsList;
+        return sourceSsrcsList;
     }
 
     /**
-     * Updates the given list of {@link TrackSsrcs}, setting the {@code owner}
+     * Updates the given list of {@link SourceSsrcs}, setting the {@code owner}
      * field according to the {@code owner} attribute in {@code ssrc-info}
      * extensions contained in {@code sources}.
      * @param sources the list of {@link SourcePacketExtension} which contain
      * the {@code owner} as an attribute of a {@code ssrc-info} child. The
      * list or the objects in the list will not be modified.
-     * @param trackSsrcsList the list of {@link TrackSsrcs} to update.
+     * @param sourceSsrcsList the list of {@link SourceSsrcs} to update.
      */
     private static void setOwners(
         Collection<SourcePacketExtension> sources,
-        Collection<TrackSsrcs> trackSsrcsList)
+        Collection<SourceSsrcs> sourceSsrcsList)
     {
-        for (TrackSsrcs trackSsrcs : trackSsrcsList)
+        for (SourceSsrcs sourceSsrcs : sourceSsrcsList)
         {
             // Look for the "owner" tag in the sources. We assume that all
             // sources contain the "owner" tag so we just check for the
-            // first SSRC of the track's SSRCs.
-            long primarySsrc = trackSsrcs.get(0);
-            SourcePacketExtension trackSource
+            // first SSRC of the source's SSRCs.
+            long primarySsrc = sourceSsrcs.get(0);
+            SourcePacketExtension sourceSource
                 = sources.stream()
                     .filter(source -> source.getSSRC() == primarySsrc)
                     .findAny().orElse(null);
 
-            trackSsrcs.owner = getOwner(trackSource);
+            sourceSsrcs.owner = getOwner(sourceSource);
         }
     }
 
@@ -521,18 +521,18 @@ public class MediaStreamTrackFactory
     }
 
     /**
-     * Creates {@link MediaStreamTrackDesc}s from signaling params
+     * Creates {@link MediaSourceDesc}s from signaling params
      *
-     * will receive the created {@link MediaStreamTrackDesc}s.
+     * will receive the created {@link MediaSourceDesc}s.
      * @param sources The {@link List} of {@link SourcePacketExtension} that
      * describes the list of jingle sources.
      * @param sourceGroups The {@link List} of
      * {@link SourceGroupPacketExtension} that describes the list of jingle
      * source groups.
-     * @return an array of {@link MediaStreamTrackDesc} that are described in the
+     * @return an array of {@link MediaSourceDesc} that are described in the
      * jingle sources and source groups.
      */
-    public static MediaStreamTrackDesc[] createMediaStreamTracks(
+    public static MediaSourceDesc[] createMediaSources(
         Collection<SourcePacketExtension> sources,
         Collection<SourceGroupPacketExtension> sourceGroups)
     {
@@ -543,29 +543,29 @@ public class MediaStreamTrackFactory
             sources = new ArrayList<>();
         }
 
-        List<TrackSsrcs> trackSsrcsList = getTrackSsrcs(sources, finalSourceGroups);
-        List<MediaStreamTrackDesc> tracks = new ArrayList<>();
+        List<SourceSsrcs> sourceSsrcsList = getSourceSsrcs(sources, finalSourceGroups);
+        List<MediaSourceDesc> mediaSources = new ArrayList<>();
 
-        trackSsrcsList.forEach(trackSsrcs -> {
+        sourceSsrcsList.forEach(sourceSsrcs -> {
             // As of now, we only ever have 1 spatial layer per stream
             int numSpatialLayersPerStream = 1;
             int numTemporalLayersPerStream = 1;
-            if (trackSsrcs.size() > 1 && ENABLE_SVC)
+            if (sourceSsrcs.size() > 1 && ENABLE_SVC)
             {
                 numTemporalLayersPerStream = VP8_SIMULCAST_TEMPORAL_LAYERS;
             }
             Map<Long, SecondarySsrcs> secondarySsrcs
-                = getAllSecondarySsrcs(trackSsrcs, finalSourceGroups);
-            MediaStreamTrackDesc track
-                = createTrack(
-                        trackSsrcs,
+                = getAllSecondarySsrcs(sourceSsrcs, finalSourceGroups);
+            MediaSourceDesc mediaSource
+                = createSource(
+                        sourceSsrcs,
                         numSpatialLayersPerStream,
                         numTemporalLayersPerStream,
                         secondarySsrcs);
-            tracks.add(track);
+            mediaSources.add(mediaSource);
         });
 
-        return tracks.toArray(new MediaStreamTrackDesc[tracks.size()]);
+        return mediaSources.toArray(new MediaSourceDesc[mediaSources.size()]);
     }
 
     /**
@@ -634,29 +634,29 @@ public class MediaStreamTrackFactory
 
     /**
      * Describes one or more primary video ssrcs for a single
-     * {@link MediaStreamTrackDesc}
+     * {@link MediaSourceDesc}
      */
-    private static class TrackSsrcs
+    private static class SourceSsrcs
         implements Iterable<Long>
     {
-        private List<Long> trackSsrcs;
+        private List<Long> sourceSsrcs;
 
         private String owner;
 
         /**
-         * Initializes a new {@link TrackSsrcs} instance for a single SSRC.
+         * Initializes a new {@link SourceSsrcs} instance for a single SSRC.
          */
-        private TrackSsrcs(Long ssrc)
+        private SourceSsrcs(Long ssrc)
         {
             this(Collections.singletonList(ssrc));
         }
 
         /**
-         * Initializes a new {@link TrackSsrcs} instance for a list of SSRCs.
+         * Initializes a new {@link SourceSsrcs} instance for a list of SSRCs.
          */
-        public TrackSsrcs(List<Long> trackSsrcs)
+        public SourceSsrcs(List<Long> sourceSsrcs)
         {
-            this.trackSsrcs = trackSsrcs;
+            this.sourceSsrcs = sourceSsrcs;
         }
 
         /**
@@ -664,7 +664,7 @@ public class MediaStreamTrackFactory
          */
         public boolean contains(Long ssrc)
         {
-            return trackSsrcs.contains(ssrc);
+            return sourceSsrcs.contains(ssrc);
         }
 
         /**
@@ -672,7 +672,7 @@ public class MediaStreamTrackFactory
          */
         public int size()
         {
-            return trackSsrcs.size();
+            return sourceSsrcs.size();
         }
 
         /**
@@ -680,7 +680,7 @@ public class MediaStreamTrackFactory
          */
         public Long get(int index)
         {
-            return trackSsrcs.get(index);
+            return sourceSsrcs.get(index);
         }
 
         /**
@@ -689,45 +689,45 @@ public class MediaStreamTrackFactory
         @Override
         public Iterator<Long> iterator()
         {
-            return trackSsrcs.iterator();
+            return sourceSsrcs.iterator();
         }
     }
 
     /**
-     * Creates a single MediaStreamTrack with the given information
-     * @param primarySsrcs the set of primary video ssrcs belonging to this track
+     * Creates a single MediaSourceDesc with the given information
+     * @param primarySsrcs the set of primary video ssrcs belonging to this source
      * @param numSpatialLayersPerStream the number of spatial layers per stream
-     * for this track
+     * for this source
      * @param numTemporalLayersPerStream the number of temporal layers per stream
-     * for this track
+     * for this source
      * @param allSecondarySsrcs a map of primary ssrc -> SecondarySsrcs, which lists
      * the ssrc and type of all the secondary ssrcs for a given primary (e.g.
      * its corresponding rtx and fec ssrcs)
-     * @return the created MediaStreamTrack
+     * @return the created MediaSourceDesc
      */
-    private static MediaStreamTrackDesc createTrack(
-            TrackSsrcs primarySsrcs,
+    private static MediaSourceDesc createSource(
+            SourceSsrcs primarySsrcs,
             int numSpatialLayersPerStream,
             int numTemporalLayersPerStream,
             Map<Long, SecondarySsrcs> allSecondarySsrcs)
     {
-        int numEncodings
+        int numLayers
             = primarySsrcs.size()
                 * numSpatialLayersPerStream * numTemporalLayersPerStream;
-        RTPEncodingDesc[] rtpEncodings = new RTPEncodingDesc[numEncodings];
-        MediaStreamTrackDesc track
-            = new MediaStreamTrackDesc(rtpEncodings, primarySsrcs.owner);
+        RtpLayerDesc[] rtpLayers = new RtpLayerDesc[numLayers];
+        MediaSourceDesc source
+            = new MediaSourceDesc(rtpLayers, primarySsrcs.owner);
 
-        RTPEncodingDesc[] encodings
-            = createRTPEncodings(
-                    track, primarySsrcs,
+        RtpLayerDesc[] layers
+            = createRTPLayerDescs(
+                    source, primarySsrcs,
                     numSpatialLayersPerStream, numTemporalLayersPerStream,
                     allSecondarySsrcs);
-        assert(encodings.length <= numEncodings);
-        System.arraycopy(encodings, 0, rtpEncodings, 0, encodings.length);
+        assert(layers.length <= numLayers);
+        System.arraycopy(layers, 0, rtpLayers, 0, layers.length);
 
-        track.updateEncodingCache();
+        source.updateLayerCache();
 
-        return track;
+        return source;
     }
 }

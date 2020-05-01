@@ -30,7 +30,7 @@ import static org.junit.Assert.*;
 import static org.powermock.api.easymock.PowerMock.*;
 
 @RunWith(PowerMockRunner.class)
-public class MediaStreamTrackFactoryTest
+public class MediaSourceFactoryTest
 {
     private SourceGroupPacketExtension createGroup(
         String semantics, SourcePacketExtension... sources)
@@ -62,40 +62,40 @@ public class MediaStreamTrackFactoryTest
         verifyAll();
     }
 
-    // 1 video stream -> 1 track, 1 encoding
+    // 1 video stream -> 1 source, 1 encoding
     @Test
-    public void createMediaStreamTrack()
+    public void createMediaSource()
         throws Exception
     {
         replayAll();
 
         Whitebox.setInternalState(
-                MediaStreamTrackFactory.class, "ENABLE_SVC", false);
+                MediaSourceFactory.class, "ENABLE_SVC", false);
 
         long videoSsrc = 12345;
 
         SourcePacketExtension videoSource = createSource(videoSsrc);
 
-        MediaStreamTrackDesc[] tracks =
-            MediaStreamTrackFactory.createMediaStreamTracks(
+        MediaSourceDesc[] sources =
+            MediaSourceFactory.createMediaSources(
                 Collections.singletonList(videoSource), Collections.emptyList());
 
-        assertNotNull(tracks);
-        assertEquals(1, tracks.length);
-        MediaStreamTrackDesc track = tracks[0];
-        assertEquals(1, track.getRTPEncodings().length);
+        assertNotNull(sources);
+        assertEquals(1, sources.length);
+        MediaSourceDesc source = sources[0];
+        assertEquals(1, source.getRtpLayers().length);
     }
 
-    // 1 video stream, 1 rtx -> 1 track, 1 encoding
+    // 1 video stream, 1 rtx -> 1 source, 1 encoding
     @Test
-    public void createMediaStreamTracks1()
+    public void createMediaSources1()
         throws
         Exception
     {
         replayAll();
 
         Whitebox.setInternalState(
-                MediaStreamTrackFactory.class, "ENABLE_SVC", false);
+                MediaSourceFactory.class, "ENABLE_SVC", false);
 
         long videoSsrc = 12345;
         long rtxSsrc = 54321;
@@ -107,26 +107,26 @@ public class MediaStreamTrackFactoryTest
             = createGroup(
                 SourceGroupPacketExtension.SEMANTICS_FID, videoSource, rtx);
 
-        MediaStreamTrackDesc[] tracks =
-            MediaStreamTrackFactory.createMediaStreamTracks(
+        MediaSourceDesc[] sources =
+            MediaSourceFactory.createMediaSources(
                 Arrays.asList(videoSource, rtx), Arrays.asList(rtxGroup));
 
-        assertNotNull(tracks);
-        assertEquals(1, tracks.length);
-        MediaStreamTrackDesc track = tracks[0];
-        assertEquals(1, track.getRTPEncodings().length);
+        assertNotNull(sources);
+        assertEquals(1, sources.length);
+        MediaSourceDesc source = sources[0];
+        assertEquals(1, source.getRtpLayers().length);
     }
 
-    // 3 sim streams, 3 rtx -> 1 track, 3 encodings
+    // 3 sim streams, 3 rtx -> 1 source, 3 encodings
     @Test
-    public void createMediaStreamTracks2()
+    public void createMediaSources2()
         throws
         Exception
     {
         replayAll();
 
         Whitebox.setInternalState(
-                MediaStreamTrackFactory.class, "ENABLE_SVC", false);
+                MediaSourceFactory.class, "ENABLE_SVC", false);
 
         long videoSsrc1 = 12345;
         long videoSsrc2 = 23456;
@@ -158,21 +158,21 @@ public class MediaStreamTrackFactoryTest
             = createGroup(
                 SourceGroupPacketExtension.SEMANTICS_FID, videoSource3, rtx3);
 
-        MediaStreamTrackDesc[] tracks =
-            MediaStreamTrackFactory.createMediaStreamTracks(
+        MediaSourceDesc[] sources =
+            MediaSourceFactory.createMediaSources(
                 Arrays.asList(
                     videoSource1, videoSource2, videoSource3, rtx1, rtx2, rtx3),
                 Arrays.asList(simGroup, rtxGroup1, rtxGroup2, rtxGroup3));
 
-        assertNotNull(tracks);
-        assertEquals(1, tracks.length);
-        MediaStreamTrackDesc track = tracks[0];
-        assertEquals(3, track.getRTPEncodings().length);
+        assertNotNull(sources);
+        assertEquals(1, sources.length);
+        MediaSourceDesc source = sources[0];
+        assertEquals(3, source.getRtpLayers().length);
     }
 
-    // 3 sim streams, svc enabled, 3 rtx -> 1 track, 3 encodings
+    // 3 sim streams, svc enabled, 3 rtx -> 1 source, 3 encodings
     @Test
-    public void createMediaStreamTracks3()
+    public void createMediaSources3()
         throws
         Exception
     {
@@ -183,7 +183,7 @@ public class MediaStreamTrackFactoryTest
         // values are only read once for the entire test class (because the
         // fields are static)
         Whitebox.setInternalState(
-            MediaStreamTrackFactory.class, "ENABLE_SVC", true);
+            MediaSourceFactory.class, "ENABLE_SVC", true);
 
         long videoSsrc1 = 12345;
         long videoSsrc2 = 23456;
@@ -213,27 +213,27 @@ public class MediaStreamTrackFactoryTest
             = createGroup(
                 SourceGroupPacketExtension.SEMANTICS_FID, videoSource3, rtx3);
 
-        MediaStreamTrackDesc[] tracks =
-            MediaStreamTrackFactory.createMediaStreamTracks(
+        MediaSourceDesc[] sources =
+            MediaSourceFactory.createMediaSources(
                 Arrays.asList(
                     videoSource1, videoSource2, videoSource3, rtx1, rtx2, rtx3),
                 Arrays.asList(simGroup, rtxGroup1, rtxGroup2, rtxGroup3));
 
-        assertNotNull(tracks);
-        assertEquals(1, tracks.length);
-        MediaStreamTrackDesc track = tracks[0];
-        assertEquals(9, track.getRTPEncodings().length);
+        assertNotNull(sources);
+        assertEquals(1, sources.length);
+        MediaSourceDesc source = sources[0];
+        assertEquals(9, source.getRtpLayers().length);
     }
 
     // 3 sim streams with rtx, 1 stream with rtx, 1 stream without rtx
     @Test
-    public void createMediaStreamTracks4()
+    public void createMediaSources4()
         throws Exception
     {
         replayAll();
 
         Whitebox.setInternalState(
-            MediaStreamTrackFactory.class, "ENABLE_SVC", true);
+            MediaSourceFactory.class, "ENABLE_SVC", true);
 
         long videoSsrc1 = 12345;
         long videoSsrc2 = 23456;
@@ -274,19 +274,19 @@ public class MediaStreamTrackFactoryTest
             = createGroup(
             SourceGroupPacketExtension.SEMANTICS_FID, videoSource4, rtx4);
 
-        MediaStreamTrackDesc[] tracks =
-            MediaStreamTrackFactory.createMediaStreamTracks(
+        MediaSourceDesc[] sources =
+            MediaSourceFactory.createMediaSources(
                 Arrays.asList(
                     videoSource1, videoSource2, videoSource3, videoSource4,
                     videoSource5, rtx1, rtx2, rtx3, rtx4),
                 Arrays.asList(
                     simGroup, rtxGroup1, rtxGroup2, rtxGroup3, rtxGroup4));
 
-        assertNotNull(tracks);
-        assertEquals(3, tracks.length);
-        assertEquals(9, tracks[0].getRTPEncodings().length);
-        assertEquals(1, tracks[1].getRTPEncodings().length);
-        assertEquals(1, tracks[2].getRTPEncodings().length);
+        assertNotNull(sources);
+        assertEquals(3, sources.length);
+        assertEquals(9, sources[0].getRtpLayers().length);
+        assertEquals(1, sources[1].getRtpLayers().length);
+        assertEquals(1, sources[2].getRtpLayers().length);
     }
 
     @Test
@@ -302,16 +302,16 @@ public class MediaStreamTrackFactoryTest
             = createGroup(
             SourceGroupPacketExtension.SEMANTICS_SIMULCAST);
 
-        MediaStreamTrackDesc[] tracks =
-            MediaStreamTrackFactory.createMediaStreamTracks(
+        MediaSourceDesc[] sources =
+            MediaSourceFactory.createMediaSources(
                 Arrays.asList(
                     videoSource1),
                 Arrays.asList(simGroup));
 
-        assertNotNull(tracks);
-        assertEquals(1, tracks.length);
-        MediaStreamTrackDesc track = tracks[0];
-        assertEquals(1, track.getRTPEncodings().length);
+        assertNotNull(sources);
+        assertEquals(1, sources.length);
+        MediaSourceDesc source = sources[0];
+        assertEquals(1, source.getRtpLayers().length);
     }
 
     @Test
@@ -321,13 +321,13 @@ public class MediaStreamTrackFactoryTest
 
         SourcePacketExtension videoSource1 = createSource(null);
 
-        MediaStreamTrackDesc[] tracks =
-            MediaStreamTrackFactory.createMediaStreamTracks(
+        MediaSourceDesc[] sources =
+            MediaSourceFactory.createMediaSources(
                 Arrays.asList(videoSource1),
                 Collections.emptyList()
             );
 
-        assertNotNull(tracks);
-        assertEquals(0, tracks.length);
+        assertNotNull(sources);
+        assertEquals(0, sources.length);
     }
 }

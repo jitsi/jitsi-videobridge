@@ -36,8 +36,8 @@ import java.util.*;
  *
  * @author George Politis
  */
-public class VP8AdaptiveTrackProjectionContext
-    implements AdaptiveTrackProjectionContext
+public class VP8AdaptiveSourceProjectionContext
+    implements AdaptiveSourceProjectionContext
 {
     private final Logger logger;
 
@@ -68,7 +68,7 @@ public class VP8AdaptiveTrackProjectionContext
     /**
      * The VP8 media format. No essential functionality relies on this field,
      * it's only used as a cache of the {@link PayloadType} instance for VP8 in
-     * case we have to do a context switch (see {@link AdaptiveTrackProjection}),
+     * case we have to do a context switch (see {@link AdaptiveSourceProjection}),
      * in order to avoid having to resolve the format.
      */
     private final PayloadType payloadType;
@@ -79,14 +79,15 @@ public class VP8AdaptiveTrackProjectionContext
      * @param payloadType the VP8 media format.
      * @param rtpState the RTP state to begin with.
      */
-    public VP8AdaptiveTrackProjectionContext(
+    public VP8AdaptiveSourceProjectionContext(
             @NotNull DiagnosticContext diagnosticContext,
             @NotNull PayloadType payloadType,
             @NotNull RtpState rtpState,
             @NotNull Logger parentLogger)
     {
         this.diagnosticContext = diagnosticContext;
-        this.logger = parentLogger.createChildLogger(VP8AdaptiveTrackProjectionContext.class.getName());
+        this.logger = parentLogger.createChildLogger(
+            VP8AdaptiveSourceProjectionContext.class.getName());
         this.payloadType = payloadType;
         this.vp8QualityFilter = new VP8QualityFilter(parentLogger);
 
@@ -672,7 +673,7 @@ public class VP8AdaptiveTrackProjectionContext
         if (!(packetInfo.getPacket() instanceof Vp8Packet))
         {
             logger.info("Got a non-VP8 packet.");
-            throw new RewriteException("Non-VP8 packet in VP8 track projection");
+            throw new RewriteException("Non-VP8 packet in VP8 source projection");
         }
         Vp8Packet vp8Packet = packetInfo.packetAs();
 
@@ -680,7 +681,7 @@ public class VP8AdaptiveTrackProjectionContext
         {
             /* Should have been rejected in accept(). */
             logger.info("VP8 packet does not have picture ID, cannot track in frame map.");
-            throw new RewriteException("VP8 packet without picture ID in VP8 track projection");
+            throw new RewriteException("VP8 packet without picture ID in VP8 source projection");
         }
 
         VP8Frame vp8Frame = lookupVP8Frame(vp8Packet);
@@ -709,7 +710,7 @@ public class VP8AdaptiveTrackProjectionContext
         JSONObject debugState = new JSONObject();
         debugState.put(
                 "class",
-                VP8AdaptiveTrackProjectionContext.class.getSimpleName());
+                VP8AdaptiveSourceProjectionContext.class.getSimpleName());
 
         JSONArray mapSizes = new JSONArray();
         for (Map.Entry<Long, VP8FrameMap> entry: vp8FrameMaps.entrySet())

@@ -722,7 +722,7 @@ public class Conference
      *
      * @param endpoint the endpoint, or {@code null} if it was an Octo endpoint.
      */
-    public void endpointTracksChanged(AbstractEndpoint endpoint)
+    public void endpointSourcesChanged(AbstractEndpoint endpoint)
     {
         List<String> endpoints = speechActivity.getEndpointIds();
         endpointsCache.forEach((e) -> {

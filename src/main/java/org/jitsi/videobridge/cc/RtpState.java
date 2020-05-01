@@ -17,7 +17,7 @@ package org.jitsi.videobridge.cc;
 
 /**
  * This class represents the RTP state and is used in adaptive track context
- * switches (see {@link AdaptiveTrackProjection}).
+ * switches (see {@link AdaptiveSourceProjection}).
  *
  * @author George Politis
  */

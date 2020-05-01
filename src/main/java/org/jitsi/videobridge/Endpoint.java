@@ -1310,33 +1310,33 @@ public class Endpoint
     }
 
     /**
-     * Sets the media stream tracks.
-     * @param mediaStreamTracks
+     * Sets the media sources.
+     * @param mediaSources
      */
-    private void setMediaStreamTracks(MediaStreamTrackDesc[] mediaStreamTracks)
+    private void setMediaSources(MediaSourceDesc[] mediaSources)
     {
-        if (transceiver.setMediaStreamTracks(mediaStreamTracks))
+        if (transceiver.setMediaSources(mediaSources))
         {
-            getConference().endpointTracksChanged(this);
+            getConference().endpointSourcesChanged(this);
         }
     }
 
     /**
-     * Gets the media stream tracks for this endpoint.
+     * Gets the media sources for this endpoint.
      * @return
      */
     @Override
-    public MediaStreamTrackDesc[] getMediaStreamTracks()
+    public MediaSourceDesc[] getMediaSources()
     {
-        return transceiver.getMediaStreamTracks();
+        return transceiver.getMediaSources();
     }
 
     /**
-     * Re-creates this endpoint's media stream tracks based on the sources
+     * Re-creates this endpoint's media sources based on the sources
      * and source groups that have been signaled.
      */
     @Override
-    public void recreateMediaStreamTracks()
+    public void recreateMediaSources()
     {
         final Supplier<Stream<ChannelShim>> videoChannels = () -> channelShims
             .stream()
@@ -1357,11 +1357,11 @@ public class Endpoint
             .collect(Collectors.toList());
 
         if (!sources.isEmpty() || !sourceGroups.isEmpty()) {
-            MediaStreamTrackDesc[] tracks =
-                MediaStreamTrackFactory.createMediaStreamTracks(
+            MediaSourceDesc[] mediaSources =
+                MediaSourceFactory.createMediaSources(
                     sources,
                     sourceGroups);
-            setMediaStreamTracks(tracks);
+            setMediaSources(mediaSources);
         }
     }
 
