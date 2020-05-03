@@ -10,6 +10,8 @@ if [[ "$1" == "--help"  || $# -lt 1 ]]; then
     echo -e "\t--subdomain=SUBDOMAIN\t sets the sub-domain used to bind JVB XMPP component (default: jitsi-videobridge)"
     echo -e "\t--apis=APIS where APIS is a comma separated list of APIs to enable. Currently supported APIs are 'xmpp' and 'rest'. The default is 'xmpp'."
     echo
+    echo -e "\tSECRET can alternatively be set via the environment variable JVB_SECRET."
+    echo
     exit 1
 fi
 

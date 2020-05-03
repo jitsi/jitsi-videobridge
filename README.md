@@ -30,3 +30,5 @@ JVB_HOME="The path to your JVB clone."
 
 mvn compile exec:exec -Dexec.executable=java -Dexec.args="-cp %classpath org.jitsi.videobridge.Main --domain=\"${DOMAIN}\" --host=\"${HOST}\" --port=\"${PORT}\" --secret=\"${SECRET}\" -Djava.library.path=$JVB_HOME/lib/native/linux-64 -Djava.util.logging.config.file=$JVB_HOME/lib/logging.properties -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=.jitsi-videobridge "
 ```
+
+NB: SECRET can alternatively be set via the environment variable JVB_SECRET, which prevents it showing up in a process listing.

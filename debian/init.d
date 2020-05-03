@@ -39,7 +39,7 @@ fi
 if [ ! $JVB_HOST ]; then
     JVB_HOST=localhost
 fi
-DAEMON_OPTS=" --host=$JVB_HOST --domain=$JVB_HOSTNAME --port=$JVB_PORT --secret=$JVB_SECRET $JVB_OPTS"
+DAEMON_OPTS=" --host=$JVB_HOST --domain=$JVB_HOSTNAME --port=$JVB_PORT $JVB_OPTS"
 
 if [ ! -x $DAEMON ] ;then
   echo "Daemon not executable: $DAEMON"
@@ -74,6 +74,7 @@ start() {
         AUTHBIND_CMD="/usr/bin/authbind --deep /bin/bash -c "
         DAEMON_START_CMD="'$DAEMON_START_CMD'"
     fi
+    export JVB_SECRET
     start-stop-daemon --start --quiet --background --chuid $USER --make-pidfile --pidfile $PIDFILE \
         --exec /bin/bash -- -c "$AUTHBIND_CMD $DAEMON_START_CMD"
     echo "$NAME started."
