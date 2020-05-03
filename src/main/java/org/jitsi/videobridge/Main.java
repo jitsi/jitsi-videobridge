@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import org.jitsi.cmd.*;
 import org.jitsi.config.*;
 import org.jitsi.meet.*;
+import org.jitsi.utils.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.xmpp.*;
 
@@ -78,9 +79,18 @@ public class Main
     /**
      * The name of the command-line argument which specifies the secret key for
      * the sub-domain of the Jabber component implemented by this application
-     * with which it is to authenticate to the XMPP server to connect to.
+     * with which it is to authenticate to the XMPP server to connect to. This
+     * secret can alternatively be specified using an environment variable; see
+     * {@link #SECRET_ENV_NAME}.
      */
     private static final String SECRET_ARG_NAME = "--secret";
+
+    /**
+     * The name of the environment variable which, when set and not an empty
+     * string, acts as an alternative to the command-line argument named by
+     * {@link #SECRET_ARG_NAME}.
+     */
+    private static final String SECRET_ENV_NAME = "JVB_SECRET";
 
     /**
      * The name of the command-line argument which specifies sub-domain name for
@@ -109,6 +119,12 @@ public class Main
         String domain = cmdLine.getOptionValue(DOMAIN_ARG_NAME, null);
         int port = cmdLine.getIntOptionValue(PORT_ARG_NAME, PORT_ARG_VALUE);
         String secret = cmdLine.getOptionValue(SECRET_ARG_NAME, "");
+        String envSecret = System.getenv(SECRET_ENV_NAME);
+        if (StringUtils.isNullOrEmpty(secret)
+            && !StringUtils.isNullOrEmpty(envSecret))
+        {
+            secret = envSecret;
+        }
         String subdomain
             = cmdLine.getOptionValue(
                     SUBDOMAIN_ARG_NAME, ComponentImpl.SUBDOMAIN);
