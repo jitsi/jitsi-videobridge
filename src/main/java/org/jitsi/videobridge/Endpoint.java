@@ -1625,15 +1625,6 @@ public class Endpoint
     }
 
     /**
-     * @return this {@link Endpoint}'s bitrate controller
-     */
-    @NotNull
-    public BitrateController getBitrateController()
-    {
-        return bitrateController;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
