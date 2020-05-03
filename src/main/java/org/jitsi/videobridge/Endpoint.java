@@ -315,6 +315,11 @@ public class Endpoint
                     forwardedEndpoints,
                     endpointsEnteringLastN,
                     conferenceEndpoints);
+
+                notifyForwardedEndpointsChanged(
+                    forwardedEndpoints,
+                    endpointsEnteringLastN,
+                    conferenceEndpoints);
             }
         });
 
@@ -1143,8 +1148,6 @@ public class Endpoint
             forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints);
 
         sendMessage(msg);
-
-        notifyForwardedEndpointsChanged(forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints);
     }
 
     /**
