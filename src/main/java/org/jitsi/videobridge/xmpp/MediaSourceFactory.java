@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.xmpp;
 
+import org.jitsi.nlj.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.xmpp.extensions.colibri.*;
