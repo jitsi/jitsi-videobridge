@@ -112,6 +112,7 @@ class OctoEndpoint(
         if (super.isExpired()) {
             return
         }
+        super.expire()
         transceiver.stop()
         logger.debug { transceiver.getNodeStats().prettyPrint() }
         conference.tentacle.removeHandler(id, this)
