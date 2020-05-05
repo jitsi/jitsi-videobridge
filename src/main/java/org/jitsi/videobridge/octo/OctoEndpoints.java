@@ -147,7 +147,14 @@ import java.util.stream.*;
 
          sourcesByOwner.forEach((epId, epTracks) -> {
              OctoEndpoint ep = (OctoEndpoint)conference.getEndpoint(epId);
-             ep.setMediaSources(epTracks.toArray(new MediaSourceDesc[0]));
+             if (ep != null)
+             {
+                 ep.setMediaSources(epTracks.toArray(new MediaSourceDesc[0]));
+             }
+             else
+             {
+                 logger.error("Error finding endpoint " + epId);
+             }
          });
      }
 
