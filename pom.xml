@@ -8,6 +8,7 @@
   <name>jitsi-videobridge</name>
   <url>https://github.com/jitsi/jitsi-videobridge</url>
   <properties>
+    <java.version>1.8</java.version>
     <assembly.skipAssembly>false</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
     <jetty.version>9.4.15.v20190215</jetty.version>
