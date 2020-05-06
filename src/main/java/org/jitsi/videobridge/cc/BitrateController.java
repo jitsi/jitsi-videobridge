@@ -832,6 +832,10 @@ public class BitrateController
             System.arraycopy(newRatedTargetIndices, 0,
                 oldRatedTargetIndices, 0, oldRatedTargetIndices.length);
 
+            /* Have all selected tracks been improved to at least their
+               preferred index? */
+            boolean allSelectedSatisifed = true;
+
             int newStateLen = 0;
             for (int i = 0; i < trackBitrateAllocations.length; i++)
             {
@@ -847,8 +851,14 @@ public class BitrateController
                     break;
                 }
 
+                if (!allSelectedSatisifed && !trackBitrateAllocation.selected)
+                {
+                    // We satisfy selected tracks first.
+                    break;
+                }
+
                 maxBandwidth += trackBitrateAllocation.getTargetBitrate();
-                trackBitrateAllocation.improve(maxBandwidth);
+                trackBitrateAllocation.improve(maxBandwidth, i == 0);
                 maxBandwidth -= trackBitrateAllocation.getTargetBitrate();
 
                 newRatedTargetIndices[i]
@@ -858,10 +868,11 @@ public class BitrateController
                     newStateLen++;
                 }
 
-                if (trackBitrateAllocation.ratedTargetIdx
-                    < trackBitrateAllocation.ratedPreferredIdx)
+                if (trackBitrateAllocation.selected &&
+                    (trackBitrateAllocation.ratedTargetIdx
+                    < trackBitrateAllocation.ratedPreferredIdx))
                 {
-                    break;
+                    allSelectedSatisifed = false;
                 }
             }
 
@@ -1419,40 +1430,26 @@ public class BitrateController
          * @param maxBps the maximum bitrate (in bps) that the target subjective
          * quality can have.
          */
-        private void improve(long maxBps)
+        private void improve(long maxBps, boolean first)
         {
             if (ratedIndices.length == 0)
             {
                 return;
             }
 
-            if (ratedTargetIdx == -1 && selected)
+            // Try the next element in the ratedIndices array.
+            if (ratedTargetIdx + 1 < ratedIndices.length
+                && ratedIndices[ratedTargetIdx + 1].bps < maxBps)
             {
-                if (!Config.enableOnstageVideoSuspend())
-                {
-                    ratedTargetIdx = 0;
-                    oversending = ratedIndices[0].bps > maxBps;
-                }
-
-                // Boost on stage participant to 360p, if there's enough bw.
-                for (int i = ratedTargetIdx + 1; i < ratedIndices.length; i++)
-                {
-                    if (i > ratedPreferredIdx || maxBps < ratedIndices[i].bps)
-                    {
-                        break;
-                    }
-
-                    ratedTargetIdx = i;
-                }
+                ratedTargetIdx++;
             }
-            else
+            else if (first && selected && ratedTargetIdx == -1 &&
+                !Config.enableOnstageVideoSuspend())
             {
-                // Try the next element in the ratedIndices array.
-                if (ratedTargetIdx + 1 < ratedIndices.length
-                    && ratedIndices[ratedTargetIdx + 1].bps < maxBps)
-                {
-                    ratedTargetIdx++;
-                }
+                // if onstageVideoSuspend isn't set, then enable the first
+                // selected source even if there isn't enough bandwidth for it.
+                ratedTargetIdx = 0;
+                oversending = true;
             }
 
             if (ratedTargetIdx > -1)
