@@ -200,7 +200,7 @@ public class MediaSourceFactory
                     int spatialId = spatialLen > 1 ? spatialIdx : -1;
 
                     rtpLayers[idx]
-                        = new RtpLayerDesc(source, idx,
+                        = new RtpLayerDesc(idx,
                         primary.get(streamIdx),
                         temporalId, spatialId, height, frameRate, dependencies);
                     SecondarySsrcs ssrcSecondarySsrcs
