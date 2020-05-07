@@ -952,6 +952,7 @@ public class Endpoint
                 }
                 catch (InterruptedException e)
                 {
+                    Thread.currentThread().interrupt();
                     break;
                 }
 

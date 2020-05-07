@@ -733,6 +733,7 @@ public class Videobridge
                     }
                     catch (InterruptedException e)
                     {
+                        Thread.currentThread().interrupt();
                         throw new RuntimeException(e);
                     }
                 }, "ForceShutdownThread").start();
