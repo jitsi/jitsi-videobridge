@@ -122,7 +122,7 @@ public class AdaptiveSourceProjection
         Logger parentLogger
     )
     {
-        targetSsrc = source.getRtpLayers()[0].getPrimarySSRC();
+        targetSsrc = source.getPrimarySSRC();
         this.diagnosticContext = diagnosticContext;
         this.payloadTypes = payloadTypes;
         this.parentLogger = parentLogger;

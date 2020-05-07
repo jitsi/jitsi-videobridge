@@ -415,7 +415,7 @@ public class BitrateController
     /**
      * Get a snapshot of the following data:
      * 1) The current target bitrate we're trying to send across our sources
-     * 2) The idea bitrate we could possibly send, given our sources
+     * 2) The ideal bitrate we could possibly send, given our sources
      * 3) The ssrcs we're currently forwarding
      * @return the snapshot containing that info
      */
@@ -434,11 +434,11 @@ public class BitrateController
             .filter(e -> !destinationEndpoint.equals(e))
             .map(AbstractEndpoint::getMediaSources)
             .flatMap(Arrays::stream)
-            .filter(t -> t.getRtpLayers().length > 0)
+            .filter(MediaSourceDesc::hasRtpLayers)
             .collect(Collectors.toList()))
         {
 
-            long primarySsrc = incomingSource.getRtpLayers()[0].getPrimarySSRC();
+            long primarySsrc = incomingSource.getPrimarySSRC();
             AdaptiveSourceProjection adaptiveSourceProjection
                 = adaptiveSourceProjectionMap.getOrDefault(primarySsrc, null);
 
@@ -756,10 +756,7 @@ public class BitrateController
                 return adaptiveSourceProjection;
             }
 
-            RtpLayerDesc[] rtpLayers
-                = sourceBitrateAllocation.source.getRtpLayers();
-
-            if (ArrayUtils.isNullOrEmpty(rtpLayers))
+            if (!sourceBitrateAllocation.source.hasRtpLayers())
             {
                 return null;
             }
@@ -785,8 +782,11 @@ public class BitrateController
             logger.debug(() -> "new source projection for " + sourceBitrateAllocation.source);
 
             // Route all layers to the specified bitrate controller.
-            for (RtpLayerDesc rtpLayer : rtpLayers)
+            int i;
+            for (i = 0; i < sourceBitrateAllocation.source.numRtpLayers(); i++)
             {
+                // TODO: should use encodings
+                RtpLayerDesc rtpLayer = sourceBitrateAllocation.source.getRtpLayerByQualityIdx(i);
                 adaptiveSourceProjectionMap.put(
                     rtpLayer.getPrimarySSRC(), adaptiveSourceProjection);
             }
@@ -1308,24 +1308,13 @@ public class BitrateController
             this.fitsInLastN = fitsInLastN;
             this.source = source;
 
-            RtpLayerDesc[] layers;
             if (source == null)
             {
                 this.targetSSRC = -1;
-                layers = null;
             }
             else
             {
-                layers = source.getRtpLayers();
-
-                if (ArrayUtils.isNullOrEmpty(layers))
-                {
-                    this.targetSSRC = -1;
-                }
-                else
-                {
-                    this.targetSSRC = layers[0].getPrimarySSRC();
-                }
+                this.targetSSRC = source.getPrimarySSRC();
             }
 
             if (targetSSRC == -1 || !fitsInLastN)
@@ -1345,8 +1334,11 @@ public class BitrateController
             // 180p@15fps and 180p@7.5fps
             int ratedPreferredIdx = 0;
             long idealBps = 0;
-            for (RtpLayerDesc layer : layers)
+            int i;
+            // TODO: add some iterator-based accessor?
+            for (i = 0; i < source.numRtpLayers(); i++)
             {
+                RtpLayerDesc layer = source.getRtpLayerByQualityIdx(i);
                 if (maxFrameHeight >= 0 && layer.getHeight() > maxFrameHeight)
                 {
                     continue;

@@ -83,7 +83,7 @@ public class MediaSourceFactoryTest
         assertNotNull(sources);
         assertEquals(1, sources.length);
         MediaSourceDesc source = sources[0];
-        assertEquals(1, source.getRtpLayers().length);
+        assertEquals(1, source.numRtpLayers());
     }
 
     // 1 video stream, 1 rtx -> 1 source, 1 encoding
@@ -114,7 +114,7 @@ public class MediaSourceFactoryTest
         assertNotNull(sources);
         assertEquals(1, sources.length);
         MediaSourceDesc source = sources[0];
-        assertEquals(1, source.getRtpLayers().length);
+        assertEquals(1, source.numRtpLayers());
     }
 
     // 3 sim streams, 3 rtx -> 1 source, 3 encodings
@@ -167,7 +167,7 @@ public class MediaSourceFactoryTest
         assertNotNull(sources);
         assertEquals(1, sources.length);
         MediaSourceDesc source = sources[0];
-        assertEquals(3, source.getRtpLayers().length);
+        assertEquals(3, source.numRtpLayers());
     }
 
     // 3 sim streams, svc enabled, 3 rtx -> 1 source, 3 encodings
@@ -222,7 +222,7 @@ public class MediaSourceFactoryTest
         assertNotNull(sources);
         assertEquals(1, sources.length);
         MediaSourceDesc source = sources[0];
-        assertEquals(9, source.getRtpLayers().length);
+        assertEquals(9, source.numRtpLayers());
     }
 
     // 3 sim streams with rtx, 1 stream with rtx, 1 stream without rtx
@@ -284,9 +284,9 @@ public class MediaSourceFactoryTest
 
         assertNotNull(sources);
         assertEquals(3, sources.length);
-        assertEquals(9, sources[0].getRtpLayers().length);
-        assertEquals(1, sources[1].getRtpLayers().length);
-        assertEquals(1, sources[2].getRtpLayers().length);
+        assertEquals(9, sources[0].numRtpLayers());
+        assertEquals(1, sources[1].numRtpLayers());
+        assertEquals(1, sources[2].numRtpLayers());
     }
 
     @Test
@@ -311,7 +311,7 @@ public class MediaSourceFactoryTest
         assertNotNull(sources);
         assertEquals(1, sources.length);
         MediaSourceDesc source = sources[0];
-        assertEquals(1, source.getRtpLayers().length);
+        assertEquals(1, source.numRtpLayers());
     }
 
     @Test
