@@ -170,23 +170,15 @@ public class BitrateController
             = Collections.emptyList();
 
     /**
-     * The maximum frame height, in pixels, the endpoint with which this
-     * {@link BitrateController} is willing to receive.  -1 means there
-     * is no maximum.
+     * The global constraints that override per-endpoint constraints.
      */
-    private int maxRxFrameHeightPx = -1;
+    private Constraints globalConstraints;
 
     /**
-     * The IDs of the endpoints which have been selected by the endpoint to
-     * which this {@link BitrateController} belongs.
+     * The list of endpoint constraints to respect when allocating bandwidth,
+     * sorted by ideal height.
      */
-    private Set<String> selectedEndpointIds = Collections.emptySet();
-
-    /**
-     * The IDs of the endpoints which have been pinned by the endpoint to which
-     * this {@link BitrateController} belongs.
-     */
-    private Set<String> pinnedEndpointIds = Collections.emptySet();
+    private List<EndpointConstraints> endpointConstraintsByHeight = Collections.EMPTY_LIST;
 
     /**
      * The last-n value for the endpoint to which this {@link BitrateController}
@@ -364,9 +356,8 @@ public class BitrateController
         debugState.put("forwardedEndpoints", forwardedEndpointIds.toString());
         debugState.put("trustBwe", Config.trustBwe());
         debugState.put("lastBwe", lastBwe);
-        debugState.put("maxRxFrameHeightPx", maxRxFrameHeightPx);
-        debugState.put("selectedEndpointIds", selectedEndpointIds.toString());
-        debugState.put("pinnedEndpointIds", pinnedEndpointIds.toString());
+        debugState.put("globalConstraints", globalConstraints);
+        debugState.put("endpointConstraints", Arrays.toString(endpointConstraintsByHeight.toArray()));
         debugState.put("lastN", lastN);
         debugState.put("supportsRtx", supportsRtx);
         JSONObject adaptiveTrackProjectionsJson = new JSONObject();
@@ -384,6 +375,16 @@ public class BitrateController
             "numDroppedPacketsUnknownSsrc",
             numDroppedPacketsUnknownSsrc.intValue());
         return debugState;
+    }
+
+    public void setEndpointConstraints(Set<EndpointConstraints> newEndpointConstraints)
+    {
+        // TODO sort by height and assign
+    }
+
+    public void setGlobalConstraints(Constraints newGlobalConstraints)
+    {
+        this.globalConstraints = newGlobalConstraints;
     }
 
     /**
@@ -626,7 +627,9 @@ public class BitrateController
             for (TrackBitrateAllocation
                 trackBitrateAllocation : trackBitrateAllocations)
             {
-                conferenceEndpointIds.add(trackBitrateAllocation.endpointID);
+                String  endpointID = trackBitrateAllocation.endpointConstraints.getEndpointId();
+
+                conferenceEndpointIds.add(endpointID);
 
                 int trackTargetIdx = trackBitrateAllocation.getTargetIndex(),
                     trackIdealIdx = trackBitrateAllocation.getIdealIndex();
@@ -661,14 +664,14 @@ public class BitrateController
                             .addField("target_idx", trackTargetIdx)
                             .addField("ideal_idx", trackIdealIdx)
                             .addField("target_bps", trackTargetBps)
-                            .addField("selected",
-                                trackBitrateAllocation.selected)
+                            .addField("endpointConstraints",
+                                trackBitrateAllocation.endpointConstraints)
                             .addField("oversending",
                                 trackBitrateAllocation.oversending)
                             .addField("preferred_idx",
                                 trackBitrateAllocation.getPreferredIndex())
                             .addField("remote_endpoint_id",
-                                trackBitrateAllocation.endpointID)
+                                endpointID)
                             .addField("ideal_bps", trackIdealBps));
                     }
                 }
@@ -676,12 +679,12 @@ public class BitrateController
                 if (trackTargetIdx > -1)
                 {
                     newForwardedEndpointIds
-                        .add(trackBitrateAllocation.endpointID);
+                        .add(endpointID);
                     if (!oldForwardedEndpointIds
-                        .contains(trackBitrateAllocation.endpointID))
+                        .contains(endpointID))
                     {
                         endpointsEnteringLastNIds
-                            .add(trackBitrateAllocation.endpointID);
+                            .add(endpointID);
                     }
                 }
             }
@@ -770,7 +773,7 @@ public class BitrateController
             // but a reference persists in the adaptiveTrackProjectionMap). We're
             // creating local final variables and pass that to the lambda function
             // in order to avoid that.
-            final String endpointID = trackBitrateAllocation.endpointID;
+            final String endpointID = trackBitrateAllocation.endpointConstraints.getEndpointId();
             final long targetSSRC = trackBitrateAllocation.targetSSRC;
             adaptiveTrackProjection
                 = new AdaptiveTrackProjection(
@@ -926,27 +929,28 @@ public class BitrateController
         {
             logger.debug("Prioritizing endpoints, adjusted last-n: " + adjustedLastN +
                 ", sorted endpoint list: " +
-                conferenceEndpoints.stream().map(AbstractEndpoint::getID).collect(Collectors.joining(", ")) +
-                ". Selected endpoints: " + String.join(", ", selectedEndpointIds) +
-                ". Pinned endpoints: " + String.join(", ", pinnedEndpointIds));
+                conferenceEndpoints.stream().map(AbstractEndpoint::getID).collect(Collectors.joining(", ")));
         }
 
         int endpointPriority = 0;
 
-        // First, bubble-up the selected endpoints (whoever's on-stage needs to
-        // be visible).
-        for (Iterator<AbstractEndpoint> it = conferenceEndpoints.iterator();
-             it.hasNext() && endpointPriority < adjustedLastN;)
+        // We first deal with "selected" endpoints (i.e. endpoints that have
+        // 720p ideal height), then with "pinned" endpoints (i.e. are those that
+        // have 180p ideal height).
+
+        for (EndpointConstraints endpointConstraints : endpointConstraintsByHeight)
         {
-            AbstractEndpoint sourceEndpoint = it.next();
+            // TODO this block needs to be factored out.
+            AbstractEndpoint sourceEndpoint = destinationEndpoint
+                .getConference().getEndpoint(endpointConstraints.getEndpointId());
+
             if (sourceEndpoint.isExpired()
-                    || sourceEndpoint.getID().equals(destinationEndpoint.getID())
-                    || !selectedEndpointIds.contains(sourceEndpoint.getID()))
+                || sourceEndpoint.getID().equals(destinationEndpoint.getID()))
             {
-                logger.trace(() -> "Endpoint " + sourceEndpoint.getID() + " is expired, is this destination, or " +
-                    "is not selected; ignoring");
                 continue;
             }
+
+            boolean forwarded = endpointPriority < adjustedLastN;
 
             MediaStreamTrackDesc[] tracks
                 = sourceEndpoint.getMediaStreamTracks();
@@ -956,59 +960,12 @@ public class BitrateController
                 for (MediaStreamTrackDesc track : tracks)
                 {
                     trackBitrateAllocations.add(
-                        endpointPriority,
-                        new TrackBitrateAllocation(
-                            sourceEndpoint,
-                            track,
-                            true /* fitsInLastN */,
-                            true /* selected */,
-                            maxRxFrameHeightPx));
+                        endpointPriority, new TrackBitrateAllocation(
+                            track, endpointConstraints, forwarded));
                 }
-                logger.trace(() -> "Adding selected endpoint " + sourceEndpoint.getID() + " to allocations");
 
+                logger.trace(() -> "Adding endpoint " + sourceEndpoint.getID() + " to allocations");
                 endpointPriority++;
-            }
-
-            it.remove();
-        }
-
-        // Then, bubble-up the pinned endpoints.
-        if (!pinnedEndpointIds.isEmpty())
-        {
-            for (Iterator<AbstractEndpoint> it = conferenceEndpoints.iterator();
-                 it.hasNext() && endpointPriority < adjustedLastN;)
-            {
-                AbstractEndpoint sourceEndpoint = it.next();
-                if (sourceEndpoint.isExpired()
-                    || sourceEndpoint.getID().equals(destinationEndpoint.getID())
-                    || !pinnedEndpointIds.contains(sourceEndpoint.getID()))
-                {
-                    logger.trace(() -> "Endpoint " + sourceEndpoint.getID() + " is expired, is this destination, or " +
-                        "is not pinned; ignoring");
-                    continue;
-                }
-
-                MediaStreamTrackDesc[] tracks
-                    = sourceEndpoint.getMediaStreamTracks();
-
-                if (!ArrayUtils.isNullOrEmpty(tracks))
-                {
-                    for (MediaStreamTrackDesc track : tracks)
-                    {
-                        trackBitrateAllocations.add(
-                            endpointPriority, new TrackBitrateAllocation(
-                                sourceEndpoint,
-                                track,
-                                true /* fitsInLastN */,
-                                false /* selected */,
-                                maxRxFrameHeightPx));
-                    }
-
-                    logger.trace(() -> "Adding pinned endpoint " + sourceEndpoint.getID() + " to allocations");
-                    endpointPriority++;
-                }
-
-                it.remove();
             }
         }
 
@@ -1034,9 +991,7 @@ public class BitrateController
                     {
                         trackBitrateAllocations.add(
                             endpointPriority, new TrackBitrateAllocation(
-                                sourceEndpoint, track,
-                                forwarded, false /* selected */,
-                                maxRxFrameHeightPx));
+                                track, globalConstraints.toEndpointConstraints(sourceEndpoint.getID()), forwarded));
                     }
 
                     logger.trace(() -> "Adding endpoint " + sourceEndpoint.getID() + " to allocations");
@@ -1046,55 +1001,6 @@ public class BitrateController
         }
 
         return trackBitrateAllocations.toArray(new TrackBitrateAllocation[0]);
-    }
-
-    /**
-     * Set the max receive frame height, in pixels, the endpoint to which this
-     * {@link BitrateController} belongs is willing to receive
-     * @param maxRxFrameHeightPx the max frame height, in pixels
-     */
-    public void setMaxRxFrameHeightPx(int maxRxFrameHeightPx)
-    {
-        if (this.maxRxFrameHeightPx != maxRxFrameHeightPx)
-        {
-            this.maxRxFrameHeightPx = maxRxFrameHeightPx;
-
-            logger.debug(() -> "setting max receive frame height to " +
-                    + maxRxFrameHeightPx + "px, updating");
-
-            update();
-        }
-    }
-
-    /**
-     * Set the endpoint IDs the endpoint to which this
-     * {@link BitrateController} belongs has selected
-     *
-     * @param selectedEndpointIds the endpoint IDs the endpoint to which this
-     * {@link BitrateController} belongs has selected
-     */
-    public void setSelectedEndpointIds(Set<String> selectedEndpointIds)
-    {
-        if (!this.selectedEndpointIds.equals(selectedEndpointIds))
-        {
-            this.selectedEndpointIds = new HashSet<>(selectedEndpointIds);
-            update();
-        }
-    }
-
-    /**
-     * Set the endpoint IDs the endpoint to which this
-     * {@link BitrateController} belongs has pinned
-     * @param pinnedEndpointIds the endpoint IDs the endpoint to which this
-     *                            {@link BitrateController} belongs has pinned
-     */
-    public void setPinnedEndpointIds(Set<String> pinnedEndpointIds)
-    {
-        if (!this.pinnedEndpointIds.equals(pinnedEndpointIds))
-        {
-            this.pinnedEndpointIds = new HashSet<>(pinnedEndpointIds);
-            update();
-        }
     }
 
     /**
@@ -1219,11 +1125,6 @@ public class BitrateController
     private class TrackBitrateAllocation
     {
         /**
-         * The ID of the {@link Endpoint} that this instance pertains to.
-         */
-        private final String endpointID;
-
-        /**
          * Indicates whether this {@link Endpoint} is forwarded or not to the
          * {@link Endpoint} that owns this {@link BitrateController}.
          */
@@ -1233,7 +1134,7 @@ public class BitrateController
          * Indicates whether this {@link Endpoint} is on-stage/selected or not
          * at the {@link Endpoint} that owns this {@link BitrateController}.
          */
-        private final boolean selected;
+        private final EndpointConstraints endpointConstraints;
 
         /**
          * Helper field that keeps the SSRC of the target stream.
@@ -1299,11 +1200,11 @@ public class BitrateController
          * selected.
          */
         private TrackBitrateAllocation(
-            AbstractEndpoint endpoint, MediaStreamTrackDesc track,
-            boolean fitsInLastN, boolean selected, int maxFrameHeight)
+            MediaStreamTrackDesc track,
+            EndpointConstraints endpointConstraints,
+            boolean fitsInLastN)
         {
-            this.endpointID = endpoint.getID();
-            this.selected = selected;
+            this.endpointConstraints = endpointConstraints;
             this.fitsInLastN = fitsInLastN;
             this.track = track;
 
@@ -1346,10 +1247,13 @@ public class BitrateController
             long idealBps = 0;
             for (RTPEncodingDesc encoding : encodings)
             {
-                if (maxFrameHeight >= 0 && encoding.getHeight() > maxFrameHeight)
+                int idealHeight = endpointConstraints.getIdealHeight();
+                if (idealHeight >= 0 && encoding.getHeight() > idealHeight)
                 {
                     continue;
                 }
+
+                boolean selected = idealHeight >= 720;
                 if (selected)
                 {
                     // For the selected participant we favor frame rate over
@@ -1393,7 +1297,7 @@ public class BitrateController
             {
                 DiagnosticContext.TimeSeriesPoint ratesTimeSeriesPoint
                     = diagnosticContext.makeTimeSeriesPoint("calculated_rates")
-                    .addField("remote_endpoint_id", endpointID);
+                    .addField("remote_endpoint_id", endpointConstraints.getEndpointId());
                 for (RateSnapshot rateSnapshot : ratesList) {
                     ratesTimeSeriesPoint.addField(
                         Integer.toString(rateSnapshot.encoding.getIndex()),
@@ -1426,6 +1330,7 @@ public class BitrateController
                 return;
             }
 
+            boolean selected = endpointConstraints.getIdealHeight() >= 0;
             if (ratedTargetIdx == -1 && selected)
             {
                 if (!Config.enableOnstageVideoSuspend())

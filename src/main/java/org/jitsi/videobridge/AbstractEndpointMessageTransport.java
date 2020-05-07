@@ -19,11 +19,11 @@ import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.util.*;
-import org.jitsi.videobridge.websocket.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
 import java.util.*;
+import java.util.stream.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
@@ -52,6 +52,8 @@ public abstract class AbstractEndpointMessageTransport
      * information.
      */
     protected final @NotNull Logger logger;
+    private Stream<EndpointConstraints> pinnedEndpointConstraintsStream;
+    private Stream<EndpointConstraints> selectedEndpointConstraintsStream;
 
     /**
      * Initializes a new {@link AbstractEndpointMessageTransport} instance.
@@ -390,9 +392,17 @@ public abstract class AbstractEndpointMessageTransport
      * {@code PinnedEndpointChangedEvent} which has been received.
      * @param newPinnedEndpoints the new pinned endpoints
      */
-    protected abstract void onPinnedEndpointsChangedEvent(
+    protected void onPinnedEndpointsChangedEvent(
         JSONObject jsonObject,
-        Set<String> newPinnedEndpoints);
+        Set<String> newPinnedEndpoints)
+    {
+        // Note that this captures the set.
+        pinnedEndpointConstraintsStream = newPinnedEndpoints
+            .stream()
+            .map(EndpointConstraints::makePinnedEndpointConstraints);
+
+        onEndpointConstraintsChangedEvent();
+    }
 
     /**
      * Notifies local or remote endpoints that a selected event has been received.
@@ -403,9 +413,27 @@ public abstract class AbstractEndpointMessageTransport
      * {@code SelectedEndpointChangedEvent} which has been received.
      * @param newSelectedEndpoints the new selected endpoints
      */
-    protected abstract void onSelectedEndpointsChangedEvent(
+    protected void onSelectedEndpointsChangedEvent(
         JSONObject jsonObject,
-        Set<String> newSelectedEndpoints);
+        Set<String> newSelectedEndpoints)
+    {
+        selectedEndpointConstraintsStream
+            = newSelectedEndpoints
+            .stream()
+            .map(EndpointConstraints::makeSelectedEndpointConstraints);
+
+        onEndpointConstraintsChangedEvent();
+    }
+
+    protected void onEndpointConstraintsChangedEvent()
+    {
+        Set<EndpointConstraints> newEndpointConstraints = Stream.concat(
+            selectedEndpointConstraintsStream,
+            pinnedEndpointConstraintsStream)
+            .collect(Collectors.toSet());
+
+        endpoint.setEndpointConstraints(newEndpointConstraints);
+    }
 
     /**
      * Notifies this {@code Endpoint} that a {@code LastNChangedEvent}
@@ -465,7 +493,8 @@ public abstract class AbstractEndpointMessageTransport
 
         if (endpoint != null)
         {
-            endpoint.setMaxReceiveFrameHeightPx(maxFrameHeight);
+            endpoint.setGlobalConstraints(Constraints
+                .makeMaxHeightEndpointConstraints(maxFrameHeight));
         }
     }
 

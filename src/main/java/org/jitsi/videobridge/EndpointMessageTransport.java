@@ -169,29 +169,6 @@ class EndpointMessageTransport
         statisticsSupplier.get().totalColibriWebSocketMessagesSent.incrementAndGet();
     }
 
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void onPinnedEndpointsChangedEvent(
-        JSONObject jsonObject, Set<String> newPinnedEndpoints)
-    {
-        endpoint.pinnedEndpointsChanged(newPinnedEndpoints);
-        propagateJSONObject(jsonObject);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void onSelectedEndpointsChangedEvent(
-        JSONObject jsonObject, Set<String> newSelectedEndpoints)
-    {
-        endpoint.selectedEndpointsChanged(newSelectedEndpoints);
-        propagateJSONObject(jsonObject);
-    }
-
     /**
      * Propagates the specified JSON object to all proxies (i.e. octo endpoints) of
      * {@link #endpoint} to all remote bridges.
