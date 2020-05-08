@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.ice;
+package org.jitsi.videobridge.ice
 
-import org.ice4j.ice.*;
+import org.ice4j.ice.Component
+import org.ice4j.ice.RemoteCandidate
 
-public class TransportUtils
-{
+object TransportUtils {
     /**
      * Determines whether at least one <tt>LocalCandidate</tt> of a specific ICE
      * <tt>Component</tt> can reach (in the terms of the ice4j library) a
@@ -35,12 +35,9 @@ public class TransportUtils
      * specified <tt>component</tt> can reach the specified
      * <tt>remoteCandidate</tt>
      */
-    public static boolean canReach(
-            Component component,
-            RemoteCandidate remoteCandidate)
-    {
-        return component.getLocalCandidates().stream().
-                anyMatch(
-                        localCandidate -> localCandidate.canReach(remoteCandidate));
+    fun canReach(component: Component, remoteCandidate: RemoteCandidate): Boolean {
+        return component.getLocalCandidates().stream().anyMatch() { localCandidate ->
+            localCandidate.canReach(remoteCandidate)
+        }
     }
 }
