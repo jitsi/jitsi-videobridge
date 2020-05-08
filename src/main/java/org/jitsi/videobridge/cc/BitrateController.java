@@ -725,8 +725,6 @@ public class BitrateController
 
         if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
         {
-            // TODO(george) bring back sending this message on message transport
-            //  connect
             notifyForwardedEndpointsChanged(
                 Collections.unmodifiableSet(newForwardedEndpointIds),
                 endpointsEnteringLastNIds,

@@ -316,6 +316,8 @@ public class Endpoint
                     endpointsEnteringLastN,
                     conferenceEndpoints);
 
+                // TODO(george) bring back sending this message on message transport
+                //  connect
                 sendLastNEndpointsChangeEvent(
                     forwardedEndpoints,
                     endpointsEnteringLastN,
