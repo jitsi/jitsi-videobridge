@@ -308,15 +308,15 @@ public class Endpoint
         bitrateController.addEventHandler(new BitrateController.EventHandler() {
             @Override
             public void forwardedEndpointsChanged(
-                Collection<String> forwardedEndpoints,
-                Collection<String> endpointsEnteringLastN,
-                Collection<String> conferenceEndpoints) {
-                sendLastNEndpointsChangeEvent(
+                Set<String> forwardedEndpoints,
+                Set<String> endpointsEnteringLastN,
+                Set<String> conferenceEndpoints) {
+                notifyForwardedEndpointsChanged(
                     forwardedEndpoints,
                     endpointsEnteringLastN,
                     conferenceEndpoints);
 
-                notifyForwardedEndpointsChanged(
+                sendLastNEndpointsChangeEvent(
                     forwardedEndpoints,
                     endpointsEnteringLastN,
                     conferenceEndpoints);
@@ -1090,13 +1090,13 @@ public class Endpoint
         int newValue = selectedCount.incrementAndGet();
         if (newValue == 1)
         {
+            notifyEndpointSelectionChanged(true);
             String selectedUpdate = createSelectedUpdateMessage(true);
             if (logger.isDebugEnabled())
             {
                 logger.debug("Is now selected, sending message: " + selectedUpdate);
             }
             sendMessage(selectedUpdate);
-            notifyEndpointSelectionChanged(true);
         }
     }
 
@@ -1109,6 +1109,7 @@ public class Endpoint
         int newValue = selectedCount.decrementAndGet();
         if (newValue == 0)
         {
+            notifyEndpointSelectionChanged(false);
             String selectedUpdate = createSelectedUpdateMessage(false);
             if (logger.isDebugEnabled())
             {
@@ -1116,7 +1117,6 @@ public class Endpoint
                         selectedUpdate);
             }
             sendMessage(selectedUpdate);
-            notifyEndpointSelectionChanged(false);
         }
     }
 
@@ -1706,9 +1706,9 @@ public class Endpoint
      * conference.
      */
     private void notifyForwardedEndpointsChanged(
-        Collection<String> forwardedEndpoints,
-        Collection<String> endpointsEnteringLastN,
-        Collection<String> conferenceEndpoints)
+        Set<String> forwardedEndpoints,
+        Set<String> endpointsEnteringLastN,
+        Set<String> conferenceEndpoints)
     {
         for (EventHandler handler : eventHandlers)
         {
@@ -1747,9 +1747,9 @@ public class Endpoint
          * conference.
          */
         void forwardedEndpointsChanged(
-            Collection<String> forwardedEndpoints,
-            Collection<String> endpointsEnteringLastN,
-            Collection<String> conferenceEndpoints);
+            Set<String> forwardedEndpoints,
+            Set<String> endpointsEnteringLastN,
+            Set<String> conferenceEndpoints);
 
         /**
          * Notify listener that current {@code Endpoint} selection has

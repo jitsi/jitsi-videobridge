@@ -728,7 +728,7 @@ public class BitrateController
             // TODO(george) bring back sending this message on message transport
             //  connect
             notifyForwardedEndpointsChanged(
-                newForwardedEndpointIds,
+                Collections.unmodifiableSet(newForwardedEndpointIds),
                 endpointsEnteringLastNIds,
                 conferenceEndpointIds);
         }
@@ -1204,9 +1204,9 @@ public class BitrateController
     }
 
     private void notifyForwardedEndpointsChanged(
-        Collection<String> forwardedEndpoints,
-        Collection<String> endpointsEnteringLastN,
-        Collection<String> conferenceEndpoints) {
+        Set<String> forwardedEndpoints,
+        Set<String> endpointsEnteringLastN,
+        Set<String> conferenceEndpoints) {
         for (EventHandler listener : listeners) {
             listener.forwardedEndpointsChanged(
                 forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints);
@@ -1229,9 +1229,9 @@ public class BitrateController
          * conference.
          */
         void forwardedEndpointsChanged(
-            Collection<String> forwardedEndpoints,
-            Collection<String> endpointsEnteringLastN,
-            Collection<String> conferenceEndpoints);
+            Set<String> forwardedEndpoints,
+            Set<String> endpointsEnteringLastN,
+            Set<String> conferenceEndpoints);
     }
 
     /**
