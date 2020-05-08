@@ -670,7 +670,6 @@ public class Conference
      */
     @NotNull
     public Endpoint createLocalEndpoint(String id, boolean iceControlling)
-        throws IOException
     {
         final AbstractEndpoint existingEndpoint = getEndpoint(id);
         if (existingEndpoint instanceof OctoEndpoint)

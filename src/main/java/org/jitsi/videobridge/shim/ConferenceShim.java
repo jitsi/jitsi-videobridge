@@ -314,26 +314,15 @@ public class ConferenceShim
      * @param endpointId identifier of endpoint to check and initialize
      * @param iceControlling ICE control role of transport of newly created
      * endpoint
-     * @throws VideobridgeShim.IqProcessingException
      */
     private void ensureEndpointCreated(String endpointId, boolean iceControlling)
-        throws VideobridgeShim.IqProcessingException
     {
         if (conference.getLocalEndpoint(endpointId) != null)
         {
             return;
         }
-        try
-        {
-            conference.createLocalEndpoint(endpointId, iceControlling);
-        }
-        catch (IOException ioe)
-        {
-            throw new VideobridgeShim.IqProcessingException(
-                XMPPError.Condition.internal_server_error,
-                "Error initializing endpoint " +
-                    endpointId);
-        }
+
+        conference.createLocalEndpoint(endpointId, iceControlling);
     }
 
     /**

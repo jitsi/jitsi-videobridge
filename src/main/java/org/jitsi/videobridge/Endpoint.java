@@ -266,7 +266,6 @@ public class Endpoint
         Logger parentLogger,
         boolean iceControlling,
         Clock clock)
-        throws IOException
     {
         super(conference, id, parentLogger);
 
@@ -353,7 +352,6 @@ public class Endpoint
         Conference conference,
         Logger parentLogger,
         boolean iceControlling)
-        throws IOException
     {
         this(id, conference, parentLogger, iceControlling, Clock.systemUTC());
     }
