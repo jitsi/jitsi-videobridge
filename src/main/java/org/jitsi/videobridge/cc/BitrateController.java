@@ -32,7 +32,7 @@ import java.lang.*;
 import java.lang.SuppressWarnings;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
+import java.util.stream.*;
 import java.util.concurrent.atomic.*;
 
 import static org.jitsi.videobridge.cc.config.BitrateControllerConfig.*;
@@ -178,7 +178,7 @@ public class BitrateController
      * The list of endpoint constraints to respect when allocating bandwidth,
      * sorted by ideal height.
      */
-    private List<EndpointConstraints> endpointConstraintsByHeight = Collections.EMPTY_LIST;
+    private Map<String, EndpointConstraints> endpointConstraintsMap = Collections.emptyMap();
 
     /**
      * The last-n value for the endpoint to which this {@link BitrateController}
@@ -265,6 +265,56 @@ public class BitrateController
 
         return deltaBwe > 0
             ||  deltaBwe < -1 * previousBwe * Config.bweChangeThresholdPct() / 100;
+    }
+
+    static class EndpointMultiRank
+    {
+        final int speakerRank;
+        final EndpointConstraints endpointConstraints;
+        final AbstractEndpoint endpoint;
+
+        EndpointMultiRank(int speakerRank, EndpointConstraints endpointConstraints, AbstractEndpoint endpoint)
+        {
+            this.speakerRank = speakerRank;
+            this.endpointConstraints = endpointConstraints;
+            this.endpoint = endpoint;
+        }
+    }
+
+    static class EndpointMultiRanker
+        implements Comparator<EndpointMultiRank>
+    {
+
+        @Override
+        public int compare(EndpointMultiRank o1, EndpointMultiRank o2)
+        {
+            // An endpoint that has higher priority/rank will be allocated
+            // bandwidth prior to other endpoints with lower priority/rank.
+            //
+            // For example, endpoints that have 720p ideal height will be given
+            // bandwidth before endpoints that have 180p ideal height.
+            //
+            // Once the endpoints are ranked, the bandwidth allocation algorithm
+            // loops over the endpoints multiple times, improving their target
+            // bitrate at ever step, until no further improvement is possible.
+            //
+            // Before endpoint constraints we had had the notion of selected and
+            // pinned endpoints. "selected" endpoints were endpoints that had
+            // 720p ideal height and were ranked high. "Pinned" endpoints where
+            // those thee had 180p ideal height and were ranked lower than
+            // selected endpoints. Finally, any remaining endpoints were ranked
+            // after pinned endpoints.
+
+            int idealHeightDiff = o1.endpointConstraints.getIdealHeight() - o2.endpointConstraints.getIdealHeight();
+            if (idealHeightDiff != 0)
+            {
+                return idealHeightDiff;
+            }
+            else
+            {
+                return o1.speakerRank - o2.speakerRank;
+            }
+        }
     }
 
     /**
@@ -357,7 +407,7 @@ public class BitrateController
         debugState.put("trustBwe", Config.trustBwe());
         debugState.put("lastBwe", lastBwe);
         debugState.put("globalConstraints", globalConstraints);
-        debugState.put("endpointConstraints", Arrays.toString(endpointConstraintsByHeight.toArray()));
+        debugState.put("endpointConstraints", Arrays.toString(endpointConstraintsMap.values().toArray()));
         debugState.put("lastN", lastN);
         debugState.put("supportsRtx", supportsRtx);
         JSONObject adaptiveTrackProjectionsJson = new JSONObject();
@@ -379,7 +429,15 @@ public class BitrateController
 
     public void setEndpointConstraints(Set<EndpointConstraints> newEndpointConstraints)
     {
-        // TODO sort by height and assign
+        Map<String, EndpointConstraints> newEndpointConstraintsMap
+            = new HashMap<>(newEndpointConstraints.size());
+
+        for (EndpointConstraints endpointConstraints : newEndpointConstraints)
+        {
+            newEndpointConstraintsMap.put(endpointConstraints.getEndpointId(), endpointConstraints);
+        }
+
+        this.endpointConstraintsMap = newEndpointConstraintsMap;
     }
 
     public void setGlobalConstraints(Constraints newGlobalConstraints)
@@ -934,16 +992,25 @@ public class BitrateController
 
         int endpointPriority = 0;
 
-        // We first deal with "selected" endpoints (i.e. endpoints that have
-        // 720p ideal height), then with "pinned" endpoints (i.e. are those that
-        // have 180p ideal height).
+        Map<String, EndpointConstraints> endpointConstraintsMapCopy = endpointConstraintsMap;
+        Constraints globalConstraintsCopy = globalConstraints;
 
-        for (EndpointConstraints endpointConstraints : endpointConstraintsByHeight)
+        List<EndpointMultiRank> endpointMultiRankList = IntStream
+            .range(0, conferenceEndpoints.size() - 1)
+            .mapToObj(i -> {
+                AbstractEndpoint endpoint = conferenceEndpoints.get(i);
+                EndpointConstraints endpointConstraints = globalConstraintsCopy
+                    .of(endpoint.getID())
+                    .unless(endpointConstraintsMapCopy.get(endpoint.getID()));
+
+                return new EndpointMultiRank(i, endpointConstraints, endpoint);
+            })
+            .sorted(new EndpointMultiRanker())
+            .collect(Collectors.toList());
+
+        for (EndpointMultiRank endpointMultiRank : endpointMultiRankList)
         {
-            // TODO this block needs to be factored out.
-            AbstractEndpoint sourceEndpoint = destinationEndpoint
-                .getConference().getEndpoint(endpointConstraints.getEndpointId());
-
+            AbstractEndpoint sourceEndpoint = endpointMultiRank.endpoint;
             if (sourceEndpoint.isExpired()
                 || sourceEndpoint.getID().equals(destinationEndpoint.getID()))
             {
@@ -961,42 +1028,11 @@ public class BitrateController
                 {
                     trackBitrateAllocations.add(
                         endpointPriority, new TrackBitrateAllocation(
-                            track, endpointConstraints, forwarded));
+                            track, endpointMultiRank.endpointConstraints, forwarded));
                 }
 
                 logger.trace(() -> "Adding endpoint " + sourceEndpoint.getID() + " to allocations");
                 endpointPriority++;
-            }
-        }
-
-        // Finally, deal with any remaining endpoints.
-        if (!conferenceEndpoints.isEmpty())
-        {
-            for (AbstractEndpoint sourceEndpoint : conferenceEndpoints)
-            {
-                if (sourceEndpoint.isExpired()
-                    || sourceEndpoint.getID().equals(destinationEndpoint.getID()))
-                {
-                    continue;
-                }
-
-                boolean forwarded = endpointPriority < adjustedLastN;
-
-                MediaStreamTrackDesc[] tracks
-                    = sourceEndpoint.getMediaStreamTracks();
-
-                if (!ArrayUtils.isNullOrEmpty(tracks))
-                {
-                    for (MediaStreamTrackDesc track : tracks)
-                    {
-                        trackBitrateAllocations.add(
-                            endpointPriority, new TrackBitrateAllocation(
-                                track, globalConstraints.toEndpointConstraints(sourceEndpoint.getID()), forwarded));
-                    }
-
-                    logger.trace(() -> "Adding endpoint " + sourceEndpoint.getID() + " to allocations");
-                    endpointPriority++;
-                }
             }
         }
 

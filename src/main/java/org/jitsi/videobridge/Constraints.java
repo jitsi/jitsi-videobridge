@@ -19,7 +19,7 @@ public class Constraints
         return new Constraints(idealHeight);
     }
 
-    public EndpointConstraints toEndpointConstraints(String id)
+    public EndpointConstraints of(String id)
     {
         return new EndpointConstraints(id, idealHeight);
     }

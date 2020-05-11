@@ -40,6 +40,11 @@ public class EndpointConstraints
         return new EndpointConstraints(endpointId, 720);
     }
 
+    public EndpointConstraints unless(EndpointConstraints endpointConstraints)
+    {
+        return endpointConstraints != null ? endpointConstraints : this;
+    }
+
     public String getEndpointId()
     {
         return endpointId;
