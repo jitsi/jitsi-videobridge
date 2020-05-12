@@ -30,6 +30,8 @@ class SignalingApiBundleActivator : BundleActivator {
         println("STARTING KTOR")
 
         // TODO: check if it's enabled, get port, etc.
+        // NOTE(brian): changed to Netty here, as the jetty versions conflicted with the
+        // other jetty code so libs were being omitted due to conflicts
         embeddedServer(Jetty, port = 9090) { module(videobridge) }.start()
     }
 

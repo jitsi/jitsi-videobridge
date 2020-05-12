@@ -23,27 +23,18 @@ import io.ktor.application.install
 import io.ktor.application.log
 import io.ktor.features.CallLogging
 import io.ktor.features.ContentNegotiation
-import io.ktor.http.HttpStatusCode
 import io.ktor.jackson.jackson
-import io.ktor.request.receive
-import io.ktor.response.respond
+import io.ktor.locations.KtorExperimentalLocationsAPI
+import io.ktor.locations.Locations
 import io.ktor.response.respondText
 import io.ktor.routing.get
-import io.ktor.routing.patch
-import io.ktor.routing.post
 import io.ktor.routing.route
 import io.ktor.routing.routing
-import io.ktor.server.engine.commandLineEnvironment
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.jetty.Jetty
-import io.ktor.server.servlet.ServletApplicationEngine
 import org.jitsi.videobridge.Videobridge
-import org.jxmpp.jid.impl.JidCreate
-import org.jxmpp.jid.parts.Localpart
-import java.util.Enumeration
-import javax.servlet.ServletConfig
-import javax.servlet.ServletContext
+import org.jitsi.videobridge.signaling.api.v1.conferencesApi
+import org.slf4j.event.Level
 
+@KtorExperimentalLocationsAPI
 @Suppress("unused") // Referenced in reference.conf
 @kotlin.jvm.JvmOverloads
 fun Application.module(videobridge: Videobridge, testing: Boolean = false) {
@@ -53,78 +44,46 @@ fun Application.module(videobridge: Videobridge, testing: Boolean = false) {
 //            propertyNamingStrategy = PropertyNamingStrategy.SNAKE_CASE
         }
     }
-    install(CallLogging)
+    install(Locations)
+    install(CallLogging) {
+        level = Level.TRACE
+    }
 
     routing {
-        trace { application.log.trace(it.buildText()) }
-        route("conferences/{confGid}") {
-            /**
-             * Posting to this URL will create a conference
-             */
-            post {
-                val gid = call.parameters["confGid"] ?: error("no GID present")
-                val confInfo = call.receive<Conference>()
-                if (videobridge.getConference(gid, JidCreate.bareFrom("jid")) == null) {
-                    confInfo.validateInitial()
-                    val conf = videobridge.createConference(JidCreate.bareFrom("jid"), Localpart.from(confInfo.name), gid)
-                    call.respond(ConferenceResponse(conf.id, conf.name.toString()))
-                }
-            }
-            /**
-             * Modify this conference
-             */
-            patch {
-
-            }
-            get {
-                // return description of conferences
-            }
-            route("endpoints/{epId}") {
-                post {
-                    // Create a new endpoint with any information give
-                    val epInfo = call.receive<Endpoint>()
-                    println("Conf ${call.parameters["confId"]}, ep ${call.parameters["epId"]}")
-                    println(epInfo)
-                    call.respond(HttpStatusCode.OK)
-                }
-                route("rtp_extensions") {
-                    post {
-                        // Modify the set of rtp extensions for this endpoint.
-                        val epId = call.parameters["epId"]
-                        println("epId: $epId")
-                        val post = call.receive<List<RtpExtension>>()
-                        println(post)
-                        call.respond(HttpStatusCode.OK)
-                    }
-                }
-                route("payload_types") {
-                    post {
-                        // Modify the set of payload types for this endpoint
-                        val post = call.receive<List<RtpExtension>>()
-                        call.respond(HttpStatusCode.OK)
-                    }
-                }
-                route("source_information") {
-                    post {
-                        // Modify the source information for this endpoint
-                        val post = call.receive<SourceInformation>()
-                        call.respond(HttpStatusCode.OK)
-                    }
-                }
-            }
+//        trace { application.log.trace(it.buildText()) }
+        trace { println(it.buildText()) }
+        route("/v1") {
+            conferencesApi(videobridge)
         }
+//        route("conferences/{confGid}") {
+//            /**
+//             * Posting to this URL will create a conference
+//             */
+//            post {
+//                val gid = call.parameters["confGid"] ?: error("no GID present")
+//                val confInfo = call.receive<ConferenceCreateRequest>()
+//                if (videobridge.getConference(gid, JidCreate.bareFrom("jid")) != null) {
+//                    val conf = videobridge.createConference(JidCreate.bareFrom("jid"), Localpart.from(confInfo.name), gid)
+//                    call.respond(ConferenceCreateResponse(conf.id, conf.name.toString()))
+//                }
+//            }
+//            /**
+//             * Modify this conference
+//             */
+//            patch {
+//
+//            }
+//            get {
+//                // return description of conferences
+//            }
+//            endpointsApi()
+//        }
         get("/hello/world") {
             call.respondText { "Hello!" }
         }
     }
 }
 
-fun foo() {
-    embeddedServer(Jetty, port = 9090) { myApp() }.start()
-}
 
-fun Application.myApp() = myApp(42)
-
-fun Application.myApp(someArg: Int) {
-
-}
+// TODO: could we write a feature that could be installed that would look
+// up the conference automatically?  middleware, basically?
