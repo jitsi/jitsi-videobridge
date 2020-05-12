@@ -18,72 +18,49 @@ package org.jitsi.videobridge.signaling.api
 
 import com.fasterxml.jackson.databind.SerializationFeature
 import io.ktor.application.Application
+import io.ktor.application.ApplicationCall
+import io.ktor.application.ApplicationCallPipeline
 import io.ktor.application.call
 import io.ktor.application.install
-import io.ktor.application.log
 import io.ktor.features.CallLogging
 import io.ktor.features.ContentNegotiation
 import io.ktor.jackson.jackson
-import io.ktor.locations.KtorExperimentalLocationsAPI
-import io.ktor.locations.Locations
-import io.ktor.response.respondText
-import io.ktor.routing.get
+import io.ktor.routing.Routing
 import io.ktor.routing.route
 import io.ktor.routing.routing
+import io.ktor.util.AttributeKey
 import org.jitsi.videobridge.Videobridge
+import org.jitsi.videobridge.signaling.api.v1.apiVersionApi
 import org.jitsi.videobridge.signaling.api.v1.conferencesApi
 import org.slf4j.event.Level
 
-@KtorExperimentalLocationsAPI
-@Suppress("unused") // Referenced in reference.conf
 @kotlin.jvm.JvmOverloads
 fun Application.module(videobridge: Videobridge, testing: Boolean = false) {
     install(ContentNegotiation) {
         jackson {
             enable(SerializationFeature.INDENT_OUTPUT)
-//            propertyNamingStrategy = PropertyNamingStrategy.SNAKE_CASE
         }
     }
-    install(Locations)
     install(CallLogging) {
         level = Level.TRACE
     }
 
     routing {
-//        trace { application.log.trace(it.buildText()) }
         trace { println(it.buildText()) }
+        // We always inject the videobridge instance
+        injectVideobridge(videobridge)
         route("/v1") {
-            conferencesApi(videobridge)
-        }
-//        route("conferences/{confGid}") {
-//            /**
-//             * Posting to this URL will create a conference
-//             */
-//            post {
-//                val gid = call.parameters["confGid"] ?: error("no GID present")
-//                val confInfo = call.receive<ConferenceCreateRequest>()
-//                if (videobridge.getConference(gid, JidCreate.bareFrom("jid")) != null) {
-//                    val conf = videobridge.createConference(JidCreate.bareFrom("jid"), Localpart.from(confInfo.name), gid)
-//                    call.respond(ConferenceCreateResponse(conf.id, conf.name.toString()))
-//                }
-//            }
-//            /**
-//             * Modify this conference
-//             */
-//            patch {
-//
-//            }
-//            get {
-//                // return description of conferences
-//            }
-//            endpointsApi()
-//        }
-        get("/hello/world") {
-            call.respondText { "Hello!" }
+            conferencesApi()
+            apiVersionApi()
         }
     }
 }
 
+fun Routing.injectVideobridge(videobridge: Videobridge) = intercept(ApplicationCallPipeline.Features) {
+    call.attributes.put(VIDEOBRIDGE_ATTR_KEY, videobridge)
+}
 
-// TODO: could we write a feature that could be installed that would look
-// up the conference automatically?  middleware, basically?
+val VIDEOBRIDGE_ATTR_KEY = AttributeKey<Videobridge>("__videobridge")
+
+val ApplicationCall.videobridge: Videobridge
+    get() = this.attributes.get(VIDEOBRIDGE_ATTR_KEY)

@@ -21,11 +21,20 @@ import io.ktor.application.call
 import io.ktor.util.AttributeKey
 import io.ktor.util.pipeline.PipelineContext
 import org.jitsi.videobridge.Conference
+import org.jitsi.videobridge.Videobridge
+
 
 const val CONF_ID_URL_PARAM = "confId"
 const val EP_ID_URL_PARAM = "epId"
 
 val CONF_KEY = AttributeKey<Conference>("conf")
+
+fun <T : Any, U : Any> PipelineContext<T, ApplicationCall>.getAttribute(attrKey: AttributeKey<U>): U? =
+    this.call.attributes.getOrNull(attrKey)
+
+val <T : Any> PipelineContext<T, ApplicationCall>.conference: Conference?
+        get() = this.getAttribute(CONF_KEY)
+
 
 fun <T : Any> PipelineContext<T, ApplicationCall>.getParam(paramName: String): String? {
     return this.call.parameters[paramName]
@@ -37,4 +46,8 @@ fun <T : Any> PipelineContext<T, ApplicationCall>.getConfId(): String? =
 
 fun <T : Any> PipelineContext<T, ApplicationCall>.getEpId(): String? =
     getParam(EP_ID_URL_PARAM)
+
+fun <T : Any, U : Any> PipelineContext<T, ApplicationCall>.setAttribute(attr: U, key: AttributeKey<U>) {
+    this.call.attributes.put(key, attr)
+}
 

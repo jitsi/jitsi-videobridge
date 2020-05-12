@@ -21,6 +21,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.request.receive
 import io.ktor.response.respond
 import io.ktor.routing.Route
+import io.ktor.routing.delete
 import io.ktor.routing.patch
 import io.ktor.routing.post
 import io.ktor.routing.route
@@ -54,15 +55,11 @@ import org.jitsi.xmpp.extensions.jingle.PayloadTypePacketExtension
 import org.jitsi.xmpp.extensions.jingle.RtcpFbPacketExtension
 import org.jitsi.xmpp.extensions.jingle.SourceGroupPacketExtension
 
-fun Route.endpointsApi(videobridge: Videobridge) {
+fun Route.endpointsApi() {
     route("endpoints/{epId}") {
-        validateConference(videobridge, EndpointCreateResponse::Error)
         post {
             val epCreateReq = call.receive<EndpointCreateRequest>()
-            println("Conf ${getConfId()}, ep ${getEpId()}")
-            println("attributes: ${call.attributes}")
-            println("got conf ${call.attributes[CONF_KEY]}")
-            val conf = call.attributes[CONF_KEY]
+            val conf = call.conference
             val ep = conf.createLocalEndpoint(getEpId(), epCreateReq.iceRole == IceRole.CONTROLLING)
 
             // Media information may be known up-front
@@ -109,7 +106,8 @@ fun Route.endpointsApi(videobridge: Videobridge) {
         patch {
             val epModifyReq = call.receive<EndpointModifyRequest>()
 
-            val conf = call.attributes[CONF_KEY]
+//            val conf = call.attributes[CONF_KEY]
+            val conf = call.conference ?: TODO()
 
             val transportInfo = IceUdpTransportPacketExtension()
             transportInfo.password = epModifyReq.transportInformation?.iceUdpTransportInformation?.password
@@ -126,57 +124,11 @@ fun Route.endpointsApi(videobridge: Videobridge) {
             updateMediaInformation(ep, epModifyReq.mediaTypeInformation)
             call.respond(HttpStatusCode.OK)
         }
+        delete {
+
+
+        }
     }
-//    post<Endpoint> { epParams ->
-//
-//        // Create a new endpoint with any information give
-//        val epInfo = call.receive<EndpointCreateRequest>()
-//
-//        // TODO: can we automatically get this somehow?
-//        val conference = videobridge.getConference(epParams.parent.id, JidCreate.bareFrom("focus"))
-//
-//        println("Conf ${epParams.parent.id}, ep ${epParams.epId}")
-//        println(epInfo)
-//        // TODO: next is to wire this call up for real to create an endpoint
-//        call.respond(EndpointCreateResponse.Error("blah"))
-//    }
-//    route("endpoints/{epId}") {
-//        post<Endpoint> { endpoint ->
-//            // Create a new endpoint with any information give
-//            val epInfo = call.receive<EndpointCreateRequest>()
-//            println("Conf ${call.parameters["confGid"]}, ep ${endpoint.epId}")
-//            println(epInfo)
-//            // TODO: next is to wire this call up for real to create an endpoint
-//            call.respond(EndpointCreateResponse.Error("blah"))
-//        }
-//        route("rtp_extensions") {
-//            post {
-//                // Modify the set of rtp extensions for this endpoint.
-//                val epId = call.parameters["epId"]
-//                println("epId: $epId")
-//                val post = call.receive<List<RtpExtension>>()
-//                println(post)
-//                call.respond(HttpStatusCode.OK)
-//            }
-//        }
-//        route("payload_types") {
-//            post {
-//                // Modify the set of payload types for this endpoint
-//                val post = call.receive<List<RtpExtension>>()
-//                call.respond(HttpStatusCode.OK)
-//            }
-//        }
-//        route("source_information") {
-//            post {
-//                // Modify the source information for this endpoint
-//                val post = call.receive<SourceInformation>()
-//                call.respond(HttpStatusCode.OK)
-//            }
-//        }
-//        delete {
-//            // Remove an endpoint
-//        }
-//    }
 }
 
 private fun updateMediaInformation(ep: AbstractEndpoint, mediaTypeInformation: MediaTypeInformation?) {
