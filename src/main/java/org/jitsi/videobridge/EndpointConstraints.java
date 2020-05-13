@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge;
 
+import java.util.*;
+
 /**
  * Expresses the ideal video constraints for an endpoint. We may wish to support
  * track-based constraints in the future.
@@ -64,5 +66,21 @@ public class EndpointConstraints
     public EndpointConstraints of(String id)
     {
         return new EndpointConstraints(id, idealHeight);
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        EndpointConstraints that = (EndpointConstraints) o;
+        return idealHeight == that.idealHeight &&
+            Objects.equals(endpointId, that.endpointId);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(endpointId, idealHeight);
     }
 }

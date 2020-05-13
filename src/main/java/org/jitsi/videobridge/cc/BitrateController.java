@@ -426,20 +426,39 @@ public class BitrateController
 
     public void setEndpointConstraints(Set<EndpointConstraints> newEndpointConstraints)
     {
-        Map<String, EndpointConstraints> newEndpointConstraintsMap
-            = new HashMap<>(newEndpointConstraints.size());
-
-        for (EndpointConstraints endpointConstraints : newEndpointConstraints)
+        boolean needsUpdate = false;
+        Map<String, EndpointConstraints> oldEndpointConstraintsMap = this.endpointConstraintsMap;
+        if (newEndpointConstraints.size() != oldEndpointConstraintsMap.size())
         {
-            newEndpointConstraintsMap.put(endpointConstraints.getEndpointId(), endpointConstraints);
+            Map<String, EndpointConstraints> newEndpointConstraintsMap
+                = new HashMap<>(newEndpointConstraints.size());
+
+            for (EndpointConstraints endpointConstraints : newEndpointConstraints)
+            {
+                String endpointId = endpointConstraints.getEndpointId();
+                newEndpointConstraintsMap.put(endpointId, endpointConstraints);
+                if (!endpointConstraints.equals(oldEndpointConstraintsMap.get(endpointId)))
+                {
+                    needsUpdate = true;
+                }
+            }
+
+            this.endpointConstraintsMap = newEndpointConstraintsMap;
         }
 
-        this.endpointConstraintsMap = newEndpointConstraintsMap;
+        if (needsUpdate)
+        {
+            update();
+        }
     }
 
     public void setGlobalConstraints(EndpointConstraints newGlobalConstraints)
     {
-        this.globalConstraints = newGlobalConstraints;
+        if (!this.globalConstraints.equals(newGlobalConstraints))
+        {
+            this.globalConstraints = newGlobalConstraints;
+            update();
+        }
     }
 
     /**
