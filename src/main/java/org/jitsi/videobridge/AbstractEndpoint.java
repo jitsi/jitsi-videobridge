@@ -76,11 +76,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     private boolean expired = false;
 
     /**
-     * The set of IDs of the pinned endpoints of this {@code Endpoint}.
-     */
-    private Set<EndpointConstraints> endpointConstraintsSet = new HashSet<>();
-
-    /**
      * Initializes a new {@link AbstractEndpoint} instance.
      * @param conference the {@link Conference} which this endpoint is to be a
      * part of.
@@ -327,8 +322,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         debugState.put("displayName", displayName);
         debugState.put("expired", expired);
         debugState.put("statsId", statsId);
-        debugState.put("endpointConstraints",
-            Arrays.toString(endpointConstraintsSet.toArray()));
 
         return debugState;
     }

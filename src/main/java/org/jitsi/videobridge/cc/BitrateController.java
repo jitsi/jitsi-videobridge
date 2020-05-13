@@ -987,7 +987,9 @@ public class BitrateController
         {
             logger.debug("Prioritizing endpoints, adjusted last-n: " + adjustedLastN +
                 ", sorted endpoint list: " +
-                conferenceEndpoints.stream().map(AbstractEndpoint::getID).collect(Collectors.joining(", ")));
+                conferenceEndpoints.stream().map(AbstractEndpoint::getID).collect(Collectors.joining(", ")) +
+                ". Endpoints constraints: " + Arrays.toString(endpointConstraintsMap.values().toArray()) +
+                ". Global endpoint constraints" + globalConstraints);
         }
 
         int endpointPriority = 0;
