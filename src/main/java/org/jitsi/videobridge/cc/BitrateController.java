@@ -175,8 +175,8 @@ public class BitrateController
     private EndpointConstraints globalConstraints;
 
     /**
-     * The list of endpoint constraints to respect when allocating bandwidth,
-     * sorted by ideal height.
+     * The map of endpoint id to endpoint constraints that contains the
+     * constraints to respect when allocating bandwidth for a specific endpoint.
      */
     private Map<String, EndpointConstraints> endpointConstraintsMap = Collections.emptyMap();
 
@@ -289,21 +289,18 @@ public class BitrateController
         public int compare(EndpointMultiRank o1, EndpointMultiRank o2)
         {
             // An endpoint that has higher priority/rank will be allocated
-            // bandwidth prior to other endpoints with lower priority/rank.
-            //
-            // For example, endpoints that have 720p ideal height will be given
-            // bandwidth before endpoints that have 180p ideal height.
+            // bandwidth prior to other endpoints with lower priority/rank
+            // (see the allocate method bellow)
             //
             // Once the endpoints are ranked, the bandwidth allocation algorithm
             // loops over the endpoints multiple times, improving their target
             // bitrate at ever step, until no further improvement is possible.
             //
-            // Before endpoint constraints we had had the notion of selected and
-            // pinned endpoints. "selected" endpoints were endpoints that had
-            // 720p ideal height and were ranked high. "Pinned" endpoints where
-            // those thee had 180p ideal height and were ranked lower than
-            // selected endpoints. Finally, any remaining endpoints were ranked
-            // after pinned endpoints.
+            // In this multi-rank implementation, endpoints that have 720p ideal
+            // height will be given bandwidth before endpoints that have 180p
+            // ideal height. If two endpoints have the same ideal height, then
+            // we look at their speech rank (whoever spoke last has is ranked
+            // higher).
 
             int idealHeightDiff = o1.endpointConstraints.getIdealHeight() - o2.endpointConstraints.getIdealHeight();
             if (idealHeightDiff != 0)
@@ -993,6 +990,14 @@ public class BitrateController
         }
 
         int endpointPriority = 0;
+
+        // Before endpoint constraints we had had the notion of selected and
+        // pinned endpoints. "selected" endpoints were endpoints that had
+        // 720p ideal height and prioritized over everything else and were
+        // allocated bandwidth first (up to their preferred resolution).
+        // "Pinned" endpoints where those thee had 180p ideal height and were
+        // ranked lower than selected endpoints but before the rest of the pack.
+        // Finally, any remaining endpoints were ranked after pinned endpoints.
 
         Map<String, EndpointConstraints> endpointConstraintsMapCopy = endpointConstraintsMap;
         EndpointConstraints globalConstraintsCopy = globalConstraints;
