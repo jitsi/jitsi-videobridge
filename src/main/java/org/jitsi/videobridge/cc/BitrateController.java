@@ -172,7 +172,7 @@ public class BitrateController
     /**
      * The global constraints that override per-endpoint constraints.
      */
-    private Constraints globalConstraints;
+    private EndpointConstraints globalConstraints;
 
     /**
      * The list of endpoint constraints to respect when allocating bandwidth,
@@ -440,7 +440,7 @@ public class BitrateController
         this.endpointConstraintsMap = newEndpointConstraintsMap;
     }
 
-    public void setGlobalConstraints(Constraints newGlobalConstraints)
+    public void setGlobalConstraints(EndpointConstraints newGlobalConstraints)
     {
         this.globalConstraints = newGlobalConstraints;
     }
@@ -993,7 +993,7 @@ public class BitrateController
         int endpointPriority = 0;
 
         Map<String, EndpointConstraints> endpointConstraintsMapCopy = endpointConstraintsMap;
-        Constraints globalConstraintsCopy = globalConstraints;
+        EndpointConstraints globalConstraintsCopy = globalConstraints;
 
         List<EndpointMultiRank> endpointMultiRankList = IntStream
             .range(0, conferenceEndpoints.size() - 1)

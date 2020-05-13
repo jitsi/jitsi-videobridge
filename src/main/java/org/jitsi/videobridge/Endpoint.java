@@ -668,7 +668,7 @@ public class Endpoint
     }
 
     @Override
-    public void setGlobalConstraints(Constraints newGlobalConstraints)
+    public void setGlobalConstraints(EndpointConstraints newGlobalConstraints)
     {
         bitrateController.setGlobalConstraints(newGlobalConstraints);
     }

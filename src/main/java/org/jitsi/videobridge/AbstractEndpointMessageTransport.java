@@ -493,7 +493,7 @@ public abstract class AbstractEndpointMessageTransport
 
         if (endpoint != null)
         {
-            endpoint.setGlobalConstraints(Constraints
+            endpoint.setGlobalConstraints(EndpointConstraints
                 .makeMaxHeightEndpointConstraints(maxFrameHeight));
         }
     }

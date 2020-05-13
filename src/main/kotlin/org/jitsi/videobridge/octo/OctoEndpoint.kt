@@ -24,7 +24,6 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
-import org.jitsi.videobridge.Constraints
 import org.jitsi.videobridge.EndpointConstraints
 import org.jitsi.videobridge.rest.root.colibri.debug.EndpointDebugFeatures
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
@@ -78,7 +77,7 @@ class OctoEndpoint(
         TODO("Not yet implemented")
     }
 
-    override fun setGlobalConstraints(newGlobalConstraints: Constraints?) {
+    override fun setGlobalConstraints(newGlobalConstraints: EndpointConstraints?) {
         TODO("Not yet implemented")
     }
 

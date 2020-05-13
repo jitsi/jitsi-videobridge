@@ -371,5 +371,5 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      *
      * @param newGlobalConstraints
      */
-    public abstract void setGlobalConstraints(Constraints newGlobalConstraints);
+    public abstract void setGlobalConstraints(EndpointConstraints newGlobalConstraints);
 }

@@ -20,14 +20,20 @@ package org.jitsi.videobridge;
  * track-based constraints in the future.
  */
 public class EndpointConstraints
-    extends Constraints
 {
     private final String endpointId;
 
+    private final int idealHeight;
+
     EndpointConstraints(String endpointId, int idealHeight)
     {
-        super(idealHeight);
+        this.idealHeight = idealHeight;
         this.endpointId = endpointId;
+    }
+
+    static EndpointConstraints makeMaxHeightEndpointConstraints(int idealHeight)
+    {
+        return new EndpointConstraints(null, idealHeight);
     }
 
     static EndpointConstraints makePinnedEndpointConstraints(String endpointId)
@@ -48,5 +54,15 @@ public class EndpointConstraints
     public String getEndpointId()
     {
         return endpointId;
+    }
+
+    public int getIdealHeight()
+    {
+        return idealHeight;
+    }
+
+    public EndpointConstraints of(String id)
+    {
+        return new EndpointConstraints(id, idealHeight);
     }
 }
