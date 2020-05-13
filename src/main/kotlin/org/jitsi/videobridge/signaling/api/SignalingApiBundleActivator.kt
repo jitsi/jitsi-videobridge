@@ -18,24 +18,34 @@ package org.jitsi.videobridge.signaling.api
 
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.jetty.Jetty
+import io.ktor.server.jetty.JettyApplicationEngine
 import org.jitsi.osgi.ServiceUtils2
 import org.jitsi.videobridge.Videobridge
 import org.osgi.framework.BundleActivator
 import org.osgi.framework.BundleContext
+import java.time.Duration
+import org.jitsi.videobridge.api.server.module
+import org.jitsi.videobridge.api.types.v1.ConferenceManager
+import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
+import org.jivesoftware.smack.packet.IQ
 
 class SignalingApiBundleActivator : BundleActivator {
+    private var server: JettyApplicationEngine? = null
 
     override fun start(bundleContext: BundleContext) {
         val videobridge = ServiceUtils2.getService(bundleContext, Videobridge::class.java)
-        println("STARTING KTOR")
 
         // TODO: check if it's enabled, get port, etc.
-        // NOTE(brian): changed to Netty here, as the jetty versions conflicted with the
-        // other jetty code so libs were being omitted due to conflicts
-        embeddedServer(Jetty, port = 9090) { module(videobridge) }.start()
+        server = embeddedServer(Jetty, port = 9090) {
+            module(object : ConferenceManager {
+                override fun handleColibriConferenceIQ(conferenceIQ: ColibriConferenceIQ): IQ {
+                    return videobridge.handleColibriConferenceIQ(conferenceIQ)
+                }
+            })
+        }.start()
     }
 
     override fun stop(p0: BundleContext) {
-        TODO("Not yet implemented")
+        server?.stop(Duration.ofSeconds(5).toMillis(), Duration.ofSeconds(5).toMillis())
     }
 }

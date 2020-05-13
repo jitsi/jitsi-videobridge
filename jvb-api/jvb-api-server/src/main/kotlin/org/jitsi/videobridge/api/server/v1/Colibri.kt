@@ -14,18 +14,26 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.signaling.api.v1
+package org.jitsi.videobridge.api.server.v1
 
 import io.ktor.application.call
-import io.ktor.response.respondText
+import io.ktor.request.receive
+import io.ktor.response.respond
 import io.ktor.routing.Route
-import io.ktor.routing.get
+import io.ktor.routing.post
 import io.ktor.routing.route
+import org.jitsi.videobridge.api.server.confManager
+import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 
-fun Route.apiVersionApi() {
-    route("/about/api_version") {
-        get {
-            call.respondText { "v1" }
+/**
+ * Handles incoming Colibri messages over HTTP
+ */
+fun Route.colibriApi() {
+    route("colibri") {
+        post {
+            val req = call.receive<ColibriConferenceIQ>()
+            val result = call.confManager.handleColibriConferenceIQ(req)
+            call.respond(result)
         }
     }
 }
