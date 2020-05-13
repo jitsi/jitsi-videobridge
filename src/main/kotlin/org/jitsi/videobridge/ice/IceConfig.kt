@@ -22,6 +22,7 @@ import org.jitsi.config.legacyConfigAttributes
 import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.FallbackProperty
 import org.jitsi.utils.config.SimpleProperty
+import org.jitsi.videobridge.config.ResettableSingleton
 import java.util.Objects
 
 class IceConfig {
@@ -43,10 +44,10 @@ class IceConfig {
                     readOnce()
                 }
             )
-            private val tcpEnabledProp = TcpEnabledProperty()
+            private val tcpEnabledProp = ResettableSingleton { TcpEnabledProperty() }
 
             @JvmStatic
-            fun tcpEnabled() = tcpEnabledProp.value
+            fun tcpEnabled() = tcpEnabledProp.get().value
 
             /**
              * The property which configures the ICE/TCP port.
@@ -57,10 +58,10 @@ class IceConfig {
                 legacyName = "org.jitsi.videobridge.TCP_HARVESTER_PORT",
                 newName = "videobridge.ice.tcp.port"
             )
-            private val tcpPortProperty = TcpPortProperty()
+            private val tcpPortProperty = ResettableSingleton { TcpPortProperty() }
 
             @JvmStatic
-            fun tcpPort() = tcpPortProperty.value
+            fun tcpPort() = tcpPortProperty.get().value
 
             /**
              * The property which configures an additional port to advertise.
@@ -71,14 +72,14 @@ class IceConfig {
                 legacyName = "org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT",
                 newName = "videobridge.ice.tcp.mapped-port"
             )
-            private val tcpMappedPortProperty = TcpMappedPortProperty()
+            private val tcpMappedPortProperty = ResettableSingleton { TcpMappedPortProperty() }
 
             /**
              * Returns the additional port to advertise, or [null] if none is configured.
              */
             @JvmStatic
             fun tcpMappedPort(): Int? = try {
-                tcpMappedPortProperty.value
+                tcpMappedPortProperty.get().value
             } catch (e: Throwable) {
                 null
             }
