@@ -16,20 +16,42 @@
 
 package org.jitsi.videobridge.api.server.v1
 
+import io.ktor.application.ApplicationCall
+import io.ktor.application.ApplicationCallPipeline
+import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.features.ContentNegotiation
 import io.ktor.http.ContentType
 import io.ktor.routing.Route
+import io.ktor.util.AttributeKey
 import org.jitsi.videobridge.api.server.XmlConverter
+import org.jitsi.videobridge.api.types.v1.ConferenceManager
 
 /**
  * The top level app.  It provides a convenient wrapper around all the top-level
  * APIs for this API version.
  */
-fun Route.app() {
+fun Route.app(conferenceManager: ConferenceManager) {
     install(ContentNegotiation) {
         register(ContentType.Application.Xml, XmlConverter)
     }
+    injectConfManager(conferenceManager)
     apiVersionApi()
     colibriApi()
 }
+
+/**
+ * Inject the instance of [ConferenceManager] into the call attributes so that it's
+ * available when handling requests
+ */
+private fun Route.injectConfManager(conferenceManager: ConferenceManager) = intercept(ApplicationCallPipeline.Features) {
+    call.attributes.put(CONF_MGR_ATTR_KEY, conferenceManager)
+}
+
+private val CONF_MGR_ATTR_KEY = AttributeKey<ConferenceManager>("__conf_mgr")
+
+/**
+ * Retrieve the [ConferenceManager] instance from the call attributes
+ */
+val ApplicationCall.confManager: ConferenceManager
+    get() = this.attributes[CONF_MGR_ATTR_KEY]

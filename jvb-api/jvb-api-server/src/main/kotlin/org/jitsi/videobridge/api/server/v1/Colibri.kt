@@ -22,7 +22,6 @@ import io.ktor.response.respond
 import io.ktor.routing.Route
 import io.ktor.routing.post
 import io.ktor.routing.route
-import org.jitsi.videobridge.api.server.confManager
 import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 
 /**
