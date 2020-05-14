@@ -37,8 +37,6 @@ import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.queue.*;
-import org.jitsi.videobridge.api.types.vlater.Source;
-import org.jitsi.videobridge.api.types.vlater.SourceGroup;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
@@ -679,7 +677,6 @@ public class Endpoint
     @Override
     public void addPayloadType(PayloadType payloadType)
     {
-        logger.info("TEMP: Adding payload type" + payloadType.toString());
         transceiver.addPayloadType(payloadType);
         bitrateController.addPayloadType(payloadType);
     }
@@ -1366,12 +1363,6 @@ public class Endpoint
         }
     }
 
-    public void recreateMediaStreamTracks2(List<Source> sources, List<SourceGroup> sourceGroups)
-    {
-        MediaStreamTrackDesc[] tracks = MediaStreamTrackFactory.createMediaStreamTracks2(getID(), sources, sourceGroups);
-        setMediaStreamTracks(tracks);
-    }
-
     /**
      * {@inheritDoc}
      */
@@ -1536,16 +1527,6 @@ public class Endpoint
             }
         }
         this.acceptAudio = acceptAudio;
-        this.acceptVideo = acceptVideo;
-    }
-
-    public void setAcceptsAudio(boolean acceptAudio)
-    {
-        this.acceptAudio = acceptAudio;
-    }
-
-    public void setAcceptsVideo(boolean acceptVideo)
-    {
         this.acceptVideo = acceptVideo;
     }
 

@@ -17,7 +17,6 @@ package org.jitsi.videobridge.xmpp;
 
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.api.types.vlater.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jitsimeet.*;
@@ -269,31 +268,6 @@ public class MediaStreamTrackFactory
         return secondarySsrcs;
     }
 
-    private static List<SecondarySsrc> getSecondarySsrcs2(
-        long ssrc, Collection<SourceGroup> sourceGroups)
-    {
-        List<SecondarySsrc> secondarySsrcs = new ArrayList<>();
-        for (SourceGroup sourceGroup : sourceGroups)
-        {
-            if (sourceGroup.getSemantics().equalsIgnoreCase(
-                SourceGroupPacketExtension.SEMANTICS_SIMULCAST))
-            {
-                // Simulcast does not fall under the definition of 'secondary'
-                // we want here.
-                continue;
-            }
-            long groupPrimarySsrc = sourceGroup.getSources().get(0).getSsrc();
-            long groupSecondarySsrc = sourceGroup.getSources().get(1).getSsrc();
-            if (groupPrimarySsrc == ssrc)
-            {
-                secondarySsrcs.add(
-                    new SecondarySsrc(
-                        groupSecondarySsrc, sourceGroup.getSemantics()));
-            }
-        }
-        return secondarySsrcs;
-    }
-
     /**
      * Build a map of source ssrc -> a list of secondary ssrc, secondary ssrc
      * type
@@ -316,20 +290,6 @@ public class MediaStreamTrackFactory
         return allSecondarySsrcs;
     }
 
-    private static Map<Long, SecondarySsrcs> getAllSecondarySsrcs2(
-        TrackSsrcs ssrcs, Collection<SourceGroup> sourceGroups)
-    {
-        Map<Long, SecondarySsrcs> allSecondarySsrcs = new HashMap<>();
-
-        for (long ssrc : ssrcs)
-        {
-            List<SecondarySsrc> secondarySsrcs
-                = getSecondarySsrcs2(ssrc, sourceGroups);
-            allSecondarySsrcs.put(ssrc, new SecondarySsrcs(secondarySsrcs));
-        }
-        return allSecondarySsrcs;
-    }
-
     /**
      * Get all groups which have the given semantics
      * @param semantics
@@ -338,14 +298,6 @@ public class MediaStreamTrackFactory
      */
     private static List<SourceGroupPacketExtension> getGroups(
         final String semantics, final List<SourceGroupPacketExtension> groups)
-    {
-        return groups.stream()
-            .filter(sg -> sg.getSemantics().equalsIgnoreCase(semantics))
-            .collect(Collectors.toList());
-    }
-
-    private static List<SourceGroup> getGroups2(
-        final String semantics, final List<SourceGroup> groups)
     {
         return groups.stream()
             .filter(sg -> sg.getSemantics().equalsIgnoreCase(semantics))
@@ -394,39 +346,6 @@ public class MediaStreamTrackFactory
                     || ssrcsToRemove.contains(source.getSSRC()));
     }
 
-    private static void removeReferences2(
-        TrackSsrcs trackSsrcs,
-        List<Source> sources,
-        List<SourceGroup> sourceGroups)
-    {
-        // Remove any groups to which any of the ssrcs of this track belong
-        List<SourceGroup> groupsToRemove
-            = sourceGroups.stream()
-            .filter(
-                group -> group.getSources().stream().anyMatch(
-                    source -> trackSsrcs.contains(source.getSsrc())))
-            .collect(Collectors.toList());
-
-        sourceGroups.removeAll(groupsToRemove);
-
-        /*
-         * Remove not only the ssrcs in the track itself, but any ssrcs that
-         * were in groups along with ssrcs from the track. E.g. if we have:`
-         * SIM 1 2 3
-         * RTX 1 10
-         * RTX 2 20
-         * RTX 3 30
-         * then we need to make sure ssrcs 10, 20 and 30 don't create tracks of
-         * their own and are removed along with the processing of the track
-         * with ssrcs 1, 2 and 3.
-         */
-        Set<Long> ssrcsToRemove = extractSsrcs2(groupsToRemove);
-        sources.removeIf(
-            source ->
-                trackSsrcs.contains(source.getSsrc())
-                    || ssrcsToRemove.contains(source.getSsrc()));
-    }
-
     /**
      * Extracts all SSRCs from all sources of a list of source groups.
      * @param groups the list of groups.
@@ -439,16 +358,6 @@ public class MediaStreamTrackFactory
         groups.forEach(
             group -> group.getSources().forEach(
                 source -> ssrcs.add(source.getSSRC())));
-        return ssrcs;
-    }
-
-    private static Set<Long> extractSsrcs2(
-        List<SourceGroup> groups)
-    {
-        Set<Long> ssrcs = new HashSet<>();
-        groups.forEach(
-            group -> group.getSources().forEach(
-                source -> ssrcs.add(source.getSsrc())));
         return ssrcs;
     };
 
@@ -556,96 +465,6 @@ public class MediaStreamTrackFactory
         return trackSsrcsList;
     }
 
-    private static List<TrackSsrcs> getTrackSsrcs2(
-        Collection<Source> sources,
-        Collection<SourceGroup> sourceGroups)
-    {
-        List<TrackSsrcs> trackSsrcsList = new ArrayList<>();
-
-        List<Source> sourcesCopy = new ArrayList<>(sources);
-        List<SourceGroup> sourceGroupsCopy = new ArrayList<>(sourceGroups);
-
-        Arrays.asList(
-            SourceGroupPacketExtension.SEMANTICS_SIMULCAST,
-            SourceGroupPacketExtension.SEMANTICS_FID,
-            SourceGroupPacketExtension.SEMANTICS_FEC
-        ).forEach(groupSem -> {
-            List<SourceGroup> groups
-                = getGroups2(groupSem, sourceGroupsCopy);
-            groups.forEach(group -> {
-                // An empty group is the signal that we want to clear all
-                // the groups.
-                // https://github.com/jitsi/jitsi/blob/7eabaab0fca37711813965d66a0720d1545f6c48/src/net/java/sip/communicator/impl/protocol/jabber/extensions/colibri/ColibriBuilder.java#L188
-                if (group.getSources() == null || group.getSources().isEmpty())
-                {
-                    if (groups.size() > 1)
-                    {
-                        logger.warn("Received empty group, which is " +
-                            "a signal to clear all groups, but there were " +
-                            "other groups present, which shouldn't happen");
-                    }
-                    return;
-                }
-                List<Long> ssrcs;
-                // For a simulcast group, all the ssrcs are considered primary
-                // ssrcs, but for others, only the main ssrc of the group is
-                if (groupSem.equalsIgnoreCase(
-                    SourceGroupPacketExtension.SEMANTICS_SIMULCAST))
-                {
-                    ssrcs
-                        = group.getSources().stream()
-                        .map(Source::getSsrc)
-                        .collect(Collectors.toList());
-                }
-                else
-                {
-                    ssrcs = Arrays.asList(group.getSources().get(0).getSsrc());
-                }
-
-                TrackSsrcs trackSsrcs = new TrackSsrcs(ssrcs);
-                // Now we need to remove any groups with these ssrcs as their
-                // primary, or sources that correspond to one of these ssrcs
-                removeReferences2(trackSsrcs, sourcesCopy, sourceGroupsCopy);
-
-                trackSsrcsList.add(trackSsrcs);
-            });
-        });
-
-        if (!sourceGroupsCopy.isEmpty()) {
-            logger.warn(
-                "Unprocessed source groups: " +
-                    sourceGroupsCopy.stream()
-                        .map(SourceGroup::toString)
-                        .reduce(String::concat));
-        }
-
-        // The remaining sources are not part of any group. Add them as tracks
-        // with their own primary SSRC.
-        // NOTE: we need to ignore sources with an ssrc of -1, because the
-        // ColibriBuilder will use that as a signal to remove sources
-        // https://github.com/jitsi/jitsi/blob/7eabaab0fca37711813965d66a0720d1545f6c48/src/net/java/sip/communicator/impl/protocol/jabber/extensions/colibri/ColibriBuilder.java#L162
-        sourcesCopy.forEach(source -> {
-            if (source.getSsrc() != -1)
-            {
-                trackSsrcsList.add(new TrackSsrcs(source.getSsrc()));
-            }
-            else
-            {
-                if (sourcesCopy.size() > 1)
-                {
-                    logger.warn("Received an empty source, which is " +
-                        "a signal to clear all sources, but there were " +
-                        "other sources present, which shouldn't happen");
-                }
-            }
-        });
-
-        // TODO(brian): i think we can avoid this and just set the endpoint id elsewhere
-//        setOwners(sources, trackSsrcsList);
-
-        return trackSsrcsList;
-    }
-
     /**
      * Updates the given list of {@link TrackSsrcs}, setting the {@code owner}
      * field according to the {@code owner} attribute in {@code ssrc-info}
@@ -743,44 +562,6 @@ public class MediaStreamTrackFactory
                         numSpatialLayersPerStream,
                         numTemporalLayersPerStream,
                         secondarySsrcs);
-            tracks.add(track);
-        });
-
-        return tracks.toArray(new MediaStreamTrackDesc[tracks.size()]);
-    }
-
-    public static MediaStreamTrackDesc[] createMediaStreamTracks2(
-        String epId,
-        Collection<Source> sources,
-        Collection<SourceGroup> sourceGroups)
-    {
-        final Collection<SourceGroup> finalSourceGroups
-            = sourceGroups == null ? new ArrayList<>() : sourceGroups;
-        if (sources == null)
-        {
-            sources = new ArrayList<>();
-        }
-
-        List<TrackSsrcs> trackSsrcsList = getTrackSsrcs2(sources, finalSourceGroups);
-        List<MediaStreamTrackDesc> tracks = new ArrayList<>();
-
-        trackSsrcsList.forEach(trackSsrcs -> {
-            // As of now, we only ever have 1 spatial layer per stream
-            int numSpatialLayersPerStream = 1;
-            int numTemporalLayersPerStream = 1;
-            if (trackSsrcs.size() > 1 && ENABLE_SVC)
-            {
-                numTemporalLayersPerStream = VP8_SIMULCAST_TEMPORAL_LAYERS;
-            }
-            Map<Long, SecondarySsrcs> secondarySsrcs
-                = getAllSecondarySsrcs2(trackSsrcs, finalSourceGroups);
-            MediaStreamTrackDesc track
-                = createTrack(
-                trackSsrcs,
-                numSpatialLayersPerStream,
-                numTemporalLayersPerStream,
-                secondarySsrcs,
-                epId);
             tracks.add(track);
         });
 
@@ -912,17 +693,8 @@ public class MediaStreamTrackFactory
         }
     }
 
-    private static MediaStreamTrackDesc createTrack(
-        TrackSsrcs primarySsrcs,
-        int numSpatialLayersPerStream,
-        int numTemporalLayersPerStream,
-        Map<Long, SecondarySsrcs> allSecondarySsrcs)
-    {
-        return createTrack(primarySsrcs, numSpatialLayersPerStream, numTemporalLayersPerStream, allSecondarySsrcs, null);
-    }
-
-        /**
-         * Creates a single MediaStreamTrack with the given information
+    /**
+     * Creates a single MediaStreamTrack with the given information
      * @param primarySsrcs the set of primary video ssrcs belonging to this track
      * @param numSpatialLayersPerStream the number of spatial layers per stream
      * for this track
@@ -937,16 +709,14 @@ public class MediaStreamTrackFactory
             TrackSsrcs primarySsrcs,
             int numSpatialLayersPerStream,
             int numTemporalLayersPerStream,
-            Map<Long, SecondarySsrcs> allSecondarySsrcs,
-            String owner)
+            Map<Long, SecondarySsrcs> allSecondarySsrcs)
     {
         int numEncodings
             = primarySsrcs.size()
                 * numSpatialLayersPerStream * numTemporalLayersPerStream;
-        String actualOwner = owner == null ? primarySsrcs.owner : owner;
         RTPEncodingDesc[] rtpEncodings = new RTPEncodingDesc[numEncodings];
         MediaStreamTrackDesc track
-            = new MediaStreamTrackDesc(rtpEncodings, actualOwner);
+            = new MediaStreamTrackDesc(rtpEncodings, primarySsrcs.owner);
 
         RTPEncodingDesc[] encodings
             = createRTPEncodings(
