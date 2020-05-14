@@ -956,7 +956,6 @@ public class BitrateController
                 for (MediaStreamTrackDesc track : tracks)
                 {
                     trackBitrateAllocations.add(
-                        endpointPriority,
                         new TrackBitrateAllocation(
                             sourceEndpoint,
                             track,
@@ -996,7 +995,7 @@ public class BitrateController
                     for (MediaStreamTrackDesc track : tracks)
                     {
                         trackBitrateAllocations.add(
-                            endpointPriority, new TrackBitrateAllocation(
+                            new TrackBitrateAllocation(
                                 sourceEndpoint,
                                 track,
                                 true /* fitsInLastN */,
@@ -1033,7 +1032,7 @@ public class BitrateController
                     for (MediaStreamTrackDesc track : tracks)
                     {
                         trackBitrateAllocations.add(
-                            endpointPriority, new TrackBitrateAllocation(
+                            new TrackBitrateAllocation(
                                 sourceEndpoint, track,
                                 forwarded, false /* selected */,
                                 maxRxFrameHeightPx));
