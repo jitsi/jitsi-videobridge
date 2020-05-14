@@ -120,122 +120,127 @@ public class MediaSourceFactory
         return secondarySsrcTypeMap;
     }
 
-    /**
-     * Creates encodings.
+    /*
+     * Creates layers for an encoding.
      *
-     * @param source the source that will own the temporal encodings.
-     * @param primary the array of the primary SSRCs for the simulcast streams.
      * @param spatialLen the number of spatial encodings per simulcast stream.
      * @param temporalLen the number of temporal encodings per simulcast stream.
-     * @param secondarySsrcs a map of primary ssrc -> list of pairs, where each
-     * pair has the secondary ssrc as its key, and the type (rtx, etc.) as its
-     * value
+     * @param height the maximum height of the top spatial layer
      * @return an array that holds the layer descriptions.
      */
     private static RtpLayerDesc[] createRTPLayerDescs(
-        MediaSourceDesc source, SourceSsrcs primary,
-        int spatialLen, int temporalLen, Map<Long, SecondarySsrcs> secondarySsrcs)
+        int spatialLen, int temporalLen, int encodingIdx, int height)
     {
         RtpLayerDesc[] rtpLayers
-            = new RtpLayerDesc[primary.size() * spatialLen * temporalLen];
+            = new RtpLayerDesc[spatialLen * temporalLen];
 
-        // this loop builds a subjective quality index array that looks like
-        // this:
-        //
-        // [s0t0, s0t1, s0t2, s1t0, s1t1, s1t2, s2t0, s2t1, s2t2]
-        //
-        // The spatial layer is offered either by simulcast (VP8) or spatial
-        // scalability (VP9). Exotic cases might do simulcast + spatial
-        // scalability.
-
-        //TODO(brian): this is only correct if the highest res is 720p
-        int height = VP8_SIMULCAST_BASE_LAYER_HEIGHT;
-        for (int streamIdx = 0; streamIdx < primary.size(); streamIdx++)
+        for (int spatialIdx = 0; spatialIdx < spatialLen; spatialIdx++)
         {
-            for (int spatialIdx = 0; spatialIdx < spatialLen; spatialIdx++)
+            double frameRate = (double) 30 / (1 << (temporalLen - 1));
+            for (int temporalIdx = 0;
+                 temporalIdx < temporalLen; temporalIdx++)
             {
-                double frameRate = (double) 30 / (1 << (temporalLen - 1));
-                for (int temporalIdx = 0;
-                     temporalIdx < temporalLen; temporalIdx++)
+                int qualityId = qid(encodingIdx, spatialIdx, temporalIdx,
+                    spatialLen, temporalLen);
+                int idx = qid(0, spatialIdx, temporalIdx,
+                    spatialLen, temporalLen);
+
+                RtpLayerDesc[] dependencies;
+                if (spatialIdx > 0 && temporalIdx > 0)
                 {
-                    int idx = qid(streamIdx, spatialIdx, temporalIdx,
-                        spatialLen, temporalLen);
-
-                    RtpLayerDesc[] dependencies;
-                    if (spatialIdx > 0 && temporalIdx > 0)
-                    {
-                        // this layer depends on spatialIdx-1 and temporalIdx-1.
-                        dependencies = new RtpLayerDesc[]{
-                            rtpLayers[
-                                qid(streamIdx, spatialIdx, temporalIdx - 1,
-                                    spatialLen, temporalLen)],
-                            rtpLayers[
-                                qid(streamIdx, spatialIdx - 1, temporalIdx,
-                                    spatialLen, temporalLen)]
-                        };
-                    }
-                    else if (spatialIdx > 0)
-                    {
-                        // this layer depends on spatialIdx-1.
-                        dependencies = new RtpLayerDesc[]
-                            {rtpLayers[
-                                qid(streamIdx, spatialIdx - 1, temporalIdx,
-                                    spatialLen, temporalLen)]};
-                    }
-                    else if (temporalIdx > 0)
-                    {
-                        // this layer depends on temporalIdx-1.
-                        dependencies = new RtpLayerDesc[]
-                            {rtpLayers[
-                                qid(streamIdx, spatialIdx, temporalIdx - 1,
-                                    spatialLen, temporalLen)]};
-                    }
-                    else
-                    {
-                        // this is a base layer without any dependencies.
-                        dependencies = null;
-                    }
-
-                    int temporalId = temporalLen > 1 ? temporalIdx : -1;
-                    int spatialId = spatialLen > 1 ? spatialIdx : -1;
-
-                    rtpLayers[idx]
-                        = new RtpLayerDesc(idx,
-                        primary.get(streamIdx),
-                        temporalId, spatialId, height, frameRate, dependencies);
-                    SecondarySsrcs ssrcSecondarySsrcs
-                        = secondarySsrcs.get(primary.get(streamIdx));
-                    if (ssrcSecondarySsrcs != null)
-                    {
-                        ssrcSecondarySsrcs.forEach(ssrcSecondarySsrc -> {
-                            SsrcAssociationType type
-                                = getSecondarySsrcTypeMap()
-                                        .get(ssrcSecondarySsrc.type);
-                            if (type == null)
-                            {
-                                logger.error("Unable to find a mapping for" +
-                                    " secondary ssrc type " +
-                                                 ssrcSecondarySsrc.type +
-                                    " will NOT included this secondary ssrc as" +
-                                    " an encoding");
-                            }
-                            else
-                            {
-                                rtpLayers[idx].addSecondarySsrc(
-                                    ssrcSecondarySsrc.ssrc, type);
-                            }
-                        });
-                    }
-
-                    frameRate *= 2;
+                    // this layer depends on spatialIdx-1 and temporalIdx-1.
+                    dependencies = new RtpLayerDesc[]{
+                        rtpLayers[
+                            qid(0, spatialIdx, temporalIdx - 1,
+                                spatialLen, temporalLen)],
+                        rtpLayers[
+                            qid(0, spatialIdx - 1, temporalIdx,
+                                spatialLen, temporalLen)]
+                    };
                 }
+                else if (spatialIdx > 0)
+                {
+                    // this layer depends on spatialIdx-1.
+                    dependencies = new RtpLayerDesc[]
+                        {rtpLayers[
+                            qid(0, spatialIdx - 1, temporalIdx,
+                                spatialLen, temporalLen)]};
+                }
+                else if (temporalIdx > 0)
+                {
+                    // this layer depends on temporalIdx-1.
+                    dependencies = new RtpLayerDesc[]
+                        {rtpLayers[
+                            qid(0, spatialIdx, temporalIdx - 1,
+                                spatialLen, temporalLen)]};
+                }
+                else
+                {
+                    // this is a base layer without any dependencies.
+                    dependencies = null;
+                }
+
+                int temporalId = temporalLen > 1 ? temporalIdx : -1;
+                int spatialId = spatialLen > 1 ? spatialIdx : -1;
+
+                rtpLayers[idx]
+                    = new RtpLayerDesc(qualityId,
+                    temporalId, spatialId, height, frameRate, dependencies);
+
+                frameRate *= 2;
             }
 
-            height *= 2;
+
         }
         return rtpLayers;
-
     }
+
+
+    /**
+     * Creates an RTP encoding.
+     * @param primarySsrc the primary SSRC for the encoding.
+     * @param spatialLen the number of spatial layers of the encoding.
+     * @param temporalLen the number of temporal layers of the encodings.
+     * @param secondarySsrcs a list of pairs, where each
+     * pair has the secondary ssrc as its key, and the type (rtx, etc.) as its
+     * value
+     * @param encodingIdx the index of the encoding
+     * @return a description of the encoding.
+     */
+    private static RtpEncodingDesc createRtpEncodingDesc(Long primarySsrc,
+        int spatialLen, int temporalLen, SecondarySsrcs secondarySsrcs,
+        int encodingIdx, int height)
+    {
+        RtpLayerDesc[] layers = createRTPLayerDescs(spatialLen, temporalLen,
+            encodingIdx, height);
+
+        RtpEncodingDesc enc = new RtpEncodingDesc(primarySsrc, layers);
+
+        if (secondarySsrcs != null)
+        {
+            secondarySsrcs.forEach(ssrcSecondarySsrc -> {
+                SsrcAssociationType type
+                    = getSecondarySsrcTypeMap()
+                    .get(ssrcSecondarySsrc.type);
+                if (type == null)
+                {
+                    logger.error("Unable to find a mapping for" +
+                        " secondary ssrc type " +
+                        ssrcSecondarySsrc.type +
+                        " will NOT included this secondary ssrc as" +
+                        " an encoding");
+                }
+                else
+                {
+                    enc.addSecondarySsrc(
+                        ssrcSecondarySsrc.ssrc, type);
+                }
+            });
+        }
+
+        return enc;
+    }
+
 
     /**
      * Get the 'secondary' ssrcs for the given primary ssrc. 'Secondary' here
@@ -712,20 +717,33 @@ public class MediaSourceFactory
             int numTemporalLayersPerStream,
             Map<Long, SecondarySsrcs> allSecondarySsrcs)
     {
-        int numLayers
-            = primarySsrcs.size()
-                * numSpatialLayersPerStream * numTemporalLayersPerStream;
-        RtpLayerDesc[] rtpLayers = new RtpLayerDesc[numLayers];
-        MediaSourceDesc source
-            = new MediaSourceDesc(rtpLayers, primarySsrcs.owner);
+        RtpEncodingDesc[] encodings =
+            new RtpEncodingDesc[primarySsrcs.size()];
 
-        RtpLayerDesc[] layers
-            = createRTPLayerDescs(
-                    source, primarySsrcs,
-                    numSpatialLayersPerStream, numTemporalLayersPerStream,
-                    allSecondarySsrcs);
-        assert(layers.length <= numLayers);
-        System.arraycopy(layers, 0, rtpLayers, 0, layers.length);
+        // this loop builds a subjective quality index array that looks like
+        // this:
+        //
+        // [s0t0, s0t1, s0t2, s1t0, s1t1, s1t2, s2t0, s2t1, s2t2]
+        //
+        // The spatial layer is offered either by simulcast (VP8) or spatial
+        // scalability (VP9). Exotic cases might do simulcast + spatial
+        // scalability.
+
+        //TODO(brian): this is only correct if the highest res is 720p
+        int height = VP8_SIMULCAST_BASE_LAYER_HEIGHT;
+
+        for (int encodingIdx = 0; encodingIdx < primarySsrcs.size(); encodingIdx++) {
+            Long primarySsrc = primarySsrcs.get(encodingIdx);
+            SecondarySsrcs ssrcSecondarySsrcs = allSecondarySsrcs.get(primarySsrc);
+
+            encodings[encodingIdx] = createRtpEncodingDesc(primarySsrc,
+                numSpatialLayersPerStream, numTemporalLayersPerStream,
+                ssrcSecondarySsrcs, encodingIdx, height);
+
+            height *= 2;
+        }
+
+        MediaSourceDesc source = new MediaSourceDesc(encodings, primarySsrcs.owner);
 
         source.updateLayerCache();
 

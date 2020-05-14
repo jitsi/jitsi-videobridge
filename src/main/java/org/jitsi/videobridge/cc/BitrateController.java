@@ -756,7 +756,10 @@ public class BitrateController
                 return adaptiveSourceProjection;
             }
 
-            if (!sourceBitrateAllocation.source.hasRtpLayers())
+            RtpEncodingDesc[] rtpEncodings =
+                sourceBitrateAllocation.source.getRtpEncodings();
+
+            if (ArrayUtils.isNullOrEmpty(rtpEncodings))
             {
                 return null;
             }
@@ -781,14 +784,11 @@ public class BitrateController
 
             logger.debug(() -> "new source projection for " + sourceBitrateAllocation.source);
 
-            // Route all layers to the specified bitrate controller.
-            int i;
-            for (i = 0; i < sourceBitrateAllocation.source.numRtpLayers(); i++)
+            // Route all encodings to the specified bitrate controller.
+            for (RtpEncodingDesc rtpEncoding: rtpEncodings)
             {
-                // TODO: should use encodings
-                RtpLayerDesc rtpLayer = sourceBitrateAllocation.source.getRtpLayerByQualityIdx(i);
                 adaptiveSourceProjectionMap.put(
-                    rtpLayer.getPrimarySSRC(), adaptiveSourceProjection);
+                    rtpEncoding.getPrimarySSRC(), adaptiveSourceProjection);
             }
 
             return adaptiveSourceProjection;
