@@ -23,9 +23,40 @@ import java.util.*;
  */
 public class VideoConstraints
 {
+    /**
+     * A constraints object for the given endpoint id, with ideal height set to
+     * 180p.
+     *
+     * Pinned endpoints are those that we always want to have in the last-n
+     * set in LD, if they're not on-stage, or in HD if they're on-stage
+     * (provided that there's enough bandwidth, but that's up to the bitrate
+     * controller to decide).
+     *
+     * Note that a selected endpoint can be pinned. Signaling that to the
+     * bridge may sound a bit redundant, after all if an endpoint is
+     * selected, we already have a 720p constraint for it. However, when the
+     * selected endpoint goes off-stage, it needs to maintain its status
+     * as "pinned".
+     *
+     * By setting the ideal height to 180, a receiver expresses the "desire"
+     * to watch them in low resolution. This will result in being
+     * prioritized during the bandwidth allocation step.
+     */
     public static final VideoConstraints
         PINNED_ENDPOINT_CONSTRAINT = new VideoConstraints(180);
 
+    /**
+     * A constraints object for the given endpoint id, with ideal height set to
+     * 720p.
+     *
+     *  Pinned endpoints are those that we want to see in HD because they're
+     *  (provided that there's enough bandwidth, but that's up to the bitrate
+     *  controller to decide).
+     *
+     *  By setting the ideal height to 720, a receiver expresses the "desire"
+     *  to watch them in high resolution. This will result in being
+     *  prioritized during the bandwidth allocation step.
+     */
     public static final VideoConstraints
         SELECTED_ENDPOINT_CONSTRAINT = new VideoConstraints(720);
 
@@ -71,47 +102,6 @@ public class VideoConstraints
     static VideoConstraints makeMaxHeightEndpointConstraints(int idealHeight)
     {
         return new VideoConstraints(idealHeight);
-    }
-
-    /**
-     * Pinned endpoints are those that we always want to have in the last-n
-     * set in LD, if they're not on-stage, or in HD if they're on-stage
-     * (provided that there's enough bandwidth, but that's up to the bitrate
-     * controller to decide).
-     *
-     * Note that a selected endpoint can be pinned. Signaling that to the
-     * bridge may sound a bit redundant, after all if an endpoint is
-     * selected, we already have a 720p constraint for it. However, when the
-     * selected endpoint goes off-stage, it needs to maintain its status
-     * as "pinned".
-     *
-     * By setting the ideal height to 180, a receiver expresses the "desire"
-     * to watch them in low resolution. This will result in being
-     * prioritized during the bandwidth allocation step.
-     *
-     * @return a constraints object for the given endpoint id, with ideal
-     * height set to 180p.
-     */
-    static VideoConstraints makePinnedEndpointConstraints()
-    {
-        return new VideoConstraints(180);
-    }
-
-    /**
-     *  Pinned endpoints are those that we want to see in HD because they're
-     *  (provided that there's enough bandwidth, but that's up to the bitrate
-     *  controller to decide).
-     *
-     *  By setting the ideal height to 720, a receiver expresses the "desire"
-     *  to watch them in high resolution. This will result in being
-     *  prioritized during the bandwidth allocation step.
-     *
-     * @return a constraints object for the given endpoint id, with ideal
-     * height set to 720p.
-     */
-    static VideoConstraints makeSelectedEndpointConstraints()
-    {
-        return new VideoConstraints(720);
     }
 
     public int getIdealHeight()
