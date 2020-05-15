@@ -21,12 +21,13 @@ import java.util.*;
  * Expresses the ideal video constraints for an endpoint. We may wish to support
  * track-based constraints in the future.
  */
-public class EndpointConstraints
+public class VideoConstraints
 {
-    /**
-     * The endpoint id of the constrained endpoint.
-     */
-    private final String endpointId;
+    public static final VideoConstraints
+        PINNED_ENDPOINT_CONSTRAINT = new VideoConstraints(180);
+
+    public static final VideoConstraints
+        SELECTED_ENDPOINT_CONSTRAINT = new VideoConstraints(720);
 
     /**
      * The idea height of the constrained endpoint.
@@ -36,13 +37,11 @@ public class EndpointConstraints
     /**
      * Ctor.
      *
-     * @param endpointId The endpoint id of the constrained endpoint.
      * @param idealHeight The idea height of the constrained endpoint.
      */
-    EndpointConstraints(String endpointId, int idealHeight)
+    VideoConstraints(int idealHeight)
     {
         this.idealHeight = idealHeight;
-        this.endpointId = endpointId;
     }
 
     /**
@@ -69,9 +68,9 @@ public class EndpointConstraints
      * @return a constraints object without endpoint id (can be used as a global
      * endpoint constraint), with ideal height set to the given ideal height.
      */
-    static EndpointConstraints makeMaxHeightEndpointConstraints(int idealHeight)
+    static VideoConstraints makeMaxHeightEndpointConstraints(int idealHeight)
     {
-        return new EndpointConstraints(null, idealHeight);
+        return new VideoConstraints(idealHeight);
     }
 
     /**
@@ -90,14 +89,12 @@ public class EndpointConstraints
      * to watch them in low resolution. This will result in being
      * prioritized during the bandwidth allocation step.
      *
-     * @param endpointId The endpoint id of the constrained endpoint.
-     *
      * @return a constraints object for the given endpoint id, with ideal
      * height set to 180p.
      */
-    static EndpointConstraints makePinnedEndpointConstraints(String endpointId)
+    static VideoConstraints makePinnedEndpointConstraints()
     {
-        return new EndpointConstraints(endpointId, 180);
+        return new VideoConstraints(180);
     }
 
     /**
@@ -108,25 +105,18 @@ public class EndpointConstraints
      *  By setting the ideal height to 720, a receiver expresses the "desire"
      *  to watch them in high resolution. This will result in being
      *  prioritized during the bandwidth allocation step.
-     *         
-     * @param endpointId The endpoint id of the constrained endpoint.
      *
      * @return a constraints object for the given endpoint id, with ideal
      * height set to 720p.
      */
-    static EndpointConstraints makeSelectedEndpointConstraints(String endpointId)
+    static VideoConstraints makeSelectedEndpointConstraints()
     {
-        return new EndpointConstraints(endpointId, 720);
+        return new VideoConstraints(720);
     }
 
-    public EndpointConstraints unless(EndpointConstraints endpointConstraints)
+    public VideoConstraints unless(VideoConstraints videoConstraints)
     {
-        return endpointConstraints != null ? endpointConstraints : this;
-    }
-
-    public String getEndpointId()
-    {
-        return endpointId;
+        return videoConstraints != null ? videoConstraints : this;
     }
 
     public int getIdealHeight()
@@ -134,24 +124,18 @@ public class EndpointConstraints
         return idealHeight;
     }
 
-    public EndpointConstraints of(String id)
-    {
-        return new EndpointConstraints(id, idealHeight);
-    }
-
     @Override
     public boolean equals(Object o)
     {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        EndpointConstraints that = (EndpointConstraints) o;
-        return idealHeight == that.idealHeight &&
-            Objects.equals(endpointId, that.endpointId);
+        VideoConstraints that = (VideoConstraints) o;
+        return idealHeight == that.idealHeight;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(endpointId, idealHeight);
+        return Objects.hash(idealHeight);
     }
 }

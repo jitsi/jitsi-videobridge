@@ -356,13 +356,13 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 
     /**
      *
-     * @param newEndpointConstraints
+     * @param newVideoConstraints
      */
-    public abstract void setEndpointConstraints(Set<EndpointConstraints> newEndpointConstraints);
+    public abstract void setEndpointConstraints(Map<String, VideoConstraints> newVideoConstraints);
 
     /**
      *
      * @param newGlobalConstraints
      */
-    public abstract void setGlobalConstraints(EndpointConstraints newGlobalConstraints);
+    public abstract void setGlobalConstraints(VideoConstraints newGlobalConstraints);
 }

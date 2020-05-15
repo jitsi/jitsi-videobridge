@@ -55,7 +55,6 @@ import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi_modified.sctp4j.*;
 import org.json.simple.*;
 
-import java.beans.*;
 import java.io.*;
 import java.nio.*;
 import java.time.*;
@@ -662,13 +661,13 @@ public class Endpoint
     }
 
     @Override
-    public void setEndpointConstraints(Set<EndpointConstraints> newEndpointConstraints)
+    public void setEndpointConstraints(Map<String, VideoConstraints> newVideoConstraints)
     {
-        bitrateController.setEndpointConstraints(newEndpointConstraints);
+        bitrateController.setEndpointConstraints(newVideoConstraints);
     }
 
     @Override
-    public void setGlobalConstraints(EndpointConstraints newGlobalConstraints)
+    public void setGlobalConstraints(VideoConstraints newGlobalConstraints)
     {
         bitrateController.setGlobalConstraints(newGlobalConstraints);
     }

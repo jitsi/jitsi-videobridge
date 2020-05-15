@@ -172,13 +172,13 @@ public class BitrateController
     /**
      * The global constraints that override per-endpoint constraints.
      */
-    private EndpointConstraints globalConstraints;
+    private VideoConstraints globalConstraints;
 
     /**
      * The map of endpoint id to endpoint constraints that contains the
      * constraints to respect when allocating bandwidth for a specific endpoint.
      */
-    private Map<String, EndpointConstraints> endpointConstraintsMap = Collections.emptyMap();
+    private Map<String, VideoConstraints> endpointConstraintsMap = Collections.emptyMap();
 
     /**
      * The last-n value for the endpoint to which this {@link BitrateController}
@@ -270,13 +270,13 @@ public class BitrateController
     static class EndpointMultiRank
     {
         final int speakerRank;
-        final EndpointConstraints endpointConstraints;
+        final VideoConstraints videoConstraints;
         final AbstractEndpoint endpoint;
 
-        EndpointMultiRank(int speakerRank, EndpointConstraints endpointConstraints, AbstractEndpoint endpoint)
+        EndpointMultiRank(int speakerRank, VideoConstraints videoConstraints, AbstractEndpoint endpoint)
         {
             this.speakerRank = speakerRank;
-            this.endpointConstraints = endpointConstraints;
+            this.videoConstraints = videoConstraints;
             this.endpoint = endpoint;
         }
     }
@@ -302,7 +302,7 @@ public class BitrateController
             // we look at their speech rank (whoever spoke last has is ranked
             // higher).
 
-            int idealHeightDiff = o1.endpointConstraints.getIdealHeight() - o2.endpointConstraints.getIdealHeight();
+            int idealHeightDiff = o1.videoConstraints.getIdealHeight() - o2.videoConstraints.getIdealHeight();
             if (idealHeightDiff != 0)
             {
                 return idealHeightDiff;
@@ -424,35 +424,38 @@ public class BitrateController
         return debugState;
     }
 
-    public void setEndpointConstraints(Set<EndpointConstraints> newEndpointConstraints)
+    public void setEndpointConstraints(Map<String, VideoConstraints> newVideoConstraintsMap)
     {
-        boolean needsUpdate = false;
-        Map<String, EndpointConstraints> oldEndpointConstraintsMap = this.endpointConstraintsMap;
-        if (newEndpointConstraints.size() != oldEndpointConstraintsMap.size())
-        {
-            Map<String, EndpointConstraints> newEndpointConstraintsMap
-                = new HashMap<>(newEndpointConstraints.size());
+        Map<String, VideoConstraints>
+            oldEndpointConstraintsMap = this.endpointConstraintsMap;
 
-            for (EndpointConstraints endpointConstraints : newEndpointConstraints)
+        boolean needsUpdate
+            = newVideoConstraintsMap.size() != oldEndpointConstraintsMap.size();
+
+        if (!needsUpdate)
+        {
+            for (Map.Entry<String, VideoConstraints>
+                videoConstraintsEntry : newVideoConstraintsMap.entrySet())
             {
-                String endpointId = endpointConstraints.getEndpointId();
-                newEndpointConstraintsMap.put(endpointId, endpointConstraints);
-                if (!endpointConstraints.equals(oldEndpointConstraintsMap.get(endpointId)))
+                String endpointId = videoConstraintsEntry.getKey();
+                VideoConstraints newVideoConstraints = videoConstraintsEntry.getValue();
+                VideoConstraints oldVideoConstraints = oldEndpointConstraintsMap.get(endpointId);
+                if (!newVideoConstraints.equals(oldVideoConstraints))
                 {
                     needsUpdate = true;
+                    break;
                 }
             }
-
-            this.endpointConstraintsMap = newEndpointConstraintsMap;
         }
 
         if (needsUpdate)
         {
+            this.endpointConstraintsMap = newVideoConstraintsMap;
             update();
         }
     }
 
-    public void setGlobalConstraints(EndpointConstraints newGlobalConstraints)
+    public void setGlobalConstraints(VideoConstraints newGlobalConstraints)
     {
         if (!this.globalConstraints.equals(newGlobalConstraints))
         {
@@ -701,9 +704,7 @@ public class BitrateController
             for (TrackBitrateAllocation
                 trackBitrateAllocation : trackBitrateAllocations)
             {
-                String  endpointID = trackBitrateAllocation.endpointConstraints.getEndpointId();
-
-                conferenceEndpointIds.add(endpointID);
+                conferenceEndpointIds.add(trackBitrateAllocation.endpointID);
 
                 int trackTargetIdx = trackBitrateAllocation.getTargetIndex(),
                     trackIdealIdx = trackBitrateAllocation.getIdealIndex();
@@ -739,13 +740,13 @@ public class BitrateController
                             .addField("ideal_idx", trackIdealIdx)
                             .addField("target_bps", trackTargetBps)
                             .addField("endpointConstraints",
-                                trackBitrateAllocation.endpointConstraints)
+                                trackBitrateAllocation.videoConstraints)
                             .addField("oversending",
                                 trackBitrateAllocation.oversending)
                             .addField("preferred_idx",
                                 trackBitrateAllocation.getPreferredIndex())
                             .addField("remote_endpoint_id",
-                                endpointID)
+                                trackBitrateAllocation.endpointID)
                             .addField("ideal_bps", trackIdealBps));
                     }
                 }
@@ -753,12 +754,12 @@ public class BitrateController
                 if (trackTargetIdx > -1)
                 {
                     newForwardedEndpointIds
-                        .add(endpointID);
+                        .add(trackBitrateAllocation.endpointID);
                     if (!oldForwardedEndpointIds
-                        .contains(endpointID))
+                        .contains(trackBitrateAllocation.endpointID))
                     {
                         endpointsEnteringLastNIds
-                            .add(endpointID);
+                            .add(trackBitrateAllocation.endpointID);
                     }
                 }
             }
@@ -847,7 +848,7 @@ public class BitrateController
             // but a reference persists in the adaptiveTrackProjectionMap). We're
             // creating local final variables and pass that to the lambda function
             // in order to avoid that.
-            final String endpointID = trackBitrateAllocation.endpointConstraints.getEndpointId();
+            final String endpointID = trackBitrateAllocation.endpointID;
             final long targetSSRC = trackBitrateAllocation.targetSSRC;
             adaptiveTrackProjection
                 = new AdaptiveTrackProjection(
@@ -1018,18 +1019,17 @@ public class BitrateController
         // ranked lower than selected endpoints but before the rest of the pack.
         // Finally, any remaining endpoints were ranked after pinned endpoints.
 
-        Map<String, EndpointConstraints> endpointConstraintsMapCopy = endpointConstraintsMap;
-        EndpointConstraints globalConstraintsCopy = globalConstraints;
+        Map<String, VideoConstraints> endpointConstraintsMapCopy = endpointConstraintsMap;
+        VideoConstraints globalConstraintsCopy = globalConstraints;
 
         List<EndpointMultiRank> endpointMultiRankList = IntStream
             .range(0, conferenceEndpoints.size() - 1)
             .mapToObj(i -> {
                 AbstractEndpoint endpoint = conferenceEndpoints.get(i);
-                EndpointConstraints endpointConstraints = globalConstraintsCopy
-                    .of(endpoint.getID())
+                VideoConstraints videoConstraints = globalConstraintsCopy
                     .unless(endpointConstraintsMapCopy.get(endpoint.getID()));
 
-                return new EndpointMultiRank(i, endpointConstraints, endpoint);
+                return new EndpointMultiRank(i, videoConstraints, endpoint);
             })
             .sorted(new EndpointMultiRanker())
             .collect(Collectors.toList());
@@ -1054,7 +1054,8 @@ public class BitrateController
                 {
                     trackBitrateAllocations.add(
                         endpointPriority, new TrackBitrateAllocation(
-                            track, endpointMultiRank.endpointConstraints, forwarded));
+                            endpointMultiRank.endpoint.getID(),
+                            track, endpointMultiRank.videoConstraints, forwarded));
                 }
 
                 logger.trace(() -> "Adding endpoint " + sourceEndpoint.getID() + " to allocations");
@@ -1187,6 +1188,11 @@ public class BitrateController
     private class TrackBitrateAllocation
     {
         /**
+         * The ID of the {@link Endpoint} that this instance pertains to.
+         */
+        private final String endpointID;
+
+        /**
          * Indicates whether this {@link Endpoint} is forwarded or not to the
          * {@link Endpoint} that owns this {@link BitrateController}.
          */
@@ -1196,7 +1202,7 @@ public class BitrateController
          * Indicates whether this {@link Endpoint} is on-stage/selected or not
          * at the {@link Endpoint} that owns this {@link BitrateController}.
          */
-        private final EndpointConstraints endpointConstraints;
+        private final VideoConstraints videoConstraints;
 
         /**
          * Helper field that keeps the SSRC of the target stream.
@@ -1262,11 +1268,13 @@ public class BitrateController
          * selected.
          */
         private TrackBitrateAllocation(
+            String endpointID,
             MediaStreamTrackDesc track,
-            EndpointConstraints endpointConstraints,
+            VideoConstraints videoConstraints,
             boolean fitsInLastN)
         {
-            this.endpointConstraints = endpointConstraints;
+            this.endpointID = endpointID;
+            this.videoConstraints = videoConstraints;
             this.fitsInLastN = fitsInLastN;
             this.track = track;
 
@@ -1309,13 +1317,14 @@ public class BitrateController
             long idealBps = 0;
             for (RTPEncodingDesc encoding : encodings)
             {
-                int idealHeight = endpointConstraints.getIdealHeight();
+                int idealHeight = videoConstraints.getIdealHeight();
                 if (idealHeight >= 0 && encoding.getHeight() > idealHeight)
                 {
                     continue;
                 }
 
-                boolean selected = idealHeight >= 720;
+                boolean selected = videoConstraints
+                    .equals(VideoConstraints.SELECTED_ENDPOINT_CONSTRAINT);
                 if (selected)
                 {
                     // For the selected participant we favor frame rate over
@@ -1359,7 +1368,7 @@ public class BitrateController
             {
                 DiagnosticContext.TimeSeriesPoint ratesTimeSeriesPoint
                     = diagnosticContext.makeTimeSeriesPoint("calculated_rates")
-                    .addField("remote_endpoint_id", endpointConstraints.getEndpointId());
+                    .addField("remote_endpoint_id", endpointID);
                 for (RateSnapshot rateSnapshot : ratesList) {
                     ratesTimeSeriesPoint.addField(
                         Integer.toString(rateSnapshot.encoding.getIndex()),
@@ -1392,7 +1401,8 @@ public class BitrateController
                 return;
             }
 
-            boolean selected = endpointConstraints.getIdealHeight() >= 0;
+            boolean selected = videoConstraints
+                .equals(VideoConstraints.SELECTED_ENDPOINT_CONSTRAINT);
             if (ratedTargetIdx == -1 && selected)
             {
                 if (!Config.enableOnstageVideoSuspend())

@@ -52,8 +52,8 @@ public abstract class AbstractEndpointMessageTransport
      * information.
      */
     protected final @NotNull Logger logger;
-    private Stream<EndpointConstraints> pinnedEndpointConstraintsStream;
-    private Stream<EndpointConstraints> selectedEndpointConstraintsStream;
+    private Map<String, VideoConstraints> pinnedEndpointConstraintsMap;
+    private Map<String, VideoConstraints> selectedEndpointConstraintsMap;
 
     /**
      * Initializes a new {@link AbstractEndpointMessageTransport} instance.
@@ -397,9 +397,11 @@ public abstract class AbstractEndpointMessageTransport
         Set<String> newPinnedEndpoints)
     {
         // Note that this captures the set.
-        pinnedEndpointConstraintsStream = newPinnedEndpoints
+        pinnedEndpointConstraintsMap = newPinnedEndpoints
             .stream()
-            .map(EndpointConstraints::makePinnedEndpointConstraints);
+            .collect(Collectors.toMap(e -> e,
+                e -> VideoConstraints.PINNED_ENDPOINT_CONSTRAINT)
+            );
 
         onEndpointConstraintsChangedEvent();
     }
@@ -417,22 +419,27 @@ public abstract class AbstractEndpointMessageTransport
         JSONObject jsonObject,
         Set<String> newSelectedEndpoints)
     {
-        selectedEndpointConstraintsStream
+        selectedEndpointConstraintsMap
             = newSelectedEndpoints
             .stream()
-            .map(EndpointConstraints::makeSelectedEndpointConstraints);
+            .collect(Collectors.toMap(e -> e,
+                e -> VideoConstraints.SELECTED_ENDPOINT_CONSTRAINT)
+            );
 
         onEndpointConstraintsChangedEvent();
     }
 
     protected void onEndpointConstraintsChangedEvent()
     {
-        Set<EndpointConstraints> newEndpointConstraints = Stream.concat(
-            selectedEndpointConstraintsStream,
-            pinnedEndpointConstraintsStream)
-            .collect(Collectors.toSet());
+        Map<String, VideoConstraints>
+            newVideoConstraints = new HashMap<>(pinnedEndpointConstraintsMap);
 
-        endpoint.setEndpointConstraints(newEndpointConstraints);
+        // Add video constraints for all the selected endpoints (which will
+        // automatically override the video constraints for pinned endpoints, so
+        // they're bumped to 720p if they're also selected).
+        newVideoConstraints.putAll(selectedEndpointConstraintsMap);
+
+        endpoint.setEndpointConstraints(newVideoConstraints);
     }
 
     /**
@@ -493,7 +500,7 @@ public abstract class AbstractEndpointMessageTransport
 
         if (endpoint != null)
         {
-            endpoint.setGlobalConstraints(EndpointConstraints
+            endpoint.setGlobalConstraints(VideoConstraints
                 .makeMaxHeightEndpointConstraints(maxFrameHeight));
         }
     }
