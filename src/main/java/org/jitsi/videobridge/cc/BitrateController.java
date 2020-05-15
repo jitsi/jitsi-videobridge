@@ -267,12 +267,37 @@ public class BitrateController
             ||  deltaBwe < -1 * previousBwe * Config.bweChangeThresholdPct() / 100;
     }
 
+    /**
+     * A helper class that is used to determine the bandwidth allocation
+     * rank/priority of an endpoint that is based on its speaker rank and its
+     * video constraints. See {@link EndpointMultiRanker} for more information
+     * on how the ranking works.
+     */
     static class EndpointMultiRank
     {
+        /**
+         * The speaker rank of the {@link #endpoint}.
+         */
         final int speakerRank;
+
+        /**
+         * The video constraints of the {@link #endpoint}.
+         */
         final VideoConstraints videoConstraints;
+
+        /**
+         * The endpoint (sender) that's constrained and is ranked for bandwidth
+         * allocation.
+         */
         final AbstractEndpoint endpoint;
 
+        /**
+         * Ctor.
+         *
+         * @param speakerRank
+         * @param videoConstraints
+         * @param endpoint
+         */
         EndpointMultiRank(int speakerRank, VideoConstraints videoConstraints, AbstractEndpoint endpoint)
         {
             this.speakerRank = speakerRank;
@@ -281,27 +306,27 @@ public class BitrateController
         }
     }
 
+    /**
+     * An endpoint that has higher priority/rank will be allocated
+     * bandwidth prior to other endpoints with lower priority/rank
+     * (see the allocate method bellow)
+     *
+     * Once the endpoints are ranked, the bandwidth allocation algorithm
+     * loops over the endpoints multiple times, improving their target
+     * bitrate at ever step, until no further improvement is possible.
+     *
+     * In this multi-rank implementation, endpoints that have 720p ideal
+     * height will be given bandwidth before endpoints that have 180p
+     * ideal height. If two endpoints have the same ideal height, then
+     * we look at their speech rank (whoever spoke last has is ranked
+     * higher).
+     */
     static class EndpointMultiRanker
         implements Comparator<EndpointMultiRank>
     {
-
         @Override
         public int compare(EndpointMultiRank o1, EndpointMultiRank o2)
         {
-            // An endpoint that has higher priority/rank will be allocated
-            // bandwidth prior to other endpoints with lower priority/rank
-            // (see the allocate method bellow)
-            //
-            // Once the endpoints are ranked, the bandwidth allocation algorithm
-            // loops over the endpoints multiple times, improving their target
-            // bitrate at ever step, until no further improvement is possible.
-            //
-            // In this multi-rank implementation, endpoints that have 720p ideal
-            // height will be given bandwidth before endpoints that have 180p
-            // ideal height. If two endpoints have the same ideal height, then
-            // we look at their speech rank (whoever spoke last has is ranked
-            // higher).
-
             int idealHeightDiff = o1.videoConstraints.getIdealHeight() - o2.videoConstraints.getIdealHeight();
             if (idealHeightDiff != 0)
             {
