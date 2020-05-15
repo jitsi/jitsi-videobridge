@@ -60,6 +60,8 @@ public class VideoConstraints
     public static final VideoConstraints
         SELECTED_ENDPOINT_CONSTRAINT = new VideoConstraints(720);
 
+    public static final VideoConstraints EMPTY = new VideoConstraints(-1);
+
     /**
      * The idea height of the constrained endpoint.
      */

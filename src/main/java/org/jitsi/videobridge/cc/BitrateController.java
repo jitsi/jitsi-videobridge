@@ -172,7 +172,7 @@ public class BitrateController
     /**
      * The global video constraints that override per-endpoint video constraints.
      */
-    private VideoConstraints globalVideoConstraints;
+    private VideoConstraints globalVideoConstraints = VideoConstraints.EMPTY;
 
     /**
      * The map of endpoint id to video constraints that contains the video
