@@ -114,11 +114,6 @@ public class VideoConstraints
         return new VideoConstraints(720);
     }
 
-    public VideoConstraints unless(VideoConstraints videoConstraints)
-    {
-        return videoConstraints != null ? videoConstraints : this;
-    }
-
     public int getIdealHeight()
     {
         return idealHeight;

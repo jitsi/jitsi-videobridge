@@ -1026,8 +1026,8 @@ public class BitrateController
             .range(0, conferenceEndpoints.size() - 1)
             .mapToObj(i -> {
                 AbstractEndpoint endpoint = conferenceEndpoints.get(i);
-                VideoConstraints videoConstraints = globalConstraintsCopy
-                    .unless(endpointConstraintsMapCopy.get(endpoint.getID()));
+                VideoConstraints videoConstraints = endpointConstraintsMapCopy
+                    .getOrDefault(endpoint.getID(), globalConstraintsCopy);
 
                 return new EndpointMultiRank(i, videoConstraints, endpoint);
             })
