@@ -170,15 +170,15 @@ public class BitrateController
             = Collections.emptyList();
 
     /**
-     * The global constraints that override per-endpoint constraints.
+     * The global video constraints that override per-endpoint video constraints.
      */
-    private VideoConstraints globalConstraints;
+    private VideoConstraints globalVideoConstraints;
 
     /**
-     * The map of endpoint id to endpoint constraints that contains the
+     * The map of endpoint id to video constraints that contains the video
      * constraints to respect when allocating bandwidth for a specific endpoint.
      */
-    private Map<String, VideoConstraints> endpointConstraintsMap = Collections.emptyMap();
+    private Map<String, VideoConstraints> videoConstraintsMap = Collections.emptyMap();
 
     /**
      * The last-n value for the endpoint to which this {@link BitrateController}
@@ -428,8 +428,8 @@ public class BitrateController
         debugState.put("forwardedEndpoints", forwardedEndpointIds.toString());
         debugState.put("trustBwe", Config.trustBwe());
         debugState.put("lastBwe", lastBwe);
-        debugState.put("globalConstraints", globalConstraints);
-        debugState.put("endpointConstraints", Arrays.toString(endpointConstraintsMap.values().toArray()));
+        debugState.put("globalConstraints", globalVideoConstraints);
+        debugState.put("videoConstraints", Arrays.toString(videoConstraintsMap.values().toArray()));
         debugState.put("lastN", lastN);
         debugState.put("supportsRtx", supportsRtx);
         JSONObject adaptiveTrackProjectionsJson = new JSONObject();
@@ -449,13 +449,13 @@ public class BitrateController
         return debugState;
     }
 
-    public void setEndpointConstraints(Map<String, VideoConstraints> newVideoConstraintsMap)
+    public void setVideoConstraints(Map<String, VideoConstraints> newVideoConstraintsMap)
     {
         Map<String, VideoConstraints>
-            oldEndpointConstraintsMap = this.endpointConstraintsMap;
+            videoConstraintsMapCopy = this.videoConstraintsMap;
 
         boolean needsUpdate
-            = newVideoConstraintsMap.size() != oldEndpointConstraintsMap.size();
+            = newVideoConstraintsMap.size() != videoConstraintsMapCopy.size();
 
         if (!needsUpdate)
         {
@@ -464,7 +464,7 @@ public class BitrateController
             {
                 String endpointId = videoConstraintsEntry.getKey();
                 VideoConstraints newVideoConstraints = videoConstraintsEntry.getValue();
-                VideoConstraints oldVideoConstraints = oldEndpointConstraintsMap.get(endpointId);
+                VideoConstraints oldVideoConstraints = videoConstraintsMapCopy.get(endpointId);
                 if (!newVideoConstraints.equals(oldVideoConstraints))
                 {
                     needsUpdate = true;
@@ -475,16 +475,16 @@ public class BitrateController
 
         if (needsUpdate)
         {
-            this.endpointConstraintsMap = newVideoConstraintsMap;
+            this.videoConstraintsMap = newVideoConstraintsMap;
             update();
         }
     }
 
-    public void setGlobalConstraints(VideoConstraints newGlobalConstraints)
+    public void setGlobalVideoConstraints(VideoConstraints newGlobalConstraints)
     {
-        if (!this.globalConstraints.equals(newGlobalConstraints))
+        if (!this.globalVideoConstraints.equals(newGlobalConstraints))
         {
-            this.globalConstraints = newGlobalConstraints;
+            this.globalVideoConstraints = newGlobalConstraints;
             update();
         }
     }
@@ -764,7 +764,7 @@ public class BitrateController
                             .addField("target_idx", trackTargetIdx)
                             .addField("ideal_idx", trackIdealIdx)
                             .addField("target_bps", trackTargetBps)
-                            .addField("endpointConstraints",
+                            .addField("videoConstraints",
                                 trackBitrateAllocation.videoConstraints)
                             .addField("oversending",
                                 trackBitrateAllocation.oversending)
@@ -1030,8 +1030,8 @@ public class BitrateController
             logger.debug("Prioritizing endpoints, adjusted last-n: " + adjustedLastN +
                 ", sorted endpoint list: " +
                 conferenceEndpoints.stream().map(AbstractEndpoint::getID).collect(Collectors.joining(", ")) +
-                ". Endpoints constraints: " + Arrays.toString(endpointConstraintsMap.values().toArray()) +
-                ". Global endpoint constraints" + globalConstraints);
+                ". Endpoints constraints: " + Arrays.toString(videoConstraintsMap.values().toArray()) +
+                ". Global endpoint constraints" + globalVideoConstraints);
         }
 
         int endpointPriority = 0;
@@ -1044,14 +1044,14 @@ public class BitrateController
         // ranked lower than selected endpoints but before the rest of the pack.
         // Finally, any remaining endpoints were ranked after pinned endpoints.
 
-        Map<String, VideoConstraints> endpointConstraintsMapCopy = endpointConstraintsMap;
-        VideoConstraints globalConstraintsCopy = globalConstraints;
+        Map<String, VideoConstraints> videoConstraintsMapCopy = videoConstraintsMap;
+        VideoConstraints globalConstraintsCopy = globalVideoConstraints;
 
         List<EndpointMultiRank> endpointMultiRankList = IntStream
             .range(0, conferenceEndpoints.size() - 1)
             .mapToObj(i -> {
                 AbstractEndpoint endpoint = conferenceEndpoints.get(i);
-                VideoConstraints videoConstraints = endpointConstraintsMapCopy
+                VideoConstraints videoConstraints = videoConstraintsMapCopy
                     .getOrDefault(endpoint.getID(), globalConstraintsCopy);
 
                 return new EndpointMultiRank(i, videoConstraints, endpoint);

@@ -73,7 +73,7 @@ class OctoEndpoint(
         // single OctoEndpoints instance.
     }
 
-    override fun setEndpointConstraints(newVideoConstraints: MutableMap<String, VideoConstraints>?) {
+    override fun setVideoConstraints(newVideoConstraints: MutableMap<String, VideoConstraints>?) {
         TODO("Not yet implemented")
     }
 

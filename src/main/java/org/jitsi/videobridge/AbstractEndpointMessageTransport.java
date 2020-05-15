@@ -46,8 +46,20 @@ public abstract class AbstractEndpointMessageTransport
      * information.
      */
     protected final @NotNull Logger logger;
-    private Map<String, VideoConstraints> pinnedEndpointConstraintsMap;
-    private Map<String, VideoConstraints> selectedEndpointConstraintsMap;
+
+    /**
+     * The last pinned endpoints set signaled by the client, converted into
+     * a map of endpoint id -> video constraints. We need this for backwards
+     * compatibility (see more bellow in {@link #onVideoConstraintsChangedEvent()}
+     */
+    private Map<String, VideoConstraints> pinnedVideoConstraintsMap;
+
+    /**
+     * The last selected endpoints set signaled by the client, converted into
+     * a map of endpoint id -> video constraints. We need this for backwards
+     * compatibility (see more bellow in {@link #onVideoConstraintsChangedEvent()}
+     */
+    private Map<String, VideoConstraints> selectedVideoConstraintsMap;
 
     /**
      * Initializes a new {@link AbstractEndpointMessageTransport} instance.
@@ -391,13 +403,13 @@ public abstract class AbstractEndpointMessageTransport
         Set<String> newPinnedEndpoints)
     {
         // Note that this captures the set.
-        pinnedEndpointConstraintsMap = newPinnedEndpoints
+        pinnedVideoConstraintsMap = newPinnedEndpoints
             .stream()
             .collect(Collectors.toMap(e -> e,
                 e -> VideoConstraints.PINNED_ENDPOINT_CONSTRAINT)
             );
 
-        onEndpointConstraintsChangedEvent();
+        onVideoConstraintsChangedEvent();
     }
 
     /**
@@ -413,27 +425,27 @@ public abstract class AbstractEndpointMessageTransport
         JSONObject jsonObject,
         Set<String> newSelectedEndpoints)
     {
-        selectedEndpointConstraintsMap
+        selectedVideoConstraintsMap
             = newSelectedEndpoints
             .stream()
             .collect(Collectors.toMap(e -> e,
                 e -> VideoConstraints.SELECTED_ENDPOINT_CONSTRAINT)
             );
 
-        onEndpointConstraintsChangedEvent();
+        onVideoConstraintsChangedEvent();
     }
 
-    protected void onEndpointConstraintsChangedEvent()
+    protected void onVideoConstraintsChangedEvent()
     {
         Map<String, VideoConstraints>
-            newVideoConstraints = new HashMap<>(pinnedEndpointConstraintsMap);
+            newVideoConstraints = new HashMap<>(pinnedVideoConstraintsMap);
 
         // Add video constraints for all the selected endpoints (which will
         // automatically override the video constraints for pinned endpoints, so
         // they're bumped to 720p if they're also selected).
-        newVideoConstraints.putAll(selectedEndpointConstraintsMap);
+        newVideoConstraints.putAll(selectedVideoConstraintsMap);
 
-        endpoint.setEndpointConstraints(newVideoConstraints);
+        endpoint.setVideoConstraints(newVideoConstraints);
     }
 
     /**
@@ -495,7 +507,7 @@ public abstract class AbstractEndpointMessageTransport
         if (endpoint != null)
         {
             endpoint.setGlobalConstraints(VideoConstraints
-                .makeMaxHeightEndpointConstraints(maxFrameHeight));
+                .makeMaxHeightVideoConstraints(maxFrameHeight));
         }
     }
 

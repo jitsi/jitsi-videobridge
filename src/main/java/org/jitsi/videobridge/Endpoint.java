@@ -661,15 +661,15 @@ public class Endpoint
     }
 
     @Override
-    public void setEndpointConstraints(Map<String, VideoConstraints> newVideoConstraints)
+    public void setVideoConstraints(Map<String, VideoConstraints> newVideoConstraints)
     {
-        bitrateController.setEndpointConstraints(newVideoConstraints);
+        bitrateController.setVideoConstraints(newVideoConstraints);
     }
 
     @Override
     public void setGlobalConstraints(VideoConstraints newGlobalConstraints)
     {
-        bitrateController.setGlobalConstraints(newGlobalConstraints);
+        bitrateController.setGlobalVideoConstraints(newGlobalConstraints);
     }
 
     /**

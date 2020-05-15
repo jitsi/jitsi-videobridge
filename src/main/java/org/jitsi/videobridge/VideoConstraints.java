@@ -99,7 +99,7 @@ public class VideoConstraints
      * @return a constraints object without endpoint id (can be used as a global
      * endpoint constraint), with ideal height set to the given ideal height.
      */
-    static VideoConstraints makeMaxHeightEndpointConstraints(int idealHeight)
+    static VideoConstraints makeMaxHeightVideoConstraints(int idealHeight)
     {
         return new VideoConstraints(idealHeight);
     }

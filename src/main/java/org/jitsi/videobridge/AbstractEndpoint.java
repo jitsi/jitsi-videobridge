@@ -358,7 +358,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      *
      * @param newVideoConstraints
      */
-    public abstract void setEndpointConstraints(Map<String, VideoConstraints> newVideoConstraints);
+    public abstract void setVideoConstraints(Map<String, VideoConstraints> newVideoConstraints);
 
     /**
      *
