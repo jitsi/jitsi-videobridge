@@ -25,6 +25,27 @@ import java.util.concurrent.*;
 public class TaskPools
 {
     private static final Logger classLogger = new LoggerImpl(TaskPools.class.getName());
+
+    /**
+     * A global pool of single thread to execute code which makes use of `usrsctp` library.
+     * This dramatically reduces chances of concurrent bugs inside `usrsctp`: 
+     * crashes, deadlocks, state corruptions, infinite loops, etc.
+     * TODO: Once newer `usrsctp` version used `SCTP timer` thread from `usrsctp` must be
+     * TODO: replaced with recurring task to this pool which will advance timers inside `usrsctp`.
+     */
+    public static final ScheduledExecutorService SCTP_POOL = Executors.unconfigurableScheduledExecutorService(
+        new ScheduledThreadPoolExecutor(
+            1,
+            new NameableThreadFactory("Global SCTP single-threaded pool"),
+            new RejectedExecutionHandler()
+            {
+                @Override
+                public void rejectedExecution(Runnable r, ThreadPoolExecutor executor)
+                {
+                    classLogger.error("Runnable " + r + " rejected to be executed on " + executor);
+                }
+            }));
+
     /**
      * A global executor service which can be used for non-CPU-intensive tasks.
      */
