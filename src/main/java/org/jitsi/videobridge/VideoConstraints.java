@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge;
 
+import org.jitsi.videobridge.cc.config.*;
+
 import java.util.*;
 
 /**
@@ -42,8 +44,8 @@ public class VideoConstraints
      * to watch them in low resolution. This will result in being
      * prioritized during the bandwidth allocation step.
      */
-    public static final VideoConstraints
-        PINNED_ENDPOINT_CONSTRAINT = new VideoConstraints(180);
+    public static final VideoConstraints PINNED_ENDPOINT_CONSTRAINT
+        = new VideoConstraints(BitrateControllerConfig.Config.thumbnailMaxHeightPx());
 
     /**
      * A constraints object for the given endpoint id, with ideal height set to
@@ -58,23 +60,53 @@ public class VideoConstraints
      *  prioritized during the bandwidth allocation step.
      */
     public static final VideoConstraints
-        SELECTED_ENDPOINT_CONSTRAINT = new VideoConstraints(720);
+        SELECTED_ENDPOINT_CONSTRAINT = new VideoConstraints(720,
+        BitrateControllerConfig.Config.onstagePreferredHeightPx(),
+        BitrateControllerConfig.Config.onstagePreferredFramerate());
 
     public static final VideoConstraints EMPTY = new VideoConstraints(-1);
 
     /**
-     * The idea height of the constrained endpoint.
+     * The ideal height of the constrained endpoint. We try to send an encoding
+     * that matches this resolution as close as possible, if bandwidth is
+     * available.
      */
     private final int idealHeight;
+
+    private final int preferredHeight;
+
+    public int getPreferredHeight()
+    {
+        return preferredHeight;
+    }
+
+    public double getPreferredFps()
+    {
+        return preferredFps;
+    }
+
+    private final double preferredFps;
 
     /**
      * Ctor.
      *
-     * @param idealHeight The idea height of the constrained endpoint.
+     * @param idealHeight The ideal height of the constrained endpoint.
+     */
+    VideoConstraints(int idealHeight, int preferredHeight, double preferredFps)
+    {
+        this.preferredFps = preferredFps;
+        this.preferredHeight = preferredHeight;
+        this.idealHeight = idealHeight;
+    }
+
+    /**
+     * Ctor.
+     *
+     * @param idealHeight The ideal height of the constrained endpoint.
      */
     VideoConstraints(int idealHeight)
     {
-        this.idealHeight = idealHeight;
+        this(idealHeight, -1, -1);
     }
 
     /**

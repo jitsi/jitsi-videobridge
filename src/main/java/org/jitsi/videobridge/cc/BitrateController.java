@@ -1326,35 +1326,22 @@ public class BitrateController
                     continue;
                 }
 
-                boolean selected = videoConstraints
-                    .equals(VideoConstraints.SELECTED_ENDPOINT_CONSTRAINT);
-                if (selected)
-                {
-                    // For the selected participant we favor frame rate over
-                    // resolution. Basically what we want for the on-stage
-                    // participant is 180p7.5fps, 180p15fps, 180p30fps,
-                    // 360p30fps and 720p30fps.
-                    if (encoding.getHeight() < Config.onstagePreferredHeightPx()
-                        || encoding.getFrameRate() >= Config.onstagePreferredFramerate())
-                    {
-                        long encodingBitrateBps = encoding.getBitrateBps(nowMs);
-                        if (encodingBitrateBps > 0)
-                        {
-                            idealBps = encodingBitrateBps;
-                        }
-                        ratesList.add(
-                            new RateSnapshot(encodingBitrateBps, encoding));
-                    }
+                // For the "selected" participant we favor frame rate over
+                // resolution. Basically what we want for the on-stage
+                // participant is 180p7.5fps, 180p15fps, 180p30fps, 360p30fps
+                // and 720p30fps. For the thumbnails, we consider all temporal
+                // layers of the low resolution stream.
 
-                    if (encoding.getHeight() <= Config.onstagePreferredHeightPx())
-                    {
-                        ratedPreferredIdx = ratesList.size() - 1;
-                    }
-                }
-                else if (encoding.getHeight() <= Config.thumbnailMaxHeightPx())
+                boolean lessThanPreferredResolution
+                    = encoding.getHeight() < videoConstraints.getPreferredHeight();
+                boolean lessThanOrEqualIdealResolution
+                    = encoding.getHeight() <= videoConstraints.getIdealHeight();
+                boolean atLeastPreferredFps
+                    = encoding.getFrameRate() >= videoConstraints.getPreferredFps();
+
+                if ((lessThanPreferredResolution
+                    || (lessThanOrEqualIdealResolution && atLeastPreferredFps)))
                 {
-                    // For the thumbnails, we consider all temporal layers of
-                    // the low resolution stream.
                     long encodingBitrateBps = encoding.getBitrateBps(nowMs);
                     if (encodingBitrateBps > 0)
                     {
@@ -1362,6 +1349,11 @@ public class BitrateController
                     }
                     ratesList.add(
                         new RateSnapshot(encodingBitrateBps, encoding));
+                }
+
+                if (encoding.getHeight() <= videoConstraints.getPreferredHeight())
+                {
+                    ratedPreferredIdx = ratesList.size() - 1;
                 }
             }
 
@@ -1404,9 +1396,7 @@ public class BitrateController
                 return;
             }
 
-            boolean selected = videoConstraints
-                .equals(VideoConstraints.SELECTED_ENDPOINT_CONSTRAINT);
-            if (ratedTargetIdx == -1 && selected)
+            if (ratedTargetIdx == -1 && ratedPreferredIdx > -1)
             {
                 if (!Config.enableOnstageVideoSuspend())
                 {
