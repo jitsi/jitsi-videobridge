@@ -117,7 +117,7 @@ case "$1" in
             echo "org.jitsi.videobridge.xmpp.user.shard.MUC_NICKNAME=$(uuidgen)" >> $NEW_JITSI_CONFIG
         fi
 
-        APIS_VALUE=$(grep -oPe '--apis=\K(\w*,*\w*)' $CONFIG || true)
+        APIS_VALUE=$(grep -v '^\s*#' $CONFIG | grep -oPe '--apis=\K(\w*,*\w*)' || true)
         if [[ $APIS_VALUE == *"xmpp"* ]]; then
             APIS_NEW_VALUE=${APIS_VALUE/xmpp/}
             if [ -z "$APIS_NEW_VALUE" ]; then
