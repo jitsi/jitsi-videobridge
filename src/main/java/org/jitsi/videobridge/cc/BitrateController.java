@@ -451,29 +451,7 @@ public class BitrateController
 
     public void setVideoConstraints(Map<String, VideoConstraints> newVideoConstraintsMap)
     {
-        Map<String, VideoConstraints>
-            videoConstraintsMapCopy = this.videoConstraintsMap;
-
-        boolean needsUpdate
-            = newVideoConstraintsMap.size() != videoConstraintsMapCopy.size();
-
-        if (!needsUpdate)
-        {
-            for (Map.Entry<String, VideoConstraints>
-                videoConstraintsEntry : newVideoConstraintsMap.entrySet())
-            {
-                String endpointId = videoConstraintsEntry.getKey();
-                VideoConstraints newVideoConstraints = videoConstraintsEntry.getValue();
-                VideoConstraints oldVideoConstraints = videoConstraintsMapCopy.get(endpointId);
-                if (!newVideoConstraints.equals(oldVideoConstraints))
-                {
-                    needsUpdate = true;
-                    break;
-                }
-            }
-        }
-
-        if (needsUpdate)
+        if (!this.videoConstraintsMap.equals(newVideoConstraintsMap))
         {
             this.videoConstraintsMap = newVideoConstraintsMap;
             update();
