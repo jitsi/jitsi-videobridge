@@ -116,6 +116,12 @@ public class ClientConnectionImpl
     @Override
     public void stop(BundleContext bundleContext)
     {
+        if (mucClientManager != null)
+        {
+            mucClientManager.stop();
+            mucClientManager = null;
+        }
+
         if (serviceRegistration != null)
         {
             serviceRegistration.unregister();
