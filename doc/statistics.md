@@ -122,8 +122,8 @@ The statistics reporting functionality can be configured with the following prop
  * **org.jitsi.videobridge.ENABLE_STATISTICS** - boolean property.
 The default value is `false`
  * **org.jitsi.videobridge.STATISTICS_TRANSPORT** - string property.
-A comma-separated list of transports. The supported transports are "muc",
-"callstats.io", and "colibri".
+A comma-separated list of transports. The supported transports are "muc"
+and "callstats.io".
  * **org.jitsi.videobridge.STATISTICS_INTERVAL** - integer property.
 This property specifies the reporting time in milliseconds between generation of the
 statistics. By default the interval is 1000 milliseconds.

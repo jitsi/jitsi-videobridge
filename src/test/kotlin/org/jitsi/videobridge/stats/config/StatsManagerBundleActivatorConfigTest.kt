@@ -46,11 +46,7 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                     should("parse the transport correctly") {
                         val cfg = Config.StatsTransportsProperty()
 
-                        cfg.value shouldHaveSize 3
-                        cfg.value.forOne {
-                            it as StatsTransportConfig.ColibriStatsTransportConfig
-                            it.interval shouldBe 5.seconds
-                        }
+                        cfg.value shouldHaveSize 2
                         cfg.value.forOne {
                             it as StatsTransportConfig.MucStatsTransportConfig
                             it.interval shouldBe 5.seconds
@@ -82,7 +78,7 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                     should("reflect the custom interval") {
                         val cfg = Config.StatsTransportsProperty()
                         cfg.value.forOne {
-                            it as StatsTransportConfig.ColibriStatsTransportConfig
+                            it as StatsTransportConfig.MucStatsTransportConfig
                             it.interval shouldBe 10.seconds
                         }
                     }
@@ -95,8 +91,7 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
             should("use the values from the old config") {
                 val cfg = Config.StatsTransportsProperty()
 
-                cfg.value shouldHaveSize 3
-                cfg.value.forOne { it as StatsTransportConfig.ColibriStatsTransportConfig }
+                cfg.value shouldHaveSize 2
                 cfg.value.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
                 cfg.value.forOne { it as StatsTransportConfig.CallStatsIoStatsTransportConfig }
             }
@@ -135,9 +130,6 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                 enabled=$enabled
                 transports = [
                     {
-                        type="colibri"
-                    },
-                    {
                         type="muc"
                     },
                     {
@@ -155,7 +147,7 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                 interval=5 seconds
                 transports = [
                     {
-                        type="colibri"
+                        type="muc"
                     }
                 ]
             }
@@ -169,7 +161,7 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                 interval=5 seconds
                 transports = [
                     {
-                        type="colibri"
+                        type="muc"
                         interval=10 seconds
                     }
                 ]
@@ -204,6 +196,6 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
 
     private fun legacyConfigAllStatsTransports(enabled: Boolean = true) = createConfigFrom(Properties().apply {
         setProperty("org.jitsi.videobridge.ENABLE_STATISTICS", "$enabled")
-        setProperty("org.jitsi.videobridge.STATISTICS_TRANSPORT", "muc,colibri,callstats.io")
+        setProperty("org.jitsi.videobridge.STATISTICS_TRANSPORT", "muc,callstats.io")
     })
 }

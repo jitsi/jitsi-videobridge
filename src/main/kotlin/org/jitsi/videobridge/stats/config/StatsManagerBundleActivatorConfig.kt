@@ -27,7 +27,6 @@ import org.jitsi.utils.config.exception.ConfigPropertyNotFoundException
 import org.jitsi.videobridge.config.ConditionalProperty
 import org.jitsi.videobridge.config.ResettableSingleton
 import org.jitsi.videobridge.stats.CallStatsIOTransport
-import org.jitsi.videobridge.stats.ColibriStatsTransport
 import org.jitsi.videobridge.stats.MucStatsTransport
 import org.jitsi.videobridge.stats.StatsTransport
 import java.time.Duration
@@ -163,9 +162,6 @@ sealed class StatsTransportConfig(
 ) {
     abstract fun toStatsTransport(): StatsTransport?
 
-    class ColibriStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval) {
-        override fun toStatsTransport(): StatsTransport = ColibriStatsTransport()
-    }
     class MucStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval) {
         override fun toStatsTransport(): StatsTransport = MucStatsTransport()
     }
@@ -183,7 +179,6 @@ sealed class StatsTransportConfig(
                 StatsManagerBundleActivatorConfig.Config.statsInterval()
             }
             return when (config.getString("type")) {
-                "colibri" -> ColibriStatsTransportConfig(interval)
                 "muc" -> MucStatsTransportConfig(interval)
                 "callstatsio" -> CallStatsIoStatsTransportConfig(interval)
                 else -> null
@@ -202,7 +197,6 @@ sealed class StatsTransportConfig(
                     StatsManagerBundleActivatorConfig.Config.statsInterval()
                 }
                 when (it) {
-                    "colibri" -> ColibriStatsTransportConfig(interval)
                     "muc" -> MucStatsTransportConfig(interval)
                     "callstats.io" -> CallStatsIoStatsTransportConfig(interval)
                     else -> null

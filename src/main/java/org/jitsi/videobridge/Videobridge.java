@@ -37,7 +37,6 @@ import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.version.*;
-import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.health.*;
@@ -139,18 +138,6 @@ public class Videobridge
      */
     public static final String AUTHORIZED_SOURCE_REGEXP_PNAME
         = "org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP";
-
-    /**
-     * The XMPP API of Jitsi Videobridge.
-     */
-    public static final String XMPP_API = "xmpp";
-
-    /**
-     * The (base) <tt>System</tt> and/or <tt>ConfigurationService</tt> property
-     * of the XMPP API of Jitsi Videobridge.
-     */
-    public static final String XMPP_API_PNAME
-        = "org.jitsi.videobridge." + XMPP_API;
 
     /**
      * The pattern used to filter entities that are allowed to operate
@@ -421,18 +408,6 @@ public class Videobridge
         }
 
         return channelCount;
-    }
-
-    /**
-     * Gets the <tt>ComponentImpl</tt> instances which implement the XMPP API of
-     * this <tt>Videobridge</tt>.
-     *
-     * @return the <tt>ComponentImpl</tt> instances which implement the XMPP API
-     * of this <tt>Videobridge</tt>
-     */
-    public Collection<ComponentImpl> getComponents()
-    {
-        return ComponentImpl.getComponents(getBundleContext());
     }
 
     /**
@@ -754,21 +729,6 @@ public class Videobridge
     public boolean isShutdownInProgress()
     {
         return shutdownInProgress;
-    }
-
-    /**
-     * Returns {@code true} if XMPP API has been enabled.
-     *
-     * @return {@code true} if XMPP API has been enabled; otherwise,
-     * {@code false}
-     */
-    public boolean isXmppApiEnabled()
-    {
-        ConfigurationService cfg = getConfigurationService();
-
-        // The XMPP API is disabled by default.
-        return cfg != null &&
-            cfg.getBoolean(Videobridge.XMPP_API_PNAME, false);
     }
 
     /**

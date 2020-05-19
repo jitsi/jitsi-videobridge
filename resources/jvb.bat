@@ -8,12 +8,7 @@ goto :begin
 :usage
 echo Usage:
 echo %0 [OPTIONS], where options can be:
-echo	--secret=SECRET	sets the shared secret used to authenticate to the XMPP server
-echo 	--domain=DOMAIN	sets the XMPP domain (default: none)
-echo 	--host=HOST	sets the hostname of the XMPP server (default: domain, if domain is set, localhost otherwise)
-echo 	--port=PORT	sets the port of the XMPP server (default: 5275)
-echo    --subdomain=SUBDOMAIN sets the sub-domain used to bind JVB XMPP component (default: jitsi-videobridge)
-echo    --apis=APIS where APIS is a comma separated list of APIs to enable. Currently supported APIs are xmpp and rest. The default is xmpp.
+echo    --apis=APIS where APIS is a comma separated list of APIs to enable. Currently the only supported API is rest. The default is none.
 echo.
 exit /B 1
 
