@@ -60,17 +60,9 @@ public class Health
 
         for (int i = 0; i < numEndpoints; ++i)
         {
-            final Endpoint endpoint;
-            try
-            {
-                final boolean iceControlling = i % 2 == 0;
-                endpoint = conference.createLocalEndpoint(
-                    generateEndpointID(), iceControlling);
-            }
-            catch (IOException ioe)
-            {
-                throw new RuntimeException(ioe);
-            }
+            final boolean iceControlling = i % 2 == 0;
+            final Endpoint endpoint = conference.createLocalEndpoint(
+                generateEndpointID(), iceControlling);
 
             //endpoints.add(endpoint);
 
