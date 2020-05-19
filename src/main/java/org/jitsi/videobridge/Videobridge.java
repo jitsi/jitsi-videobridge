@@ -34,7 +34,6 @@ import org.jitsi.utils.version.Version;
 import org.jitsi.videobridge.ice.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
-import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.version.*;
@@ -46,8 +45,6 @@ import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
-import org.jivesoftware.smackx.pubsub.*;
-import org.jivesoftware.smackx.pubsub.provider.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
@@ -749,15 +746,6 @@ public class Videobridge
     }
 
     /**
-     * Handles an XMPP IQ of a response type ('error' or 'result')
-     * @param response the IQ.
-     */
-    public void handleIQResponse(org.jivesoftware.smack.packet.IQ response)
-    {
-        PubSubPublisher.handleIQResponse(response);
-    }
-
-    /**
      * Returns {@code true} if this instance has entered graceful shutdown mode.
      *
      * @return {@code true} if this instance has entered graceful shutdown mode;
@@ -942,12 +930,6 @@ public class Videobridge
                 DtlsFingerprintPacketExtension.NAMESPACE,
                 new DefaultPacketExtensionProvider<>(
                         DtlsFingerprintPacketExtension.class));
-
-        // PubSub
-        ProviderManager.addIQProvider(
-                PubSubElementType.PUBLISH.getElementName(),
-                PubSubElementType.PUBLISH.getNamespace().getXmlns(),
-                new PubSubProvider());
 
         // Health-check
         ProviderManager.addIQProvider(
