@@ -47,9 +47,10 @@ object XmlConverter : ContentConverter {
         val request = context.subject
         val channel = request.value as? ByteReadChannel ?: return null
         val reader = (context.call.request.contentCharset() ?: Charsets.UTF_8).newDecoder().decode(channel.readRemaining()).reader()
-        val parser = PacketParserUtils.newXmppParser(reader)
-        // Prime the parser
-        parser.next()
+        val parser = PacketParserUtils.getParserFor(reader)
+//        val parser = PacketParserUtils.newXmppParser(reader)
+//        // Prime the parser
+//        parser.next()
         return PacketParserUtils.parseIQ(parser)
     }
 

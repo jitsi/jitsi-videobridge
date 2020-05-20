@@ -28,6 +28,10 @@
 
     <artifactId>jvb-api-client</artifactId>
 
+    <properties>
+        <ktor.version>1.3.1</ktor.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -36,31 +40,79 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-test</artifactId>
-            <version>${kotlin.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.jitsi</groupId>
-            <artifactId>jvb-api-types</artifactId>
+            <artifactId>jvb-api-common</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
-            <!--Use something more generic here? -->
             <artifactId>ktor-client-apache</artifactId>
-            <version>1.3.1</version>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-client-cio</artifactId>
+            <version>${ktor.version}</version>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
             <artifactId>ktor-client-jackson</artifactId>
-            <version>1.3.1</version>
+            <version>${ktor.version}</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-kotlin</artifactId>
             <version>2.11.0</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>jitsi-utils-kotlin</artifactId>
+            <version>1.0-49-gef466fc</version>
+        </dependency>
+        <!-- test -->
+        <dependency>
+            <groupId>io.kotest</groupId>
+            <artifactId>kotest-runner-junit5-jvm</artifactId>
+            <version>${kotest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.kotest</groupId>
+            <artifactId>kotest-assertions-core-jvm</artifactId>
+            <version>${kotest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-client-mock</artifactId>
+            <version>${ktor.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-client-mock-jvm</artifactId>
+            <version>${ktor.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- We include the server libs in test, as it's currently the only way
+        to test websockets -->
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-jetty</artifactId>
+            <version>${ktor.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-websockets</artifactId>
+            <version>${ktor.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-core</artifactId>
+            <version>${ktor.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -101,8 +153,27 @@
                     <jvmTarget>1.8</jvmTarget>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.22.2</version>
+            </plugin>
         </plugins>
     </build>
+    <repositories>
+        <repository>
+            <id>jitsi-maven-repository-releases</id>
+            <layout>default</layout>
+            <name>Jitsi Maven Repository (Releases)</name>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <url>https://github.com/jitsi/jitsi-maven-repository/raw/master/releases/</url>
+        </repository>
+    </repositories>
 
 
 </project>

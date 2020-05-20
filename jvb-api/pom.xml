@@ -25,12 +25,15 @@
     <name>jvb-api-parent</name>
 
     <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <kotlin.version>1.3.72</kotlin.version>
+        <kotest.version>4.0.5</kotest.version>
     </properties>
 
     <modules>
-        <module>jvb-api-types</module>
+        <module>jvb-api-common</module>
         <module>jvb-api-client</module>
         <module>jvb-api-server</module>
     </modules>
+
 </project>

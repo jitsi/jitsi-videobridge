@@ -18,31 +18,38 @@ package org.jitsi.videobridge.api.server
 
 import io.ktor.application.Application
 import io.ktor.application.install
-import io.ktor.features.CallLogging
+import io.ktor.features.ContentNegotiation
+import io.ktor.http.ContentType
 import io.ktor.routing.route
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.jetty.Jetty
+import io.ktor.websocket.WebSockets
 import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 import org.jitsi.xmpp.extensions.colibri.ColibriIQProvider
+import org.jitsi.xmpp.extensions.health.HealthCheckIQ
+import org.jitsi.xmpp.extensions.health.HealthCheckIQProvider
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.provider.ProviderManager
-import org.slf4j.event.Level
 import org.jitsi.videobridge.api.server.v1.app as v1App
 import org.jitsi.videobridge.api.types.v1.ConferenceManager as v1ConferenceManager
 
 /**
  * The top level JVB API application.  It's responsible for inserting all
  * the correct versions of the application at the correct URLs and injecting
- * the [ConferenceManager] instance for calls.
+ * the [v1ConferenceManager] instance for calls.
  */
 @kotlin.jvm.JvmOverloads
 fun Application.module(conferenceManager: v1ConferenceManager, testing: Boolean = false) {
-    install(CallLogging) {
-        level = Level.TRACE
+//    install(CallLogging) {
+//        level = Level.TRACE
+//    }
+    install(ContentNegotiation) {
+        register(ContentType.Application.Xml, XmlConverter)
     }
+    install(WebSockets)
     routing {
-        trace { println(it.buildText()) }
+//        trace { println(it.buildText()) }
         route("/v1") {
             v1App(conferenceManager)
         }
@@ -54,10 +61,18 @@ fun main() {
         ColibriConferenceIQ.ELEMENT_NAME,
         ColibriConferenceIQ.NAMESPACE,
         ColibriIQProvider())
-    embeddedServer(Jetty, port = 9090) {
+    ProviderManager.addIQProvider(
+        HealthCheckIQ.ELEMENT_NAME,
+        HealthCheckIQ.NAMESPACE,
+        HealthCheckIQProvider())
+    embeddedServer(Jetty, port = 9099) {
         module(object : v1ConferenceManager {
             override fun handleColibriConferenceIQ(conferenceIQ: ColibriConferenceIQ): IQ {
                 return ColibriConferenceIQ()
+            }
+
+            override fun handleHealthIq(healthCheckIQ: HealthCheckIQ): IQ {
+                return IQ.createResultIQ(healthCheckIQ)
             }
         })
     }.start()

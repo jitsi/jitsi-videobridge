@@ -17,12 +17,18 @@
 package org.jitsi.videobridge.api.types.v1
 
 import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
+import org.jitsi.xmpp.extensions.health.HealthCheckIQ
 import org.jivesoftware.smack.packet.IQ
 
 /**
- * The [ConferenceManager] is the entity responsible for creating and deleting
- * conferences
+ * The [ConferenceManager] is an interface that correlates to the methods
+ * currently in the 'Videobridge' class in JVB that the API will need to
+ * interact with when handling incoming messages.  This interface exists
+ * to allow a decoupling between the API and the JVB so that the API can
+ * live as a separate artifact and avoid a circular dependency (since the
+ * JVB will rely on this artifact).
  */
 interface ConferenceManager {
     fun handleColibriConferenceIQ(conferenceIQ: ColibriConferenceIQ): IQ
+    fun handleHealthIq(healthCheckIQ: HealthCheckIQ): IQ
 }

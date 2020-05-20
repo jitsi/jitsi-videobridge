@@ -27,6 +27,7 @@ import java.time.Duration
 import org.jitsi.videobridge.api.server.module
 import org.jitsi.videobridge.api.types.v1.ConferenceManager
 import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
+import org.jitsi.xmpp.extensions.health.HealthCheckIQ
 import org.jivesoftware.smack.packet.IQ
 
 class SignalingApiBundleActivator : BundleActivator {
@@ -34,12 +35,17 @@ class SignalingApiBundleActivator : BundleActivator {
 
     override fun start(bundleContext: BundleContext) {
         val videobridge = ServiceUtils2.getService(bundleContext, Videobridge::class.java)
+        println("STARTING KTOR")
 
         // TODO: check if it's enabled, get port, etc.
-        server = embeddedServer(Jetty, port = 9090) {
+        server = embeddedServer(Jetty, port = 9099) {
             module(object : ConferenceManager {
                 override fun handleColibriConferenceIQ(conferenceIQ: ColibriConferenceIQ): IQ {
                     return videobridge.handleColibriConferenceIQ(conferenceIQ)
+                }
+
+                override fun handleHealthIq(healthCheckIQ: HealthCheckIQ): IQ {
+                    return videobridge.handleHealthCheckIQ(healthCheckIQ)
                 }
             })
         }.start()

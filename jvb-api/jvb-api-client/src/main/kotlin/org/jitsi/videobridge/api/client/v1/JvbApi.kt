@@ -19,49 +19,57 @@
 package org.jitsi.videobridge.api.client.v1
 
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.apache.Apache
-import io.ktor.client.features.HttpTimeout
-import io.ktor.client.request.post
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
-import kotlinx.coroutines.runBlocking
-import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
-import org.jitsi.xmpp.extensions.colibri.ColibriIQProvider
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.features.websocket.WebSockets
+import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.videobridge.api.util.SmackXmlSerDes
+import org.jitsi.videobridge.api.util.SynchronousWebSocketClient
 import org.jivesoftware.smack.packet.IQ
-import org.jivesoftware.smack.provider.ProviderManager
 
 /**
  * JVB Client API for controlling a JVB instance
  */
-class JvbApi(private val jvbUrl: String) {
-    private val client = HttpClient(Apache) {
-        install(XmlFeature)
-        install(HttpTimeout) {
-            this.requestTimeoutMillis = 5000
-        }
+class JvbApi(jvbHost: String, jvbPort: Int) {
+    private val client = HttpClient(CIO) {
+        install(WebSockets)
+    }
+
+    private val wsClient = SynchronousWebSocketClient(
+        client,
+        host = jvbHost,
+        port = jvbPort,
+        path = "/v1/ws",
+        parentLogger = LoggerImpl(JvbApi::class.qualifiedName)
+    ).also {
+        it.run()
     }
 
     /**
-     * Send a [ColibriConferenceIQ] message to the JVB for processing
-     * and receive an [IQ] back.  Call is synchronous.
+     * Send an [IQ] and return the response [IQ].  Call is synchronous.
      */
-    fun sendColibri(colibri: ColibriConferenceIQ): IQ {
-        return runBlocking {
-            client.post<IQ>("$jvbUrl/v1/colibri") {
-                contentType(ContentType.Application.Xml)
-                body = colibri
-            }
-        }
+    fun sendIqAndGetReply(iq: IQ): IQ {
+        return wsClient.sendIqAndGetReply(iq)
+    }
+
+    /**
+     * Send an [IQ] and don't wait for its response
+     */
+    fun sendAndForget(iq: IQ) {
+        wsClient.sendIqAndForget(iq)
     }
 }
 
-fun main() {
-    ProviderManager.addIQProvider(
-        ColibriConferenceIQ.ELEMENT_NAME,
-        ColibriConferenceIQ.NAMESPACE,
-        ColibriIQProvider())
-    val x = ColibriConferenceIQ()
-    val api = JvbApi("http://127.0.0.1:9090")
-    val resp = api.sendColibri(x)
-    println("got resp: ${resp.toXML()}")
+/**
+ * Send [IQ]s and get their replies via a [SynchronousWebSocketClient].
+ */
+private fun SynchronousWebSocketClient.sendIqAndGetReply(iq: IQ): IQ {
+    val resp = sendAndGetReply(SmackXmlSerDes.serialize(iq))
+    return SmackXmlSerDes.deserialize(resp) as IQ
+}
+
+/**
+ * Send [IQ]s via a [SynchronousWebSocketClient].
+ */
+private inline fun SynchronousWebSocketClient.sendIqAndForget(iq: IQ) {
+    sendAndForget(SmackXmlSerDes.serialize(iq))
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.api.client.v1
+package org.jitsi.videobridge.api.util
 
 import io.ktor.client.HttpClient
 import io.ktor.client.features.HttpClientFeature
@@ -22,16 +22,13 @@ import io.ktor.client.request.HttpRequestPipeline
 import io.ktor.client.request.accept
 import io.ktor.client.statement.HttpResponseContainer
 import io.ktor.client.statement.HttpResponsePipeline
+import io.ktor.client.statement.readText
 import io.ktor.http.ContentType
-import io.ktor.http.charset
 import io.ktor.http.contentType
 import io.ktor.util.AttributeKey
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.charsets.Charsets
-import io.ktor.utils.io.charsets.decode
-import io.ktor.utils.io.readRemaining
 import org.jivesoftware.smack.packet.Stanza
-import org.jivesoftware.smack.util.PacketParserUtils
 
 /**
  * A client-side content serialization/deserialization feature for
@@ -40,7 +37,7 @@ import org.jivesoftware.smack.util.PacketParserUtils
  * This class handles all requests with a content type of 'application/xml' and
  * assumes that the body being sent is an instance of [Stanza].
  *
- * It assumes responses will be instances of [org.jivesoftware.smack.packet.IQ].
+ * It assumes responses will be instances of [org.jivesoftware.smack.packet.Stanza].
  */
 class XmlFeature {
     class Config
@@ -58,17 +55,18 @@ class XmlFeature {
             scope.requestPipeline.intercept(HttpRequestPipeline.Transform) { payload ->
                 context.accept(ContentType.Application.Xml)
 
+                // Only handle XML
                 if (context.contentType()?.match(ContentType.Application.Xml) != true) {
                     return@intercept
                 }
                 val serializedContent = when (payload) {
-                    is Stanza -> payload.toXML().toString()
+                    is Stanza ->  SmackXmlSerDes.serialize(payload)
                     else -> throw IllegalArgumentException("Unsupported XML type: ${payload::class}")
                 }
                 proceedWith(serializedContent)
             }
 
-            // Intercept incoming requests and deserialize the body into an IQ
+            // Intercept incoming requests and deserialize the body into a Stanza
             scope.responsePipeline.intercept(HttpResponsePipeline.Transform) { (info, body) ->
                 if (body !is ByteReadChannel) return@intercept
 
@@ -76,10 +74,8 @@ class XmlFeature {
                 if (context.response.contentType()?.match(ContentType.Application.Xml) != true) {
                     return@intercept
                 }
-                val reader = (context.response.charset() ?: Charsets.UTF_8).newDecoder().decode(body.readRemaining()).reader()
-                val parser = PacketParserUtils.newXmppParser(reader)
-                parser.next()
-                val parsedBody = PacketParserUtils.parseIQ(parser)
+                val text = context.response.readText(fallbackCharset = Charsets.UTF_8)
+                val parsedBody = SmackXmlSerDes.deserialize(text)
                 proceedWith(HttpResponseContainer(info, parsedBody))
             }
         }
