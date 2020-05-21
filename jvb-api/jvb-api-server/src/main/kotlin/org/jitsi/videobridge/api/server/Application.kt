@@ -17,9 +17,12 @@
 package org.jitsi.videobridge.api.server
 
 import io.ktor.application.Application
+import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.features.ContentNegotiation
-import io.ktor.http.ContentType
+import io.ktor.jackson.jackson
+import io.ktor.response.respond
+import io.ktor.routing.get
 import io.ktor.routing.route
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
@@ -40,12 +43,9 @@ import org.jitsi.videobridge.api.types.v1.ConferenceManager as v1ConferenceManag
  * the [v1ConferenceManager] instance for calls.
  */
 @kotlin.jvm.JvmOverloads
-fun Application.module(conferenceManager: v1ConferenceManager, testing: Boolean = false) {
-//    install(CallLogging) {
-//        level = Level.TRACE
-//    }
+fun Application.module(conferenceManager: v1ConferenceManager) {
     install(ContentNegotiation) {
-        register(ContentType.Application.Xml, XmlConverter)
+        jackson {}
     }
     install(WebSockets)
     routing {
@@ -53,7 +53,17 @@ fun Application.module(conferenceManager: v1ConferenceManager, testing: Boolean 
         route("/v1") {
             v1App(conferenceManager)
         }
+        get("/about/api_version") {
+            // This line should be updated to reflect all versions
+            // supported by this server
+            call.respond(ApiVersion("v1"))
+        }
     }
+}
+
+@Suppress("unused")
+class ApiVersion(val supportedVersions: List<String>) {
+    constructor(vararg versions: String) : this(versions.toList())
 }
 
 fun main() {

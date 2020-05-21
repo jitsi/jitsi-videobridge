@@ -36,7 +36,6 @@ fun Route.app(conferenceManager: ConferenceManager) {
         register(ContentType.Application.Xml, XmlConverter)
     }
     injectConfManager(conferenceManager)
-    apiVersionApi()
     colibriApi()
 }
 
@@ -44,7 +43,7 @@ fun Route.app(conferenceManager: ConferenceManager) {
  * Inject the instance of [ConferenceManager] into the call attributes so that it's
  * available when handling requests
  */
-/*private*/ fun Route.injectConfManager(conferenceManager: ConferenceManager) = intercept(ApplicationCallPipeline.Features) {
+private fun Route.injectConfManager(conferenceManager: ConferenceManager) = intercept(ApplicationCallPipeline.Features) {
     call.attributes.put(CONF_MGR_ATTR_KEY, conferenceManager)
 }
 

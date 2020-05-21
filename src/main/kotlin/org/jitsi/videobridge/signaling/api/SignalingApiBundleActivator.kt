@@ -30,6 +30,7 @@ import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 import org.jitsi.xmpp.extensions.health.HealthCheckIQ
 import org.jivesoftware.smack.packet.IQ
 
+@Suppress("unused") // Used in BundleConfig.java
 class SignalingApiBundleActivator : BundleActivator {
     private var server: JettyApplicationEngine? = null
 

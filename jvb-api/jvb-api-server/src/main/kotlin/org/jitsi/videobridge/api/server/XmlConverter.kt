@@ -27,34 +27,27 @@ import io.ktor.util.pipeline.PipelineContext
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.charsets.decode
 import io.ktor.utils.io.readRemaining
+import org.jitsi.videobridge.api.util.SmackXmlSerDes
 import org.jivesoftware.smack.packet.Stanza
-import org.jivesoftware.smack.util.PacketParserUtils
 
 /**
  * A server-side content serialization/deserialization feature for
  * handling XML requests and responses.
  *
  * This class handles all requests with a content type of 'application/xml' and
- * assumes that the body being sent can be parsed into an
- * [org.jivesoftware.smack.packet.IQ].  The IQ parsing is done via
- * [PacketParserUtils.parseIQ], so it requires that any necessary
- * [org.jivesoftware.smack.provider.IQProvider]s have been installed.
- *
- * It assumes responses will be instances of [Stanza].
+ * assumes that the body being received can be parsed via
+ * [SmackXmlSerDes.deserialize] and outgoing data is of type [Stanza], which
+ * will be serialized via [SmackXmlSerDes.serialize].
  */
 object XmlConverter : ContentConverter {
     override suspend fun convertForReceive(context: PipelineContext<ApplicationReceiveRequest, ApplicationCall>): Any? {
         val request = context.subject
         val channel = request.value as? ByteReadChannel ?: return null
-        val reader = (context.call.request.contentCharset() ?: Charsets.UTF_8).newDecoder().decode(channel.readRemaining()).reader()
-        val parser = PacketParserUtils.getParserFor(reader)
-//        val parser = PacketParserUtils.newXmppParser(reader)
-//        // Prime the parser
-//        parser.next()
-        return PacketParserUtils.parseIQ(parser)
+        val text = (context.call.request.contentCharset() ?: Charsets.UTF_8).newDecoder().decode(channel.readRemaining())
+        return SmackXmlSerDes.deserialize(text)
     }
 
     override suspend fun convertForSend(context: PipelineContext<Any, ApplicationCall>, contentType: ContentType, value: Any): Any? {
-        return TextContent((value as Stanza).toXML().toString(), contentType)
+        return TextContent(SmackXmlSerDes.serialize(value as Stanza), contentType)
     }
 }
