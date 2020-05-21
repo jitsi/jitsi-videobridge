@@ -140,10 +140,8 @@ public class MediaSourceFactory
             for (int temporalIdx = 0;
                  temporalIdx < temporalLen; temporalIdx++)
             {
-                int qualityId = qid(encodingIdx, spatialIdx, temporalIdx,
-                    spatialLen, temporalLen);
-                int idx = qid(0, spatialIdx, temporalIdx,
-                    spatialLen, temporalLen);
+                int idx = idx(spatialIdx, temporalIdx,
+                    temporalLen);
 
                 RtpLayerDesc[] dependencies;
                 if (spatialIdx > 0 && temporalIdx > 0)
@@ -151,11 +149,11 @@ public class MediaSourceFactory
                     // this layer depends on spatialIdx-1 and temporalIdx-1.
                     dependencies = new RtpLayerDesc[]{
                         rtpLayers[
-                            qid(0, spatialIdx, temporalIdx - 1,
-                                spatialLen, temporalLen)],
+                            idx(spatialIdx, temporalIdx - 1,
+                                temporalLen)],
                         rtpLayers[
-                            qid(0, spatialIdx - 1, temporalIdx,
-                                spatialLen, temporalLen)]
+                            idx(spatialIdx - 1, temporalIdx,
+                                temporalLen)]
                     };
                 }
                 else if (spatialIdx > 0)
@@ -163,16 +161,16 @@ public class MediaSourceFactory
                     // this layer depends on spatialIdx-1.
                     dependencies = new RtpLayerDesc[]
                         {rtpLayers[
-                            qid(0, spatialIdx - 1, temporalIdx,
-                                spatialLen, temporalLen)]};
+                            idx(spatialIdx - 1, temporalIdx,
+                                temporalLen)]};
                 }
                 else if (temporalIdx > 0)
                 {
                     // this layer depends on temporalIdx-1.
                     dependencies = new RtpLayerDesc[]
                         {rtpLayers[
-                            qid(0, spatialIdx, temporalIdx - 1,
-                                spatialLen, temporalLen)]};
+                            idx(spatialIdx, temporalIdx - 1,
+                                temporalLen)]};
                 }
                 else
                 {
@@ -184,7 +182,7 @@ public class MediaSourceFactory
                 int spatialId = spatialLen > 1 ? spatialIdx : -1;
 
                 rtpLayers[idx]
-                    = new RtpLayerDesc(qualityId,
+                    = new RtpLayerDesc(encodingIdx,
                     temporalId, spatialId, height, frameRate, dependencies);
 
                 frameRate *= 2;
@@ -571,25 +569,23 @@ public class MediaSourceFactory
             mediaSources.add(mediaSource);
         });
 
-        return mediaSources.toArray(new MediaSourceDesc[mediaSources.size()]);
+        return mediaSources.toArray(new MediaSourceDesc[0]);
     }
 
     /**
-     * Calculates the subjective quality index of an RTP flow specified by its
-     * stream index (simulcast), spatial index (SVC) and temporal index (SVC).
+     * Calculates the array position of an RTP layer description specified by its
+     * spatial index (SVC) and temporal index (SVC).
      *
-     * @param streamIdx the stream index.
      * @param spatialIdx the spatial layer index.
      * @param temporalIdx the temporal layer index.
      *
      * @return the subjective quality index of the flow specified in the
      * arguments.
      */
-    private static int qid(int streamIdx, int spatialIdx, int temporalIdx,
-                           int spatialLen, int temporalLen)
+    private static int idx(int spatialIdx, int temporalIdx,
+        int temporalLen)
     {
-        return streamIdx * spatialLen * temporalLen
-            + spatialIdx * temporalLen + temporalIdx;
+        return spatialIdx * temporalLen + temporalIdx;
     }
 
     /**

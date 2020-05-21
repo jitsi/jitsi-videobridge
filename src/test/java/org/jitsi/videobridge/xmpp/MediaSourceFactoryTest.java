@@ -176,13 +176,6 @@ public class MediaSourceFactoryTest
         assertEquals(1, sources.length);
         MediaSourceDesc source = sources[0];
         assertEquals(3, source.numRtpLayers());
-
-        for (int idx = 0; idx < source.numRtpLayers(); idx++)
-        {
-            RtpLayerDesc layer = source.getRtpLayerByQualityIdx(idx);
-            assertNotNull(layer);
-            assertEquals(idx, layer.getIndex());
-        }
     }
 
     // 3 sim streams, svc enabled, 3 rtx -> 1 source, 3 encodings
@@ -238,13 +231,6 @@ public class MediaSourceFactoryTest
         assertEquals(1, sources.length);
         MediaSourceDesc source = sources[0];
         assertEquals(9, source.numRtpLayers());
-
-        for (int idx = 0; idx < source.numRtpLayers(); idx++)
-        {
-            RtpLayerDesc layer = source.getRtpLayerByQualityIdx(idx);
-            assertNotNull(layer);
-            assertEquals(idx, layer.getIndex());
-        }
     }
 
     // 3 sim streams with rtx, 1 stream with rtx, 1 stream without rtx
@@ -309,16 +295,6 @@ public class MediaSourceFactoryTest
         assertEquals(9, sources[0].numRtpLayers());
         assertEquals(1, sources[1].numRtpLayers());
         assertEquals(1, sources[2].numRtpLayers());
-
-        for (int i = 0; i < sources.length; i++)
-        {
-            for (int idx = 0; idx < sources[i].numRtpLayers(); idx++)
-            {
-                RtpLayerDesc layer = sources[i].getRtpLayerByQualityIdx(idx);
-                assertNotNull(layer);
-                assertEquals(idx, layer.getIndex());
-            }
-        }
     }
 
     @Test
@@ -344,13 +320,6 @@ public class MediaSourceFactoryTest
         assertEquals(1, sources.length);
         MediaSourceDesc source = sources[0];
         assertEquals(1, source.numRtpLayers());
-
-        for (int idx = 0; idx < source.numRtpLayers(); idx++)
-        {
-            RtpLayerDesc layer = source.getRtpLayerByQualityIdx(idx);
-            assertNotNull(layer);
-            assertEquals(idx, layer.getIndex());
-        }
     }
 
     @Test

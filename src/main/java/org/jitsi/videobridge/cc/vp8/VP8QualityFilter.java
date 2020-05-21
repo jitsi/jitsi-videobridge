@@ -17,10 +17,10 @@ package org.jitsi.videobridge.cc.vp8;
 
 import edu.umd.cs.findbugs.annotations.*;
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.*;
 import org.jitsi.utils.logging2.*;
 import org.json.simple.*;
 
-import java.lang.*;
 import java.lang.SuppressWarnings;
 
 /**
@@ -47,7 +47,7 @@ class VP8QualityFilter
     /**
      * The HD, SD, LD and suspended spatial/quality layer IDs.
      */
-    private static final int SUSPENDED_LAYER_ID = -1;
+    private static final int SUSPENDED_ENCODING_ID = -1;
 
     /**
      * Holds the arrival time (in millis) of the most recent keyframe group.
@@ -66,21 +66,21 @@ class VP8QualityFilter
     private boolean needsKeyframe = false;
 
     /**
-     * The spatial/quality layer id that this instance tries to achieve. Upon
+     * The encoding id that this instance tries to achieve. Upon
      * receipt of a packet, we check whether externalSpatialLayerIdTarget
      * (that's specified as an argument to the
      * {@link #acceptFrame(VP8Frame, int, int, long)} method) is set to something
      * different, in which case we set {@link #needsKeyframe} equal to true and
      * update.
      */
-    private int internalSpatialLayerIdTarget = SUSPENDED_LAYER_ID;
+    private int internalEncodingIdTarget = SUSPENDED_ENCODING_ID;
 
     /**
-     * The spatial/quality layer ID that we're currently forwarding. -1
+     * The encoding layer ID that we're currently forwarding. -1
      * indicates that we're not forwarding anything. Reading/writing of this
      * field is synchronized on this instance.
      */
-    private int currentSpatialLayerId = SUSPENDED_LAYER_ID;
+    private int currentEncodingId = SUSPENDED_ENCODING_ID;
 
     public VP8QualityFilter(Logger parentLogger)
     {
@@ -88,7 +88,7 @@ class VP8QualityFilter
     }
 
     /**
-     * @return true if a the target spatial/quality layer id has changed and a
+     * @return true if a the target encoding id has changed and a
      * keyframe hasn't been received yet, false otherwise.
      */
     boolean needsKeyframe()
@@ -116,30 +116,30 @@ class VP8QualityFilter
         int externalTargetIndex, long receivedMs)
     {
         // We make local copies of the externalTemporalLayerIdTarget and the
-        // externalSpatialLayerIdTarget (as they may be updated by some other
+        // externalEncodingTarget (as they may be updated by some other
         // thread).
         int externalTemporalLayerIdTarget
-            = getTemporalLayerId(externalTargetIndex);
-        int externalSpatialLayerIdTarget
-            = getSpatialLayerId(externalTargetIndex);
+            = RtpLayerDesc.getTidFromIndex(externalTargetIndex);
+        int externalEncodingIdTarget
+            = RtpLayerDesc.getEidFromIndex(externalTargetIndex);
 
-        if (externalSpatialLayerIdTarget != internalSpatialLayerIdTarget)
+        if (externalEncodingIdTarget != internalEncodingIdTarget)
         {
-            // The externalSpatialLayerIdTarget has changed since accept last
+            // The externalEncodingIdTarget has changed since accept last
             // run; perhaps we should request a keyframe.
-            internalSpatialLayerIdTarget = externalSpatialLayerIdTarget;
-            if (externalSpatialLayerIdTarget > SUSPENDED_LAYER_ID)
+            internalEncodingIdTarget = externalEncodingIdTarget;
+            if (externalEncodingIdTarget > SUSPENDED_ENCODING_ID)
             {
                 needsKeyframe = true;
             }
         }
 
-        if (externalSpatialLayerIdTarget < 0
+        if (externalEncodingIdTarget < 0
             || externalTemporalLayerIdTarget < 0)
         {
             // We stop forwarding immediately. We will need a keyframe in order
             // to resume.
-            currentSpatialLayerId = SUSPENDED_LAYER_ID;
+            currentEncodingId = SUSPENDED_ENCODING_ID;
             return false;
         }
 
@@ -152,16 +152,16 @@ class VP8QualityFilter
             temporalLayerIdOfFrame = 0;
         }
 
-        int spatialLayerId = getSpatialLayerId(incomingIndex);
+        int encodingId = RtpLayerDesc.getEidFromIndex(incomingIndex);
         if (frame.isKeyframe())
         {
             logger.debug(() -> "Quality filter got keyframe for stream "
                     + frame.getSsrc());
-            return acceptKeyframe(spatialLayerId, receivedMs);
+            return acceptKeyframe(encodingId, receivedMs);
         }
-        else if (currentSpatialLayerId > SUSPENDED_LAYER_ID)
+        else if (currentEncodingId > SUSPENDED_ENCODING_ID)
         {
-            if (isOutOfSwitchingPhase(receivedMs) && isPossibleToSwitch(spatialLayerId))
+            if (isOutOfSwitchingPhase(receivedMs) && isPossibleToSwitch(encodingId))
             {
                 // XXX(george) i've noticed some "rogue" base layer keyframes
                 // that trigger this. what happens is the client sends a base
@@ -174,22 +174,22 @@ class VP8QualityFilter
                 needsKeyframe = true;
             }
 
-            if (spatialLayerId != currentSpatialLayerId)
+            if (encodingId != currentEncodingId)
             {
-                // for non-keyframes, we can't route anything but the current spatial layer
+                // for non-keyframes, we can't route anything but the current encoding
                 return false;
             }
 
-            // This branch reads the {@link #currentSpatialLayerId} and it
+            // This branch reads the {@link #currentEncodingId} and it
             // filters packets based on their temporal layer.
 
-            if (currentSpatialLayerId > externalSpatialLayerIdTarget)
+            if (currentEncodingId > externalEncodingIdTarget)
             {
                 // pending downscale, decrease the frame rate until we
                 // downscale.
                 return temporalLayerIdOfFrame < 1;
             }
-            else if (currentSpatialLayerId < externalSpatialLayerIdTarget)
+            else if (currentEncodingId < externalEncodingIdTarget)
             {
                 // pending upscale, increase the frame rate until we upscale.
                 return true;
@@ -207,7 +207,7 @@ class VP8QualityFilter
             // currentSpatialLayerId is in suspended state, which means we need
             // a keyframe to start streaming again. Reaching this point also
             // means that we want to forward something (because both
-            // externalSpatialLayerIdTarget and externalTemporalLayerIdTarget
+            // externalEncodingIdTarget and externalTemporalLayerIdTarget
             // are greater than 0) so we set the request keyframe flag.
 
             // assert needsKeyframe == true;
@@ -232,22 +232,22 @@ class VP8QualityFilter
      * @return true if it looks like we can re-scale (see implementation of
      * method for specific details).
      */
-    private synchronized boolean isPossibleToSwitch(int spatialLayerId)
+    private synchronized boolean isPossibleToSwitch(int encodingId)
     {
-        if (spatialLayerId == -1)
+        if (encodingId == -1)
         {
             // We failed to resolve the spatial/quality layer of the packet.
             return false;
         }
 
-        if (spatialLayerId > currentSpatialLayerId
-            && currentSpatialLayerId < internalSpatialLayerIdTarget)
+        if (encodingId > currentEncodingId
+            && currentEncodingId < internalEncodingIdTarget)
         {
             // It looks like upscaling is possible.
             return true;
         }
-        else if (spatialLayerId < currentSpatialLayerId
-            && currentSpatialLayerId > internalSpatialLayerIdTarget)
+        else if (encodingId < currentEncodingId
+            && currentEncodingId > internalEncodingIdTarget)
         {
             // It looks like downscaling is possible.
             return true;
@@ -270,12 +270,12 @@ class VP8QualityFilter
      * @return true to accept the VP8 keyframe, otherwise false.
      */
     private synchronized boolean acceptKeyframe(
-        int spatialLayerIdOfKeyframe, long receivedMs)
+        int encodingIdOfKeyframe, long receivedMs)
     {
         // This branch writes the {@link #currentSpatialLayerId} and it
         // determines whether or not we should switch to another simulcast
         // stream.
-        if (spatialLayerIdOfKeyframe < 0)
+        if (encodingIdOfKeyframe < 0)
         {
             // something went terribly wrong, normally we should be able to
             // extract the layer id from a keyframe.
@@ -283,12 +283,12 @@ class VP8QualityFilter
             return false;
         }
 
-        logger.debug(() -> "Received a keyframe of spatial layer: "
-                    + spatialLayerIdOfKeyframe);
+        logger.debug(() -> "Received a keyframe of encoding: "
+                    + encodingIdOfKeyframe);
 
 
         // The keyframe request has been fulfilled at this point, regardless of
-        // whether we'll be able to achieve the internalSpatialLayerIdTarget.
+        // whether we'll be able to achieve the internalEncodingIdTarget.
         needsKeyframe = false;
 
         if (isOutOfSwitchingPhase(receivedMs))
@@ -301,16 +301,16 @@ class VP8QualityFilter
             mostRecentKeyframeGroupArrivalTimeMs = receivedMs;
 
             logger.debug(() -> "First keyframe in this kf group " +
-                "currentSpatialLayerId: " + spatialLayerIdOfKeyframe +
-                ". Target is " + internalSpatialLayerIdTarget);
+                "currentEncodingId: " + encodingIdOfKeyframe +
+                ". Target is " + internalEncodingIdTarget);
 
-            if (spatialLayerIdOfKeyframe <= internalSpatialLayerIdTarget)
+            if (encodingIdOfKeyframe <= internalEncodingIdTarget)
             {
                 // If the target is 180p and the first keyframe of a group of
                 // keyframes is a 720p keyframe we don't project it. If we
                 // receive a 720p keyframe, we know that there MUST be a 180p
                 // keyframe shortly after.
-                currentSpatialLayerId = spatialLayerIdOfKeyframe;
+                currentEncodingId = encodingIdOfKeyframe;
                 return true;
             }
             else
@@ -324,24 +324,24 @@ class VP8QualityFilter
             // first key frame of a key frame group, let's check whether an
             // upscale/downscale is possible.
 
-            if (currentSpatialLayerId <= spatialLayerIdOfKeyframe
-                && spatialLayerIdOfKeyframe <= internalSpatialLayerIdTarget)
+            if (currentEncodingId <= encodingIdOfKeyframe
+                && encodingIdOfKeyframe <= internalEncodingIdTarget)
             {
                 // upscale or current quality case
-                currentSpatialLayerId = spatialLayerIdOfKeyframe;
-                logger.debug(() -> "Upscaling to spatial layer "
-                    + spatialLayerIdOfKeyframe
-                    + ". The target is " + internalSpatialLayerIdTarget);
+                currentEncodingId = encodingIdOfKeyframe;
+                logger.debug(() -> "Upscaling to encoding "
+                    + encodingIdOfKeyframe
+                    + ". The target is " + internalEncodingIdTarget);
                 return true;
             }
-            else if (spatialLayerIdOfKeyframe <= internalSpatialLayerIdTarget
-                && internalSpatialLayerIdTarget < currentSpatialLayerId)
+            else if (encodingIdOfKeyframe <= internalEncodingIdTarget
+                && internalEncodingIdTarget < currentEncodingId)
             {
                 // downscale case
-                currentSpatialLayerId = spatialLayerIdOfKeyframe;
-                logger.debug(() -> " Downscaling to spatial layer "
-                    + spatialLayerIdOfKeyframe + ". The target is + "
-                    + internalSpatialLayerIdTarget);
+                currentEncodingId = encodingIdOfKeyframe;
+                logger.debug(() -> " Downscaling to encoding "
+                    + encodingIdOfKeyframe + ". The target is + "
+                    + internalEncodingIdTarget);
                 return true;
             }
             else
@@ -349,32 +349,6 @@ class VP8QualityFilter
                 return false;
             }
         }
-    }
-
-    /**
-     * Small utility method that computes the temporal layer index from the
-     * quality index
-     * @param index the quality index
-     * @return the temporal layer index
-     */
-    private static int getTemporalLayerId(int index)
-    {
-        return index > -1 ? index % 3 : -1;
-    }
-
-    /**
-     * Small utility method that computes the spatial/quality layer index from
-     * the quality index
-     *
-     * FIXME quality has a very specific meaning in video coding. Consider
-     * picking another name for our quality index.
-     *
-     * @param index the quality index
-     * @return the spatial/quality index
-     */
-    private static int getSpatialLayerId(int index)
-    {
-        return index > -1 ? index / 3 : -1;
     }
 
     /**
@@ -394,10 +368,9 @@ class VP8QualityFilter
                 mostRecentKeyframeGroupArrivalTimeMs);
         debugState.put("needsKeyframe", needsKeyframe);
         debugState.put(
-                "internalSpatialLayerIdTarget",
-                internalSpatialLayerIdTarget);
-        debugState.put("currentSpatialLayerId", currentSpatialLayerId);
-
+                "internalEncodingIdTarget",
+            internalEncodingIdTarget);
+        debugState.put("currentEncodingId", currentEncodingId);
 
         return debugState;
     }
