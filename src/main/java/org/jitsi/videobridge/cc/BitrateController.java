@@ -1334,11 +1334,8 @@ public class BitrateController
             // 180p@15fps and 180p@7.5fps
             int ratedPreferredIdx = 0;
             long idealBps = 0;
-            int i;
-            // TODO: add some iterator-based accessor?
-            for (i = 0; i < source.numRtpLayers(); i++)
+            for (RtpLayerDesc layer : source.getRtpLayers())
             {
-                RtpLayerDesc layer = source.getRtpLayerByQualityIdx(i);
                 if (maxFrameHeight >= 0 && layer.getHeight() > maxFrameHeight)
                 {
                     continue;
