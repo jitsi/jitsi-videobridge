@@ -19,4 +19,9 @@ if [[ ! -f /config/logging.properties ]]; then
     cp /defaults/logging.properties /config
 fi
 
+groupadd jitsi
+useradd -r -g jitsi --shell /bin/bash --create-home -d /usr/share/jitsi-videobridge jvb
+usermod -g jitsi jvb
+
 chown -R jvb:jitsi /config
+chown -R jvb:jitsi /usr/share/jitsi-videobridge
