@@ -19,7 +19,8 @@ RUN \
 
 FROM ${JITSI_REPO}/base-java
 
-COPY rootfs/ /
-#COPY --from=builder /src/target/
+COPY resources/jvb.sh /usr/share/jitsi-videobridge/
+COPY docker/rootfs/ /
+COPY --from=builder /src/target/jitsi-videobridge-*-jar-with-dependencies.jar /usr/share/jitsi-videobridge/jitsi-videobridge.jar
 
 VOLUME /config
