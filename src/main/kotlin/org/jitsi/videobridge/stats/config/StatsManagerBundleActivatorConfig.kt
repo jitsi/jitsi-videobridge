@@ -27,12 +27,8 @@ import org.jitsi.utils.config.exception.ConfigPropertyNotFoundException
 import org.jitsi.videobridge.config.ConditionalProperty
 import org.jitsi.videobridge.config.ResettableSingleton
 import org.jitsi.videobridge.stats.CallStatsIOTransport
-import org.jitsi.videobridge.stats.ColibriStatsTransport
 import org.jitsi.videobridge.stats.MucStatsTransport
-import org.jitsi.videobridge.stats.PubSubStatsTransport
 import org.jitsi.videobridge.stats.StatsTransport
-import org.jxmpp.jid.Jid
-import org.jxmpp.jid.impl.JidCreate
 import java.time.Duration
 
 class StatsManagerBundleActivatorConfig {
@@ -148,22 +144,6 @@ class StatsManagerBundleActivatorConfig {
              * implement the property that's used differently (see above)
              */
             @Suppress("unused")
-            private class PubSubStatsServiceProperty : SimpleProperty<String>(
-                legacyConfigAttributes {
-                    name("org.jitsi.videobridge.PUBSUB_SERVICE")
-                    readOnce()
-                }
-            )
-
-            @Suppress("unused")
-            private class PubSubStatsNodeProperty : SimpleProperty<String>(
-                legacyConfigAttributes {
-                    name("org.jitsi.videobridge.PUBSUB_NODE")
-                    readOnce()
-                }
-            )
-
-            @Suppress("unused")
             private class LegacyStatsTransportsProperty : SimpleProperty<String>(
                 legacyConfigAttributes {
                     name("org.jitsi.videobridge.STATISTICS_TRANSPORT")
@@ -182,32 +162,11 @@ sealed class StatsTransportConfig(
 ) {
     abstract fun toStatsTransport(): StatsTransport?
 
-    class ColibriStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval) {
-        override fun toStatsTransport(): StatsTransport = ColibriStatsTransport()
-    }
     class MucStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval) {
         override fun toStatsTransport(): StatsTransport = MucStatsTransport()
     }
     class CallStatsIoStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval) {
         override fun toStatsTransport(): StatsTransport = CallStatsIOTransport()
-    }
-    class PubSubStatsTransportConfig(
-        val service: Jid,
-        val node: String,
-        interval: Duration
-    ) : StatsTransportConfig(interval) {
-        override fun toStatsTransport(): StatsTransport = PubSubStatsTransport(service, node)
-
-        companion object {
-            operator fun invoke(serviceName: String, nodeName: String, interval: Duration): PubSubStatsTransportConfig? {
-                return try {
-                    val service = JidCreate.from(serviceName)
-                    PubSubStatsTransportConfig(service, nodeName, interval)
-                } catch (e: Exception) {
-                    null
-                }
-            }
-        }
     }
     companion object {
         /**
@@ -220,14 +179,8 @@ sealed class StatsTransportConfig(
                 StatsManagerBundleActivatorConfig.Config.statsInterval()
             }
             return when (config.getString("type")) {
-                "colibri" -> ColibriStatsTransportConfig(interval)
                 "muc" -> MucStatsTransportConfig(interval)
                 "callstatsio" -> CallStatsIoStatsTransportConfig(interval)
-                "pubsub" -> {
-                    val serviceString = config.getString("service")
-                    val nodeString = config.getString("node")
-                    PubSubStatsTransportConfig(JidCreate.from(serviceString), nodeString, interval)
-                }
                 else -> null
             }
         }
@@ -244,20 +197,8 @@ sealed class StatsTransportConfig(
                     StatsManagerBundleActivatorConfig.Config.statsInterval()
                 }
                 when (it) {
-                    "colibri" -> ColibriStatsTransportConfig(interval)
                     "muc" -> MucStatsTransportConfig(interval)
                     "callstats.io" -> CallStatsIoStatsTransportConfig(interval)
-                    "pubsub" -> {
-                        // In keeping consistent to swallow all errors, we don't fail here
-                        // if we can't find the pubsub service or not properties.
-                        try {
-                            val serviceString = config.getString("PUBSUB_SERVICE")
-                            val nodeString = config.getString("PUBSUB_NODE")
-                            PubSubStatsTransportConfig(JidCreate.from(serviceString), nodeString, interval)
-                        } catch (t: Throwable) {
-                            null
-                        }
-                    }
                     else -> null
                 }
             }

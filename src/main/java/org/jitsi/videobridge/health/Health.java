@@ -20,10 +20,8 @@ import org.jitsi.health.*;
 import org.jitsi.osgi.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.ice.*;
-import org.jitsi.videobridge.xmpp.*;
 import org.osgi.framework.*;
 
-import java.io.*;
 import java.util.*;
 
 import static org.jitsi.videobridge.health.config.HealthConfig.*;
@@ -98,35 +96,6 @@ public class Health
     }
 
     /**
-     * Checks if this {@link Videobridge} has an XMPP component and its
-     * connection is alive. Throws an exception if this isn't the case.
-     * an XMPP component,
-     *
-     * @param videobridge the {@code Videobridge} to check the XMPP connection
-     *                    status of
-     */
-    private static void checkXmppConnection(Videobridge videobridge)
-        throws Exception
-    {
-        // If XMPP API was requested, but there isn't any XMPP component
-        // registered we shall return false (no valid XMPP connection)
-        Collection<ComponentImpl> components = videobridge.getComponents();
-        if (videobridge.isXmppApiEnabled() && components.size() == 0)
-        {
-            throw new Exception("No XMPP components");
-        }
-
-        for (ComponentImpl component : components)
-        {
-            if (!component.isConnectionAlive())
-            {
-                throw new Exception(
-                    "XMPP component not connected: " + component);
-            }
-        }
-    }
-
-    /**
      * Generates a pseudo-random {@code Endpoint} ID which is not guaranteed to
      * be unique.
      *
@@ -192,7 +161,7 @@ public class Health
             throw new Exception("Failed to bind single-port");
         }
 
-        checkXmppConnection(videobridge);
+        // TODO: check if ClientConnectionImpl is configured and connected.
 
         // Conference
         Conference conference =

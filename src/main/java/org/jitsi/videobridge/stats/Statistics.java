@@ -55,22 +55,6 @@ public abstract class Statistics
     }
 
     /**
-     * Formats statistics in <tt>ColibriStatsIQ</tt> object
-     * @param statistics the statistics instance
-     * @return the <tt>ColibriStatsIQ</tt> instance.
-     */
-    public static ColibriStatsIQ toXmppIq(Statistics statistics)
-    {
-        ColibriStatsIQ iq = new ColibriStatsIQ();
-        for (Map.Entry<String,Object> e : statistics.getStats().entrySet())
-        {
-            iq.addStat(
-                    new ColibriStatsExtension.Stat(e.getKey(), e.getValue()));
-        }
-        return iq;
-    }
-
-    /**
      * The <tt>ReadWriteLock</tt> which synchronizes the access to and/or
      * modification of the state of this instance. Replaces
      * <tt>synchronized</tt> blocks in order to reduce the number of exclusive

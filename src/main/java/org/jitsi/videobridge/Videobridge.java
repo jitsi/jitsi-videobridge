@@ -34,11 +34,9 @@ import org.jitsi.utils.version.Version;
 import org.jitsi.videobridge.ice.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
-import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.version.*;
-import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.health.*;
@@ -46,8 +44,6 @@ import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
-import org.jivesoftware.smackx.pubsub.*;
-import org.jivesoftware.smackx.pubsub.provider.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
@@ -142,18 +138,6 @@ public class Videobridge
      */
     public static final String AUTHORIZED_SOURCE_REGEXP_PNAME
         = "org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP";
-
-    /**
-     * The XMPP API of Jitsi Videobridge.
-     */
-    public static final String XMPP_API = "xmpp";
-
-    /**
-     * The (base) <tt>System</tt> and/or <tt>ConfigurationService</tt> property
-     * of the XMPP API of Jitsi Videobridge.
-     */
-    public static final String XMPP_API_PNAME
-        = "org.jitsi.videobridge." + XMPP_API;
 
     /**
      * The pattern used to filter entities that are allowed to operate
@@ -424,18 +408,6 @@ public class Videobridge
         }
 
         return channelCount;
-    }
-
-    /**
-     * Gets the <tt>ComponentImpl</tt> instances which implement the XMPP API of
-     * this <tt>Videobridge</tt>.
-     *
-     * @return the <tt>ComponentImpl</tt> instances which implement the XMPP API
-     * of this <tt>Videobridge</tt>
-     */
-    public Collection<ComponentImpl> getComponents()
-    {
-        return ComponentImpl.getComponents(getBundleContext());
     }
 
     /**
@@ -749,15 +721,6 @@ public class Videobridge
     }
 
     /**
-     * Handles an XMPP IQ of a response type ('error' or 'result')
-     * @param response the IQ.
-     */
-    public void handleIQResponse(org.jivesoftware.smack.packet.IQ response)
-    {
-        PubSubPublisher.handleIQResponse(response);
-    }
-
-    /**
      * Returns {@code true} if this instance has entered graceful shutdown mode.
      *
      * @return {@code true} if this instance has entered graceful shutdown mode;
@@ -766,21 +729,6 @@ public class Videobridge
     public boolean isShutdownInProgress()
     {
         return shutdownInProgress;
-    }
-
-    /**
-     * Returns {@code true} if XMPP API has been enabled.
-     *
-     * @return {@code true} if XMPP API has been enabled; otherwise,
-     * {@code false}
-     */
-    public boolean isXmppApiEnabled()
-    {
-        ConfigurationService cfg = getConfigurationService();
-
-        // The XMPP API is disabled by default.
-        return cfg != null &&
-            cfg.getBoolean(Videobridge.XMPP_API_PNAME, false);
     }
 
     /**
@@ -942,12 +890,6 @@ public class Videobridge
                 DtlsFingerprintPacketExtension.NAMESPACE,
                 new DefaultPacketExtensionProvider<>(
                         DtlsFingerprintPacketExtension.class));
-
-        // PubSub
-        ProviderManager.addIQProvider(
-                PubSubElementType.PUBLISH.getElementName(),
-                PubSubElementType.PUBLISH.getNamespace().getXmlns(),
-                new PubSubProvider());
 
         // Health-check
         ProviderManager.addIQProvider(

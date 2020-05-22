@@ -317,13 +317,6 @@ public class XmppCommon
      */
     private void handleIQResponse(IQ response)
     {
-        Videobridge videobridge = getVideobridge();
-
-        if (videobridge != null)
-        {
-            long start = System.currentTimeMillis();
-            videobridge.handleIQResponse(response);
-            responseDelayStats.addDelay(System.currentTimeMillis() - start);
-        }
+        // No-op
     }
 }

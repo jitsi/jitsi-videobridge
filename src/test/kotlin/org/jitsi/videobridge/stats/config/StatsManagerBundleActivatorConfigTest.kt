@@ -28,7 +28,6 @@ import org.jitsi.utils.config.ConfigSource
 import org.jitsi.videobridge.JitsiConfigTest
 import org.jitsi.videobridge.config.ConditionalPropertyConditionNotMetException
 import org.jitsi.videobridge.testutils.resetSingleton
-import org.jxmpp.jid.impl.JidCreate
 import java.util.Properties
 import org.jitsi.videobridge.stats.config.StatsManagerBundleActivatorConfig.Config.Companion as Config
 
@@ -47,23 +46,13 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                     should("parse the transport correctly") {
                         val cfg = Config.StatsTransportsProperty()
 
-                        cfg.value shouldHaveSize 4
-                        cfg.value.forOne {
-                            it as StatsTransportConfig.ColibriStatsTransportConfig
-                            it.interval shouldBe 5.seconds
-                        }
+                        cfg.value shouldHaveSize 2
                         cfg.value.forOne {
                             it as StatsTransportConfig.MucStatsTransportConfig
                             it.interval shouldBe 5.seconds
                         }
                         cfg.value.forOne {
                             it as StatsTransportConfig.CallStatsIoStatsTransportConfig
-                            it.interval shouldBe 5.seconds
-                        }
-                        cfg.value.forOne {
-                            it as StatsTransportConfig.PubSubStatsTransportConfig
-                            it.service shouldBe JidCreate.from("meet.jit.si")
-                            it.node shouldBe "jvb"
                             it.interval shouldBe 5.seconds
                         }
                     }
@@ -89,7 +78,7 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                     should("reflect the custom interval") {
                         val cfg = Config.StatsTransportsProperty()
                         cfg.value.forOne {
-                            it as StatsTransportConfig.ColibriStatsTransportConfig
+                            it as StatsTransportConfig.MucStatsTransportConfig
                             it.interval shouldBe 10.seconds
                         }
                     }
@@ -102,15 +91,9 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
             should("use the values from the old config") {
                 val cfg = Config.StatsTransportsProperty()
 
-                cfg.value shouldHaveSize 4
-                cfg.value.forOne { it as StatsTransportConfig.ColibriStatsTransportConfig }
+                cfg.value shouldHaveSize 2
                 cfg.value.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
                 cfg.value.forOne { it as StatsTransportConfig.CallStatsIoStatsTransportConfig }
-                cfg.value.forOne {
-                    it as StatsTransportConfig.PubSubStatsTransportConfig
-                    it.service shouldBe JidCreate.from("meet.jit.si")
-                    it.node shouldBe "jvb"
-                }
             }
             "and it's disabled in old config but enabled in new config" {
                 withLegacyConfig(legacyConfigStatsEnabled(enabled = false))
@@ -147,19 +130,11 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                 enabled=$enabled
                 transports = [
                     {
-                        type="colibri"
-                    },
-                    {
                         type="muc"
                     },
                     {
                         type="callstatsio"
                     },
-                    {
-                        type="pubsub"
-                        service="meet.jit.si"
-                        node="jvb"
-                    }
                 ]
             }
         }
@@ -172,7 +147,7 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                 interval=5 seconds
                 transports = [
                     {
-                        type="colibri"
+                        type="muc"
                     }
                 ]
             }
@@ -186,7 +161,7 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                 interval=5 seconds
                 transports = [
                     {
-                        type="colibri"
+                        type="muc"
                         interval=10 seconds
                     }
                 ]
@@ -221,8 +196,6 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
 
     private fun legacyConfigAllStatsTransports(enabled: Boolean = true) = createConfigFrom(Properties().apply {
         setProperty("org.jitsi.videobridge.ENABLE_STATISTICS", "$enabled")
-        setProperty("org.jitsi.videobridge.STATISTICS_TRANSPORT", "muc,colibri,callstats.io,pubsub")
-        setProperty("org.jitsi.videobridge.PUBSUB_SERVICE", "meet.jit.si")
-        setProperty("org.jitsi.videobridge.PUBSUB_NODE", "jvb")
+        setProperty("org.jitsi.videobridge.STATISTICS_TRANSPORT", "muc,callstats.io")
     })
 }

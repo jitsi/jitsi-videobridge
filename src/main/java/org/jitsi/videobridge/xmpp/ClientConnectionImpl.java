@@ -50,6 +50,8 @@ public class ClientConnectionImpl
      */
     private MucClientManager mucClientManager;
 
+    private ServiceRegistration<ClientConnectionImpl> serviceRegistration;
+
     /**
      * The {@link XmppCommon} instance which implements handling of Smack IQs
      * for this {@link ClientConnectionImpl}.
@@ -86,8 +88,8 @@ public class ClientConnectionImpl
             Config.getClientConfigs()
                 .forEach(cfg -> mucClientManager.addMucClient(cfg));
 
-            bundleContext.registerService(
-                ClientConnectionImpl.class, this, null);
+            serviceRegistration
+                = bundleContext.registerService(ClientConnectionImpl.class, this, null);
         }
         else
         {
@@ -113,30 +115,20 @@ public class ClientConnectionImpl
      */
     @Override
     public void stop(BundleContext bundleContext)
-        throws Exception
     {
-        try
+        if (mucClientManager != null)
         {
-            // Unregister this instance as an OSGi service.
-            Collection<ServiceReference<ComponentImpl>> serviceReferences
-                = bundleContext.getServiceReferences(ComponentImpl.class, null);
-
-            if (serviceReferences != null)
-            {
-                for (ServiceReference<ComponentImpl> serviceReference
-                    : serviceReferences)
-                {
-                    Object service = bundleContext.getService(serviceReference);
-
-                    if (service == this)
-                        bundleContext.ungetService(serviceReference);
-                }
-            }
+            mucClientManager.stop();
+            mucClientManager = null;
         }
-        finally
+
+        if (serviceRegistration != null)
         {
-            common.stop(bundleContext);
+            serviceRegistration.unregister();
+            serviceRegistration = null;
         }
+
+        common.stop(bundleContext);
     }
 
     /**

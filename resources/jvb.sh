@@ -3,12 +3,7 @@
 if [[ "$1" == "--help"  || $# -lt 1 ]]; then
     echo -e "Usage:"
     echo -e "$0 [OPTIONS], where options can be:"
-    echo -e "\t--secret=SECRET\t sets the shared secret used to authenticate to the XMPP server"
-    echo -e "\t--domain=DOMAIN\t sets the XMPP domain (default: none)"
-    echo -e "\t--host=HOST\t sets the hostname of the XMPP server (default: domain, if domain is set, \"localhost\" otherwise)"
-    echo -e "\t--port=PORT\t sets the port of the XMPP server (default: 5275)"
-    echo -e "\t--subdomain=SUBDOMAIN\t sets the sub-domain used to bind JVB XMPP component (default: jitsi-videobridge)"
-    echo -e "\t--apis=APIS where APIS is a comma separated list of APIs to enable. Currently supported APIs are 'xmpp' and 'rest'. The default is 'xmpp'."
+    echo -e "\t--apis=APIS where APIS is a comma separated list of APIs to enable. Currently the only supported API is 'rest'. The default is none."
     echo
     exit 1
 fi
