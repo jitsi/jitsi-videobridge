@@ -994,8 +994,6 @@ public class BitrateController
                 ". Endpoints constraints: " + Arrays.toString(videoConstraintsMap.values().toArray()));
         }
 
-        int endpointPriority = 0;
-
         // Before endpoint constraints we had had the notion of selected and
         // pinned endpoints. "selected" endpoints were endpoints that had
         // 720p ideal height and prioritized over everything else and were
@@ -1027,7 +1025,7 @@ public class BitrateController
                 continue;
             }
 
-            boolean forwarded = endpointPriority < adjustedLastN;
+            boolean forwarded = trackBitrateAllocations.size() - 1 < adjustedLastN;
 
             MediaStreamTrackDesc[] tracks
                 = sourceEndpoint.getMediaStreamTracks();
@@ -1037,13 +1035,12 @@ public class BitrateController
                 for (MediaStreamTrackDesc track : tracks)
                 {
                     trackBitrateAllocations.add(
-                        endpointPriority, new TrackBitrateAllocation(
+                        new TrackBitrateAllocation(
                             endpointMultiRank.endpoint.getID(),
                             track, endpointMultiRank.videoConstraints, forwarded));
                 }
 
                 logger.trace(() -> "Adding endpoint " + sourceEndpoint.getID() + " to allocations");
-                endpointPriority++;
             }
         }
 
@@ -1333,13 +1330,13 @@ public class BitrateController
                 if ((lessThanPreferredResolution
                     || (lessThanOrEqualIdealResolution && atLeastPreferredFps)))
                 {
-                    long encodingBitrateBps = encoding.getBitrateBps(nowMs);
-                    if (encodingBitrateBps > 0)
-                    {
-                        idealBps = encodingBitrateBps;
-                    }
-                    ratesList.add(
-                        new RateSnapshot(encodingBitrateBps, encoding));
+                long encodingBitrateBps = encoding.getBitrateBps(nowMs);
+                if (encodingBitrateBps > 0)
+                {
+                    idealBps = encodingBitrateBps;
+                }
+                ratesList.add(
+                    new RateSnapshot(encodingBitrateBps, encoding));
                 }
 
                 if (encoding.getHeight() <= videoConstraints.getPreferredHeight())
