@@ -49,7 +49,7 @@ import org.jivesoftware.smack.packet.SimpleIQ
 import org.jivesoftware.smack.provider.ProviderManager
 import java.util.concurrent.TimeUnit
 
-class ApplicationKtTest : ShouldSpec() {
+class ApplicationTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val confMgr: ConferenceManager = mockk()
