@@ -25,15 +25,7 @@ import io.ktor.response.respond
 import io.ktor.routing.get
 import io.ktor.routing.route
 import io.ktor.routing.routing
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.jetty.Jetty
 import io.ktor.websocket.WebSockets
-import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
-import org.jitsi.xmpp.extensions.colibri.ColibriIQProvider
-import org.jitsi.xmpp.extensions.health.HealthCheckIQ
-import org.jitsi.xmpp.extensions.health.HealthCheckIQProvider
-import org.jivesoftware.smack.packet.IQ
-import org.jivesoftware.smack.provider.ProviderManager
 import org.jitsi.videobridge.api.server.v1.app as v1App
 import org.jitsi.videobridge.api.types.v1.ConferenceManager as v1ConferenceManager
 
@@ -63,26 +55,4 @@ fun Application.module(conferenceManager: v1ConferenceManager) {
 @Suppress("unused")
 class ApiVersion(val supportedVersions: List<String>) {
     constructor(vararg versions: String) : this(versions.toList())
-}
-
-fun main() {
-    ProviderManager.addIQProvider(
-        ColibriConferenceIQ.ELEMENT_NAME,
-        ColibriConferenceIQ.NAMESPACE,
-        ColibriIQProvider())
-    ProviderManager.addIQProvider(
-        HealthCheckIQ.ELEMENT_NAME,
-        HealthCheckIQ.NAMESPACE,
-        HealthCheckIQProvider())
-    embeddedServer(Jetty, port = 9099) {
-        module(object : v1ConferenceManager {
-            override fun handleColibriConferenceIQ(conferenceIQ: ColibriConferenceIQ): IQ {
-                return ColibriConferenceIQ()
-            }
-
-            override fun handleHealthIq(healthCheckIQ: HealthCheckIQ): IQ {
-                return IQ.createResultIQ(healthCheckIQ)
-            }
-        })
-    }.start()
 }
