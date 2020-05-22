@@ -83,6 +83,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>io.kotest</groupId>
+            <artifactId>kotest-assertions-ktor-jvm</artifactId>
+            <version>${kotest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>io.mockk</groupId>
             <artifactId>mockk</artifactId>
             <version>1.10.0</version>

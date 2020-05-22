@@ -42,7 +42,6 @@ import org.jitsi.videobridge.api.types.v1.ConferenceManager as v1ConferenceManag
  * the correct versions of the application at the correct URLs and injecting
  * the [v1ConferenceManager] instance for calls.
  */
-@kotlin.jvm.JvmOverloads
 fun Application.module(conferenceManager: v1ConferenceManager) {
     install(ContentNegotiation) {
         jackson {}

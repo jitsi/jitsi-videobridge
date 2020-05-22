@@ -17,13 +17,18 @@
 package org.jitsi.videobridge.api.server
 
 import io.kotest.assertions.failure
+import io.kotest.assertions.ktor.shouldHaveContent
+import io.kotest.assertions.ktor.shouldHaveStatus
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.ktor.http.HttpMethod
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.readText
+import io.ktor.server.testing.handleRequest
 import io.ktor.server.testing.withTestApplication
 import io.mockk.every
 import io.mockk.mockk
@@ -128,6 +133,18 @@ class ApplicationKtTest : ShouldSpec() {
                     }
                 }
             }
+        }
+        context("Querying the supported API versions") {
+            withTestApplication({ module(confMgr) }) {
+                with(handleRequest(method = HttpMethod.Get, uri = "about/api_version")) {
+                    response shouldHaveStatus HttpStatusCode.OK
+                    response shouldHaveContent """
+                        {"supportedVersions":["v1"]}
+                    """.trimIndent()
+                    println(response.content)
+                }
+            }
+
         }
     }
 }
