@@ -19,12 +19,8 @@ package org.jitsi.videobridge.api.server.v1
 import io.ktor.application.ApplicationCall
 import io.ktor.application.ApplicationCallPipeline
 import io.ktor.application.call
-import io.ktor.application.install
-import io.ktor.features.ContentNegotiation
-import io.ktor.http.ContentType
 import io.ktor.routing.Route
 import io.ktor.util.AttributeKey
-import org.jitsi.videobridge.api.server.XmlConverter
 import org.jitsi.videobridge.api.types.v1.ConferenceManager
 
 /**
@@ -32,9 +28,6 @@ import org.jitsi.videobridge.api.types.v1.ConferenceManager
  * APIs for this API version.
  */
 fun Route.app(conferenceManager: ConferenceManager) {
-    install(ContentNegotiation) {
-        register(ContentType.Application.Xml, XmlConverter)
-    }
     injectConfManager(conferenceManager)
     colibriApi()
 }
