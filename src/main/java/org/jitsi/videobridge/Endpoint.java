@@ -666,12 +666,6 @@ public class Endpoint
         bitrateController.setVideoConstraints(newVideoConstraints);
     }
 
-    @Override
-    public void setGlobalConstraints(VideoConstraints newGlobalConstraints)
-    {
-        bitrateController.setGlobalVideoConstraints(newGlobalConstraints);
-    }
-
     /**
      * {@inheritDoc}
      */

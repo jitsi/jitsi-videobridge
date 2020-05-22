@@ -23,7 +23,6 @@ import org.json.simple.*;
 import org.json.simple.parser.*;
 
 import java.util.*;
-import java.util.stream.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
@@ -48,18 +47,19 @@ public abstract class AbstractEndpointMessageTransport
     protected final @NotNull Logger logger;
 
     /**
-     * The last pinned endpoints set signaled by the client, converted into
-     * a map of endpoint id -> video constraints. We need this for backwards
-     * compatibility (see more bellow in {@link #onVideoConstraintsChangedEvent()}
+     * A constraints object for the given endpoint id, with ideal height set to
+     * 720p.
+     *
+     *  Pinned endpoints are those that we want to see in HD because they're
+     *  (provided that there's enough bandwidth, but that's up to the bitrate
+     *  controller to decide).
+     *
+     *  By setting the ideal height to 720, a receiver expresses the "desire"
+     *  to watch them in high resolution. This will result in being
+     *  prioritized during the bandwidth allocation step.
      */
-    private Map<String, VideoConstraints> pinnedVideoConstraintsMap;
-
-    /**
-     * The last selected endpoints set signaled by the client, converted into
-     * a map of endpoint id -> video constraints. We need this for backwards
-     * compatibility (see more bellow in {@link #onVideoConstraintsChangedEvent()}
-     */
-    private Map<String, VideoConstraints> selectedVideoConstraintsMap;
+    private final VideoConstraintsCompatibility
+        videoConstraintsCompatibility = new VideoConstraintsCompatibility();
 
     /**
      * Initializes a new {@link AbstractEndpointMessageTransport} instance.
@@ -402,14 +402,9 @@ public abstract class AbstractEndpointMessageTransport
         JSONObject jsonObject,
         Set<String> newPinnedEndpoints)
     {
-        // Note that this captures the set.
-        pinnedVideoConstraintsMap = newPinnedEndpoints
-            .stream()
-            .collect(Collectors.toMap(e -> e,
-                e -> VideoConstraints.PINNED_ENDPOINT_CONSTRAINT)
-            );
-
-        onVideoConstraintsChangedEvent();
+        videoConstraintsCompatibility.setPinnedEndpoints(newPinnedEndpoints);
+        onVideoConstraintsChangedEvent(
+            videoConstraintsCompatibility.computeVideoConstraints());
     }
 
     /**
@@ -425,26 +420,13 @@ public abstract class AbstractEndpointMessageTransport
         JSONObject jsonObject,
         Set<String> newSelectedEndpoints)
     {
-        selectedVideoConstraintsMap
-            = newSelectedEndpoints
-            .stream()
-            .collect(Collectors.toMap(e -> e,
-                e -> VideoConstraints.SELECTED_ENDPOINT_CONSTRAINT)
-            );
-
-        onVideoConstraintsChangedEvent();
+        videoConstraintsCompatibility.setSelectedEndpoints(newSelectedEndpoints);
+        onVideoConstraintsChangedEvent(
+            videoConstraintsCompatibility.computeVideoConstraints());
     }
 
-    protected void onVideoConstraintsChangedEvent()
+    protected void onVideoConstraintsChangedEvent(Map<String, VideoConstraints> newVideoConstraints)
     {
-        Map<String, VideoConstraints>
-            newVideoConstraints = new HashMap<>(pinnedVideoConstraintsMap);
-
-        // Add video constraints for all the selected endpoints (which will
-        // automatically override the video constraints for pinned endpoints, so
-        // they're bumped to 720p if they're also selected).
-        newVideoConstraints.putAll(selectedVideoConstraintsMap);
-
         endpoint.setVideoConstraints(newVideoConstraints);
     }
 
@@ -504,11 +486,8 @@ public abstract class AbstractEndpointMessageTransport
                     + getId() + ": " + maxFrameHeight);
         }
 
-        if (endpoint != null)
-        {
-            endpoint.setGlobalConstraints(VideoConstraints
-                .makeMaxHeightVideoConstraints(maxFrameHeight));
-        }
+        videoConstraintsCompatibility.setMaxFrameHeight(maxFrameHeight);
+        onVideoConstraintsChangedEvent(videoConstraintsCompatibility.computeVideoConstraints());
     }
 
     /**

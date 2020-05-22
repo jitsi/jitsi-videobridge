@@ -77,10 +77,6 @@ class OctoEndpoint(
         TODO("Not yet implemented")
     }
 
-    override fun setGlobalConstraints(newGlobalConstraints: VideoConstraints?) {
-        TODO("Not yet implemented")
-    }
-
     override fun requestKeyframe(mediaSsrc: Long) {
         transceiver.requestKeyframe(mediaSsrc)
     }
