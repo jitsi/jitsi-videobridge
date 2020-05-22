@@ -23,10 +23,10 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.client.features.websocket.WebSockets
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.jetty.Jetty
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import org.jitsi.utils.logging2.LoggerImpl
-import java.time.Duration
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 import kotlin.random.Random
 import kotlin.time.ExperimentalTime
@@ -53,66 +53,39 @@ class SynchronousWebSocketClientTest : ShouldSpec() {
         testModule()
     }
 
-    private val debugEnabled = false
-
     init {
         thread { server.start() }
 
-        context("Multiple, concurrent requests") {
+        context("Lots of concurrent synchronous requests") {
             val ws = SynchronousWebSocketClient(client, "localhost", wsPort, "/ws/echo", LoggerImpl("test"))
             ws.run()
-            should("still have responses match up correctly") {
-                launch {
-                    delay(100)
-                    debug("Sending req 1")
-                    val resp = ws.sendAndGetReply("hello 1")
-                    debug("Got resp 1")
-                    resp shouldBe "hello 1"
+            val executor = Executors.newFixedThreadPool(32)
+            should("work correctly") {
+                val numTasks = 10000
+                val latch = CountDownLatch(numTasks)
+                repeat (numTasks) {
+                    val result= executor.submit(Callable {
+                        val resp = ws.sendAndGetReply("$it")
+                        latch.countDown()
+                        resp
+                    }).get()
+                    // We can't do this verification inside the task, as it swallows
+                    // the exception
+                    result shouldBe "$it"
                 }
-                launch {
-                    debug("Sending req 2")
-                    val resp = ws.sendAndGetReply("hello 2")
-                    debug("Got resp 2")
-                    resp shouldBe "hello 2"
-                }
-                launch {
-                    debug("Sending and forgetting 3")
-                    ws.sendAndForget("hello 3")
-                }
-                launch {
-                    debug("Sending req 4")
-                    val resp = ws.sendAndGetReply("hello 4")
-                    debug("Got resp 4")
-                    resp shouldBe "hello 4"
-                }
-                launch {
-                    delay(500)
-                    debug("Sending req 5")
-                    val resp = ws.sendAndGetReply("hello 5")
-                    debug("Got resp 5")
-                    resp shouldBe "hello 5"
-                }
-                launch {
-                    debug("Sending and forgetting 6")
-                    ws.sendAndForget("hello 6")
-                }
+                latch.await()
             }
-            ws.stop()
         }
         context("sendAndForget") {
-            should("not block the caller").config(timeout = 200.milliseconds) {
-                val ws = SynchronousWebSocketClient(client, "localhost", wsPort, "/ws/delay", LoggerImpl("test"))
-                ws.run()
-                repeat (5) {
+            val ws = SynchronousWebSocketClient(client, "localhost", wsPort, "/ws/delay", LoggerImpl("test"))
+            ws.run()
+            // The 'delay' websocket endpoint delays for 100ms before responding,
+            // so we can verify these calls happen faster
+            should("not block the caller").config(timeout = 10.milliseconds) {
+                repeat(5) {
                     ws.sendAndForget("$it")
                 }
             }
-        }
-    }
-
-    private fun debug(msg: String) {
-        if (debugEnabled) {
-            println(msg)
         }
     }
 }
