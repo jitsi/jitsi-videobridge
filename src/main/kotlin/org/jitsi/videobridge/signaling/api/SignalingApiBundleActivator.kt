@@ -20,26 +20,32 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.jetty.Jetty
 import io.ktor.server.jetty.JettyApplicationEngine
 import org.jitsi.osgi.ServiceUtils2
+import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.Videobridge
-import org.osgi.framework.BundleActivator
-import org.osgi.framework.BundleContext
-import java.time.Duration
 import org.jitsi.videobridge.api.server.module
 import org.jitsi.videobridge.api.types.v1.ConferenceManager
 import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 import org.jitsi.xmpp.extensions.health.HealthCheckIQ
 import org.jivesoftware.smack.packet.IQ
+import org.osgi.framework.BundleActivator
+import org.osgi.framework.BundleContext
+import java.time.Duration
+import org.jitsi.videobridge.signaling.api.SignalingApiConfig as Config
 
 @Suppress("unused") // Used in BundleConfig.java
 class SignalingApiBundleActivator : BundleActivator {
     private var server: JettyApplicationEngine? = null
+    private val logger = LoggerImpl(SignalingApiBundleActivator::class.java.name)
 
     override fun start(bundleContext: BundleContext) {
+        if (!Config.enabled()) {
+            logger.info("Signaling API disabled, not starting")
+            return
+        }
         val videobridge = ServiceUtils2.getService(bundleContext, Videobridge::class.java)
-        println("STARTING KTOR")
 
         // TODO: check if it's enabled, get port, etc.
-        server = embeddedServer(Jetty, port = 9099) {
+        server = embeddedServer(Jetty, port = Config.bindPort(), host = Config.bindAddress()) {
             module(object : ConferenceManager {
                 override fun handleColibriConferenceIQ(conferenceIQ: ColibriConferenceIQ): IQ {
                     return videobridge.handleColibriConferenceIQ(conferenceIQ)
