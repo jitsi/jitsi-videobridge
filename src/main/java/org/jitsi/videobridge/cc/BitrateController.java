@@ -1007,7 +1007,7 @@ public class BitrateController
         Map<String, VideoConstraints> videoConstraintsMapCopy = videoConstraintsMap;
 
         List<EndpointMultiRank> endpointMultiRankList = IntStream
-            .range(0, conferenceEndpoints.size() - 1)
+            .rangeClosed(0, conferenceEndpoints.size() - 1)
             .mapToObj(i -> {
                 AbstractEndpoint endpoint = conferenceEndpoints.get(i);
                 VideoConstraints videoConstraints = videoConstraintsMapCopy
