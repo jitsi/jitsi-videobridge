@@ -28,8 +28,6 @@ import org.jitsi.videobridge.api.util.SmackXmlSerDes
 import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 import org.jitsi.xmpp.extensions.health.HealthCheckIQ
 import org.jivesoftware.smack.packet.IQ
-import org.jivesoftware.smack.packet.IQ.createErrorResponse
-import org.jivesoftware.smack.packet.Message
 import org.jivesoftware.smack.packet.Stanza
 import org.jivesoftware.smack.packet.XMPPError
 

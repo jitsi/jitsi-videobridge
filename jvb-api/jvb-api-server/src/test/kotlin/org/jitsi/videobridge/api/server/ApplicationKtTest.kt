@@ -49,7 +49,6 @@ import org.jivesoftware.smack.packet.SimpleIQ
 import org.jivesoftware.smack.provider.ProviderManager
 import java.util.concurrent.TimeUnit
 
-
 class ApplicationKtTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
@@ -90,7 +89,7 @@ class ApplicationKtTest : ShouldSpec() {
         }
         context("Receiving a HealthCheckIQ") {
             val capturedIq = slot<HealthCheckIQ>()
-            every { confMgr.handleHealthIq(capture(capturedIq)) } answers { IQ.createResultIQ(capturedIq.captured)}
+            every { confMgr.handleHealthIq(capture(capturedIq)) } answers { IQ.createResultIQ(capturedIq.captured) }
             withTestApplication({ module(confMgr) }) {
                 handleWebSocketConversation("/v1/ws") { incoming, outgoing ->
                     val iq = HealthCheckIQ()
@@ -144,7 +143,6 @@ class ApplicationKtTest : ShouldSpec() {
                     println(response.content)
                 }
             }
-
         }
     }
 }

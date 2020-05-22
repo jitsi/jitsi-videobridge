@@ -63,8 +63,8 @@ class SynchronousWebSocketClientTest : ShouldSpec() {
             should("work correctly") {
                 val numTasks = 10000
                 val latch = CountDownLatch(numTasks)
-                repeat (numTasks) {
-                    val result= executor.submit(Callable {
+                repeat(numTasks) {
+                    val result = executor.submit(Callable {
                         val resp = ws.sendAndGetReply("$it")
                         latch.countDown()
                         resp
@@ -89,4 +89,3 @@ class SynchronousWebSocketClientTest : ShouldSpec() {
         }
     }
 }
-
