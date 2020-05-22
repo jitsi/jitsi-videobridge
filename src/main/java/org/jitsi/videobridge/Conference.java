@@ -703,7 +703,6 @@ public class Conference
                 + id + "already created");
         }
 
-        logger.info("Creating local endpoint with id " + id);
         final Endpoint endpoint = new Endpoint(
             id, this, logger, iceControlling);
         // The propertyChangeListener will weakly reference this
