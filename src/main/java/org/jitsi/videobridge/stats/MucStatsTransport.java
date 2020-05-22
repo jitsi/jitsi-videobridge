@@ -60,6 +60,10 @@ public class MucStatsTransport
 
             clientConnectionImpl
                 .setPresenceExtension(Statistics.toXmppExtensionElement(stats));
+
+            // When advertising the Signaling API, the public address
+            // will come from the config, but the supported versions
+            // come from the server itself
         }
         else
         {

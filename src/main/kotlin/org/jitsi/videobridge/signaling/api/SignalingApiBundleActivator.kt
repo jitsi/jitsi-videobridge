@@ -44,7 +44,6 @@ class SignalingApiBundleActivator : BundleActivator {
         }
         val videobridge = ServiceUtils2.getService(bundleContext, Videobridge::class.java)
 
-        // TODO: check if it's enabled, get port, etc.
         server = embeddedServer(Jetty, port = Config.bindPort(), host = Config.bindAddress()) {
             module(object : ConferenceManager {
                 override fun handleColibriConferenceIQ(conferenceIQ: ColibriConferenceIQ): IQ {
