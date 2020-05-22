@@ -44,6 +44,7 @@ class SignalingApiBundleActivator : BundleActivator {
         }
         val videobridge = ServiceUtils2.getService(bundleContext, Videobridge::class.java)
 
+        logger.info("Signaling API starting on address ${Config.bindAddress()}:${Config.bindPort()}")
         server = embeddedServer(Jetty, port = Config.bindPort(), host = Config.bindAddress()) {
             module(object : ConferenceManager {
                 override fun handleColibriConferenceIQ(conferenceIQ: ColibriConferenceIQ): IQ {
