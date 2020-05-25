@@ -117,17 +117,17 @@ case "$1" in
             echo "org.jitsi.videobridge.xmpp.user.shard.MUC_NICKNAME=$(uuidgen)" >> $NEW_JITSI_CONFIG
         fi
 
-        APIS_VALUE=$(grep -oPe '--apis=\K(\w*,*\w*)' $CONFIG || true)
+        APIS_VALUE=$(grep -v '^\s*#' $CONFIG | grep -oPe '--apis=\K(\w*,*\w*)' || true)
         if [[ $APIS_VALUE == *"xmpp"* ]]; then
             APIS_NEW_VALUE=${APIS_VALUE/xmpp/}
             if [ -z "$APIS_NEW_VALUE" ]; then
                 APIS_NEW_VALUE=","
             fi
-            sed -i "s/--apis=$APIS_VALUE/--apis=$APIS_NEW_VALUE/g" $CONFIG
+            sed -i "/^\s*#/ !s/--apis=$APIS_VALUE/--apis=$APIS_NEW_VALUE/g" $CONFIG
         fi
         if [ -z "$APIS_VALUE" ]; then
             # no apis setting, component is turned on by default, so let's disable it
-            sed -i "s/JVB_OPTS=\"/JVB_OPTS=\"--apis=, /g" $CONFIG
+            sed -i "/^\s*#/ !s/JVB_OPTS=\"/JVB_OPTS=\"--apis=, /g" $CONFIG
         fi
 
         # we don't want to start the daemon as root
