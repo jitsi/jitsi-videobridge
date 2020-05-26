@@ -18,50 +18,37 @@ package org.jitsi.videobridge;
 import java.util.*;
 
 /**
- * Expresses the ideal video constraints for an endpoint. We may wish to support
- * track-based constraints in the future.
+ * Expresses the ideal video constraints for an endpoint or a track.
  */
 public class VideoConstraints
 {
     /**
-     * The ideal height of the constrained endpoint. We try to send an encoding
-     * that matches this resolution as close as possible, if bandwidth is
-     * available.
+     * The ideal height of the constrained endpoint. The bridge tries to send an
+     * encoding that matches this resolution as close as possible, if bandwidth
+     * is available.
      */
     private final int idealHeight;
 
     /**
-     *
+     * The "preferred" height of the constrained endpoint. When it's time to
+     * allocate bandwidth for the associated track or endpoint, the bridge
+     * tries to satisfy the preferred resolution before moving to the next
+     * endpoint or track.
      */
     private final int preferredHeight;
 
     /**
-     *
-     * @return
-     */
-    public int getPreferredHeight()
-    {
-        return preferredHeight;
-    }
-
-    /**
-     *
-     * @return
-     */
-    public double getPreferredFps()
-    {
-        return preferredFps;
-    }
-
-    /**
-     *
+     * The "preferred" frame-rate of the constrained endpoint.
      */
     private final double preferredFps;
+
 
     /**
      * Ctor.
      *
      * @param idealHeight The ideal height of the constrained endpoint.
+     * @param preferredFps
+     * @param preferredHeight
      */
     VideoConstraints(int idealHeight, int preferredHeight, double preferredFps)
     {
@@ -73,13 +60,32 @@ public class VideoConstraints
     /**
      * Ctor.
      *
-     * @param idealHeight The ideal height of the constrained endpoint.
+     * @param idealHeight The ideal height of the constrained endpoint or track.
      */
     public VideoConstraints(int idealHeight)
     {
         this(idealHeight, -1, -1);
     }
 
+    /**
+     * @return The "preferred" height of the constrained endpoint track.
+     */
+    public int getPreferredHeight()
+    {
+        return preferredHeight;
+    }
+
+    /**
+     * @return The "preferred" framerate of the constrained endpoint or track.
+     */
+    public double getPreferredFps()
+    {
+        return preferredFps;
+    }
+
+    /**
+     * @return the ideal resolution of the constrained endpoint or track.
+     */
     public int getIdealHeight()
     {
         return idealHeight;

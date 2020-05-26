@@ -47,16 +47,8 @@ public abstract class AbstractEndpointMessageTransport
     protected final @NotNull Logger logger;
 
     /**
-     * A constraints object for the given endpoint id, with ideal height set to
-     * 720p.
-     *
-     *  Pinned endpoints are those that we want to see in HD because they're
-     *  (provided that there's enough bandwidth, but that's up to the bitrate
-     *  controller to decide).
-     *
-     *  By setting the ideal height to 720, a receiver expresses the "desire"
-     *  to watch them in high resolution. This will result in being
-     *  prioritized during the bandwidth allocation step.
+     * The compatibility layer that translates selected, pinned and max
+     * resolution messages into video constraints.
      */
     private final VideoConstraintsCompatibility
         videoConstraintsCompatibility = new VideoConstraintsCompatibility();
