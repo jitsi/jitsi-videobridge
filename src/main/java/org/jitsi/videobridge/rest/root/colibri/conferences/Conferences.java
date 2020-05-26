@@ -135,7 +135,7 @@ public class Conferences extends ColibriResource
             throw new BadRequestExceptionWithMessage("Must not include conference ID");
         }
 
-        return getVideobridgeIqResponseAsJson(requestConferenceIQ, Videobridge.OPTION_ALLOW_NO_FOCUS);
+        return getVideobridgeIqResponseAsJson(requestConferenceIQ);
     }
 
     @PATCH
@@ -167,13 +167,13 @@ public class Conferences extends ColibriResource
             throw new BadRequestException();
         }
 
-        return getVideobridgeIqResponseAsJson(requestIq, Videobridge.OPTION_ALLOW_NO_FOCUS);
+        return getVideobridgeIqResponseAsJson(requestIq);
     }
 
-    private String getVideobridgeIqResponseAsJson(ColibriConferenceIQ request, int options)
+    private String getVideobridgeIqResponseAsJson(ColibriConferenceIQ request)
     {
         IQ responseIq = videobridgeProvider.get()
-                .handleColibriConferenceIQ(request, options);
+                .handleColibriConferenceIQ(request);
 
         if (responseIq.getError() != null)
         {
