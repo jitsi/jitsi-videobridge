@@ -62,16 +62,20 @@ public class MucStatsTransport
 
             ColibriStatsExtension statsExt = Statistics.toXmppExtensionElement(stats);
 
-            // When advertising the Signaling API, the public address
-            // will come from the config, but the supported versions
-            // come from the server itself
-            String apiUrl = SignalingApiConfig.Companion.publicAddress();
-            int apiPort = SignalingApiConfig.Companion.bindPort();
-            // BridgeMucDetector expects a ColibriStatsExtension directly (no wrapper type)
-            // so for now hack the api stuff into there
-            statsExt.addStat("jvb-api-base-url", apiUrl);
-            statsExt.addStat("jvb-api-port", apiPort);
-            statsExt.addStat("jvb-api-version", "v1");
+            if (SignalingApiConfig.Companion.enabled())
+            {
+                // When advertising the Signaling API, the public address
+                // will come from the config, but the supported versions
+                // come from the server itself
+                String apiUrl = SignalingApiConfig.Companion.publicAddress();
+                int apiPort = SignalingApiConfig.Companion.bindPort();
+                // BridgeMucDetector expects a ColibriStatsExtension directly (no wrapper type)
+                // so for now hack the api stuff into there
+                statsExt.addStat("jvb-api-base-url", apiUrl);
+                statsExt.addStat("jvb-api-port", apiPort);
+                // TODO: how to get the values for version?
+                statsExt.addStat("jvb-api-version", "v1");
+            }
 
             clientConnectionImpl.setPresenceExtension(statsExt);
         }
