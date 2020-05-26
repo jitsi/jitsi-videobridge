@@ -8,4 +8,4 @@ fi
 
 . $CONFIG
 
-exec mvn compile exec:exec -Dexec.executable=java -Dexec.args="-cp %classpath ${JAVA_SYS_PROPS} org.jitsi.videobridge.Main --opts=${JVB_OPTS}"
+exec mvn compile exec:exec -Dexec.executable=java -Dexec.args="-cp %classpath ${JAVA_SYS_PROPS} org.jitsi.videobridge.Main ${JVB_OPTS}"
