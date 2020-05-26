@@ -72,17 +72,22 @@ class SynchronousWebSocketClient(
      * Send [data] and block until the response is received, returning the
      * body of the response as a [String].
      */
+    @Throws(JvbApiException::class)
     fun sendAndGetReply(data: String): String {
-        val resp = runBlocking(coroutineScope.coroutineContext) {
-            logger.trace { "sendAndGetReply running in thread ${Thread.currentThread().name}" }
-            msgsToSend.send(Frame.Text(data))
-            msgsReceived.receive().also {
-                logger.trace { "sendAndGetReply got reply in thread ${Thread.currentThread().name}" }
+        try {
+            val resp = runBlocking(coroutineScope.coroutineContext) {
+                logger.trace { "sendAndGetReply running in thread ${Thread.currentThread().name}" }
+                msgsToSend.send(Frame.Text(data))
+                msgsReceived.receive().also {
+                    logger.trace { "sendAndGetReply got reply in thread ${Thread.currentThread().name}" }
+                }
             }
-        }
-        return when (resp) {
-            is Frame.Text -> resp.readText()
-            else -> throw IllegalStateException("Expected a text frame response")
+            return when (resp) {
+                is Frame.Text -> resp.readText()
+                else -> throw IllegalStateException("Expected a text frame response")
+            }
+        } catch (t: Throwable) {
+            throw JvbApiException(t.message)
         }
     }
 
@@ -128,3 +133,8 @@ class SynchronousWebSocketClient(
         }
     }
 }
+
+/**
+ * An exception occurred while processing an API request
+ */
+class JvbApiException(msg: String?) : Exception(msg)
