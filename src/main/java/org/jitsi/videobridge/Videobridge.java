@@ -34,11 +34,9 @@ import org.jitsi.utils.version.Version;
 import org.jitsi.videobridge.ice.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
-import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.version.*;
-import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.health.*;
@@ -46,8 +44,6 @@ import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
-import org.jivesoftware.smackx.pubsub.*;
-import org.jivesoftware.smackx.pubsub.provider.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
@@ -134,32 +130,6 @@ public class Videobridge
      */
     public static final String SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME
         = "org.jitsi.videobridge.shutdown.ALLOWED_SOURCE_REGEXP";
-
-    /**
-     * The property that specifies entities authorized to operate the bridge.
-     * For XMPP API this is "from" JID. In case of REST the source IP is being
-     * copied into the "from" field of the IQ.
-     */
-    public static final String AUTHORIZED_SOURCE_REGEXP_PNAME
-        = "org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP";
-
-    /**
-     * The XMPP API of Jitsi Videobridge.
-     */
-    public static final String XMPP_API = "xmpp";
-
-    /**
-     * The (base) <tt>System</tt> and/or <tt>ConfigurationService</tt> property
-     * of the XMPP API of Jitsi Videobridge.
-     */
-    public static final String XMPP_API_PNAME
-        = "org.jitsi.videobridge." + XMPP_API;
-
-    /**
-     * The pattern used to filter entities that are allowed to operate
-     * the videobridge.
-     */
-    private Pattern authorizedSourcePattern;
 
     /**
      * The (OSGi) <tt>BundleContext</tt> in which this <tt>Videobridge</tt> has
@@ -427,18 +397,6 @@ public class Videobridge
     }
 
     /**
-     * Gets the <tt>ComponentImpl</tt> instances which implement the XMPP API of
-     * this <tt>Videobridge</tt>.
-     *
-     * @return the <tt>ComponentImpl</tt> instances which implement the XMPP API
-     * of this <tt>Videobridge</tt>
-     */
-    public Collection<ComponentImpl> getComponents()
-    {
-        return ComponentImpl.getComponents(getBundleContext());
-    }
-
-    /**
      * Gets an existing {@link Conference} with a specific ID and a specific
      * conference focus.
      *
@@ -600,38 +558,6 @@ public class Videobridge
         return shim.handleColibriConferenceIQ(conferenceIQ, options);
     }
 
-
-    /**
-     * Checks whether a COLIBRI request from a specific source ({@code focus})
-     * with specific {@code options} should be accepted or not.
-     * @param focus the source of the request (i.e. the JID of the conference
-     * focus).
-     * @param options
-     * @return {@code true} if a COLIBRI request from focus should be accepted,
-     * given the specified {@code options}, and {@code false} otherwise.
-     */
-    public boolean accept(Jid focus, int options)
-    {
-        if ((options & OPTION_ALLOW_ANY_FOCUS) > 0)
-        {
-            return true;
-        }
-
-        if (focus == null)
-        {
-            return (options & OPTION_ALLOW_NO_FOCUS) != 0;
-        }
-
-        if (authorizedSourcePattern != null)
-        {
-            return authorizedSourcePattern.matcher(focus).matches();
-        }
-        else
-        {
-            return true;
-        }
-    }
-
     /**
      * Handles <tt>HealthCheckIQ</tt> by performing health check on this
      * <tt>Videobridge</tt> instance.
@@ -646,16 +572,6 @@ public class Videobridge
      */
     public IQ handleHealthCheckIQ(HealthCheckIQ healthCheckIQ)
     {
-        if (authorizedSourcePattern != null
-                && !authorizedSourcePattern
-                    .matcher(healthCheckIQ.getFrom())
-                        .matches())
-        {
-            return
-                IQUtils.createError(
-                    healthCheckIQ, XMPPError.Condition.not_authorized);
-        }
-
         try
         {
             return IQ.createResultIQ(healthCheckIQ);
@@ -749,15 +665,6 @@ public class Videobridge
     }
 
     /**
-     * Handles an XMPP IQ of a response type ('error' or 'result')
-     * @param response the IQ.
-     */
-    public void handleIQResponse(org.jivesoftware.smack.packet.IQ response)
-    {
-        PubSubPublisher.handleIQResponse(response);
-    }
-
-    /**
      * Returns {@code true} if this instance has entered graceful shutdown mode.
      *
      * @return {@code true} if this instance has entered graceful shutdown mode;
@@ -766,21 +673,6 @@ public class Videobridge
     public boolean isShutdownInProgress()
     {
         return shutdownInProgress;
-    }
-
-    /**
-     * Returns {@code true} if XMPP API has been enabled.
-     *
-     * @return {@code true} if XMPP API has been enabled; otherwise,
-     * {@code false}
-     */
-    public boolean isXmppApiEnabled()
-    {
-        ConfigurationService cfg = getConfigurationService();
-
-        // The XMPP API is disabled by default.
-        return cfg != null &&
-            cfg.getBoolean(Videobridge.XMPP_API_PNAME, false);
     }
 
     /**
@@ -806,37 +698,6 @@ public class Videobridge
                     shutdownService.beginShutdown();
                 }
             }
-        }
-    }
-
-    /**
-     * Configures regular expression used to filter users authorized to manage
-     * conferences and trigger graceful shutdown (if separate pattern has not
-     * been configured).
-     * @param authorizedSourceRegExp regular expression string
-     */
-    public void setAuthorizedSourceRegExp(String authorizedSourceRegExp)
-    {
-        if (!StringUtils.isBlank(authorizedSourceRegExp))
-        {
-            authorizedSourcePattern
-                = Pattern.compile(authorizedSourceRegExp);
-
-            // If no shutdown regexp, then authorized sources are also allowed
-            // to trigger graceful shutdown.
-            if (shutdownSourcePattern == null)
-            {
-                shutdownSourcePattern = authorizedSourcePattern;
-            }
-        }
-        // Turn off
-        else
-        {
-            if (shutdownSourcePattern == authorizedSourcePattern)
-            {
-                shutdownSourcePattern = null;
-            }
-            authorizedSourcePattern = null;
         }
     }
 
@@ -882,31 +743,6 @@ public class Videobridge
             }
         }
 
-        String authorizedSourceRegexp
-            = (cfg == null)
-                    ? null : cfg.getString(AUTHORIZED_SOURCE_REGEXP_PNAME);
-        if (!StringUtils.isBlank(authorizedSourceRegexp))
-        {
-            try
-            {
-                logger.info(
-                    "Authorized source regexp: " + authorizedSourceRegexp);
-
-                setAuthorizedSourceRegExp(authorizedSourceRegexp);
-            }
-            catch (PatternSyntaxException exc)
-            {
-                logger.error(
-                    "Error parsing authorized sources regexp: "
-                        + shutdownSourcesRegexp, exc);
-            }
-        }
-        else
-        {
-            logger.warn("No authorized source regexp configured. Will accept "
-                            + "requests from any source.");
-        }
-
         // <conference>
         ProviderManager.addIQProvider(
                 ColibriConferenceIQ.ELEMENT_NAME,
@@ -942,12 +778,6 @@ public class Videobridge
                 DtlsFingerprintPacketExtension.NAMESPACE,
                 new DefaultPacketExtensionProvider<>(
                         DtlsFingerprintPacketExtension.class));
-
-        // PubSub
-        ProviderManager.addIQProvider(
-                PubSubElementType.PUBLISH.getElementName(),
-                PubSubElementType.PUBLISH.getNamespace().getXmlns(),
-                new PubSubProvider());
 
         // Health-check
         ProviderManager.addIQProvider(

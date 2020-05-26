@@ -259,12 +259,6 @@ public class VideobridgeShim
         logger.debug(() -> "Got ColibriConferenceIq:\n" + conferenceIQ.toXML());
         Jid focus = conferenceIQ.getFrom();
 
-        if (!videobridge.accept(focus, options))
-        {
-            return IQUtils.createError(
-                    conferenceIQ, XMPPError.Condition.not_authorized);
-        }
-
         Conference conference;
 
         String conferenceId = conferenceIQ.getID();

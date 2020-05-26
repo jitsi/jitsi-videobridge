@@ -122,31 +122,11 @@ The statistics reporting functionality can be configured with the following prop
  * **org.jitsi.videobridge.ENABLE_STATISTICS** - boolean property.
 The default value is `false`
  * **org.jitsi.videobridge.STATISTICS_TRANSPORT** - string property.
-A comma-separated list of transports. The supported transports are "muc",
-"pubsub", "callstats.io", and "colibri".
+A comma-separated list of transports. The supported transports are "muc"
+and "callstats.io".
  * **org.jitsi.videobridge.STATISTICS_INTERVAL** - integer property.
 This property specifies the reporting time in milliseconds between generation of the
 statistics. By default the interval is 1000 milliseconds.
 
 With the `muc` transport the `stats` element is added to the Presence in the MUCs that have been configured
 (TODO document how).
-
-With the `pubsub` transport the `stats` element is sent in an item to the configured pubsub channel:
-```xml
-<iq type="set" id="0z5p5-90" from="jitsi-videobridge.jitsi.net" to="pubsub.jitsi.net">
-	<pubsub xmlns=" http://jabber.org/protocol/pubsub">
-		<publish node="videobridge_stats">
-			<item>
-				<stats xmlns=" http://jitsi.org/protocol/colibri">
-					...
-				</stats>
-			</item>
-		</publish>
-	</pubsub>
-</iq>
-```
-The pubsub channel can be configured with these properties:
- * **org.jitsi.videobridge.PUBSUB_SERVICE** - string property.
-Required. Specifies the name of the PubSub service.
- * **org.jitsi.videobridge.PUBSUB_NODE** - string property.
-Required. Specifies the name of the PubSub node.

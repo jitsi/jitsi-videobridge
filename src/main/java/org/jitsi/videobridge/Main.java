@@ -19,7 +19,6 @@ import org.jitsi.cmd.*;
 import org.jitsi.config.*;
 import org.jitsi.meet.*;
 import org.jitsi.videobridge.osgi.*;
-import org.jitsi.videobridge.xmpp.*;
 
 /**
  * Provides the <tt>main</tt> entry point of the Jitsi Videobridge application
@@ -46,49 +45,6 @@ public class Main
     private static final String APIS_ARG_NAME = "--apis";
 
     /**
-     * The name of the command-line argument which specifies the XMPP domain
-     * to use.
-     */
-    private static final String DOMAIN_ARG_NAME = "--domain";
-
-    /**
-     * The name of the command-line argument which specifies the IP address or
-     * the name of the XMPP host to connect to.
-     */
-    private static final String HOST_ARG_NAME = "--host";
-
-    /**
-     * The default value of the {@link #HOST_ARG_NAME} command-line argument if
-     * it is not explicitly provided.
-     */
-    private static final String HOST_ARG_VALUE = "localhost";
-
-    /**
-     * The name of the command-line argument which specifies the port of the
-     * XMPP host to connect on.
-     */
-    private static final String PORT_ARG_NAME = "--port";
-
-    /**
-     * The default value of the {@link #PORT_ARG_NAME} command-line argument if
-     * it is not explicitly provided.
-     */
-    private static final int PORT_ARG_VALUE = 5275;
-
-    /**
-     * The name of the command-line argument which specifies the secret key for
-     * the sub-domain of the Jabber component implemented by this application
-     * with which it is to authenticate to the XMPP server to connect to.
-     */
-    private static final String SECRET_ARG_NAME = "--secret";
-
-    /**
-     * The name of the command-line argument which specifies sub-domain name for
-     * the videobridge component.
-     */
-    private static final String SUBDOMAIN_ARG_NAME = "--subdomain";
-
-    /**
      * Represents the <tt>main</tt> entry point of the Jitsi Videobridge
      * application which implements an external Jabber component.
      *
@@ -104,19 +60,7 @@ public class Main
         cmdLine.parse(args);
 
         // Parse the command-line arguments.
-        String apis
-            = cmdLine.getOptionValue(APIS_ARG_NAME, Videobridge.XMPP_API);
-        String domain = cmdLine.getOptionValue(DOMAIN_ARG_NAME, null);
-        int port = cmdLine.getIntOptionValue(PORT_ARG_NAME, PORT_ARG_VALUE);
-        String secret = cmdLine.getOptionValue(SECRET_ARG_NAME, "");
-        String subdomain
-            = cmdLine.getOptionValue(
-                    SUBDOMAIN_ARG_NAME, ComponentImpl.SUBDOMAIN);
-
-        String host
-            = cmdLine.getOptionValue(
-                    HOST_ARG_NAME,
-                    domain == null ? HOST_ARG_VALUE : domain);
+        String apis = cmdLine.getOptionValue(APIS_ARG_NAME);
 
         // Some of our dependencies bring in slf4j, which means Jetty will default to using
         // slf4j as its logging backend.  The version of slf4j brought in, however, is too old
@@ -132,9 +76,6 @@ public class Main
         System.setProperty(
                 Videobridge.REST_API_PNAME,
                 Boolean.toString(apis.contains(Videobridge.REST_API)));
-        System.setProperty(
-                Videobridge.XMPP_API_PNAME,
-                Boolean.toString(apis.contains(Videobridge.XMPP_API)));
 
         // Need to force a reload to see the updated system properties
         JitsiConfig.Companion.reload();
@@ -142,22 +83,6 @@ public class Main
         ComponentMain main = new ComponentMain();
         BundleConfig osgiBundles = new BundleConfig();
 
-        // Start Jitsi Videobridge as an external Jabber component.
-        if (apis.contains(Videobridge.XMPP_API))
-        {
-            ComponentImpl component
-                = new ComponentImpl(
-                        host,
-                        port,
-                        domain,
-                        subdomain,
-                        secret);
-
-            main.runMainProgramLoop(component, osgiBundles);
-        }
-        else
-        {
-            main.runMainProgramLoop(osgiBundles);
-        }
+        main.runMainProgramLoop(osgiBundles);
     }
 }
