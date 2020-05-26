@@ -92,10 +92,41 @@ class VideoConstraintsCompatibility
     {
         int maxFrameHeightCopy = maxFrameHeight;
 
-        final VideoConstraints selectedEndpointConstraints
-            = new VideoConstraints(Math.min(1080, maxFrameHeightCopy),
-            BitrateControllerConfig.Config.onstagePreferredHeightPx(),
-            BitrateControllerConfig.Config.onstagePreferredFramerate());
+        final VideoConstraints selectedEndpointConstraints;
+        if (selectedEndpoints.size() > 1)
+        {
+            // This implements special handling for tile-view. We can show that
+            // (selectedEndpoints.size() > 1) is equivalent to tile-view (so we
+            // can use it as a clue to detect tile-view):
+            //
+            // (selectedEndpoints.size() > 1) implies tile-view because multiple
+            // "selected" endpoints has only ever been used for tile-view.
+            //
+            // tile-view implies (selectedEndpoints.size() > 1), or, equivalently,
+            // (selectedEndpoints.size() <= 1) implies non tile-view because as
+            // soon as we click on a participant we exit tile-view, see:
+            //
+            // https://github.com/jitsi/jitsi-meet/commit/ebcde745ef34bd3d45a2d884825fdc48cfa16839
+            // https://github.com/jitsi/jitsi-meet/commit/4cea7018f536891b028784e7495f71fc99fc18a0
+            // https://github.com/jitsi/jitsi-meet/commit/29bc18df01c82cefbbc7b78f5aef7b97c2dee0e4
+            // https://github.com/jitsi/jitsi-meet/commit/e63cd8c81bceb9763e4d57be5f2262c6347afc23
+            //
+            // This means that the condition selectedEndpoints.size() > 1 is
+            // equivalent to tile-view.
+
+            // In tile view we set the ideal height but not the preferred height
+            // nor the preferred frame-rate because we want even even
+            // distribution of bandwidth among all the tiles to avoid ninjas.
+            selectedEndpointConstraints
+                = new VideoConstraints(Math.min(1080, maxFrameHeightCopy));
+        }
+        else
+        {
+            selectedEndpointConstraints
+                = new VideoConstraints(Math.min(1080, maxFrameHeightCopy),
+                BitrateControllerConfig.Config.onstagePreferredHeightPx(),
+                BitrateControllerConfig.Config.onstagePreferredFramerate());
+        }
 
         Map<String, VideoConstraints> selectedVideoConstraintsMap
             = selectedEndpoints
