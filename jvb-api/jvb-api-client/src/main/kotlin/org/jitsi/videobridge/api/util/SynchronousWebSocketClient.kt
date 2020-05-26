@@ -27,6 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.jitsi.utils.logging2.Logger
@@ -116,9 +117,14 @@ class SynchronousWebSocketClient(
                         val resp = incoming.receive()
                         msgsReceived.send(resp)
                     }
-                } finally {
-                    logger.info("Websocket closing")
-                    close()
+                } catch (e: ClosedReceiveChannelException) {
+                    logger.info("Websocket was closed")
+                    msgsReceived.close(e)
+                    return@ws
+                } catch (t: Throwable) {
+                    logger.error("Error in websocket connection: ", t)
+                    msgsReceived.close(t)
+                    return@ws
                 }
             }
         }

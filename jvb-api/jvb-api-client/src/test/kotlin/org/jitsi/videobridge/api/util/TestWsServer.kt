@@ -50,6 +50,13 @@ fun Application.testModule() {
                     send(Frame.Text(frame.readText()))
                 }
             }
+            webSocket("delayandclose") {
+                for (frame in incoming) {
+                    frame as Frame.Text
+                    delay(1000)
+                    terminate()
+                }
+            }
         }
     }
 }

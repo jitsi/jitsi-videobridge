@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.api.util
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.ktor.client.HttpClient
@@ -84,6 +85,15 @@ class SynchronousWebSocketClientTest : ShouldSpec() {
             should("not block the caller").config(timeout = 10.milliseconds) {
                 repeat(5) {
                     ws.sendAndForget("$it")
+                }
+            }
+        }
+        context("when the ws connection is closed while waiting for a reply") {
+            val ws = SynchronousWebSocketClient(client, "localhost", wsPort, "/ws/delayandclose", LoggerImpl("test"))
+            ws.run()
+            should("get an exception") {
+                shouldThrow<JvbApiException> {
+                    ws.sendAndGetReply("hello")
                 }
             }
         }
