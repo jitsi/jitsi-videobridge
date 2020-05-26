@@ -45,14 +45,20 @@ fun Application.module(conferenceManager: v1ConferenceManager) {
             v1App(conferenceManager)
         }
         get("/about/api_version") {
-            // This line should be updated to reflect all versions
-            // supported by this server
-            call.respond(ApiVersion("v1"))
+            call.respond(SUPPORTED_API_VERSIONS)
         }
     }
 }
 
+/**
+ * What versions of the API are currently supported by jvb-api-server.  Whenever
+ * support for a new version is added, the version string must be added to
+ * this value.  If support for an older version is removed, it must be removed
+ * from this value.
+ */
+val SUPPORTED_API_VERSIONS = SupportedApiVersions("v1")
+
 @Suppress("unused")
-class ApiVersion(val supportedVersions: List<String>) {
+class SupportedApiVersions(val supportedVersions: List<String>) {
     constructor(vararg versions: String) : this(versions.toList())
 }
