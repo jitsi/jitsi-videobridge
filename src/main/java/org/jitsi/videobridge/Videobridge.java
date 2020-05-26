@@ -558,31 +558,6 @@ public class Videobridge
         return shim.handleColibriConferenceIQ(conferenceIQ, options);
     }
 
-
-    /**
-     * Checks whether a COLIBRI request from a specific source ({@code focus})
-     * with specific {@code options} should be accepted or not.
-     * @param focus the source of the request (i.e. the JID of the conference
-     * focus).
-     * @param options
-     * @return {@code true} if a COLIBRI request from focus should be accepted,
-     * given the specified {@code options}, and {@code false} otherwise.
-     */
-    public boolean accept(Jid focus, int options)
-    {
-        if ((options & OPTION_ALLOW_ANY_FOCUS) > 0)
-        {
-            return true;
-        }
-
-        if (focus == null)
-        {
-            return (options & OPTION_ALLOW_NO_FOCUS) != 0;
-        }
-
-        return true;
-    }
-
     /**
      * Handles <tt>HealthCheckIQ</tt> by performing health check on this
      * <tt>Videobridge</tt> instance.
