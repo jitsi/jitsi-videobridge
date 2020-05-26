@@ -123,11 +123,11 @@ case "$1" in
             if [ -z "$APIS_NEW_VALUE" ]; then
                 APIS_NEW_VALUE=","
             fi
-            sed -i "/^\s*#/ !s/--apis=$APIS_VALUE/--apis=$APIS_NEW_VALUE/g" $CONFIG
+            sed -i '/^\s*#/ !s/--apis='"$APIS_VALUE"'/--apis='"$APIS_NEW_VALUE"'/g' $CONFIG
         fi
         if [ -z "$APIS_VALUE" ]; then
             # no apis setting, component is turned on by default, so let's disable it
-            sed -i "/^\s*#/ !s/JVB_OPTS=\"/JVB_OPTS=\"--apis=, /g" $CONFIG
+            sed -i '/^\s*#/ !s/JVB_OPTS="/JVB_OPTS="--apis=, /g' $CONFIG
         fi
 
         # we don't want to start the daemon as root
