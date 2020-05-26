@@ -22,11 +22,7 @@ Maven assembly binaries:
 Or you can clone the Git repo and run the JVB from source using maven.
 
 ```sh
-HOST="Your XMPP server hostname/IP address goes here."
-DOMAIN="The JVB component name goes here."
-PORT="the component port of your XMPP server goes here."
-SECRET="The secret or password for the JVB component."
 JVB_HOME="The path to your JVB clone."
 
-mvn compile exec:exec -Dexec.executable=java -Dexec.args="-cp %classpath org.jitsi.videobridge.Main --domain=\"${DOMAIN}\" --host=\"${HOST}\" --port=\"${PORT}\" --secret=\"${SECRET}\" -Djava.library.path=$JVB_HOME/lib/native/linux-64 -Djava.util.logging.config.file=$JVB_HOME/lib/logging.properties -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=.jitsi-videobridge "
+mvn compile exec:exec -Dexec.executable=java -Dexec.args="-cp %classpath org.jitsi.videobridge.Main -Djava.library.path=$JVB_HOME/lib/native/linux-64 -Djava.util.logging.config.file=$JVB_HOME/lib/logging.properties -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=.jitsi-videobridge "
 ```
