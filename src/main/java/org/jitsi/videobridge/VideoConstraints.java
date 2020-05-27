@@ -18,7 +18,7 @@ package org.jitsi.videobridge;
 import java.util.*;
 
 /**
- * Expresses the ideal video constraints for an endpoint or a track.
+ * Expresses the video constraints for an endpoint or a track.
  */
 public class VideoConstraints
 {
