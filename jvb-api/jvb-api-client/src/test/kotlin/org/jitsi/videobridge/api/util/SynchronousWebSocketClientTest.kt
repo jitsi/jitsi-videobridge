@@ -25,6 +25,7 @@ import io.ktor.client.features.websocket.WebSockets
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.jetty.Jetty
 import org.jitsi.utils.logging2.LoggerImpl
+import java.time.Duration
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -85,6 +86,24 @@ class SynchronousWebSocketClientTest : ShouldSpec() {
             should("not block the caller").config(timeout = 10.milliseconds) {
                 repeat(5) {
                     ws.sendAndForget("$it")
+                }
+            }
+        }
+        context("sendAndGetReply") {
+            context("when the request takes longer than the timeout") {
+                val ws = SynchronousWebSocketClient(
+                    client,
+                    "localhost",
+                    wsPort,
+                    "/ws/delay",
+                    LoggerImpl("test"),
+                    Duration.ofMillis(500)
+                )
+                ws.run()
+                should("throw an exception") {
+                    shouldThrow<JvbApiTimeoutException> {
+                        ws.sendAndGetReply("hello")
+                    }
                 }
             }
         }

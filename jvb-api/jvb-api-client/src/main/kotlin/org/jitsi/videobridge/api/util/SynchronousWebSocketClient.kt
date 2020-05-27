@@ -25,13 +25,16 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import java.time.Duration
 
 /**
  * A websocket client which sends one message at a time, waiting for
@@ -57,6 +60,7 @@ class SynchronousWebSocketClient(
      */
     private val path: String,
     parentLogger: Logger,
+    private val requestTimeout: Duration = Duration.ofSeconds(5),
     /**
      * The dispatcher which will be used for all of the request and response
      * processing.
@@ -77,16 +81,17 @@ class SynchronousWebSocketClient(
     fun sendAndGetReply(data: String): String {
         try {
             val resp = runBlocking(coroutineScope.coroutineContext) {
-                logger.trace { "sendAndGetReply running in thread ${Thread.currentThread().name}" }
-                msgsToSend.send(Frame.Text(data))
-                msgsReceived.receive().also {
-                    logger.trace { "sendAndGetReply got reply in thread ${Thread.currentThread().name}" }
+                withTimeout(requestTimeout.toMillis()) {
+                    msgsToSend.send(Frame.Text(data))
+                    msgsReceived.receive()
                 }
             }
             return when (resp) {
                 is Frame.Text -> resp.readText()
                 else -> throw IllegalStateException("Expected a text frame response")
             }
+        } catch (t: TimeoutCancellationException) {
+            throw JvbApiTimeoutException()
         } catch (t: Throwable) {
             throw JvbApiException(t.message)
         }
@@ -143,4 +148,6 @@ class SynchronousWebSocketClient(
 /**
  * An exception occurred while processing an API request
  */
-class JvbApiException(msg: String?) : Exception(msg)
+open class JvbApiException(msg: String?) : Exception(msg)
+
+class JvbApiTimeoutException : JvbApiException("Operation timed out")
