@@ -17,6 +17,8 @@ package org.jitsi.videobridge.stats;
 
 import org.jitsi.osgi.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.api.server.*;
+import org.jitsi.videobridge.api.types.*;
 import org.jitsi.videobridge.signaling.api.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -73,8 +75,10 @@ public class MucStatsTransport
                 // so for now hack the api stuff into there
                 statsExt.addStat("jvb-api-base-url", apiUrl);
                 statsExt.addStat("jvb-api-port", apiPort);
-                // TODO: how to get the values for version?
-                statsExt.addStat("jvb-api-version", "v1");
+                statsExt.addStat(
+                    "jvb-api-version",
+                    SupportedApiVersionsKt.toPresenceString(ApplicationKt.SUPPORTED_API_VERSIONS)
+                );
             }
 
             clientConnectionImpl.setPresenceExtension(statsExt);
