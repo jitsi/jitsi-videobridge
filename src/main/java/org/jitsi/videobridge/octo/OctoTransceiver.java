@@ -26,7 +26,6 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.octo.config.*;
-import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
 import java.util.*;

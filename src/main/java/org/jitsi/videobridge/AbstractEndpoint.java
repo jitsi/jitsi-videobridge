@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
@@ -23,7 +24,6 @@ import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.rest.root.colibri.debug.*;
 import org.jitsi.xmpp.extensions.colibri.*;
-import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
 import java.io.*;

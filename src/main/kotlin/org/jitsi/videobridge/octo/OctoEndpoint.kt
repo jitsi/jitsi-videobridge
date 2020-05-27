@@ -25,7 +25,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.rest.root.colibri.debug.EndpointDebugFeatures
-import org.jitsi_modified.impl.neomedia.rtp.MediaSourceDesc
+import org.jitsi.nlj.MediaSourceDesc
 
 /**
  * Represents an endpoint in a conference, which is connected to another

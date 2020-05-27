@@ -19,7 +19,6 @@ package org.jitsi.videobridge.xmpp;
 import org.jitsi.nlj.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
-import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.junit.*;
 import org.junit.runner.*;
 import org.powermock.modules.junit4.*;
@@ -116,13 +115,6 @@ public class MediaSourceFactoryTest
         assertEquals(1, sources.length);
         MediaSourceDesc source = sources[0];
         assertEquals(1, source.numRtpLayers());
-
-        for (int idx = 0; idx < source.numRtpLayers(); idx++)
-        {
-            RtpLayerDesc layer = source.getRtpLayerByQualityIdx(idx);
-            assertNotNull(layer);
-            assertEquals(idx, layer.getIndex());
-        }
     }
 
     // 3 sim streams, 3 rtx -> 1 source, 3 encodings

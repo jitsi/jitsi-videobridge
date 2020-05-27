@@ -21,7 +21,6 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jitsimeet.*;
-import org.jitsi_modified.impl.neomedia.rtp.*;
 
 import java.util.*;
 import java.util.stream.*;

@@ -51,12 +51,10 @@ import org.jitsi.videobridge.websocket.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
-import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi_modified.sctp4j.*;
 import org.json.simple.*;
 
 import java.beans.*;
-import java.io.*;
 import java.nio.*;
 import java.time.*;
 import java.util.*;

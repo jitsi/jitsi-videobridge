@@ -33,7 +33,6 @@ import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
-import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.osgi.framework.*;
 
 import java.net.*;
