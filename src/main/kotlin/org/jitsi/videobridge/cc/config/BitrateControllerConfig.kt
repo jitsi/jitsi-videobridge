@@ -114,6 +114,24 @@ class BitrateControllerConfig {
 
             @JvmStatic
             fun trustBwe() = trustBweProp.value
+
+            /**
+             * The property for the max resolution to allocate for the onstage
+             * participant.
+             */
+            class OnstageMaxHeightPixelsProperty : LegacyFallbackConfigProperty<Int>(
+                    Int::class,
+                    readOnce = true,
+                    legacyName = "org.jitsi.videobridge.ONSTAGE_MAX_HEIGHT",
+                    newName = "videobridge.cc.onstage-max-height-px"
+            )
+
+            private val onstageMaxHeightPxProp = OnstageMaxHeightPixelsProperty()
+
+            @JvmStatic
+            fun onstageMaxHeightPx(): Int {
+                return onstageMaxHeightPxProp.value
+            }
         }
     }
 }
