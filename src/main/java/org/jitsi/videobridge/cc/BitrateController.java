@@ -1004,14 +1004,14 @@ public class BitrateController
 
         Map<String, VideoConstraints> videoConstraintsMapCopy = videoConstraintsMap;
 
-        List<EndpointMultiRank> endpointMultiRankList = IntStream
-            .rangeClosed(0, conferenceEndpoints.size() - 1)
-            .mapToObj(i -> {
-                AbstractEndpoint endpoint = conferenceEndpoints.get(i);
+        List<EndpointMultiRank> endpointMultiRankList = conferenceEndpoints
+            .stream()
+            .map(endpoint -> {
                 VideoConstraints videoConstraints = videoConstraintsMapCopy
                     .getOrDefault(endpoint.getID(), defaultVideoConstraints);
 
-                return new EndpointMultiRank(i, videoConstraints, endpoint);
+                int rank = conferenceEndpoints.indexOf(endpoint);
+                return new EndpointMultiRank(rank, videoConstraints, endpoint);
             })
             .sorted(new EndpointMultiRanker())
             .collect(Collectors.toList());
