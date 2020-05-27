@@ -26,6 +26,8 @@ import io.ktor.routing.get
 import io.ktor.routing.route
 import io.ktor.routing.routing
 import io.ktor.websocket.WebSockets
+import org.jitsi.videobridge.api.types.ApiVersion
+import org.jitsi.videobridge.api.types.SupportedApiVersions
 import org.jitsi.videobridge.api.server.v1.app as v1App
 import org.jitsi.videobridge.api.types.v1.ConferenceManager as v1ConferenceManager
 
@@ -52,13 +54,9 @@ fun Application.module(conferenceManager: v1ConferenceManager) {
 
 /**
  * What versions of the API are currently supported by jvb-api-server.  Whenever
- * support for a new version is added, the version string must be added to
+ * support for a new version is added, the [ApiVersion] must be added to
  * this value.  If support for an older version is removed, it must be removed
  * from this value.
  */
-val SUPPORTED_API_VERSIONS = SupportedApiVersions("v1")
-
-@Suppress("unused")
-class SupportedApiVersions(val supportedVersions: List<String>) {
-    constructor(vararg versions: String) : this(versions.toList())
-}
+@JvmField
+val SUPPORTED_API_VERSIONS = SupportedApiVersions(ApiVersion.V1)
