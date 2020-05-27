@@ -22,6 +22,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.features.websocket.WebSockets
 import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.videobridge.api.util.JvbApiException
 import org.jitsi.videobridge.api.util.SmackXmlSerDes
 import org.jitsi.videobridge.api.util.SynchronousWebSocketClient
 import org.jivesoftware.smack.packet.IQ
@@ -47,6 +48,7 @@ class JvbApi(jvbHost: String, jvbPort: Int) {
     /**
      * Send an [IQ] and return the response [IQ].  Call is synchronous.
      */
+    @Throws(JvbApiException::class)
     fun sendIqAndGetReply(iq: IQ): IQ {
         return wsClient.sendIqAndGetReply(iq)
     }
