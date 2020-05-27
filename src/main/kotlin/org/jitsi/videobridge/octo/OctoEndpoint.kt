@@ -74,7 +74,7 @@ class OctoEndpoint(
     }
 
     override fun setVideoConstraints(newVideoConstraints: MutableMap<String, VideoConstraints>?) {
-        TODO("Not yet implemented")
+        // NO-OP
     }
 
     override fun requestKeyframe(mediaSsrc: Long) {
