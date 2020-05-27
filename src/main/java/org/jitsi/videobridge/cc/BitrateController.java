@@ -278,7 +278,9 @@ public class BitrateController
     static class EndpointMultiRank
     {
         /**
-         * The speaker rank of the {@link #endpoint}.
+         * The speaker rank of the {@link #endpoint} with 0 meaning that the
+         * {@link #endpoint} is the most recent dominant speaker. Also see
+         * {@link ConferenceSpeechActivity#endpoints}
          */
         final int speakerRank;
 
