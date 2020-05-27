@@ -1025,7 +1025,7 @@ public class BitrateController
                 continue;
             }
 
-            boolean forwarded = trackBitrateAllocations.size() - 1 < adjustedLastN;
+            boolean forwarded = trackBitrateAllocations.size() < adjustedLastN;
 
             MediaStreamTrackDesc[] tracks
                 = sourceEndpoint.getMediaStreamTracks();
