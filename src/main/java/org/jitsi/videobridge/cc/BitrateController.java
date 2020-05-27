@@ -1056,7 +1056,6 @@ public class BitrateController
         }
     }
 
-
     /**
      * Sets the LastN value.
      */
@@ -1330,13 +1329,13 @@ public class BitrateController
                 if ((lessThanPreferredResolution
                     || (lessThanOrEqualIdealResolution && atLeastPreferredFps)))
                 {
-                long encodingBitrateBps = encoding.getBitrateBps(nowMs);
-                if (encodingBitrateBps > 0)
-                {
-                    idealBps = encodingBitrateBps;
-                }
-                ratesList.add(
-                    new RateSnapshot(encodingBitrateBps, encoding));
+                    long encodingBitrateBps = encoding.getBitrateBps(nowMs);
+                    if (encodingBitrateBps > 0)
+                    {
+                        idealBps = encodingBitrateBps;
+                    }
+                    ratesList.add(
+                        new RateSnapshot(encodingBitrateBps, encoding));
                 }
 
                 if (encoding.getHeight() <= videoConstraints.getPreferredHeight())
