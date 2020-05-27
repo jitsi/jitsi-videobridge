@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge;
 
+import org.json.simple.*;
+
 import java.util.*;
 
 /**
@@ -111,6 +113,10 @@ public class VideoConstraints
     @Override
     public String toString()
     {
-        return "VideoConstraints[idealHeight=" + idealHeight + "]";
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("idealHeight", idealHeight);
+        jsonObject.put("preferredHeight", preferredHeight);
+        jsonObject.put("preferredFps", preferredFps);
+        return jsonObject.toJSONString();
     }
 }
