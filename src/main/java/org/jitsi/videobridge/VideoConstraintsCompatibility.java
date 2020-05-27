@@ -38,9 +38,12 @@ class VideoConstraintsCompatibility
     private Set<String> selectedEndpoints;
 
     /**
-     * The last max resolution signaled by the receiving endpoint.
+     * The last max resolution signaled by the receiving endpoint. We set a
+     * very large initial value because we want this to be ignored when we take
+     * the Math.min below, unless the client has set it to a lower, more
+     * reasonable, value.
      */
-    private int maxFrameHeight;
+    private int maxFrameHeight = Integer.MAX_VALUE;
 
     /**
      * Computes the video constraints map (endpoint -> video constraints) that
