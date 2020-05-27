@@ -430,7 +430,7 @@ public class BitrateController
         debugState.put("forwardedEndpoints", forwardedEndpointIds.toString());
         debugState.put("trustBwe", Config.trustBwe());
         debugState.put("lastBwe", lastBwe);
-        debugState.put("videoConstraints", Arrays.toString(videoConstraintsMap.values().toArray()));
+        debugState.put("videoConstraints", videoConstraintsMap);
         debugState.put("lastN", lastN);
         debugState.put("supportsRtx", supportsRtx);
         JSONObject adaptiveTrackProjectionsJson = new JSONObject();
