@@ -36,9 +36,6 @@ if [ ! -d "$TMPPATH" ]; then
     chown $USER:adm "$TMPPATH"
 fi
 
-if [ ! $JVB_HOST ]; then
-    JVB_HOST=localhost
-fi
 DAEMON_OPTS="$JVB_OPTS"
 
 if [ ! -x $DAEMON ] ;then

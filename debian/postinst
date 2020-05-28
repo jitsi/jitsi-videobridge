@@ -31,29 +31,11 @@ case "$1" in
 
         # generate config on new install or when we are reconfiguring
         # and all install is different than current one
-        if [ "$OLDCONFIG" = "false" ] || [ "$JVB_HOSTNAME" != "$JVB_HOSTNAME_IN" ]; then
-
-            JVB_HOSTNAME="$JVB_HOSTNAME_IN"
-            if [ "$OLDCONFIG" = "false" ]; then
-                # 8-chars random secret, alternative to pwgen 8
-                JVB_SECRET=`head -c 8 /dev/urandom | tr '\0-\377' 'a-zA-Z0-9a-zA-Z0-9a-zA-Z0-9a-zA-Z0-9@@@@####'`
-            fi
-            JVB_PORT=5347
+        if [ "$OLDCONFIG" = "false" ] ;then
+            JVB_SECRET=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 16`
 
             # storing default for later use by Jitsi Meet and other packages
             echo '# Jitsi Videobridge settings' > $CONFIG
-            echo >> $CONFIG
-            echo '# sets the XMPP domain (default: none)' >> $CONFIG
-            echo "JVB_HOSTNAME=$JVB_HOSTNAME" >> $CONFIG
-            echo >> $CONFIG
-            echo '# sets the hostname of the XMPP server (default: domain if set, localhost otherwise)' >> $CONFIG
-            echo "JVB_HOST=" >> $CONFIG
-            echo >> $CONFIG
-            echo '# sets the port of the XMPP server (default: 5275)' >> $CONFIG
-            echo "JVB_PORT=$JVB_PORT" >> $CONFIG
-            echo >> $CONFIG
-            echo '# sets the shared secret used to authenticate to the XMPP server' >> $CONFIG
-            echo "JVB_SECRET=$JVB_SECRET" >> $CONFIG
             echo >> $CONFIG
             echo '# extra options to pass to the JVB daemon' >> $CONFIG
             echo "JVB_OPTS=\"--apis=,\"" >> $CONFIG
@@ -110,10 +92,10 @@ case "$1" in
             echo "org.jitsi.videobridge.ENABLE_STATISTICS=true" >> $NEW_JITSI_CONFIG
             echo "org.jitsi.videobridge.STATISTICS_TRANSPORT=muc" >> $NEW_JITSI_CONFIG
             echo "org.jitsi.videobridge.xmpp.user.shard.HOSTNAME=localhost" >> $NEW_JITSI_CONFIG
-            echo "org.jitsi.videobridge.xmpp.user.shard.DOMAIN=auth.$JVB_HOSTNAME" >> $NEW_JITSI_CONFIG
+            echo "org.jitsi.videobridge.xmpp.user.shard.DOMAIN=auth.$JVB_HOSTNAME_IN" >> $NEW_JITSI_CONFIG
             echo "org.jitsi.videobridge.xmpp.user.shard.USERNAME=jvb" >> $NEW_JITSI_CONFIG
             echo "org.jitsi.videobridge.xmpp.user.shard.PASSWORD=$JVB_SECRET" >> $NEW_JITSI_CONFIG
-            echo "org.jitsi.videobridge.xmpp.user.shard.MUC_JIDS=JvbBrewery@internal.auth.$JVB_HOSTNAME" >> $NEW_JITSI_CONFIG
+            echo "org.jitsi.videobridge.xmpp.user.shard.MUC_JIDS=JvbBrewery@internal.auth.$JVB_HOSTNAME_IN" >> $NEW_JITSI_CONFIG
             echo "org.jitsi.videobridge.xmpp.user.shard.MUC_NICKNAME=$(uuidgen)" >> $NEW_JITSI_CONFIG
         fi
 
