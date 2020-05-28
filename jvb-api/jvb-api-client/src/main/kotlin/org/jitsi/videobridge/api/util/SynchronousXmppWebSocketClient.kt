@@ -77,7 +77,7 @@ class SynchronousXmppWebSocketClient(
         }
     }
 
-    fun sendAndForget(iq: IQ) = wsClient.sendString(SmackXmlSerDes.serialize(iq))
+    fun sendIqAndForget(iq: IQ) = wsClient.sendString(SmackXmlSerDes.serialize(iq))
 
     fun run() = wsClient.run()
 }

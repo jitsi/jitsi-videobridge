@@ -83,7 +83,7 @@ class SynchronousXmppWebSocketClientTest : ShouldSpec() {
                         } else {
                             // Send and forget
                             executor.submit {
-                                ws.sendAndForget(iq)
+                                ws.sendIqAndForget(iq)
                                 latch.countDown()
                             }
                         }

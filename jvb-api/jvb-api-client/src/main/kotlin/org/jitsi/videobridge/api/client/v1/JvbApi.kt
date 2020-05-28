@@ -22,11 +22,11 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.features.websocket.WebSockets
 import org.jitsi.utils.logging2.LoggerImpl
-import org.jitsi.videobridge.api.util.JvbApiException
-import org.jitsi.videobridge.api.util.JvbApiTimeoutException
 import org.jitsi.videobridge.api.util.SmackXmlSerDes
 import org.jitsi.videobridge.api.util.SynchronousWebSocketClient
+import org.jitsi.videobridge.api.util.SynchronousXmppWebSocketClient
 import org.jivesoftware.smack.packet.IQ
+import org.jivesoftware.smack.packet.Stanza
 
 /**
  * JVB Client API for controlling a JVB instance
@@ -36,7 +36,7 @@ class JvbApi(jvbHost: String, jvbPort: Int) {
         install(WebSockets)
     }
 
-    private val wsClient = SynchronousWebSocketClient(
+    private val wsClient = SynchronousXmppWebSocketClient(
         client,
         host = jvbHost,
         port = jvbPort,
@@ -49,13 +49,8 @@ class JvbApi(jvbHost: String, jvbPort: Int) {
     /**
      * Send an [IQ] and return the response [IQ].  Call is synchronous.
      */
-    @Throws(JvbApiException::class)
-    fun sendIqAndGetReply(iq: IQ): IQ? {
-        return try {
-            wsClient.sendIqAndGetReply(iq)
-        } catch (t: JvbApiTimeoutException) {
-            null
-        }
+    fun sendIqAndGetReply(iq: IQ): Stanza? {
+        return wsClient.sendIqAndGetReply(iq)
     }
 
     /**
