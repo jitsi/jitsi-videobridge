@@ -319,11 +319,12 @@ public class BitrateController
      * loops over the endpoints multiple times, improving their target
      * bitrate at ever step, until no further improvement is possible.
      *
-     * In this multi-rank implementation, endpoints that have 720p ideal
-     * height will be given bandwidth before endpoints that have 180p
-     * ideal height. If two endpoints have the same ideal height, then
-     * we look at their speech rank (whoever spoke last has is ranked
-     * higher).
+     * In this multi-rank implementation, endpoints that have a preferred height
+     * set (on-stage endpoints in Jitsi Meet) will be given bandwidth first.
+     * Then we prioritized endpoints that have higher ideal height (this rule is
+     * somewhat arbitrary since we don't have a use case in Jitsi Meet that
+     * leverages it). If two endpoints have the same ideal and preferred height,
+     * then we look at their speech rank (whoever spoke last has is ranked higher).
      */
     static class EndpointMultiRanker
         implements Comparator<EndpointMultiRank>
@@ -331,14 +332,19 @@ public class BitrateController
         @Override
         public int compare(EndpointMultiRank o1, EndpointMultiRank o2)
         {
-            int idealHeightDiff = o1.videoConstraints.getPreferredHeight() - o2.videoConstraints.getPreferredHeight();
-            if (idealHeightDiff != 0)
+            int preferredHeightDiff = o1.videoConstraints.getPreferredHeight() - o2.videoConstraints.getPreferredHeight();
+            if (preferredHeightDiff != 0)
             {
-                return idealHeightDiff;
+                return preferredHeightDiff;
             }
             else
             {
-                return o1.speakerRank - o2.speakerRank;
+                int idealHeightDiff = o1.videoConstraints.getIdealHeight() - o2.videoConstraints.getIdealHeight();
+                if (idealHeightDiff != 0)
+                {
+                    return idealHeightDiff;
+                }
+                return o2.speakerRank - o1.speakerRank;
             }
         }
     }
