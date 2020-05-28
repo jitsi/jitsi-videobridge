@@ -740,8 +740,6 @@ public class MediaSourceFactory
 
         MediaSourceDesc source = new MediaSourceDesc(encodings, primarySsrcs.owner);
 
-        source.updateLayerCache();
-
         return source;
     }
 }
