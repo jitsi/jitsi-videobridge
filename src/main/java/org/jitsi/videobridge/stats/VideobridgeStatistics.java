@@ -194,17 +194,17 @@ public class VideobridgeStatistics
         int videoStreams = 0;
         double fractionLostSum = 0d; // TODO verify
         int fractionLostCount = 0;
-        long packetsReceived = 0; // TODO verify (Transceiver)
+        long packetsReceived = 0;
         long packetsReceivedLost = 0; // TODO verify
         long bitrateDownloadBps = 0;
         long bitrateUploadBps = 0;
-        int packetRateUpload = 0;
-        int packetRateDownload = 0;
+        long packetRateUpload = 0;
+        long packetRateDownload = 0;
 
         // Average jitter and RTT across MediaStreams which report a valid value.
         double jitterSumMs = 0; // TODO verify
         int jitterCount = 0;
-        long rttSumMs = 0; // TODO verify (Transceiver)
+        double rttSumMs = 0;
         long rttCount = 0;
         int largestConferenceSize = 0;
         int[] conferenceSizes = new int[CONFERENCE_SIZE_BUCKETS];
@@ -252,7 +252,6 @@ public class VideobridgeStatistics
             endpoints += numConferenceEndpoints;
             octoEndpoints += (numConferenceEndpoints - numLocalEndpoints);
 
-            // TODO: count Octo endpoints too
             int conferenceAudioSenders = 0;
             int conferenceVideoSenders = 0;
 
@@ -318,7 +317,7 @@ public class VideobridgeStatistics
                 bitrateUploadBps += outgoingStats.getBitrate();
                 packetRateUpload += outgoingStats.getPacketRate();
 
-                Double endpointRtt
+                double endpointRtt
                         = transceiverStats.getEndpointConnectionStats().getRtt();
                 if (endpointRtt > 0)
                 {
@@ -366,7 +365,7 @@ public class VideobridgeStatistics
         // RTT_AGGREGATE
         double rttAggregate
             = rttCount > 0
-            ? ((double) rttSumMs) / rttCount
+            ? rttSumMs / rttCount
             : 0;
 
         // CONFERENCE_SIZES
