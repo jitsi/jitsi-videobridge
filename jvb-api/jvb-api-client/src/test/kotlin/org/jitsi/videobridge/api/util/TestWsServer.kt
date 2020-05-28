@@ -28,10 +28,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 
 /**
- * A server which sets up 2 websocket endpoints:
- *
- * 1) /ws/echo: repeats back whatever it receives immediately
- * 2) /ws/delay: repeats back whatever it receives after a 1 second delay
+ * A ws server configuration which defines multiple ws endpoints that can be
+ * used for different test scenarios.
  */
 class TestWsServer {
     val receivedMessages = mutableListOf<Frame>()

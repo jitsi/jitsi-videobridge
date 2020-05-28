@@ -36,7 +36,7 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
 @ExperimentalTime
-class SynchronousWebSocketClient2Test : ShouldSpec() {
+class WebSocketClientTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val wsPort = Random.nextInt(1024, 65535).also {
@@ -64,7 +64,7 @@ class SynchronousWebSocketClient2Test : ShouldSpec() {
 
         context("sendString") {
             context("when no reply is expected") {
-                val ws = SynchronousWebSocketClient2(client, "localhost", wsPort, "/ws/blackhole", ::incomingMessageHandler, LoggerImpl("test"))
+                val ws = WebSocketClient(client, "localhost", wsPort, "/ws/blackhole", ::incomingMessageHandler, LoggerImpl("test"))
                 ws.run()
                 ws.sendString("hello")
                 should("send a message") {
@@ -76,7 +76,7 @@ class SynchronousWebSocketClient2Test : ShouldSpec() {
                 }
             }
             context("when a reply is expected") {
-                val ws = SynchronousWebSocketClient2(client, "localhost", wsPort, "/ws/echo", ::incomingMessageHandler, LoggerImpl("test"))
+                val ws = WebSocketClient(client, "localhost", wsPort, "/ws/echo", ::incomingMessageHandler, LoggerImpl("test"))
                 ws.run()
                 ws.sendString("hello")
                 should("invoke the incoming message handler") {
