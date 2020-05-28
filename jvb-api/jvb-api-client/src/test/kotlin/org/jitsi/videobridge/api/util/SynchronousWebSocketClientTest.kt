@@ -52,7 +52,7 @@ class SynchronousWebSocketClientTest : ShouldSpec() {
     }
 
     private val server = embeddedServer(Jetty, port = wsPort) {
-        testModule()
+        testWsServer()
     }
 
     init {

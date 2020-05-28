@@ -32,7 +32,7 @@ import kotlinx.coroutines.delay
  * 1) /ws/echo: repeats back whatever it receives immediately
  * 2) /ws/delay: repeats back whatever it receives after a 1 second delay
  */
-fun Application.testModule() {
+fun Application.testWsServer() {
     install(WebSockets)
 
     routing {
