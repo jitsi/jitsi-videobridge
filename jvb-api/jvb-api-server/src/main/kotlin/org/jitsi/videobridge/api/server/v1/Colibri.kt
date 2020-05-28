@@ -41,10 +41,12 @@ fun Route.colibriApi() {
                 when (stanza) {
                     is HealthCheckIQ -> {
                         val result = call.confManager.handleHealthIq(stanza)
+                        result.stanzaId = stanza.stanzaId
                         sendStanza(result)
                     }
                     is ColibriConferenceIQ -> {
                         val result = call.confManager.handleColibriConferenceIQ(stanza)
+                        result.stanzaId = stanza.stanzaId
                         sendStanza(result)
                     }
                     else -> {
