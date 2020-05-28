@@ -24,6 +24,7 @@ import io.ktor.routing.route
 import io.ktor.routing.routing
 import io.ktor.websocket.WebSockets
 import io.ktor.websocket.webSocket
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 
 /**
@@ -32,6 +33,51 @@ import kotlinx.coroutines.delay
  * 1) /ws/echo: repeats back whatever it receives immediately
  * 2) /ws/delay: repeats back whatever it receives after a 1 second delay
  */
+class TestWsServer {
+    val receivedMessages = mutableListOf<Frame>()
+    val app: Application.() -> Unit = {
+        install(WebSockets)
+
+        routing {
+            route("ws") {
+                // Receive messages and don't respond
+                webSocket("blackhole") {
+                    for (frame in incoming) {
+                        receivedMessages.add(frame)
+                    }
+                }
+                // Receive messages and echo the content back
+                webSocket("echo") {
+                    for (frame in incoming) {
+                        receivedMessages.add(frame)
+                        frame as Frame.Text
+                        send(Frame.Text(frame.readText()))
+                    }
+                }
+                // Receive messages and echo the content back after a delay
+                webSocket("delayecho") {
+                    for (frame in incoming) {
+                        receivedMessages.add(frame)
+                        frame as Frame.Text
+                        delay(1000)
+                        send(Frame.Text(frame.readText()))
+                    }
+                }
+                // Receive a message and then close the connection after a
+                // delay
+                webSocket("delayandclose") {
+                    for (frame in incoming) {
+                        receivedMessages.add(frame)
+                        frame as Frame.Text
+                        delay(1000)
+                        cancel()
+                    }
+                }
+            }
+        }
+    }
+}
+
 fun Application.testWsServer() {
     install(WebSockets)
 
