@@ -1310,6 +1310,20 @@ public class BitrateController
             for (RTPEncodingDesc encoding : encodings)
             {
                 int idealHeight = videoConstraints.getIdealHeight();
+                // NOTE that this condition is a bit too rigid: Imagine an
+                // endpoint without simulcast where it sends a single 720p track
+                // with a single encoding and imagine that the ideal resolution
+                // is 180p for that endpoint because it's a thumbnail.
+                //
+                // The guard below should lead to no video for that endpoint.
+                //
+                // It works today because of how we interpret signaling from the
+                // endpoints: the bridge assumes that the first encoding is 180p
+                // (and that the second is 360p and the third 720p).
+                //
+                // When we change how tracks are signaled or how we discover the
+                // resolution of each individual encoding, this guard will have
+                // to be tweaked.
                 if (idealHeight >= 0 && encoding.getHeight() > idealHeight)
                 {
                     continue;
