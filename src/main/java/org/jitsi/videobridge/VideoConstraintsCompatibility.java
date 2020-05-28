@@ -121,13 +121,13 @@ class VideoConstraintsCompatibility
             // nor the preferred frame-rate because we want even even
             // distribution of bandwidth among all the tiles to avoid ninjas.
             selectedEndpointConstraints = new VideoConstraints(
-                Math.min(BitrateControllerConfig.Config.onstageMaxHeightPx(),
+                Math.min(BitrateControllerConfig.Config.onstageIdealHeightPx(),
                     maxFrameHeightCopy));
         }
         else
         {
             selectedEndpointConstraints = new VideoConstraints(
-                Math.min(BitrateControllerConfig.Config.onstageMaxHeightPx(),
+                Math.min(BitrateControllerConfig.Config.onstageIdealHeightPx(),
                     maxFrameHeightCopy),
                 BitrateControllerConfig.Config.onstagePreferredHeightPx(),
                 BitrateControllerConfig.Config.onstagePreferredFramerate());

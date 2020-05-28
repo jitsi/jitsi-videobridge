@@ -17,6 +17,8 @@
 package org.jitsi.videobridge.cc.config
 
 import org.jitsi.config.LegacyFallbackConfigProperty
+import org.jitsi.config.newConfigAttributes
+import org.jitsi.utils.config.SimpleProperty
 
 class BitrateControllerConfig {
     class Config {
@@ -119,18 +121,18 @@ class BitrateControllerConfig {
              * The property for the max resolution to allocate for the onstage
              * participant.
              */
-            class OnstageMaxHeightPixelsProperty : LegacyFallbackConfigProperty<Int>(
-                    Int::class,
-                    readOnce = true,
-                    legacyName = "org.jitsi.videobridge.ONSTAGE_MAX_HEIGHT",
-                    newName = "videobridge.cc.onstage-max-height-px"
+            class OnstageIdealHeightPixelsProperty : SimpleProperty<Int>(
+                    newConfigAttributes {
+                        readOnce()
+                        name("videobridge.cc.onstage-ideal-height-px")
+                    }
             )
 
-            private val onstageMaxHeightPxProp = OnstageMaxHeightPixelsProperty()
+            private val onstageIdealHeightPxProp = OnstageIdealHeightPixelsProperty()
 
             @JvmStatic
-            fun onstageMaxHeightPx(): Int {
-                return onstageMaxHeightPxProp.value
+            fun onstageIdealHeightPx(): Int {
+                return onstageIdealHeightPxProp.value
             }
         }
     }
