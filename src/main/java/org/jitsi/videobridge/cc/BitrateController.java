@@ -279,7 +279,7 @@ public class BitrateController
      * Defines a packet filter that controls which RTP packets to be written
      * into the {@link Endpoint} that owns this {@link BitrateController}.
      *
-     * @param videoRtpPacket that packet for which to decide whether to accept
+     * @param packetInfo that packet for which to decide whether to accept
      * @return <tt>true</tt> to allow the specified packet to be
      * written into the {@link Endpoint} that owns this {@link BitrateController}
      * ; otherwise, <tt>false</tt>
@@ -568,14 +568,6 @@ public class BitrateController
      * Computes a new bitrate allocation for every endpoint in the conference,
      * and updates the state of this instance so that bitrate allocation is
      * eventually met.
-     *
-     * @param conferenceEndpoints the ordered list of {@link Endpoint}s
-     * participating in the multipoint conference with the dominant (speaker)
-     * {@link Endpoint} at the beginning of the list i.e. the dominant speaker
-     * history. This parameter is optional but it can be used for performance;
-     * if it's omitted it will be fetched from the
-     * {@link ConferenceSpeechActivity}.
-     * @param bweBps the current bandwidth estimation (in bps)
      */
     private synchronized void update()
     {

@@ -169,7 +169,7 @@ public class ByteBufferPool
 
         if (ENABLE_BOOKKEEPING)
         {
-            Integer arrayId = System.identityHashCode(buf);
+            int arrayId = System.identityHashCode(buf);
 
             bookkeeping.put(arrayId, UtilKt.getStackTrace());
             returnedBookkeeping.remove(arrayId);
@@ -194,7 +194,7 @@ public class ByteBufferPool
 
         if (ENABLE_BOOKKEEPING)
         {
-            Integer arrayId = System.identityHashCode(buf);
+            int arrayId = System.identityHashCode(buf);
             logger.info("Thread " + threadId() + " returned " + len + "-byte buffer "
                 + arrayId);
             String s;

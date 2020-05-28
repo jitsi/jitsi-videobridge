@@ -81,7 +81,9 @@ class BundleContextHolder2
             }
         }
         if (oldValue != newValue)
+        {
             bundleContextChanged(oldValue, newValue);
+        }
     }
 
     /**
@@ -92,10 +94,10 @@ class BundleContextHolder2
      * @throws Exception if this instance failed to stop in the specified
      * <tt>bundleContext</tt>
      */
-    synchronized void stop(BundleContext bundleContext)
+    void stop(BundleContext bundleContext)
         throws Exception
     {
-        BundleContext oldValue = null, newValue = null;
+        BundleContext oldValue = null;
 
         synchronized (this)
         {
@@ -103,10 +105,11 @@ class BundleContextHolder2
             {
                 oldValue = this.bundleContext;
                 this.bundleContext = null;
-                newValue = this.bundleContext;
             }
         }
-        if (oldValue != newValue)
-            bundleContextChanged(oldValue, newValue);
+        if (oldValue != null)
+        {
+            bundleContextChanged(oldValue, null);
+        }
     }
 }

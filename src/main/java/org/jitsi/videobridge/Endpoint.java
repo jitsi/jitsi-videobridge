@@ -1001,7 +1001,7 @@ public class Endpoint
         String icePassword = getIcePassword();
         if (!icePassword.equals(password))
         {
-            logger.warn("Incoming web socket request with an invalid password." +
+            logger.warn("Incoming web socket request with an invalid password. " +
                     "Expected: " + icePassword + ", received " + password);
             return false;
         }
