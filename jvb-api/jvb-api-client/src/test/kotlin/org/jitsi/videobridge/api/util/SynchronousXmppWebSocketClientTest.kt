@@ -67,27 +67,28 @@ class SynchronousXmppWebSocketClientTest : ShouldSpec() {
             should("work correctly").config(tags = setOf(LongTest)) {
                 val numTasks = 10000
                 val latch = CountDownLatch(numTasks)
-                repeat(numTasks) {
+                repeat(10000) {
                     val iq = generateIq(toJidStr = "client-$it", fromJidStr = "server-$it")
-                    if (Random.nextBoolean()) {
-                        // Send and wait for reply
-                        val result = executor.submit(Callable {
-                            val resp = ws.sendIqAndGetReply(iq)
-                            latch.countDown()
-                            resp
-                        }).get()
-                        // We can't do this verification inside the task, as it swallows
-                        // the exception
-                        result.shouldBeResponseTo(iq)
-                    } else {
-                        // Send and forget
-                        executor.submit {
-                            ws.sendAndForget(iq)
-                            latch.countDown()
+                    launch {
+                        if (Random.nextBoolean()) {
+                            // Send and wait for reply
+                            val result = executor.submit(Callable {
+                                val resp = ws.sendIqAndGetReply(iq)
+                                latch.countDown()
+                                resp
+                            }).get()
+                            // We can't do this verification inside the task, as it swallows
+                            // the exception
+                            result.shouldBeResponseTo(iq)
+                        } else {
+                            // Send and forget
+                            executor.submit {
+                                ws.sendAndForget(iq)
+                                latch.countDown()
+                            }
                         }
                     }
                 }
-                latch.await()
             }
         }
         /**
@@ -103,8 +104,7 @@ class SynchronousXmppWebSocketClientTest : ShouldSpec() {
             ws.run()
             val executor = Executors.newFixedThreadPool(32)
             should("work correctly").config(tags = setOf(LongTest)) {
-                val numRequests = 100
-                repeat(numRequests) {
+                repeat(100) {
                     val iq = generateIq(toJidStr = "client-$it", fromJidStr = "server-$it")
                     launch(executor.asCoroutineDispatcher()) {
                         val resp = ws.sendIqAndGetReply(iq)
@@ -127,7 +127,7 @@ class SynchronousXmppWebSocketClientTest : ShouldSpec() {
                 }
             }
         }
-        context("!sendIqAndGetReply") {
+        context("sendIqAndGetReply") {
             context("without any timeout") {
                 val ws = SynchronousXmppWebSocketClient(client, "localhost", wsPort, "/ws/iqreply", parentLogger = LoggerImpl("test"))
                 ws.run()
