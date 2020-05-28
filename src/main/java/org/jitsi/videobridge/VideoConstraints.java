@@ -99,15 +99,15 @@ public class VideoConstraints
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         VideoConstraints that = (VideoConstraints) o;
-        return idealHeight == that.idealHeight
-            && preferredHeight == that.preferredHeight
-            && preferredFps == that.preferredFps;
+        return idealHeight == that.idealHeight &&
+            preferredHeight == that.preferredHeight &&
+            Double.compare(that.preferredFps, preferredFps) == 0;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(idealHeight);
+        return Objects.hash(idealHeight, preferredHeight, preferredFps);
     }
 
     @Override
