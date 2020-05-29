@@ -22,7 +22,6 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.features.websocket.WebSockets
 import org.jitsi.utils.logging2.LoggerImpl
-import org.jitsi.videobridge.api.util.SynchronousWebSocketClient
 import org.jitsi.videobridge.api.util.XmppWebSocketClient
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.Stanza
@@ -58,19 +57,4 @@ class JvbApi(jvbHost: String, jvbPort: Int) {
     fun sendAndForget(iq: IQ) {
         wsClient.sendIqAndForget(iq)
     }
-}
-
-/**
- * Send [IQ]s and get their replies via a [SynchronousWebSocketClient].
- */
-private fun SynchronousWebSocketClient.sendIqAndGetReply(iq: IQ): IQ {
-    val resp = sendAndGetReply(SmackXmlSerDes.serialize(iq))
-    return SmackXmlSerDes.deserialize(resp) as IQ
-}
-
-/**
- * Send [IQ]s via a [SynchronousWebSocketClient].
- */
-private inline fun SynchronousWebSocketClient.sendIqAndForget(iq: IQ) {
-    sendAndForget(SmackXmlSerDes.serialize(iq))
 }
