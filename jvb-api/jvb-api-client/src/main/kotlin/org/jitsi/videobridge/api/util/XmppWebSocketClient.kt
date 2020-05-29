@@ -121,4 +121,9 @@ class XmppWebSocketClient(
      * Connect the websocket client
      */
     fun run() = wsClient.run()
+
+    /**
+     * Disconnect the websocket client
+     */
+    fun stop() = wsClient.stop()
 }
