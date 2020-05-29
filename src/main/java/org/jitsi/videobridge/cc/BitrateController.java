@@ -1325,41 +1325,22 @@ public class BitrateController
             // 180p@15fps and 180p@7.5fps
             int ratedPreferredIdx = 0;
             long idealBps = 0;
-            synchronized (source) {
-                for (RtpLayerDesc layer : source.getRtpLayers())
+            for (RtpLayerDesc layer : source.getRtpLayers())
+            {
+                int index = layer.getIndex();
+                if (maxFrameHeight >= 0 && layer.getHeight() > maxFrameHeight)
                 {
-                    int index = layer.getIndex();
-                    if (maxFrameHeight >= 0 && layer.getHeight() > maxFrameHeight)
+                    continue;
+                }
+                if (selected)
+                {
+                    // For the selected participant we favor frame rate over
+                    // resolution. Basically what we want for the on-stage
+                    // participant is 180p7.5fps, 180p15fps, 180p30fps,
+                    // 360p30fps and 720p30fps.
+                    if (layer.getHeight() < Config.onstagePreferredHeightPx()
+                        || layer.getFrameRate() >= Config.onstagePreferredFramerate())
                     {
-                        continue;
-                    }
-                    if (selected)
-                    {
-                        // For the selected participant we favor frame rate over
-                        // resolution. Basically what we want for the on-stage
-                        // participant is 180p7.5fps, 180p15fps, 180p30fps,
-                        // 360p30fps and 720p30fps.
-                        if (layer.getHeight() < Config.onstagePreferredHeightPx()
-                            || layer.getFrameRate() >= Config.onstagePreferredFramerate())
-                        {
-                            long layerBitrateBps = source.getBitrateBps(nowMs, index);
-                            if (layerBitrateBps > 0)
-                            {
-                                idealBps = layerBitrateBps;
-                            }
-                            ratesList.add(
-                                new RateSnapshot(layerBitrateBps, layer));
-                        }
-
-                        if (layer.getHeight() <= Config.onstagePreferredHeightPx())
-                        {
-                            ratedPreferredIdx = ratesList.size() - 1;
-                        }
-                    }
-                    else if (layer.getHeight() <= Config.thumbnailMaxHeightPx())
-                    {
-                        // For the thumbnails, we consider all temporal layers of
-                        // the low resolution stream.
                         long layerBitrateBps = source.getBitrateBps(nowMs, index);
                         if (layerBitrateBps > 0)
                         {
@@ -1368,9 +1349,26 @@ public class BitrateController
                         ratesList.add(
                             new RateSnapshot(layerBitrateBps, layer));
                     }
+
+                    if (layer.getHeight() <= Config.onstagePreferredHeightPx())
+                    {
+                        ratedPreferredIdx = ratesList.size() - 1;
+                    }
+                }
+                else if (layer.getHeight() <= Config.thumbnailMaxHeightPx())
+                {
+                    // For the thumbnails, we consider all temporal layers of
+                    // the low resolution stream.
+                    long layerBitrateBps = source.getBitrateBps(nowMs, index);
+                    if (layerBitrateBps > 0)
+                    {
+                        idealBps = layerBitrateBps;
+                    }
+                    ratesList.add(
+                        new RateSnapshot(layerBitrateBps, layer));
                 }
             }
-
+            
             this.idealBitrate = idealBps;
 
             if (timeSeriesLogger.isTraceEnabled())
