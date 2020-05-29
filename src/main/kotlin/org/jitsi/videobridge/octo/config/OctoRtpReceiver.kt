@@ -35,6 +35,7 @@ import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.RtpParser
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
+import org.jitsi.nlj.transform.node.incoming.VideoBitrateCalculator
 import org.jitsi.nlj.transform.node.incoming.VideoParser
 import org.jitsi.nlj.transform.node.incoming.Vp8Parser
 import org.jitsi.nlj.transform.packetPath
@@ -103,6 +104,7 @@ class OctoRtpReceiver(
                             path = pipeline {
                                 node(VideoParser(streamInformationStore, logger))
                                 node(Vp8Parser(logger))
+                                node(VideoBitrateCalculator(logger))
                                 node(pipelineTerminationNode)
                             }
                         }
