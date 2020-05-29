@@ -38,4 +38,42 @@
         <module>jvb-api-server</module>
     </modules>
 
+    <build>
+        <pluginManagement>
+            <!-- Plugins which should be inherited by children,
+            see https://stackoverflow.com/a/53666166 -->
+            <plugins>
+                <plugin>
+                    <groupId>com.github.gantsign.maven</groupId>
+                    <artifactId>ktlint-maven-plugin</artifactId>
+                    <version>1.4.2</version>
+                    <executions>
+                        <execution>
+                            <id>format-and-check</id>
+                            <goals>
+                                <goal>format</goal>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <!-- This declaration makes sure children get plugin in their lifecycle -->
+            <plugin>
+                <!-- This declaration makes sure children get plugin in their lifecycle -->
+                <groupId>com.github.gantsign.maven</groupId>
+                <artifactId>ktlint-maven-plugin</artifactId>
+                <!-- Configuration won't be propagated to children -->
+                <inherited>false</inherited>
+                <executions>
+                    <execution>
+                        <id>format-and-check</id>
+                        <phase>none</phase>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>

@@ -67,4 +67,3 @@ fun SupportedApiVersions.toPresenceString(): String =
  */
 fun SupportedApiVersions.Companion.fromPresenceString(str: String): SupportedApiVersions =
     SupportedApiVersions(str.split(",").mapNotNull(ApiVersion.Companion::fromString))
-
