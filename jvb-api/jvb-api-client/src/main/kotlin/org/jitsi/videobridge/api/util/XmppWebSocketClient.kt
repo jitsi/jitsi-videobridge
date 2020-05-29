@@ -35,15 +35,41 @@ import java.util.concurrent.atomic.AtomicInteger
  * 'sending-and-forgetting': sending an IQ but not waiting for its response.
  */
 class XmppWebSocketClient(
+    /**
+     * The underlying [HttpClient] to use.  It must supports websockets.
+     */
     client: HttpClient,
+    /**
+     * The host we'll use for establishing the websocket connection
+     */
     host: String,
+    /**
+     * The port we'll use for establishing the websocket connection
+     */
     port: Int,
+    /**
+     * The path to the websocket endpoint
+     */
     path: String,
+    /**
+     * How long we'll wait in [#sendIqAndGetReply] for a response before
+     * timing out
+     */
     private val requestTimeout: Duration = Duration.ofSeconds(15),
     parentLogger: LoggerImpl
 ) {
     private val logger = createChildLogger(parentLogger)
+
+    /**
+     * A monotonically incremening counter we'll use for the stanza ID to
+     * correlate requests and responses
+     */
     private val requestId = AtomicInteger(1)
+
+    /**
+     * A map of stanza ID -> handlers waiting for a response to a stanza with
+     * that ID
+     */
     private val responseHandlers: MutableMap<String, CompletableFuture<Stanza>> = ConcurrentHashMap()
 
     private val wsClient = WebSocketClient(
@@ -63,10 +89,14 @@ class XmppWebSocketClient(
                     it.complete(stanza)
                 }
             }
-            else -> TODO("log error?")
+            else -> logger.error("Received a non-test websocket frame: $frame")
         }
     }
 
+    /**
+     * Send an [IQ] and wait up to [requestTimeout] for a response, returns
+     * null if it times out.
+     */
     fun sendIqAndGetReply(iq: IQ): Stanza? {
         val id = requestId.getAndIncrement()
         iq.stanzaId = "$id"
@@ -78,12 +108,17 @@ class XmppWebSocketClient(
             response.get(requestTimeout.toMillis(), TimeUnit.MILLISECONDS)
         } catch (t: Throwable) {
             responseHandlers.remove("$id")
-            // TODO: handle the specific exception types?
             null
         }
     }
 
+    /**
+     * Send an [IQ] asynchronously and don't wait for a response
+     */
     fun sendIqAndForget(iq: IQ) = wsClient.sendString(SmackXmlSerDes.serialize(iq))
 
+    /**
+     * Connect the websocket client
+     */
     fun run() = wsClient.run()
 }
