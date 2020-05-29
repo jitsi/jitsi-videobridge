@@ -114,10 +114,11 @@ class BridgeOctoTransport(
     fun stop() {
     }
 
+    @Suppress("DEPRECATION")
     fun dataReceived(buf: ByteArray, off: Int, len: Int, receivedTime: Instant) {
-        var conferenceId = ""
-        var mediaType = MediaType.VIDEO // a random default value to put something
-        var sourceEpId = ""
+        var conferenceId: String
+        var mediaType: MediaType
+        var sourceEpId: String
 
         try {
             conferenceId = OctoPacket.readConferenceId(buf, off, len)
@@ -166,6 +167,7 @@ class BridgeOctoTransport(
         sendData(buf, off, len, targets, confId, MediaType.VIDEO, sourceEpId)
     }
 
+    @Suppress("DEPRECATION")
     fun sendString(msg: String, targets: Set<SocketAddress>, confId: String) {
         val msgData = msg.toByteArray(StandardCharsets.UTF_8)
         sendData(msgData, 0, msgData.size, targets, confId, MediaType.DATA, null)
