@@ -29,7 +29,12 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-class SynchronousXmppWebSocketClient(
+/**
+ * Send and receive XMPP messages over websockets.  Supports sending [IQ]s and
+ * waiting for their replies (by correlating stanza IDs) or
+ * 'sending-and-forgetting': sending an IQ but not waiting for its response.
+ */
+class XmppWebSocketClient(
     client: HttpClient,
     host: String,
     port: Int,

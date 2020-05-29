@@ -22,9 +22,8 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.features.websocket.WebSockets
 import org.jitsi.utils.logging2.LoggerImpl
-import org.jitsi.videobridge.api.util.SmackXmlSerDes
 import org.jitsi.videobridge.api.util.SynchronousWebSocketClient
-import org.jitsi.videobridge.api.util.SynchronousXmppWebSocketClient
+import org.jitsi.videobridge.api.util.XmppWebSocketClient
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.Stanza
 
@@ -36,7 +35,7 @@ class JvbApi(jvbHost: String, jvbPort: Int) {
         install(WebSockets)
     }
 
-    private val wsClient = SynchronousXmppWebSocketClient(
+    private val wsClient = XmppWebSocketClient(
         client,
         host = jvbHost,
         port = jvbPort,

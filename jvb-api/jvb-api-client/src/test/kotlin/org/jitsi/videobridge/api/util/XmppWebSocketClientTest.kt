@@ -42,7 +42,7 @@ import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 import kotlin.random.Random
 
-class SynchronousXmppWebSocketClientTest : ShouldSpec() {
+class XmppWebSocketClientTest : ShouldSpec() {
     private val wsPort = Random.nextInt(1024, 65535).also {
         println("Server running on port $it")
     }
@@ -61,7 +61,7 @@ class SynchronousXmppWebSocketClientTest : ShouldSpec() {
         thread { server.start() }
 
         context("lots of concurrent requests") {
-            val ws = SynchronousXmppWebSocketClient(client, "localhost", wsPort, "/ws/iqreply", parentLogger = LoggerImpl("test"))
+            val ws = XmppWebSocketClient(client, "localhost", wsPort, "/ws/iqreply", parentLogger = LoggerImpl("test"))
             ws.run()
             val executor = Executors.newFixedThreadPool(32)
             should("work correctly").config(tags = setOf(LongTest)) {
@@ -100,7 +100,7 @@ class SynchronousXmppWebSocketClientTest : ShouldSpec() {
          * various timeouts.
          */
         context("lots of concurrent requests with different results") {
-            val ws = SynchronousXmppWebSocketClient(client, "localhost", wsPort, "/ws/varied", requestTimeout = Duration.ofSeconds(5), parentLogger = LoggerImpl("test"))
+            val ws = XmppWebSocketClient(client, "localhost", wsPort, "/ws/varied", requestTimeout = Duration.ofSeconds(5), parentLogger = LoggerImpl("test"))
             ws.run()
             val executor = Executors.newFixedThreadPool(32)
             should("work correctly").config(tags = setOf(LongTest)) {
@@ -129,7 +129,7 @@ class SynchronousXmppWebSocketClientTest : ShouldSpec() {
         }
         context("sendIqAndGetReply") {
             context("without any timeout") {
-                val ws = SynchronousXmppWebSocketClient(client, "localhost", wsPort, "/ws/iqreply", parentLogger = LoggerImpl("test"))
+                val ws = XmppWebSocketClient(client, "localhost", wsPort, "/ws/iqreply", parentLogger = LoggerImpl("test"))
                 ws.run()
                 should("work correctly") {
                     val iq = generateIq()
@@ -138,7 +138,7 @@ class SynchronousXmppWebSocketClientTest : ShouldSpec() {
                 }
             }
             context("when the request times out") {
-                val ws = SynchronousXmppWebSocketClient(client, "localhost", wsPort, "/ws/iqreplywithdelay", requestTimeout = Duration.ofMillis(500), parentLogger = LoggerImpl("test"))
+                val ws = XmppWebSocketClient(client, "localhost", wsPort, "/ws/iqreplywithdelay", requestTimeout = Duration.ofMillis(500), parentLogger = LoggerImpl("test"))
                 ws.run()
                 should("return null for the response") {
                     val iq = generateIq()
@@ -147,7 +147,7 @@ class SynchronousXmppWebSocketClientTest : ShouldSpec() {
                 }
             }
             context("when an incorrect response is sent") {
-                val ws = SynchronousXmppWebSocketClient(client, "localhost", wsPort, "/ws/wrongiqreply", requestTimeout = Duration.ofMillis(500), parentLogger = LoggerImpl("test"))
+                val ws = XmppWebSocketClient(client, "localhost", wsPort, "/ws/wrongiqreply", requestTimeout = Duration.ofMillis(500), parentLogger = LoggerImpl("test"))
                 ws.run()
                 should("return null for the response") {
                     val iq = generateIq()
