@@ -72,6 +72,7 @@ class SynchronousXmppWebSocketClient(
         return try {
             response.get(requestTimeout.toMillis(), TimeUnit.MILLISECONDS)
         } catch (t: Throwable) {
+            responseHandlers.remove("$id")
             // TODO: handle the specific exception types?
             null
         }
