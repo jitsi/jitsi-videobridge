@@ -55,5 +55,19 @@ class SupportedApiVersionsTest : ShouldSpec() {
                 }
             }
         }
+        context("intersect") {
+            context("when there is intersection") {
+                val s2 = SupportedApiVersions(ApiVersion.V1)
+                should("return the correct intersection") {
+                    supportedApiVersions.intersect(s2) shouldBe SupportedApiVersions(ApiVersion.V1)
+                }
+            }
+            context("where there is no intersection") {
+                val s2 = SupportedApiVersions()
+                should("return an empty intersection") {
+                    supportedApiVersions.intersect(s2) shouldBe SupportedApiVersions()
+                }
+            }
+        }
     }
 }

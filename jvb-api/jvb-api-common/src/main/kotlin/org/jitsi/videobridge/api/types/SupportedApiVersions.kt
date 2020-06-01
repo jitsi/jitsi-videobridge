@@ -52,6 +52,9 @@ data class SupportedApiVersions(val supportedVersions: List<ApiVersion>) {
     fun maxSupported(other: SupportedApiVersions): ApiVersion? =
         supportedVersions.sorted().find(other::supports)
 
+    fun intersect(other: SupportedApiVersions): SupportedApiVersions =
+        SupportedApiVersions(supportedVersions.intersect(other.supportedVersions).toList())
+
     // So we can add extensions to it
     companion object
 }
