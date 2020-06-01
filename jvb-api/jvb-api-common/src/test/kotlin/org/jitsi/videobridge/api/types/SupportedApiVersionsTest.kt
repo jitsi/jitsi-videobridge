@@ -24,8 +24,8 @@ class SupportedApiVersionsTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
+        val supportedApiVersions = SupportedApiVersions(ApiVersion.V1)
         context("serializing SupportedApiVersions") {
-            val supportedApiVersions = SupportedApiVersions(ApiVersion.V1)
             should("return the correct string") {
                 supportedApiVersions.toPresenceString() shouldBe "v1"
             }
@@ -37,22 +37,21 @@ class SupportedApiVersionsTest : ShouldSpec() {
         }
         context("supports") {
             should("return the right result") {
-                SupportedApiVersions(ApiVersion.V1).supports(ApiVersion.V1) shouldBe true
+                supportedApiVersions.supports(ApiVersion.V1) shouldBe true
                 SupportedApiVersions().supports(ApiVersion.V1) shouldBe false
             }
         }
         context("maxSupported") {
-            val s1 = SupportedApiVersions(ApiVersion.V1)
             context("when there is intersection") {
                 val s2 = SupportedApiVersions(ApiVersion.V1)
                 should("return the correct version") {
-                    s1.maxSupported(s2) shouldBe ApiVersion.V1
+                    supportedApiVersions.maxSupported(s2) shouldBe ApiVersion.V1
                 }
             }
             context("where there is no intersection") {
                 val s2 = SupportedApiVersions()
                 should("return null") {
-                    s1.maxSupported(s2) shouldBe null
+                    supportedApiVersions.maxSupported(s2) shouldBe null
                 }
             }
         }
