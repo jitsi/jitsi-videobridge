@@ -219,7 +219,7 @@ public class Videobridge
      */
     public @NotNull Conference createConference(Jid focus, Localpart name, String gid)
     {
-        return this.createConference(focus, name, /* enableLogging */ true, gid);
+        return this.createConference(focus, name.toString(), /* enableLogging */ true, gid);
     }
 
     /**
@@ -231,7 +231,7 @@ public class Videobridge
      * @param gid
      * @return
      */
-    private @NotNull Conference doCreateConference(Jid focus, Localpart name, boolean enableLogging, String gid)
+    private @NotNull Conference doCreateConference(Jid focus, String name, boolean enableLogging, String gid)
     {
         Conference conference = null;
         do
@@ -280,7 +280,7 @@ public class Videobridge
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
     public @NotNull Conference createConference(
-            Jid focus, Localpart name, boolean enableLogging, String gid)
+            Jid focus, String name, boolean enableLogging, String gid)
     {
         final Conference conference = doCreateConference(focus, name, enableLogging, gid);
 

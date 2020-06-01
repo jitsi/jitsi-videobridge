@@ -209,20 +209,6 @@ public class Conference
     private ConfOctoTransport tentacle;
 
     /**
-     * Deprecated, see {@link Conference#Conference(Videobridge, String, Jid, String, boolean, String)}
-     */
-    @Deprecated
-    public Conference(Videobridge videobridge,
-                      String id,
-                      Jid focus,
-                      Localpart name,
-                      boolean enableLogging,
-                      String gid)
-    {
-        this(videobridge, id, focus, name.toString(), enableLogging, gid);
-    }
-
-    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID and is managed by a conference focus with a specific JID.
