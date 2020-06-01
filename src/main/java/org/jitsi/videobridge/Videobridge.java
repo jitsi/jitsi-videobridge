@@ -219,7 +219,7 @@ public class Videobridge
      */
     public @NotNull Conference createConference(Jid focus, Localpart name, String gid)
     {
-        return this.createConference(focus, name.toString(), /* enableLogging */ true, gid);
+        return this.createConference(focus, name == null ? null : name.toString(), /* enableLogging */ true, gid);
     }
 
     /**

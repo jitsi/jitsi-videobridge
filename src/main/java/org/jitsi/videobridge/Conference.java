@@ -430,7 +430,14 @@ public class Conference
         iq.setID(getID());
         try
         {
-            iq.setName(Localpart.from(getName()));
+            if (conferenceName == null)
+            {
+                iq.setName(null);
+            }
+            else
+            {
+                iq.setName(Localpart.from(conferenceName));
+            }
         } catch (XmppStringprepException e)
         {
             logger.error("Error converting conference name to a localpart ", e);
