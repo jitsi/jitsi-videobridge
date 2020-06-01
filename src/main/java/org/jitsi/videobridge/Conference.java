@@ -1322,7 +1322,7 @@ public class Conference
     {
         JSONObject debugState = new JSONObject();
         debugState.put("id", id);
-        debugState.put("name", conferenceName == null ? null : conferenceName);
+        debugState.put("name", conferenceName);
 
         if (full)
         {
