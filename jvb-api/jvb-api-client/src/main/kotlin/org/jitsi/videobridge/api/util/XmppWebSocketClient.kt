@@ -51,17 +51,17 @@ class XmppWebSocketClient(
      * The path to the websocket endpoint
      */
     path: String,
+    parentLogger: LoggerImpl,
     /**
      * How long we'll wait in [#sendIqAndGetReply] for a response before
      * timing out
      */
-    private val requestTimeout: Duration = Duration.ofSeconds(15),
-    parentLogger: LoggerImpl
+    private val requestTimeout: Duration = Duration.ofSeconds(15)
 ) {
     private val logger = createChildLogger(parentLogger)
 
     /**
-     * A monotonically incremening counter we'll use for the stanza ID to
+     * A monotonically incrementing counter we'll use for the stanza ID to
      * correlate requests and responses
      */
     private val requestId = AtomicInteger(1)

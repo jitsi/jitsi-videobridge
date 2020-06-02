@@ -34,8 +34,9 @@ import org.jitsi.utils.logging2.createChildLogger
 /**
  * A websocket client which sends messages and invokes a handler upon receiving
  * messages from the far side.  Sending is non-blocking, and the client has no
- * notion of correlating "responses" to "requests": if doing so is required
- * then that must be done in a layer which wraps this client, as the client
+ * notion of correlating "responses" to "requests": if request/response
+ * semantics are required then they must be implemented by a layer on top of
+ * this class.
  */
 class WebSocketClient(
     private val client: HttpClient,
