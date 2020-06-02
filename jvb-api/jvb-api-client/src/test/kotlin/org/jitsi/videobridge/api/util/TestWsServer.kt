@@ -74,32 +74,3 @@ class TestWsServer {
         }
     }
 }
-
-fun Application.testWsServer() {
-    install(WebSockets)
-
-    routing {
-        route("ws") {
-            webSocket("echo") {
-                for (frame in incoming) {
-                    frame as Frame.Text
-                    send(Frame.Text(frame.readText()))
-                }
-            }
-            webSocket("delay") {
-                for (frame in incoming) {
-                    frame as Frame.Text
-                    delay(1000)
-                    send(Frame.Text(frame.readText()))
-                }
-            }
-            webSocket("delayandclose") {
-                for (frame in incoming) {
-                    frame as Frame.Text
-                    delay(1000)
-                    terminate()
-                }
-            }
-        }
-    }
-}
