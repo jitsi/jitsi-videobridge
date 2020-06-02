@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:JvmName("JvbApiClientInfo")
+
 package org.jitsi.videobridge.api.client
 
 import org.jitsi.videobridge.api.types.ApiVersion
