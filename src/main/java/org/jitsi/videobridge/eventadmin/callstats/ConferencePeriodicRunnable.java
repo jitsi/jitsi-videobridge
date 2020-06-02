@@ -51,7 +51,7 @@ public class ConferencePeriodicRunnable
             period,
             statsService,
             conference.getName() == null
-                  ? "null" : conference.getName().toString(),
+                  ? "null" : conference.getName(),
             conferenceIDPrefix,
             initiatorID);
     }

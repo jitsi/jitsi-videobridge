@@ -36,6 +36,7 @@ import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
+import org.jxmpp.stringprep.*;
 import org.osgi.framework.*;
 
 import java.beans.*;
@@ -124,7 +125,7 @@ public class Conference
     /**
      * The world readable name of this instance if any.
      */
-    private Localpart name;
+    private String conferenceName;
 
     /**
      * The time in milliseconds of the last activity related to this
@@ -219,7 +220,7 @@ public class Conference
      * initialization of the new instance and from whom further/future requests
      * to manage the new instance must come or they will be ignored.
      * Pass <tt>null</tt> to override this safety check.
-     * @param name world readable name of this instance if any.
+     * @param conferenceName world readable name of this conference
      * @param enableLogging whether logging should be enabled for this
      * {@link Conference} and its sub-components, and whether this conference
      * should be considered when generating statistics.
@@ -228,7 +229,7 @@ public class Conference
     public Conference(Videobridge videobridge,
                       String id,
                       Jid focus,
-                      Localpart name,
+                      String conferenceName,
                       boolean enableLogging,
                       String gid)
     {
@@ -241,9 +242,9 @@ public class Conference
         {
             context.put("gid", gid);
         }
-        if (name != null)
+        if (conferenceName != null)
         {
-            context.put("conf_name", name.toString());
+            context.put("conf_name", conferenceName);
         }
         logger = new LoggerImpl(Conference.class.getName(), minLevel, new LogContext(context));
         this.shim = new ConferenceShim(this, logger);
@@ -252,7 +253,7 @@ public class Conference
         this.focus = focus;
         this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
         this.includeInStatistics = enableLogging;
-        this.name = name;
+        this.conferenceName = conferenceName;
 
         lastKnownFocus = focus;
 
@@ -288,10 +289,10 @@ public class Conference
     {
 
 
-        if (name != null)
+        if (conferenceName != null)
         {
             DiagnosticContext diagnosticContext = new DiagnosticContext();
-            diagnosticContext.put("conf_name", name.toString());
+            diagnosticContext.put("conf_name", conferenceName);
             diagnosticContext.put("conf_creation_time_ms", creationTime);
             return diagnosticContext;
         }
@@ -427,7 +428,21 @@ public class Conference
     public void describeShallow(ColibriConferenceIQ iq)
     {
         iq.setID(getID());
-        iq.setName(getName());
+        try
+        {
+            if (conferenceName == null)
+            {
+                iq.setName(null);
+            }
+            else
+            {
+                iq.setName(Localpart.from(conferenceName));
+            }
+        } catch (XmppStringprepException e)
+        {
+            logger.error("Error converting conference name to a localpart ", e);
+            iq.setName(null);
+        }
     }
 
     /**
@@ -1097,9 +1112,9 @@ public class Conference
      *
      * @return the conference name
      */
-    public Localpart getName()
+    public String getName()
     {
-        return name;
+        return conferenceName;
     }
 
     /**
@@ -1307,7 +1322,7 @@ public class Conference
     {
         JSONObject debugState = new JSONObject();
         debugState.put("id", id);
-        debugState.put("name", name == null ? null : name.toString());
+        debugState.put("name", conferenceName);
 
         if (full)
         {
