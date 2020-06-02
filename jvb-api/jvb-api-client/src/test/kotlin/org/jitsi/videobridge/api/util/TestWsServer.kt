@@ -66,7 +66,6 @@ class TestWsServer {
                 webSocket("delayandclose") {
                     for (frame in incoming) {
                         receivedMessages.add(frame)
-                        frame as Frame.Text
                         delay(1000)
                         cancel()
                     }

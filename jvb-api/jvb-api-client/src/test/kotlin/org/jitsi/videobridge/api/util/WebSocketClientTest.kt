@@ -87,6 +87,14 @@ class WebSocketClientTest : ShouldSpec() {
                     (receivedMessages.first() as Frame.Text).readText() shouldBe "hello"
                 }
             }
+            context("stop") {
+                val ws = WebSocketClient(client, "localhost", wsPort, "/ws/echo", ::incomingMessageHandler, LoggerImpl("test"))
+                ws.run()
+                ws.sendString("hello")
+                should("clean things up correctly") {
+                    ws.stop()
+                }
+            }
         }
     }
 }
