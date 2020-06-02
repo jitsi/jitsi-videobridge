@@ -71,7 +71,9 @@ private val WebSocketSession.incomingStanzas: ReceiveChannel<Stanza>
                     val stanza = SmackXmlSerDes.deserialize(msg.readText())
                     send(stanza)
                 }
-                else -> throw IllegalStateException("Expected only text frames")
+                else -> {
+                    close(IllegalStateException("Expected only text frames"))
+                }
             }
         }
     }
