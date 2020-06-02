@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class XmppWebSocketClient(
     /**
-     * The underlying [HttpClient] to use.  It must supports websockets.
+     * The underlying [HttpClient] to use.  It must support websockets.
      */
     client: HttpClient,
     /**
