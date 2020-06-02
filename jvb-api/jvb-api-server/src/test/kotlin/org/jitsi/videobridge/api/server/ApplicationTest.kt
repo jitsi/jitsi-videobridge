@@ -138,7 +138,7 @@ class ApplicationTest : ShouldSpec() {
                 with(handleRequest(method = HttpMethod.Get, uri = "about/api_version")) {
                     response shouldHaveStatus HttpStatusCode.OK
                     response shouldHaveContent """
-                        {"supportedVersions":["v1"]}
+                        {"supportedVersions":["V1"]}
                     """.trimIndent()
                     println(response.content)
                 }
