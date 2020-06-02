@@ -39,9 +39,12 @@ import java.time.Duration
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.random.Random
+import kotlin.time.ExperimentalTime
 
+@ExperimentalTime
 class XmppWebSocketClientTest : ShouldSpec() {
     private val wsPort = Random.nextInt(1024, 65535).also {
         println("Server running on port $it")
@@ -153,6 +156,19 @@ class XmppWebSocketClientTest : ShouldSpec() {
                     val iq = generateIq()
                     val resp = ws.sendIqAndGetReply(iq)
                     resp shouldBe null
+                }
+            }
+        }
+        context("stop") {
+            context("when an IQ response is pending") {
+                val ws = XmppWebSocketClient(client, "localhost", wsPort, "/ws/iqindefinitedelay", requestTimeout = Duration.ofSeconds(3), parentLogger = LoggerImpl("test"))
+                ws.run()
+                val iq = generateIq()
+                val resp = Executors.newSingleThreadExecutor().submit(Callable { ws.sendIqAndGetReply(iq) })
+                ws.stop()
+                should("clean up properly") {
+                    // This time should be the same as the request timeout given to the client
+                    resp.get(3, TimeUnit.SECONDS) shouldBe null
                 }
             }
         }

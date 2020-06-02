@@ -84,6 +84,15 @@ class TestXmppWsServer {
                         }
                     }
                 }
+                // Accepts incoming IQs and delays indefinitely
+                webSocket("iqindefinitedelay") {
+                    for (frame in incoming) {
+                        frame as Frame.Text
+                        val stanza = SmackXmlSerDes.deserialize(frame.readText())
+                        receivedMessages.add(stanza)
+                        delay(Long.MAX_VALUE)
+                    }
+                }
                 // Accepts incoming IQs and responds to them after a 5 second delay
                 webSocket("iqreplywithdelay") {
                     for (frame in incoming) {
