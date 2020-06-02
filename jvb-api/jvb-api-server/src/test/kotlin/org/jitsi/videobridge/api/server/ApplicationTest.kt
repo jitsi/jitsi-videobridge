@@ -133,6 +133,19 @@ class ApplicationTest : ShouldSpec() {
                 }
             }
         }
+        context("Receiving a non-text frame") {
+            withTestApplication({ module(confMgr) }) {
+                handleWebSocketConversation("/v1/ws") { incoming, outgoing ->
+                    outgoing.send(Frame.Binary(true, byteArrayOf(0x42, 0x42)))
+                    should("close the websocket") {
+                        val iq = ColibriConferenceIQ()
+                        outgoing.send(Frame.Text(SmackXmlSerDes.serialize(iq)))
+                        val resp = incoming.receive()
+                        resp.shouldBeInstanceOf<Frame.Close>()
+                    }
+                }
+            }
+        }
         context("Querying the supported API versions") {
             withTestApplication({ module(confMgr) }) {
                 with(handleRequest(method = HttpMethod.Get, uri = "about/api_version")) {
