@@ -40,7 +40,6 @@ import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlin.concurrent.thread
 import kotlin.random.Random
 import kotlin.time.ExperimentalTime
 
@@ -61,7 +60,7 @@ class XmppWebSocketClientTest : ShouldSpec() {
     }
 
     init {
-        thread { server.start() }
+        server.start()
 
         context("lots of concurrent requests") {
             val ws = XmppWebSocketClient(client, "localhost", wsPort, "/ws/iqreply", parentLogger = LoggerImpl("test"))

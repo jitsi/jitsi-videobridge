@@ -30,7 +30,6 @@ import io.ktor.http.cio.websocket.readText
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.jetty.Jetty
 import org.jitsi.utils.logging2.LoggerImpl
-import kotlin.concurrent.thread
 import kotlin.random.Random
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
@@ -60,7 +59,7 @@ class WebSocketClientTest : ShouldSpec() {
     }
 
     init {
-        thread { server.start() }
+        server.start()
 
         context("sendString") {
             context("when no reply is expected") {
