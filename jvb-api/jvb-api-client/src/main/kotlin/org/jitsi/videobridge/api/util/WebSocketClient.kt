@@ -19,6 +19,7 @@ package org.jitsi.videobridge.api.util
 import io.ktor.client.HttpClient
 import io.ktor.client.features.websocket.ws
 import io.ktor.http.cio.websocket.Frame
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -84,6 +85,9 @@ class WebSocketClient(
                 } catch (e: ClosedReceiveChannelException) {
                     logger.info("Websocket was closed")
                     return@ws
+                } catch (e: CancellationException) {
+                    logger.info("Websocket job was cancelled")
+                    throw e
                 } catch (t: Throwable) {
                     logger.error("Error in websocket connection: ", t)
                     return@ws
