@@ -67,7 +67,7 @@ class WebSocketClientTest : ShouldSpec() {
                 ws.run()
                 ws.sendString("hello")
                 should("send a message") {
-                    eventually(1.seconds) {
+                    eventually(5.seconds) {
                         wsServer.receivedMessages shouldHaveSize 1
                     }
                     wsServer.receivedMessages.first().shouldBeInstanceOf<Frame.Text>()
@@ -79,7 +79,7 @@ class WebSocketClientTest : ShouldSpec() {
                 ws.run()
                 ws.sendString("hello")
                 should("invoke the incoming message handler") {
-                    eventually(1.seconds) {
+                    eventually(5.seconds) {
                         receivedMessages shouldHaveSize 1
                     }
                     receivedMessages.first().shouldBeInstanceOf<Frame.Text>()
