@@ -182,7 +182,7 @@ private fun generateIq(
     }
 
 private fun Random.nextPrintableAlphaString(length: Int): String {
-    return (0 until length).map { nextInt(from = 65, until = 90) }.joinToString("")
+    return (0 until length).map { nextInt(from = 65, until = 90).toChar() }.joinToString("")
 }
 
 private fun Stanza?.shouldBeResponseTo(req: IQ) {
