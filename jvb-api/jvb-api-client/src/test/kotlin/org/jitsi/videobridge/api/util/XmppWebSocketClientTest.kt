@@ -22,7 +22,6 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.comparables.shouldBeEqualComparingTo
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.kotest.properties.nextPrintableString
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.features.websocket.WebSockets
@@ -178,9 +177,13 @@ private fun generateIq(
     toJidStr: String? = null,
     fromJidStr: String? = null
 ): IQ = ColibriConferenceIQ().apply {
-        to = JidCreate.bareFrom(toJidStr ?: Random.nextPrintableString(5))
-        from = JidCreate.bareFrom(fromJidStr ?: Random.nextPrintableString(5))
+        to = JidCreate.bareFrom(toJidStr ?: Random.nextPrintableAlphaString(5))
+        from = JidCreate.bareFrom(fromJidStr ?: Random.nextPrintableAlphaString(5))
     }
+
+private fun Random.nextPrintableAlphaString(length: Int): String {
+    return (0 until length).map { nextInt(from = 65, until = 90) }.joinToString("")
+}
 
 private fun Stanza?.shouldBeResponseTo(req: IQ) {
     this.shouldNotBeNull()
