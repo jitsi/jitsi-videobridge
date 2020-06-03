@@ -49,8 +49,8 @@ public class VideoConstraints
      * Ctor.
      *
      * @param idealHeight The ideal height of the constrained endpoint.
-     * @param preferredFps
-     * @param preferredHeight
+     * @param preferredHeight The "preferred" height of the constrained endpoint.
+     * @param preferredFps The "preferred" frame-rate of the constrained endpoint.
      */
     VideoConstraints(int idealHeight, int preferredHeight, double preferredFps)
     {

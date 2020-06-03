@@ -317,11 +317,11 @@ public class BitrateController
      *
      * Once the endpoints are ranked, the bandwidth allocation algorithm
      * loops over the endpoints multiple times, improving their target
-     * bitrate at ever step, until no further improvement is possible.
+     * bitrate at every step, until no further improvement is possible.
      *
      * In this multi-rank implementation, endpoints that have a preferred height
      * set (on-stage endpoints in Jitsi Meet) will be given bandwidth first.
-     * Then we prioritized endpoints that have higher ideal height (this rule is
+     * Then we prioritize endpoints that have higher ideal height (this rule is
      * somewhat arbitrary since we don't have a use case in Jitsi Meet that
      * leverages it). If two endpoints have the same ideal and preferred height,
      * then we look at their speech rank (whoever spoke last has is ranked higher).
@@ -1001,14 +1001,6 @@ public class BitrateController
                 conferenceEndpoints.stream().map(AbstractEndpoint::getID).collect(Collectors.joining(", ")) +
                 ". Endpoints constraints: " + Arrays.toString(videoConstraintsMap.values().toArray()));
         }
-
-        // Before endpoint constraints we had had the notion of selected and
-        // pinned endpoints. "selected" endpoints were endpoints that had
-        // 720p ideal height and prioritized over everything else and were
-        // allocated bandwidth first (up to their preferred resolution).
-        // "Pinned" endpoints where those thee had 180p ideal height and were
-        // ranked lower than selected endpoints but before the rest of the pack.
-        // Finally, any remaining endpoints were ranked after pinned endpoints.
 
         Map<String, VideoConstraints> videoConstraintsMapCopy = videoConstraintsMap;
 
