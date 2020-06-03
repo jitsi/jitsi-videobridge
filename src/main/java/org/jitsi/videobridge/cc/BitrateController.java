@@ -1345,6 +1345,19 @@ public class BitrateController
 
                 if (encoding.getHeight() <= videoConstraints.getPreferredHeight())
                 {
+                    // The improve step below will "eagerly" try to allocate
+                    // up-to the ratedPreferredIdx before moving on to the next
+                    // track. Eagerly means we consume all available bandwidth
+                    // up to the preferred resolution, leaving higher-frame
+                    // rates as an option for subsequent improvement steps.
+                    //
+                    // NOTE that the above comment suggests that the prefix
+                    // "preferred" in the preferredFps and preferredHeight
+                    // params has different semantics: In the preferredHeight
+                    // param it means "eagerly allocate up to the preferred
+                    // resolution" whereas in the preferredFps param it means
+                    // "only consider encodings with at least preferredFps" once
+                    // we've reached the preferredHeight.
                     ratedPreferredIdx = ratesList.size() - 1;
                 }
             }
