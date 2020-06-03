@@ -1319,7 +1319,7 @@ public class BitrateController
                 // For the "selected" participant we favor frame rate over
                 // resolution. We include all temporal layers up to the
                 // preferred resolution, but only consider the preferred
-                // frame-rate rate with higher-than-preferred resolutions. In
+                // frame-rate with higher-than-preferred resolutions. In
                 // practice today this translates to 180p7.5fps, 180p15fps,
                 // 180p30fps, 360p30fps and 720p30fps.
 
