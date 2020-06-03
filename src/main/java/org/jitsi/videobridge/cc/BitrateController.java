@@ -1317,10 +1317,11 @@ public class BitrateController
                 }
 
                 // For the "selected" participant we favor frame rate over
-                // resolution. Basically what we want for the on-stage
-                // participant is 180p7.5fps, 180p15fps, 180p30fps, 360p30fps
-                // and 720p30fps. For the thumbnails, we consider all temporal
-                // layers of the low resolution stream.
+                // resolution. We include all temporal layers up to the
+                // preferred resolution, but only consider the preferred
+                // frame-rae rate higher-than-preferred resolutions. In practice
+                // today this translates to 180p7.5fps, 180p15fps, 180p30fps,
+                // 360p30fps and 720p30fps.
 
                 boolean lessThanPreferredResolution
                     = encoding.getHeight() < videoConstraints.getPreferredHeight();
