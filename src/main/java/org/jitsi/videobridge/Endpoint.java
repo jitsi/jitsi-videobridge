@@ -1290,7 +1290,7 @@ public class Endpoint
                 iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension);
             }
         }
-        logger.info("Transport description:\n " + iceUdpTransportPacketExtension.toXML());
+        logger.debug(() -> "Transport description:\n " + iceUdpTransportPacketExtension.toXML());
         channelBundle.setTransport(iceUdpTransportPacketExtension);
     }
 
