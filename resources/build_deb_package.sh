@@ -38,12 +38,12 @@ REV=$(git log --pretty=format:'%h' -n 1)
 dch -v "$VERSION-1" "Build from git. $REV"
 dch -D unstable -r ""
 
-# We need to make sure all dependencies are downloaded before start building
-# the debian package
-mvn dependency:resolve
-
 # sets the version in the pom file so it will propagate to resulting jar
 mvn versions:set -DnewVersion="${VERSION}"
+
+# We need to make sure all dependencies are downloaded before start building
+# the debian package
+mvn package
 
 # now build the deb
 dpkg-buildpackage -tc -us -uc -A
