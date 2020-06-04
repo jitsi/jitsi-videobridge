@@ -42,7 +42,6 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>jitsi-xmpp-extensions</artifactId>
-            <version>1.0-8-g340be56</version>
         </dependency>
         <dependency>
             <groupId>io.kotest</groupId>
