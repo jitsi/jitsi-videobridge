@@ -237,9 +237,6 @@ public class Videobridge
     {
         final Conference conference = doCreateConference(name, enableLogging, gid);
 
-        // The method Videobridge.getConferenceCountString() should better
-        // be executed outside synchronized blocks in order to reduce the
-        // risks of causing deadlocks.
         logger.info(() -> "create_conf, id=" + conference.getID()
                 + " gid=" + conference.getGid()
                 + " logging=" + enableLogging);
@@ -326,30 +323,6 @@ public class Videobridge
     }
 
     /**
-     * Gets the number of active <tt>Channel</tt>s in this <tt>Videobridge</tt>
-     * (across all active <tt>Conference</tt>s and active <tt>Content</tt>s).
-     *
-     * @return the number of active <tt>Channel</tt>s in this
-     * <tt>Videobridge</tt>
-     */
-    public int getChannelCount()
-    {
-        int channelCount = 0;
-
-        // TODO(boris): Implement natively (i.e. loop over endpoints) or move
-        // to shim.
-        for (Conference conference : getConferences())
-        {
-            for (ContentShim contentShim : conference.getShim().getContents())
-            {
-                channelCount += contentShim.getChannelCount();
-            }
-        }
-
-        return channelCount;
-    }
-
-    /**
      * Gets an existing {@link Conference} with a specific ID.
      *
      * @param id the ID of the existing <tt>Conference</tt> to get
@@ -364,44 +337,15 @@ public class Videobridge
     }
 
     /**
-     * Gets the number of <tt>Conference</tt>s of this <tt>Videobridge</tt> that
-     * are not expired.
-     *
-     * @return the number of <tt>Conference</tt>s of this <tt>Videobridge</tt>
-     * that are not expired.
-     */
-    public int getConferenceCount()
-    {
-        int sz = 0;
-
-        Conference[] cs = getConferences();
-        if (cs != null && cs.length != 0)
-        {
-            for (Conference c : cs)
-            {
-                if (c != null && !c.isExpired())
-                {
-                    sz++;
-                }
-            }
-        }
-
-        return sz;
-    }
-
-    /**
      * Gets the <tt>Conference</tt>s of this <tt>Videobridge</tt>.
-     * TODO: don't expose a weird array API...
      *
      * @return the <tt>Conference</tt>s of this <tt>Videobridge</tt>
      */
-    public Conference[] getConferences()
+    public Collection<Conference> getConferences()
     {
         synchronized (conferences)
         {
-            Collection<Conference> values = conferences.values();
-
-            return values.toArray(new Conference[values.size()]);
+            return new HashSet<>(conferences.values());
         }
     }
 
@@ -820,12 +764,10 @@ public class Videobridge
         debugState.put("conferences", conferences);
         if (StringUtils.isBlank(conferenceId))
         {
-            for (Conference conference : getConferences())
-            {
+            getConferences().forEach(conference ->
                 conferences.put(
                         conference.getID(),
-                        conference.getDebugState(full, null));
-            }
+                        conference.getDebugState(full, null)));
         }
         else
         {

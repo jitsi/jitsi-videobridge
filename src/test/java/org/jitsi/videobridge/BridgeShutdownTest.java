@@ -156,17 +156,11 @@ public class BridgeShutdownTest
         Util.waitForEquals(
             "Channels should be expired",
             0,
-            () -> bridge.getChannelCount());
+            () -> bridge.getConferences().stream()
+                .mapToInt(Conference::getEndpointCount)
+                .sum());
 
-        if (bridge.getConferenceCount() > 0)
-        {
-            // There are no channels, but conference exist - expire them by hand
-            Conference[] conferences = bridge.getConferences();
-            for (Conference conf : conferences)
-            {
-                conf.expire();
-            }
-        }
+        bridge.getConferences().forEach(Conference::expire);
 
         assertTrue(
             "The bridge should trigger a shutdown after last conference is "

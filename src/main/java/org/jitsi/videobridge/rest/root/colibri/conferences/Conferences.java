@@ -42,10 +42,9 @@ public class Conferences extends ColibriResource
     public String getConferences()
     {
         Videobridge videobridge = videobridgeProvider.get();
-        Conference[] conferences = videobridge.getConferences();
         List<ColibriConferenceIQ> conferenceIQs = new ArrayList<>();
 
-        for (Conference conference : conferences)
+        for (Conference conference : videobridge.getConferences())
         {
             ColibriConferenceIQ conferenceIQ = new ColibriConferenceIQ();
 
