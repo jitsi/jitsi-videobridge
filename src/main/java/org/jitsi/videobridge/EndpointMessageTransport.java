@@ -169,52 +169,6 @@ class EndpointMessageTransport
         statisticsSupplier.get().totalColibriWebSocketMessagesSent.incrementAndGet();
     }
 
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void onPinnedEndpointsChangedEvent(
-        JSONObject jsonObject, Set<String> newPinnedEndpoints)
-    {
-        endpoint.pinnedEndpointsChanged(newPinnedEndpoints);
-        propagateJSONObject(jsonObject);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void onSelectedEndpointsChangedEvent(
-        JSONObject jsonObject, Set<String> newSelectedEndpoints)
-    {
-        endpoint.selectedEndpointsChanged(newSelectedEndpoints);
-        propagateJSONObject(jsonObject);
-    }
-
-    /**
-     * Propagates the specified JSON object to all proxies (i.e. octo endpoints) of
-     * {@link #endpoint} to all remote bridges.
-     *
-     * @param jsonObject the JSON object to propagate.
-     */
-    @SuppressWarnings("unchecked")
-    private void propagateJSONObject(JSONObject jsonObject)
-    {
-        Conference conference = getConference();
-        if (conference == null || conference.isExpired())
-        {
-            logger.warn(
-                "Unable to propagate a JSON object, the conference is null or expired.");
-            return;
-        }
-
-        jsonObject.put(PROP_TARGET_OCTO_ENDPOINT_ID, endpoint.getID());
-
-        // Notify Cthulhu and its minions about selected/pinned events.
-        conference.sendMessage(jsonObject.toString(), Collections.emptyList(), true);
-    }
-
     @Override
     public void onDataChannelMessage(DataChannelMessage dataChannelMessage)
     {

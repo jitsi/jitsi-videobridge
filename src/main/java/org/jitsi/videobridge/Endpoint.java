@@ -54,7 +54,6 @@ import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi_modified.sctp4j.*;
 import org.json.simple.*;
 
-import java.beans.*;
 import java.nio.*;
 import java.time.*;
 import java.util.*;
@@ -76,7 +75,6 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  */
 public class Endpoint
     extends AbstractEndpoint implements PotentialPacketHandler,
-        PropertyChangeListener,
         EncodingsManager.EncodingsUpdateListener
 {
     /**
@@ -270,7 +268,6 @@ public class Endpoint
         this.clock = clock;
 
         creationTime = clock.instant();
-        super.addPropertyChangeListener(this);
         diagnosticContext = conference.newDiagnosticContext();
         transceiver = new Transceiver(
             id,
@@ -472,20 +469,6 @@ public class Endpoint
         return true;
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public void propertyChange(PropertyChangeEvent evt)
-    {
-        if (SELECTED_ENDPOINTS_PROPERTY_NAME.equals(evt.getPropertyName()))
-        {
-            bitrateController.setSelectedEndpointIds((Set<String>) evt.getNewValue());
-        }
-        else if (PINNED_ENDPOINTS_PROPERTY_NAME.equals(evt.getPropertyName()))
-        {
-            bitrateController.setPinnedEndpointIds((Set<String>) evt.getNewValue());
-        }
-    }
-
     /**
      * Notifies this {@code Endpoint} that the list of {@code Endpoint}s ordered
      * by speech activity (i.e. the dominant speaker history) has changed.
@@ -526,16 +509,6 @@ public class Endpoint
     public int getLastN()
     {
         return bitrateController.getLastN();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setMaxReceiveFrameHeightPx(int maxReceiveFrameHeightPx)
-    {
-        super.setMaxReceiveFrameHeightPx(maxReceiveFrameHeightPx);
-        bitrateController.setMaxRxFrameHeightPx(maxReceiveFrameHeightPx);
     }
 
     /**
@@ -683,6 +656,12 @@ public class Endpoint
     public void addRtpExtension(RtpExtension rtpExtension)
     {
         transceiver.addRtpExtension(rtpExtension);
+    }
+
+    @Override
+    public void setVideoConstraints(Map<String, VideoConstraints> newVideoConstraints)
+    {
+        bitrateController.setVideoConstraints(newVideoConstraints);
     }
 
     /**
@@ -1288,7 +1267,7 @@ public class Endpoint
                 iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension);
             }
         }
-        logger.info("Transport description:\n " + iceUdpTransportPacketExtension.toXML());
+        logger.debug(() -> "Transport description:\n " + iceUdpTransportPacketExtension.toXML());
         channelBundle.setTransport(iceUdpTransportPacketExtension);
     }
 

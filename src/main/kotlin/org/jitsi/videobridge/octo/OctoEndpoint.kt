@@ -24,6 +24,7 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
+import org.jitsi.videobridge.VideoConstraints
 import org.jitsi.videobridge.rest.root.colibri.debug.EndpointDebugFeatures
 import org.jitsi.nlj.MediaSourceDesc
 
@@ -70,6 +71,10 @@ class OctoEndpoint(
         // multiple OctoEndpoint instances, but we want a single message
         // to be sent through Octo, the message should be sent through the
         // single OctoEndpoints instance.
+    }
+
+    override fun setVideoConstraints(newVideoConstraints: MutableMap<String, VideoConstraints>?) {
+        // NO-OP
     }
 
     override fun requestKeyframe(mediaSsrc: Long) {
