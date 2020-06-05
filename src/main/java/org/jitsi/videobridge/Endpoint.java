@@ -416,37 +416,17 @@ public class Endpoint
 
     private void setupDtlsTransport()
     {
-        dtlsTransport.incomingDataHandler = new DtlsTransport.IncomingDataHandler()
+        dtlsTransport.incomingDataHandler = this::dtlsAppPacketReceived;
+        dtlsTransport.outgoingDataHandler = iceTransport::send;
+        dtlsTransport.eventHandler = (chosenSrtpProtectionProfile, tlsRole, keyingMaterial) ->
         {
-            @Override
-            public void dtlsAppDataReceived(@NotNull byte[] buf, int off, int len)
-            {
-                dtlsAppPacketReceived(buf, off, len);
-            }
-        };
-        dtlsTransport.outgoingDataHandler = new DtlsTransport.OutgoingDataHandler()
-        {
-            @Override
-            public void sendData(@NotNull byte[] buf, int off, int len)
-            {
-                iceTransport.send(buf, off, len);
-            }
-        };
-        dtlsTransport.eventHandler = new DtlsTransport.EventHandler()
-        {
-            @Override
-            public void handshakeComplete(int chosenSrtpProtectionProfile, @NotNull TlsRole tlsRole, @NotNull byte[] keyingMaterial)
-            {
-                logger.info("DTLS handshake complete");
-                transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial);
-                //TODO(brian): the old code would work even if the sctp connection was created after
-                // the handshake had completed, but this won't (since this is a one-time event).  do
-                // we need to worry about that case?
-                sctpSocket.ifPresent(socket -> {
-                    acceptSctpConnection(socket);
-                });
-                scheduleEndpointMessageTransportTimeout();
-            }
+            logger.info("DTLS handshake complete");
+            transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial);
+            //TODO(brian): the old code would work even if the sctp connection was created after
+            // the handshake had completed, but this won't (since this is a one-time event).  do
+            // we need to worry about that case?
+            sctpSocket.ifPresent(socket -> acceptSctpConnection(socket));
+            scheduleEndpointMessageTransportTimeout();
         };
     }
 
@@ -1549,7 +1529,6 @@ public class Endpoint
 
         debugState.put("selectedCount", selectedCount.get());
         //debugState.put("sctpManager", sctpManager.getDebugState());
-        //debugState.put("messageTransport", messageTransport.getDebugState());
         debugState.put("bitrateController", bitrateController.getDebugState());
         debugState.put("bandwidthProbing", bandwidthProbing.getDebugState());
         debugState.put("iceTransport", iceTransport.getDebugState());
