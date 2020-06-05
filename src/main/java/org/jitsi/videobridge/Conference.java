@@ -135,12 +135,6 @@ public class Conference
     private long lastActivityTime;
 
     /**
-     * If {@link #focus} is <tt>null</tt> the value of the last known focus is
-     * stored in this member.
-     */
-    private Jid lastKnownFocus;
-
-    /**
      * The speech activity (representation) of the <tt>Endpoint</tt>s of this
      * <tt>Conference</tt>.
      */
@@ -242,8 +236,6 @@ public class Conference
         this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
         this.includeInStatistics = enableLogging;
         this.conferenceName = conferenceName;
-
-        lastKnownFocus = focus;
 
         speechActivity = new ConferenceSpeechActivity(this);
         audioLevelListener
@@ -831,15 +823,6 @@ public class Conference
     }
 
     /**
-     * Returns the JID of the last known focus.
-     * @return the JID of the last known focus.
-     */
-    public Jid getLastKnowFocus()
-    {
-        return lastKnownFocus;
-    }
-
-    /**
      * Gets an <tt>Endpoint</tt> participating in this <tt>Conference</tt> which
      * has a specific identifier/ID.
      *
@@ -998,16 +981,6 @@ public class Conference
                 }
             }
         }
-    }
-
-    /**
-     * Sets the JID of the last known focus.
-     *
-     * @param jid the JID of the last known focus.
-     */
-    public void setLastKnownFocus(Jid jid)
-    {
-        lastKnownFocus = jid;
     }
 
     /**

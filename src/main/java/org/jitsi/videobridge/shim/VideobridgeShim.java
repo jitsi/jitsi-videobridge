@@ -289,7 +289,6 @@ public class VideobridgeShim
                         "Conference not found for ID: " + conferenceId);
             }
         }
-        conference.setLastKnownFocus(focus);
 
         ConferenceShim conferenceShim = conference.getShim();
         ColibriConferenceIQ responseConferenceIQ = new ColibriConferenceIQ();
