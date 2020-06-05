@@ -988,5 +988,11 @@ public class Videobridge
          * changed.
          */
         public LongAdder totalDominantSpeakerChanges = new LongAdder();
+
+        /**
+         * Number of endpoints whose ICE connection was established, but DTLS
+         * wasn't (at the time of expiration).
+         */
+        public AtomicInteger dtlsFailedEndpoints = new AtomicInteger();
     }
 }
