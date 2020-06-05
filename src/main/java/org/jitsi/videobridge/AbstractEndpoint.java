@@ -19,7 +19,6 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.*;
-import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.rest.root.colibri.debug.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -40,7 +39,7 @@ import java.util.*;
  * @author Boris Grozev
  * @author Brian Baldino
  */
-public abstract class AbstractEndpoint extends PropertyChangeNotifier
+public abstract class AbstractEndpoint
 {
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a

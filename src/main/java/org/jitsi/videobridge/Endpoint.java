@@ -22,7 +22,6 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.bandwidthestimation.*;
-import org.jitsi.nlj.srtp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
@@ -55,7 +54,6 @@ import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jitsi_modified.sctp4j.*;
 import org.json.simple.*;
 
-import java.io.*;
 import java.nio.*;
 import java.time.*;
 import java.util.*;
