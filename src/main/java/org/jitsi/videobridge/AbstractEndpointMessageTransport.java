@@ -19,7 +19,6 @@ import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.util.*;
-import org.jitsi.videobridge.websocket.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
@@ -36,12 +35,6 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 public abstract class AbstractEndpointMessageTransport
 {
     /**
-     * The name of the JSON property that indicates the target Octo endpoint id
-     * of a propagated JSON message.
-     */
-    public static final String PROP_TARGET_OCTO_ENDPOINT_ID = "targetOctoEndpointId";
-
-    /**
      * The {@link Endpoint} associated with this
      * {@link EndpointMessageTransport}.
      */
@@ -52,6 +45,13 @@ public abstract class AbstractEndpointMessageTransport
      * information.
      */
     protected final @NotNull Logger logger;
+
+    /**
+     * The compatibility layer that translates selected, pinned and max
+     * resolution messages into video constraints.
+     */
+    private final VideoConstraintsCompatibility
+        videoConstraintsCompatibility = new VideoConstraintsCompatibility();
 
     /**
      * Initializes a new {@link AbstractEndpointMessageTransport} instance.
@@ -390,9 +390,14 @@ public abstract class AbstractEndpointMessageTransport
      * {@code PinnedEndpointChangedEvent} which has been received.
      * @param newPinnedEndpoints the new pinned endpoints
      */
-    protected abstract void onPinnedEndpointsChangedEvent(
+    protected void onPinnedEndpointsChangedEvent(
         JSONObject jsonObject,
-        Set<String> newPinnedEndpoints);
+        Set<String> newPinnedEndpoints)
+    {
+        videoConstraintsCompatibility.setPinnedEndpoints(newPinnedEndpoints);
+        onVideoConstraintsChangedEvent(
+            videoConstraintsCompatibility.computeVideoConstraints());
+    }
 
     /**
      * Notifies local or remote endpoints that a selected event has been received.
@@ -403,9 +408,19 @@ public abstract class AbstractEndpointMessageTransport
      * {@code SelectedEndpointChangedEvent} which has been received.
      * @param newSelectedEndpoints the new selected endpoints
      */
-    protected abstract void onSelectedEndpointsChangedEvent(
+    protected void onSelectedEndpointsChangedEvent(
         JSONObject jsonObject,
-        Set<String> newSelectedEndpoints);
+        Set<String> newSelectedEndpoints)
+    {
+        videoConstraintsCompatibility.setSelectedEndpoints(newSelectedEndpoints);
+        onVideoConstraintsChangedEvent(
+            videoConstraintsCompatibility.computeVideoConstraints());
+    }
+
+    protected void onVideoConstraintsChangedEvent(Map<String, VideoConstraints> newVideoConstraints)
+    {
+        endpoint.setVideoConstraints(newVideoConstraints);
+    }
 
     /**
      * Notifies this {@code Endpoint} that a {@code LastNChangedEvent}
@@ -463,10 +478,8 @@ public abstract class AbstractEndpointMessageTransport
                     + getId() + ": " + maxFrameHeight);
         }
 
-        if (endpoint != null)
-        {
-            endpoint.setMaxReceiveFrameHeightPx(maxFrameHeight);
-        }
+        videoConstraintsCompatibility.setMaxFrameHeight(maxFrameHeight);
+        onVideoConstraintsChangedEvent(videoConstraintsCompatibility.computeVideoConstraints());
     }
 
     /**

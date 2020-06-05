@@ -43,22 +43,6 @@ import java.util.*;
 public abstract class AbstractEndpoint extends PropertyChangeNotifier
 {
     /**
-     * The name of the <tt>Endpoint</tt> property <tt>pinnedEndpoint</tt> which
-     * specifies the ID of the currently pinned <tt>Endpoint</tt> of this
-     * <tt>Endpoint</tt>.
-     */
-    public static final String PINNED_ENDPOINTS_PROPERTY_NAME
-        = Endpoint.class.getName() + ".pinnedEndpoints";
-
-    /**
-     * The name of the <tt>Endpoint</tt> property <tt>selectedEndpoint</tt>
-     * which specifies the ID of the currently selected <tt>Endpoint</tt> of
-     * this <tt>Endpoint</tt>.
-     */
-    public static final String SELECTED_ENDPOINTS_PROPERTY_NAME
-        = Endpoint.class.getName() + ".selectedEndpoints";
-
-    /**
      * The (unique) identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt>.
      */
@@ -92,65 +76,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     private boolean expired = false;
 
     /**
-     * The set of IDs of the pinned endpoints of this {@code Endpoint}.
-     */
-    private Set<String> pinnedEndpoints = new HashSet<>();
-
-    /**
-     * The set of currently selected <tt>Endpoint</tt>s at this
-     * <tt>Endpoint</tt>.
-     */
-    private Set<String> selectedEndpoints = new HashSet<>();
-
-
-    /**
-     * Sets the list of pinned endpoints for this endpoint.
-     * @param newPinnedEndpoints the set of pinned endpoints.
-     * @return true if the underlying set of pinned endpoints has changed, false
-     * otherwise. The return value was introduced to enable overrides to
-     * act upon the underlying set changing.
-     */
-    public void pinnedEndpointsChanged(Set<String> newPinnedEndpoints)
-    {
-        // Check if that's different to what we think the pinned endpoints are.
-        Set<String> oldPinnedEndpoints = this.pinnedEndpoints;
-        if (!oldPinnedEndpoints.equals(newPinnedEndpoints))
-        {
-            this.pinnedEndpoints = newPinnedEndpoints;
-
-            logger.debug(() -> "Pinned "
-                + Arrays.toString(pinnedEndpoints.toArray()));
-
-            firePropertyChange(PINNED_ENDPOINTS_PROPERTY_NAME,
-                oldPinnedEndpoints, pinnedEndpoints);
-        }
-    }
-
-    /**
-     * Sets the list of selected endpoints for this endpoint.
-     * @param newSelectedEndpoints the set of selected endpoints.
-     * @return true if the underlying set of selected endpoints has changed,
-     * false otherwise. The return value was introduced to enable overrides to
-     * act upon the underlying set changing.
-     */
-    public void selectedEndpointsChanged(Set<String> newSelectedEndpoints)
-    {
-        // Check if that's different to what we think the pinned endpoints are.
-        Set<String> oldSelectedEndpoints = this.selectedEndpoints;
-        if (!oldSelectedEndpoints.equals(newSelectedEndpoints))
-        {
-            this.selectedEndpoints = newSelectedEndpoints;
-
-            logger.debug(() -> "Selected "
-                + Arrays.toString(selectedEndpoints.toArray()));
-
-            firePropertyChange(SELECTED_ENDPOINTS_PROPERTY_NAME,
-                oldSelectedEndpoints, selectedEndpoints);
-        }
-    }
-
-
-    /**
      * Initializes a new {@link AbstractEndpoint} instance.
      * @param conference the {@link Conference} which this endpoint is to be a
      * part of.
@@ -172,15 +97,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public void setLastN(Integer lastN)
     {
     }
-
-    /**
-     * Set the maximum frame height, in pixels, of video streams that can be
-     * forwarded to this participant.
-     *
-     * @param maxReceiveFrameHeightPx the maximum frame height, in pixels, of
-     * video streams that can be forwarded to this participant.
-     */
-    public void setMaxReceiveFrameHeightPx(int maxReceiveFrameHeightPx) { }
 
     /**
      * Checks whether a specific SSRC belongs to this endpoint.
@@ -406,8 +322,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         debugState.put("displayName", displayName);
         debugState.put("expired", expired);
         debugState.put("statsId", statsId);
-        debugState.put("selectedEndpoints", selectedEndpoints.toString());
-        debugState.put("pinnedEndpoints", pinnedEndpoints.toString());
 
         return debugState;
     }
@@ -439,4 +353,10 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * Adds an RTP extension to this endpoint
      */
     public abstract void addRtpExtension(RtpExtension rtpExtension);
+
+    /**
+     *
+     * @param newVideoConstraints
+     */
+    public abstract void setVideoConstraints(Map<String, VideoConstraints> newVideoConstraints);
 }

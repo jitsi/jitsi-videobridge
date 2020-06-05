@@ -24,7 +24,6 @@ import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.collections.*;
-import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging.DiagnosticContext;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
@@ -39,7 +38,6 @@ import org.jxmpp.jid.parts.*;
 import org.jxmpp.stringprep.*;
 import org.osgi.framework.*;
 
-import java.beans.*;
 import java.io.*;
 import java.lang.*;
 import java.lang.SuppressWarnings;
@@ -60,9 +58,7 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  * @author George Politis
  */
 public class Conference
-     extends PropertyChangeNotifier
-     implements PropertyChangeListener,
-        Expireable,
+     implements Expireable,
         AbstractEndpointMessageTransport.EndpointMessageTransportEventHandler
 {
     /**
@@ -143,14 +139,6 @@ public class Conference
      * stored in this member.
      */
     private Jid lastKnownFocus;
-
-    /**
-     * The <tt>PropertyChangeListener</tt> which listens to
-     * <tt>PropertyChangeEvent</tt>s on behalf of this instance while
-     * referencing it by a <tt>WeakReference</tt>.
-     */
-    private final PropertyChangeListener propertyChangeListener
-        = new WeakReferencePropertyChangeListener(this);
 
     /**
      * The speech activity (representation) of the <tt>Endpoint</tt>s of this
@@ -271,10 +259,6 @@ public class Conference
                 = videobridge.getStatistics();
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
         }
-
-        // We listen to our own events so we have a centralized place to handle
-        // certain things (e.g. anytime the endpoints list changes)
-        addPropertyChangeListener(propertyChangeListener);
 
         touch();
     }
@@ -705,10 +689,6 @@ public class Conference
 
         final Endpoint endpoint = new Endpoint(
             id, this, logger, iceControlling);
-        // The propertyChangeListener will weakly reference this
-        // Conference and will unregister itself from the endpoint
-        // sooner or later.
-        endpoint.addPropertyChangeListener(propertyChangeListener);
 
         addEndpoint(endpoint);
 
@@ -917,57 +897,6 @@ public class Conference
         // this.expired starts as 'false' and only ever changes to 'true',
         // so there is no need to synchronize while reading.
         return expired;
-    }
-
-    /**
-     * Notifies this instance that there was a change in the value of a property
-     * of an object in which this instance is interested.
-     *
-     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the object of
-     * interest, the name of the property and the old and new values of that
-     * property
-     */
-    @Override
-    @SuppressWarnings("unchecked")
-    public void propertyChange(PropertyChangeEvent ev)
-    {
-        Object source = ev.getSource();
-
-        if (isExpired())
-        {
-            // An expired Conference is to be treated like a null Conference
-            // i.e. it does not handle any PropertyChangeEvents. If possible,
-            // make sure that no further PropertyChangeEvents will be delivered
-            // to this Conference.
-            if (source instanceof PropertyChangeNotifier)
-            {
-                ((PropertyChangeNotifier) source).removePropertyChangeListener(
-                        propertyChangeListener);
-            }
-        }
-        else if (Endpoint.SELECTED_ENDPOINTS_PROPERTY_NAME
-                .equals(ev.getPropertyName()))
-        {
-            Set<String> oldSelectedEndpoints = (Set<String>)ev.getOldValue();
-            Set<String> newSelectedEndpoints = (Set<String>)ev.getNewValue();
-            // Any endpoints in the oldSelectedEndpoints list which AREN'T
-            // in the newSelectedEndpoints list should have their count decremented
-            oldSelectedEndpoints.stream()
-                .filter(
-                    oldSelectedEp -> !newSelectedEndpoints.contains(oldSelectedEp))
-                .map(this::getEndpoint)
-                .filter(Objects::nonNull)
-                .forEach(AbstractEndpoint::decrementSelectedCount);
-
-            // Any endpoints in the newSelectedEndpoints list which AREN'T
-            // in the oldSelectedEndpoints list should have their count incremented
-            newSelectedEndpoints.stream()
-                .filter(
-                    newSelectedEp -> !oldSelectedEndpoints.contains(newSelectedEp))
-                .map(this::getEndpoint)
-                .filter(Objects::nonNull)
-                .forEach(AbstractEndpoint::incrementSelectedCount);
-        }
     }
 
     /**
@@ -1242,7 +1171,6 @@ public class Conference
         if (tentacle == null)
         {
             tentacle = new ConfOctoTransport(this);
-            tentacle.addPropertyChangeListener(propertyChangeListener);
         }
         return tentacle;
     }

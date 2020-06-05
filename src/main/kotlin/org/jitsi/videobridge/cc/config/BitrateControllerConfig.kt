@@ -17,6 +17,8 @@
 package org.jitsi.videobridge.cc.config
 
 import org.jitsi.config.LegacyFallbackConfigProperty
+import org.jitsi.config.newConfigAttributes
+import org.jitsi.utils.config.SimpleProperty
 
 class BitrateControllerConfig {
     class Config {
@@ -114,6 +116,24 @@ class BitrateControllerConfig {
 
             @JvmStatic
             fun trustBwe() = trustBweProp.value
+
+            /**
+             * The property for the max resolution to allocate for the onstage
+             * participant.
+             */
+            class OnstageIdealHeightPixelsProperty : SimpleProperty<Int>(
+                    newConfigAttributes {
+                        readOnce()
+                        name("videobridge.cc.onstage-ideal-height-px")
+                    }
+            )
+
+            private val onstageIdealHeightPxProp = OnstageIdealHeightPixelsProperty()
+
+            @JvmStatic
+            fun onstageIdealHeightPx(): Int {
+                return onstageIdealHeightPxProp.value
+            }
         }
     }
 }
