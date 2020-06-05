@@ -553,6 +553,9 @@ public class Conference
             = statistics.hasIceFailedEndpoint
                 && statistics.hasIceSucceededEndpoint;
 
+        videobridgeStatistics.dtlsFailedEndpoints.addAndGet(
+                statistics.dtlsFailedEndpoints.get());
+
         if (hasPartiallyFailed)
         {
             videobridgeStatistics.totalPartiallyFailedConferences
@@ -1241,6 +1244,12 @@ public class Conference
         boolean hasIceSucceededEndpoint = false;
 
         /**
+         * Number of endpoints whose ICE connection was established, but DTLS
+         * wasn't (at the time of expiration).
+         */
+        AtomicInteger dtlsFailedEndpoints = new AtomicInteger();
+
+        /**
          * Gets a snapshot of this object's state as JSON.
          */
         @SuppressWarnings("unchecked")
@@ -1253,6 +1262,7 @@ public class Conference
             jsonObject.put("total_packets_sent", totalPacketsSent.get());
             jsonObject.put("has_failed_endpoint", hasIceFailedEndpoint);
             jsonObject.put("has_succeeded_endpoint", hasIceSucceededEndpoint);
+            jsonObject.put("dtls_failed_endpoints", dtlsFailedEndpoints.get());
             return jsonObject;
         }
     }

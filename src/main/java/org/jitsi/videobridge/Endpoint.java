@@ -813,6 +813,12 @@ public class Endpoint
             videobridgeStats.totalLossDegradedParticipantMs
                 .addAndGet(lossDegradedMs.longValue());
         }
+
+        if (iceTransport.isConnected() && !dtlsTransport.isConnected())
+        {
+            logger.info("Expiring an endpoint with ICE, but no DTLS.");
+            conferenceStats.dtlsFailedEndpoints.incrementAndGet();
+        }
     }
 
     /**
