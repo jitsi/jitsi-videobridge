@@ -203,35 +203,27 @@ public class Videobridge
      * Initializes a new {@link Conference} instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt> and
      * adds the new instance to the list of existing <tt>Conference</tt>
-     * instances. Optionally the new instance is owned by a specific conference
-     * focus i.e. further/future requests to manage the new instance must come
-     * from the specified <tt>focus</tt> or they will be ignored. If the focus
-     * is not specified this safety check is overridden.
+     * instances.
      *
-     * @param focus (optional) a <tt>String</tt> which specifies the JID of
-     * the conference focus which will own the new instance i.e. from whom
-     * further/future requests to manage the new instance must come or they will
-     * be ignored. Pass <tt>null</tt> to override this safety check.
      * @param name world readable name of the conference to create.
      * @param gid the optional "global" id of the conference.
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public @NotNull Conference createConference(Jid focus, Localpart name, String gid)
+    public @NotNull Conference createConference(Localpart name, String gid)
     {
-        return this.createConference(focus, name == null ? null : name.toString(), /* enableLogging */ true, gid);
+        return this.createConference(name == null ? null : name.toString(), /* enableLogging */ true, gid);
     }
 
     /**
      * Generate conference IDs until one is found that isn't in use and create a new {@link Conference}
      * object using that ID
-     * @param focus
      * @param name
      * @param enableLogging
      * @param gid
      * @return
      */
-    private @NotNull Conference doCreateConference(Jid focus, String name, boolean enableLogging, String gid)
+    private @NotNull Conference doCreateConference(String name, boolean enableLogging, String gid)
     {
         Conference conference = null;
         do
@@ -246,7 +238,6 @@ public class Videobridge
                         = new Conference(
                                 this,
                                 id,
-                                focus,
                                 name,
                                 enableLogging,
                                 gid);
@@ -263,15 +254,8 @@ public class Videobridge
      * Initializes a new {@link Conference} instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt> and
      * adds the new instance to the list of existing <tt>Conference</tt>
-     * instances. Optionally the new instance is owned by a specific conference
-     * focus i.e. further/future requests to manage the new instance must come
-     * from the specified <tt>focus</tt> or they will be ignored. If the focus
-     * is not specified this safety check is overridden.
+     * instances.
      *
-     * @param focus (optional) a <tt>String</tt> which specifies the JID of
-     * the conference focus which will own the new instance i.e. from whom
-     * further/future requests to manage the new instance must come or they will
-     * be ignored. Pass <tt>null</tt> to override this safety check.
      * @param name world readable name of the conference to create.
      * @param enableLogging whether logging should be enabled or disabled for
      * the {@link Conference}.
@@ -279,10 +263,9 @@ public class Videobridge
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public @NotNull Conference createConference(
-            Jid focus, String name, boolean enableLogging, String gid)
+    public @NotNull Conference createConference(String name, boolean enableLogging, String gid)
     {
-        final Conference conference = doCreateConference(focus, name, enableLogging, gid);
+        final Conference conference = doCreateConference(name, enableLogging, gid);
 
         // The method Videobridge.getConferenceCountString() should better
         // be executed outside synchronized blocks in order to reduce the
@@ -397,50 +380,17 @@ public class Videobridge
     }
 
     /**
-     * Gets an existing {@link Conference} with a specific ID and a specific
-     * conference focus.
+     * Gets an existing {@link Conference} with a specific ID.
      *
      * @param id the ID of the existing <tt>Conference</tt> to get
-     * @param focus (optional) the JID of the conference focus of the existing
-     * <tt>Conference</tt> to get. A <tt>Conference</tt> does not take orders
-     * from a (remote) entity other than the conference focus who has
-     * initialized it. Pass <tt>null</tt> if you want any participant to be able
-     * to modify the conference.
-     * @return an existing <tt>Conference</tt> with the specified ID and the
-     * specified conference focus or <tt>null</tt> if no <tt>Conference</tt>
-     * with the specified ID and the specified conference focus is known to this
-     * <tt>Videobridge</tt>
+     * @return an existing <tt>Conference</tt> with the specified ID.
      */
-    public Conference getConference(String id, Jid focus)
+    public Conference getConference(String id)
     {
-        Conference conference;
-
         synchronized (conferences)
         {
-            conference = conferences.get(id);
+            return conferences.get(id);
         }
-
-        if (conference != null)
-        {
-            /*
-             * (Optional) A conference is owned by the focus who has initialized
-             * it and it may be managed by that focus only.
-             */
-            Jid conferenceFocus = conference.getFocus();
-
-            // If no 'focus' was given as an argument or if conference is not
-            // owned by any 'conferenceFocus' then skip equals()
-            if (focus == null || conferenceFocus == null
-                || focus.equals(conferenceFocus))
-            {
-            }
-            else
-            {
-                conference = null;
-            }
-        }
-
-        return conference;
     }
 
     /**

@@ -46,7 +46,7 @@ public class DebugTest extends JerseyTest
 
         Endpoint endpoint = mock(Endpoint.class);
         Conference conference = mock(Conference.class);
-        when(videobridge.getConference("foo", null)).thenReturn(conference);
+        when(videobridge.getConference("foo")).thenReturn(conference);
         when(conference.getEndpoint("bar")).thenReturn(endpoint);
 
         enable(TestProperties.LOG_TRAFFIC);
