@@ -124,17 +124,6 @@ public class Conference
     private String conferenceName;
 
     /**
-     * The time in milliseconds of the last activity related to this
-     * <tt>Conference</tt>. In the time interval between the last activity and
-     * now, this <tt>Conference</tt> is considered inactive.
-     */
-    @SuppressFBWarnings(
-            value = "IS2_INCONSISTENT_SYNC",
-            justification = "The value is deemed safe to read without " +
-                    "synchronization.")
-    private long lastActivityTime;
-
-    /**
      * The speech activity (representation) of the <tt>Endpoint</tt>s of this
      * <tt>Conference</tt>.
      */
@@ -251,8 +240,6 @@ public class Conference
                 = videobridge.getStatistics();
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
         }
-
-        touch();
     }
 
     /**
@@ -808,21 +795,6 @@ public class Conference
     }
 
     /**
-     * Gets the time in milliseconds of the last activity related to this
-     * <tt>Conference</tt>.
-     *
-     * @return the time in milliseconds of the last activity related to this
-     * <tt>Conference</tt>
-     */
-    public long getLastActivityTime()
-    {
-        synchronized (this)
-        {
-            return lastActivityTime;
-        }
-    }
-
-    /**
      * Gets an <tt>Endpoint</tt> participating in this <tt>Conference</tt> which
      * has a specific identifier/ID.
      *
@@ -990,23 +962,6 @@ public class Conference
     {
         endpointsCache.forEach(
                 e ->  e.speechActivityEndpointsChanged(newEndpointIds));
-    }
-
-    /**
-     * Sets the time in milliseconds of the last activity related to this
-     * <tt>Conference</tt> to the current system time.
-     */
-    public void touch()
-    {
-        long now = System.currentTimeMillis();
-
-        synchronized (this)
-        {
-            if (getLastActivityTime() < now)
-            {
-                lastActivityTime = now;
-            }
-        }
     }
 
     /**
@@ -1230,7 +1185,6 @@ public class Conference
             debugState.put("gid", gid);
             debugState.put("expired", expired);
             debugState.put("creationTime", creationTime);
-            debugState.put("lastActivity", lastActivityTime);
             debugState.put("speechActivity", speechActivity.getDebugState());
             debugState.put("includeInStatistics", includeInStatistics);
             debugState.put("statistics", statistics.getJson());

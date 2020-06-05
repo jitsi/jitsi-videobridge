@@ -433,8 +433,6 @@ public class Videobridge
             if (focus == null || conferenceFocus == null
                 || focus.equals(conferenceFocus))
             {
-                // It seems the conference is still active.
-                conference.touch();
             }
             else
             {
