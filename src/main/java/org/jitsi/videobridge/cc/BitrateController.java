@@ -696,8 +696,7 @@ public class BitrateController
 
                 // Review this.
                 AdaptiveSourceProjection adaptiveSourceProjection
-                    = lookupOrCreateAdaptiveSourceProjection(
-                    sourceBitrateAllocation);
+                    = lookupOrCreateAdaptiveSourceProjection(sourceBitrateAllocation);
 
                 if (adaptiveSourceProjection != null)
                 {

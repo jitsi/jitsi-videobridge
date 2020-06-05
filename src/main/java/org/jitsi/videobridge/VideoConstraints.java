@@ -20,7 +20,7 @@ import org.json.simple.*;
 import java.util.*;
 
 /**
- * Expresses the video constraints for an endpoint or a track.
+ * Expresses the video constraints for an endpoint or a source.
  */
 public class VideoConstraints
 {
@@ -33,9 +33,9 @@ public class VideoConstraints
 
     /**
      * The "preferred" height of the constrained endpoint. When it's time to
-     * allocate bandwidth for the associated track or endpoint, the bridge
+     * allocate bandwidth for the associated source or endpoint, the bridge
      * tries to satisfy the preferred resolution before moving to the next
-     * endpoint or track.
+     * endpoint or source.
      */
     private final int preferredHeight;
 
@@ -62,7 +62,7 @@ public class VideoConstraints
     /**
      * Ctor.
      *
-     * @param idealHeight The ideal height of the constrained endpoint or track.
+     * @param idealHeight The ideal height of the constrained endpoint or source.
      */
     public VideoConstraints(int idealHeight)
     {
@@ -70,7 +70,7 @@ public class VideoConstraints
     }
 
     /**
-     * @return The "preferred" height of the constrained endpoint track.
+     * @return The "preferred" height of the constrained endpoint source.
      */
     public int getPreferredHeight()
     {
@@ -78,7 +78,7 @@ public class VideoConstraints
     }
 
     /**
-     * @return The "preferred" framerate of the constrained endpoint or track.
+     * @return The "preferred" framerate of the constrained endpoint or source.
      */
     public double getPreferredFps()
     {
@@ -86,7 +86,7 @@ public class VideoConstraints
     }
 
     /**
-     * @return the ideal resolution of the constrained endpoint or track.
+     * @return the ideal resolution of the constrained endpoint or source.
      */
     public int getIdealHeight()
     {

@@ -711,7 +711,7 @@ public class Conference
     }
 
     /**
-     * The media stream tracks of one of the endpoints in this conference
+     * The media sources of one of the endpoints in this conference
      * changed.
      *
      * @param endpoint the endpoint, or {@code null} if it was an Octo endpoint.
