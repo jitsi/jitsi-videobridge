@@ -33,7 +33,6 @@ import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
-import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
 import org.jxmpp.stringprep.*;
 import org.osgi.framework.*;
@@ -97,14 +96,6 @@ public class Conference
             justification = "The value is deemed safe to read without " +
                 "synchronization.")
     private boolean expired = false;
-
-    /**
-     * The JID of the conference focus who has initialized this instance and
-     * from whom requests to manage this instance must come or they will be
-     * ignored. If <tt>null</tt> value is assigned we don't care who modifies
-     * the conference.
-     */
-    private final Jid focus;
 
     /**
      * The (unique) identifier/ID of this instance.
@@ -182,15 +173,11 @@ public class Conference
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
-     * (unique) ID and is managed by a conference focus with a specific JID.
+     * (unique) ID.
      *
      * @param videobridge the <tt>Videobridge</tt> on which the new
      * <tt>Conference</tt> instance is to be initialized
      * @param id the (unique) ID of the new instance to be initialized
-     * @param focus the JID of the conference focus who has requested the
-     * initialization of the new instance and from whom further/future requests
-     * to manage the new instance must come or they will be ignored.
-     * Pass <tt>null</tt> to override this safety check.
      * @param conferenceName world readable name of this conference
      * @param enableLogging whether logging should be enabled for this
      * {@link Conference} and its sub-components, and whether this conference
@@ -199,7 +186,6 @@ public class Conference
      */
     public Conference(Videobridge videobridge,
                       String id,
-                      Jid focus,
                       String conferenceName,
                       boolean enableLogging,
                       String gid)
@@ -221,7 +207,6 @@ public class Conference
         this.shim = new ConferenceShim(this, logger);
         this.id = Objects.requireNonNull(id, "id");
         this.gid = gid;
-        this.focus = focus;
         this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
         this.includeInStatistics = enableLogging;
         this.conferenceName = conferenceName;
@@ -768,20 +753,6 @@ public class Conference
     public List<Endpoint> getLocalEndpoints()
     {
         return endpointsCache;
-    }
-
-    /**
-     * Gets the JID of the conference focus who has initialized this instance
-     * and from whom requests to manage this instance must come or they will be
-     * ignored.
-     *
-     * @return the JID of the conference focus who has initialized this instance
-     * and from whom requests to manage this instance must come or they will be
-     * ignored
-     */
-    public final Jid getFocus()
-    {
-        return focus;
     }
 
     /**

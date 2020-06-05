@@ -22,7 +22,6 @@ import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
-import org.jxmpp.jid.*;
 
 import java.util.*;
 
@@ -257,7 +256,6 @@ public class VideobridgeShim
             ColibriConferenceIQ conferenceIQ, int options)
     {
         logger.debug(() -> "Got ColibriConferenceIq:\n" + conferenceIQ.toXML());
-        Jid focus = conferenceIQ.getFrom();
 
         Conference conference;
 
@@ -273,14 +271,13 @@ public class VideobridgeShim
             {
                 conference
                         = videobridge.createConference(
-                                focus,
                                 conferenceIQ.getName(),
                                 conferenceIQ.getGID());
             }
         }
         else
         {
-            conference = videobridge.getConference(conferenceId, focus);
+            conference = videobridge.getConference(conferenceId);
             if (conference == null)
             {
                 return IQUtils.createError(

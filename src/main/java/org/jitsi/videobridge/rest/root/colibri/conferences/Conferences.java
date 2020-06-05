@@ -70,8 +70,7 @@ public class Conferences extends ColibriResource
     @Path("/{confId}")
     public String getConference(@PathParam("confId") String confId)
     {
-        Conference conference
-                = videobridgeProvider.get().getConference(confId, null);
+        Conference conference = videobridgeProvider.get().getConference(confId);
 
         if (conference == null)
         {
@@ -93,8 +92,7 @@ public class Conferences extends ColibriResource
     @Path("/{confId}/dominant-speaker-identification")
     public String getDominantSpeakerIdentification(@PathParam("confId") String confId)
     {
-        Conference conference
-                = videobridgeProvider.get().getConference(confId, null);
+        Conference conference = videobridgeProvider.get().getConference(confId);
 
         if (conference == null)
         {
@@ -144,7 +142,7 @@ public class Conferences extends ColibriResource
     @Produces(MediaType.APPLICATION_JSON)
     public String patchConference(@PathParam("confId") String confId, String requestBody)
     {
-        Conference conference = videobridgeProvider.get().getConference(confId, null);
+        Conference conference = videobridgeProvider.get().getConference(confId);
         if (conference == null)
         {
             throw new NotFoundException();

@@ -139,7 +139,7 @@ class ColibriWebSocketServlet
         // Note: intentionally fail with the exact same message (as to not leak
         // info)
         String authFailed = "authentication failed";
-        Conference conference = videobridge.getConference(ids[1], null);
+        Conference conference = videobridge.getConference(ids[1]);
         if (conference == null)
         {
             logger.warn("Received request for an nonexistent conference: "
