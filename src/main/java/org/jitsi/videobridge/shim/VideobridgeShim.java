@@ -247,13 +247,12 @@ public class VideobridgeShim
      *
      * @param conferenceIQ the <tt>ColibriConferenceIQ</tt> stanza represents
      * the request to handle
-     * @param options
      * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
      * represents the response to the specified request or <tt>null</tt> to
      * reply with <tt>feature-not-implemented</tt>
      */
     public IQ handleColibriConferenceIQ(
-            ColibriConferenceIQ conferenceIQ, int options)
+            ColibriConferenceIQ conferenceIQ)
     {
         logger.debug(() -> "Got ColibriConferenceIq:\n" + conferenceIQ.toXML());
 
