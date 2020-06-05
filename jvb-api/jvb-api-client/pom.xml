@@ -93,6 +93,12 @@
             <version>${ktor.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.mockk</groupId>
+            <artifactId>mockk</artifactId>
+            <version>1.10.0</version>
+            <scope>test</scope>
+        </dependency>
         <!-- We include the server libs in test, as it's currently the only way
         to test websockets -->
         <dependency>

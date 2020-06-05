@@ -16,18 +16,17 @@
 
 package org.jitsi.videobridge.api.util
 
-import LongTest
-import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.comparables.shouldBeEqualComparingTo
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.features.websocket.WebSockets
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.jetty.Jetty
-import kotlinx.coroutines.asCoroutineDispatcher
+import io.ktor.http.cio.websocket.Frame
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.slot
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
@@ -35,142 +34,135 @@ import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.Stanza
 import org.jxmpp.jid.impl.JidCreate
 import java.time.Duration
-import java.util.concurrent.Callable
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 import kotlin.time.ExperimentalTime
 
 @ExperimentalTime
 class XmppWebSocketClientTest : ShouldSpec() {
-    private val wsPort = Random.nextInt(1024, 65535).also {
-        println("Server running on port $it")
-    }
-
-    private val client = HttpClient(CIO) {
-        install(WebSockets)
-    }
-
-    val wsServer = TestXmppWsServer()
-
-    private val server = embeddedServer(Jetty, port = wsPort) {
-        wsServer.app(this)
-    }
+    private val capturedIncomingMessageHandler = slot<(Frame) -> Unit>()
+    private val capturedSentIq = slot<String>()
+    private val wsClient: WebSocketClient = mockk()
 
     init {
-        server.start()
+        every {
+            wsClient setProperty "incomingMessageHandler" value capture(capturedIncomingMessageHandler)
+        } just runs
+        every { wsClient.run() } just runs
 
-        context("lots of concurrent requests") {
-            val ws = XmppWebSocketClient(client, "localhost", wsPort, "/ws/iqreply", parentLogger = LoggerImpl("test"))
-            ws.run()
-            val executor = Executors.newFixedThreadPool(32)
-            should("work correctly").config(tags = setOf(LongTest)) {
-                val numTasks = 10000
-                val latch = CountDownLatch(numTasks)
-                repeat(10000) {
-                    val iq = generateIq(toJidStr = "client-$it", fromJidStr = "server-$it")
-                    launch {
-                        if (Random.nextBoolean()) {
-                            // Send and wait for reply
-                            val result = executor.submit(Callable {
-                                val resp = ws.sendIqAndGetReply(iq)
-                                latch.countDown()
-                                resp
-                            }).get()
-                            // We can't do this verification inside the task, as it swallows
-                            // the exception
-                            result.shouldBeResponseTo(iq)
-                        } else {
-                            // Send and forget
-                            executor.submit {
-                                ws.sendIqAndForget(iq)
-                                latch.countDown()
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        /**
-         * This test is based on the behavior defined in TestXmppWsServer, where a value in
-         * the 'to' field of the stanza determines a server behavior.  Based on that scheme,
-         * the tests launches lots of concurrent requests and knows what to expect for
-         * the response (if anything) so it can be verified.  The primary goal here is to
-         * verify that there's no mismatching of requests and responses, even with
-         * various timeouts.
-         */
-        context("lots of concurrent requests with different results") {
-            val ws = XmppWebSocketClient(client, "localhost", wsPort, "/ws/varied", requestTimeout = Duration.ofSeconds(5), parentLogger = LoggerImpl("test"))
-            ws.run()
-            val executor = Executors.newFixedThreadPool(32)
-            should("work correctly").config(tags = setOf(LongTest)) {
-                repeat(100) {
-                    val iq = generateIq(toJidStr = "client-$it", fromJidStr = "server-$it")
-                    launch(executor.asCoroutineDispatcher()) {
-                        val resp = ws.sendIqAndGetReply(iq)
-                        when (it % 3) {
-                            0 -> {
-                                // Do nothing, no response expected
-                            }
-                            1 -> {
-                                // Incorrect response will be sent, should have null
-                                resp shouldBe null
-                            }
-                            2 -> {
-                                // Proper response expected
-                                withClue("request $it should get a response") {
-                                    resp.shouldBeResponseTo(iq)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        val ws = XmppWebSocketClient(wsClient, parentLogger = LoggerImpl("test"), requestTimeout = Duration.ofSeconds(3))
+        ws.run()
+
         context("sendIqAndGetReply") {
-            context("without any timeout") {
-                val ws = XmppWebSocketClient(client, "localhost", wsPort, "/ws/iqreply", parentLogger = LoggerImpl("test"))
-                ws.run()
+            context("when a correct reply is sent") {
+                wsClient.respondCorrectly(capturedIncomingMessageHandler.captured)
                 should("work correctly") {
                     val iq = generateIq()
                     val resp = ws.sendIqAndGetReply(iq)
-                    resp.shouldBeResponseTo(iq)
+                    resp shouldBeResponseTo iq
                 }
             }
-            context("when the request times out") {
-                val ws = XmppWebSocketClient(client, "localhost", wsPort, "/ws/iqreplywithdelay", requestTimeout = Duration.ofMillis(500), parentLogger = LoggerImpl("test"))
-                ws.run()
-                should("return null for the response") {
+            context("when no reply is sent") {
+                wsClient.neverRespond()
+                should("return null") {
                     val iq = generateIq()
                     val resp = ws.sendIqAndGetReply(iq)
                     resp shouldBe null
                 }
             }
-            context("when an incorrect response is sent") {
-                val ws = XmppWebSocketClient(client, "localhost", wsPort, "/ws/wrongiqreply", requestTimeout = Duration.ofMillis(500), parentLogger = LoggerImpl("test"))
-                ws.run()
-                should("return null for the response") {
+            context("when a reply is sent for a different IQ") {
+                wsClient.respondToDifferentIq(capturedIncomingMessageHandler.captured)
+                should("return null") {
                     val iq = generateIq()
                     val resp = ws.sendIqAndGetReply(iq)
                     resp shouldBe null
                 }
             }
-        }
-        context("stop") {
-            context("when an IQ response is pending") {
-                val ws = XmppWebSocketClient(client, "localhost", wsPort, "/ws/iqindefinitedelay", requestTimeout = Duration.ofSeconds(3), parentLogger = LoggerImpl("test"))
-                ws.run()
-                val iq = generateIq()
-                val resp = Executors.newSingleThreadExecutor().submit(Callable { ws.sendIqAndGetReply(iq) })
-                ws.stop()
-                should("clean up properly") {
-                    // This time should be the same as the request timeout given to the client
-                    resp.get(3, TimeUnit.SECONDS) shouldBe null
+            context("when requests and responses are mixed") {
+                wsClient.flipResponses(capturedIncomingMessageHandler.captured)
+                should("work correctly") {
+                    launch(Dispatchers.IO) {
+                        println("sending req 1")
+                        val iq = generateIq()
+                        val resp = ws.sendIqAndGetReply(iq)
+                        resp shouldBeResponseTo iq
+                    }
+                    launch(Dispatchers.IO) {
+                        println("sending req 2")
+                        val iq = generateIq()
+                        val resp = ws.sendIqAndGetReply(iq)
+                        resp shouldBeResponseTo iq
+                    }
                 }
             }
         }
     }
+}
+
+/**
+ * Configure the mock [WebSocketClient] to simulate a proper response to any
+ * IQ it receives
+ */
+private fun WebSocketClient.respondCorrectly(msgHandler: (Frame) -> Unit) {
+    val iqStr = slot<String>()
+    every { sendString(capture(iqStr)) } answers {
+        val response = iqStr.captured.createResponseIq()
+        msgHandler.invoke(Frame.Text(response.toXML().toString()))
+    }
+}
+
+/**
+ * Configure the mock [WebSocketClient] to receive an IQ but never respond
+ */
+private fun WebSocketClient.neverRespond() {
+    every { sendString(any()) } just runs
+}
+
+/**
+ * Configure the mock [WebSocketClient] to receive an IQ and respond, but with a
+ * different stanza ID
+ */
+private fun WebSocketClient.respondToDifferentIq(msgHandler: (Frame) -> Unit) {
+    val iqStr = slot<String>()
+    every { sendString(capture(iqStr)) } answers {
+        val response = iqStr.captured.createResponseIq()
+        response.stanzaId = "${response.stanzaId}-wrong"
+        msgHandler.invoke(Frame.Text(response.toXML().toString()))
+    }
+}
+
+/**
+ * Configure the mock [WebSocketClient] to wait for 2 IQs and send their
+ * responses in the opposite order they were received
+ */
+private fun WebSocketClient.flipResponses(msgHandler: (Frame) -> Unit) {
+    val iqStr = mutableListOf<String>()
+    every { sendString(capture(iqStr)) } answers {
+        if (iqStr.size == 2) {
+            val resp1 = iqStr[0].createResponseIq()
+            val resp2 = iqStr[1].createResponseIq()
+
+            msgHandler.invoke(Frame.Text(resp2.toXML().toString()))
+            msgHandler.invoke(Frame.Text(resp1.toXML().toString()))
+        }
+    }
+}
+
+/**
+ * Configure the mock [WebSocketClient] to wait for an IQ and then shut itself
+ * down via [WebSocketClient.stop]
+ */
+private fun WebSocketClient.stopAfterIq(xmppWsClient: XmppWebSocketClient) {
+    every { sendString(any()) } answers {
+        xmppWsClient.stop()
+    }
+}
+
+/**
+ * Create a response IQ to the IQ request represented by this String
+ */
+private fun String.createResponseIq(): IQ {
+    val iqReq = SmackXmlSerDes.deserialize(this) as IQ
+    return IQ.createResultIQ(iqReq)
 }
 
 private fun generateIq(
@@ -185,7 +177,7 @@ private fun Random.nextPrintableAlphaString(length: Int): String {
     return (0 until length).map { nextInt(from = 65, until = 90).toChar() }.joinToString("")
 }
 
-private fun Stanza?.shouldBeResponseTo(req: IQ) {
+private infix fun Stanza?.shouldBeResponseTo(req: IQ) {
     this.shouldNotBeNull()
     from.shouldBeEqualComparingTo(req.to)
     to.shouldBeEqualComparingTo(req.from)

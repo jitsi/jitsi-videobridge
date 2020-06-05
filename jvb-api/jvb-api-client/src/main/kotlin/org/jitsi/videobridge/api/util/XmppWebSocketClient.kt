@@ -35,22 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * 'sending-and-forgetting': sending an IQ but not waiting for its response.
  */
 class XmppWebSocketClient(
-    /**
-     * The underlying [HttpClient] to use.  It must support websockets.
-     */
-    client: HttpClient,
-    /**
-     * The host we'll use for establishing the websocket connection
-     */
-    host: String,
-    /**
-     * The port we'll use for establishing the websocket connection
-     */
-    port: Int,
-    /**
-     * The path to the websocket endpoint
-     */
-    path: String,
+    private val wsClient: WebSocketClient,
     parentLogger: LoggerImpl,
     /**
      * How long we'll wait in [#sendIqAndGetReply] for a response before
@@ -58,6 +43,27 @@ class XmppWebSocketClient(
      */
     private val requestTimeout: Duration = Duration.ofSeconds(15)
 ) {
+    constructor(
+        /**
+         * The underlying [HttpClient] to use.  It must support websockets.
+         */
+        client: HttpClient,
+        /**
+         * The host we'll use for establishing the websocket connection
+         */
+        host: String,
+        /**
+         * The port we'll use for establishing the websocket connection
+         */
+        port: Int,
+        /**
+         * The path to the websocket endpoint
+         */
+        path: String,
+        parentLogger: LoggerImpl,
+        requestTimeout: Duration = Duration.ofSeconds(15)
+    ) : this(WebSocketClient(client, host, port, path, parentLogger), parentLogger, requestTimeout)
+
     private val logger = createChildLogger(parentLogger)
 
     /**
@@ -72,14 +78,9 @@ class XmppWebSocketClient(
      */
     private val responseHandlers: MutableMap<String, CompletableFuture<Stanza>> = ConcurrentHashMap()
 
-    private val wsClient = WebSocketClient(
-        client,
-        host,
-        port,
-        path,
-        this::handleIncomingMessage,
-        logger
-    )
+    init {
+        wsClient.incomingMessageHandler = this::handleIncomingMessage
+    }
 
     private fun handleIncomingMessage(frame: Frame) {
         when (frame) {

@@ -58,12 +58,14 @@ class WebSocketClientTest : ShouldSpec() {
         receivedMessages.add(frame)
     }
 
+    private val testLogger = LoggerImpl("test")
+
     init {
         server.start()
 
         context("sendString") {
             context("when no reply is expected") {
-                val ws = WebSocketClient(client, "localhost", wsPort, "/ws/blackhole", ::incomingMessageHandler, LoggerImpl("test"))
+                val ws = WebSocketClient(client, "localhost", wsPort, "/ws/blackhole", testLogger, ::incomingMessageHandler)
                 ws.run()
                 ws.sendString("hello")
                 should("send a message") {
@@ -75,7 +77,7 @@ class WebSocketClientTest : ShouldSpec() {
                 }
             }
             context("when a reply is expected") {
-                val ws = WebSocketClient(client, "localhost", wsPort, "/ws/echo", ::incomingMessageHandler, LoggerImpl("test"))
+                val ws = WebSocketClient(client, "localhost", wsPort, "/ws/echo", testLogger, ::incomingMessageHandler)
                 ws.run()
                 ws.sendString("hello")
                 should("invoke the incoming message handler") {
@@ -87,7 +89,7 @@ class WebSocketClientTest : ShouldSpec() {
                 }
             }
             context("stop") {
-                val ws = WebSocketClient(client, "localhost", wsPort, "/ws/echo", ::incomingMessageHandler, LoggerImpl("test"))
+                val ws = WebSocketClient(client, "localhost", wsPort, "/ws/echo", testLogger, ::incomingMessageHandler)
                 ws.run()
                 ws.sendString("hello")
                 should("clean things up correctly") {
