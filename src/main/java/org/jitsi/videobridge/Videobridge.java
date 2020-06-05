@@ -68,34 +68,10 @@ public class Videobridge
     public static final String COLIBRI_CLASS = "colibriClass";
 
     /**
-     * The name of configuration property used to specify default processing
-     * options passed as the second argument to
-     * {@link #handleColibriConferenceIq2(ColibriConferenceIQ, int)}}.
-     */
-    public static final String DEFAULT_OPTIONS_PROPERTY_NAME
-        = "org.jitsi.videobridge.defaultOptions";
-
-    /**
      * The <tt>Logger</tt> used by the <tt>Videobridge</tt> class and its
      * instances to print debug information.
      */
     private static final Logger logger = new LoggerImpl(Videobridge.class.getName());
-
-    /**
-     * The optional flag which specifies to
-     * {@link #handleColibriConferenceIq2(ColibriConferenceIQ, int)} that
-     * <tt>ColibriConferenceIQ</tt>s can be accessed by any peer(not only by the
-     * focus that created the conference).
-     */
-    public static final int OPTION_ALLOW_ANY_FOCUS = 2;
-
-    /**
-     * The optional flag which specifies to
-     * {@link #handleColibriConferenceIq2(ColibriConferenceIQ, int)} that
-     * <tt>ColibriConferenceIQ</tt>s without an associated conference focus are
-     * allowed.
-     */
-    public static final int OPTION_ALLOW_NO_FOCUS = 1;
 
     /**
      * The pseudo-random generator which is to be used when generating
@@ -142,12 +118,6 @@ public class Videobridge
      * IDs.
      */
     private final Map<String, Conference> conferences = new HashMap<>();
-
-    /**
-     * Default options passed as second argument to
-     * {@link #handleColibriConferenceIq2(ColibriConferenceIQ, int)}
-     */
-    private int defaultProcessingOptions;
 
     /**
      * Indicates if this bridge instance has entered graceful shutdown mode.
@@ -487,23 +457,7 @@ public class Videobridge
      */
     public IQ handleColibriConferenceIQ(ColibriConferenceIQ conferenceIQ)
     {
-        return
-            handleColibriConferenceIQ(conferenceIQ, defaultProcessingOptions);
-    }
-
-    /**
-     * Handles a <tt>ColibriConferenceIQ</tt> stanza which represents a request.
-     *
-     * @param conferenceIQ the <tt>ColibriConferenceIQ</tt> stanza represents
-     * the request to handle
-     * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
-     * represents the response to the specified request or <tt>null</tt> to
-     * reply with <tt>feature-not-implemented</tt>
-     */
-    public IQ handleColibriConferenceIQ(ColibriConferenceIQ conferenceIQ,
-                                        int options)
-    {
-        return shim.handleColibriConferenceIQ(conferenceIQ, options);
+        return shim.handleColibriConferenceIQ(conferenceIQ);
     }
 
     /**
@@ -664,13 +618,6 @@ public class Videobridge
         ConfigurationService cfg = getConfigurationService();
 
         videobridgeExpireThread.start();
-
-        defaultProcessingOptions
-            = (cfg == null)
-                ? 0
-                : cfg.getInt(DEFAULT_OPTIONS_PROPERTY_NAME, 0);
-        logger.debug(() -> "Default videobridge processing options: 0x"
-                    + Integer.toHexString(defaultProcessingOptions));
 
         String shutdownSourcesRegexp
             = (cfg == null)
