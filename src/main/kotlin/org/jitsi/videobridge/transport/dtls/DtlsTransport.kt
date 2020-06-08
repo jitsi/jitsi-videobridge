@@ -182,7 +182,10 @@ class DtlsTransport(parentLogger: Logger) {
         }
     }
 
-    fun getDebugState(): OrderedJsonObject = stats.toJson()
+    fun getDebugState(): OrderedJsonObject = stats.toJson().apply {
+        put("running", running.get())
+        put("is_connected", isConnected)
+    }
 
     private data class Stats(
         var numPacketsReceived: Int = 0,

@@ -47,8 +47,8 @@ class WebSocketClient(
      * The path of the remote websocket URL
      */
     private val path: String,
-    private val incomingMessageHandler: (Frame) -> Unit = {},
     parentLogger: Logger,
+    var incomingMessageHandler: (Frame) -> Unit = {},
     /**
      * The dispatcher which will be used for all of the request and response
      * processing.

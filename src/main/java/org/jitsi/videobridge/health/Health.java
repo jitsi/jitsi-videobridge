@@ -163,9 +163,7 @@ public class Health
 
         // TODO: check if ClientConnectionImpl is configured and connected.
 
-        // Conference
-        Conference conference =
-                videobridge.createConference(null, null, false, null);
+        Conference conference = videobridge.createConference(null, false, null);
 
         try
         {

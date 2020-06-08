@@ -22,7 +22,6 @@ import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
-import org.jxmpp.jid.*;
 
 import java.util.*;
 
@@ -248,16 +247,14 @@ public class VideobridgeShim
      *
      * @param conferenceIQ the <tt>ColibriConferenceIQ</tt> stanza represents
      * the request to handle
-     * @param options
      * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
      * represents the response to the specified request or <tt>null</tt> to
      * reply with <tt>feature-not-implemented</tt>
      */
     public IQ handleColibriConferenceIQ(
-            ColibriConferenceIQ conferenceIQ, int options)
+            ColibriConferenceIQ conferenceIQ)
     {
         logger.debug(() -> "Got ColibriConferenceIq:\n" + conferenceIQ.toXML());
-        Jid focus = conferenceIQ.getFrom();
 
         Conference conference;
 
@@ -273,14 +270,13 @@ public class VideobridgeShim
             {
                 conference
                         = videobridge.createConference(
-                                focus,
                                 conferenceIQ.getName(),
                                 conferenceIQ.getGID());
             }
         }
         else
         {
-            conference = videobridge.getConference(conferenceId, focus);
+            conference = videobridge.getConference(conferenceId);
             if (conference == null)
             {
                 return IQUtils.createError(
@@ -289,7 +285,6 @@ public class VideobridgeShim
                         "Conference not found for ID: " + conferenceId);
             }
         }
-        conference.setLastKnownFocus(focus);
 
         ConferenceShim conferenceShim = conference.getShim();
         ColibriConferenceIQ responseConferenceIQ = new ColibriConferenceIQ();

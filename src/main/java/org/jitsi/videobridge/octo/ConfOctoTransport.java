@@ -22,7 +22,6 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.*;
-import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.stats.*;
@@ -53,7 +52,7 @@ import static org.jitsi.videobridge.transport.octo.OctoUtils.JVB_EP_ID;
  *
  * @author Boris Grozev
  */
-public class ConfOctoTransport extends PropertyChangeNotifier
+public class ConfOctoTransport
     implements PotentialPacketHandler, BridgeOctoTransport.IncomingOctoPacketHandler
 {
     /**

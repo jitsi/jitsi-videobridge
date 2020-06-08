@@ -85,7 +85,7 @@ public class Debug extends ColibriResource
             @PathParam("feature") EndpointDebugFeatures feature,
             @PathParam("state") String state)
     {
-        Conference conference = videobridgeProvider.get().getConference(confId, null);
+        Conference conference = videobridgeProvider.get().getConference(confId);
         if (conference == null)
         {
             throw new NotFoundException("No conference was found with the specified id.");

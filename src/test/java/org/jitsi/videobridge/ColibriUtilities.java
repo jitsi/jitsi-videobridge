@@ -20,7 +20,7 @@ import org.jitsi.xmpp.extensions.colibri.*;
 import org.jxmpp.jid.*;
 
 /**
- * FIXME merge with utility used by the focus
+ * FIXME merge with utility used by jicofo
  *
  * @author Pawel Domas
  */
@@ -31,16 +31,16 @@ public class ColibriUtilities
      * IQ. Conference ID is empty hence it can be used to created new conference
      * on the bridge.
      *
-     * @param focusJid conference focus owner.
+     * @param from value to use for the {@code from} field of the created IQ.
      *
      * @return {@link ColibriConferenceIQ} with audio content and empty channel
      *         IQ.
      */
-    public static ColibriConferenceIQ createConferenceIq(Jid focusJid)
+    public static ColibriConferenceIQ createConferenceIq(Jid from)
     {
         ColibriConferenceIQ confIq = new ColibriConferenceIQ();
 
-        confIq.setFrom(focusJid);
+        confIq.setFrom(from);
 
         ColibriConferenceIQ.Content audioContent
             = new ColibriConferenceIQ.Content(MediaType.AUDIO.toString());

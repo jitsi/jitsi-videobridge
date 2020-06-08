@@ -17,7 +17,7 @@ override_dh_auto_test:
 	# do nothing
 
 override_dh_auto_build:
-	mvn -Dmaven.repo.local=${HOME}/.m2/repository -DskipTests -Dassembly.skipAssembly=true package
+	mvn -Dmaven.repo.local=${HOME}/.m2/repository -DskipTests -Dassembly.skipAssembly=true install
 	mvn -Dmaven.repo.local=${HOME}/.m2/repository dependency:copy-dependencies -DincludeScope=runtime
 
 override_dh_install:

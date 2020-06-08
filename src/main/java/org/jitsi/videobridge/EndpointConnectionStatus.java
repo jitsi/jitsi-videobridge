@@ -170,9 +170,8 @@ public class EndpointConnectionStatus
                 = ServiceUtils2.getService(bundleContext, Videobridge.class);
             cleanupExpiredEndpointsStatus();
 
-            Conference[] conferences = videobridge.getConferences();
-            Arrays.stream(conferences)
-                .forEachOrdered(
+            videobridge.getConferences()
+                .forEach(
                     conference ->
                         conference.getEndpoints()
                             .forEach(this::monitorEndpointActivity));

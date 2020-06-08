@@ -1,6 +1,4 @@
 /*
- * Jicofo, the Jitsi Conference Focus.
- *
  * Copyright @ 2018 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
