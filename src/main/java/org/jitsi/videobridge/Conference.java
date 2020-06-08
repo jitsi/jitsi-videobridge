@@ -678,12 +678,12 @@ public class Conference
     }
 
     /**
-     * The media stream tracks of one of the endpoints in this conference
+     * The media sources of one of the endpoints in this conference
      * changed.
      *
      * @param endpoint the endpoint, or {@code null} if it was an Octo endpoint.
      */
-    public void endpointTracksChanged(AbstractEndpoint endpoint)
+    public void endpointSourcesChanged(AbstractEndpoint endpoint)
     {
         List<String> endpoints = speechActivity.getEndpointIds();
         endpointsCache.forEach((e) -> {

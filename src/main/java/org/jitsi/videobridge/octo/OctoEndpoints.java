@@ -16,11 +16,11 @@
 package org.jitsi.videobridge.octo;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
-import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
 import java.util.*;
@@ -139,16 +139,17 @@ import java.util.stream.*;
              .forEach(ep -> ep.addRtpExtension(rtpExtension));
      }
 
-     void setMediaStreamTracks(MediaStreamTrackDesc[] tracks) {
+     void setMediaSources(MediaSourceDesc[] tracks) {
          // Split the tracks up by owner
-         Map<String, List<MediaStreamTrackDesc>> tracksByOwner =
-             Arrays.stream(tracks).collect(Collectors.groupingBy(MediaStreamTrackDesc::getOwner));
+         Map<String, List<MediaSourceDesc>> sourcesByOwner =
+             Arrays.stream(tracks).collect(Collectors.groupingBy(
+                 MediaSourceDesc::getOwner));
 
-         tracksByOwner.forEach((epId, epTracks) -> {
+         sourcesByOwner.forEach((epId, epTracks) -> {
              OctoEndpoint ep = (OctoEndpoint)conference.getEndpoint(epId);
              if (ep != null)
              {
-                 ep.setMediaStreamTracks(epTracks.toArray(new MediaStreamTrackDesc[0]));
+                 ep.setMediaSources(epTracks.toArray(new MediaSourceDesc[0]));
              }
              else
              {

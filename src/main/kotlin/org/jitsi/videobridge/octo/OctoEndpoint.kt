@@ -26,7 +26,7 @@ import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.VideoConstraints
 import org.jitsi.videobridge.rest.root.colibri.debug.EndpointDebugFeatures
-import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
+import org.jitsi.nlj.MediaSourceDesc
 
 /**
  * Represents an endpoint in a conference, which is connected to another
@@ -91,8 +91,8 @@ class OctoEndpoint(
 
     override fun shouldExpire(): Boolean = !transceiver.hasReceiveSsrcs()
 
-    override fun getMediaStreamTracks(): Array<MediaStreamTrackDesc> {
-        return transceiver.mediaStreamTracks
+    override fun getMediaSources(): Array<MediaSourceDesc> {
+        return transceiver.mediaSources
     }
 
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
@@ -109,8 +109,8 @@ class OctoEndpoint(
         transceiver.addRtpExtension(rtpExtension)
     }
 
-    fun setMediaStreamTracks(tracks: Array<MediaStreamTrackDesc>) {
-        transceiver.mediaStreamTracks = tracks
+    fun setMediaSources(sources: Array<MediaSourceDesc>) {
+        transceiver.mediaSources = sources
     }
 
     override fun expire() {

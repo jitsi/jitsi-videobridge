@@ -22,19 +22,19 @@ import org.json.simple.*;
 
 /**
  * Implementations of this interface are responsible for projecting a specific
- * video track of a specific payload type.
+ * video source of a specific payload type.
  *
  * One can imagine signaling a specific encoding layout (i.e. 3 temporal layers)
  * and multiple codec support (e.g. VP8 SVC and VP9 SVC). In the bridge such
- * signaling would translate into an AdaptiveTrackProjection instance that would
- * remain active throughout the life of the source video track and would receive
+ * signaling would translate into an AdaptiveSourceProjection instance that would
+ * remain active throughout the life of the source video source and would receive
  * updates from the bitrate controller (i.e. ideal index and target index). The
  * specific way of projecting VP9 SVC or VP8 SVC is implemented in "context"
  * classes that know how to deal with codec specificities.
  *
  * @author George Politis
  */
-public interface AdaptiveTrackProjectionContext
+public interface AdaptiveSourceProjectionContext
 {
     /**
      * Determines whether an RTP packet should be accepted or not.
@@ -56,7 +56,7 @@ public interface AdaptiveTrackProjectionContext
     /**
      * Rewrites the timestamp, sequence number, ssrc and other codec dependent
      * fields of the RTP packet that is specified as an argument. Projecting a
-     * video track needs to be invisible to the receiving endpoint so goal here
+     * video source needs to be invisible to the receiving endpoint so goal here
      * is to make the resulting rtp stream continuous.
      *
      * @param packetInfo the RTP packet info to rewrite.

@@ -14,15 +14,15 @@ typically affect the sending bitrate of the senders because, from their
 perspective, there is only one receiver (the JVB) with a presumably good
 down-link. The JVB, in its turn, _estimates_ the available down-link of a
 particular receiver(or, symmetrically, its available up-link bandwidth towards 
-a particular receiver) and it _distributes_ it among the several video _tracks_
+a particular receiver) and it _distributes_ it among the several video _sources_
 [[MCS], section 4.3] that the several senders of a group-call are sharing.
 
-Due to different video tracks having different bitrate allocations depending on
-the video track receiver, each video track is _projected_ [[RFC7667],
+Due to different video sources having different bitrate allocations depending on
+the video source receiver, each video source is _projected_ [[RFC7667],
 Section-3.7] differently onto each receiver. In the simplest case possible where
-a video track is offered in a single _encoding_ [[WEBRTC], section 5.2] the JVB
-makes use of last-n [[LASTN]] where it either forwards the video track, if there
-is enough bandwidth, or otherwise drops it. When a track is offered in multiple
+a video source is offered in a single _encoding_ [[WEBRTC], section 5.2] the JVB
+makes use of last-n [[LASTN]] where it either forwards the video source, if there
+is enough bandwidth, or otherwise drops it. When a source is offered in multiple
 encodings, senders are sending multiple _bitstreams_ (multistream) of the same
 video source (using either with simulcast [[SIMULCAST]] or scalable video coding
 [[SVC]]) and the JVB decides which bitstream to send to which receiver. An
@@ -30,16 +30,16 @@ encoding in webrtc terms is the same as a bitstream so we will use these two
 terms interchangeably throughout this document.
 
 The specific algorithm that the JVB uses to distribute the available (estimated)
-bandwidth among the different video tracks merits its own section and is
+bandwidth among the different video sources merits its own section and is
 described bellow [[BWE]], but, for sake of clarity, we give a couple of
 examples in the next few paragraphs.
 
-Consider, for example, a group call where the endpoints share a video track in
+Consider, for example, a group call where the endpoints share a video source in
 two encodings, a "high quality" and a "low quality". The JVB will chose to
 forward at most one encoding at a time to a specific destination endpoint
 depending on the available (estimated) bandwidth and the viewport of the
-projected track. Multistreaming is achieved in different ways, depending on the
-codec that is used to encode a track. For instance, VP8 supports temporal
+projected source. Multistreaming is achieved in different ways, depending on the
+codec that is used to encode a source. For instance, VP8 supports temporal
 scalability but not spatial scalability. So, in the previous example, in order
 to achieve a high and a low quality, simulcast must be used. With VP9 the engine
 could activate spatial scalability.
@@ -71,8 +71,8 @@ RTCP Sender Reports (SRs) [[RFC3550], Section 6.4.1] are used by media senders
 to compute RTT and by media receivers for A/V syncing and for computing packet
 loss. In its media sender role the JVB projects SSRCs for bandwidth adaptivity,
 it needs to produce its own SRs. RTCP SR generation takes place in the various
-`AdaptiveTrackProjectionContext` implementations (see, for example,
-`BasicAdaptiveTrackProjectionContext#rewriteRtcp`).
+`AdaptiveSourceProjectionContext` implementations (see, for example,
+`BasicAdaptiveSourceProjectionContext#rewriteRtcp`).
 
 For estimating the available down-link bandwidth of a particular receiver (or,
 symmetrically,  the available up-link bandwidth towards a particular receiver)
@@ -148,27 +148,27 @@ orchestrates the bandwidth adaptivity towards its attached endpoint (the
 endpoint of the attached video channel). The bitrate controller "reacts" (see
 `BitrateController#update`) on different events such as endpoints joining or
 leaving the call, the available bandwidth estimation changing, the active
-speaker changing, the viewport of a projected track changing, etc. Reacting to
+speaker changing, the viewport of a projected source changing, etc. Reacting to
 such an event is a multistep process with the end-goal of delivering to its
 attached endpoint the best overall video quality within the limits set by the
 bandwidth estimation and the options set by the endpoint.
 
-The first step is to produce a bitrate allocation for each video track of each
-sender for each receiver in a call (see `TrackBitrateAllocation`). This step
+The first step is to produce a bitrate allocation for each video source of each
+sender for each receiver in a call (see `SourceBitrateAllocation`). This step
 essentially determines which bitstream (encoding) will be forwarded for each of
-the projected tracks.
+the projected sources.
 
-The next step is to update the list of video track projections that it maintains
-(see `AdaptiveTrackProjection`) with the newly computed quality targets. It is
-then the responsibility of the specific adaptive track projection instances to
+The next step is to update the list of video source projections that it maintains
+(see `AdaptiveSourceProjection`) with the newly computed quality targets. It is
+then the responsibility of the specific adaptive source projection instances to
 strive to achieve the target quality. The specific way of achieving the target
-quality depends on the video track codec and on the encodings that the video
-track is offering. The offered encodings and the codec used are orthogonal
+quality depends on the video source codec and on the encodings that the video
+source is offering. The offered encodings and the codec used are orthogonal
 concepts. An endpoint can be configured to send two encodings and it has the
 option to change the codec that its using on the fly and pass from VP8 to H264.
 The specific handling of the different codec in order to achieve the different
 qualities is implemented in the different specializations of the
-`AdaptiveTrackProjectionContext` interface.
+`AdaptiveSourceProjectionContext` interface.
 
 ## Bugs
 

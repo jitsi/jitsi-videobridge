@@ -22,42 +22,41 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
 /**
- * A generic implementation of an adaptive track projection context that can be
+ * A generic implementation of an adaptive source projection context that can be
  * used with non-SVC codecs or when simulcast is not enabled/used or when
  * support for these advanced features is not implemented in the bridge. In this
- * restricted case the track projection can have only two states (or qualities),
+ * restricted case the source projection can have only two states (or qualities),
  * either off or on (or -1, 0).
  *
- * Instances of this class suspend a track when the target quality is set to -1.
+ * Instances of this class suspend a source when the target quality is set to -1.
  * When the target quality is set back to 0, the request key frame flag is
- * raised and the track is re-activated after a key frame is received.
+ * raised and the source is re-activated after a key frame is received.
  * (consequently support for key frame detection for the specific media format
- * of the track that is being adapted is necessary).
+ * of the source that is being adapted is necessary).
  *
  * In order to make the suspend/resume operation transparent to the receiver (at
  * least in the RTP level), instances of this class rewrite the RTP sequence
- * numbers of the source track to hide the gaps caused by the suspend/resume
+ * numbers of the source to hide the gaps caused by the suspend/resume
  * operation.
  *
  * This may not be sufficient for fluid playback at the receiver as the decoder
  * may be unable to handle codec specific discontinuities (such as discontinuous
- * picture IDs in VP8). In this case a codec specific adaptive track projection
+ * picture IDs in VP8). In this case a codec specific adaptive source projection
  * context implementation will have to be used instead.
  *
  * Instances of this class are thread-safe.
  *
  * @author George Politis
  */
-class GenericAdaptiveTrackProjectionContext
-    implements AdaptiveTrackProjectionContext
+class GenericAdaptiveSourceProjectionContext
+    implements AdaptiveSourceProjectionContext
 {
     /**
      * The <tt>Logger</tt> used by the
-     * <tt>GenericAdaptiveTrackProjectionContext</tt> class and its instances to
+     * <tt>GenericAdaptiveSourceProjectionContext</tt> class and its instances to
      * log debug information.
      */
     private final Logger logger;
@@ -65,7 +64,7 @@ class GenericAdaptiveTrackProjectionContext
     private final long ssrc;
 
     /**
-     * Raised when a track has been resumed (after being suspended).
+     * Raised when a source has been resumed (after being suspended).
      */
     private boolean needsKeyframe = true;
 
@@ -80,14 +79,14 @@ class GenericAdaptiveTrackProjectionContext
     private int maxDestinationSequenceNumber;
 
     /**
-     * The delta to apply to the timestamps of the RTP packets of the source
-     * track.
+     * The delta to apply to the timestamps of the RTP packets of the incoming
+     * source.
      */
     private long timestampDelta;
 
     /**
      * A boolean that indicates whether or not the timestamp delta has been
-     * initialized. This is only necessary upon adaptive track projection
+     * initialized. This is only necessary upon adaptive source projection
      * context switches.
      */
     private boolean timestampDeltaInitialized = false;
@@ -99,7 +98,7 @@ class GenericAdaptiveTrackProjectionContext
 
     /**
      * The delta to apply to the sequence numbers of the RTP packets of the
-     * source track.
+     * incoming source.
      */
     private int sequenceNumberDelta;
 
@@ -109,7 +108,7 @@ class GenericAdaptiveTrackProjectionContext
      * @param payloadType the media format to expect
      * @param rtpState the RTP state (i.e. seqnum, timestamp to start with, etc).
      */
-    GenericAdaptiveTrackProjectionContext(
+    GenericAdaptiveSourceProjectionContext(
             @NotNull PayloadType payloadType,
             @NotNull RtpState rtpState,
             @NotNull Logger parentLogger)
@@ -118,12 +117,13 @@ class GenericAdaptiveTrackProjectionContext
         this.ssrc = rtpState.ssrc;
         this.maxDestinationSequenceNumber = rtpState.maxSequenceNumber;
         this.maxDestinationTimestamp = rtpState.maxTimestamp;
-        this.logger = parentLogger.createChildLogger(GenericAdaptiveTrackProjectionContext.class.getName());
+        this.logger = parentLogger.createChildLogger(
+            GenericAdaptiveSourceProjectionContext.class.getName());
     }
 
     /**
-     * Determines whether an RTP packet from the source track should be accepted
-     * or not. If the track is currently suspended, a key frame is necessary to
+     * Determines whether an RTP packet from the incoming source should be accepted
+     * or not. If the source is currently suspended, a key frame is necessary to
      * start accepting packets again.
      *
      * Note that, at the time of this writing, there's no practical need for a
@@ -140,7 +140,7 @@ class GenericAdaptiveTrackProjectionContext
     accept(@NotNull PacketInfo packetInfo, int incomingIndex, int targetIndex)
     {
         VideoRtpPacket rtpPacket = packetInfo.packetAs();
-        if (targetIndex == RTPEncodingDesc.SUSPENDED_INDEX)
+        if (targetIndex == RtpLayerDesc.SUSPENDED_INDEX)
         {
             // suspend the stream.
             needsKeyframe = true;
@@ -261,7 +261,7 @@ class GenericAdaptiveTrackProjectionContext
     }
 
     /**
-     * @return true when a track has been resumed (after being suspended).
+     * @return true when a source has been resumed (after being suspended).
      */
     @Override
     public boolean needsKeyframe()
@@ -272,7 +272,7 @@ class GenericAdaptiveTrackProjectionContext
     /**
      * Applies a delta to the sequence number of the RTP packet that is
      * specified as an argument in order to make suspending/resuming of the
-     * source track transparent at the RTP level.
+     * incoming source transparent at the RTP level.
      *
      * @param packetInfo the RTP packet info to rewrite.
      */
@@ -344,7 +344,7 @@ class GenericAdaptiveTrackProjectionContext
         JSONObject debugState = new JSONObject();
         debugState.put(
                 "class",
-                GenericAdaptiveTrackProjectionContext.class.getSimpleName());
+                GenericAdaptiveSourceProjectionContext.class.getSimpleName());
         debugState.put("TODO", "export more state (or refactor)");
 
         return debugState;

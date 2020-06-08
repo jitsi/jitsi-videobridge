@@ -162,7 +162,7 @@ public class VideobridgeShim
             if (MediaType.VIDEO.equals(contentShim.getMediaType())
                     && !channelSources.isEmpty())
             {
-                channelShim.getEndpoint().recreateMediaStreamTracks();
+                channelShim.getEndpoint().recreateMediaSources();
             }
 
             Integer channelLastN = channelIq.getLastN();

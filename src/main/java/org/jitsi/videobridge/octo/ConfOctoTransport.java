@@ -32,7 +32,6 @@ import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
-import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.osgi.framework.*;
 
 import java.net.*;
@@ -322,35 +321,35 @@ public class ConfOctoTransport
         // nulls here.
         Set<String> endpointIds
                 = allSources.stream()
-                    .map(MediaStreamTrackFactory::getOwner)
+                    .map(MediaSourceFactory::getOwner)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
 
         octoEndpoints.setEndpoints(endpointIds);
 
-        // Create the tracks after creating the endpoints
-        MediaStreamTrackDesc[] tracks =
-            MediaStreamTrackFactory.createMediaStreamTracks(
+        // Create the sources after creating the endpoints
+        MediaSourceDesc[] sources =
+            MediaSourceFactory.createMediaSources(
                 videoSources, videoSourceGroups);
-        octoEndpoints.setMediaStreamTracks(tracks);
+        octoEndpoints.setMediaSources(sources);
 
-        // We only need to call this if the tracks of any endpoint actually
+        // We only need to call this if the sources of any endpoint actually
         // changed, but that's not easy to detect. It's safe to call it more
         // often.
-        conference.endpointTracksChanged(null);
+        conference.endpointSourcesChanged(null);
 
         endpointIds.forEach(endpointId ->
         {
             Map<MediaType, Set<Long>> endpointSsrcsByMediaType = new HashMap<>();
             Set<Long> epAudioSsrcs = audioSources.stream()
-                    .filter(source -> endpointId.equals(MediaStreamTrackFactory.getOwner(source)))
+                    .filter(source -> endpointId.equals(MediaSourceFactory.getOwner(source)))
                     .filter(Objects::nonNull)
                     .map(SourcePacketExtension::getSSRC)
                     .collect(Collectors.toSet());
             endpointSsrcsByMediaType.put(MediaType.AUDIO, epAudioSsrcs);
 
             Set<Long> epVideoSsrcs = videoSources.stream()
-                    .filter(source -> endpointId.equals(MediaStreamTrackFactory.getOwner(source)))
+                    .filter(source -> endpointId.equals(MediaSourceFactory.getOwner(source)))
                     .filter(Objects::nonNull)
                     .map(SourcePacketExtension::getSSRC)
                     .collect(Collectors.toSet());

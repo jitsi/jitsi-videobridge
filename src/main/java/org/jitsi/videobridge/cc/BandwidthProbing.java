@@ -86,7 +86,7 @@ import static org.jitsi.videobridge.cc.config.BandwidthProbingConfig.*;
       * tough to get another way. for now, i've tried to at least minimize the
       * dependency by creating the #getStatusSnapshot method inside
       * bitratecontroller that this can use (so it doesn't have to depend on
-      * accessing the track projections
+      * accessing the source descriptions)
       */
      public void setBitrateController(BitrateController bitrateController)
      {

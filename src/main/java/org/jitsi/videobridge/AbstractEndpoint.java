@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
@@ -22,7 +23,6 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.rest.root.colibri.debug.*;
 import org.jitsi.xmpp.extensions.colibri.*;
-import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.json.simple.*;
 
 import java.io.*;
@@ -121,9 +121,9 @@ public abstract class AbstractEndpoint
     }
 
     /**
-     * Gets the list of media stream tracks that belong to this endpoint.
+     * Gets the list of media sources that belong to this endpoint.
      */
-    abstract public MediaStreamTrackDesc[] getMediaStreamTracks();
+    abstract public MediaSourceDesc[] getMediaSources();
 
     /**
      * Returns the display name of this <tt>Endpoint</tt>.
@@ -293,10 +293,10 @@ public abstract class AbstractEndpoint
     }
 
     /**
-     * Recreates this {@link AbstractEndpoint}'s media stream tracks based
-     * on the sources (and source groups) described in it's video channel.
+     * Recreates this {@link AbstractEndpoint}'s media sources based
+     * on the sources (and source groups) described in its video channel.
      */
-    public void recreateMediaStreamTracks()
+    public void recreateMediaSources()
     {
     }
 
