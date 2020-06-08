@@ -24,7 +24,7 @@ fun main(args: Array<String>) {
         packets.add(pg.generatePacket())
     }
 
-    val stream1 = IncomingMediaStreamTrack1()
+    val stream1 = IncomingMediaSource1()
     val stream2 = RtpReceiverImpl()
     // IncomingMediaStreamTrack currently implements the following simulated packet pipeline:
     //
