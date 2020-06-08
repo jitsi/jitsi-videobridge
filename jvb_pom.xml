@@ -112,7 +112,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>sctp</artifactId>
-      <version>1.0-20190319.172750-1</version>
+      <version>1.0-2-ga3ad2e6</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
