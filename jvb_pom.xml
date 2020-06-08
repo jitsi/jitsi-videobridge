@@ -114,6 +114,11 @@
       <artifactId>sctp</artifactId>
       <version>1.0-20190319.172750-1</version>
     </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>jvb-api-server</artifactId>
+      <version>${project.version}</version>
+    </dependency>
     <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
     <!-- we inherit an old version of slf4j-api from tinder, which pcap4j doesn't work with. Adding slf4j-api 1.7.30 (the current stable) as a dep of jvb fixes the problem. -->
     <dependency>
