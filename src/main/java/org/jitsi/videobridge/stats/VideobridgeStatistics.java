@@ -486,7 +486,7 @@ public class VideobridgeStatistics
                             jvbStats.totalColibriWebSocketMessagesSent.get());
             unlockedSetStat(
                     TOTAL_BYTES_RECEIVED, jvbStats.totalBytesReceived.get());
-            unlockedSetStat("dtls_failed_endpoints", jvbStats.dtlsFailedEndpoints);
+            unlockedSetStat("dtls_failed_endpoints", jvbStats.dtlsFailedEndpoints.get());
             unlockedSetStat(TOTAL_BYTES_SENT, jvbStats.totalBytesSent.get());
             unlockedSetStat(
                     TOTAL_PACKETS_RECEIVED, jvbStats.totalPacketsReceived.get());
