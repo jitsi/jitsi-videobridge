@@ -38,7 +38,6 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.cinfo
 import org.jitsi.utils.logging2.createChildLogger
-import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 import java.time.Clock
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
@@ -83,7 +82,7 @@ class Transceiver(
      */
     private val rtcpEventNotifier = RtcpEventNotifier()
 
-    private var mediaStreamTracks = MediaStreamTracks()
+    private var mediaSources = MediaSources()
 
     private val bandwidthEstimator: BandwidthEstimator = GoogleCcEstimator(diagnosticContext, logger)
 
@@ -197,16 +196,16 @@ class Transceiver(
 
     fun receivesSsrc(ssrc: Long): Boolean = streamInformationStore.receiveSsrcs.contains(ssrc)
 
-    fun setMediaStreamTracks(mediaStreamTracks: Array<MediaStreamTrackDesc>): Boolean {
-        logger.cdebug { "$id setting media stream tracks: ${mediaStreamTracks.joinToString()}" }
-        val ret = this.mediaStreamTracks.setMediaStreamTracks(mediaStreamTracks)
-        rtpReceiver.handleEvent(SetMediaStreamTracksEvent(this.mediaStreamTracks.getMediaStreamTracks()))
+    fun setMediaSources(mediaSources: Array<MediaSourceDesc>): Boolean {
+        logger.cdebug { "$id setting media sources: ${mediaSources.joinToString()}" }
+        val ret = this.mediaSources.setMediaSources(mediaSources)
+        rtpReceiver.handleEvent(SetMediaSourcesEvent(this.mediaSources.getMediaSources()))
         return ret
     }
 
     // TODO(brian): we should only expose an immutable version of this, but Array doesn't have that.  Go in
-    // and change all the storage of the media stream tracks to use a list
-    fun getMediaStreamTracks(): Array<MediaStreamTrackDesc> = mediaStreamTracks.getMediaStreamTracks()
+    // and change all the storage of the media sources to use a list
+    fun getMediaSources(): Array<MediaSourceDesc> = mediaSources.getMediaSources()
 
     @JvmOverloads
     fun requestKeyFrame(mediaSsrc: Long? = null) = rtpSender.requestKeyframe(mediaSsrc)
@@ -284,7 +283,7 @@ class Transceiver(
     override fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("Transceiver $id").apply {
             addBlock(streamInformationStore.getNodeStats())
-            addBlock(mediaStreamTracks.getNodeStats())
+            addBlock(mediaSources.getNodeStats())
             addString("endpointConnectionStats", endpointConnectionStats.getSnapshot().toString())
             addJson("Bandwidth Estimation", bandwidthEstimator.getStats(clock.instant()).toJson())
             addBlock(rtpReceiver.getNodeStats())

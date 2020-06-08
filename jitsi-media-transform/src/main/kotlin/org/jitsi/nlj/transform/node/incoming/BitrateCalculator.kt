@@ -18,7 +18,7 @@ package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.SetMediaStreamTracksEvent
+import org.jitsi.nlj.SetMediaSourcesEvent
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
@@ -28,34 +28,34 @@ import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.stats.RateStatistics
-import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
-import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
+import org.jitsi.nlj.MediaSourceDesc
+import org.jitsi.nlj.RtpLayerDesc
 
 /**
  * When deciding what can be forwarded, we want to know the bitrate of a stream so we can fill the receiver's
  * available bandwidth as much as possible without going over.  This node tracks the incoming bitrate per each
- * individual encoding (that is, each forwardable stream taking into account spatial and temporal scalability) and
+ * individual layer (that is, each forwardable stream taking into account spatial and temporal scalability) and
  * tags the [VideoRtpPacket] with a snapshot of the current estimated bitrate for the encoding to which it belongs
  */
 class VideoBitrateCalculator(
     parentLogger: Logger
 ) : BitrateCalculator("Video bitrate calculator") {
     private val logger = createChildLogger(parentLogger)
-    private var mediaStreamTrackDescs: Array<MediaStreamTrackDesc> = arrayOf()
+    private var mediaSourceDescs: Array<MediaSourceDesc> = arrayOf()
 
     override fun observe(packetInfo: PacketInfo) {
         super.observe(packetInfo)
 
         val videoRtpPacket: VideoRtpPacket = packetInfo.packet as VideoRtpPacket
-        findRtpEncodingDesc(videoRtpPacket)?.let {
+        findRtpLayerDesc(videoRtpPacket)?.let {
             val now = System.currentTimeMillis()
             it.updateBitrate(videoRtpPacket.length, now)
         }
     }
 
-    private fun findRtpEncodingDesc(packet: VideoRtpPacket): RTPEncodingDesc? {
-        for (track in mediaStreamTrackDescs) {
-            track.findRtpEncodingDesc(packet)?.let {
+    private fun findRtpLayerDesc(packet: VideoRtpPacket): RtpLayerDesc? {
+        for (source in mediaSourceDescs) {
+            source.findRtpLayerDesc(packet)?.let {
                 return it
             }
         }
@@ -64,9 +64,9 @@ class VideoBitrateCalculator(
 
     override fun handleEvent(event: Event) {
         when (event) {
-            is SetMediaStreamTracksEvent -> {
-                mediaStreamTrackDescs = event.mediaStreamTrackDescs.copyOf()
-                logger.cdebug { "Video bitrate calculator got media stream tracks:\n$mediaStreamTrackDescs" }
+            is SetMediaSourcesEvent -> {
+                mediaSourceDescs = event.mediaSourceDescs.copyOf()
+                logger.cdebug { "Video bitrate calculator got media sources:\n$mediaSourceDescs" }
             }
         }
     }

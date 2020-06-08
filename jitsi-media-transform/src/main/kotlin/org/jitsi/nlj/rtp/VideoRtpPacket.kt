@@ -37,7 +37,7 @@ open class VideoRtpPacket protected constructor(
         qualityIndex = null
     )
 
-    /** The index of this packet relative to its track's RTPEncodings. */
+    /** The index of this packet relative to its source's RtpLayers. */
     var qualityIndex: Int = qualityIndex ?: -1
 
     override fun clone(): VideoRtpPacket {
