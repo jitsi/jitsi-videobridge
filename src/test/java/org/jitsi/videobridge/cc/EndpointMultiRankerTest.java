@@ -48,6 +48,12 @@ public class EndpointMultiRankerTest
 
         endpointMultiRanks.sort(new EndpointMultiRanker());
 
+        // NOTE that the active speaker rank is the tie breaker if both the
+        // ideal and preferred height is equal and the order in which the
+        // endpoints are added to the list determines their speaker rank (for
+        // more information on how the ranking works, see the EndpointMultiRanker
+        // class documentation).
+        //
         // Whoever's on-stage needs to be prioritized first, then by speaker. In
         // this particular test case, the on-stage speaker coincides with the
         // active speaker.
@@ -73,6 +79,12 @@ public class EndpointMultiRankerTest
 
         endpointMultiRanks.sort(new EndpointMultiRanker());
 
+        // NOTE that the active speaker rank is the tie breaker if both the
+        // ideal and preferred height is equal and the order in which the
+        // endpoints are added to the list determines their speaker rank (for
+        // more information on how the ranking works, see the EndpointMultiRanker
+        // class documentation).
+        //
         // Whoever's on-stage needs to be prioritized first, then by speaker. In
         // this particular test case, the on-stage speaker is the least recent
         // active speaker.
