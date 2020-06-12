@@ -878,6 +878,7 @@ public class Endpoint
                 logger.info("SCTP connection is disconnected.");
             }
         };
+        SequentialExecutor receiveExecutor = new SequentialExecutor(TaskPools.IO_POOL);
         socket.dataCallback = (data, sid, ssn, tsn, ppid, context, flags) -> {
             // We assume all data coming over SCTP will be datachannel data
             DataChannelPacket dcp
@@ -886,8 +887,7 @@ public class Endpoint
             // holding a lock inside the SctpSocket which can cause a deadlock
             // if two endpoints are trying to send datachannel messages to one
             // another (with stats broadcasting it can happen often)
-            TaskPools.IO_POOL.execute(
-                    () -> dataChannelHandler.consume(new PacketInfo(dcp)));
+            receiveExecutor.execute(() -> dataChannelHandler.consume(new PacketInfo(dcp)));
         };
         socket.listen();
         sctpSocket = Optional.of(socket);
