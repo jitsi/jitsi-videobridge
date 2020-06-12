@@ -463,7 +463,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param src the transport channel by which {@code jsonObject} has been
      * received.
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code LastNChangedEvent} which has been received.
+     * {@code ReceiverVideoConstraints} which has been received.
      */
     protected abstract void onReceiverVideoConstraintsEvent(
         Object src,
@@ -476,7 +476,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param src the transport channel by which {@code jsonObject} has been
      * received.
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code LastNChangedEvent} which has been received.
+     * {@code ReceiverVideoConstraint} which has been received.
      */
     protected void onReceiverVideoConstraintEvent(
         Object src,
