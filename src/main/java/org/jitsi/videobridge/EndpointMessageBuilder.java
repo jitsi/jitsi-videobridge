@@ -86,6 +86,13 @@ public class EndpointMessageBuilder
 
     /**
      * The {@link Videobridge#COLIBRI_CLASS} value indicating a
+     * {@code ReceiverVideoConstraints} message.
+     */
+    public static final String COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINTS
+        = "ReceiverVideoConstraints";
+
+    /**
+     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
      * {@code SelectedEndpointChangedEvent}.
      */
     public static final String COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED
@@ -142,7 +149,7 @@ public class EndpointMessageBuilder
             "{\"colibriClass\":\""
                 + COLIBRI_CLASS_ENDPOINT_CONNECTIVITY_STATUS
                 + "\",\"endpoint\":\"" + JSONValue.escape(endpointId)
-                +"\", \"active\":\"" + String.valueOf(connected)
+                +"\", \"active\":\"" + connected
                 + "\"}";
     }
 
@@ -213,5 +220,18 @@ public class EndpointMessageBuilder
             array.addAll(strings);
         }
         return array.toString();
+    }
+
+    public static String createReceiverVideoConstraintsMessage(
+        String octoEndpointId, String localEndpointId, VideoConstraints videoConstraints)
+    {
+        // Note that this isn't the same  as {@link #COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT}
+        // (pay attention to the absence of the final s)
+        JSONObject videoConstraintsMessage = new JSONObject();
+        videoConstraintsMessage.put("colibriClass", COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINTS);
+        videoConstraintsMessage.put("octoEndpointId", octoEndpointId);
+        videoConstraintsMessage.put("localEndpointId", localEndpointId);
+        videoConstraintsMessage.put("videoConstraints", videoConstraints);
+        return videoConstraintsMessage.toJSONString();
     }
 }

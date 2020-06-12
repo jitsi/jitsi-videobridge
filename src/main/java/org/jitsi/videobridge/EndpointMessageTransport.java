@@ -109,6 +109,12 @@ class EndpointMessageTransport
         sendMessage(src, createServerHelloEvent(), "response to ClientHello");
     }
 
+    @Override
+    protected void onReceiverVideoConstraintsEvent(Object src, JSONObject jsonObject)
+    {
+        // NO-OP (for now).
+    }
+
     /**
      * Sends a string via a particular transport channel.
      * @param dst the transport channel.

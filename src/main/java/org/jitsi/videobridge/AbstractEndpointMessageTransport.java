@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import com.google.common.collect.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.octo.*;
@@ -131,6 +132,9 @@ public abstract class AbstractEndpointMessageTransport
                     break;
                 case COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT:
                     onReceiverVideoConstraintEvent(src, jsonObject);
+                    break;
+            case COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINTS:
+                    onReceiverVideoConstraintsEvent(src, jsonObject);
                     break;
                 default:
                     logger.info(
@@ -417,9 +421,12 @@ public abstract class AbstractEndpointMessageTransport
             videoConstraintsCompatibility.computeVideoConstraints());
     }
 
-    protected void onVideoConstraintsChangedEvent(Map<String, VideoConstraints> newVideoConstraints)
+    protected void onVideoConstraintsChangedEvent(Map<String, VideoConstraints> videoConstraintMap)
     {
-        endpoint.setVideoConstraints(newVideoConstraints);
+        // Don't "pollute" the video constraints map with constraints for this
+        // endpoint.
+        videoConstraintMap.remove(endpoint.getID());
+        endpoint.setSenderVideoConstraints(ImmutableMap.copyOf(videoConstraintMap));
     }
 
     /**
@@ -449,6 +456,19 @@ public abstract class AbstractEndpointMessageTransport
         }
     }
 
+    /**
+     * Notifies this {@code Endpoint} that a {@code ReceiverVideoConstraints}
+     * event has been received
+     *
+     * @param src the transport channel by which {@code jsonObject} has been
+     * received.
+     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
+     * {@code LastNChangedEvent} which has been received.
+     */
+    protected abstract void onReceiverVideoConstraintsEvent(
+        Object src,
+        JSONObject jsonObject);
+    
     /**
      * Notifies this {@code Endpoint} that a {@code ReceiverVideoConstraint}
      * event has been received

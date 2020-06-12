@@ -112,7 +112,7 @@ public class Conference
     /**
      * The world readable name of this instance if any.
      */
-    private String conferenceName;
+    private final String conferenceName;
 
     /**
      * The speech activity (representation) of the <tt>Endpoint</tt>s of this
@@ -842,6 +842,9 @@ public class Conference
         {
             updateEndpointsCache();
         }
+
+        endpoints.forEach((i, senderEndpoint)
+            -> senderEndpoint.getReceiverVideoConstraintsBroker().removeReceiver(id));
 
         if (tentacle != null)
         {

@@ -16,11 +16,13 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.nlj.*;
+import com.google.common.collect.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.cc.config.*;
 import org.jitsi.videobridge.rest.root.colibri.debug.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
@@ -28,6 +30,7 @@ import org.json.simple.*;
 import java.io.*;
 import java.time.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
@@ -73,6 +76,22 @@ public abstract class AbstractEndpoint
      * on this <tt>Endpoint</tt>.
      */
     private boolean expired = false;
+
+    /**
+     * The instance responsible for bookkeeping of who (which receiver) is
+     * viewing what (video constraints). Internally it maintains a map of
+     * receiver endpoint id -> video constraints. When the map changes, it sets
+     * the new map by calling {@link #setReceiverVideoConstraints(ImmutableMap)}.
+     */
+    private final ReceiverVideoConstraintsBroker
+        receiverVideoConstraintsBroker = new ReceiverVideoConstraintsBroker();
+
+    /**
+     * The max video constraints that the bridge should receive from this
+     * endpoint.
+     */
+    private VideoConstraints maxReceiverVideoConstraints
+        = new VideoConstraints(BitrateControllerConfig.Config.onstageIdealHeightPx());
 
     /**
      * Initializes a new {@link AbstractEndpoint} instance.
@@ -274,27 +293,8 @@ public abstract class AbstractEndpoint
     public abstract void requestKeyframe();
 
     /**
-     * Notify this endpoint that another endpoint has set it
-     * as a 'selected' endpoint, meaning its HD stream has another
-     * consumer.
-     */
-    public void incrementSelectedCount()
-    {
-        // No-op
-    }
-
-    /**
-     * Notify this endpoint that another endpoint has stopped consuming
-     * its HD stream.
-     */
-    public void decrementSelectedCount()
-    {
-        // No-op
-    }
-
-    /**
-     * Recreates this {@link AbstractEndpoint}'s media sources based
-     * on the sources (and source groups) described in its video channel.
+     * Recreates this {@link AbstractEndpoint}'s media stream tracks based
+     * on the sources (and source groups) described in it's video channel.
      */
     public void recreateMediaSources()
     {
@@ -323,6 +323,46 @@ public abstract class AbstractEndpoint
         debugState.put("statsId", statsId);
 
         return debugState;
+    }
+
+    /**
+     * Computes and sets the {@link #maxReceiverVideoConstraints} from the
+     * specified video constraints.
+     *
+     * @param newVideoConstraints the map of receiver endpoint id -> video
+     * constraints that specifies who (which receiver endpoint) is viewing what
+     * (as determined by the video constraints) from this endpoint (which is the
+     * sender).
+     */
+    private void setReceiverVideoConstraints(
+        ImmutableMap<String, VideoConstraints> newVideoConstraints)
+    {
+        VideoConstraints oldReceiverMaxVideoConstraints
+            = this.maxReceiverVideoConstraints;
+
+        VideoConstraints defaultVideoConstraints
+            = new VideoConstraints(BitrateControllerConfig.Config.thumbnailMaxHeightPx());
+
+        VideoConstraints newReceiverMaxVideoConstraints = newVideoConstraints
+            .values()
+            .stream()
+            .max(Comparator.comparingInt(VideoConstraints::getIdealHeight))
+            .orElse(defaultVideoConstraints);
+
+        if (!newReceiverMaxVideoConstraints.equals(oldReceiverMaxVideoConstraints))
+        {
+            maxReceiverVideoConstraints = newReceiverMaxVideoConstraints;
+            onMaxReceiverVideoConstraintsChanged(newReceiverMaxVideoConstraints);
+        }
+    }
+
+    /**
+     * @return the instance responsible for bookkeeping of who (which receiver)
+     * is viewing what (video constraints).
+     */
+    public ReceiverVideoConstraintsBroker getReceiverVideoConstraintsBroker()
+    {
+        return receiverVideoConstraintsBroker;
     }
 
     /**
@@ -357,5 +397,69 @@ public abstract class AbstractEndpoint
      *
      * @param newVideoConstraints
      */
-    public abstract void setVideoConstraints(Map<String, VideoConstraints> newVideoConstraints);
+    public abstract void setSenderVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraints);
+
+    /**
+     * Notifies this instance that the max video constraints that the bridge
+     * needs to receive from this endpoint has changed. Each implementation
+     * handles this notification differently.
+     *
+     * @param maxVideoConstraints the max video constraints that the bridge
+     * needs to receive from this endpoint
+     */
+    protected abstract void
+    onMaxReceiverVideoConstraintsChanged(VideoConstraints maxVideoConstraints);
+
+    /**
+     * The class that is responsible for bookkeeping of who (which receiver) is
+     * viewing what (video constraints). Internally it maintains a map of
+     * receiver endpoint id -> video constraints. When the map changes, it sets
+     * the new map by calling {@link #setReceiverVideoConstraints(ImmutableMap)}.
+     *
+     * The main benefit of having this class (as opposed to spilling the
+     * implementation in AbstractEndpoint) is to keep the endpoint video
+     * constraints API symmetric (i.e. provide setter for send/recv video
+     * constraints).
+     */
+    public class ReceiverVideoConstraintsBroker
+    {
+        /**
+         * The map of receiver endpoint id -> video constraints.
+         */
+        private final Map<String, VideoConstraints> videoConstraintsMap = new ConcurrentHashMap<>();
+
+        /**
+         * Notifies this instance that the specified endpoint wants to receive
+         * the specified video constraints from the endpoint attached to this
+         * instance (the sender).
+         *
+         * @param endpointId the id that specifies the receiver endpoint
+         * @param newVideoConstraints the video constraints that the receiver
+         * wishes to receive.
+         */
+        public void addReceiver(String endpointId, VideoConstraints newVideoConstraints)
+        {
+            VideoConstraints oldVideoConstraints = videoConstraintsMap.put(endpointId, newVideoConstraints);
+            if (oldVideoConstraints == null
+                || !oldVideoConstraints.equals(newVideoConstraints))
+            {
+                setReceiverVideoConstraints(ImmutableMap.copyOf(videoConstraintsMap));
+            }
+        }
+
+        /**
+         * Notifies this instance that the specified endpoint no longer wants or
+         * needs to receive anything from the endpoint attached to this
+         * instance (the sender).
+         *
+         * @param endpointId the id that specifies the receiver endpoint
+         */
+        public void removeReceiver(String endpointId)
+        {
+            if (videoConstraintsMap.remove(endpointId) != null)
+            {
+                setReceiverVideoConstraints(ImmutableMap.copyOf(videoConstraintsMap));
+            }
+        }
+    }
 }

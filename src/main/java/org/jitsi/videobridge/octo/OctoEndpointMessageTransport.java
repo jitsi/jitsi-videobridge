@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.octo;
 
+import com.google.gson.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.json.simple.*;
@@ -105,6 +106,49 @@ class OctoEndpointMessageTransport
             JSONObject jsonObject)
     {
         logUnexpectedMessage(jsonObject.toJSONString());
+    }
+
+    @Override
+    protected void onReceiverVideoConstraintsEvent(Object src, JSONObject jsonObject)
+    {
+        Object octoEndpointIdObj = jsonObject.get("octoEndpointId");
+        Object localEndpointIdObj = jsonObject.get("localEndpointId");
+        Object videoConstraintsObj = jsonObject.get("videoConstraints");
+
+        if (!(octoEndpointIdObj instanceof String))
+        {
+            logger.warn(
+                "Received a non-string octoEndpointId "
+                    + src + ": " + octoEndpointIdObj.toString());
+            return;
+        }
+
+        if (!(localEndpointIdObj instanceof String))
+        {
+            logger.warn(
+                "Received a non-string localEndpointId "
+                    + src + ": " + localEndpointIdObj.toString());
+            return;
+        }
+
+        // TODO This is temporary until I write the deserializer or we agree to
+        // include Gson in the dependencies.
+        Gson gson = new Gson();
+        VideoConstraints videoConstraints
+            = gson.fromJson((String) videoConstraintsObj, VideoConstraints.class);
+
+        AbstractEndpoint localEndpoint
+            = octoEndpoints.getConference().getEndpoint((String) localEndpointIdObj);
+
+        if (!(localEndpoint instanceof Endpoint))
+        {
+            // NO-OP
+            return;
+        }
+
+        // TODO need to implement call to remove
+        localEndpoint.getReceiverVideoConstraintsBroker()
+            .addReceiver((String) octoEndpointIdObj, videoConstraints);
     }
 
     @Override
