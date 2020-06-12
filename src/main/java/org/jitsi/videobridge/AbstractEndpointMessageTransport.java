@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import com.google.common.collect.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.octo.*;
@@ -85,7 +86,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code ClientHello} which has been received by the associated SCTP connection
      */
-    protected void onClientHello(Object src, JSONObject jsonObject)
+    protected void clientHello(Object src, JSONObject jsonObject)
     {
     }
 
@@ -109,28 +110,31 @@ public abstract class AbstractEndpointMessageTransport
             switch (colibriClass)
             {
                 case COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED:
-                    onSelectedEndpointChangedEvent(src, jsonObject);
+                    selectedEndpointChangedEvent(src, jsonObject);
                     break;
                 case COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED:
-                    onSelectedEndpointsChangedEvent(src, jsonObject);
+                    selectedEndpointsChangedEvent(src, jsonObject);
                     break;
                 case COLIBRI_CLASS_PINNED_ENDPOINT_CHANGED:
-                    onPinnedEndpointChangedEvent(src, jsonObject);
+                    pinnedEndpointChangedEvent(src, jsonObject);
                     break;
                 case COLIBRI_CLASS_PINNED_ENDPOINTS_CHANGED:
-                    onPinnedEndpointsChangedEvent(src, jsonObject);
+                    pinnedEndpointsChangedEvent(src, jsonObject);
                     break;
                 case COLIBRI_CLASS_CLIENT_HELLO:
-                    onClientHello(src, jsonObject);
+                    clientHello(src, jsonObject);
                     break;
                 case COLIBRI_CLASS_ENDPOINT_MESSAGE:
-                    onClientEndpointMessage(src, jsonObject);
+                    clientEndpointMessage(src, jsonObject);
                     break;
                 case COLIBRI_CLASS_LASTN_CHANGED:
-                    onLastNChangedEvent(src, jsonObject);
+                    lastNChangedEvent(src, jsonObject);
                     break;
                 case COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT:
-                    onReceiverVideoConstraintEvent(src, jsonObject);
+                    receiverVideoConstraintEvent(src, jsonObject);
+                    break;
+                case COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINTS_CHANGED:
+                    receiverVideoConstraintsChangedEvent(src, jsonObject);
                     break;
                 default:
                     logger.info(
@@ -171,7 +175,7 @@ public abstract class AbstractEndpointMessageTransport
      * jitsi messages.
      */
     @SuppressWarnings("unchecked")
-    protected void onClientEndpointMessage(
+    protected void clientEndpointMessage(
         @SuppressWarnings("unused") Object src,
         JSONObject jsonObject)
     {
@@ -268,7 +272,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code PinnedEndpointChangedEvent} which has been received.
      */
-    protected void onPinnedEndpointChangedEvent(
+    protected void pinnedEndpointChangedEvent(
         @SuppressWarnings("unused") Object src,
         JSONObject jsonObject)
     {
@@ -281,7 +285,7 @@ public abstract class AbstractEndpointMessageTransport
             newPinnedIDs = Collections.singleton(newPinnedEndpointID);
         }
 
-        onPinnedEndpointsChangedEvent(jsonObject, newPinnedIDs);
+        pinnedEndpointsChangedEvent(jsonObject, newPinnedIDs);
     }
 
     /**
@@ -293,7 +297,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code PinnedEndpointChangedEvent} which has been received.
      */
-    protected void onPinnedEndpointsChangedEvent(
+    protected void pinnedEndpointsChangedEvent(
         @SuppressWarnings("unused") Object src,
         JSONObject jsonObject)
     {
@@ -313,7 +317,7 @@ public abstract class AbstractEndpointMessageTransport
             logger.debug("Pinned " + newPinnedEndpoints);
         }
 
-        onPinnedEndpointsChangedEvent(jsonObject, newPinnedEndpoints);
+        pinnedEndpointsChangedEvent(jsonObject, newPinnedEndpoints);
     }
 
     /**
@@ -325,7 +329,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code SelectedEndpointChangedEvent} which has been received.
      */
-    protected void onSelectedEndpointChangedEvent(
+    protected void selectedEndpointChangedEvent(
         @SuppressWarnings("unused") Object src,
         JSONObject jsonObject)
     {
@@ -339,7 +343,7 @@ public abstract class AbstractEndpointMessageTransport
             newSelectedIDs = Collections.singleton(newSelectedEndpointID);
         }
 
-        onSelectedEndpointsChangedEvent(jsonObject, newSelectedIDs);
+        selectedEndpointsChangedEvent(jsonObject, newSelectedIDs);
     }
 
     /**
@@ -351,7 +355,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code SelectedEndpointChangedEvent} which has been received.
      */
-    protected void onSelectedEndpointsChangedEvent(
+    protected void selectedEndpointsChangedEvent(
         @SuppressWarnings("unused") Object src,
         JSONObject jsonObject)
     {
@@ -365,7 +369,7 @@ public abstract class AbstractEndpointMessageTransport
 
         JSONArray jsonArray = (JSONArray) o;
         Set<String> newSelectedEndpoints = filterStringsToSet(jsonArray);
-        onSelectedEndpointsChangedEvent(jsonObject, newSelectedEndpoints);
+        selectedEndpointsChangedEvent(jsonObject, newSelectedEndpoints);
     }
 
     private Set<String> filterStringsToSet(JSONArray jsonArray)
@@ -390,12 +394,12 @@ public abstract class AbstractEndpointMessageTransport
      * {@code PinnedEndpointChangedEvent} which has been received.
      * @param newPinnedEndpoints the new pinned endpoints
      */
-    protected void onPinnedEndpointsChangedEvent(
+    protected void pinnedEndpointsChangedEvent(
         JSONObject jsonObject,
         Set<String> newPinnedEndpoints)
     {
         videoConstraintsCompatibility.setPinnedEndpoints(newPinnedEndpoints);
-        onVideoConstraintsChangedEvent(
+        senderVideoConstraintsChangedEvent(
             videoConstraintsCompatibility.computeVideoConstraints());
     }
 
@@ -408,18 +412,21 @@ public abstract class AbstractEndpointMessageTransport
      * {@code SelectedEndpointChangedEvent} which has been received.
      * @param newSelectedEndpoints the new selected endpoints
      */
-    protected void onSelectedEndpointsChangedEvent(
+    protected void selectedEndpointsChangedEvent(
         JSONObject jsonObject,
         Set<String> newSelectedEndpoints)
     {
         videoConstraintsCompatibility.setSelectedEndpoints(newSelectedEndpoints);
-        onVideoConstraintsChangedEvent(
+        senderVideoConstraintsChangedEvent(
             videoConstraintsCompatibility.computeVideoConstraints());
     }
 
-    protected void onVideoConstraintsChangedEvent(Map<String, VideoConstraints> newVideoConstraints)
+    protected void senderVideoConstraintsChangedEvent(Map<String, VideoConstraints> videoAllocationPolicyMap)
     {
-        endpoint.setVideoConstraints(newVideoConstraints);
+        // Don't "pollute" the video constraints map with constraints for this
+        // endpoint.
+        videoAllocationPolicyMap.remove(endpoint.getID());
+        endpoint.setSenderVideoConstraints(ImmutableMap.copyOf(videoAllocationPolicyMap));
     }
 
     /**
@@ -431,7 +438,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code LastNChangedEvent} which has been received.
      */
-    protected void onLastNChangedEvent(
+    protected void lastNChangedEvent(
         Object src,
         JSONObject jsonObject)
     {
@@ -450,15 +457,28 @@ public abstract class AbstractEndpointMessageTransport
     }
 
     /**
+     * Notifies this {@code Endpoint} that a {@code ReceiverVideoConstraints}
+     * event has been received
+     *
+     * @param src the transport channel by which {@code jsonObject} has been
+     * received.
+     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
+     * {@code ReceiverVideoConstraints} which has been received.
+     */
+    protected abstract void receiverVideoConstraintsChangedEvent(
+        Object src,
+        JSONObject jsonObject);
+    
+    /**
      * Notifies this {@code Endpoint} that a {@code ReceiverVideoConstraint}
      * event has been received
      *
      * @param src the transport channel by which {@code jsonObject} has been
      * received.
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code LastNChangedEvent} which has been received.
+     * {@code ReceiverVideoConstraint} which has been received.
      */
-    protected void onReceiverVideoConstraintEvent(
+    protected void receiverVideoConstraintEvent(
         Object src,
         JSONObject jsonObject)
     {
@@ -479,7 +499,7 @@ public abstract class AbstractEndpointMessageTransport
         }
 
         videoConstraintsCompatibility.setMaxFrameHeight(maxFrameHeight);
-        onVideoConstraintsChangedEvent(videoConstraintsCompatibility.computeVideoConstraints());
+        senderVideoConstraintsChangedEvent(videoConstraintsCompatibility.computeVideoConstraints());
     }
 
     /**

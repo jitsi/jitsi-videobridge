@@ -86,6 +86,20 @@ public class EndpointMessageBuilder
 
     /**
      * The {@link Videobridge#COLIBRI_CLASS} value indicating a
+     * {@code ReceiverVideoConstraintsChanged} message.
+     */
+    public static final String COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINTS_CHANGED
+        = "ReceiverVideoConstraintsChanged";
+
+    /**
+     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
+     * {@code SenderVideoConstraints} message.
+     */
+    public static final String COLIBRI_CLASS_SENDER_VIDEO_CONSTRAINTS
+        = "SenderVideoConstraints";
+
+    /**
+     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
      * {@code SelectedEndpointChangedEvent}.
      */
     public static final String COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED
@@ -97,13 +111,6 @@ public class EndpointMessageBuilder
      */
     public static final String COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED
         = "SelectedEndpointsChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code SelectedUpdateEvent}.
-     */
-    public static final String COLIBRI_CLASS_SELECTED_UPDATE
-        = "SelectedUpdateEvent";
 
     /**
      * The string which encodes a COLIBRI {@code ServerHello} message.
@@ -142,7 +149,7 @@ public class EndpointMessageBuilder
             "{\"colibriClass\":\""
                 + COLIBRI_CLASS_ENDPOINT_CONNECTIVITY_STATUS
                 + "\",\"endpoint\":\"" + JSONValue.escape(endpointId)
-                +"\", \"active\":\"" + String.valueOf(connected)
+                +"\", \"active\":\"" + connected
                 + "\"}";
     }
 
@@ -185,23 +192,6 @@ public class EndpointMessageBuilder
     }
 
     /**
-     * Create a {@link EndpointMessageBuilder#COLIBRI_CLASS_SELECTED_UPDATE}
-     * colibri message
-     * @param isSelected whether or not this endpoint has been marked as a
-     * selected endpoint
-     * @return a JSON string serialization of the created message
-     */
-    @SuppressWarnings("unchecked")
-    public static String createSelectedUpdateMessage(boolean isSelected)
-    {
-        JSONObject selectedUpdate = new JSONObject();
-        selectedUpdate.put("colibriClass", COLIBRI_CLASS_SELECTED_UPDATE);
-        selectedUpdate.put("isSelected", isSelected);
-        return selectedUpdate.toJSONString();
-    }
-
-
-    /**
      * Returns a JSON array representation of a collection of strings.
      */
     @SuppressWarnings("unchecked")
@@ -213,5 +203,16 @@ public class EndpointMessageBuilder
             array.addAll(strings);
         }
         return array.toString();
+    }
+
+    public static String createSenderVideoConstraintsMessage(
+        VideoConstraints videoConstraints)
+    {
+        // Note that this isn't the same  as {@link #COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT}
+        // (pay attention to the absence of the final s)
+        JSONObject videoConstraintsMessage = new JSONObject();
+        videoConstraintsMessage.put("colibriClass", COLIBRI_CLASS_SENDER_VIDEO_CONSTRAINTS);
+        videoConstraintsMessage.put("videoConstraints", videoConstraints);
+        return videoConstraintsMessage.toJSONString();
     }
 }

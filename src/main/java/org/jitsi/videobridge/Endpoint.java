@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import com.google.common.collect.*;
 import kotlin.*;
 import kotlin.jvm.functions.*;
 import org.jetbrains.annotations.*;
@@ -57,7 +58,6 @@ import java.nio.*;
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.*;
 import java.util.function.Function;
 import java.util.function.*;
 import java.util.stream.*;
@@ -154,11 +154,6 @@ public class Endpoint
      */
     @NotNull
     private final EndpointMessageTransport messageTransport;
-
-    /**
-     * A count of how many endpoints have 'selected' this endpoint
-     */
-    private final AtomicInteger selectedCount = new AtomicInteger(0);
 
     /**
      * The diagnostic context of this instance.
@@ -638,9 +633,54 @@ public class Endpoint
     }
 
     @Override
-    public void setVideoConstraints(Map<String, VideoConstraints> newVideoConstraints)
+    public void setSenderVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraints)
     {
+        ImmutableMap<String, VideoConstraints>
+            oldVideoConstraints = bitrateController.getVideoConstraints();
+
         bitrateController.setVideoConstraints(newVideoConstraints);
+
+        Set<String> endpointsThatNoLongerCare
+            = new HashSet<>(oldVideoConstraints.keySet());
+        endpointsThatNoLongerCare.removeAll(newVideoConstraints.keySet());
+
+        // Endpoints that no longer care what they receive.
+        for (String id : endpointsThatNoLongerCare)
+        {
+            AbstractEndpoint senderEndpoint = getConference().getEndpoint(id);
+            if (senderEndpoint != null)
+            {
+                senderEndpoint.removeReceiver(getID());
+            }
+        }
+
+        // Added or updated.
+        for (Map.Entry<String, VideoConstraints>
+            videoConstraintsEntry : newVideoConstraints.entrySet())
+        {
+            AbstractEndpoint senderEndpoint
+                = getConference().getEndpoint(videoConstraintsEntry.getKey());
+
+            if (senderEndpoint != null)
+            {
+                senderEndpoint.addReceiver(
+                    getID(), videoConstraintsEntry.getValue());
+            }
+        }
+    }
+
+    @Override
+    protected void maxReceiverVideoConstraintsChanged(VideoConstraints maxVideoConstraints)
+    {
+        // Note that it's up to the client to respect these constraints.
+        String senderVideoConstraintsMessage = createSenderVideoConstraintsMessage(maxVideoConstraints);
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Sender constraints changed: " + senderVideoConstraintsMessage);
+        }
+
+        sendMessage(senderVideoConstraintsMessage);
     }
 
     /**
@@ -978,43 +1018,6 @@ public class Endpoint
     private String getIcePassword()
     {
         return iceTransport.getIcePassword();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void incrementSelectedCount()
-    {
-        int newValue = selectedCount.incrementAndGet();
-        if (newValue == 1)
-        {
-            String selectedUpdate = createSelectedUpdateMessage(true);
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Is now selected, sending message: " + selectedUpdate);
-            }
-            sendMessage(selectedUpdate);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void decrementSelectedCount()
-    {
-        int newValue = selectedCount.decrementAndGet();
-        if (newValue == 0)
-        {
-            String selectedUpdate = createSelectedUpdateMessage(false);
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Is no longer selected, sending message: " +
-                        selectedUpdate);
-            }
-            sendMessage(selectedUpdate);
-        }
     }
 
     /**
@@ -1530,7 +1533,6 @@ public class Endpoint
     {
         JSONObject debugState = super.getDebugState();
 
-        debugState.put("selectedCount", selectedCount.get());
         //debugState.put("sctpManager", sctpManager.getDebugState());
         debugState.put("bitrateController", bitrateController.getDebugState());
         debugState.put("bandwidthProbing", bandwidthProbing.getDebugState());

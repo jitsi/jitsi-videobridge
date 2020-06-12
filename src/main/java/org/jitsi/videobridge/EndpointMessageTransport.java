@@ -98,7 +98,7 @@ class EndpointMessageTransport
      * {@inheritDoc}
      */
     @Override
-    protected void onClientHello(Object src, JSONObject jsonObject)
+    protected void clientHello(Object src, JSONObject jsonObject)
     {
         // ClientHello was introduced for functional testing purposes. It
         // triggers a ServerHello response from Videobridge. The exchange
@@ -107,6 +107,12 @@ class EndpointMessageTransport
         // We take care to send the reply using the same transport channel on
         // which we received the request..
         sendMessage(src, createServerHelloEvent(), "response to ClientHello");
+    }
+
+    @Override
+    protected void receiverVideoConstraintsChangedEvent(Object src, JSONObject jsonObject)
+    {
+        // NO-OP (for now).
     }
 
     /**

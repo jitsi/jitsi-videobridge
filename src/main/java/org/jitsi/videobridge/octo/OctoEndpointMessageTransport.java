@@ -19,14 +19,12 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.json.simple.*;
 
-import java.util.*;
-
 /**
  * Extends {@link AbstractEndpointMessageTransport} for the purposes of Octo.
  *
  * Most {@code on*Event} methods are overridden as no-ops because they don't make
  * sense for Octo and are never used. The single exception is
- * {@link #onClientEndpointMessage(Object, JSONObject)} which is not overridden
+ * {@link #clientEndpointMessage(Object, JSONObject)} which is not overridden
  * and the logic in the super class applies.
  */
 class OctoEndpointMessageTransport
@@ -74,7 +72,7 @@ class OctoEndpointMessageTransport
      * warning.
      */
     @Override
-    protected void onClientHello(Object src, JSONObject jsonObject)
+    protected void clientHello(Object src, JSONObject jsonObject)
     {
         logUnexpectedMessage(jsonObject.toJSONString());
     }
@@ -86,7 +84,7 @@ class OctoEndpointMessageTransport
      * warning.
      */
     @Override
-    protected void onReceiverVideoConstraintEvent(
+    protected void receiverVideoConstraintEvent(
         Object src,
         JSONObject jsonObject)
     {
@@ -100,11 +98,17 @@ class OctoEndpointMessageTransport
      * warning.
      */
     @Override
-    protected void onLastNChangedEvent(
+    protected void lastNChangedEvent(
             Object src,
             JSONObject jsonObject)
     {
         logUnexpectedMessage(jsonObject.toJSONString());
+    }
+
+    @Override
+    protected void receiverVideoConstraintsChangedEvent(Object src, JSONObject jsonObject)
+    {
+        // NO-OP
     }
 
     @Override

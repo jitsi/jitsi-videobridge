@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.octo
 
+import com.google.common.collect.ImmutableMap
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.PayloadType
@@ -24,9 +25,9 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
-import org.jitsi.videobridge.VideoConstraints
 import org.jitsi.videobridge.rest.root.colibri.debug.EndpointDebugFeatures
 import org.jitsi.nlj.MediaSourceDesc
+import org.jitsi.videobridge.VideoConstraints
 
 /**
  * Represents an endpoint in a conference, which is connected to another
@@ -73,7 +74,7 @@ class OctoEndpoint(
         // single OctoEndpoints instance.
     }
 
-    override fun setVideoConstraints(newVideoConstraints: MutableMap<String, VideoConstraints>?) {
+    override fun setSenderVideoConstraints(newVideoConstraints: ImmutableMap<String, VideoConstraints>?) {
         // NO-OP
     }
 
@@ -93,6 +94,10 @@ class OctoEndpoint(
 
     override fun getMediaSources(): Array<MediaSourceDesc> {
         return transceiver.mediaSources
+    }
+
+    override fun maxReceiverVideoConstraintsChanged(maxVideoConstraints: VideoConstraints?) {
+        // NO-OP
     }
 
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
