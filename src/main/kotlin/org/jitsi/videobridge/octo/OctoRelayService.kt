@@ -120,6 +120,11 @@ class OctoRelayService : BundleActivator {
          * The send buffer size for the Octo socket
          */
         private const val OCTO_SO_SNDBUF = 10 * 1024 * 1024
+
+        /**
+         * The version of the octo protocol.
+         */
+        const val OCTO_VERSION = 1;
     }
 
     data class Stats(
