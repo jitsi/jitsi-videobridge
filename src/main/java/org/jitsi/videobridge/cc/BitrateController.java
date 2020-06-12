@@ -331,19 +331,27 @@ public class BitrateController
         @Override
         public int compare(EndpointMultiRank o1, EndpointMultiRank o2)
         {
-            int preferredHeightDiff = o1.videoConstraints.getPreferredHeight() - o2.videoConstraints.getPreferredHeight();
+            // We want "o1 has higher preferred height than o2" to imply "o1 is
+            // smaller than o2" as this is equivalent to "o1 needs to be
+            // prioritized first".
+            int preferredHeightDiff = o2.videoConstraints.getPreferredHeight() - o1.videoConstraints.getPreferredHeight();
             if (preferredHeightDiff != 0)
             {
                 return preferredHeightDiff;
             }
             else
             {
-                int idealHeightDiff = o1.videoConstraints.getIdealHeight() - o2.videoConstraints.getIdealHeight();
+                // We want "o1 has higher ideal height than o2" to imply "o1 is
+                // smaller than o2" as this is equivalent to "o1 needs to be
+                // prioritized first".
+                int idealHeightDiff = o2.videoConstraints.getIdealHeight() - o1.videoConstraints.getIdealHeight();
                 if (idealHeightDiff != 0)
                 {
                     return idealHeightDiff;
                 }
-                return o2.speakerRank - o1.speakerRank;
+
+                // Everything else being equal, we rely on the speaker order.
+                return o1.speakerRank - o2.speakerRank;
             }
         }
     }
