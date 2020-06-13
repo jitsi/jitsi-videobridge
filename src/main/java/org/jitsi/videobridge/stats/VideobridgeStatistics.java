@@ -497,6 +497,11 @@ public class VideobridgeStatistics
             OctoRelayService.Stats octoRelayServiceStats
                 = relayService == null ? null : relayService.getStats();
 
+            if (relayService != null)
+            {
+                unlockedSetStat("octo_version", OctoRelayService.OCTO_VERSION);
+            }
+
             unlockedSetStat(
                     TOTAL_BYTES_RECEIVED_OCTO,
                     octoRelayServiceStats == null ? 0 : octoRelayServiceStats.getBytesReceived());
