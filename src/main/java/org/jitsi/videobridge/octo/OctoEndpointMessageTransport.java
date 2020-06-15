@@ -147,7 +147,7 @@ class OctoEndpointMessageTransport
         }
 
         // TODO need to implement call to remove
-        localEndpoint.getReceiverVideoConstraintsBroker()
+        localEndpoint
             .addReceiver((String) octoEndpointIdObj, videoConstraints);
     }
 

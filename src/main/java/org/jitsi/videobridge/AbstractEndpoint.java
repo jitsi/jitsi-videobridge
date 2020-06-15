@@ -78,15 +78,6 @@ public abstract class AbstractEndpoint
     private boolean expired = false;
 
     /**
-     * The instance responsible for bookkeeping of who (which receiver) is
-     * viewing what (video constraints). Internally it maintains a map of
-     * receiver endpoint id -> video constraints. When the map changes, it sets
-     * the new map by calling {@link #setReceiverVideoConstraints(ImmutableMap)}.
-     */
-    private final ReceiverVideoConstraintsBroker
-        receiverVideoConstraintsBroker = new ReceiverVideoConstraintsBroker();
-
-    /**
      * The max video constraints that the bridge should receive from this
      * endpoint.
      */
@@ -95,9 +86,10 @@ public abstract class AbstractEndpoint
 
     /**
      * Initializes a new {@link AbstractEndpoint} instance.
+     *
      * @param conference the {@link Conference} which this endpoint is to be a
-     * part of.
-     * @param id the ID of the endpoint.
+     *                   part of.
+     * @param id         the ID of the endpoint.
      */
     protected AbstractEndpoint(Conference conference, String id, Logger parentLogger)
     {
@@ -110,6 +102,7 @@ public abstract class AbstractEndpoint
 
     /**
      * Sets the last-n value for this endpoint.
+     *
      * @param lastN
      */
     public void setLastN(Integer lastN)
@@ -118,6 +111,7 @@ public abstract class AbstractEndpoint
 
     /**
      * Checks whether a specific SSRC belongs to this endpoint.
+     *
      * @param ssrc
      * @return
      */
@@ -125,7 +119,8 @@ public abstract class AbstractEndpoint
 
     /**
      * Adds an SSRC to this endpoint.
-     * @param ssrc the receive SSRC being added
+     *
+     * @param ssrc      the receive SSRC being added
      * @param mediaType the {@link MediaType} of the added SSRC
      */
     public abstract void addReceiveSsrc(long ssrc, MediaType mediaType);
@@ -247,7 +242,7 @@ public abstract class AbstractEndpoint
     /**
      * Return true if this endpoint should expire (based on whatever logic is
      * appropriate for that endpoint implementation.
-     *
+     * <p>
      * NOTE(brian): Currently the bridge will automatically expire an endpoint
      * if all of its channel shims are removed. Maybe we should instead have
      * this logic always be called before expiring instead? But that would mean
@@ -259,6 +254,7 @@ public abstract class AbstractEndpoint
 
     /**
      * Get the last 'incoming activity' (packets received) this endpoint has seen
+     *
      * @return the timestamp, in milliseconds, of the last activity of this endpoint
      */
     public Instant getLastIncomingActivity()
@@ -273,7 +269,8 @@ public abstract class AbstractEndpoint
      * @param msg message text to send.
      */
     public abstract void sendMessage(String msg)
-        throws IOException;
+        throws
+        IOException;
 
 
     /**
@@ -330,9 +327,9 @@ public abstract class AbstractEndpoint
      * specified video constraints.
      *
      * @param newVideoConstraints the map of receiver endpoint id -> video
-     * constraints that specifies who (which receiver endpoint) is viewing what
-     * (as determined by the video constraints) from this endpoint (which is the
-     * sender).
+     *                            constraints that specifies who (which receiver endpoint) is viewing what
+     *                            (as determined by the video constraints) from this endpoint (which is the
+     *                            sender).
      */
     private void setReceiverVideoConstraints(
         ImmutableMap<String, VideoConstraints> newVideoConstraints)
@@ -349,20 +346,13 @@ public abstract class AbstractEndpoint
             .max(Comparator.comparingInt(VideoConstraints::getIdealHeight))
             .orElse(defaultVideoConstraints);
 
-        if (!newReceiverMaxVideoConstraints.equals(oldReceiverMaxVideoConstraints))
+        // for intra-bridge traffic we only care about the ideal height.
+        if (newReceiverMaxVideoConstraints.getIdealHeight()
+            != oldReceiverMaxVideoConstraints.getIdealHeight())
         {
             maxReceiverVideoConstraints = newReceiverMaxVideoConstraints;
             onMaxReceiverVideoConstraintsChanged(newReceiverMaxVideoConstraints);
         }
-    }
-
-    /**
-     * @return the instance responsible for bookkeeping of who (which receiver)
-     * is viewing what (video constraints).
-     */
-    public ReceiverVideoConstraintsBroker getReceiverVideoConstraintsBroker()
-    {
-        return receiverVideoConstraintsBroker;
     }
 
     /**
@@ -394,7 +384,6 @@ public abstract class AbstractEndpoint
     public abstract void addRtpExtension(RtpExtension rtpExtension);
 
     /**
-     *
      * @param newVideoConstraints
      */
     public abstract void setSenderVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraints);
@@ -405,61 +394,47 @@ public abstract class AbstractEndpoint
      * handles this notification differently.
      *
      * @param maxVideoConstraints the max video constraints that the bridge
-     * needs to receive from this endpoint
+     *                            needs to receive from this endpoint
      */
     protected abstract void
     onMaxReceiverVideoConstraintsChanged(VideoConstraints maxVideoConstraints);
 
     /**
-     * The class that is responsible for bookkeeping of who (which receiver) is
-     * viewing what (video constraints). Internally it maintains a map of
-     * receiver endpoint id -> video constraints. When the map changes, it sets
-     * the new map by calling {@link #setReceiverVideoConstraints(ImmutableMap)}.
-     *
-     * The main benefit of having this class (as opposed to spilling the
-     * implementation in AbstractEndpoint) is to keep the endpoint video
-     * constraints API symmetric (i.e. provide setter for send/recv video
-     * constraints).
+     * The map of receiver endpoint id -> video constraints.
      */
-    public class ReceiverVideoConstraintsBroker
+    private final Map<String, VideoConstraints> videoConstraintsMap = new ConcurrentHashMap<>();
+
+    /**
+     * Notifies this instance that the specified endpoint wants to receive
+     * the specified video constraints from the endpoint attached to this
+     * instance (the sender).
+     *
+     * @param endpointId          the id that specifies the receiver endpoint
+     * @param newVideoConstraints the video constraints that the receiver
+     *                            wishes to receive.
+     */
+    public void addReceiver(String endpointId, VideoConstraints newVideoConstraints)
     {
-        /**
-         * The map of receiver endpoint id -> video constraints.
-         */
-        private final Map<String, VideoConstraints> videoConstraintsMap = new ConcurrentHashMap<>();
-
-        /**
-         * Notifies this instance that the specified endpoint wants to receive
-         * the specified video constraints from the endpoint attached to this
-         * instance (the sender).
-         *
-         * @param endpointId the id that specifies the receiver endpoint
-         * @param newVideoConstraints the video constraints that the receiver
-         * wishes to receive.
-         */
-        public void addReceiver(String endpointId, VideoConstraints newVideoConstraints)
+        VideoConstraints oldVideoConstraints = videoConstraintsMap.put(endpointId, newVideoConstraints);
+        if (oldVideoConstraints == null
+            || !oldVideoConstraints.equals(newVideoConstraints))
         {
-            VideoConstraints oldVideoConstraints = videoConstraintsMap.put(endpointId, newVideoConstraints);
-            if (oldVideoConstraints == null
-                || !oldVideoConstraints.equals(newVideoConstraints))
-            {
-                setReceiverVideoConstraints(ImmutableMap.copyOf(videoConstraintsMap));
-            }
+            setReceiverVideoConstraints(ImmutableMap.copyOf(videoConstraintsMap));
         }
+    }
 
-        /**
-         * Notifies this instance that the specified endpoint no longer wants or
-         * needs to receive anything from the endpoint attached to this
-         * instance (the sender).
-         *
-         * @param endpointId the id that specifies the receiver endpoint
-         */
-        public void removeReceiver(String endpointId)
+    /**
+     * Notifies this instance that the specified endpoint no longer wants or
+     * needs to receive anything from the endpoint attached to this
+     * instance (the sender).
+     *
+     * @param endpointId the id that specifies the receiver endpoint
+     */
+    public void removeReceiver(String endpointId)
+    {
+        if (videoConstraintsMap.remove(endpointId) != null)
         {
-            if (videoConstraintsMap.remove(endpointId) != null)
-            {
-                setReceiverVideoConstraints(ImmutableMap.copyOf(videoConstraintsMap));
-            }
+            setReceiverVideoConstraints(ImmutableMap.copyOf(videoConstraintsMap));
         }
     }
 }

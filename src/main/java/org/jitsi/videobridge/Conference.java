@@ -844,7 +844,7 @@ public class Conference
         }
 
         endpoints.forEach((i, senderEndpoint)
-            -> senderEndpoint.getReceiverVideoConstraintsBroker().removeReceiver(id));
+            -> senderEndpoint.removeReceiver(id));
 
         if (tentacle != null)
         {

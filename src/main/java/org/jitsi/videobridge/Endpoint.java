@@ -650,7 +650,7 @@ public class Endpoint
             AbstractEndpoint senderEndpoint = getConference().getEndpoint(id);
             if (senderEndpoint != null)
             {
-                senderEndpoint.getReceiverVideoConstraintsBroker().removeReceiver(getID());
+                senderEndpoint.removeReceiver(getID());
             }
         }
 
@@ -663,7 +663,7 @@ public class Endpoint
 
             if (senderEndpoint != null)
             {
-                senderEndpoint.getReceiverVideoConstraintsBroker().addReceiver(
+                senderEndpoint.addReceiver(
                     getID(), videoConstraintsEntry.getValue());
             }
         }
