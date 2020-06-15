@@ -672,17 +672,15 @@ public class Endpoint
     @Override
     protected void onMaxReceiverVideoConstraintsChanged(VideoConstraints maxVideoConstraints)
     {
-        // TODO this is equivalent to what we have today but we want to handle
-        // tile-view better
-        String selectedUpdate = createSelectedUpdateMessage(
-            maxVideoConstraints.getIdealHeight() >= 360);
+        // Note that it's up to the client to respect these constraints.
+        String senderVideoConstraintsMessage = createSenderVideoConstraintsMessage(maxVideoConstraints);
 
         if (logger.isDebugEnabled())
         {
-            logger.debug("Is now selected, sending message: " + selectedUpdate);
+            logger.debug("Is now selected, sending message: " + senderVideoConstraintsMessage);
         }
 
-        sendMessage(selectedUpdate);
+        sendMessage(senderVideoConstraintsMessage);
     }
 
     /**
