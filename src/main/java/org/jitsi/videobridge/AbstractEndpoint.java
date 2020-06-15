@@ -315,6 +315,8 @@ public abstract class AbstractEndpoint
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
+        debugState.put("receiveVideoConstraints", videoConstraintsMap);
+        debugState.put("maxReceiveVideoConstraints", maxReceiverVideoConstraints);
         debugState.put("displayName", displayName);
         debugState.put("expired", expired);
         debugState.put("statsId", statsId);
