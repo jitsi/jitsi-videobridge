@@ -239,6 +239,6 @@ public class OctoPacket
             byte[] buf, int off, int len, int minLen)
     {
         return buf != null && off >= 0 && len >= minLen && minLen >= 0
-            && off + len < buf.length;
+            && off + len <= buf.length;
     }
 }
