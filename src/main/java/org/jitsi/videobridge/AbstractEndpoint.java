@@ -315,8 +315,8 @@ public abstract class AbstractEndpoint
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
-        debugState.put("receiveVideoConstraints", videoConstraintsMap);
-        debugState.put("maxReceiveVideoConstraints", maxReceiverVideoConstraints);
+        debugState.put("receiverVideoConstraints", receiverVideoConstraintsMap);
+        debugState.put("maxReceiverVideoConstraints", maxReceiverVideoConstraints);
         debugState.put("displayName", displayName);
         debugState.put("expired", expired);
         debugState.put("statsId", statsId);
@@ -404,7 +404,7 @@ public abstract class AbstractEndpoint
     /**
      * The map of receiver endpoint id -> video constraints.
      */
-    private final Map<String, VideoConstraints> videoConstraintsMap = new ConcurrentHashMap<>();
+    private final Map<String, VideoConstraints> receiverVideoConstraintsMap = new ConcurrentHashMap<>();
 
     /**
      * Notifies this instance that the specified endpoint wants to receive
@@ -417,11 +417,11 @@ public abstract class AbstractEndpoint
      */
     public void addReceiver(String endpointId, VideoConstraints newVideoConstraints)
     {
-        VideoConstraints oldVideoConstraints = videoConstraintsMap.put(endpointId, newVideoConstraints);
+        VideoConstraints oldVideoConstraints = receiverVideoConstraintsMap.put(endpointId, newVideoConstraints);
         if (oldVideoConstraints == null
             || !oldVideoConstraints.equals(newVideoConstraints))
         {
-            setReceiverVideoConstraints(ImmutableMap.copyOf(videoConstraintsMap));
+            setReceiverVideoConstraints(ImmutableMap.copyOf(receiverVideoConstraintsMap));
         }
     }
 
@@ -434,9 +434,9 @@ public abstract class AbstractEndpoint
      */
     public void removeReceiver(String endpointId)
     {
-        if (videoConstraintsMap.remove(endpointId) != null)
+        if (receiverVideoConstraintsMap.remove(endpointId) != null)
         {
-            setReceiverVideoConstraints(ImmutableMap.copyOf(videoConstraintsMap));
+            setReceiverVideoConstraints(ImmutableMap.copyOf(receiverVideoConstraintsMap));
         }
     }
 }
