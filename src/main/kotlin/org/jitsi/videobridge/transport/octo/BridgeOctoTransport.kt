@@ -208,9 +208,7 @@ class BridgeOctoTransport(
         }
         OctoPacket.writeHeaders(
             newBuf, newOff,
-            true /* source is a relay */,
             mediaType,
-            0 /* simulcast layers info */,
             confId,
             epId
         )

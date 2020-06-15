@@ -124,7 +124,7 @@ class OctoRelayService : BundleActivator {
         /**
          * The version of the octo protocol.
          */
-        const val OCTO_VERSION = 0
+        const val OCTO_VERSION = 1
     }
 
     data class Stats(
