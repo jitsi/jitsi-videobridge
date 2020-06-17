@@ -343,7 +343,7 @@ public abstract class AbstractEndpoint
      *                            (as determined by the video constraints) from this endpoint (which is the
      *                            sender).
      */
-    private void setReceiverVideoConstraints(
+    private void receiverVideoConstraintsChanged(
         ImmutableMap<String, VideoConstraints> newVideoConstraints)
     {
         VideoConstraints oldReceiverMaxVideoConstraints
@@ -427,7 +427,7 @@ public abstract class AbstractEndpoint
         if (oldVideoConstraints == null
             || !oldVideoConstraints.equals(newVideoConstraints))
         {
-            setReceiverVideoConstraints(ImmutableMap.copyOf(receiverVideoConstraintsMap));
+            receiverVideoConstraintsChanged(ImmutableMap.copyOf(receiverVideoConstraintsMap));
         }
     }
 
@@ -442,7 +442,7 @@ public abstract class AbstractEndpoint
     {
         if (receiverVideoConstraintsMap.remove(endpointId) != null)
         {
-            setReceiverVideoConstraints(ImmutableMap.copyOf(receiverVideoConstraintsMap));
+            receiverVideoConstraintsChanged(ImmutableMap.copyOf(receiverVideoConstraintsMap));
         }
     }
 }
