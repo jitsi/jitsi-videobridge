@@ -100,7 +100,7 @@ class OctoEndpoint(
         return transceiver.mediaSources
     }
 
-    override fun onMaxReceiverVideoConstraintsChanged(maxVideoConstraints: VideoConstraints?) {
+    override fun maxReceiverVideoConstraintsChanged(maxVideoConstraints: VideoConstraints?) {
         // XXX is it possible to send the message only to the specific bridge
         // that the sending endpoint connects to?
         conference.tentacle.sendMessage(EndpointMessageBuilder

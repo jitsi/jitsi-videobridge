@@ -111,16 +111,16 @@ public abstract class AbstractEndpointMessageTransport
             switch (colibriClass)
             {
                 case COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED:
-                    onSelectedEndpointChangedEvent(src, jsonObject);
+                    selectedEndpointChangedEvent(src, jsonObject);
                     break;
                 case COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED:
-                    onSelectedEndpointsChangedEvent(src, jsonObject);
+                    selectedEndpointsChangedEvent(src, jsonObject);
                     break;
                 case COLIBRI_CLASS_PINNED_ENDPOINT_CHANGED:
-                    onPinnedEndpointChangedEvent(src, jsonObject);
+                    pinnedEndpointChangedEvent(src, jsonObject);
                     break;
                 case COLIBRI_CLASS_PINNED_ENDPOINTS_CHANGED:
-                    onPinnedEndpointsChangedEvent(src, jsonObject);
+                    pinnedEndpointsChangedEvent(src, jsonObject);
                     break;
                 case COLIBRI_CLASS_CLIENT_HELLO:
                     onClientHello(src, jsonObject);
@@ -273,7 +273,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code PinnedEndpointChangedEvent} which has been received.
      */
-    protected void onPinnedEndpointChangedEvent(
+    protected void pinnedEndpointChangedEvent(
         @SuppressWarnings("unused") Object src,
         JSONObject jsonObject)
     {
@@ -286,7 +286,7 @@ public abstract class AbstractEndpointMessageTransport
             newPinnedIDs = Collections.singleton(newPinnedEndpointID);
         }
 
-        onPinnedEndpointsChangedEvent(jsonObject, newPinnedIDs);
+        pinnedEndpointsChangedEvent(jsonObject, newPinnedIDs);
     }
 
     /**
@@ -298,7 +298,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code PinnedEndpointChangedEvent} which has been received.
      */
-    protected void onPinnedEndpointsChangedEvent(
+    protected void pinnedEndpointsChangedEvent(
         @SuppressWarnings("unused") Object src,
         JSONObject jsonObject)
     {
@@ -318,7 +318,7 @@ public abstract class AbstractEndpointMessageTransport
             logger.debug("Pinned " + newPinnedEndpoints);
         }
 
-        onPinnedEndpointsChangedEvent(jsonObject, newPinnedEndpoints);
+        pinnedEndpointsChangedEvent(jsonObject, newPinnedEndpoints);
     }
 
     /**
@@ -330,7 +330,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code SelectedEndpointChangedEvent} which has been received.
      */
-    protected void onSelectedEndpointChangedEvent(
+    protected void selectedEndpointChangedEvent(
         @SuppressWarnings("unused") Object src,
         JSONObject jsonObject)
     {
@@ -344,7 +344,7 @@ public abstract class AbstractEndpointMessageTransport
             newSelectedIDs = Collections.singleton(newSelectedEndpointID);
         }
 
-        onSelectedEndpointsChangedEvent(jsonObject, newSelectedIDs);
+        selectedEndpointsChangedEvent(jsonObject, newSelectedIDs);
     }
 
     /**
@@ -356,7 +356,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code SelectedEndpointChangedEvent} which has been received.
      */
-    protected void onSelectedEndpointsChangedEvent(
+    protected void selectedEndpointsChangedEvent(
         @SuppressWarnings("unused") Object src,
         JSONObject jsonObject)
     {
@@ -370,7 +370,7 @@ public abstract class AbstractEndpointMessageTransport
 
         JSONArray jsonArray = (JSONArray) o;
         Set<String> newSelectedEndpoints = filterStringsToSet(jsonArray);
-        onSelectedEndpointsChangedEvent(jsonObject, newSelectedEndpoints);
+        selectedEndpointsChangedEvent(jsonObject, newSelectedEndpoints);
     }
 
     private Set<String> filterStringsToSet(JSONArray jsonArray)
@@ -395,12 +395,12 @@ public abstract class AbstractEndpointMessageTransport
      * {@code PinnedEndpointChangedEvent} which has been received.
      * @param newPinnedEndpoints the new pinned endpoints
      */
-    protected void onPinnedEndpointsChangedEvent(
+    protected void pinnedEndpointsChangedEvent(
         JSONObject jsonObject,
         Set<String> newPinnedEndpoints)
     {
         legacyVideoAllocationPolicy.setPinnedEndpoints(newPinnedEndpoints);
-        onVideoAllocationPoliciesChangedEvent(
+        videoAllocationPoliciesChangedEvent(
             legacyVideoAllocationPolicy.computeVideoAllocationPolicies());
     }
 
@@ -413,16 +413,16 @@ public abstract class AbstractEndpointMessageTransport
      * {@code SelectedEndpointChangedEvent} which has been received.
      * @param newSelectedEndpoints the new selected endpoints
      */
-    protected void onSelectedEndpointsChangedEvent(
+    protected void selectedEndpointsChangedEvent(
         JSONObject jsonObject,
         Set<String> newSelectedEndpoints)
     {
         legacyVideoAllocationPolicy.setSelectedEndpoints(newSelectedEndpoints);
-        onVideoAllocationPoliciesChangedEvent(
+        videoAllocationPoliciesChangedEvent(
             legacyVideoAllocationPolicy.computeVideoAllocationPolicies());
     }
 
-    protected void onVideoAllocationPoliciesChangedEvent(Map<String, VideoAllocationPolicy> videoAllocationPolicyMap)
+    protected void videoAllocationPoliciesChangedEvent(Map<String, VideoAllocationPolicy> videoAllocationPolicyMap)
     {
         // Don't "pollute" the video constraints map with constraints for this
         // endpoint.
@@ -500,7 +500,7 @@ public abstract class AbstractEndpointMessageTransport
         }
 
         legacyVideoAllocationPolicy.setMaxFrameHeight(maxFrameHeight);
-        onVideoAllocationPoliciesChangedEvent(legacyVideoAllocationPolicy.computeVideoAllocationPolicies());
+        videoAllocationPoliciesChangedEvent(legacyVideoAllocationPolicy.computeVideoAllocationPolicies());
     }
 
     /**

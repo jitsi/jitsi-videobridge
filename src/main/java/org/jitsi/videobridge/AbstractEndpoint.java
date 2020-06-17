@@ -359,7 +359,7 @@ public abstract class AbstractEndpoint
         if (!newReceiverMaxVideoConstraints.equals(oldReceiverMaxVideoConstraints))
         {
             maxReceiverVideoConstraints = newReceiverMaxVideoConstraints;
-            onMaxReceiverVideoConstraintsChanged(newReceiverMaxVideoConstraints);
+            maxReceiverVideoConstraintsChanged(newReceiverMaxVideoConstraints);
         }
     }
 
@@ -406,7 +406,7 @@ public abstract class AbstractEndpoint
      *                            needs to receive from this endpoint
      */
     protected abstract void
-    onMaxReceiverVideoConstraintsChanged(VideoConstraints maxVideoConstraints);
+    maxReceiverVideoConstraintsChanged(VideoConstraints maxVideoConstraints);
 
     /**
      * The map of receiver endpoint id -> video constraints.

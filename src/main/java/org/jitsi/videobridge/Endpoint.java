@@ -670,7 +670,7 @@ public class Endpoint
     }
 
     @Override
-    protected void onMaxReceiverVideoConstraintsChanged(VideoConstraints maxVideoConstraints)
+    protected void maxReceiverVideoConstraintsChanged(VideoConstraints maxVideoConstraints)
     {
         // Note that it's up to the client to respect these constraints.
         String senderVideoConstraintsMessage = createSenderVideoConstraintsMessage(maxVideoConstraints);
