@@ -134,7 +134,7 @@ The respective response could look like:
     "threads":17,
     "videochannels":0
 }</pre>
-		(Make sure <a href="https://github.com/jitsi/jitsi-videobridge/blob/master/doc/rest.md#introduction">statistics are enabled</a>.)
+		(Make sure <a href="rest.md#introduction">statistics are enabled</a>.)
 		</td>
 	</tr>
 </table>
