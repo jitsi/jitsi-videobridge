@@ -180,7 +180,7 @@ public class Videobridge
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public @NotNull Conference createConference(Localpart name, String gid)
+    public @NotNull Conference createConference(Localpart name, long gid)
     {
         return this.createConference(name == null ? null : name.toString(), /* enableLogging */ true, gid);
     }
@@ -193,7 +193,7 @@ public class Videobridge
      * @param gid
      * @return
      */
-    private @NotNull Conference doCreateConference(String name, boolean enableLogging, String gid)
+    private @NotNull Conference doCreateConference(String name, boolean enableLogging, long gid)
     {
         Conference conference = null;
         do
@@ -229,11 +229,29 @@ public class Videobridge
      * @param name world readable name of the conference to create.
      * @param enableLogging whether logging should be enabled or disabled for
      * the {@link Conference}.
-     * @param gid the optional "global" id of the conference.
+     */
+    public @NotNull Conference createConference(
+            String name, boolean enableLogging)
+    {
+        return createConference(name, enableLogging, -1);
+    }
+
+    /**
+     * Initializes a new {@link Conference} instance with an ID unique to the
+     * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt> and
+     * adds the new instance to the list of existing <tt>Conference</tt>
+     * instances.
+     *
+     * @param name world readable name of the conference to create.
+     * @param enableLogging whether logging should be enabled or disabled for
+     * the {@link Conference}.
+     * @param gid the "global" id of the conference (or {@code -1} if it is not
+     * specified.
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public @NotNull Conference createConference(String name, boolean enableLogging, String gid)
+    public @NotNull Conference createConference(
+            String name, boolean enableLogging, long gid)
     {
         final Conference conference = doCreateConference(name, enableLogging, gid);
 

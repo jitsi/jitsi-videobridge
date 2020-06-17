@@ -60,13 +60,13 @@ class BridgeOctoTransport(
      * Handlers for incoming Octo packets.  Packets will be routed to a handler based on the conference
      * ID in the Octo packet
      */
-    private val incomingPacketHandlers: MutableMap<String, IncomingOctoPacketHandler> = ConcurrentHashMap()
+    private val incomingPacketHandlers: MutableMap<Long, IncomingOctoPacketHandler> = ConcurrentHashMap()
 
     /**
      * Maps how many Octo packets have been received for unknown conference IDs, to avoid
      * spamming the error logs
      */
-    private val unknownConferences: MutableMap<String, AtomicLong> = ConcurrentHashMap()
+    private val unknownConferences: MutableMap<Long, AtomicLong> = ConcurrentHashMap()
 
     /**
      * The handler which will be invoked when this [BridgeOctoTransport] wants to
@@ -81,7 +81,10 @@ class BridgeOctoTransport(
     /**
      * Registers a [PacketHandler] for the given [conferenceId]
      */
-    fun addHandler(conferenceId: String, handler: IncomingOctoPacketHandler) {
+    fun addHandler(conferenceId: Long, handler: IncomingOctoPacketHandler) {
+        if (conferenceId < 0 || conferenceId > 0xffff_ffff) {
+            throw IllegalArgumentException("Invalid conference ID: $conferenceId")
+        }
         logger.info("Adding handler for conference $conferenceId")
 
         synchronized(incomingPacketHandlers) {
@@ -96,7 +99,7 @@ class BridgeOctoTransport(
      * Removes the [PacketHandler] for the given [conferenceId] IFF the one
      * in the map is the same as [handler].
      */
-    fun removeHandler(conferenceId: String, handler: IncomingOctoPacketHandler) = synchronized(incomingPacketHandlers) {
+    fun removeHandler(conferenceId: Long, handler: IncomingOctoPacketHandler) = synchronized(incomingPacketHandlers) {
         // If the Colibri conference for this GID was re-created, and the
         // original Conference object is expired after a new packet handler
         // was registered, the new packet handler should not be removed (as
@@ -116,7 +119,7 @@ class BridgeOctoTransport(
 
     @Suppress("DEPRECATION")
     fun dataReceived(buf: ByteArray, off: Int, len: Int, receivedTime: Instant) {
-        var conferenceId: String
+        var conferenceId: Long
         var mediaType: MediaType
         var sourceEpId: String
 
@@ -163,12 +166,12 @@ class BridgeOctoTransport(
         }
     }
 
-    fun sendMediaData(buf: ByteArray, off: Int, len: Int, targets: Set<SocketAddress>, confId: String, sourceEpId: String? = null) {
+    fun sendMediaData(buf: ByteArray, off: Int, len: Int, targets: Set<SocketAddress>, confId: Long, sourceEpId: String? = null) {
         sendData(buf, off, len, targets, confId, MediaType.VIDEO, sourceEpId)
     }
 
     @Suppress("DEPRECATION")
-    fun sendString(msg: String, targets: Set<SocketAddress>, confId: String) {
+    fun sendString(msg: String, targets: Set<SocketAddress>, confId: Long) {
         val msgData = msg.toByteArray(StandardCharsets.UTF_8)
         sendData(msgData, 0, msgData.size, targets, confId, MediaType.DATA, null)
     }
@@ -178,7 +181,7 @@ class BridgeOctoTransport(
         off: Int,
         len: Int,
         targets: Set<SocketAddress>,
-        confId: String,
+        confId: Long,
         mediaType: MediaType,
         sourceEpId: String? = null
     ) {
