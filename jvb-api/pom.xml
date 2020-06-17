@@ -40,7 +40,6 @@
     <modules>
         <module>jvb-api-common</module>
         <module>jvb-api-client</module>
-        <module>jvb-api-server</module>
     </modules>
 
     <build>
