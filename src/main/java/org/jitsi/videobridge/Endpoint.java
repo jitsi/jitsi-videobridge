@@ -633,16 +633,16 @@ public class Endpoint
     }
 
     @Override
-    public void setSenderVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraints)
+    public void setSenderVideoAllocationPolicies(ImmutableMap<String, VideoAllocationPolicy> newVideoAllocationPolicies)
     {
-        ImmutableMap<String, VideoConstraints>
-            oldVideoConstraints = bitrateController.getVideoConstraints();
+        ImmutableMap<String, VideoAllocationPolicy>
+            oldVideoConstraints = bitrateController.getVideoAllocationPolicies();
 
-        bitrateController.setVideoConstraints(newVideoConstraints);
+        bitrateController.setVideoAllocationPolicies(newVideoAllocationPolicies);
 
         Set<String> endpointsThatNoLongerCare
             = new HashSet<>(oldVideoConstraints.keySet());
-        endpointsThatNoLongerCare.removeAll(newVideoConstraints.keySet());
+        endpointsThatNoLongerCare.removeAll(newVideoAllocationPolicies.keySet());
 
         // Endpoints that no longer care what they receive.
         for (String id : endpointsThatNoLongerCare)
@@ -655,8 +655,8 @@ public class Endpoint
         }
 
         // Added or updated.
-        for (Map.Entry<String, VideoConstraints>
-            videoConstraintsEntry : newVideoConstraints.entrySet())
+        for (Map.Entry<String, VideoAllocationPolicy>
+            videoConstraintsEntry : newVideoAllocationPolicies.entrySet())
         {
             AbstractEndpoint senderEndpoint
                 = getConference().getEndpoint(videoConstraintsEntry.getKey());
@@ -677,7 +677,7 @@ public class Endpoint
 
         if (logger.isDebugEnabled())
         {
-            logger.debug("Is now selected, sending message: " + senderVideoConstraintsMessage);
+            logger.debug("Sender constraints changed: " + senderVideoConstraintsMessage);
         }
 
         sendMessage(senderVideoConstraintsMessage);

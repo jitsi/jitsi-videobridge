@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.cc;
 
-import org.jitsi.videobridge.*;
 import org.junit.*;
 
 import java.util.*;
@@ -26,24 +25,24 @@ import static org.junit.Assert.*;
 public class EndpointMultiRankerTest
 {
     final List<EndpointMultiRank> endpointMultiRanks = new ArrayList<>();
-    final VideoConstraints stageVideoConstraints
-        = new VideoConstraints(/* idealHeight */ 720);
-    final VideoConstraints thumbnailVideoConstraints
-        = new VideoConstraints(/* idealHeight */ 180);
+    final VideoAllocationPolicy stageVideoAllocationPolicy
+        = new VideoAllocationPolicy(/* idealHeight */ 720);
+    final VideoAllocationPolicy thumbnailVideoAllocationPolicy
+        = new VideoAllocationPolicy(/* idealHeight */ 180);
 
     @Test
     public void followActiveSpeaker()
     {
         EndpointMultiRank activeSpeakerMultiRank
-            = makeNextSpeakerWithVideoConstraints(stageVideoConstraints);
+            = makeNextSpeakerWithVideoAllocationPolicy(stageVideoAllocationPolicy);
         endpointMultiRanks.add(activeSpeakerMultiRank);
 
         EndpointMultiRank speaker2MultiRank
-            = makeNextSpeakerWithVideoConstraints(thumbnailVideoConstraints);
+            = makeNextSpeakerWithVideoAllocationPolicy(thumbnailVideoAllocationPolicy);
         endpointMultiRanks.add(speaker2MultiRank);
 
         EndpointMultiRank speaker3MultiRank
-            = makeNextSpeakerWithVideoConstraints(thumbnailVideoConstraints);
+            = makeNextSpeakerWithVideoAllocationPolicy(thumbnailVideoAllocationPolicy);
         endpointMultiRanks.add(speaker3MultiRank);
 
         endpointMultiRanks.sort(new EndpointMultiRanker());
@@ -66,15 +65,15 @@ public class EndpointMultiRankerTest
     public void followArbitrarySpeaker()
     {
         EndpointMultiRank activeSpeakerMultiRank
-            = makeNextSpeakerWithVideoConstraints(thumbnailVideoConstraints);
+            = makeNextSpeakerWithVideoAllocationPolicy(thumbnailVideoAllocationPolicy);
         endpointMultiRanks.add(activeSpeakerMultiRank);
 
         EndpointMultiRank speaker2MultiRank
-            = makeNextSpeakerWithVideoConstraints(thumbnailVideoConstraints);
+            = makeNextSpeakerWithVideoAllocationPolicy(thumbnailVideoAllocationPolicy);
         endpointMultiRanks.add(speaker2MultiRank);
 
         EndpointMultiRank speaker3MultiRank
-            = makeNextSpeakerWithVideoConstraints(stageVideoConstraints);
+            = makeNextSpeakerWithVideoAllocationPolicy(stageVideoAllocationPolicy);
         endpointMultiRanks.add(speaker3MultiRank);
 
         endpointMultiRanks.sort(new EndpointMultiRanker());
@@ -93,8 +92,8 @@ public class EndpointMultiRankerTest
         assertEquals(endpointMultiRanks.get(2), speaker2MultiRank);
     }
 
-    private EndpointMultiRank makeNextSpeakerWithVideoConstraints(VideoConstraints videoConstraints)
+    private EndpointMultiRank makeNextSpeakerWithVideoAllocationPolicy(VideoAllocationPolicy videoAllocationPolicy)
     {
-        return new EndpointMultiRank(endpointMultiRanks.size(), videoConstraints, null);
+        return new EndpointMultiRank(endpointMultiRanks.size(), videoAllocationPolicy, null);
     }
 }

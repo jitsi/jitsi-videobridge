@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import com.google.common.collect.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
@@ -51,8 +52,8 @@ public abstract class AbstractEndpointMessageTransport
      * The compatibility layer that translates selected, pinned and max
      * resolution messages into video constraints.
      */
-    private final VideoConstraintsCompatibility
-        videoConstraintsCompatibility = new VideoConstraintsCompatibility();
+    private final LegacyVideoAllocationPolicy
+        legacyVideoAllocationPolicy = new LegacyVideoAllocationPolicy();
 
     /**
      * Initializes a new {@link AbstractEndpointMessageTransport} instance.
@@ -398,9 +399,9 @@ public abstract class AbstractEndpointMessageTransport
         JSONObject jsonObject,
         Set<String> newPinnedEndpoints)
     {
-        videoConstraintsCompatibility.setPinnedEndpoints(newPinnedEndpoints);
-        onVideoConstraintsChangedEvent(
-            videoConstraintsCompatibility.computeVideoConstraints());
+        legacyVideoAllocationPolicy.setPinnedEndpoints(newPinnedEndpoints);
+        onVideoAllocationPoliciesChangedEvent(
+            legacyVideoAllocationPolicy.computeVideoAllocationPolicies());
     }
 
     /**
@@ -416,17 +417,17 @@ public abstract class AbstractEndpointMessageTransport
         JSONObject jsonObject,
         Set<String> newSelectedEndpoints)
     {
-        videoConstraintsCompatibility.setSelectedEndpoints(newSelectedEndpoints);
-        onVideoConstraintsChangedEvent(
-            videoConstraintsCompatibility.computeVideoConstraints());
+        legacyVideoAllocationPolicy.setSelectedEndpoints(newSelectedEndpoints);
+        onVideoAllocationPoliciesChangedEvent(
+            legacyVideoAllocationPolicy.computeVideoAllocationPolicies());
     }
 
-    protected void onVideoConstraintsChangedEvent(Map<String, VideoConstraints> videoConstraintMap)
+    protected void onVideoAllocationPoliciesChangedEvent(Map<String, VideoAllocationPolicy> videoAllocationPolicyMap)
     {
         // Don't "pollute" the video constraints map with constraints for this
         // endpoint.
-        videoConstraintMap.remove(endpoint.getID());
-        endpoint.setSenderVideoConstraints(ImmutableMap.copyOf(videoConstraintMap));
+        videoAllocationPolicyMap.remove(endpoint.getID());
+        endpoint.setSenderVideoAllocationPolicies(ImmutableMap.copyOf(videoAllocationPolicyMap));
     }
 
     /**
@@ -498,8 +499,8 @@ public abstract class AbstractEndpointMessageTransport
                     + getId() + ": " + maxFrameHeight);
         }
 
-        videoConstraintsCompatibility.setMaxFrameHeight(maxFrameHeight);
-        onVideoConstraintsChangedEvent(videoConstraintsCompatibility.computeVideoConstraints());
+        legacyVideoAllocationPolicy.setMaxFrameHeight(maxFrameHeight);
+        onVideoAllocationPoliciesChangedEvent(legacyVideoAllocationPolicy.computeVideoAllocationPolicies());
     }
 
     /**

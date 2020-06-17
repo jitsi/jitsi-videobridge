@@ -170,17 +170,18 @@ public class BitrateController
             = Collections.emptyList();
 
     /**
-     * The default video constraints to use for endpoints without video
+     * The default video allocation policy to use for endpoints without video
      * constraints.
      */
-    private static final VideoConstraints defaultVideoConstraints
-        = new VideoConstraints(Config.thumbnailMaxHeightPx());
+    private static final VideoAllocationPolicy defaultVideoAllocationPolicy
+        = new VideoAllocationPolicy(Config.thumbnailMaxHeightPx());
 
     /**
-     * The map of endpoint id to video constraints that contains the video
-     * constraints to respect when allocating bandwidth for a specific endpoint.
+     * The map of endpoint id to video allocation policy that contains the video
+     * allocation policy to follow when allocating bandwidth for a specific
+     * endpoint.
      */
-    private ImmutableMap<String, VideoConstraints> videoConstraintsMap = ImmutableMap.of();
+    private ImmutableMap<String, VideoAllocationPolicy> videoAllocationPolicyMap = ImmutableMap.of();
 
     /**
      * The last-n value for the endpoint to which this {@link BitrateController}
@@ -270,13 +271,13 @@ public class BitrateController
     }
 
     /**
-     * @return the map of endpoint id to video constraints that contains the
-     * video constraints to respect when allocating bandwidth for a specific
-     * endpoint.
+     * @return the map of endpoint id to video allocation policy that contains
+     * the video allocation poliicy to follow when allocating bandwidth for a
+     * specific endpoint.
      */
-    public ImmutableMap<String, VideoConstraints> getVideoConstraints()
+    public ImmutableMap<String, VideoAllocationPolicy> getVideoAllocationPolicies()
     {
-        return videoConstraintsMap;
+        return videoAllocationPolicyMap;
     }
 
     /**
@@ -295,9 +296,9 @@ public class BitrateController
         final int speakerRank;
 
         /**
-         * The video constraints of the {@link #endpoint}.
+         * The video allocation policy of the {@link #endpoint}.
          */
-        final VideoConstraints videoConstraints;
+        final VideoAllocationPolicy videoAllocationPolicy;
 
         /**
          * The endpoint (sender) that's constrained and is ranked for bandwidth
@@ -309,13 +310,13 @@ public class BitrateController
          * Ctor.
          *
          * @param speakerRank
-         * @param videoConstraints
+         * @param videoAllocationPolicy
          * @param endpoint
          */
-        EndpointMultiRank(int speakerRank, VideoConstraints videoConstraints, AbstractEndpoint endpoint)
+        EndpointMultiRank(int speakerRank, VideoAllocationPolicy videoAllocationPolicy, AbstractEndpoint endpoint)
         {
             this.speakerRank = speakerRank;
-            this.videoConstraints = videoConstraints;
+            this.videoAllocationPolicy = videoAllocationPolicy;
             this.endpoint = endpoint;
         }
     }
@@ -345,7 +346,7 @@ public class BitrateController
             // We want "o1 has higher preferred height than o2" to imply "o1 is
             // smaller than o2" as this is equivalent to "o1 needs to be
             // prioritized first".
-            int preferredHeightDiff = o2.videoConstraints.getPreferredHeight() - o1.videoConstraints.getPreferredHeight();
+            int preferredHeightDiff = o2.videoAllocationPolicy.getPreferredHeight() - o1.videoAllocationPolicy.getPreferredHeight();
             if (preferredHeightDiff != 0)
             {
                 return preferredHeightDiff;
@@ -355,7 +356,7 @@ public class BitrateController
                 // We want "o1 has higher ideal height than o2" to imply "o1 is
                 // smaller than o2" as this is equivalent to "o1 needs to be
                 // prioritized first".
-                int idealHeightDiff = o2.videoConstraints.getIdealHeight() - o1.videoConstraints.getIdealHeight();
+                int idealHeightDiff = o2.videoAllocationPolicy.getIdealHeight() - o1.videoAllocationPolicy.getIdealHeight();
                 if (idealHeightDiff != 0)
                 {
                     return idealHeightDiff;
@@ -456,7 +457,7 @@ public class BitrateController
         debugState.put("forwardedEndpoints", forwardedEndpointIds.toString());
         debugState.put("trustBwe", Config.trustBwe());
         debugState.put("lastBwe", lastBwe);
-        debugState.put("videoConstraints", videoConstraintsMap);
+        debugState.put("videoAllocationPolicies", videoAllocationPolicyMap);
         debugState.put("lastN", lastN);
         debugState.put("supportsRtx", supportsRtx);
         JSONObject adaptiveSourceProjectionsJson = new JSONObject();
@@ -743,8 +744,8 @@ public class BitrateController
                             .addField("target_idx", sourceTargetIdx)
                             .addField("ideal_idx", sourceIdealIdx)
                             .addField("target_bps", sourceTargetBps)
-                            .addField("videoConstraints",
-                                sourceBitrateAllocation.videoConstraints)
+                            .addField("videoAllocationPolicy",
+                                sourceBitrateAllocation.videoAllocationPolicy)
                             .addField("oversending",
                                 sourceBitrateAllocation.oversending)
                             .addField("preferred_idx",
@@ -1009,19 +1010,18 @@ public class BitrateController
             logger.debug("Prioritizing endpoints, adjusted last-n: " + adjustedLastN +
                 ", sorted endpoint list: " +
                 conferenceEndpoints.stream().map(AbstractEndpoint::getID).collect(Collectors.joining(", ")) +
-                ". Endpoints constraints: " + Arrays.toString(videoConstraintsMap.values().toArray()));
+                ". Endpoints allocation policies: " + Arrays.toString(videoAllocationPolicyMap.values().toArray()));
         }
 
-        Map<String, VideoConstraints> videoConstraintsMapCopy = videoConstraintsMap;
+        Map<String, VideoAllocationPolicy> copyOfVideoAllocationPolicyMap = videoAllocationPolicyMap;
 
         List<EndpointMultiRank> endpointMultiRankList = conferenceEndpoints
             .stream()
             .map(endpoint -> {
-                VideoConstraints videoConstraints = videoConstraintsMapCopy
-                    .getOrDefault(endpoint.getID(), defaultVideoConstraints);
-
+                VideoAllocationPolicy videoAllocationPolicy = copyOfVideoAllocationPolicyMap
+                    .getOrDefault(endpoint.getID(), defaultVideoAllocationPolicy);
                 int rank = conferenceEndpoints.indexOf(endpoint);
-                return new EndpointMultiRank(rank, videoConstraints, endpoint);
+                return new EndpointMultiRank(rank, videoAllocationPolicy, endpoint);
             })
             .sorted(new EndpointMultiRanker())
             .collect(Collectors.toList());
@@ -1047,7 +1047,7 @@ public class BitrateController
                     sourceBitrateAllocations.add(
                         new SourceBitrateAllocation(
                             endpointMultiRank.endpoint.getID(),
-                            source, endpointMultiRank.videoConstraints, forwarded));
+                            source, endpointMultiRank.videoAllocationPolicy, forwarded));
 
                 }
 
@@ -1059,11 +1059,11 @@ public class BitrateController
         return sourceBitrateAllocations.toArray(new SourceBitrateAllocation[0]);
     }
 
-    public void setVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraintsMap)
+    public void setVideoAllocationPolicies(ImmutableMap<String, VideoAllocationPolicy> newVideoAllocationPolicies)
     {
-        if (!this.videoConstraintsMap.equals(newVideoConstraintsMap))
+        if (!this.videoAllocationPolicyMap.equals(newVideoAllocationPolicies))
         {
-            this.videoConstraintsMap = newVideoConstraintsMap;
+            this.videoAllocationPolicyMap = newVideoAllocationPolicies;
             update();
         }
     }
@@ -1204,7 +1204,7 @@ public class BitrateController
          * Indicates whether this {@link Endpoint} is on-stage/selected or not
          * at the {@link Endpoint} that owns this {@link BitrateController}.
          */
-        private final VideoConstraints videoConstraints;
+        private final VideoAllocationPolicy videoAllocationPolicy;
 
         /**
          * Helper field that keeps the SSRC of the target stream.
@@ -1272,11 +1272,11 @@ public class BitrateController
         private SourceBitrateAllocation(
             String endpointID,
             MediaSourceDesc source,
-            VideoConstraints videoConstraints,
+            VideoAllocationPolicy videoAllocationPolicy,
             boolean fitsInLastN)
         {
             this.endpointID = endpointID;
-            this.videoConstraints = videoConstraints;
+            this.videoAllocationPolicy = videoAllocationPolicy;
             this.fitsInLastN = fitsInLastN;
             this.source = source;
 
@@ -1309,7 +1309,7 @@ public class BitrateController
             for (RtpLayerDesc layer : source.getRtpLayers())
             {
 
-                int idealHeight = videoConstraints.getIdealHeight();
+                int idealHeight = videoAllocationPolicy.getIdealHeight();
                 // We don't want to exceed the ideal resolution but we also
                 // want to make sure we have at least 1 rated encoding.
                 if (idealHeight >= 0 && layer.getHeight() > idealHeight
@@ -1326,11 +1326,11 @@ public class BitrateController
                 // 180p30fps, 360p30fps and 720p30fps.
 
                 boolean lessThanPreferredResolution
-                    = layer.getHeight() < videoConstraints.getPreferredHeight();
+                    = layer.getHeight() < videoAllocationPolicy.getPreferredHeight();
                 boolean lessThanOrEqualIdealResolution
-                    = layer.getHeight() <= videoConstraints.getIdealHeight();
+                    = layer.getHeight() <= videoAllocationPolicy.getIdealHeight();
                 boolean atLeastPreferredFps
-                    = layer.getFrameRate() >= videoConstraints.getPreferredFps();
+                    = layer.getFrameRate() >= videoAllocationPolicy.getPreferredFps();
 
                 if ((lessThanPreferredResolution
                     || (lessThanOrEqualIdealResolution && atLeastPreferredFps))
@@ -1345,7 +1345,7 @@ public class BitrateController
                         new RateSnapshot(layerBitrateBps, layer));
                 }
 
-                if (layer.getHeight() <= videoConstraints.getPreferredHeight())
+                if (layer.getHeight() <= videoAllocationPolicy.getPreferredHeight())
                 {
                     // The improve step below will "eagerly" try to allocate
                     // up-to the ratedPreferredIdx before moving on to the next

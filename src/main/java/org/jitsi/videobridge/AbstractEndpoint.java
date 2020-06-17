@@ -22,6 +22,7 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.cc.config.*;
 import org.jitsi.videobridge.rest.root.colibri.debug.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -386,9 +387,10 @@ public abstract class AbstractEndpoint
     public abstract void addRtpExtension(RtpExtension rtpExtension);
 
     /**
-     * @param newVideoConstraints
+     * @param newVideoAllocationPolicies
      */
-    public abstract void setSenderVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraints);
+    public abstract void setSenderVideoAllocationPolicies(
+        ImmutableMap<String, VideoAllocationPolicy> newVideoAllocationPolicies);
 
     /**
      * Notifies this instance that the max video constraints that the bridge

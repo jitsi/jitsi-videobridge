@@ -29,6 +29,7 @@ import org.jitsi.videobridge.EndpointMessageBuilder
 import org.jitsi.videobridge.VideoConstraints
 import org.jitsi.videobridge.rest.root.colibri.debug.EndpointDebugFeatures
 import org.jitsi.nlj.MediaSourceDesc
+import org.jitsi.videobridge.cc.VideoAllocationPolicy
 
 /**
  * Represents an endpoint in a conference, which is connected to another
@@ -75,7 +76,7 @@ class OctoEndpoint(
         // single OctoEndpoints instance.
     }
 
-    override fun setSenderVideoConstraints(newVideoConstraints: ImmutableMap<String, VideoConstraints>?) {
+    override fun setSenderVideoAllocationPolicies(newVideoAllocationPolicies: ImmutableMap<String, VideoAllocationPolicy>?) {
         // NO-OP
     }
 

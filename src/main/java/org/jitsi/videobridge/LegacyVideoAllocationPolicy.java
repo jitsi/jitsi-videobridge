@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge;
 
+import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.cc.config.*;
 
 import java.util.*;
@@ -25,7 +26,7 @@ import java.util.stream.*;
  * A class that translates between old-world selected/pinned/maxFrameHeight
  * messages to new-world video constraints.
  */
-class VideoConstraintsCompatibility
+class LegacyVideoAllocationPolicy
 {
     /**
      * The last pinned endpoints set signaled by the receiving endpoint.
@@ -91,11 +92,11 @@ class VideoConstraintsCompatibility
      * controller that it needs to (evenly) distribute bandwidth across all
      * participants, up to X.
      */
-    Map<String, VideoConstraints> computeVideoConstraints()
+    Map<String, VideoAllocationPolicy> computeVideoAllocationPolicies()
     {
         int maxFrameHeightCopy = maxFrameHeight;
 
-        final VideoConstraints selectedEndpointConstraints;
+        final VideoAllocationPolicy selectedEndpointPolicy;
         if (selectedEndpoints.size() > 1)
         {
             // This implements special handling for tile-view. We can show that
@@ -120,42 +121,42 @@ class VideoConstraintsCompatibility
             // In tile view we set the ideal height but not the preferred height
             // nor the preferred frame-rate because we want even even
             // distribution of bandwidth among all the tiles to avoid ninjas.
-            selectedEndpointConstraints = new VideoConstraints(
+            selectedEndpointPolicy = new VideoAllocationPolicy(
                 Math.min(BitrateControllerConfig.Config.onstageIdealHeightPx(),
                     maxFrameHeightCopy));
         }
         else
         {
-            selectedEndpointConstraints = new VideoConstraints(
+            selectedEndpointPolicy = new VideoAllocationPolicy(
                 Math.min(BitrateControllerConfig.Config.onstageIdealHeightPx(),
                     maxFrameHeightCopy),
                 BitrateControllerConfig.Config.onstagePreferredHeightPx(),
                 BitrateControllerConfig.Config.onstagePreferredFramerate());
         }
 
-        Map<String, VideoConstraints> selectedVideoConstraintsMap
+        Map<String, VideoAllocationPolicy> selectedVideoAllocationPolicyMap
             = selectedEndpoints
             .stream()
-            .collect(Collectors.toMap(e -> e, e -> selectedEndpointConstraints));
+            .collect(Collectors.toMap(e -> e, e -> selectedEndpointPolicy));
 
-        final VideoConstraints pinnedEndpointConstraints
-            = new VideoConstraints(Math.min(
+        final VideoAllocationPolicy pinnedEndpointPolicy
+            = new VideoAllocationPolicy(Math.min(
             BitrateControllerConfig.Config.thumbnailMaxHeightPx(), maxFrameHeightCopy));
 
-        Map<String, VideoConstraints> pinnedVideoConstraintsMap
+        Map<String, VideoAllocationPolicy> pinnedVideoAllocationPolicyMap
             = pinnedEndpoints
             .stream()
-            .collect(Collectors.toMap(e -> e, e -> pinnedEndpointConstraints));
+            .collect(Collectors.toMap(e -> e, e -> pinnedEndpointPolicy));
 
-        Map<String, VideoConstraints>
-            newVideoConstraints = new HashMap<>(pinnedVideoConstraintsMap);
+        Map<String, VideoAllocationPolicy>
+            newVideoAllocationPolicyMap = new HashMap<>(pinnedVideoAllocationPolicyMap);
 
         // Add video constraints for all the selected endpoints (which will
         // automatically override the video constraints for pinned endpoints, so
         // they're bumped to 720p if they're also selected).
-        newVideoConstraints.putAll(selectedVideoConstraintsMap);
+        newVideoAllocationPolicyMap.putAll(selectedVideoAllocationPolicyMap);
 
-        return newVideoConstraints;
+        return newVideoAllocationPolicyMap;
     }
 
     /**
