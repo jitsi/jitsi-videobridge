@@ -87,8 +87,9 @@ public abstract class AbstractEndpoint
         DEFAULT_MAX_RECEIVER_CONSTRAINTS = THUMBNAIL_VIDEO_CONSTRAINTS;
 
     /**
-     * The max video constraints that the bridge should receive from this
-     * endpoint.
+     * The maximum set of constraints applied by all receivers of this endpoint
+     * in the conference. The client needs to send _at least_ this to satisfy
+     * all receivers.
      */
     private VideoConstraints maxReceiverVideoConstraints
         = new VideoConstraints(BitrateControllerConfig.Config.onstageIdealHeightPx());
