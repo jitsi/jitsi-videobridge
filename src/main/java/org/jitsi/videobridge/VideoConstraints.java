@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.jitsi.videobridge.cc.config.*;
 import org.json.simple.*;
 
 import java.util.*;
@@ -24,6 +25,12 @@ import java.util.*;
  */
 public class VideoConstraints
 {
+    /**
+     * Static instance for the default constraints for a thumbnail.
+     */
+    public static final VideoConstraints THUMBNAIL_VIDEO_CONSTRAINTS =
+        new VideoConstraints(BitrateControllerConfig.Config.thumbnailMaxHeightPx());
+
     /**
      * The ideal height of the constrained endpoint. The bridge tries to send an
      * encoding that matches this resolution as close as possible, if bandwidth

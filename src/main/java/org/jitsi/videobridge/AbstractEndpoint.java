@@ -33,6 +33,8 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 
+import static org.jitsi.videobridge.VideoConstraints.THUMBNAIL_VIDEO_CONSTRAINTS;
+
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
  * a participant in the conference, which connects the participant's audio
@@ -81,8 +83,8 @@ public abstract class AbstractEndpoint
     /**
      * The default video constraints to assume when nothing is signaled.
      */
-    private final VideoConstraints defaultReceiverVideoConstraints
-        = new VideoConstraints(BitrateControllerConfig.Config.thumbnailMaxHeightPx());
+    private final VideoConstraints
+        defaultReceiverVideoConstraints = THUMBNAIL_VIDEO_CONSTRAINTS;
 
     /**
      * The max video constraints that the bridge should receive from this
