@@ -25,6 +25,7 @@ import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
+import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 
 import java.io.*;

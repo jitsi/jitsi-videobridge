@@ -104,10 +104,10 @@ public class Conference
 
     /**
      * The "global" id of this conference, set by the controller (e.g. jicofo)
-     * as opposed to the bridge. This defaults to {@code null} unless it is
-     * specified.
+     * as opposed to the bridge. This is a 32-bit unsigned integer, or {@code -1}
+     * if it is not set.
      */
-    private final String gid;
+    private final long gid;
 
     /**
      * The world readable name of this instance if any.
@@ -188,17 +188,18 @@ public class Conference
                       String id,
                       String conferenceName,
                       boolean enableLogging,
-                      String gid)
+                      long gid)
     {
+        if (gid < -1 || gid > 0xffff_ffffl)
+        {
+            throw new IllegalArgumentException("Invalid GID:" + gid);
+        }
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
         Level minLevel = enableLogging ? Level.ALL : Level.WARNING;
         Map<String, String> context = JMap.ofEntries(
-            entry("confId", id)
+            entry("confId", id),
+            entry("gid", String.valueOf(gid))
         );
-        if (gid != null)
-        {
-            context.put("gid", gid);
-        }
         if (conferenceName != null)
         {
             context.put("conf_name", conferenceName);
@@ -969,10 +970,10 @@ public class Conference
     }
 
     /**
-     * @return the global ID of the conference, or {@code null} if none has been
+     * @return the global ID of the conference, or {@code -1} if none has been
      * set.
      */
-    public String getGid()
+    public long getGid()
     {
         return gid;
     }
@@ -1070,6 +1071,11 @@ public class Conference
      */
     public ConfOctoTransport getTentacle()
     {
+        if (gid < 0)
+        {
+            throw new IllegalStateException(
+                    "Can not enable Octo without a valid GID.");
+        }
         if (tentacle == null)
         {
             tentacle = new ConfOctoTransport(this);
