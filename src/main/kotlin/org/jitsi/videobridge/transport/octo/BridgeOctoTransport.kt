@@ -58,7 +58,7 @@ class BridgeOctoTransport(
 
     /**
      * Handlers for incoming Octo packets.  Packets will be routed to a handler based on the conference
-     * ID in the Octo packet
+     * ID in the Octo packet.
      */
     private val incomingPacketHandlers: MutableMap<Long, IncomingOctoPacketHandler> = ConcurrentHashMap()
 

@@ -61,6 +61,11 @@ public class Conference
         AbstractEndpointMessageTransport.EndpointMessageTransportEventHandler
 {
     /**
+     * The constant denoting that {@link #gid} is not specified.
+     */
+    public static final long GID_NOT_SET = -1;
+
+    /**
      * The endpoints participating in this {@link Conference}. Although it's a
      * {@link ConcurrentHashMap}, writing to it must be protected by
      * synchronizing on the map itself, because it must be kept in sync with
@@ -98,14 +103,28 @@ public class Conference
     private boolean expired = false;
 
     /**
-     * The (unique) identifier/ID of this instance.
+     * The locally unique identifier of this conference (i.e. unique across the
+     * conferences on this bridge). It is locally generated and exposed via
+     * colibri, and used by colibri clients to reference the conference.
+     *
+     * The current thinking is that we will phase out use of this ID (but keep
+     * it for backward compatibility) in favor of {@link #gid}.
      */
     private final String id;
 
     /**
-     * The "global" id of this conference, set by the controller (e.g. jicofo)
-     * as opposed to the bridge. This is a 32-bit unsigned integer, or {@code -1}
-     * if it is not set.
+     * The "global" id of this conference, selected by the controller of the
+     * bridge (e.g. jicofo). The set of controllers are responsible for making
+     * sure this ID is unique across all conferences in the system.
+     *
+     * This is not a required field unless Octo is used, and when it is not
+     * specified by the controller its value is {@link #GID_NOT_SET}.
+     *
+     * If specified, it must be a 32-bit unsigned integer (i.e. in the range
+     * [0, 0xffff_ffff]).
+     *
+     * This ID is shared between all bridges in an Octo conference, and included
+     * on-the-wire in Octo packets.
      */
     private final long gid;
 
@@ -190,7 +209,7 @@ public class Conference
                       boolean enableLogging,
                       long gid)
     {
-        if (gid < -1 || gid > 0xffff_ffffl)
+        if (gid != GID_NOT_SET && (gid < 0 || gid > 0xffff_ffffL))
         {
             throw new IllegalArgumentException("Invalid GID:" + gid);
         }
@@ -973,8 +992,9 @@ public class Conference
     }
 
     /**
-     * @return the global ID of the conference, or {@code -1} if none has been
-     * set.
+     * @return the global ID of the conference (see {@link #gid)}, or
+     * {@link #GID_NOT_SET} if none has been set.
+     * @see #gid
      */
     public long getGid()
     {
@@ -1074,10 +1094,10 @@ public class Conference
      */
     public ConfOctoTransport getTentacle()
     {
-        if (gid < 0)
+        if (gid == GID_NOT_SET)
         {
             throw new IllegalStateException(
-                    "Can not enable Octo without a valid GID.");
+                    "Can not enable Octo without the GID being set.");
         }
         if (tentacle == null)
         {

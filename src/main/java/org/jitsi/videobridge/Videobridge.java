@@ -233,7 +233,7 @@ public class Videobridge
     public @NotNull Conference createConference(
             String name, boolean enableLogging)
     {
-        return createConference(name, enableLogging, -1);
+        return createConference(name, enableLogging, Conference.GID_NOT_SET);
     }
 
     /**
@@ -245,8 +245,8 @@ public class Videobridge
      * @param name world readable name of the conference to create.
      * @param enableLogging whether logging should be enabled or disabled for
      * the {@link Conference}.
-     * @param gid the "global" id of the conference (or {@code -1} if it is not
-     * specified.
+     * @param gid the "global" id of the conference (or
+     * {@link Conference#GID_NOT_SET} if it is not specified.
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */

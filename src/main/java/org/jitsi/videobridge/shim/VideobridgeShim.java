@@ -25,6 +25,8 @@ import org.jivesoftware.smack.packet.*;
 
 import java.util.*;
 
+import static org.jitsi.videobridge.Conference.GID_NOT_SET;
+
 /**
  * Handles Colibri-related logic for a {@link Videobridge}, e.g. handles
  * incoming Colibri requests.
@@ -377,7 +379,7 @@ public class VideobridgeShim
 
         if (octoAudioChannel != null && octoVideoChannel != null)
         {
-            if (conference.getGid() < 0)
+            if (conference.getGid() == GID_NOT_SET)
             {
                 return IQUtils.createError(
                         conferenceIQ,
@@ -453,11 +455,12 @@ public class VideobridgeShim
 
     /**
      * Parses the "gid" field encoded in {@link ColibriConferenceIQ#getGID()}.
-     * It is a 32-bit unsigned integer encoded in hex. Returns {@code -1} if
-     * parsing fails.
+     * It is a 32-bit unsigned integer encoded in hex. Returns
+     * {@link Conference#GID_NOT_SET} if parsing fails.
      *
      * @param gidStr the string to parse
-     * @return the GID parsed as a {@code long}, or {@code -1} on failrue.
+     * @return the GID parsed as a {@code long}, or
+     * {@link Conference#GID_NOT_SET -1} on failure.
      */
     private static long parseGid(String gidStr)
     {
@@ -465,7 +468,7 @@ public class VideobridgeShim
 
         if (gidStr == null)
         {
-            gid = -1;
+            gid = GID_NOT_SET;
         }
         else
         {
@@ -477,7 +480,7 @@ public class VideobridgeShim
             {
                 logger.warn(
                     "Invalid GID: " + gidStr + ". Assuming it's unset.");
-                gid = -1;
+                gid = GID_NOT_SET;
             }
 
             if (gid < 0 || gid > 0xffff_ffffL)
@@ -485,7 +488,7 @@ public class VideobridgeShim
                 logger.warn(
                     "Invalid GID (not a 32-bit unsigned): " + gidStr
                             + ". Assuming it's unset");
-                gid = -1;
+                gid = GID_NOT_SET;
             }
         }
 
