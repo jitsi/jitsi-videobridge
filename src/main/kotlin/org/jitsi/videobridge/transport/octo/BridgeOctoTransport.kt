@@ -170,6 +170,10 @@ class BridgeOctoTransport(
     @Suppress("DEPRECATION")
     fun sendString(msg: String, targets: Set<SocketAddress>, confId: String) {
         val msgData = msg.toByteArray(StandardCharsets.UTF_8)
+        if (msgData.size > 1500) {
+            logger.warn("Sending a large data packet over octo (${msgData.size} bytes): $msg")
+        }
+
         sendData(msgData, 0, msgData.size, targets, confId, MediaType.DATA, null)
     }
 
