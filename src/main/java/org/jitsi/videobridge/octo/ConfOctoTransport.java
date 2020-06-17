@@ -67,6 +67,12 @@ public class ConfOctoTransport
     private final Conference conference;
 
     /**
+     * The ID of the conference to use for everything Octo-related. It is set
+     * to the GID of the conference (see {@link Conference#gid}).
+     */
+    private final long conferenceId;
+
+    /**
      * The {@link OctoEndpoints} instance which maintains the list of Octo
      * endpoints in the conference.
      */
@@ -129,6 +135,7 @@ public class ConfOctoTransport
     public ConfOctoTransport(Conference conference, Clock clock)
     {
         this.conference = conference;
+        this.conferenceId = conference.getGid();
         this.clock = clock;
         this.logger = conference.getLogger().createChildLogger(this.getClass().getName());
         BundleContext bundleContext = conference.getBundleContext();
@@ -148,7 +155,7 @@ public class ConfOctoTransport
         }
 
         octoEndpoints = new OctoEndpoints(conference);
-        octoTransceiver = new OctoTransceiver("tentacle-" + conference.getGid(), logger);
+        octoTransceiver = new OctoTransceiver("tentacle-" + conferenceId, logger);
         octoTransceiver.setIncomingPacketHandler(conference::handleIncomingPacket);
         octoTransceiver.setOutgoingPacketHandler(packetInfo ->
         {
@@ -258,7 +265,7 @@ public class ConfOctoTransport
             packetInfo.getPacket().getOffset(),
             packetInfo.getPacket().getLength(),
             targets,
-            conference.getGid(),
+            conferenceId,
             packetInfo.getEndpointId()
         );
 
@@ -391,11 +398,11 @@ public class ConfOctoTransport
 
             if (targets.isEmpty())
             {
-                bridgeOctoTransport.removeHandler(conference.getGid(), this);
+                bridgeOctoTransport.removeHandler(conferenceId, this);
             }
             else
             {
-                bridgeOctoTransport.addHandler(conference.getGid(), this);
+                bridgeOctoTransport.addHandler(conferenceId, this);
             }
         }
     }
@@ -443,7 +450,7 @@ public class ConfOctoTransport
         bridgeOctoTransport.sendString(
             message,
             targets,
-            conference.getGid()
+            conferenceId
         );
     }
 

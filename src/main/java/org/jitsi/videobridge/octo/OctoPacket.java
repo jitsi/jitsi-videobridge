@@ -30,7 +30,7 @@ import static org.jitsi.utils.ByteArrayUtils.*;
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                         Endpoint ID                           |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |MT|                      Reserved                              |
+ * | M |                     Reserved                              |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * }</pre>
  * <p/>
@@ -39,7 +39,7 @@ import static org.jitsi.utils.ByteArrayUtils.*;
  * Endpoint ID: An identifier of the endpoint that is the original source of
  * the packet.
  * <p/>
- * MT: media type (audio, video, or data).
+ * M: media type (audio, video, or data).
  *
  * @author Boris Grozev
  */
