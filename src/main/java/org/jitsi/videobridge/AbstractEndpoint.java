@@ -84,7 +84,7 @@ public abstract class AbstractEndpoint
      * The default video constraints to assume when nothing is signaled.
      */
     private final VideoConstraints
-        defaultReceiverVideoConstraints = THUMBNAIL_VIDEO_CONSTRAINTS;
+        DEFAULT_MAX_RECEIVER_CONSTRAINTS = THUMBNAIL_VIDEO_CONSTRAINTS;
 
     /**
      * The max video constraints that the bridge should receive from this
@@ -352,7 +352,7 @@ public abstract class AbstractEndpoint
             .values()
             .stream()
             .max(Comparator.comparingInt(VideoConstraints::getIdealHeight))
-            .orElse(defaultReceiverVideoConstraints);
+            .orElse(DEFAULT_MAX_RECEIVER_CONSTRAINTS);
 
         // for intra-bridge traffic we only care about the ideal height.
         if (!newReceiverMaxVideoConstraints.equals(oldReceiverMaxVideoConstraints))
