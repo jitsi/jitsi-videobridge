@@ -79,6 +79,12 @@ public abstract class AbstractEndpoint
     private boolean expired = false;
 
     /**
+     * The default video constraints to assume when nothing is signaled.
+     */
+    private final VideoConstraints defaultReceiverVideoConstraints
+        = new VideoConstraints(BitrateControllerConfig.Config.thumbnailMaxHeightPx());
+
+    /**
      * The max video constraints that the bridge should receive from this
      * endpoint.
      */
@@ -340,14 +346,11 @@ public abstract class AbstractEndpoint
         VideoConstraints oldReceiverMaxVideoConstraints
             = this.maxReceiverVideoConstraints;
 
-        VideoConstraints defaultVideoConstraints
-            = new VideoConstraints(BitrateControllerConfig.Config.thumbnailMaxHeightPx());
-
         VideoConstraints newReceiverMaxVideoConstraints = newVideoConstraints
             .values()
             .stream()
             .max(Comparator.comparingInt(VideoConstraints::getIdealHeight))
-            .orElse(defaultVideoConstraints);
+            .orElse(defaultReceiverVideoConstraints);
 
         // for intra-bridge traffic we only care about the ideal height.
         if (!newReceiverMaxVideoConstraints.equals(oldReceiverMaxVideoConstraints))
