@@ -350,8 +350,7 @@ public abstract class AbstractEndpoint
             .orElse(defaultVideoConstraints);
 
         // for intra-bridge traffic we only care about the ideal height.
-        if (newReceiverMaxVideoConstraints.getIdealHeight()
-            != oldReceiverMaxVideoConstraints.getIdealHeight())
+        if (!newReceiverMaxVideoConstraints.equals(oldReceiverMaxVideoConstraints))
         {
             maxReceiverVideoConstraints = newReceiverMaxVideoConstraints;
             onMaxReceiverVideoConstraintsChanged(newReceiverMaxVideoConstraints);
