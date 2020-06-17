@@ -61,6 +61,8 @@ class OctoEndpoint(
         })
     }
 
+    val octoEndpointId = "${conference.tentacle.relayId}:$id"
+
     init {
         conference.tentacle.addHandler(id, this)
     }
@@ -99,14 +101,11 @@ class OctoEndpoint(
     }
 
     override fun onMaxReceiverVideoConstraintsChanged(maxVideoConstraints: VideoConstraints?) {
-        // TODO send to the specific bridge that the sender connects
-        val octoEndpointId = "[bridgeId]$id"
-        val localEndpointId = id
-
-        // TODO defense
+        // XXX is it possible to send the message only to the specific bridge
+        // that the sending endpoint connects to?
         conference.tentacle.sendMessage(EndpointMessageBuilder
                 .createReceiverVideoConstraintsMessage(
-                        octoEndpointId, localEndpointId, maxVideoConstraints))
+                        octoEndpointId, id, maxVideoConstraints))
     }
 
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
