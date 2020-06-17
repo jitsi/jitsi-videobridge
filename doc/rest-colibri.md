@@ -134,7 +134,7 @@ The respective response could look like:
     "threads":17,
     "videochannels":0
 }</pre>
-		(Make sure <a href="rest.md#introduction">statistics are enabled</a>.)
+		(Make sure <a href="statistics.md#implementation">statistics are enabled</a>.)
 		</td>
 	</tr>
 </table>
