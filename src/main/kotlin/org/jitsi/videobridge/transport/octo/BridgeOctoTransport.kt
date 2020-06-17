@@ -54,7 +54,7 @@ class BridgeOctoTransport(
 ) {
     private val logger = createChildLogger(parentLogger, mapOf("relayId" to relayId))
 
-    private val stats = Stats()
+    private val stats = Stats(logger)
 
     /**
      * Handlers for incoming Octo packets.  Packets will be routed to a handler based on the conference
@@ -214,6 +214,9 @@ class BridgeOctoTransport(
             confId,
             epId
         )
+        if (octoPacketLength > 1500) {
+            stats.largePacketSent(mediaType)
+        }
         outgoingDataHandler?.sendData(newBuf, newOff, octoPacketLength, targets) ?: stats.noOutgoingHandler()
     }
 
@@ -251,10 +254,11 @@ class BridgeOctoTransport(
         }
     }
 
-    private class Stats {
+    private class Stats(val logger: Logger) {
         private val numInvalidPackets = LongAdder()
         private val numIncomingDroppedNoHandler = LongAdder()
         private val numOutgoingDroppedNoHandler = LongAdder()
+        private val largePacketsSent = HashMap<MediaType, AtomicLong>().withDefault { AtomicLong() }
 
         fun invalidPacketReceived() {
             numInvalidPackets.increment()
@@ -268,22 +272,38 @@ class BridgeOctoTransport(
             numOutgoingDroppedNoHandler.increment()
         }
 
+        fun largePacketSent(mediaType: MediaType) {
+            val value = largePacketsSent.getValue(mediaType).incrementAndGet()
+            if (value == 1L || value % 1000 == 0L) {
+                logger.warn("Sent $value large (>1500B) packets with type $mediaType")
+            }
+        }
+
         fun toSnapshot(): StatsSnapshot = StatsSnapshot(
             numInvalidPackets = numInvalidPackets.sum(),
             numIncomingDroppedNoHandler = numIncomingDroppedNoHandler.sum(),
-            numOutgoingDroppedNoHandler = numOutgoingDroppedNoHandler.sum()
+            numOutgoingDroppedNoHandler = numOutgoingDroppedNoHandler.sum(),
+            numLargeAudioPacketsSent = largePacketsSent[MediaType.AUDIO]?.get() ?: 0,
+            numLargeVideoPacketsSent = largePacketsSent[MediaType.VIDEO]?.get() ?: 0,
+            numLargeDataPacketsSent = largePacketsSent[MediaType.DATA]?.get() ?: 0
         )
     }
 
     class StatsSnapshot(
         val numInvalidPackets: Long,
         val numIncomingDroppedNoHandler: Long,
-        val numOutgoingDroppedNoHandler: Long
+        val numOutgoingDroppedNoHandler: Long,
+        val numLargeAudioPacketsSent: Long,
+        val numLargeVideoPacketsSent: Long,
+        val numLargeDataPacketsSent: Long
     ) {
         fun toJson(): OrderedJsonObject = OrderedJsonObject().apply {
             put("num_invalid_packets_rx", numInvalidPackets)
             put("num_incoming_packets_dropped_no_handler", numIncomingDroppedNoHandler)
             put("num_outgoing_packets_dropped_no_handler", numOutgoingDroppedNoHandler)
+            put("num_large_audio_packets_sent", numLargeAudioPacketsSent)
+            put("num_large_video_packets_sent", numLargeVideoPacketsSent)
+            put("num_large_data_packets_sent", numLargeDataPacketsSent)
         }
     }
 
