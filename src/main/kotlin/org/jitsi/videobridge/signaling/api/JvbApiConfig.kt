@@ -19,7 +19,7 @@ package org.jitsi.videobridge.signaling.api
 import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.SimpleProperty
 
-class SignalingApiConfig {
+class JvbApiConfig {
     companion object {
         class EnabledProperty : SimpleProperty<Boolean>(
             newConfigAttributes {

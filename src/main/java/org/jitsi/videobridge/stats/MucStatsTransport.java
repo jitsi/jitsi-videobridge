@@ -17,8 +17,6 @@ package org.jitsi.videobridge.stats;
 
 import org.jitsi.osgi.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.api.server.*;
-import org.jitsi.videobridge.api.types.*;
 import org.jitsi.videobridge.signaling.api.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -64,7 +62,7 @@ public class MucStatsTransport
 
             ColibriStatsExtension statsExt = Statistics.toXmppExtensionElement(stats);
 
-            if (SignalingApiConfig.enabled())
+            if (JvbApiConfig.enabled())
             {
 //                statsExt.addStat(
 //                    "jvb-api-version",
