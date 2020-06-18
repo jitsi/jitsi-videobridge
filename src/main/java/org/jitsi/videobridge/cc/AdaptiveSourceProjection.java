@@ -25,6 +25,7 @@ import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.vp8.*;
+import org.jitsi.videobridge.cc.vp9.*;
 import org.json.simple.*;
 
 import java.lang.*;
@@ -315,6 +316,27 @@ public class AdaptiveSourceProjection
             }
 
             // no context switch
+            return context;
+        }
+        else if (payloadTypeObject instanceof Vp9PayloadType)
+        {
+            if (!(context instanceof VP9AdaptiveSourceProjectionContext))
+            {
+                // context switch
+                RtpState rtpState = getRtpState();
+                if (rtpState == null) {
+                    return null;
+                }
+                logger.debug(() -> "adaptive source projection " +
+                    (context == null ? "creating new" : "changing to") +
+                    " VP9 context for payload type "
+                    + payloadType +
+                    ", source packet ssrc " + rtpPacket.getSsrc());
+                context = new VP9AdaptiveSourceProjectionContext(
+                    diagnosticContext, payloadTypeObject, rtpState, parentLogger);
+                contextPayloadType = payloadType;
+            }
+
             return context;
         }
         else if (context == null || contextPayloadType != payloadType)
