@@ -17,8 +17,6 @@ package org.jitsi.videobridge.stats;
 
 import org.jitsi.osgi.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.api.server.*;
-import org.jitsi.videobridge.api.types.*;
 import org.jitsi.videobridge.signaling.api.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -64,21 +62,12 @@ public class MucStatsTransport
 
             ColibriStatsExtension statsExt = Statistics.toXmppExtensionElement(stats);
 
-            if (SignalingApiConfig.Companion.enabled())
+            if (JvbApiConfig.enabled())
             {
-                // When advertising the Signaling API, the public address
-                // will come from the config, but the supported versions
-                // come from the server itself
-                String apiUrl = SignalingApiConfig.Companion.publicAddress();
-                int apiPort = SignalingApiConfig.Companion.bindPort();
-                // BridgeMucDetector expects a ColibriStatsExtension directly (no wrapper type)
-                // so for now hack the api stuff into there
-                statsExt.addStat("jvb-api-base-url", apiUrl);
-                statsExt.addStat("jvb-api-port", apiPort);
-                statsExt.addStat(
-                    "jvb-api-version",
-                    SupportedApiVersionsKt.toPresenceString(ApplicationKt.SUPPORTED_API_VERSIONS)
-                );
+//                statsExt.addStat(
+//                    "jvb-api-version",
+//                    SupportedApiVersionsKt.toPresenceString(ApplicationKt.SUPPORTED_API_VERSIONS)
+//                );
             }
 
             clientConnectionImpl.setPresenceExtension(statsExt);

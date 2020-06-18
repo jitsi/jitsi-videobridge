@@ -19,7 +19,7 @@ package org.jitsi.videobridge.signaling.api
 import org.jitsi.config.newConfigAttributes
 import org.jitsi.utils.config.SimpleProperty
 
-class SignalingApiConfig {
+class JvbApiConfig {
     companion object {
         class EnabledProperty : SimpleProperty<Boolean>(
             newConfigAttributes {
@@ -30,39 +30,7 @@ class SignalingApiConfig {
 
         private val enabledProperty = EnabledProperty()
 
+        @JvmStatic
         fun enabled(): Boolean = enabledProperty.value
-
-        class BindPortProperty : SimpleProperty<Int>(
-            newConfigAttributes {
-                readOnce()
-                name("videobridge.apis.jvb-api.bind-port")
-            }
-        )
-
-        private val bindPortProperty = BindPortProperty()
-
-        fun bindPort(): Int = bindPortProperty.value
-
-        class BindAddressProperty : SimpleProperty<String>(
-            newConfigAttributes {
-                readOnce()
-                name("videobridge.apis.jvb-api.bind-address")
-            }
-        )
-
-        private val bindAddressProperty = BindAddressProperty()
-
-        fun bindAddress(): String = bindAddressProperty.value
-
-        class PublicAddressProperty : SimpleProperty<String>(
-            newConfigAttributes {
-                readOnce()
-                name("videobridge.apis.jvb-api.public-address")
-            }
-        )
-
-        private val publicAddressProperty = PublicAddressProperty()
-
-        fun publicAddress(): String = publicAddressProperty.value
     }
 }
