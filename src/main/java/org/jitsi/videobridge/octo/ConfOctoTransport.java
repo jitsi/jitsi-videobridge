@@ -206,11 +206,6 @@ public class ConfOctoTransport
         setTargets(socketAddresses);
     }
 
-    public String getRelayId()
-    {
-        return bridgeOctoTransport.getRelayId();
-    }
-
     /**
      * {@inheritDoc}
      */

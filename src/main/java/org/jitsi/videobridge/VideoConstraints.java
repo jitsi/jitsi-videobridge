@@ -43,7 +43,7 @@ public class VideoConstraints
      *
      * @param idealHeight The ideal height of the constrained endpoint.
      */
-    VideoConstraints(int idealHeight)
+    public VideoConstraints(int idealHeight)
     {
         this.idealHeight = idealHeight;
     }
