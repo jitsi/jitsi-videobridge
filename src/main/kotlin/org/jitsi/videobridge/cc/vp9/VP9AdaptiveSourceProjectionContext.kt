@@ -36,19 +36,14 @@ class VP9AdaptiveSourceProjectionContext(
      * The diagnostic context of this instance.
      */
     private val diagnosticContext: DiagnosticContext,
-    payloadType: PayloadType,
+    private val payloadType: PayloadType,
     private val /* TODO */ rtpState: RtpState,
     parentLogger: Logger
 ) : AdaptiveSourceProjectionContext {
-    private val logger: Logger
+    private val logger: Logger = parentLogger.createChildLogger(
+        VP9AdaptiveSourceProjectionContext::class.java.name)
 
-    /**
-     * The VP9 media format. No essential functionality relies on this field,
-     * it's only used as a cache of the [PayloadType] instance for VP9 in
-     * case we have to do a context switch (see [AdaptiveSourceProjection]),
-     * in order to avoid having to resolve the format.
-     */
-    private val payloadType: PayloadType
+    @Synchronized
     override fun accept(
         packetInfo: PacketInfo,
         incomingIndex: Int,
@@ -70,6 +65,7 @@ class VP9AdaptiveSourceProjectionContext(
     }
 
     override fun getRtpState(): RtpState {
+        /* TODO */
         return rtpState
     }
 
@@ -85,11 +81,5 @@ class VP9AdaptiveSourceProjectionContext(
         /* TODO */
 
         return debugState
-    }
-
-    init {
-        logger = parentLogger.createChildLogger(
-            VP9AdaptiveSourceProjectionContext::class.java.name)
-        this.payloadType = payloadType
     }
 }
