@@ -17,9 +17,11 @@ package org.jitsi.videobridge.cc.vp9
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.cc.AdaptiveSourceProjectionContext
 import org.jitsi.videobridge.cc.RewriteException
 import org.jitsi.videobridge.cc.RtpState
@@ -32,16 +34,12 @@ import org.json.simple.JSONObject
  * svc.md for implementation details. Instances of this class are thread-safe.
  */
 class VP9AdaptiveSourceProjectionContext(
-    /**
-     * The diagnostic context of this instance.
-     */
     private val diagnosticContext: DiagnosticContext,
     private val payloadType: PayloadType,
     private val /* TODO */ rtpState: RtpState,
     parentLogger: Logger
 ) : AdaptiveSourceProjectionContext {
-    private val logger: Logger = parentLogger.createChildLogger(
-        VP9AdaptiveSourceProjectionContext::class.java.name)
+    private val logger: Logger = createChildLogger(parentLogger)
 
     @Synchronized
     override fun accept(
@@ -49,6 +47,13 @@ class VP9AdaptiveSourceProjectionContext(
         incomingIndex: Int,
         targetIndex: Int
     ): Boolean {
+        val packet = packetInfo.packet
+        if (packet !is Vp9Packet) {
+            logger.warn("Packet is not VP9 packet")
+            return false
+        }
+
+        /* TODO */
         return false
     }
 
@@ -79,6 +84,8 @@ class VP9AdaptiveSourceProjectionContext(
         debugState["class"] = VP8AdaptiveSourceProjectionContext::class.java.simpleName
 
         /* TODO */
+
+        debugState["payloadType"] = payloadType.toString()
 
         return debugState
     }
