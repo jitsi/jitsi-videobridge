@@ -238,6 +238,12 @@ public class Endpoint
     private final PacketInfoQueue outgoingSrtpPacketQueue;
 
     /**
+     * The queue which enforces sequential processing of incoming data channel messages
+     * to maintain processing order.
+     */
+    private final PacketInfoQueue incomingDataChannelMessagesQueue;
+
+    /**
      * The {@link SctpSocket} for this endpoint, if an SCTP connection was
      * negotiated.
      */
@@ -301,6 +307,16 @@ public class Endpoint
             TransportConfig.Config.queueSize()
         );
         outgoingSrtpPacketQueue.setErrorHandler(queueErrorCounter);
+
+        incomingDataChannelMessagesQueue = new PacketInfoQueue(
+            getClass().getSimpleName() + "-incoming-data-channel-queue",
+            TaskPools.IO_POOL, 
+            packetInfo -> 
+            {
+                dataChannelHandler.consume(packetInfo);
+                return true;
+            },
+            TransportConfig.Config.queueSize());
 
         messageTransport = new EndpointMessageTransport(
             this,
@@ -886,8 +902,7 @@ public class Endpoint
             // holding a lock inside the SctpSocket which can cause a deadlock
             // if two endpoints are trying to send datachannel messages to one
             // another (with stats broadcasting it can happen often)
-            TaskPools.IO_POOL.execute(
-                    () -> dataChannelHandler.consume(new PacketInfo(dcp)));
+            incomingDataChannelMessagesQueue.add(new PacketInfo(dcp));
         };
         socket.listen();
         sctpSocket = Optional.of(socket);
