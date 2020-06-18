@@ -128,18 +128,7 @@ class MediaSourceDesc
         }
         val encodingId = videoRtpPacket.getEncodingId()
         val desc = layersById[encodingId]
-        if (desc != null) {
-            return desc
-        }
-        /* ??? Does this part actually get used?
-         * I think it won't, because ssrc should always be
-         * the encoding's primary SSRC by this point. */
-        for (encoding in rtpEncodings) {
-            if (encoding.matches(videoRtpPacket.ssrc)) {
-                return encoding.findRtpLayerDesc(videoRtpPacket)
-            }
-        }
-        return null
+        return desc
     }
 
     @Synchronized

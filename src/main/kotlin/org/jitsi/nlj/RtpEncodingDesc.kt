@@ -17,7 +17,6 @@ package org.jitsi.nlj
 
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.VideoRtpPacket
-import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.stats.NodeStatsBlock
 
 /**
@@ -100,22 +99,6 @@ constructor(
             "layers=${layers.joinToString(separator = "\n    ")}"
     }
 
-    fun findRtpLayerDesc(packet: VideoRtpPacket): RtpLayerDesc? =
-        layers.find { it.matches(packet) }
-
-    fun matches(packet: VideoRtpPacket): Boolean {
-        if (!matches(packet.ssrc)) {
-            return false
-        } else if (layers.isEmpty()) {
-            return true // ???
-        } else for (layer in layers) {
-            if (layer.matches(packet)) {
-                return true
-            }
-        }
-        return false
-    }
-
     /**
      * Gets a boolean indicating whether or not the SSRC specified in the
      * arguments matches this encoding or not.
@@ -146,21 +129,5 @@ constructor(
 }
 
 fun VideoRtpPacket.getEncodingId(): Long {
-    val layerId =
-        if (this is Vp8Packet) {
-            // note(george) we've observed that a client may announce but not
-            // send simulcast (it is not clear atm who's to blame for this
-            // "bug", chrome or our client code). In any case, when this happens
-            // we "pretend" that the encoding of the packet is the base temporal
-            // layer of the encoding.
-            val tid = temporalLayerIndex
-            if (tid >= 0) {
-                tid
-            } else {
-                0
-            }
-        } else {
-            0
-        }
-    return RtpEncodingDesc.calcEncodingId(ssrc, layerId)
+    return RtpEncodingDesc.calcEncodingId(ssrc, this.layerId)
 }

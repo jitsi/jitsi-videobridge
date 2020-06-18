@@ -15,8 +15,6 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.rtp.VideoRtpPacket
-import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.utils.stats.RateStatistics
 
@@ -88,23 +86,6 @@ constructor(
         return "subjective_quality=" + index +
             ",temporal_id=" + tid +
             ",spatial_id=" + sid
-    }
-
-    fun matches(packet: VideoRtpPacket): Boolean {
-        return if (tid == -1 && sid == -1) {
-            true
-        } else if (packet is Vp8Packet) {
-            // NOTE(brian): the spatial layer index of an encoding is only currently used for in-band spatial
-            // scalability (a la vp9), so it isn't used for anything we're currently supporting (and is
-            // codec-specific, so should probably be implemented in another way anyhow) so for now we don't
-            // check that here (note, though, that the spatial layer index in a packet is currently set as of
-            // the time of this writing and is from the perspective of a logical spatial index, i.e. the lowest sim
-            // stream (180p) has spatial index 0, 360p has 1, 720p has 2.
-            val vp8PacketTid = packet.temporalLayerIndex
-            tid == vp8PacketTid || vp8PacketTid == -1 && tid == 0
-        } else {
-            true
-        }
     }
 
     /**

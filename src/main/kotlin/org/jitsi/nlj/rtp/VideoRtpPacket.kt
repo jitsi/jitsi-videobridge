@@ -40,6 +40,8 @@ open class VideoRtpPacket protected constructor(
     /** The index of this packet relative to its source's RtpLayers. */
     var qualityIndex: Int = qualityIndex ?: -1
 
+    open val layerId = 0
+
     override fun clone(): VideoRtpPacket {
         return VideoRtpPacket(
             cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
