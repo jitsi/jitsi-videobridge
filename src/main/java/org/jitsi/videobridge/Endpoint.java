@@ -310,8 +310,8 @@ public class Endpoint
 
         incomingDataChannelMessagesQueue = new PacketInfoQueue(
             getClass().getSimpleName() + "-incoming-data-channel-queue",
-            TaskPools.IO_POOL, 
-            packetInfo -> 
+            TaskPools.IO_POOL,
+            packetInfo ->
             {
                 dataChannelHandler.consume(packetInfo);
                 return true;
