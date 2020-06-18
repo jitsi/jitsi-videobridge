@@ -43,19 +43,9 @@ public class VideoConstraints
      *
      * @param idealHeight The ideal height of the constrained endpoint.
      */
-    VideoConstraints(int idealHeight, int preferredHeight, double preferredFps)
+    VideoConstraints(int idealHeight)
     {
         this.idealHeight = idealHeight;
-    }
-
-    /**
-     * Ctor.
-     *
-     * @param idealHeight The ideal height of the constrained endpoint or source.
-     */
-    public VideoConstraints(int idealHeight)
-    {
-        this(idealHeight, -1, -1);
     }
 
     /**
