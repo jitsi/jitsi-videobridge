@@ -18,8 +18,8 @@ package org.jitsi.videobridge.cc.vp9
 import org.jitsi.nlj.codec.vp8.Vp8Utils.Companion.applyExtendedPictureIdDelta
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
-import org.jitsi.rtp.util.RtpUtils.Companion.isNewerSequenceNumberThan
-import org.jitsi.rtp.util.RtpUtils.Companion.isOlderSequenceNumberThan
+import org.jitsi.rtp.util.isNewerThan
+import org.jitsi.rtp.util.isOlderThan
 
 /**
  * Groups together some RTP/VP9 fields that refer to a specific incoming VP9
@@ -116,10 +116,10 @@ class VP9Frame(packet: Vp9Packet) {
     fun addPacket(packet: Vp9Packet) {
         require(matchesFrame(packet)) { "Non-matching packet added to frame" }
         val seq = packet.sequenceNumber
-        if (isOlderSequenceNumberThan(seq, earliestKnownSequenceNumber)) {
+        if (seq isOlderThan earliestKnownSequenceNumber) {
             earliestKnownSequenceNumber = seq
         }
-        if (isNewerSequenceNumberThan(seq, latestKnownSequenceNumber)) {
+        if (seq isNewerThan latestKnownSequenceNumber) {
             latestKnownSequenceNumber = seq
         }
         if (packet.isStartOfFrame) {

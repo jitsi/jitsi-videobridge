@@ -17,7 +17,7 @@ package org.jitsi.videobridge.cc.vp9
 
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.rtp.util.RtpUtils.Companion.applySequenceNumberDelta
-import org.jitsi.rtp.util.RtpUtils.Companion.isOlderSequenceNumberThan
+import org.jitsi.rtp.util.isOlderThan
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 
@@ -158,8 +158,7 @@ internal constructor(
         synchronized(vp9Frame) {
             return if (closedSeq < 0) {
                 true
-            } else isOlderSequenceNumberThan(rtpPacket.sequenceNumber,
-                closedSeq)
+            } else rtpPacket.sequenceNumber isOlderThan closedSeq
         }
     }
 
