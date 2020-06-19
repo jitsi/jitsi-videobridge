@@ -193,7 +193,7 @@ class VP9Frame(packet: Vp9Packet) {
         if (temporalLayer == pkt.temporalLayerIndex && tl0PICIDX == pkt.TL0PICIDX && pictureId == pkt.pictureId) /* TODO: also check start, end, seq nums? */ {
             return
         }
-        throw RuntimeException(StringBuilder().apply {
+        throw RuntimeException(buildString {
             with(pkt) {
                 append("Packet ssrc $ssrc, seq $sequenceNumber, picture id $pictureId, timestamp $timestamp ")
             }
@@ -218,7 +218,7 @@ class VP9Frame(packet: Vp9Packet) {
                 }
                 append("packet PictureID ${pkt.pictureId} != frame PictureID $pictureId")
             }
-        }.toString())
+        })
     }
 
     /**
