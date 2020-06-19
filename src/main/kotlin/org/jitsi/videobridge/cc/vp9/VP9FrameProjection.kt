@@ -55,7 +55,7 @@ internal constructor(
     /**
      * The RTP SSRC of the projection (RFC7667, RFC3550).
      */
-    val sSRC: Long,
+    val ssrc: Long,
     /**
      * The RTP timestamp of the projection (RFC7667, RFC3550).
      */
@@ -123,7 +123,7 @@ internal constructor(
                 .addField("orig.rtp.seq", pkt.sequenceNumber)
                 .addField("orig.vp9.pictureid", pkt.pictureId)
                 .addField("orig.vp9.tl0picidx", pkt.TL0PICIDX)
-                .addField("proj.rtp.ssrc", sSRC)
+                .addField("proj.rtp.ssrc", ssrc)
                 .addField("proj.rtp.timestamp", timestamp)
                 .addField("proj.rtp.seq", sequenceNumber)
                 .addField("proj.vp9.pictureid", pictureId)
@@ -131,7 +131,7 @@ internal constructor(
         }
 
         // update ssrc, sequence number, timestamp, pictureId and tl0picidx
-        pkt.ssrc = sSRC
+        pkt.ssrc = ssrc
         pkt.timestamp = timestamp
         pkt.sequenceNumber = sequenceNumber
         if (pkt.TL0PICIDX != -1) {
