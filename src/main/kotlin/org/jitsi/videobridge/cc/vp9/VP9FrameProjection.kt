@@ -151,7 +151,7 @@ internal constructor(
      * [VP9FrameProjection], false otherwise.
      */
     fun accept(rtpPacket: Vp9Packet): Boolean {
-        if (vp9Frame == null || !vp9Frame.matchesFrame(rtpPacket)) {
+        if (vp9Frame?.matchesFrame(rtpPacket) != true) {
             // The packet does not belong to this VP9 picture.
             return false
         }
@@ -162,7 +162,7 @@ internal constructor(
         }
     }
 
-    val earliestProjectedSequence: Int
+    val earliestProjectedSeqNum: Int
         get() {
             if (vp9Frame == null) {
                 return sequenceNumberDelta
@@ -170,7 +170,7 @@ internal constructor(
             synchronized(vp9Frame) { return rewriteSeqNo(vp9Frame.earliestKnownSequenceNumber) }
         }
 
-    val latestProjectedSequence: Int
+    val latestProjectedSeqNum: Int
         get() {
             if (vp9Frame == null) {
                 return sequenceNumberDelta
