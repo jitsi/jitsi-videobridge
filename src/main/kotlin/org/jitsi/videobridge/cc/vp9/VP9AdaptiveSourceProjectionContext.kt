@@ -36,10 +36,13 @@ import org.json.simple.JSONObject
 class VP9AdaptiveSourceProjectionContext(
     private val diagnosticContext: DiagnosticContext,
     private val payloadType: PayloadType,
-    private val /* TODO */ rtpState: RtpState,
+    rtpState: RtpState,
     parentLogger: Logger
 ) : AdaptiveSourceProjectionContext {
     private val logger: Logger = createChildLogger(parentLogger)
+
+    private var lastVp9FrameProjection = VP9FrameProjection(diagnosticContext,
+        rtpState.ssrc, rtpState.maxSequenceNumber, rtpState.maxTimestamp)
 
     @Synchronized
     override fun accept(
@@ -69,10 +72,10 @@ class VP9AdaptiveSourceProjectionContext(
         return false
     }
 
-    override fun getRtpState(): RtpState {
-        /* TODO */
-        return rtpState
-    }
+    override fun getRtpState() = RtpState(
+            lastVp9FrameProjection.ssrc,
+            lastVp9FrameProjection.latestProjectedSeqNum,
+            lastVp9FrameProjection.timestamp)
 
     override fun getPayloadType(): PayloadType {
         return payloadType
