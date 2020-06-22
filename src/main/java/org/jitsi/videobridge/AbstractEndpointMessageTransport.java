@@ -399,7 +399,7 @@ public abstract class AbstractEndpointMessageTransport
         Set<String> newPinnedEndpoints)
     {
         videoConstraintsCompatibility.setPinnedEndpoints(newPinnedEndpoints);
-        senderVideoConstraintsChangedEvent(
+        receiverVideoConstraintsChangedEvent(
             videoConstraintsCompatibility.computeVideoConstraints());
     }
 
@@ -417,16 +417,24 @@ public abstract class AbstractEndpointMessageTransport
         Set<String> newSelectedEndpoints)
     {
         videoConstraintsCompatibility.setSelectedEndpoints(newSelectedEndpoints);
-        senderVideoConstraintsChangedEvent(
+        receiverVideoConstraintsChangedEvent(
             videoConstraintsCompatibility.computeVideoConstraints());
     }
 
-    protected void senderVideoConstraintsChangedEvent(Map<String, VideoConstraints> videoAllocationPolicyMap)
+    /**
+     * Sets the sender video constraints of this {@link #endpoint}.
+     *
+     * @param videoConstraintsMap the sender video constraints of this
+     * {@link #endpoint}.
+     */
+    private void receiverVideoConstraintsChangedEvent(
+        Map<String, VideoConstraints> videoConstraintsMap)
     {
         // Don't "pollute" the video constraints map with constraints for this
         // endpoint.
-        videoAllocationPolicyMap.remove(endpoint.getID());
-        endpoint.setSenderVideoConstraints(ImmutableMap.copyOf(videoAllocationPolicyMap));
+        videoConstraintsMap.remove(endpoint.getID());
+        endpoint.setSenderVideoConstraints(
+            ImmutableMap.copyOf(videoConstraintsMap));
     }
 
     /**
@@ -499,7 +507,7 @@ public abstract class AbstractEndpointMessageTransport
         }
 
         videoConstraintsCompatibility.setMaxFrameHeight(maxFrameHeight);
-        senderVideoConstraintsChangedEvent(videoConstraintsCompatibility.computeVideoConstraints());
+        receiverVideoConstraintsChangedEvent(videoConstraintsCompatibility.computeVideoConstraints());
     }
 
     /**
