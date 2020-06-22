@@ -27,11 +27,11 @@ import org.jitsi.utils.logging.TimeSeriesLogger
  * projection is responsible for rewriting a VP9 packet. Instances of this class
  * are thread-safe.
  */
-class VP9FrameProjection
+class Vp9FrameProjection
 /**
  * Ctor.
  *
- * @param vp9Frame The [VP9Frame] that's projected.
+ * @param vp9Frame The [Vp9Frame] that's projected.
  * @param ssrc The RTP SSRC of the projected frame that this instance refers
  * to (RFC3550).
  * @param timestamp The RTP timestamp of the projected frame that this
@@ -49,9 +49,9 @@ internal constructor(
      */
     private val diagnosticContext: DiagnosticContext,
     /**
-     * The projected [VP9Frame].
+     * The projected [Vp9Frame].
      */
-    val vp9Frame: VP9Frame?,
+    val vp9Frame: Vp9Frame?,
     /**
      * The RTP SSRC of the projection (RFC7667, RFC3550).
      */
@@ -142,13 +142,13 @@ internal constructor(
 
     /**
      * Determines whether a packet can be forwarded as part of this
-     * [VP9FrameProjection] instance. The check is based on the sequence
-     * of the incoming packet and whether or not the [VP9FrameProjection]
+     * [Vp9FrameProjection] instance. The check is based on the sequence
+     * of the incoming packet and whether or not the [Vp9FrameProjection]
      * has been "closed" or not.
      *
      * @param rtpPacket the [Vp9Packet] that will be examined.
      * @return true if the packet can be forwarded as part of this
-     * [VP9FrameProjection], false otherwise.
+     * [Vp9FrameProjection], false otherwise.
      */
     fun accept(rtpPacket: Vp9Packet): Boolean {
         if (vp9Frame?.matchesFrame(rtpPacket) != true) {
@@ -191,6 +191,6 @@ internal constructor(
         /**
          * The time series logger for this instance.
          */
-        private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(VP9FrameProjection::class.java)
+        private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(Vp9FrameProjection::class.java)
     }
 }

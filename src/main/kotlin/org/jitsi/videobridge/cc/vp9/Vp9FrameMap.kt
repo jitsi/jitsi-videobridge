@@ -26,7 +26,7 @@ import org.jitsi.utils.logging2.createChildLogger
 /**
  * A history of recent frames on a VP9 stream.
  */
-class VP9FrameMap(
+class Vp9FrameMap(
     parentLogger: Logger
 ) {
     /** Cache mapping picture IDs to frames.  */
@@ -35,7 +35,7 @@ class VP9FrameMap(
 
     /** Find a frame in the frame map, based on a packet.  */
     @Synchronized
-    fun findFrame(packet: Vp9Packet): VP9Frame? {
+    fun findFrame(packet: Vp9Packet): Vp9Frame? {
         return frameHistory[packet.pictureId]
     }
 
@@ -46,7 +46,7 @@ class VP9FrameMap(
 
     /** Helper function to insert a packet into an existing frame.  */
     @Contract("_, _ -> new")
-    private fun doFrameInsert(frame: VP9Frame, packet: Vp9Packet): FrameInsertionResult {
+    private fun doFrameInsert(frame: Vp9Frame, packet: Vp9Packet): FrameInsertionResult {
         try {
             frame.validateConsistent(packet)
         } catch (e: Exception) {
@@ -58,7 +58,7 @@ class VP9FrameMap(
 
     /** Check whether this is a large jump from previous state, so the map should be reset.  */
     private fun isLargeJump(packet: Vp9Packet): Boolean {
-        val latestFrame: VP9Frame = frameHistory.latestFrame
+        val latestFrame: Vp9Frame = frameHistory.latestFrame
             ?: return false
         val picDelta = getExtendedPictureIdDelta(packet.pictureId, latestFrame.pictureId)
         if (picDelta > FRAME_MAP_SIZE) {
@@ -94,7 +94,7 @@ class VP9FrameMap(
         }
         if (isLargeJump(packet)) {
             frameHistory.indexTracker.resetAt(pictureId)
-            val frame = VP9Frame(packet)
+            val frame = Vp9Frame(packet)
             return if (!frameHistory.insert(pictureId, frame)) {
                 null
             } else FrameInsertionResult(frame, true, true)
@@ -121,45 +121,45 @@ class VP9FrameMap(
             return doFrameInsert(frame, packet)
         }
 
-        val newFrame = VP9Frame(packet)
+        val newFrame = Vp9Frame(packet)
         return if (!frameHistory.insert(pictureId, newFrame)) {
             null
         } else FrameInsertionResult(newFrame, true, false)
     }
 
     @Synchronized
-    fun nextFrame(frame: VP9Frame): VP9Frame? {
+    fun nextFrame(frame: Vp9Frame): Vp9Frame? {
         return frameHistory.findAfter(frame) { true }
     }
 
     @Synchronized
-    fun nextFrameWith(frame: VP9Frame, pred: (VP9Frame) -> Boolean): VP9Frame? {
+    fun nextFrameWith(frame: Vp9Frame, pred: (Vp9Frame) -> Boolean): Vp9Frame? {
         return frameHistory.findAfter(frame, pred)
     }
 
     @Synchronized
-    fun findNextTl0(frame: VP9Frame): VP9Frame? {
-        return nextFrameWith(frame, VP9Frame::isTL0)
+    fun findNextTl0(frame: Vp9Frame): Vp9Frame? {
+        return nextFrameWith(frame, Vp9Frame::isTL0)
     }
 
     @Synchronized
-    fun findNextAcceptedFrame(frame: VP9Frame): VP9Frame? {
-        return nextFrameWith(frame, VP9Frame::isAccepted)
+    fun findNextAcceptedFrame(frame: Vp9Frame): Vp9Frame? {
+        return nextFrameWith(frame, Vp9Frame::isAccepted)
     }
 
     @Synchronized
-    fun prevFrame(frame: VP9Frame): VP9Frame? {
+    fun prevFrame(frame: Vp9Frame): Vp9Frame? {
         return frameHistory.findBefore(frame) { true }
     }
 
     @Synchronized
-    fun prevFrameWith(frame: VP9Frame, pred: (VP9Frame) -> Boolean): VP9Frame? {
+    fun prevFrameWith(frame: Vp9Frame, pred: (Vp9Frame) -> Boolean): Vp9Frame? {
         return frameHistory.findBefore(frame, pred)
     }
 
     @Synchronized
-    fun findPrevAcceptedFrame(frame: VP9Frame): VP9Frame? {
-        return prevFrameWith(frame, VP9Frame::isAccepted)
+    fun findPrevAcceptedFrame(frame: Vp9Frame): Vp9Frame? {
+        return prevFrameWith(frame, Vp9Frame::isAccepted)
     }
 
     /**
@@ -167,7 +167,7 @@ class VP9FrameMap(
      */
     class FrameInsertionResult(
         /** The frame corresponding to the packet that was inserted.  */
-        val frame: VP9Frame,
+        val frame: Vp9Frame,
         /** Whether inserting the frame created a new frame.  */
         val isNewFrame: Boolean,
         /** Whether inserting the frame caused a reset  */
@@ -180,7 +180,7 @@ class VP9FrameMap(
 }
 
 internal class FrameHistory
-constructor(size: Int) : ArrayCache<VP9Frame>(
+constructor(size: Int) : ArrayCache<Vp9Frame>(
     size,
     cloneItem = { k -> k },
     synchronize = false
@@ -192,7 +192,7 @@ constructor(size: Int) : ArrayCache<VP9Frame>(
     /**
      * Gets a frame with a given VP9 picture ID from the cache.
      */
-    operator fun get(pictureId: Int): VP9Frame? {
+    operator fun get(pictureId: Int): Vp9Frame? {
         val index = indexTracker.interpret(pictureId)
         return getIndex(index)
     }
@@ -200,7 +200,7 @@ constructor(size: Int) : ArrayCache<VP9Frame>(
     /**
      * Gets a frame with a given VP9 picture ID index from the cache.
      */
-    private fun getIndex(index: Int): VP9Frame? {
+    private fun getIndex(index: Int): Vp9Frame? {
         if (index <= lastIndex - size) {
             /* We don't want to remember old frames even if they're still
                tracked; their neighboring frames may have been evicted,
@@ -212,10 +212,10 @@ constructor(size: Int) : ArrayCache<VP9Frame>(
     }
 
     /** Get the latest frame in the tracker.  */
-    val latestFrame: VP9Frame?
+    val latestFrame: Vp9Frame?
         get() = getIndex(lastIndex)
 
-    fun insert(pictureId: Int, frame: VP9Frame): Boolean {
+    fun insert(pictureId: Int, frame: Vp9Frame): Boolean {
         val index = indexTracker.update(pictureId)
         val ret = super.insertItem(frame, index)
         if (ret) {
@@ -230,11 +230,11 @@ constructor(size: Int) : ArrayCache<VP9Frame>(
     /**
      * Called when an item in the cache is replaced/discarded.
      */
-    override fun discardItem(item: VP9Frame) {
+    override fun discardItem(item: Vp9Frame) {
         numCached--
     }
 
-    fun findBefore(frame: VP9Frame, pred: (VP9Frame) -> Boolean): VP9Frame? {
+    fun findBefore(frame: Vp9Frame, pred: (Vp9Frame) -> Boolean): Vp9Frame? {
         val lastIndex = lastIndex
         if (lastIndex == -1) {
             return null
@@ -245,7 +245,7 @@ constructor(size: Int) : ArrayCache<VP9Frame>(
         return doFind(pred, searchStartIndex, searchEndIndex, -1)
     }
 
-    fun findAfter(frame: VP9Frame, pred: (VP9Frame) -> Boolean): VP9Frame? {
+    fun findAfter(frame: Vp9Frame, pred: (Vp9Frame) -> Boolean): Vp9Frame? {
         val lastIndex = lastIndex
         if (lastIndex == -1) {
             return null
@@ -258,7 +258,7 @@ constructor(size: Int) : ArrayCache<VP9Frame>(
         return doFind(pred, searchStartIndex, lastIndex + 1, 1)
     }
 
-    private fun doFind(pred: (VP9Frame) -> Boolean, startIndex: Int, endIndex: Int, increment: Int): VP9Frame? {
+    private fun doFind(pred: (Vp9Frame) -> Boolean, startIndex: Int, endIndex: Int, increment: Int): Vp9Frame? {
         var index = startIndex
         while (index != endIndex) {
             val frame = getIndex(index)

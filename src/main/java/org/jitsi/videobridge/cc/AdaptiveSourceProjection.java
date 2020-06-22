@@ -320,7 +320,7 @@ public class AdaptiveSourceProjection
         }
         else if (payloadTypeObject instanceof Vp9PayloadType)
         {
-            if (!(context instanceof VP9AdaptiveSourceProjectionContext))
+            if (!(context instanceof Vp9AdaptiveSourceProjectionContext))
             {
                 // context switch
                 RtpState rtpState = getRtpState();
@@ -332,7 +332,7 @@ public class AdaptiveSourceProjection
                     " VP9 context for payload type "
                     + payloadType +
                     ", source packet ssrc " + rtpPacket.getSsrc());
-                context = new VP9AdaptiveSourceProjectionContext(
+                context = new Vp9AdaptiveSourceProjectionContext(
                     diagnosticContext, payloadTypeObject, rtpState, parentLogger);
                 contextPayloadType = payloadType;
             }

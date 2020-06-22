@@ -33,7 +33,7 @@ import org.jitsi.rtp.util.isOlderThan
  *
  * @author Jonathan Lennox
  */
-class VP9Frame(packet: Vp9Packet) {
+class Vp9Frame(packet: Vp9Packet) {
     /**
      * The RTP SSRC of the incoming frame that this instance refers to
      * (RFC3550).
@@ -99,7 +99,7 @@ class VP9Frame(packet: Vp9Packet) {
     /**
      * A record of how this frame was projected, or null if not.
      */
-    var projection: VP9FrameProjection? = null
+    var projection: Vp9FrameProjection? = null
 
     /**
      * A boolean that records whether this frame was accepted.
@@ -138,31 +138,31 @@ class VP9Frame(packet: Vp9Packet) {
         get() = temporalLayer <= 0
 
     /**
-     * Small utility method that checks whether the [VP9Frame] that is
+     * Small utility method that checks whether the [Vp9Frame] that is
      * specified as a parameter belongs to the same RTP stream as the frame that
      * this instance refers to.
      *
-     * @param vp9Frame the [VP9Frame] to check whether it belongs to the
+     * @param vp9Frame the [Vp9Frame] to check whether it belongs to the
      * same RTP stream as the frame that this instance refers to.
-     * @return true if the [VP9Frame] that is specified as a parameter
+     * @return true if the [Vp9Frame] that is specified as a parameter
      * belongs to the same RTP stream as the frame that this instance refers to,
      * false otherwise.
      */
-    fun matchesSSRC(vp9Frame: VP9Frame): Boolean {
+    fun matchesSSRC(vp9Frame: Vp9Frame): Boolean {
         return ssrc == vp9Frame.ssrc
     }
 
     /**
      * Determines whether the [VideoRtpPacket] that is specified as an
      * argument is part of the VP9 picture that is represented by this
-     * [VP9Frame] instance.
+     * [Vp9Frame] instance.
      *
      * @param pkt the [VideoRtpPacket] instance to check whether it's part
-     * of the VP9 picture that is represented by this [VP9Frame]
+     * of the VP9 picture that is represented by this [Vp9Frame]
      * instance.
      * @return true if the [VideoRtpPacket] that is specified as an
      * argument is part of the VP9 picture that is represented by this
-     * [VP9Frame] instance, false otherwise.
+     * [Vp9Frame] instance, false otherwise.
      */
     private fun matchesSSRC(pkt: VideoRtpPacket): Boolean {
         return ssrc == pkt.ssrc
@@ -225,7 +225,7 @@ class VP9Frame(packet: Vp9Packet) {
      * Check whether this frame is immediately after another one, according
      * to their extended picture IDs.
      */
-    fun isImmediatelyAfter(otherFrame: VP9Frame): Boolean {
+    fun isImmediatelyAfter(otherFrame: Vp9Frame): Boolean {
         return pictureId ==
             applyExtendedPictureIdDelta(otherFrame.pictureId, 1)
     }

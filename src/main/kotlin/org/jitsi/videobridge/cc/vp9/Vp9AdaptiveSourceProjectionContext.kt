@@ -33,7 +33,7 @@ import org.json.simple.JSONObject
  * and it is the main entry point for VP9 simulcast/svc RTP/RTCP rewriting. Read
  * svc.md for implementation details. Instances of this class are thread-safe.
  */
-class VP9AdaptiveSourceProjectionContext(
+class Vp9AdaptiveSourceProjectionContext(
     private val diagnosticContext: DiagnosticContext,
     private val payloadType: PayloadType,
     rtpState: RtpState,
@@ -41,7 +41,7 @@ class VP9AdaptiveSourceProjectionContext(
 ) : AdaptiveSourceProjectionContext {
     private val logger: Logger = createChildLogger(parentLogger)
 
-    private var lastVp9FrameProjection = VP9FrameProjection(diagnosticContext,
+    private var lastVp9FrameProjection = Vp9FrameProjection(diagnosticContext,
         rtpState.ssrc, rtpState.maxSequenceNumber, rtpState.maxTimestamp)
 
     @Synchronized
