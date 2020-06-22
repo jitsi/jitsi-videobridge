@@ -47,6 +47,12 @@ import static org.jitsi.videobridge.VideoConstraints.thumbnailVideoConstraints;
 public abstract class AbstractEndpoint
 {
     /**
+     * The default video constraints to assume when nothing is signaled.
+     */
+    private static final VideoConstraints
+        defaultMaxReceiverVideoConstraints = thumbnailVideoConstraints;
+
+    /**
      * The (unique) identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt>.
      */
@@ -64,6 +70,12 @@ public abstract class AbstractEndpoint
     private final Conference conference;
 
     /**
+     * The map of receiver endpoint id -> video constraints.
+     */
+    private final Map<String, VideoConstraints>
+        receiverVideoConstraintsMap = new ConcurrentHashMap<>();
+
+    /**
      * The (human readable) display name of this <tt>Endpoint</tt>.
      */
     private String displayName;
@@ -78,12 +90,6 @@ public abstract class AbstractEndpoint
      * on this <tt>Endpoint</tt>.
      */
     private boolean expired = false;
-
-    /**
-     * The default video constraints to assume when nothing is signaled.
-     */
-    private static final VideoConstraints
-        defaultMaxReceiverVideoConstraints = thumbnailVideoConstraints;
 
     /**
      * The maximum set of constraints applied by all receivers of this endpoint
@@ -398,11 +404,6 @@ public abstract class AbstractEndpoint
      */
     protected abstract void
     maxReceiverVideoConstraintsChanged(VideoConstraints maxVideoConstraints);
-
-    /**
-     * The map of receiver endpoint id -> video constraints.
-     */
-    private final Map<String, VideoConstraints> receiverVideoConstraintsMap = new ConcurrentHashMap<>();
 
     /**
      * Notifies this instance that the specified endpoint wants to receive
