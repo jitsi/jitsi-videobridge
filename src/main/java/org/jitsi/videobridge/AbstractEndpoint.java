@@ -389,7 +389,21 @@ public abstract class AbstractEndpoint
     public abstract void addRtpExtension(RtpExtension rtpExtension);
 
     /**
-     * @param videoConstraints
+     * Sets the map of endpoint id to {@link VideoConstraints} that contains the
+     * {@link VideoConstraints} to respect when allocating bandwidth for a
+     * specific endpoint.
+     *
+     * NOTE that the map specifies all the constraints that need to be respected
+     * and therefore it resets any previous settings. In other words the map
+     * is not a diff/delta to be applied on top of the existing settings.
+     *
+     * NOTE that if there are no {@link VideoConstraints} specified for an
+     * endpoint, then its {@link VideoConstraints} are assumed to be
+     * {@link org.jitsi.videobridge.cc.BitrateController.defaultVideoConstraints}
+     *
+     * @param videoConstraints the map of endpoint id to {@link VideoConstraints}
+     * that contains the {@link VideoConstraints} to respect when allocating
+     * bandwidth for a specific endpoint.
      */
     public abstract void setSenderVideoConstraints(
         ImmutableMap<String, VideoConstraints> videoConstraints);
