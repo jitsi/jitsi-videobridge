@@ -28,6 +28,7 @@ import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.cc.AdaptiveSourceProjectionContext
 import org.jitsi.videobridge.cc.RewriteException
 import org.jitsi.videobridge.cc.RtpState
+import org.json.simple.JSONArray
 import org.json.simple.JSONObject
 
 /**
@@ -267,7 +268,15 @@ class Vp9AdaptiveSourceProjectionContext(
         val debugState = JSONObject()
         debugState["class"] = Vp9AdaptiveSourceProjectionContext::class.java.simpleName
 
-        /* TODO */
+        val mapSizes = JSONArray()
+        for ((key, value) in vp9FrameMaps.entries) {
+            val sizeInfo = JSONObject()
+            sizeInfo["ssrc"] = key
+            sizeInfo["size"] = value.size()
+            mapSizes.add(sizeInfo)
+        }
+        debugState["vp9FrameMaps"] = mapSizes
+        debugState["vp9QualityFilter"] = vp9QualityFilter.debugState
 
         debugState["payloadType"] = payloadType.toString()
 
