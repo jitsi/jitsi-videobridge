@@ -168,6 +168,7 @@ public class Endpoint
     /**
      * The bitrate controller.
      */
+    @NotNull
     private final BitrateController bitrateController;
 
     /**
@@ -245,6 +246,11 @@ public class Endpoint
     private Optional<SctpServerSocket> sctpSocket = Optional.empty();
 
     /**
+     * Set of event handlers subscribe to events of current {@code Endpoint}
+     */
+    private final Set<EventHandler> eventHandlers = ConcurrentHashMap.newKeySet();
+
+    /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
      * identifier/ID of the endpoint of a participant in a <tt>Conference</tt>.
      *
@@ -293,6 +299,25 @@ public class Endpoint
                 }
             });
         bitrateController = new BitrateController(this, diagnosticContext, logger);
+        bitrateController.addEventHandler(new BitrateController.EventHandler() {
+            @Override
+            public void forwardedEndpointsChanged(
+                Set<String> forwardedEndpoints,
+                Set<String> endpointsEnteringLastN,
+                Set<String> conferenceEndpoints) {
+                notifyForwardedEndpointsChanged(
+                    forwardedEndpoints,
+                    endpointsEnteringLastN,
+                    conferenceEndpoints);
+
+                // TODO(george) bring back sending this message on message transport
+                //  connect
+                sendLastNEndpointsChangeEvent(
+                    forwardedEndpoints,
+                    endpointsEnteringLastN,
+                    conferenceEndpoints);
+            }
+        });
 
         outgoingSrtpPacketQueue = new PacketInfoQueue(
             getClass().getSimpleName() + "-outgoing-packet-queue",
@@ -989,6 +1014,7 @@ public class Endpoint
         int newValue = selectedCount.incrementAndGet();
         if (newValue == 1)
         {
+            notifyEndpointSelectionChanged(true);
             String selectedUpdate = createSelectedUpdateMessage(true);
             if (logger.isDebugEnabled())
             {
@@ -1007,6 +1033,7 @@ public class Endpoint
         int newValue = selectedCount.decrementAndGet();
         if (newValue == 0)
         {
+            notifyEndpointSelectionChanged(false);
             String selectedUpdate = createSelectedUpdateMessage(false);
             if (logger.isDebugEnabled())
             {
@@ -1027,7 +1054,7 @@ public class Endpoint
      * @param conferenceEndpoints the collection of all endpoints in the
      * conference.
      */
-    public void sendLastNEndpointsChangeEvent(
+    private void sendLastNEndpointsChangeEvent(
         Collection<String> forwardedEndpoints,
         Collection<String> endpointsEnteringLastN,
         Collection<String> conferenceEndpoints)
@@ -1572,5 +1599,89 @@ public class Endpoint
         // The endpoint is sending video if we (the transceiver) are receiving
         // video.
         return transceiver.isReceivingVideo();
+    }
+
+    /**
+     * Subscribe to {@link Endpoint}'s events.
+     * @param handler event handler
+     */
+    public void addEventHandler(@NotNull EventHandler handler)
+    {
+        eventHandlers.add(handler);
+    }
+
+    /**
+     * Unsubscribe from {@link Endpoint}'s events.
+     * @param handler event handler
+     */
+    public void removeEventHandler(@NotNull EventHandler handler)
+    {
+        eventHandlers.remove(handler);
+    }
+
+    /**
+     * Notify event handlers listening current {@code Endpoint} that
+     * set of forwarded endpoints to current {@code Endpoint} has changed.
+     * @param forwardedEndpoints the collection of forwarded endpoints.
+     * @param endpointsEnteringLastN the <tt>Endpoint</tt>s which are entering
+     * the list of <tt>Endpoint</tt>s defined by <tt>lastN</tt>
+     * @param conferenceEndpoints the collection of all endpoints in the
+     * conference.
+     */
+    private void notifyForwardedEndpointsChanged(
+        Set<String> forwardedEndpoints,
+        Set<String> endpointsEnteringLastN,
+        Set<String> conferenceEndpoints)
+    {
+        for (EventHandler handler : eventHandlers)
+        {
+            handler.forwardedEndpointsChanged(
+                forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints);
+        }
+    }
+
+    /**
+     * Notify event handlers listening current {@code Endpoint} that
+     * endpoint is selected or de selected.
+     * @param selected endpoint selection state
+     */
+    private void notifyEndpointSelectionChanged(boolean selected)
+    {
+        for (EventHandler handler : eventHandlers)
+        {
+            handler.endpointSelectionChanged(selected);
+        }
+    }
+
+    /**
+     * Interface for listeners of events generated
+     * by {@code Endpoint}
+     */
+    public interface EventHandler
+    {
+        /**
+         * Notify listener that the collection of forwarded endpoints of
+         * current {@link Endpoint} has changed.
+         *
+         * @param forwardedEndpoints the collection of forwarded endpoints.
+         * @param endpointsEnteringLastN the <tt>Endpoint</tt>s which are entering
+         * the list of <tt>Endpoint</tt>s defined by <tt>lastN</tt>
+         * @param conferenceEndpoints the collection of all endpoints in the
+         * conference.
+         */
+        void forwardedEndpointsChanged(
+            Set<String> forwardedEndpoints,
+            Set<String> endpointsEnteringLastN,
+            Set<String> conferenceEndpoints);
+
+        /**
+         * Notify listener that current {@code Endpoint} selection has
+         * changed
+         * @param selected true when current {@code Endpoint} is selected
+         *                 by at least one other {@code Endpoint} in a conference;
+         *                 false when no other endpoint in endpoint has selected
+         *                 current {@code Endpoint}
+         */
+        void endpointSelectionChanged(boolean selected);
     }
 }

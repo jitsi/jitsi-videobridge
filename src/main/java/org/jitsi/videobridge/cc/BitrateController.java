@@ -182,6 +182,11 @@ public class BitrateController
     private Map<String, VideoConstraints> videoConstraintsMap = Collections.emptyMap();
 
     /**
+     * Set of event listeners of current {@code BitrateController}
+     */
+    private final Set<EventHandler> listeners = ConcurrentHashMap.newKeySet();
+
+    /**
      * The last-n value for the endpoint to which this {@link BitrateController}
      * belongs
      */
@@ -791,10 +796,8 @@ public class BitrateController
 
         if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
         {
-            // TODO(george) bring back sending this message on message transport
-            //  connect
-            destinationEndpoint.sendLastNEndpointsChangeEvent(
-                newForwardedEndpointIds,
+            notifyForwardedEndpointsChanged(
+                Collections.unmodifiableSet(newForwardedEndpointIds),
                 endpointsEnteringLastNIds,
                 conferenceEndpointIds);
         }
@@ -1142,6 +1145,52 @@ public class BitrateController
         }
     }
 
+    /**
+     * Subscribe to {@link BitrateController}'s events.
+     * @param listener event listener
+     */
+    public void addEventHandler(EventHandler listener) {
+        listeners.add(listener);
+    }
+
+    /**
+     * Unsubscribe from {@link BitrateController}'s events.
+     * @param listener event listener
+     */
+    public void removeEventHandler(EventHandler listener) {
+        listeners.remove(listener);
+    }
+
+    private void notifyForwardedEndpointsChanged(
+        Set<String> forwardedEndpoints,
+        Set<String> endpointsEnteringLastN,
+        Set<String> conferenceEndpoints) {
+        for (EventHandler listener : listeners) {
+            listener.forwardedEndpointsChanged(
+                forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints);
+        }
+    }
+    /**
+     * Interface for listeners of events generated
+     * by {@code BitrateController}
+     */
+    public interface EventHandler {
+
+        /**
+         * Notify listener that the collection of forwarded endpoints by
+         * current {@link BitrateController} has changed.
+         *
+         * @param forwardedEndpoints the collection of forwarded endpoints.
+         * @param endpointsEnteringLastN the <tt>Endpoint</tt>s which are entering
+         * the list of <tt>Endpoint</tt>s defined by <tt>lastN</tt>
+         * @param conferenceEndpoints the collection of all endpoints in the
+         * conference.
+         */
+        void forwardedEndpointsChanged(
+            Set<String> forwardedEndpoints,
+            Set<String> endpointsEnteringLastN,
+            Set<String> conferenceEndpoints);
+    }
 
     /**
      * A snapshot of the bitrate for a given {@link RtpLayerDesc}.
