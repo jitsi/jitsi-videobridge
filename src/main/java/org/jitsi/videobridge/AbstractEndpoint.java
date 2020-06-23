@@ -389,9 +389,8 @@ public abstract class AbstractEndpoint
     public abstract void addRtpExtension(RtpExtension rtpExtension);
 
     /**
-     * Sets the map of endpoint id to {@link VideoConstraints} that contains the
-     * {@link VideoConstraints} to respect when allocating bandwidth for a
-     * specific endpoint.
+     * Sets the video constraints for the streams that this endpoint wishes to
+     * receive expressed as a map of endpoint id to {@link VideoConstraints}.
      *
      * NOTE that the map specifies all the constraints that need to be respected
      * and therefore it resets any previous settings. In other words the map
