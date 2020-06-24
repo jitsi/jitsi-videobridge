@@ -39,6 +39,13 @@ public class VideoConstraints
     private final int idealHeight;
 
     /**
+     * The max height of the constrained endpoint. The bridge will not exceed
+     * this resolution. If there aren't any encodings does provide resolution or
+      less, the stream from this endpoint becomes suspended.
+     */
+    private final int maxHeight;
+
+    /**
      * The "preferred" height of the constrained endpoint. When it's time to
      * allocate bandwidth for the associated source or endpoint, the bridge
      * tries to satisfy the preferred resolution before moving to the next
@@ -55,6 +62,21 @@ public class VideoConstraints
      */
     private final double preferredFps;
 
+    /**
+     * Ctor.
+     *
+     * @param idealHeight The ideal height of the constrained endpoint.
+     * @param maxHeight The max height of the constrained endpoint.
+     * @param preferredHeight The "preferred" height of the constrained endpoint.
+     * @param preferredFps The "preferred" frame-rate of the constrained endpoint.
+     */
+    VideoConstraints(int idealHeight, int maxHeight, int preferredHeight, double preferredFps)
+    {
+        this.maxHeight = maxHeight;
+        this.preferredFps = preferredFps;
+        this.preferredHeight = preferredHeight;
+        this.idealHeight = idealHeight;
+    }
 
     /**
      * Ctor.
@@ -65,9 +87,7 @@ public class VideoConstraints
      */
     VideoConstraints(int idealHeight, int preferredHeight, double preferredFps)
     {
-        this.preferredFps = preferredFps;
-        this.preferredHeight = preferredHeight;
-        this.idealHeight = idealHeight;
+        this(idealHeight, -1, preferredHeight, preferredFps);
     }
 
     /**
@@ -77,7 +97,7 @@ public class VideoConstraints
      */
     public VideoConstraints(int idealHeight)
     {
-        this(idealHeight, -1, -1);
+        this(idealHeight, -1, -1, -1);
     }
 
     /**
@@ -111,6 +131,7 @@ public class VideoConstraints
         if (o == null || getClass() != o.getClass()) return false;
         VideoConstraints that = (VideoConstraints) o;
         return idealHeight == that.idealHeight &&
+            maxHeight == that.maxHeight &&
             preferredHeight == that.preferredHeight &&
             Double.compare(that.preferredFps, preferredFps) == 0;
     }
@@ -118,7 +139,7 @@ public class VideoConstraints
     @Override
     public int hashCode()
     {
-        return Objects.hash(idealHeight, preferredHeight, preferredFps);
+        return Objects.hash(idealHeight, maxHeight, preferredHeight, preferredFps);
     }
 
     @Override
@@ -126,8 +147,14 @@ public class VideoConstraints
     {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("idealHeight", idealHeight);
+        jsonObject.put("maxHeight", maxHeight);
         jsonObject.put("preferredHeight", preferredHeight);
         jsonObject.put("preferredFps", preferredFps);
         return jsonObject.toJSONString();
+    }
+
+    public boolean lessThanMaxResolution(int height)
+    {
+        return maxHeight == -1 || height <= maxHeight;
     }
 }

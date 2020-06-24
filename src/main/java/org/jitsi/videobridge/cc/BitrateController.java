@@ -1327,12 +1327,15 @@ public class BitrateController
 
                 boolean lessThanPreferredResolution
                     = layer.getHeight() < videoConstraints.getPreferredHeight();
+                boolean lessThanMaxResolution
+                    = videoConstraints.lessThanMaxResolution(layer.getHeight());
                 boolean lessThanOrEqualIdealResolution
                     = layer.getHeight() <= videoConstraints.getIdealHeight();
                 boolean atLeastPreferredFps
                     = layer.getFrameRate() >= videoConstraints.getPreferredFps();
 
-                if ((lessThanPreferredResolution
+                if (lessThanMaxResolution
+                    && (lessThanPreferredResolution
                     || (lessThanOrEqualIdealResolution && atLeastPreferredFps))
                     || ratesList.isEmpty())
                 {
