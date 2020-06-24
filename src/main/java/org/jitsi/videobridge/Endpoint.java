@@ -640,12 +640,12 @@ public class Endpoint
 
         bitrateController.setVideoConstraints(newVideoConstraints);
 
-        Set<String> endpointsThatNoLongerCare
+        Set<String> removedEndpoints
             = new HashSet<>(oldVideoConstraints.keySet());
-        endpointsThatNoLongerCare.removeAll(newVideoConstraints.keySet());
+        removedEndpoints.removeAll(newVideoConstraints.keySet());
 
-        // Endpoints that no longer care what they receive.
-        for (String id : endpointsThatNoLongerCare)
+        // Endpoints that "this" no longer cares about what it receives.
+        for (String id : removedEndpoints)
         {
             AbstractEndpoint senderEndpoint = getConference().getEndpoint(id);
             if (senderEndpoint != null)
