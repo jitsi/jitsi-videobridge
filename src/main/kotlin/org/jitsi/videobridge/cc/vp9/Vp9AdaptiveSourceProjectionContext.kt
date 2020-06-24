@@ -148,8 +148,8 @@ class Vp9AdaptiveSourceProjectionContext(
      * @param frame The frame to query
      * @return A subsequent TL0 frame, or null
      */
-    private fun findNextTl0(frame: Vp9Frame) =
-        vp9PictureMaps[frame.ssrc]?.findNextTl0(frame)
+    private fun findNextTl0(picture: Vp9Picture) =
+        vp9PictureMaps[picture.ssrc]?.findNextTl0(picture)
 
     private fun frameIsNewSsrc(frame: Vp9Frame): Boolean {
         val lastFrame = lastVp9FrameProjection.vp9Frame
