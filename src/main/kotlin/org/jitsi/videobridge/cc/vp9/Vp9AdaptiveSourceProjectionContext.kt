@@ -47,7 +47,7 @@ class Vp9AdaptiveSourceProjectionContext(
     /**
      * A map that stores the per-encoding VP9 frame maps.
      */
-    private val vp9FrameMaps = HashMap<Long, Vp9FrameMap>().withDefault { ssrc: Long? -> Vp9FrameMap(logger) }
+    private val vp9PictureMaps = HashMap<Long, Vp9PictureMap>().withDefault { ssrc: Long? -> Vp9PictureMap(logger) }
 
     /**
      * The [Vp9QualityFilter] instance that does quality filtering on the
@@ -70,7 +70,7 @@ class Vp9AdaptiveSourceProjectionContext(
             return false
         }
 
-        val result: Vp9FrameMap.FrameInsertionResult = insertPacketInMap(packet)
+        val result = insertPacketInMap(packet)
             ?: return false
             /* Very old frame, more than Vp9FrameMap.FRAME_MAP_SIZE old,
               or something wrong with the stream. */
@@ -80,14 +80,15 @@ class Vp9AdaptiveSourceProjectionContext(
         if (result.isNewFrame) {
             if (packet.isKeyframe && frameIsNewSsrc(frame)) {
                 /* If we're not currently projecting this SSRC, check if we've
-               already decided to drop a subsequent TL0 frame of this SSRC.
-               If we have, we can't turn on the encoding starting from this
-               packet, so treat this frame as though it weren't a keyframe.
-             */
-                val f: Vp9Frame? = findNextTl0(frame)
+                 * already decided to drop a subsequent TL0 frame of this SSRC.
+                 * If we have, we can't turn on the encoding starting from this
+                 * packet, so treat this frame as though it weren't a keyframe.
+                 */
+                /* TODO */
+                /* val f: Vp9Frame? = findNextTl0(frame)
                 if (f != null && !f.isAccepted) {
                     frame.isKeyframe = false
-                }
+                } */
             }
             val receivedMs = packetInfo.receivedTime
             var accepted: Boolean = vp9QualityFilter
@@ -120,39 +121,27 @@ class Vp9AdaptiveSourceProjectionContext(
 
     /** Lookup a Vp9Frame for a packet. */
     private fun lookupVp9Frame(vp9Packet: Vp9Packet): Vp9Frame? =
-        vp9FrameMaps[vp9Packet.ssrc]?.findFrame(vp9Packet)
+        vp9PictureMaps[vp9Packet.ssrc]?.findPicture(vp9Packet)?.frame(vp9Packet.spatialLayerIndex)
 
     /**
      * Insert a packet in the appropriate Vp9FrameMap.
      */
     private fun insertPacketInMap(vp9Packet: Vp9Packet) =
-        vp9FrameMaps[vp9Packet.ssrc]?.insertPacket(vp9Packet)
+        vp9PictureMaps[vp9Packet.ssrc]?.insertPacket(vp9Packet)
 
     /**
      * Find the previous frame before the given one.
      */
     @Synchronized
-    private fun prevFrame(frame: Vp9Frame) =
-        vp9FrameMaps[frame.ssrc]?.prevFrame(frame)
+    private fun prevPicture(picture: Vp9Picture) =
+        vp9PictureMaps[picture.ssrc]?.prevPicture(picture)
 
     /**
      * Find the next frame after the given one.
      */
     @Synchronized
-    private fun nextFrame(frame: Vp9Frame) =
-        vp9FrameMaps[frame.ssrc]?.nextFrame(frame)
-
-    /**
-     * Find the previous accepted frame before the given one.
-     */
-    private fun findPrevAcceptedFrame(frame: Vp9Frame) =
-        vp9FrameMaps[frame.ssrc]?.findPrevAcceptedFrame(frame)
-
-    /**
-     * Find the next accepted frame after the given one.
-     */
-    private fun findNextAcceptedFrame(frame: Vp9Frame) =
-        vp9FrameMaps[frame.ssrc]?.findNextAcceptedFrame(frame)
+    private fun nextPicture(picture: Vp9Picture) =
+        vp9PictureMaps[picture.ssrc]?.nextPicture(picture)
 
     /**
      * Find a subsequent Tid==0 frame after the given frame
@@ -160,7 +149,7 @@ class Vp9AdaptiveSourceProjectionContext(
      * @return A subsequent TL0 frame, or null
      */
     private fun findNextTl0(frame: Vp9Frame) =
-        vp9FrameMaps[frame.ssrc]?.findNextTl0(frame)
+        vp9PictureMaps[frame.ssrc]?.findNextTl0(frame)
 
     private fun frameIsNewSsrc(frame: Vp9Frame): Boolean {
         val lastFrame = lastVp9FrameProjection.vp9Frame
@@ -269,7 +258,7 @@ class Vp9AdaptiveSourceProjectionContext(
         debugState["class"] = Vp9AdaptiveSourceProjectionContext::class.java.simpleName
 
         val mapSizes = JSONArray()
-        for ((key, value) in vp9FrameMaps.entries) {
+        for ((key, value) in vp9PictureMaps.entries) {
             val sizeInfo = JSONObject()
             sizeInfo["ssrc"] = key
             sizeInfo["size"] = value.size()

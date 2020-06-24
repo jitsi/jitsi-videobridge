@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.cc.vp9
 
-import org.jitsi.nlj.codec.vp8.Vp8Utils.Companion.applyExtendedPictureIdDelta
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.rtp.util.isNewerThan
@@ -75,9 +74,19 @@ class Vp9Frame(packet: Vp9Packet) {
         private set
 
     /**
+     * A boolean that indicates whether we've seen a packet with the marker bit set.
+     */
+    var seenMarker: Boolean = packet.isMarked
+
+    /**
      * The temporal layer of this frame.
      */
     val temporalLayer: Int = packet.temporalLayerIndex
+
+    /**
+     * The spatial layer of this frame.
+     */
+    val spatialLayer: Int = packet.spatialLayerIndex
 
     /**
      * The VP9 PictureID of the incoming VP9 frame that this instance refers to.
@@ -111,7 +120,7 @@ class Vp9Frame(packet: Vp9Packet) {
      * Note: this assumes every packet is received only once, i.e. a filter
      * like [org.jitsi.nlj.transform.node.incoming.PaddingTermination] is in use.
      * @param packet The packet to remember.  This should be a packet which
-     * has tested true with [.matchesFrame].
+     * has tested true with [matchesFrame].
      */
     fun addPacket(packet: Vp9Packet) {
         require(matchesFrame(packet)) { "Non-matching packet added to frame" }
@@ -127,6 +136,9 @@ class Vp9Frame(packet: Vp9Packet) {
         }
         if (packet.isEndOfFrame) {
             seenEndOfFrame = true
+        }
+        if (packet.isMarked) {
+            seenMarker = true
         }
     }
 
@@ -176,7 +188,8 @@ class Vp9Frame(packet: Vp9Packet) {
      * otherwise.
      */
     fun matchesFrame(pkt: Vp9Packet): Boolean {
-        return matchesSSRC(pkt) && timestamp == pkt.timestamp
+        return matchesSSRC(pkt) && timestamp == pkt.timestamp &&
+            spatialLayer == pkt.spatialLayerIndex
     }
 
     /**
@@ -219,14 +232,5 @@ class Vp9Frame(packet: Vp9Packet) {
                 append("packet PictureID ${pkt.pictureId} != frame PictureID $pictureId")
             }
         })
-    }
-
-    /**
-     * Check whether this frame is immediately after another one, according
-     * to their extended picture IDs.
-     */
-    fun isImmediatelyAfter(otherFrame: Vp9Frame): Boolean {
-        return pictureId ==
-            applyExtendedPictureIdDelta(otherFrame.pictureId, 1)
     }
 }

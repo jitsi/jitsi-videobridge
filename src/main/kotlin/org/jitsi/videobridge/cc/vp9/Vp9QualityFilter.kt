@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc.vp9
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
+import org.jitsi.nlj.RtpLayerDesc.Companion.getSidFromIndex
 import org.jitsi.nlj.RtpLayerDesc.Companion.getTidFromIndex
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
@@ -100,7 +101,9 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         // externalEncodingTarget (as they may be updated by some other
         // thread).
         val externalTemporalLayerIdTarget = getTidFromIndex(externalTargetIndex)
+        val externalSpatialLayerIdTarget = getSidFromIndex(externalTargetIndex)
         val externalEncodingIdTarget = getEidFromIndex(externalTargetIndex)
+
         if (externalEncodingIdTarget != internalEncodingIdTarget) {
             // The externalEncodingIdTarget has changed since accept last
             // run; perhaps we should request a keyframe.
@@ -109,7 +112,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
                 needsKeyframe = true
             }
         }
-        if (externalEncodingIdTarget < 0 || externalTemporalLayerIdTarget < 0) {
+        if (externalEncodingIdTarget < 0) {
             // We stop forwarding immediately. We will need a keyframe in order
             // to resume.
             currentEncodingId = SUSPENDED_ENCODING_ID
