@@ -267,24 +267,28 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             // We're within the 300ms window since the reception of the
             // first key frame of a key frame group, let's check whether an
             // upscale/downscale is possible.
-            if (encodingIdOfKeyframe in currentEncodingId..internalEncodingIdTarget) {
-                // upscale or current quality case
-                currentEncodingId = encodingIdOfKeyframe
-                logger.debug {
-                    "Upscaling to encoding $encodingIdOfKeyframe. " +
-                        "The target is $internalEncodingIdTarget"
+            when {
+                encodingIdOfKeyframe in currentEncodingId..internalEncodingIdTarget -> {
+                    // upscale or current quality case
+                    currentEncodingId = encodingIdOfKeyframe
+                    logger.debug {
+                        "Upscaling to encoding $encodingIdOfKeyframe. " +
+                            "The target is $internalEncodingIdTarget"
+                    }
+                    true
                 }
-                true
-            } else if (internalEncodingIdTarget in encodingIdOfKeyframe until currentEncodingId) {
-                // downscale case
-                currentEncodingId = encodingIdOfKeyframe
-                logger.debug {
-                    "Downscaling to encoding $encodingIdOfKeyframe. " +
-                        "The target is $internalEncodingIdTarget"
+                internalEncodingIdTarget in encodingIdOfKeyframe until currentEncodingId -> {
+                    // downscale case
+                    currentEncodingId = encodingIdOfKeyframe
+                    logger.debug {
+                        "Downscaling to encoding $encodingIdOfKeyframe. " +
+                            "The target is $internalEncodingIdTarget"
+                    }
+                    true
                 }
-                true
-            } else {
-                false
+                else -> {
+                    false
+                }
             }
         }
     }
