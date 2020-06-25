@@ -1,0 +1,1024 @@
+<iq to='jvb@auth.meet.jit.si/XRqb4Z3w'
+    from='jvbbrewery@internal.auth.meet.jit.si/focus'
+    id='anZiQGF1dGgubWVldC5qaXQuc2kvWFJxYjRaM3cARENvREMtMTE0NTcyMQDg4283A7PzCTa4+rvv4l+9'
+    type='set'>
+    <conference xmlns='http://jitsi.org/protocol/colibri' id='bda729c99abd2423'
+                gid='ff85f7' name='vtm_meet'>
+        <content name='video'>
+            <channel id='octo-video' type='octo'>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2570309870'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='xHEKe8La4aM5IwH-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='575faeb2-0394-4d97-b6dc-d51862bdd087-1 3A221F6B-F288-4635-971D-48F8AFC2B7BB-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/baa278ea'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='4219298180'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='xHEKe8La4aM5IwH-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='575faeb2-0394-4d97-b6dc-d51862bdd087-1 3A221F6B-F288-4635-971D-48F8AFC2B7BB-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/baa278ea'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='700465280'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='xHEKe8La4aM5IwH-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='575faeb2-0394-4d97-b6dc-d51862bdd087-1 3A221F6B-F288-4635-971D-48F8AFC2B7BB-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/baa278ea'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2092811287'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='xHEKe8La4aM5IwH-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='575faeb2-0394-4d97-b6dc-d51862bdd087-1 3A221F6B-F288-4635-971D-48F8AFC2B7BB-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/baa278ea'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='340902319'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='xHEKe8La4aM5IwH-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='575faeb2-0394-4d97-b6dc-d51862bdd087-1 3A221F6B-F288-4635-971D-48F8AFC2B7BB-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/baa278ea'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2475680121'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='xHEKe8La4aM5IwH-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='575faeb2-0394-4d97-b6dc-d51862bdd087-1 3A221F6B-F288-4635-971D-48F8AFC2B7BB-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/baa278ea'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='3031418169'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='11npLyHHjVIgX39x-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='baeb3f20-a055-4c92-8506-cd60bf842870-1 6a3f2a3e-2fa2-45b9-a79a-22b6e7cee208-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/69b857c5'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0' ssrc='81361293'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='11npLyHHjVIgX39x-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='baeb3f20-a055-4c92-8506-cd60bf842870-1 6a3f2a3e-2fa2-45b9-a79a-22b6e7cee208-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/69b857c5'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='903219577'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='11npLyHHjVIgX39x-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='baeb3f20-a055-4c92-8506-cd60bf842870-1 6a3f2a3e-2fa2-45b9-a79a-22b6e7cee208-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/69b857c5'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1786036047'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='11npLyHHjVIgX39x-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='baeb3f20-a055-4c92-8506-cd60bf842870-1 6a3f2a3e-2fa2-45b9-a79a-22b6e7cee208-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/69b857c5'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='3049419467'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='11npLyHHjVIgX39x-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='baeb3f20-a055-4c92-8506-cd60bf842870-1 6a3f2a3e-2fa2-45b9-a79a-22b6e7cee208-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/69b857c5'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='3564410218'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='11npLyHHjVIgX39x-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='baeb3f20-a055-4c92-8506-cd60bf842870-1 6a3f2a3e-2fa2-45b9-a79a-22b6e7cee208-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/69b857c5'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1799466363'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='1EsMtKW7PAoLJWm-2'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='7948cb1e-6dc7-4907-8dd0-e5d97d431c07-2 0701c3c3-f98c-410a-8ac8-18aded12510f-2'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/01b7a8d5'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1326201922'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='1EsMtKW7PAoLJWm-2'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='7948cb1e-6dc7-4907-8dd0-e5d97d431c07-2 0701c3c3-f98c-410a-8ac8-18aded12510f-2'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/01b7a8d5'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='495336862'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='1EsMtKW7PAoLJWm-2'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='7948cb1e-6dc7-4907-8dd0-e5d97d431c07-2 0701c3c3-f98c-410a-8ac8-18aded12510f-2'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/01b7a8d5'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1496742233'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='1EsMtKW7PAoLJWm-2'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='7948cb1e-6dc7-4907-8dd0-e5d97d431c07-2 0701c3c3-f98c-410a-8ac8-18aded12510f-2'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/01b7a8d5'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='4066294367'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='1EsMtKW7PAoLJWm-2'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='7948cb1e-6dc7-4907-8dd0-e5d97d431c07-2 0701c3c3-f98c-410a-8ac8-18aded12510f-2'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/01b7a8d5'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1523172721'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='1EsMtKW7PAoLJWm-2'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='7948cb1e-6dc7-4907-8dd0-e5d97d431c07-2 0701c3c3-f98c-410a-8ac8-18aded12510f-2'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/01b7a8d5'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='411816112'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='injected-411816112-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='58320c75-9507-4c41-8b1a-a24ea747b605-1 4d7b3051-694c-43d4-b952-29fc9a6bdbc7-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/d362d0ab'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='4209062420'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='injected-411816112-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='58320c75-9507-4c41-8b1a-a24ea747b605-1 4d7b3051-694c-43d4-b952-29fc9a6bdbc7-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/d362d0ab'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='3418694739'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='injected-411816112-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='58320c75-9507-4c41-8b1a-a24ea747b605-1 4d7b3051-694c-43d4-b952-29fc9a6bdbc7-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/d362d0ab'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2931169087'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='injected-411816112-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='58320c75-9507-4c41-8b1a-a24ea747b605-1 4d7b3051-694c-43d4-b952-29fc9a6bdbc7-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/d362d0ab'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1054986935'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='injected-411816112-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='58320c75-9507-4c41-8b1a-a24ea747b605-1 4d7b3051-694c-43d4-b952-29fc9a6bdbc7-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/d362d0ab'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2855310965'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='injected-411816112-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='58320c75-9507-4c41-8b1a-a24ea747b605-1 4d7b3051-694c-43d4-b952-29fc9a6bdbc7-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/d362d0ab'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='3478596868'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='hR5z1YXXEBpm1ToG-13'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='39802934-4f64-4aa2-9b18-98a3b1475375-13 657c68ff-c70b-481f-8091-04e75224aef8-13'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/791dd666'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='3431875143'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='hR5z1YXXEBpm1ToG-13'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='39802934-4f64-4aa2-9b18-98a3b1475375-13 657c68ff-c70b-481f-8091-04e75224aef8-13'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/791dd666'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='4037600602'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='hR5z1YXXEBpm1ToG-13'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='39802934-4f64-4aa2-9b18-98a3b1475375-13 657c68ff-c70b-481f-8091-04e75224aef8-13'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/791dd666'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='3610386699'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='hR5z1YXXEBpm1ToG-13'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='39802934-4f64-4aa2-9b18-98a3b1475375-13 657c68ff-c70b-481f-8091-04e75224aef8-13'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/791dd666'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2761687978'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='hR5z1YXXEBpm1ToG-13'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='39802934-4f64-4aa2-9b18-98a3b1475375-13 657c68ff-c70b-481f-8091-04e75224aef8-13'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/791dd666'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1158498008'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='hR5z1YXXEBpm1ToG-13'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='39802934-4f64-4aa2-9b18-98a3b1475375-13 657c68ff-c70b-481f-8091-04e75224aef8-13'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/791dd666'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='452869651'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='P7uKeo7l5QRpQOQ-2'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='ab2d4659-9d1e-49ba-8ac4-d068b71eaaf8-2 56c4a401-7e6f-42ed-b13b-5dacc0b67fbe-2'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/328aa1f3'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1650058189'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='P7uKeo7l5QRpQOQ-2'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='ab2d4659-9d1e-49ba-8ac4-d068b71eaaf8-2 56c4a401-7e6f-42ed-b13b-5dacc0b67fbe-2'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/328aa1f3'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2333249032'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='P7uKeo7l5QRpQOQ-2'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='ab2d4659-9d1e-49ba-8ac4-d068b71eaaf8-2 56c4a401-7e6f-42ed-b13b-5dacc0b67fbe-2'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/328aa1f3'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2393589863'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='P7uKeo7l5QRpQOQ-2'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='ab2d4659-9d1e-49ba-8ac4-d068b71eaaf8-2 56c4a401-7e6f-42ed-b13b-5dacc0b67fbe-2'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/328aa1f3'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='3279379725'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='P7uKeo7l5QRpQOQ-2'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='ab2d4659-9d1e-49ba-8ac4-d068b71eaaf8-2 56c4a401-7e6f-42ed-b13b-5dacc0b67fbe-2'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/328aa1f3'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='3548328433'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='P7uKeo7l5QRpQOQ-2'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='ab2d4659-9d1e-49ba-8ac4-d068b71eaaf8-2 56c4a401-7e6f-42ed-b13b-5dacc0b67fbe-2'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/328aa1f3'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2130317741'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='zpYbDLLRX0fHvDc7-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='3b101735-4855-4cff-8f30-722b0073ddd9-1 2ea35de9-4c7f-4d15-a881-eb46b330f72f-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/484b356b'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1377796050'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='zpYbDLLRX0fHvDc7-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='3b101735-4855-4cff-8f30-722b0073ddd9-1 2ea35de9-4c7f-4d15-a881-eb46b330f72f-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/484b356b'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1042700937'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='zpYbDLLRX0fHvDc7-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='3b101735-4855-4cff-8f30-722b0073ddd9-1 2ea35de9-4c7f-4d15-a881-eb46b330f72f-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/484b356b'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='365801923'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='zpYbDLLRX0fHvDc7-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='3b101735-4855-4cff-8f30-722b0073ddd9-1 2ea35de9-4c7f-4d15-a881-eb46b330f72f-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/484b356b'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1587156127'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='zpYbDLLRX0fHvDc7-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='3b101735-4855-4cff-8f30-722b0073ddd9-1 2ea35de9-4c7f-4d15-a881-eb46b330f72f-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/484b356b'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2705820243'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='zpYbDLLRX0fHvDc7-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='3b101735-4855-4cff-8f30-722b0073ddd9-1 2ea35de9-4c7f-4d15-a881-eb46b330f72f-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/484b356b'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1701019844'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='JQy6YXlH0SDxYrw8-4'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='e0404248-42d3-4609-93ca-5c72e243f203-4 C74B537B-6BC5-42E0-82CD-DAC2D5131028-4'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/ad84aa7f'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2961525061'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='JQy6YXlH0SDxYrw8-4'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='e0404248-42d3-4609-93ca-5c72e243f203-4 C74B537B-6BC5-42E0-82CD-DAC2D5131028-4'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/ad84aa7f'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='3393498789'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='JQy6YXlH0SDxYrw8-4'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='e0404248-42d3-4609-93ca-5c72e243f203-4 C74B537B-6BC5-42E0-82CD-DAC2D5131028-4'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/ad84aa7f'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1421421338'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='JQy6YXlH0SDxYrw8-4'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='e0404248-42d3-4609-93ca-5c72e243f203-4 C74B537B-6BC5-42E0-82CD-DAC2D5131028-4'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/ad84aa7f'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2817979675'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='JQy6YXlH0SDxYrw8-4'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='e0404248-42d3-4609-93ca-5c72e243f203-4 C74B537B-6BC5-42E0-82CD-DAC2D5131028-4'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/ad84aa7f'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0' ssrc='62868230'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='JQy6YXlH0SDxYrw8-4'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='e0404248-42d3-4609-93ca-5c72e243f203-4 C74B537B-6BC5-42E0-82CD-DAC2D5131028-4'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/ad84aa7f'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='671505984'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='UwRY7OQIyskiarB8-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='fc7dd048-6ce8-4839-bc52-16be981e30c2-1 30c2e7a7-151d-4b00-ba16-f1cf33ac99ac-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/491fe704'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1491962833'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='UwRY7OQIyskiarB8-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='fc7dd048-6ce8-4839-bc52-16be981e30c2-1 30c2e7a7-151d-4b00-ba16-f1cf33ac99ac-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/491fe704'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1605061584'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='UwRY7OQIyskiarB8-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='fc7dd048-6ce8-4839-bc52-16be981e30c2-1 30c2e7a7-151d-4b00-ba16-f1cf33ac99ac-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/491fe704'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2531737235'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='UwRY7OQIyskiarB8-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='fc7dd048-6ce8-4839-bc52-16be981e30c2-1 30c2e7a7-151d-4b00-ba16-f1cf33ac99ac-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/491fe704'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='3250531244'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='UwRY7OQIyskiarB8-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='fc7dd048-6ce8-4839-bc52-16be981e30c2-1 30c2e7a7-151d-4b00-ba16-f1cf33ac99ac-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/491fe704'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='3513314565'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='UwRY7OQIyskiarB8-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='fc7dd048-6ce8-4839-bc52-16be981e30c2-1 30c2e7a7-151d-4b00-ba16-f1cf33ac99ac-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/491fe704'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2066298393'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='hTs983Nu9fJ5l49-3'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='7948cb1e-6dc7-4907-8dd0-e5d97d431c07-3 0701c3c3-f98c-410a-8ac8-18aded12510f-3'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/6cca25b1'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1650242300'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='hTs983Nu9fJ5l49-3'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='7948cb1e-6dc7-4907-8dd0-e5d97d431c07-3 0701c3c3-f98c-410a-8ac8-18aded12510f-3'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/6cca25b1'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2742338067'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='hTs983Nu9fJ5l49-3'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='7948cb1e-6dc7-4907-8dd0-e5d97d431c07-3 0701c3c3-f98c-410a-8ac8-18aded12510f-3'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/6cca25b1'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='282172268'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='hTs983Nu9fJ5l49-3'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='7948cb1e-6dc7-4907-8dd0-e5d97d431c07-3 0701c3c3-f98c-410a-8ac8-18aded12510f-3'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/6cca25b1'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2573711075'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='hTs983Nu9fJ5l49-3'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='7948cb1e-6dc7-4907-8dd0-e5d97d431c07-3 0701c3c3-f98c-410a-8ac8-18aded12510f-3'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/6cca25b1'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0' ssrc='21340224'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='hTs983Nu9fJ5l49-3'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='7948cb1e-6dc7-4907-8dd0-e5d97d431c07-3 0701c3c3-f98c-410a-8ac8-18aded12510f-3'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/6cca25b1'/>
+                </source>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2570309870'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='4219298180'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='700465280'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='340902319'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2092811287'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2475680121'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='SIM'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2570309870'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='700465280'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2092811287'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3031418169'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='81361293'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='903219577'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3049419467'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1786036047'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3564410218'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='SIM'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3031418169'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='903219577'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1786036047'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1799466363'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1326201922'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='495336862'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='4066294367'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1496742233'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1523172721'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='SIM'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1799466363'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='495336862'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1496742233'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='SIM'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='411816112'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='4209062420'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3418694739'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='411816112'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2931169087'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='4209062420'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1054986935'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3418694739'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2855310965'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3478596868'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3431875143'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='4037600602'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2761687978'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3610386699'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1158498008'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='SIM'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3478596868'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='4037600602'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3610386699'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2333249032'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3279379725'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2393589863'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3548328433'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='452869651'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1650058189'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='SIM'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2333249032'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2393589863'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='452869651'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2130317741'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1377796050'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='SIM'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2130317741'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1042700937'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='365801923'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1042700937'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1587156127'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='365801923'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2705820243'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1701019844'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2961525061'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3393498789'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2817979675'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1421421338'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='62868230'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='SIM'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1701019844'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3393498789'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1421421338'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2531737235'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='671505984'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1605061584'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1491962833'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3250531244'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3513314565'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='SIM'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2531737235'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1605061584'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='3250531244'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2066298393'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='1650242300'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2742338067'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2573711075'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='FID'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='282172268'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='21340224'/>
+                </ssrc-group>
+                <ssrc-group xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            semantics='SIM'>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2066298393'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='2742338067'/>
+                    <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                            ssrc='282172268'/>
+                </ssrc-group>
+                <relay id='10.11.5.70:4096'/>
+            </channel>
+        </content>
+        <content name='audio'>
+            <channel id='octo-audio' type='octo'>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2073159429'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='xHEKe8La4aM5IwH-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='250bd1ba-9d98-46f0-a5b0-a9c254596cfd-1 F3CDC0DA-00B7-451D-9DFF-C1A9497F0E39-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/baa278ea'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1028610797'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='11npLyHHjVIgX39x-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='502f3437-5ba6-4761-a3d4-ab320d83768d-1 169936fa-27e1-41eb-ad2a-27cfb8f84b6c-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/69b857c5'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='3163655973'>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/9d61cdbc'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='102567110'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='P7uKeo7l5QRpQOQ-2'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='025627d4-d525-4ea6-bf97-93860f1075ab-2 5d3ad0c5-f5a4-4e48-affb-9fd75ec31d79-2'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/328aa1f3'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2074001524'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='1EsMtKW7PAoLJWm-2'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='06fafcb4-fee1-47af-9859-8014d6168450-2 7bddae8c-c929-49e6-90aa-b089a85fdd90-2'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/01b7a8d5'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1714733872'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='3dgnc4W1zycyCX3-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='1c1c37f2-af4c-48ed-91bd-eb1a09aaebab-1 4edb20e5-f508-4c44-8b04-0c1211f96ea9-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/d362d0ab'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0' ssrc='36685354'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='hR5z1YXXEBpm1ToG-13'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='62efddea-909a-4fea-9538-84648060fcfd-13 112aa07f-4b04-4d10-a6c3-ca6f6657c405-13'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/791dd666'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='869828424'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='zpYbDLLRX0fHvDc7-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='2b15916e-7eed-4c3f-b536-4a3736095b36-1 bbba93cf-b027-4477-9a3b-97036984a5b9-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/484b356b'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='1661829004'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='JQy6YXlH0SDxYrw8-4'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='4414abf1-4fdc-44b2-a32a-0428b8e1c71c-4 E479181C-EB47-4388-8509-B04FF5E07807-4'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/ad84aa7f'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='934357324'>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/69b857c5'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='626435512'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='UwRY7OQIyskiarB8-1'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='4af488f4-5a3c-47f8-a2c6-312f97703e5d-1 ebe7effb-d706-4234-bee0-020ff61d478a-1'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/491fe704'/>
+                </source>
+                <source xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                        ssrc='2773069249'>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='cname' value='hTs983Nu9fJ5l49-3'/>
+                    <parameter xmlns='urn:xmpp:jingle:apps:rtp:ssma:0'
+                               name='msid'
+                               value='06fafcb4-fee1-47af-9859-8014d6168450-3 7bddae8c-c929-49e6-90aa-b089a85fdd90-3'/>
+                    <ssrc-info xmlns='http://jitsi.org/jitmeet'
+                               owner='vtm_meet@conference.meet.jit.si/6cca25b1'/>
+                </source>
+                <relay id='10.11.5.70:4096'/>
+            </channel>
+        </content>
+    </conference>
+</iq>

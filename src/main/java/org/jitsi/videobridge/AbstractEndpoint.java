@@ -96,8 +96,8 @@ public abstract class AbstractEndpoint
      * in the conference. The client needs to send _at least_ this to satisfy
      * all receivers.
      */
-    private VideoConstraints maxReceiverVideoConstraints
-        = new VideoConstraints(BitrateControllerConfig.Config.onstageIdealHeightPx());
+    private VideoConstraints
+        maxReceiverVideoConstraints = defaultMaxReceiverVideoConstraints;
 
     /**
      * Initializes a new {@link AbstractEndpoint} instance.
