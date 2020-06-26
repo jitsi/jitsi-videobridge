@@ -44,17 +44,6 @@ class Vp9PictureMap(
         return pictureHistory.numCached
     }
 
-    /** Helper function to insert a packet into an existing picture.  */
-    @Contract("_, _ -> new")
-    private fun doPictureInsert(picture: Vp9Picture, packet: Vp9Packet): PacketInsertionResult {
-        try {
-            picture.validateConsistent(packet)
-        } catch (e: Exception) {
-            logger.warn(e)
-        }
-        return picture.addPacket(packet)
-    }
-
     /** Check whether this is a large jump from previous state, so the map should be reset.  */
     private fun isLargeJump(packet: Vp9Packet): Boolean {
         val latestPicture: Vp9Picture = pictureHistory.latestPicture
@@ -119,7 +108,13 @@ class Vp9PictureMap(
                     " both have picture ID $pictureId")
                 return null
             }
-            return doPictureInsert(picture, packet)
+            try {
+                picture.validateConsistent(packet)
+            } catch (e: Exception) {
+                logger.warn(e)
+            }
+
+            return picture.addPacket(packet)
         }
 
         val newPicture = Vp9Picture(packet)

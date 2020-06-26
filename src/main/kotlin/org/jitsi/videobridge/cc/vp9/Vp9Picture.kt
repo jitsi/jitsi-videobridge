@@ -176,7 +176,7 @@ class Vp9Picture(packet: Vp9Packet) {
 
     /**
      * Validates that the specified RTP packet consistently matches all the
-     * parameters of this frame.
+     * parameters of this picture (or the appropriate frame).
      *
      * This can be useful for diagnosing invalid streams if this fails when
      * [matchesPicture] is true.
@@ -185,6 +185,12 @@ class Vp9Picture(packet: Vp9Packet) {
      * @throws RuntimeException if the specified RTP packet is inconsistent with this frame
      */
     fun validateConsistent(pkt: Vp9Packet) {
+        val f = frame(pkt.spatialLayerIndex)
+        if (f != null) {
+            f.validateConsistent(pkt)
+            return
+        }
+
         if (temporalLayer == pkt.temporalLayerIndex && tl0PICIDX == pkt.TL0PICIDX && pictureId == pkt.pictureId) /* TODO: also check start, end, seq nums? */ {
             return
         }
