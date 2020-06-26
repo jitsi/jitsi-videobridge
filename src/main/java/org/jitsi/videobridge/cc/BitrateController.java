@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc;
 
+import com.google.common.collect.*;
 import edu.umd.cs.findbugs.annotations.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
@@ -179,7 +180,7 @@ public class BitrateController
      * The map of endpoint id to video constraints that contains the video
      * constraints to respect when allocating bandwidth for a specific endpoint.
      */
-    private Map<String, VideoConstraints> videoConstraintsMap = Collections.emptyMap();
+    private ImmutableMap<String, VideoConstraints> videoConstraintsMap = ImmutableMap.of();
 
     /**
      * The last-n value for the endpoint to which this {@link BitrateController}
@@ -266,6 +267,16 @@ public class BitrateController
 
         return deltaBwe > 0
             ||  deltaBwe < -1 * previousBwe * Config.bweChangeThresholdPct() / 100;
+    }
+
+    /**
+     * @return the map of endpoint id to video constraints that contains the
+     * video constraints to follow when allocating bandwidth for a specific
+     * endpoint.
+     */
+    public ImmutableMap<String, VideoConstraints> getVideoConstraints()
+    {
+        return videoConstraintsMap;
     }
 
     /**
@@ -1048,7 +1059,7 @@ public class BitrateController
         return sourceBitrateAllocations.toArray(new SourceBitrateAllocation[0]);
     }
 
-    public void setVideoConstraints(Map<String, VideoConstraints> newVideoConstraintsMap)
+    public void setVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraintsMap)
     {
         if (!this.videoConstraintsMap.equals(newVideoConstraintsMap))
         {

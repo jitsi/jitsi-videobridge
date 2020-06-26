@@ -67,6 +67,7 @@ public class EndpointMessageBuilder
      * The {@link Videobridge#COLIBRI_CLASS} value indicating a
      * {@code PinnedEndpointChangedEvent}.
      */
+    @Deprecated
     public static final String COLIBRI_CLASS_PINNED_ENDPOINT_CHANGED
         = "PinnedEndpointChangedEvent";
 
@@ -74,20 +75,76 @@ public class EndpointMessageBuilder
      * The {@link Videobridge#COLIBRI_CLASS} value indicating a
      * {@code PinnedEndpointsChangedEvent}.
      */
+    @Deprecated
     public static final String COLIBRI_CLASS_PINNED_ENDPOINTS_CHANGED
         = "PinnedEndpointsChangedEvent";
 
     /**
      * The {@link Videobridge#COLIBRI_CLASS} value indicating a
      * {@code ReceiverVideoConstraint} message.
+     *
+     * Note that this message is substantially different from its successor
+     * (ReceiverVideoConstraintsChangedEvent) and should not be confused with
+     * that.
+     *
+     * Example Json message:
+     *
+     * {
+     *     colibriClass: ReceiverVideoConstraint,
+     *     maxFrameHeight: MAX_FRAME_HEIGHT
+     *
+     * }
      */
+    @Deprecated
     public static final String COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT
         = "ReceiverVideoConstraint";
 
     /**
      * The {@link Videobridge#COLIBRI_CLASS} value indicating a
+     * {@code ReceiverVideoConstraintsChanged} message.
+     *
+     * NOTE that the intention is for {@code ReceiverVideoConstraintsChanged}
+     * message to completely replace the four messages below:
+     *
+     * {@code ReceiverVideoConstraint},
+     * {@code PinnedEndpointChangedEvent},
+     * {@code PinnedEndpointsChangedEvent},
+     * {@code SelectedEndpointChangedEvent} and
+     * {@code SelectedEndpointsChangedEvent}
+     *
+     * This isn't the case currently because that would require
+     * substantial changes in the client and instead it was decided to provide a
+     * server side compatibility layer {@link VideoConstraintsCompatibility}.
+     *
+     * Usage of the above old-world data messages should be avoided in future
+     * code.
+     *
+     * Example Json message:
+     *
+     * {
+     *     colibriClass: ReceiverVideoConstraintsChangedEvent,
+     *     videoConstraints: [{
+     *         id: ENDPOINT_ID,
+     *         idealHeight: IDEAL_FRAME_HEIGHT
+     *     }]
+     *
+     * }
+     */
+    public static final String COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINTS_CHANGED
+        = "ReceiverVideoConstraintsChangedEvent";
+
+    /**
+     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
+     * {@code SenderVideoConstraintsChanged} message.
+     */
+    public static final String COLIBRI_CLASS_SENDER_VIDEO_CONSTRAINTS_CHANGED
+        = "SenderVideoConstraintsChangedEvent";
+
+    /**
+     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
      * {@code SelectedEndpointChangedEvent}.
      */
+    @Deprecated
     public static final String COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED
         = "SelectedEndpointChangedEvent";
 
@@ -95,15 +152,9 @@ public class EndpointMessageBuilder
      * The {@link Videobridge#COLIBRI_CLASS} value indicating a
      * {@code SelectedEndpointChangedEvent}.
      */
+    @Deprecated
     public static final String COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED
         = "SelectedEndpointsChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code SelectedUpdateEvent}.
-     */
-    public static final String COLIBRI_CLASS_SELECTED_UPDATE
-        = "SelectedUpdateEvent";
 
     /**
      * The string which encodes a COLIBRI {@code ServerHello} message.
@@ -142,7 +193,7 @@ public class EndpointMessageBuilder
             "{\"colibriClass\":\""
                 + COLIBRI_CLASS_ENDPOINT_CONNECTIVITY_STATUS
                 + "\",\"endpoint\":\"" + JSONValue.escape(endpointId)
-                +"\", \"active\":\"" + String.valueOf(connected)
+                +"\", \"active\":\"" + connected
                 + "\"}";
     }
 
@@ -185,23 +236,6 @@ public class EndpointMessageBuilder
     }
 
     /**
-     * Create a {@link EndpointMessageBuilder#COLIBRI_CLASS_SELECTED_UPDATE}
-     * colibri message
-     * @param isSelected whether or not this endpoint has been marked as a
-     * selected endpoint
-     * @return a JSON string serialization of the created message
-     */
-    @SuppressWarnings("unchecked")
-    public static String createSelectedUpdateMessage(boolean isSelected)
-    {
-        JSONObject selectedUpdate = new JSONObject();
-        selectedUpdate.put("colibriClass", COLIBRI_CLASS_SELECTED_UPDATE);
-        selectedUpdate.put("isSelected", isSelected);
-        return selectedUpdate.toJSONString();
-    }
-
-
-    /**
      * Returns a JSON array representation of a collection of strings.
      */
     @SuppressWarnings("unchecked")
@@ -213,5 +247,16 @@ public class EndpointMessageBuilder
             array.addAll(strings);
         }
         return array.toString();
+    }
+
+    public static String createSenderVideoConstraintsMessage(
+        VideoConstraints videoConstraints)
+    {
+        // Note that this isn't the same  as {@link #COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT}
+        // (pay attention to the absence of the final s)
+        JSONObject videoConstraintsMessage = new JSONObject();
+        videoConstraintsMessage.put("colibriClass", COLIBRI_CLASS_SENDER_VIDEO_CONSTRAINTS_CHANGED);
+        videoConstraintsMessage.put("videoConstraints", videoConstraints);
+        return videoConstraintsMessage.toJSONString();
     }
 }
