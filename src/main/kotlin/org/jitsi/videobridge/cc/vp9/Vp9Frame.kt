@@ -89,6 +89,21 @@ class Vp9Frame(packet: Vp9Packet) {
     val spatialLayer: Int = packet.spatialLayerIndex
 
     /**
+     * Whether the frame is used as an upper level reference.
+     */
+    val isUpperLevelReference: Boolean = packet.isUpperLevelReference
+
+    /**
+     * Whether the frame is a temporal switching-up point.
+     */
+    val isSwitchingUpPoint: Boolean = packet.isSwitchingUpPoint
+
+    /**
+     * Whether the frame uses inter-layer dependency.
+     */
+    val usesInterLayerDependency: Boolean = packet.usesInterLayerDependency
+
+    /**
      * The VP9 PictureID of the incoming VP9 frame that this instance refers to.
      */
     val pictureId: Int = packet.pictureId
@@ -203,7 +218,13 @@ class Vp9Frame(packet: Vp9Packet) {
      * @throws RuntimeException if the specified RTP packet is inconsistent with this frame
      */
     fun validateConsistent(pkt: Vp9Packet) {
-        if (temporalLayer == pkt.temporalLayerIndex && tl0PICIDX == pkt.TL0PICIDX && pictureId == pkt.pictureId) /* TODO: also check start, end, seq nums? */ {
+        if (temporalLayer == pkt.temporalLayerIndex &&
+            tl0PICIDX == pkt.TL0PICIDX &&
+            pictureId == pkt.pictureId &&
+            isSwitchingUpPoint == pkt.isSwitchingUpPoint &&
+            isUpperLevelReference == pkt.isUpperLevelReference &&
+            usesInterLayerDependency == pkt.usesInterLayerDependency
+        ) /* TODO: also check start, end, seq nums? */ {
             return
         }
         throw RuntimeException(buildString {
@@ -230,6 +251,28 @@ class Vp9Frame(packet: Vp9Packet) {
                     append("; ")
                 }
                 append("packet PictureID ${pkt.pictureId} != frame PictureID $pictureId")
+                complained = true
+            }
+            if (isSwitchingUpPoint != pkt.isSwitchingUpPoint) {
+                if (complained) {
+                    append("; ")
+                }
+                append("packet switchingUpPoint ${pkt.isSwitchingUpPoint} != frame switchingUpPoint $isSwitchingUpPoint")
+                complained = true
+            }
+            if (isUpperLevelReference != pkt.isUpperLevelReference) {
+                if (complained) {
+                    append("; ")
+                }
+                append("packet upperLevelReference ${pkt.isUpperLevelReference} != frame upperLevelReference $isUpperLevelReference")
+                complained = true
+            }
+            if (usesInterLayerDependency != pkt.usesInterLayerDependency) {
+                if (complained) {
+                    append("; ")
+                }
+                append("packet usesInterLayerDepencency ${pkt.usesInterLayerDependency} != frame usesInterLayerDepencency $usesInterLayerDependency")
+                complained = true
             }
         })
     }
