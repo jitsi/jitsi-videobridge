@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.jitsi.videobridge.message.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 import org.junit.*;
@@ -30,9 +31,9 @@ public class EndpointMessageBuilderTest
     public void testServerHello()
         throws Exception
     {
-        String str = createServerHelloEvent();
+        String str = new ServerHelloMessage().toJson();
         JSONObject json = (JSONObject) new JSONParser().parse(str);
-        assertEquals(COLIBRI_CLASS_SERVER_HELLO,
+        assertEquals(ServerHelloMessage.TYPE,
                      json.get(Videobridge.COLIBRI_CLASS));
     }
 

@@ -17,14 +17,14 @@ package org.jitsi.videobridge.octo;
 
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
-import org.json.simple.*;
+import org.jitsi.videobridge.message.*;
 
 /**
  * Extends {@link AbstractEndpointMessageTransport} for the purposes of Octo.
  *
  * Most {@code on*Event} methods are overridden as no-ops because they don't make
  * sense for Octo and are never used. The single exception is
- * {@link #clientEndpointMessage(Object, JSONObject)} which is not overridden
+ * {@link #clientEndpointMessage(EndpointMessage)} which is not overridden
  * and the logic in the super class applies.
  */
 class OctoEndpointMessageTransport
@@ -72,9 +72,9 @@ class OctoEndpointMessageTransport
      * warning.
      */
     @Override
-    protected void clientHello(Object src, JSONObject jsonObject)
+    protected void clientHello(Object src, ClientHelloMessage message)
     {
-        logUnexpectedMessage(jsonObject.toJSONString());
+        logUnexpectedMessage(message.toJson());
     }
 
     /**
@@ -84,11 +84,9 @@ class OctoEndpointMessageTransport
      * warning.
      */
     @Override
-    protected void receiverVideoConstraintEvent(
-        Object src,
-        JSONObject jsonObject)
+    protected void receiverVideoConstraintEvent(ReceiverVideoConstraintMessage message)
     {
-        logUnexpectedMessage(jsonObject.toJSONString());
+        logUnexpectedMessage(message.toJson());
     }
 
     /**
@@ -98,17 +96,15 @@ class OctoEndpointMessageTransport
      * warning.
      */
     @Override
-    protected void lastNChangedEvent(
-            Object src,
-            JSONObject jsonObject)
+    protected void lastNChangedEvent(LastNMessage message)
     {
-        logUnexpectedMessage(jsonObject.toJSONString());
+        logUnexpectedMessage(message.toJson());
     }
 
     @Override
-    protected void receiverVideoConstraintsChangedEvent(Object src, JSONObject jsonObject)
+    protected void receiverVideoConstraintsChangedEvent(ReceiverVideoConstraintsMessage message)
     {
-        // NO-OP
+        logUnexpectedMessage(message.toJson());
     }
 
     @Override

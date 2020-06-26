@@ -19,15 +19,13 @@ import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
+import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.websocket.*;
 import org.json.simple.*;
 
 import java.lang.ref.*;
-import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.*;
-
-import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
 /**
  * Handles the functionality related to sending and receiving COLIBRI messages
@@ -98,7 +96,7 @@ class EndpointMessageTransport
      * {@inheritDoc}
      */
     @Override
-    protected void clientHello(Object src, JSONObject jsonObject)
+    protected void clientHello(Object src, ClientHelloMessage message)
     {
         // ClientHello was introduced for functional testing purposes. It
         // triggers a ServerHello response from Videobridge. The exchange
@@ -106,11 +104,15 @@ class EndpointMessageTransport
         // remote endpoint and the Videobridge is operational.
         // We take care to send the reply using the same transport channel on
         // which we received the request..
-        sendMessage(src, createServerHelloEvent(), "response to ClientHello");
+        sendMessage(
+                src,
+                new ServerHelloMessage().toJson(),
+                "response to ClientHello");
     }
 
     @Override
-    protected void receiverVideoConstraintsChangedEvent(Object src, JSONObject jsonObject)
+    protected void receiverVideoConstraintsChangedEvent(
+            ReceiverVideoConstraintsMessage message)
     {
         // NO-OP (for now).
     }
@@ -276,7 +278,10 @@ class EndpointMessageTransport
 
             webSocket = ws;
             webSocketLastActive = true;
-            sendMessage(ws, createServerHelloEvent(), "initial ServerHello");
+            sendMessage(
+                    ws,
+                    new ServerHelloMessage().toJson(),
+                    "initial ServerHello");
         }
 
         notifyTransportChannelConnected();

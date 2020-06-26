@@ -18,14 +18,15 @@ package org.jitsi.videobridge;
 import com.google.common.collect.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
-import org.json.simple.parser.*;
 
+import java.io.*;
 import java.util.*;
 
-import static org.jitsi.videobridge.EndpointMessageBuilder.*;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 /**
  * Handles the functionality related to sending and receiving COLIBRI messages
@@ -79,70 +80,13 @@ public abstract class AbstractEndpointMessageTransport
 
     /**
      * Notifies this {@link AbstractEndpointMessageTransport} that a
-     * {@code ClientHello} has been received.
+     * {@link ClientHelloMessage} has been received on a particular channel.
      *
-     * @param src the transport channel on which {@code jsonObject} has
-     * been received
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code ClientHello} which has been received by the associated SCTP connection
+     * @param src the channel on which the message was received.
+     * @param message the message.
      */
-    protected void clientHello(Object src, JSONObject jsonObject)
+    protected void clientHello(Object src, ClientHelloMessage message)
     {
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a specific JSON object has been
-     * received.
-     *
-     * @param src the transport channel by which the specified
-     * {@code jsonObject} has been received.
-     * @param jsonObject the JSON data received by {@code src}.
-     * @param colibriClass the non-{@code null} value of the mandatory JSON
-     * property {@link Videobridge#COLIBRI_CLASS} required of all JSON objects
-     * received.
-     */
-    private void onJSONData(
-        Object src,
-        JSONObject jsonObject,
-        String colibriClass)
-    {
-        TaskPools.IO_POOL.submit(() -> {
-            switch (colibriClass)
-            {
-                case COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED:
-                    selectedEndpointChangedEvent(src, jsonObject);
-                    break;
-                case COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED:
-                    selectedEndpointsChangedEvent(src, jsonObject);
-                    break;
-                case COLIBRI_CLASS_PINNED_ENDPOINT_CHANGED:
-                    pinnedEndpointChangedEvent(src, jsonObject);
-                    break;
-                case COLIBRI_CLASS_PINNED_ENDPOINTS_CHANGED:
-                    pinnedEndpointsChangedEvent(src, jsonObject);
-                    break;
-                case COLIBRI_CLASS_CLIENT_HELLO:
-                    clientHello(src, jsonObject);
-                    break;
-                case COLIBRI_CLASS_ENDPOINT_MESSAGE:
-                    clientEndpointMessage(src, jsonObject);
-                    break;
-                case COLIBRI_CLASS_LASTN_CHANGED:
-                    lastNChangedEvent(src, jsonObject);
-                    break;
-                case COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT:
-                    receiverVideoConstraintEvent(src, jsonObject);
-                    break;
-                case COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINTS_CHANGED:
-                    receiverVideoConstraintsChangedEvent(src, jsonObject);
-                    break;
-                default:
-                    logger.info(
-                            "Received a message with unknown colibri class: "
-                                    + colibriClass);
-                    break;
-            }
-        });
     }
 
     /**
@@ -150,10 +94,7 @@ public abstract class AbstractEndpointMessageTransport
      * forwarded to either: a) another client in this conference (1:1
      * message) or b) all other clients in this conference (broadcast message)
      *
-     * @param src the transport channel on which {@code jsonObject} has
-     * been received.
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code EndpointMessage} which has been received.
+     * @param message the message that was received from the endpoint.
      *
      * EndpointMessage definition:
      * 'to': If the 'to' field contains the endpoint id of another endpoint
@@ -175,15 +116,12 @@ public abstract class AbstractEndpointMessageTransport
      * jitsi messages.
      */
     @SuppressWarnings("unchecked")
-    protected void clientEndpointMessage(
-        @SuppressWarnings("unused") Object src,
-        JSONObject jsonObject)
+    protected void clientEndpointMessage(EndpointMessage message)
     {
-        String to = (String)jsonObject.get("to");
+        String to = message.getTo();
 
-        // First insert the "from" to prevent spoofing.
-        String from = getId(jsonObject.get("from"));
-        jsonObject.put("from", from);
+        // First insert/overwrite the "from" to prevent spoofing.
+        message.setFrom(getId());
         Conference conference = getConference();
 
         if (conference == null || conference.isExpired())
@@ -193,7 +131,7 @@ public abstract class AbstractEndpointMessageTransport
             return;
         }
 
-        AbstractEndpoint sourceEndpoint = conference.getEndpoint(from);
+        AbstractEndpoint sourceEndpoint = conference.getEndpoint(getId());
 
         if (sourceEndpoint == null)
         {
@@ -233,7 +171,7 @@ public abstract class AbstractEndpointMessageTransport
               && targets.stream().anyMatch(e -> (e instanceof OctoEndpoint));
 
         conference.sendMessage(
-                jsonObject.toString(),
+                message.toJson(),
                 targets,
                 sendToOcto);
     }
@@ -264,161 +202,75 @@ public abstract class AbstractEndpointMessageTransport
     }
 
     /**
-     * Notifies this {@code Endpoint} that a {@code PinnedEndpointChangedEvent}
+     * Notifies this {@code Endpoint} that a {@link PinnedEndpointMessage}
      * has been received.
      *
-     * @param src the transport channel by which {@code jsonObject} has
-     * been received.
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code PinnedEndpointChangedEvent} which has been received.
+     * @param message the message that was received.
      */
-    protected void pinnedEndpointChangedEvent(
-        @SuppressWarnings("unused") Object src,
-        JSONObject jsonObject)
+    private void pinnedEndpointChangedEvent(PinnedEndpointMessage message)
     {
-        // Find the new pinned endpoint.
-        String newPinnedEndpointID = (String) jsonObject.get("pinnedEndpoint");
+        String newPinnedEndpointID = message.getPinnedEndpoint();
 
-        Set<String> newPinnedIDs = Collections.emptySet();
-        if (newPinnedEndpointID != null && !"".equals(newPinnedEndpointID))
-        {
-            newPinnedIDs = Collections.singleton(newPinnedEndpointID);
-        }
+        List<String> newPinnedIDs =
+                isBlank(newPinnedEndpointID) ?
+                        Collections.emptyList() :
+                        Collections.singletonList(newPinnedEndpointID);
 
-        pinnedEndpointsChangedEvent(jsonObject, newPinnedIDs);
+        pinnedEndpointsChangedEvent(new PinnedEndpointsMessage(newPinnedIDs));
     }
 
     /**
      * Notifies this {@code Endpoint} that a {@code PinnedEndpointsChangedEvent}
      * has been received.
      *
-     * @param src the transport channel by which {@code jsonObject} has
-     * been received
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code PinnedEndpointChangedEvent} which has been received.
+     * @param message the message that was received.
      */
-    protected void pinnedEndpointsChangedEvent(
-        @SuppressWarnings("unused") Object src,
-        JSONObject jsonObject)
+    private void pinnedEndpointsChangedEvent(PinnedEndpointsMessage message)
     {
-        // Find the new pinned endpoint.
-        Object o = jsonObject.get("pinnedEndpoints");
-        if (!(o instanceof JSONArray))
-        {
-            logger.warn("Received invalid or unexpected JSON: " + jsonObject);
-            return;
-        }
-
-        JSONArray jsonArray = (JSONArray) o;
-        Set<String> newPinnedEndpoints = filterStringsToSet(jsonArray);
+        Set<String> newPinnedEndpoints = new HashSet<>(message.getPinnedEndpoints());
 
         if (logger.isDebugEnabled())
         {
             logger.debug("Pinned " + newPinnedEndpoints);
         }
 
-        pinnedEndpointsChangedEvent(jsonObject, newPinnedEndpoints);
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a {@code SelectedEndpointChangedEvent}
-     * has been received.
-     *
-     * @param src the transport channel by which {@code jsonObject} has
-     * been received.
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code SelectedEndpointChangedEvent} which has been received.
-     */
-    protected void selectedEndpointChangedEvent(
-        @SuppressWarnings("unused") Object src,
-        JSONObject jsonObject)
-    {
-        // Find the new pinned endpoint.
-        String newSelectedEndpointID
-            = (String) jsonObject.get("selectedEndpoint");
-
-        Set<String> newSelectedIDs = Collections.emptySet();
-        if (newSelectedEndpointID != null && !"".equals(newSelectedEndpointID))
-        {
-            newSelectedIDs = Collections.singleton(newSelectedEndpointID);
-        }
-
-        selectedEndpointsChangedEvent(jsonObject, newSelectedIDs);
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a
-     * {@code SelectedEndpointsChangedEvent} has been received.
-     *
-     * @param src the transport channel by which {@code jsonObject} has
-     * been received
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code SelectedEndpointChangedEvent} which has been received.
-     */
-    protected void selectedEndpointsChangedEvent(
-        @SuppressWarnings("unused") Object src,
-        JSONObject jsonObject)
-    {
-        // Find the new pinned endpoint.
-        Object o = jsonObject.get("selectedEndpoints");
-        if (!(o instanceof JSONArray))
-        {
-            logger.warn("Received invalid or unexpected JSON: " + jsonObject);
-            return;
-        }
-
-        JSONArray jsonArray = (JSONArray) o;
-        Set<String> newSelectedEndpoints = filterStringsToSet(jsonArray);
-        selectedEndpointsChangedEvent(jsonObject, newSelectedEndpoints);
-    }
-
-    private Set<String> filterStringsToSet(JSONArray jsonArray)
-    {
-        Set<String> strings = new HashSet<>();
-        for (Object element : jsonArray)
-        {
-            if (element instanceof String)
-            {
-                strings.add((String)element);
-            }
-        }
-        return strings;
-    }
-
-    /**
-     * Notifies local or remote endpoints that a pinned event has been received.
-     * If it is a local endpoint that has received the message, then this method
-     * propagates the message to all proxies of the local endpoint.
-     *
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code PinnedEndpointChangedEvent} which has been received.
-     * @param newPinnedEndpoints the new pinned endpoints
-     */
-    protected void pinnedEndpointsChangedEvent(
-        JSONObject jsonObject,
-        Set<String> newPinnedEndpoints)
-    {
         videoConstraintsCompatibility.setPinnedEndpoints(newPinnedEndpoints);
         receiverVideoConstraintsChangedEvent(
-            videoConstraintsCompatibility.computeVideoConstraints());
+                videoConstraintsCompatibility.computeVideoConstraints());
     }
 
     /**
-     * Notifies local or remote endpoints that a selected event has been received.
-     * If it is a local endpoint that has received the message, then this method
-     * propagates the message to all proxies of the local endpoint.
+     * Notifies this {@code Endpoint} that a {@link SelectedEndpointsMessage}
+     * has been received.
      *
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code SelectedEndpointChangedEvent} which has been received.
-     * @param newSelectedEndpoints the new selected endpoints
+     * @param message the message that was received.
      */
-    protected void selectedEndpointsChangedEvent(
-        JSONObject jsonObject,
-        Set<String> newSelectedEndpoints)
+    private void selectedEndpointChangedEvent(SelectedEndpointMessage message)
     {
+        String newSelectedEndpointID = message.getSelectedEndpoint();
+
+        List<String> newSelectedIDs =
+            isBlank(newSelectedEndpointID) ?
+                    Collections.emptyList() :
+                    Collections.singletonList(newSelectedEndpointID);
+
+        selectedEndpointsChangedEvent(
+                new SelectedEndpointsMessage(newSelectedIDs));
+    }
+
+    /**
+     * Notifies this {@code Endpoint} that a {@link SelectedEndpointsMessage}
+     * has been received.
+     *
+     * @param message the message that was received.
+     */
+    private void selectedEndpointsChangedEvent(SelectedEndpointsMessage message)
+    {
+        Set<String> newSelectedEndpoints = new HashSet<>(message.getSelectedEndpoints());
+
         videoConstraintsCompatibility.setSelectedEndpoints(newSelectedEndpoints);
         receiverVideoConstraintsChangedEvent(
-            videoConstraintsCompatibility.computeVideoConstraints());
+                videoConstraintsCompatibility.computeVideoConstraints());
     }
 
     /**
@@ -438,25 +290,14 @@ public abstract class AbstractEndpointMessageTransport
     }
 
     /**
-     * Notifies this {@code Endpoint} that a {@code LastNChangedEvent}
-     * has been received.
-     *
-     * @param src the transport channel by which {@code jsonObject} has been
+     * Notifies this {@code Endpoint} that a {@link LastNMessage} has been
      * received.
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code LastNChangedEvent} which has been received.
+     *
+     * @param message the message that was received.
      */
-    protected void lastNChangedEvent(
-        Object src,
-        JSONObject jsonObject)
+    protected void lastNChangedEvent(LastNMessage message)
     {
-        // Find the new value for LastN.
-        Object o = jsonObject.get("lastN");
-        if (!(o instanceof Number))
-        {
-            return;
-        }
-        int lastN = ((Number) o).intValue();
+        int lastN = message.getLastN();
 
         if (endpoint != null)
         {
@@ -465,40 +306,24 @@ public abstract class AbstractEndpointMessageTransport
     }
 
     /**
-     * Notifies this {@code Endpoint} that a {@code ReceiverVideoConstraints}
-     * event has been received
+     * Notifies this {@code Endpoint} that a
+     * {@link ReceiverVideoConstraintsMessage} has been received
      *
-     * @param src the transport channel by which {@code jsonObject} has been
-     * received.
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code ReceiverVideoConstraints} which has been received.
+     * @param message the message that was received.
      */
     protected abstract void receiverVideoConstraintsChangedEvent(
-        Object src,
-        JSONObject jsonObject);
-    
+            ReceiverVideoConstraintsMessage message);
+
     /**
-     * Notifies this {@code Endpoint} that a {@code ReceiverVideoConstraint}
-     * event has been received
+     * Notifies this {@code Endpoint} that a
+     * {@link ReceiverVideoConstraintMessage} has been received
      *
-     * @param src the transport channel by which {@code jsonObject} has been
-     * received.
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code ReceiverVideoConstraint} which has been received.
+     * @param message the message that was received.
      */
     protected void receiverVideoConstraintEvent(
-        Object src,
-        JSONObject jsonObject)
+            ReceiverVideoConstraintMessage message)
     {
-        Object o = jsonObject.get("maxFrameHeight");
-        if (!(o instanceof Number))
-        {
-            logger.warn(
-                "Received a non-number maxFrameHeight video constraint from "
-                    + getId() + ": " + o.toString());
-            return;
-        }
-        int maxFrameHeight = ((Number) o).intValue();
+        int maxFrameHeight = message.getMaxFrameHeight();
         if (logger.isDebugEnabled())
         {
             logger.debug(
@@ -514,45 +339,66 @@ public abstract class AbstractEndpointMessageTransport
      * Notifies this {@link EndpointMessageTransport} that a specific message
      * has been received on a specific transport channel.
      * @param src the transport channel on which the message has been received.
-     * @param msg the message which has been received.
+     * @param msg the message that was received.
      */
     public void onMessage(Object src, String msg)
     {
-        Object obj;
-        JSONParser parser = new JSONParser(); // JSONParser is NOT thread-safe.
+        BridgeChannelMessage message;
 
         try
         {
-            obj = parser.parse(msg);
+            message = BridgeChannelMessage.Companion.parse(msg);
         }
-        catch (ParseException ex)
+        catch (IOException ioe)
         {
-            logger.warn(
-                    "Malformed JSON received from endpoint " + getId(),
-                    ex);
-            obj = null;
+            logger.warn("Invalid message received: " + msg, ioe);
+            return;
         }
 
-        // We utilize JSONObjects only.
-        if (obj instanceof JSONObject)
+        // This cries for kotlin
+        TaskPools.IO_POOL.submit(() ->
         {
-            JSONObject jsonObject = (JSONObject) obj;
-            // We utilize JSONObjects with colibriClass only.
-            String colibriClass
-                = (String)jsonObject.get(Videobridge.COLIBRI_CLASS);
-
-            if (colibriClass != null)
+            if (message instanceof SelectedEndpointsMessage)
             {
-                onJSONData(src, jsonObject, colibriClass);
+                selectedEndpointsChangedEvent((SelectedEndpointsMessage) message);
+            }
+            else if (message instanceof SelectedEndpointMessage)
+            {
+                selectedEndpointChangedEvent((SelectedEndpointMessage) message);
+            }
+            else if (message instanceof PinnedEndpointsMessage)
+            {
+                pinnedEndpointsChangedEvent((PinnedEndpointsMessage) message);
+            }
+            else if (message instanceof PinnedEndpointMessage)
+            {
+                pinnedEndpointChangedEvent((PinnedEndpointMessage) message);
+            }
+            else if (message instanceof ClientHelloMessage)
+            {
+                clientHello(src, (ClientHelloMessage) message);
+            }
+            else if (message instanceof EndpointMessage)
+            {
+                clientEndpointMessage((EndpointMessage) message);
+            }
+            else if (message instanceof LastNMessage)
+            {
+                lastNChangedEvent((LastNMessage) message);
+            }
+            else if (message instanceof ReceiverVideoConstraintMessage)
+            {
+                receiverVideoConstraintEvent((ReceiverVideoConstraintMessage) message);
+            }
+            else if (message instanceof ReceiverVideoConstraintsMessage)
+            {
+                receiverVideoConstraintsChangedEvent((ReceiverVideoConstraintsMessage) message);
             }
             else
             {
-                logger.warn(
-                    "Malformed JSON received from endpoint " + getId()
-                        + ". JSON object does not contain the colibriClass"
-                        + " field.");
+                logger.warn("Unhandled message: " + msg);
             }
-        }
+        });
     }
 
     /**

@@ -22,13 +22,6 @@ import java.util.*;
 public class EndpointMessageBuilder
 {
     /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code ClientHello} message.
-     */
-    public static final String COLIBRI_CLASS_CLIENT_HELLO
-        = "ClientHello";
-
-    /**
      * The {@link Videobridge#COLIBRI_CLASS} value indicating a dominant speaker
      * change event.
      */
@@ -44,20 +37,6 @@ public class EndpointMessageBuilder
 
     /**
      * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code EndpointMessage}.
-     */
-    public static final String COLIBRI_CLASS_ENDPOINT_MESSAGE
-        = "EndpointMessage";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code LastNChangedEvent}.
-     */
-    public static final String COLIBRI_CLASS_LASTN_CHANGED
-        = "LastNChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
      * {@code LastNEndpointsChangedEvent}.
      */
     public static final String COLIBRI_CLASS_LASTN_ENDPOINTS_CHANGED
@@ -65,101 +44,10 @@ public class EndpointMessageBuilder
 
     /**
      * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code PinnedEndpointChangedEvent}.
-     */
-    @Deprecated
-    public static final String COLIBRI_CLASS_PINNED_ENDPOINT_CHANGED
-        = "PinnedEndpointChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code PinnedEndpointsChangedEvent}.
-     */
-    @Deprecated
-    public static final String COLIBRI_CLASS_PINNED_ENDPOINTS_CHANGED
-        = "PinnedEndpointsChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code ReceiverVideoConstraint} message.
-     *
-     * Note that this message is substantially different from its successor
-     * (ReceiverVideoConstraintsChangedEvent) and should not be confused with
-     * that.
-     *
-     * Example Json message:
-     *
-     * {
-     *     colibriClass: ReceiverVideoConstraint,
-     *     maxFrameHeight: MAX_FRAME_HEIGHT
-     *
-     * }
-     */
-    @Deprecated
-    public static final String COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT
-        = "ReceiverVideoConstraint";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code ReceiverVideoConstraintsChanged} message.
-     *
-     * NOTE that the intention is for {@code ReceiverVideoConstraintsChanged}
-     * message to completely replace the four messages below:
-     *
-     * {@code ReceiverVideoConstraint},
-     * {@code PinnedEndpointChangedEvent},
-     * {@code PinnedEndpointsChangedEvent},
-     * {@code SelectedEndpointChangedEvent} and
-     * {@code SelectedEndpointsChangedEvent}
-     *
-     * This isn't the case currently because that would require
-     * substantial changes in the client and instead it was decided to provide a
-     * server side compatibility layer {@link VideoConstraintsCompatibility}.
-     *
-     * Usage of the above old-world data messages should be avoided in future
-     * code.
-     *
-     * Example Json message:
-     *
-     * {
-     *     colibriClass: ReceiverVideoConstraintsChangedEvent,
-     *     videoConstraints: [{
-     *         id: ENDPOINT_ID,
-     *         idealHeight: IDEAL_FRAME_HEIGHT
-     *     }]
-     *
-     * }
-     */
-    public static final String COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINTS_CHANGED
-        = "ReceiverVideoConstraintsChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
      * {@code SenderVideoConstraintsChanged} message.
      */
     public static final String COLIBRI_CLASS_SENDER_VIDEO_CONSTRAINTS_CHANGED
         = "SenderVideoConstraints";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code SelectedEndpointChangedEvent}.
-     */
-    @Deprecated
-    public static final String COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED
-        = "SelectedEndpointChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code SelectedEndpointChangedEvent}.
-     */
-    @Deprecated
-    public static final String COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED
-        = "SelectedEndpointsChangedEvent";
-
-    /**
-     * The string which encodes a COLIBRI {@code ServerHello} message.
-     */
-    public static final String COLIBRI_CLASS_SERVER_HELLO = "ServerHello";
 
     /**
      * @param endpoint the ID of the dominant speaker endpoint in this
@@ -195,14 +83,6 @@ public class EndpointMessageBuilder
                 + "\",\"endpoint\":\"" + JSONValue.escape(endpointId)
                 +"\", \"active\":\"" + connected
                 + "\"}";
-    }
-
-    /**
-     * Creates a Colibri ServerHello message.
-     */
-    public static String createServerHelloEvent()
-    {
-        return "{\"colibriClass\":\"" + COLIBRI_CLASS_SERVER_HELLO + "\"}";
     }
 
     /**
