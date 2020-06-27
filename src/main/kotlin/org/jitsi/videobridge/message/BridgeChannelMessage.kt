@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import org.jitsi.videobridge.VideoConstraints
 
 /**
  * Represent a message sent over the "bridge channel" between an endpoint (or "client") and jitsi-videobridge, or
@@ -59,6 +60,10 @@ sealed class BridgeChannelMessage(
                 LastNMessage.TYPE -> LastNMessage::class.java
                 ReceiverVideoConstraintMessage.TYPE -> ReceiverVideoConstraintMessage::class.java
                 ReceiverVideoConstraintsMessage.TYPE -> ReceiverVideoConstraintsMessage::class.java
+                DominantSpeakerMessage.TYPE -> DominantSpeakerMessage::class.java
+                EndpointConnectionStatusMessage.TYPE -> EndpointConnectionStatusMessage::class.java
+                ForwardedEndpointMessage.TYPE -> ForwardedEndpointMessage::class.java
+                SenderVideoConstraintsMessage.TYPE -> SenderVideoConstraintsMessage::class.java
                 else -> throw InvalidMessageTypeException("Unknown colibriClass: $colibriClass")
             }
 
@@ -221,5 +226,59 @@ class ReceiverVideoConstraintsMessage(val videoConstraints: List<VideoConstraint
 
     companion object {
         const val TYPE = "ReceiverVideoConstraintsChangedEvent"
+    }
+}
+
+/**
+ * A message sent from the bridge to a client, indicating that the dominant speaker in the conference changed.
+ */
+class DominantSpeakerMessage(val dominantSpeakerEndpoint: String) : BridgeChannelMessage(TYPE) {
+    companion object {
+        const val TYPE = "DominantSpeakerEndpointChangeEvent"
+    }
+}
+
+/**
+ * A message sent from the bridge to a client, indicating that the bridge's connection to another endpoint changed
+ * status.
+ */
+class EndpointConnectionStatusMessage(
+    val endpoint: String,
+    activeBoolean: Boolean
+) : BridgeChannelMessage(TYPE) {
+
+    // For whatever reason we encode the boolean in JSON as a string.
+    val active: String = activeBoolean.toString()
+
+    companion object {
+        const val TYPE = "EndpointConnectivityStatusChangeEvent"
+    }
+}
+
+/**
+ * A message sent from the bridge to a client, indicating the set of endpoints that are currently being forwarded.
+ *
+ * TODO: document the semantics of the fields.
+ */
+class ForwardedEndpointMessage(
+    @get:JsonProperty("lastNEndpoints")
+    val forwardedEndpoints: Collection<String>,
+    val endpointsEnteringLastN: Collection<String>,
+    val conferenceEndpoints: Collection<String>
+) : BridgeChannelMessage(TYPE) {
+
+    companion object {
+        const val TYPE = "LastNEndpointsChangeEvent"
+    }
+}
+
+/**
+ * A message sent from the bridge to a client (sender), indicating constraints for the sender's video streams.
+ *
+ * TODO: consider and adjust the format of videoConstraints. Do we need all of the VideoConstraints fields? Document.
+ */
+class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : BridgeChannelMessage(TYPE) {
+    companion object {
+        const val TYPE = "SenderVideoConstraintsChangedEvent"
     }
 }

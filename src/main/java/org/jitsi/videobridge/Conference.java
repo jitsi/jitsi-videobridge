@@ -28,6 +28,7 @@ import org.jitsi.utils.logging.DiagnosticContext;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
+import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
@@ -46,7 +47,6 @@ import java.util.concurrent.atomic.*;
 import java.util.logging.*;
 
 import static org.jitsi.utils.collections.JMap.entry;
-import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
 /**
  * Represents a conference in the terms of Jitsi Videobridge.
@@ -435,8 +435,7 @@ public class Conference
         if (dominantSpeaker != null)
         {
             broadcastMessage(
-                    createDominantSpeakerEndpointChangeEvent(
-                        dominantSpeaker.getID()));
+                    new DominantSpeakerMessage(dominantSpeaker.getID()).toJson());
             if (getEndpointCount() > 2)
             {
                 double senderRtt = getRtt(dominantSpeaker);
@@ -938,8 +937,7 @@ public class Conference
                 try
                 {
                     endpoint.sendMessage(
-                            createDominantSpeakerEndpointChangeEvent(
-                                dominantSpeaker.getID()));
+                        new DominantSpeakerMessage(dominantSpeaker.getID()).toJson());
                 }
                 catch (IOException e)
                 {

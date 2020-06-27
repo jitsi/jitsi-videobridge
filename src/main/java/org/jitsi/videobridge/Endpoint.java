@@ -40,6 +40,7 @@ import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
+import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.rest.root.colibri.debug.*;
 import org.jitsi.videobridge.sctp.*;
 import org.jitsi.videobridge.shim.*;
@@ -61,8 +62,6 @@ import java.util.concurrent.*;
 import java.util.function.Function;
 import java.util.function.*;
 import java.util.stream.*;
-
-import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
 /**
  * Represents an endpoint of a participant in a <tt>Conference</tt>.
@@ -673,7 +672,8 @@ public class Endpoint
     protected void maxReceiverVideoConstraintsChanged(VideoConstraints maxVideoConstraints)
     {
         // Note that it's up to the client to respect these constraints.
-        String senderVideoConstraintsMessage = createSenderVideoConstraintsMessage(maxVideoConstraints);
+        String senderVideoConstraintsMessage
+                = new SenderVideoConstraintsMessage(maxVideoConstraints).toJson();
 
         if (logger.isDebugEnabled())
         {
@@ -1044,8 +1044,8 @@ public class Endpoint
             endpointsEnteringLastN = forwardedEndpoints;
         }
 
-        String msg = createLastNEndpointsChangeEvent(
-            forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints);
+        String msg = new ForwardedEndpointMessage(
+            forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints).toJson();
 
         sendMessage(msg);
     }
