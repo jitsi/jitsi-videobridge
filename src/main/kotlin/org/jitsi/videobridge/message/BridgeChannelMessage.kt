@@ -83,7 +83,7 @@ open class MessageHandler {
      * Handles a [BridgeChannelMessage] that was received. Returns an optional response.
      */
     fun handleMessage(message: BridgeChannelMessage): BridgeChannelMessage? {
-        receivedCounts.computeIfAbsent(message::class.java.simpleName) { AtomicLong()} .incrementAndGet()
+        receivedCounts.computeIfAbsent(message::class.java.simpleName) { AtomicLong() }.incrementAndGet()
 
         return when (message) {
             is SelectedEndpointsMessage -> selectedEndpoints(message)
