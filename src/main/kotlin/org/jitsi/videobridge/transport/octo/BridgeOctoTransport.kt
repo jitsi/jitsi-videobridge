@@ -273,7 +273,7 @@ class BridgeOctoTransport(
         private val numInvalidPackets = LongAdder()
         private val numIncomingDroppedNoHandler = LongAdder()
         private val numOutgoingDroppedNoHandler = LongAdder()
-        private val largePacketsSent = HashMap<MediaType, AtomicLong>().withDefault { AtomicLong() }
+        private val largePacketsSent = HashMap<MediaType, AtomicLong>()
 
         fun invalidPacketReceived() {
             numInvalidPackets.increment()
@@ -288,7 +288,7 @@ class BridgeOctoTransport(
         }
 
         fun largePacketSent(mediaType: MediaType) {
-            val value = largePacketsSent.getValue(mediaType).incrementAndGet()
+            val value = largePacketsSent.computeIfAbsent(mediaType) { AtomicLong() }.incrementAndGet()
             if (value == 1L || value % 1000 == 0L) {
                 logger.warn("Sent $value large (>1500B) packets with type $mediaType")
             }
