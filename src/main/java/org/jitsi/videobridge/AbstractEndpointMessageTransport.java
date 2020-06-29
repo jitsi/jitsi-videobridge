@@ -155,7 +155,7 @@ public abstract class AbstractEndpointMessageTransport<T extends AbstractEndpoin
 
         // TODO: do we want to off-load this to another IO thread?
         conference.sendMessage(
-                message.toJson(),
+                message,
                 targets,
                 sendToOcto);
         return null;
@@ -211,22 +211,22 @@ public abstract class AbstractEndpointMessageTransport<T extends AbstractEndpoin
             BridgeChannelMessage response = handleMessage(message);
             if (response != null)
             {
-                sendMessage(src, response.toJson());
+                sendMessage(src, response);
             }
         });
     }
 
     /**
-     * Sends a specific message over the active transport channels of this
+     * Sends a specific message over the active transport channel of this
      * {@link EndpointMessageTransport}.
      *
      * @param msg message text to send.
      */
-    protected void sendMessage(String msg)
+    protected void sendMessage(BridgeChannelMessage msg)
     {
     }
 
-    protected void sendMessage(Object dst, String message)
+    protected void sendMessage(Object dst, BridgeChannelMessage message)
     {
     }
 

@@ -129,7 +129,7 @@ class EndpointMessageTransport
      * @param dst the transport channel.
      * @param message the message to send.
      */
-    protected void sendMessage(Object dst, String message)
+    protected void sendMessage(Object dst, BridgeChannelMessage message)
     {
         if (dst instanceof ColibriWebSocket)
         {
@@ -150,9 +150,9 @@ class EndpointMessageTransport
      * @param dst the data channel to send through.
      * @param message the message to send.
      */
-    private void sendMessage(DataChannel dst, String message)
+    private void sendMessage(DataChannel dst, BridgeChannelMessage message)
     {
-        dst.sendString(message);
+        dst.sendString(message.toJson());
         statisticsSupplier.get().totalDataChannelMessagesSent.incrementAndGet();
     }
 
@@ -161,12 +161,12 @@ class EndpointMessageTransport
      * @param dst the {@link ColibriWebSocket} through which to send the message.
      * @param message the message to send.
      */
-    private void sendMessage(ColibriWebSocket dst, String message)
+    private void sendMessage(ColibriWebSocket dst, BridgeChannelMessage message)
     {
         // We'll use the async version of sendString since this may be called
         // from multiple threads.  It's just fire-and-forget though, so we
         // don't wait on the result
-        dst.getRemote().sendStringByFuture(message);
+        dst.getRemote().sendStringByFuture(message.toJson());
         statisticsSupplier.get().totalColibriWebSocketMessagesSent.incrementAndGet();
     }
 
@@ -188,7 +188,7 @@ class EndpointMessageTransport
      * {@inheritDoc}
      */
     @Override
-    protected void sendMessage(String msg)
+    protected void sendMessage(BridgeChannelMessage msg)
     {
         Object dst = getActiveTransportChannel();
         if (dst == null)
@@ -271,7 +271,7 @@ class EndpointMessageTransport
 
             webSocket = ws;
             webSocketLastActive = true;
-            sendMessage(ws, new ServerHelloMessage().toJson());
+            sendMessage(ws, new ServerHelloMessage());
         }
 
         notifyTransportChannelConnected();

@@ -300,7 +300,7 @@ public class Conference
      * be sent.
      */
     public void sendMessage(
-        String msg,
+        BridgeChannelMessage msg,
         List<AbstractEndpoint> endpoints,
         boolean sendToOcto)
     {
@@ -334,7 +334,7 @@ public class Conference
      * @param endpoints the list of <tt>Endpoint</tt>s to which the message will
      * be sent.
      */
-    public void sendMessage(String msg, List<AbstractEndpoint> endpoints)
+    public void sendMessage(BridgeChannelMessage msg, List<AbstractEndpoint> endpoints)
     {
         sendMessage(msg, endpoints, false);
     }
@@ -344,7 +344,7 @@ public class Conference
      *
      * @param msg the message to be broadcast.
      */
-    public void broadcastMessage(String msg, boolean sendToOcto)
+    public void broadcastMessage(BridgeChannelMessage msg, boolean sendToOcto)
     {
         sendMessage(msg, getEndpoints(), sendToOcto);
     }
@@ -354,7 +354,7 @@ public class Conference
      *
      * @param msg the message to be broadcast.
      */
-    public void broadcastMessage(String msg)
+    public void broadcastMessage(BridgeChannelMessage msg)
     {
         broadcastMessage(msg, false);
     }
@@ -435,7 +435,7 @@ public class Conference
         if (dominantSpeaker != null)
         {
             broadcastMessage(
-                    new DominantSpeakerMessage(dominantSpeaker.getID()).toJson());
+                    new DominantSpeakerMessage(dominantSpeaker.getID()));
             if (getEndpointCount() > 2)
             {
                 double senderRtt = getRtt(dominantSpeaker);
@@ -937,7 +937,7 @@ public class Conference
                 try
                 {
                     endpoint.sendMessage(
-                        new DominantSpeakerMessage(dominantSpeaker.getID()).toJson());
+                        new DominantSpeakerMessage(dominantSpeaker.getID()));
                 }
                 catch (IOException e)
                 {

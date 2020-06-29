@@ -26,6 +26,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.stats.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.transport.octo.*;
 import org.jitsi.videobridge.util.*;
@@ -440,7 +441,7 @@ public class ConfOctoTransport
      * Sends a data message through the Octo relay.
      * @param message the message to send
      */
-    public void sendMessage(String message)
+    public void sendMessage(BridgeChannelMessage message)
     {
         if (!running.get())
         {
@@ -448,7 +449,7 @@ public class ConfOctoTransport
         }
 
         bridgeOctoTransport.sendString(
-            message,
+            message.toJson(),
             targets,
             conferenceId
         );

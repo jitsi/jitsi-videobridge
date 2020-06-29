@@ -276,9 +276,9 @@ public class EndpointConnectionStatus
         Conference conference = subjectEndpoint.getConference();
         if (conference != null)
         {
-            String msg
+            EndpointConnectionStatusMessage msg
                 = new EndpointConnectionStatusMessage(
-                        subjectEndpoint.getID(), isConnected).toJson();
+                        subjectEndpoint.getID(), isConnected);
             if (msgReceiver == null)
             {
                 // We broadcast the message also to the endpoint itself for

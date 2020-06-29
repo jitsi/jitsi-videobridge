@@ -458,7 +458,7 @@ public class Endpoint
      * @param msg message text to send.
      */
     @Override
-    public void sendMessage(String msg)
+    public void sendMessage(BridgeChannelMessage msg)
     {
         EndpointMessageTransport messageTransport = getMessageTransport();
         if (messageTransport != null)
@@ -671,12 +671,12 @@ public class Endpoint
     protected void maxReceiverVideoConstraintsChanged(VideoConstraints maxVideoConstraints)
     {
         // Note that it's up to the client to respect these constraints.
-        String senderVideoConstraintsMessage
-                = new SenderVideoConstraintsMessage(maxVideoConstraints).toJson();
+        SenderVideoConstraintsMessage senderVideoConstraintsMessage
+                = new SenderVideoConstraintsMessage(maxVideoConstraints);
 
         if (logger.isDebugEnabled())
         {
-            logger.debug("Sender constraints changed: " + senderVideoConstraintsMessage);
+            logger.debug("Sender constraints changed: " + senderVideoConstraintsMessage.toJson());
         }
 
         sendMessage(senderVideoConstraintsMessage);
@@ -1043,8 +1043,11 @@ public class Endpoint
             endpointsEnteringLastN = forwardedEndpoints;
         }
 
-        String msg = new ForwardedEndpointMessage(
-            forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints).toJson();
+        ForwardedEndpointMessage msg
+                = new ForwardedEndpointMessage(
+                    forwardedEndpoints,
+                    endpointsEnteringLastN,
+                    conferenceEndpoints);
 
         sendMessage(msg);
     }
