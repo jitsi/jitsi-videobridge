@@ -332,6 +332,6 @@ class ForwardedEndpointsMessage(
  */
 class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : BridgeChannelMessage(TYPE) {
     companion object {
-        const val TYPE = "SenderVideoConstraintsChangedEvent"
+        const val TYPE = "SenderVideoConstraints"
     }
 }
