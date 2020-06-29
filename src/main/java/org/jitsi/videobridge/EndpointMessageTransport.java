@@ -26,6 +26,7 @@ import org.json.simple.*;
 
 import java.lang.ref.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.*;
 
@@ -74,6 +75,12 @@ class EndpointMessageTransport
      */
     private final VideoConstraintsCompatibility
             videoConstraintsCompatibility = new VideoConstraintsCompatibility();
+
+    /**
+     * The number of sent message by type.
+     */
+    private final Map<String, AtomicLong> sentMessagesCounts
+            = new ConcurrentHashMap<>();
 
     /**
      * Initializes a new {@link EndpointMessageTransport} instance.
@@ -188,7 +195,7 @@ class EndpointMessageTransport
      * {@inheritDoc}
      */
     @Override
-    protected void sendMessage(BridgeChannelMessage msg)
+    protected void sendMessage(@NotNull BridgeChannelMessage msg)
     {
         Object dst = getActiveTransportChannel();
         if (dst == null)
@@ -198,6 +205,9 @@ class EndpointMessageTransport
         }
         else
         {
+            sentMessagesCounts.computeIfAbsent(
+                    msg.getClass().getSimpleName(),
+                    (k) -> new AtomicLong()).incrementAndGet();
             sendMessage(dst, msg);
         }
     }
@@ -377,6 +387,11 @@ class EndpointMessageTransport
     {
         JSONObject debugState = super.getDebugState();
         debugState.put("numOutgoingMessagesDropped", numOutgoingMessagesDropped.get());
+
+        JSONObject sentCounts = new JSONObject();
+        sentCounts.putAll(sentMessagesCounts);
+
+        debugState.put("sent_counts", sentCounts);
 
         return debugState;
     }
