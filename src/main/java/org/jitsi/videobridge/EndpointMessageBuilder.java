@@ -138,7 +138,7 @@ public class EndpointMessageBuilder
      * {@code SenderVideoConstraintsChanged} message.
      */
     public static final String COLIBRI_CLASS_SENDER_VIDEO_CONSTRAINTS_CHANGED
-        = "SenderVideoConstraintsChangedEvent";
+        = "SenderVideoConstraints";
 
     /**
      * The {@link Videobridge#COLIBRI_CLASS} value indicating a
