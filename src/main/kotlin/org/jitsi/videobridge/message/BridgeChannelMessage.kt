@@ -144,7 +144,7 @@ class SelectedEndpointsMessage(val selectedEndpoints: List<String>) : BridgeChan
  * [SelectedEndpointsMessage] with a list of one endpoint.
  */
 @Deprecated("Use SelectedEndpointsMessage")
-class SelectedEndpointMessage(val selectedEndpoint: String) : BridgeChannelMessage(TYPE) {
+class SelectedEndpointMessage(val selectedEndpoint: String?) : BridgeChannelMessage(TYPE) {
     companion object {
         const val TYPE = "SelectedEndpointChangedEvent"
     }
@@ -167,7 +167,7 @@ class PinnedEndpointsMessage(val pinnedEndpoints: List<String>) : BridgeChannelM
  * [PinnedEndpointsMessage] with a list of one endpoint.
  */
 @Deprecated("Use SelectedEndpointsMessage")
-class PinnedEndpointMessage(val pinnedEndpoint: String) : BridgeChannelMessage(TYPE) {
+class PinnedEndpointMessage(val pinnedEndpoint: String?) : BridgeChannelMessage(TYPE) {
     companion object {
         const val TYPE = "PinnedEndpointChangedEvent"
     }
