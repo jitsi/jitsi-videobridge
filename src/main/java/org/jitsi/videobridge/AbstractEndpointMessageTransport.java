@@ -238,7 +238,13 @@ public abstract class AbstractEndpointMessageTransport<T extends AbstractEndpoin
     }
 
     public JSONObject getDebugState() {
-        return new JSONObject();
+        JSONObject receivedCounts = new JSONObject();
+        getReceivedCounts().forEach(receivedCounts::put);
+
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("received_counts", receivedCounts);
+
+        return jsonObject;
     }
 
     /**

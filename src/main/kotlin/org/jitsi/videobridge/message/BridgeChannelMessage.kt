@@ -26,6 +26,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.jitsi.videobridge.VideoConstraints
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Represent a message sent over the "bridge channel" between an endpoint (or "client") and jitsi-videobridge, or
@@ -75,24 +77,30 @@ sealed class BridgeChannelMessage(
 class InvalidMessageTypeException(message: String) : JsonProcessingException(message)
 
 open class MessageHandler {
+    private val receivedCounts = ConcurrentHashMap<String, AtomicLong>()
+
     /**
      * Handles a [BridgeChannelMessage] that was received. Returns an optional response.
      */
-    fun handleMessage(message: BridgeChannelMessage): BridgeChannelMessage? = when (message) {
-        is SelectedEndpointsMessage -> selectedEndpoints(message)
-        is SelectedEndpointMessage -> selectedEndpoint(message)
-        is PinnedEndpointsMessage -> pinnedEndpoints(message)
-        is PinnedEndpointMessage -> pinnedEndpoint(message)
-        is ClientHelloMessage -> clientHello(message)
-        is ServerHelloMessage -> serverHello(message)
-        is EndpointMessage -> endpointMessage(message)
-        is LastNMessage -> lastN(message)
-        is ReceiverVideoConstraintMessage -> receiverVideoConstraint(message)
-        is ReceiverVideoConstraintsMessage -> receiverVideoConstraints(message)
-        is DominantSpeakerMessage -> dominantSpeaker(message)
-        is EndpointConnectionStatusMessage -> endpointConnectionStatus(message)
-        is ForwardedEndpointMessage -> forwardedEndpoints(message)
-        is SenderVideoConstraintsMessage -> senderVideoConstraints(message)
+    fun handleMessage(message: BridgeChannelMessage): BridgeChannelMessage? {
+        receivedCounts.computeIfAbsent(message::class.java.simpleName) { AtomicLong()} .incrementAndGet()
+
+        return when (message) {
+            is SelectedEndpointsMessage -> selectedEndpoints(message)
+            is SelectedEndpointMessage -> selectedEndpoint(message)
+            is PinnedEndpointsMessage -> pinnedEndpoints(message)
+            is PinnedEndpointMessage -> pinnedEndpoint(message)
+            is ClientHelloMessage -> clientHello(message)
+            is ServerHelloMessage -> serverHello(message)
+            is EndpointMessage -> endpointMessage(message)
+            is LastNMessage -> lastN(message)
+            is ReceiverVideoConstraintMessage -> receiverVideoConstraint(message)
+            is ReceiverVideoConstraintsMessage -> receiverVideoConstraints(message)
+            is DominantSpeakerMessage -> dominantSpeaker(message)
+            is EndpointConnectionStatusMessage -> endpointConnectionStatus(message)
+            is ForwardedEndpointMessage -> forwardedEndpoints(message)
+            is SenderVideoConstraintsMessage -> senderVideoConstraints(message)
+        }
     }
 
     open fun unhandledMessage(message: BridgeChannelMessage) {}
@@ -115,6 +123,8 @@ open class MessageHandler {
     open fun endpointConnectionStatus(message: EndpointConnectionStatusMessage) = unhandledMessageReturnNull(message)
     open fun forwardedEndpoints(message: ForwardedEndpointMessage) = unhandledMessageReturnNull(message)
     open fun senderVideoConstraints(message: SenderVideoConstraintsMessage) = unhandledMessageReturnNull(message)
+
+    fun getReceivedCounts() = receivedCounts.mapValues { it.value.get() }
 }
 
 /**
