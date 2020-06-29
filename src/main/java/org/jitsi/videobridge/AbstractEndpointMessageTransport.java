@@ -26,7 +26,6 @@ import org.json.simple.*;
 import java.io.*;
 import java.util.*;
 
-import static org.apache.commons.lang3.StringUtils.isBlank;
 
 /**
  * Handles the functionality related to sending and receiving COLIBRI messages
@@ -34,13 +33,14 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
  *
  * @author Boris Grozev
  */
-public abstract class AbstractEndpointMessageTransport
+public abstract class AbstractEndpointMessageTransport<T extends AbstractEndpoint>
+    extends MessageHandler
 {
     /**
      * The {@link Endpoint} associated with this
      * {@link EndpointMessageTransport}.
      */
-    protected final AbstractEndpoint endpoint;
+    protected final T endpoint;
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -49,17 +49,10 @@ public abstract class AbstractEndpointMessageTransport
     protected final @NotNull Logger logger;
 
     /**
-     * The compatibility layer that translates selected, pinned and max
-     * resolution messages into video constraints.
-     */
-    private final VideoConstraintsCompatibility
-        videoConstraintsCompatibility = new VideoConstraintsCompatibility();
-
-    /**
      * Initializes a new {@link AbstractEndpointMessageTransport} instance.
      * @param endpoint the endpoint to which this transport belongs
      */
-    public AbstractEndpointMessageTransport(AbstractEndpoint endpoint, @NotNull Logger parentLogger)
+    public AbstractEndpointMessageTransport(T endpoint, @NotNull Logger parentLogger)
     {
         this.endpoint = endpoint;
         this.logger = parentLogger.createChildLogger(getClass().getName());
@@ -75,17 +68,6 @@ public abstract class AbstractEndpointMessageTransport
      * Fires the message transport ready event for the associated endpoint.
      */
     protected void notifyTransportChannelConnected()
-    {
-    }
-
-    /**
-     * Notifies this {@link AbstractEndpointMessageTransport} that a
-     * {@link ClientHelloMessage} has been received on a particular channel.
-     *
-     * @param src the channel on which the message was received.
-     * @param message the message.
-     */
-    protected void clientHello(Object src, ClientHelloMessage message)
     {
     }
 
@@ -116,7 +98,8 @@ public abstract class AbstractEndpointMessageTransport
      * jitsi messages.
      */
     @SuppressWarnings("unchecked")
-    protected void clientEndpointMessage(EndpointMessage message)
+    @Override
+    public BridgeChannelMessage endpointMessage(EndpointMessage message)
     {
         String to = message.getTo();
 
@@ -128,7 +111,7 @@ public abstract class AbstractEndpointMessageTransport
         {
             logger.warn(
                 "Unable to send EndpointMessage, conference is null or expired");
-            return;
+            return null;
         }
 
         AbstractEndpoint sourceEndpoint = conference.getEndpoint(getId());
@@ -139,7 +122,7 @@ public abstract class AbstractEndpointMessageTransport
             // The source endpoint might have expired. If it was an Octo
             // endpoint and we forward the message, we may mistakenly forward
             // it back through Octo and cause a loop.
-            return;
+            return null;
         }
 
         List<AbstractEndpoint> targets;
@@ -162,7 +145,7 @@ public abstract class AbstractEndpointMessageTransport
                 logger.warn(
                     "Unable to find endpoint " + to
                         + " to send EndpointMessage");
-                return;
+                return null;
             }
         }
 
@@ -170,10 +153,12 @@ public abstract class AbstractEndpointMessageTransport
             = !(sourceEndpoint instanceof OctoEndpoint)
               && targets.stream().anyMatch(e -> (e instanceof OctoEndpoint));
 
+        // TODO: do we want to off-load this to another IO thread?
         conference.sendMessage(
                 message.toJson(),
                 targets,
                 sendToOcto);
+        return null;
     }
 
     /**
@@ -187,7 +172,7 @@ public abstract class AbstractEndpointMessageTransport
     /**
      * @return the ID of the associated endpoint or {@code null}.
      */
-    private String getId()
+    protected String getId()
     {
         return getId(null);
     }
@@ -199,140 +184,6 @@ public abstract class AbstractEndpointMessageTransport
     protected String getId(Object id)
     {
         return endpoint != null ? endpoint.getID() : null;
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a {@link PinnedEndpointMessage}
-     * has been received.
-     *
-     * @param message the message that was received.
-     */
-    private void pinnedEndpointChangedEvent(PinnedEndpointMessage message)
-    {
-        String newPinnedEndpointID = message.getPinnedEndpoint();
-
-        List<String> newPinnedIDs =
-                isBlank(newPinnedEndpointID) ?
-                        Collections.emptyList() :
-                        Collections.singletonList(newPinnedEndpointID);
-
-        pinnedEndpointsChangedEvent(new PinnedEndpointsMessage(newPinnedIDs));
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a {@code PinnedEndpointsChangedEvent}
-     * has been received.
-     *
-     * @param message the message that was received.
-     */
-    private void pinnedEndpointsChangedEvent(PinnedEndpointsMessage message)
-    {
-        Set<String> newPinnedEndpoints = new HashSet<>(message.getPinnedEndpoints());
-
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Pinned " + newPinnedEndpoints);
-        }
-
-        videoConstraintsCompatibility.setPinnedEndpoints(newPinnedEndpoints);
-        receiverVideoConstraintsChangedEvent(
-                videoConstraintsCompatibility.computeVideoConstraints());
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a {@link SelectedEndpointsMessage}
-     * has been received.
-     *
-     * @param message the message that was received.
-     */
-    private void selectedEndpointChangedEvent(SelectedEndpointMessage message)
-    {
-        String newSelectedEndpointID = message.getSelectedEndpoint();
-
-        List<String> newSelectedIDs =
-            isBlank(newSelectedEndpointID) ?
-                    Collections.emptyList() :
-                    Collections.singletonList(newSelectedEndpointID);
-
-        selectedEndpointsChangedEvent(
-                new SelectedEndpointsMessage(newSelectedIDs));
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a {@link SelectedEndpointsMessage}
-     * has been received.
-     *
-     * @param message the message that was received.
-     */
-    private void selectedEndpointsChangedEvent(SelectedEndpointsMessage message)
-    {
-        Set<String> newSelectedEndpoints = new HashSet<>(message.getSelectedEndpoints());
-
-        videoConstraintsCompatibility.setSelectedEndpoints(newSelectedEndpoints);
-        receiverVideoConstraintsChangedEvent(
-                videoConstraintsCompatibility.computeVideoConstraints());
-    }
-
-    /**
-     * Sets the sender video constraints of this {@link #endpoint}.
-     *
-     * @param videoConstraintsMap the sender video constraints of this
-     * {@link #endpoint}.
-     */
-    private void receiverVideoConstraintsChangedEvent(
-        Map<String, VideoConstraints> videoConstraintsMap)
-    {
-        // Don't "pollute" the video constraints map with constraints for this
-        // endpoint.
-        videoConstraintsMap.remove(endpoint.getID());
-        endpoint.setSenderVideoConstraints(
-            ImmutableMap.copyOf(videoConstraintsMap));
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a {@link LastNMessage} has been
-     * received.
-     *
-     * @param message the message that was received.
-     */
-    protected void lastNChangedEvent(LastNMessage message)
-    {
-        int lastN = message.getLastN();
-
-        if (endpoint != null)
-        {
-            endpoint.setLastN(lastN);
-        }
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a
-     * {@link ReceiverVideoConstraintsMessage} has been received
-     *
-     * @param message the message that was received.
-     */
-    protected abstract void receiverVideoConstraintsChangedEvent(
-            ReceiverVideoConstraintsMessage message);
-
-    /**
-     * Notifies this {@code Endpoint} that a
-     * {@link ReceiverVideoConstraintMessage} has been received
-     *
-     * @param message the message that was received.
-     */
-    protected void receiverVideoConstraintEvent(
-            ReceiverVideoConstraintMessage message)
-    {
-        int maxFrameHeight = message.getMaxFrameHeight();
-        if (logger.isDebugEnabled())
-        {
-            logger.debug(
-                "Received a maxFrameHeight video constraint from "
-                    + getId() + ": " + maxFrameHeight);
-        }
-
-        videoConstraintsCompatibility.setMaxFrameHeight(maxFrameHeight);
-        receiverVideoConstraintsChangedEvent(videoConstraintsCompatibility.computeVideoConstraints());
     }
 
     /**
@@ -355,48 +206,12 @@ public abstract class AbstractEndpointMessageTransport
             return;
         }
 
-        // This cries for kotlin
         TaskPools.IO_POOL.submit(() ->
         {
-            if (message instanceof SelectedEndpointsMessage)
+            BridgeChannelMessage response = handleMessage(message);
+            if (response != null)
             {
-                selectedEndpointsChangedEvent((SelectedEndpointsMessage) message);
-            }
-            else if (message instanceof SelectedEndpointMessage)
-            {
-                selectedEndpointChangedEvent((SelectedEndpointMessage) message);
-            }
-            else if (message instanceof PinnedEndpointsMessage)
-            {
-                pinnedEndpointsChangedEvent((PinnedEndpointsMessage) message);
-            }
-            else if (message instanceof PinnedEndpointMessage)
-            {
-                pinnedEndpointChangedEvent((PinnedEndpointMessage) message);
-            }
-            else if (message instanceof ClientHelloMessage)
-            {
-                clientHello(src, (ClientHelloMessage) message);
-            }
-            else if (message instanceof EndpointMessage)
-            {
-                clientEndpointMessage((EndpointMessage) message);
-            }
-            else if (message instanceof LastNMessage)
-            {
-                lastNChangedEvent((LastNMessage) message);
-            }
-            else if (message instanceof ReceiverVideoConstraintMessage)
-            {
-                receiverVideoConstraintEvent((ReceiverVideoConstraintMessage) message);
-            }
-            else if (message instanceof ReceiverVideoConstraintsMessage)
-            {
-                receiverVideoConstraintsChangedEvent((ReceiverVideoConstraintsMessage) message);
-            }
-            else
-            {
-                logger.warn("Unhandled message: " + msg);
+                sendMessage(src, response.toJson());
             }
         });
     }
@@ -408,6 +223,10 @@ public abstract class AbstractEndpointMessageTransport
      * @param msg message text to send.
      */
     protected void sendMessage(String msg)
+    {
+    }
+
+    protected void sendMessage(Object dst, String message)
     {
     }
 

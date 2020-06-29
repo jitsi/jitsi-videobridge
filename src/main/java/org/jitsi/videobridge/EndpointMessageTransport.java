@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import com.google.common.collect.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.*;
@@ -24,8 +25,11 @@ import org.jitsi.videobridge.websocket.*;
 import org.json.simple.*;
 
 import java.lang.ref.*;
+import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.*;
+
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 /**
  * Handles the functionality related to sending and receiving COLIBRI messages
@@ -35,7 +39,7 @@ import java.util.function.*;
  * @author Boris Grozev
  */
 class EndpointMessageTransport
-    extends AbstractEndpointMessageTransport
+    extends AbstractEndpointMessageTransport<Endpoint>
     implements DataChannelStack.DataChannelMessageListener,
         ColibriWebSocket.EventHandler
 {
@@ -63,6 +67,13 @@ class EndpointMessageTransport
     private final EndpointMessageTransportEventHandler eventHandler;
 
     private final AtomicInteger numOutgoingMessagesDropped = new AtomicInteger(0);
+
+    /**
+     * The compatibility layer that translates selected, pinned and max
+     * resolution messages into video constraints.
+     */
+    private final VideoConstraintsCompatibility
+            videoConstraintsCompatibility = new VideoConstraintsCompatibility();
 
     /**
      * Initializes a new {@link EndpointMessageTransport} instance.
@@ -96,7 +107,7 @@ class EndpointMessageTransport
      * {@inheritDoc}
      */
     @Override
-    protected void clientHello(Object src, ClientHelloMessage message)
+    public BridgeChannelMessage clientHello(ClientHelloMessage message)
     {
         // ClientHello was introduced for functional testing purposes. It
         // triggers a ServerHello response from Videobridge. The exchange
@@ -104,17 +115,13 @@ class EndpointMessageTransport
         // remote endpoint and the Videobridge is operational.
         // We take care to send the reply using the same transport channel on
         // which we received the request..
-        sendMessage(
-                src,
-                new ServerHelloMessage().toJson(),
-                "response to ClientHello");
+        return new ServerHelloMessage();
     }
 
     @Override
-    protected void receiverVideoConstraintsChangedEvent(
-            ReceiverVideoConstraintsMessage message)
+    public void unhandledMessage(BridgeChannelMessage message)
     {
-        // NO-OP (for now).
+        logger.warn("Received a message with an unexpected type: " + message.getType());
     }
 
     /**
@@ -122,26 +129,15 @@ class EndpointMessageTransport
      * @param dst the transport channel.
      * @param message the message to send.
      */
-    private void sendMessage(Object dst, String message)
-    {
-        sendMessage(dst, message, "");
-    }
-
-    /**
-     * Sends a string via a particular transport channel.
-     * @param dst the transport channel.
-     * @param message the message to send.
-     * @param errorMessage an error message to be logged in case of failure.
-     */
-    private void sendMessage(Object dst, String message, String errorMessage)
+    protected void sendMessage(Object dst, String message)
     {
         if (dst instanceof ColibriWebSocket)
         {
-            sendMessage((ColibriWebSocket) dst, message, errorMessage);
+            sendMessage((ColibriWebSocket) dst, message);
         }
         else if (dst instanceof DataChannel)
         {
-            sendMessage((DataChannel)dst, message, errorMessage);
+            sendMessage((DataChannel)dst, message);
         }
         else
         {
@@ -153,9 +149,8 @@ class EndpointMessageTransport
      * Sends a string via a particular {@link DataChannel}.
      * @param dst the data channel to send through.
      * @param message the message to send.
-     * @param errorMessage an error message to be logged in case of failure.
      */
-    private void sendMessage(DataChannel dst, String message, String errorMessage)
+    private void sendMessage(DataChannel dst, String message)
     {
         dst.sendString(message);
         statisticsSupplier.get().totalDataChannelMessagesSent.incrementAndGet();
@@ -165,10 +160,8 @@ class EndpointMessageTransport
      * Sends a string via a particular {@link ColibriWebSocket} instance.
      * @param dst the {@link ColibriWebSocket} through which to send the message.
      * @param message the message to send.
-     * @param errorMessage an error message to be logged in case of failure.
      */
-    private void sendMessage(
-        ColibriWebSocket dst, String message, String errorMessage)
+    private void sendMessage(ColibriWebSocket dst, String message)
     {
         // We'll use the async version of sendString since this may be called
         // from multiple threads.  It's just fire-and-forget though, so we
@@ -278,10 +271,7 @@ class EndpointMessageTransport
 
             webSocket = ws;
             webSocketLastActive = true;
-            sendMessage(
-                    ws,
-                    new ServerHelloMessage().toJson(),
-                    "initial ServerHello");
+            sendMessage(ws, new ServerHelloMessage().toJson());
         }
 
         notifyTransportChannelConnected();
@@ -390,4 +380,143 @@ class EndpointMessageTransport
 
         return debugState;
     }
+
+    /**
+     * Notifies this {@code Endpoint} that a {@link PinnedEndpointMessage}
+     * has been received.
+     *
+     * @param message the message that was received.
+     */
+    @Override
+    public BridgeChannelMessage pinnedEndpoint(PinnedEndpointMessage message)
+    {
+        String newPinnedEndpointID = message.getPinnedEndpoint();
+
+        List<String> newPinnedIDs =
+                isBlank(newPinnedEndpointID) ?
+                        Collections.emptyList() :
+                        Collections.singletonList(newPinnedEndpointID);
+
+        pinnedEndpoints(new PinnedEndpointsMessage(newPinnedIDs));
+        return null;
+    }
+
+    /**
+     * Notifies this {@code Endpoint} that a {@code PinnedEndpointsChangedEvent}
+     * has been received.
+     *
+     * @param message the message that was received.
+     */
+    @Override
+    public BridgeChannelMessage pinnedEndpoints(PinnedEndpointsMessage message)
+    {
+        Set<String> newPinnedEndpoints = new HashSet<>(message.getPinnedEndpoints());
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Pinned " + newPinnedEndpoints);
+        }
+
+        videoConstraintsCompatibility.setPinnedEndpoints(newPinnedEndpoints);
+        setSenderVideoConstraints(
+                videoConstraintsCompatibility.computeVideoConstraints());
+
+        return null;
+    }
+
+    /**
+     * Notifies this {@code Endpoint} that a {@link SelectedEndpointsMessage}
+     * has been received.
+     *
+     * @param message the message that was received.
+     */
+    @Override
+    public BridgeChannelMessage selectedEndpoint(SelectedEndpointMessage message)
+    {
+        String newSelectedEndpointID = message.getSelectedEndpoint();
+
+        List<String> newSelectedIDs =
+                isBlank(newSelectedEndpointID) ?
+                        Collections.emptyList() :
+                        Collections.singletonList(newSelectedEndpointID);
+
+        selectedEndpoints(new SelectedEndpointsMessage(newSelectedIDs));
+        return null;
+    }
+
+    /**
+     * Notifies this {@code Endpoint} that a {@link SelectedEndpointsMessage}
+     * has been received.
+     *
+     * @param message the message that was received.
+     */
+    @Override
+    public BridgeChannelMessage selectedEndpoints(SelectedEndpointsMessage message)
+    {
+        Set<String> newSelectedEndpoints = new HashSet<>(message.getSelectedEndpoints());
+
+        videoConstraintsCompatibility.setSelectedEndpoints(newSelectedEndpoints);
+        setSenderVideoConstraints(
+                videoConstraintsCompatibility.computeVideoConstraints());
+        return null;
+    }
+
+    /**
+     * Sets the sender video constraints of this {@link #endpoint}.
+     *
+     * @param videoConstraintsMap the sender video constraints of this
+     * {@link #endpoint}.
+     */
+    public void setSenderVideoConstraints(
+            Map<String, VideoConstraints> videoConstraintsMap)
+    {
+        // Don't "pollute" the video constraints map with constraints for this
+        // endpoint.
+        videoConstraintsMap.remove(endpoint.getID());
+        endpoint.setSenderVideoConstraints(
+                ImmutableMap.copyOf(videoConstraintsMap));
+    }
+
+    /**
+     * Notifies this {@code Endpoint} that a
+     * {@link ReceiverVideoConstraintMessage} has been received
+     *
+     * @param message the message that was received.
+     */
+    @Override
+    public BridgeChannelMessage receiverVideoConstraint(ReceiverVideoConstraintMessage message)
+    {
+        int maxFrameHeight = message.getMaxFrameHeight();
+        if (logger.isDebugEnabled())
+        {
+            logger.debug(
+                    "Received a maxFrameHeight video constraint from "
+                            + getId(null) + ": " + maxFrameHeight);
+        }
+
+        videoConstraintsCompatibility.setMaxFrameHeight(maxFrameHeight);
+        setSenderVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints());
+
+        return null;
+    }
+
+    /**
+     * Notifies this {@code Endpoint} that a {@link LastNMessage} has been
+     * received.
+     *
+     * @param message the message that was received.
+     */
+    @Override
+    public BridgeChannelMessage lastN(LastNMessage message)
+    {
+        int lastN = message.getLastN();
+
+        if (endpoint != null)
+        {
+            endpoint.setLastN(lastN);
+        }
+
+        return null;
+    }
+
 }

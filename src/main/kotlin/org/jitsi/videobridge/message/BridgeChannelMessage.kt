@@ -42,12 +42,12 @@ sealed class BridgeChannelMessage(
 
     companion object {
         @JsonIgnoreProperties(ignoreUnknown = true)
-        private class EmptyBridgeChannelMessage : BridgeChannelMessage("")
+        private data class EmptyBridgeChannelMessage(val colibriClass: String?)
 
         @Throws(InvalidMessageTypeException::class, JsonProcessingException::class, JsonMappingException::class)
         fun parse(string: String): BridgeChannelMessage {
             // First parse as an empty message, ignoring any fields other than colibriClass, in order to get the type.
-            val colibriClass = jacksonObjectMapper().readValue<EmptyBridgeChannelMessage>(string).type
+            val colibriClass = jacksonObjectMapper().readValue<EmptyBridgeChannelMessage>(string).colibriClass
 
             val clazz = when (colibriClass) {
                 SelectedEndpointsMessage.TYPE -> SelectedEndpointsMessage::class.java
@@ -73,6 +73,49 @@ sealed class BridgeChannelMessage(
 }
 
 class InvalidMessageTypeException(message: String) : JsonProcessingException(message)
+
+open class MessageHandler {
+    /**
+     * Handles a [BridgeChannelMessage] that was received. Returns an optional response.
+     */
+    fun handleMessage(message: BridgeChannelMessage): BridgeChannelMessage? = when (message) {
+        is SelectedEndpointsMessage -> selectedEndpoints(message)
+        is SelectedEndpointMessage -> selectedEndpoint(message)
+        is PinnedEndpointsMessage -> pinnedEndpoints(message)
+        is PinnedEndpointMessage -> pinnedEndpoint(message)
+        is ClientHelloMessage -> clientHello(message)
+        is ServerHelloMessage -> serverHello(message)
+        is EndpointMessage -> endpointMessage(message)
+        is LastNMessage -> lastN(message)
+        is ReceiverVideoConstraintMessage -> receiverVideoConstraint(message)
+        is ReceiverVideoConstraintsMessage -> receiverVideoConstraints(message)
+        is DominantSpeakerMessage -> dominantSpeaker(message)
+        is EndpointConnectionStatusMessage -> endpointConnectionStatus(message)
+        is ForwardedEndpointMessage -> forwardedEndpoints(message)
+        is SenderVideoConstraintsMessage -> senderVideoConstraints(message)
+    }
+
+    open fun unhandledMessage(message: BridgeChannelMessage) {}
+    private fun unhandledMessageReturnNull(message: BridgeChannelMessage): BridgeChannelMessage? {
+        unhandledMessage(message)
+        return null
+    }
+
+    open fun selectedEndpoints(message: SelectedEndpointsMessage) = unhandledMessageReturnNull(message)
+    open fun selectedEndpoint(message: SelectedEndpointMessage) = unhandledMessageReturnNull(message)
+    open fun pinnedEndpoints(message: PinnedEndpointsMessage) = unhandledMessageReturnNull(message)
+    open fun pinnedEndpoint(message: PinnedEndpointMessage) = unhandledMessageReturnNull(message)
+    open fun clientHello(message: ClientHelloMessage) = unhandledMessageReturnNull(message)
+    open fun serverHello(message: ServerHelloMessage) = unhandledMessageReturnNull(message)
+    open fun endpointMessage(message: EndpointMessage) = unhandledMessageReturnNull(message)
+    open fun lastN(message: LastNMessage) = unhandledMessageReturnNull(message)
+    open fun receiverVideoConstraint(message: ReceiverVideoConstraintMessage) = unhandledMessageReturnNull(message)
+    open fun receiverVideoConstraints(message: ReceiverVideoConstraintsMessage) = unhandledMessageReturnNull(message)
+    open fun dominantSpeaker(message: DominantSpeakerMessage) = unhandledMessageReturnNull(message)
+    open fun endpointConnectionStatus(message: EndpointConnectionStatusMessage) = unhandledMessageReturnNull(message)
+    open fun forwardedEndpoints(message: ForwardedEndpointMessage) = unhandledMessageReturnNull(message)
+    open fun senderVideoConstraints(message: SenderVideoConstraintsMessage) = unhandledMessageReturnNull(message)
+}
 
 /**
  * A message sent from a client to a bridge, indicating that the list of endpoints selected by the client has changed.

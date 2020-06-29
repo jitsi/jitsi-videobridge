@@ -470,7 +470,6 @@ public class Endpoint
     /**
      * {@inheritDoc}
      */
-    @Override
     public void setLastN(Integer lastN)
     {
         bitrateController.setLastN(lastN);

@@ -115,14 +115,6 @@ public abstract class AbstractEndpoint
     }
 
     /**
-     * Sets the last-n value for this endpoint.
-     * @param lastN
-     */
-    public void setLastN(Integer lastN)
-    {
-    }
-
-    /**
      * Checks whether a specific SSRC belongs to this endpoint.
      * @param ssrc
      * @return
