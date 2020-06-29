@@ -161,11 +161,11 @@ class BridgeChannelMessageTest : ShouldSpec() {
             val endpointsEnteringLastN = listOf("b", "c")
             val conferenceEndpoints = listOf("a", "b", "c", "d")
 
-            val message = ForwardedEndpointMessage(forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints)
+            val message = ForwardedEndpointsMessage(forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints)
             val parsed = parse(message.toJson())
 
-            parsed.shouldBeInstanceOf<ForwardedEndpointMessage>()
-            parsed as ForwardedEndpointMessage
+            parsed.shouldBeInstanceOf<ForwardedEndpointsMessage>()
+            parsed as ForwardedEndpointsMessage
 
             parsed.forwardedEndpoints shouldContainExactly forwardedEndpoints
             parsed.endpointsEnteringLastN shouldContainExactly endpointsEnteringLastN

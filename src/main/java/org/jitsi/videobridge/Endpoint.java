@@ -1043,8 +1043,8 @@ public class Endpoint
             endpointsEnteringLastN = forwardedEndpoints;
         }
 
-        ForwardedEndpointMessage msg
-                = new ForwardedEndpointMessage(
+        ForwardedEndpointsMessage msg
+                = new ForwardedEndpointsMessage(
                     forwardedEndpoints,
                     endpointsEnteringLastN,
                     conferenceEndpoints);

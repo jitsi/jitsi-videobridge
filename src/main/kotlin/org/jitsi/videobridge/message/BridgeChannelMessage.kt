@@ -64,7 +64,7 @@ sealed class BridgeChannelMessage(
                 ReceiverVideoConstraintsMessage.TYPE -> ReceiverVideoConstraintsMessage::class.java
                 DominantSpeakerMessage.TYPE -> DominantSpeakerMessage::class.java
                 EndpointConnectionStatusMessage.TYPE -> EndpointConnectionStatusMessage::class.java
-                ForwardedEndpointMessage.TYPE -> ForwardedEndpointMessage::class.java
+                ForwardedEndpointsMessage.TYPE -> ForwardedEndpointsMessage::class.java
                 SenderVideoConstraintsMessage.TYPE -> SenderVideoConstraintsMessage::class.java
                 else -> throw InvalidMessageTypeException("Unknown colibriClass: $colibriClass")
             }
@@ -98,7 +98,7 @@ open class MessageHandler {
             is ReceiverVideoConstraintsMessage -> receiverVideoConstraints(message)
             is DominantSpeakerMessage -> dominantSpeaker(message)
             is EndpointConnectionStatusMessage -> endpointConnectionStatus(message)
-            is ForwardedEndpointMessage -> forwardedEndpoints(message)
+            is ForwardedEndpointsMessage -> forwardedEndpoints(message)
             is SenderVideoConstraintsMessage -> senderVideoConstraints(message)
         }
     }
@@ -121,7 +121,7 @@ open class MessageHandler {
     open fun receiverVideoConstraints(message: ReceiverVideoConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun dominantSpeaker(message: DominantSpeakerMessage) = unhandledMessageReturnNull(message)
     open fun endpointConnectionStatus(message: EndpointConnectionStatusMessage) = unhandledMessageReturnNull(message)
-    open fun forwardedEndpoints(message: ForwardedEndpointMessage) = unhandledMessageReturnNull(message)
+    open fun forwardedEndpoints(message: ForwardedEndpointsMessage) = unhandledMessageReturnNull(message)
     open fun senderVideoConstraints(message: SenderVideoConstraintsMessage) = unhandledMessageReturnNull(message)
 
     fun getReceivedCounts() = receivedCounts.mapValues { it.value.get() }
@@ -313,7 +313,7 @@ class EndpointConnectionStatusMessage(
  *
  * TODO: document the semantics of the fields.
  */
-class ForwardedEndpointMessage(
+class ForwardedEndpointsMessage(
     @get:JsonProperty("lastNEndpoints")
     val forwardedEndpoints: Collection<String>,
     val endpointsEnteringLastN: Collection<String>,
