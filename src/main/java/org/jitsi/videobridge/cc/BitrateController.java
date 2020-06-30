@@ -345,7 +345,8 @@ public class BitrateController
             // We want "o1 has higher preferred height than o2" to imply "o1 is
             // smaller than o2" as this is equivalent to "o1 needs to be
             // prioritized first".
-            int preferredHeightDiff = o2.videoConstraints.getPreferredHeight() - o1.videoConstraints.getPreferredHeight();
+            int preferredHeightDiff =
+                o2.videoConstraints.getPreferredHeight() - o1.videoConstraints.getPreferredHeight();
             if (preferredHeightDiff != 0)
             {
                 return preferredHeightDiff;

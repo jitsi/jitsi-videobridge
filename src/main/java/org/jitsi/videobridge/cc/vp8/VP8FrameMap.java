@@ -103,7 +103,8 @@ public class VP8FrameMap
             {
                 return true;
             }
-            if (RtpUtils.getSequenceNumberDelta(packet.getSequenceNumber(), latestFrame.getLatestKnownSequenceNumber()) > 0)
+            if (RtpUtils.getSequenceNumberDelta(
+                packet.getSequenceNumber(), latestFrame.getLatestKnownSequenceNumber()) > 0)
             {
                 return true;
             }
