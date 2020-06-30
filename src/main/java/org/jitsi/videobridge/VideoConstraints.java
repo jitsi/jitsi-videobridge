@@ -57,13 +57,21 @@ public class VideoConstraints
 
 
     /**
+     * A default constructor to allow parsing with jackson.
+     */
+    public VideoConstraints()
+    {
+        this(-1);
+    }
+
+    /**
      * Ctor.
      *
      * @param idealHeight The ideal height of the constrained endpoint.
      * @param preferredHeight The "preferred" height of the constrained endpoint.
      * @param preferredFps The "preferred" frame-rate of the constrained endpoint.
      */
-    VideoConstraints(int idealHeight, int preferredHeight, double preferredFps)
+    public VideoConstraints(int idealHeight, int preferredHeight, double preferredFps)
     {
         this.preferredFps = preferredFps;
         this.preferredHeight = preferredHeight;

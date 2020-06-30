@@ -16,6 +16,8 @@
 package org.jitsi.videobridge.message
 
 import com.fasterxml.jackson.core.JsonProcessingException
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import io.kotlintest.matchers.collections.shouldContainExactly
 import io.kotlintest.matchers.types.shouldBeInstanceOf
 import io.kotlintest.shouldBe
@@ -180,6 +182,23 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsedForwardedEndpoints as JSONArray
             parsedForwardedEndpoints.toList() shouldContainExactly forwardedEndpoints
         }
+
+        "serializing and parsing VideoConstraints and SenderVideoConstraintsMessage" {
+            val videoConstraints: org.jitsi.videobridge.VideoConstraints = jacksonObjectMapper().readValue(VIDEO_CONSTRAINTS)
+            videoConstraints.idealHeight shouldBe 1080
+            videoConstraints.preferredHeight shouldBe 360
+            videoConstraints.preferredFps shouldBe 30.0
+
+            val senderVideoConstraintsMessage = SenderVideoConstraintsMessage(videoConstraints)
+            val parsed = parse(senderVideoConstraintsMessage.toJson())
+
+            parsed.shouldBeInstanceOf<SenderVideoConstraintsMessage>()
+            parsed as SenderVideoConstraintsMessage
+
+            parsed.videoConstraints.idealHeight shouldBe 1080
+            parsed.videoConstraints.preferredHeight shouldBe 360
+            parsed.videoConstraints.preferredFps shouldBe 30.0
+        }
     }
 
     companion object {
@@ -196,6 +215,14 @@ class BridgeChannelMessageTest : ShouldSpec() {
               "to": "to_value",
               "other_field1": "other_value1",
               "other_field2": 97
+            }
+        """
+
+        const val VIDEO_CONSTRAINTS = """
+            {
+                "idealHeight": 1080,
+                "preferredHeight": 360,
+                "preferredFps": 30.0
             }
         """
     }
