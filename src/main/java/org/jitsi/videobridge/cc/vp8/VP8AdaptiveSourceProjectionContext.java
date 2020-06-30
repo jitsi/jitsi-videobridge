@@ -201,7 +201,10 @@ public class VP8AdaptiveSourceProjectionContext
      */
     private int seqGap(@NotNull VP8Frame frame1, @NotNull VP8Frame frame2)
     {
-        int seqGap = RtpUtils.getSequenceNumberDelta(frame2.getEarliestKnownSequenceNumber(), frame1.getLatestKnownSequenceNumber());
+        int seqGap = RtpUtils.getSequenceNumberDelta(
+            frame2.getEarliestKnownSequenceNumber(),
+            frame1.getLatestKnownSequenceNumber()
+        );
 
         if (!frame1.isAccepted() && !frame2.isAccepted() &&
             frame2.isImmediatelyAfter(frame1))
@@ -387,7 +390,11 @@ public class VP8AdaptiveSourceProjectionContext
      * Create a projection for this frame.
      */
     @NotNull
-    private VP8FrameProjection createProjection(@NotNull VP8Frame frame, @NotNull Vp8Packet initialPacket, boolean isReset, long receivedMs)
+    private VP8FrameProjection createProjection(
+        @NotNull VP8Frame frame,
+        @NotNull Vp8Packet initialPacket,
+        boolean isReset,
+        long receivedMs)
     {
         if (frameIsNewSsrc(frame))
         {
@@ -406,7 +413,10 @@ public class VP8AdaptiveSourceProjectionContext
      * Create a projection for this frame. It is the first frame sent for a layer.
      */
     @NotNull
-    private VP8FrameProjection createLayerSwitchProjection(@NotNull VP8Frame frame, @NotNull Vp8Packet initialPacket, long receivedMs)
+    private VP8FrameProjection createLayerSwitchProjection(
+        @NotNull VP8Frame frame,
+        @NotNull Vp8Packet initialPacket,
+        long receivedMs)
     {
         assert(frame.isKeyframe());
         assert(initialPacket.isStartOfFrame());
@@ -427,7 +437,8 @@ public class VP8AdaptiveSourceProjectionContext
             lastVP8FrameProjection.close();
         }
 
-        int projectedSeq = RtpUtils.applySequenceNumberDelta(lastVP8FrameProjection.getLatestProjectedSequence(), projectedSeqGap);
+        int projectedSeq =
+            RtpUtils.applySequenceNumberDelta(lastVP8FrameProjection.getLatestProjectedSequence(), projectedSeqGap);
 
         // this is a simulcast switch. The typical incremental value =
         // 90kHz / 30 = 90,000Hz / 30 = 3000 per frame or per 33ms
@@ -524,7 +535,8 @@ public class VP8AdaptiveSourceProjectionContext
                 if (f2 == null)
                 {
                     throw new IllegalStateException("No next frame found after frame with picId " + f1.getPictureId() +
-                        ", even though refFrame " + refFrame.getPictureId() + " is before frame " + frame.getPictureId() + "!");
+                        ", even though refFrame " + refFrame.getPictureId() + " is before frame " +
+                        frame.getPictureId() + "!");
                 }
                 seqGap += seqGap(f1, f2);
                 picGap += picGap(f1, f2);
@@ -540,8 +552,9 @@ public class VP8AdaptiveSourceProjectionContext
                 f2 = prevFrame(f1);
                 if (f2 == null)
                 {
-                    throw new IllegalStateException("No previous frame found before frame with picId " + f1.getPictureId() +
-                        ", even though refFrame " + refFrame.getPictureId() + " is after frame " + frame.getPictureId() + "!");
+                    throw new IllegalStateException("No previous frame found before frame with picId " +
+                        f1.getPictureId() + ", even though refFrame " + refFrame.getPictureId() + " is after frame " +
+                        frame.getPictureId() + "!");
                 }
                 seqGap += -seqGap(f2, f1);
                 picGap += -picGap(f2, f1);
@@ -571,7 +584,10 @@ public class VP8AdaptiveSourceProjectionContext
      * of this layer.
      */
     @NotNull
-    private VP8FrameProjection createInLayerProjection(@NotNull VP8Frame frame, @NotNull Vp8Packet initialPacket, long receivedMs)
+    private VP8FrameProjection createInLayerProjection(
+        @NotNull VP8Frame frame,
+        @NotNull Vp8Packet initialPacket,
+        long receivedMs)
     {
         VP8Frame prevFrame = findPrevAcceptedFrame(frame);
         if (prevFrame != null)
