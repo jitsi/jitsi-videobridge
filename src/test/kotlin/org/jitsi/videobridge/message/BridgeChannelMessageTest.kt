@@ -189,7 +189,8 @@ class BridgeChannelMessageTest : ShouldSpec() {
         }
 
         "serializing and parsing VideoConstraints and SenderVideoConstraintsMessage" {
-            val videoConstraints: org.jitsi.videobridge.VideoConstraints = jacksonObjectMapper().readValue(VIDEO_CONSTRAINTS)
+            val videoConstraints: org.jitsi.videobridge.VideoConstraints
+                = jacksonObjectMapper().readValue(VIDEO_CONSTRAINTS)
             videoConstraints.idealHeight shouldBe 1080
             videoConstraints.preferredHeight shouldBe 360
             videoConstraints.preferredFps shouldBe 30.0
