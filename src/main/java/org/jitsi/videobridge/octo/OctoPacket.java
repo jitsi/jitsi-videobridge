@@ -98,7 +98,7 @@ public class OctoPacket
             long conferenceId,
             String endpointId)
     {
-        assertMinLen(buf, off, buf.length);
+        assertMinLen(buf, off, buf.length - off);
         off += writeConferenceId(conferenceId, buf, off);
         off += writeEndpointId(endpointId, buf, off);
         buf[off] = (byte) (getMediaTypeId(mediaType) << 6);
