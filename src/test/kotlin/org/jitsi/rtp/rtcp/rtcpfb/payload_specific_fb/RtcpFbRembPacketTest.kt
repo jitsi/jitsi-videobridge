@@ -100,7 +100,8 @@ internal class RtcpFbRembPacketTest : ShouldSpec() {
             }
             "creation" {
                 "from a buffer of a simple REMB" {
-                    val rembPacket = RtcpFbRembPacket(rembPacket1Buf.array(), rembPacket1Buf.arrayOffset(), rembPacket1Buf.limit())
+                    val rembPacket =
+                        RtcpFbRembPacket(rembPacket1Buf.array(), rembPacket1Buf.arrayOffset(), rembPacket1Buf.limit())
                     should("read everything correctly") {
                         rembPacket.senderSsrc shouldBe 0xfe932303
                         rembPacket.numSsrc shouldBe 1
@@ -111,7 +112,8 @@ internal class RtcpFbRembPacketTest : ShouldSpec() {
             }
             "creation" {
                 "from a buffer of a REMB with two ssrcs" {
-                    val rembPacket = RtcpFbRembPacket(rembPacket2Buf.array(), rembPacket2Buf.arrayOffset(), rembPacket2Buf.limit())
+                    val rembPacket =
+                        RtcpFbRembPacket(rembPacket2Buf.array(), rembPacket2Buf.arrayOffset(), rembPacket2Buf.limit())
                     should("read everything correctly") {
                         rembPacket.senderSsrc shouldBe 0xfe932303
                         rembPacket.numSsrc shouldBe 2
@@ -122,7 +124,8 @@ internal class RtcpFbRembPacketTest : ShouldSpec() {
             }
             "creation" {
                 "from a buffer of a REMB signaling unbound bandwidth" {
-                    val rembPacket = RtcpFbRembPacket(rembPacket3Buf.array(), rembPacket3Buf.arrayOffset(), rembPacket3Buf.limit())
+                    val rembPacket =
+                        RtcpFbRembPacket(rembPacket3Buf.array(), rembPacket3Buf.arrayOffset(), rembPacket3Buf.limit())
                     should("read everything correctly") {
                         rembPacket.senderSsrc shouldBe 0xfe932303
                         rembPacket.numSsrc shouldBe 2

@@ -81,7 +81,8 @@ class RtpPacketTest : ShouldSpec() {
 
     private val rtpPacketWithExtensions = RtpPacket(rtpHeaderWithExtensions + dummyRtpPayload)
     private val rtpPacketNoExtensions = RtpPacket(rtpHeaderWithNoExtensions + dummyRtpPayload)
-    private val rtpPacketWithExtensionsWithPaddingBetween = RtpPacket(rtpHeaderWithExtensionsPaddingBetween + dummyRtpPayload)
+    private val rtpPacketWithExtensionsWithPaddingBetween =
+        RtpPacket(rtpHeaderWithExtensionsPaddingBetween + dummyRtpPayload)
 
     init {
         "An RTP packet with header extensions" {

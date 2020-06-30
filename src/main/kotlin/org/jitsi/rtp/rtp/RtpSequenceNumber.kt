@@ -76,8 +76,11 @@ class RtpSequenceNumberProgression(
         RtpSequenceNumberProgressionIterator(start, endInclusive, step)
 
     companion object {
-        fun fromClosedRange(rangeStart: RtpSequenceNumber, rangeEnd: RtpSequenceNumber, step: Int): RtpSequenceNumberProgression =
-            RtpSequenceNumberProgression(rangeStart, rangeEnd, step)
+        fun fromClosedRange(
+            rangeStart: RtpSequenceNumber,
+            rangeEnd: RtpSequenceNumber,
+            step: Int
+        ): RtpSequenceNumberProgression = RtpSequenceNumberProgression(rangeStart, rangeEnd, step)
     }
 }
 

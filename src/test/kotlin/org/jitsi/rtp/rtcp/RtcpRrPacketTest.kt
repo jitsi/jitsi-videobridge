@@ -87,7 +87,8 @@ internal class RtcpRrPacketTest : ShouldSpec() {
 //        }
         "creation" {
             "from a buffer" {
-                val rrPacket = RtcpRrPacket(rrPacketBuffer.array(), rrPacketBuffer.arrayOffset(), rrPacketBuffer.limit())
+                val rrPacket =
+                    RtcpRrPacket(rrPacketBuffer.array(), rrPacketBuffer.arrayOffset(), rrPacketBuffer.limit())
                 should("read all values correctly") {
                     rrPacket.packetType shouldBe RtcpRrPacket.PT
                     rrPacket.reportBlocks should haveSize(2)

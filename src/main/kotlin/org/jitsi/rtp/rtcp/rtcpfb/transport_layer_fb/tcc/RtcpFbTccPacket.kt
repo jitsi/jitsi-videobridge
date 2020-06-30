@@ -358,7 +358,15 @@ class RtcpFbTccPacket(
                 seq_no += 1
             }
         }
-        TccMemberData(base_seq_no_.value, base_time_ticks_, encoded_chunks_, last_chunk_, num_seq_no_, last_timestamp_us_, packets_)
+        TccMemberData(
+            base_seq_no_.value,
+            base_time_ticks_,
+            encoded_chunks_,
+            last_chunk_,
+            num_seq_no_,
+            last_timestamp_us_,
+            packets_
+        )
     }
 
     // All but last encoded packet chunks.

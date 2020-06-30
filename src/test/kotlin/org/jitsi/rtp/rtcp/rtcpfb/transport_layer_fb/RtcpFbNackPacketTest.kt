@@ -62,7 +62,11 @@ internal class RtcpFbNackPacketTest : ShouldSpec() {
 //                }
 //            }
             "from a buffer with multiple NACK blocks" {
-                val nackPacket = RtcpFbNackPacket(multipleNackBlocksBuf.array(), multipleNackBlocksBuf.arrayOffset(), multipleNackBlocksBuf.limit())
+                val nackPacket = RtcpFbNackPacket(
+                    multipleNackBlocksBuf.array(),
+                    multipleNackBlocksBuf.arrayOffset(),
+                    multipleNackBlocksBuf.limit()
+                )
                 should("parse the values correctly") {
                     nackPacket.missingSeqNums shouldContainExactly sortedSetOf(44832, 44838, 44848, 44850, 44854, 44856)
                 }

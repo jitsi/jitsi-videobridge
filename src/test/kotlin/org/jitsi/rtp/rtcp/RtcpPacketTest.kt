@@ -32,7 +32,8 @@ class RtcpPacketTest : ShouldSpec() {
                     0x00, 0x00, 0x00, 0x00
                 )
                 should("return UnsupportedRtcpPacket") {
-                    RtcpPacket.parse(unsupportedRtcpData, 0, unsupportedRtcpData.size).shouldBeInstanceOf<UnsupportedRtcpPacket>()
+                    RtcpPacket.parse(unsupportedRtcpData, 0, unsupportedRtcpData.size)
+                        .shouldBeInstanceOf<UnsupportedRtcpPacket>()
                 }
             }
             "an invalid RTCP packet" {

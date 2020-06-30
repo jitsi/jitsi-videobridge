@@ -166,7 +166,8 @@ open class RtpPacket(
      * For [RtpPacket] the payload is everything after the RTP Header.
      */
     override val payloadVerification: String
-        get() = "type=RtpPacket len=$payloadLength hashCode=${buffer.hashCodeOfSegment(payloadOffset, payloadOffset + payloadLength)}"
+        get() = "type=RtpPacket len=$payloadLength " +
+            "hashCode=${buffer.hashCodeOfSegment(payloadOffset, payloadOffset + payloadLength)}"
 
     fun getHeaderExtension(extensionId: Int): HeaderExtension? {
         headerExtensions.forEach { ext ->
