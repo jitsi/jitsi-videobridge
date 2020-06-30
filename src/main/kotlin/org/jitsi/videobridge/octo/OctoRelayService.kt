@@ -101,7 +101,9 @@ class OctoRelayService : BundleActivator {
             packetsSent = octoUdpTransportStats.packetsSent,
             receiveBitrate = octoUdpTransportStats.receiveBitRate,
             receivePacketRate = octoUdpTransportStats.receivePacketRate,
-            packetsDropped = octoUdpTransportStats.incomingPacketsDropped + octoTransportStats.numInvalidPackets + octoTransportStats.numIncomingDroppedNoHandler,
+            packetsDropped = octoUdpTransportStats.incomingPacketsDropped +
+                    octoTransportStats.numInvalidPackets +
+                    octoTransportStats.numIncomingDroppedNoHandler,
             sendBitrate = octoUdpTransportStats.sendBitRate,
             sendPacketRate = octoUdpTransportStats.sendPacketRate,
             relayId = bridgeOctoTransport!!.relayId

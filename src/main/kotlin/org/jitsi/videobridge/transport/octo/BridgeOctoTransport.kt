@@ -109,7 +109,8 @@ class BridgeOctoTransport(
                 logger.info("Removing handler for conference $conferenceId")
                 incomingPacketHandlers.remove(conferenceId)
             } else {
-                logger.info("Tried to remove handler for conference $conferenceId but it wasn't the currently active one")
+                logger.info("Tried to remove handler for conference $conferenceId but it wasn't the currently " +
+                    "active one")
             }
         }
     }
@@ -166,7 +167,14 @@ class BridgeOctoTransport(
         }
     }
 
-    fun sendMediaData(buf: ByteArray, off: Int, len: Int, targets: Set<SocketAddress>, confId: Long, sourceEpId: String? = null) {
+    fun sendMediaData(
+        buf: ByteArray,
+        off: Int,
+        len: Int,
+        targets: Set<SocketAddress>,
+        confId: Long,
+        sourceEpId: String? = null
+    ) {
         sendData(buf, off, len, targets, confId, MediaType.VIDEO, sourceEpId)
     }
 
@@ -228,7 +236,13 @@ class BridgeOctoTransport(
 
     fun getStats(): StatsSnapshot = stats.toSnapshot()
 
-    private fun createPacketInfo(sourceEpId: String, buf: ByteArray, off: Int, len: Int, receivedTime: Instant): OctoPacketInfo {
+    private fun createPacketInfo(
+        sourceEpId: String,
+        buf: ByteArray,
+        off: Int,
+        len: Int,
+        receivedTime: Instant
+    ): OctoPacketInfo {
         val rtpLen = len - OCTO_HEADER_LENGTH
         val bufCopy = ByteBufferPool.getBuffer(
             rtpLen + RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET + Packet.BYTES_TO_LEAVE_AT_END_OF_PACKET

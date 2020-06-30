@@ -49,7 +49,11 @@ class XmppWebSocketClientTest : ShouldSpec() {
         } just runs
         every { wsClient.run() } just runs
 
-        val ws = XmppWebSocketClient(wsClient, parentLogger = LoggerImpl("test"), requestTimeout = Duration.ofSeconds(3))
+        val ws = XmppWebSocketClient(
+            wsClient,
+            parentLogger = LoggerImpl("test"),
+            requestTimeout = Duration.ofSeconds(3)
+        )
         ws.run()
 
         context("sendIqAndGetReply") {

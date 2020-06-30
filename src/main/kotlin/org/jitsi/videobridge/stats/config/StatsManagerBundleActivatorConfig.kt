@@ -118,7 +118,8 @@ class StatsManagerBundleActivatorConfig {
                     name("videobridge.stats")
                     readOnce()
                     retrievedAs<ConfigObject>() convertedBy { cfg ->
-                        val transports = cfg["transports"] ?: throw ConfigPropertyNotFoundException("Could not find transports within stats")
+                        val transports = cfg["transports"]
+                            ?: throw ConfigPropertyNotFoundException("Could not find transports within stats")
                         transports as ConfigList
                         transports.map { it as ConfigObject }
                             .map { it.toConfig() }
