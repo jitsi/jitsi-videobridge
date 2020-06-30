@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.message
 
 import com.fasterxml.jackson.core.JsonProcessingException
+import com.fasterxml.jackson.databind.exc.InvalidTypeIdException
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.kotlintest.matchers.collections.shouldContainExactly
@@ -66,14 +67,18 @@ class BridgeChannelMessageTest : ShouldSpec() {
         }
         "parsing an invalid message" {
             shouldThrow<JsonProcessingException> {
+                parse("{invalid json")
+            }
+
+            shouldThrow<JsonProcessingException> {
                 parse("")
             }
 
-            shouldThrow<InvalidMessageTypeException> {
+            shouldThrow<InvalidTypeIdException> {
                 parse("{}")
             }
 
-            shouldThrow<InvalidMessageTypeException> {
+            shouldThrow<InvalidTypeIdException> {
                 parse("""{"colibriClass": "invalid-colibri-class" }""")
             }
 

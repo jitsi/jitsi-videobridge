@@ -20,6 +20,8 @@ import com.fasterxml.jackson.annotation.JsonAnySetter
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -36,46 +38,38 @@ import java.util.concurrent.atomic.AtomicLong
  * The messages are formatted in JSON with a required "colibriClass" field, which indicates the message type. Different
  * message types have different (if any) additional fields.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "colibriClass")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = SelectedEndpointsMessage::class, name = SelectedEndpointsMessage.TYPE),
+    JsonSubTypes.Type(value = SelectedEndpointMessage::class, name = SelectedEndpointMessage.TYPE),
+    JsonSubTypes.Type(value = PinnedEndpointsMessage::class, name = PinnedEndpointsMessage.TYPE),
+    JsonSubTypes.Type(value = PinnedEndpointMessage::class, name = PinnedEndpointMessage.TYPE),
+    JsonSubTypes.Type(value = ClientHelloMessage::class, name = ClientHelloMessage.TYPE),
+    JsonSubTypes.Type(value = ServerHelloMessage::class, name = ServerHelloMessage.TYPE),
+    JsonSubTypes.Type(value = EndpointMessage::class, name = EndpointMessage.TYPE),
+    JsonSubTypes.Type(value = LastNMessage::class, name = LastNMessage.TYPE),
+    JsonSubTypes.Type(value = ReceiverVideoConstraintMessage::class, name = ReceiverVideoConstraintMessage.TYPE),
+    JsonSubTypes.Type(value = ReceiverVideoConstraintsMessage::class, name = ReceiverVideoConstraintsMessage.TYPE),
+    JsonSubTypes.Type(value = DominantSpeakerMessage::class, name = DominantSpeakerMessage.TYPE),
+    JsonSubTypes.Type(value = EndpointConnectionStatusMessage::class, name = EndpointConnectionStatusMessage.TYPE),
+    JsonSubTypes.Type(value = ForwardedEndpointsMessage::class, name = ForwardedEndpointsMessage.TYPE),
+    JsonSubTypes.Type(value = SenderVideoConstraintsMessage::class, name = SenderVideoConstraintsMessage.TYPE)
+)
+// The type is included as colibriClass (as we want) by the annotation above.
+@JsonIgnoreProperties("type")
 sealed class BridgeChannelMessage(
-    @get:JsonProperty("colibriClass")
     val type: String
 ) {
     fun toJson(): String = ObjectMapper().writeValueAsString(this)
 
     companion object {
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        private data class EmptyBridgeChannelMessage(val colibriClass: String?)
-
         @JvmStatic
-        @Throws(InvalidMessageTypeException::class, JsonProcessingException::class, JsonMappingException::class)
+        @Throws(JsonProcessingException::class, JsonMappingException::class)
         fun parse(string: String): BridgeChannelMessage {
-            // First parse as an empty message, ignoring any fields other than colibriClass, in order to get the type.
-            val colibriClass = jacksonObjectMapper().readValue<EmptyBridgeChannelMessage>(string).colibriClass
-
-            val clazz = when (colibriClass) {
-                SelectedEndpointsMessage.TYPE -> SelectedEndpointsMessage::class.java
-                SelectedEndpointMessage.TYPE -> SelectedEndpointMessage::class.java
-                PinnedEndpointsMessage.TYPE -> PinnedEndpointsMessage::class.java
-                PinnedEndpointMessage.TYPE -> PinnedEndpointMessage::class.java
-                ClientHelloMessage.TYPE -> ClientHelloMessage::class.java
-                ServerHelloMessage.TYPE -> ServerHelloMessage::class.java
-                EndpointMessage.TYPE -> EndpointMessage::class.java
-                LastNMessage.TYPE -> LastNMessage::class.java
-                ReceiverVideoConstraintMessage.TYPE -> ReceiverVideoConstraintMessage::class.java
-                ReceiverVideoConstraintsMessage.TYPE -> ReceiverVideoConstraintsMessage::class.java
-                DominantSpeakerMessage.TYPE -> DominantSpeakerMessage::class.java
-                EndpointConnectionStatusMessage.TYPE -> EndpointConnectionStatusMessage::class.java
-                ForwardedEndpointsMessage.TYPE -> ForwardedEndpointsMessage::class.java
-                SenderVideoConstraintsMessage.TYPE -> SenderVideoConstraintsMessage::class.java
-                else -> throw InvalidMessageTypeException("Unknown colibriClass: $colibriClass")
-            }
-
-            return jacksonObjectMapper().readValue(string, clazz)
+            return jacksonObjectMapper().readValue(string)
         }
     }
 }
-
-class InvalidMessageTypeException(message: String) : JsonProcessingException(message)
 
 open class MessageHandler {
     private val receivedCounts = ConcurrentHashMap<String, AtomicLong>()
