@@ -83,7 +83,11 @@ class DtlsTransport(parentLogger: Logger) {
 
         // Handle DTLS stack events
         it.eventHandler = object : DtlsStack.EventHandler {
-            override fun handshakeComplete(chosenSrtpProtectionProfile: Int, tlsRole: TlsRole, keyingMaterial: ByteArray) {
+            override fun handshakeComplete(
+                chosenSrtpProtectionProfile: Int,
+                tlsRole: TlsRole,
+                keyingMaterial: ByteArray
+            ) {
                 dtlsHandshakeComplete = true
                 eventHandler?.handshakeComplete(chosenSrtpProtectionProfile, tlsRole, keyingMaterial)
             }
@@ -149,9 +153,9 @@ class DtlsTransport(parentLogger: Logger) {
      * Describe the properties of this [DtlsTransport] into the given
      * [IceUdpTransportPacketExtension]
      */
-    fun describe(iceUdpTransportPacketExtension: IceUdpTransportPacketExtension) {
-        val fingerprintPE = iceUdpTransportPacketExtension.getFirstChildOfType(DtlsFingerprintPacketExtension::class.java) ?: run {
-            DtlsFingerprintPacketExtension().also { iceUdpTransportPacketExtension.addChildExtension(it) }
+    fun describe(iceUdpTransportPe: IceUdpTransportPacketExtension) {
+        val fingerprintPE = iceUdpTransportPe.getFirstChildOfType(DtlsFingerprintPacketExtension::class.java) ?: run {
+            DtlsFingerprintPacketExtension().also { iceUdpTransportPe.addChildExtension(it) }
         }
         fingerprintPE.setup = when (dtlsStack.role) {
             is DtlsServer -> "passive"

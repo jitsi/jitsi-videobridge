@@ -65,7 +65,14 @@ class WebSocketClientTest : ShouldSpec() {
 
         context("sendString") {
             context("when no reply is expected") {
-                val ws = WebSocketClient(client, "localhost", wsPort, "/ws/blackhole", testLogger, ::incomingMessageHandler)
+                val ws = WebSocketClient(
+                    client,
+                    "localhost",
+                    wsPort,
+                    "/ws/blackhole",
+                    testLogger,
+                    ::incomingMessageHandler
+                )
                 ws.run()
                 ws.sendString("hello")
                 should("send a message") {
