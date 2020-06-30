@@ -46,6 +46,7 @@ sealed class BridgeChannelMessage(
         @JsonIgnoreProperties(ignoreUnknown = true)
         private data class EmptyBridgeChannelMessage(val colibriClass: String?)
 
+        @JvmStatic
         @Throws(InvalidMessageTypeException::class, JsonProcessingException::class, JsonMappingException::class)
         fun parse(string: String): BridgeChannelMessage {
             // First parse as an empty message, ignoring any fields other than colibriClass, in order to get the type.

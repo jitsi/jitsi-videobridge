@@ -198,7 +198,7 @@ public abstract class AbstractEndpointMessageTransport<T extends AbstractEndpoin
 
         try
         {
-            message = BridgeChannelMessage.Companion.parse(msg);
+            message = BridgeChannelMessage.parse(msg);
         }
         catch (IOException ioe)
         {
