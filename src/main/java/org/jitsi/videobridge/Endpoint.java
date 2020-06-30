@@ -40,6 +40,7 @@ import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
+import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.rest.root.colibri.debug.*;
 import org.jitsi.videobridge.sctp.*;
 import org.jitsi.videobridge.shim.*;
@@ -61,8 +62,6 @@ import java.util.concurrent.*;
 import java.util.function.Function;
 import java.util.function.*;
 import java.util.stream.*;
-
-import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
 /**
  * Represents an endpoint of a participant in a <tt>Conference</tt>.
@@ -459,7 +458,7 @@ public class Endpoint
      * @param msg message text to send.
      */
     @Override
-    public void sendMessage(String msg)
+    public void sendMessage(BridgeChannelMessage msg)
     {
         EndpointMessageTransport messageTransport = getMessageTransport();
         if (messageTransport != null)
@@ -471,7 +470,6 @@ public class Endpoint
     /**
      * {@inheritDoc}
      */
-    @Override
     public void setLastN(Integer lastN)
     {
         bitrateController.setLastN(lastN);
@@ -673,11 +671,12 @@ public class Endpoint
     protected void maxReceiverVideoConstraintsChanged(VideoConstraints maxVideoConstraints)
     {
         // Note that it's up to the client to respect these constraints.
-        String senderVideoConstraintsMessage = createSenderVideoConstraintsMessage(maxVideoConstraints);
+        SenderVideoConstraintsMessage senderVideoConstraintsMessage
+                = new SenderVideoConstraintsMessage(maxVideoConstraints);
 
         if (logger.isDebugEnabled())
         {
-            logger.debug("Sender constraints changed: " + senderVideoConstraintsMessage);
+            logger.debug("Sender constraints changed: " + senderVideoConstraintsMessage.toJson());
         }
 
         sendMessage(senderVideoConstraintsMessage);
@@ -1044,8 +1043,11 @@ public class Endpoint
             endpointsEnteringLastN = forwardedEndpoints;
         }
 
-        String msg = createLastNEndpointsChangeEvent(
-            forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints);
+        ForwardedEndpointsMessage msg
+                = new ForwardedEndpointsMessage(
+                    forwardedEndpoints,
+                    endpointsEnteringLastN,
+                    conferenceEndpoints);
 
         sendMessage(msg);
     }

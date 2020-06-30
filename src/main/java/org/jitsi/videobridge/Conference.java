@@ -28,6 +28,7 @@ import org.jitsi.utils.logging.DiagnosticContext;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
+import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
@@ -46,7 +47,6 @@ import java.util.concurrent.atomic.*;
 import java.util.logging.*;
 
 import static org.jitsi.utils.collections.JMap.entry;
-import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
 /**
  * Represents a conference in the terms of Jitsi Videobridge.
@@ -300,7 +300,7 @@ public class Conference
      * be sent.
      */
     public void sendMessage(
-        String msg,
+        BridgeChannelMessage msg,
         List<AbstractEndpoint> endpoints,
         boolean sendToOcto)
     {
@@ -334,7 +334,7 @@ public class Conference
      * @param endpoints the list of <tt>Endpoint</tt>s to which the message will
      * be sent.
      */
-    public void sendMessage(String msg, List<AbstractEndpoint> endpoints)
+    public void sendMessage(BridgeChannelMessage msg, List<AbstractEndpoint> endpoints)
     {
         sendMessage(msg, endpoints, false);
     }
@@ -344,7 +344,7 @@ public class Conference
      *
      * @param msg the message to be broadcast.
      */
-    public void broadcastMessage(String msg, boolean sendToOcto)
+    public void broadcastMessage(BridgeChannelMessage msg, boolean sendToOcto)
     {
         sendMessage(msg, getEndpoints(), sendToOcto);
     }
@@ -354,7 +354,7 @@ public class Conference
      *
      * @param msg the message to be broadcast.
      */
-    public void broadcastMessage(String msg)
+    public void broadcastMessage(BridgeChannelMessage msg)
     {
         broadcastMessage(msg, false);
     }
@@ -435,8 +435,7 @@ public class Conference
         if (dominantSpeaker != null)
         {
             broadcastMessage(
-                    createDominantSpeakerEndpointChangeEvent(
-                        dominantSpeaker.getID()));
+                    new DominantSpeakerMessage(dominantSpeaker.getID()));
             if (getEndpointCount() > 2)
             {
                 double senderRtt = getRtt(dominantSpeaker);
@@ -938,8 +937,7 @@ public class Conference
                 try
                 {
                     endpoint.sendMessage(
-                            createDominantSpeakerEndpointChangeEvent(
-                                dominantSpeaker.getID()));
+                        new DominantSpeakerMessage(dominantSpeaker.getID()));
                 }
                 catch (IOException e)
                 {

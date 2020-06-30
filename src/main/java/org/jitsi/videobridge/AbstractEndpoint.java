@@ -23,6 +23,7 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.cc.config.*;
+import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.rest.root.colibri.debug.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
@@ -112,14 +113,6 @@ public abstract class AbstractEndpoint
         context.put("epId", id);
         logger = parentLogger.createChildLogger(this.getClass().getName(), context);
         this.id = Objects.requireNonNull(id, "id");
-    }
-
-    /**
-     * Sets the last-n value for this endpoint.
-     * @param lastN
-     */
-    public void setLastN(Integer lastN)
-    {
     }
 
     /**
@@ -278,7 +271,7 @@ public abstract class AbstractEndpoint
      *
      * @param msg message text to send.
      */
-    public abstract void sendMessage(String msg)
+    public abstract void sendMessage(BridgeChannelMessage msg)
         throws IOException;
 
 

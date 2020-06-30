@@ -65,8 +65,6 @@ import java.util.regex.*;
 @SuppressWarnings("JavadocReference")
 public class Videobridge
 {
-    public static final String COLIBRI_CLASS = "colibriClass";
-
     /**
      * The <tt>Logger</tt> used by the <tt>Videobridge</tt> class and its
      * instances to print debug information.

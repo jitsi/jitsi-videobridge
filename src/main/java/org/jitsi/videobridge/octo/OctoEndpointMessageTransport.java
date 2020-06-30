@@ -17,18 +17,19 @@ package org.jitsi.videobridge.octo;
 
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
-import org.json.simple.*;
+import org.jitsi.videobridge.message.*;
 
 /**
  * Extends {@link AbstractEndpointMessageTransport} for the purposes of Octo.
  *
- * Most {@code on*Event} methods are overridden as no-ops because they don't make
- * sense for Octo and are never used. The single exception is
- * {@link #clientEndpointMessage(Object, JSONObject)} which is not overridden
- * and the logic in the super class applies.
+ * Most {@link MessageHandler} methods are not overridden and result in a
+ * warning being logged, because we don't expect to received them via the Octo
+ * channel.
+ * {@link #endpointMessage(EndpointMessage)} is an exception, where the logic in
+ * the super class applies.
  */
 class OctoEndpointMessageTransport
-    extends AbstractEndpointMessageTransport
+    extends AbstractEndpointMessageTransport<OctoEndpoint>
 {
     /**
      * The associated {@link OctoEndpoints}.
@@ -65,64 +66,20 @@ class OctoEndpointMessageTransport
         return (String) id;
     }
 
-    /**
-     * {@inheritDoc}
-     * </p>
-     * We don't expect any of these messages to go through Octo, so we log a
-     * warning.
-     */
-    @Override
-    protected void clientHello(Object src, JSONObject jsonObject)
-    {
-        logUnexpectedMessage(jsonObject.toJSONString());
-    }
-
-    /**
-     * {@inheritDoc}
-     * </p>
-     * We don't expect any of these messages to go through Octo, so we log a
-     * warning.
-     */
-    @Override
-    protected void receiverVideoConstraintEvent(
-        Object src,
-        JSONObject jsonObject)
-    {
-        logUnexpectedMessage(jsonObject.toJSONString());
-    }
-
-    /**
-     * {@inheritDoc}
-     * </p>
-     * We don't expect any of these messages to go through Octo, so we log a
-     * warning.
-     */
-    @Override
-    protected void lastNChangedEvent(
-            Object src,
-            JSONObject jsonObject)
-    {
-        logUnexpectedMessage(jsonObject.toJSONString());
-    }
-
-    @Override
-    protected void receiverVideoConstraintsChangedEvent(Object src, JSONObject jsonObject)
-    {
-        // NO-OP
-    }
-
     @Override
     public boolean isConnected()
     {
         return true;
     }
 
+
     /**
      * Logs a warning about an unexpected message received through Octo.
-     * @param msg the received message.
+     * @param message the received message.
      */
-    private void logUnexpectedMessage(String msg)
+    @Override
+    public void unhandledMessage(BridgeChannelMessage message)
     {
-        logger.warn("Received an unexpected message type through Octo: " + msg);
+        logger.warn("Received a message with an unexpected type: " + message.getType());
     }
 }
