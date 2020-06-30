@@ -42,10 +42,8 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     private var mostRecentKeyframeGroupArrivalTimeMs = -1L
 
     /**
-     * A boolean flag that indicates whether a simulcast switch is pending. This
-     * condition is equivalent to:
-     *
-     * internalSpatialLayerIdTarget != externalSpatialLayerIdTarget.
+     * A boolean flag that indicates whether a keyframe is needed, due to an
+     * encoding or spatial layer switch.
      *
      * Reading/writing of this field is synchronized on this instance.
      */

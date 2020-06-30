@@ -104,6 +104,11 @@ class Vp9Frame(packet: Vp9Packet) {
     val usesInterLayerDependency: Boolean = packet.usesInterLayerDependency
 
     /**
+     * Whether the frame is inter-picture predicted.
+     */
+    val isInterPicturePredicted: Boolean = packet.isInterPicturePredicted
+
+    /**
      * The VP9 PictureID of the incoming VP9 frame that this instance refers to.
      */
     val pictureId: Int = packet.pictureId
@@ -223,7 +228,8 @@ class Vp9Frame(packet: Vp9Packet) {
             pictureId == pkt.pictureId &&
             isSwitchingUpPoint == pkt.isSwitchingUpPoint &&
             isUpperLevelReference == pkt.isUpperLevelReference &&
-            usesInterLayerDependency == pkt.usesInterLayerDependency
+            usesInterLayerDependency == pkt.usesInterLayerDependency &&
+            isInterPicturePredicted == pkt.isInterPicturePredicted
         ) /* TODO: also check start, end, seq nums? */ {
             return
         }
@@ -274,6 +280,14 @@ class Vp9Frame(packet: Vp9Packet) {
                 append("packet usesInterLayerDepencency ${pkt.usesInterLayerDependency} != frame usesInterLayerDepencency $usesInterLayerDependency")
                 complained = true
             }
+            if (isInterPicturePredicted != pkt.isInterPicturePredicted) {
+                if (complained) {
+                    append("; ")
+                }
+                append("packet isInterPicturePredicted ${pkt.isInterPicturePredicted} != frame isInterPicturePredicted $isInterPicturePredicted")
+                complained = true
+            }
+
         })
     }
 }
