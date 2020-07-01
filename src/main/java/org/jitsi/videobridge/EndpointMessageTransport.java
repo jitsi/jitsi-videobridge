@@ -470,6 +470,10 @@ class EndpointMessageTransport
     {
         Set<String> newSelectedEndpoints = new HashSet<>(message.getSelectedEndpoints());
 
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Selected " + newSelectedEndpoints);
+        }
         videoConstraintsCompatibility.setSelectedEndpoints(newSelectedEndpoints);
         setSenderVideoConstraints(
                 videoConstraintsCompatibility.computeVideoConstraints());
@@ -488,6 +492,12 @@ class EndpointMessageTransport
         // Don't "pollute" the video constraints map with constraints for this
         // endpoint.
         videoConstraintsMap.remove(endpoint.getID());
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("New video constraints map: " + videoConstraintsMap);
+        }
+
         endpoint.setSenderVideoConstraints(
                 ImmutableMap.copyOf(videoConstraintsMap));
     }
