@@ -60,22 +60,27 @@ class Vp8Packet private constructor (
     /** Due to the format of the VP8 payload, this value is only reliable for packets where [isStartOfFrame] is true. */
     override val isKeyframe: Boolean = isKeyframe ?: DePacketizer.isKeyFrame(this.buffer, payloadOffset, payloadLength)
 
-    override val isStartOfFrame: Boolean = isStartOfFrame ?: DePacketizer.VP8PayloadDescriptor.isStartOfFrame(buffer, payloadOffset)
+    override val isStartOfFrame: Boolean =
+        isStartOfFrame ?: DePacketizer.VP8PayloadDescriptor.isStartOfFrame(buffer, payloadOffset)
 
     /** End of VP8 frame is the marker bit. */
     override val isEndOfFrame: Boolean
         /** This uses [get] rather than initialization because [isMarked] is a var. */
         get() = isMarked
 
-    val hasTemporalLayerIndex = DePacketizer.VP8PayloadDescriptor.hasTemporalLayerIndex(buffer, payloadOffset, payloadLength)
+    val hasTemporalLayerIndex =
+        DePacketizer.VP8PayloadDescriptor.hasTemporalLayerIndex(buffer, payloadOffset, payloadLength)
 
     val hasPictureId = DePacketizer.VP8PayloadDescriptor.hasPictureId(buffer, payloadOffset, payloadLength)
 
-    val hasExtendedPictureId = DePacketizer.VP8PayloadDescriptor.hasExtendedPictureId(buffer, payloadOffset, payloadLength)
+    val hasExtendedPictureId =
+        DePacketizer.VP8PayloadDescriptor.hasExtendedPictureId(buffer, payloadOffset, payloadLength)
 
     val hasTL0PICIDX = DePacketizer.VP8PayloadDescriptor.hasTL0PICIDX(buffer, payloadOffset, payloadLength)
 
-    private var _TL0PICIDX = TL0PICIDX ?: DePacketizer.VP8PayloadDescriptor.getTL0PICIDX(buffer, payloadOffset, payloadLength)
+    private var _TL0PICIDX = TL0PICIDX
+        ?: DePacketizer.VP8PayloadDescriptor.getTL0PICIDX(buffer, payloadOffset, payloadLength)
+
     var TL0PICIDX: Int
         get() = _TL0PICIDX
         set(newValue) {

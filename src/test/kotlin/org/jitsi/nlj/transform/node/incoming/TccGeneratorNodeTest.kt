@@ -39,7 +39,9 @@ class TccGeneratorNodeTest : ShouldSpec() {
 
     override fun beforeSpec(spec: Spec) {
         super.beforeSpec(spec)
-        streamInformationStore.addRtpExtensionMapping(RtpExtension(tccExtensionId.toByte(), RtpExtensionType.TRANSPORT_CC))
+        streamInformationStore.addRtpExtensionMapping(
+            RtpExtension(tccExtensionId.toByte(), RtpExtensionType.TRANSPORT_CC)
+        )
         streamInformationStore.addRtpPayloadType(vp8PayloadType)
         tccGenerator = TccGeneratorNode(onTccReady, streamInformationStore, StdoutLogger(), clock)
     }
@@ -49,7 +51,9 @@ class TccGeneratorNodeTest : ShouldSpec() {
             streamInformationStore.clearRtpPayloadTypes()
             with(clock) {
                 repeat(100) { tccSeqNum ->
-                    tccGenerator.processPacket(PacketInfo(createPacket(tccSeqNum)).apply { receivedTime = clock.millis() })
+                    tccGenerator.processPacket(PacketInfo(createPacket(tccSeqNum)).apply {
+                        receivedTime = clock.millis()
+                    })
                     elapse(10.ms())
                 }
             }
@@ -60,7 +64,9 @@ class TccGeneratorNodeTest : ShouldSpec() {
         "when a series of packets (without marking) is received" {
             with(clock) {
                 repeat(11) { tccSeqNum ->
-                    tccGenerator.processPacket(PacketInfo(createPacket(tccSeqNum)).apply { receivedTime = clock.millis() })
+                    tccGenerator.processPacket(PacketInfo(createPacket(tccSeqNum)).apply {
+                        receivedTime = clock.millis()
+                    })
                     elapse(10.ms())
                 }
             }
@@ -78,13 +84,23 @@ class TccGeneratorNodeTest : ShouldSpec() {
         }
         "when a series of packets (where one is marked) is received" {
             with(clock) {
-                tccGenerator.processPacket(PacketInfo(createPacket(1)).apply { receivedTime = clock.millis() })
+                tccGenerator.processPacket(PacketInfo(createPacket(1)).apply {
+                    receivedTime = clock.millis()
+                })
                 elapse(10.ms())
-                tccGenerator.processPacket(PacketInfo(createPacket(2)).apply { receivedTime = clock.millis() })
+                tccGenerator.processPacket(PacketInfo(createPacket(2)).apply {
+                    receivedTime = clock.millis()
+                })
                 elapse(10.ms())
-                tccGenerator.processPacket(PacketInfo(createPacket(3).apply { isMarked = true }).apply { receivedTime = clock.millis() })
+                tccGenerator.processPacket(PacketInfo(createPacket(3).apply {
+                    isMarked = true
+                }).apply {
+                    receivedTime = clock.millis()
+                })
                 elapse(100.ms())
-                tccGenerator.processPacket(PacketInfo(createPacket(4)).apply { receivedTime = clock.millis() })
+                tccGenerator.processPacket(PacketInfo(createPacket(4)).apply {
+                    receivedTime = clock.millis()
+                })
             }
             "two TCC packets" {
                 should("be sent") {
@@ -95,7 +111,9 @@ class TccGeneratorNodeTest : ShouldSpec() {
         "when random packets are added" {
             val random = Random(1234)
             for (i in 1..10000) {
-                tccGenerator.processPacket(PacketInfo(createPacket(random.nextInt(0xffff))).apply { receivedTime = clock.millis() })
+                tccGenerator.processPacket(PacketInfo(createPacket(random.nextInt(0xffff))).apply {
+                    receivedTime = clock.millis()
+                })
                 clock.elapse(10.ms())
 
                 tccPackets.lastOrNull()?.let {
@@ -105,10 +123,14 @@ class TccGeneratorNodeTest : ShouldSpec() {
         }
         "when a few packets covering the seq num space are added" {
             for (i in listOf(0, 10000, 20000, 30000, 40000, 50000, 60000)) {
-                tccGenerator.processPacket(PacketInfo(createPacket(i % 0xffff)).apply { receivedTime = clock.millis() })
+                tccGenerator.processPacket(PacketInfo(createPacket(i % 0xffff)).apply {
+                    receivedTime = clock.millis()
+                })
             }
             for (i in 2..5000) {
-                tccGenerator.processPacket(PacketInfo(createPacket(i % 0xffff)).apply { receivedTime = clock.millis() })
+                tccGenerator.processPacket(PacketInfo(createPacket(i % 0xffff)).apply {
+                    receivedTime = clock.millis()
+                })
                 clock.elapse(10.ms())
 
                 tccPackets.lastOrNull()?.let {
@@ -122,7 +144,9 @@ class TccGeneratorNodeTest : ShouldSpec() {
                 if (tccSeqNum > 0xffff) {
                     val x = 1
                 }
-                val pi = PacketInfo(createPacket(tccSeqNum % 0xffff)).apply { receivedTime = clock.millis() }
+                val pi = PacketInfo(createPacket(tccSeqNum % 0xffff)).apply {
+                    receivedTime = clock.millis()
+                }
                 tccGenerator.processPacket(pi)
                 clock.elapse(10.ms())
 
@@ -138,7 +162,9 @@ class TccGeneratorNodeTest : ShouldSpec() {
         "when sequence numbers cycle with losses" {
             var prevSize = tccPackets.size
             repeat(50000) { tccSeqNum ->
-                val pi = PacketInfo(createPacket((tccSeqNum * 2) % 0xffff)).apply { receivedTime = clock.millis() }
+                val pi = PacketInfo(createPacket((tccSeqNum * 2) % 0xffff)).apply {
+                    receivedTime = clock.millis()
+                }
                 tccGenerator.processPacket(pi)
                 clock.elapse(20.ms())
 
@@ -154,11 +180,15 @@ class TccGeneratorNodeTest : ShouldSpec() {
         "when there is a loss after a TCC packet is sent" {
             with(clock) {
                 repeat(11) { tccSeqNum ->
-                    tccGenerator.processPacket(PacketInfo(createPacket(tccSeqNum)).apply { receivedTime = clock.millis() })
+                    tccGenerator.processPacket(PacketInfo(createPacket(tccSeqNum)).apply {
+                        receivedTime = clock.millis()
+                    })
                     elapse(10.ms())
                 }
                 elapse(100.ms())
-                tccGenerator.processPacket(PacketInfo(createPacket(20)).apply { receivedTime = clock.millis() })
+                tccGenerator.processPacket(PacketInfo(createPacket(20)).apply {
+                    receivedTime = clock.millis()
+                })
             }
             "two TCC packets" {
                 should("be sent") {
@@ -177,16 +207,24 @@ class TccGeneratorNodeTest : ShouldSpec() {
         "when there is a packet reordering after a TCC packet is sent" {
             with(clock) {
                 repeat(9) { tccSeqNum ->
-                    tccGenerator.processPacket(PacketInfo(createPacket(tccSeqNum)).apply { receivedTime = clock.millis() })
+                    tccGenerator.processPacket(PacketInfo(createPacket(tccSeqNum)).apply {
+                        receivedTime = clock.millis()
+                    })
                     elapse(10.ms())
                 }
                 elapse(10.ms())
-                tccGenerator.processPacket(PacketInfo(createPacket(10)).apply { receivedTime = clock.millis() })
+                tccGenerator.processPacket(PacketInfo(createPacket(10)).apply {
+                    receivedTime = clock.millis()
+                })
 
-                tccGenerator.processPacket(PacketInfo(createPacket(9)).apply { receivedTime = clock.millis() - 10 })
+                tccGenerator.processPacket(PacketInfo(createPacket(9)).apply {
+                    receivedTime = clock.millis() - 10
+                })
 
                 elapse(100.ms())
-                tccGenerator.processPacket(PacketInfo(createPacket(20)).apply { receivedTime = clock.millis() })
+                tccGenerator.processPacket(PacketInfo(createPacket(20)).apply {
+                    receivedTime = clock.millis()
+                })
             }
             "two TCC packets" {
                 should("be sent") {
@@ -215,7 +253,8 @@ class TccGeneratorNodeTest : ShouldSpec() {
             timestamp = 456L
             ssrc = 1234L
         }
-        val ext = dummyPacket.addHeaderExtension(tccExtensionId, TccHeaderExtension.DATA_SIZE_BYTES)
+        val ext =
+            dummyPacket.addHeaderExtension(tccExtensionId, TccHeaderExtension.DATA_SIZE_BYTES)
         TccHeaderExtension.setSequenceNumber(ext, tccSeqNum)
 
         return dummyPacket

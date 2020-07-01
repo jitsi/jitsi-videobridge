@@ -17,7 +17,12 @@ internal abstract class FakeScheduledExecutorService : ScheduledExecutorService 
     private var jobs = JobsTimeline()
     val clock: FakeClock = FakeClock()
 
-    override fun scheduleAtFixedRate(command: Runnable, initialDelay: Long, period: Long, unit: TimeUnit): ScheduledFuture<*> {
+    override fun scheduleAtFixedRate(
+        command: Runnable,
+        initialDelay: Long,
+        period: Long,
+        unit: TimeUnit
+    ): ScheduledFuture<*> {
         val future: ScheduledFuture<Unit> = mock(stubOnly = true)
         val nextRunTime = clock.instant().plus(Duration.ofMillis(unit.toMillis(initialDelay)))
         val job = RecurringJob(command, nextRunTime, Duration.ofMillis(unit.toMillis(period)))

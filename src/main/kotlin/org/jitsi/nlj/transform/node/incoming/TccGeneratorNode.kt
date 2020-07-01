@@ -116,7 +116,10 @@ class TccGeneratorNode(
             val firstEntry = packetArrivalTimes.ceilingEntry(windowStartSeq) ?: return emptyList()
 
             val tccPackets = mutableListOf<RtcpFbTccPacket>()
-            var currentTccPacket = RtcpFbTccPacketBuilder(mediaSourceSsrc = mediaSsrc, feedbackPacketSeqNum = currTccSeqNum++)
+            var currentTccPacket = RtcpFbTccPacketBuilder(
+                mediaSourceSsrc = mediaSsrc,
+                feedbackPacketSeqNum = currTccSeqNum++
+            )
             currentTccPacket.SetBase(windowStartSeq, firstEntry.value * 1000)
 
             var nextSequenceNumber = windowStartSeq
@@ -139,7 +142,8 @@ class TccGeneratorNode(
             tccPackets.add(currentTccPacket.build())
             if (tccPackets.size > 1) {
                 numMultipleTccPackets++
-                logger.info("Sending TCC feedback in ${tccPackets.size} packets (${feedbackBlockPackets.size} media packets)")
+                logger.info("Sending TCC feedback in ${tccPackets.size} packets " +
+                    "(${feedbackBlockPackets.size} media packets)")
             }
             // The next window will start with the sequence number after the last one we included in the previous
             // feedback

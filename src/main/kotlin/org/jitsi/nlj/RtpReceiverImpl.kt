@@ -94,8 +94,12 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val logger = createChildLogger(parentLogger)
     private var running: Boolean = true
     private val inputTreeRoot: Node
-    private val incomingPacketQueue =
-            PacketInfoQueue("rtp-receiver-incoming-packet-queue", executor, this::handleIncomingPacket, Config.queueSize())
+    private val incomingPacketQueue = PacketInfoQueue(
+            "rtp-receiver-incoming-packet-queue",
+            executor,
+            this::handleIncomingPacket,
+            Config.queueSize()
+        )
     private val srtpDecryptWrapper = SrtpDecryptNode()
     private val srtcpDecryptWrapper = SrtcpDecryptNode()
     private val tccGenerator = TccGeneratorNode(rtcpSender, streamInformationStore, logger)

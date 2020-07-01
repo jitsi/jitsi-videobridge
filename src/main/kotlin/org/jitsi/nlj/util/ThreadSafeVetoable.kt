@@ -23,8 +23,10 @@ import kotlin.reflect.KProperty
 /**
  * Same as [kotlin.properties.Delegates.vetoable], but thread safe
  */
-public inline fun <T> threadSafeVetoable(initialValue: T, crossinline onChange: (property: KProperty<*>, oldValue: T, newValue: T) -> Boolean):
-    ReadWriteProperty<Any?, T> = object : ObservableProperty<T>(initialValue) {
+public inline fun <T> threadSafeVetoable(
+    initialValue: T,
+    crossinline onChange: (property: KProperty<*>, oldValue: T, newValue: T) -> Boolean
+): ReadWriteProperty<Any?, T> = object : ObservableProperty<T>(initialValue) {
         private val lock = Any()
 
         override fun beforeChange(property: KProperty<*>, oldValue: T, newValue: T): Boolean =

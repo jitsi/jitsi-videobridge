@@ -50,7 +50,8 @@ class RemoteBandwidthEstimatorTest : ShouldSpec() {
         addRtpPayloadType(vp8PayloadType)
     }
 
-    private val remoteBandwidthEstimator = RemoteBandwidthEstimator(streamInformationStore, StdoutLogger(), clock = clock)
+    private val remoteBandwidthEstimator =
+        RemoteBandwidthEstimator(streamInformationStore, StdoutLogger(), clock = clock)
 
     init {
         "when REMB is not signaled" {
@@ -94,7 +95,8 @@ class RemoteBandwidthEstimatorTest : ShouldSpec() {
     private fun sendPackets(targetBitrate: Bandwidth = 1.mbps, duration: Duration = 15.seconds) {
         val rtpPacketGenerator = RtpPacketGenerator(targetBitrate, duration = duration, clock = clock)
         rtpPacketGenerator.generatePackets(ssrc = ssrc) {
-            val ext = it.packetAs<RtpPacket>().addHeaderExtension(astExtensionId, AbsSendTimeHeaderExtension.DATA_SIZE_BYTES)
+            val ext =
+                it.packetAs<RtpPacket>().addHeaderExtension(astExtensionId, AbsSendTimeHeaderExtension.DATA_SIZE_BYTES)
             AbsSendTimeHeaderExtension.setTime(ext, it.receivedTime * 1_000_000)
             remoteBandwidthEstimator.processPacket(it)
         }

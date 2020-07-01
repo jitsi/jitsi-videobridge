@@ -58,7 +58,8 @@ class RtxPacketTest : ShouldSpec() {
         "Removing the original sequence number" {
             should("work correctly") {
                 RtxPacket.removeOriginalSequenceNumber(rtxPacket)
-                val newPayload = ByteBuffer.wrap(rtxPacket.buffer, rtxPacket.payloadOffset, rtxPacket.payloadLength).slice()
+                val newPayload =
+                    ByteBuffer.wrap(rtxPacket.buffer, rtxPacket.payloadOffset, rtxPacket.payloadLength).slice()
                 newPayload should haveSameContentAs(ByteBuffer.wrap(payload))
             }
         }

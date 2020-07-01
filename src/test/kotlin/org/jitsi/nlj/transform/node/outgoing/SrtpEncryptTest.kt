@@ -67,7 +67,9 @@ internal class SrtpEncryptTest : ShouldSpec() {
                 should("result in all header fields being correct") {
                     println("original packet:\n${originalPacket.buffer.toHex()}")
                     println("packet after:\n${encryptedPacket.buffer.toHex()}")
-                    RtcpHeader.getPacketType(encryptedPacket.buffer, encryptedPacket.offset) shouldBe TransportLayerRtcpFbPacket.PT
+                    RtcpHeader.getPacketType(
+                        encryptedPacket.buffer, encryptedPacket.offset
+                    ) shouldBe TransportLayerRtcpFbPacket.PT
                 }
             }
         }

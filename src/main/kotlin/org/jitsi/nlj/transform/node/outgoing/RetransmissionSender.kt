@@ -64,8 +64,10 @@ class RetransmissionSender(
     override fun modify(packetInfo: PacketInfo): PacketInfo {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
         numRetransmissionsRequested++
-        val rtxPt = origPtToRtxPayloadType[rtpPacket.payloadType.toPositiveInt()] ?: return retransmitPlain(packetInfo)
-        val rtxSsrc = streamInformationStore.getRemoteSecondarySsrc(rtpPacket.ssrc, SsrcAssociationType.RTX) ?: return retransmitPlain(packetInfo)
+        val rtxPt = origPtToRtxPayloadType[rtpPacket.payloadType.toPositiveInt()]
+            ?: return retransmitPlain(packetInfo)
+        val rtxSsrc = streamInformationStore.getRemoteSecondarySsrc(rtpPacket.ssrc, SsrcAssociationType.RTX)
+            ?: return retransmitPlain(packetInfo)
 
         return retransmitRtx(packetInfo, rtxPt.pt.toPositiveInt(), rtxSsrc)
     }
@@ -107,7 +109,9 @@ class RetransmissionSender(
             addNumber("num_retransmissions_requested", numRetransmissionsRequested)
             addNumber("num_retransmissions_rtx_sent", numRetransmittedRtxPackets)
             addNumber("num_retransmissions_plain_sent", numRetransmittedPlainPackets)
-            addString("rtx_payload_types(orig -> rtx)", this@RetransmissionSender.origPtToRtxPayloadType.toString())
+            addString(
+                "rtx_payload_types(orig -> rtx)", this@RetransmissionSender.origPtToRtxPayloadType.toString()
+            )
         }
     }
 

@@ -41,7 +41,12 @@ private fun createStatPacketInfo(seqNum: Int, sentTime: Long, receivedTime: Long
     return StatPacketInfo(packetInfo, sentTime)
 }
 
-private fun createJitterPacketInfo(seqNum: Int, sentTime: Long, receivedTime: Long, expectedJitter: Double): JitterPacketInfo {
+private fun createJitterPacketInfo(
+    seqNum: Int,
+    sentTime: Long,
+    receivedTime: Long,
+    expectedJitter: Double
+): JitterPacketInfo {
     val statPacketInfo = createStatPacketInfo(seqNum, sentTime, receivedTime)
     return JitterPacketInfo(statPacketInfo, expectedJitter)
 }

@@ -138,12 +138,16 @@ class TransportCcEngine(
                                 numPacketsReportedAfterLost.getAndIncrement()
                             }
 
-                            val arrivalTimeInLocalClock = currArrivalTimestamp - Duration.between(localReferenceTime, remoteReferenceTime)
+                            val arrivalTimeInLocalClock =
+                                currArrivalTimestamp - Duration.between(localReferenceTime, remoteReferenceTime)
 
-                            /* TODO: BandwidthEstimator should have an API for "previously reported lost packet has arrived"
-                             * for the reportedLost case. */
+                            /* TODO: BandwidthEstimator should have an API for "previously reported lost packet
+                             *  has arrived" for the reportedLost case.
+                             */
                             bandwidthEstimator.processPacketArrival(
-                                now, packetDetail.packetSendTime, arrivalTimeInLocalClock, tccSeqNum, packetDetail.packetLength)
+                                now, packetDetail.packetSendTime, arrivalTimeInLocalClock,
+                                tccSeqNum, packetDetail.packetLength
+                            )
                             packetDetail.state = PacketDetailState.reportedReceived
                         }
 

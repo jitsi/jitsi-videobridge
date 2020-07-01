@@ -61,8 +61,13 @@ class RtpPacketExtensionsKtTest : ShouldSpec() {
                     rtpPacket.sequenceNumber shouldBe 5807
                     rtpPacket.timestamp shouldBe 1710483662L
 
-                    val newPayload = ByteBuffer.wrap(rtpPacket.buffer, rtpPacket.payloadOffset, rtpPacket.payloadLength).slice()
-                    newPayload should haveSameContentAs(byteBufferOf(0x01, 0x02) + ByteBuffer.wrap(payload))
+                    val newPayload = ByteBuffer.wrap(
+                        rtpPacket.buffer,
+                        rtpPacket.payloadOffset,
+                        rtpPacket.payloadLength
+                    ).slice()
+                    newPayload should haveSameContentAs(
+                        byteBufferOf(0x01, 0x02) + ByteBuffer.wrap(payload))
                 }
             }
         }

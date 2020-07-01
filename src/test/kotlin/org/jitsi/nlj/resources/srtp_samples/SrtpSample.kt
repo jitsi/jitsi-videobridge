@@ -91,7 +91,8 @@ class SrtpSample {
             0x80, 0x00, 0x00, 0x01, 0x3C, 0xB4, 0xC8, 0xE6,
             0xB8, 0x19, 0xFB, 0xEE, 0xCE, 0xA2
         )
-        val incomingEncryptedRtcpPacket = UnparsedPacket(incomingEncryptedRtcpData, 0, incomingEncryptedRtcpData.size)
+        val incomingEncryptedRtcpPacket =
+            UnparsedPacket(incomingEncryptedRtcpData, 0, incomingEncryptedRtcpData.size)
 
         val expectedDecryptedRtcpPacket = UnparsedPacket(org.jitsi.rtp.extensions.bytearray.byteArrayOf(
             0x80, 0xC8, 0x00, 0x06, 0x75, 0x6D, 0x56, 0x40,
@@ -114,7 +115,8 @@ class SrtpSample {
             0x3A, 0x18, 0x98, 0xEE, 0x62, 0xCB, 0x60, 0xFF,
             0x6C, 0x1B, 0x29, 0x00
         )
-        val outgoingUnencryptedRtpPacket = RtpPacket(outgoingUnencryptedRtpData, 0, outgoingUnencryptedRtpData.size)
+        val outgoingUnencryptedRtpPacket =
+            RtpPacket(outgoingUnencryptedRtpData, 0, outgoingUnencryptedRtpData.size)
 
         val expectedEncryptedRtpData = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
             0x90, 0xEF, 0x36, 0xD6, 0x6C, 0x25, 0xF2, 0x81,
@@ -136,7 +138,8 @@ class SrtpSample {
             0x56, 0x29, 0x97, 0x7A, 0x00, 0x01, 0x00, 0x01,
             0x95, 0xBE, 0x64, 0x00, 0xD0, 0x00, 0x00, 0x00
         )
-        val outgoingUnencryptedRtcpPacket = RtcpPacket.parse(outgoingUnencryptedRtcpData, 0, outgoingUnencryptedRtcpData.size)
+        val outgoingUnencryptedRtcpPacket =
+            RtcpPacket.parse(outgoingUnencryptedRtcpData, 0, outgoingUnencryptedRtcpData.size)
 
         val expectedEncryptedRtcpPacket = UnparsedPacket(org.jitsi.rtp.extensions.bytearray.byteArrayOf(
             0x8F, 0xCD, 0x00, 0x05, 0xE7, 0x46, 0x52, 0x23,
