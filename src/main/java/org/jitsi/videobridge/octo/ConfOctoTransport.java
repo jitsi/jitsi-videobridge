@@ -85,10 +85,10 @@ public class ConfOctoTransport
     private final BridgeOctoTransport bridgeOctoTransport;
 
     /**
-     * The list of remote Octo targets.
+     * The IDs of the remote bridges, mapped to their address.
      */
-    private Set<SocketAddress> targets
-            = Collections.unmodifiableSet(new HashSet<>());
+    private Map<String, SocketAddress> remoteBridges
+            = Collections.unmodifiableMap(new HashMap<>());
 
     /**
      * Handlers for incoming Octo media packets, looked up by the
@@ -125,6 +125,11 @@ public class ConfOctoTransport
     private final AtomicBoolean running = new AtomicBoolean(true);
 
     /**
+     * The ID of this bridge in this octo conference.
+     */
+    private final String bridgeId;
+
+    /**
      * Initializes a new {@link ConfOctoTransport} instance.
      * @param conference the conference.
      */
@@ -155,6 +160,8 @@ public class ConfOctoTransport
             throw new IllegalStateException("Couldn't get OctoTransport");
         }
 
+        bridgeId = bridgeOctoTransport.getRelayId();
+
         octoEndpoints = new OctoEndpoints(conference);
         octoTransceiver = new OctoTransceiver("tentacle-" + conferenceId, logger);
         octoTransceiver.setIncomingPacketHandler(conference::handleIncomingPacket);
@@ -175,6 +182,11 @@ public class ConfOctoTransport
         });
     }
 
+    public String getBridgeId()
+    {
+        return bridgeId;
+    }
+
     /**
      * Adds a {@link PayloadType}
      */
@@ -188,10 +200,10 @@ public class ConfOctoTransport
 
     /**
      * Sets the list of remote relays to send packets to.
-     * @param relays the list of relay IDs, which are converted to addresses
+     * @param newRelayIds the list of relay IDs, which are converted to addresses
      * using the logic in {@link OctoUtils}.
      */
-    public void setRelays(Collection<String> relays)
+    public void setRelays(Collection<String> newRelayIds)
     {
         if (!running.get())
         {
@@ -201,17 +213,37 @@ public class ConfOctoTransport
             bridgeOctoTransport,
             "Octo requested but not configured");
 
-        Set<SocketAddress> socketAddresses = new HashSet<>();
-        for (String relay : relays)
+        HashMap<String, SocketAddress> newRelays = new HashMap<>();
+        for (String relayId : newRelayIds)
         {
-            SocketAddress socketAddress = OctoUtils.Companion.relayIdToSocketAddress(relay);
+            SocketAddress socketAddress = OctoUtils.Companion.relayIdToSocketAddress(relayId);
             if (socketAddress != null)
             {
-                socketAddresses.add(socketAddress);
+                newRelays.put(relayId, socketAddress);
             }
         }
 
-        setTargets(socketAddresses);
+        if (!remoteBridges.equals(newRelays))
+        {
+            remoteBridges.keySet().stream()
+                    .filter(r -> !newRelays.containsKey(r))
+                    .forEach(this::remoteRelayRemoved);
+
+            if (newRelays.isEmpty())
+            {
+                bridgeOctoTransport.removeHandler(conferenceId, this);
+            }
+            else if(remoteBridges.isEmpty())
+            {
+                bridgeOctoTransport.addHandler(conferenceId, this);
+            }
+            remoteBridges = Collections.unmodifiableMap(newRelays);
+        }
+    }
+
+    private void remoteRelayRemoved(String relayId)
+    {
+        conference.getLocalEndpoints().forEach(e -> e.removeReceiver(relayId));
     }
 
     /**
@@ -224,7 +256,7 @@ public class ConfOctoTransport
         // itself, and we have targets).
         return running.get() &&
             !(packetInfo instanceof OctoPacketInfo) &&
-            !targets.isEmpty();
+            !remoteBridges.isEmpty();
     }
 
     @Override
@@ -265,7 +297,7 @@ public class ConfOctoTransport
             packetInfo.getPacket().getBuffer(),
             packetInfo.getPacket().getOffset(),
             packetInfo.getPacket().getLength(),
-            targets,
+            remoteBridges.values(),
             conferenceId,
             packetInfo.getEndpointId()
         );
@@ -388,27 +420,6 @@ public class ConfOctoTransport
     }
 
     /**
-     * Sets the list of remote addresses to send Octo packets to.
-     * @param targets the list of addresses.
-     */
-    private void setTargets(Set<SocketAddress> targets)
-    {
-        if (!targets.equals(this.targets))
-        {
-            this.targets = Collections.unmodifiableSet(targets);
-
-            if (targets.isEmpty())
-            {
-                bridgeOctoTransport.removeHandler(conferenceId, this);
-            }
-            else
-            {
-                bridgeOctoTransport.addHandler(conferenceId, this);
-            }
-        }
-    }
-
-    /**
      * Adds an RTP header extension.
      * @param rtpExtension the {@link RtpExtension} to add
      */
@@ -430,7 +441,7 @@ public class ConfOctoTransport
         if (running.compareAndSet(true, false))
         {
             logger.info("Expiring");
-            setTargets(Collections.emptySet());
+            setRelays(Collections.emptySet());
             octoEndpoints.setEndpoints(Collections.emptySet());
             outgoingPacketQueues.values().forEach(PacketInfoQueue::close);
             outgoingPacketQueues.clear();
@@ -450,7 +461,7 @@ public class ConfOctoTransport
 
         bridgeOctoTransport.sendString(
             message.toJson(),
-            targets,
+            remoteBridges.values(),
             conferenceId
         );
     }
@@ -499,7 +510,7 @@ public class ConfOctoTransport
         debugState.put("octoEndpoints", octoEndpoints.getDebugState());
         debugState.putAll(stats.toJson());
         debugState.put("bridgeOctoTransport", bridgeOctoTransport.getStatsJson());
-        debugState.put("targets", targets.toString());
+        debugState.put("remoteRelays", remoteBridges);
 
         return debugState;
     }
@@ -562,7 +573,8 @@ public class ConfOctoTransport
         }
     }
 
-    interface IncomingOctoEpPacketHandler {
+    interface IncomingOctoEpPacketHandler
+    {
         void handleIncomingPacket(@NotNull OctoPacketInfo packetInfo);
     }
 }

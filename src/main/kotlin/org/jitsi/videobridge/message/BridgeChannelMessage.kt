@@ -53,7 +53,9 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = DominantSpeakerMessage::class, name = DominantSpeakerMessage.TYPE),
     JsonSubTypes.Type(value = EndpointConnectionStatusMessage::class, name = EndpointConnectionStatusMessage.TYPE),
     JsonSubTypes.Type(value = ForwardedEndpointsMessage::class, name = ForwardedEndpointsMessage.TYPE),
-    JsonSubTypes.Type(value = SenderVideoConstraintsMessage::class, name = SenderVideoConstraintsMessage.TYPE)
+    JsonSubTypes.Type(value = SenderVideoConstraintsMessage::class, name = SenderVideoConstraintsMessage.TYPE),
+    JsonSubTypes.Type(value = AddReceiverMessage::class, name = AddReceiverMessage.TYPE),
+    JsonSubTypes.Type(value = RemoveReceiverMessage::class, name = RemoveReceiverMessage.TYPE)
 )
 // The type is included as colibriClass (as we want) by the annotation above.
 @JsonIgnoreProperties("type")
@@ -95,6 +97,8 @@ open class MessageHandler {
             is EndpointConnectionStatusMessage -> endpointConnectionStatus(message)
             is ForwardedEndpointsMessage -> forwardedEndpoints(message)
             is SenderVideoConstraintsMessage -> senderVideoConstraints(message)
+            is AddReceiverMessage -> addReceiver(message)
+            is RemoveReceiverMessage -> removeReceiver(message)
         }
     }
 
@@ -118,6 +122,8 @@ open class MessageHandler {
     open fun endpointConnectionStatus(message: EndpointConnectionStatusMessage) = unhandledMessageReturnNull(message)
     open fun forwardedEndpoints(message: ForwardedEndpointsMessage) = unhandledMessageReturnNull(message)
     open fun senderVideoConstraints(message: SenderVideoConstraintsMessage) = unhandledMessageReturnNull(message)
+    open fun addReceiver(message: AddReceiverMessage) = unhandledMessageReturnNull(message)
+    open fun removeReceiver(message: RemoveReceiverMessage) = unhandledMessageReturnNull(message)
 
     fun getReceivedCounts() = receivedCounts.mapValues { it.value.get() }
 }
@@ -328,5 +334,32 @@ class ForwardedEndpointsMessage(
 class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : BridgeChannelMessage(TYPE) {
     companion object {
         const val TYPE = "SenderVideoConstraints"
+    }
+}
+
+/**
+ * A message sent from one bridge to another (via Octo) indicating that the first bridge wishes to receive video streams
+ * from the specified endpoint with the specified constraints.
+ */
+class AddReceiverMessage(
+    val bridgeId: String,
+    val endpointId: String,
+    val videoConstraints: VideoConstraints
+) : BridgeChannelMessage(TYPE) {
+    companion object {
+        const val TYPE = "AddReceiver"
+    }
+}
+
+/**
+ * A message sent from one bridge to another (via Octo) indicating that it no longer wishes to receive video streams
+ * from the specified endpoint.
+ */
+class RemoveReceiverMessage(
+    val bridgeId: String,
+    val endpointId: String
+) : BridgeChannelMessage(TYPE) {
+    companion object {
+        const val TYPE = "RemoveReceiver"
     }
 }

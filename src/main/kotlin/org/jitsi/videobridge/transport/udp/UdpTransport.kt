@@ -116,7 +116,7 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
      * Send data out via this transport to [remoteAddresses]. Does not take ownership
      * of the given buffer.
      */
-    fun send(data: ByteArray, off: Int, length: Int, remoteAddresses: Set<SocketAddress>) {
+    fun send(data: ByteArray, off: Int, length: Int, remoteAddresses: Collection<SocketAddress>) {
         remoteAddresses.forEach { send(data, off, length, it) }
     }
 

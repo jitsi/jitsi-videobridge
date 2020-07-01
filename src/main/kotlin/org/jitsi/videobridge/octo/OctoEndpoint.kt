@@ -28,7 +28,9 @@ import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.rest.root.colibri.debug.EndpointDebugFeatures
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.videobridge.VideoConstraints
+import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.message.BridgeChannelMessage
+import org.jitsi.videobridge.message.RemoveReceiverMessage
 
 /**
  * Represents an endpoint in a conference, which is connected to another
@@ -97,8 +99,15 @@ class OctoEndpoint(
         return transceiver.mediaSources
     }
 
-    override fun maxReceiverVideoConstraintsChanged(maxVideoConstraints: VideoConstraints?) {
-        // NO-OP
+    /**
+     * This [OctoEndpoint] aggregates the constraints from the local endpoints on this bridge, and propagates the max
+     * constraints to the bridge that is local for the sending endpoint via an [AddReceiverMessage].
+     */
+    override fun maxReceiverVideoConstraintsChanged(maxVideoConstraints: VideoConstraints) {
+        conference.tentacle.sendMessage(AddReceiverMessage(
+            conference.tentacle.bridgeId,
+            id,
+            maxVideoConstraints))
     }
 
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
@@ -124,6 +133,7 @@ class OctoEndpoint(
             return
         }
         super.expire()
+        conference.tentacle.sendMessage(RemoveReceiverMessage(conference.tentacle.bridgeId, id))
         transceiver.stop()
         logger.debug { transceiver.getNodeStats().prettyPrint() }
         conference.tentacle.removeHandler(id, this)
