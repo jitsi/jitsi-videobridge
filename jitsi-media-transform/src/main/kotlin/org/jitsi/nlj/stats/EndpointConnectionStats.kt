@@ -55,7 +55,8 @@ class EndpointConnectionStats(
 
     // Per-SSRC, maps the compacted NTP timestamp found in an SR SenderInfo to
     //  the clock time at which it was transmitted
-    private val srSentTimes: MutableMap<SsrcAndTimestamp, Instant> = Collections.synchronizedMap(LRUCache(MAX_SR_TIMESTAMP_HISTORY))
+    private val srSentTimes: MutableMap<SsrcAndTimestamp, Instant> =
+        Collections.synchronizedMap(LRUCache(MAX_SR_TIMESTAMP_HISTORY))
     private val logger = createChildLogger(parentLogger)
 
     /**
@@ -91,8 +92,10 @@ class EndpointConnectionStats(
     override fun rtcpPacketSent(packet: RtcpPacket) {
         when (packet) {
             is RtcpSrPacket -> {
-                logger.cdebug { "Tracking sent SR packet with compacted timestamp ${packet.senderInfo.compactedNtpTimestamp}" }
-                srSentTimes[SsrcAndTimestamp(packet.senderSsrc, packet.senderInfo.compactedNtpTimestamp)] = clock.instant()
+                logger.cdebug { "Tracking sent SR packet with compacted timestamp " +
+                    "${packet.senderInfo.compactedNtpTimestamp}" }
+                val entry = SsrcAndTimestamp(packet.senderSsrc, packet.senderInfo.compactedNtpTimestamp)
+                srSentTimes[entry] = clock.instant()
             }
         }
     }
@@ -112,11 +115,14 @@ class EndpointConnectionStats(
             rtt = (Duration.between(srSentTime, receivedTime) - remoteProcessingDelay).toDoubleMillis()
             if (rtt > Duration.ofSeconds(7).toMillis()) {
                 logger.warn("Suspiciously high rtt value: $rtt ms, remote processing delay was " +
-                    "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, received time was $receivedTime")
+                    "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, " +
+                    "received time was $receivedTime")
             } else if (rtt < -1.0) {
-                // Allow some small slop here, since receivedTime and srSentTime are only accurate to the nearest millisecond.
+                // Allow some small slop here, since receivedTime and srSentTime are only accurate to the nearest
+                // millisecond.
                 logger.warn("Negative rtt value: $rtt ms, remote processing delay was " +
-                    "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, received time was $receivedTime")
+                    "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, " +
+                    "received time was $receivedTime")
             }
             endpointConnectionStatsListeners.forEach { it.onRttUpdate(rtt) }
         } ?: run {

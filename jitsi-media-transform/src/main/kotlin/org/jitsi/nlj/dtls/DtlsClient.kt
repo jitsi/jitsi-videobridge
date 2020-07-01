@@ -44,7 +44,11 @@ class DtlsClient(
         try {
             return dtlsClientProtocol.connect(this.tlsClient, datagramTransport).also {
                 logger.cdebug { "DTLS handshake finished" }
-                handshakeCompleteHandler(tlsClient.chosenSrtpProtectionProfile, TlsRole.CLIENT, tlsClient.srtpKeyingMaterial)
+                handshakeCompleteHandler(
+                    tlsClient.chosenSrtpProtectionProfile,
+                    TlsRole.CLIENT,
+                    tlsClient.srtpKeyingMaterial
+                )
             }
         } catch (e: Exception) {
             logger.cerror { "Error during DTLS connection: $e" }

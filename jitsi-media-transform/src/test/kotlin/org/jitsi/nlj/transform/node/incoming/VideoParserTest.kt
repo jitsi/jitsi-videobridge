@@ -41,7 +41,8 @@ class VideoParserTest : ShouldSpec() {
 
     private val streamInformationStore = object : ReadOnlyStreamInformationStore {
         override val rtpExtensions: List<RtpExtension> = mutableListOf()
-        override val rtpPayloadTypes: Map<Byte, PayloadType> = mutableMapOf(100.toByte() to Vp8PayloadType(100.toByte()))
+        override val rtpPayloadTypes: Map<Byte, PayloadType> =
+            mutableMapOf(100.toByte() to Vp8PayloadType(100.toByte()))
         override var supportsFir: Boolean = true
         override var supportsPli: Boolean = true
         override var supportsRemb: Boolean = true

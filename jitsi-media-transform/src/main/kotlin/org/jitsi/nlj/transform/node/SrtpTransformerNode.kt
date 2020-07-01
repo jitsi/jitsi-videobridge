@@ -39,7 +39,10 @@ abstract class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode
      * We pass it as an arg (rather than referencing it from the object) so Kotlin
      * knows it's non-null here.
      */
-    private fun transformList(packetInfos: List<PacketInfo>, transformer: AbstractSrtpTransformer<*>): List<PacketInfo> {
+    private fun transformList(
+        packetInfos: List<PacketInfo>,
+        transformer: AbstractSrtpTransformer<*>
+    ): List<PacketInfo> {
         val transformedPackets = mutableListOf<PacketInfo>()
         packetInfos.forEach { packetInfo ->
             val err = transformer.transform(packetInfo)

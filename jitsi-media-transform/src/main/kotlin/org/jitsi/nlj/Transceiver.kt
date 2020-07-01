@@ -113,7 +113,8 @@ class Transceiver(
             id,
             { rtcpPacket ->
                 if (rtcpPacket.length >= 1500) {
-                    logger.warn("Sending large locally-generated RTCP packet of size ${rtcpPacket.length}, first packet of type ${rtcpPacket.packetType}.")
+                    logger.warn("Sending large locally-generated RTCP packet of size ${rtcpPacket.length}, " +
+                        "first packet of type ${rtcpPacket.packetType}.")
                 }
                 rtpSender.processPacket(PacketInfo(rtcpPacket))
             },

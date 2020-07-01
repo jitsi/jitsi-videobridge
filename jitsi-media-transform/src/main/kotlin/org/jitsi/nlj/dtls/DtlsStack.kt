@@ -118,7 +118,9 @@ class DtlsStack(
         role = DtlsServer(
             datagramTransport,
             certificateInfo,
-            { chosenSrtpProfile, tlsRole, keyingMaterial -> eventHandler?.handshakeComplete(chosenSrtpProfile, tlsRole, keyingMaterial) },
+            { chosenSrtpProfile, tlsRole, keyingMaterial ->
+                eventHandler?.handshakeComplete(chosenSrtpProfile, tlsRole, keyingMaterial)
+            },
             this::verifyAndValidateRemoteCertificate,
             logger
         )
@@ -129,7 +131,9 @@ class DtlsStack(
         role = DtlsClient(
             datagramTransport,
             certificateInfo,
-            { chosenSrtpProfile, tlsRole, keyingMaterial -> eventHandler?.handshakeComplete(chosenSrtpProfile, tlsRole, keyingMaterial) },
+            { chosenSrtpProfile, tlsRole, keyingMaterial ->
+                eventHandler?.handshakeComplete(chosenSrtpProfile, tlsRole, keyingMaterial)
+            },
             this::verifyAndValidateRemoteCertificate,
             logger
         )

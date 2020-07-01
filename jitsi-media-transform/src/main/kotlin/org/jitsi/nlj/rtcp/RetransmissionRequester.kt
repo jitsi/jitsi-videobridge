@@ -115,9 +115,9 @@ class RetransmissionRequester(
                     }
                     else -> { // diff > maxMissingSeqNums
                         logger.cwarn {
-                            "$ssrc large jump in sequence numbers detected (highest received was $highestReceivedSeqNum," +
-                                    " current is $seqNum, jump of ${highestReceivedSeqNum numPacketsTo seqNum})" +
-                                    ", not requesting retransmissions"
+                            "$ssrc large jump in sequence numbers detected (highest received was " +
+                                "$highestReceivedSeqNum, current is $seqNum, jump of " +
+                                "${highestReceivedSeqNum numPacketsTo seqNum}) , not requesting retransmissions"
                         }
                         highestReceivedSeqNum = seqNum
                         // Reset and clear any pending work to do for this source
@@ -156,7 +156,10 @@ class RetransmissionRequester(
                         // re-schedule the task
                         currentTaskHandle?.cancel(false)
                         currentTaskHandle = scheduler.schedule(
-                                ::doWork, Duration.between(clock.instant(), newWorkDueTs).toMillis(), TimeUnit.MILLISECONDS)
+                                ::doWork,
+                            Duration.between(clock.instant(), newWorkDueTs).toMillis(),
+                            TimeUnit.MILLISECONDS
+                        )
                     }
                 }
             }
@@ -183,7 +186,8 @@ class RetransmissionRequester(
                         request.requested(timestamp)
                         if (request.numTimesRequested == MAX_REQUESTS) {
                             logger.cdebug { "$ssrc generated the last NACK for seq num ${request.seqNum}, " +
-                                    "time since the first request = ${Duration.between(request.firstRequestTimestamp, timestamp)}" }
+                                "time since the first request = " +
+                                "${Duration.between(request.firstRequestTimestamp, timestamp)}" }
 
                             requests.remove(nackedSeqNum)
                         }
