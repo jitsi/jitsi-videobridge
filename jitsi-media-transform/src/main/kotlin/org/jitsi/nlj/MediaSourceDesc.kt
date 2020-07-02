@@ -98,7 +98,7 @@ class MediaSourceDesc
      * at or below the specified index.
      */
     fun getBitrateBps(nowMs: Long, idx: Int): Long {
-        for (entry in layersByIndex.tailMap(idx, true).descendingMap()) {
+        for (entry in layersByIndex.headMap(idx, true).descendingMap()) {
             val bps = entry.value.getBitrateBps(nowMs)
             if (bps > 0) {
                 return bps
