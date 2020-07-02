@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import com.google.common.collect.*;
 import org.jitsi.nlj.format.*;
@@ -22,7 +23,6 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.cc.config.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.rest.root.colibri.debug.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -409,38 +409,42 @@ public abstract class AbstractEndpoint
      * needs to receive from this endpoint
      */
     protected abstract void
-    maxReceiverVideoConstraintsChanged(VideoConstraints maxVideoConstraints);
+    maxReceiverVideoConstraintsChanged(@NotNull VideoConstraints maxVideoConstraints);
 
     /**
-     * Notifies this instance that the specified endpoint wants to receive
+     * Notifies this instance that a specified received wants to receive
      * the specified video constraints from the endpoint attached to this
      * instance (the sender).
      *
-     * @param endpointId the id that specifies the receiver endpoint
+     * The receiver can be either another endpoint, or a remote bridge.
+     *
+     * @param receiverId the id that specifies the receiver endpoint
      * @param newVideoConstraints the video constraints that the receiver
      * wishes to receive.
      */
-    public void addReceiver(String endpointId, VideoConstraints newVideoConstraints)
+    public void addReceiver(String receiverId, VideoConstraints newVideoConstraints)
     {
-        VideoConstraints oldVideoConstraints = receiverVideoConstraintsMap.put(endpointId, newVideoConstraints);
-        if (oldVideoConstraints == null
-            || !oldVideoConstraints.equals(newVideoConstraints))
+        VideoConstraints oldVideoConstraints = receiverVideoConstraintsMap.put(receiverId, newVideoConstraints);
+        if (oldVideoConstraints == null || !oldVideoConstraints.equals(newVideoConstraints))
         {
+            logger.debug(
+                () -> "Changed receiver constraints: " + receiverId + ": " + newVideoConstraints.getIdealHeight());
             receiverVideoConstraintsChanged(receiverVideoConstraintsMap.values());
         }
     }
 
     /**
-     * Notifies this instance that the specified endpoint no longer wants or
+     * Notifies this instance that the specified receiver no longer wants or
      * needs to receive anything from the endpoint attached to this
      * instance (the sender).
      *
-     * @param endpointId the id that specifies the receiver endpoint
+     * @param receiverId the id that specifies the receiver endpoint
      */
-    public void removeReceiver(String endpointId)
+    public void removeReceiver(String receiverId)
     {
-        if (receiverVideoConstraintsMap.remove(endpointId) != null)
+        if (receiverVideoConstraintsMap.remove(receiverId) != null)
         {
+            logger.debug(() -> "Removed receiver " + receiverId);
             receiverVideoConstraintsChanged(receiverVideoConstraintsMap.values());
         }
     }

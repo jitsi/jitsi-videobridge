@@ -73,7 +73,7 @@ class OctoRelayService : BundleActivator {
         }
         // Wire the data going out of OctoTransport to UdpTransport
         bridgeOctoTransport!!.outgoingDataHandler = object : BridgeOctoTransport.OutgoingOctoPacketHandler {
-            override fun sendData(data: ByteArray, off: Int, length: Int, remoteAddresses: Set<SocketAddress>) {
+            override fun sendData(data: ByteArray, off: Int, length: Int, remoteAddresses: Collection<SocketAddress>) {
                 udpTransport!!.send(data, off, length, remoteAddresses)
             }
         }

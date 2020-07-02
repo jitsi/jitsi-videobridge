@@ -668,7 +668,7 @@ public class Endpoint
     }
 
     @Override
-    protected void maxReceiverVideoConstraintsChanged(VideoConstraints maxVideoConstraints)
+    protected void maxReceiverVideoConstraintsChanged(@NotNull VideoConstraints maxVideoConstraints)
     {
         // Note that it's up to the client to respect these constraints.
         SenderVideoConstraintsMessage senderVideoConstraintsMessage

@@ -15,12 +15,15 @@
  */
 package org.jitsi.videobridge.octo;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.message.*;
 
 /**
  * Extends {@link AbstractEndpointMessageTransport} for the purposes of Octo.
+ * This handles incoming messages for a whole conference, and not for a
+ * specific {@link OctoEndpoint}.
  *
  * Most {@link MessageHandler} methods are not overridden and result in a
  * warning being logged, because we don't expect to received them via the Octo
@@ -82,4 +85,43 @@ class OctoEndpointMessageTransport
     {
         logger.warn("Received a message with an unexpected type: " + message.getType());
     }
+
+    /**
+     * This message indicates that a remote bridge wishes to receive video
+     * with certain constraints for a specific endpoin.
+     * @param message
+     * @return
+     */
+    @Nullable
+    @Override
+    public BridgeChannelMessage addReceiver(@NotNull AddReceiverMessage message)
+    {
+        Conference conference = octoEndpoints.getConference();
+        AbstractEndpoint endpoint = conference.getEndpoint(message.getEndpointId());
+        // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge. Handle
+        // only those that reference an endpoint local to this bridge.
+        if (endpoint instanceof Endpoint)
+        {
+            endpoint.addReceiver(message.getBridgeId(), message.getVideoConstraints());
+        }
+
+        return null;
+    }
+
+    @Nullable
+    @Override
+    public BridgeChannelMessage removeReceiver(@NotNull RemoveReceiverMessage message)
+    {
+        Conference conference = octoEndpoints.getConference();
+        AbstractEndpoint endpoint = conference.getEndpoint(message.getEndpointId());
+        // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge. Handle
+        // only those that reference an endpoint local to this bridge.
+        if (endpoint instanceof Endpoint)
+        {
+            endpoint.removeReceiver(message.getBridgeId());
+        }
+
+        return null;
+    }
+
 }

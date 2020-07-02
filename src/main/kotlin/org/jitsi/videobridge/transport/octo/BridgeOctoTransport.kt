@@ -171,7 +171,7 @@ class BridgeOctoTransport(
         buf: ByteArray,
         off: Int,
         len: Int,
-        targets: Set<SocketAddress>,
+        targets: Collection<SocketAddress>,
         confId: Long,
         sourceEpId: String? = null
     ) {
@@ -179,7 +179,7 @@ class BridgeOctoTransport(
     }
 
     @Suppress("DEPRECATION")
-    fun sendString(msg: String, targets: Set<SocketAddress>, confId: Long) {
+    fun sendString(msg: String, targets: Collection<SocketAddress>, confId: Long) {
         val msgData = msg.toByteArray(StandardCharsets.UTF_8)
         sendData(msgData, 0, msgData.size, targets, confId, MediaType.DATA, null)
     }
@@ -188,7 +188,7 @@ class BridgeOctoTransport(
         buf: ByteArray,
         off: Int,
         len: Int,
-        targets: Set<SocketAddress>,
+        targets: Collection<SocketAddress>,
         confId: Long,
         mediaType: MediaType,
         sourceEpId: String? = null
@@ -340,6 +340,6 @@ class BridgeOctoTransport(
     }
 
     interface OutgoingOctoPacketHandler {
-        fun sendData(data: ByteArray, off: Int, length: Int, remoteAddresses: Set<SocketAddress>)
+        fun sendData(data: ByteArray, off: Int, length: Int, remoteAddresses: Collection<SocketAddress>)
     }
 }
