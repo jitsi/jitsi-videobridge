@@ -21,28 +21,75 @@ import org.jitsi.utils.logging2.*;
 import org.json.simple.*;
 
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 
 public class TaskPools
 {
     private static final Logger classLogger = new LoggerImpl(TaskPools.class.getName());
+
+    /**
+     * Count and log exceptions from the IO pool.
+     */
+    private static final ExceptionLogger IO_POOL_EXCEPTION_LOGGER = new ExceptionLogger("Global IO pool");
+
     /**
      * A global executor service which can be used for non-CPU-intensive tasks.
      */
     public static final ExecutorService IO_POOL =
-            Executors.newCachedThreadPool(new NameableThreadFactory("Global IO pool"));
+        new ThreadPoolExecutor(
+                0, Integer.MAX_VALUE,
+                60L, TimeUnit.SECONDS,
+                new SynchronousQueue<>(),
+                new NameableThreadFactory("Global IO pool"))
+        {
+            @Override
+            protected void afterExecute(Runnable runnable, Throwable t)
+            {
+                super.afterExecute(runnable, t);
+                IO_POOL_EXCEPTION_LOGGER.checkForExceptionAndLog(runnable, t);
+            }
+        };
+
+    /**
+     * Count and log exceptions from the CPU pool.
+     */
+    private static final ExceptionLogger CPU_POOL_EXCEPTION_LOGGER = new ExceptionLogger("CPU pool");
 
     /**
      * An executor to be used for CPU-intensive tasks.  NOTE that tasks which block should
      * NOT use this pool!
      */
     public static final ExecutorService CPU_POOL =
-            Executors.newFixedThreadPool(
-                    Runtime.getRuntime().availableProcessors(),
-                    new NameableThreadFactory("Global CPU pool")
-            );
+        new ThreadPoolExecutor(
+                Runtime.getRuntime().availableProcessors(),
+                Runtime.getRuntime().availableProcessors(),
+                0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>())
+        {
+            @Override
+            protected void afterExecute(Runnable runnable, Throwable t)
+            {
+                super.afterExecute(runnable, t);
+                CPU_POOL_EXCEPTION_LOGGER.checkForExceptionAndLog(runnable, t);
+            }
+        };
+
+    /**
+     * Count and log exceptions from the scheduled executor.
+     */
+    private static final ExceptionLogger SCHEDULED_POOL_EXCEPTION_LOGGER = new ExceptionLogger("Global scheduled pool");
 
     public static final ScheduledExecutorService SCHEDULED_POOL =
-            Executors.newSingleThreadScheduledExecutor(new NameableThreadFactory("Global scheduled pool"));
+        new ScheduledThreadPoolExecutor(1, new NameableThreadFactory("Global scheduled pool"))
+        {
+            @Override
+            protected void afterExecute(Runnable runnable, Throwable t)
+            {
+                super.afterExecute(runnable, t);
+                SCHEDULED_POOL_EXCEPTION_LOGGER.checkForExceptionAndLog(runnable, t);
+            }
+
+        };
 
     @SuppressWarnings("unchecked")
     public static JSONObject getStatsJson(ExecutorService es)
@@ -69,17 +116,79 @@ public class TaskPools
     @SuppressWarnings("unchecked")
     public static JSONObject getStatsJson()
     {
-        JSONObject debugState = new JSONObject();
+        JSONObject stats = new JSONObject();
 
-        debugState.put("IO_POOL", getStatsJson(IO_POOL));
-        debugState.put("CPU_POOL", getStatsJson(CPU_POOL));
+        JSONObject ioPoolStats = getStatsJson(IO_POOL);
+        ioPoolStats.put("num_exceptions", IO_POOL_EXCEPTION_LOGGER.numExceptions.get());
+        stats.put("IO_POOL", ioPoolStats);
 
-        return debugState;
+        JSONObject cpuPoolStats = getStatsJson(CPU_POOL);
+        cpuPoolStats.put("num_exceptions", CPU_POOL_EXCEPTION_LOGGER.numExceptions.get());
+        stats.put("CPU_POOL", cpuPoolStats);
+
+        JSONObject scheduledPoolStats = getStatsJson(CPU_POOL);
+        cpuPoolStats.put("num_exceptions", SCHEDULED_POOL_EXCEPTION_LOGGER.numExceptions.get());
+        stats.put("SCHEDULED_POOL", scheduledPoolStats);
+
+        return stats;
     }
 
-    static {
+    /**
+     * Count and log exceptions from an {@ExecutorService}.
+     */
+    private static class ExceptionLogger
+    {
+        private final AtomicLong numExceptions = new AtomicLong();
+        private final String name;
+
+        private ExceptionLogger(String name)
+        {
+            this.name = name;
+        }
+
+        /**
+         * See {@link ThreadPoolExecutor#afterExecute(Runnable, Throwable)}
+         * @param runnable
+         * @param t
+         */
+        private void checkForExceptionAndLog(Runnable runnable, Throwable t)
+        {
+            if (t == null && runnable instanceof Future<?>)
+            {
+                Future<?> future = (Future<?>) runnable;
+                try
+                {
+                    if (future.isDone() || future.isCancelled())
+                    {
+                        future.get();
+                    }
+                }
+                catch (CancellationException ce)
+                {
+                    // Ignore these. Notably PacketQueue AsyncQueueHandler causes a lot of them (for the RtpReceiver,
+                    // but not RtpSender).
+                }
+                catch (ExecutionException ee)
+                {
+                    t = ee.getCause();
+                }
+                catch (InterruptedException ie)
+                {
+                    Thread.currentThread().interrupt();
+                }
+            }
+
+            if (t != null)
+            {
+                numExceptions.incrementAndGet();
+                classLogger.warn("Uncaught exception (" + name + "): ", t);
+            }
+        }
+    }
+
+    static
+    {
         classLogger.info("TaskPools detected " + Runtime.getRuntime().availableProcessors() +
                 " processors, creating the CPU pool with that many threads");
-
     }
 }
