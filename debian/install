@@ -1,4 +1,6 @@
-target/dependency/*		usr/share/jitsi-videobridge/lib
+jvb/target/dependency/*		usr/share/jitsi-videobridge/lib
+jvb-api/jvb-api-client/target/dependency/*		usr/share/jitsi-videobridge/lib
+jvb-api/jvb-api-common/target/dependency/*		usr/share/jitsi-videobridge/lib
 lib/videobridge.rc		usr/share/jitsi-videobridge/lib
 lib/logging.properties		etc/jitsi/videobridge
 jitsi-videobridge.jar		usr/share/jitsi-videobridge
