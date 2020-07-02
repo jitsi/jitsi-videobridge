@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.cc.vp9
 
-import org.jetbrains.annotations.Contract
 import org.jitsi.nlj.codec.vp8.Vp8Utils.Companion.getExtendedPictureIdDelta
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.nlj.util.ArrayCache

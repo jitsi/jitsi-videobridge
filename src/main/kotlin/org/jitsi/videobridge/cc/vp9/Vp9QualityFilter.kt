@@ -295,8 +295,8 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
-    @get:SuppressFBWarnings(value = ["IS2_INCONSISTENT_SYNC"], justification = "We intentionally avoid synchronizing while reading" +
-        " fields only used in debug output.")
+    @get:SuppressFBWarnings(value = ["IS2_INCONSISTENT_SYNC"],
+        justification = "We intentionally avoid synchronizing while reading fields only used in debug output.")
     val debugState: JSONObject
         get() {
             val debugState = JSONObject()

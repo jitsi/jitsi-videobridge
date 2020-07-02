@@ -263,31 +263,34 @@ class Vp9Frame(packet: Vp9Packet) {
                 if (complained) {
                     append("; ")
                 }
-                append("packet switchingUpPoint ${pkt.isSwitchingUpPoint} != frame switchingUpPoint $isSwitchingUpPoint")
+                append("packet switchingUpPoint ${pkt.isSwitchingUpPoint} != " +
+                    "frame switchingUpPoint $isSwitchingUpPoint")
                 complained = true
             }
             if (isUpperLevelReference != pkt.isUpperLevelReference) {
                 if (complained) {
                     append("; ")
                 }
-                append("packet upperLevelReference ${pkt.isUpperLevelReference} != frame upperLevelReference $isUpperLevelReference")
+                append("packet upperLevelReference ${pkt.isUpperLevelReference} != " +
+                    "frame upperLevelReference $isUpperLevelReference")
                 complained = true
             }
             if (usesInterLayerDependency != pkt.usesInterLayerDependency) {
                 if (complained) {
                     append("; ")
                 }
-                append("packet usesInterLayerDepencency ${pkt.usesInterLayerDependency} != frame usesInterLayerDepencency $usesInterLayerDependency")
+                append("packet usesInterLayerDepencency ${pkt.usesInterLayerDependency} != " +
+                    "frame usesInterLayerDepencency $usesInterLayerDependency")
                 complained = true
             }
             if (isInterPicturePredicted != pkt.isInterPicturePredicted) {
                 if (complained) {
                     append("; ")
                 }
-                append("packet isInterPicturePredicted ${pkt.isInterPicturePredicted} != frame isInterPicturePredicted $isInterPicturePredicted")
+                append("packet isInterPicturePredicted ${pkt.isInterPicturePredicted} != " +
+                    "frame isInterPicturePredicted $isInterPicturePredicted")
                 complained = true
             }
-
         })
     }
 }

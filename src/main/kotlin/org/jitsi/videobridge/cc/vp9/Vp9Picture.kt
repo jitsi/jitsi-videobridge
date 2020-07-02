@@ -191,7 +191,8 @@ class Vp9Picture(packet: Vp9Packet) {
             return
         }
 
-        if (temporalLayer == pkt.temporalLayerIndex && tl0PICIDX == pkt.TL0PICIDX && pictureId == pkt.pictureId) /* TODO: also check start, end, seq nums? */ {
+        if (temporalLayer == pkt.temporalLayerIndex && tl0PICIDX == pkt.TL0PICIDX && pictureId == pkt.pictureId) {
+            /* TODO: also check start, end, seq nums? */
             return
         }
         throw RuntimeException(buildString {
