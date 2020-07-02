@@ -418,19 +418,17 @@ public abstract class AbstractEndpoint
      *
      * The receiver can be either another endpoint, or a remote bridge.
      *
-     * @param receiver the id that specifies the receiver endpoint
+     * @param receiverId the id that specifies the receiver endpoint
      * @param newVideoConstraints the video constraints that the receiver
      * wishes to receive.
      */
-    public void addReceiver(String receiver, VideoConstraints newVideoConstraints)
+    public void addReceiver(String receiverId, VideoConstraints newVideoConstraints)
     {
-        VideoConstraints oldVideoConstraints
-                = receiverVideoConstraintsMap.put(receiver, newVideoConstraints);
-        if (oldVideoConstraints == null
-            || !oldVideoConstraints.equals(newVideoConstraints))
+        VideoConstraints oldVideoConstraints = receiverVideoConstraintsMap.put(receiverId, newVideoConstraints);
+        if (oldVideoConstraints == null || !oldVideoConstraints.equals(newVideoConstraints))
         {
             logger.debug(
-                () -> "Changed receiver constraints: " + receiver + ": " + newVideoConstraints.getIdealHeight());
+                () -> "Changed receiver constraints: " + receiverId + ": " + newVideoConstraints.getIdealHeight());
             receiverVideoConstraintsChanged(receiverVideoConstraintsMap.values());
         }
     }
@@ -440,13 +438,13 @@ public abstract class AbstractEndpoint
      * needs to receive anything from the endpoint attached to this
      * instance (the sender).
      *
-     * @param receiver the id that specifies the receiver endpoint
+     * @param receiverId the id that specifies the receiver endpoint
      */
-    public void removeReceiver(String receiver)
+    public void removeReceiver(String receiverId)
     {
-        if (receiverVideoConstraintsMap.remove(receiver) != null)
+        if (receiverVideoConstraintsMap.remove(receiverId) != null)
         {
-            logger.debug(() -> "Removed receiver " + receiver);
+            logger.debug(() -> "Removed receiver " + receiverId);
             receiverVideoConstraintsChanged(receiverVideoConstraintsMap.values());
         }
     }
