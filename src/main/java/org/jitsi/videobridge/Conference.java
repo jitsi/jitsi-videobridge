@@ -28,6 +28,7 @@ import org.jitsi.utils.logging.DiagnosticContext;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
+import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
@@ -46,7 +47,6 @@ import java.util.concurrent.atomic.*;
 import java.util.logging.*;
 
 import static org.jitsi.utils.collections.JMap.entry;
-import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
 /**
  * Represents a conference in the terms of Jitsi Videobridge.
@@ -60,6 +60,11 @@ public class Conference
      implements Expireable,
         AbstractEndpointMessageTransport.EndpointMessageTransportEventHandler
 {
+    /**
+     * The constant denoting that {@link #gid} is not specified.
+     */
+    public static final long GID_NOT_SET = -1;
+
     /**
      * The endpoints participating in this {@link Conference}. Although it's a
      * {@link ConcurrentHashMap}, writing to it must be protected by
@@ -98,21 +103,35 @@ public class Conference
     private boolean expired = false;
 
     /**
-     * The (unique) identifier/ID of this instance.
+     * The locally unique identifier of this conference (i.e. unique across the
+     * conferences on this bridge). It is locally generated and exposed via
+     * colibri, and used by colibri clients to reference the conference.
+     *
+     * The current thinking is that we will phase out use of this ID (but keep
+     * it for backward compatibility) in favor of {@link #gid}.
      */
     private final String id;
 
     /**
-     * The "global" id of this conference, set by the controller (e.g. jicofo)
-     * as opposed to the bridge. This defaults to {@code null} unless it is
-     * specified.
+     * The "global" id of this conference, selected by the controller of the
+     * bridge (e.g. jicofo). The set of controllers are responsible for making
+     * sure this ID is unique across all conferences in the system.
+     *
+     * This is not a required field unless Octo is used, and when it is not
+     * specified by the controller its value is {@link #GID_NOT_SET}.
+     *
+     * If specified, it must be a 32-bit unsigned integer (i.e. in the range
+     * [0, 0xffff_ffff]).
+     *
+     * This ID is shared between all bridges in an Octo conference, and included
+     * on-the-wire in Octo packets.
      */
-    private final String gid;
+    private final long gid;
 
     /**
      * The world readable name of this instance if any.
      */
-    private String conferenceName;
+    private final String conferenceName;
 
     /**
      * The speech activity (representation) of the <tt>Endpoint</tt>s of this
@@ -188,17 +207,18 @@ public class Conference
                       String id,
                       String conferenceName,
                       boolean enableLogging,
-                      String gid)
+                      long gid)
     {
+        if (gid != GID_NOT_SET && (gid < 0 || gid > 0xffff_ffffL))
+        {
+            throw new IllegalArgumentException("Invalid GID:" + gid);
+        }
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
         Level minLevel = enableLogging ? Level.ALL : Level.WARNING;
         Map<String, String> context = JMap.ofEntries(
-            entry("confId", id)
+            entry("confId", id),
+            entry("gid", String.valueOf(gid))
         );
-        if (gid != null)
-        {
-            context.put("gid", gid);
-        }
         if (conferenceName != null)
         {
             context.put("conf_name", conferenceName);
@@ -280,7 +300,7 @@ public class Conference
      * be sent.
      */
     public void sendMessage(
-        String msg,
+        BridgeChannelMessage msg,
         List<AbstractEndpoint> endpoints,
         boolean sendToOcto)
     {
@@ -314,7 +334,7 @@ public class Conference
      * @param endpoints the list of <tt>Endpoint</tt>s to which the message will
      * be sent.
      */
-    public void sendMessage(String msg, List<AbstractEndpoint> endpoints)
+    public void sendMessage(BridgeChannelMessage msg, List<AbstractEndpoint> endpoints)
     {
         sendMessage(msg, endpoints, false);
     }
@@ -324,7 +344,7 @@ public class Conference
      *
      * @param msg the message to be broadcast.
      */
-    public void broadcastMessage(String msg, boolean sendToOcto)
+    public void broadcastMessage(BridgeChannelMessage msg, boolean sendToOcto)
     {
         sendMessage(msg, getEndpoints(), sendToOcto);
     }
@@ -334,7 +354,7 @@ public class Conference
      *
      * @param msg the message to be broadcast.
      */
-    public void broadcastMessage(String msg)
+    public void broadcastMessage(BridgeChannelMessage msg)
     {
         broadcastMessage(msg, false);
     }
@@ -415,8 +435,7 @@ public class Conference
         if (dominantSpeaker != null)
         {
             broadcastMessage(
-                    createDominantSpeakerEndpointChangeEvent(
-                        dominantSpeaker.getID()));
+                    new DominantSpeakerMessage(dominantSpeaker.getID()));
             if (getEndpointCount() > 2)
             {
                 double senderRtt = getRtt(dominantSpeaker);
@@ -843,6 +862,9 @@ public class Conference
             updateEndpointsCache();
         }
 
+        endpoints.forEach((i, senderEndpoint)
+            -> senderEndpoint.removeReceiver(id));
+
         if (tentacle != null)
         {
             tentacle.endpointExpired(id);
@@ -915,8 +937,7 @@ public class Conference
                 try
                 {
                     endpoint.sendMessage(
-                            createDominantSpeakerEndpointChangeEvent(
-                                dominantSpeaker.getID()));
+                        new DominantSpeakerMessage(dominantSpeaker.getID()));
                 }
                 catch (IOException e)
                 {
@@ -969,10 +990,11 @@ public class Conference
     }
 
     /**
-     * @return the global ID of the conference, or {@code null} if none has been
-     * set.
+     * @return the global ID of the conference (see {@link #gid)}, or
+     * {@link #GID_NOT_SET} if none has been set.
+     * @see #gid
      */
-    public String getGid()
+    public long getGid()
     {
         return gid;
     }
@@ -1070,6 +1092,11 @@ public class Conference
      */
     public ConfOctoTransport getTentacle()
     {
+        if (gid == GID_NOT_SET)
+        {
+            throw new IllegalStateException(
+                    "Can not enable Octo without the GID being set.");
+        }
         if (tentacle == null)
         {
             tentacle = new ConfOctoTransport(this);

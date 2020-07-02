@@ -21,22 +21,25 @@ import static org.jitsi.utils.ByteArrayUtils.*;
 
 /**
  * A utility class which handles the on-the-wire Octo format. Octo encapsulates
- * its payload (RTP, RTCP, or anything else) in an 8-byte header:
+ * its payload (RTP, RTCP, or anything else) in an 12-byte header:
  * <pre>{@code
  *  0                   1                   2                   3
  *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |R| M | S | res |              Conference ID                    |
+ * |                         Conference ID                         |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |                         Endpoint ID                           |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * | M |                     Reserved                              |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * }</pre>
- * R: Source-is-a-relay flag. 1 if the source of the packet is a relay, and
- * 0 if it is an endpoint (bridge).
+ * <p/>
+ * Conference ID: An identifier of the conference.
+ * <p/>
+ * Endpoint ID: An identifier of the endpoint that is the original source of
+ * the packet.
  * <p/>
  * M: media type (audio, video, or data).
- * <p/>
- * S: Simulcast layer ID.
  *
  * @author Boris Grozev
  */
@@ -45,7 +48,7 @@ public class OctoPacket
     /**
      * The fixed length of the Octo header.
      */
-    public static final int OCTO_HEADER_LENGTH = 8;
+    public static final int OCTO_HEADER_LENGTH = 12;
 
     /**
      * The integer which identifies the "audio" media type in Octo.
@@ -85,28 +88,23 @@ public class OctoPacket
      * Writes an Octo header to the specified buffer at the specified offset.
      * @param buf the buffer to write to.
      * @param off the offset to write at.
-     * @param r the value of the {@code r} flag.
      * @param mediaType the media type.
-     * @param s the value of the {@code s} flag.
      * @param conferenceId the Octo ID of the conference.
      * @param endpointId the Octo ID of the endpoint.
      */
     public static void writeHeaders(
             byte[] buf, int off,
-            boolean r, MediaType mediaType, int s,
-            String conferenceId,
+            MediaType mediaType,
+            long conferenceId,
             String endpointId)
     {
-        buf[off] = 0;
-        if (r)
-        {
-            buf[off] |= 0x80;
-        }
-        buf[off] |= (getMediaTypeId(mediaType) & 0x03) << 5;
-        buf[off] |= (s & 0x03) << 3;
-
-        writeConferenceId(conferenceId, buf, off, OCTO_HEADER_LENGTH);
-        writeEndpointId(endpointId, buf, off, OCTO_HEADER_LENGTH);
+        assertMinLen(buf, off, buf.length - off);
+        off += writeConferenceId(conferenceId, buf, off);
+        off += writeEndpointId(endpointId, buf, off);
+        buf[off] = (byte) (getMediaTypeId(mediaType) << 6);
+        buf[off+1] = 0;
+        buf[off+2] = 0;
+        buf[off+3] = 0;
     }
 
     /**
@@ -116,12 +114,11 @@ public class OctoPacket
      * @param len the length of the buffer.
      * @return the Octo conference ID read from the buffer.
      */
-    public static String readConferenceId(byte[] buf, int off, int len)
+    public static long readConferenceId(byte[] buf, int off, int len)
     {
         assertMinLen(buf, off, len);
 
-        int cid = readUint24(buf, off + 1);
-        return Integer.toHexString(cid);
+        return readUint32(buf, off);
     }
 
     /**
@@ -135,7 +132,7 @@ public class OctoPacket
     {
         assertMinLen(buf, off, len);
 
-        int mediaType = (buf[off] & 0x60) >> 5;
+        int mediaType = (buf[off + 8] & 0xc0) >> 6;
         switch (mediaType)
         {
         case OCTO_MEDIA_TYPE_AUDIO:
@@ -147,20 +144,6 @@ public class OctoPacket
         default:
             throw new IllegalArgumentException("Invalid media type value: " + mediaType);
         }
-    }
-
-    /**
-     * Reads the {@code r} flag from an Octo header.
-     * @param buf the buffer which contains the Octo header.
-     * @param off the offset in {@code buf} at which the Octo header begins.
-     * @param len the length of the buffer.
-     * @return the {@code r} flag from the given Octo header.
-     */
-    private static boolean readRflag(byte[] buf, int off, int len)
-    {
-        assertMinLen(buf, off, len);
-
-        return (buf[off] & 0x80) != 0;
     }
 
     /**
@@ -185,13 +168,11 @@ public class OctoPacket
      * @param off the offset in {@code buf} at which the Octo header begins.
      * @param len the length of the buffer.
      */
-    private static void writeConferenceId(
-            String conferenceId, byte[] buf, int off, int len)
+    private static int writeConferenceId(
+            long conferenceId, byte[] buf, int off)
     {
-        assertMinLen(buf, off, len);
-
-        int cid = Integer.parseInt(conferenceId, 16);
-        writeUint24(buf, off + 1, cid);
+        writeInt(buf, off, (int) conferenceId);
+        return 4;
     }
 
     /**
@@ -199,15 +180,13 @@ public class OctoPacket
      * @param endpointId the Octo endpoint ID represented as a hex string.
      * @param buf the buffer which contains the Octo header.
      * @param off the offset in {@code buf} at which the Octo header begins.
-     * @param len the length of the buffer.
      */
-    private static void writeEndpointId(
-            String endpointId, byte[] buf, int off, int len)
+    private static int writeEndpointId(String endpointId, byte[] buf, int off)
     {
-        assertMinLen(buf, off, len);
-
         long eid = Long.parseLong(endpointId, 16);
-        writeInt(buf, off + 4, (int) eid);
+        writeInt(buf, off, (int) eid);
+
+        return 4;
     }
 
     /**
@@ -239,6 +218,6 @@ public class OctoPacket
             byte[] buf, int off, int len, int minLen)
     {
         return buf != null && off >= 0 && len >= minLen && minLen >= 0
-            && off + len < buf.length;
+            && off + len <= buf.length;
     }
 }

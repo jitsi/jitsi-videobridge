@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import com.google.common.collect.*;
 import kotlin.*;
 import kotlin.jvm.functions.*;
 import org.jetbrains.annotations.*;
@@ -39,6 +40,7 @@ import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
+import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.rest.root.colibri.debug.*;
 import org.jitsi.videobridge.sctp.*;
 import org.jitsi.videobridge.shim.*;
@@ -57,12 +59,9 @@ import java.nio.*;
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.*;
 import java.util.function.Function;
 import java.util.function.*;
 import java.util.stream.*;
-
-import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
 /**
  * Represents an endpoint of a participant in a <tt>Conference</tt>.
@@ -154,11 +153,6 @@ public class Endpoint
      */
     @NotNull
     private final EndpointMessageTransport messageTransport;
-
-    /**
-     * A count of how many endpoints have 'selected' this endpoint
-     */
-    private final AtomicInteger selectedCount = new AtomicInteger(0);
 
     /**
      * The diagnostic context of this instance.
@@ -464,7 +458,7 @@ public class Endpoint
      * @param msg message text to send.
      */
     @Override
-    public void sendMessage(String msg)
+    public void sendMessage(BridgeChannelMessage msg)
     {
         EndpointMessageTransport messageTransport = getMessageTransport();
         if (messageTransport != null)
@@ -476,7 +470,6 @@ public class Endpoint
     /**
      * {@inheritDoc}
      */
-    @Override
     public void setLastN(Integer lastN)
     {
         bitrateController.setLastN(lastN);
@@ -638,9 +631,55 @@ public class Endpoint
     }
 
     @Override
-    public void setVideoConstraints(Map<String, VideoConstraints> newVideoConstraints)
+    public void setSenderVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraints)
     {
+        ImmutableMap<String, VideoConstraints>
+            oldVideoConstraints = bitrateController.getVideoConstraints();
+
         bitrateController.setVideoConstraints(newVideoConstraints);
+
+        Set<String> removedEndpoints
+            = new HashSet<>(oldVideoConstraints.keySet());
+        removedEndpoints.removeAll(newVideoConstraints.keySet());
+
+        // Endpoints that "this" no longer cares about what it receives.
+        for (String id : removedEndpoints)
+        {
+            AbstractEndpoint senderEndpoint = getConference().getEndpoint(id);
+            if (senderEndpoint != null)
+            {
+                senderEndpoint.removeReceiver(getID());
+            }
+        }
+
+        // Added or updated.
+        for (Map.Entry<String, VideoConstraints>
+            videoConstraintsEntry : newVideoConstraints.entrySet())
+        {
+            AbstractEndpoint senderEndpoint
+                = getConference().getEndpoint(videoConstraintsEntry.getKey());
+
+            if (senderEndpoint != null)
+            {
+                senderEndpoint.addReceiver(
+                    getID(), videoConstraintsEntry.getValue());
+            }
+        }
+    }
+
+    @Override
+    protected void maxReceiverVideoConstraintsChanged(VideoConstraints maxVideoConstraints)
+    {
+        // Note that it's up to the client to respect these constraints.
+        SenderVideoConstraintsMessage senderVideoConstraintsMessage
+                = new SenderVideoConstraintsMessage(maxVideoConstraints);
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Sender constraints changed: " + senderVideoConstraintsMessage.toJson());
+        }
+
+        sendMessage(senderVideoConstraintsMessage);
     }
 
     /**
@@ -981,43 +1020,6 @@ public class Endpoint
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void incrementSelectedCount()
-    {
-        int newValue = selectedCount.incrementAndGet();
-        if (newValue == 1)
-        {
-            String selectedUpdate = createSelectedUpdateMessage(true);
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Is now selected, sending message: " + selectedUpdate);
-            }
-            sendMessage(selectedUpdate);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void decrementSelectedCount()
-    {
-        int newValue = selectedCount.decrementAndGet();
-        if (newValue == 0)
-        {
-            String selectedUpdate = createSelectedUpdateMessage(false);
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Is no longer selected, sending message: " +
-                        selectedUpdate);
-            }
-            sendMessage(selectedUpdate);
-        }
-    }
-
-    /**
      * Sends a message to this {@link Endpoint} in order to notify it that the
      * list/set of {@code lastN} has changed.
      *
@@ -1041,8 +1043,11 @@ public class Endpoint
             endpointsEnteringLastN = forwardedEndpoints;
         }
 
-        String msg = createLastNEndpointsChangeEvent(
-            forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints);
+        ForwardedEndpointsMessage msg
+                = new ForwardedEndpointsMessage(
+                    forwardedEndpoints,
+                    endpointsEnteringLastN,
+                    conferenceEndpoints);
 
         sendMessage(msg);
     }
@@ -1505,7 +1510,8 @@ public class Endpoint
                         audioForcedMuted = true;
                         break;
                     case VIDEO:
-                        logger.warn(() -> "Tried to mute the incoming video stream, but that is not currently supported");
+                        logger.warn(() -> "Tried to mute the incoming video stream, but that is not currently " +
+                            "supported");
                         break;
                 }
             }
@@ -1530,7 +1536,6 @@ public class Endpoint
     {
         JSONObject debugState = super.getDebugState();
 
-        debugState.put("selectedCount", selectedCount.get());
         //debugState.put("sctpManager", sctpManager.getDebugState());
         debugState.put("bitrateController", bitrateController.getDebugState());
         debugState.put("bandwidthProbing", bandwidthProbing.getDebugState());

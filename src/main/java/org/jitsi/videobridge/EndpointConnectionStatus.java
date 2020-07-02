@@ -19,13 +19,13 @@ import org.jitsi.eventadmin.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.message.*;
 import org.osgi.framework.*;
 
 import java.time.*;
 import java.util.*;
 import java.util.stream.*;
 
-import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 import static org.jitsi.videobridge.EndpointConnectionStatusConfig.*;
 
 /**
@@ -276,8 +276,8 @@ public class EndpointConnectionStatus
         Conference conference = subjectEndpoint.getConference();
         if (conference != null)
         {
-            String msg
-                = createEndpointConnectivityStatusChangeEvent(
+            EndpointConnectionStatusMessage msg
+                = new EndpointConnectionStatusMessage(
                         subjectEndpoint.getID(), isConnected);
             if (msgReceiver == null)
             {

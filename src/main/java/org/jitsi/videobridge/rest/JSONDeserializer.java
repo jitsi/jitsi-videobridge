@@ -93,7 +93,8 @@ public final class JSONDeserializer
             {
                 candidateIQ = candidateIQClass.getConstructor().newInstance();
             }
-            catch (IllegalAccessException | InstantiationException | NoSuchMethodException | InvocationTargetException iae)
+            catch (IllegalAccessException | InstantiationException |
+                NoSuchMethodException | InvocationTargetException iae)
             {
                 throw new UndeclaredThrowableException(iae);
             }

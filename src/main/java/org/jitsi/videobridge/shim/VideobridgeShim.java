@@ -25,6 +25,8 @@ import org.jivesoftware.smack.packet.*;
 
 import java.util.*;
 
+import static org.jitsi.videobridge.Conference.GID_NOT_SET;
+
 /**
  * Handles Colibri-related logic for a {@link Videobridge}, e.g. handles
  * incoming Colibri requests.
@@ -271,7 +273,7 @@ public class VideobridgeShim
                 conference
                         = videobridge.createConference(
                                 conferenceIQ.getName(),
-                                conferenceIQ.getGID());
+                                parseGid(conferenceIQ.getGID()));
             }
         }
         else
@@ -377,6 +379,14 @@ public class VideobridgeShim
 
         if (octoAudioChannel != null && octoVideoChannel != null)
         {
+            if (conference.getGid() == GID_NOT_SET)
+            {
+                return IQUtils.createError(
+                        conferenceIQ,
+                        XMPPError.Condition.bad_request,
+                        "Can not enable octo without a valid GID.");
+            }
+
             conferenceShim.processOctoChannels(
                     octoAudioChannel, octoVideoChannel);
 
@@ -441,6 +451,48 @@ public class VideobridgeShim
                 content.getChannels().stream()
                         .filter(c -> isOctoChannel(c))
                         .findAny().orElse(null);
+    }
+
+    /**
+     * Parses the "gid" field encoded in {@link ColibriConferenceIQ#getGID()}.
+     * It is a 32-bit unsigned integer encoded in hex. Returns
+     * {@link Conference#GID_NOT_SET} if parsing fails.
+     *
+     * @param gidStr the string to parse
+     * @return the GID parsed as a {@code long}, or
+     * {@link Conference#GID_NOT_SET -1} on failure.
+     */
+    private static long parseGid(String gidStr)
+    {
+        long gid;
+
+        if (gidStr == null)
+        {
+            gid = GID_NOT_SET;
+        }
+        else
+        {
+            try
+            {
+                gid = Long.parseLong(gidStr, 16);
+            }
+            catch (NumberFormatException nfe)
+            {
+                logger.warn(
+                    "Invalid GID: " + gidStr + ". Assuming it's unset.");
+                gid = GID_NOT_SET;
+            }
+
+            if (gid < 0 || gid > 0xffff_ffffL)
+            {
+                logger.warn(
+                    "Invalid GID (not a 32-bit unsigned): " + gidStr
+                            + ". Assuming it's unset");
+                gid = GID_NOT_SET;
+            }
+        }
+
+        return gid;
     }
 
     static class IqProcessingException extends Exception

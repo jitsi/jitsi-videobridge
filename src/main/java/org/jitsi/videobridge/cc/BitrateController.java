@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc;
 
+import com.google.common.collect.*;
 import edu.umd.cs.findbugs.annotations.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
@@ -179,7 +180,7 @@ public class BitrateController
      * The map of endpoint id to video constraints that contains the video
      * constraints to respect when allocating bandwidth for a specific endpoint.
      */
-    private Map<String, VideoConstraints> videoConstraintsMap = Collections.emptyMap();
+    private ImmutableMap<String, VideoConstraints> videoConstraintsMap = ImmutableMap.of();
 
     /**
      * The last-n value for the endpoint to which this {@link BitrateController}
@@ -269,6 +270,16 @@ public class BitrateController
     }
 
     /**
+     * @return the map of endpoint id to video constraints that contains the
+     * video constraints to follow when allocating bandwidth for a specific
+     * endpoint.
+     */
+    public ImmutableMap<String, VideoConstraints> getVideoConstraints()
+    {
+        return videoConstraintsMap;
+    }
+
+    /**
      * A helper class that is used to determine the bandwidth allocation
      * rank/priority of an endpoint that is based on its speaker rank and its
      * video constraints. See {@link EndpointMultiRanker} for more information
@@ -334,7 +345,8 @@ public class BitrateController
             // We want "o1 has higher preferred height than o2" to imply "o1 is
             // smaller than o2" as this is equivalent to "o1 needs to be
             // prioritized first".
-            int preferredHeightDiff = o2.videoConstraints.getPreferredHeight() - o1.videoConstraints.getPreferredHeight();
+            int preferredHeightDiff =
+                o2.videoConstraints.getPreferredHeight() - o1.videoConstraints.getPreferredHeight();
             if (preferredHeightDiff != 0)
             {
                 return preferredHeightDiff;
@@ -1048,7 +1060,7 @@ public class BitrateController
         return sourceBitrateAllocations.toArray(new SourceBitrateAllocation[0]);
     }
 
-    public void setVideoConstraints(Map<String, VideoConstraints> newVideoConstraintsMap)
+    public void setVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraintsMap)
     {
         if (!this.videoConstraintsMap.equals(newVideoConstraintsMap))
         {

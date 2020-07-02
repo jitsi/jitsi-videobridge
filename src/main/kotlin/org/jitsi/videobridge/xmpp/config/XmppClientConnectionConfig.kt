@@ -44,20 +44,20 @@ class XmppClientConnectionConfig {
             )
             private val clientConnectionConfigs = ClientConnectionConfigsProperty()
 
-            private fun MutableMap.MutableEntry<String, ConfigValue>.toMucClientConfiguration(): MucClientConfiguration {
-                val config = MucClientConfiguration(this.key)
-                (value as? ConfigObject)?.let {
-                    it.forEach { (propName, propValue) ->
-                        config.setProperty(propName, propValue.unwrapped().toString())
-                    }
-                } ?: run { throw Exception("Invalid muc client configuration. " +
-                        "Expected type ConfigObject but got ${value.unwrapped()::class.java}") }
-                return config
-            }
-
             @JvmStatic
             fun getClientConfigs(): List<MucClientConfiguration> =
                 clientConnectionConfigs.value
         }
     }
+}
+
+private fun MutableMap.MutableEntry<String, ConfigValue>.toMucClientConfiguration(): MucClientConfiguration {
+    val config = MucClientConfiguration(this.key)
+    (value as? ConfigObject)?.let {
+        it.forEach { (propName, propValue) ->
+            config.setProperty(propName, propValue.unwrapped().toString())
+        }
+    } ?: run { throw Exception("Invalid muc client configuration. " +
+            "Expected type ConfigObject but got ${value.unwrapped()::class.java}") }
+    return config
 }

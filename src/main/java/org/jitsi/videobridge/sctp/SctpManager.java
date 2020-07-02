@@ -76,7 +76,11 @@ public class SctpManager {
         // of the buffer we pass it here (this ends up hitting usrsctp_conninput, and the sample
         // program for usrsctp re-uses the buffer that's passed here, and the code does appear
         // to make a copy).
-        socket.onConnIn(sctpPacket.getPacket().getBuffer(), sctpPacket.getPacket().getOffset(), sctpPacket.getPacket().getLength());
+        socket.onConnIn(
+            sctpPacket.getPacket().getBuffer(),
+            sctpPacket.getPacket().getOffset(),
+            sctpPacket.getPacket().getLength()
+        );
         ByteBufferPool.returnBuffer(sctpPacket.getPacket().getBuffer());
     }
 
