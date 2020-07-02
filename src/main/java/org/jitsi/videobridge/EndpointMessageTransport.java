@@ -470,10 +470,7 @@ class EndpointMessageTransport
     {
         Set<String> newSelectedEndpoints = new HashSet<>(message.getSelectedEndpoints());
 
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Selected " + newSelectedEndpoints);
-        }
+        logger.debug(() -> "Selected " + newSelectedEndpoints);
         videoConstraintsCompatibility.setSelectedEndpoints(newSelectedEndpoints);
         setSenderVideoConstraints(
                 videoConstraintsCompatibility.computeVideoConstraints());
@@ -493,10 +490,7 @@ class EndpointMessageTransport
         // endpoint.
         videoConstraintsMap.remove(endpoint.getID());
 
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("New video constraints map: " + videoConstraintsMap);
-        }
+        logger.debug(() -> "New video constraints map: " + videoConstraintsMap);
 
         endpoint.setSenderVideoConstraints(
                 ImmutableMap.copyOf(videoConstraintsMap));
@@ -512,12 +506,9 @@ class EndpointMessageTransport
     public BridgeChannelMessage receiverVideoConstraint(ReceiverVideoConstraintMessage message)
     {
         int maxFrameHeight = message.getMaxFrameHeight();
-        if (logger.isDebugEnabled())
-        {
-            logger.debug(
-                    "Received a maxFrameHeight video constraint from "
-                            + getId(null) + ": " + maxFrameHeight);
-        }
+        logger.debug(() ->
+            "Received a maxFrameHeight video constraint from "
+                + getId(null) + ": " + maxFrameHeight);
 
         videoConstraintsCompatibility.setMaxFrameHeight(maxFrameHeight);
         setSenderVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints());
