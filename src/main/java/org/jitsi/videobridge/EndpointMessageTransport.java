@@ -511,7 +511,8 @@ class EndpointMessageTransport
     public BridgeChannelMessage receiverVideoConstraint(ReceiverVideoConstraintMessage message)
     {
         int maxFrameHeight = message.getMaxFrameHeight();
-        logger.debug(() -> "Received a maxFrameHeight video constraint from " + endpoint.getID() + ": " + maxFrameHeight);
+        logger.debug(
+                () -> "Received a maxFrameHeight video constraint from " + endpoint.getID() + ": " + maxFrameHeight);
 
         videoConstraintsCompatibility.setMaxFrameHeight(maxFrameHeight);
         setSenderVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints());
