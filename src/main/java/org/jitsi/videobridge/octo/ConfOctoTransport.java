@@ -510,7 +510,7 @@ public class ConfOctoTransport
         debugState.put("octoEndpoints", octoEndpoints.getDebugState());
         debugState.putAll(stats.toJson());
         debugState.put("bridgeOctoTransport", bridgeOctoTransport.getStatsJson());
-        debugState.put("remoteRelays", remoteBridges);
+        debugState.put("remoteRelays", remoteBridges.keySet());
 
         return debugState;
     }
