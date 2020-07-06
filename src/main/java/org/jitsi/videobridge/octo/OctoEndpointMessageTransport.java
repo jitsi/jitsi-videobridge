@@ -104,19 +104,10 @@ class OctoEndpointMessageTransport
      * {@code message.getFrom}, as verified by the remote bridge sending the message.
      *
      * @param message the message that was received from the endpoint.
-     *
-     * EndpointMessage definition:
-     * 'to': If the 'to' field contains the endpoint id of another endpoint in this conference, the message will be
-     * treated as a 1:1 message and forwarded just to that endpoint. If the 'to' field is an empty string, the message
-     * will be treated as a broadcast and sent to all local endpoints in this conference.
-     * 'msgPayload': An opaque payload. The bridge does not need to know or care what is contained in the 'msgPayload'
-     * field, it will just forward it blindly.
      */
     @Override
     public BridgeChannelMessage endpointMessage(EndpointMessage message)
     {
-        String to = message.getTo();
-
         // We trust the "from" field, because it comes from another bridge, not an endpoint.
         //String from = getId(message.getFrom());
         //message.setFrom(from);
@@ -130,7 +121,7 @@ class OctoEndpointMessageTransport
         }
 
         List<AbstractEndpoint> targets;
-        if ("".equals(to))
+        if (message.isBroadcast())
         {
             // Broadcast message
             targets = new LinkedList<>(conference.getLocalEndpoints());
@@ -138,6 +129,8 @@ class OctoEndpointMessageTransport
         else
         {
             // 1:1 message
+            String to = message.getTo();
+
             AbstractEndpoint targetEndpoint = conference.getLocalEndpoint(to);
             if (targetEndpoint != null)
             {
