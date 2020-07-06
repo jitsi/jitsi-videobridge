@@ -186,6 +186,7 @@ import java.util.stream.*;
      {
          JSONObject debugState = new JSONObject();
          debugState.put("ids", octoEndpointIds.toString());
+         debugState.put("messageTransport", messageTransport.getDebugState());
          return debugState;
      }
  }
