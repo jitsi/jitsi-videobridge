@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge;
 
-import com.google.common.collect.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.message.*;
@@ -97,14 +96,15 @@ public abstract class AbstractEndpointMessageTransport<T extends AbstractEndpoin
      * channel (e.g. file transfer), such that it may interfere with other
      * jitsi messages.
      */
-    @SuppressWarnings("unchecked")
     @Override
     public BridgeChannelMessage endpointMessage(EndpointMessage message)
     {
         String to = message.getTo();
 
         // First insert/overwrite the "from" to prevent spoofing.
-        message.setFrom(getId());
+        String from = getId(message.getFrom());
+        message.setFrom(from);
+
         Conference conference = getConference();
 
         if (conference == null || conference.isExpired())
@@ -114,7 +114,7 @@ public abstract class AbstractEndpointMessageTransport<T extends AbstractEndpoin
             return null;
         }
 
-        AbstractEndpoint sourceEndpoint = conference.getEndpoint(getId());
+        AbstractEndpoint sourceEndpoint = conference.getEndpoint(getId(from));
 
         if (sourceEndpoint == null)
         {
