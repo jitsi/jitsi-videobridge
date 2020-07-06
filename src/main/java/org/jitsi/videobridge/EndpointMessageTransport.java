@@ -21,6 +21,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.message.*;
+import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.websocket.*;
 import org.json.simple.*;
 
@@ -82,6 +83,9 @@ class EndpointMessageTransport
     private final Map<String, AtomicLong> sentMessagesCounts
             = new ConcurrentHashMap<>();
 
+    @NotNull
+    private final Endpoint endpoint;
+
     /**
      * Initializes a new {@link EndpointMessageTransport} instance.
      * @param endpoint the associated {@link Endpoint}.
@@ -96,7 +100,8 @@ class EndpointMessageTransport
         EndpointMessageTransportEventHandler eventHandler,
         Logger parentLogger)
     {
-        super(endpoint, parentLogger);
+        super(parentLogger);
+        this.endpoint = endpoint;
         this.statisticsSupplier = statisticsSupplier;
         this.eventHandler = eventHandler;
     }
@@ -506,9 +511,7 @@ class EndpointMessageTransport
     public BridgeChannelMessage receiverVideoConstraint(ReceiverVideoConstraintMessage message)
     {
         int maxFrameHeight = message.getMaxFrameHeight();
-        logger.debug(() ->
-            "Received a maxFrameHeight video constraint from "
-                + getId(null) + ": " + maxFrameHeight);
+        logger.debug(() -> "Received a maxFrameHeight video constraint from " + endpoint.getID() + ": " + maxFrameHeight);
 
         videoConstraintsCompatibility.setMaxFrameHeight(maxFrameHeight);
         setSenderVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints());
@@ -526,12 +529,76 @@ class EndpointMessageTransport
     public BridgeChannelMessage lastN(LastNMessage message)
     {
         int lastN = message.getLastN();
-
         if (endpoint != null)
         {
             endpoint.setLastN(lastN);
         }
 
+        return null;
+    }
+
+    /**
+     * Handles an opaque message from this {@code Endpoint} that should be forwarded to either: a) another client in
+     * this conference (1:1 message) or b) all other clients in this conference (broadcast message).
+     *
+     * @param message the message that was received from the endpoint.
+     *
+     * EndpointMessage definition:
+     * 'to': If the 'to' field contains the endpoint id of another endpoint in this conference, the message will be
+     * treated as a 1:1 message and forwarded just to that endpoint. If the 'to' field is an empty string, the message
+     * will be treated as a broadcast and sent to all other endpoints in this conference.
+     * 'msgPayload': An opaque payload. The bridge does not need to know or care what is contained in the 'msgPayload'
+     * field, it will just forward it blindly.
+     */
+    @Override
+    public BridgeChannelMessage endpointMessage(EndpointMessage message)
+    {
+        String to = message.getTo();
+
+        // First insert/overwrite the "from" to prevent spoofing.
+        String from = endpoint.getID();
+        message.setFrom(from);
+
+        Conference conference = endpoint.getConference();
+
+        if (conference == null || conference.isExpired())
+        {
+            logger.warn("Unable to send EndpointMessage, conference is null or expired");
+            return null;
+        }
+
+        boolean sendToOcto;
+
+        List<AbstractEndpoint> targets;
+        if ("".equals(to))
+        {
+            // Broadcast message to all local endpoints + octo.
+            targets = new LinkedList<>(conference.getLocalEndpoints());
+            targets.remove(endpoint);
+            sendToOcto = true;
+        }
+        else
+        {
+            // 1:1 message
+            AbstractEndpoint targetEndpoint = conference.getEndpoint(to);
+            if (targetEndpoint instanceof Endpoint)
+            {
+                targets = Collections.singletonList(targetEndpoint);
+                sendToOcto = false;
+            }
+            else if (targetEndpoint instanceof OctoEndpoint)
+            {
+                targets = Collections.emptyList();
+                sendToOcto = true;
+            }
+            else
+            {
+                logger.warn("Unable to find endpoint to send EndpointMessage to: " + to);
+                return null;
+            }
+        }
+
+        conference.sendMessage(message, targets, sendToOcto);
         return null;
     }
 
