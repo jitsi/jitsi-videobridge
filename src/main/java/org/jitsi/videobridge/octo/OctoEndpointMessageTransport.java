@@ -15,18 +15,17 @@
  */
 package org.jitsi.videobridge.octo;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.message.*;
 
+import java.util.*;
+
 /**
  * Extends {@link AbstractEndpointMessageTransport} for the purposes of Octo.
- *
- * Most {@link MessageHandler} methods are not overridden and result in a
- * warning being logged, because we don't expect to received them via the Octo
- * channel.
- * {@link #endpointMessage(EndpointMessage)} is an exception, where the logic in
- * the super class applies.
+ * This handles incoming messages for a whole conference, and not for a
+ * specific {@link OctoEndpoint}.
  */
 class OctoEndpointMessageTransport
     extends AbstractEndpointMessageTransport<OctoEndpoint>
@@ -34,36 +33,16 @@ class OctoEndpointMessageTransport
     /**
      * The associated {@link OctoEndpoints}.
      */
+    @NotNull
     private final OctoEndpoints octoEndpoints;
 
     /**
      * Initializes a new {@link AbstractEndpointMessageTransport} instance.
      */
-    OctoEndpointMessageTransport(OctoEndpoints octoEndpoints, Logger parentLogger)
+    OctoEndpointMessageTransport(@NotNull OctoEndpoints octoEndpoints, Logger parentLogger)
     {
-        super(null, parentLogger);
+        super(parentLogger);
         this.octoEndpoints = octoEndpoints;
-    }
-
-    @Override
-    protected Conference getConference()
-    {
-        return octoEndpoints.getConference();
-    }
-
-    /**
-     * We know this message came from another jitsi-videobridge instance (as
-     * opposed to a client endpoint), so we trust the ID that it provided.
-     * @param id a suggested ID.
-     */
-    @Override
-    protected String getId(Object id)
-    {
-        if (!(id instanceof String))
-        {
-            return null;
-        }
-        return (String) id;
     }
 
     @Override
@@ -71,7 +50,6 @@ class OctoEndpointMessageTransport
     {
         return true;
     }
-
 
     /**
      * Logs a warning about an unexpected message received through Octo.
@@ -82,4 +60,91 @@ class OctoEndpointMessageTransport
     {
         logger.warn("Received a message with an unexpected type: " + message.getType());
     }
+
+    /**
+     * This message indicates that a remote bridge wishes to receive video
+     * with certain constraints for a specific endpoin.
+     * @param message
+     * @return
+     */
+    @Nullable
+    @Override
+    public BridgeChannelMessage addReceiver(@NotNull AddReceiverMessage message)
+    {
+        Conference conference = octoEndpoints.getConference();
+        AbstractEndpoint endpoint = conference.getEndpoint(message.getEndpointId());
+        // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge. Handle
+        // only those that reference an endpoint local to this bridge.
+        if (endpoint instanceof Endpoint)
+        {
+            endpoint.addReceiver(message.getBridgeId(), message.getVideoConstraints());
+        }
+
+        return null;
+    }
+
+    @Nullable
+    @Override
+    public BridgeChannelMessage removeReceiver(@NotNull RemoveReceiverMessage message)
+    {
+        Conference conference = octoEndpoints.getConference();
+        AbstractEndpoint endpoint = conference.getEndpoint(message.getEndpointId());
+        // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge. Handle
+        // only those that reference an endpoint local to this bridge.
+        if (endpoint instanceof Endpoint)
+        {
+            endpoint.removeReceiver(message.getBridgeId());
+        }
+
+        return null;
+    }
+
+    /**
+     * Handles an opaque message received on the Octo channel. The message originates from an endpoint with an ID of
+     * {@code message.getFrom}, as verified by the remote bridge sending the message.
+     *
+     * @param message the message that was received from the endpoint.
+     */
+    @Override
+    public BridgeChannelMessage endpointMessage(EndpointMessage message)
+    {
+        // We trust the "from" field, because it comes from another bridge, not an endpoint.
+        //String from = getId(message.getFrom());
+        //message.setFrom(from);
+
+        Conference conference = octoEndpoints.getConference();
+
+        if (conference == null || conference.isExpired())
+        {
+            logger.warn("Unable to send EndpointMessage, conference is null or expired");
+            return null;
+        }
+
+        List<AbstractEndpoint> targets;
+        if (message.isBroadcast())
+        {
+            // Broadcast message
+            targets = new LinkedList<>(conference.getLocalEndpoints());
+        }
+        else
+        {
+            // 1:1 message
+            String to = message.getTo();
+
+            AbstractEndpoint targetEndpoint = conference.getLocalEndpoint(to);
+            if (targetEndpoint != null)
+            {
+                targets = Collections.singletonList(targetEndpoint);
+            }
+            else
+            {
+                logger.warn("Unable to find endpoint to send EndpointMessage to: " + to);
+                return null;
+            }
+        }
+
+        conference.sendMessage(message, targets, false /* sendToOcto */);
+        return null;
+    }
+
 }

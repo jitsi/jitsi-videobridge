@@ -205,6 +205,27 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed.videoConstraints.preferredHeight shouldBe 360
             parsed.videoConstraints.preferredFps shouldBe 30.0
         }
+
+        "serializing and parsing AddReceiver" {
+            val message = AddReceiverMessage("bridge1", "abcdabcd", org.jitsi.videobridge.VideoConstraints(360))
+            val parsed = parse(message.toJson())
+
+            parsed.shouldBeInstanceOf<AddReceiverMessage>()
+            parsed as AddReceiverMessage
+            parsed.bridgeId shouldBe "bridge1"
+            parsed.endpointId shouldBe "abcdabcd"
+            parsed.videoConstraints shouldBe org.jitsi.videobridge.VideoConstraints(360)
+        }
+
+        "serializing and parsing RemoveReceiver" {
+            val message = RemoveReceiverMessage("bridge1", "abcdabcd")
+            val parsed = parse(message.toJson())
+
+            parsed.shouldBeInstanceOf<RemoveReceiverMessage>()
+            parsed as RemoveReceiverMessage
+            parsed.bridgeId shouldBe "bridge1"
+            parsed.endpointId shouldBe "abcdabcd"
+        }
     }
 
     companion object {
