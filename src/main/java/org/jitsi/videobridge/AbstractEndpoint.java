@@ -50,8 +50,7 @@ public abstract class AbstractEndpoint
     /**
      * The default video constraints to assume when nothing is signaled.
      */
-    private static final VideoConstraints
-        defaultMaxReceiverVideoConstraints = thumbnailVideoConstraints;
+    private static final VideoConstraints defaultMaxReceiverVideoConstraints = thumbnailVideoConstraints;
 
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a
@@ -73,8 +72,7 @@ public abstract class AbstractEndpoint
     /**
      * The map of receiver endpoint id -> video constraints.
      */
-    private final Map<String, VideoConstraints>
-        receiverVideoConstraintsMap = new ConcurrentHashMap<>();
+    private final Map<String, VideoConstraints> receiverVideoConstraintsMap = new ConcurrentHashMap<>();
 
     /**
      * The (human readable) display name of this <tt>Endpoint</tt>.
@@ -97,8 +95,7 @@ public abstract class AbstractEndpoint
      * in the conference. The client needs to send _at least_ this to satisfy
      * all receivers.
      */
-    private VideoConstraints
-        maxReceiverVideoConstraints = defaultMaxReceiverVideoConstraints;
+    private VideoConstraints maxReceiverVideoConstraints = defaultMaxReceiverVideoConstraints;
 
     /**
      * Initializes a new {@link AbstractEndpoint} instance.
@@ -338,8 +335,7 @@ public abstract class AbstractEndpoint
     private void receiverVideoConstraintsChanged(
         Collection<VideoConstraints> newVideoConstraints)
     {
-        VideoConstraints oldReceiverMaxVideoConstraints
-            = this.maxReceiverVideoConstraints;
+        VideoConstraints oldReceiverMaxVideoConstraints = this.maxReceiverVideoConstraints;
 
         VideoConstraints newReceiverMaxVideoConstraints = newVideoConstraints
             .stream()
