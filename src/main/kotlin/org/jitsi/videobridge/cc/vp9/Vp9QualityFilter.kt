@@ -177,7 +177,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             var currentSpatialLayer = getSidFromIndex(currentIndex)
 
             val canForwardLayer = (!frame.isInterPicturePredicted || layers[spatialLayerOfFrame]) &&
-                (!frame.usesInterLayerDependency || layers[spatialLayerOfFrame-1])
+                (!frame.usesInterLayerDependency || layers[spatialLayerOfFrame - 1])
 
             val wantToSwitch =
                 (spatialLayerOfFrame > currentSpatialLayer && currentSpatialLayer < externalTargetSpatialId) ||
@@ -187,8 +187,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
                 if (canForwardLayer) {
                     currentIndex = incomingIndex
                     currentSpatialLayer = spatialLayerOfFrame
-                }
-                else {
+                } else {
                     needsKeyframe = true
                 }
             }
