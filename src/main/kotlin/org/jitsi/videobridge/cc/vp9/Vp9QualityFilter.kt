@@ -16,9 +16,12 @@
 package org.jitsi.videobridge.cc.vp9
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
+import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_ENCODING_ID
+import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_INDEX
 import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
 import org.jitsi.nlj.RtpLayerDesc.Companion.getSidFromIndex
 import org.jitsi.nlj.RtpLayerDesc.Companion.getTidFromIndex
+import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.json.simple.JSONObject
@@ -43,36 +46,41 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
 
     /**
      * A boolean flag that indicates whether a keyframe is needed, due to an
-     * encoding or spatial layer switch.
+     * encoding or (in some cases) a spatial layer switch.
      *
      * Reading/writing of this field is synchronized on this instance.
      */
     private var needsKeyframe = false
 
     /**
-     * The encoding id that this instance tries to achieve. Upon
-     * receipt of a packet, we check whether externalSpatialLayerIdTarget
+     * The layer index that this instance tries to achieve. Upon
+     * receipt of a packet, we check whether externalTargetIndex
      * (that's specified as an argument to the
-     * [acceptFrame] method) is set to something
-     * different, in which case we set [needsKeyframe] equal to true and
+     * [acceptFrame] method) is set to a different encoding or spatial layer,
+     * in which case we set [needsKeyframe] equal to true and
      * update.
      */
-    private var internalEncodingIdTarget = SUSPENDED_ENCODING_ID
+    private var internalTargetIndex = SUSPENDED_INDEX
 
     /**
-     * The encoding layer ID that we're currently forwarding. -1
+     * The layer index that we're currently forwarding. [SUSPENDED_INDEX]
      * indicates that we're not forwarding anything. Reading/writing of this
      * field is synchronized on this instance.
      */
-    private var currentEncodingId = SUSPENDED_ENCODING_ID
+    private var currentIndex = SUSPENDED_INDEX
 
     /**
-     * @return true if a the target encoding id has changed and a
-     * keyframe hasn't been received yet, false otherwise.
+     * @return true if a keyframe is needed and hasn't been received yet, false otherwise.
+     * (This will be set if the encoding changes, and in some cases if the spatial layer changes.)
      */
     fun needsKeyframe(): Boolean {
         return needsKeyframe
     }
+
+    /**
+     * Which spatial layers are currently being forwarded.
+     */
+    private val layers: Array<Boolean> = Array(MAX_VP9_LAYERS) { false }
 
     /**
      * Determines whether to accept or drop a VP9 frame.
@@ -95,25 +103,23 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         externalTargetIndex: Int,
         receivedMs: Long
     ): Boolean {
-        // We make local copies of the externalTemporalLayerIdTarget and the
-        // externalEncodingTarget (as they may be updated by some other
-        // thread).
-        val externalTemporalLayerIdTarget = getTidFromIndex(externalTargetIndex)
-        val externalSpatialLayerIdTarget = getSidFromIndex(externalTargetIndex)
-        val externalEncodingIdTarget = getEidFromIndex(externalTargetIndex)
+        val externalTargetEncoding = getEidFromIndex(externalTargetIndex)
+        val internalTargetEncoding = getEidFromIndex(internalTargetIndex)
+        val currentEncoding = getEidFromIndex(currentIndex)
 
-        if (externalEncodingIdTarget != internalEncodingIdTarget) {
+        if (externalTargetEncoding != internalTargetEncoding) {
             // The externalEncodingIdTarget has changed since accept last
-            // run; perhaps we should request a keyframe.
-            internalEncodingIdTarget = externalEncodingIdTarget
-            if (externalEncodingIdTarget > SUSPENDED_ENCODING_ID) {
+            // ran; perhaps we should request a keyframe.
+            internalTargetIndex = externalTargetIndex
+            if (externalTargetEncoding != SUSPENDED_ENCODING_ID &&
+                externalTargetEncoding != currentEncoding) {
                 needsKeyframe = true
             }
         }
-        if (externalEncodingIdTarget < 0) {
+        if (externalTargetEncoding == SUSPENDED_ENCODING_ID) {
             // We stop forwarding immediately. We will need a keyframe in order
             // to resume.
-            currentEncodingId = SUSPENDED_ENCODING_ID
+            currentIndex = SUSPENDED_INDEX
             return false
         }
         var temporalLayerIdOfFrame = frame.temporalLayer
@@ -122,14 +128,21 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             // this is the base temporal layer.
             temporalLayerIdOfFrame = 0
         }
-        val encodingId = getEidFromIndex(incomingIndex)
+        val incomingEncoding = getEidFromIndex(incomingIndex)
         return if (frame.isKeyframe) {
             logger.debug {
                 "Quality filter got keyframe for stream ${frame.ssrc}"
             }
-            acceptKeyframe(encodingId, receivedMs)
-        } else if (currentEncodingId > SUSPENDED_ENCODING_ID) {
-            if (isOutOfSwitchingPhase(receivedMs) && isPossibleToSwitch(encodingId)) {
+            val accept = acceptKeyframe(incomingIndex, receivedMs)
+            if (accept) {
+                // Keyframes reset layer forwarding, whether or not they're an encoding switch
+                for (i in layers.indices) {
+                    layers[i] = (i == 0)
+                }
+            }
+            accept
+        } else if (currentEncoding != SUSPENDED_ENCODING_ID) {
+            if (isOutOfSwitchingPhase(receivedMs) && isPossibleToSwitch(incomingEncoding)) {
                 // XXX(george) i've noticed some "rogue" base layer keyframes
                 // that trigger this. what happens is the client sends a base
                 // layer key frame, the bridge switches to that layer because
@@ -140,32 +153,88 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
                 // key frames
                 needsKeyframe = true
             }
-            if (encodingId != currentEncodingId) {
+            if (incomingEncoding != currentEncoding) {
                 // for non-keyframes, we can't route anything but the current encoding
+                return false
+            }
+
+            /* Logic to forward spatial layer:
+             * Can forward layer: If layer is being sent, or frame is not inter-picture predicted; and
+             *  if layer below is being sent, or if frame does not use inter-picture dependency.
+             * Switching layers: If layer of frame is closer to target than current, set current to target
+             *  if can forward, otherwise request keyframe.
+             * Want to forward layer: If layer of frame is equal to currentLayer, or is less than currentLayer
+             *  and isUpperLayerReference.
+             * If wantToForward and !canForward, something's wrong, request keyFrame.
+             * accept = wantToForward && canForward
+             * if (tid == 0)
+             *   layers[layerOfFrame] = accept
+             * return accept
+             */
+
+            val spatialLayerOfFrame = getSidFromIndex(incomingIndex)
+            val externalTargetSpatialId = getSidFromIndex(externalTargetIndex)
+            var currentSpatialLayer = getSidFromIndex(currentIndex)
+
+            val canForwardLayer = (!frame.isInterPicturePredicted || layers[spatialLayerOfFrame]) &&
+                (!frame.usesInterLayerDependency || layers[spatialLayerOfFrame-1])
+
+            val wantToSwitch =
+                (spatialLayerOfFrame > currentSpatialLayer && currentSpatialLayer < externalTargetSpatialId) ||
+                (spatialLayerOfFrame < currentEncoding && currentSpatialLayer > externalTargetSpatialId)
+
+            if (wantToSwitch) {
+                if (canForwardLayer) {
+                    currentIndex = incomingIndex
+                    currentSpatialLayer = spatialLayerOfFrame
+                }
+                else {
+                    needsKeyframe = true
+                }
+            }
+
+            val wantToForwardLayer =
+                (spatialLayerOfFrame == currentSpatialLayer) ||
+                    (spatialLayerOfFrame < currentSpatialLayer && frame.isUpperLevelReference)
+
+            if (wantToForwardLayer && !canForwardLayer) {
+                logger.warn("Want to forward ${indexString(currentIndex)} frame, but can't! " +
+                    "layers=${layers.joinToString()}, currentIndex=${indexString(currentIndex)}, " +
+                    "isInterPicturePredicted=${frame.isInterPicturePredicted}, " +
+                    "usesInterLayerDependency=${frame.usesInterLayerDependency}."
+                )
+            }
+
+            val accept = wantToForwardLayer && canForwardLayer
+
+            if (temporalLayerIdOfFrame == 0) {
+                layers[spatialLayerOfFrame] = accept
+            }
+
+            if (!accept) {
                 return false
             }
 
             // This branch reads the {@link #currentEncodingId} and it
             // filters packets based on their temporal layer.
-            if (currentEncodingId > externalEncodingIdTarget) {
+            if (currentEncoding > externalTargetEncoding || currentSpatialLayer > externalTargetSpatialId) {
                 // pending downscale, decrease the frame rate until we
                 // downscale.
                 temporalLayerIdOfFrame < 1
-            } else if (currentEncodingId < externalEncodingIdTarget) {
+            } else if (currentEncoding < externalTargetEncoding || currentSpatialLayer < externalTargetSpatialId) {
                 // pending upscale, increase the frame rate until we upscale.
                 true
             } else {
-                // The currentSpatialLayerId matches exactly the target
-                // currentSpatialLayerId.
-                temporalLayerIdOfFrame <= externalTemporalLayerIdTarget
+                // The currentEncoding exactly matches the externalTargetEncoding.
+                val externalTargetTemporalId = getTidFromIndex(externalTargetIndex)
+                temporalLayerIdOfFrame <= externalTargetTemporalId
             }
         } else {
             // In this branch we're not processing a keyframe and the
-            // currentSpatialLayerId is in suspended state, which means we need
+            // currentEncoding is in suspended state, which means we need
             // a keyframe to start streaming again. Reaching this point also
             // means that we want to forward something (because both
-            // externalEncodingIdTarget and externalTemporalLayerIdTarget
-            // are greater than 0) so we set the request keyframe flag.
+            // externalEncodingTarget is not suspended) so we set the request keyframe flag.
 
             // assert needsKeyframe == true;
             false
@@ -190,21 +259,23 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
      * method for specific details).
      */
     @Synchronized
-    private fun isPossibleToSwitch(encodingId: Int): Boolean {
-        if (encodingId == -1) {
+    private fun isPossibleToSwitch(incomingEncoding: Int): Boolean {
+        val currentEncoding = getEidFromIndex(currentIndex)
+        val internalTargetEncoding = getEidFromIndex(internalTargetIndex)
+
+        if (incomingEncoding == SUSPENDED_ENCODING_ID) {
             // We failed to resolve the spatial/quality layer of the packet.
             return false
         }
-        return if (encodingId > currentEncodingId &&
-            currentEncodingId < internalEncodingIdTarget) {
-            // It looks like upscaling is possible.
-            true
-        } else if (encodingId < currentEncodingId &&
-            currentEncodingId > internalEncodingIdTarget) {
-            // It looks like downscaling is possible.
-            true
-        } else {
-            false
+        return when {
+            incomingEncoding > currentEncoding && currentEncoding < internalTargetEncoding ->
+                // It looks like upscaling is possible
+                true
+            incomingEncoding < currentEncoding && currentEncoding > internalTargetEncoding ->
+                // It looks like downscaling is possible.
+                true
+            else ->
+                false
         }
     }
 
@@ -221,9 +292,10 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
      */
     @Synchronized
     private fun acceptKeyframe(
-        encodingIdOfKeyframe: Int,
+        incomingIndex: Int,
         receivedMs: Long
     ): Boolean {
+        val encodingIdOfKeyframe = getEidFromIndex(incomingIndex)
         // This branch writes the {@link #currentSpatialLayerId} and it
         // determines whether or not we should switch to another simulcast
         // stream.
@@ -233,10 +305,15 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             logger.error("unable to get layer id from keyframe")
             return false
         }
+        // Keyframes have to be sid 0, tid 0, unless something screwy is going on.
+        if (getSidFromIndex(incomingIndex) != 0 || getTidFromIndex(incomingIndex) != 0) {
+            logger.warn("Surprising index ${indexString(incomingIndex)} on keyframe")
+        }
         logger.debug {
             "Received a keyframe of encoding: $encodingIdOfKeyframe"
         }
 
+        val internalTargetEncoding = getEidFromIndex(internalTargetIndex)
         // The keyframe request has been fulfilled at this point, regardless of
         // whether we'll be able to achieve the internalEncodingIdTarget.
         needsKeyframe = false
@@ -249,14 +326,14 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             logger.debug {
                 "First keyframe in this kf group " +
                     "currentEncodingId: $encodingIdOfKeyframe. " +
-                    "Target is $internalEncodingIdTarget"
+                    "Target is $internalTargetEncoding"
             }
-            if (encodingIdOfKeyframe <= internalEncodingIdTarget) {
+            if (encodingIdOfKeyframe <= internalTargetEncoding) {
                 // If the target is 180p and the first keyframe of a group of
                 // keyframes is a 720p keyframe we don't project it. If we
                 // receive a 720p keyframe, we know that there MUST be a 180p
                 // keyframe shortly after.
-                currentEncodingId = encodingIdOfKeyframe
+                currentIndex = incomingIndex
                 true
             } else {
                 false
@@ -265,22 +342,25 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             // We're within the 300ms window since the reception of the
             // first key frame of a key frame group, let's check whether an
             // upscale/downscale is possible.
+            val currentEncoding = getEidFromIndex(currentIndex)
             when {
-                encodingIdOfKeyframe in currentEncodingId..internalEncodingIdTarget -> {
+                currentEncoding <= encodingIdOfKeyframe &&
+                    encodingIdOfKeyframe <= internalTargetEncoding -> {
                     // upscale or current quality case
-                    currentEncodingId = encodingIdOfKeyframe
+                    currentIndex = incomingIndex
                     logger.debug {
                         "Upscaling to encoding $encodingIdOfKeyframe. " +
-                            "The target is $internalEncodingIdTarget"
+                            "The target is $internalTargetEncoding"
                     }
                     true
                 }
-                internalEncodingIdTarget in encodingIdOfKeyframe until currentEncodingId -> {
+                encodingIdOfKeyframe <= internalTargetEncoding &&
+                    internalTargetEncoding < currentEncoding -> {
                     // downscale case
-                    currentEncodingId = encodingIdOfKeyframe
+                    currentIndex = incomingIndex
                     logger.debug {
                         "Downscaling to encoding $encodingIdOfKeyframe. " +
-                            "The target is $internalEncodingIdTarget"
+                            "The target is $internalTargetEncoding"
                     }
                     true
                 }
@@ -302,8 +382,8 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             val debugState = JSONObject()
             debugState["mostRecentKeyframeGroupArrivalTimeMs"] = mostRecentKeyframeGroupArrivalTimeMs
             debugState["needsKeyframe"] = needsKeyframe
-            debugState["internalEncodingIdTarget"] = internalEncodingIdTarget
-            debugState["currentEncodingId"] = currentEncodingId
+            debugState["internalTargetIndex"] = indexString(internalTargetIndex)
+            debugState["currentIndex"] = indexString(currentIndex)
             return debugState
         }
 
@@ -315,8 +395,8 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         private const val MIN_KEY_FRAME_WAIT_MS = 300
 
         /**
-         * The HD, SD, LD and suspended spatial/quality layer IDs.
+         * The maximum possible number of VP9 spatial layers.
          */
-        private const val SUSPENDED_ENCODING_ID = -1
+        private const val MAX_VP9_LAYERS = 8
     }
 }
