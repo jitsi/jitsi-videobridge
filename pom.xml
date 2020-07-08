@@ -36,7 +36,7 @@
 
     <modules>
         <module>jvb-api</module>
-        <module>jvb_pom.xml</module>
+        <module>jvb</module>
     </modules>
 
     <dependencyManagement>
