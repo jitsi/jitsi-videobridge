@@ -189,7 +189,7 @@ internal constructor(
 
     companion object {
         /**
-         * The time series logger for this instance.
+         * The time series logger for this class.
          */
         private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(Vp9FrameProjection::class.java)
     }

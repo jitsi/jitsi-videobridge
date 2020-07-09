@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.cc.vp9
 
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.rtp.rtcp.RtcpSrPacket
@@ -23,6 +24,7 @@ import org.jitsi.rtp.util.RtpUtils.Companion.applyTimestampDelta
 import org.jitsi.rtp.util.RtpUtils.Companion.getTimestampDiff
 import org.jitsi.rtp.util.isNewerThan
 import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.cc.AdaptiveSourceProjectionContext
@@ -116,7 +118,26 @@ class Vp9AdaptiveSourceProjectionContext(
             }
         }
 
-        return frame.isAccepted && frame.projection?.accept(packet) == true
+        val accept = frame.isAccepted && frame.projection?.accept(packet) == true
+
+        if (timeSeriesLogger.isTraceEnabled) {
+            val pt = diagnosticContext.makeTimeSeriesPoint("rtp_vp9")
+                .addField("ssrc", packet.ssrc)
+                .addField("timestamp", packet.timestamp)
+                .addField("seq", packet.sequenceNumber)
+                .addField("pictureId", packet.pictureId)
+                .addField("index", indexString(incomingIndex))
+                .addField("isInterPicturePredicted", packet.isInterPicturePredicted)
+                .addField("usesInterLayerDependency", packet.usesInterLayerDependency)
+                .addField("isUpperLevelReference", packet.isUpperLevelReference)
+                .addField("targetIndex", indexString(targetIndex))
+                .addField("new_frame", result.isNewFrame)
+                .addField("accept", accept)
+            vp9QualityFilter.addDiagnosticContext(pt)
+            timeSeriesLogger.trace(pt)
+        }
+
+        return accept
     }
 
     /** Lookup a Vp9Frame for a packet. */
@@ -270,5 +291,13 @@ class Vp9AdaptiveSourceProjectionContext(
         debugState["payloadType"] = payloadType.toString()
 
         return debugState
+    }
+
+    companion object {
+        /**
+         * The time series logger for this class.
+         */
+        private val timeSeriesLogger =
+            TimeSeriesLogger.getTimeSeriesLogger(Vp9AdaptiveSourceProjectionContext::class.java)
     }
 }

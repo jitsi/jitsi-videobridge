@@ -22,6 +22,7 @@ import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
 import org.jitsi.nlj.RtpLayerDesc.Companion.getSidFromIndex
 import org.jitsi.nlj.RtpLayerDesc.Companion.getTidFromIndex
 import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
+import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.json.simple.JSONObject
@@ -70,17 +71,17 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     private var currentIndex = SUSPENDED_INDEX
 
     /**
+     * Which spatial layers are currently being forwarded.
+     */
+    private val layers: Array<Boolean> = Array(MAX_VP9_LAYERS) { false }
+
+    /**
      * @return true if a keyframe is needed and hasn't been received yet, false otherwise.
      * (This will be set if the encoding changes, and in some cases if the spatial layer changes.)
      */
     fun needsKeyframe(): Boolean {
         return needsKeyframe
     }
-
-    /**
-     * Which spatial layers are currently being forwarded.
-     */
-    private val layers: Array<Boolean> = Array(MAX_VP9_LAYERS) { false }
 
     /**
      * Determines whether to accept or drop a VP9 frame.
@@ -367,6 +368,21 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
                     false
                 }
             }
+        }
+    }
+
+    /**
+     * Adds internal state to a diagnostic context time series point.
+     */
+    @SuppressFBWarnings(value = ["IS2_INCONSISTENT_SYNC"],
+        justification = "We intentionally avoid synchronizing while reading fields only used in debug output.")
+    internal fun addDiagnosticContext(pt: DiagnosticContext.TimeSeriesPoint) {
+        pt.addField("qf.currentIndex", indexString(currentIndex))
+            .addField("qf.internalTargetIndex", indexString(internalTargetIndex))
+            .addField("qf.needsKeyframe", needsKeyframe)
+            .addField("qf.mostRecentKeyframeGroupArrivalTimeMs", mostRecentKeyframeGroupArrivalTimeMs)
+        for (i in layers.indices) {
+            pt.addField("qf.layer." + i, layers[i])
         }
     }
 
