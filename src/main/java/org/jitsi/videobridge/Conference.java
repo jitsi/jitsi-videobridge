@@ -190,6 +190,12 @@ public class Conference
     private final LastNEndpoints lastNEndpoints = new LastNEndpoints();
 
     /**
+     * The task of updating the ordered list of endpoints in the conference. It runs periodically in order to adapt to
+     * endpoints stopping or starting to their video streams (which affects the order).
+     */
+    private ScheduledFuture<?> updateLastNEndpointsFuture;
+
+    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID.
@@ -232,6 +238,18 @@ public class Conference
         this.conferenceName = conferenceName;
 
         speechActivity = new ConferenceSpeechActivity(this);
+        updateLastNEndpointsFuture = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(() -> {
+            try
+            {
+                lastNEndpoints.update();
+            }
+            catch (Exception e)
+            {
+                logger.warn("Failed to update lastN endpoints:", e);
+            }
+
+        }, 3, 3, TimeUnit.SECONDS);
+
         audioLevelListener
             = (sourceSsrc, level) -> speechActivity.levelChanged(sourceSsrc, (int) level);
 
@@ -499,6 +517,13 @@ public class Conference
         }
 
         logger.info("Expiring.");
+
+        if (updateLastNEndpointsFuture != null)
+        {
+            updateLastNEndpointsFuture.cancel(true);
+            updateLastNEndpointsFuture = null;
+        }
+
         EventAdmin eventAdmin = getEventAdmin();
         if (eventAdmin != null)
         {
@@ -1299,11 +1324,18 @@ public class Conference
         @NotNull
         private List<String> lastNEndpointIds = new LinkedList<>();
 
+        /**
+         * Re-calculate the ordered list of endpoints in the conference.
+         */
         private void update()
         {
             update(false);
         }
 
+        /**
+         * Re-calculate the ordered list of endpoints in the conference.
+         * @param force whether to fire an event even if the list doesn't change as a result of the call.
+         */
         private void update(boolean force)
         {
             List<AbstractEndpoint> endpointsBySpeechActivity = speechActivity.getEndpoints();

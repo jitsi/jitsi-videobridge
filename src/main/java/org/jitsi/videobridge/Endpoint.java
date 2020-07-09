@@ -1531,16 +1531,14 @@ public class Endpoint
     @Override
     public boolean isSendingAudio()
     {
-        // The endpoint is sending audio if we (the transceiver) are receiving
-        // audio.
+        // The endpoint is sending audio if we (the transceiver) are receiving audio.
         return transceiver.isReceivingAudio();
     }
 
     @Override
     public boolean isSendingVideo()
     {
-        // The endpoint is sending video if we (the transceiver) are receiving
-        // video.
+        // The endpoint is sending video if we (the transceiver) are receiving video.
         return transceiver.isReceivingVideo();
     }
 
