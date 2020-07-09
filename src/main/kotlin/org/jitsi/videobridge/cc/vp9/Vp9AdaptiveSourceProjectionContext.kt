@@ -47,7 +47,7 @@ class Vp9AdaptiveSourceProjectionContext(
     /**
      * A map that stores the per-encoding VP9 frame maps.
      */
-    private val vp9PictureMaps = HashMap<Long, Vp9PictureMap>().withDefault { ssrc: Long? -> Vp9PictureMap(logger) }
+    private val vp9PictureMaps = HashMap<Long, Vp9PictureMap>()
 
     /**
      * The [Vp9QualityFilter] instance that does quality filtering on the
@@ -127,7 +127,7 @@ class Vp9AdaptiveSourceProjectionContext(
      * Insert a packet in the appropriate Vp9FrameMap.
      */
     private fun insertPacketInMap(vp9Packet: Vp9Packet) =
-        vp9PictureMaps[vp9Packet.ssrc]?.insertPacket(vp9Packet)
+        vp9PictureMaps.getOrPut(vp9Packet.ssrc) { Vp9PictureMap(logger) }.insertPacket(vp9Packet)
 
     /**
      * Find the previous frame before the given one.
