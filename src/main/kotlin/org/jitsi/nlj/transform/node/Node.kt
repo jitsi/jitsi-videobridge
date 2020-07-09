@@ -322,10 +322,10 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
         /**
          * The longest time it took to process a single packet.
          */
-        var maxProcessingDurationNs: Long = -1
+        var maxProcessingDurationNs: Long = 0
     ) {
         private val maxProcessingDurationMs: Double
-            get() = maxProcessingDurationNs / 1000_000.0
+            get() = maxProcessingDurationNs / 1_000_000.0
 
         fun appendTo(block: NodeStatsBlock) {
             block.apply {
