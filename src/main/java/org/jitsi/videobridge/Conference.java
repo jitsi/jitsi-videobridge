@@ -71,8 +71,7 @@ public class Conference
      * synchronizing on the map itself, because it must be kept in sync with
      * {@link #endpointsCache}.
      */
-    private final ConcurrentHashMap<String, AbstractEndpoint> endpoints
-            = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, AbstractEndpoint> endpoints = new ConcurrentHashMap<>();
 
     /**
      * A read-only cache of the endpoints in this conference. Note that it
@@ -98,8 +97,7 @@ public class Conference
      */
     @SuppressFBWarnings(
             value = "IS2_INCONSISTENT_SYNC",
-            justification = "The value is deemed safe to read without " +
-                "synchronization.")
+            justification = "The value is deemed safe to read without synchronization.")
     private boolean expired = false;
 
     /**
@@ -233,16 +231,14 @@ public class Conference
 
         speechActivity = new ConferenceSpeechActivity(this);
         audioLevelListener
-            = (sourceSsrc, level)
-                -> speechActivity.levelChanged(sourceSsrc, (int) level);
+            = (sourceSsrc, level) -> speechActivity.levelChanged(sourceSsrc, (int) level);
 
         expireableImpl = new ExpireableImpl(logger, this::expire);
 
         if (enableLogging)
         {
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
-            Videobridge.Statistics videobridgeStatistics
-                = videobridge.getStatistics();
+            Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
         }
     }
@@ -255,8 +251,6 @@ public class Conference
      */
     public DiagnosticContext newDiagnosticContext()
     {
-
-
         if (conferenceName != null)
         {
             DiagnosticContext diagnosticContext = new DiagnosticContext();
@@ -312,9 +306,7 @@ public class Conference
             }
             catch (IOException e)
             {
-                logger.error(
-                    "Failed to send message on data channel to: "
-                        + endpoint.getID() + ", msg: " + msg, e);
+                logger.error("Failed to send message on data channel to: " + endpoint.getID() + ", msg: " + msg, e);
             }
         }
 
@@ -375,8 +367,7 @@ public class Conference
         }
         else if (logger.isDebugEnabled())
         {
-            logger.debug(
-                "Cannot request keyframe because the endpoint was not found.");
+            logger.debug("Cannot request keyframe because the endpoint was not found.");
         }
     }
     /**
@@ -406,9 +397,10 @@ public class Conference
             {
                 iq.setName(Localpart.from(conferenceName));
             }
-        } catch (XmppStringprepException e)
+        }
+        catch (XmppStringprepException e)
         {
-            logger.error("Error converting conference name to a localpart ", e);
+            logger.error("Error converting conference name to a Localpart ", e);
             iq.setName(null);
         }
     }
@@ -424,8 +416,7 @@ public class Conference
 
         if (logger.isInfoEnabled())
         {
-            String id
-                = dominantSpeaker == null ? "null" : dominantSpeaker.getID();
+            String id = dominantSpeaker == null ? "null" : dominantSpeaker.getID();
             logger.info("ds_change ds_id=" + id);
             getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
         }
@@ -434,8 +425,7 @@ public class Conference
 
         if (dominantSpeaker != null)
         {
-            broadcastMessage(
-                    new DominantSpeakerMessage(dominantSpeaker.getID()));
+            broadcastMessage(new DominantSpeakerMessage(dominantSpeaker.getID()));
             if (getEndpointCount() > 2)
             {
                 double senderRtt = getRtt(dominantSpeaker);
@@ -545,40 +535,26 @@ public class Conference
      */
     private void updateStatisticsOnExpire()
     {
-        long durationSeconds
-            = Math.round((System.currentTimeMillis() - creationTime) / 1000d);
+        long durationSeconds = Math.round((System.currentTimeMillis() - creationTime) / 1000d);
 
-        Videobridge.Statistics videobridgeStatistics
-            = getVideobridge().getStatistics();
+        Videobridge.Statistics videobridgeStatistics = getVideobridge().getStatistics();
 
-        videobridgeStatistics.totalConferencesCompleted
-            .incrementAndGet();
-        videobridgeStatistics.totalConferenceSeconds.addAndGet(
-            durationSeconds);
+        videobridgeStatistics.totalConferencesCompleted.incrementAndGet();
+        videobridgeStatistics.totalConferenceSeconds.addAndGet(durationSeconds);
 
-        videobridgeStatistics.totalBytesReceived.addAndGet(
-            statistics.totalBytesReceived.get());
-        videobridgeStatistics.totalBytesSent.addAndGet(
-            statistics.totalBytesSent.get());
-        videobridgeStatistics.totalPacketsReceived.addAndGet(
-            statistics.totalPacketsReceived.get());
-        videobridgeStatistics.totalPacketsSent.addAndGet(
-            statistics.totalPacketsSent.get());
+        videobridgeStatistics.totalBytesReceived.addAndGet(statistics.totalBytesReceived.get());
+        videobridgeStatistics.totalBytesSent.addAndGet(statistics.totalBytesSent.get());
+        videobridgeStatistics.totalPacketsReceived.addAndGet(statistics.totalPacketsReceived.get());
+        videobridgeStatistics.totalPacketsSent.addAndGet(statistics.totalPacketsSent.get());
 
-        boolean hasFailed
-            = statistics.hasIceFailedEndpoint
-                && !statistics.hasIceSucceededEndpoint;
-        boolean hasPartiallyFailed
-            = statistics.hasIceFailedEndpoint
-                && statistics.hasIceSucceededEndpoint;
+        boolean hasFailed = statistics.hasIceFailedEndpoint && !statistics.hasIceSucceededEndpoint;
+        boolean hasPartiallyFailed = statistics.hasIceFailedEndpoint && statistics.hasIceSucceededEndpoint;
 
-        videobridgeStatistics.dtlsFailedEndpoints.addAndGet(
-                statistics.dtlsFailedEndpoints.get());
+        videobridgeStatistics.dtlsFailedEndpoints.addAndGet(statistics.dtlsFailedEndpoints.get());
 
         if (hasPartiallyFailed)
         {
-            videobridgeStatistics.totalPartiallyFailedConferences
-                .incrementAndGet();
+            videobridgeStatistics.totalPartiallyFailedConferences.incrementAndGet();
         }
 
         if (hasFailed)
@@ -638,8 +614,7 @@ public class Conference
     @Nullable
     public AbstractEndpoint getEndpoint(@NotNull String id)
     {
-        return endpoints.get(
-            Objects.requireNonNull(id, "id must be non null"));
+        return endpoints.get(Objects.requireNonNull(id, "id must be non null"));
     }
 
     /**
@@ -669,20 +644,17 @@ public class Conference
         }
         else if (existingEndpoint != null)
         {
-            throw new IllegalArgumentException("Local endpoint with ID = "
-                + id + "already created");
+            throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
         }
 
-        final Endpoint endpoint = new Endpoint(
-            id, this, logger, iceControlling);
+        final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling);
 
         addEndpoint(endpoint);
 
         EventAdmin eventAdmin = getEventAdmin();
         if (eventAdmin != null)
         {
-            eventAdmin.sendEvent(
-                EventFactory.endpointCreated(endpoint));
+            eventAdmin.sendEvent(EventFactory.endpointCreated(endpoint));
         }
 
         return endpoint;
@@ -721,9 +693,7 @@ public class Conference
     {
         synchronized (endpointsCacheLock)
         {
-            ArrayList<Endpoint>
-                    endpointsList
-                    = new ArrayList<>(endpoints.size());
+            ArrayList<Endpoint> endpointsList = new ArrayList<>(endpoints.size());
             endpoints.values().forEach(e ->
             {
                 if (e instanceof Endpoint)
@@ -862,8 +832,7 @@ public class Conference
             updateEndpointsCache();
         }
 
-        endpoints.forEach((i, senderEndpoint)
-            -> senderEndpoint.removeReceiver(id));
+        endpoints.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
 
         if (tentacle != null)
         {
@@ -875,8 +844,7 @@ public class Conference
             final EventAdmin eventAdmin = getEventAdmin();
             if (eventAdmin != null)
             {
-                eventAdmin.sendEvent(
-                    EventFactory.endpointExpired(removedEndpoint));
+                eventAdmin.sendEvent(EventFactory.endpointExpired(removedEndpoint));
             }
             endpointsChanged();
         }
@@ -923,27 +891,23 @@ public class Conference
 
         if (eventAdmin != null)
         {
-            eventAdmin.postEvent(
-                EventFactory.endpointMessageTransportReady(endpoint));
+            eventAdmin.postEvent(EventFactory.endpointMessageTransportReady(endpoint));
         }
 
         if (!isExpired())
         {
-            AbstractEndpoint dominantSpeaker
-                    = speechActivity.getDominantEndpoint();
+            AbstractEndpoint dominantSpeaker = speechActivity.getDominantEndpoint();
 
             if (dominantSpeaker != null)
             {
                 try
                 {
-                    endpoint.sendMessage(
-                        new DominantSpeakerMessage(dominantSpeaker.getID()));
+                    endpoint.sendMessage(new DominantSpeakerMessage(dominantSpeaker.getID()));
                 }
                 catch (IOException e)
                 {
                     logger.error(
-                            "Failed to send dominant speaker update"
-                                + " on data channel to " + endpoint.getID(),
+                            "Failed to send dominant speaker update on data channel to " + endpoint.getID(),
                             e);
                 }
             }
@@ -955,8 +919,7 @@ public class Conference
      */
     void speechActivityEndpointsChanged(List<String> newEndpointIds)
     {
-        endpointsCache.forEach(
-                e ->  e.speechActivityEndpointsChanged(newEndpointIds));
+        endpointsCache.forEach(e ->  e.speechActivityEndpointsChanged(newEndpointIds));
     }
 
     /**
@@ -1094,8 +1057,7 @@ public class Conference
     {
         if (gid == GID_NOT_SET)
         {
-            throw new IllegalStateException(
-                    "Can not enable Octo without the GID being set.");
+            throw new IllegalStateException("Can not enable Octo without the GID being set.");
         }
         if (tentacle == null)
         {
@@ -1122,16 +1084,14 @@ public class Conference
             // because the vast majority of packet will follow this path.
             sendOut(packetInfo);
         }
-        else if (packet instanceof RtcpFbPliPacket
-                || packet instanceof RtcpFbFirPacket)
+        else if (packet instanceof RtcpFbPliPacket || packet instanceof RtcpFbFirPacket)
         {
             long mediaSsrc = (packet instanceof RtcpFbPliPacket)
                 ? ((RtcpFbPliPacket) packet).getMediaSourceSsrc()
                 : ((RtcpFbFirPacket) packet).getMediaSenderSsrc();
 
             // XXX we could make this faster with a map
-            AbstractEndpoint targetEndpoint
-                = findEndpointByReceiveSSRC(mediaSsrc);
+            AbstractEndpoint targetEndpoint = findEndpointByReceiveSSRC(mediaSsrc);
 
             PotentialPacketHandler pph = null;
             if (targetEndpoint instanceof Endpoint)
@@ -1202,8 +1162,7 @@ public class Conference
         {
             if (endpointId == null || endpointId.equals(e.getID()))
             {
-                endpoints.put(e.getID(),
-                        full ? e.getDebugState() : e.getStatsId());
+                endpoints.put(e.getID(), full ? e.getDebugState() : e.getStatsId());
             }
         }
         return debugState;

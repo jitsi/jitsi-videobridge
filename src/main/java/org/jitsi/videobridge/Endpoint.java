@@ -102,8 +102,7 @@ public class Endpoint
     /**
      * Count the number of dropped packets and exceptions.
      */
-    static final CountingErrorHandler queueErrorCounter
-        = new CountingErrorHandler();
+    static final CountingErrorHandler queueErrorCounter = new CountingErrorHandler();
 
     /**
      * Measures the jitter introduced by the bridge itself (i.e. jitter calculated between
@@ -144,8 +143,7 @@ public class Endpoint
     /**
      * TODO Brian
      */
-    private final DataChannelHandler dataChannelHandler
-            = new DataChannelHandler();
+    private final DataChannelHandler dataChannelHandler = new DataChannelHandler();
 
     /**
      * The instance which manages the Colibri messaging (over a data channel
@@ -222,8 +220,8 @@ public class Endpoint
      * TODO (brian): align the recurringRunnable stuff with whatever we end up
      * doing with all the other executors.
      */
-    private static final RecurringRunnableExecutor recurringRunnableExecutor =
-            new RecurringRunnableExecutor(Endpoint.class.getSimpleName());
+    private static final RecurringRunnableExecutor recurringRunnableExecutor
+            = new RecurringRunnableExecutor(Endpoint.class.getSimpleName());
 
     /**
      * The queue we put outgoing SRTP packets onto so they can be sent
@@ -304,17 +302,13 @@ public class Endpoint
         );
 
         diagnosticContext.put("endpoint_id", id);
-        bandwidthProbing
-            = new BandwidthProbing(Endpoint.this.transceiver::sendProbing);
+        bandwidthProbing = new BandwidthProbing(Endpoint.this.transceiver::sendProbing);
         bandwidthProbing.setDiagnosticContext(diagnosticContext);
         bandwidthProbing.setBitrateController(bitrateController);
         transceiver.setAudioLevelListener(conference.getAudioLevelListener());
         transceiver.onBandwidthEstimateChanged(newValueBps ->
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Estimated bandwidth is now " + newValueBps + " bps.");
-            }
+            logger.debug(() -> "Estimated bandwidth is now " + newValueBps + " bps.");
             bitrateController.bandwidthChanged((long)newValueBps.getBps());
         });
         transceiver.onBandwidthEstimateChanged(bandwidthProbing);
@@ -330,8 +324,7 @@ public class Endpoint
 
         if (conference.includeInStatistics())
         {
-            conference.getVideobridge().getStatistics()
-                .totalEndpoints.incrementAndGet();
+            conference.getVideobridge().getStatistics().totalEndpoints.incrementAndGet();
         }
     }
 
@@ -524,8 +517,7 @@ public class Endpoint
         {
             if (packet instanceof VideoRtpPacket)
             {
-                return acceptVideo
-                        && bitrateController.accept(packetInfo);
+                return acceptVideo && bitrateController.accept(packetInfo);
             }
             if (packet instanceof AudioRtpPacket)
             {
@@ -540,8 +532,7 @@ public class Endpoint
                 //  association, so we could only accept srs from the main ssrc
                 return bitrateController.accept((RtcpSrPacket) packet);
             }
-            else if (packet instanceof RtcpFbPliPacket ||
-                     packet instanceof RtcpFbFirPacket)
+            else if (packet instanceof RtcpFbPliPacket || packet instanceof RtcpFbFirPacket)
             {
                 // We assume that we are only given PLIs/FIRs destined for this
                 // endpoint. This is because Conference has to find the target
@@ -551,14 +542,12 @@ public class Endpoint
             }
             else
             {
-                logger.warn("Ignoring an rtcp packet of type"
-                    + packet.getClass().getSimpleName());
+                logger.warn("Ignoring an rtcp packet of type" + packet.getClass().getSimpleName());
                 return false;
             }
         }
 
-        logger.warn("Ignoring an unknown packet type:"
-            + packet.getClass().getSimpleName());
+        logger.warn("Ignoring an unknown packet type:" + packet.getClass().getSimpleName());
         return false;
     }
 
@@ -574,9 +563,7 @@ public class Endpoint
             boolean accepted = bitrateController.transformRtp(packetInfo);
             if (!accepted)
             {
-                logger.warn(
-                    "Dropping a packet which was supposed to be accepted:"
-                        + packet);
+                logger.warn( "Dropping a packet which was supposed to be accepted:" + packet);
                 return;
             }
 
@@ -633,13 +620,11 @@ public class Endpoint
     @Override
     public void setSenderVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraints)
     {
-        ImmutableMap<String, VideoConstraints>
-            oldVideoConstraints = bitrateController.getVideoConstraints();
+        ImmutableMap<String, VideoConstraints> oldVideoConstraints = bitrateController.getVideoConstraints();
 
         bitrateController.setVideoConstraints(newVideoConstraints);
 
-        Set<String> removedEndpoints
-            = new HashSet<>(oldVideoConstraints.keySet());
+        Set<String> removedEndpoints = new HashSet<>(oldVideoConstraints.keySet());
         removedEndpoints.removeAll(newVideoConstraints.keySet());
 
         // Endpoints that "this" no longer cares about what it receives.
@@ -653,16 +638,13 @@ public class Endpoint
         }
 
         // Added or updated.
-        for (Map.Entry<String, VideoConstraints>
-            videoConstraintsEntry : newVideoConstraints.entrySet())
+        for (Map.Entry<String, VideoConstraints> videoConstraintsEntry : newVideoConstraints.entrySet())
         {
-            AbstractEndpoint senderEndpoint
-                = getConference().getEndpoint(videoConstraintsEntry.getKey());
+            AbstractEndpoint senderEndpoint = getConference().getEndpoint(videoConstraintsEntry.getKey());
 
             if (senderEndpoint != null)
             {
-                senderEndpoint.addReceiver(
-                    getID(), videoConstraintsEntry.getValue());
+                senderEndpoint.addReceiver(getID(), videoConstraintsEntry.getValue());
             }
         }
     }
@@ -674,10 +656,7 @@ public class Endpoint
         SenderVideoConstraintsMessage senderVideoConstraintsMessage
                 = new SenderVideoConstraintsMessage(maxVideoConstraints);
 
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Sender constraints changed: " + senderVideoConstraintsMessage.toJson());
-        }
+        logger.debug(() -> "Sender constraints changed: " + senderVideoConstraintsMessage.toJson());
 
         sendMessage(senderVideoConstraintsMessage);
     }
@@ -688,8 +667,7 @@ public class Endpoint
     @Override
     public Instant getLastIncomingActivity()
     {
-        PacketIOActivity packetIOActivity
-                = this.transceiver.getPacketIOActivity();
+        PacketIOActivity packetIOActivity = this.transceiver.getPacketIOActivity();
         return packetIOActivity.getLastIncomingActivityInstant();
     }
 
@@ -721,7 +699,8 @@ public class Endpoint
         if (lastActivity == ClockUtils.NEVER)
         {
             Duration timeSinceCreation = Duration.between(creationTime, now);
-            if (timeSinceCreation.compareTo(EP_TIMEOUT) > 0) {
+            if (timeSinceCreation.compareTo(EP_TIMEOUT) > 0)
+            {
                 logger.info("Endpoint's ICE connection has neither failed nor connected " +
                     "after " + timeSinceCreation + ", expiring");
                 return true;
@@ -733,8 +712,7 @@ public class Endpoint
 
         if (Duration.between(lastActivity, now).compareTo(maxExpireTimeFromChannelShims) > 0)
         {
-            logger.info("Allowing to expire because of no activity in over " +
-                    maxExpireTimeFromChannelShims);
+            logger.info("Allowing to expire because of no activity in over " + maxExpireTimeFromChannelShims);
             return true;
         }
         return false;
@@ -777,8 +755,7 @@ public class Endpoint
 
             transceiver.teardown();
 
-            AbstractEndpointMessageTransport messageTransport
-                    = getMessageTransport();
+            AbstractEndpointMessageTransport messageTransport = getMessageTransport();
             if (messageTransport != null)
             {
                 messageTransport.close();
@@ -792,6 +769,7 @@ public class Endpoint
         {
             logger.error("Exception while expiring: ", e);
         }
+
         bandwidthProbing.enabled = false;
         recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing);
         getConference().encodingsManager.unsubscribe(this);
@@ -813,21 +791,14 @@ public class Endpoint
     {
         Conference.Statistics conferenceStats = getConference().getStatistics();
         TransceiverStats transceiverStats = transceiver.getTransceiverStats();
-        PacketStreamStats.Snapshot incomingStats
-                = transceiverStats.getIncomingPacketStreamStats();
-        PacketStreamStats.Snapshot outgoingStats
-                = transceiverStats.getOutgoingPacketStreamStats();
-        BandwidthEstimator.StatisticsSnapshot bweStats
-                = transceiverStats.getBandwidthEstimatorStats();
+        PacketStreamStats.Snapshot incomingStats = transceiverStats.getIncomingPacketStreamStats();
+        PacketStreamStats.Snapshot outgoingStats = transceiverStats.getOutgoingPacketStreamStats();
+        BandwidthEstimator.StatisticsSnapshot bweStats = transceiverStats.getBandwidthEstimatorStats();
 
-        conferenceStats.totalBytesReceived.addAndGet(
-                incomingStats.getBytes());
-        conferenceStats.totalPacketsReceived.addAndGet(
-                incomingStats.getPackets());
-        conferenceStats.totalBytesSent.addAndGet(
-                outgoingStats.getBytes());
-        conferenceStats.totalPacketsSent.addAndGet(
-                outgoingStats.getPackets());
+        conferenceStats.totalBytesReceived.addAndGet(incomingStats.getBytes());
+        conferenceStats.totalPacketsReceived.addAndGet(incomingStats.getPackets());
+        conferenceStats.totalBytesSent.addAndGet(outgoingStats.getBytes());
+        conferenceStats.totalPacketsSent.addAndGet(outgoingStats.getPackets());
 
         Number lossLimitedMs = bweStats.getNumber("lossLimitedMs");
         Number lossDegradedMs = bweStats.getNumber("lossDegradedMs");
@@ -835,19 +806,13 @@ public class Endpoint
 
         if (lossLimitedMs != null && lossDegradedMs != null && lossFreeMs != null)
         {
-            Videobridge.Statistics videobridgeStats
-                = getConference().getVideobridge().getStatistics();
+            Videobridge.Statistics videobridgeStats = getConference().getVideobridge().getStatistics();
 
-            long participantMs = lossFreeMs.longValue() +
-                lossDegradedMs.longValue() +
-                lossLimitedMs.longValue();
+            long participantMs = lossFreeMs.longValue() + lossDegradedMs.longValue() + lossLimitedMs.longValue();
 
-            videobridgeStats.totalLossControlledParticipantMs
-                .addAndGet(participantMs);
-            videobridgeStats.totalLossLimitedParticipantMs
-                .addAndGet(lossLimitedMs.longValue());
-            videobridgeStats.totalLossDegradedParticipantMs
-                .addAndGet(lossDegradedMs.longValue());
+            videobridgeStats.totalLossControlledParticipantMs.addAndGet(participantMs);
+            videobridgeStats.totalLossLimitedParticipantMs.addAndGet(lossLimitedMs.longValue());
+            videobridgeStats.totalLossDegradedParticipantMs.addAndGet(lossDegradedMs.longValue());
         }
 
         if (iceTransport.isConnected() && !dtlsTransport.isConnected())
@@ -919,14 +884,12 @@ public class Endpoint
         };
         socket.dataCallback = (data, sid, ssn, tsn, ppid, context, flags) -> {
             // We assume all data coming over SCTP will be datachannel data
-            DataChannelPacket dcp
-                    = new DataChannelPacket(data, 0, data.length, sid, (int)ppid);
+            DataChannelPacket dcp = new DataChannelPacket(data, 0, data.length, sid, (int)ppid);
             // Post the rest of the task here because the current context is
             // holding a lock inside the SctpSocket which can cause a deadlock
             // if two endpoints are trying to send datachannel messages to one
             // another (with stats broadcasting it can happen often)
-            TaskPools.IO_POOL.execute(
-                    () -> dataChannelHandler.consume(new PacketInfo(dcp)));
+            TaskPools.IO_POOL.execute(() -> dataChannelHandler.consume(new PacketInfo(dcp)));
         };
         socket.listen();
         sctpSocket = Optional.of(socket);
@@ -1061,12 +1024,10 @@ public class Endpoint
     public void setTransportInfo(IceUdpTransportPacketExtension transportInfo)
     {
         List<DtlsFingerprintPacketExtension> fingerprintExtensions
-                = transportInfo.getChildExtensionsOfType(
-                DtlsFingerprintPacketExtension.class);
+                = transportInfo.getChildExtensionsOfType(DtlsFingerprintPacketExtension.class);
         Map<String, String> remoteFingerprints = new HashMap<>();
         fingerprintExtensions.forEach(fingerprintExtension -> {
-            if (fingerprintExtension.getHash() != null
-                    && fingerprintExtension.getFingerprint() != null)
+            if (fingerprintExtension.getHash() != null && fingerprintExtension.getFingerprint() != null)
             {
                 remoteFingerprints.put(
                         fingerprintExtension.getHash(),
@@ -1074,8 +1035,7 @@ public class Endpoint
             }
             else
             {
-                logger.info("Ignoring empty DtlsFingerprint extension: "
-                        + transportInfo.toXML());
+                logger.info("Ignoring empty DtlsFingerprint extension: " + transportInfo.toXML());
             }
         });
         dtlsTransport.setRemoteFingerprints(remoteFingerprints);
@@ -1096,8 +1056,7 @@ public class Endpoint
     {
         private final Object sctpManagerLock = new Object();
         public SctpManager sctpManager = null;
-        public BlockingQueue<PacketInfo> cachedSctpPackets
-                = new LinkedBlockingQueue<>();
+        public BlockingQueue<PacketInfo> cachedSctpPackets = new LinkedBlockingQueue<>();
 
         /**
          * Initializes a new {@link SctpHandler} instance.
@@ -1160,8 +1119,7 @@ public class Endpoint
     {
         private final Object dataChannelStackLock = new Object();
         public DataChannelStack dataChannelStack = null;
-        public BlockingQueue<PacketInfo> cachedDataChannelPackets
-                = new LinkedBlockingQueue<>();
+        public BlockingQueue<PacketInfo> cachedDataChannelPackets = new LinkedBlockingQueue<>();
 
         /**
          * Initializes a new {@link DataChannelHandler} instance.
@@ -1187,8 +1145,7 @@ public class Endpoint
                     }
                     else
                     {
-                        DataChannelPacket dcp
-                            = (DataChannelPacket) packetInfo.getPacket();
+                        DataChannelPacket dcp = (DataChannelPacket) packetInfo.getPacket();
                         dataChannelStack.onIncomingDataChannelPacket(
                             ByteBuffer.wrap(dcp.getBuffer()), dcp.sid, dcp.ppid);
                     }
@@ -1237,12 +1194,11 @@ public class Endpoint
     @Override
     public void describe(ColibriConferenceIQ.ChannelBundle channelBundle)
     {
-        IceUdpTransportPacketExtension iceUdpTransportPacketExtension =
-                new IceUdpTransportPacketExtension();
+        IceUdpTransportPacketExtension iceUdpTransportPacketExtension = new IceUdpTransportPacketExtension();
         iceTransport.describe(iceUdpTransportPacketExtension);
         dtlsTransport.describe(iceUdpTransportPacketExtension);
-        ColibriWebSocketService colibriWebSocketService = ServiceUtils2.getService(
-                getConference().getBundleContext(), ColibriWebSocketService.class);
+        ColibriWebSocketService colibriWebSocketService
+                = ServiceUtils2.getService(getConference().getBundleContext(), ColibriWebSocketService.class);
         if (colibriWebSocketService != null)
         {
             String wsUrl = colibriWebSocketService.getColibriWebSocketUrl(
@@ -1252,8 +1208,7 @@ public class Endpoint
             );
             if (wsUrl != null)
             {
-                WebSocketPacketExtension wsPacketExtension
-                        = new WebSocketPacketExtension(wsUrl);
+                WebSocketPacketExtension wsPacketExtension = new WebSocketPacketExtension(wsUrl);
                 iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension);
             }
         }
@@ -1321,7 +1276,8 @@ public class Endpoint
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
 
-        if (!sources.isEmpty() || !sourceGroups.isEmpty()) {
+        if (!sources.isEmpty() || !sourceGroups.isEmpty())
+        {
             MediaSourceDesc[] mediaSources =
                 MediaSourceFactory.createMediaSources(
                     sources,
@@ -1345,10 +1301,7 @@ public class Endpoint
     @Override
     public void addReceiveSsrc(long ssrc, MediaType mediaType)
     {
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Adding receive ssrc " + ssrc + " of type " + mediaType);
-        }
+        logger.debug(() -> "Adding receive ssrc " + ssrc + " of type " + mediaType);
         transceiver.addReceiveSsrc(ssrc, mediaType);
     }
 
@@ -1446,14 +1399,20 @@ public class Endpoint
      * @param direction desired media direction:
      *                       'sendrecv', 'sendonly', 'recvonly', 'inactive'
      */
-    public void updateMediaDirection(MediaType type, String direction) {
-        switch (direction) {
+    @SuppressWarnings("unused") // Used by plugins (Yuri)
+    public void updateMediaDirection(MediaType type, String direction)
+    {
+        switch (direction)
+        {
             case "sendrecv":
             case "sendonly":
             case "recvonly":
-            case "inactive": {
-                for (ChannelShim channelShim : channelShims) {
-                    if (channelShim.getMediaType() == type) {
+            case "inactive":
+            {
+                for (ChannelShim channelShim : channelShims)
+                {
+                    if (channelShim.getMediaType() == type)
+                    {
                         channelShim.setDirection(direction);
                     }
                 }

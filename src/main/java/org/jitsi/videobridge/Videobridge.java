@@ -94,8 +94,7 @@ public class Videobridge
      * but for now we rename the property used to signal the rest API is
      * enabled so it doesn't conflict.
      */
-    public static final String REST_API_PNAME
-        = "org.jitsi.videobridge." + REST_API + "_api_temp";
+    public static final String REST_API_PNAME = "org.jitsi.videobridge." + REST_API + "_api_temp";
 
     /**
      * The property that specifies allowed entities for turning on graceful
@@ -296,10 +295,14 @@ public class Videobridge
                 expireConference = true;
             }
             else
+            {
                 expireConference = false;
+            }
         }
         if (expireConference)
+        {
             conference.expire();
+        }
 
         // Check if it's the time to shutdown now
         maybeDoShutdown();
@@ -382,10 +385,7 @@ public class Videobridge
         }
         else
         {
-            return
-                ServiceUtils2.getService(
-                        bundleContext,
-                        ConfigurationService.class);
+            return ServiceUtils2.getService(bundleContext, ConfigurationService.class);
         }
     }
 
@@ -401,9 +401,13 @@ public class Videobridge
         BundleContext bundleContext = getBundleContext();
 
         if (bundleContext == null)
+        {
             return null;
+        }
         else
+        {
             return ServiceUtils2.getService(bundleContext, EventAdmin.class);
+        }
     }
 
     /**
@@ -440,7 +444,7 @@ public class Videobridge
         }
         catch (Exception e)
         {
-            e.printStackTrace();
+            logger.warn("Exception while handling health check IQ request", e);
             return
                 IQUtils.createError(
                         healthCheckIQ,
@@ -458,8 +462,7 @@ public class Videobridge
      */
     private String getHealthStatus()
     {
-        HealthCheckService health
-                = ServiceUtils2.getService(bundleContext, HealthCheckService.class);
+        HealthCheckService health = ServiceUtils2.getService(bundleContext, HealthCheckService.class);
         if (health == null)
         {
             return "No health check service running";
@@ -483,8 +486,7 @@ public class Videobridge
         // Security not configured - service unavailable
         if (shutdownSourcePattern == null)
         {
-            return IQUtils.createError(
-                    shutdownIQ, XMPPError.Condition.service_unavailable);
+            return IQUtils.createError(shutdownIQ, XMPPError.Condition.service_unavailable);
         }
         // Check if source matches pattern
         Jid from = shutdownIQ.getFrom();
@@ -504,9 +506,7 @@ public class Videobridge
                     try
                     {
                         Thread.sleep(1000);
-
                         logger.warn("JVB force shutdown - now");
-
                         System.exit(0);
                     }
                     catch (InterruptedException e)
@@ -521,8 +521,7 @@ public class Videobridge
         {
             // Unauthorized
             logger.error("Rejected shutdown request from: " + from);
-            return IQUtils.createError(
-                    shutdownIQ, XMPPError.Condition.not_authorized);
+            return IQUtils.createError(shutdownIQ, XMPPError.Condition.not_authorized);
         }
     }
 
@@ -544,17 +543,16 @@ public class Videobridge
     private void maybeDoShutdown()
     {
         if (!shutdownInProgress)
+        {
             return;
+        }
 
         synchronized (conferences)
         {
             if (conferences.isEmpty())
             {
                 logger.info("Videobridge is shutting down NOW");
-                ShutdownService shutdownService
-                        = ServiceUtils2.getService(
-                            bundleContext,
-                            ShutdownService.class);
+                ShutdownService shutdownService = ServiceUtils2.getService(bundleContext, ShutdownService.class);
                 if (shutdownService != null)
                 {
                     shutdownService.beginShutdown();
@@ -608,13 +606,10 @@ public class Videobridge
         ProviderManager.addExtensionProvider(
                 IceUdpTransportPacketExtension.ELEMENT_NAME,
                 IceUdpTransportPacketExtension.NAMESPACE,
-                new DefaultPacketExtensionProvider<>(
-                        IceUdpTransportPacketExtension.class));
+                new DefaultPacketExtensionProvider<>(IceUdpTransportPacketExtension.class));
 
-        DefaultPacketExtensionProvider<CandidatePacketExtension>
-            candidatePacketExtensionProvider
-                = new DefaultPacketExtensionProvider<>(
-                    CandidatePacketExtension.class);
+        DefaultPacketExtensionProvider<CandidatePacketExtension> candidatePacketExtensionProvider
+                = new DefaultPacketExtensionProvider<>(CandidatePacketExtension.class);
 
         // ICE-UDP <candidate>
         ProviderManager.addExtensionProvider(
@@ -624,15 +619,13 @@ public class Videobridge
         ProviderManager.addExtensionProvider(
                 RtcpmuxPacketExtension.ELEMENT_NAME,
                 IceUdpTransportPacketExtension.NAMESPACE,
-                new DefaultPacketExtensionProvider<>(
-                        RtcpmuxPacketExtension.class));
+                new DefaultPacketExtensionProvider<>(RtcpmuxPacketExtension.class));
 
         // DTLS-SRTP <fingerprint>
         ProviderManager.addExtensionProvider(
                 DtlsFingerprintPacketExtension.ELEMENT_NAME,
                 DtlsFingerprintPacketExtension.NAMESPACE,
-                new DefaultPacketExtensionProvider<>(
-                        DtlsFingerprintPacketExtension.class));
+                new DefaultPacketExtensionProvider<>(DtlsFingerprintPacketExtension.class));
 
         // Health-check
         ProviderManager.addIQProvider(
@@ -659,8 +652,7 @@ public class Videobridge
         // Make all ice4j properties system properties.
         if (cfg != null)
         {
-            List<String> ice4jPropertyNames
-                = cfg.getPropertyNamesByPrefix("org.ice4j", false);
+            List<String> ice4jPropertyNames = cfg.getPropertyNamesByPrefix("org.ice4j", false);
 
             if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
             {
@@ -671,7 +663,9 @@ public class Videobridge
                     // we expect the getString to return either null or a
                     // non-empty String object.
                     if (propertyValue != null)
+                    {
                         System.setProperty(propertyName, propertyValue);
+                    }
                 }
             }
 
@@ -739,8 +733,7 @@ public class Videobridge
         // the system property (as it would have survived the restart).
         if (cfg != null)
         {
-            List<String> ice4jPropertyNames
-                = cfg.getPropertyNamesByPrefix("org.ice4j", false);
+            List<String> ice4jPropertyNames = cfg.getPropertyNamesByPrefix("org.ice4j", false);
 
             if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
             {
@@ -796,8 +789,7 @@ public class Videobridge
 
             conferences.put(
                     conferenceId,
-                    conference == null
-                            ? "null" : conference.getDebugState(full, endpointId));
+                    conference == null ? "null" : conference.getDebugState(full, endpointId));
         }
 
         return debugState;
@@ -824,12 +816,10 @@ public class Videobridge
                 getJsonFromQueueErrorHandler(OctoRtpReceiver.queueErrorCounter));
         queueStats.put(
                 "rtp_receiver_queue",
-                getJsonFromQueueErrorHandler(
-                        RtpReceiverImpl.Companion.getQueueErrorCounter()));
+                getJsonFromQueueErrorHandler(RtpReceiverImpl.Companion.getQueueErrorCounter()));
         queueStats.put(
                 "rtp_sender_queue",
-                getJsonFromQueueErrorHandler(
-                        RtpSenderImpl.Companion.getQueueErrorCounter()));
+                getJsonFromQueueErrorHandler(RtpSenderImpl.Companion.getQueueErrorCounter()));
 
         return queueStats;
     }
@@ -871,8 +861,7 @@ public class Videobridge
          * channels failed because there was no transport activity (which
          * includes those that failed because there was no payload activity).
          */
-        public AtomicInteger totalPartiallyFailedConferences
-            = new AtomicInteger(0);
+        public AtomicInteger totalPartiallyFailedConferences = new AtomicInteger(0);
 
         /**
          * The cumulative/total number of conferences completed/expired on this
@@ -996,8 +985,7 @@ public class Videobridge
          * The number of endpoints which had not established an endpoint
          * message transport even after some delay.
          */
-        public AtomicInteger numEndpointsNoMessageTransportAfterDelay =
-            new AtomicInteger();
+        public AtomicInteger numEndpointsNoMessageTransportAfterDelay = new AtomicInteger();
 
         /**
          * The total number of times the dominant speaker in any conference
