@@ -103,8 +103,8 @@ class Vp9AdaptiveSourceProjectionContext(
             if (accepted) {
                 val projection: Vp9FrameProjection
                 try {
-                    projection = createProjection(frame, packet, result.isReset,
-                        acceptResult.mark, receivedMs)
+                    projection = createProjection(frame = frame, initialPacket = packet,
+                        isReset = result.isReset, mark = acceptResult.mark, receivedMs = receivedMs)
                 } catch (e: Exception) {
                     logger.warn("Failed to create frame projection", e)
                     /* Make sure we don't have an accepted frame without a projection in the map. */
