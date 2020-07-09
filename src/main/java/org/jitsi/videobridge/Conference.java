@@ -158,7 +158,6 @@ public class Conference
      */
     private final Logger logger;
 
-
     /**
      * Whether this conference should be considered when generating statistics.
      */

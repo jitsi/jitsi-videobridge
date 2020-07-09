@@ -54,18 +54,23 @@ public class OctoTransceiver implements Stoppable, NodeStatsProducer
     private final StreamInformationStore streamInformationStore
             = new StreamInformationStoreImpl();
 
-    private final OctoRtpReceiver octoReceiver;
+    final OctoRtpReceiver octoReceiver;
 
     private final OctoRtpSender octoSender;
+
+    OctoTransceiver(String id, Logger parentLogger)
+    {
+        this(id, null, parentLogger);
+    }
 
     /**
      * Initializes a new {@link OctoTransceiver} instance.
      */
-    OctoTransceiver(String id, Logger parentLogger)
+    OctoTransceiver(String id, TransceiverEventHandler eventHandler, Logger parentLogger)
     {
         this.logger = parentLogger.createChildLogger(this.getClass().getName());
         this.id = id;
-        this.octoReceiver = new OctoRtpReceiver(streamInformationStore, logger);
+        this.octoReceiver = new OctoRtpReceiver(streamInformationStore, eventHandler, logger);
         this.octoSender = new OctoRtpSender(streamInformationStore, logger);
     }
 
@@ -173,13 +178,9 @@ public class OctoTransceiver implements Stoppable, NodeStatsProducer
         streamInformationStore.addRtpExtensionMapping(rtpExtension);
     }
 
-    void setAudioLevelListener(AudioLevelListener audioLevelListener)
-    {
-        octoReceiver.setAudioLevelListener(audioLevelListener);
-    }
-
     @Override
-    public void stop() {
+    public void stop()
+    {
         octoReceiver.stop();
         octoReceiver.tearDown();
         octoSender.stop();
@@ -199,17 +200,13 @@ public class OctoTransceiver implements Stoppable, NodeStatsProducer
         return nodeStats;
     }
 
-    /**
-     * Gets a JSON representation of the parts of this object's state that
-     * are deemed useful for debugging.
-     */
-    @SuppressWarnings("unchecked")
-    JSONObject getDebugState()
+    boolean isReceivingAudio()
     {
-        JSONObject debugState = new JSONObject();
-        debugState.put("octoReceiver", octoReceiver.getDebugState());
-        debugState.put("octoSender", octoSender.getDebugState());
-        debugState.put("mediaSources", mediaSources.getNodeStats().toJson());
-        return debugState;
+        return octoReceiver.isReceivingAudio();
+    }
+
+    boolean isReceivingVideo()
+    {
+        return octoReceiver.isReceivingVideo();
     }
 }
