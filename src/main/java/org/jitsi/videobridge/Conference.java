@@ -45,6 +45,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.logging.*;
+import java.util.stream.*;
 
 import static org.jitsi.utils.collections.JMap.entry;
 
@@ -185,6 +186,8 @@ public class Conference
      * This {@link Conference}'s link to Octo.
      */
     private ConfOctoTransport tentacle;
+
+    private final LastNEndpoints lastNEndpoints = new LastNEndpoints();
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
@@ -420,7 +423,7 @@ public class Conference
             getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
         }
 
-        speechActivityEndpointsChanged(speechActivity.getEndpointIds());
+        speechActivityEndpointsChanged();
 
         if (dominantSpeaker != null)
         {
@@ -675,13 +678,8 @@ public class Conference
      */
     public void endpointSourcesChanged(AbstractEndpoint endpoint)
     {
-        List<String> endpoints = speechActivity.getEndpointIds();
-        endpointsCache.forEach((e) -> {
-            if (e != endpoint)
-            {
-                e.speechActivityEndpointsChanged(endpoints);
-            }
-        });
+        // Force an update to be propagated to each endpoint's bitrate controller.
+        lastNEndpoints.update(true);
     }
 
     /**
@@ -916,9 +914,9 @@ public class Conference
     /**
      * Notifies this instance that the list of ordered endpoints has changed
      */
-    void speechActivityEndpointsChanged(List<String> newEndpointIds)
+    void speechActivityEndpointsChanged()
     {
-        endpointsCache.forEach(e ->  e.speechActivityEndpointsChanged(newEndpointIds));
+        lastNEndpoints.update();
     }
 
     /**
@@ -1289,6 +1287,43 @@ public class Conference
         public Object put(String key, Object value)
         {
             return null;
+        }
+    }
+
+    private class LastNEndpoints
+    {
+        /**
+         * The list of endpoints ordered by speech activity and video activity (that is, endpoints with video enabled
+         * are first in the list).
+         */
+        @NotNull
+        private List<String> lastNEndpointIds = new LinkedList<>();
+
+        private void update()
+        {
+            update(false);
+        }
+
+        private void update(boolean force)
+        {
+            List<AbstractEndpoint> endpointsBySpeechActivity = speechActivity.getEndpoints();
+
+            Map<Boolean, List<AbstractEndpoint>> bySendingVideo
+                    = endpointsBySpeechActivity.stream()
+                        .collect(Collectors.groupingBy(AbstractEndpoint::isSendingVideo));
+
+            List<AbstractEndpoint> lastNEndpoints = new LinkedList<>();
+            lastNEndpoints.addAll(bySendingVideo.getOrDefault(true, Collections.emptyList()));
+            lastNEndpoints.addAll(bySendingVideo.getOrDefault(false, Collections.emptyList()));
+
+            List<String> lastNEndpointIds
+                    = lastNEndpoints.stream().map(AbstractEndpoint::getID).collect(Collectors.toList());
+
+            if (force || !lastNEndpointIds.equals(this.lastNEndpointIds))
+            {
+                this.lastNEndpointIds = lastNEndpointIds;
+                endpointsCache.forEach(e -> e.speechActivityEndpointsChanged(this.lastNEndpointIds));
+            }
         }
     }
 }

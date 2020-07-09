@@ -1009,7 +1009,16 @@ public class Endpoint
                     endpointsEnteringLastN,
                     conferenceEndpoints);
 
-        sendMessage(msg);
+        TaskPools.IO_POOL.submit(() -> {
+            try
+            {
+                sendMessage(msg);
+            }
+            catch (Exception e)
+            {
+                logger.warn("Failed to send a message: ", e);
+            }
+        });
     }
 
     /**
