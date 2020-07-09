@@ -73,6 +73,11 @@ internal constructor(
      */
     val tl0PICIDX: Int,
     /**
+     * Whether to add a marker bit to the last packet of this frame.
+     * (Note this will not clear already-existing marker bits.)
+     */
+    val mark: Boolean,
+    /**
      * A timestamp of when this instance was created. It's used to calculate
      * RTP timestamps when we switch encodings.
      */
@@ -101,7 +106,7 @@ internal constructor(
         timestamp: Long
     ) : this(diagnosticContext, null /* vp9Frame */, ssrc, timestamp,
         sequenceNumberDelta, 0 /* extendedPictureId */,
-        0 /* tl0PICIDX */, 0 /* createdMs */) {
+        0 /* tl0PICIDX */, false, 0 /* createdMs */) {
     }
 
     fun rewriteSeqNo(seq: Int): Int {
@@ -127,7 +132,9 @@ internal constructor(
                 .addField("proj.rtp.timestamp", timestamp)
                 .addField("proj.rtp.seq", sequenceNumber)
                 .addField("proj.vp9.pictureid", pictureId)
-                .addField("proj.vp9.tl0picidx", tl0PICIDX))
+                .addField("proj.vp9.tl0picidx", tl0PICIDX)
+                .addField("proj.rtp.mark", mark)
+            )
         }
 
         // update ssrc, sequence number, timestamp, pictureId and tl0picidx
@@ -138,6 +145,7 @@ internal constructor(
             pkt.TL0PICIDX = tl0PICIDX
         }
         pkt.pictureId = pictureId
+        if (mark && pkt.isEndOfFrame) pkt.isMarked = true
     }
 
     /**

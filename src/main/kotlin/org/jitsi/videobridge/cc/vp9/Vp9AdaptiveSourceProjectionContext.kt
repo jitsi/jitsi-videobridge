@@ -93,8 +93,9 @@ class Vp9AdaptiveSourceProjectionContext(
                 } */
             }
             val receivedMs = packetInfo.receivedTime
-            var accepted: Boolean = vp9QualityFilter
+            val acceptResult = vp9QualityFilter
                 .acceptFrame(frame, incomingIndex, targetIndex, receivedMs)
+            var accepted = acceptResult.accept
             if (accepted) {
                 accepted = checkDecodability(frame)
             }
@@ -103,7 +104,7 @@ class Vp9AdaptiveSourceProjectionContext(
                 val projection: Vp9FrameProjection
                 try {
                     projection = createProjection(frame, packet, result.isReset,
-                        receivedMs)
+                        acceptResult.mark, receivedMs)
                 } catch (e: Exception) {
                     logger.warn("Failed to create frame projection", e)
                     /* Make sure we don't have an accepted frame without a projection in the map. */
@@ -194,6 +195,7 @@ class Vp9AdaptiveSourceProjectionContext(
     private fun createProjection(
         frame: Vp9Frame,
         initialPacket: Vp9Packet,
+        mark: Boolean,
         isReset: Boolean,
         receivedMs: Long
     ): Vp9FrameProjection {
@@ -206,6 +208,7 @@ class Vp9AdaptiveSourceProjectionContext(
             sequenceNumberDelta = 0,
             pictureId = frame.pictureId,
             tl0PICIDX = frame.tl0PICIDX,
+            mark = mark,
             createdMs = receivedMs
         )
     }

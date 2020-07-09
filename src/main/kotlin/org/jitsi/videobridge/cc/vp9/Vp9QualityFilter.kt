@@ -103,6 +103,16 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         incomingIndex: Int,
         externalTargetIndex: Int,
         receivedMs: Long
+    ): AcceptResult {
+        val accept = acceptFrame_(frame, incomingIndex, externalTargetIndex, receivedMs)
+        return AcceptResult(accept, getSidFromIndex(incomingIndex) == getSidFromIndex(currentIndex))
+    }
+
+    fun acceptFrame_(
+        frame: Vp9Frame,
+        incomingIndex: Int,
+        externalTargetIndex: Int,
+        receivedMs: Long
     ): Boolean {
         val externalTargetEncoding = getEidFromIndex(externalTargetIndex)
         val internalTargetEncoding = getEidFromIndex(internalTargetIndex)
@@ -382,7 +392,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             .addField("qf.needsKeyframe", needsKeyframe)
             .addField("qf.mostRecentKeyframeGroupArrivalTimeMs", mostRecentKeyframeGroupArrivalTimeMs)
         for (i in layers.indices) {
-            pt.addField("qf.layer." + i, layers[i])
+            pt.addField("qf.layer.$i", layers[i])
         }
     }
 
@@ -401,6 +411,11 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             debugState["currentIndex"] = indexString(currentIndex)
             return debugState
         }
+
+    data class AcceptResult(
+        val accept: Boolean,
+        val mark: Boolean = false
+    )
 
     companion object {
         /**
