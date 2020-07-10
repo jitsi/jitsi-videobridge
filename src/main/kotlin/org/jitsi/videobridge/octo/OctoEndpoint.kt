@@ -49,7 +49,7 @@ class OctoEndpoint(
 
     private val transceiverEventHandler = object : TransceiverEventHandler {
         override fun audioLevelReceived(sourceSsrc: Long, level: Long) =
-            conference.audioLevelListener.onLevelReceived(sourceSsrc, level)
+            conference.speechActivity.levelChanged(id, level)
     }
 
     private val transceiver = OctoTransceiver(id, transceiverEventHandler, logger).apply {

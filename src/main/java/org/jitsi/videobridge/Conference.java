@@ -139,11 +139,6 @@ public class Conference
     private final ConferenceSpeechActivity speechActivity;
 
     /**
-     * The audio level listener.
-     */
-    private final AudioLevelListener audioLevelListener;
-
-    /**
      * The <tt>Videobridge</tt> which has initialized this <tt>Conference</tt>.
      */
     private final Videobridge videobridge;
@@ -249,9 +244,6 @@ public class Conference
             }
 
         }, 3, 3, TimeUnit.SECONDS);
-
-        audioLevelListener
-            = (sourceSsrc, level) -> speechActivity.levelChanged(sourceSsrc, (int) level);
 
         expireableImpl = new ExpireableImpl(logger, this::expire);
 
@@ -1062,14 +1054,6 @@ public class Conference
             // No one wanted the packet, so the buffer is now free!
             ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
         }
-    }
-
-    /**
-     * Gets the audio level listener.
-     */
-    public AudioLevelListener getAudioLevelListener()
-    {
-        return audioLevelListener;
     }
 
     /**

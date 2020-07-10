@@ -97,53 +97,50 @@ public class ConferenceSpeechActivity
      * changed to one identified by a specific synchronization source
      * identifier/SSRC.
      * 
-     * @param ssrc the synchronization source identifier/SSRC of the new
+     * @param id the synchronization source identifier/SSRC of the new
      * active/dominant speaker
      */
-    private void activeSpeakerChanged(long ssrc)
+    private void activeSpeakerChanged(Object id)
     {
         Conference conference = this.conference;
-
-        if (conference != null)
+        if (conference == null)
         {
-            if (logger.isTraceEnabled())
-            {
-                logger.trace(
-                        "The dominant speaker in conference "
-                            + conference.getID() + " is now the SSRC " + ssrc
-                            + ".");
-            }
+            return;
+        }
 
-            AbstractEndpoint endpoint
-                = conference.findEndpointByReceiveSSRC(ssrc);
+        if (id != null && !(id instanceof String))
+        {
+            throw new IllegalStateException("Invalid speaker ID: " + id);
+        }
 
-            if (endpoint == null)
+        logger.trace(() -> "The dominant speaker in conference " + conference.getID() + " is now " + id + ".");
+
+        AbstractEndpoint endpoint = conference.getEndpoint((String) id);
+        if (endpoint == null)
+        {
+            logger.warn("Unable to find endpoint with id " + id);
+            return;
+        }
+
+        synchronized (syncRoot)
+        {
+            // Move this endpoint to the top of our sorted list
+            if (!endpoints.remove(endpoint))
             {
-                logger.warn("Unable to find endpoint corresponding to "
-                    + "active speaker SSRC " + ssrc);
+                logger.warn("Got active speaker notification for an unknown"
+                        + " endpoint (ssrc: " + id + ", epId "
+                        + endpoint.getID() + ")! Ignoring");
                 return;
             }
+            endpoints.add(0, endpoint);
 
-            synchronized (syncRoot)
+            TaskPools.IO_POOL.submit(() ->
             {
-                // Move this endpoint to the top of our sorted list
-                if (!endpoints.remove(endpoint))
+                if (conference != null)
                 {
-                    logger.warn("Got active speaker notification for an unknown"
-                            + " endpoint (ssrc: " + ssrc + ", epId "
-                            + endpoint.getID() + ")! Ignoring");
-                    return;
+                    conference.dominantSpeakerChanged();
                 }
-                endpoints.add(0, endpoint);
-
-                TaskPools.IO_POOL.submit(() ->
-                {
-                    if (conference != null)
-                    {
-                        conference.dominantSpeakerChanged();
-                    }
-                });
-            }
+            });
         }
     }
 
@@ -196,23 +193,17 @@ public class ConferenceSpeechActivity
     }
 
     /**
-     * Notifies this instance that a new audio level was received or measured by
-     * an <tt>Endpoint</tt> for an RTP stream with a specific synchronization
-     * source identifier/SSRC.
+     * Notifies this instance that a new audio level was received or measured by an <tt>Endpoint</tt>.
      *
-     * @param ssrc the synchronization source identifier/SSRC of the RTP stream
-     * for which a new audio level was received or measured by the specified
-     * <tt>channel</tt>
-     * @param level the new audio level which was received or measured by the
-     * specified <tt>channel</tt> for the RTP stream with the specified
-     * <tt>ssrc</tt> 
+     * @param endpointId the ID of he endpoint for which a new audio level was received or measured
+     * @param level the new audio level which was received or measured
      */
-    public void levelChanged(long ssrc, int level)
+    public void levelChanged(String endpointId, long level)
     {
         DominantSpeakerIdentification dsi = this.dominantSpeakerIdentification;
         if (dsi != null)
         {
-            dominantSpeakerIdentification.levelChanged(ssrc, level);
+            dominantSpeakerIdentification.levelChanged(endpointId, (int) level);
         }
     }
 

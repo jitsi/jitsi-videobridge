@@ -1553,7 +1553,7 @@ public class Endpoint
         @Override
         public void audioLevelReceived(long sourceSsrc, long level)
         {
-            getConference().getAudioLevelListener().onLevelReceived(sourceSsrc, level);
+            getConference().getSpeechActivity().levelChanged(getID(), level);
         }
 
         /**
