@@ -21,7 +21,6 @@ import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 
 import java.util.*;
-import java.util.stream.*;
 
 /**
  * Represents the speech activity of the <tt>Endpoint</tt>s in a
@@ -39,74 +38,6 @@ public class ConferenceSpeechActivity
      * and its instances to print debug information.
      */
     private final Logger logger;
-
-    /**
-     * Parses an <tt>Object</tt> as a synchronization source identifier (SSRC).
-     *
-     * @param obj the <tt>Object</tt> to parse as an SSRC
-     * @return the SSRC represented by <tt>obj</tt> or <tt>-1</tt> if
-     * <tt>obj</tt> could not be parsed as an SSRC
-     */
-    private static long parseSSRC(Object obj)
-    {
-        long l;
-
-        if (obj == null)
-        {
-            l = -1L;
-        }
-        else if (obj instanceof Number)
-        {
-            l = ((Number) obj).longValue();
-        }
-        else
-        {
-            String s = obj.toString();
-
-            try
-            {
-                l = Long.parseLong(s);
-            }
-            catch (NumberFormatException ex)
-            {
-                l = -1L;
-            }
-        }
-        return l;
-    }
-
-    /**
-     * Resolves a synchronization source identifier (SSRC) of a received RTP
-     * stream as an <tt>Endpoint</tt> identifier (ID).
-     *
-     * @param jsonObject the <tt>JSONObject</tt> from which the SSRC is to be
-     * read and into which the <tt>Endpoint</tt> ID is to be written
-     * @param ssrcKey the key in <tt>jsonObject</tt> with which the SSRC to be
-     * resolved is associated
-     * @param conference
-     * @param endpointKey the key in <tt>jsonObject</tt> with which the resolved
-     * <tt>Endpoint</tt> ID is to be associated
-     */
-    @SuppressWarnings("unchecked")
-    private static void resolveSSRCAsEndpoint(
-            JSONObject jsonObject,
-            String ssrcKey,
-            Conference conference,
-            String endpointKey)
-    {
-        long ssrc = parseSSRC(jsonObject.get(ssrcKey));
-
-        if (ssrc != -1)
-        {
-            AbstractEndpoint endpoint
-                = conference.findEndpointByReceiveSSRC(ssrc);
-
-            if (endpoint != null)
-            {
-                jsonObject.put(endpointKey, endpoint.getID());
-            }
-        }
-    }
 
     /**
      * The <tt>ActiveSpeakerChangedListener</tt> which listens to
@@ -214,87 +145,6 @@ public class ConferenceSpeechActivity
                 });
             }
         }
-    }
-
-    /**
-     * Retrieves a JSON representation of the dominant speaker
-     * for the purposes of the REST API of Videobridge.
-     *
-     * @return a <tt>JSONObject</tt> which represents
-     * <tt>dominantSpeakerIdentification</tt> for the purposes of the REST API
-     * of Videobridge
-     */
-    public JSONObject doGetDominantSpeakerIdentificationJSON()
-    {
-        DominantSpeakerIdentification dominantSpeakerIdentification
-            = this.dominantSpeakerIdentification;
-        JSONObject jsonObject;
-
-        if (dominantSpeakerIdentification == null)
-        {
-            // We do not know how to represent ActiveSpeakerDetector at the time
-            // of this writing, we know how to represent
-            // DominantSpeakerIdentification only.
-            jsonObject = null;
-        }
-        else
-        {
-            Conference conference = this.conference;
-
-            if (conference == null)
-            {
-                jsonObject = null;
-            }
-            else
-            {
-                jsonObject = dominantSpeakerIdentification.doGetJSON();
-                if (jsonObject != null)
-                {
-                    // Resolve the dominantSpeaker of
-                    // DominantSpeakerIdentification which is a synchronization
-                    // source identifier (SSRC) as an Endpoint.
-                    resolveSSRCAsEndpoint(
-                            jsonObject,
-                            "dominantSpeaker",
-                            conference,
-                            "dominantEndpoint");
-
-                    // Resolve the ssrc of each one of the speakers of
-                    // DominantSpeakerIdentification as an Endpoint.
-                    Object speakers = jsonObject.get("speakers");
-
-                    if (speakers != null)
-                    {
-                        if (speakers instanceof JSONObject[])
-                        {
-                            for (JSONObject speaker : (JSONObject[]) speakers)
-                            {
-                                resolveSSRCAsEndpoint(
-                                        speaker,
-                                        "ssrc",
-                                        conference,
-                                        "endpoint");
-                            }
-                        }
-                        else if (speakers instanceof JSONArray)
-                        {
-                            for (Object speaker : (JSONArray) speakers)
-                            {
-                                if (speaker instanceof JSONObject)
-                                {
-                                    resolveSSRCAsEndpoint(
-                                            (JSONObject) speaker,
-                                            "ssrc",
-                                            conference,
-                                            "endpoint");
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return jsonObject;
     }
 
     void expire()

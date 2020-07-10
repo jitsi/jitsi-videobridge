@@ -100,7 +100,7 @@ public class Conferences extends ColibriResource
 
         ConferenceSpeechActivity conferenceSpeechActivity = conference.getSpeechActivity();
 
-        return conferenceSpeechActivity.doGetDominantSpeakerIdentificationJSON().toJSONString();
+        return conferenceSpeechActivity.getDebugState().toJSONString();
     }
 
     @POST
