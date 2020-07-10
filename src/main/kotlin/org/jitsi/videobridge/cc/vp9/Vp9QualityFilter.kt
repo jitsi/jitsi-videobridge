@@ -190,8 +190,8 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
                 (!frame.usesInterLayerDependency || layers[spatialLayerOfFrame - 1])
 
             val wantToSwitch =
-                (spatialLayerOfFrame > currentSpatialLayer && currentSpatialLayer <= externalTargetSpatialId) ||
-                (spatialLayerOfFrame < currentEncoding && currentSpatialLayer >= externalTargetSpatialId)
+                (spatialLayerOfFrame > currentSpatialLayer && spatialLayerOfFrame <= externalTargetSpatialId) ||
+                (spatialLayerOfFrame < currentEncoding && spatialLayerOfFrame >= externalTargetSpatialId)
 
             if (wantToSwitch) {
                 if (canForwardLayer) {
