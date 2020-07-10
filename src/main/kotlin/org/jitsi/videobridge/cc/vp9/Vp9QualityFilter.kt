@@ -54,14 +54,14 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     private var needsKeyframe = false
 
     /**
-     * The layer index that this instance tries to achieve. Upon
-     * receipt of a packet, we check whether externalTargetIndex
+     * The encoding ID that this instance tries to achieve. Upon
+     * receipt of a packet, we check whether encoding in the externalTargetIndex
      * (that's specified as an argument to the
-     * [acceptFrame] method) is set to a different encoding or spatial layer,
+     * [acceptFrame] method) is set to something different,
      * in which case we set [needsKeyframe] equal to true and
      * update.
      */
-    private var internalTargetIndex = SUSPENDED_INDEX
+    private var internalTargetEncoding = SUSPENDED_ENCODING_ID
 
     /**
      * The layer index that we're currently forwarding. [SUSPENDED_INDEX]
@@ -115,13 +115,12 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         receivedMs: Long
     ): Boolean {
         val externalTargetEncoding = getEidFromIndex(externalTargetIndex)
-        val internalTargetEncoding = getEidFromIndex(internalTargetIndex)
         val currentEncoding = getEidFromIndex(currentIndex)
 
         if (externalTargetEncoding != internalTargetEncoding) {
             // The externalEncodingIdTarget has changed since accept last
             // ran; perhaps we should request a keyframe.
-            internalTargetIndex = externalTargetIndex
+            internalTargetEncoding = externalTargetEncoding
             if (externalTargetEncoding != SUSPENDED_ENCODING_ID &&
                 externalTargetEncoding != currentEncoding) {
                 needsKeyframe = true
@@ -191,8 +190,8 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
                 (!frame.usesInterLayerDependency || layers[spatialLayerOfFrame - 1])
 
             val wantToSwitch =
-                (spatialLayerOfFrame > currentSpatialLayer && currentSpatialLayer < externalTargetSpatialId) ||
-                (spatialLayerOfFrame < currentEncoding && currentSpatialLayer > externalTargetSpatialId)
+                (spatialLayerOfFrame > currentSpatialLayer && currentSpatialLayer <= externalTargetSpatialId) ||
+                (spatialLayerOfFrame < currentEncoding && currentSpatialLayer >= externalTargetSpatialId)
 
             if (wantToSwitch) {
                 if (canForwardLayer) {
@@ -237,7 +236,13 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             } else {
                 // The currentEncoding exactly matches the externalTargetEncoding.
                 val externalTargetTemporalId = getTidFromIndex(externalTargetIndex)
-                temporalLayerIdOfFrame <= externalTargetTemporalId
+                val currentTemporalLayer = getTidFromIndex(currentIndex)
+
+                val acceptTemporal = temporalLayerIdOfFrame <= externalTargetTemporalId
+                if (acceptTemporal && temporalLayerIdOfFrame > currentTemporalLayer) {
+                    currentIndex = incomingIndex
+                }
+                acceptTemporal
             }
         } else {
             // In this branch we're not processing a keyframe and the
@@ -271,7 +276,6 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     @Synchronized
     private fun isPossibleToSwitch(incomingEncoding: Int): Boolean {
         val currentEncoding = getEidFromIndex(currentIndex)
-        val internalTargetEncoding = getEidFromIndex(internalTargetIndex)
 
         if (incomingEncoding == SUSPENDED_ENCODING_ID) {
             // We failed to resolve the spatial/quality layer of the packet.
@@ -323,7 +327,6 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             "Received a keyframe of encoding: $encodingIdOfKeyframe"
         }
 
-        val internalTargetEncoding = getEidFromIndex(internalTargetIndex)
         // The keyframe request has been fulfilled at this point, regardless of
         // whether we'll be able to achieve the internalEncodingIdTarget.
         needsKeyframe = false
@@ -388,7 +391,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         justification = "We intentionally avoid synchronizing while reading fields only used in debug output.")
     internal fun addDiagnosticContext(pt: DiagnosticContext.TimeSeriesPoint) {
         pt.addField("qf.currentIndex", indexString(currentIndex))
-            .addField("qf.internalTargetIndex", indexString(internalTargetIndex))
+            .addField("qf.internalTargetEncoding", internalTargetEncoding)
             .addField("qf.needsKeyframe", needsKeyframe)
             .addField("qf.mostRecentKeyframeGroupArrivalTimeMs", mostRecentKeyframeGroupArrivalTimeMs)
         for (i in layers.indices) {
@@ -407,7 +410,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             val debugState = JSONObject()
             debugState["mostRecentKeyframeGroupArrivalTimeMs"] = mostRecentKeyframeGroupArrivalTimeMs
             debugState["needsKeyframe"] = needsKeyframe
-            debugState["internalTargetIndex"] = indexString(internalTargetIndex)
+            debugState["internalTargetIndex"] = internalTargetEncoding
             debugState["currentIndex"] = indexString(currentIndex)
             return debugState
         }
