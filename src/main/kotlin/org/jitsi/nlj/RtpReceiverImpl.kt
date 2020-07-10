@@ -66,6 +66,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.queue.CountingErrorHandler
 
 import org.jitsi.nlj.RtpReceiverConfig.Config
+import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BufferPool
 
 class RtpReceiverImpl @JvmOverloads constructor(
@@ -88,6 +89,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
      */
     private val backgroundExecutor: ScheduledExecutorService,
     streamInformationStore: ReadOnlyStreamInformationStore,
+    private val eventHandler: RtpReceiverEventHandler,
     parentLogger: Logger,
     diagnosticContext: DiagnosticContext = DiagnosticContext()
 ) : RtpReceiver() {
@@ -104,7 +106,13 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val srtcpDecryptWrapper = SrtcpDecryptNode()
     private val tccGenerator = TccGeneratorNode(rtcpSender, streamInformationStore, logger)
     private val remoteBandwidthEstimator = RemoteBandwidthEstimator(streamInformationStore, logger, diagnosticContext)
-    private val audioLevelReader = AudioLevelReader(streamInformationStore)
+    private val audioLevelReader = AudioLevelReader(streamInformationStore).apply {
+        audioLevelListener = object : AudioLevelListener {
+            override fun onLevelReceived(sourceSsrc: Long, level: Long) {
+                eventHandler.audioLevelReceived(sourceSsrc, level)
+            }
+        }
+    }
     private val silenceDiscarder = DiscardableDiscarder("Silence discarder", false)
     private val paddingOnlyDiscarder = DiscardableDiscarder("Padding-only discarder", true)
     private val statsTracker = IncomingStatisticsTracker(streamInformationStore)
@@ -116,14 +124,19 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
     private val rtcpTermination = RtcpTermination(rtcpEventNotifier, logger)
     private val retransmissionRequester = RetransmissionRequesterNode(rtcpSender, backgroundExecutor, logger)
-    private val rembHandler = RembHandler(logger)
+    private val rembHandler = RembHandler(logger).apply {
+        addListener(object : BandwidthEstimator.Listener {
+            override fun bandwidthEstimationChanged(newValue: Bandwidth) {
+                eventHandler.bandwidthEstimationChanged(newValue)
+            }
+        })
+    }
     private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-rx")
     private val videoBitrateCalculator = VideoBitrateCalculator(parentLogger)
     private val audioBitrateCalculator = BitrateCalculator("Audio bitrate calculator")
 
-    override fun isReceivingAudio() = audioBitrateCalculator.packetRatePps >= 5
-    // Screen sharing static content can result in very low packet/bit rates, hence the low threshold.
-    override fun isReceivingVideo() = videoBitrateCalculator.packetRatePps >= 1
+    override fun isReceivingAudio() = audioBitrateCalculator.active
+    override fun isReceivingVideo() = videoBitrateCalculator.active
 
     companion object {
         val queueErrorCounter = CountingErrorHandler()
@@ -263,14 +276,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun handleEvent(event: Event) {
         NodeEventVisitor(event).visit(inputTreeRoot)
-    }
-
-    override fun setAudioLevelListener(audioLevelListener: AudioLevelListener) {
-        audioLevelReader.audioLevelListener = audioLevelListener
-    }
-
-    override fun onBandwidthEstimateChanged(listener: BandwidthEstimator.Listener) {
-        rembHandler.addListener(listener)
     }
 
     override fun getStreamStats() = statsTracker.getSnapshot()
