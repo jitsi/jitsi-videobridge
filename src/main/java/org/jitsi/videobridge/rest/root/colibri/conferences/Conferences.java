@@ -98,8 +98,7 @@ public class Conferences extends ColibriResource
             throw new NotFoundException();
         }
 
-        ConferenceSpeechActivity conferenceSpeechActivity
-                = conference.getSpeechActivity();
+        ConferenceSpeechActivity conferenceSpeechActivity = conference.getSpeechActivity();
 
         return conferenceSpeechActivity.doGetDominantSpeakerIdentificationJSON().toJSONString();
     }

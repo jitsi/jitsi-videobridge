@@ -341,19 +341,7 @@ public class ConferenceSpeechActivity
     {
         synchronized (syncRoot)
         {
-            //TODO(brian): make a copy?
-            return endpoints;
-        }
-    }
-
-    public List<String> getEndpointIds()
-    {
-
-        synchronized (syncRoot)
-        {
-           return endpoints.stream()
-                .map(AbstractEndpoint::getID)
-                .collect(Collectors.toList());
+            return new LinkedList<>(endpoints);
         }
     }
 
@@ -418,7 +406,6 @@ public class ConferenceSpeechActivity
         {
             final boolean finalDominantSpeakerChanged = dominantSpeakerChanged;
             final boolean finalEndpointsChanged = endpointsListChanged;
-            final List<String> finalNewEndpointIds = getEndpointIds();
             TaskPools.IO_POOL.submit(() -> {
                 final Conference conference = this.conference;
                 if (conference == null)
@@ -432,7 +419,7 @@ public class ConferenceSpeechActivity
                 // Dominant speaker changed implies that the list changed.
                 if (finalEndpointsChanged && !finalDominantSpeakerChanged)
                 {
-                    conference.speechActivityEndpointsChanged(finalNewEndpointIds);
+                    conference.speechActivityEndpointsChanged();
                 }
 
             });

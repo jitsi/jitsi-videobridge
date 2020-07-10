@@ -45,6 +45,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.logging.*;
+import java.util.stream.*;
 
 import static org.jitsi.utils.collections.JMap.entry;
 
@@ -158,7 +159,6 @@ public class Conference
      */
     private final Logger logger;
 
-
     /**
      * Whether this conference should be considered when generating statistics.
      */
@@ -186,6 +186,14 @@ public class Conference
      * This {@link Conference}'s link to Octo.
      */
     private ConfOctoTransport tentacle;
+
+    private final LastNEndpoints lastNEndpoints = new LastNEndpoints();
+
+    /**
+     * The task of updating the ordered list of endpoints in the conference. It runs periodically in order to adapt to
+     * endpoints stopping or starting to their video streams (which affects the order).
+     */
+    private ScheduledFuture<?> updateLastNEndpointsFuture;
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
@@ -230,6 +238,18 @@ public class Conference
         this.conferenceName = conferenceName;
 
         speechActivity = new ConferenceSpeechActivity(this);
+        updateLastNEndpointsFuture = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(() -> {
+            try
+            {
+                lastNEndpoints.update();
+            }
+            catch (Exception e)
+            {
+                logger.warn("Failed to update lastN endpoints:", e);
+            }
+
+        }, 3, 3, TimeUnit.SECONDS);
+
         audioLevelListener
             = (sourceSsrc, level) -> speechActivity.levelChanged(sourceSsrc, (int) level);
 
@@ -421,7 +441,7 @@ public class Conference
             getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
         }
 
-        speechActivityEndpointsChanged(speechActivity.getEndpointIds());
+        speechActivityEndpointsChanged();
 
         if (dominantSpeaker != null)
         {
@@ -497,6 +517,13 @@ public class Conference
         }
 
         logger.info("Expiring.");
+
+        if (updateLastNEndpointsFuture != null)
+        {
+            updateLastNEndpointsFuture.cancel(true);
+            updateLastNEndpointsFuture = null;
+        }
+
         EventAdmin eventAdmin = getEventAdmin();
         if (eventAdmin != null)
         {
@@ -676,13 +703,8 @@ public class Conference
      */
     public void endpointSourcesChanged(AbstractEndpoint endpoint)
     {
-        List<String> endpoints = speechActivity.getEndpointIds();
-        endpointsCache.forEach((e) -> {
-            if (e != endpoint)
-            {
-                e.speechActivityEndpointsChanged(endpoints);
-            }
-        });
+        // Force an update to be propagated to each endpoint's bitrate controller.
+        lastNEndpoints.update(true);
     }
 
     /**
@@ -917,9 +939,9 @@ public class Conference
     /**
      * Notifies this instance that the list of ordered endpoints has changed
      */
-    void speechActivityEndpointsChanged(List<String> newEndpointIds)
+    void speechActivityEndpointsChanged()
     {
-        endpointsCache.forEach(e ->  e.speechActivityEndpointsChanged(newEndpointIds));
+        lastNEndpoints.update();
     }
 
     /**
@@ -1290,6 +1312,50 @@ public class Conference
         public Object put(String key, Object value)
         {
             return null;
+        }
+    }
+
+    private class LastNEndpoints
+    {
+        /**
+         * The list of endpoints ordered by speech activity and video activity (that is, endpoints with video enabled
+         * are first in the list).
+         */
+        @NotNull
+        private List<String> lastNEndpointIds = new LinkedList<>();
+
+        /**
+         * Re-calculate the ordered list of endpoints in the conference.
+         */
+        private void update()
+        {
+            update(false);
+        }
+
+        /**
+         * Re-calculate the ordered list of endpoints in the conference.
+         * @param force whether to fire an event even if the list doesn't change as a result of the call.
+         */
+        private void update(boolean force)
+        {
+            List<AbstractEndpoint> endpointsBySpeechActivity = speechActivity.getEndpoints();
+
+            Map<Boolean, List<AbstractEndpoint>> bySendingVideo
+                    = endpointsBySpeechActivity.stream()
+                        .collect(Collectors.groupingBy(AbstractEndpoint::isSendingVideo));
+
+            List<AbstractEndpoint> lastNEndpoints = new LinkedList<>();
+            lastNEndpoints.addAll(bySendingVideo.getOrDefault(true, Collections.emptyList()));
+            lastNEndpoints.addAll(bySendingVideo.getOrDefault(false, Collections.emptyList()));
+
+            List<String> lastNEndpointIds
+                    = lastNEndpoints.stream().map(AbstractEndpoint::getID).collect(Collectors.toList());
+
+            if (force || !lastNEndpointIds.equals(this.lastNEndpointIds))
+            {
+                this.lastNEndpointIds = lastNEndpointIds;
+                endpointsCache.forEach(e -> e.speechActivityEndpointsChanged(this.lastNEndpointIds));
+            }
         }
     }
 }

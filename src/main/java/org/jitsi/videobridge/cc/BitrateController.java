@@ -696,6 +696,9 @@ public class BitrateController
 
         Set<String> newForwardedEndpointIds = new HashSet<>();
         Set<String> endpointsEnteringLastNIds = new HashSet<>();
+        // TODO: The only use of conferenceEndpointIds is sending it to the client. Since it is just a set of all
+        // endpoints in the conference (not ordered by anything specific), it carries no useful information to the
+        // client. Check if we can remove its use from the client and subsequently from this code.
         Set<String> conferenceEndpointIds = new HashSet<>();
 
         // Accumulators used for tracing purposes.
