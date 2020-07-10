@@ -30,6 +30,8 @@ import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.stats.RateStatistics
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
+import java.time.Clock
+import java.time.Duration
 
 /**
  * When deciding what can be forwarded, we want to know the bitrate of a stream so we can fill the receiver's
@@ -38,8 +40,10 @@ import org.jitsi.nlj.RtpLayerDesc
  * tags the [VideoRtpPacket] with a snapshot of the current estimated bitrate for the encoding to which it belongs
  */
 class VideoBitrateCalculator(
-    parentLogger: Logger
-) : BitrateCalculator("Video bitrate calculator") {
+    parentLogger: Logger,
+    // Screen sharing static content can result in very low packet/bit rates, hence the low threshold.
+    activePacketRateThreshold: Int = 1
+) : BitrateCalculator("Video bitrate calculator", activePacketRateThreshold) {
     private val logger = createChildLogger(parentLogger)
     private var mediaSourceDescs: Array<MediaSourceDesc> = arrayOf()
 
@@ -74,13 +78,27 @@ class VideoBitrateCalculator(
     override fun trace(f: () -> Unit) = f.invoke()
 }
 
-open class BitrateCalculator(name: String = "Bitrate calculator") : ObserverNode(name) {
+open class BitrateCalculator(
+    name: String = "Bitrate calculator",
+    /**
+     * At what threshold the stream is considered active.
+     */
+    private val activePacketRateThreshold: Int = 5,
+    private val clock: Clock = Clock.systemUTC()
+) : ObserverNode(name) {
     private val bitrateStatistics = RateStatistics(5000, 8000f)
     private val packetRateStatistics = RateStatistics(5000, 1000f)
     val bitrate: Bandwidth
         get() = bitrateStatistics.rate.bps
     val packetRatePps: Long
         get() = packetRateStatistics.rate
+    private val start = clock.instant()
+
+    /**
+     * Keep track of whether the stream is active (has packets at at least [activePacketRateThreshold])
+     */
+    val active: Boolean
+        get() = Duration.between(start, clock.instant()) <= GRACE_PERIOD || packetRatePps >= activePacketRateThreshold
 
     override fun observe(packetInfo: PacketInfo) {
         val now = System.currentTimeMillis()
@@ -98,5 +116,12 @@ open class BitrateCalculator(name: String = "Bitrate calculator") : ObserverNode
 
     override fun getNodeStatsToAggregate(): NodeStatsBlock {
         return super.getNodeStats()
+    }
+
+    companion object {
+        /**
+         * The initial period in which we consider the stream active regardless of packet rate.
+         */
+        val GRACE_PERIOD = Duration.ofSeconds(10)
     }
 }

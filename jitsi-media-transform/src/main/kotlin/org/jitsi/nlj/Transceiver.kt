@@ -28,6 +28,7 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.stats.PacketIOActivity
 import org.jitsi.nlj.stats.TransceiverStats
 import org.jitsi.nlj.transform.NodeStatsProducer
+import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.SsrcAssociation
@@ -67,6 +68,12 @@ class Transceiver(
     backgroundExecutor: ScheduledExecutorService,
     diagnosticContext: DiagnosticContext,
     parentLogger: Logger,
+    /**
+     * The handler for events coming out of this [Transceiver]. Note that these events are fired synchronously,
+     * potentially in one of the threads in the CPU pool, and it is up to the user of the library to handle the
+     * transition to another thread if necessary.
+     */
+    private val eventHandler: TransceiverEventHandler,
     private val clock: Clock = Clock.systemUTC()
 ) : Stoppable, NodeStatsProducer {
     private val logger = createChildLogger(parentLogger)
@@ -84,7 +91,13 @@ class Transceiver(
 
     private var mediaSources = MediaSources()
 
-    private val bandwidthEstimator: BandwidthEstimator = GoogleCcEstimator(diagnosticContext, logger)
+    private val bandwidthEstimator: BandwidthEstimator = GoogleCcEstimator(diagnosticContext, logger).apply {
+        addListener(object : BandwidthEstimator.Listener {
+            override fun bandwidthEstimationChanged(newValue: Bandwidth) {
+                eventHandler.bandwidthEstimationChanged(newValue)
+            }
+        })
+    }
 
     private val transportCcEngine = TransportCcEngine(bandwidthEstimator, logger)
 
@@ -122,6 +135,7 @@ class Transceiver(
             receiverExecutor,
             backgroundExecutor,
             streamInformationStore,
+            eventHandler,
             logger,
             diagnosticContext
         )
@@ -133,11 +147,6 @@ class Transceiver(
 
         endpointConnectionStats.addListener(rtpSender)
         endpointConnectionStats.addListener(rtpReceiver)
-    }
-
-    fun onBandwidthEstimateChanged(listener: BandwidthEstimator.Listener) {
-        bandwidthEstimator.addListener(listener)
-        rtpReceiver.onBandwidthEstimateChanged(listener)
     }
 
     /**
@@ -235,11 +244,6 @@ class Transceiver(
 //        rtpExtensions.clear()
     }
 
-    fun setAudioLevelListener(audioLevelListener: AudioLevelListener) {
-        logger.cdebug { "Setting audio level listener $audioLevelListener" }
-        rtpReceiver.setAudioLevelListener(audioLevelListener)
-    }
-
     // TODO(brian): we may want to handle local and remote ssrc associations differently, as different parts of the
     // code care about one or the other, but currently there is no issue treating them the same.
     fun addSsrcAssociation(ssrcAssociation: SsrcAssociation) {
@@ -330,3 +334,9 @@ class Transceiver(
         }
     }
 }
+
+/**
+ * Interface for handling events coming from a [Transceiver]
+ * The intention is to extend if needed (e.g. merge with EndpointConnectionStats or a potential RtpSenderEventHandler).
+ */
+interface TransceiverEventHandler : RtpReceiverEventHandler

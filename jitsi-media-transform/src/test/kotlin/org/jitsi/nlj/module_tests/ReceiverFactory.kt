@@ -21,6 +21,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import org.jitsi.nlj.RtpReceiver
 import org.jitsi.nlj.RtpReceiverImpl
+import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
@@ -52,6 +53,7 @@ class ReceiverFactory {
                 executor = executor,
                 backgroundExecutor = backgroundExecutor,
                 streamInformationStore = streamInformationStore,
+                eventHandler = object : TransceiverEventHandler {},
                 parentLogger = logger
             )
             receiver.setSrtpTransformers(SrtpTransformerFactory.createSrtpTransformers(srtpData))
