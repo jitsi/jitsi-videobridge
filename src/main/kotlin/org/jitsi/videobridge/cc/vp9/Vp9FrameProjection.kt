@@ -104,10 +104,15 @@ internal constructor(
         ssrc: Long,
         sequenceNumberDelta: Int,
         timestamp: Long
-    ) : this(diagnosticContext, null /* vp9Frame */, ssrc, timestamp,
-        sequenceNumberDelta, 0 /* extendedPictureId */,
-        0 /* tl0PICIDX */, false, 0 /* createdMs */) {
-    }
+    ) : this(diagnosticContext = diagnosticContext,
+        vp9Frame = null,
+        ssrc = ssrc,
+        timestamp = timestamp,
+        sequenceNumberDelta = sequenceNumberDelta,
+        pictureId = 0,
+        tl0PICIDX = 0,
+        mark = false,
+        createdMs = 0)
 
     fun rewriteSeqNo(seq: Int): Int {
         return applySequenceNumberDelta(seq, sequenceNumberDelta)

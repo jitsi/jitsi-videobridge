@@ -104,11 +104,11 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         externalTargetIndex: Int,
         receivedMs: Long
     ): AcceptResult {
-        val accept = acceptFrame_(frame, incomingIndex, externalTargetIndex, receivedMs)
+        val accept = doAcceptFrame(frame, incomingIndex, externalTargetIndex, receivedMs)
         return AcceptResult(accept, getSidFromIndex(incomingIndex) == getSidFromIndex(currentIndex))
     }
 
-    fun acceptFrame_(
+    private fun doAcceptFrame(
         frame: Vp9Frame,
         incomingIndex: Int,
         externalTargetIndex: Int,
