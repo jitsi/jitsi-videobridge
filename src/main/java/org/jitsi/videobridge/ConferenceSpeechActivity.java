@@ -68,7 +68,7 @@ public class ConferenceSpeechActivity
      * {@link #conference} with the dominant (speaker) <tt>Endpoint</tt> at the
      * beginning of the list i.e. the dominant speaker history.
      */
-    private final List<AbstractEndpoint> endpoints = new ArrayList<>();
+    private final List<String> endpoints = new ArrayList<>();
 
     /**
      * The <tt>Object</tt> used to synchronize the access to the state of this
@@ -88,8 +88,7 @@ public class ConferenceSpeechActivity
         this.conference = Objects.requireNonNull(conference, "conference");
         logger = conference.getLogger().createChildLogger(ConferenceSpeechActivity.class.getName());
 
-        dominantSpeakerIdentification
-                .addActiveSpeakerChangedListener(activeSpeakerChangedListener);
+        dominantSpeakerIdentification.addActiveSpeakerChangedListener(activeSpeakerChangedListener);
     }
 
     /**
@@ -102,44 +101,33 @@ public class ConferenceSpeechActivity
      */
     private void activeSpeakerChanged(Object id)
     {
-        Conference conference = this.conference;
+        final Conference conference = this.conference;
         if (conference == null)
         {
             return;
         }
 
-        if (id != null && !(id instanceof String))
+        if (!(id instanceof String))
         {
             throw new IllegalStateException("Invalid speaker ID: " + id);
         }
+        String endpoint = (String) id;
 
         logger.trace(() -> "The dominant speaker in conference " + conference.getID() + " is now " + id + ".");
-
-        AbstractEndpoint endpoint = conference.getEndpoint((String) id);
-        if (endpoint == null)
-        {
-            logger.warn("Unable to find endpoint with id " + id);
-            return;
-        }
 
         synchronized (syncRoot)
         {
             // Move this endpoint to the top of our sorted list
             if (!endpoints.remove(endpoint))
             {
-                logger.warn("Got active speaker notification for an unknown"
-                        + " endpoint (ssrc: " + id + ", epId "
-                        + endpoint.getID() + ")! Ignoring");
+                logger.warn("Got active speaker notification for an unknown endpoint: " + endpoint + ", ignoring");
                 return;
             }
             endpoints.add(0, endpoint);
 
             TaskPools.IO_POOL.submit(() ->
             {
-                if (conference != null)
-                {
-                    conference.dominantSpeakerChanged();
-                }
+                conference.dominantSpeakerChanged();
             });
         }
     }
@@ -166,7 +154,7 @@ public class ConferenceSpeechActivity
      * @return the <tt>Endpoint</tt> which is the dominant speaker in the
      * multipoint conference represented by this instance or <tt>null</tt>
      */
-    public AbstractEndpoint getDominantEndpoint()
+    public String getDominantEndpoint()
     {
         synchronized (syncRoot)
         {
@@ -184,7 +172,7 @@ public class ConferenceSpeechActivity
      * multipoint conference represented by this instance with the dominant
      * (speaker) <tt>Endpoint</tt> at the beginning of the list
      */
-    public List<AbstractEndpoint> getEndpoints()
+    public List<String> getEndpoints()
     {
         synchronized (syncRoot)
         {
@@ -210,37 +198,29 @@ public class ConferenceSpeechActivity
     /**
      * Notifies this instance that the
      */
-    public void endpointsChanged()
+    public void endpointsChanged(List<String> conferenceEndpoints)
     {
         boolean endpointsListChanged = false;
         boolean dominantSpeakerChanged = false;
         // The list of endpoints may have changed, sync our list to make
         // sure it matches.
-        List<AbstractEndpoint> conferenceEndpointsCopy
-                = conference.getEndpoints();
         synchronized (syncRoot)
         {
             // Remove any endpoints we have that are no longer in the
             // conference
-            String previousDominantSpeaker
-                = endpoints.isEmpty() ? null : endpoints.get(0).getID();
-            endpointsListChanged
-                = endpoints.removeIf(
-                        ep -> !conferenceEndpointsCopy.contains(ep));
-            // Add any endpoints from the conf we don't have to the end
-            // of our list
-            for (AbstractEndpoint ep : conferenceEndpointsCopy)
+            String previousDominantSpeaker = endpoints.isEmpty() ? null : endpoints.get(0);
+            endpointsListChanged = endpoints.removeIf(ep -> !conferenceEndpoints.contains(ep));
+            // Add any endpoints from the conf we don't have to the end of our list
+            for (String conferenceEndpoint : conferenceEndpoints)
             {
-                if (!endpoints.contains(ep))
+                if (!endpoints.contains(conferenceEndpoint))
                 {
-                    endpoints.add(ep);
+                    endpoints.add(conferenceEndpoint);
                     endpointsListChanged = true;
                 }
             }
-            String newDominantSpeaker
-                = endpoints.isEmpty() ? null : endpoints.get(0).getID();
-            dominantSpeakerChanged
-                = !Objects.equals(previousDominantSpeaker, newDominantSpeaker);
+            String newDominantSpeaker = endpoints.isEmpty() ? null : endpoints.get(0);
+            dominantSpeakerChanged = !Objects.equals(previousDominantSpeaker, newDominantSpeaker);
         }
 
         if (dominantSpeakerChanged || endpointsListChanged)
@@ -276,10 +256,8 @@ public class ConferenceSpeechActivity
     {
         JSONObject debugState = new JSONObject();
 
-        AbstractEndpoint dominantEndpoint = getDominantEndpoint();
-        debugState.put(
-                "dominantEndpoint",
-                dominantEndpoint == null ? null : dominantEndpoint.getID());
+        String dominantEndpoint = getDominantEndpoint();
+        debugState.put("dominantEndpoint", dominantEndpoint);
         DominantSpeakerIdentification dsi = this.dominantSpeakerIdentification;
         debugState.put(
                 "dominantSpeakerIdentification",

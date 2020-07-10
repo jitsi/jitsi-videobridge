@@ -424,11 +424,11 @@ public class Conference
      */
     void dominantSpeakerChanged()
     {
-        AbstractEndpoint dominantSpeaker = speechActivity.getDominantEndpoint();
+        String dominantSpeakerId = speechActivity.getDominantEndpoint();
+        AbstractEndpoint dominantSpeaker = getEndpoint(dominantSpeakerId);
 
         if (logger.isInfoEnabled())
         {
-            String id = dominantSpeaker == null ? "null" : dominantSpeaker.getID();
             logger.info("ds_change ds_id=" + id);
             getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
         }
@@ -437,17 +437,17 @@ public class Conference
 
         if (dominantSpeaker != null)
         {
-            broadcastMessage(new DominantSpeakerMessage(dominantSpeaker.getID()));
+            broadcastMessage(new DominantSpeakerMessage(dominantSpeakerId));
             if (getEndpointCount() > 2)
             {
                 double senderRtt = getRtt(dominantSpeaker);
-                double maxReceiveRtt = getMaxReceiverRtt(dominantSpeaker.getID());
+                double maxReceiveRtt = getMaxReceiverRtt(dominantSpeakerId);
                 // We add an additional 10ms delay to reduce the risk of the keyframe arriving
                 // too early
                 double keyframeDelay = maxReceiveRtt - senderRtt + 10;
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug("Scheduling keyframe request from " + dominantSpeaker.getID() + " after a delay" +
+                    logger.debug("Scheduling keyframe request from " + dominantSpeakerId + " after a delay" +
                             " of " + keyframeDelay + "ms");
                 }
                 TaskPools.SCHEDULED_POOL.schedule(
@@ -684,7 +684,10 @@ public class Conference
      */
     private void endpointsChanged()
     {
-        speechActivity.endpointsChanged();
+        speechActivity.endpointsChanged(
+                getEndpoints().stream()
+                        .map(AbstractEndpoint::getID)
+                        .collect(Collectors.toList()));
     }
 
     /**
@@ -910,13 +913,13 @@ public class Conference
 
         if (!isExpired())
         {
-            AbstractEndpoint dominantSpeaker = speechActivity.getDominantEndpoint();
+            String dominantSpeakerId = speechActivity.getDominantEndpoint();
 
-            if (dominantSpeaker != null)
+            if (dominantSpeakerId != null)
             {
                 try
                 {
-                    endpoint.sendMessage(new DominantSpeakerMessage(dominantSpeaker.getID()));
+                    endpoint.sendMessage(new DominantSpeakerMessage(dominantSpeakerId));
                 }
                 catch (IOException e)
                 {
@@ -1322,10 +1325,12 @@ public class Conference
          */
         private void update(boolean force)
         {
-            List<AbstractEndpoint> endpointsBySpeechActivity = speechActivity.getEndpoints();
+            List<String> endpointsBySpeechActivity = speechActivity.getEndpoints();
 
             Map<Boolean, List<AbstractEndpoint>> bySendingVideo
                     = endpointsBySpeechActivity.stream()
+                        .map(Conference.this::getEndpoint)
+                        .filter(Objects::nonNull)
                         .collect(Collectors.groupingBy(AbstractEndpoint::isSendingVideo));
 
             List<AbstractEndpoint> lastNEndpoints = new LinkedList<>();
