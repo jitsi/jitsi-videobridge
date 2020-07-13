@@ -209,11 +209,11 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
                 if (canForwardLayer) {
                     currentIndex = incomingIndex
                     currentSpatialLayer = spatialLayerOfFrame
-                    logger.debug {"Switching to spatial layer ${externalTargetSpatialId}"}
+                    logger.debug { "Switching to spatial layer $externalTargetSpatialId" }
                 } else {
                     needsKeyframe = true
                     if (internalTargetSpatialId != externalTargetSpatialId) {
-                        logger.debug {"Want to switch to spatial layer ${externalTargetSpatialId}, requesting keyframe"}
+                        logger.debug { "Want to switch to spatial layer $externalTargetSpatialId, requesting keyframe" }
                     }
                 }
                 internalTargetSpatialId = externalTargetSpatialId
