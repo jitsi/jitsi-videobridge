@@ -64,6 +64,11 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     private var internalTargetEncoding = SUSPENDED_ENCODING_ID
 
     /**
+     * The spatial layer that this instance tries to achieve.
+     */
+    private var internalTargetSpatialId = SUSPENDED_ENCODING_ID
+
+    /**
      * The layer index that we're currently forwarding. [SUSPENDED_INDEX]
      * indicates that we're not forwarding anything. Reading/writing of this
      * field is synchronized on this instance.
@@ -105,7 +110,14 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         receivedMs: Long
     ): AcceptResult {
         val accept = doAcceptFrame(frame, incomingIndex, externalTargetIndex, receivedMs)
-        return AcceptResult(accept, getSidFromIndex(incomingIndex) == getSidFromIndex(currentIndex))
+        val mark = if (frame.isInterPicturePredicted) {
+            getSidFromIndex(incomingIndex) == getSidFromIndex(currentIndex)
+        } else {
+            /* This is wrong if the stream isn't actually currently encoding the target index's spatial layer */
+            /* However, I think as long as the stream only has three spatial layers max, this won't be a problem? */
+            getSidFromIndex(incomingIndex) == getSidFromIndex(externalTargetIndex)
+        }
+        return AcceptResult(accept, mark)
     }
 
     private fun doAcceptFrame(
@@ -197,9 +209,14 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
                 if (canForwardLayer) {
                     currentIndex = incomingIndex
                     currentSpatialLayer = spatialLayerOfFrame
+                    logger.debug {"Switching to spatial layer ${externalTargetSpatialId}"}
                 } else {
                     needsKeyframe = true
+                    if (internalTargetSpatialId != externalTargetSpatialId) {
+                        logger.debug {"Want to switch to spatial layer ${externalTargetSpatialId}, requesting keyframe"}
+                    }
                 }
+                internalTargetSpatialId = externalTargetSpatialId
             }
 
             val wantToForwardLayer =
