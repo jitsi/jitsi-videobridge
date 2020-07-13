@@ -203,18 +203,21 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
 
             val wantToSwitch =
                 (spatialLayerOfFrame > currentSpatialLayer && spatialLayerOfFrame <= externalTargetSpatialId) ||
-                (spatialLayerOfFrame < currentEncoding && spatialLayerOfFrame >= externalTargetSpatialId)
+                (spatialLayerOfFrame < currentSpatialLayer && spatialLayerOfFrame >= externalTargetSpatialId)
 
             if (wantToSwitch) {
                 if (canForwardLayer) {
+                    logger.debug { "Switching to spatial layer $externalTargetSpatialId from $currentSpatialLayer" }
                     currentIndex = incomingIndex
                     currentSpatialLayer = spatialLayerOfFrame
-                    logger.debug { "Switching to spatial layer $externalTargetSpatialId" }
                 } else {
-                    needsKeyframe = true
                     if (internalTargetSpatialId != externalTargetSpatialId) {
-                        logger.debug { "Want to switch to spatial layer $externalTargetSpatialId, requesting keyframe" }
+                        logger.debug {
+                            "Want to switch to spatial layer $externalTargetSpatialId from $currentSpatialLayer, " +
+                                "requesting keyframe"
+                        }
                     }
+                    needsKeyframe = true
                 }
                 internalTargetSpatialId = externalTargetSpatialId
             }
