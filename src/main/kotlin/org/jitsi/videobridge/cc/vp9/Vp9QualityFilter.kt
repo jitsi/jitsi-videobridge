@@ -114,7 +114,8 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             getSidFromIndex(incomingIndex) == getSidFromIndex(currentIndex)
         } else {
             /* This is wrong if the stream isn't actually currently encoding the target index's spatial layer */
-            /* However, I think as long as the stream only has three spatial layers max, this won't be a problem? */
+            /* However, in that case the final (lower) spatial layer should have the marker bit set by the encoder, so
+               I think this shouldn't be a problem? */
             getSidFromIndex(incomingIndex) == getSidFromIndex(externalTargetIndex)
         }
         return AcceptResult(accept, mark)
@@ -363,11 +364,14 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
                     "Target is $internalTargetEncoding"
             }
             if (encodingIdOfKeyframe <= internalTargetEncoding) {
+                val currentEncoding = getEidFromIndex(currentIndex)
                 // If the target is 180p and the first keyframe of a group of
                 // keyframes is a 720p keyframe we don't project it. If we
                 // receive a 720p keyframe, we know that there MUST be a 180p
                 // keyframe shortly after.
-                currentIndex = incomingIndex
+                if (currentEncoding != encodingIdOfKeyframe) {
+                    currentIndex = incomingIndex
+                }
                 true
             } else {
                 false
@@ -381,7 +385,9 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
                 currentEncoding <= encodingIdOfKeyframe &&
                     encodingIdOfKeyframe <= internalTargetEncoding -> {
                     // upscale or current quality case
-                    currentIndex = incomingIndex
+                    if (currentEncoding != encodingIdOfKeyframe) {
+                        currentIndex = incomingIndex
+                    }
                     logger.debug {
                         "Upscaling to encoding $encodingIdOfKeyframe. " +
                             "The target is $internalTargetEncoding"
