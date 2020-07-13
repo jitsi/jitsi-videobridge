@@ -236,6 +236,9 @@ public class Endpoint
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private Optional<SctpServerSocket> sctpSocket = Optional.empty();
 
+    @NotNull
+    private final TransceiverEventHandler transceiverEventHandler = new TransceiverEventHandlerImpl();
+
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
      * identifier/ID of the endpoint of a participant in a <tt>Conference</tt>.
@@ -267,6 +270,7 @@ public class Endpoint
             TaskPools.SCHEDULED_POOL,
             diagnosticContext,
             logger,
+            transceiverEventHandler,
             clock
         );
         transceiver.setIncomingPacketHandler(
@@ -305,13 +309,6 @@ public class Endpoint
         bandwidthProbing = new BandwidthProbing(Endpoint.this.transceiver::sendProbing);
         bandwidthProbing.setDiagnosticContext(diagnosticContext);
         bandwidthProbing.setBitrateController(bitrateController);
-        transceiver.setAudioLevelListener(conference.getAudioLevelListener());
-        transceiver.onBandwidthEstimateChanged(newValueBps ->
-        {
-            logger.debug(() -> "Estimated bandwidth is now " + newValueBps + " bps.");
-            bitrateController.bandwidthChanged((long)newValueBps.getBps());
-        });
-        transceiver.onBandwidthEstimateChanged(bandwidthProbing);
         conference.encodingsManager.subscribe(this);
 
         bandwidthProbing.enabled = true;
@@ -1012,7 +1009,16 @@ public class Endpoint
                     endpointsEnteringLastN,
                     conferenceEndpoints);
 
-        sendMessage(msg);
+        TaskPools.IO_POOL.submit(() -> {
+            try
+            {
+                sendMessage(msg);
+            }
+            catch (Exception e)
+            {
+                logger.warn("Failed to send a message: ", e);
+            }
+        });
     }
 
     /**
@@ -1525,16 +1531,40 @@ public class Endpoint
     @Override
     public boolean isSendingAudio()
     {
-        // The endpoint is sending audio if we (the transceiver) are receiving
-        // audio.
+        // The endpoint is sending audio if we (the transceiver) are receiving audio.
         return transceiver.isReceivingAudio();
     }
 
     @Override
     public boolean isSendingVideo()
     {
-        // The endpoint is sending video if we (the transceiver) are receiving
-        // video.
+        // The endpoint is sending video if we (the transceiver) are receiving video.
         return transceiver.isReceivingVideo();
+    }
+
+    private class TransceiverEventHandlerImpl implements TransceiverEventHandler
+    {
+        /**
+         * Forward audio level events from the Transceiver to the conference. We use the same thread, because this fires
+         * for every packet and we want to avoid the switch. The conference audio level code must not block.
+         * @param sourceSsrc
+         * @param level
+         */
+        @Override
+        public void audioLevelReceived(long sourceSsrc, long level)
+        {
+            getConference().getAudioLevelListener().onLevelReceived(sourceSsrc, level);
+        }
+
+        /**
+         * Forward bwe events from the Transceiver.
+         */
+        @Override
+        public void bandwidthEstimationChanged(@NotNull Bandwidth newValue)
+        {
+            logger.debug(() -> "Estimated bandwidth is now " + newValue);
+            bitrateController.bandwidthChanged((long)newValue.getBps());
+            bandwidthProbing.bandwidthEstimationChanged(newValue);
+        }
     }
 }

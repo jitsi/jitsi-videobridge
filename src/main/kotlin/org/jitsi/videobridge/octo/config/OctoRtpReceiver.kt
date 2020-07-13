@@ -21,10 +21,10 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpReceiver
+import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.nlj.rtcp.SingleRtcpParser
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
-import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.stats.PacketStreamStats
@@ -34,6 +34,7 @@ import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.RtpParser
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
+import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 import org.jitsi.nlj.transform.node.incoming.VideoBitrateCalculator
 import org.jitsi.nlj.transform.node.incoming.VideoParser
@@ -60,6 +61,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class OctoRtpReceiver(
     val streamInformationStore: ReadOnlyStreamInformationStore,
+    val eventHandler: TransceiverEventHandler?,
     parentLogger: Logger
 ) : RtpReceiver() {
     private val logger = createChildLogger(parentLogger)
@@ -75,7 +77,16 @@ class OctoRtpReceiver(
         setErrorHandler(queueErrorCounter)
     }
 
-    private val audioLevelReader = AudioLevelReader(streamInformationStore)
+    private val audioLevelReader = AudioLevelReader(streamInformationStore).apply {
+        audioLevelListener = object : AudioLevelListener {
+            override fun onLevelReceived(sourceSsrc: Long, level: Long) {
+                eventHandler?.audioLevelReceived(sourceSsrc, level)
+            }
+        }
+    }
+
+    private val audioBitrateCalculator = BitrateCalculator("Audio bitrate calculator")
+    private val videoBitrateCalculator = VideoBitrateCalculator(logger)
 
     override var packetHandler: PacketHandler? = null
 
@@ -104,7 +115,7 @@ class OctoRtpReceiver(
                             path = pipeline {
                                 node(VideoParser(streamInformationStore, logger))
                                 node(Vp8Parser(logger))
-                                node(VideoBitrateCalculator(logger))
+                                node(videoBitrateCalculator)
                                 node(pipelineTerminationNode)
                             }
                         }
@@ -113,6 +124,7 @@ class OctoRtpReceiver(
                             predicate = PacketPredicate { it is AudioRtpPacket }
                             path = pipeline {
                                 node(audioLevelReader)
+                                node(audioBitrateCalculator)
                                 node(pipelineTerminationNode)
                             }
                         }
@@ -167,20 +179,8 @@ class OctoRtpReceiver(
         TODO("Not yet implemented")
     }
 
-    override fun isReceivingAudio(): Boolean = true
-
-    override fun isReceivingVideo(): Boolean = true
-
-    override fun onBandwidthEstimateChanged(listener: BandwidthEstimator.Listener) {
-        TODO("Not yet implemented")
-    }
-
     override fun onRttUpdate(newRttMs: Double) {
         TODO("Not yet implemented")
-    }
-
-    override fun setAudioLevelListener(audioLevelListener: AudioLevelListener) {
-        audioLevelReader.audioLevelListener = audioLevelListener
     }
 
     override fun setSrtpTransformers(srtpTransformers: SrtpTransformers) {}
@@ -192,6 +192,9 @@ class OctoRtpReceiver(
     override fun tearDown() {
         incomingPacketQueue.close()
     }
+
+    override fun isReceivingAudio(): Boolean = audioBitrateCalculator.active
+    override fun isReceivingVideo(): Boolean = videoBitrateCalculator.active
 
     fun getDebugState(): OrderedJsonObject = OrderedJsonObject().apply {
         putAll(getNodeStats().toJson())

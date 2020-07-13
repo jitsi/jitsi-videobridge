@@ -27,6 +27,7 @@ import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.rest.root.colibri.debug.EndpointDebugFeatures
 import org.jitsi.nlj.MediaSourceDesc
+import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.videobridge.VideoConstraints
 import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.message.BridgeChannelMessage
@@ -43,10 +44,15 @@ class OctoEndpoint(
     id: String,
     private val octoEndpoints: OctoEndpoints,
     parentLogger: Logger
-) : AbstractEndpoint(conference, id, parentLogger), ConfOctoTransport.IncomingOctoEpPacketHandler {
+) : AbstractEndpoint(conference, id, parentLogger),
+    ConfOctoTransport.IncomingOctoEpPacketHandler {
 
-    private val transceiver = OctoTransceiver(id, logger).apply {
-        setAudioLevelListener(conference.audioLevelListener)
+    private val transceiverEventHandler = object : TransceiverEventHandler {
+        override fun audioLevelReceived(sourceSsrc: Long, level: Long) =
+            conference.audioLevelListener.onLevelReceived(sourceSsrc, level)
+    }
+
+    private val transceiver = OctoTransceiver(id, transceiverEventHandler, logger).apply {
         setIncomingPacketHandler(object : PacketHandler {
             override fun processPacket(packetInfo: PacketInfo) {
                 packetInfo.endpointId = id
@@ -147,13 +153,9 @@ class OctoEndpoint(
         transceiver.setReceiveSsrcs(ssrcsByMediaType)
     }
 
-    override fun isSendingAudio(): Boolean {
-        // TODO implement detection
-        return true
-    }
+    // The endpoint is sending audio if our Receiver object is receiving audio from the endpoint.
+    override fun isSendingAudio(): Boolean = transceiver.isReceivingAudio
 
-    override fun isSendingVideo(): Boolean {
-        // TODO implement detection
-        return true
-    }
+    // The endpoint is sending video if our Receiver object is receiving video from the endpoint.
+    override fun isSendingVideo(): Boolean = transceiver.isReceivingVideo
 }
