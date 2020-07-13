@@ -201,6 +201,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             val canForwardLayer = (!frame.isInterPicturePredicted || layers[spatialLayerOfFrame]) &&
                 (!frame.usesInterLayerDependency || layers[spatialLayerOfFrame - 1])
 
+            /* TODO: this logic is fragile in the presence of frame reordering. */
             val wantToSwitch =
                 (spatialLayerOfFrame > currentSpatialLayer && spatialLayerOfFrame <= externalTargetSpatialId) ||
                 (spatialLayerOfFrame < currentSpatialLayer && spatialLayerOfFrame >= externalTargetSpatialId)
