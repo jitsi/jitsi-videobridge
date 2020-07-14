@@ -32,98 +32,128 @@ import org.jitsi.rtp.util.isOlderThan
  *
  * @author Jonathan Lennox
  */
-class Vp9Frame(packet: Vp9Packet) {
+class Vp9Frame internal constructor(
     /**
      * The RTP SSRC of the incoming frame that this instance refers to
      * (RFC3550).
      */
-    val ssrc: Long = packet.ssrc
+    val ssrc: Long,
 
     /**
      * The RTP timestamp of the incoming frame that this instance refers to
      * (RFC3550).
      */
-    val timestamp: Long = packet.timestamp
+    val timestamp: Long,
 
     /**
      * The earliest RTP sequence number seen of the incoming frame that this instance
      * refers to (RFC3550).
      */
-    var earliestKnownSequenceNumber: Int = packet.sequenceNumber
+    earliestKnownSequenceNumber: Int,
+
+    /**
+     * The latest RTP sequence number seen of the incoming frame that this instance
+     * refers to (RFC3550).
+     */
+    latestKnownSequenceNumber: Int,
+
+    /**
+     * A boolean that indicates whether or not we've seen the first packet of the frame.
+     * If so, its sequence is earliestKnownSequenceNumber.
+     */
+    seenStartOfFrame: Boolean,
+
+    /**
+     * A boolean that indicates whether or not we've seen the last packet of the frame.
+     * If so, its sequence is latestKnownSequenceNumber.
+     */
+    seenEndOfFrame: Boolean,
+
+    /**
+     * A boolean that indicates whether we've seen a packet with the marker bit set.
+     */
+    seenMarker: Boolean,
+
+    /**
+     * The temporal layer of this frame.
+     */
+    val temporalLayer: Int,
+
+    /**
+     * The spatial layer of this frame.
+     */
+    val spatialLayer: Int,
+
+    /**
+     * Whether the frame is used as an upper level reference.
+     */
+    val isUpperLevelReference: Boolean,
+
+    /**
+     * Whether the frame is a temporal switching-up point.
+     */
+    val isSwitchingUpPoint: Boolean,
+
+    /**
+     * Whether the frame uses inter-layer dependency.
+     */
+    val usesInterLayerDependency: Boolean,
+
+    /**
+     * Whether the frame is inter-picture predicted.
+     */
+    val isInterPicturePredicted: Boolean,
+
+    /**
+     * The VP9 PictureID of the incoming VP9 frame that this instance refers to.
+     */
+    val pictureId: Int,
+
+    /**
+     * The VP9 TL0PICIDX of the incoming VP9 frame that this instance refers to
+     * (RFC7741).
+     */
+    val tl0PICIDX: Int,
+
+    /**
+     * A boolean that indicates whether the incoming VP9 frame that this
+     * instance refers to is a keyframe.
+     */
+    var isKeyframe: Boolean
+) {
+    /**
+     * The earliest RTP sequence number seen of the incoming frame that this instance
+     * refers to (RFC3550).
+     */
+    var earliestKnownSequenceNumber = earliestKnownSequenceNumber
         private set
 
     /**
      * The latest RTP sequence number seen of the incoming frame that this instance
      * refers to (RFC3550).
      */
-    var latestKnownSequenceNumber: Int = packet.sequenceNumber
+    var latestKnownSequenceNumber: Int = latestKnownSequenceNumber
         private set
 
     /**
      * A boolean that indicates whether or not we've seen the first packet of the frame.
      * If so, its sequence is earliestKnownSequenceNumber.
      */
-    var seenStartOfFrame: Boolean = packet.isStartOfFrame
+    var seenStartOfFrame: Boolean = seenStartOfFrame
         private set
 
     /**
      * A boolean that indicates whether or not we've seen the last packet of the frame.
      * If so, its sequence is latestKnownSequenceNumber.
      */
-    var seenEndOfFrame: Boolean = packet.isEndOfFrame
+    var seenEndOfFrame: Boolean = seenEndOfFrame
         private set
 
     /**
      * A boolean that indicates whether we've seen a packet with the marker bit set.
      */
-    var seenMarker: Boolean = packet.isMarked
-
-    /**
-     * The temporal layer of this frame.
-     */
-    val temporalLayer: Int = packet.temporalLayerIndex
-
-    /**
-     * The spatial layer of this frame.
-     */
-    val spatialLayer: Int = packet.spatialLayerIndex
-
-    /**
-     * Whether the frame is used as an upper level reference.
-     */
-    val isUpperLevelReference: Boolean = packet.isUpperLevelReference
-
-    /**
-     * Whether the frame is a temporal switching-up point.
-     */
-    val isSwitchingUpPoint: Boolean = packet.isSwitchingUpPoint
-
-    /**
-     * Whether the frame uses inter-layer dependency.
-     */
-    val usesInterLayerDependency: Boolean = packet.usesInterLayerDependency
-
-    /**
-     * Whether the frame is inter-picture predicted.
-     */
-    val isInterPicturePredicted: Boolean = packet.isInterPicturePredicted
-
-    /**
-     * The VP9 PictureID of the incoming VP9 frame that this instance refers to.
-     */
-    val pictureId: Int = packet.pictureId
-
-    /**
-     * The VP9 TL0PICIDX of the incoming VP9 frame that this instance refers to
-     * (RFC7741).
-     */
-    val tl0PICIDX: Int = packet.TL0PICIDX
-
-    /**
-     * A boolean that indicates whether the incoming VP9 frame that this
-     * instance refers to is a keyframe.
-     */
-    var isKeyframe: Boolean = packet.isKeyframe
+    var seenMarker: Boolean = seenMarker
+        private set
 
     /**
      * A record of how this frame was projected, or null if not.
@@ -135,6 +165,24 @@ class Vp9Frame(packet: Vp9Packet) {
      */
     var isAccepted = false
 
+    constructor(packet: Vp9Packet) : this(
+        ssrc = packet.ssrc,
+        timestamp = packet.timestamp,
+        earliestKnownSequenceNumber = packet.sequenceNumber,
+        latestKnownSequenceNumber = packet.sequenceNumber,
+        seenStartOfFrame = packet.isStartOfFrame,
+        seenEndOfFrame = packet.isEndOfFrame,
+        seenMarker = packet.isMarked,
+        temporalLayer = packet.temporalLayerIndex,
+        spatialLayer = packet.spatialLayerIndex,
+        isUpperLevelReference = packet.isUpperLevelReference,
+        isSwitchingUpPoint = packet.isSwitchingUpPoint,
+        usesInterLayerDependency = packet.usesInterLayerDependency,
+        isInterPicturePredicted = packet.isInterPicturePredicted,
+        pictureId = packet.pictureId,
+        tl0PICIDX = packet.TL0PICIDX,
+        isKeyframe = packet.isKeyframe
+    )
     /**
      * Remember another packet of this frame.
      * Note: this assumes every packet is received only once, i.e. a filter
