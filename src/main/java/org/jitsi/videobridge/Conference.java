@@ -236,7 +236,7 @@ public class Conference
         updateLastNEndpointsFuture = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(() -> {
             try
             {
-                lastNEndpoints.update();
+                lastNEndpoints.update(speechActivity.getEndpoints());
             }
             catch (Exception e)
             {
@@ -433,7 +433,7 @@ public class Conference
             getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
         }
 
-        lastNEndpoints.update();
+        lastNEndpoints.update(speechActivity.getEndpoints());
 
         if (dominantSpeaker != null)
         {
@@ -699,7 +699,7 @@ public class Conference
     public void endpointSourcesChanged(AbstractEndpoint endpoint)
     {
         // Force an update to be propagated to each endpoint's bitrate controller.
-        lastNEndpoints.update(true);
+        lastNEndpoints.update(speechActivity.getEndpoints(), true);
     }
 
     /**
@@ -1306,19 +1306,17 @@ public class Conference
         /**
          * Re-calculate the ordered list of endpoints in the conference.
          */
-        private void update()
+        private void update(List<String> endpointsBySpeechActivity)
         {
-            update(false);
+            update(endpointsBySpeechActivity, false);
         }
 
         /**
          * Re-calculate the ordered list of endpoints in the conference.
          * @param force whether to fire an event even if the list doesn't change as a result of the call.
          */
-        private void update(boolean force)
+        private void update(List<String> endpointsBySpeechActivity, boolean force)
         {
-            List<String> endpointsBySpeechActivity = speechActivity.getEndpoints();
-
             Map<Boolean, List<AbstractEndpoint>> bySendingVideo
                     = endpointsBySpeechActivity.stream()
                         .map(Conference.this::getEndpoint)
@@ -1352,7 +1350,7 @@ public class Conference
         @Override
         public void speechActivityEndpointsChanged()
         {
-            lastNEndpoints.update();
+            lastNEndpoints.update(speechActivity.getEndpoints());
         }
     }
 }
