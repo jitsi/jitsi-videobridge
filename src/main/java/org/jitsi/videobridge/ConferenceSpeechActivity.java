@@ -22,6 +22,7 @@ import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 
 import java.util.*;
+import java.util.stream.*;
 
 /**
  * Represents the speech activity of the <tt>Endpoint</tt>s in a
@@ -61,11 +62,16 @@ public class ConferenceSpeechActivity
     private Listener listener;
 
     /**
-     * The ordered list of <tt>Endpoint</tt>s participating in
-     * {@link #conference} with the dominant (speaker) <tt>Endpoint</tt> at the
-     * beginning of the list i.e. the dominant speaker history.
+     * The list of endpoints ordered by speech activity alone with the dominant speaker at the beginning of the list
+     * i.e. the dominant speaker history.
      */
-    private final List<String> endpoints = new ArrayList<>();
+    private final List<AbstractEndpoint> endpointsBySpeechActivity = new ArrayList<>();
+
+    /**
+     * The list of endpoints in "LastN" order. That is, endpoints currently sending video are at the top of the list,
+     * ordered by speech activity, followed by the rest of the endpoints (again in speech activity order).
+     */
+    private @NotNull List<AbstractEndpoint> endpointsInLastNOrder = new ArrayList<>();
 
     /**
      * The <tt>Object</tt> used to synchronize the access to the state of this
@@ -113,21 +119,61 @@ public class ConferenceSpeechActivity
         {
             throw new IllegalStateException("Invalid speaker ID: " + id);
         }
-        String endpoint = (String) id;
+        String endpointId = (String) id;
 
         logger.trace(() -> "The dominant speaker is now " + id + ".");
 
+        boolean endpointListChanged;
         synchronized (syncRoot)
         {
+            AbstractEndpoint endpoint
+                    = endpointsBySpeechActivity.stream()
+                        .filter(e -> endpointId.equals(e.getID()))
+                        .findFirst().orElse(null);
             // Move this endpoint to the top of our sorted list
-            if (!endpoints.remove(endpoint))
+            if (!endpointsBySpeechActivity.remove(endpoint))
             {
-                logger.warn("Got active speaker notification for an unknown endpoint: " + endpoint + ", ignoring");
+                logger.warn("Got active speaker notification for an unknown endpoint: " + endpointId + ", ignoring");
                 return;
             }
-            endpoints.add(0, endpoint);
+            endpointsBySpeechActivity.add(0, endpoint);
 
-            TaskPools.IO_POOL.submit(listener::dominantSpeakerChanged);
+            endpointListChanged = updateLastNEndpoints();
+        }
+
+        TaskPools.IO_POOL.submit(() -> {
+            listener.dominantSpeakerChanged();
+            if (endpointListChanged)
+            {
+                listener.lastNEndpointsChanged();
+            }
+        });
+    }
+
+    /**
+     * Re-calculates the list of endpoints in LastN order ({@link #endpointsInLastNOrder}) based on the speech activity
+     * and video availability.
+     */
+    boolean updateLastNEndpoints()
+    {
+        synchronized (syncRoot)
+        {
+            Map<Boolean, List<AbstractEndpoint>> bySendingVideo
+                    = endpointsBySpeechActivity.stream()
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.groupingBy(AbstractEndpoint::isSendingVideo));
+
+            List<AbstractEndpoint> newEndpointsInLastNOrder = new ArrayList<>(endpointsBySpeechActivity.size());
+            newEndpointsInLastNOrder.addAll(bySendingVideo.getOrDefault(true, Collections.emptyList()));
+            newEndpointsInLastNOrder.addAll(bySendingVideo.getOrDefault(false, Collections.emptyList()));
+
+            if (!newEndpointsInLastNOrder.equals(endpointsInLastNOrder))
+            {
+                endpointsInLastNOrder = Collections.unmodifiableList(newEndpointsInLastNOrder);
+                return true;
+            }
+
+            return false;
         }
     }
 
@@ -141,6 +187,8 @@ public class ConferenceSpeechActivity
             }
             this.listener = null;
             this.dominantSpeakerIdentification = null;
+            endpointsBySpeechActivity.clear();
+            endpointsInLastNOrder = new ArrayList<>();
         }
     }
 
@@ -151,51 +199,43 @@ public class ConferenceSpeechActivity
      * @return the <tt>Endpoint</tt> which is the dominant speaker in the
      * multipoint conference represented by this instance or <tt>null</tt>
      */
-    public String getDominantEndpoint()
+    public AbstractEndpoint getDominantEndpoint()
     {
         synchronized (syncRoot)
         {
-            return endpoints.isEmpty() ? null : endpoints.get(0);
+            return endpointsBySpeechActivity.isEmpty() ? null : endpointsBySpeechActivity.get(0);
         }
     }
 
     /**
-     * Gets the ordered list of <tt>Endpoint</tt>s participating in the
-     * multipoint conference represented by this instance with the dominant
-     * (speaker) <tt>Endpoint</tt> at the beginning of the list i.e. the
-     * dominant speaker history.
+     * Gets a read-only list of endpoints in "LastN" order.
      *
-     * @return the ordered list of <tt>Endpoint</tt>s participating in the
-     * multipoint conference represented by this instance with the dominant
-     * (speaker) <tt>Endpoint</tt> at the beginning of the list
+     * @return a read-only list of endpoints in "LastN" order.
      */
-    public List<String> getEndpoints()
+    public List<AbstractEndpoint> getOrderedEndpoints()
     {
-        synchronized (syncRoot)
-        {
-            return new LinkedList<>(endpoints);
-        }
+        return endpointsInLastNOrder;
     }
 
     /**
      * Notifies this instance that a new audio level was received or measured by an <tt>Endpoint</tt>.
      *
-     * @param endpointId the ID of he endpoint for which a new audio level was received or measured
+     * @param endpoint the endpoint for which a new audio level was received or measured
      * @param level the new audio level which was received or measured
      */
-    public void levelChanged(String endpointId, long level)
+    public void levelChanged(@NotNull AbstractEndpoint endpoint, long level)
     {
         DominantSpeakerIdentification dsi = this.dominantSpeakerIdentification;
         if (dsi != null)
         {
-            dominantSpeakerIdentification.levelChanged(endpointId, (int) level);
+            dominantSpeakerIdentification.levelChanged(endpoint.getID(), (int) level);
         }
     }
 
     /**
      * Notifies this instance that the list of endpoints changed.
      */
-    public void endpointsChanged(List<String> conferenceEndpoints)
+    public void endpointsChanged(List<AbstractEndpoint> conferenceEndpoints)
     {
         boolean endpointsListChanged = false;
         boolean dominantSpeakerChanged = false;
@@ -204,19 +244,26 @@ public class ConferenceSpeechActivity
         synchronized (syncRoot)
         {
             // Remove any endpoints we have that are no longer in the conference
-            String previousDominantSpeaker = endpoints.isEmpty() ? null : endpoints.get(0);
-            endpointsListChanged = endpoints.removeIf(ep -> !conferenceEndpoints.contains(ep));
+            AbstractEndpoint previousDominantSpeaker
+                    = endpointsBySpeechActivity.isEmpty() ? null : endpointsBySpeechActivity.get(0);
+            endpointsListChanged = endpointsBySpeechActivity.removeIf(ep -> !conferenceEndpoints.contains(ep));
             // Add any endpoints from the conf we don't have to the end of our list
-            for (String conferenceEndpoint : conferenceEndpoints)
+            for (AbstractEndpoint conferenceEndpoint : conferenceEndpoints)
             {
-                if (!endpoints.contains(conferenceEndpoint))
+                if (!endpointsBySpeechActivity.contains(conferenceEndpoint))
                 {
-                    endpoints.add(conferenceEndpoint);
+                    endpointsBySpeechActivity.add(conferenceEndpoint);
                     endpointsListChanged = true;
                 }
             }
-            String newDominantSpeaker = endpoints.isEmpty() ? null : endpoints.get(0);
+            AbstractEndpoint newDominantSpeaker
+                    = endpointsBySpeechActivity.isEmpty() ? null : endpointsBySpeechActivity.get(0);
             dominantSpeakerChanged = !Objects.equals(previousDominantSpeaker, newDominantSpeaker);
+
+            if (endpointsListChanged)
+            {
+                endpointsListChanged = updateLastNEndpoints();
+            }
         }
 
         if (dominantSpeakerChanged || endpointsListChanged)
@@ -233,12 +280,10 @@ public class ConferenceSpeechActivity
                 {
                     listener.dominantSpeakerChanged();
                 }
-                // Dominant speaker changed implies that the list changed.
-                if (finalEndpointsChanged && !finalDominantSpeakerChanged)
+                if (finalEndpointsChanged)
                 {
-                    listener.speechActivityEndpointsChanged();
+                    listener.lastNEndpointsChanged();
                 }
-
             });
         }
     }
@@ -252,8 +297,10 @@ public class ConferenceSpeechActivity
     {
         JSONObject debugState = new JSONObject();
 
-        String dominantEndpoint = getDominantEndpoint();
-        debugState.put("dominantEndpoint", dominantEndpoint);
+        AbstractEndpoint dominantEndpoint = getDominantEndpoint();
+        debugState.put(
+                "dominantEndpoint",
+                dominantEndpoint == null ? "null" : dominantEndpoint.getID());
         DominantSpeakerIdentification dsi = this.dominantSpeakerIdentification;
         debugState.put(
                 "dominantSpeakerIdentification",
@@ -265,6 +312,6 @@ public class ConferenceSpeechActivity
     interface Listener
     {
         void dominantSpeakerChanged();
-        void speechActivityEndpointsChanged();
+        void lastNEndpointsChanged();
     }
 }

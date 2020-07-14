@@ -433,10 +433,9 @@ public class Endpoint
     }
 
     /**
-     * Notifies this {@code Endpoint} that the list of {@code Endpoint}s ordered
-     * by speech activity (i.e. the dominant speaker history) has changed.
+     * Notifies this {@code Endpoint} that the ordered list of {@code Endpoint}s changed.
      */
-    void speechActivityEndpointsChanged(List<String> endpoints)
+    void lastNEndpointsChanged(List<String> endpoints)
     {
         bitrateController.endpointOrderingChanged(endpoints);
     }
@@ -1413,7 +1412,7 @@ public class Endpoint
         @Override
         public void audioLevelReceived(long sourceSsrc, long level)
         {
-            getConference().getSpeechActivity().levelChanged(getID(), level);
+            getConference().getSpeechActivity().levelChanged(Endpoint.this, level);
         }
 
         /**
