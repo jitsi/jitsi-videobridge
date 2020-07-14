@@ -236,7 +236,7 @@ public class Conference
             {
                 if (speechActivity.updateLastNEndpoints())
                 {
-                    lastNEndpointsChanged();
+                    lastNEndpointsChangedAsync();
                 }
             }
             catch (Exception e)
@@ -418,6 +418,27 @@ public class Conference
         }
     }
 
+    /**
+     * Runs {@link #lastNEndpointsChanged()} in an IO pool thread.
+     */
+    private void lastNEndpointsChangedAsync()
+    {
+        TaskPools.IO_POOL.submit(() ->
+        {
+            try
+            {
+                lastNEndpointsChanged();
+            }
+            catch (Exception e)
+            {
+                logger.warn("Failed to handle change in last N endpoints: ", e);
+            }
+        });
+    }
+
+    /**
+     * Updates all endpoints with a new list of ordered endpoints in the conference.
+     */
     private void lastNEndpointsChanged()
     {
         List<String> lastNEndpointIds
@@ -425,7 +446,7 @@ public class Conference
                     .map(AbstractEndpoint::getID)
                     .collect(Collectors.toList());
 
-        TaskPools.IO_POOL.submit(() -> endpointsCache.forEach(e -> e.lastNEndpointsChanged(lastNEndpointIds)));
+        endpointsCache.forEach(e -> e.lastNEndpointsChanged(lastNEndpointIds));
     }
 
     /**
@@ -1302,7 +1323,6 @@ public class Conference
 
     private class SpeechActivityListener implements ConferenceSpeechActivity.Listener
     {
-
         @Override
         public void dominantSpeakerChanged()
         {

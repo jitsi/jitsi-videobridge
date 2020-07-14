@@ -92,7 +92,7 @@ public class ConferenceSpeechActivity
      */
     public ConferenceSpeechActivity(@NotNull Listener listener, Logger parentLogger)
     {
-        this.listener = Objects.requireNonNull(listener, "conference");
+        this.listener = Objects.requireNonNull(listener, "listener");
         logger =
                 parentLogger == null ?
                         new LoggerImpl(ConferenceSpeechActivity.class.getName()) :
@@ -107,7 +107,7 @@ public class ConferenceSpeechActivity
      *
      * @param id the ID of the new active/dominant speaker.
      */
-    protected void activeSpeakerChanged(String id)
+    protected void activeSpeakerChanged(@NotNull String id)
     {
         final Listener listener = this.listener;
         if (listener == null)
@@ -148,6 +148,9 @@ public class ConferenceSpeechActivity
     /**
      * Re-calculates the list of endpoints in LastN order ({@link #endpointsInLastNOrder}) based on the speech activity
      * and video availability.
+     *
+     * @return {@code true} if the call resulted in a change of the ordered list of endpoints, and {@code false}
+     * otherwise.
      */
     boolean updateLastNEndpoints()
     {
@@ -155,8 +158,7 @@ public class ConferenceSpeechActivity
         {
             Map<Boolean, List<AbstractEndpoint>> bySendingVideo
                     = endpointsBySpeechActivity.stream()
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.groupingBy(AbstractEndpoint::isSendingVideo));
+                        .collect(Collectors.groupingBy(AbstractEndpoint::isSendingVideo));
 
             List<AbstractEndpoint> newEndpointsInLastNOrder = new ArrayList<>(endpointsBySpeechActivity.size());
             newEndpointsInLastNOrder.addAll(bySendingVideo.getOrDefault(true, Collections.emptyList()));
@@ -183,7 +185,7 @@ public class ConferenceSpeechActivity
             this.listener = null;
             this.dominantSpeakerIdentification = null;
             endpointsBySpeechActivity.clear();
-            endpointsInLastNOrder = new ArrayList<>();
+            endpointsInLastNOrder = Collections.emptyList();
         }
     }
 

@@ -435,9 +435,9 @@ public class Endpoint
     /**
      * Notifies this {@code Endpoint} that the ordered list of {@code Endpoint}s changed.
      */
-    void lastNEndpointsChanged(List<String> endpoints)
+    void lastNEndpointsChanged(List<String> orderedEndpointIds)
     {
-        bitrateController.endpointOrderingChanged(endpoints);
+        bitrateController.endpointOrderingChanged(orderedEndpointIds);
     }
 
     /**
