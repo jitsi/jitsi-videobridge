@@ -46,15 +46,15 @@ public class ConferenceSpeechActivity
      * {@link #dominantSpeakerIdentification} about changes in the
      * active/dominant speaker in this multipoint conference.
      */
-    private final ActiveSpeakerChangedListener activeSpeakerChangedListener
+    private final ActiveSpeakerChangedListener<String> activeSpeakerChangedListener
         = ConferenceSpeechActivity.this::activeSpeakerChanged;
 
     /**
      * The <tt>DominantSpeakerIdentification</tt> instance which
      * detects/identifies the active/dominant speaker in {@link #conference}.
      */
-    private DominantSpeakerIdentification dominantSpeakerIdentification
-            = new DominantSpeakerIdentification();
+    private DominantSpeakerIdentification<String> dominantSpeakerIdentification
+            = new DominantSpeakerIdentification<>();
 
     /**
      * The listener to be notified when the dominant speaker or endpoint order changes.
@@ -107,7 +107,7 @@ public class ConferenceSpeechActivity
      *
      * @param id the ID of the new active/dominant speaker.
      */
-    protected void activeSpeakerChanged(Object id)
+    protected void activeSpeakerChanged(String id)
     {
         final Listener listener = this.listener;
         if (listener == null)
@@ -115,12 +115,7 @@ public class ConferenceSpeechActivity
             return;
         }
 
-        if (!(id instanceof String))
-        {
-            throw new IllegalStateException("Invalid speaker ID: " + id);
-        }
-        String endpointId = (String) id;
-
+        Objects.requireNonNull(id);
         logger.trace(() -> "The dominant speaker is now " + id + ".");
 
         boolean endpointListChanged;
@@ -128,12 +123,12 @@ public class ConferenceSpeechActivity
         {
             AbstractEndpoint endpoint
                     = endpointsBySpeechActivity.stream()
-                        .filter(e -> endpointId.equals(e.getID()))
+                        .filter(e -> id.equals(e.getID()))
                         .findFirst().orElse(null);
             // Move this endpoint to the top of our sorted list
             if (!endpointsBySpeechActivity.remove(endpoint))
             {
-                logger.warn("Got active speaker notification for an unknown endpoint: " + endpointId + ", ignoring");
+                logger.warn("Got active speaker notification for an unknown endpoint: " + id + ", ignoring");
                 return;
             }
             endpointsBySpeechActivity.add(0, endpoint);
@@ -225,7 +220,7 @@ public class ConferenceSpeechActivity
      */
     public void levelChanged(@NotNull AbstractEndpoint endpoint, long level)
     {
-        DominantSpeakerIdentification dsi = this.dominantSpeakerIdentification;
+        DominantSpeakerIdentification<String> dsi = this.dominantSpeakerIdentification;
         if (dsi != null)
         {
             dominantSpeakerIdentification.levelChanged(endpoint.getID(), (int) level);
@@ -301,7 +296,7 @@ public class ConferenceSpeechActivity
         debugState.put(
                 "dominantEndpoint",
                 dominantEndpoint == null ? "null" : dominantEndpoint.getID());
-        DominantSpeakerIdentification dsi = this.dominantSpeakerIdentification;
+        DominantSpeakerIdentification<String> dsi = this.dominantSpeakerIdentification;
         debugState.put(
                 "dominantSpeakerIdentification",
                 dsi == null ? null : dsi.doGetJSON());
