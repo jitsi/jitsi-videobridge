@@ -232,7 +232,7 @@ public class Conference
         this.includeInStatistics = enableLogging;
         this.conferenceName = conferenceName;
 
-        speechActivity = new ConferenceSpeechActivity(this);
+        speechActivity = new ConferenceSpeechActivity(new SpeechActivityListener());
         updateLastNEndpointsFuture = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(() -> {
             try
             {
@@ -422,7 +422,7 @@ public class Conference
      * speaker switch event in this multipoint conference and there is now a new
      * dominant speaker.
      */
-    void dominantSpeakerChanged()
+    private void dominantSpeakerChanged()
     {
         String dominantSpeakerId = speechActivity.getDominantEndpoint();
         AbstractEndpoint dominantSpeaker = getEndpoint(dominantSpeakerId);
@@ -433,7 +433,7 @@ public class Conference
             getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
         }
 
-        speechActivityEndpointsChanged();
+        lastNEndpoints.update();
 
         if (dominantSpeaker != null)
         {
@@ -932,14 +932,6 @@ public class Conference
     }
 
     /**
-     * Notifies this instance that the list of ordered endpoints has changed
-     */
-    void speechActivityEndpointsChanged()
-    {
-        lastNEndpoints.update();
-    }
-
-    /**
      * Gets the conference name.
      *
      * @return the conference name
@@ -1345,6 +1337,22 @@ public class Conference
                 this.lastNEndpointIds = lastNEndpointIds;
                 endpointsCache.forEach(e -> e.speechActivityEndpointsChanged(this.lastNEndpointIds));
             }
+        }
+    }
+
+    private class SpeechActivityListener implements ConferenceSpeechActivity.Listener
+    {
+
+        @Override
+        public void dominantSpeakerChanged()
+        {
+            Conference.this.dominantSpeakerChanged();
+        }
+
+        @Override
+        public void speechActivityEndpointsChanged()
+        {
+            lastNEndpoints.update();
         }
     }
 }

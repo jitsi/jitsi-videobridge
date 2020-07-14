@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.utils.dsi.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.util.*;
@@ -55,13 +56,9 @@ public class ConferenceSpeechActivity
             = new DominantSpeakerIdentification();
 
     /**
-     * The <tt>Conference</tt> for which this instance represents the speech
-     * activity of its <tt>Endpoint</tt>s. The reference will be set to
-     * <tt>null</tt> once the <tt>Conference</tt> gets expired.
-     * <tt>ConferenceSpeechActivity</tt> is a part of <tt>Conference</tt> and
-     * the operation of the former in the absence of the latter is useless.
+     * The listener to be notified when the dominant speaker or endpoint order changes.
      */
-    private Conference conference;
+    private Listener listener;
 
     /**
      * The ordered list of <tt>Endpoint</tt>s participating in
@@ -76,33 +73,38 @@ public class ConferenceSpeechActivity
      */
     private final Object syncRoot = new Object();
 
+    public ConferenceSpeechActivity(@NotNull Listener listener)
+    {
+        this(listener, null);
+    }
+
     /**
-     * Initializes a new <tt>ConferenceSpeechActivity</tt> instance which is to
-     * represent the speech activity in a specific <tt>Conference</tt>.
+     * Initializes a new <tt>ConferenceSpeechActivity</tt> instance.
      *
-     * @param conference the <tt>Conference</tt> whose speech activity is to be
+     * @param listener the listener to be notified when the dominant speaker or enpoint order change.
      * represented by the new instance
      */
-    public ConferenceSpeechActivity(Conference conference)
+    public ConferenceSpeechActivity(@NotNull Listener listener, Logger parentLogger)
     {
-        this.conference = Objects.requireNonNull(conference, "conference");
-        logger = conference.getLogger().createChildLogger(ConferenceSpeechActivity.class.getName());
+        this.listener = Objects.requireNonNull(listener, "conference");
+        logger =
+                parentLogger == null ?
+                        new LoggerImpl(ConferenceSpeechActivity.class.getName()) :
+                        parentLogger.createChildLogger(ConferenceSpeechActivity.class.getName());
 
         dominantSpeakerIdentification.addActiveSpeakerChangedListener(activeSpeakerChangedListener);
     }
 
     /**
-     * Notifies this multipoint conference that the active/dominant speaker has
-     * changed to one identified by a specific synchronization source
-     * identifier/SSRC.
-     * 
-     * @param id the synchronization source identifier/SSRC of the new
-     * active/dominant speaker
+     * Notifies this instance that the underlying {@code dominant speaker identification} has elected a new
+     * active/dominant speaker.
+     *
+     * @param id the ID of the new active/dominant speaker.
      */
-    private void activeSpeakerChanged(Object id)
+    protected void activeSpeakerChanged(Object id)
     {
-        final Conference conference = this.conference;
-        if (conference == null)
+        final Listener listener = this.listener;
+        if (listener == null)
         {
             return;
         }
@@ -113,7 +115,7 @@ public class ConferenceSpeechActivity
         }
         String endpoint = (String) id;
 
-        logger.trace(() -> "The dominant speaker in conference " + conference.getID() + " is now " + id + ".");
+        logger.trace(() -> "The dominant speaker is now " + id + ".");
 
         synchronized (syncRoot)
         {
@@ -125,10 +127,7 @@ public class ConferenceSpeechActivity
             }
             endpoints.add(0, endpoint);
 
-            TaskPools.IO_POOL.submit(() ->
-            {
-                conference.dominantSpeakerChanged();
-            });
+            TaskPools.IO_POOL.submit(listener::dominantSpeakerChanged);
         }
     }
 
@@ -138,11 +137,9 @@ public class ConferenceSpeechActivity
         {
             if (dominantSpeakerIdentification != null)
             {
-                dominantSpeakerIdentification
-                        .removeActiveSpeakerChangedListener(
-                                activeSpeakerChangedListener);
+                dominantSpeakerIdentification.removeActiveSpeakerChangedListener(activeSpeakerChangedListener);
             }
-            this.conference = null;
+            this.listener = null;
             this.dominantSpeakerIdentification = null;
         }
     }
@@ -196,7 +193,7 @@ public class ConferenceSpeechActivity
     }
 
     /**
-     * Notifies this instance that the
+     * Notifies this instance that the list of endpoints changed.
      */
     public void endpointsChanged(List<String> conferenceEndpoints)
     {
@@ -206,8 +203,7 @@ public class ConferenceSpeechActivity
         // sure it matches.
         synchronized (syncRoot)
         {
-            // Remove any endpoints we have that are no longer in the
-            // conference
+            // Remove any endpoints we have that are no longer in the conference
             String previousDominantSpeaker = endpoints.isEmpty() ? null : endpoints.get(0);
             endpointsListChanged = endpoints.removeIf(ep -> !conferenceEndpoints.contains(ep));
             // Add any endpoints from the conf we don't have to the end of our list
@@ -227,20 +223,20 @@ public class ConferenceSpeechActivity
         {
             final boolean finalDominantSpeakerChanged = dominantSpeakerChanged;
             final boolean finalEndpointsChanged = endpointsListChanged;
+            final Listener listener = this.listener;
+            if (listener == null)
+            {
+                return;
+            }
             TaskPools.IO_POOL.submit(() -> {
-                final Conference conference = this.conference;
-                if (conference == null)
-                {
-                    return;
-                }
                 if (finalDominantSpeakerChanged)
                 {
-                    conference.dominantSpeakerChanged();
+                    listener.dominantSpeakerChanged();
                 }
                 // Dominant speaker changed implies that the list changed.
                 if (finalEndpointsChanged && !finalDominantSpeakerChanged)
                 {
-                    conference.speechActivityEndpointsChanged();
+                    listener.speechActivityEndpointsChanged();
                 }
 
             });
@@ -264,5 +260,11 @@ public class ConferenceSpeechActivity
                 dsi == null ? null : dsi.doGetJSON());
 
         return debugState;
+    }
+
+    interface Listener
+    {
+        void dominantSpeakerChanged();
+        void speechActivityEndpointsChanged();
     }
 }
