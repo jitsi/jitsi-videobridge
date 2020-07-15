@@ -1,0 +1,121 @@
+/*
+ * Copyright @ 2020 - present 8x8, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.jitsi.videobridge
+
+import io.kotlintest.IsolationMode
+import io.kotlintest.matchers.collections.shouldContainExactly
+import io.kotlintest.matchers.collections.shouldContainInOrder
+import io.kotlintest.shouldBe
+import io.kotlintest.specs.ShouldSpec
+import io.mockk.every
+import io.mockk.mockk
+
+class SpeechActivityTest : ShouldSpec() {
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
+
+    private val a = mockEndpoint("a")
+    private val b = mockEndpoint("b")
+    private val c = mockEndpoint("c")
+    private val d = mockEndpoint("d")
+    private val conferenceSpeechActivity = ConferenceSpeechActivity(object : ConferenceSpeechActivity.Listener {
+        override fun lastNEndpointsChanged() {}
+        override fun dominantSpeakerChanged() {}
+    })
+
+    init {
+        "Should maintain correct order when everyone has video" {
+            conferenceSpeechActivity.endpointsChanged(listOf(a, b, c))
+            conferenceSpeechActivity.orderedEndpoints shouldContainExactly listOf(a, b, c)
+
+            conferenceSpeechActivity.activeSpeakerChanged(b.id)
+            conferenceSpeechActivity.dominantEndpoint shouldBe b
+
+            conferenceSpeechActivity.activeSpeakerChanged(c.id)
+            conferenceSpeechActivity.dominantEndpoint shouldBe c
+
+            conferenceSpeechActivity.activeSpeakerChanged(a.id)
+            conferenceSpeechActivity.dominantEndpoint shouldBe a
+
+            conferenceSpeechActivity.orderedEndpoints shouldContainInOrder listOf(a, c, b)
+
+            conferenceSpeechActivity.endpointsChanged(listOf(b, c))
+            conferenceSpeechActivity.orderedEndpoints shouldContainInOrder listOf(c, b)
+
+            conferenceSpeechActivity.activeSpeakerChanged(c.id)
+            conferenceSpeechActivity.dominantEndpoint shouldBe c
+
+            conferenceSpeechActivity.activeSpeakerChanged(b.id)
+            conferenceSpeechActivity.dominantEndpoint shouldBe b
+
+            conferenceSpeechActivity.endpointsChanged(listOf(d, b, c))
+            conferenceSpeechActivity.dominantEndpoint shouldBe b
+
+            conferenceSpeechActivity.activeSpeakerChanged(d.id)
+            conferenceSpeechActivity.dominantEndpoint shouldBe d
+            conferenceSpeechActivity.orderedEndpoints shouldContainInOrder listOf(d, b, c)
+        }
+
+        "Should maintain correct order when endpoints disable/enable video" {
+            conferenceSpeechActivity.endpointsChanged(listOf(a, b, c, d))
+            conferenceSpeechActivity.activeSpeakerChanged(d.id)
+            conferenceSpeechActivity.activeSpeakerChanged(c.id)
+            conferenceSpeechActivity.activeSpeakerChanged(b.id)
+            conferenceSpeechActivity.activeSpeakerChanged(a.id)
+
+            conferenceSpeechActivity.orderedEndpoints shouldContainExactly listOf(a, b, c, d)
+
+            every { a.isSendingVideo } returns false
+            conferenceSpeechActivity.updateLastNEndpoints()
+            conferenceSpeechActivity.dominantEndpoint shouldBe a
+            conferenceSpeechActivity.orderedEndpoints shouldContainExactly listOf(b, c, d, a)
+
+            every { a.isSendingVideo } returns true
+            conferenceSpeechActivity.updateLastNEndpoints()
+            conferenceSpeechActivity.dominantEndpoint shouldBe a
+            conferenceSpeechActivity.orderedEndpoints shouldContainExactly listOf(a, b, c, d)
+
+            every { b.isSendingVideo } returns false
+            conferenceSpeechActivity.updateLastNEndpoints()
+            conferenceSpeechActivity.dominantEndpoint shouldBe a
+            conferenceSpeechActivity.orderedEndpoints shouldContainExactly listOf(a, c, d, b)
+
+            conferenceSpeechActivity.activeSpeakerChanged(b.id)
+            conferenceSpeechActivity.dominantEndpoint shouldBe b
+            conferenceSpeechActivity.orderedEndpoints shouldContainExactly listOf(a, c, d, b)
+
+            every { b.isSendingVideo } returns true
+            conferenceSpeechActivity.updateLastNEndpoints()
+            conferenceSpeechActivity.dominantEndpoint shouldBe b
+            conferenceSpeechActivity.orderedEndpoints shouldContainExactly listOf(b, a, c, d)
+
+            every { a.isSendingVideo } returns false
+            every { b.isSendingVideo } returns false
+            every { c.isSendingVideo } returns false
+            every { d.isSendingVideo } returns false
+            conferenceSpeechActivity.updateLastNEndpoints()
+            conferenceSpeechActivity.activeSpeakerChanged(a.id)
+            conferenceSpeechActivity.dominantEndpoint shouldBe a
+            conferenceSpeechActivity.orderedEndpoints shouldContainExactly listOf(a, b, c, d)
+        }
+    }
+
+    companion object {
+        fun mockEndpoint(endpointId: String) = mockk<AbstractEndpoint>().apply {
+            every { id } returns endpointId
+            every { isSendingVideo } returns true
+        }
+    }
+}

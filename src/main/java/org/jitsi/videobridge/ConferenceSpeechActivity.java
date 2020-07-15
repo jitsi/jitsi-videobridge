@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.utils.dsi.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.util.*;
@@ -41,103 +42,36 @@ public class ConferenceSpeechActivity
     private final Logger logger;
 
     /**
-     * Parses an <tt>Object</tt> as a synchronization source identifier (SSRC).
-     *
-     * @param obj the <tt>Object</tt> to parse as an SSRC
-     * @return the SSRC represented by <tt>obj</tt> or <tt>-1</tt> if
-     * <tt>obj</tt> could not be parsed as an SSRC
-     */
-    private static long parseSSRC(Object obj)
-    {
-        long l;
-
-        if (obj == null)
-        {
-            l = -1L;
-        }
-        else if (obj instanceof Number)
-        {
-            l = ((Number) obj).longValue();
-        }
-        else
-        {
-            String s = obj.toString();
-
-            try
-            {
-                l = Long.parseLong(s);
-            }
-            catch (NumberFormatException ex)
-            {
-                l = -1L;
-            }
-        }
-        return l;
-    }
-
-    /**
-     * Resolves a synchronization source identifier (SSRC) of a received RTP
-     * stream as an <tt>Endpoint</tt> identifier (ID).
-     *
-     * @param jsonObject the <tt>JSONObject</tt> from which the SSRC is to be
-     * read and into which the <tt>Endpoint</tt> ID is to be written
-     * @param ssrcKey the key in <tt>jsonObject</tt> with which the SSRC to be
-     * resolved is associated
-     * @param conference
-     * @param endpointKey the key in <tt>jsonObject</tt> with which the resolved
-     * <tt>Endpoint</tt> ID is to be associated
-     */
-    @SuppressWarnings("unchecked")
-    private static void resolveSSRCAsEndpoint(
-            JSONObject jsonObject,
-            String ssrcKey,
-            Conference conference,
-            String endpointKey)
-    {
-        long ssrc = parseSSRC(jsonObject.get(ssrcKey));
-
-        if (ssrc != -1)
-        {
-            AbstractEndpoint endpoint
-                = conference.findEndpointByReceiveSSRC(ssrc);
-
-            if (endpoint != null)
-            {
-                jsonObject.put(endpointKey, endpoint.getID());
-            }
-        }
-    }
-
-    /**
      * The <tt>ActiveSpeakerChangedListener</tt> which listens to
      * {@link #dominantSpeakerIdentification} about changes in the
      * active/dominant speaker in this multipoint conference.
      */
-    private final ActiveSpeakerChangedListener activeSpeakerChangedListener
+    private final ActiveSpeakerChangedListener<String> activeSpeakerChangedListener
         = ConferenceSpeechActivity.this::activeSpeakerChanged;
 
     /**
      * The <tt>DominantSpeakerIdentification</tt> instance which
      * detects/identifies the active/dominant speaker in {@link #conference}.
      */
-    private DominantSpeakerIdentification dominantSpeakerIdentification
-            = new DominantSpeakerIdentification();
+    private DominantSpeakerIdentification<String> dominantSpeakerIdentification
+            = new DominantSpeakerIdentification<>();
 
     /**
-     * The <tt>Conference</tt> for which this instance represents the speech
-     * activity of its <tt>Endpoint</tt>s. The reference will be set to
-     * <tt>null</tt> once the <tt>Conference</tt> gets expired.
-     * <tt>ConferenceSpeechActivity</tt> is a part of <tt>Conference</tt> and
-     * the operation of the former in the absence of the latter is useless.
+     * The listener to be notified when the dominant speaker or endpoint order changes.
      */
-    private Conference conference;
+    private Listener listener;
 
     /**
-     * The ordered list of <tt>Endpoint</tt>s participating in
-     * {@link #conference} with the dominant (speaker) <tt>Endpoint</tt> at the
-     * beginning of the list i.e. the dominant speaker history.
+     * The list of endpoints ordered by speech activity alone with the dominant speaker at the beginning of the list
+     * i.e. the dominant speaker history.
      */
-    private final List<AbstractEndpoint> endpoints = new ArrayList<>();
+    private final List<AbstractEndpoint> endpointsBySpeechActivity = new ArrayList<>();
+
+    /**
+     * The list of endpoints in "LastN" order. That is, endpoints currently sending video are at the top of the list,
+     * ordered by speech activity, followed by the rest of the endpoints (again in speech activity order).
+     */
+    private @NotNull List<AbstractEndpoint> endpointsInLastNOrder = new ArrayList<>();
 
     /**
      * The <tt>Object</tt> used to synchronize the access to the state of this
@@ -145,156 +79,99 @@ public class ConferenceSpeechActivity
      */
     private final Object syncRoot = new Object();
 
+    public ConferenceSpeechActivity(@NotNull Listener listener)
+    {
+        this(listener, null);
+    }
+
     /**
-     * Initializes a new <tt>ConferenceSpeechActivity</tt> instance which is to
-     * represent the speech activity in a specific <tt>Conference</tt>.
+     * Initializes a new <tt>ConferenceSpeechActivity</tt> instance.
      *
-     * @param conference the <tt>Conference</tt> whose speech activity is to be
+     * @param listener the listener to be notified when the dominant speaker or enpoint order change.
      * represented by the new instance
      */
-    public ConferenceSpeechActivity(Conference conference)
+    public ConferenceSpeechActivity(@NotNull Listener listener, Logger parentLogger)
     {
-        this.conference = Objects.requireNonNull(conference, "conference");
-        logger = conference.getLogger().createChildLogger(ConferenceSpeechActivity.class.getName());
+        this.listener = Objects.requireNonNull(listener, "listener");
+        logger =
+                parentLogger == null ?
+                        new LoggerImpl(ConferenceSpeechActivity.class.getName()) :
+                        parentLogger.createChildLogger(ConferenceSpeechActivity.class.getName());
 
-        dominantSpeakerIdentification
-                .addActiveSpeakerChangedListener(activeSpeakerChangedListener);
+        dominantSpeakerIdentification.addActiveSpeakerChangedListener(activeSpeakerChangedListener);
     }
 
     /**
-     * Notifies this multipoint conference that the active/dominant speaker has
-     * changed to one identified by a specific synchronization source
-     * identifier/SSRC.
-     * 
-     * @param ssrc the synchronization source identifier/SSRC of the new
-     * active/dominant speaker
+     * Notifies this instance that the underlying {@code dominant speaker identification} has elected a new
+     * active/dominant speaker.
+     *
+     * @param id the ID of the new active/dominant speaker.
      */
-    private void activeSpeakerChanged(long ssrc)
+    protected void activeSpeakerChanged(@NotNull String id)
     {
-        Conference conference = this.conference;
-
-        if (conference != null)
+        final Listener listener = this.listener;
+        if (listener == null)
         {
-            if (logger.isTraceEnabled())
-            {
-                logger.trace(
-                        "The dominant speaker in conference "
-                            + conference.getID() + " is now the SSRC " + ssrc
-                            + ".");
-            }
+            return;
+        }
 
+        Objects.requireNonNull(id);
+        logger.trace(() -> "The dominant speaker is now " + id + ".");
+
+        boolean endpointListChanged;
+        synchronized (syncRoot)
+        {
             AbstractEndpoint endpoint
-                = conference.findEndpointByReceiveSSRC(ssrc);
-
-            if (endpoint == null)
+                    = endpointsBySpeechActivity.stream()
+                        .filter(e -> id.equals(e.getID()))
+                        .findFirst().orElse(null);
+            // Move this endpoint to the top of our sorted list
+            if (!endpointsBySpeechActivity.remove(endpoint))
             {
-                logger.warn("Unable to find endpoint corresponding to "
-                    + "active speaker SSRC " + ssrc);
+                logger.warn("Got active speaker notification for an unknown endpoint: " + id + ", ignoring");
                 return;
             }
+            endpointsBySpeechActivity.add(0, endpoint);
 
-            synchronized (syncRoot)
-            {
-                // Move this endpoint to the top of our sorted list
-                if (!endpoints.remove(endpoint))
-                {
-                    logger.warn("Got active speaker notification for an unknown"
-                            + " endpoint (ssrc: " + ssrc + ", epId "
-                            + endpoint.getID() + ")! Ignoring");
-                    return;
-                }
-                endpoints.add(0, endpoint);
-
-                TaskPools.IO_POOL.submit(() ->
-                {
-                    if (conference != null)
-                    {
-                        conference.dominantSpeakerChanged();
-                    }
-                });
-            }
+            endpointListChanged = updateLastNEndpoints();
         }
+
+        TaskPools.IO_POOL.submit(() -> {
+            listener.dominantSpeakerChanged();
+            if (endpointListChanged)
+            {
+                listener.lastNEndpointsChanged();
+            }
+        });
     }
 
     /**
-     * Retrieves a JSON representation of the dominant speaker
-     * for the purposes of the REST API of Videobridge.
+     * Re-calculates the list of endpoints in LastN order ({@link #endpointsInLastNOrder}) based on the speech activity
+     * and video availability.
      *
-     * @return a <tt>JSONObject</tt> which represents
-     * <tt>dominantSpeakerIdentification</tt> for the purposes of the REST API
-     * of Videobridge
+     * @return {@code true} if the call resulted in a change of the ordered list of endpoints, and {@code false}
+     * otherwise.
      */
-    public JSONObject doGetDominantSpeakerIdentificationJSON()
+    boolean updateLastNEndpoints()
     {
-        DominantSpeakerIdentification dominantSpeakerIdentification
-            = this.dominantSpeakerIdentification;
-        JSONObject jsonObject;
-
-        if (dominantSpeakerIdentification == null)
+        synchronized (syncRoot)
         {
-            // We do not know how to represent ActiveSpeakerDetector at the time
-            // of this writing, we know how to represent
-            // DominantSpeakerIdentification only.
-            jsonObject = null;
-        }
-        else
-        {
-            Conference conference = this.conference;
+            Map<Boolean, List<AbstractEndpoint>> bySendingVideo
+                    = endpointsBySpeechActivity.stream()
+                        .collect(Collectors.groupingBy(AbstractEndpoint::isSendingVideo));
 
-            if (conference == null)
+            List<AbstractEndpoint> newEndpointsInLastNOrder = new ArrayList<>(endpointsBySpeechActivity.size());
+            newEndpointsInLastNOrder.addAll(bySendingVideo.getOrDefault(true, Collections.emptyList()));
+            newEndpointsInLastNOrder.addAll(bySendingVideo.getOrDefault(false, Collections.emptyList()));
+
+            if (!newEndpointsInLastNOrder.equals(endpointsInLastNOrder))
             {
-                jsonObject = null;
+                endpointsInLastNOrder = Collections.unmodifiableList(newEndpointsInLastNOrder);
+                return true;
             }
-            else
-            {
-                jsonObject = dominantSpeakerIdentification.doGetJSON();
-                if (jsonObject != null)
-                {
-                    // Resolve the dominantSpeaker of
-                    // DominantSpeakerIdentification which is a synchronization
-                    // source identifier (SSRC) as an Endpoint.
-                    resolveSSRCAsEndpoint(
-                            jsonObject,
-                            "dominantSpeaker",
-                            conference,
-                            "dominantEndpoint");
 
-                    // Resolve the ssrc of each one of the speakers of
-                    // DominantSpeakerIdentification as an Endpoint.
-                    Object speakers = jsonObject.get("speakers");
-
-                    if (speakers != null)
-                    {
-                        if (speakers instanceof JSONObject[])
-                        {
-                            for (JSONObject speaker : (JSONObject[]) speakers)
-                            {
-                                resolveSSRCAsEndpoint(
-                                        speaker,
-                                        "ssrc",
-                                        conference,
-                                        "endpoint");
-                            }
-                        }
-                        else if (speakers instanceof JSONArray)
-                        {
-                            for (Object speaker : (JSONArray) speakers)
-                            {
-                                if (speaker instanceof JSONObject)
-                                {
-                                    resolveSSRCAsEndpoint(
-                                            (JSONObject) speaker,
-                                            "ssrc",
-                                            conference,
-                                            "endpoint");
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            return false;
         }
-        return jsonObject;
     }
 
     void expire()
@@ -303,12 +180,12 @@ public class ConferenceSpeechActivity
         {
             if (dominantSpeakerIdentification != null)
             {
-                dominantSpeakerIdentification
-                        .removeActiveSpeakerChangedListener(
-                                activeSpeakerChangedListener);
+                dominantSpeakerIdentification.removeActiveSpeakerChangedListener(activeSpeakerChangedListener);
             }
-            this.conference = null;
+            this.listener = null;
             this.dominantSpeakerIdentification = null;
+            endpointsBySpeechActivity.clear();
+            endpointsInLastNOrder = Collections.emptyList();
         }
     }
 
@@ -323,105 +200,87 @@ public class ConferenceSpeechActivity
     {
         synchronized (syncRoot)
         {
-            return endpoints.isEmpty() ? null : endpoints.get(0);
+            return endpointsBySpeechActivity.isEmpty() ? null : endpointsBySpeechActivity.get(0);
         }
     }
 
     /**
-     * Gets the ordered list of <tt>Endpoint</tt>s participating in the
-     * multipoint conference represented by this instance with the dominant
-     * (speaker) <tt>Endpoint</tt> at the beginning of the list i.e. the
-     * dominant speaker history.
+     * Gets a read-only list of endpoints in "LastN" order.
      *
-     * @return the ordered list of <tt>Endpoint</tt>s participating in the
-     * multipoint conference represented by this instance with the dominant
-     * (speaker) <tt>Endpoint</tt> at the beginning of the list
+     * @return a read-only list of endpoints in "LastN" order.
      */
-    public List<AbstractEndpoint> getEndpoints()
+    public List<AbstractEndpoint> getOrderedEndpoints()
     {
-        synchronized (syncRoot)
-        {
-            return new LinkedList<>(endpoints);
-        }
+        return endpointsInLastNOrder;
     }
 
     /**
-     * Notifies this instance that a new audio level was received or measured by
-     * an <tt>Endpoint</tt> for an RTP stream with a specific synchronization
-     * source identifier/SSRC.
+     * Notifies this instance that a new audio level was received or measured by an <tt>Endpoint</tt>.
      *
-     * @param ssrc the synchronization source identifier/SSRC of the RTP stream
-     * for which a new audio level was received or measured by the specified
-     * <tt>channel</tt>
-     * @param level the new audio level which was received or measured by the
-     * specified <tt>channel</tt> for the RTP stream with the specified
-     * <tt>ssrc</tt> 
+     * @param endpoint the endpoint for which a new audio level was received or measured
+     * @param level the new audio level which was received or measured
      */
-    public void levelChanged(long ssrc, int level)
+    public void levelChanged(@NotNull AbstractEndpoint endpoint, long level)
     {
-        DominantSpeakerIdentification dsi = this.dominantSpeakerIdentification;
+        DominantSpeakerIdentification<String> dsi = this.dominantSpeakerIdentification;
         if (dsi != null)
         {
-            dominantSpeakerIdentification.levelChanged(ssrc, level);
+            dominantSpeakerIdentification.levelChanged(endpoint.getID(), (int) level);
         }
     }
 
     /**
-     * Notifies this instance that the
+     * Notifies this instance that the list of endpoints changed.
      */
-    public void endpointsChanged()
+    public void endpointsChanged(List<AbstractEndpoint> conferenceEndpoints)
     {
         boolean endpointsListChanged = false;
         boolean dominantSpeakerChanged = false;
         // The list of endpoints may have changed, sync our list to make
         // sure it matches.
-        List<AbstractEndpoint> conferenceEndpointsCopy
-                = conference.getEndpoints();
         synchronized (syncRoot)
         {
-            // Remove any endpoints we have that are no longer in the
-            // conference
-            String previousDominantSpeaker
-                = endpoints.isEmpty() ? null : endpoints.get(0).getID();
-            endpointsListChanged
-                = endpoints.removeIf(
-                        ep -> !conferenceEndpointsCopy.contains(ep));
-            // Add any endpoints from the conf we don't have to the end
-            // of our list
-            for (AbstractEndpoint ep : conferenceEndpointsCopy)
+            // Remove any endpoints we have that are no longer in the conference
+            AbstractEndpoint previousDominantSpeaker
+                    = endpointsBySpeechActivity.isEmpty() ? null : endpointsBySpeechActivity.get(0);
+            endpointsListChanged = endpointsBySpeechActivity.removeIf(ep -> !conferenceEndpoints.contains(ep));
+            // Add any endpoints from the conf we don't have to the end of our list
+            for (AbstractEndpoint conferenceEndpoint : conferenceEndpoints)
             {
-                if (!endpoints.contains(ep))
+                if (!endpointsBySpeechActivity.contains(conferenceEndpoint))
                 {
-                    endpoints.add(ep);
+                    endpointsBySpeechActivity.add(conferenceEndpoint);
                     endpointsListChanged = true;
                 }
             }
-            String newDominantSpeaker
-                = endpoints.isEmpty() ? null : endpoints.get(0).getID();
-            dominantSpeakerChanged
-                = !Objects.equals(previousDominantSpeaker, newDominantSpeaker);
+            AbstractEndpoint newDominantSpeaker
+                    = endpointsBySpeechActivity.isEmpty() ? null : endpointsBySpeechActivity.get(0);
+            dominantSpeakerChanged = !Objects.equals(previousDominantSpeaker, newDominantSpeaker);
+
+            if (endpointsListChanged)
+            {
+                endpointsListChanged = updateLastNEndpoints();
+            }
         }
 
         if (dominantSpeakerChanged || endpointsListChanged)
         {
             final boolean finalDominantSpeakerChanged = dominantSpeakerChanged;
             final boolean finalEndpointsChanged = endpointsListChanged;
+            final Listener listener = this.listener;
+            if (listener == null)
+            {
+                return;
+            }
             TaskPools.IO_POOL.submit(() -> {
-                final Conference conference = this.conference;
-                if (conference == null)
-                {
-                    return;
-                }
                 if (finalDominantSpeakerChanged)
                 {
-                    conference.dominantSpeakerChanged();
+                    listener.dominantSpeakerChanged();
                 }
-                // Dominant speaker changed implies that the list changed.
-                if (finalEndpointsChanged && !finalDominantSpeakerChanged)
+                if (finalEndpointsChanged)
                 {
-                    conference.speechActivityEndpointsChanged();
+                    listener.lastNEndpointsChanged();
                 }
-
             });
         }
     }
@@ -438,12 +297,18 @@ public class ConferenceSpeechActivity
         AbstractEndpoint dominantEndpoint = getDominantEndpoint();
         debugState.put(
                 "dominantEndpoint",
-                dominantEndpoint == null ? null : dominantEndpoint.getID());
-        DominantSpeakerIdentification dsi = this.dominantSpeakerIdentification;
+                dominantEndpoint == null ? "null" : dominantEndpoint.getID());
+        DominantSpeakerIdentification<String> dsi = this.dominantSpeakerIdentification;
         debugState.put(
                 "dominantSpeakerIdentification",
                 dsi == null ? null : dsi.doGetJSON());
 
         return debugState;
+    }
+
+    interface Listener
+    {
+        void dominantSpeakerChanged();
+        void lastNEndpointsChanged();
     }
 }

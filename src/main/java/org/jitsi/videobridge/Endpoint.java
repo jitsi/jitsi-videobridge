@@ -433,12 +433,11 @@ public class Endpoint
     }
 
     /**
-     * Notifies this {@code Endpoint} that the list of {@code Endpoint}s ordered
-     * by speech activity (i.e. the dominant speaker history) has changed.
+     * Notifies this {@code Endpoint} that the ordered list of {@code Endpoint}s changed.
      */
-    void speechActivityEndpointsChanged(List<String> endpoints)
+    void lastNEndpointsChanged(List<String> orderedEndpointIds)
     {
-        bitrateController.endpointOrderingChanged(endpoints);
+        bitrateController.endpointOrderingChanged(orderedEndpointIds);
     }
 
     /**
@@ -1055,146 +1054,6 @@ public class Endpoint
     }
 
     /**
-     * A node which can be placed in the pipeline to cache SCTP packets until
-     * the SCTPManager is ready to handle them.
-     */
-    private static class SctpHandler extends ConsumerNode
-    {
-        private final Object sctpManagerLock = new Object();
-        public SctpManager sctpManager = null;
-        public BlockingQueue<PacketInfo> cachedSctpPackets = new LinkedBlockingQueue<>();
-
-        /**
-         * Initializes a new {@link SctpHandler} instance.
-         */
-        public SctpHandler()
-        {
-            super("SCTP handler");
-        }
-
-        @Override
-        protected void consume(@NotNull PacketInfo packetInfo)
-        {
-            synchronized (sctpManagerLock)
-            {
-                if (sctpManager == null)
-                {
-                    cachedSctpPackets.add(packetInfo);
-                }
-                else
-                {
-                    sctpManager.handleIncomingSctp(packetInfo);
-                }
-            }
-        }
-
-        /**
-         * Sets the SCTP manager of this endpoint.
-         */
-        public void setSctpManager(SctpManager sctpManager)
-        {
-            // Submit this to the pool since we wait on the lock and process any
-            // cached packets here as well
-            TaskPools.IO_POOL.submit(() -> {
-                // We grab the lock here so that we can set the SCTP manager and
-                // process any previously-cached packets as an atomic operation.
-                // It also prevents another thread from coming in via
-                // #doProcessPackets and processing packets at the same time in
-                // another thread, which would be a problem.
-                synchronized (sctpManagerLock)
-                {
-                    this.sctpManager = sctpManager;
-                    cachedSctpPackets.forEach(sctpManager::handleIncomingSctp);
-                    cachedSctpPackets.clear();
-                }
-            });
-        }
-
-        @Override
-        public void trace(@NotNull Function0<Unit> f)
-        {
-            f.invoke();
-        }
-    }
-
-    /**
-     * A node which can be placed in the pipeline to cache Data channel packets
-     * until the DataChannelStack is ready to handle them.
-     */
-    private static class DataChannelHandler extends ConsumerNode
-    {
-        private final Object dataChannelStackLock = new Object();
-        public DataChannelStack dataChannelStack = null;
-        public BlockingQueue<PacketInfo> cachedDataChannelPackets = new LinkedBlockingQueue<>();
-
-        /**
-         * Initializes a new {@link DataChannelHandler} instance.
-         */
-        public DataChannelHandler()
-        {
-            super("Data channel handler");
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        protected void consume(PacketInfo packetInfo)
-        {
-            synchronized (dataChannelStackLock)
-            {
-                if (packetInfo.getPacket() instanceof DataChannelPacket)
-                {
-                    if (dataChannelStack == null)
-                    {
-                        cachedDataChannelPackets.add(packetInfo);
-                    }
-                    else
-                    {
-                        DataChannelPacket dcp = (DataChannelPacket) packetInfo.getPacket();
-                        dataChannelStack.onIncomingDataChannelPacket(
-                            ByteBuffer.wrap(dcp.getBuffer()), dcp.sid, dcp.ppid);
-                    }
-                }
-            }
-        }
-
-        /**
-         * Sets the data channel stack
-         */
-        public void setDataChannelStack(DataChannelStack dataChannelStack)
-        {
-            // Submit this to the pool since we wait on the lock and process any
-            // cached packets here as well
-            TaskPools.IO_POOL.submit(() -> {
-                // We grab the lock here so that we can set the SCTP manager and
-                // process any previously-cached packets as an atomic operation.
-                // It also prevents another thread from coming in via
-                // #doProcessPackets and processing packets at the same time in
-                // another thread, which would be a problem.
-                synchronized (dataChannelStackLock)
-                {
-                    this.dataChannelStack = dataChannelStack;
-                    cachedDataChannelPackets.forEach(packetInfo -> {
-                        DataChannelPacket dcp
-                                = (DataChannelPacket)packetInfo.getPacket();
-                        //TODO(brian): have datachannelstack accept
-                        // DataChannelPackets?
-                        dataChannelStack.onIncomingDataChannelPacket(
-                            ByteBuffer.wrap(dcp.getBuffer()), dcp.sid, dcp.ppid);
-                    });
-                }
-            });
-        }
-
-        @Override
-        public void trace(@NotNull Function0<Unit> f)
-        {
-            f.invoke();
-        }
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -1553,7 +1412,7 @@ public class Endpoint
         @Override
         public void audioLevelReceived(long sourceSsrc, long level)
         {
-            getConference().getAudioLevelListener().onLevelReceived(sourceSsrc, level);
+            getConference().getSpeechActivity().levelChanged(Endpoint.this, level);
         }
 
         /**
@@ -1565,6 +1424,146 @@ public class Endpoint
             logger.debug(() -> "Estimated bandwidth is now " + newValue);
             bitrateController.bandwidthChanged((long)newValue.getBps());
             bandwidthProbing.bandwidthEstimationChanged(newValue);
+        }
+    }
+
+    /**
+     * A node which can be placed in the pipeline to cache Data channel packets
+     * until the DataChannelStack is ready to handle them.
+     */
+    private static class DataChannelHandler extends ConsumerNode
+    {
+        private final Object dataChannelStackLock = new Object();
+        public DataChannelStack dataChannelStack = null;
+        public BlockingQueue<PacketInfo> cachedDataChannelPackets = new LinkedBlockingQueue<>();
+
+        /**
+         * Initializes a new {@link DataChannelHandler} instance.
+         */
+        public DataChannelHandler()
+        {
+            super("Data channel handler");
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected void consume(PacketInfo packetInfo)
+        {
+            synchronized (dataChannelStackLock)
+            {
+                if (packetInfo.getPacket() instanceof DataChannelPacket)
+                {
+                    if (dataChannelStack == null)
+                    {
+                        cachedDataChannelPackets.add(packetInfo);
+                    }
+                    else
+                    {
+                        DataChannelPacket dcp = (DataChannelPacket) packetInfo.getPacket();
+                        dataChannelStack.onIncomingDataChannelPacket(
+                                ByteBuffer.wrap(dcp.getBuffer()), dcp.sid, dcp.ppid);
+                    }
+                }
+            }
+        }
+
+        /**
+         * Sets the data channel stack
+         */
+        public void setDataChannelStack(DataChannelStack dataChannelStack)
+        {
+            // Submit this to the pool since we wait on the lock and process any
+            // cached packets here as well
+            TaskPools.IO_POOL.submit(() -> {
+                // We grab the lock here so that we can set the SCTP manager and
+                // process any previously-cached packets as an atomic operation.
+                // It also prevents another thread from coming in via
+                // #doProcessPackets and processing packets at the same time in
+                // another thread, which would be a problem.
+                synchronized (dataChannelStackLock)
+                {
+                    this.dataChannelStack = dataChannelStack;
+                    cachedDataChannelPackets.forEach(packetInfo -> {
+                        DataChannelPacket dcp
+                                = (DataChannelPacket)packetInfo.getPacket();
+                        //TODO(brian): have datachannelstack accept
+                        // DataChannelPackets?
+                        dataChannelStack.onIncomingDataChannelPacket(
+                                ByteBuffer.wrap(dcp.getBuffer()), dcp.sid, dcp.ppid);
+                    });
+                }
+            });
+        }
+
+        @Override
+        public void trace(@NotNull Function0<Unit> f)
+        {
+            f.invoke();
+        }
+    }
+
+    /**
+     * A node which can be placed in the pipeline to cache SCTP packets until
+     * the SCTPManager is ready to handle them.
+     */
+    private static class SctpHandler extends ConsumerNode
+    {
+        private final Object sctpManagerLock = new Object();
+        public SctpManager sctpManager = null;
+        public BlockingQueue<PacketInfo> cachedSctpPackets = new LinkedBlockingQueue<>();
+
+        /**
+         * Initializes a new {@link SctpHandler} instance.
+         */
+        public SctpHandler()
+        {
+            super("SCTP handler");
+        }
+
+        @Override
+        protected void consume(@NotNull PacketInfo packetInfo)
+        {
+            synchronized (sctpManagerLock)
+            {
+                if (sctpManager == null)
+                {
+                    cachedSctpPackets.add(packetInfo);
+                }
+                else
+                {
+                    sctpManager.handleIncomingSctp(packetInfo);
+                }
+            }
+        }
+
+        /**
+         * Sets the SCTP manager of this endpoint.
+         */
+        public void setSctpManager(SctpManager sctpManager)
+        {
+            // Submit this to the pool since we wait on the lock and process any
+            // cached packets here as well
+            TaskPools.IO_POOL.submit(() -> {
+                // We grab the lock here so that we can set the SCTP manager and
+                // process any previously-cached packets as an atomic operation.
+                // It also prevents another thread from coming in via
+                // #doProcessPackets and processing packets at the same time in
+                // another thread, which would be a problem.
+                synchronized (sctpManagerLock)
+                {
+                    this.sctpManager = sctpManager;
+                    cachedSctpPackets.forEach(sctpManager::handleIncomingSctp);
+                    cachedSctpPackets.clear();
+                }
+            });
+        }
+
+        @Override
+        public void trace(@NotNull Function0<Unit> f)
+        {
+            f.invoke();
         }
     }
 }

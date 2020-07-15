@@ -139,11 +139,6 @@ public class Conference
     private final ConferenceSpeechActivity speechActivity;
 
     /**
-     * The audio level listener.
-     */
-    private final AudioLevelListener audioLevelListener;
-
-    /**
      * The <tt>Videobridge</tt> which has initialized this <tt>Conference</tt>.
      */
     private final Videobridge videobridge;
@@ -186,8 +181,6 @@ public class Conference
      * This {@link Conference}'s link to Octo.
      */
     private ConfOctoTransport tentacle;
-
-    private final LastNEndpoints lastNEndpoints = new LastNEndpoints();
 
     /**
      * The task of updating the ordered list of endpoints in the conference. It runs periodically in order to adapt to
@@ -237,11 +230,14 @@ public class Conference
         this.includeInStatistics = enableLogging;
         this.conferenceName = conferenceName;
 
-        speechActivity = new ConferenceSpeechActivity(this);
+        speechActivity = new ConferenceSpeechActivity(new SpeechActivityListener());
         updateLastNEndpointsFuture = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(() -> {
             try
             {
-                lastNEndpoints.update();
+                if (speechActivity.updateLastNEndpoints())
+                {
+                    lastNEndpointsChangedAsync();
+                }
             }
             catch (Exception e)
             {
@@ -249,9 +245,6 @@ public class Conference
             }
 
         }, 3, 3, TimeUnit.SECONDS);
-
-        audioLevelListener
-            = (sourceSsrc, level) -> speechActivity.levelChanged(sourceSsrc, (int) level);
 
         expireableImpl = new ExpireableImpl(logger, this::expire);
 
@@ -426,36 +419,65 @@ public class Conference
     }
 
     /**
+     * Runs {@link #lastNEndpointsChanged()} in an IO pool thread.
+     */
+    private void lastNEndpointsChangedAsync()
+    {
+        TaskPools.IO_POOL.submit(() ->
+        {
+            try
+            {
+                lastNEndpointsChanged();
+            }
+            catch (Exception e)
+            {
+                logger.warn("Failed to handle change in last N endpoints: ", e);
+            }
+        });
+    }
+
+    /**
+     * Updates all endpoints with a new list of ordered endpoints in the conference.
+     */
+    private void lastNEndpointsChanged()
+    {
+        List<String> lastNEndpointIds
+                = speechActivity.getOrderedEndpoints().stream()
+                    .map(AbstractEndpoint::getID)
+                    .collect(Collectors.toList());
+
+        endpointsCache.forEach(e -> e.lastNEndpointsChanged(lastNEndpointIds));
+    }
+
+    /**
      * Notifies this instance that {@link #speechActivity} has identified a
      * speaker switch event in this multipoint conference and there is now a new
      * dominant speaker.
      */
-    void dominantSpeakerChanged()
+    private void dominantSpeakerChanged()
     {
         AbstractEndpoint dominantSpeaker = speechActivity.getDominantEndpoint();
+        String dominantSpeakerId = dominantSpeaker == null ? null : dominantSpeaker.getID();
 
         if (logger.isInfoEnabled())
         {
-            String id = dominantSpeaker == null ? "null" : dominantSpeaker.getID();
             logger.info("ds_change ds_id=" + id);
             getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
         }
 
-        speechActivityEndpointsChanged();
-
         if (dominantSpeaker != null)
         {
-            broadcastMessage(new DominantSpeakerMessage(dominantSpeaker.getID()));
+            broadcastMessage(new DominantSpeakerMessage(dominantSpeakerId));
             if (getEndpointCount() > 2)
             {
                 double senderRtt = getRtt(dominantSpeaker);
-                double maxReceiveRtt = getMaxReceiverRtt(dominantSpeaker.getID());
+                double maxReceiveRtt = getMaxReceiverRtt(dominantSpeakerId);
                 // We add an additional 10ms delay to reduce the risk of the keyframe arriving
                 // too early
                 double keyframeDelay = maxReceiveRtt - senderRtt + 10;
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug("Scheduling keyframe request from " + dominantSpeaker.getID() + " after a delay" +
+                    logger.debug("Scheduling keyframe request from " + dominantSpeakerId + " after a delay" +
                             " of " + keyframeDelay + "ms");
                 }
                 TaskPools.SCHEDULED_POOL.schedule(
@@ -692,7 +714,7 @@ public class Conference
      */
     private void endpointsChanged()
     {
-        speechActivity.endpointsChanged();
+        speechActivity.endpointsChanged(getEndpoints());
     }
 
     /**
@@ -704,7 +726,7 @@ public class Conference
     public void endpointSourcesChanged(AbstractEndpoint endpoint)
     {
         // Force an update to be propagated to each endpoint's bitrate controller.
-        lastNEndpoints.update(true);
+        lastNEndpointsChanged();
     }
 
     /**
@@ -937,14 +959,6 @@ public class Conference
     }
 
     /**
-     * Notifies this instance that the list of ordered endpoints has changed
-     */
-    void speechActivityEndpointsChanged()
-    {
-        lastNEndpoints.update();
-    }
-
-    /**
      * Gets the conference name.
      *
      * @return the conference name
@@ -1062,14 +1076,6 @@ public class Conference
             // No one wanted the packet, so the buffer is now free!
             ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
         }
-    }
-
-    /**
-     * Gets the audio level listener.
-     */
-    public AudioLevelListener getAudioLevelListener()
-    {
-        return audioLevelListener;
     }
 
     /**
@@ -1315,47 +1321,18 @@ public class Conference
         }
     }
 
-    private class LastNEndpoints
+    private class SpeechActivityListener implements ConferenceSpeechActivity.Listener
     {
-        /**
-         * The list of endpoints ordered by speech activity and video activity (that is, endpoints with video enabled
-         * are first in the list).
-         */
-        @NotNull
-        private List<String> lastNEndpointIds = new LinkedList<>();
-
-        /**
-         * Re-calculate the ordered list of endpoints in the conference.
-         */
-        private void update()
+        @Override
+        public void dominantSpeakerChanged()
         {
-            update(false);
+            Conference.this.dominantSpeakerChanged();
         }
 
-        /**
-         * Re-calculate the ordered list of endpoints in the conference.
-         * @param force whether to fire an event even if the list doesn't change as a result of the call.
-         */
-        private void update(boolean force)
+        @Override
+        public void lastNEndpointsChanged()
         {
-            List<AbstractEndpoint> endpointsBySpeechActivity = speechActivity.getEndpoints();
-
-            Map<Boolean, List<AbstractEndpoint>> bySendingVideo
-                    = endpointsBySpeechActivity.stream()
-                        .collect(Collectors.groupingBy(AbstractEndpoint::isSendingVideo));
-
-            List<AbstractEndpoint> lastNEndpoints = new LinkedList<>();
-            lastNEndpoints.addAll(bySendingVideo.getOrDefault(true, Collections.emptyList()));
-            lastNEndpoints.addAll(bySendingVideo.getOrDefault(false, Collections.emptyList()));
-
-            List<String> lastNEndpointIds
-                    = lastNEndpoints.stream().map(AbstractEndpoint::getID).collect(Collectors.toList());
-
-            if (force || !lastNEndpointIds.equals(this.lastNEndpointIds))
-            {
-                this.lastNEndpointIds = lastNEndpointIds;
-                endpointsCache.forEach(e -> e.speechActivityEndpointsChanged(this.lastNEndpointIds));
-            }
+            Conference.this.lastNEndpointsChanged();
         }
     }
 }
