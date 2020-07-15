@@ -170,13 +170,15 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
 
                 /* Switch to spatial layer 2.  Need a keyframe. */
                 val targetIndex2 = RtpLayerDesc.getIndex(0, 2, 2)
+                var sawTargetLayer = false
                 var sawKeyframe = false
                 testGenerator(generator, filter, targetIndex2, numFrames = 1200) { f, result ->
+                    if (f.spatialLayer == 2) sawTargetLayer = true
                     if (f.isKeyframe) sawKeyframe = true
                     result.accept shouldBe if (!sawKeyframe) (f.spatialLayer == 0) else true
                     if (result.accept) {
                         result.mark shouldBe if (!sawKeyframe) (f.spatialLayer == 0) else (f.spatialLayer == 2)
-                        filter.needsKeyframe() shouldBe !sawKeyframe
+                        filter.needsKeyframe() shouldBe (sawTargetLayer && !sawKeyframe)
                     }
                 }
 
@@ -261,24 +263,29 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
 
                 /* Switch to spatial layer 2.  Need a keyframe. */
                 val targetIndex2 = RtpLayerDesc.getIndex(0, 2, 2)
+                var sawTargetLayer = false
                 var sawKeyframe = false
                 testGenerator(generator, filter, targetIndex2, numFrames = 1200) { f, result ->
+                    if (f.spatialLayer == 2) sawTargetLayer = true
                     if (f.isKeyframe) sawKeyframe = true
                     result.accept shouldBe if (!sawKeyframe) (f.spatialLayer == 0) else
                         (f.spatialLayer == 2 || !f.isInterPicturePredicted)
                     if (result.accept) {
                         result.mark shouldBe if (!sawKeyframe) (f.spatialLayer == 0) else (f.spatialLayer == 2)
-                        filter.needsKeyframe() shouldBe !sawKeyframe
+                        filter.needsKeyframe() shouldBe (sawTargetLayer && !sawKeyframe)
                     }
                 }
 
                 /* Switch to spatial layer 1.  For K-SVC this needs a keyframe. */
+                /* Until the switch is complete we send only TL0. */
+                sawTargetLayer = false
                 sawKeyframe = false
                 val targetIndex3 = RtpLayerDesc.getIndex(0, 1, 2)
                 testGenerator(generator, filter, targetIndex3) { f, result ->
+                    if (f.spatialLayer == 1) sawTargetLayer = true
                     if (f.isKeyframe) sawKeyframe = true
                     result.accept shouldBe if (!sawKeyframe)
-                        (f.spatialLayer == 2 || !f.isInterPicturePredicted) else
+                        ((f.spatialLayer == 2 || !f.isInterPicturePredicted) && f.temporalLayer == 0) else
                         (f.spatialLayer == 1 || (!f.isInterPicturePredicted && f.spatialLayer < 1))
                     if (result.accept) {
                         result.mark shouldBe if (!sawKeyframe) (f.spatialLayer == 2) else (f.spatialLayer == 1)
@@ -369,11 +376,13 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                 }
 
                 /* Switch to encoding 1.  Need a keyframe. */
+                /* Until the switch is complete we send only TL0. */
                 sawKeyframe = false
                 val targetIndex3 = RtpLayerDesc.getIndex(1, 0, 2)
                 testGenerator(generator, filter, targetIndex3) { f, result ->
                     if (f.isKeyframe) sawKeyframe = true
-                    result.accept shouldBe if (!sawKeyframe) (f.ssrc == 2L || f.isKeyframe) else
+                    result.accept shouldBe if (!sawKeyframe)
+                        (f.temporalLayer == 0 && (f.ssrc == 2L || f.isKeyframe)) else
                         (f.ssrc == 1L || (f.isKeyframe && f.ssrc < 1L))
                     if (result.accept) {
                         result.mark shouldBe true
@@ -393,7 +402,8 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
     ) {
         var lastTs = -1L
         var ms = -1L
-        while (g.hasNext() && numFrames > 0) {
+        var frames = 0
+        while (g.hasNext() && frames < numFrames) {
             val f = g.next()
 
             ms = if (f.timestamp != lastTs) { f.timestamp / 90 } else { ms + 1 }
@@ -407,6 +417,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                 incomingIndex = packetIndex,
                 receivedMs = ms)
             evaluator(f, result)
+            frames++
         }
     }
 
