@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.cc.vp9
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
+import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_ENCODING_ID
 import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_INDEX
 import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
@@ -248,6 +249,8 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
 
             // This branch reads the {@link #currentEncodingId} and it
             // filters packets based on their temporal layer.
+            /* TODO: pay attention to isSwitchingUpPoint.  (I believe the current VP9 encoders we deal with always
+             *  have it set, however.) */
             if (currentEncoding > externalTargetEncoding || currentSpatialLayer > externalTargetSpatialId) {
                 // pending downscale, decrease the frame rate until we
                 // downscale.
@@ -262,7 +265,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
 
                 val acceptTemporal = temporalLayerIdOfFrame <= externalTargetTemporalId
                 if (acceptTemporal && temporalLayerIdOfFrame > currentTemporalLayer) {
-                    currentIndex = incomingIndex
+                    currentIndex = RtpLayerDesc.getIndex(currentEncoding, currentSpatialLayer, temporalLayerIdOfFrame)
                 }
                 acceptTemporal
             }
