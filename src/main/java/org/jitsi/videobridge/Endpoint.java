@@ -823,7 +823,7 @@ public class Endpoint
      */
     public void createSctpConnection()
     {
-        logger.debug(() -> "Creating SCTP mananger");
+        logger.debug(() -> "Creating SCTP manager");
         // Create the SctpManager and provide it a method for sending SCTP data
         this.sctpManager = new SctpManager(
             (data, offset, length) -> {

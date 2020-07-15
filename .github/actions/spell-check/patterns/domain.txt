@@ -1,0 +1,6 @@
+# These are violations of TLD namespace
+# They should use example.com and friends
+# This file is here to shame the project into fixing things
+
+fdfsgv1\@auth\.domain23\.com/pc3
+focus@auth\.domain4?\.com/fdsfwetg
