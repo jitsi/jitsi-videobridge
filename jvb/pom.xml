@@ -155,6 +155,10 @@
       <artifactId>jitsi-utils-kotlin</artifactId>
     </dependency>
     <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>jitsi-metaconfig</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.osgi</groupId>
       <artifactId>org.osgi.core</artifactId>
       <version>4.3.1</version>
