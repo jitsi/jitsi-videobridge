@@ -424,7 +424,7 @@ public class ContentShim
         else
         {
             channelShim.setExpire(
-                (int)VideobridgeExpireThreadConfig.Config.inactivityTimeout().getSeconds());
+                (int)VideobridgeExpireThread.config.getInactivityTimeout().getSeconds());
         }
 
         return true;
