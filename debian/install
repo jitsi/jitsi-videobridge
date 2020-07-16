@@ -1,10 +1,10 @@
 jvb/target/dependency/*		usr/share/jitsi-videobridge/lib
 jvb-api/jvb-api-client/target/dependency/*		usr/share/jitsi-videobridge/lib
 jvb-api/jvb-api-common/target/dependency/*		usr/share/jitsi-videobridge/lib
-lib/videobridge.rc		usr/share/jitsi-videobridge/lib
-lib/logging.properties		etc/jitsi/videobridge
+jvb/lib/videobridge.rc		usr/share/jitsi-videobridge/lib
+jvb/lib/logging.properties		etc/jitsi/videobridge
 jitsi-videobridge.jar		usr/share/jitsi-videobridge
-resources/jvb.sh	usr/share/jitsi-videobridge
+jvb/resources/jvb.sh	usr/share/jitsi-videobridge
 resources/graceful_shutdown.sh	usr/share/jitsi-videobridge
 resources/collect-dump-logs.sh	usr/share/jitsi-videobridge
 
