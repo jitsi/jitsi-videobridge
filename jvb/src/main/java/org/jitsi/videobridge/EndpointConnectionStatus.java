@@ -26,8 +26,6 @@ import java.time.*;
 import java.util.*;
 import java.util.stream.*;
 
-import static org.jitsi.videobridge.EndpointConnectionStatusConfig.*;
-
 /**
  * This module monitors all endpoints across all conferences currently hosted
  * on the bridge for their connectivity status and sends notifications through
@@ -35,7 +33,8 @@ import static org.jitsi.videobridge.EndpointConnectionStatusConfig.*;
  *
  * An endpoint's connectivity status is considered connected as long as there
  * is any traffic activity seen on any of its endpoints. When there is no
- * activity for longer than the value of {@link Config#getMaxInactivityLimit()}, it
+ * activity for longer than the value of
+ * {@link EndpointConnectionStatusConfig#getMaxInactivityLimit()} ()}, it
  * will be assumed that the endpoint is having some connectivity issues. Those
  * may be temporary or permanent. When that happens there will be a Colibri
  * message broadcast to all conference endpoints. The Colibri class name of
@@ -77,6 +76,8 @@ public class EndpointConnectionStatus
      * The timer which runs the periodical connection status probing operation.
      */
     private Timer timer;
+
+    private final EndpointConnectionStatusConfig config = new EndpointConnectionStatusConfig();
 
     /**
      * The {@link Clock} used by this class
@@ -123,12 +124,12 @@ public class EndpointConnectionStatus
             logger.error("Endpoint connection monitoring is already running");
         }
 
-        if (Config.getFirstTransferTimeout().compareTo(Config.getMaxInactivityLimit()) <= 0)
+        if (config.getFirstTransferTimeout().compareTo(config.getMaxInactivityLimit()) <= 0)
         {
             throw new IllegalArgumentException(
                 String.format("first transfer timeout(%s) must be greater"
                             + " than max inactivity limit(%s)",
-                        Config.getFirstTransferTimeout(), Config.getMaxInactivityLimit()));
+                        config.getFirstTransferTimeout(), config.getMaxInactivityLimit()));
         }
 
         super.start(bundleContext);
@@ -206,7 +207,7 @@ public class EndpointConnectionStatus
             // We're doing that by checking how much time has elapsed since
             // the first endpoint's channel has been created.
             Duration timeSinceCreated = Duration.between(mostRecentChannelCreated, now);
-            if (timeSinceCreated.compareTo(Config.getFirstTransferTimeout()) > 0)
+            if (timeSinceCreated.compareTo(config.getFirstTransferTimeout()) > 0)
             {
                 if (logger.isDebugEnabled())
                     logger.debug(
@@ -228,7 +229,7 @@ public class EndpointConnectionStatus
         }
 
         Duration noActivityTime = Duration.between(lastActivity, now);
-        boolean inactive = noActivityTime.compareTo(Config.getMaxInactivityLimit()) > 0;
+        boolean inactive = noActivityTime.compareTo(config.getMaxInactivityLimit()) > 0;
         boolean changed = false;
         synchronized (inactiveEndpoints)
         {
