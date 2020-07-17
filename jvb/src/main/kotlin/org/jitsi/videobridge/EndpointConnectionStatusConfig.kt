@@ -16,8 +16,8 @@
 
 package org.jitsi.videobridge
 
+import org.jitsi.config.NewJitsiConfig
 import org.jitsi.metaconfig.config
-import org.jitsi.videobridge.config.NewJitsiConfig
 import java.time.Duration
 
 class EndpointConnectionStatusConfig {

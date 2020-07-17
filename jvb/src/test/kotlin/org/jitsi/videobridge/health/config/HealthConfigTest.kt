@@ -20,10 +20,10 @@ import io.kotlintest.IsolationMode
 import io.kotlintest.Spec
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
+import org.jitsi.config.NewJitsiConfig
 import org.jitsi.metaconfig.MapConfigSource
 import org.jitsi.metaconfig.MetaconfigSettings
 import org.jitsi.metaconfig.StdOutLogger
-import org.jitsi.videobridge.config.NewJitsiConfig
 import java.time.Duration
 
 class HealthConfigTest : ShouldSpec() {
@@ -41,8 +41,8 @@ class HealthConfigTest : ShouldSpec() {
 
     override fun afterSpec(spec: Spec) {
         super.afterSpec(spec)
-        NewJitsiConfig.legacyConfig = NewJitsiConfig.LegacyConfigFromFile
-        NewJitsiConfig.newConfig = NewJitsiConfig.ConfigFromFile
+        NewJitsiConfig.legacyConfig = NewJitsiConfig.SipCommunicatorProps
+        NewJitsiConfig.newConfig = NewJitsiConfig.TypesafeConfig
     }
 
     init {

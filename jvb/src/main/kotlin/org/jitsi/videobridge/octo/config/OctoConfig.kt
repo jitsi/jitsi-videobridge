@@ -16,9 +16,9 @@
 
 package org.jitsi.videobridge.octo.config
 
+import org.jitsi.config.NewJitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
-import org.jitsi.videobridge.config.NewJitsiConfig
 import org.jitsi.metaconfig.optionalconfig
 
 class OctoConfig {
