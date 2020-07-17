@@ -75,7 +75,11 @@ class IceConfig {
     }
 
     val keepAliveStrategy: KeepAliveStrategy by config {
-        retrieve("org.jitsi.videobridge.KEEP_ALIVE_STRATEGY".from(NewJitsiConfig.legacyConfig))
+        retrieve("org.jitsi.videobridge.KEEP_ALIVE_STRATEGY"
+                .from(NewJitsiConfig.legacyConfig)
+                .asType<String>()
+                .andConvertBy { KeepAliveStrategy.fromString(it) }
+        )
         retrieve("videobridge.ice.keep-alive-strategy".from(NewJitsiConfig.newConfig))
     }
 
