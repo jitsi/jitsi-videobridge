@@ -19,11 +19,10 @@ import org.jitsi.nlj.rtp.bandwidthestimation.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
+import org.jitsi.videobridge.cc.config.*;
 import org.json.simple.*;
 
 import java.util.*;
-
-import static org.jitsi.videobridge.cc.config.BandwidthProbingConfig.*;
 
 /**
   * @author George Politis
@@ -63,13 +62,15 @@ import static org.jitsi.videobridge.cc.config.BandwidthProbingConfig.*;
 
      private ProbingDataSender probingDataSender;
 
+     private static final BandwidthProbingConfig config = new BandwidthProbingConfig();
+
      /**
       * Ctor.
       *
       */
      public BandwidthProbing(ProbingDataSender probingDataSender)
      {
-         super(Config.paddingPeriodMs());
+         super(config.getPaddingPeriodMs());
          this.probingDataSender = probingDataSender;
      }
 
@@ -156,7 +157,7 @@ import static org.jitsi.videobridge.cc.config.BandwidthProbingConfig.*;
 
          // XXX a signed int is practically sufficient, as it can represent up to
          // ~ 2GB
-         int bytes = (int) (Config.paddingPeriodMs() * paddingBps / 1000 / 8);
+         int bytes = (int) (config.getPaddingPeriodMs() * paddingBps / 1000 / 8);
 
          if (!bitrateControllerStatus.activeSsrcs.isEmpty())
          {
