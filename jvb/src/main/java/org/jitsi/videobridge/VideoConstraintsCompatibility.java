@@ -17,6 +17,7 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.nlj.util.*;
+import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.cc.config.*;
 import org.json.simple.*;
 
@@ -93,20 +94,20 @@ class VideoConstraintsCompatibility
      * controller that it needs to (evenly) distribute bandwidth across all
      * participants, up to X.
      */
-    Map<String, VideoConstraints> computeVideoConstraints()
+    Map<String, VideoSetup> computeVideoSetupMap()
     {
-        Map<String, VideoConstraints> newVideoConstraints = new HashMap<>();
+        Map<String, VideoSetup> newVideoConstraints = new HashMap<>();
 
         int maxFrameHeightCopy = maxFrameHeight;
 
         Set<String> pinnedEndpointsCopy = pinnedEndpoints;
         if (pinnedEndpointsCopy != null && !pinnedEndpointsCopy.isEmpty())
         {
-            final VideoConstraints pinnedEndpointConstraints
-                = new VideoConstraints(Math.min(
-                BitrateControllerConfig.thumbnailMaxHeightPx(), maxFrameHeightCopy));
+            final VideoSetup pinnedEndpointConstraints
+                = new VideoSetup(VideoPolicy.empty, new VideoConstraints(Math.min(
+                BitrateControllerConfig.thumbnailMaxHeightPx(), maxFrameHeightCopy)));
 
-            Map<String, VideoConstraints> pinnedVideoConstraintsMap
+            Map<String, VideoSetup> pinnedVideoConstraintsMap
                 = pinnedEndpointsCopy
                 .stream()
                 .collect(Collectors.toMap(e -> e, e -> pinnedEndpointConstraints));
@@ -117,7 +118,7 @@ class VideoConstraintsCompatibility
         Set<String> selectedEndpointsCopy = selectedEndpoints;
         if (selectedEndpointsCopy != null && !selectedEndpointsCopy.isEmpty())
         {
-            final VideoConstraints selectedEndpointConstraints;
+            final VideoSetup selectedEndpointConstraints;
 
             if (selectedEndpointsCopy.size() > 1)
             {
@@ -143,20 +144,18 @@ class VideoConstraintsCompatibility
                 // In tile view we set the ideal height but not the preferred height
                 // nor the preferred frame-rate because we want even even
                 // distribution of bandwidth among all the tiles to avoid ninjas.
-                selectedEndpointConstraints = new VideoConstraints(
+                selectedEndpointConstraints = new VideoSetup(VideoPolicy.empty, new VideoConstraints(
                     Math.min(BitrateControllerConfig.onstageIdealHeightPx(),
-                        maxFrameHeightCopy));
+                        maxFrameHeightCopy)));
             }
             else
             {
-                selectedEndpointConstraints = new VideoConstraints(
+                selectedEndpointConstraints = new VideoSetup(VideoPolicy.greedyTo360ThenFavorMotion, new VideoConstraints(
                     Math.min(BitrateControllerConfig.onstageIdealHeightPx(),
-                        maxFrameHeightCopy),
-                    BitrateControllerConfig.onstagePreferredHeightPx(),
-                    BitrateControllerConfig.onstagePreferredFramerate());
+                        maxFrameHeightCopy)));
             }
 
-            Map<String, VideoConstraints> selectedVideoConstraintsMap
+            Map<String, VideoSetup> selectedVideoConstraintsMap
                 = selectedEndpointsCopy
                 .stream()
                 .collect(Collectors.toMap(e -> e, e -> selectedEndpointConstraints));

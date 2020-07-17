@@ -192,8 +192,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
             val videoConstraints: org.jitsi.videobridge.VideoConstraints =
                 jacksonObjectMapper().readValue(VIDEO_CONSTRAINTS)
             videoConstraints.idealHeight shouldBe 1080
-            videoConstraints.preferredHeight shouldBe 360
-            videoConstraints.preferredFps shouldBe 30.0
 
             val senderVideoConstraintsMessage = SenderVideoConstraintsMessage(videoConstraints)
             val parsed = parse(senderVideoConstraintsMessage.toJson())
@@ -202,8 +200,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed as SenderVideoConstraintsMessage
 
             parsed.videoConstraints.idealHeight shouldBe 1080
-            parsed.videoConstraints.preferredHeight shouldBe 360
-            parsed.videoConstraints.preferredFps shouldBe 30.0
         }
 
         "serializing and parsing AddReceiver" {

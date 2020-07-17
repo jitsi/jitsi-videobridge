@@ -28,7 +28,7 @@ public class VideoConstraints
     /**
      * Static instance for the default constraints for a thumbnail.
      */
-    public static final VideoConstraints thumbnailVideoConstraints =
+    public static final VideoConstraints thumbnail =
         new VideoConstraints(BitrateControllerConfig.thumbnailMaxHeightPx());
 
     /**
@@ -37,24 +37,6 @@ public class VideoConstraints
      * is available.
      */
     private final int idealHeight;
-
-    /**
-     * The "preferred" height of the constrained endpoint. When it's time to
-     * allocate bandwidth for the associated source or endpoint, the bridge
-     * tries to satisfy the preferred resolution before moving to the next
-     * endpoint or source.
-     *
-     * NOTE this this field along with {@link #preferredFps} is more of a
-     * per-endpoint policy than a constraint and eventually it should be moved
-     * out of this class.
-     */
-    private final int preferredHeight;
-
-    /**
-     * The "preferred" frame-rate of the constrained endpoint.
-     */
-    private final double preferredFps;
-
 
     /**
      * A default constructor to allow parsing with jackson.
@@ -68,13 +50,9 @@ public class VideoConstraints
      * Ctor.
      *
      * @param idealHeight The ideal height of the constrained endpoint.
-     * @param preferredHeight The "preferred" height of the constrained endpoint.
-     * @param preferredFps The "preferred" frame-rate of the constrained endpoint.
      */
     public VideoConstraints(int idealHeight, int preferredHeight, double preferredFps)
     {
-        this.preferredFps = preferredFps;
-        this.preferredHeight = preferredHeight;
         this.idealHeight = idealHeight;
     }
 
@@ -86,22 +64,6 @@ public class VideoConstraints
     public VideoConstraints(int idealHeight)
     {
         this(idealHeight, -1, -1);
-    }
-
-    /**
-     * @return The "preferred" height of the constrained endpoint source.
-     */
-    public int getPreferredHeight()
-    {
-        return preferredHeight;
-    }
-
-    /**
-     * @return The "preferred" framerate of the constrained endpoint or source.
-     */
-    public double getPreferredFps()
-    {
-        return preferredFps;
     }
 
     /**
@@ -118,15 +80,13 @@ public class VideoConstraints
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         VideoConstraints that = (VideoConstraints) o;
-        return idealHeight == that.idealHeight &&
-            preferredHeight == that.preferredHeight &&
-            Double.compare(that.preferredFps, preferredFps) == 0;
+        return idealHeight == that.idealHeight;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(idealHeight, preferredHeight, preferredFps);
+        return Objects.hash(idealHeight);
     }
 
     @Override
@@ -134,8 +94,6 @@ public class VideoConstraints
     {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("idealHeight", idealHeight);
-        jsonObject.put("preferredHeight", preferredHeight);
-        jsonObject.put("preferredFps", preferredFps);
         return jsonObject.toJSONString();
     }
 }

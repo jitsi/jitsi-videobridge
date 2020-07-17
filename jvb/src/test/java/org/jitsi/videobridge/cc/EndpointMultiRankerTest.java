@@ -26,10 +26,14 @@ import static org.junit.Assert.*;
 public class EndpointMultiRankerTest
 {
     final List<EndpointMultiRank> endpointMultiRanks = new ArrayList<>();
-    final VideoConstraints stageVideoConstraints
-        = new VideoConstraints(/* idealHeight */ 720);
-    final VideoConstraints thumbnailVideoConstraints
-        = new VideoConstraints(/* idealHeight */ 180);
+    final VideoSetup stageVideoConstraints
+        = new VideoSetup(
+            VideoPolicy.greedyTo360ThenFavorMotion,
+            new VideoConstraints(/* idealHeight */ 720));
+    final VideoSetup thumbnailVideoConstraints
+        = new VideoSetup(
+            VideoPolicy.empty,
+            new VideoConstraints(/* idealHeight */ 180));
 
     @Test
     public void followActiveSpeaker()
@@ -93,8 +97,8 @@ public class EndpointMultiRankerTest
         assertEquals(endpointMultiRanks.get(2), speaker2MultiRank);
     }
 
-    private EndpointMultiRank makeNextSpeakerWithVideoConstraints(VideoConstraints videoConstraints)
+    private EndpointMultiRank makeNextSpeakerWithVideoConstraints(VideoSetup videoSetup)
     {
-        return new EndpointMultiRank(endpointMultiRanks.size(), videoConstraints, null);
+        return new EndpointMultiRank(endpointMultiRanks.size(), videoSetup, null);
     }
 }

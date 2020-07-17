@@ -17,7 +17,6 @@ package org.jitsi.videobridge;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
-import com.google.common.collect.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
@@ -33,7 +32,7 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-import static org.jitsi.videobridge.VideoConstraints.thumbnailVideoConstraints;
+import static org.jitsi.videobridge.VideoConstraints.thumbnail;
 
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
@@ -50,7 +49,7 @@ public abstract class AbstractEndpoint
     /**
      * The default video constraints to assume when nothing is signaled.
      */
-    private static final VideoConstraints defaultMaxReceiverVideoConstraints = thumbnailVideoConstraints;
+    private static final VideoConstraints defaultMaxReceiverVideoConstraints = thumbnail;
 
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a
@@ -376,25 +375,6 @@ public abstract class AbstractEndpoint
      * Adds an RTP extension to this endpoint
      */
     public abstract void addRtpExtension(RtpExtension rtpExtension);
-
-    /**
-     * Sets the video constraints for the streams that this endpoint wishes to
-     * receive expressed as a map of endpoint id to {@link VideoConstraints}.
-     *
-     * NOTE that the map specifies all the constraints that need to be respected
-     * and therefore it resets any previous settings. In other words the map
-     * is not a diff/delta to be applied on top of the existing settings.
-     *
-     * NOTE that if there are no {@link VideoConstraints} specified for an
-     * endpoint, then its {@link VideoConstraints} are assumed to be
-     * {@link org.jitsi.videobridge.cc.BitrateController.defaultVideoConstraints}
-     *
-     * @param videoConstraints the map of endpoint id to {@link VideoConstraints}
-     * that contains the {@link VideoConstraints} to respect when allocating
-     * bandwidth for a specific endpoint.
-     */
-    public abstract void setSenderVideoConstraints(
-        ImmutableMap<String, VideoConstraints> videoConstraints);
 
     /**
      * Notifies this instance that the max video constraints that the bridge

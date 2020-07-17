@@ -613,15 +613,31 @@ public class Endpoint
         transceiver.addRtpExtension(rtpExtension);
     }
 
-    @Override
-    public void setSenderVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraints)
+
+    /**
+     * Sets the video setup for the streams that this endpoint wishes to
+     * receive expressed as a map of endpoint id to {@link VideoSetup}.
+     *
+     * NOTE that the map specifies all the constraints that need to be respected
+     * and therefore it resets any previous settings. In other words the map
+     * is not a diff/delta to be applied on top of the existing settings.
+     *
+     * NOTE that if there are no {@link VideoSetup} specified for an
+     * endpoint, then its {@link VideoSetup} are assumed to be
+     * {@link org.jitsi.videobridge.cc.BitrateController.defaultVideoSetup}
+     *
+     * @param newVideoSetupMap the map of endpoint id to {@link VideoSetup}
+     * that contains the {@link VideoSetup} to respect when allocating
+     * bandwidth for a specific endpoint.
+     */
+    public void setSenderVideoSetupMap(ImmutableMap<String, VideoSetup> newVideoSetupMap)
     {
-        ImmutableMap<String, VideoConstraints> oldVideoConstraints = bitrateController.getVideoConstraints();
+        ImmutableMap<String, VideoSetup> oldVideoSetupMap = bitrateController.getVideoSetupMap();
 
-        bitrateController.setVideoConstraints(newVideoConstraints);
+        bitrateController.setVideoSetupMap(newVideoSetupMap);
 
-        Set<String> removedEndpoints = new HashSet<>(oldVideoConstraints.keySet());
-        removedEndpoints.removeAll(newVideoConstraints.keySet());
+        Set<String> removedEndpoints = new HashSet<>(oldVideoSetupMap.keySet());
+        removedEndpoints.removeAll(newVideoSetupMap.keySet());
 
         // Endpoints that "this" no longer cares about what it receives.
         for (String id : removedEndpoints)
@@ -634,13 +650,13 @@ public class Endpoint
         }
 
         // Added or updated.
-        for (Map.Entry<String, VideoConstraints> videoConstraintsEntry : newVideoConstraints.entrySet())
+        for (Map.Entry<String, VideoSetup> newVideoSetupMapEntry : newVideoSetupMap.entrySet())
         {
-            AbstractEndpoint senderEndpoint = getConference().getEndpoint(videoConstraintsEntry.getKey());
+            AbstractEndpoint senderEndpoint = getConference().getEndpoint(newVideoSetupMapEntry.getKey());
 
             if (senderEndpoint != null)
             {
-                senderEndpoint.addReceiver(getID(), videoConstraintsEntry.getValue());
+                senderEndpoint.addReceiver(getID(), newVideoSetupMapEntry.getValue().constraints);
             }
         }
     }

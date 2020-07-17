@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import com.google.common.collect.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.message.*;
@@ -429,7 +430,7 @@ class EndpointMessageTransport
         }
 
         videoConstraintsCompatibility.setPinnedEndpoints(newPinnedEndpoints);
-        setSenderVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints());
+        setSenderVideoSetupMap(videoConstraintsCompatibility.computeVideoSetupMap());
 
         return null;
     }
@@ -467,25 +468,25 @@ class EndpointMessageTransport
 
         logger.debug(() -> "Selected " + newSelectedEndpoints);
         videoConstraintsCompatibility.setSelectedEndpoints(newSelectedEndpoints);
-        setSenderVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints());
+        setSenderVideoSetupMap(videoConstraintsCompatibility.computeVideoSetupMap());
         return null;
     }
 
     /**
      * Sets the sender video constraints of this {@link #endpoint}.
      *
-     * @param videoConstraintsMap the sender video constraints of this
+     * @param videoSetupMap the sender video constraints of this
      * {@link #endpoint}.
      */
-    public void setSenderVideoConstraints(Map<String, VideoConstraints> videoConstraintsMap)
+    public void setSenderVideoSetupMap(Map<String, VideoSetup> videoSetupMap)
     {
         // Don't "pollute" the video constraints map with constraints for this
         // endpoint.
-        videoConstraintsMap.remove(endpoint.getID());
+        videoSetupMap.remove(endpoint.getID());
 
-        logger.debug(() -> "New video constraints map: " + videoConstraintsMap);
+        logger.debug(() -> "New video setup map: " + videoSetupMap);
 
-        endpoint.setSenderVideoConstraints(ImmutableMap.copyOf(videoConstraintsMap));
+        endpoint.setSenderVideoSetupMap(ImmutableMap.copyOf(videoSetupMap));
     }
 
     /**
@@ -502,7 +503,7 @@ class EndpointMessageTransport
                 () -> "Received a maxFrameHeight video constraint from " + endpoint.getID() + ": " + maxFrameHeight);
 
         videoConstraintsCompatibility.setMaxFrameHeight(maxFrameHeight);
-        setSenderVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints());
+        setSenderVideoSetupMap(videoConstraintsCompatibility.computeVideoSetupMap());
 
         return null;
     }
