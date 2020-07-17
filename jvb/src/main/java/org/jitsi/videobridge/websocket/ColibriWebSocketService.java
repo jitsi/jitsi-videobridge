@@ -17,9 +17,8 @@ package org.jitsi.videobridge.websocket;
 
 import org.eclipse.jetty.servlet.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.websocket.config.*;
 import org.osgi.framework.*;
-
-import static org.jitsi.videobridge.websocket.config.WebsocketServiceConfig.Config;
 
 /**
  * @author Boris Grozev
@@ -46,29 +45,31 @@ public class ColibriWebSocketService
      */
     private final String serverId;
 
+    private final WebsocketServiceConfig config = new WebsocketServiceConfig();
+
     /**
      * Initializes a {@link ColibriWebSocketService} in a specific
      * {@link BundleContext}.
      *
      * @param tls whether to use "ws" or "wss" in advertised URLs in the absence
      * of configuration which overrides it (see
-     * {@link WebsocketServiceConfig.Config#useTls()}).
+     * {@link WebsocketServiceConfig#getUseTls()}).
      */
     public ColibriWebSocketService(boolean tls)
     {
         // The domain name is currently a required property.
-        if (Config.enabled())
+        if (config.getEnabled())
         {
-            String domain = Config.domain();
+            String domain = config.getDomain();
             // We default to matching the protocol used by the local jetty
             // instance, but we allow for the configuration via properties
             // to override it since certain use-cases require it.
-            Boolean tlsProp = Config.useTls();
+            Boolean tlsProp = config.getUseTls();
             tls = tlsProp != null ? tlsProp : tls;
 
             // The server ID is not critical, just use a default string
             // unless configured.
-            serverId = Config.serverId();
+            serverId = config.getServerId();
 
             String scheme = tls ? "wss://" : "ws://";
             baseUrl = scheme + domain + COLIBRI_WS_PATH + serverId + "/";
@@ -129,7 +130,7 @@ public class ColibriWebSocketService
     {
         ServletHolder holder = null;
 
-        if (baseUrl != null && Config.enabled())
+        if (baseUrl != null && config.getEnabled())
         {
             logger.info("Starting colibri websocket service with baseUrl: "
                 + baseUrl);

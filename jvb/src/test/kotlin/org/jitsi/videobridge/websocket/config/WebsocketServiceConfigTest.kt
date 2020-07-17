@@ -16,133 +16,74 @@
 
 package org.jitsi.videobridge.websocket.config
 
+import io.kotlintest.IsolationMode
+import io.kotlintest.Spec
+import io.kotlintest.TestCase
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldThrow
-import org.jitsi.config.BooleanMockConfigValueGenerator
-import org.jitsi.config.MockConfigSource
-import org.jitsi.config.MockConfigValue
-import org.jitsi.config.MockConfigValueGenerator
-import org.jitsi.config.runBasicTests
-import org.jitsi.videobridge.JitsiConfigTest
-import org.jitsi.videobridge.config.ConditionalPropertyConditionNotMetException
-import org.jitsi.videobridge.testutils.resetSingleton
+import io.kotlintest.specs.ShouldSpec
+import org.jitsi.config.NewJitsiConfig
+import org.jitsi.metaconfig.ConfigException
+import org.jitsi.metaconfig.MapConfigSource
 
-class WebsocketServiceConfigTest : JitsiConfigTest() {
-    // By default install config sources which can be modified later
-    private val legacyConfig = MockConfigSource("legacy", mapOf())
-    private val newConfig = MockConfigSource("new", mapOf())
+class WebsocketServiceConfigTest : ShouldSpec() {
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
+
+    private val newConfig = MapConfigSource("new")
+    private val legacyConfig = MapConfigSource("legacy")
+    private lateinit var config: WebsocketServiceConfig
+
+    override fun beforeSpec(spec: Spec) {
+        super.beforeSpec(spec)
+        NewJitsiConfig.legacyConfig = legacyConfig
+        NewJitsiConfig.newConfig = newConfig
+    }
+
+    override fun beforeTest(testCase: TestCase) {
+        super.beforeTest(testCase)
+        config = WebsocketServiceConfig()
+    }
+
+    override fun afterSpec(spec: Spec) {
+        super.afterSpec(spec)
+        NewJitsiConfig.legacyConfig = NewJitsiConfig.SipCommunicatorPropsConfigSource
+        NewJitsiConfig.newConfig = NewJitsiConfig.TypesafeConfig
+    }
 
     init {
-        withLegacyConfig(legacyConfig)
-        withNewConfig(newConfig)
-        "enabled" {
-            runBasicTests(
-                legacyConfigName = "org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE",
-                legacyValueGenerator = InvertedBooleanMockConfigValueGenerator(),
-                newConfigName = "videobridge.websockets.enabled",
-                newConfigValueGenerator = BooleanMockConfigValueGenerator(),
-                propCreator = { WebsocketServiceConfig.Config.Companion.EnabledProperty() }
-            )
-        }
-        "domain" {
-            val propCreator = { WebsocketServiceConfig.Config.Companion.DomainProperty() }
-            "when websockets are disabled" {
-                disableWebsockets(legacyConfig)
-                val prop = propCreator()
-                shouldThrow<ConditionalPropertyConditionNotMetException> {
-                    prop.value
+        "when websockets are disabled" {
+            newConfig["videobridge.websockets.enabled"] = false
+            "accessing domain should throw" {
+                shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
+                    config.domain
                 }
             }
-            "when websockets are enabled" {
-                enableWebsockets(legacyConfig)
-                "and websocket domain is set in old config" {
-                    legacyConfig["org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN"] = "domain"
-                    val prop = propCreator()
-                    prop.value shouldBe "domain"
-                }
-                "and websocket domain is set in new config" {
-                    newConfig["videobridge.websockets.domain"] = "new_domain"
-                    val prop = propCreator()
-                    prop.value shouldBe "new_domain"
+            "accessing useTls should throw" {
+                shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
+                    config.useTls
                 }
             }
         }
-        "tls" {
-            val propCreator = { WebsocketServiceConfig.Config.Companion.TlsProperty() }
-            "when websockets are disabled" {
-                disableWebsockets(legacyConfig)
-                // Even if config is set
-                legacyConfig["org.jitsi.videobridge.rest.COLIBRI_WS_TLS"] = true
-                val prop = propCreator()
-                shouldThrow<ConditionalPropertyConditionNotMetException> {
-                    val ignore = prop.value
-                    ignore
+        "when websockets are enabled" {
+            newConfig["videobridge.websockets.enabled"] = true
+            "accessing domain" {
+                newConfig["videobridge.websockets.domain"] = "new_domain"
+                should("get the right value") {
+                    config.domain shouldBe "new_domain"
                 }
             }
-            "when websockets are enabled" {
-                enableWebsockets(legacyConfig)
-                "and websocket domain is set in old config" {
-                    legacyConfig["org.jitsi.videobridge.rest.COLIBRI_WS_TLS"] = true
-                    val prop = propCreator()
-                    prop.value shouldBe true
+            "accessing useTls" {
+                "when no value has been set" {
+                    should("return null") {
+                        config.useTls shouldBe null
+                    }
                 }
-                "and websocket domain is set in new config" {
-                    newConfig["videobridge.websockets.tls"] = false
-                    val prop = propCreator()
-                    prop.value shouldBe false
+                "when a value has been set" {
+                    newConfig["videobridge.websockets.tls"] = true
+                    should("get the right value xx") {
+                        config.useTls shouldBe true
+                    }
                 }
-            }
-        }
-        "server id" {
-            val propCreator = { WebsocketServiceConfig.Config.Companion.ServerIdProperty() }
-            "when websockets are disabled" {
-                disableWebsockets(legacyConfig)
-                // Even if config is set
-                legacyConfig["org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID"] = "server_id"
-                val prop = propCreator()
-                shouldThrow<ConditionalPropertyConditionNotMetException> {
-                    prop.value
-                }
-            }
-            "when websockets are enabled" {
-                enableWebsockets(legacyConfig)
-                "and websocket domain is set in old config" {
-                    legacyConfig["org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID"] = "server_id"
-                    val prop = propCreator()
-                    prop.value shouldBe "server_id"
-                }
-                "and websocket domain is set in new config" {
-                    newConfig["videobridge.websockets.server-id"] = "new_server_id"
-                    val prop = propCreator()
-                    prop.value shouldBe "new_server_id"
-                }
-            }
-        }
-    }
-
-    private fun enableWebsockets(legacyConfig: MockConfigSource) {
-        legacyConfig["org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE"] = false
-        resetEnabledProperty()
-    }
-
-    private fun disableWebsockets(legacyConfig: MockConfigSource) {
-        legacyConfig["org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE"] = true
-        resetEnabledProperty()
-    }
-
-    private fun resetEnabledProperty() {
-        resetSingleton(
-            "enabledProp",
-            WebsocketServiceConfig.Config.Companion
-        )
-    }
-
-    private class InvertedBooleanMockConfigValueGenerator : MockConfigValueGenerator<Boolean, Boolean> {
-        private var currValue: Boolean = true
-
-        override fun gen(): MockConfigValue<Boolean, Boolean> {
-            return MockConfigValue(currValue, !currValue).also {
-                currValue = !currValue
             }
         }
     }

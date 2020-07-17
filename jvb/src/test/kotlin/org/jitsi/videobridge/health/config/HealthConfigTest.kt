@@ -41,7 +41,7 @@ class HealthConfigTest : ShouldSpec() {
 
     override fun afterSpec(spec: Spec) {
         super.afterSpec(spec)
-        NewJitsiConfig.legacyConfig = NewJitsiConfig.SipCommunicatorProps
+        NewJitsiConfig.legacyConfig = NewJitsiConfig.SipCommunicatorPropsConfigSource
         NewJitsiConfig.newConfig = NewJitsiConfig.TypesafeConfig
     }
 

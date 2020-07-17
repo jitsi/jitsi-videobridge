@@ -16,119 +16,49 @@
 
 package org.jitsi.videobridge.websocket.config
 
-import org.jitsi.config.LegacyFallbackConfigProperty
-import org.jitsi.config.legacyConfigAttributes
-import org.jitsi.config.newConfigAttributes
-import org.jitsi.utils.config.FallbackProperty
-import org.jitsi.videobridge.config.ConditionalProperty
-import org.jitsi.videobridge.config.ConditionalPropertyConditionNotMetException
-import org.jitsi.videobridge.config.ResettableSingleton
+import org.jitsi.config.NewJitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.optionalconfig
 
 class WebsocketServiceConfig {
-    class Config {
-        companion object {
-            /**
-             * The name of the property which enables the
-             * [org.jitsi.videobridge.websocket.ColibriWebSocketService]
-             */
-            class EnabledProperty : FallbackProperty<Boolean>(
-                legacyConfigAttributes {
-                    name("org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE")
-                    readOnce()
-                    // The old property is named 'disable', while the new one
-                    // is 'enable', so invert the old value
-                    transformedBy { !it }
-                },
-                newConfigAttributes {
-                    name("videobridge.websockets.enabled")
-                    readOnce()
-                }
-            )
-            private val enabledProp = ResettableSingleton { EnabledProperty() }
+    /**
+     * Whether [org.jitsi.videobridge.websocket.ColibriWebSocketService] is enabled
+     */
+    val enabled: Boolean by config {
+        // The old property is named 'disable', while the new one
+        // is 'enable', so invert the old value
+        retrieve("org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE"
+            .from(NewJitsiConfig.legacyConfig).andTransformBy { !it })
+        retrieve("videobridge.websockets.enabled".from(NewJitsiConfig.newConfig))
+    }
 
-            @JvmStatic
-            fun enabled() = enabledProp.get().value
+    /**
+     * The domain name used in URLs advertised for COLIBRI WebSockets.
+     */
+    val domain: String by config {
+        onlyIf("Websocket are enabled", ::enabled) {
+            retrieve("org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN".from(NewJitsiConfig.legacyConfig))
+            retrieve("videobridge.websockets.domain".from(NewJitsiConfig.newConfig))
+        }
+    }
 
-            /**
-             * The property which controls the domain name used in URLs
-             * advertised for COLIBRI WebSockets.
-             */
-            class DomainProperty : ConditionalProperty<String>(
-                Companion::enabled,
-                object : LegacyFallbackConfigProperty<String>(
-                    String::class,
-                    readOnce = true,
-                    legacyName = "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN",
-                    newName = "videobridge.websockets.domain"
-                ) {},
-                "Websocket domain property is only parsed when websockets are enabled"
-            )
+    /**
+     * Whether the "wss" or "ws" protocol should be used for websockets
+     */
+    val useTls: Boolean? by optionalconfig {
+        onlyIf("Websocket are enabled", ::enabled) {
+            retrieve("org.jitsi.videobridge.rest.COLIBRI_WS_TLS".from(NewJitsiConfig.legacyConfig))
+            retrieve("videobridge.websockets.tls".from(NewJitsiConfig.newConfig))
+        }
+    }
 
-            private val domainProp =
-                DomainProperty()
-
-            /**
-             * Note, should only be accessed after verifying [enabled] is true
-             */
-            @JvmStatic
-            fun domain() = domainProp.value
-
-            /**
-             * The property which controls whether URLs advertised for
-             * COLIBRI WebSockets should use the "ws" (if false) or "wss" (if true)
-             * schema.
-             */
-            class TlsProperty : ConditionalProperty<Boolean>(
-                Companion::enabled,
-                object : LegacyFallbackConfigProperty<Boolean>(
-                    Boolean::class,
-                    readOnce = true,
-                    legacyName = "org.jitsi.videobridge.rest.COLIBRI_WS_TLS",
-                    newName = "videobridge.websockets.tls"
-                ) {},
-                "Websocket TLS property is only parsed when websockets are enabled"
-            )
-            private val tlsProp =
-                TlsProperty()
-
-            /**
-             * Note, should only be accessed after verifying [enabled] is true.
-             * Also: we support the field not being defined.  See its usage.
-             */
-            @JvmStatic
-            fun useTls(): Boolean? {
-                return try {
-                    tlsProp.value
-                } catch (t: Throwable) {
-                    when (t) {
-                        is ConditionalPropertyConditionNotMetException -> throw t
-                        else -> null
-                    }
-                }
-            }
-
-            /**
-             * The name of the property which controls the server ID used in URLs
-             * advertised for COLIBRI WebSockets.
-             */
-            class ServerIdProperty : ConditionalProperty<String>(
-                Companion::enabled,
-                object : LegacyFallbackConfigProperty<String>(
-                    String::class,
-                    readOnce = true,
-                    legacyName = "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID",
-                    newName = "videobridge.websockets.server-id"
-                ) {},
-                "Websocket server ID property is only parsed when websockets are enabled"
-            )
-            private val serverIdProp =
-                ServerIdProperty()
-
-            /**
-             * Note, should only be accessed after verifying [enabled] is true
-             */
-            @JvmStatic
-            fun serverId() = serverIdProp.value
+    /**
+     * The server ID used in URLs advertised for COLIBRI WebSockets.
+     */
+    val serverId: String by config {
+        onlyIf("Websocket are enabled", ::enabled) {
+            retrieve("org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID".from(NewJitsiConfig.legacyConfig))
+            retrieve("videobridge.websockets.server-id".from(NewJitsiConfig.newConfig))
         }
     }
 }
