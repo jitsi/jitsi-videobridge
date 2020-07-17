@@ -46,10 +46,10 @@ class SafeExecutorTest : ShouldSpec() {
                 se.getStatsJson()["num_exceptions"] shouldBe 0
             }
             should("count uncaught exceptions correctly") {
-                se.submit(Runnable { Unit })
-                se.submit(Runnable { throw NullPointerException() })
-                se.submit(Runnable { throw RuntimeException() })
-                se.submit(Runnable { Unit })
+                se.submit { Unit }
+                se.submit { throw NullPointerException() }
+                se.submit { throw RuntimeException() }
+                se.submit { Unit }
                 se.getStatsJson()["num_exceptions"] shouldBe 2
             }
         }

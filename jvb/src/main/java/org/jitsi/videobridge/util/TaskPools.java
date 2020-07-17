@@ -28,7 +28,7 @@ public class TaskPools
     /**
      * A global executor service which can be used for non-CPU-intensive tasks.
      */
-    public static final SafeExecutorService IO_POOL =
+    public static final SafeExecutor IO_POOL =
         new SafeExecutor(
             "Global IO pool",
             Executors.newCachedThreadPool(new NameableThreadFactory("Global IO pool"))
@@ -38,7 +38,7 @@ public class TaskPools
      * An executor to be used for CPU-intensive tasks.  NOTE that tasks which block should
      * NOT use this pool!
      */
-    public static final SafeExecutorService CPU_POOL =
+    public static final SafeExecutor CPU_POOL =
         new SafeExecutor(
             "Global CPU pool",
             Executors.newFixedThreadPool(

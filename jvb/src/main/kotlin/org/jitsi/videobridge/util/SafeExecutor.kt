@@ -19,17 +19,22 @@ package org.jitsi.videobridge.util
 import org.jitsi.utils.logging2.LoggerImpl
 import org.json.simple.JSONObject
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.Future
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.LongAdder
 
-abstract class SafeExecutorService(protected val name: String) {
+/**
+ * Tracks the number of uncaught exceptions from tasks
+ */
+abstract class TaskServiceWrapper<T : ExecutorService>(
+    val name: String,
+    protected val delegate: T
+) {
     private val logger = LoggerImpl(name)
     private val numExceptions = LongAdder()
-
-    abstract val innerExecutor: ExecutorService
 
     protected fun wrapTask(task: Runnable): Runnable {
         return Runnable {
@@ -43,10 +48,10 @@ abstract class SafeExecutorService(protected val name: String) {
     }
 
     fun getStatsJson(): JSONObject = JSONObject().apply {
-        put("executor_class", innerExecutor::class.simpleName)
+        put("executor_class", delegate::class.simpleName)
         put("num_exceptions", numExceptions.sum())
 
-        val ex = innerExecutor as? ThreadPoolExecutor ?: return@apply
+        val ex = delegate as? ThreadPoolExecutor ?: return@apply
         put("pool_size", ex.poolSize)
         put("active_task_count", ex.activeCount)
         put("completed_task_count", ex.completedTaskCount)
@@ -58,25 +63,34 @@ abstract class SafeExecutorService(protected val name: String) {
     }
 }
 
+/**
+ * An [ExecutorService] which catches and logs any uncaught exceptions from tasks
+ */
 class SafeExecutor(
     name: String,
-    override val innerExecutor: ExecutorService
-) : SafeExecutorService(name) {
-    fun submit(task: Runnable) {
-        innerExecutor.submit(wrapTask(task))
-    }
+    delegate: ExecutorService
+) : ExecutorService by delegate, TaskServiceWrapper<ExecutorService>(name, delegate) {
+    private val logger = LoggerImpl(name)
+    private val numExceptions = LongAdder()
+
+    override fun submit(task: Runnable): Future<*> = delegate.submit(wrapTask(task))
 }
 
+/**
+ * A [ScheduledExecutorService] which catches and logs any uncaught exceptions from tasks
+ */
 class SafeScheduledExecutor(
     name: String,
-    override val innerExecutor: ScheduledExecutorService
-) : SafeExecutorService(name) {
-    /**
-     * See [ScheduledExecutorService.scheduleAtFixedRate]
-     */
-    fun scheduleAtFixedRate(command: Runnable, initialDelay: Long, period: Long, unit: TimeUnit): ScheduledFuture<*> =
-        innerExecutor.scheduleAtFixedRate(wrapTask(command), initialDelay, period, unit)
+    delegate: ScheduledExecutorService
+) : ScheduledExecutorService by delegate, TaskServiceWrapper<ScheduledExecutorService>(name, delegate) {
 
-    fun schedule(command: Runnable, delay: Long, unit: TimeUnit): ScheduledFuture<*> =
-        innerExecutor.schedule(wrapTask(command), delay, unit)
+    override fun scheduleAtFixedRate(
+        command: Runnable,
+        initialDelay: Long,
+        period: Long,
+        unit: TimeUnit
+    ): ScheduledFuture<*> = delegate.scheduleAtFixedRate(wrapTask(command), initialDelay, period, unit)
+
+    override fun schedule(command: Runnable, delay: Long, unit: TimeUnit): ScheduledFuture<*> =
+        delegate.schedule(wrapTask(command), delay, unit)
 }
