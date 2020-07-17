@@ -17,15 +17,19 @@
 package org.jitsi.videobridge.util
 
 import org.jitsi.utils.logging2.LoggerImpl
+import org.json.simple.JSONObject
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.LongAdder
 
-open class SafeExecutorService(protected val name: String) {
+abstract class SafeExecutorService(protected val name: String) {
     private val logger = LoggerImpl(name)
     private val numExceptions = LongAdder()
+
+    abstract val innerExecutor: ExecutorService
 
     protected fun wrapTask(task: Runnable): Runnable {
         return Runnable {
@@ -37,21 +41,42 @@ open class SafeExecutorService(protected val name: String) {
             }
         }
     }
-}
 
-class SafeExecutor(name: String, private val executor: ExecutorService) : SafeExecutorService(name) {
-    fun submit(task: Runnable) {
-        executor.submit(wrapTask(task))
+    fun getStatsJson(): JSONObject = JSONObject().apply {
+        put("executor_class", innerExecutor::class.simpleName)
+        put("num_exceptions", numExceptions.sum())
+
+        val ex = innerExecutor as? ThreadPoolExecutor ?: return@apply
+        put("pool_size", ex.poolSize)
+        put("active_task_count", ex.activeCount)
+        put("completed_task_count", ex.completedTaskCount)
+        put("core_pool_size", ex.corePoolSize)
+        put("maximum_pool_size", ex.maximumPoolSize)
+        put("largest_pool_size", ex.largestPoolSize)
+        put("queue_class", ex.queue.javaClass.simpleName)
+        put("pending_task_count", ex.queue.size)
     }
 }
 
-class SafeScheduledExecutor(name: String, private val executor: ScheduledExecutorService) : SafeExecutorService(name) {
+class SafeExecutor(
+    name: String,
+    override val innerExecutor: ExecutorService
+) : SafeExecutorService(name) {
+    fun submit(task: Runnable) {
+        innerExecutor.submit(wrapTask(task))
+    }
+}
+
+class SafeScheduledExecutor(
+    name: String,
+    override val innerExecutor: ScheduledExecutorService
+) : SafeExecutorService(name) {
     /**
      * See [ScheduledExecutorService.scheduleAtFixedRate]
      */
     fun scheduleAtFixedRate(command: Runnable, initialDelay: Long, period: Long, unit: TimeUnit): ScheduledFuture<*> =
-        executor.scheduleAtFixedRate(wrapTask(command), initialDelay, period, unit)
+        innerExecutor.scheduleAtFixedRate(wrapTask(command), initialDelay, period, unit)
 
     fun schedule(command: Runnable, delay: Long, unit: TimeUnit): ScheduledFuture<*> =
-        executor.schedule(wrapTask(command), delay, unit)
+        innerExecutor.schedule(wrapTask(command), delay, unit)
 }
