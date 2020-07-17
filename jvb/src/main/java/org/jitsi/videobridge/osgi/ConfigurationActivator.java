@@ -40,9 +40,9 @@ public class ConfigurationActivator
     {
         bundleContext.registerService(
             ConfigurationService.class.getName(),
-            JitsiConfig.getLegacyConfigShim(),
+            NewJitsiConfig.getSipCommunicatorProps(),
             null);
-        logger.info("Registered the LegacyConfigurationServiceShim in OSGi.");
+        logger.info("Registered the legacy ConfigurationService in OSGi.");
     }
 
     @Override
