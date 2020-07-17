@@ -18,36 +18,31 @@ package org.jitsi.videobridge.xmpp.config
 
 import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValue
-import org.jitsi.config.legacyConfigAttributes
-import org.jitsi.config.newConfigAttributes
-import org.jitsi.utils.config.FallbackProperty
+import org.jitsi.config.NewJitsiConfig
+import org.jitsi.metaconfig.ConfigException
+import org.jitsi.metaconfig.config
 import org.jitsi.xmpp.mucclient.MucClientConfiguration
 
 class XmppClientConnectionConfig {
-    class Config {
-        companion object {
-            class ClientConnectionConfigsProperty : FallbackProperty<List<MucClientConfiguration>>(
-                legacyConfigAttributes {
-                    name("org.jitsi.videobridge.xmpp.user")
-                    readOnce()
-                    retrievedAs<ConfigObject>() convertedBy { cfg ->
-                        cfg.entries.map { it.toMucClientConfiguration() }
-                    }
-                },
-                newConfigAttributes {
-                    name("videobridge.apis.xmpp-client.configs")
-                    readOnce()
-                    retrievedAs<ConfigObject>() convertedBy { cfg ->
-                        cfg.entries.map { it.toMucClientConfiguration() }
-                    }
-                }
-            )
-            private val clientConnectionConfigs = ClientConnectionConfigsProperty()
-
-            @JvmStatic
-            fun getClientConfigs(): List<MucClientConfiguration> =
-                clientConnectionConfigs.value
+    val clientConfigs: List<MucClientConfiguration> by config {
+        retrieve("Props from legacy config") {
+            // TODO: This is tricky.  We no longer parse the old config via typesafe, so we can't
+            // get a config object of the prefix and ConfigSource doesn't expose a
+            // 'getPropertyNamesByPrefix' method, so for now we grab the ConfigurationService
+            // instance from NewJitsiConfig directly.  It works, but wouldn't play nicely with
+            // testing and is pretty ugly.
+            MucClientConfiguration.loadFromConfigService(
+                NewJitsiConfig.SipCommunicatorProps,
+                "org.jitsi.videobridge.xmpp.user.",
+                true
+            ).toList().takeIf { it.isNotEmpty() } ?: throw ConfigException.UnableToRetrieve.NotFound("no configs found")
         }
+        retrieve("videobridge.apis.xmpp-client.configs".from(NewJitsiConfig.newConfig)
+            .asType<ConfigObject>()
+            .andConvertBy { cfg ->
+                cfg.entries.map { it.toMucClientConfiguration() }
+            }
+        )
     }
 }
 

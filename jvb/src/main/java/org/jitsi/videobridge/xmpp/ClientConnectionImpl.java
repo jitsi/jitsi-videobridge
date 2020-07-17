@@ -18,6 +18,7 @@ package org.jitsi.videobridge.xmpp;
 import edu.umd.cs.findbugs.annotations.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.xmpp.config.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.health.*;
 import org.jitsi.xmpp.mucclient.*;
@@ -26,8 +27,6 @@ import org.json.simple.*;
 import org.osgi.framework.*;
 
 import java.util.*;
-
-import static org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig.*;
 
 /**
  * Provides jitsi-videobridge functions through an XMPP client connection.
@@ -58,6 +57,8 @@ public class ClientConnectionImpl
      */
     private final XmppCommon common = new XmppCommon();
 
+    private final XmppClientConnectionConfig config = new XmppClientConnectionConfig();
+
     /**
      * Starts this bundle.
      */
@@ -85,7 +86,7 @@ public class ClientConnectionImpl
                 ShutdownIQ.createGracefulShutdownIQ());
             mucClientManager.setIQListener(this);
 
-            Config.getClientConfigs()
+            config.getClientConfigs()
                 .forEach(cfg -> mucClientManager.addMucClient(cfg));
 
             serviceRegistration
