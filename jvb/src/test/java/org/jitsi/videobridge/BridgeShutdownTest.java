@@ -17,6 +17,8 @@ package org.jitsi.videobridge;
 
 import org.jitsi.config.*;
 import org.jitsi.meet.*;
+import org.jitsi.metaconfig.*;
+import org.jitsi.utils.collections.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.util.*;
@@ -50,12 +52,12 @@ public class BridgeShutdownTest
     public static void setUp()
         throws InterruptedException
     {
+        ConfigSource config = new MapConfigSource("test", JMap.of(
         // Allow focus JID
-        System.setProperty(
-            Videobridge.SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME,
-            "focus.*");
-        JitsiConfig.Companion.reload();
-
+            Videobridge.SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME, "focus.*"
+        ));
+        NewJitsiConfig.Companion.setLegacyConfig(config);
+        
         osgiHandler.start();
 
         bridge = osgiHandler.getService(Videobridge.class);

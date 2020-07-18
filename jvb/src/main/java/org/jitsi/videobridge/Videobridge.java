@@ -138,6 +138,8 @@ public class Videobridge
      */
     private VideobridgeExpireThread videobridgeExpireThread;
 
+    private final VideobridgeConfig config = new VideobridgeConfig();
+
     /**
      * The shim which handles Colibri-related logic for this
      * {@link Videobridge}.
@@ -484,13 +486,13 @@ public class Videobridge
     public IQ handleShutdownIQ(ShutdownIQ shutdownIQ)
     {
         // Security not configured - service unavailable
-        if (shutdownSourcePattern == null)
+        if (config.getShutdownSourcePattern() == null)
         {
             return IQUtils.createError(shutdownIQ, XMPPError.Condition.service_unavailable);
         }
         // Check if source matches pattern
         Jid from = shutdownIQ.getFrom();
-        if (from != null && shutdownSourcePattern.matcher(from).matches())
+        if (from != null && config.getShutdownSourcePattern().matcher(from).matches())
         {
             logger.info("Accepted shutdown request from: " + from);
             if (shutdownIQ.isGracefulShutdown())
@@ -573,28 +575,7 @@ public class Videobridge
 
         UlimitCheck.printUlimits();
 
-        ConfigurationService cfg = getConfigurationService();
-
         videobridgeExpireThread.start();
-
-        String shutdownSourcesRegexp
-            = (cfg == null)
-                ? null
-                : cfg.getString(SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME);
-
-        if (!StringUtils.isBlank(shutdownSourcesRegexp))
-        {
-            try
-            {
-                shutdownSourcePattern = Pattern.compile(shutdownSourcesRegexp);
-            }
-            catch (PatternSyntaxException exc)
-            {
-                logger.error(
-                   "Error parsing enableGracefulShutdownMode sources reg expr: "
-                        + shutdownSourcesRegexp, exc);
-            }
-        }
 
         // <conference>
         ProviderManager.addIQProvider(
@@ -633,6 +614,7 @@ public class Videobridge
                 HealthCheckIQ.NAMESPACE,
                 new HealthCheckIQProvider());
 
+        ConfigurationService cfg = getConfigurationService();
         startIce4j(bundleContext, cfg);
     }
 
