@@ -16,7 +16,6 @@
 
 package org.jitsi.videobridge.octo.config
 
-import com.typesafe.config.ConfigObject
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import org.jitsi.videobridge.config.NewJitsiConfig
@@ -27,25 +26,24 @@ class OctoConfig {
 
     val sendQueueSize: Int by config("videobridge.octo.send-queue-size".from(NewJitsiConfig.newConfig))
 
+    // We grab these two properties from the legacy config separately here
+    // because we use them to infer a legacy value of 'enabled' (which was
+    // based on the presence of these properties) and as potential values
+    // in each of the individual bindAddress and bindPort properties.
+    private val legacyBindAddress: String? by optionalconfig(
+        "org.jitsi.videobridge.octo.BIND_ADDRESS".from(NewJitsiConfig.legacyConfig))
+    private val legacyBindPort: Int? by optionalconfig(
+        "org.jitsi.videobridge.octo.BIND_PORT".from(NewJitsiConfig.legacyConfig))
+
     val enabled: Boolean by config {
         // The legacy config file doesn't have an 'enabled' property,
         // instead it was based on the values of the parameters.  Here,
         // we simulate a legacy 'enabled' value based on the results
         // of validating the other properties in the legacy config
         // file.
-        retrieve("org.jitsi.videobridge.octo".from(NewJitsiConfig.legacyConfig)
-                .asType<ConfigObject>()
-                .andConvertBy {
-                    val cfg = it.toConfig()
-                    if (cfg.hasPath("BIND_ADDRESS") && cfg.hasPath("BIND_PORT")) {
-                        val bindAddress = cfg.getString("BIND_ADDRESS")
-                        val bindPort = cfg.getInt("BIND_PORT")
-                        bindAddress != null && (bindPort.isUnprivilegedPort())
-                    } else {
-                        false
-                    }
-                }
-        )
+        retrieve("Legacy Octo relay enabled") {
+            legacyBindAddress != null && legacyBindPort?.isUnprivilegedPort() == true
+        }
         retrieve("videobridge.octo.enabled".from(NewJitsiConfig.newConfig))
     }
 
@@ -55,12 +53,12 @@ class OctoConfig {
     }
 
     val bindAddress: String by config {
-        retrieve("org.jitsi.videobridge.octo.BIND_ADDRESS".from(NewJitsiConfig.legacyConfig))
+        retrieve("bind address from legacy config") { legacyBindAddress!! }
         retrieve("videobridge.octo.bind-address".from(NewJitsiConfig.newConfig))
     }
 
     val bindPort: Int by config {
-        retrieve("org.jitsi.videobridge.octo.BIND_PORT".from(NewJitsiConfig.legacyConfig))
+        retrieve("bind port from legacy config") { legacyBindPort!! }
         retrieve("videobridge.octo.bind-port".from(NewJitsiConfig.newConfig))
     }
 
