@@ -204,5 +204,20 @@ sealed class StatsTransportConfig(
                 }
             }
         }
+
+        fun fromOtherLegacyConfig(props: Map<String, String>): List<StatsTransportConfig> {
+            val transportTypes =
+                props["org.jitsi.videobridge.STATISTICS_TRANSPORT"]?.split(",") ?: return listOf()
+            return transportTypes.mapNotNull { transportType ->
+                val interval = props["org.jitsi.videobridge.STATISTICS_INTERVAL.$transportType"]?.let {
+                    Duration.ofMillis(it.toLong())
+                } ?: StatsManagerBundleActivatorConfig.Config.statsInterval()
+                when (transportType) {
+                    "muc" -> MucStatsTransportConfig(interval)
+                    "callstats.io" -> CallStatsIoStatsTransportConfig(interval)
+                    else -> null
+                }
+            }
+        }
     }
 }

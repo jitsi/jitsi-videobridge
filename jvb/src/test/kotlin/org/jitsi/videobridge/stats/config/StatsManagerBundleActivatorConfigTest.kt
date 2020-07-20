@@ -17,7 +17,6 @@
 package org.jitsi.videobridge.stats.config
 
 import com.typesafe.config.ConfigFactory
-import io.kotlintest.TestCase
 import io.kotlintest.inspectors.forOne
 import io.kotlintest.matchers.collections.shouldHaveSize
 import io.kotlintest.seconds
