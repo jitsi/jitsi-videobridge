@@ -17,10 +17,16 @@ package org.jitsi.videobridge.cc.vp9
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
+import org.jitsi.nlj.codec.vp8.Vp8Utils.Companion.applyExtendedPictureIdDelta
+import org.jitsi.nlj.codec.vp8.Vp8Utils.Companion.applyTl0PicIdxDelta
+import org.jitsi.nlj.codec.vp8.Vp8Utils.Companion.getExtendedPictureIdDelta
+import org.jitsi.nlj.codec.vp8.Vp8Utils.Companion.getTl0PicIdxDelta
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.rtp.util.RtpUtils.Companion.applySequenceNumberDelta
 import org.jitsi.rtp.util.RtpUtils.Companion.applyTimestampDelta
+import org.jitsi.rtp.util.RtpUtils.Companion.getSequenceNumberDelta
 import org.jitsi.rtp.util.RtpUtils.Companion.getTimestampDiff
 import org.jitsi.rtp.util.isNewerThan
 import org.jitsi.utils.logging.DiagnosticContext
@@ -152,31 +158,74 @@ class Vp9AdaptiveSourceProjectionContext(
         vp9PictureMaps.getOrPut(vp9Packet.ssrc) { Vp9PictureMap(logger) }.insertPacket(vp9Packet)
 
     /**
-     * Find the previous frame before the given one.
+     * Calculate the projected sequence number gap between two frames (of the same encoding),
+     * allowing collapsing for unaccepted frames.
      */
-    @Synchronized
-    private fun prevPicture(picture: Vp9Picture) =
-        vp9PictureMaps[picture.ssrc]?.prevPicture(picture)
-
-    /**
-     * Find the next frame after the given one.
-     */
-    @Synchronized
-    private fun nextPicture(picture: Vp9Picture) =
-        vp9PictureMaps[picture.ssrc]?.nextPicture(picture)
-
-    /**
-     * Find a subsequent Tid==0 frame after the given frame
-     * @param frame The frame to query
-     * @return A subsequent TL0 frame, or null
-     */
-    private fun findNextTl0(picture: Vp9Picture) =
-        vp9PictureMaps[picture.ssrc]?.findNextTl0(picture)
+    private fun seqGap(frame1: Vp9Frame, frame2: Vp9Frame): Int {
+        var seqGap = getSequenceNumberDelta(
+            frame2.earliestKnownSequenceNumber,
+            frame1.latestKnownSequenceNumber
+        )
+        if (!frame1.isAccepted && !frame2.isAccepted &&
+            frame2.isImmediatelyAfter(frame1)) {
+            /* If neither frame is being projected, and they have consecutive
+               picture IDs, we don't need to leave any gap. */
+            seqGap = 0
+        } else {
+            /* If the earlier frame wasn't projected, and we haven't seen its
+             * final packet, we know it has to consume at least one more sequence number. */
+            if (!frame1.isAccepted && !frame1.seenEndOfFrame && seqGap > 1) {
+                seqGap--
+            }
+            /* Similarly, if the later frame wasn't projected and we haven't seen
+             * its first packet. */if (!frame2.isAccepted && !frame2.seenStartOfFrame && seqGap > 1) {
+                seqGap--
+            }
+            if (!frame1.isAccepted && seqGap > 0) {
+                seqGap--
+            }
+        }
+        return seqGap
+    }
 
     private fun frameIsNewSsrc(frame: Vp9Frame): Boolean {
         val lastFrame = lastVp9FrameProjection.vp9Frame
 
         return lastFrame != null && frame.matchesSSRC(lastFrame)
+    }
+
+    /**
+     * Find the previous frame before the given one.
+     */
+    @Synchronized
+    private fun prevFrame(frame: Vp9Frame): Vp9Frame? {
+        val frameMap = vp9PictureMaps.get(frame.ssrc) ?: return null
+        return frameMap.prevFrame(frame)
+    }
+
+    /**
+     * Find the next frame after the given one.
+     */
+    @Synchronized
+    private fun nextFrame(frame: Vp9Frame): Vp9Frame? {
+        val frameMap = vp9PictureMaps.get(frame.ssrc) ?: return null
+        return frameMap.nextFrame(frame)
+    }
+
+    /**
+     * Find the previous accepted frame before the given one.
+     */
+    private fun findPrevAcceptedFrame(frame: Vp9Frame): Vp9Frame? {
+        val frameMap = vp9PictureMaps.get(frame.ssrc) ?: return null
+        return frameMap.findPrevAcceptedFrame(frame)
+    }
+
+    /**
+     * Find the next accepted frame after the given one.
+     */
+    private fun findNextAcceptedFrame(frame: Vp9Frame): Vp9Frame? {
+        val frameMap = vp9PictureMaps.get(frame.ssrc) ?: return null
+        return frameMap.findNextAcceptedFrame(frame)
     }
 
     /**
@@ -199,15 +248,188 @@ class Vp9AdaptiveSourceProjectionContext(
         isReset: Boolean,
         receivedMs: Long
     ): Vp9FrameProjection {
-        /* TODO - rewriting */
+        if (frameIsNewSsrc(frame)) {
+            return createLayerSwitchProjection(frame, initialPacket, mark, receivedMs)
+        } else if (isReset) {
+            return createResetProjection(frame, initialPacket, mark, receivedMs)
+        }
+
+        return createInLayerProjection(frame, initialPacket, mark, receivedMs)
+    }
+
+    private fun createLayerSwitchProjection(
+        frame: Vp9Frame,
+        initialPacket: Vp9Packet,
+        mark: Boolean,
+        receivedMs: Long
+    ): Vp9FrameProjection {
+        assert(frame.isKeyframe)
+        assert(initialPacket.isStartOfFrame)
+
+        var projectedSeqGap = 1
+
+        if (lastVp9FrameProjection.vp9Frame != null &&
+            lastVp9FrameProjection.vp9Frame?.seenEndOfFrame != true) {
+            /* Leave a gap to signal to the decoder that the previously routed
+               frame was incomplete. */
+            projectedSeqGap++
+
+            /* Make sure subsequent packets of the previous projection won't
+               overlap the new one.  (This means the gap, above, will never be
+               filled in.)
+             */
+            lastVp9FrameProjection.close()
+        }
+
+        val projectedSeq = applySequenceNumberDelta(lastVp9FrameProjection.latestProjectedSeqNum, projectedSeqGap)
+
+        // this is a simulcast switch. The typical incremental value =
+        // 90kHz / 30 = 90,000Hz / 30 = 3000 per frame or per 33ms
+
+        // this is a simulcast switch. The typical incremental value =
+        // 90kHz / 30 = 90,000Hz / 30 = 3000 per frame or per 33ms
+        val tsDelta: Long
+        tsDelta = if (lastVp9FrameProjection.createdMs != 0L) {
+            (3000 * Math.max(1, (receivedMs - lastVp9FrameProjection.createdMs) / 33)).toLong()
+        } else {
+            3000
+        }
+        val projectedTs = applyTimestampDelta(lastVp9FrameProjection.timestamp, tsDelta)
+
+        val picId: Int
+        val tl0PicIdx: Int
+        if (lastVp9FrameProjection.vp9Frame != null) {
+            picId = applyExtendedPictureIdDelta(lastVp9FrameProjection.pictureId,
+                1)
+            tl0PicIdx = applyTl0PicIdxDelta(lastVp9FrameProjection.tl0PICIDX,
+                1)
+        } else {
+            picId = frame.pictureId
+            tl0PicIdx = frame.tl0PICIDX
+        }
+
         return Vp9FrameProjection(
             diagnosticContext = diagnosticContext,
             vp9Frame = frame,
             ssrc = lastVp9FrameProjection.ssrc,
-            timestamp = frame.timestamp,
-            sequenceNumberDelta = 0,
-            pictureId = frame.pictureId,
-            tl0PICIDX = frame.tl0PICIDX,
+            timestamp = projectedTs,
+            sequenceNumberDelta = getSequenceNumberDelta(projectedSeq, initialPacket.sequenceNumber),
+            pictureId = picId,
+            tl0PICIDX = tl0PicIdx,
+            mark = mark,
+            createdMs = receivedMs
+        )
+    }
+
+    private fun createResetProjection(
+        frame: Vp9Frame,
+        initialPacket: Vp9Packet,
+        mark: Boolean,
+        receivedMs: Long
+    ): Vp9FrameProjection {
+        /* This must be non-null because we don't execute this function unless
+            frameIsNewSsrc has returned false.
+        */
+        val lastFrame = lastVp9FrameProjection.vp9Frame!!
+
+        /* Apply the latest projected frame's projections out, linearly. */
+        val seqDelta = getSequenceNumberDelta(lastVp9FrameProjection.latestProjectedSeqNum,
+            lastFrame.latestKnownSequenceNumber)
+        val tsDelta = getTimestampDiff(lastVp9FrameProjection.timestamp,
+            lastFrame.timestamp)
+        val picIdDelta = getExtendedPictureIdDelta(lastVp9FrameProjection.pictureId,
+            lastFrame.pictureId)
+        val tl0PicIdxDelta = getTl0PicIdxDelta(lastVp9FrameProjection.tl0PICIDX,
+            lastFrame.tl0PICIDX)
+
+        val projectedTs = applyTimestampDelta(frame.timestamp, tsDelta)
+        val projectedPicId = applyExtendedPictureIdDelta(frame.pictureId, picIdDelta)
+        val projectedTl0PicIdx = applyTl0PicIdxDelta(frame.tl0PICIDX, tl0PicIdxDelta)
+
+        return Vp9FrameProjection(diagnosticContext,
+            frame, lastVp9FrameProjection.ssrc, projectedTs,
+            seqDelta,
+            projectedPicId, projectedTl0PicIdx, mark, receivedMs
+        )
+    }
+
+    private fun createInLayerProjection(
+        frame: Vp9Frame,
+        initialPacket: Vp9Packet,
+        mark: Boolean,
+        receivedMs: Long
+    ): Vp9FrameProjection {
+        val prevFrame = findPrevAcceptedFrame(frame)
+        if (prevFrame != null) {
+            return createInLayerProjection(frame, prevFrame, initialPacket, mark, receivedMs)
+        }
+
+        /* prev frame has rolled off beginning of frame map, try next frame */
+        val nextFrame = findNextAcceptedFrame(frame)
+        if (nextFrame != null) {
+            return createInLayerProjection(frame, nextFrame, initialPacket, mark, receivedMs)
+        }
+
+        /* Neither previous or next is found. Very big frame? Use previous projected.
+           (This must be valid because we don't execute this function unless
+           frameIsNewSsrc has returned false.)
+         */
+        return createInLayerProjection(frame, lastVp9FrameProjection.vp9Frame!!,
+            initialPacket, mark, receivedMs)
+    }
+
+    private fun createInLayerProjection(
+        frame: Vp9Frame,
+        refFrame: Vp9Frame,
+        initialPacket: Vp9Packet,
+        mark: Boolean,
+        receivedMs: Long
+    ): Vp9FrameProjection {
+        val tsGap = getTimestampDiff(frame.timestamp, refFrame.timestamp)
+        val tl0Gap = getTl0PicIdxDelta(frame.tl0PICIDX, refFrame.tl0PICIDX)
+        val picGap = getExtendedPictureIdDelta(frame.pictureId, refFrame.pictureId)
+        var seqGap = 0
+
+        var f1 = refFrame
+        var f2: Vp9Frame?
+        val refSeq: Int
+        if (picGap > 0) {
+            do {
+                f2 = nextFrame(f1)
+                checkNotNull(f2) {
+                    "No next frame found after frame with picId ${f1.pictureId}, " +
+                        "even though refFrame ${refFrame.pictureId} is before frame ${frame.pictureId}!"
+                }
+                seqGap += seqGap(f1, f2)
+                f1 = f2
+            } while (f2 !== frame)
+            refSeq = refFrame.projection!!.latestProjectedSeqNum
+        } else {
+            do {
+                f2 = prevFrame(f1)
+                checkNotNull(f2) {
+                    "No previous frame found before frame with picId ${f1.pictureId}, " +
+                        "even though refFrame ${refFrame.pictureId} is after frame ${frame.pictureId}!"
+                }
+                seqGap += -seqGap(f2, f1)
+                f1 = f2
+            } while (f2 !== frame)
+            refSeq = refFrame.projection!!.earliestProjectedSeqNum
+        }
+
+        val projectedSeq = applySequenceNumberDelta(refSeq, seqGap)
+        val projectedTs = applyTimestampDelta(refFrame.projection!!.timestamp, tsGap)
+        val projectedPicId = applyExtendedPictureIdDelta(refFrame.projection!!.pictureId, picGap)
+        val projectedTl0PicIdx = applyTl0PicIdxDelta(refFrame.projection!!.tl0PICIDX, tl0Gap)
+
+        return Vp9FrameProjection(
+            diagnosticContext = diagnosticContext,
+            vp9Frame = frame,
+            ssrc = lastVp9FrameProjection.ssrc,
+            timestamp = projectedTs,
+            sequenceNumberDelta = getSequenceNumberDelta(projectedSeq, initialPacket.sequenceNumber),
+            pictureId = projectedPicId,
+            tl0PICIDX = projectedTl0PicIdx,
             mark = mark,
             createdMs = receivedMs
         )

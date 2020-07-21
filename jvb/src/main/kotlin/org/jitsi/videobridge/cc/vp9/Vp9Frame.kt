@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc.vp9
 
+import org.jitsi.nlj.codec.vp8.Vp8Utils.Companion.getExtendedPictureIdDelta
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.rtp.util.isNewerThan
@@ -340,5 +341,22 @@ class Vp9Frame internal constructor(
                 complained = true
             }
         })
+    }
+
+    /**
+     * Check whether this frame is immediately after another one, according
+     * to their extended picture IDs and spatial layers
+     */
+    fun isImmediatelyAfter(otherFrame: Vp9Frame): Boolean {
+        val delta = getExtendedPictureIdDelta(otherFrame.pictureId, pictureId)
+
+        return when {
+            delta == 0 ->
+                spatialLayer == otherFrame.spatialLayer + 1
+            delta == 1 ->
+                spatialLayer == 0 && otherFrame.spatialLayer == 2 /* ??? */
+            else ->
+                false
+        }
     }
 }

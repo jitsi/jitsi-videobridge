@@ -123,28 +123,31 @@ class Vp9PictureMap(
     }
 
     @Synchronized
-    fun nextPicture(picture: Vp9Picture): Vp9Picture? {
-        return pictureHistory.findAfter(picture) { true }
+    fun nextFrame(frame: Vp9Frame): Vp9Frame? {
+        return pictureHistory.findAfter(frame) { true }
     }
 
     @Synchronized
-    fun nextPictureWith(picture: Vp9Picture, pred: (Vp9Picture) -> Boolean): Vp9Picture? {
-        return pictureHistory.findAfter(picture, pred)
+    fun nextFrameWith(frame: Vp9Frame, pred: (Vp9Frame) -> Boolean): Vp9Frame? {
+        return pictureHistory.findAfter(frame, pred)
     }
 
     @Synchronized
-    fun findNextTl0(picture: Vp9Picture): Vp9Picture? {
-        return nextPictureWith(picture, Vp9Picture::isTL0)
+    fun prevFrame(frame: Vp9Frame): Vp9Frame? {
+        return pictureHistory.findBefore(frame) { true }
     }
 
     @Synchronized
-    fun prevPicture(picture: Vp9Picture): Vp9Picture? {
-        return pictureHistory.findBefore(picture) { true }
+    fun prevFrameWith(frame: Vp9Frame, pred: (Vp9Frame) -> Boolean): Vp9Frame? {
+        return pictureHistory.findBefore(frame, pred)
     }
 
-    @Synchronized
-    fun prevPictureWith(picture: Vp9Picture, pred: (Vp9Picture) -> Boolean): Vp9Picture? {
-        return pictureHistory.findBefore(picture, pred)
+    fun findPrevAcceptedFrame(frame: Vp9Frame): Vp9Frame? {
+        return prevFrameWith(frame) { it.isAccepted }
+    }
+
+    fun findNextAcceptedFrame(frame: Vp9Frame): Vp9Frame? {
+        return nextFrameWith(frame) { it.isAccepted }
     }
 
     companion object {
@@ -207,38 +210,68 @@ constructor(size: Int) : ArrayCache<Vp9Picture>(
         numCached--
     }
 
-    fun findBefore(picture: Vp9Picture, pred: (Vp9Picture) -> Boolean): Vp9Picture? {
+    fun findBefore(frame: Vp9Frame, pred: (Vp9Frame) -> Boolean): Vp9Frame? {
         val lastIndex = lastIndex
         if (lastIndex == -1) {
             return null
         }
-        val index = indexTracker.interpret(picture.pictureId)
-        val searchStartIndex = Integer.min(index - 1, lastIndex)
+        val index = indexTracker.interpret(frame.pictureId)
+        val searchStartIndex = Integer.min(index, lastIndex)
         val searchEndIndex = Integer.max(lastIndex - size, firstIndex - 1)
-        return doFind(pred, searchStartIndex, searchEndIndex, -1)
+        return doFind(
+            pred = pred,
+            startIndex = searchStartIndex,
+            endIndex = searchEndIndex,
+            startLayer = frame.spatialLayer - 1,
+            increment = -1
+        )
     }
 
-    fun findAfter(picture: Vp9Picture, pred: (Vp9Picture) -> Boolean): Vp9Picture? {
+    fun findAfter(frame: Vp9Frame, pred: (Vp9Frame) -> Boolean): Vp9Frame? {
         val lastIndex = lastIndex
         if (lastIndex == -1) {
             return null
         }
-        val index = indexTracker.interpret(picture.pictureId)
+        val index = indexTracker.interpret(frame.pictureId)
         if (index >= lastIndex) {
             return null
         }
-        val searchStartIndex = Integer.max(index + 1, Integer.max(lastIndex - size + 1, firstIndex))
-        return doFind(pred, searchStartIndex, lastIndex + 1, 1)
+        val searchStartIndex = Integer.max(index, Integer.max(lastIndex - size + 1, firstIndex))
+        return doFind(
+            pred = pred,
+            startIndex = searchStartIndex,
+            endIndex = lastIndex + 1,
+            startLayer = frame.spatialLayer + 1,
+            increment = 1
+        )
     }
 
-    private fun doFind(pred: (Vp9Picture) -> Boolean, startIndex: Int, endIndex: Int, increment: Int): Vp9Picture? {
+    private fun doFind(
+        pred: (Vp9Frame) -> Boolean,
+        startIndex: Int,
+        endIndex: Int,
+        startLayer: Int,
+        increment: Int
+    ): Vp9Frame? {
         var index = startIndex
+        var layer = startLayer
+        var firstPicture = true
         while (index != endIndex) {
             val picture = getIndex(index)
-            if (picture != null && pred(picture)) {
-                return picture
+            if (picture != null) {
+                if (!firstPicture) {
+                    layer = if (increment < 0) picture.frames.size - 1 else 0
+                }
+                while (layer in picture.frames.indices) {
+                    val frame = picture.frames[layer]
+                    if (frame != null && pred(frame)) {
+                        return frame
+                    }
+                    layer += increment
+                }
             }
             index += increment
+            firstPicture = false
         }
         return null
     }
