@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.octo.config
 
 import org.jitsi.config.NewJitsiConfig
+import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import org.jitsi.metaconfig.optionalconfig
@@ -40,8 +41,12 @@ class OctoConfig {
         // instead it was based on the values of the parameters.  Here,
         // we simulate a legacy 'enabled' value based on the results
         // of validating the other properties in the legacy config
-        // file.
+        // file.  If neither property is present, we consider the field
+        // "not found" in the legacy config.
         retrieve("Legacy Octo relay enabled") {
+            if (legacyBindAddress == null && legacyBindPort == null) {
+                throw ConfigException.UnableToRetrieve.NotFound("not found")
+            }
             legacyBindAddress != null && legacyBindPort?.isUnprivilegedPort() == true
         }
         retrieve("videobridge.octo.enabled".from(NewJitsiConfig.newConfig))
