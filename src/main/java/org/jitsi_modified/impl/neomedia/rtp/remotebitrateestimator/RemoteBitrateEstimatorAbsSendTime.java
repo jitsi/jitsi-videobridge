@@ -180,7 +180,7 @@ public class RemoteBitrateEstimatorAbsSendTime
     /**
      * Reset back to the state immediately after construction.
      */
-    public void reset()
+    public synchronized void reset()
     {
         remoteRate.reset();
         this.incomingBitrate = new RateStatistics(kBitrateWindowMs, kBitrateScale);
@@ -200,7 +200,7 @@ public class RemoteBitrateEstimatorAbsSendTime
      * @param sendTimeMs the send time of the packet in millis
      * @param payloadSize the payload size of the packet.
      */
-    public void incomingPacketInfo(
+    public synchronized void incomingPacketInfo(
         long nowMs,
         long sendTimeMs,
         long arrivalTimeMs,
@@ -248,73 +248,69 @@ public class RemoteBitrateEstimatorAbsSendTime
         }
 
         boolean updateEstimate = false;
-        long targetBitrateBps = 0;
 
-        synchronized (this)
+        checkTimeouts(nowMs);
+        lastPacketTimeMs = nowMs;
+
+        long[] deltas = this.deltas;
+
+        /* long timestampDelta */ deltas[0] = 0;
+        /* long timeDelta */ deltas[1] = 0;
+        /* int sizeDelta */ deltas[2] = 0;
+
+        if (detector == null)
         {
-            checkTimeouts(nowMs);
-            lastPacketTimeMs = nowMs;
+            detector = new Detector(new OverUseDetectorOptions(), true, logger);
+        }
 
-            long[] deltas = this.deltas;
+        if (detector.interArrival.computeDeltas(
+            timestamp, arrivalTimeMs, payloadSize, deltas, nowMs))
+        {
+            double tsDeltaMs = deltas[0] * kTimestampToMs;
 
-            /* long timestampDelta */ deltas[0] = 0;
-            /* long timeDelta */ deltas[1] = 0;
-            /* int sizeDelta */ deltas[2] = 0;
+            detector.estimator.update(
+                /* timeDelta */ deltas[1],
+                /* timestampDelta */ tsDeltaMs,
+                /* sizeDelta */ (int) deltas[2],
+                detector.detector.getState(), nowMs);
 
-            if (detector == null)
-            {
-                detector = new Detector(new OverUseDetectorOptions(), true, logger);
-            }
+            detector.detector.detect(
+                detector.estimator.getOffset(), tsDeltaMs,
+                detector.estimator.getNumOfDeltas(), arrivalTimeMs);
+        }
 
-            if (detector.interArrival.computeDeltas(
-                timestamp, arrivalTimeMs, payloadSize, deltas, nowMs))
-            {
-                double tsDeltaMs = deltas[0] * kTimestampToMs;
+        // Check if it's time for a periodic update or if we
+        // should update because of an over-use.
+        if (lastUpdateMs == -1
+            || nowMs - lastUpdateMs > remoteRate.getFeedBackInterval())
+        {
+            updateEstimate = true;
+        }
+        else if (
+            detector.detector.getState() == BandwidthUsage.kBwOverusing)
+        {
+            long incomingRate_ = incomingBitrate.getRate(arrivalTimeMs);
 
-                detector.estimator.update(
-                    /* timeDelta */ deltas[1],
-                    /* timestampDelta */ tsDeltaMs,
-                    /* sizeDelta */ (int) deltas[2],
-                    detector.detector.getState(), nowMs);
-
-                detector.detector.detect(
-                    detector.estimator.getOffset(), tsDeltaMs,
-                    detector.estimator.getNumOfDeltas(), arrivalTimeMs);
-            }
-
-            // Check if it's time for a periodic update or if we
-            // should update because of an over-use.
-            if (lastUpdateMs == -1
-                || nowMs - lastUpdateMs > remoteRate.getFeedBackInterval())
+            if (incomingRate_ > 0 && remoteRate
+                .isTimeToReduceFurther(nowMs, incomingBitrate_))
             {
                 updateEstimate = true;
             }
-            else if (
-                detector.detector.getState() == BandwidthUsage.kBwOverusing)
-            {
-                long incomingRate_ = incomingBitrate.getRate(arrivalTimeMs);
+        }
 
-                if (incomingRate_ > 0 && remoteRate
-                    .isTimeToReduceFurther(nowMs, incomingBitrate_))
-                {
-                    updateEstimate = true;
-                }
-            }
+        if (updateEstimate)
+        {
+            // The first overuse should immediately trigger a new estimate.
+            // We also have to update the estimate immediately if we are
+            // overusing and the target bitrate is too high compared to
+            // what we are receiving.
+            input.bwState = detector.detector.getState();
+            input.incomingBitRate = incomingBitrate.getRate(arrivalTimeMs);
+            input.noiseVar = detector.estimator.getVarNoise();
 
-            if (updateEstimate)
-            {
-                // The first overuse should immediately trigger a new estimate.
-                // We also have to update the estimate immediately if we are
-                // overusing and the target bitrate is too high compared to
-                // what we are receiving.
-                input.bwState = detector.detector.getState();
-                input.incomingBitRate = incomingBitrate.getRate(arrivalTimeMs);
-                input.noiseVar = detector.estimator.getVarNoise();
-
-                remoteRate.update(input, nowMs);
-                targetBitrateBps = remoteRate.updateBandwidthEstimate(nowMs);
-                updateEstimate = remoteRate.isValidEstimate();
-            }
+            remoteRate.update(input, nowMs);
+            remoteRate.updateBandwidthEstimate(nowMs);
+            updateEstimate = remoteRate.isValidEstimate();
         }
 
         if (updateEstimate)
@@ -421,7 +417,7 @@ public class RemoteBitrateEstimatorAbsSendTime
                 kTimestampGroupLengthTicks, kTimestampToMs,
                 enableBurstGrouping, diagnosticContext, parentLogger);
             this.estimator = new OveruseEstimator(options, diagnosticContext, logger);
-            this.detector = new OveruseDetector(options, diagnosticContext, logger);
+            this.detector = new OveruseDetector(options, diagnosticContext);
         }
     }
 

@@ -86,7 +86,9 @@ class DtlsUtils {
             return try {
                 theirs.first(ours::contains)
             } catch (e: NoSuchElementException) {
-                throw DtlsException("No common SRTP protection profile found.  Ours: $ours Theirs: $theirs")
+                throw DtlsException(
+                    "No common SRTP protection profile found.  Ours: ${ours.joinToString()} " +
+                        "Theirs: ${theirs.joinToString()}")
             }
         }
 

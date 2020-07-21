@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+
+<Match>
+  <Or>
+    <!-- Our Packet hierarchy intentionally uses clone() without calling super.clone(). -->
+    <Bug pattern="CN_IDIOM_NO_SUPER_CALL"/>
+    <!-- Serialization -->
+    <Bug pattern="SE_BAD_FIELD"/>
+    <Bug pattern="SE_BAD_FIELD_STORE"/>
+    <!-- We expose arrays in multiple places on purpose. -->
+    <Bug pattern="EI_EXPOSE_REP"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+
+  </Or>
+</Match>
+
+<!-- Kotlin-specific -->
+<Match>
+  <Or>
+    <!-- False positives with lateinit -->
+    <Bug pattern="NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
+    <!-- False positives with lateinit -->
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
+    <!-- False positives with lateinit -->
+    <Bug pattern="NP_NULL_PARAM_DEREF"/>
+    <!-- False positives with method references -->
+    <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
+    <!-- False positives with kotlin's "when" -->
+    <Bug pattern="SF_SWITCH_NO_DEFAULT"/>
+    <!-- False positives with lazy vals -->
+    <Bug pattern="NP_NULL_ON_SOME_PATH"/>
+
+
+    <!-- False positives for an unknown reason -->
+    <Bug pattern="BC_BAD_CAST_TO_ABSTRACT_COLLECTION"/>
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
+    <Bug pattern="UR_UNINIT_READ"/>
+    <Bug pattern="UC_USELESS_OBJECT"/>
+  </Or>
+  <Source name="~.*\.kt" />
+</Match>
+
+
+<!-- Tests -->
+<Match>
+  <Or>
+    <!-- Tests have a valid reason to ignore return values (expecting exceptions, etc). -->
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+    <!-- Same for exceptions. -->
+    <Bug pattern="DE_MIGHT_IGNORE"/>
+    <!-- In tests it is convenient to use Random() randomly. -->
+    <Bug pattern="DMI_RANDOM_USED_ONLY_ONCE"/>
+    <!-- Looks like a false positive. -->
+    <Bug pattern="UMAC_UNCALLABLE_METHOD_OF_ANONYMOUS_CLASS"/>
+  </Or>
+  <Or>
+    <Source name="~.*\.*Test.kt" />
+    <Source name="~.*\.*Test.java" />
+    <Class name="~.*\.module_tests\..*" />
+  </Or>
+</Match>
+
+
+</FindBugsFilter>

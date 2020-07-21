@@ -47,8 +47,8 @@ class KeyframeRequesterTest : ShouldSpec() {
         override val rtpPayloadTypes: Map<Byte, PayloadType> = mutableMapOf()
         override var supportsFir: Boolean = true
         override var supportsPli: Boolean = true
-        override var supportsRemb: Boolean = true
-        override var supportsTcc: Boolean = true
+        override val supportsRemb: Boolean = true
+        override val supportsTcc: Boolean = true
         override fun onRtpExtensionMapping(rtpExtensionType: RtpExtensionType, handler: RtpExtensionHandler) {
             // no-op
         }

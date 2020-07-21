@@ -37,7 +37,7 @@ class RetransmissionSender(
     /**
      * Maps an original payload type (Int) to its [RtxPayloadType]
      */
-    private val origPtToRtxPayloadType: MutableMap<Int, RtxPayloadType> = ConcurrentHashMap<Int, RtxPayloadType>()
+    private val origPtToRtxPayloadType: MutableMap<Int, RtxPayloadType> = ConcurrentHashMap()
     /**
      * A map of rtx stream ssrc to the current sequence number for that stream
      */

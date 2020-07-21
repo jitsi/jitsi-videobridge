@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.util
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.lang.Integer.max
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
@@ -27,6 +28,7 @@ import org.jitsi.nlj.transform.NodeStatsProducer
  *
  * @author Boris Grozev
  */
+@SuppressFBWarnings("CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE")
 open class ArrayCache<T>(
     val size: Int,
     private val cloneItem: (T) -> T,

@@ -130,8 +130,8 @@ class ProbingDataSender(
         return bytesSent
     }
 
-    private var currDummyTimestamp = Random().nextLong() and 0xFFFFFFFF
-    private var currDummySeqNum = Random().nextInt(0xFFFF)
+    private var currDummyTimestamp = random.nextLong() and 0xFFFFFFFF
+    private var currDummySeqNum = random.nextInt(0xFFFF)
 
     private fun sendDummyData(numBytes: Int): Int {
         var bytesSent = 0
@@ -178,5 +178,9 @@ class ProbingDataSender(
             addString("curr_dummy_seq_num", currDummySeqNum.toString())
             addString("video_payload_types", videoPayloadTypes.toString())
         }
+    }
+
+    companion object {
+        val random = Random()
     }
 }

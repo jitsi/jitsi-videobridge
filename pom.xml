@@ -16,6 +16,7 @@
         <bouncycastle.version>1.65</bouncycastle.version>
         <jitsi.utils.version>1.0-47-gdb30505</jitsi.utils.version>
         <ktlint.skip>false</ktlint.skip>
+        <spotbugs.version>4.0.6</spotbugs.version>
     </properties>
     <dependencies>
         <dependency>
@@ -77,6 +78,12 @@
             <groupId>org.pcap4j</groupId>
             <artifactId>pcap4j-packetfactory-static</artifactId>
             <version>1.8.2</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/com.github.spotbugs/spotbugs-annotations -->
+        <dependency>
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>spotbugs-annotations</artifactId>
+            <version>${spotbugs.version}</version>
         </dependency>
 
         <!-- test -->
@@ -278,6 +285,28 @@
 				  </execution>
 			  </executions>
 		  </plugin>
+          <plugin>
+              <groupId>com.github.spotbugs</groupId>
+              <artifactId>spotbugs-maven-plugin</artifactId>
+              <version>4.0.4</version>
+              <configuration>
+                  <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+                  <includeTests>true</includeTests>
+              </configuration>
+              <executions>
+                  <execution>
+                      <phase>verify</phase>
+                      <goals><goal>check</goal></goals>
+                  </execution>
+              </executions>
+              <dependencies>
+                  <dependency>
+                      <groupId>com.github.spotbugs</groupId>
+                      <artifactId>spotbugs</artifactId>
+                      <version>${spotbugs.version}</version>
+                  </dependency>
+              </dependencies>
+          </plugin>
         </plugins>
     </build>
 

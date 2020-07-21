@@ -76,8 +76,6 @@ enum class PayloadTypeEncoding {
     RTX,
     OPUS;
 
-    var unknownVal: String? = null
-
     companion object {
         /**
          * [valueOf] does not allow for case-insensitivity and can't be overridden, so this
@@ -85,16 +83,15 @@ enum class PayloadTypeEncoding {
          */
         fun createFrom(value: String): PayloadTypeEncoding {
             return try {
-                PayloadTypeEncoding.valueOf(value.toUpperCase())
+                valueOf(value.toUpperCase())
             } catch (e: IllegalArgumentException) {
-                return PayloadTypeEncoding.OTHER.also { it.unknownVal = value }
+                return OTHER
             }
         }
     }
 
     override fun toString(): String = with(StringBuffer()) {
         append(super.toString())
-        unknownVal?.let { append(" (").append(it).append(")") }
         toString()
     }
 }
