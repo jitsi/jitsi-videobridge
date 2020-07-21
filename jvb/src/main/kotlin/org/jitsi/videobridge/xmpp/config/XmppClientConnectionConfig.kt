@@ -37,7 +37,9 @@ class XmppClientConnectionConfig {
         retrieve("videobridge.apis.xmpp-client.configs".from(NewJitsiConfig.newConfig)
             .asType<ConfigObject>()
             .andConvertBy { cfg ->
-                cfg.entries.map { it.toMucClientConfiguration() }
+                cfg.entries
+                    .map { it.toMucClientConfiguration() }
+                    .filter { it.isComplete }
             }
         )
     }
