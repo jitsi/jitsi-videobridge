@@ -70,7 +70,7 @@ class VideoBitrateCalculator(
         when (event) {
             is SetMediaSourcesEvent -> {
                 mediaSourceDescs = event.mediaSourceDescs.copyOf()
-                logger.cdebug { "Video bitrate calculator got media sources:\n$mediaSourceDescs" }
+                logger.cdebug { "Video bitrate calculator got media sources:\n${mediaSourceDescs.joinToString()}" }
             }
         }
     }

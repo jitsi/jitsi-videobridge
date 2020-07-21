@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.jitsi.nlj.transform.node
 
 import org.jitsi.config.newConfigAttributes
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.FeatureToggleEvent
 import org.jitsi.nlj.Features
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.transform.node.ObserverNode
-import org.jitsi.nlj.transform.node.PcapWriter
 import org.jitsi.utils.config.SimpleProperty
 import org.jitsi.utils.logging2.Logger
 import java.lang.IllegalStateException

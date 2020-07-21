@@ -18,6 +18,7 @@ package org.jitsi.nlj.util
 
 import java.text.DecimalFormat
 import java.time.Duration
+import kotlin.math.sign
 
 /**
  * [Bandwidth] models a current bandwidth, represented as a rate
@@ -64,7 +65,7 @@ class Bandwidth(bps: Double) : Comparable<Bandwidth> {
     operator fun div(other: Bandwidth): Double =
         bps / other.bps
 
-    override fun compareTo(other: Bandwidth): Int = (bps - other.bps).toInt()
+    override fun compareTo(other: Bandwidth): Int = sign(bps - other.bps).toInt()
 
     override fun toString(): String {
         // To determine which unit we'll print in,
@@ -134,5 +135,5 @@ val Long.mbps: Bandwidth
  * Create a [Bandwidth] from a [DataSize] over a given time
  */
 fun DataSize.per(duration: Duration): Bandwidth {
-    return Bandwidth((this.bits / duration.seconds).toDouble())
+    return Bandwidth(this.bits / duration.seconds.toDouble())
 }

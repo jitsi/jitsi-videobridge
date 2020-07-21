@@ -52,11 +52,6 @@ class StdoutLogger(
             println("$name: $context $msg")
         }
     }
-    private fun log(level: Level, msgSupplier: () -> String) {
-        if (isLoggable(level)) {
-            println("$name: $context ${msgSupplier()}")
-        }
-    }
     private fun log(level: Level, msg: Any, throwable: Throwable) {
         log(level, "$msg $throwable")
     }

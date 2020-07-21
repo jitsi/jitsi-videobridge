@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj
 
-import ToggleablePcapWriter
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import org.jitsi.nlj.rtcp.CompoundRtcpParser
@@ -36,6 +35,7 @@ import org.jitsi.nlj.transform.node.PacketStreamStatsNode
 import org.jitsi.nlj.transform.node.RtpParser
 import org.jitsi.nlj.transform.node.SrtcpDecryptNode
 import org.jitsi.nlj.transform.node.SrtpDecryptNode
+import org.jitsi.nlj.transform.node.ToggleablePcapWriter
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
 import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.transform.node.incoming.DuplicateTermination
@@ -76,7 +76,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
      * participant it's receiving data from (NACK packets, for example)
      */
     private val rtcpSender: (RtcpPacket) -> Unit = {},
-    private val rtcpEventNotifier: RtcpEventNotifier,
+    rtcpEventNotifier: RtcpEventNotifier,
     /**
      * The executor this class will use for its primary work (i.e. critical path
      * packet processing).  This [RtpReceiver] will execute a blocking queue read

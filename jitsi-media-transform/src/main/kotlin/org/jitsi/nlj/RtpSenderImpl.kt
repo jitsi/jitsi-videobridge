@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj
 
-import ToggleablePcapWriter
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
@@ -35,6 +34,7 @@ import org.jitsi.nlj.transform.node.PacketCacher
 import org.jitsi.nlj.transform.node.PacketStreamStatsNode
 import org.jitsi.nlj.transform.node.SrtcpEncryptNode
 import org.jitsi.nlj.transform.node.SrtpEncryptNode
+import org.jitsi.nlj.transform.node.ToggleablePcapWriter
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.transform.node.outgoing.ProbingDataSender

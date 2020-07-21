@@ -244,7 +244,7 @@ public class SendSideBandwidthEstimation
         setBitrate(startBitrate);
     }
 
-    public void reset(long startBitrate)
+    public synchronized void reset(long startBitrate)
     {
         first_report_time_ms_ = -1;
         lost_packets_since_last_loss_update_Q8_ = 0;
@@ -566,7 +566,7 @@ public class SendSideBandwidthEstimation
         return statistics;
     }
 
-    public void onRttUpdate(Duration newRtt)
+    public synchronized void onRttUpdate(Duration newRtt)
     {
         this.rttMs = newRtt.toMillis();
     }

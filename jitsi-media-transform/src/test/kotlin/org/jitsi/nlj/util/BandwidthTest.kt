@@ -20,6 +20,7 @@ import io.kotlintest.matchers.beGreaterThan
 import io.kotlintest.seconds
 import io.kotlintest.should
 import io.kotlintest.shouldBe
+import io.kotlintest.shouldNotBe
 import io.kotlintest.shouldThrow
 import io.kotlintest.specs.ShouldSpec
 
@@ -76,14 +77,23 @@ class BandwidthTest : ShouldSpec() {
             }
         }
         "comparing bandwidths" {
-            should("work correctly") {
-                2.mbps should beGreaterThan(1.mbps)
-                1000.bps should beGreaterThan(999.bps)
+            "with integral bps" {
+                should("work correctly") {
+                    2.mbps should beGreaterThan(1.mbps)
+                    1000.bps should beGreaterThan(999.bps)
+                }
+            }
+            "with fractional bps" {
+                should("work correctly") {
+                    0.2.bps shouldNotBe 0.bps
+                    0.2.bps should beGreaterThan(0.1.bps)
+                }
             }
         }
         "creation from 'per'" {
             should("work correctly") {
                 1.megabytes.per(1.seconds) shouldBe 8.mbps
+                2.bits.per(5.seconds) shouldBe 0.4.bps
             }
         }
         "creation from a string" {

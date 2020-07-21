@@ -15,10 +15,11 @@
  */
 package org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator;
 
+import edu.umd.cs.findbugs.annotations.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging.*;
-import org.jitsi.utils.logging2.*;
-import org.jitsi.utils.logging2.Logger;
+
+import java.util.*;
 
 /**
  * webrtc/modules/remote_bitrate_estimator/overuse_detector.cc
@@ -26,33 +27,30 @@ import org.jitsi.utils.logging2.Logger;
  *
  * @author Lyubomir Marinov
  */
+@SuppressFBWarnings(
+        value = {"FE_FLOATING_POINT_EQUALITY", "DB_DUPLICATE_BRANCHES"},
+        justification = "We only compare timeOverUsing with the special value -1")
 class OveruseDetector
 {
-    private final Logger logger;
-
     private final TimeSeriesLogger timeSeriesLogger;
 
     private static final double kMaxAdaptOffsetMs = 15.0;
 
-    private static final int kOverUsingTimeThreshold = 100;
-
     private BandwidthUsage hypothesis = BandwidthUsage.kBwNormal;
 
-    private final boolean inExperiment = false; // AdaptiveThresholdExperimentIsEnabled()
+    private static final double kDown = 0D;
 
-    private double kDown = 0.00018D;
-
-    private double kUp = 0.01D;
+    private static final double kUp = 0D;
 
     private long lastUpdateMs = -1L;
 
     private int overuseCounter;
 
-    private double overusingTimeThreshold = 100D;
+    private static final double overusingTimeThreshold = 100D;
 
     private double prevOffset;
 
-    private double threshold = 12.5D;
+    private double threshold;
 
     private double timeOverUsing = -1D;
 
@@ -60,20 +58,14 @@ class OveruseDetector
 
     public OveruseDetector(
             OverUseDetectorOptions options,
-            @NotNull DiagnosticContext diagnosticContext,
-            @NotNull Logger parentLogger)
+            @NotNull DiagnosticContext diagnosticContext)
     {
-        if (options == null)
-            throw new NullPointerException("options");
+        Objects.requireNonNull(options, "options");
 
         threshold = options.initialThreshold;
-        logger = parentLogger.createChildLogger(getClass().getName());
         timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(getClass());
 
         this.diagnosticContext = diagnosticContext;
-
-        if (inExperiment)
-            initializeExperiment();
     }
 
     /**
@@ -175,24 +167,8 @@ class OveruseDetector
         return hypothesis;
     }
 
-    private void initializeExperiment()
-    {
-        double kUp = 0.0;
-        double kDown = 0.0;
-
-        overusingTimeThreshold = kOverUsingTimeThreshold;
-//        if (readExperimentConstants(kUp, kDown))
-        {
-            this.kUp = kUp;
-            this.kDown = kDown;
-        }
-    }
-
     private void updateThreshold(double modifiedOffset, long nowMs)
     {
-        if (!inExperiment)
-            return;
-
         if (lastUpdateMs == -1)
             lastUpdateMs = nowMs;
 

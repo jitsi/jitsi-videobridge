@@ -15,10 +15,12 @@
  */
 package org.jitsi.nlj
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.time.Duration
 import org.jitsi.rtp.Packet
 import java.util.Collections
 
+@SuppressFBWarnings("CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE")
 class EventTimeline(
     private val timeline: MutableList<Pair<String, Long>> = mutableListOf()
 ) : Iterable<Pair<String, Long>> {
@@ -76,6 +78,7 @@ class EventTimeline(
  * (as it is parsed into different types), the wrapping [PacketInfo] stays consistent
  * and allows for metadata to be passed along with a packet.
  */
+@SuppressFBWarnings("CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE")
 open class PacketInfo @JvmOverloads constructor(
     var packet: Packet,
     val timeline: EventTimeline = EventTimeline()
