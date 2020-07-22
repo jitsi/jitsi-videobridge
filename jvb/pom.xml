@@ -155,7 +155,7 @@
       <artifactId>jitsi-utils-kotlin</artifactId>
     </dependency>
     <dependency>
-        <groupId>${project.groupId}</groupId>
+        <groupId>com.github.jitsi</groupId>
         <artifactId>jitsi-metaconfig</artifactId>
     </dependency>
     <dependency>
