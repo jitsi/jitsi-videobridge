@@ -39,7 +39,6 @@ class Vp9AdaptiveSourceProjectionTest {
         ConcurrentHashMap(), CopyOnWriteArraySet())
 
     @Test
-    @Throws(RewriteException::class)
     fun singlePacketProjectionTest() {
         val diagnosticContext = DiagnosticContext()
         diagnosticContext["test"] = "singlePacketProjectionTest"
@@ -58,7 +57,6 @@ class Vp9AdaptiveSourceProjectionTest {
         Assert.assertEquals(0, packet.temporalLayerIndex.toLong())
     }
 
-    @Throws(RewriteException::class)
     private fun runInOrderTest(generator: Vp9PacketGenerator, targetTid: Int) {
         val diagnosticContext = DiagnosticContext()
         diagnosticContext["test"] = Thread.currentThread().stackTrace[2].methodName
@@ -105,7 +103,6 @@ class Vp9AdaptiveSourceProjectionTest {
     )
 
     /** Run an out-of-order test on a single stream, randomized order except for the first packet.  */
-    @Throws(RewriteException::class)
     private fun doRunOutOfOrderTest(generator: Vp9PacketGenerator, targetTid: Int, seed: Long) {
         val diagnosticContext = DiagnosticContext()
         diagnosticContext["test"] = Thread.currentThread().stackTrace[2].methodName
@@ -198,7 +195,6 @@ class Vp9AdaptiveSourceProjectionTest {
 
     /** Run multiple instances of out-of-order test on a single stream, with different
      * random seeds.  */
-    @Throws(RewriteException::class)
     private fun runOutOfOrderTest(generator: Vp9PacketGenerator, targetIndex: Int) {
         /* Seeds that have triggered problems in the past, plus a random one. */
         val seeds = longArrayOf(1576267371838L, 1578347926155L, 1579620018479L, System.currentTimeMillis())
@@ -215,70 +211,60 @@ class Vp9AdaptiveSourceProjectionTest {
     }
 
     @Test
-    @Throws(RewriteException::class)
     fun simpleProjectionTest() {
         val generator = Vp9PacketGenerator(1)
         runInOrderTest(generator, 2)
     }
 
     @Test
-    @Throws(RewriteException::class)
     fun filteredProjectionTest() {
         val generator = Vp9PacketGenerator(1)
         runInOrderTest(generator, 0)
     }
 
     @Test
-    @Throws(RewriteException::class)
     fun largerFrameProjectionTest() {
         val generator = Vp9PacketGenerator(3)
         runInOrderTest(generator, 2)
     }
 
     @Test
-    @Throws(RewriteException::class)
     fun largerFrameFilteredTest() {
         val generator = Vp9PacketGenerator(3)
         runInOrderTest(generator, 0)
     }
 
     @Test
-    @Throws(RewriteException::class)
     fun hugeFrameTest() {
         val generator = Vp9PacketGenerator(200)
         runInOrderTest(generator, 0)
     }
 
     //@Test
-    @Throws(RewriteException::class)
     fun simpleOutOfOrderTest() {
         val generator = Vp9PacketGenerator(1)
         runOutOfOrderTest(generator, 2)
     }
 
     //@Test
-    @Throws(RewriteException::class)
     fun largerOutOfOrderTest() {
         val generator = Vp9PacketGenerator(3)
         runOutOfOrderTest(generator, 2)
     }
 
     //@Test
-    @Throws(RewriteException::class)
     fun filteredOutOfOrderTest() {
         val generator = Vp9PacketGenerator(1)
         runOutOfOrderTest(generator, 0)
     }
 
     //@Test
-    @Throws(RewriteException::class)
     fun largerFilteredOutOfOrderTest() {
         val generator = Vp9PacketGenerator(3)
         runOutOfOrderTest(generator, 0)
     }
 
     //@Test
-    @Throws(RewriteException::class)
     fun slightlyDelayedKeyframeTest() {
         val generator = Vp9PacketGenerator(1)
         val diagnosticContext = DiagnosticContext()
@@ -305,7 +291,6 @@ class Vp9AdaptiveSourceProjectionTest {
     }
 
     //@Test
-    @Throws(RewriteException::class)
     fun veryDelayedKeyframeTest() {
         val generator = Vp9PacketGenerator(1)
         val diagnosticContext = DiagnosticContext()
@@ -337,7 +322,6 @@ class Vp9AdaptiveSourceProjectionTest {
     }
 
     //@Test
-    @Throws(RewriteException::class)
     fun delayedPartialKeyframeTest() {
         val generator = Vp9PacketGenerator(3)
         val diagnosticContext = DiagnosticContext()
@@ -369,7 +353,6 @@ class Vp9AdaptiveSourceProjectionTest {
     }
 
     @Test
-    @Throws(RewriteException::class)
     fun twoStreamsNoSwitchingTest() {
         val generator1 = Vp9PacketGenerator(3)
         val generator2 = Vp9PacketGenerator(3)
@@ -400,7 +383,6 @@ class Vp9AdaptiveSourceProjectionTest {
     }
 
  //   @Test
-    @Throws(RewriteException::class)
     fun twoStreamsSwitchingTest() {
         val generator1 = Vp9PacketGenerator(3)
         val generator2 = Vp9PacketGenerator(3)
@@ -527,7 +509,6 @@ class Vp9AdaptiveSourceProjectionTest {
     }
 
     @Test
-    @Throws(RewriteException::class)
     fun temporalLayerSwitchingTest() {
         val generator = Vp9PacketGenerator(3)
         val diagnosticContext = DiagnosticContext()
@@ -582,7 +563,6 @@ class Vp9AdaptiveSourceProjectionTest {
         }
     }
 
-    @Throws(RewriteException::class)
     private fun runLargeDropoutTest(generator: Vp9PacketGenerator, targetIndex: Int) {
         val diagnosticContext = DiagnosticContext()
         diagnosticContext["test"] = Thread.currentThread().stackTrace[2].methodName
@@ -671,28 +651,24 @@ class Vp9AdaptiveSourceProjectionTest {
     }
 
     //@Test
-    @Throws(RewriteException::class)
     fun largeDropoutTest() {
         val generator = Vp9PacketGenerator(1)
         runLargeDropoutTest(generator, 2)
     }
 
     //@Test
-    @Throws(RewriteException::class)
     fun filteredLargeDropoutTest() {
         val generator = Vp9PacketGenerator(1)
         runLargeDropoutTest(generator, 0)
     }
 
     //@Test
-    @Throws(RewriteException::class)
     fun largeFrameDropoutTest() {
         val generator = Vp9PacketGenerator(3)
         runLargeDropoutTest(generator, 2)
     }
 
     //@Test
-    @Throws(RewriteException::class)
     fun filteredLargeFrameDropoutTest() {
         val generator = Vp9PacketGenerator(3)
         runLargeDropoutTest(generator, 0)
