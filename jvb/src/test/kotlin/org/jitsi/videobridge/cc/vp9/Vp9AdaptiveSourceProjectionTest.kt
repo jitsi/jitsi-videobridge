@@ -51,10 +51,10 @@ class Vp9AdaptiveSourceProjectionTest {
         val targetIndex = getIndex(0, 0, 0)
         Assert.assertTrue(context.accept(packetInfo, packet.temporalLayerIndex, targetIndex))
         context.rewriteRtp(packetInfo)
-        Assert.assertEquals(10001, packet.sequenceNumber.toLong())
+        Assert.assertEquals(10001, packet.sequenceNumber)
         Assert.assertEquals(1003000, packet.timestamp)
-        Assert.assertEquals(0, packet.pictureId.toLong())
-        Assert.assertEquals(0, packet.temporalLayerIndex.toLong())
+        Assert.assertEquals(0, packet.pictureId)
+        Assert.assertEquals(0, packet.temporalLayerIndex)
     }
 
     private fun runInOrderTest(generator: Vp9PacketGenerator, targetTid: Int) {
@@ -80,7 +80,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 context.rewriteRtp(packetInfo)
                 Assert.assertEquals(expectedSeq, packet.sequenceNumber)
                 Assert.assertEquals(expectedTs, packet.timestamp)
-// TODO                Assert.assertEquals(expectedPicId.toLong(), packet.pictureId.toLong())
+// TODO                Assert.assertEquals(expectedPicId, packet.pictureId)
                 Assert.assertEquals(expectedTl0PicIdx, packet.TL0PICIDX)
                 expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
                 if (packet.isEndOfFrame) {
@@ -159,7 +159,7 @@ class Vp9AdaptiveSourceProjectionTest {
                     RtpUtils.getSequenceNumberDelta(origSeq, oldestValidSeq) < generator.packetsPerFrame
                 context.rewriteRtp(packetInfo)
                 Assert.assertEquals(RtpUtils.applyTimestampDelta(origTs, expectedTsOffset), packet.timestamp)
-                Assert.assertEquals(origTl0PicIdx.toLong(), packet.TL0PICIDX.toLong())
+                Assert.assertEquals(origTl0PicIdx, packet.TL0PICIDX)
                 val newSeq = packet.sequenceNumber
                 val extNewSeq = newSeqIdxTracker.update(newSeq)
                 val extOrigSeq = origSeqIdxTracker.update(origSeq)
@@ -373,7 +373,7 @@ class Vp9AdaptiveSourceProjectionTest {
             val packet2 = packetInfo2.packetAs<Vp9Packet>()
             Assert.assertFalse(context.accept(packetInfo2, getIndex(0, 0, packet2.temporalLayerIndex), targetIndex))
             context.rewriteRtp(packetInfo1)
-            Assert.assertEquals(expectedSeq.toLong(), packet1.sequenceNumber.toLong())
+            Assert.assertEquals(expectedSeq, packet1.sequenceNumber)
             Assert.assertEquals(expectedTs, packet1.timestamp)
             expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
             if (packet1.isEndOfFrame) {
@@ -415,10 +415,10 @@ class Vp9AdaptiveSourceProjectionTest {
             val packet2 = packetInfo2.packetAs<Vp9Packet>()
             Assert.assertFalse(context.accept(packetInfo2, getIndex(1, 0, packet2.temporalLayerIndex), targetIndex))
             Assert.assertFalse(context.rewriteRtcp(srPacket2))
-            Assert.assertEquals(expectedSeq.toLong(), packet1.sequenceNumber.toLong())
+            Assert.assertEquals(expectedSeq, packet1.sequenceNumber)
             Assert.assertEquals(expectedTs, packet1.timestamp)
-            Assert.assertEquals(expectedPicId.toLong(), packet1.pictureId.toLong())
-            Assert.assertEquals(expectedTl0PicIdx.toLong(), packet1.TL0PICIDX.toLong())
+            Assert.assertEquals(expectedPicId, packet1.pictureId)
+            Assert.assertEquals(expectedTl0PicIdx, packet1.TL0PICIDX)
             expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
             if (packet1.isEndOfFrame) {
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
@@ -447,10 +447,10 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertFalse(context.accept(packetInfo2, getIndex(1, 0, packet2.temporalLayerIndex),
                 targetIndex))
             Assert.assertFalse(context.rewriteRtcp(srPacket2))
-            Assert.assertEquals(expectedSeq.toLong(), packet1.sequenceNumber.toLong())
+            Assert.assertEquals(expectedSeq, packet1.sequenceNumber)
             Assert.assertEquals(expectedTs, packet1.timestamp)
-            Assert.assertEquals(expectedPicId.toLong(), packet1.pictureId.toLong())
-            Assert.assertEquals(expectedTl0PicIdx.toLong(), packet1.TL0PICIDX.toLong())
+            Assert.assertEquals(expectedPicId, packet1.pictureId)
+            Assert.assertEquals(expectedTl0PicIdx, packet1.TL0PICIDX)
             expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
             if (packet1.isEndOfFrame) {
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
@@ -496,10 +496,10 @@ class Vp9AdaptiveSourceProjectionTest {
                 /* pid id and tl0picidx will advance by 1 for the extra keyframe. */
                 expectedPicId = applyExtendedPictureIdDelta(expectedPicId, 1)
             }
-            Assert.assertEquals(expectedSeq.toLong(), packet2.sequenceNumber.toLong())
+            Assert.assertEquals(expectedSeq, packet2.sequenceNumber)
             Assert.assertEquals(expectedTs, packet2.timestamp)
-            Assert.assertEquals(expectedPicId.toLong(), packet2.pictureId.toLong())
-            Assert.assertEquals(expectedTl0PicIdx.toLong(), packet2.TL0PICIDX.toLong())
+            Assert.assertEquals(expectedPicId, packet2.pictureId)
+            Assert.assertEquals(expectedTl0PicIdx, packet2.TL0PICIDX)
             expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
             if (packet2.isEndOfFrame) {
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
@@ -584,10 +584,10 @@ class Vp9AdaptiveSourceProjectionTest {
             if (packet.temporalLayerIndex <= targetIndex) {
                 Assert.assertTrue(accepted)
                 context.rewriteRtp(packetInfo)
-                Assert.assertEquals(expectedSeq.toLong(), packet.sequenceNumber.toLong())
+                Assert.assertEquals(expectedSeq, packet.sequenceNumber)
                 Assert.assertEquals(expectedTs, packet.timestamp)
-                Assert.assertEquals(expectedPicId.toLong(), packet.pictureId.toLong())
-                Assert.assertEquals(expectedTl0PicIdx.toLong(), packet.TL0PICIDX.toLong())
+                Assert.assertEquals(expectedPicId, packet.pictureId)
+                Assert.assertEquals(expectedTl0PicIdx, packet.TL0PICIDX)
                 expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
                 if (packet.isEndOfFrame) {
                     expectedPicId = applyExtendedPictureIdDelta(expectedPicId, 1)
@@ -631,10 +631,10 @@ class Vp9AdaptiveSourceProjectionTest {
                 if (packet.temporalLayerIndex <= targetIndex) {
                     Assert.assertTrue(accepted)
                     context.rewriteRtp(packetInfo)
-                    Assert.assertEquals(expectedSeq.toLong(), packet.sequenceNumber.toLong())
+                    Assert.assertEquals(expectedSeq, packet.sequenceNumber)
                     Assert.assertEquals(expectedTs, packet.timestamp)
-                    Assert.assertEquals(expectedPicId.toLong(), packet.pictureId.toLong())
-                    Assert.assertEquals(expectedTl0PicIdx.toLong(), packet.TL0PICIDX.toLong())
+                    Assert.assertEquals(expectedPicId, packet.pictureId)
+                    Assert.assertEquals(expectedTl0PicIdx, packet.TL0PICIDX)
                     expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
                     if (packet.isEndOfFrame) {
                         expectedPicId = applyExtendedPictureIdDelta(expectedPicId, 1)
