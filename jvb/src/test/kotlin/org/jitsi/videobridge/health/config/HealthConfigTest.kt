@@ -22,8 +22,6 @@ import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.config.NewJitsiConfig
 import org.jitsi.metaconfig.MapConfigSource
-import org.jitsi.metaconfig.MetaconfigSettings
-import org.jitsi.metaconfig.StdOutLogger
 import java.time.Duration
 
 class HealthConfigTest : ShouldSpec() {
@@ -36,7 +34,6 @@ class HealthConfigTest : ShouldSpec() {
         super.beforeSpec(spec)
         NewJitsiConfig.legacyConfig = legacyConfig
         NewJitsiConfig.newConfig = newConfig
-        MetaconfigSettings.logger = StdOutLogger
     }
 
     override fun afterSpec(spec: Spec) {
