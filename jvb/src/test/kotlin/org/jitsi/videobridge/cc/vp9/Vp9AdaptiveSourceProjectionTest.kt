@@ -26,7 +26,6 @@ import org.jitsi_modified.impl.neomedia.codec.video.vp9.DePacketizer
 import org.junit.Assert
 import org.junit.Test
 import java.lang.IllegalArgumentException
-import java.lang.IllegalStateException
 import java.util.Collections
 import java.util.Random
 import java.util.TreeMap
@@ -602,7 +601,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 context.rewriteRtp(packetInfo)
                 Assert.assertEquals(expectedSeq, packet.sequenceNumber)
                 Assert.assertEquals(expectedTs, packet.timestamp)
- // TODO              Assert.assertEquals(expectedPicId, packet.pictureId)
+                Assert.assertEquals(expectedPicId, packet.pictureId)
                 Assert.assertEquals(expectedTl0PicIdx, packet.TL0PICIDX)
                 expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
                 if (packet.isEndOfFrame) {
