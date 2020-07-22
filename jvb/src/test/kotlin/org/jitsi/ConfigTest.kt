@@ -16,33 +16,43 @@
 
 package org.jitsi
 
-import io.kotlintest.IsolationMode
+import com.typesafe.config.ConfigFactory
 import io.kotlintest.Spec
 import io.kotlintest.specs.ShouldSpec
+import org.jitsi.config.AbstractReadOnlyConfigurationService
+import org.jitsi.config.ConfigurationServiceConfigSource
 import org.jitsi.config.NewJitsiConfig
-import org.jitsi.metaconfig.MapConfigSource
-import org.jitsi.metaconfig.MetaconfigSettings
-import org.jitsi.metaconfig.StdOutLogger
+import org.jitsi.config.NewTypesafeConfigSource
+import java.io.StringReader
+import java.util.Properties
 
 /**
  * A helper class for testing configuration properties
  */
 abstract class ConfigTest : ShouldSpec() {
-    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
-
-    protected val legacyConfig = MapConfigSource("legacy")
-    protected val newConfig = MapConfigSource("new")
+    private val legacyService = TestReadOnlyConfigurationService()
+    private val legacyConfig = ConfigurationServiceConfigSource("legacy", legacyService)
 
     override fun beforeSpec(spec: Spec) {
         super.beforeSpec(spec)
         NewJitsiConfig.legacyConfig = legacyConfig
-        NewJitsiConfig.newConfig = newConfig
-        MetaconfigSettings.logger = StdOutLogger
     }
 
-    override fun afterSpec(spec: Spec) {
-        super.afterSpec(spec)
-        NewJitsiConfig.legacyConfig = NewJitsiConfig.SipCommunicatorPropsConfigSource
-        NewJitsiConfig.newConfig = NewJitsiConfig.TypesafeConfig
+    fun withLegacyConfig(props: String) {
+        legacyService.props.load(StringReader(props))
     }
+
+    fun withNewConfig(config: String) {
+        NewJitsiConfig.newConfig = NewTypesafeConfigSource("new", ConfigFactory.parseString(config))
+    }
+}
+
+private class TestReadOnlyConfigurationService(
+    override var properties: Properties = Properties()
+) : AbstractReadOnlyConfigurationService() {
+
+    val props: Properties
+        get() = properties
+
+    override fun reloadConfiguration() {}
 }
