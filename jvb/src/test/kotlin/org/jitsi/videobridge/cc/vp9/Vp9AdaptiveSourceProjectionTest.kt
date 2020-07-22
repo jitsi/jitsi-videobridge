@@ -240,25 +240,25 @@ class Vp9AdaptiveSourceProjectionTest {
         runInOrderTest(generator, 0)
     }
 
-    //@Test
+    @Test
     fun simpleOutOfOrderTest() {
         val generator = Vp9PacketGenerator(1)
         runOutOfOrderTest(generator, 2)
     }
 
-    //@Test
+    @Test
     fun largerOutOfOrderTest() {
         val generator = Vp9PacketGenerator(3)
         runOutOfOrderTest(generator, 2)
     }
 
-    //@Test
+    @Test
     fun filteredOutOfOrderTest() {
         val generator = Vp9PacketGenerator(1)
         runOutOfOrderTest(generator, 0)
     }
 
-    //@Test
+    @Test
     fun largerFilteredOutOfOrderTest() {
         val generator = Vp9PacketGenerator(3)
         runOutOfOrderTest(generator, 0)
@@ -650,25 +650,25 @@ class Vp9AdaptiveSourceProjectionTest {
         }
     }
 
-    //@Test
+    @Test
     fun largeDropoutTest() {
         val generator = Vp9PacketGenerator(1)
         runLargeDropoutTest(generator, 2)
     }
 
-    //@Test
+    @Test
     fun filteredLargeDropoutTest() {
         val generator = Vp9PacketGenerator(1)
         runLargeDropoutTest(generator, 0)
     }
 
-    //@Test
+    @Test
     fun largeFrameDropoutTest() {
         val generator = Vp9PacketGenerator(3)
         runLargeDropoutTest(generator, 2)
     }
 
-    //@Test
+    @Test
     fun filteredLargeFrameDropoutTest() {
         val generator = Vp9PacketGenerator(3)
         runLargeDropoutTest(generator, 0)
