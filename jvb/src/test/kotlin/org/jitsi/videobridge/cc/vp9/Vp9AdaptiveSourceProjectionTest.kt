@@ -382,7 +382,7 @@ class Vp9AdaptiveSourceProjectionTest {
         }
     }
 
- //   @Test
+    @Test
     fun twoStreamsSwitchingTest() {
         val generator1 = Vp9PacketGenerator(3)
         val generator2 = Vp9PacketGenerator(3)
@@ -743,7 +743,7 @@ class Vp9AdaptiveSourceProjectionTest {
             DePacketizer.VP9PayloadDescriptor.setInterPicturePredicted(rtpPacket.buffer,
                 rtpPacket.payloadOffset, !keyframe /* TODO */)
             DePacketizer.VP9PayloadDescriptor.setUpperLevelReference(rtpPacket.buffer,
-                rtpPacket.payloadLength, false /* TODO */)
+                rtpPacket.payloadOffset, false /* TODO */)
 
             Assert.assertTrue(DePacketizer.VP9PayloadDescriptor.setLayerIndices(rtpPacket.buffer,
                 rtpPacket.payloadOffset, rtpPacket.payloadLength, 0 /* TODO */, tid, tid > 0, false /* TODO */))
