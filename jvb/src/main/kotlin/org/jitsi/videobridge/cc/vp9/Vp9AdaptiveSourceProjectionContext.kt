@@ -191,7 +191,7 @@ class Vp9AdaptiveSourceProjectionContext(
     private fun frameIsNewSsrc(frame: Vp9Frame): Boolean {
         val lastFrame = lastVp9FrameProjection.vp9Frame
 
-        return lastFrame != null && frame.matchesSSRC(lastFrame)
+        return lastFrame == null || !frame.matchesSSRC(lastFrame)
     }
 
     /**
