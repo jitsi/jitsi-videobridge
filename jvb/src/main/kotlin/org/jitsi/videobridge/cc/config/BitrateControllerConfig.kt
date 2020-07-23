@@ -16,124 +16,94 @@
 
 package org.jitsi.videobridge.cc.config
 
-import org.jitsi.config.LegacyFallbackConfigProperty
-import org.jitsi.config.newConfigAttributes
-import org.jitsi.utils.config.SimpleProperty
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
 
 class BitrateControllerConfig {
-    class Config {
-        companion object {
-            /**
-             * The property that holds the bandwidth estimation threshold.
-             *
-             * In order to limit the resolution changes due to bandwidth changes we
-             * react to bandwidth changes greater bweChangeThresholdPct / 100 of the
-             * last bandwidth estimation.
-             */
-            class BweChangeThresholdPercentProperty : LegacyFallbackConfigProperty<Int>(
-                Int::class,
-                readOnce = true,
-                legacyName = "org.jitsi.videobridge.BWE_CHANGE_THRESHOLD_PCT",
-                newName = "videobridge.cc.bwe-change-threshold-pct"
-            )
-            private val bweChangeThresholdPctProp = BweChangeThresholdPercentProperty()
-
-            @JvmStatic
-            fun bweChangeThresholdPct() = bweChangeThresholdPctProp.value
-
-            /**
-             * The property for the max resolution to allocate for the thumbnails.
-             */
-            class ThumbnailMaxHeightPixelsProperty : LegacyFallbackConfigProperty<Int>(
-                Int::class,
-                readOnce = true,
-                legacyName = "org.jitsi.videobridge.THUMBNAIL_MAX_HEIGHT",
-                newName = "videobridge.cc.thumbnail-max-height-px"
-            )
-
-            private val thumbnailMaxHeightPxProp = ThumbnailMaxHeightPixelsProperty()
-
-            @JvmStatic
-            fun thumbnailMaxHeightPx() = thumbnailMaxHeightPxProp.value
-
-            /**
-             * The default preferred resolution to allocate for the onstage participant,
-             * before allocating bandwidth for the thumbnails.
-             */
-            class OnstagePreferredHeightPixelsProperty : LegacyFallbackConfigProperty<Int>(
-                Int::class,
-                readOnce = true,
-                legacyName = "org.jitsi.videobridge.ONSTAGE_PREFERRED_HEIGHT",
-                newName = "videobridge.cc.onstage-preferred-height-px"
-            )
-            private val onstagePreferredHeightPxProp = OnstagePreferredHeightPixelsProperty()
-
-            @JvmStatic
-            fun onstagePreferredHeightPx() = onstagePreferredHeightPxProp.value
-
-            /**
-             * The preferred frame rate to allocate for the onstage participant.
-             */
-            class OnstagePreferredFramerateProperty : LegacyFallbackConfigProperty<Double>(
-                Double::class,
-                readOnce = true,
-                legacyName = "org.jitsi.videobridge.ONSTAGE_PREFERRED_FRAME_RATE",
-                newName = "videobridge.cc.onstage-preferred-framerate"
-            )
-            private val onstagePreferredFramerate = OnstagePreferredFramerateProperty()
-
-            @JvmStatic
-            fun onstagePreferredFramerate() = onstagePreferredFramerate.value
-
-            /**
-             * Whether or not we're allowed to suspend the video of the
-             * on-stage participant.
-             */
-            class EnableOnstageVideoSuspendProperty : LegacyFallbackConfigProperty<Boolean>(
-                Boolean::class,
-                readOnce = true,
-                legacyName = "org.jitsi.videobridge.ENABLE_ONSTAGE_VIDEO_SUSPEND",
-                newName = "videobridge.cc.enable-onstage-video-suspend"
-            )
-            private val enableOnstageVideoSuspendProp = EnableOnstageVideoSuspendProperty()
-
-            @JvmStatic
-            fun enableOnstageVideoSuspend() = enableOnstageVideoSuspendProp.value
-
-            /**
-             * Whether or not we should trust the bandwidth
-             * estimations. If this is se to false, then we assume a bandwidth
-             * estimation of Long.MAX_VALUE.
-             */
-            class TrustBweProperty : LegacyFallbackConfigProperty<Boolean>(
-                Boolean::class,
-                readOnce = true,
-                legacyName = "org.jitsi.videobridge.TRUST_BWE",
-                newName = "videobridge.cc.trust-bwe"
-            )
-
-            private val trustBweProp = TrustBweProperty()
-
-            @JvmStatic
-            fun trustBwe() = trustBweProp.value
-
-            /**
-             * The property for the max resolution to allocate for the onstage
-             * participant.
-             */
-            class OnstageIdealHeightPixelsProperty : SimpleProperty<Int>(
-                    newConfigAttributes {
-                        readOnce()
-                        name("videobridge.cc.onstage-ideal-height-px")
-                    }
-            )
-
-            private val onstageIdealHeightPxProp = OnstageIdealHeightPixelsProperty()
-
-            @JvmStatic
-            fun onstageIdealHeightPx(): Int {
-                return onstageIdealHeightPxProp.value
-            }
+    companion object {
+        /**
+         * The bandwidth estimation threshold.
+         *
+         * In order to limit the resolution changes due to bandwidth changes we
+         * react to bandwidth changes greater bweChangeThresholdPct / 100 of the
+         * last bandwidth estimation.
+         */
+        private val bweChangeThresholdPct: Int by config {
+            retrieve("org.jitsi.videobridge.BWE_CHANGE_THRESHOLD_PCT".from(JitsiConfig.legacyConfig))
+            retrieve("videobridge.cc.bwe-change-threshold-pct".from(JitsiConfig.newConfig))
         }
+
+        @JvmStatic
+        fun bweChangeThresholdPct() = bweChangeThresholdPct
+
+        /**
+         * The max resolution to allocate for the thumbnails.
+         */
+        private val thumbnailMaxHeightPx: Int by config {
+            retrieve("org.jitsi.videobridge.THUMBNAIL_MAX_HEIGHT".from(JitsiConfig.legacyConfig))
+            retrieve("videobridge.cc.thumbnail-max-height-px".from(JitsiConfig.newConfig))
+        }
+
+        @JvmStatic
+        fun thumbnailMaxHeightPx() = thumbnailMaxHeightPx
+
+        /**
+         * The default preferred resolution to allocate for the onstage participant,
+         * before allocating bandwidth for the thumbnails.
+         */
+        private val onstagePreferredHeightPx: Int by config {
+            retrieve("org.jitsi.videobridge.ONSTAGE_PREFERRED_HEIGHT".from(JitsiConfig.legacyConfig))
+            retrieve("videobridge.cc.onstage-preferred-height-px".from(JitsiConfig.newConfig))
+        }
+
+        @JvmStatic
+        fun onstagePreferredHeightPx() = onstagePreferredHeightPx
+
+        /**
+         * The preferred frame rate to allocate for the onstage participant.
+         */
+        private val onstagePreferredFramerate: Double by config {
+            retrieve("org.jitsi.videobridge.ONSTAGE_PREFERRED_FRAME_RATE".from(JitsiConfig.legacyConfig))
+            retrieve("videobridge.cc.onstage-preferred-framerate".from(JitsiConfig.newConfig))
+        }
+
+        @JvmStatic
+        fun onstagePreferredFramerate() = onstagePreferredFramerate
+
+        /**
+         * Whether or not we're allowed to suspend the video of the
+         * on-stage participant.
+         */
+        private val enableOnstageVideoSuspend: Boolean by config {
+            retrieve("org.jitsi.videobridge.ENABLE_ONSTAGE_VIDEO_SUSPEND".from(JitsiConfig.legacyConfig))
+            retrieve("videobridge.cc.enable-onstage-video-suspend".from(JitsiConfig.newConfig))
+        }
+
+        @JvmStatic
+        fun enableOnstageVideoSuspend(): Boolean = enableOnstageVideoSuspend
+
+        /**
+         * Whether or not we should trust the bandwidth
+         * estimations. If this is se to false, then we assume a bandwidth
+         * estimation of Long.MAX_VALUE.
+         */
+        private val trustBwe: Boolean by config {
+            retrieve("org.jitsi.videobridge.TRUST_BWE".from(JitsiConfig.legacyConfig))
+            retrieve("videobridge.cc.trust-bwe".from(JitsiConfig.newConfig))
+        }
+
+        @JvmStatic
+        fun trustBwe(): Boolean = trustBwe
+
+        /**
+         * The property for the max resolution to allocate for the onstage
+         * participant.
+         */
+        private val onstageIdealHeightPx: Int by
+            config("videobridge.cc.onstage-ideal-height-px".from(JitsiConfig.newConfig))
+
+        @JvmStatic
+        fun onstageIdealHeightPx() = onstageIdealHeightPx
     }
 }
