@@ -102,7 +102,7 @@ class VideoConstraintsCompatibility
         {
             final VideoConstraints pinnedEndpointConstraints
                 = new VideoConstraints(Math.min(
-                BitrateControllerConfig.Config.thumbnailMaxHeightPx(), maxFrameHeightCopy));
+                BitrateControllerConfig.thumbnailMaxHeightPx(), maxFrameHeightCopy));
 
             Map<String, VideoConstraints> pinnedVideoConstraintsMap
                 = pinnedEndpointsCopy
@@ -142,16 +142,16 @@ class VideoConstraintsCompatibility
                 // nor the preferred frame-rate because we want even even
                 // distribution of bandwidth among all the tiles to avoid ninjas.
                 selectedEndpointConstraints = new VideoConstraints(
-                    Math.min(BitrateControllerConfig.Config.onstageIdealHeightPx(),
+                    Math.min(BitrateControllerConfig.onstageIdealHeightPx(),
                         maxFrameHeightCopy));
             }
             else
             {
                 selectedEndpointConstraints = new VideoConstraints(
-                    Math.min(BitrateControllerConfig.Config.onstageIdealHeightPx(),
+                    Math.min(BitrateControllerConfig.onstageIdealHeightPx(),
                         maxFrameHeightCopy),
-                    BitrateControllerConfig.Config.onstagePreferredHeightPx(),
-                    BitrateControllerConfig.Config.onstagePreferredFramerate());
+                    BitrateControllerConfig.onstagePreferredHeightPx(),
+                    BitrateControllerConfig.onstagePreferredFramerate());
             }
 
             Map<String, VideoConstraints> selectedVideoConstraintsMap
