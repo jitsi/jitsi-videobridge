@@ -294,7 +294,7 @@ public class Endpoint
             getClass().getSimpleName() + "-outgoing-packet-queue",
             TaskPools.IO_POOL,
             this::doSendSrtp,
-            TransportConfig.Config.queueSize()
+            TransportConfig.getQueueSize()
         );
         outgoingSrtpPacketQueue.setErrorHandler(queueErrorCounter);
 
