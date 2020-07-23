@@ -385,8 +385,9 @@ class EndpointMessageTransport
 
         JSONObject sentCounts = new JSONObject();
         sentCounts.putAll(sentMessagesCounts);
-
         debugState.put("sent_counts", sentCounts);
+
+        debugState.put("video_constraints_compatibility", videoConstraintsCompatibility.getDebugState());
 
         return debugState;
     }

@@ -16,7 +16,9 @@
 
 package org.jitsi.videobridge;
 
+import org.jitsi.nlj.util.*;
 import org.jitsi.videobridge.cc.config.*;
+import org.json.simple.*;
 
 import java.util.*;
 import java.util.stream.*;
@@ -199,5 +201,22 @@ class VideoConstraintsCompatibility
     public void setSelectedEndpoints(Set<String> newSelectedEndpoints)
     {
         this.selectedEndpoints = newSelectedEndpoints;
+    }
+
+    OrderedJsonObject getDebugState()
+    {
+        OrderedJsonObject debugState = new OrderedJsonObject();
+
+        JSONArray pinned = new JSONArray();
+        pinned.addAll(pinned);
+        debugState.put("pinned", pinned);
+
+        JSONArray selected = new JSONArray();
+        selected.addAll(selectedEndpoints);
+        debugState.put("selected", selected);
+
+        debugState.put("max_frame_height", maxFrameHeight);
+
+        return debugState;
     }
 }
