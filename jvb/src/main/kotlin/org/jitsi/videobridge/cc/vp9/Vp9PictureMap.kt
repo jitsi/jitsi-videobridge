@@ -233,7 +233,7 @@ constructor(size: Int) : ArrayCache<Vp9Picture>(
             return null
         }
         val index = indexTracker.interpret(frame.pictureId)
-        if (index >= lastIndex) {
+        if (index > lastIndex) {
             return null
         }
         val searchStartIndex = Integer.max(index, Integer.max(lastIndex - size + 1, firstIndex))

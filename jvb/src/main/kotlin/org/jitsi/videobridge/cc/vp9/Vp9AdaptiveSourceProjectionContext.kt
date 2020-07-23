@@ -388,17 +388,19 @@ class Vp9AdaptiveSourceProjectionContext(
         val tsGap = getTimestampDiff(frame.timestamp, refFrame.timestamp)
         val tl0Gap = getTl0PicIdxDelta(frame.tl0PICIDX, refFrame.tl0PICIDX)
         val picGap = getExtendedPictureIdDelta(frame.pictureId, refFrame.pictureId)
+        val layerGap = frame.spatialLayer - refFrame.spatialLayer
         var seqGap = 0
 
         var f1 = refFrame
         var f2: Vp9Frame?
         val refSeq: Int
-        if (picGap > 0) {
+        if (picGap > 0 || (picGap == 0 && layerGap > 0)) {
             do {
                 f2 = nextFrame(f1)
                 checkNotNull(f2) {
-                    "No next frame found after frame with picId ${f1.pictureId}, " +
-                        "even though refFrame ${refFrame.pictureId} is before frame ${frame.pictureId}!"
+                    "No next frame found after frame with picId ${f1.pictureId} layer ${f1.spatialLayer}, " +
+                        "even though refFrame ${refFrame.pictureId}/${refFrame.spatialLayer} is before " +
+                        "frame ${frame.pictureId}/${frame.spatialLayer}!"
                 }
                 seqGap += seqGap(f1, f2)
                 f1 = f2
@@ -408,8 +410,9 @@ class Vp9AdaptiveSourceProjectionContext(
             do {
                 f2 = prevFrame(f1)
                 checkNotNull(f2) {
-                    "No previous frame found before frame with picId ${f1.pictureId}, " +
-                        "even though refFrame ${refFrame.pictureId} is after frame ${frame.pictureId}!"
+                    "No previous frame found before frame with picId ${f1.pictureId} layer ${f1.spatialLayer}, " +
+                        "even though refFrame ${refFrame.pictureId}/${refFrame.spatialLayer} is after " +
+                        "frame ${frame.pictureId}/${frame.spatialLayer}!"
                 }
                 seqGap += -seqGap(f2, f1)
                 f1 = f2
