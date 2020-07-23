@@ -16,7 +16,7 @@
 
 package org.jitsi.videobridge
 
-import org.jitsi.config.NewJitsiConfig
+import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.optionalconfig
 import java.util.regex.Pattern
@@ -25,7 +25,7 @@ import java.util.regex.PatternSyntaxException
 class VideobridgeConfig {
     val shutdownSourcePattern: Pattern? by optionalconfig {
         retrieve("org.jitsi.videobridge.shutdown.ALLOWED_SOURCE_REGEXP"
-            .from(NewJitsiConfig.legacyConfig)
+            .from(JitsiConfig.legacyConfig)
             .asType<String>()
             .andConvertBy {
                 if (it.isNotBlank()) {

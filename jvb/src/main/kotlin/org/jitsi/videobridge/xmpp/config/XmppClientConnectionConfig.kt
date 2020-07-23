@@ -18,7 +18,7 @@ package org.jitsi.videobridge.xmpp.config
 
 import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValue
-import org.jitsi.config.NewJitsiConfig
+import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.config
 import org.jitsi.xmpp.mucclient.MucClientConfiguration
@@ -26,7 +26,7 @@ import org.jitsi.xmpp.mucclient.MucClientConfiguration
 class XmppClientConnectionConfig {
     val clientConfigs: List<MucClientConfiguration> by config {
         retrieve("org.jitsi.videobridge.xmpp.user."
-            .from(NewJitsiConfig.legacyConfig)
+            .from(JitsiConfig.legacyConfig)
             .asType<Map<String, String>>()
             .andConvertBy { propsMap ->
                 MucClientConfiguration.loadFromMap(propsMap, "org.jitsi.videobridge.xmpp.user.", true)
@@ -34,7 +34,7 @@ class XmppClientConnectionConfig {
                     .takeIf { it.isNotEmpty() } ?: throw ConfigException.UnableToRetrieve.NotFound("no configs found")
             }
         )
-        retrieve("videobridge.apis.xmpp-client.configs".from(NewJitsiConfig.newConfig)
+        retrieve("videobridge.apis.xmpp-client.configs".from(JitsiConfig.newConfig)
             .asType<ConfigObject>()
             .andConvertBy { cfg ->
                 cfg.entries

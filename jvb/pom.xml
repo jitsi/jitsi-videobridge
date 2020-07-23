@@ -155,7 +155,7 @@
       <artifactId>jitsi-utils-kotlin</artifactId>
     </dependency>
     <dependency>
-        <groupId>com.github.jitsi</groupId>
+        <groupId>${project.groupId}</groupId>
         <artifactId>jitsi-metaconfig</artifactId>
     </dependency>
     <dependency>
@@ -288,7 +288,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.jitsi</groupId>
+        <groupId>${project.groupId}</groupId>
       <artifactId>jicoco-test-kotlin</artifactId>
       <version>${jicoco.version}</version>
       <scope>test</scope>

@@ -40,7 +40,7 @@ public class ConfigurationActivator
     {
         bundleContext.registerService(
             ConfigurationService.class.getName(),
-            NewJitsiConfig.getSipCommunicatorProps(),
+            JitsiConfig.getSipCommunicatorProps(),
             null);
         logger.info("Registered the legacy ConfigurationService in OSGi.");
     }

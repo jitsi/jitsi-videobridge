@@ -16,26 +16,26 @@
 
 package org.jitsi.videobridge
 
-import org.jitsi.config.NewJitsiConfig
+import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import java.time.Duration
 
 class EndpointConnectionStatusConfig {
     val firstTransferTimeout: Duration by config {
         retrieve("org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT"
-                .from(NewJitsiConfig.legacyConfig)
+                .from(JitsiConfig.legacyConfig)
                 .asType<Long>()
                 .andConvertBy(Duration::ofMillis)
         )
-        retrieve("videobridge.ep-connection-status.first-transfer-timeout".from(NewJitsiConfig.newConfig))
+        retrieve("videobridge.ep-connection-status.first-transfer-timeout".from(JitsiConfig.newConfig))
     }
 
     val maxInactivityLimit: Duration by config {
         retrieve("org.jitsi.videobridge.EndpointConnectionStatus.MAX_INACTIVITY_LIMIT"
-                .from(NewJitsiConfig.legacyConfig)
+                .from(JitsiConfig.legacyConfig)
                 .asType<Long>()
                 .andConvertBy(Duration::ofMillis)
         )
-        retrieve("videobridge.ep-connection-status.max-inactivity-limit".from(NewJitsiConfig.newConfig))
+        retrieve("videobridge.ep-connection-status.max-inactivity-limit".from(JitsiConfig.newConfig))
     }
 }

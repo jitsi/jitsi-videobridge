@@ -16,29 +16,29 @@
 
 package org.jitsi.videobridge.health.config
 
-import org.jitsi.config.NewJitsiConfig
+import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import java.time.Duration
 
 class HealthConfig {
     val interval: Duration by config {
-        retrieve("org.jitsi.videobridge.health.INTERVAL".from(NewJitsiConfig.legacyConfig)
+        retrieve("org.jitsi.videobridge.health.INTERVAL".from(JitsiConfig.legacyConfig)
                 .asType<Long>().andConvertBy(Duration::ofMillis)
         )
-        retrieve("videobridge.health.interval".from(NewJitsiConfig.newConfig))
+        retrieve("videobridge.health.interval".from(JitsiConfig.newConfig))
     }
 
     val timeout: Duration by config {
-        retrieve("org.jitsi.videobridge.health.TIMEOUT".from(NewJitsiConfig.legacyConfig)
+        retrieve("org.jitsi.videobridge.health.TIMEOUT".from(JitsiConfig.legacyConfig)
                 .asType<Long>().andConvertBy(Duration::ofMillis))
-        retrieve("videobridge.health.timeout".from(NewJitsiConfig.newConfig))
+        retrieve("videobridge.health.timeout".from(JitsiConfig.newConfig))
     }
 
-    val maxCheckDuration: Duration by config("videobridge.health.max-check-duration".from(NewJitsiConfig.newConfig))
+    val maxCheckDuration: Duration by config("videobridge.health.max-check-duration".from(JitsiConfig.newConfig))
 
     val stickyFailures: Boolean by config {
-        retrieve("org.jitsi.videobridge.health.STICKY_FAILURES".from(NewJitsiConfig.legacyConfig))
-        retrieve("videobridge.health.sticky-failures".from(NewJitsiConfig.newConfig))
+        retrieve("org.jitsi.videobridge.health.STICKY_FAILURES".from(JitsiConfig.legacyConfig))
+        retrieve("videobridge.health.sticky-failures".from(JitsiConfig.newConfig))
     }
 }

@@ -19,7 +19,7 @@ package org.jitsi.videobridge.stats.config
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigList
 import com.typesafe.config.ConfigObject
-import org.jitsi.config.NewJitsiConfig
+import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.config
 import org.jitsi.videobridge.stats.CallStatsIOTransport
@@ -32,8 +32,8 @@ class NewStatsManagerBundleActivatorConfig {
      * Whether or not the stats are enabled
      */
     val enabled: Boolean by config {
-        retrieve("org.jitsi.videobridge.ENABLE_STATISTICS".from(NewJitsiConfig.legacyConfig))
-        retrieve("videobridge.stats.enabled".from(NewJitsiConfig.newConfig))
+        retrieve("org.jitsi.videobridge.ENABLE_STATISTICS".from(JitsiConfig.legacyConfig))
+        retrieve("videobridge.stats.enabled".from(JitsiConfig.newConfig))
     }
 
     /**
@@ -42,11 +42,11 @@ class NewStatsManagerBundleActivatorConfig {
     val interval: Duration by config {
         onlyIf("Stats are enabled", ::enabled) {
             retrieve("org.jitsi.videobridge.STATISTICS_INTERVAL"
-                .from(NewJitsiConfig.legacyConfig)
+                .from(JitsiConfig.legacyConfig)
                 .asType<Long>()
                 .andConvertBy(Duration::ofMillis)
             )
-            retrieve("videobridge.stats.interval".from(NewJitsiConfig.newConfig))
+            retrieve("videobridge.stats.interval".from(JitsiConfig.newConfig))
         }
     }
 
@@ -60,7 +60,7 @@ class NewStatsManagerBundleActivatorConfig {
     val transportConfigs: List<NewStatsTransportConfig> by config {
         onlyIf("Stats transports are enabled", ::enabled) {
             retrieve("org.jitsi.videobridge."
-                .from(NewJitsiConfig.legacyConfig)
+                .from(JitsiConfig.legacyConfig)
                 .asType<Map<String, String>>()
                 .andConvertBy {
                     if ("org.jitsi.videobridge.STATISTICS_TRANSPORT" in it) {
@@ -71,7 +71,7 @@ class NewStatsManagerBundleActivatorConfig {
                 }
             )
             retrieve("videobridge.stats"
-                .from(NewJitsiConfig.newConfig)
+                .from(JitsiConfig.newConfig)
                 .asType<ConfigObject>()
                 .andConvertBy { cfg ->
                     val transports = cfg["transports"]

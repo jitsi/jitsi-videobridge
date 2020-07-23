@@ -62,7 +62,7 @@
                 <version>${jitsi.utils.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.github.jitsi</groupId>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-metaconfig</artifactId>
                 <version>1.0-RC2</version>
             </dependency>

@@ -16,7 +16,7 @@
 
 package org.jitsi.videobridge.websocket.config
 
-import org.jitsi.config.NewJitsiConfig
+import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.optionalconfig
 
@@ -28,8 +28,8 @@ class WebsocketServiceConfig {
         // The old property is named 'disable', while the new one
         // is 'enable', so invert the old value
         retrieve("org.jitsi.videobridge.rest.COLIBRI_WS_DISABLE"
-            .from(NewJitsiConfig.legacyConfig).andTransformBy { !it })
-        retrieve("videobridge.websockets.enabled".from(NewJitsiConfig.newConfig))
+            .from(JitsiConfig.legacyConfig).andTransformBy { !it })
+        retrieve("videobridge.websockets.enabled".from(JitsiConfig.newConfig))
     }
 
     /**
@@ -37,8 +37,8 @@ class WebsocketServiceConfig {
      */
     val domain: String by config {
         onlyIf("Websocket are enabled", ::enabled) {
-            retrieve("org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN".from(NewJitsiConfig.legacyConfig))
-            retrieve("videobridge.websockets.domain".from(NewJitsiConfig.newConfig))
+            retrieve("org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN".from(JitsiConfig.legacyConfig))
+            retrieve("videobridge.websockets.domain".from(JitsiConfig.newConfig))
         }
     }
 
@@ -47,8 +47,8 @@ class WebsocketServiceConfig {
      */
     val useTls: Boolean? by optionalconfig {
         onlyIf("Websocket are enabled", ::enabled) {
-            retrieve("org.jitsi.videobridge.rest.COLIBRI_WS_TLS".from(NewJitsiConfig.legacyConfig))
-            retrieve("videobridge.websockets.tls".from(NewJitsiConfig.newConfig))
+            retrieve("org.jitsi.videobridge.rest.COLIBRI_WS_TLS".from(JitsiConfig.legacyConfig))
+            retrieve("videobridge.websockets.tls".from(JitsiConfig.newConfig))
         }
     }
 
@@ -57,8 +57,8 @@ class WebsocketServiceConfig {
      */
     val serverId: String by config {
         onlyIf("Websocket are enabled", ::enabled) {
-            retrieve("org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID".from(NewJitsiConfig.legacyConfig))
-            retrieve("videobridge.websockets.server-id".from(NewJitsiConfig.newConfig))
+            retrieve("org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID".from(JitsiConfig.legacyConfig))
+            retrieve("videobridge.websockets.server-id".from(JitsiConfig.newConfig))
         }
     }
 }

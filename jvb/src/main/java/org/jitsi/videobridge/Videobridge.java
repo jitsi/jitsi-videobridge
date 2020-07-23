@@ -652,7 +652,8 @@ public class Videobridge
             }
 
             // Reload for all the new system properties to be seen
-            JitsiConfig.Companion.reload();
+            // TODO(brian): I don't think this reload is necessary?
+//            JitsiConfig.Companion.reload();
         }
 
         // Initialize the the host candidate interface filters in the ice4j

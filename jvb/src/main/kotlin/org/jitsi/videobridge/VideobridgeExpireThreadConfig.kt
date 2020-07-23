@@ -16,19 +16,19 @@
 
 package org.jitsi.videobridge
 
-import org.jitsi.config.NewJitsiConfig
+import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import java.time.Duration
 
 class VideobridgeExpireThreadConfig {
-    val inactivityTimeout: Duration by config("videobridge.entity-expiration.timeout".from(NewJitsiConfig.newConfig))
+    val inactivityTimeout: Duration by config("videobridge.entity-expiration.timeout".from(JitsiConfig.newConfig))
 
     val interval: Duration by config {
-        retrieve("org.jitsi.videobridge.EXPIRE_CHECK_SLEEP_SEC".from(NewJitsiConfig.legacyConfig)
+        retrieve("org.jitsi.videobridge.EXPIRE_CHECK_SLEEP_SEC".from(JitsiConfig.legacyConfig)
                 .asType<Long>()
                 .andConvertBy(Duration::ofSeconds)
         )
-        retrieve("videobridge.entity-expiration.check-interval".from(NewJitsiConfig.newConfig))
+        retrieve("videobridge.entity-expiration.check-interval".from(JitsiConfig.newConfig))
     }
 }
