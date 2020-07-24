@@ -77,11 +77,6 @@ public class Main
                 Videobridge.REST_API_PNAME,
                 Boolean.toString(apis.contains(Videobridge.REST_API)));
 
-        // Need to force a reload to see the updated system properties
-        // TODO: is this needed? may need to port the config in RESTBundleActivator to new config
-        // to make the rest api default work
-        //JitsiConfig.Companion.reload();
-
         ComponentMain main = new ComponentMain();
         BundleConfig osgiBundles = new BundleConfig();
 
