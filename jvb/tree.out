@@ -1,0 +1,212 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] --------------------< org.jitsi:jitsi-videobridge >---------------------
+[INFO] Building jitsi-videobridge 2.1-SNAPSHOT
+[INFO] --------------------------------[ jar ]---------------------------------
+Downloading from jitsi-maven-repository-releases: https://github.com/jitsi/jitsi-maven-repository/raw/master/releases/org/jitsi/jicoco-test-kotlin/1.1-36-gecd3e61/jicoco-test-kotlin-1.1-36-gecd3e61.jar
+Progress (1): 1.4/33 kBProgress (1): 2.7/33 kBProgress (1): 4.1/33 kBProgress (1): 5.5/33 kBProgress (1): 6.9/33 kBProgress (1): 8.2/33 kBProgress (1): 9.6/33 kBProgress (1): 11/33 kB Progress (1): 12/33 kBProgress (1): 14/33 kBProgress (1): 15/33 kBProgress (1): 16/33 kBProgress (1): 18/33 kBProgress (1): 19/33 kBProgress (1): 21/33 kBProgress (1): 22/33 kBProgress (1): 23/33 kBProgress (1): 25/33 kBProgress (1): 26/33 kBProgress (1): 27/33 kBProgress (1): 29/33 kBProgress (1): 30/33 kBProgress (1): 32/33 kBProgress (1): 33/33 kBProgress (1): 33 kB                      Downloaded from jitsi-maven-repository-releases: https://github.com/jitsi/jitsi-maven-repository/raw/master/releases/org/jitsi/jicoco-test-kotlin/1.1-36-gecd3e61/jicoco-test-kotlin-1.1-36-gecd3e61.jar (33 kB at 26 kB/s)
+[INFO] 
+[INFO] --- maven-dependency-plugin:2.8:tree (default-cli) @ jitsi-videobridge ---
+Downloading from jitpack.io: https://jitpack.io/org/jitsi/jitsi-android-osgi/1.0-SNAPSHOT/maven-metadata.xml
+Downloading from jitsi-maven-repository-snapshots: https://github.com/jitsi/jitsi-maven-repository/raw/master/snapshots/org/jitsi/jitsi-android-osgi/1.0-SNAPSHOT/maven-metadata.xml
+Downloading from snapshots-repo: https://oss.sonatype.org/content/repositories/snapshots/org/jitsi/jitsi-android-osgi/1.0-SNAPSHOT/maven-metadata.xml
+Progress (1): 983 B                   Downloaded from jitsi-maven-repository-snapshots: https://github.com/jitsi/jitsi-maven-repository/raw/master/snapshots/org/jitsi/jitsi-android-osgi/1.0-SNAPSHOT/maven-metadata.xml (983 B at 1.1 kB/s)
+[INFO] org.jitsi:jitsi-videobridge:jar:2.1-SNAPSHOT
+[INFO] +- com.googlecode.json-simple:json-simple:jar:1.1.1:compile
+[INFO] +- dom4j:dom4j:jar:1.6.1:compile
+[INFO] |  \- xml-apis:xml-apis:jar:1.0.b2:compile
+[INFO] +- com.google.guava:guava:jar:28.2-jre:compile
+[INFO] |  +- com.google.guava:failureaccess:jar:1.0.1:compile
+[INFO] |  +- com.google.guava:listenablefuture:jar:9999.0-empty-to-avoid-conflict-with-guava:compile
+[INFO] |  +- com.google.code.findbugs:jsr305:jar:3.0.2:compile
+[INFO] |  +- org.checkerframework:checker-qual:jar:2.10.0:compile
+[INFO] |  +- com.google.errorprone:error_prone_annotations:jar:2.3.4:compile
+[INFO] |  \- com.google.j2objc:j2objc-annotations:jar:1.3:compile
+[INFO] +- org.eclipse.jetty:jetty-rewrite:jar:9.4.15.v20190215:compile
+[INFO] |  +- org.eclipse.jetty:jetty-server:jar:9.4.15.v20190215:compile
+[INFO] |  \- javax.servlet:javax.servlet-api:jar:3.1.0:compile
+[INFO] +- org.eclipse.jetty:jetty-servlets:jar:9.4.15.v20190215:compile
+[INFO] |  +- org.eclipse.jetty:jetty-continuation:jar:9.4.15.v20190215:compile
+[INFO] |  +- org.eclipse.jetty:jetty-http:jar:9.4.15.v20190215:compile
+[INFO] |  +- org.eclipse.jetty:jetty-util:jar:9.4.15.v20190215:compile
+[INFO] |  \- org.eclipse.jetty:jetty-io:jar:9.4.15.v20190215:compile
+[INFO] +- org.eclipse.jetty.websocket:websocket-server:jar:9.4.15.v20190215:compile
+[INFO] |  +- org.eclipse.jetty.websocket:websocket-common:jar:9.4.15.v20190215:compile
+[INFO] |  |  \- org.eclipse.jetty.websocket:websocket-api:jar:9.4.15.v20190215:compile
+[INFO] |  +- org.eclipse.jetty.websocket:websocket-client:jar:9.4.15.v20190215:compile
+[INFO] |  |  +- org.eclipse.jetty:jetty-client:jar:9.4.15.v20190215:compile
+[INFO] |  |  \- org.eclipse.jetty:jetty-xml:jar:9.4.15.v20190215:compile
+[INFO] |  +- org.eclipse.jetty.websocket:websocket-servlet:jar:9.4.15.v20190215:compile
+[INFO] |  \- org.eclipse.jetty:jetty-servlet:jar:9.4.15.v20190215:compile
+[INFO] |     \- org.eclipse.jetty:jetty-security:jar:9.4.15.v20190215:compile
+[INFO] +- org.igniterealtime.smack:smack-extensions:jar:4.2.4-47d17fc:compile
+[INFO] |  +- org.igniterealtime.smack:smack-core:jar:4.2.4-47d17fc:compile
+[INFO] |  |  +- org.jxmpp:jxmpp-core:jar:0.6.2:compile
+[INFO] |  |  |  \- org.jxmpp:jxmpp-util-cache:jar:0.6.2:compile
+[INFO] |  |  \- org.jxmpp:jxmpp-jid:jar:0.6.2:compile
+[INFO] |  \- org.igniterealtime.smack:smack-im:jar:4.2.4-47d17fc:compile
+[INFO] +- org.jetbrains:annotations:jar:15.0:compile
+[INFO] +- com.github.spotbugs:spotbugs-annotations:jar:4.0.1:compile
+[INFO] +- org.jitsi:jitsi-media-transform:jar:1.0-164-g031788f:compile
+[INFO] |  +- org.jitsi:jitsi-srtp:jar:1.0-20-g513e4e3:compile
+[INFO] |  |  \- org.jitsi:bccontrib:jar:1.0:compile
+[INFO] |  +- org.jitsi:jicoco-kotlin:jar:1.1-28-gf83a3d3:compile
+[INFO] |  |  \- org.jitsi:jicoco:jar:1.1-28-gf83a3d3:compile
+[INFO] |  +- org.jetbrains.kotlin:kotlin-reflect:jar:1.3.71:compile
+[INFO] |  +- org.bouncycastle:bctls-jdk15on:jar:1.65:compile
+[INFO] |  +- org.bouncycastle:bcprov-jdk15on:jar:1.65:compile
+[INFO] |  +- org.bouncycastle:bcpkix-jdk15on:jar:1.65:compile
+[INFO] |  +- org.pcap4j:pcap4j-core:jar:1.8.2:compile
+[INFO] |  \- org.pcap4j:pcap4j-packetfactory-static:jar:1.8.2:compile
+[INFO] +- org.jitsi:rtp:jar:1.0-46-gd3742d1:compile
+[INFO] |  \- com.github.kotlin-graphics:kotlin-unsigned:jar:v3.1.3:compile
+[INFO] +- org.jitsi:sctp:jar:1.0-2-ga3ad2e6:compile
+[INFO] |  \- org.jitsi:jnilib:jar:1.0-2-ga3ad2e6:compile
+[INFO] |     +- org.jitsi:jniwrapper-java:jar:1.0-2-ga3ad2e6:compile
+[INFO] |     \- org.jitsi:jniwrapper-native:jar:1.0-2-ga3ad2e6:compile
+[INFO] +- org.slf4j:slf4j-api:jar:1.7.30:compile
+[INFO] +- org.jitsi:ice4j:jar:3.0-18-g686164f:compile
+[INFO] |  +- org.opentelecoms.sdp:java-sdp-nist-bridge:jar:1.2:compile
+[INFO] |  |  +- org.opentelecoms.sdp:sdp-api:jar:1.0:compile
+[INFO] |  |  \- org.jitsi:jain-sip-ri-ossonly:jar:1.2.279-jitsi-oss1:compile
+[INFO] |  \- org.bitlet:weupnp:jar:0.1.4:compile
+[INFO] +- com.github.bbaldino.jicoco:jicoco:jar:metaconfig-41-gbb6aa1d-91:compile
+[INFO] |  +- com.datadoghq:java-dogstatsd-client:jar:2.5:compile
+[INFO] |  +- org.eclipse.jetty:jetty-proxy:jar:9.4.15.v20190215:compile
+[INFO] |  +- org.xeustechnologies:jcl-core:jar:2.8:compile
+[INFO] |  |  \- org.kamranzafar.commons:object-cloner:jar:0.1:compile
+[INFO] |  +- org.igniterealtime:tinder:jar:1.3.0:compile
+[INFO] |  |  +- net.jcip:jcip-annotations:jar:1.0:compile
+[INFO] |  |  +- org.gnu.inet:libidn:jar:1.15:compile
+[INFO] |  |  \- com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:jar:1.0_jdk5:compile
+[INFO] |  +- org.igniterealtime.whack:core:jar:2.0.1:compile
+[INFO] |  |  +- xmlpull:xmlpull:jar:1.1.3.4a:compile
+[INFO] |  |  \- org.eclipse.jetty:jetty-webapp:jar:7.0.1.v20091125:compile
+[INFO] |  +- org.igniterealtime.smack:smack-tcp:jar:4.2.4-47d17fc:compile
+[INFO] |  \- org.javassist:javassist:jar:3.22.0-CR2:compile
+[INFO] +- com.github.bbaldino.jicoco:jicoco-kotlin:jar:metaconfig-41-gbb6aa1d-91:compile
+[INFO] |  +- com.typesafe:config:jar:1.3.4:compile
+[INFO] |  \- com.github.bbaldino.jicoco:jicoco-test-kotlin:jar:metaconfig-41-gbb6aa1d-91:compile
+[INFO] +- org.jitsi:jitsi-android-osgi:jar:1.0-SNAPSHOT:compile
+[INFO] +- org.jitsi:jitsi-stats:jar:1.0-3-gd5cc199:compile
+[INFO] |  \- io.callstats:callstats-java-sdk:jar:5.0.0:compile
+[INFO] |     +- com.google.code.gson:gson:jar:2.3.1:compile
+[INFO] |     +- org.apache.logging.log4j:log4j-api:jar:2.3:compile
+[INFO] |     +- org.apache.logging.log4j:log4j-core:jar:2.3:compile
+[INFO] |     +- org.slf4j:slf4j-simple:jar:1.6.1:compile
+[INFO] |     +- org.bitbucket.b_c:jose4j:jar:0.5.1:compile
+[INFO] |     +- com.squareup.okhttp3:okhttp:jar:3.9.1:compile
+[INFO] |     +- com.squareup.okio:okio:jar:1.13.0:compile
+[INFO] |     \- commons-codec:commons-codec:jar:1.9:compile
+[INFO] +- org.jitsi:jitsi-xmpp-extensions:jar:1.0-8-g340be56:compile
+[INFO] |  +- org.igniterealtime.smack:smack-java7:jar:4.2.4-47d17fc:compile
+[INFO] |  |  +- org.igniterealtime.smack:smack-resolver-javax:jar:4.2.4-47d17fc:compile
+[INFO] |  |  \- org.igniterealtime.smack:smack-sasl-javax:jar:4.2.4-47d17fc:compile
+[INFO] |  \- org.apache.commons:commons-lang3:jar:3.9:compile
+[INFO] +- org.jitsi:jitsi-utils:jar:1.0-55-g21baf6e:compile
+[INFO] |  \- net.java.dev.jna:jna:jar:5.5.0:compile
+[INFO] +- org.jitsi:jitsi-utils-kotlin:jar:1.0-55-g21baf6e:compile
+[INFO] +- org.jitsi:jitsi-metaconfig:jar:1.0-RC2:compile
+[INFO] +- org.osgi:org.osgi.core:jar:4.3.1:compile
+[INFO] +- xpp3:xpp3:jar:1.1.4c:compile
+[INFO] +- org.jetbrains.kotlin:kotlin-stdlib-jdk8:jar:1.3.71:compile
+[INFO] |  +- org.jetbrains.kotlin:kotlin-stdlib:jar:1.3.71:compile
+[INFO] |  |  \- org.jetbrains.kotlin:kotlin-stdlib-common:jar:1.3.71:compile
+[INFO] |  \- org.jetbrains.kotlin:kotlin-stdlib-jdk7:jar:1.3.71:compile
+[INFO] +- org.glassfish.jersey.containers:jersey-container-jetty-http:jar:2.30.1:compile
+[INFO] |  +- org.glassfish.hk2.external:jakarta.inject:jar:2.6.1:compile
+[INFO] |  +- org.glassfish.jersey.core:jersey-common:jar:2.30.1:compile
+[INFO] |  |  +- jakarta.annotation:jakarta.annotation-api:jar:1.3.5:compile
+[INFO] |  |  +- org.glassfish.hk2:osgi-resource-locator:jar:1.0.3:compile
+[INFO] |  |  \- com.sun.activation:jakarta.activation:jar:1.2.1:compile
+[INFO] |  +- org.glassfish.jersey.core:jersey-server:jar:2.30.1:compile
+[INFO] |  |  +- org.glassfish.jersey.core:jersey-client:jar:2.30.1:compile
+[INFO] |  |  +- org.glassfish.jersey.media:jersey-media-jaxb:jar:2.30.1:compile
+[INFO] |  |  +- jakarta.validation:jakarta.validation-api:jar:2.0.2:compile
+[INFO] |  |  \- jakarta.xml.bind:jakarta.xml.bind-api:jar:2.3.2:compile
+[INFO] |  \- jakarta.ws.rs:jakarta.ws.rs-api:jar:2.1.6:compile
+[INFO] +- org.glassfish.jersey.containers:jersey-container-servlet:jar:2.30.1:compile
+[INFO] |  \- org.glassfish.jersey.containers:jersey-container-servlet-core:jar:2.30.1:compile
+[INFO] +- org.glassfish.jersey.inject:jersey-hk2:jar:2.30.1:compile
+[INFO] |  \- org.glassfish.hk2:hk2-locator:jar:2.6.1:compile
+[INFO] |     +- org.glassfish.hk2.external:aopalliance-repackaged:jar:2.6.1:compile
+[INFO] |     +- org.glassfish.hk2:hk2-api:jar:2.6.1:compile
+[INFO] |     \- org.glassfish.hk2:hk2-utils:jar:2.6.1:compile
+[INFO] +- org.glassfish.jersey.media:jersey-media-json-jackson:jar:2.30.1:compile
+[INFO] |  +- org.glassfish.jersey.ext:jersey-entity-filtering:jar:2.30.1:compile
+[INFO] |  +- com.fasterxml.jackson.core:jackson-annotations:jar:2.10.1:compile
+[INFO] |  +- com.fasterxml.jackson.core:jackson-databind:jar:2.10.1:compile
+[INFO] |  \- com.fasterxml.jackson.module:jackson-module-jaxb-annotations:jar:2.10.1:compile
+[INFO] |     \- jakarta.activation:jakarta.activation-api:jar:1.2.1:compile
+[INFO] +- com.fasterxml.jackson.module:jackson-module-kotlin:jar:2.11.0:compile
+[INFO] +- org.reflections:reflections:jar:0.9.11:compile
+[INFO] +- rusv:agafua-syslog:jar:0.4:runtime
+[INFO] +- io.sentry:sentry:jar:1.7.30:runtime
+[INFO] |  \- com.fasterxml.jackson.core:jackson-core:jar:2.10.0:compile
+[INFO] +- org.mockito:mockito-core:jar:3.3.3:test
+[INFO] |  +- net.bytebuddy:byte-buddy:jar:1.10.5:test
+[INFO] |  +- net.bytebuddy:byte-buddy-agent:jar:1.10.5:test
+[INFO] |  \- org.objenesis:objenesis:jar:2.6:compile
+[INFO] +- org.easymock:easymock:jar:4.0.2:test
+[INFO] +- org.powermock:powermock-core:jar:2.0.6:test
+[INFO] |  \- org.powermock:powermock-reflect:jar:2.0.6:test
+[INFO] +- org.powermock:powermock-api-easymock:jar:2.0.6:test
+[INFO] |  +- org.powermock:powermock-api-support:jar:2.0.6:test
+[INFO] |  \- cglib:cglib-nodep:jar:3.2.9:compile
+[INFO] +- org.powermock:powermock-module-junit4:jar:2.0.6:test
+[INFO] |  +- org.powermock:powermock-module-junit4-common:jar:2.0.6:test
+[INFO] |  \- org.hamcrest:hamcrest-core:jar:1.3:test
+[INFO] +- org.glassfish.jersey.test-framework:jersey-test-framework-core:jar:2.30.1:compile
+[INFO] |  \- jakarta.servlet:jakarta.servlet-api:jar:4.0.3:compile
+[INFO] +- org.glassfish.jersey.test-framework.providers:jersey-test-framework-provider-jetty:jar:2.30.1:test
+[INFO] +- org.glassfish.jersey.test-framework.providers:jersey-test-framework-provider-grizzly2:jar:2.30.1:test
+[INFO] |  +- org.glassfish.jersey.containers:jersey-container-grizzly2-http:jar:2.30.1:test
+[INFO] |  |  \- org.glassfish.grizzly:grizzly-http-server:jar:2.4.4:test
+[INFO] |  |     \- org.glassfish.grizzly:grizzly-http:jar:2.4.4:test
+[INFO] |  |        \- org.glassfish.grizzly:grizzly-framework:jar:2.4.4:test
+[INFO] |  \- org.glassfish.jersey.containers:jersey-container-grizzly2-servlet:jar:2.30.1:test
+[INFO] |     \- org.glassfish.grizzly:grizzly-http-servlet:jar:2.4.4:test
+[INFO] +- junit:junit:jar:4.12:test
+[INFO] +- org.junit.vintage:junit-vintage-engine:jar:5.5.2:test
+[INFO] |  +- org.apiguardian:apiguardian-api:jar:1.1.0:test
+[INFO] |  \- org.junit.platform:junit-platform-engine:jar:1.5.2:test
+[INFO] |     +- org.opentest4j:opentest4j:jar:1.2.0:test
+[INFO] |     \- org.junit.platform:junit-platform-commons:jar:1.5.2:test
+[INFO] +- io.kotlintest:kotlintest-runner-junit5:jar:3.4.2:test
+[INFO] |  +- io.kotlintest:kotlintest-core:jar:3.4.2:test
+[INFO] |  |  +- org.jetbrains.kotlinx:kotlinx-coroutines-core:jar:1.1.1:test
+[INFO] |  |  |  \- org.jetbrains.kotlinx:kotlinx-coroutines-core-common:jar:1.1.1:test
+[INFO] |  |  \- org.junit.jupiter:junit-jupiter-api:jar:5.5.1:test
+[INFO] |  +- io.kotlintest:kotlintest-assertions:jar:3.4.2:test
+[INFO] |  |  +- io.arrow-kt:arrow-core-data:jar:0.9.0:test
+[INFO] |  |  |  \- io.arrow-kt:arrow-annotations:jar:0.9.0:test
+[INFO] |  |  |     \- io.kindedj:kindedj:jar:1.1.0:test
+[INFO] |  |  +- com.univocity:univocity-parsers:jar:2.8.1:test
+[INFO] |  |  \- com.github.wumpz:diffutils:jar:2.2:test
+[INFO] |  |     \- org.eclipse.jgit:org.eclipse.jgit:jar:4.4.1.201607150455-r:test
+[INFO] |  +- io.kotlintest:kotlintest-runner-jvm:jar:3.4.2:test
+[INFO] |  |  +- io.kotlintest:kotlintest-extensions:jar:3.4.2:test
+[INFO] |  |  |  +- commons-io:commons-io:jar:2.6:test
+[INFO] |  |  |  \- io.mockk:mockk:jar:1.9.1:test
+[INFO] |  |  |     +- io.mockk:mockk-common:jar:1.9.1:test
+[INFO] |  |  |     |  \- io.mockk:mockk-dsl:jar:1.9.1:test
+[INFO] |  |  |     +- io.mockk:mockk-dsl-jvm:jar:1.9.1:test
+[INFO] |  |  |     \- io.mockk:mockk-agent-jvm:jar:1.9.1:test
+[INFO] |  |  |        +- io.mockk:mockk-agent-api:jar:1.9.1:test
+[INFO] |  |  |        \- io.mockk:mockk-agent-common:jar:1.9.1:test
+[INFO] |  |  +- io.github.classgraph:classgraph:jar:4.8.1:test
+[INFO] |  |  \- io.arrow-kt:arrow-core-extensions:jar:0.9.0:test
+[INFO] |  |     \- io.arrow-kt:arrow-typeclasses:jar:0.9.0:test
+[INFO] |  +- io.kotlintest:kotlintest-runner-console:jar:3.4.2:test
+[INFO] |  |  +- net.sourceforge.argparse4j:argparse4j:jar:0.8.1:test
+[INFO] |  |  \- com.github.ajalt:mordant:jar:1.2.1:test
+[INFO] |  |     \- com.github.ajalt:colormath:jar:1.2.0:test
+[INFO] |  +- org.junit.platform:junit-platform-suite-api:jar:1.4.0:test
+[INFO] |  \- org.junit.platform:junit-platform-launcher:jar:1.4.0:test
+[INFO] \- org.jitsi:jicoco-test-kotlin:jar:1.1-36-gecd3e61:test
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  8.967 s
+[INFO] Finished at: 2020-07-23T12:55:01-07:00
+[INFO] ------------------------------------------------------------------------

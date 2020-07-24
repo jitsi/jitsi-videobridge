@@ -41,7 +41,7 @@ abstract class TaskServiceWrapper<T : ExecutorService>(
             try {
                 task.run()
             } catch (t: Throwable) {
-                logger.warn("Uncaught exception ($name): $t")
+                logger.warn("Uncaught exception: $t")
                 numExceptions.increment()
             }
         }
@@ -70,9 +70,6 @@ class SafeExecutor(
     name: String,
     delegate: ExecutorService
 ) : ExecutorService by delegate, TaskServiceWrapper<ExecutorService>(name, delegate) {
-    private val logger = LoggerImpl(name)
-    private val numExceptions = LongAdder()
-
     override fun submit(task: Runnable): Future<*> = delegate.submit(wrapTask(task))
 }
 
