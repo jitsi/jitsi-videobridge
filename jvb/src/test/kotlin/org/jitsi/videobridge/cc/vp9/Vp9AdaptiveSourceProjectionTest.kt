@@ -110,7 +110,12 @@ class Vp9AdaptiveSourceProjectionTest {
     )
 
     /** Run an out-of-order test on a single stream, randomized order except for the first packet.  */
-    private fun doRunOutOfOrderTest(generator: Vp9PacketGenerator, targetIndex: Int, seed: Long) {
+    private fun doRunOutOfOrderTest(
+        generator: Vp9PacketGenerator,
+        targetIndex: Int,
+        initialOrderedCount: Int,
+        seed: Long
+    ) {
         val diagnosticContext = DiagnosticContext()
         diagnosticContext["test"] = Thread.currentThread().stackTrace[2].methodName
         val initialState = RtpState(1, 10000, 1000000)
@@ -124,6 +129,7 @@ class Vp9AdaptiveSourceProjectionTest {
             buffer.add(generator.nextPacket())
         }
         val random = Random(seed)
+        var orderedCount = initialOrderedCount - 1
         val context = Vp9AdaptiveSourceProjectionContext(diagnosticContext,
             payloadType,
             initialState, logger)
@@ -179,8 +185,14 @@ class Vp9AdaptiveSourceProjectionTest {
             } else {
                 Assert.assertFalse(accepted)
             }
-            buffer[0] = generator.nextPacket()
-            buffer.shuffle(random)
+            if (orderedCount > 0) {
+                buffer.removeAt(0)
+                buffer.add(generator.nextPacket())
+                orderedCount--
+            } else {
+                buffer[0] = generator.nextPacket()
+                buffer.shuffle(random)
+            }
         }
         val iter: Iterator<Int> = projectedPackets.keys.iterator()
         var prevPacket = projectedPackets[iter.next()]
@@ -206,12 +218,12 @@ class Vp9AdaptiveSourceProjectionTest {
 
     /** Run multiple instances of out-of-order test on a single stream, with different
      * random seeds.  */
-    private fun runOutOfOrderTest(generator: Vp9PacketGenerator, targetIndex: Int) {
-        /* Seeds that have triggered problems in the past, plus a random one. */
+    private fun runOutOfOrderTest(generator: Vp9PacketGenerator, targetIndex: Int, initialOrderedCount: Int = 1) {
+        /* Seeds that have triggered problems in the past for this or VP8, plus a random one. */
         val seeds = longArrayOf(1576267371838L, 1578347926155L, 1579620018479L, System.currentTimeMillis())
         for (seed in seeds) {
             try {
-                doRunOutOfOrderTest(generator, targetIndex, seed)
+                doRunOutOfOrderTest(generator, targetIndex, initialOrderedCount, seed)
             } catch (e: Throwable) {
                 logger.error(
                     "Exception thrown in randomized test, seed = $seed", e)
@@ -369,6 +381,54 @@ class Vp9AdaptiveSourceProjectionTest {
     fun largerFilteredOutOfOrderTest() {
         val generator = Vp9PacketGenerator(3)
         runOutOfOrderTest(generator, getIndex(0, 0, 0))
+    }
+
+    @Test
+    fun simpleKsvcOutOfOrderTest() {
+        val generator = Vp9PacketGenerator(1, 3)
+        runOutOfOrderTest(generator, getIndex(0, 2, 2), 3)
+    }
+
+    @Test
+    fun largerKsvcOutOfOrderTest() {
+        val generator = Vp9PacketGenerator(3, 3)
+        runOutOfOrderTest(generator, getIndex(0, 2, 2), 7)
+    }
+
+    @Test
+    fun filteredKsvcOutOfOrderTest() {
+        val generator = Vp9PacketGenerator(1, 3)
+        runOutOfOrderTest(generator, getIndex(0, 0, 2), 3)
+    }
+
+    @Test
+    fun largerFilteredKsvcOutOfOrderTest() {
+        val generator = Vp9PacketGenerator(3, 3)
+        runOutOfOrderTest(generator, getIndex(0, 0, 2), 7)
+    }
+
+    @Test
+    fun simpleSvcOutOfOrderTest() {
+        val generator = Vp9PacketGenerator(1, 3, false)
+        runOutOfOrderTest(generator, getIndex(0, 2, 2), 3)
+    }
+
+    @Test
+    fun largerSvcOutOfOrderTest() {
+        val generator = Vp9PacketGenerator(3, 3, false)
+        runOutOfOrderTest(generator, getIndex(0, 2, 2), 7)
+    }
+
+    @Test
+    fun filteredSvcOutOfOrderTest() {
+        val generator = Vp9PacketGenerator(1, 3, false)
+        runOutOfOrderTest(generator, getIndex(0, 0, 2), 3)
+    }
+
+    @Test
+    fun largerFilteredSvcOutOfOrderTest() {
+        val generator = Vp9PacketGenerator(3, 3, false)
+        runOutOfOrderTest(generator, getIndex(0, 0, 2), 7)
     }
 
     // @Test
