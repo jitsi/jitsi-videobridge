@@ -44,11 +44,11 @@ internal class StatsManagerBundleActivatorConfigTest : ShouldSpec() {
 
                     cfg.transportConfigs shouldHaveSize 2
                     cfg.transportConfigs.forOne {
-                        it as NewStatsTransportConfig.MucStatsTransportConfig
+                        it as StatsTransportConfig.MucStatsTransportConfig
                         it.interval shouldBe 5.seconds
                     }
                     cfg.transportConfigs.forOne {
-                        it as NewStatsTransportConfig.CallStatsIoStatsTransportConfig
+                        it as StatsTransportConfig.CallStatsIoStatsTransportConfig
                         it.interval shouldBe 5.seconds
                     }
                 }
@@ -58,7 +58,7 @@ internal class StatsManagerBundleActivatorConfigTest : ShouldSpec() {
                         val cfg = StatsManagerBundleActivatorConfig()
 
                         cfg.transportConfigs shouldHaveSize 1
-                        cfg.transportConfigs.forOne { it as NewStatsTransportConfig.MucStatsTransportConfig }
+                        cfg.transportConfigs.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
                     }
                 }
                 "which has valid transports but stats are disabled" {
@@ -75,7 +75,7 @@ internal class StatsManagerBundleActivatorConfigTest : ShouldSpec() {
                     should("reflect the custom interval") {
                         val cfg = StatsManagerBundleActivatorConfig()
                         cfg.transportConfigs.forOne {
-                            it as NewStatsTransportConfig.MucStatsTransportConfig
+                            it as StatsTransportConfig.MucStatsTransportConfig
                             it.interval shouldBe 10.seconds
                         }
                     }
@@ -89,8 +89,8 @@ internal class StatsManagerBundleActivatorConfigTest : ShouldSpec() {
                 val cfg = StatsManagerBundleActivatorConfig()
 
                 cfg.transportConfigs shouldHaveSize 2
-                cfg.transportConfigs.forOne { it as NewStatsTransportConfig.MucStatsTransportConfig }
-                cfg.transportConfigs.forOne { it as NewStatsTransportConfig.CallStatsIoStatsTransportConfig }
+                cfg.transportConfigs.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
+                cfg.transportConfigs.forOne { it as StatsTransportConfig.CallStatsIoStatsTransportConfig }
             }
             "and it's disabled in old config but enabled in new config" {
                 withLegacyConfig(legacyConfigStatsEnabled(enabled = false))

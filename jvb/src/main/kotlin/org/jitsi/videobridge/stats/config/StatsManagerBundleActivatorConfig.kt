@@ -57,7 +57,7 @@ class StatsManagerBundleActivatorConfig {
      * in the legacy config, we won't search the new config (we don't support merging
      * stats transport configs from old and new config together).
     */
-    val transportConfigs: List<NewStatsTransportConfig> by config {
+    val transportConfigs: List<StatsTransportConfig> by config {
         onlyIf("Stats transports are enabled", ::enabled) {
             retrieve("org.jitsi.videobridge."
                 .from(JitsiConfig.legacyConfig)
@@ -86,9 +86,9 @@ class StatsManagerBundleActivatorConfig {
     }
 
     /**
-     * From a map of properties pulled from the legacy config file, create a list of [NewStatsTransportConfig]
+     * From a map of properties pulled from the legacy config file, create a list of [StatsTransportConfig]
      */
-    private fun Map<String, String>.toStatsTransportConfig(): List<NewStatsTransportConfig> {
+    private fun Map<String, String>.toStatsTransportConfig(): List<StatsTransportConfig> {
         val transportTypes =
             this["org.jitsi.videobridge.STATISTICS_TRANSPORT"]?.split(",") ?: return listOf()
         return transportTypes.mapNotNull { transportType ->
@@ -96,22 +96,22 @@ class StatsManagerBundleActivatorConfig {
                 Duration.ofMillis(it.toLong())
             } ?: this@StatsManagerBundleActivatorConfig.interval
             when (transportType) {
-                "muc" -> NewStatsTransportConfig.MucStatsTransportConfig(interval)
-                "callstats.io" -> NewStatsTransportConfig.CallStatsIoStatsTransportConfig(interval)
+                "muc" -> StatsTransportConfig.MucStatsTransportConfig(interval)
+                "callstats.io" -> StatsTransportConfig.CallStatsIoStatsTransportConfig(interval)
                 else -> null
             }
         }
     }
 
-    private fun Config.toStatsTransportConfig(): NewStatsTransportConfig? {
+    private fun Config.toStatsTransportConfig(): StatsTransportConfig? {
         val interval = if (hasPath("interval")) {
             getDuration("interval")
         } else {
             this@StatsManagerBundleActivatorConfig.interval
         }
         return when (getString("type")) {
-            "muc" -> NewStatsTransportConfig.MucStatsTransportConfig(interval)
-            "callstatsio" -> NewStatsTransportConfig.CallStatsIoStatsTransportConfig(interval)
+            "muc" -> StatsTransportConfig.MucStatsTransportConfig(interval)
+            "callstatsio" -> StatsTransportConfig.CallStatsIoStatsTransportConfig(interval)
             else -> null
         }
     }
@@ -120,16 +120,16 @@ class StatsManagerBundleActivatorConfig {
 /**
  * Helper classes which model the config parameters for each stats transport
  */
-sealed class NewStatsTransportConfig(
+sealed class StatsTransportConfig(
     val interval: Duration
 ) {
     abstract fun toStatsTransport(): StatsTransport?
 
-    class MucStatsTransportConfig(interval: Duration) : NewStatsTransportConfig(interval) {
+    class MucStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval) {
         override fun toStatsTransport(): StatsTransport = MucStatsTransport()
     }
 
-    class CallStatsIoStatsTransportConfig(interval: Duration) : NewStatsTransportConfig(interval) {
+    class CallStatsIoStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval) {
         override fun toStatsTransport(): StatsTransport = CallStatsIOTransport()
     }
 }

@@ -132,8 +132,8 @@ public class Activator
 
             // Update with per stats transport interval if available.
             Duration intervalDuration = StatsManagerBundleActivator.config.getTransportConfigs().stream()
-                    .filter(tc -> tc instanceof NewStatsTransportConfig.CallStatsIoStatsTransportConfig)
-                    .map(NewStatsTransportConfig::getInterval)
+                    .filter(tc -> tc instanceof StatsTransportConfig.CallStatsIoStatsTransportConfig)
+                    .map(StatsTransportConfig::getInterval)
                     .findFirst()
                     .orElse(StatsManagerBundleActivator.config.getInterval());
             int interval = (int)intervalDuration.toMillis();
