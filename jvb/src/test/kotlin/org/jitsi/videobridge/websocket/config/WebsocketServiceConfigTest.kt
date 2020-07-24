@@ -22,7 +22,7 @@ import io.kotlintest.TestCase
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldThrow
 import io.kotlintest.specs.ShouldSpec
-import org.jitsi.config.NewJitsiConfig
+import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.MapConfigSource
 
@@ -35,8 +35,8 @@ class WebsocketServiceConfigTest : ShouldSpec() {
 
     override fun beforeSpec(spec: Spec) {
         super.beforeSpec(spec)
-        NewJitsiConfig.legacyConfig = legacyConfig
-        NewJitsiConfig.newConfig = newConfig
+        JitsiConfig.legacyConfig = legacyConfig
+        JitsiConfig.newConfig = newConfig
     }
 
     override fun beforeTest(testCase: TestCase) {
@@ -46,8 +46,8 @@ class WebsocketServiceConfigTest : ShouldSpec() {
 
     override fun afterSpec(spec: Spec) {
         super.afterSpec(spec)
-        NewJitsiConfig.legacyConfig = NewJitsiConfig.SipCommunicatorPropsConfigSource
-        NewJitsiConfig.newConfig = NewJitsiConfig.TypesafeConfig
+        JitsiConfig.legacyConfig = JitsiConfig.SipCommunicatorPropsConfigSource
+        JitsiConfig.newConfig = JitsiConfig.TypesafeConfig
     }
 
     init {

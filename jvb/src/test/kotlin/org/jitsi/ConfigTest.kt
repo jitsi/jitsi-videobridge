@@ -19,12 +19,10 @@ package org.jitsi
 import com.typesafe.config.ConfigFactory
 import io.kotlintest.Spec
 import io.kotlintest.specs.ShouldSpec
-import org.jitsi.config.AbstractReadOnlyConfigurationService
 import org.jitsi.config.ConfigurationServiceConfigSource
-import org.jitsi.config.NewJitsiConfig
-import org.jitsi.config.NewTypesafeConfigSource
+import org.jitsi.config.JitsiConfig
+import org.jitsi.config.TypesafeConfigSource
 import java.io.StringReader
-import java.util.Properties
 
 /**
  * A helper class for testing configuration properties
@@ -35,7 +33,7 @@ abstract class ConfigTest : ShouldSpec() {
 
     override fun beforeSpec(spec: Spec) {
         super.beforeSpec(spec)
-        NewJitsiConfig.legacyConfig = legacyConfig
+        JitsiConfig.legacyConfig = legacyConfig
     }
 
     fun withLegacyConfig(props: String) {
@@ -43,16 +41,6 @@ abstract class ConfigTest : ShouldSpec() {
     }
 
     fun withNewConfig(config: String) {
-        NewJitsiConfig.newConfig = NewTypesafeConfigSource("new", ConfigFactory.parseString(config))
+        JitsiConfig.newConfig = TypesafeConfigSource("new", ConfigFactory.parseString(config))
     }
-}
-
-private class TestReadOnlyConfigurationService(
-    override var properties: Properties = Properties()
-) : AbstractReadOnlyConfigurationService() {
-
-    val props: Properties
-        get() = properties
-
-    override fun reloadConfiguration() {}
 }

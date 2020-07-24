@@ -20,7 +20,7 @@ import io.kotlintest.IsolationMode
 import io.kotlintest.Spec
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
-import org.jitsi.config.NewJitsiConfig
+import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.MapConfigSource
 import java.time.Duration
 
@@ -32,14 +32,14 @@ class HealthConfigTest : ShouldSpec() {
 
     override fun beforeSpec(spec: Spec) {
         super.beforeSpec(spec)
-        NewJitsiConfig.legacyConfig = legacyConfig
-        NewJitsiConfig.newConfig = newConfig
+        JitsiConfig.legacyConfig = legacyConfig
+        JitsiConfig.newConfig = newConfig
     }
 
     override fun afterSpec(spec: Spec) {
         super.afterSpec(spec)
-        NewJitsiConfig.legacyConfig = NewJitsiConfig.SipCommunicatorPropsConfigSource
-        NewJitsiConfig.newConfig = NewJitsiConfig.TypesafeConfig
+        JitsiConfig.legacyConfig = JitsiConfig.SipCommunicatorPropsConfigSource
+        JitsiConfig.newConfig = JitsiConfig.TypesafeConfig
     }
 
     init {

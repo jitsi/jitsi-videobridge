@@ -10,8 +10,8 @@ import io.kotlintest.shouldThrow
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.config.AbstractReadOnlyConfigurationService
 import org.jitsi.config.ConfigurationServiceConfigSource
-import org.jitsi.config.NewJitsiConfig
-import org.jitsi.config.NewTypesafeConfigSource
+import org.jitsi.config.JitsiConfig
+import org.jitsi.config.TypesafeConfigSource
 import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.ConfigSource
 import org.jitsi.metaconfig.MapConfigSource
@@ -24,14 +24,14 @@ internal class NewStatsManagerBundleActivatorConfigTest : ShouldSpec() {
 
     override fun beforeSpec(spec: Spec) {
         super.beforeSpec(spec)
-        NewJitsiConfig.legacyConfig = legacyConfig
-        NewJitsiConfig.newConfig = newConfig
+        JitsiConfig.legacyConfig = legacyConfig
+        JitsiConfig.newConfig = newConfig
     }
 
     override fun afterSpec(spec: Spec) {
         super.afterSpec(spec)
-        NewJitsiConfig.legacyConfig = NewJitsiConfig.SipCommunicatorPropsConfigSource
-        NewJitsiConfig.newConfig = NewJitsiConfig.TypesafeConfig
+        JitsiConfig.legacyConfig = JitsiConfig.SipCommunicatorPropsConfigSource
+        JitsiConfig.newConfig = JitsiConfig.TypesafeConfig
     }
 
     init {
@@ -112,7 +112,7 @@ internal class NewStatsManagerBundleActivatorConfigTest : ShouldSpec() {
 }
 
 private fun createConfigFrom(configString: String): ConfigSource =
-    NewTypesafeConfigSource("testConfig", ConfigFactory.parseString(configString))
+    TypesafeConfigSource("testConfig", ConfigFactory.parseString(configString))
 
 private fun createConfigFrom(configProps: Properties): ConfigSource =
     ConfigurationServiceConfigSource("legacyConfig", TestReadOnlyConfigurationService(configProps))
