@@ -36,7 +36,7 @@ class WebsocketServiceConfig {
      * The domain name used in URLs advertised for COLIBRI WebSockets.
      */
     val domain: String by config {
-        onlyIf("Websocket are enabled", ::enabled) {
+        onlyIf("Websockets are enabled", ::enabled) {
             retrieve("org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN".from(JitsiConfig.legacyConfig))
             retrieve("videobridge.websockets.domain".from(JitsiConfig.newConfig))
         }
@@ -46,7 +46,7 @@ class WebsocketServiceConfig {
      * Whether the "wss" or "ws" protocol should be used for websockets
      */
     val useTls: Boolean? by optionalconfig {
-        onlyIf("Websocket are enabled", ::enabled) {
+        onlyIf("Websockets are enabled", ::enabled) {
             retrieve("org.jitsi.videobridge.rest.COLIBRI_WS_TLS".from(JitsiConfig.legacyConfig))
             retrieve("videobridge.websockets.tls".from(JitsiConfig.newConfig))
         }
@@ -56,7 +56,7 @@ class WebsocketServiceConfig {
      * The server ID used in URLs advertised for COLIBRI WebSockets.
      */
     val serverId: String by config {
-        onlyIf("Websocket are enabled", ::enabled) {
+        onlyIf("Websockets are enabled", ::enabled) {
             retrieve("org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID".from(JitsiConfig.legacyConfig))
             retrieve("videobridge.websockets.server-id".from(JitsiConfig.newConfig))
         }
