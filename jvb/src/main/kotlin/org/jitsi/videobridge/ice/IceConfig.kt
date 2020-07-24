@@ -103,9 +103,10 @@ class IceConfig {
      * The ice4j nomination strategy policy.
      */
     val nominationStrategy: NominationStrategy by config {
-        "videobridge.ice.nomination-strategy"
+        retrieve("videobridge.ice.nomination-strategy"
             .from(JitsiConfig.newConfig)
             .asType<String>()
             .andConvertBy { NominationStrategy.fromString(it) }
+        )
     }
 }
