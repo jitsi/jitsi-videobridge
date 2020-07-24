@@ -43,7 +43,7 @@ class IceConfig {
     }
 
     /**
-     * The additional port to advertise, or [null] if none is configured.
+     * The additional port to advertise, or null if none is configured.
      */
     val tcpMappedPort: Int? by optionalconfig {
         retrieve("org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT".from(JitsiConfig.legacyConfig))
@@ -76,11 +76,15 @@ class IceConfig {
 
     val keepAliveStrategy: KeepAliveStrategy by config {
         retrieve("org.jitsi.videobridge.KEEP_ALIVE_STRATEGY"
-                .from(JitsiConfig.legacyConfig)
-                .asType<String>()
-                .andConvertBy { KeepAliveStrategy.fromString(it) }
+            .from(JitsiConfig.legacyConfig)
+            .asType<String>()
+            .andConvertBy { KeepAliveStrategy.fromString(it) }
         )
-        retrieve("videobridge.ice.keep-alive-strategy".from(JitsiConfig.newConfig))
+        retrieve("videobridge.ice.keep-alive-strategy"
+            .from(JitsiConfig.newConfig)
+            .asType<String>()
+            .andConvertBy { KeepAliveStrategy.fromString(it) }
+        )
     }
 
     /**
@@ -98,7 +102,10 @@ class IceConfig {
     /**
      * The ice4j nomination strategy policy.
      */
-    val nominationStrategy: NominationStrategy by config(
-        "videobridge.ice.nomination-strategy".from(JitsiConfig.newConfig)
-    )
+    val nominationStrategy: NominationStrategy by config {
+        "videobridge.ice.nomination-strategy"
+            .from(JitsiConfig.newConfig)
+            .asType<String>()
+            .andConvertBy { NominationStrategy.fromString(it) }
+    }
 }
