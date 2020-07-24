@@ -69,7 +69,7 @@ public class StatsManagerBundleActivator
      */
     private ServiceRegistration<StatsManager> serviceRegistration;
 
-    public static final NewStatsManagerBundleActivatorConfig config = new NewStatsManagerBundleActivatorConfig();
+    public static final StatsManagerBundleActivatorConfig config = new StatsManagerBundleActivatorConfig();
 
     /**
      * Starts the <tt>StatsManager</tt> OSGi bundle in a <tt>BundleContext</tt>.

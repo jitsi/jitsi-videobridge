@@ -18,7 +18,7 @@ import org.jitsi.metaconfig.MapConfigSource
 import java.util.Properties
 import kotlin.reflect.KType
 
-internal class NewStatsManagerBundleActivatorConfigTest : ShouldSpec() {
+internal class StatsManagerBundleActivatorConfigTest : ShouldSpec() {
     private val legacyConfig = ConfigSourceWrapper(MapConfigSource("legacy"))
     private val newConfig = ConfigSourceWrapper(MapConfigSource("new"))
 
@@ -40,7 +40,7 @@ internal class NewStatsManagerBundleActivatorConfigTest : ShouldSpec() {
             "a stats transport config" {
                 "with multiple, valid stats transports configured" {
                     withNewConfig(newConfigAllStatsTransports())
-                    val cfg = NewStatsManagerBundleActivatorConfig()
+                    val cfg = StatsManagerBundleActivatorConfig()
 
                     cfg.transportConfigs shouldHaveSize 2
                     cfg.transportConfigs.forOne {
@@ -55,7 +55,7 @@ internal class NewStatsManagerBundleActivatorConfigTest : ShouldSpec() {
                 "with an invalid stats transport configured" {
                     withNewConfig(newConfigInvalidStatsTransports())
                     should("ignore the invalid config and parse the valid transport correctly") {
-                        val cfg = NewStatsManagerBundleActivatorConfig()
+                        val cfg = StatsManagerBundleActivatorConfig()
 
                         cfg.transportConfigs shouldHaveSize 1
                         cfg.transportConfigs.forOne { it as NewStatsTransportConfig.MucStatsTransportConfig }
@@ -64,7 +64,7 @@ internal class NewStatsManagerBundleActivatorConfigTest : ShouldSpec() {
                 "which has valid transports but stats are disabled" {
                     withNewConfig(newConfigInvalidStatsTransports(enabled = false))
                     should("throw when trying to access the stats transports") {
-                        val cfg = NewStatsManagerBundleActivatorConfig()
+                        val cfg = StatsManagerBundleActivatorConfig()
                         shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
                             cfg.transportConfigs
                         }
@@ -73,7 +73,7 @@ internal class NewStatsManagerBundleActivatorConfigTest : ShouldSpec() {
                 "which has a custom interval" {
                     withNewConfig(newConfigOneStatsTransportCustomInterval())
                     should("reflect the custom interval") {
-                        val cfg = NewStatsManagerBundleActivatorConfig()
+                        val cfg = StatsManagerBundleActivatorConfig()
                         cfg.transportConfigs.forOne {
                             it as NewStatsTransportConfig.MucStatsTransportConfig
                             it.interval shouldBe 10.seconds
@@ -86,7 +86,7 @@ internal class NewStatsManagerBundleActivatorConfigTest : ShouldSpec() {
             withLegacyConfig(legacyConfigAllStatsTransports())
             withNewConfig(newConfigOneStatsTransport())
             should("use the values from the old config") {
-                val cfg = NewStatsManagerBundleActivatorConfig()
+                val cfg = StatsManagerBundleActivatorConfig()
 
                 cfg.transportConfigs shouldHaveSize 2
                 cfg.transportConfigs.forOne { it as NewStatsTransportConfig.MucStatsTransportConfig }
@@ -96,7 +96,7 @@ internal class NewStatsManagerBundleActivatorConfigTest : ShouldSpec() {
                 withLegacyConfig(legacyConfigStatsEnabled(enabled = false))
                 withNewConfig(newConfigOneStatsTransport())
                 should("throw when trying to access the stats transports field") {
-                    val cfg = NewStatsManagerBundleActivatorConfig()
+                    val cfg = StatsManagerBundleActivatorConfig()
                     shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> { cfg.transportConfigs }
                 }
             }

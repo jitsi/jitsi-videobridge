@@ -27,7 +27,7 @@ import org.jitsi.videobridge.stats.MucStatsTransport
 import org.jitsi.videobridge.stats.StatsTransport
 import java.time.Duration
 
-class NewStatsManagerBundleActivatorConfig {
+class StatsManagerBundleActivatorConfig {
     /**
      * Whether or not the stats are enabled
      */
@@ -94,7 +94,7 @@ class NewStatsManagerBundleActivatorConfig {
         return transportTypes.mapNotNull { transportType ->
             val interval = this["org.jitsi.videobridge.STATISTICS_INTERVAL.$transportType"]?.let {
                 Duration.ofMillis(it.toLong())
-            } ?: this@NewStatsManagerBundleActivatorConfig.interval
+            } ?: this@StatsManagerBundleActivatorConfig.interval
             when (transportType) {
                 "muc" -> NewStatsTransportConfig.MucStatsTransportConfig(interval)
                 "callstats.io" -> NewStatsTransportConfig.CallStatsIoStatsTransportConfig(interval)
@@ -107,7 +107,7 @@ class NewStatsManagerBundleActivatorConfig {
         val interval = if (hasPath("interval")) {
             getDuration("interval")
         } else {
-            this@NewStatsManagerBundleActivatorConfig.interval
+            this@StatsManagerBundleActivatorConfig.interval
         }
         return when (getString("type")) {
             "muc" -> NewStatsTransportConfig.MucStatsTransportConfig(interval)
