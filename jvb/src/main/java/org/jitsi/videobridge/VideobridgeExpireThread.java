@@ -144,22 +144,24 @@ public class VideobridgeExpireThread
         logger.info("Running expire()");
         for (Conference conference : videobridge.getConferences())
         {
-            // The Conferences will live an iteration more than the Contents.
-            if (conference.shouldExpire())
-            {
-                logger.info("Conference "
-                        + conference.getID() + " should expire, expiring it");
-                EXPIRE_EXECUTOR.execute(
-                        () -> videobridge.expireConference(conference));
-            }
-            else
-            {
-                for (AbstractEndpoint endpoint : conference.getEndpoints())
+            synchronized(conference) {
+                // The Conferences will live an iteration more than the Contents.
+                if (conference.shouldExpire())
                 {
-                    if (endpoint.shouldExpire())
+                    logger.info("Conference "
+                            + conference.getID() + " should expire, expiring it");
+                    EXPIRE_EXECUTOR.execute(
+                            () -> videobridge.expireConference(conference));
+                }
+                else
+                {
+                    for (AbstractEndpoint endpoint : conference.getEndpoints())
                     {
-                        logger.info("Expiring endpoint " + endpoint.getID());
-                        EXPIRE_EXECUTOR.execute(endpoint::expire);
+                        if (endpoint.shouldExpire())
+                        {
+                            logger.info("Expiring endpoint " + endpoint.getID());
+                            EXPIRE_EXECUTOR.execute(endpoint::expire);
+                        }
                     }
                 }
             }

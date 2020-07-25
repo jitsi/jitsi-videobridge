@@ -317,12 +317,14 @@ public class ConferenceShim
      */
     private void ensureEndpointCreated(String endpointId, boolean iceControlling)
     {
-        if (conference.getLocalEndpoint(endpointId) != null)
-        {
-            return;
-        }
+        synchronized(conference) {
+            if (conference.getLocalEndpoint(endpointId) != null)
+            {
+                return;
+            }
 
-        conference.createLocalEndpoint(endpointId, iceControlling);
+            conference.createLocalEndpoint(endpointId, iceControlling);
+        }
     }
 
     /**
