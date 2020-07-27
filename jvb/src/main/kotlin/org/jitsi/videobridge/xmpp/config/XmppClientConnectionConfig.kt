@@ -25,23 +25,19 @@ import org.jitsi.xmpp.mucclient.MucClientConfiguration
 
 class XmppClientConnectionConfig {
     val clientConfigs: List<MucClientConfiguration> by config {
-        retrieve("org.jitsi.videobridge.xmpp.user."
+        "org.jitsi.videobridge.xmpp.user."
             .from(JitsiConfig.legacyConfig)
-            .asType<Map<String, String>>()
-            .andConvertBy { propsMap ->
+            .convertFrom<Map<String, String>> { propsMap ->
                 MucClientConfiguration.loadFromMap(propsMap, "org.jitsi.videobridge.xmpp.user.", true)
                     .toList()
                     .takeIf { it.isNotEmpty() } ?: throw ConfigException.UnableToRetrieve.NotFound("no configs found")
             }
-        )
-        retrieve("videobridge.apis.xmpp-client.configs".from(JitsiConfig.newConfig)
-            .asType<ConfigObject>()
-            .andConvertBy { cfg ->
+        "videobridge.apis.xmpp-client.configs".from(JitsiConfig.newConfig)
+            .convertFrom<ConfigObject> { cfg ->
                 cfg.entries
                     .map { it.toMucClientConfiguration() }
                     .filter { it.isComplete }
             }
-        )
     }
 }
 
