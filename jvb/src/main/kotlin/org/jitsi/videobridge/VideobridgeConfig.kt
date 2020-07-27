@@ -24,10 +24,9 @@ import java.util.regex.PatternSyntaxException
 
 class VideobridgeConfig {
     val shutdownSourcePattern: Pattern? by optionalconfig {
-        retrieve("org.jitsi.videobridge.shutdown.ALLOWED_SOURCE_REGEXP"
+        "org.jitsi.videobridge.shutdown.ALLOWED_SOURCE_REGEXP"
             .from(JitsiConfig.legacyConfig)
-            .asType<String>()
-            .andConvertBy {
+            .convertFrom<String> {
                 if (it.isNotBlank()) {
                     try {
                         Pattern.compile(it)
@@ -39,6 +38,5 @@ class VideobridgeConfig {
                     throw ConfigException.UnableToRetrieve.NotFound("not found")
                 }
             }
-        )
     }
 }
