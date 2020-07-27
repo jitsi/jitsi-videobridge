@@ -32,8 +32,8 @@ class StatsManagerBundleActivatorConfig {
      * Whether or not the stats are enabled
      */
     val enabled: Boolean by config {
-        retrieve("org.jitsi.videobridge.ENABLE_STATISTICS".from(JitsiConfig.legacyConfig))
-        retrieve("videobridge.stats.enabled".from(JitsiConfig.newConfig))
+        "org.jitsi.videobridge.ENABLE_STATISTICS".from(JitsiConfig.legacyConfig)
+        "videobridge.stats.enabled".from(JitsiConfig.newConfig)
     }
 
     /**
@@ -41,12 +41,10 @@ class StatsManagerBundleActivatorConfig {
      */
     val interval: Duration by config {
         onlyIf("Stats are enabled", ::enabled) {
-            retrieve("org.jitsi.videobridge.STATISTICS_INTERVAL"
+            "org.jitsi.videobridge.STATISTICS_INTERVAL"
                 .from(JitsiConfig.legacyConfig)
-                .asType<Long>()
-                .andConvertBy(Duration::ofMillis)
-            )
-            retrieve("videobridge.stats.interval".from(JitsiConfig.newConfig))
+                .convertFrom<Long>(Duration::ofMillis)
+            "videobridge.stats.interval".from(JitsiConfig.newConfig)
         }
     }
 
@@ -59,21 +57,18 @@ class StatsManagerBundleActivatorConfig {
     */
     val transportConfigs: List<StatsTransportConfig> by config {
         onlyIf("Stats transports are enabled", ::enabled) {
-            retrieve("org.jitsi.videobridge."
+            "org.jitsi.videobridge."
                 .from(JitsiConfig.legacyConfig)
-                .asType<Map<String, String>>()
-                .andConvertBy {
+                .convertFrom<Map<String, String>> {
                     if ("org.jitsi.videobridge.STATISTICS_TRANSPORT" in it) {
                         it.toStatsTransportConfig()
                     } else {
                         throw ConfigException.UnableToRetrieve.NotFound("not found in legacy config")
                     }
                 }
-            )
-            retrieve("videobridge.stats"
+            "videobridge.stats"
                 .from(JitsiConfig.newConfig)
-                .asType<ConfigObject>()
-                .andConvertBy { cfg ->
+                .convertFrom<ConfigObject> { cfg ->
                     val transports = cfg["transports"]
                         ?: throw ConfigException.UnableToRetrieve.NotFound("Could not find transports within stats")
                     transports as ConfigList
@@ -81,7 +76,6 @@ class StatsManagerBundleActivatorConfig {
                             .map { it.toConfig() }
                             .mapNotNull { it.toStatsTransportConfig() }
                 }
-            )
         }
     }
 
