@@ -23,22 +23,21 @@ import java.time.Duration
 
 class HealthConfig {
     val interval: Duration by config {
-        retrieve("org.jitsi.videobridge.health.INTERVAL".from(JitsiConfig.legacyConfig)
-                .asType<Long>().andConvertBy(Duration::ofMillis)
-        )
-        retrieve("videobridge.health.interval".from(JitsiConfig.newConfig))
+        "org.jitsi.videobridge.health.INTERVAL"
+            .from(JitsiConfig.legacyConfig).convertFrom<Long>(Duration::ofMillis)
+        "videobridge.health.interval".from(JitsiConfig.newConfig)
     }
 
     val timeout: Duration by config {
-        retrieve("org.jitsi.videobridge.health.TIMEOUT".from(JitsiConfig.legacyConfig)
-                .asType<Long>().andConvertBy(Duration::ofMillis))
-        retrieve("videobridge.health.timeout".from(JitsiConfig.newConfig))
+        "org.jitsi.videobridge.health.TIMEOUT"
+            .from(JitsiConfig.legacyConfig).convertFrom<Long>(Duration::ofMillis)
+        "videobridge.health.timeout".from(JitsiConfig.newConfig)
     }
 
     val maxCheckDuration: Duration by config("videobridge.health.max-check-duration".from(JitsiConfig.newConfig))
 
     val stickyFailures: Boolean by config {
-        retrieve("org.jitsi.videobridge.health.STICKY_FAILURES".from(JitsiConfig.legacyConfig))
-        retrieve("videobridge.health.sticky-failures".from(JitsiConfig.newConfig))
+        "org.jitsi.videobridge.health.STICKY_FAILURES".from(JitsiConfig.legacyConfig)
+        "videobridge.health.sticky-failures".from(JitsiConfig.newConfig)
     }
 }
