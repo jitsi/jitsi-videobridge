@@ -22,20 +22,16 @@ import java.time.Duration
 
 class EndpointConnectionStatusConfig {
     val firstTransferTimeout: Duration by config {
-        retrieve("org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT"
-                .from(JitsiConfig.legacyConfig)
-                .asType<Long>()
-                .andConvertBy(Duration::ofMillis)
-        )
-        retrieve("videobridge.ep-connection-status.first-transfer-timeout".from(JitsiConfig.newConfig))
+        "org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT"
+            .from(JitsiConfig.legacyConfig)
+            .convertFrom<Long>(Duration::ofMillis)
+        "videobridge.ep-connection-status.first-transfer-timeout".from(JitsiConfig.newConfig)
     }
 
     val maxInactivityLimit: Duration by config {
-        retrieve("org.jitsi.videobridge.EndpointConnectionStatus.MAX_INACTIVITY_LIMIT"
-                .from(JitsiConfig.legacyConfig)
-                .asType<Long>()
-                .andConvertBy(Duration::ofMillis)
-        )
-        retrieve("videobridge.ep-connection-status.max-inactivity-limit".from(JitsiConfig.newConfig))
+        "org.jitsi.videobridge.EndpointConnectionStatus.MAX_INACTIVITY_LIMIT"
+            .from(JitsiConfig.legacyConfig)
+            .convertFrom<Long>(Duration::ofMillis)
+        "videobridge.ep-connection-status.max-inactivity-limit".from(JitsiConfig.newConfig)
     }
 }

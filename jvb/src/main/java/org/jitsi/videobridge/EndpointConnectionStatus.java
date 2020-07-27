@@ -34,7 +34,7 @@ import java.util.stream.*;
  * An endpoint's connectivity status is considered connected as long as there
  * is any traffic activity seen on any of its endpoints. When there is no
  * activity for longer than the value of
- * {@link EndpointConnectionStatusConfig#getMaxInactivityLimit()} ()}, it
+ * {@link EndpointConnectionStatusConfig#getMaxInactivityLimit()}, it
  * will be assumed that the endpoint is having some connectivity issues. Those
  * may be temporary or permanent. When that happens there will be a Colibri
  * message broadcast to all conference endpoints. The Colibri class name of
