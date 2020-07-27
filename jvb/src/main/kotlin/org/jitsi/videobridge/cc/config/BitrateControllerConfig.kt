@@ -30,8 +30,8 @@ class BitrateControllerConfig {
          * last bandwidth estimation.
          */
         private val bweChangeThresholdPct: Int by config {
-            retrieve("org.jitsi.videobridge.BWE_CHANGE_THRESHOLD_PCT".from(JitsiConfig.legacyConfig))
-            retrieve("videobridge.cc.bwe-change-threshold-pct".from(JitsiConfig.newConfig))
+            "org.jitsi.videobridge.BWE_CHANGE_THRESHOLD_PCT".from(JitsiConfig.legacyConfig)
+            "videobridge.cc.bwe-change-threshold-pct".from(JitsiConfig.newConfig)
         }
 
         @JvmStatic
@@ -41,8 +41,8 @@ class BitrateControllerConfig {
          * The max resolution to allocate for the thumbnails.
          */
         private val thumbnailMaxHeightPx: Int by config {
-            retrieve("org.jitsi.videobridge.THUMBNAIL_MAX_HEIGHT".from(JitsiConfig.legacyConfig))
-            retrieve("videobridge.cc.thumbnail-max-height-px".from(JitsiConfig.newConfig))
+            "org.jitsi.videobridge.THUMBNAIL_MAX_HEIGHT".from(JitsiConfig.legacyConfig)
+            "videobridge.cc.thumbnail-max-height-px".from(JitsiConfig.newConfig)
         }
 
         @JvmStatic
@@ -53,8 +53,8 @@ class BitrateControllerConfig {
          * before allocating bandwidth for the thumbnails.
          */
         private val onstagePreferredHeightPx: Int by config {
-            retrieve("org.jitsi.videobridge.ONSTAGE_PREFERRED_HEIGHT".from(JitsiConfig.legacyConfig))
-            retrieve("videobridge.cc.onstage-preferred-height-px".from(JitsiConfig.newConfig))
+            "org.jitsi.videobridge.ONSTAGE_PREFERRED_HEIGHT".from(JitsiConfig.legacyConfig)
+            "videobridge.cc.onstage-preferred-height-px".from(JitsiConfig.newConfig)
         }
 
         @JvmStatic
@@ -64,8 +64,8 @@ class BitrateControllerConfig {
          * The preferred frame rate to allocate for the onstage participant.
          */
         private val onstagePreferredFramerate: Double by config {
-            retrieve("org.jitsi.videobridge.ONSTAGE_PREFERRED_FRAME_RATE".from(JitsiConfig.legacyConfig))
-            retrieve("videobridge.cc.onstage-preferred-framerate".from(JitsiConfig.newConfig))
+            "org.jitsi.videobridge.ONSTAGE_PREFERRED_FRAME_RATE".from(JitsiConfig.legacyConfig)
+            "videobridge.cc.onstage-preferred-framerate".from(JitsiConfig.newConfig)
         }
 
         @JvmStatic
@@ -76,8 +76,8 @@ class BitrateControllerConfig {
          * on-stage participant.
          */
         private val enableOnstageVideoSuspend: Boolean by config {
-            retrieve("org.jitsi.videobridge.ENABLE_ONSTAGE_VIDEO_SUSPEND".from(JitsiConfig.legacyConfig))
-            retrieve("videobridge.cc.enable-onstage-video-suspend".from(JitsiConfig.newConfig))
+            "org.jitsi.videobridge.ENABLE_ONSTAGE_VIDEO_SUSPEND".from(JitsiConfig.legacyConfig)
+            "videobridge.cc.enable-onstage-video-suspend".from(JitsiConfig.newConfig)
         }
 
         @JvmStatic
@@ -89,8 +89,8 @@ class BitrateControllerConfig {
          * estimation of Long.MAX_VALUE.
          */
         private val trustBwe: Boolean by config {
-            retrieve("org.jitsi.videobridge.TRUST_BWE".from(JitsiConfig.legacyConfig))
-            retrieve("videobridge.cc.trust-bwe".from(JitsiConfig.newConfig))
+            "org.jitsi.videobridge.TRUST_BWE".from(JitsiConfig.legacyConfig)
+            "videobridge.cc.trust-bwe".from(JitsiConfig.newConfig)
         }
 
         @JvmStatic
