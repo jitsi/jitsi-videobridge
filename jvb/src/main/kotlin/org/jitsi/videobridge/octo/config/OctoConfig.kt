@@ -43,28 +43,28 @@ class OctoConfig {
         // of validating the other properties in the legacy config
         // file.  If neither property is present, we consider the field
         // "not found" in the legacy config.
-        retrieve("Legacy Octo relay enabled") {
+        "Legacy Octo relay enabled" {
             if (legacyBindAddress == null && legacyBindPort == null) {
                 throw ConfigException.UnableToRetrieve.NotFound("not found")
             }
             legacyBindAddress != null && legacyBindPort?.isUnprivilegedPort() == true
         }
-        retrieve("videobridge.octo.enabled".from(JitsiConfig.newConfig))
+        "videobridge.octo.enabled".from(JitsiConfig.newConfig)
     }
 
     val region: String? by optionalconfig {
-        retrieve("org.jitsi.videobridge.REGION".from(JitsiConfig.legacyConfig))
-        retrieve("videobridge.octo.region".from(JitsiConfig.newConfig))
+        "org.jitsi.videobridge.REGION".from(JitsiConfig.legacyConfig)
+        "videobridge.octo.region".from(JitsiConfig.newConfig)
     }
 
     val bindAddress: String by config {
-        retrieve("bind address from legacy config") { legacyBindAddress!! }
-        retrieve("videobridge.octo.bind-address".from(JitsiConfig.newConfig))
+        "bind address from legacy config" { legacyBindAddress!! }
+        "videobridge.octo.bind-address".from(JitsiConfig.newConfig)
     }
 
     val bindPort: Int by config {
-        retrieve("bind port from legacy config") { legacyBindPort!! }
-        retrieve("videobridge.octo.bind-port".from(JitsiConfig.newConfig))
+        "bind port from legacy config" { legacyBindPort!! }
+        "videobridge.octo.bind-port".from(JitsiConfig.newConfig)
     }
 
     /**
@@ -73,9 +73,9 @@ class OctoConfig {
      * reading a value from the legacy config file
      */
     val publicAddress: String by config {
-        retrieve("org.jitsi.videobridge.octo.PUBLIC_ADDRESS".from(JitsiConfig.legacyConfig))
-        retrieve("videobridge.octo.public-address".from(JitsiConfig.newConfig))
-        retrieve("bindAddress") { bindAddress }
+        "org.jitsi.videobridge.octo.PUBLIC_ADDRESS".from(JitsiConfig.legacyConfig)
+        "videobridge.octo.public-address".from(JitsiConfig.newConfig)
+        "bindAddress" { bindAddress }
     }
 
     companion object {
