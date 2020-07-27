@@ -25,8 +25,8 @@ class BandwidthProbingConfig {
      * How often we check to send probing data
      */
     val paddingPeriodMs: Long by config {
-        retrieve("org.jitsi.videobridge.PADDING_PERIOD_MS".from(JitsiConfig.legacyConfig))
-        retrieve("videobridge.cc.padding-period"
-                .from(JitsiConfig.newConfig).asType<Duration>().andConvertBy { it.toMillis() })
+        "org.jitsi.videobridge.PADDING_PERIOD_MS".from(JitsiConfig.legacyConfig)
+        "videobridge.cc.padding-period"
+            .from(JitsiConfig.newConfig).convertFrom<Duration> { it.toMillis() }
     }
 }
