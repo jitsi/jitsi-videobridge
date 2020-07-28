@@ -15,6 +15,9 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
@@ -52,7 +55,6 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.queue.CountingErrorHandler
 
-import org.jitsi.nlj.RtpSenderConfig.Config
 import org.jitsi.nlj.util.BufferPool
 
 class RtpSenderImpl(
@@ -78,11 +80,12 @@ class RtpSenderImpl(
     private val outgoingRtpRoot: Node
     private val outgoingRtxRoot: Node
     private val outgoingRtcpRoot: Node
+    private val queueSize: Int by config("jmt.transceiver.send.queue-size".from(JitsiConfig.newConfig))
     private val incomingPacketQueue = PacketInfoQueue(
         "rtp-sender-incoming-packet-queue",
         executor,
         this::handlePacket,
-        Config.queueSize()
+        queueSize
     )
     var running = true
     private var localVideoSsrc: Long? = null
