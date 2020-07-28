@@ -79,7 +79,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-media-transform</artifactId>
-                <version>1.0-SNAPSHOT</version>
+                <version>1.0-166-g5924c16</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
