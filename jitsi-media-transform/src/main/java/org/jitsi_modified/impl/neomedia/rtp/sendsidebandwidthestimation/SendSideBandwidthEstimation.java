@@ -19,6 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging.DiagnosticContext;
 import org.jitsi.utils.logging.TimeSeriesLogger;
 import org.jitsi.utils.logging2.*;
+import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.config.SendSideBandwidthEstimationConfig;
 
 import java.time.*;
 import java.util.*;
@@ -220,23 +221,23 @@ public class SendSideBandwidthEstimation
         logger = parentLogger.createChildLogger(getClass().getName());
         this.diagnosticContext = diagnosticContext;
 
-        double lossExperimentProbability = Config.lossExperimentProbability();
+        double lossExperimentProbability = SendSideBandwidthEstimationConfig.lossExperimentProbability();
 
         if (kRandom.nextFloat() < lossExperimentProbability)
         {
-            low_loss_threshold_ = Config.experimentalLowLossThreshold();
-            high_loss_threshold_ = Config.experimentalHighLossThreshold();
-            bitrate_threshold_bps_ = 1000 * Config.experimentalBitrateThresholdKbps();
+            low_loss_threshold_ = SendSideBandwidthEstimationConfig.experimentalLowLossThreshold();
+            high_loss_threshold_ = SendSideBandwidthEstimationConfig.experimentalHighLossThreshold();
+            bitrate_threshold_bps_ = 1000 * SendSideBandwidthEstimationConfig.experimentalBitrateThresholdKbps();
         }
         else
         {
-            low_loss_threshold_ = Config.defaultLowLossThreshold();
-            high_loss_threshold_ = Config.defaultHighLossThreshold();
-            bitrate_threshold_bps_ = 1000 * Config.defaultBitrateThresholdKbps();
+            low_loss_threshold_ = SendSideBandwidthEstimationConfig.defaultLowLossThreshold();
+            high_loss_threshold_ = SendSideBandwidthEstimationConfig.defaultHighLossThreshold();
+            bitrate_threshold_bps_ = 1000 * SendSideBandwidthEstimationConfig.defaultBitrateThresholdKbps();
         }
 
 
-        double timeoutExperimentProbability = Config.timeoutExperimentProbability();
+        double timeoutExperimentProbability = SendSideBandwidthEstimationConfig.timeoutExperimentProbability();
 
         in_timeout_experiment_
             = kRandom.nextFloat() < timeoutExperimentProbability;

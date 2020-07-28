@@ -15,6 +15,9 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import org.jitsi.nlj.rtcp.CompoundRtcpParser
@@ -65,7 +68,6 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.queue.CountingErrorHandler
 
-import org.jitsi.nlj.RtpReceiverConfig.Config
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BufferPool
 
@@ -96,11 +98,12 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val logger = createChildLogger(parentLogger)
     private var running: Boolean = true
     private val inputTreeRoot: Node
+    private val queueSize: Int by config("jmt.transceiver.recv.queue-size".from(JitsiConfig.newConfig))
     private val incomingPacketQueue = PacketInfoQueue(
             "rtp-receiver-incoming-packet-queue",
             executor,
             this::handleIncomingPacket,
-            Config.queueSize()
+            queueSize
         )
     private val srtpDecryptWrapper = SrtpDecryptNode()
     private val srtcpDecryptWrapper = SrtcpDecryptNode()

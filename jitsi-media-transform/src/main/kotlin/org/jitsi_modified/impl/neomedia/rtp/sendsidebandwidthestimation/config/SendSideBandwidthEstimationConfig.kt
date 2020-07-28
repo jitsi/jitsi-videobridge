@@ -16,164 +16,101 @@
 
 package org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.config
 
-import org.jitsi.config.LegacyFallbackConfigProperty
-import org.jitsi.config.legacyConfigAttributes
-import org.jitsi.config.newConfigAttributes
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
 import org.jitsi.nlj.util.Bandwidth
-import org.jitsi.utils.config.FallbackProperty
-import org.jitsi.utils.config.SimpleProperty
 
 class SendSideBandwidthEstimationConfig {
-    class Config {
-        companion object {
-            private const val LEGACY_BASE_NAME =
-                "org.jitsi.impl.neomedia.rtp.sendsidebandwidthestimation.SendSideBandwidthEstimation"
+    companion object {
+        private val defaultLowLossThreshold: Double by
+            config("jmt.bwe.send-side.low-loss-threshold".from(JitsiConfig.newConfig))
 
-            /**
-             * The property that specifies the low-loss threshold
-             * (expressed as a proportion of lost packets) when the loss probability
-             * experiment is *not* active
-             */
-            class DefaultLowLossThresholdProperty : SimpleProperty<Double>(
-                newConfigAttributes {
-                    readOnce()
-                    name("jmt.bwe.send-side.low-loss-threshold")
-                }
-            )
-            private val defaultLowLossThresholdProp =
-                DefaultLowLossThresholdProperty()
+        /**
+         * The low-loss threshold (expressed as a proportion of lost packets) when the loss probability
+         * experiment is *not* active
+         */
+        @JvmStatic
+        fun defaultLowLossThreshold() = defaultLowLossThreshold
 
-            @JvmStatic
-            fun defaultLowLossThreshold(): Double = defaultLowLossThresholdProp.value
+        private val defaultHighLossThreshold: Double by
+            config("jmt.bwe.send-side.high-loss-threshold".from(JitsiConfig.newConfig))
 
-            /*
-             * The property that specifies the high-loss threshold
-             * (expressed as a proportion of lost packets) when the loss probability
-             * experiment is *not* active.
-             */
-            class DefaultHighLossThresholdProperty : SimpleProperty<Double>(
-                newConfigAttributes {
-                    readOnce()
-                    name("jmt.bwe.send-side.high-loss-threshold")
-                }
-            )
-            private val defaultHighLossThresholdProp =
-                DefaultHighLossThresholdProperty()
+        /**
+         * The high-loss threshold (expressed as a proportion of lost packets) when the loss probability
+         * experiment is *not* active.
+         */
+        @JvmStatic
+        fun defaultHighLossThreshold() = defaultHighLossThreshold
 
-            @JvmStatic
-            fun defaultHighLossThreshold(): Double = defaultHighLossThresholdProp.value
-
-            /**
-             * The property that specifies the bitrate threshold when the
-             * loss probability experiment is *not* active.
-             */
-            class DefaultBitrateThresholdProperty : SimpleProperty<Bandwidth>(
-                newConfigAttributes {
-                    name("jmt.bwe.send-side.bitrate-threshold")
-                    readOnce()
-                    retrievedAs<String>() convertedBy(Bandwidth.Companion::fromString)
-                }
-            )
-            private val defaultBitrateThresholdProp =
-                DefaultBitrateThresholdProperty()
-
-            @JvmStatic
-            fun defaultBitrateThresholdKbps(): Int = defaultBitrateThresholdProp.value.kbps.toInt()
-
-            /**
-             * The property that specifies the probability of enabling the
-             * loss-based experiment.
-             */
-            class LossExperimentProbabilityProperty : LegacyFallbackConfigProperty<Double>(
-                Double::class,
-                legacyName = "$LEGACY_BASE_NAME.lossExperimentProbability",
-                newName = "jmt.bwe.send-side.loss-experiment.probability",
-                readOnce = true
-            )
-            private val lossExperimentProbabilityProp =
-                LossExperimentProbabilityProperty()
-
-            @JvmStatic
-            fun lossExperimentProbability(): Double = lossExperimentProbabilityProp.value
-
-            /**
-             * The property that specifies the low-loss threshold
-             * (expressed as a proportion of lost packets) when the loss probability
-             * experiment is active.
-             *
-             * First, we'll check for an experimental value in the old config file,
-             * then we'll check for an experimental value in the new config file,
-             * then we'll fall back to the default value
-             */
-            class ExperimentalLowLossThresholdProperty : LegacyFallbackConfigProperty<Double>(
-                Double::class,
-                legacyName = "$LEGACY_BASE_NAME.lowLossThreshold",
-                newName = "jmt.bwe.send-side.loss-experiment.low-loss-threshold",
-                readOnce = true
-            )
-            private val experimentalLowLossThresholdProp =
-                ExperimentalLowLossThresholdProperty()
-
-            @JvmStatic
-            fun experimentalLowLossThreshold(): Double = experimentalLowLossThresholdProp.value
-
-            /*
-             * The property that specifies the high-loss threshold
-             * (expressed as a proportion of lost packets).
-             *
-             * First, we'll check for an experimental value in the old config file,
-             * then we'll check for an experimental value in the new config file,
-             * then we'll fall back to the default value
-             */
-            class ExperimentalHighLossThresholdProperty : LegacyFallbackConfigProperty<Double>(
-                Double::class,
-                legacyName = "$LEGACY_BASE_NAME.highLossThreshold",
-                newName = "jmt.bwe.send-side.loss-experiment.high-loss-threshold",
-                readOnce = true
-            )
-            private val experimentalHighLossThresholdProp =
-                ExperimentalHighLossThresholdProperty()
-
-            @JvmStatic
-            fun experimentalHighLossThreshold(): Double = experimentalHighLossThresholdProp.value
-
-            /**
-             * The property that specifies the bitrate threshold when the
-             * loss probability experiment is active.
-             */
-            class ExperimentalBitrateThresholdProperty : FallbackProperty<Bandwidth>(
-                legacyConfigAttributes {
-                    name("$LEGACY_BASE_NAME.bitrateThresholdKbps")
-                    readOnce()
-                },
-                newConfigAttributes {
-                    name("jmt.bwe.send-side.loss-experiment.bitrate-threshold")
-                    readOnce()
-                    retrievedAs<String>() convertedBy(Bandwidth.Companion::fromString)
-                }
-            )
-            private val experimentalBitrateThresholdProp =
-                ExperimentalBitrateThresholdProperty()
-
-            @JvmStatic
-            fun experimentalBitrateThresholdKbps(): Int = experimentalBitrateThresholdProp.value.kbps.toInt()
-
-            /**
-             * The property that specifies the probability of enabling the
-             * timeout experiment.
-             */
-            class TimeoutExperimentProbabilityProperty : LegacyFallbackConfigProperty<Double>(
-                Double::class,
-                readOnce = true,
-                legacyName = "$LEGACY_BASE_NAME.timeoutExperimentProbability",
-                newName = "jmt.bwe.send-side.timeout-experiment.probability"
-            )
-
-            private val timeoutExperimentProbabilityProp =
-                TimeoutExperimentProbabilityProperty()
-
-            @JvmStatic
-            fun timeoutExperimentProbability(): Double = timeoutExperimentProbabilityProp.value
+        private val defaultBitrateThresholdKbps: Int by config {
+            "jmt.bwe.send-side.bitrate-threshold".from(JitsiConfig.newConfig)
+                .convertFrom<String> { Bandwidth.fromString(it).kbps.toInt() }
         }
+        /**
+         * The bitrate threshold when the loss probability experiment is *not* active.
+         */
+        @JvmStatic
+        fun defaultBitrateThresholdKbps() = defaultBitrateThresholdKbps
+
+        private const val LEGACY_BASE_NAME =
+            "org.jitsi.impl.neomedia.rtp.sendsidebandwidthestimation.SendSideBandwidthEstimation"
+
+        private val lossExperimentProbability: Double by config {
+            "$LEGACY_BASE_NAME.lossExperimentProbability".from(JitsiConfig.legacyConfig)
+            "jmt.bwe.send-side.loss-experiment.probability".from(JitsiConfig.newConfig)
+        }
+
+        /**
+         * The probability of enabling the loss-based experiment.
+         */
+        @JvmStatic
+        fun lossExperimentProbability() = lossExperimentProbability
+
+        private val experimentalLowLossThreshold: Double by config {
+            "$LEGACY_BASE_NAME.lowLossThreshold".from(JitsiConfig.legacyConfig)
+            "jmt.bwe.send-side.loss-experiment.low-loss-threshold".from(JitsiConfig.newConfig)
+        }
+
+        /**
+         * The low-loss threshold (expressed as a proportion of lost packets) when the loss probability
+         * experiment is active.
+         */
+        @JvmStatic
+        fun experimentalLowLossThreshold() = experimentalLowLossThreshold
+
+        private val experimentalHighLossThreshold: Double by config {
+            "$LEGACY_BASE_NAME.highLossThreshold".from(JitsiConfig.legacyConfig)
+            "jmt.bwe.send-side.loss-experiment.high-loss-threshold".from(JitsiConfig.newConfig)
+        }
+
+        /**
+         * The high-loss threshold (expressed as a proportion of lost packets).
+         */
+        @JvmStatic
+        fun experimentalHighLossThreshold() = experimentalHighLossThreshold
+
+        private val experimentalBitrateThresholdKbps: Int by config {
+            "$LEGACY_BASE_NAME.bitrateThresholdKbps".from(JitsiConfig.legacyConfig)
+            "jmt.bwe.send-side.loss-experiment.bitrate-threshold".from(JitsiConfig.newConfig)
+                .convertFrom<String> { Bandwidth.fromString(it).kbps.toInt() }
+        }
+
+        /**
+         * The bitrate threshold when the loss probability experiment is active.
+         */
+        @JvmStatic
+        fun experimentalBitrateThresholdKbps() = experimentalBitrateThresholdKbps
+
+        private val timeoutExperimentProbability: Double by config {
+            "$LEGACY_BASE_NAME.timeoutExperimentProbability".from(JitsiConfig.legacyConfig)
+            "jmt.bwe.send-side.timeout-experiment.probability".from(JitsiConfig.newConfig)
+        }
+
+        /**
+         * The probability of enabling the timeout experiment.
+         */
+        @JvmStatic
+        fun timeoutExperimentProbability() = timeoutExperimentProbability
     }
 }

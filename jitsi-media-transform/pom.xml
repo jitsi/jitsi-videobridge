@@ -47,7 +47,12 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>jicoco-kotlin</artifactId>
-            <version>1.1-28-gf83a3d3</version>
+            <version>1.1-37-g95fd201</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>jitsi-metaconfig</artifactId>
+            <version>1.0</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -270,21 +275,21 @@
                     <!-- additional 3rd party ruleset(s) can be specified here -->
                 </dependencies>
             </plugin>
-			<plugin>
-			  <groupId>org.apache.maven.plugins</groupId>
-			  <artifactId>maven-checkstyle-plugin</artifactId>
-			  <version>3.1.1</version>
-			  <configuration>
-				  <configLocation>checkstyle.xml</configLocation>
-			  </configuration>
-			  <executions>
-				  <execution>
-					  <goals>
-						  <goal>check</goal>
-					  </goals>
-				  </execution>
-			  </executions>
-		  </plugin>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-checkstyle-plugin</artifactId>
+              <version>3.1.1</version>
+              <configuration>
+                  <configLocation>checkstyle.xml</configLocation>
+              </configuration>
+              <executions>
+                  <execution>
+                      <goals>
+                          <goal>check</goal>
+                      </goals>
+                  </execution>
+              </executions>
+          </plugin>
           <plugin>
               <groupId>com.github.spotbugs</groupId>
               <artifactId>spotbugs-maven-plugin</artifactId>
@@ -334,6 +339,10 @@
                 <enabled>true</enabled>
             </snapshots>
             <url>https://github.com/jitsi/jitsi-maven-repository/raw/master/snapshots/</url>
+        </repository>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
         </repository>
     </repositories>
 

@@ -15,12 +15,13 @@
  */
 package org.jitsi.nlj.transform.node
 
-import org.jitsi.config.newConfigAttributes
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.FeatureToggleEvent
 import org.jitsi.nlj.Features
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.utils.config.SimpleProperty
 import org.jitsi.utils.logging2.Logger
 import java.lang.IllegalStateException
 import java.util.Date
@@ -34,7 +35,7 @@ class ToggleablePcapWriter(
     private val pcapLock = Any()
 
     fun enable() {
-        if (!PcapWriterConfig.Config.pcapEnabled()) {
+        if (!enabled) {
             throw IllegalStateException("PCAP capture is disabled in configuration")
         }
         synchronized(pcapLock) {
@@ -74,23 +75,8 @@ class ToggleablePcapWriter(
 
         override fun trace(f: () -> Unit) = f.invoke()
     }
-}
 
-class PcapWriterConfig {
-    class Config {
-        companion object {
-
-            class PcapEnabledProperty : SimpleProperty<Boolean>(
-                newConfigAttributes {
-                    readOnce()
-                    name("jmt.debug.pcap.enabled")
-                }
-            )
-            private val pcapEnabledProperty =
-                PcapEnabledProperty()
-
-            @JvmStatic
-            fun pcapEnabled(): Boolean = pcapEnabledProperty.value
-        }
+    companion object {
+        val enabled: Boolean by config("jmt.debug.pcap.enabled".from(JitsiConfig.newConfig))
     }
 }
