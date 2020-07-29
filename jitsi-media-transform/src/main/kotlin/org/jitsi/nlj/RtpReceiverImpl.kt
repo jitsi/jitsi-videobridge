@@ -217,7 +217,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 path = pipeline {
                                     node(RtxHandler(streamInformationStore, logger))
                                     node(DuplicateTermination())
-                                    node(RetransmissionRequesterNode(rtcpSender, backgroundExecutor, logger))
+                                    node(retransmissionRequester)
                                     node(paddingOnlyDiscarder)
                                     node(VideoParser(streamInformationStore, logger))
                                     node(Vp8Parser(logger))
