@@ -81,7 +81,7 @@ public class Harvesters
 
 
             singlePortHarvesters
-                    = SinglePortUdpHarvester.createHarvesters(IceTransport.config.getPort());
+                    = SinglePortUdpHarvester.createHarvesters(IceConfig.config.getPort());
             if (singlePortHarvesters.isEmpty())
             {
                 singlePortHarvesters = null;
@@ -90,14 +90,14 @@ public class Harvesters
 
             healthy = singlePortHarvesters != null;
 
-            if (IceTransport.config.getTcpEnabled())
+            if (IceConfig.config.getTcpEnabled())
             {
-                int port = IceTransport.config.getTcpPort();
+                int port = IceConfig.config.getTcpPort();
                 try
                 {
-                    tcpHarvester = new TcpHarvester(port, IceTransport.config.getIceSslTcp());
+                    tcpHarvester = new TcpHarvester(port, IceConfig.config.getIceSslTcp());
                     classLogger.info("Initialized TCP harvester on port "
-                            + port + ", ssltcp=" + IceTransport.config.getIceSslTcp());
+                            + port + ", ssltcp=" + IceConfig.config.getIceSslTcp());
 
                 }
                 catch (IOException ioe)
@@ -106,7 +106,7 @@ public class Harvesters
                         "Failed to initialize TCP harvester on port " + port);
                 }
 
-                Integer mappedPort = IceTransport.config.getTcpMappedPort();
+                Integer mappedPort = IceConfig.config.getTcpMappedPort();
                 if (mappedPort != null)
                 {
                     tcpHarvester.addMappedPort(mappedPort);

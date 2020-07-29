@@ -103,4 +103,9 @@ class IceConfig {
             .from(JitsiConfig.newConfig)
             .convertFrom<String> { NominationStrategy.fromString(it) }
     }
+
+    companion object {
+        @JvmField
+        val config = IceConfig()
+    }
 }
