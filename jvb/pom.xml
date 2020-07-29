@@ -288,7 +288,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>${project.groupId}</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>jicoco-test-kotlin</artifactId>
       <version>${jicoco.version}</version>
       <scope>test</scope>
