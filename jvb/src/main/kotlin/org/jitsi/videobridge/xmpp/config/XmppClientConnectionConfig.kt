@@ -18,36 +18,26 @@ package org.jitsi.videobridge.xmpp.config
 
 import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValue
-import org.jitsi.config.legacyConfigAttributes
-import org.jitsi.config.newConfigAttributes
-import org.jitsi.utils.config.FallbackProperty
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.ConfigException
+import org.jitsi.metaconfig.config
 import org.jitsi.xmpp.mucclient.MucClientConfiguration
 
 class XmppClientConnectionConfig {
-    class Config {
-        companion object {
-            class ClientConnectionConfigsProperty : FallbackProperty<List<MucClientConfiguration>>(
-                legacyConfigAttributes {
-                    name("org.jitsi.videobridge.xmpp.user")
-                    readOnce()
-                    retrievedAs<ConfigObject>() convertedBy { cfg ->
-                        cfg.entries.map { it.toMucClientConfiguration() }
-                    }
-                },
-                newConfigAttributes {
-                    name("videobridge.apis.xmpp-client.configs")
-                    readOnce()
-                    retrievedAs<ConfigObject>() convertedBy { cfg ->
-                        cfg.entries.map { it.toMucClientConfiguration() }
-                    }
-                }
-            )
-            private val clientConnectionConfigs = ClientConnectionConfigsProperty()
-
-            @JvmStatic
-            fun getClientConfigs(): List<MucClientConfiguration> =
-                clientConnectionConfigs.value
-        }
+    val clientConfigs: List<MucClientConfiguration> by config {
+        "org.jitsi.videobridge.xmpp.user."
+            .from(JitsiConfig.legacyConfig)
+            .convertFrom<Map<String, String>> { propsMap ->
+                MucClientConfiguration.loadFromMap(propsMap, "org.jitsi.videobridge.xmpp.user.", true)
+                    .toList()
+                    .takeIf { it.isNotEmpty() } ?: throw ConfigException.UnableToRetrieve.NotFound("no configs found")
+            }
+        "videobridge.apis.xmpp-client.configs".from(JitsiConfig.newConfig)
+            .convertFrom<ConfigObject> { cfg ->
+                cfg.entries
+                    .map { it.toMucClientConfiguration() }
+                    .filter { it.isComplete }
+            }
     }
 }
 

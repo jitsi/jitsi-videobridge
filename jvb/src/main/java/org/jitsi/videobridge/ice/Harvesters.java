@@ -17,13 +17,11 @@
 package org.jitsi.videobridge.ice;
 
 import org.ice4j.ice.harvest.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.transport.ice.*;
 
 import java.io.*;
 import java.util.*;
-
-import static org.jitsi.videobridge.ice.IceConfig.*;
 
 public class Harvesters
 {
@@ -83,7 +81,7 @@ public class Harvesters
 
 
             singlePortHarvesters
-                    = SinglePortUdpHarvester.createHarvesters(Config.port());
+                    = SinglePortUdpHarvester.createHarvesters(IceConfig.config.getPort());
             if (singlePortHarvesters.isEmpty())
             {
                 singlePortHarvesters = null;
@@ -92,14 +90,14 @@ public class Harvesters
 
             healthy = singlePortHarvesters != null;
 
-            if (Config.tcpEnabled())
+            if (IceConfig.config.getTcpEnabled())
             {
-                int port = Config.tcpPort();
+                int port = IceConfig.config.getTcpPort();
                 try
                 {
-                    tcpHarvester = new TcpHarvester(port, Config.iceSslTcp());
+                    tcpHarvester = new TcpHarvester(port, IceConfig.config.getIceSslTcp());
                     classLogger.info("Initialized TCP harvester on port "
-                            + port + ", ssltcp=" + Config.iceSslTcp());
+                            + port + ", ssltcp=" + IceConfig.config.getIceSslTcp());
 
                 }
                 catch (IOException ioe)
@@ -108,7 +106,7 @@ public class Harvesters
                         "Failed to initialize TCP harvester on port " + port);
                 }
 
-                Integer mappedPort = Config.tcpMappedPort();
+                Integer mappedPort = IceConfig.config.getTcpMappedPort();
                 if (mappedPort != null)
                 {
                     tcpHarvester.addMappedPort(mappedPort);

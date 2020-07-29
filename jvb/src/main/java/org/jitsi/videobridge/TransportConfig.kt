@@ -15,24 +15,13 @@
  */
 package org.jitsi.videobridge
 
-import org.jitsi.config.newConfigAttributes
-import org.jitsi.utils.config.SimpleProperty
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
 
 class TransportConfig {
-    class Config {
-        companion object {
-
-            class QueueSizeProperty : SimpleProperty<Int>(
-                    newConfigAttributes {
-                        name("videobridge.transport.send.queue-size")
-                        readOnce()
-                    }
-            )
-
-            private val queueSizeProperty = QueueSizeProperty()
-
-            @JvmStatic
-            fun queueSize() = queueSizeProperty.value
-        }
+    companion object {
+        @JvmStatic
+        val queueSize: Int by config("videobridge.transport.send.queue-size".from(JitsiConfig.newConfig))
     }
 }

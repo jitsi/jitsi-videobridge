@@ -21,8 +21,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.stats.media.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.stats.*;
-import org.jitsi.videobridge.stats.config.StatsManagerBundleActivatorConfig;
-import org.jitsi.videobridge.stats.config.StatsTransportConfig;
+import org.jitsi.videobridge.stats.config.*;
 import org.osgi.framework.*;
 
 import java.time.Duration;
@@ -132,11 +131,11 @@ public class Activator
                 CallStatsIOTransport.DEFAULT_BRIDGE_ID);
 
             // Update with per stats transport interval if available.
-            Duration intervalDuration = StatsManagerBundleActivatorConfig.Config.transportConfigs().stream()
+            Duration intervalDuration = StatsManagerBundleActivator.config.getTransportConfigs().stream()
                     .filter(tc -> tc instanceof StatsTransportConfig.CallStatsIoStatsTransportConfig)
                     .map(StatsTransportConfig::getInterval)
                     .findFirst()
-                    .orElse(StatsManagerBundleActivatorConfig.Config.statsInterval());
+                    .orElse(StatsManagerBundleActivator.config.getInterval());
             int interval = (int)intervalDuration.toMillis();
             String conferenceIDPrefix = ConfigUtils.getString(
                 cfg,

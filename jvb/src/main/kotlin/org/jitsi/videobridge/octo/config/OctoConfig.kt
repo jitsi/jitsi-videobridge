@@ -16,151 +16,75 @@
 
 package org.jitsi.videobridge.octo.config
 
-import com.typesafe.config.ConfigObject
-import org.jitsi.config.LegacyFallbackConfigProperty
-import org.jitsi.config.legacyConfigAttributes
-import org.jitsi.config.newConfigAttributes
-import org.jitsi.utils.config.FallbackProperty
-import org.jitsi.utils.config.SimpleProperty
-import org.jitsi.utils.config.exception.ConfigValueParsingException
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.ConfigException
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
+import org.jitsi.metaconfig.optionalconfig
 
 class OctoConfig {
-    class Config {
-        companion object {
+    val recvQueueSize: Int by config("videobridge.octo.recv-queue-size".from(JitsiConfig.newConfig))
 
-            class RecvQueueSizeProperty : SimpleProperty<Int>(
-                    newConfigAttributes {
-                        name("videobridge.octo.recv-queue-size")
-                        readOnce()
-                    }
-            )
+    val sendQueueSize: Int by config("videobridge.octo.send-queue-size".from(JitsiConfig.newConfig))
 
-            private val recvQueueSizeProperty = RecvQueueSizeProperty()
+    // We grab these two properties from the legacy config separately here
+    // because we use them to infer a legacy value of 'enabled' (which was
+    // based on the presence of these properties) and as potential values
+    // in each of the individual bindAddress and bindPort properties.
+    private val legacyBindAddress: String? by optionalconfig(
+        "org.jitsi.videobridge.octo.BIND_ADDRESS".from(JitsiConfig.legacyConfig))
+    private val legacyBindPort: Int? by optionalconfig(
+        "org.jitsi.videobridge.octo.BIND_PORT".from(JitsiConfig.legacyConfig))
 
-            @JvmStatic
-            fun recvQueueSize() = recvQueueSizeProperty.value
-
-            class SendQueueSizeProperty : SimpleProperty<Int>(
-                newConfigAttributes {
-                    name("videobridge.octo.send-queue-size")
-                    readOnce()
-                }
-            )
-
-            private val sendQueueSizeProperty = SendQueueSizeProperty()
-
-            @JvmStatic
-            fun sendQueueSize() = sendQueueSizeProperty.value
-
-            class EnabledProperty : FallbackProperty<Boolean>(
-                // The legacy config file doesn't have an 'enabled' property,
-                // instead it was based on the values of the parameters.  Here,
-                // we simulate a legacy 'enabled' value based on the results
-                // of validating the other properties in the legacy config
-                // file.
-                legacyConfigAttributes {
-                    name("org.jitsi.videobridge.octo")
-                    readOnce()
-                    retrievedAs<ConfigObject>() convertedBy {
-                        val cfg = it.toConfig()
-                        if (cfg.hasPath("BIND_ADDRESS") && cfg.hasPath("BIND_PORT")) {
-                            val bindAddress = cfg.getString("BIND_ADDRESS")
-                            val bindPort = cfg.getInt("BIND_PORT")
-                            bindAddress != null && (bindPort.isUnprivilegedPort())
-                        } else {
-                            false
-                        }
-                    }
-                },
-                newConfigAttributes {
-                    name("videobridge.octo.enabled")
-                    readOnce()
-                }
-            )
-
-            private val enabledProp = EnabledProperty()
-
-            @JvmStatic
-            fun enabled() = enabledProp.value
-
-            class RegionProperty : LegacyFallbackConfigProperty<String>(
-                String::class,
-                "org.jitsi.videobridge.REGION",
-                "videobridge.octo.region",
-                readOnce = true
-            )
-
-            private val regionProp = RegionProperty()
-
-            @JvmStatic
-            fun region(): String? {
-                return try {
-                    regionProp.value
-                } catch (t: Throwable) {
-                    null
-                }
+    val enabled: Boolean by config {
+        // The legacy config file doesn't have an 'enabled' property,
+        // instead it was based on the values of the parameters.  Here,
+        // we simulate a legacy 'enabled' value based on the results
+        // of validating the other properties in the legacy config
+        // file.  If neither property is present, we consider the field
+        // "not found" in the legacy config.
+        "Legacy Octo relay enabled" {
+            if (legacyBindAddress == null && legacyBindPort == null) {
+                throw ConfigException.UnableToRetrieve.NotFound("not found")
             }
-
-            class BindAddressProperty : LegacyFallbackConfigProperty<String>(
-                String::class,
-                "org.jitsi.videobridge.octo.BIND_ADDRESS",
-                "videobridge.octo.bind-address",
-                readOnce = true
-            )
-
-            private val bindAddressProp = BindAddressProperty()
-
-            @JvmStatic
-            fun bindAddress(): String = bindAddressProp.value
-
-            class BindPortProperty : FallbackProperty<Int>(
-                legacyConfigAttributes {
-                    name("org.jitsi.videobridge.octo.BIND_PORT")
-                    readOnce()
-                    retrievedAs<Int>() convertedBy {
-                        if (!it.isUnprivilegedPort()) {
-                            throw ConfigValueParsingException("Octo bind port " +
-                                    "must be in the unprivileged port space")
-                        }
-                        it
-                    }
-                },
-                newConfigAttributes {
-                    name("videobridge.octo.bind-port")
-                    readOnce()
-                }
-            )
-
-            private val bindPortProp = BindPortProperty()
-
-            @JvmStatic
-            fun bindPort(): Int = bindPortProp.value
-
-            class PublicAddressProperty : LegacyFallbackConfigProperty<String>(
-                String::class,
-                "org.jitsi.videobridge.octo.PUBLIC_ADDRESS",
-                "videobridge.octo.public-address",
-                readOnce = true
-            )
-
-            private val publicAddressProp = PublicAddressProperty()
-
-            /**
-             * If publicAddress doesn't have a value, default to the
-             * value of bindAddress.
-             * Note: we can't use a substitution in reference.conf
-             * because that won't take into account reading a value
-             * from the legacy config file
-             */
-            @JvmStatic
-            fun publicAddress(): String {
-                return try {
-                    publicAddressProp.value
-                } catch (t: Throwable) {
-                    bindAddressProp.value
-                }
-            }
+            legacyBindAddress != null && legacyBindPort?.isUnprivilegedPort() == true
         }
+        "videobridge.octo.enabled".from(JitsiConfig.newConfig)
+    }
+
+    val region: String? by optionalconfig {
+        "org.jitsi.videobridge.REGION".from(JitsiConfig.legacyConfig)
+        "videobridge.octo.region".from(JitsiConfig.newConfig)
+    }
+
+    val bindAddress: String by config {
+        "bind address from legacy config" { legacyBindAddress!! }
+        "videobridge.octo.bind-address".from(JitsiConfig.newConfig)
+    }
+
+    val bindPort: Int by config {
+        "bind port from legacy config" { legacyBindPort!! }
+        "videobridge.octo.bind-port".from(JitsiConfig.newConfig)
+    }
+
+    /**
+     * If publicAddress doesn't have a value, default to the value of bindAddress.
+     * Note: we can't use a substitution in reference.conf because that won't take into account
+     * reading a value from the legacy config file
+     */
+    val publicAddress: String by config {
+        "org.jitsi.videobridge.octo.PUBLIC_ADDRESS".from(JitsiConfig.legacyConfig)
+        "videobridge.octo.public-address".from(JitsiConfig.newConfig)
+        "bindAddress" { bindAddress }
+    }
+
+    companion object {
+        /**
+         * NOTE(brian): Define this here because many classes want to access it from a static context, but
+         * I think we could tweak that if we wanted.
+         */
+        @JvmField
+        val config = OctoConfig()
     }
 }
 

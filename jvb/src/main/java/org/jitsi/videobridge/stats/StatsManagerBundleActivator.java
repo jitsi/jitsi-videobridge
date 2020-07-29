@@ -17,11 +17,10 @@ package org.jitsi.videobridge.stats;
 
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
+import org.jitsi.videobridge.stats.config.*;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
-
-import static org.jitsi.videobridge.stats.config.StatsManagerBundleActivatorConfig.Config;
 
 /**
  * Implements a <tt>BundleActivator</tt> for <tt>StatsManager</tt> which starts
@@ -70,6 +69,8 @@ public class StatsManagerBundleActivator
      */
     private ServiceRegistration<StatsManager> serviceRegistration;
 
+    public static final StatsManagerBundleActivatorConfig config = new StatsManagerBundleActivatorConfig();
+
     /**
      * Starts the <tt>StatsManager</tt> OSGi bundle in a <tt>BundleContext</tt>.
      * Initializes and starts a new <tt>StatsManager</tt> instance and registers
@@ -83,7 +84,7 @@ public class StatsManagerBundleActivator
     public void start(BundleContext bundleContext)
         throws Exception
     {
-        if (Config.enabled())
+        if (config.getEnabled())
         {
             StatsManagerBundleActivator.bundleContext = bundleContext;
 
@@ -126,10 +127,10 @@ public class StatsManagerBundleActivator
         //
         // XXX Consequently, the default Statistics instance is to be added to
         // StatsManager before adding any StatsTransport instances.
-        statsMgr.addStatistics(new VideobridgeStatistics(), Config.statsInterval().toMillis());
+        statsMgr.addStatistics(new VideobridgeStatistics(), config.getInterval().toMillis());
 
         // Add StatsTransports to StatsManager.
-        Config.transportConfigs().forEach(transportConfig -> {
+        config.getTransportConfigs().forEach(transportConfig -> {
             statsMgr.addTransport(transportConfig.toStatsTransport(), transportConfig.getInterval().toMillis());
         });
 

@@ -16,43 +16,17 @@
 
 package org.jitsi.videobridge
 
-import org.jitsi.config.legacyConfigAttributes
-import org.jitsi.config.newConfigAttributes
-import org.jitsi.utils.config.FallbackProperty
-import org.jitsi.utils.config.SimpleProperty
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
 import java.time.Duration
 
 class VideobridgeExpireThreadConfig {
-    class Config {
-        companion object {
-            class InactivityTimeoutProperty : SimpleProperty<Duration>(
-                newConfigAttributes {
-                    name("videobridge.entity-expiration.timeout")
-                    readOnce()
-                }
-            )
+    val inactivityTimeout: Duration by config("videobridge.entity-expiration.timeout".from(JitsiConfig.newConfig))
 
-            private val inactivityTimeoutProp = InactivityTimeoutProperty()
-
-            @JvmStatic
-            fun inactivityTimeout() = inactivityTimeoutProp.value
-
-            class ExpireThreadIntervalProperty : FallbackProperty<Duration>(
-                legacyConfigAttributes {
-                    name("org.jitsi.videobridge.EXPIRE_CHECK_SLEEP_SEC")
-                    readOnce()
-                    retrievedAs<Long>() convertedBy { Duration.ofSeconds(it) }
-                },
-                newConfigAttributes {
-                    name("videobridge.entity-expiration.check-interval")
-                    readOnce()
-                }
-            )
-
-            private val expireThreadIntervalProp = ExpireThreadIntervalProperty()
-
-            @JvmStatic
-            fun interval(): Duration = expireThreadIntervalProp.value
-        }
+    val interval: Duration by config {
+        "org.jitsi.videobridge.EXPIRE_CHECK_SLEEP_SEC".from(JitsiConfig.legacyConfig)
+            .convertFrom<Long>(Duration::ofSeconds)
+        "videobridge.entity-expiration.check-interval".from(JitsiConfig.newConfig)
     }
 }
