@@ -133,6 +133,10 @@
       <artifactId>jicoco-kotlin</artifactId>
     </dependency>
     <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>jicoco-config</artifactId>
+    </dependency>
+    <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-android-osgi</artifactId>
       <version>1.0-20190327.160432-3</version>
