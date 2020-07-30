@@ -294,17 +294,7 @@ public class VideobridgeShim
         responseConferenceIQ.setGracefulShutdown(
                 videobridge.isShutdownInProgress());
 
-        try
-        {
-            conferenceShim.initializeSignaledEndpoints(conferenceIQ);
-        }
-        catch (IqProcessingException e)
-        {
-            return IQUtils.createError(
-                conferenceIQ,
-                XMPPError.Condition.internal_server_error,
-                "Failed to init endpoints in conference: " + conferenceId);
-        }
+        conferenceShim.initializeSignaledEndpoints(conferenceIQ);
 
         ColibriConferenceIQ.Channel octoAudioChannel = null;
         ColibriConferenceIQ.Channel octoVideoChannel = null;
