@@ -80,11 +80,6 @@
       <version>${jetty.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.igniterealtime.smack</groupId>
-      <artifactId>smack-extensions</artifactId>
-      <version>${smack.version}</version>
-    </dependency>
-    <dependency>
       <groupId>org.jetbrains</groupId>
       <artifactId>annotations</artifactId>
       <version>15.0</version>
