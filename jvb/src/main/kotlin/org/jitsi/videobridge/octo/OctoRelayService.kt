@@ -34,6 +34,8 @@ class OctoRelayService : BundleActivator {
      */
     private var udpTransport: UdpTransport? = null
 
+    private val config = OctoConfig()
+
     /**
      * The [BridgeOctoTransport] for handling incoming and outgoing Octo data
      */
@@ -41,14 +43,14 @@ class OctoRelayService : BundleActivator {
         private set
 
     override fun start(bundleContext: BundleContext) {
-        if (!OctoConfig.config.enabled) {
+        if (!config.enabled) {
             logger.info("Octo relay is disabled")
             return
         }
 
-        val address = OctoConfig.config.bindAddress
-        val publicAddress = OctoConfig.config.publicAddress
-        val port = OctoConfig.config.bindPort
+        val address = config.bindAddress
+        val publicAddress = config.publicAddress
+        val port = config.bindPort
 
         try {
             udpTransport = UdpTransport(address, port, logger, OCTO_SO_RCVBUF, OCTO_SO_SNDBUF)

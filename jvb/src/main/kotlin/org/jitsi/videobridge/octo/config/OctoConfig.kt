@@ -77,15 +77,6 @@ class OctoConfig {
         "videobridge.octo.public-address".from(JitsiConfig.newConfig)
         "bindAddress" { bindAddress }
     }
-
-    companion object {
-        /**
-         * NOTE(brian): Define this here because many classes want to access it from a static context, but
-         * I think we could tweak that if we wanted.
-         */
-        @JvmField
-        val config = OctoConfig()
-    }
 }
 
 private fun Int.isUnprivilegedPort(): Boolean = this in 1024..65535

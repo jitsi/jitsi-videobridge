@@ -40,7 +40,10 @@ abstract class ConfigTest : ShouldSpec() {
         legacyService.props.load(StringReader(props))
     }
 
-    fun withNewConfig(config: String) {
-        JitsiConfig.newConfig = TypesafeConfigSource("new", ConfigFactory.parseString(config))
+    fun withNewConfig(config: String, loadDefaults: Boolean = false) {
+        JitsiConfig.newConfig = TypesafeConfigSource(
+            "new",
+            ConfigFactory.parseString(config).run { if (loadDefaults) withFallback(ConfigFactory.load()) else this }
+        )
     }
 }
