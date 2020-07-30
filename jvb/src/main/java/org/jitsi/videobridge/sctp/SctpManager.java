@@ -22,6 +22,8 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.sctp4j.*;
 
+import static org.jitsi.videobridge.sctp.SctpConfig.config;
+
 /**
  * Manages the SCTP connection and handles incoming and outgoing SCTP packets.
  *
@@ -33,6 +35,8 @@ import org.jitsi_modified.sctp4j.*;
  * {@link SctpSocket} will receive it via the data callback.
  */
 public class SctpManager {
+    private static final Logger classLogger = new LoggerImpl(SctpManager.class.getName());
+
     private final Logger logger;
     /**
      * The {@link SctpDataSender} is necessary from the start, as it's needed to send outgoing SCTP protocol packets
@@ -51,7 +55,15 @@ public class SctpManager {
     private static int DEFAULT_SCTP_PORT = 5000;
     static
     {
-        Sctp4j.init(DEFAULT_SCTP_PORT);
+        if (config.enabled())
+        {
+            classLogger.info("Initializing Sctp4j");
+            Sctp4j.init(DEFAULT_SCTP_PORT);
+        }
+        else
+        {
+            classLogger.info("Will not initialize Sctp4j, SCTP is not configured.");
+        }
     }
 
     /**
@@ -61,6 +73,10 @@ public class SctpManager {
      */
     public SctpManager(SctpDataSender dataSender, Logger parentLogger)
     {
+        if (!config.enabled())
+        {
+            throw new IllegalStateException("SCTP is disabled in configuration");
+        }
         this.dataSender = new BufferCopyingSctpDataSender(dataSender);
         this.logger = parentLogger.createChildLogger(SctpManager.class.getName());
     }

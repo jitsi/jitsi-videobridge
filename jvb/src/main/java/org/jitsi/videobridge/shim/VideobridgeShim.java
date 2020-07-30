@@ -18,6 +18,7 @@ package org.jitsi.videobridge.shim;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.sctp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.util.*;
@@ -201,6 +202,12 @@ public class VideobridgeShim
         List<ColibriConferenceIQ.SctpConnection> createdOrUpdatedSctpConnections = new ArrayList<>();
         for (ColibriConferenceIQ.SctpConnection sctpConnIq : sctpConnections)
         {
+            if (!SctpConfig.config.enabled())
+            {
+                throw new IqProcessingException(
+                        XMPPError.Condition.feature_not_implemented,
+                        "SCTP support is not configured");
+            }
             SctpConnectionShim sctpConnectionShim = contentShim.getOrCreateSctpConnectionShim(sctpConnIq);
             if (sctpConnectionShim == null)
             {
