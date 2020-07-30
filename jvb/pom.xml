@@ -296,12 +296,6 @@
         <version>1.6.2</version>
         <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>jicoco-test-kotlin</artifactId>
-      <version>${jicoco.version}</version>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
   <build>
     <plugins>
