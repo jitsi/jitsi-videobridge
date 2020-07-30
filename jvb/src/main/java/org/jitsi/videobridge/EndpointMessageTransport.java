@@ -423,10 +423,7 @@ class EndpointMessageTransport
     {
         Set<String> newPinnedEndpoints = new HashSet<>(message.getPinnedEndpoints());
 
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Pinned " + newPinnedEndpoints);
-        }
+        logger.debug(() -> "Pinned " + newPinnedEndpoints);
 
         videoConstraintsCompatibility.setPinnedEndpoints(newPinnedEndpoints);
         setSenderVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints());
