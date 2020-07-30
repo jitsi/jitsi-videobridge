@@ -378,8 +378,8 @@ public class Endpoint
                 getConference().getStatistics().hasIceSucceededEndpoint = true;
                 getConference().getVideobridge().getStatistics().totalIceSucceeded.incrementAndGet();
                 transceiver.setOutgoingPacketHandler(outgoingSrtpPacketQueue::add);
-                TaskPools.IO_POOL.submit(iceTransport::startReadingData);
-                TaskPools.IO_POOL.submit(dtlsTransport::startDtlsHandshake);
+                TaskPools.IO_POOL.execute(iceTransport::startReadingData);
+                TaskPools.IO_POOL.execute(dtlsTransport::startDtlsHandshake);
             }
 
             @Override
@@ -893,7 +893,7 @@ public class Endpoint
 
     private void acceptSctpConnection(SctpServerSocket sctpServerSocket)
     {
-        TaskPools.IO_POOL.submit(() -> {
+        TaskPools.IO_POOL.execute(() -> {
             // We don't want to block the thread calling
             // onDtlsHandshakeComplete so run the socket acceptance in an IO
             // pool thread
@@ -1008,16 +1008,7 @@ public class Endpoint
                     endpointsEnteringLastN,
                     conferenceEndpoints);
 
-        TaskPools.IO_POOL.submit(() -> {
-            try
-            {
-                sendMessage(msg);
-            }
-            catch (Exception e)
-            {
-                logger.warn("Failed to send a message: ", e);
-            }
-        });
+        TaskPools.IO_POOL.execute(() -> sendMessage(msg));
     }
 
     /**
@@ -1476,7 +1467,7 @@ public class Endpoint
         {
             // Submit this to the pool since we wait on the lock and process any
             // cached packets here as well
-            TaskPools.IO_POOL.submit(() -> {
+            TaskPools.IO_POOL.execute(() -> {
                 // We grab the lock here so that we can set the SCTP manager and
                 // process any previously-cached packets as an atomic operation.
                 // It also prevents another thread from coming in via
@@ -1545,7 +1536,7 @@ public class Endpoint
         {
             // Submit this to the pool since we wait on the lock and process any
             // cached packets here as well
-            TaskPools.IO_POOL.submit(() -> {
+            TaskPools.IO_POOL.execute(() -> {
                 // We grab the lock here so that we can set the SCTP manager and
                 // process any previously-cached packets as an atomic operation.
                 // It also prevents another thread from coming in via

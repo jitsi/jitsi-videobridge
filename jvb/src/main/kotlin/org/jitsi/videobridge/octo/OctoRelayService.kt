@@ -77,7 +77,7 @@ class OctoRelayService : BundleActivator {
                 udpTransport!!.send(data, off, length, remoteAddresses)
             }
         }
-        TaskPools.IO_POOL.submit { udpTransport!!.startReadingData() }
+        TaskPools.IO_POOL.execute { udpTransport!!.startReadingData() }
 
         bundleContext.registerService(
             OctoRelayService::class.java.name,

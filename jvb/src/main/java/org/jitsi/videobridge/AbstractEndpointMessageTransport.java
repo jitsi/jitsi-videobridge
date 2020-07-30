@@ -80,7 +80,7 @@ public abstract class AbstractEndpointMessageTransport<T extends AbstractEndpoin
             return;
         }
 
-        TaskPools.IO_POOL.submit(() ->
+        TaskPools.IO_POOL.execute(() ->
         {
             BridgeChannelMessage response = handleMessage(message);
             if (response != null)

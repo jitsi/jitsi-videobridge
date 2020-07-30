@@ -231,12 +231,12 @@ public class Conference
         this.conferenceName = conferenceName;
 
         speechActivity = new ConferenceSpeechActivity(new SpeechActivityListener());
-        updateLastNEndpointsFuture = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(() -> {
+        updateLastNEndpointsFuture = TaskPools.SCHEDULED_POOL.unsafeScheduleAtFixedRate(() -> {
             try
             {
                 if (speechActivity.updateLastNEndpoints())
                 {
-                    lastNEndpointsChangedAsync();
+                    TaskPools.IO_POOL.execute(this::lastNEndpointsChanged);
                 }
             }
             catch (Exception e)
@@ -419,24 +419,6 @@ public class Conference
     }
 
     /**
-     * Runs {@link #lastNEndpointsChanged()} in an IO pool thread.
-     */
-    private void lastNEndpointsChangedAsync()
-    {
-        TaskPools.IO_POOL.submit(() ->
-        {
-            try
-            {
-                lastNEndpointsChanged();
-            }
-            catch (Exception e)
-            {
-                logger.warn("Failed to handle change in last N endpoints: ", e);
-            }
-        });
-    }
-
-    /**
      * Updates all endpoints with a new list of ordered endpoints in the conference.
      */
     private void lastNEndpointsChanged()
@@ -481,7 +463,7 @@ public class Conference
                             " of " + keyframeDelay + "ms");
                 }
                 TaskPools.SCHEDULED_POOL.schedule(
-                        (Runnable)dominantSpeaker::requestKeyframe,
+                        dominantSpeaker::requestKeyframe,
                         (long)keyframeDelay,
                         TimeUnit.MILLISECONDS
                 );

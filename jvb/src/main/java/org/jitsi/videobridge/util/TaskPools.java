@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.util;
 
 import org.jitsi.nlj.util.*;
+import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging2.*;
 import org.json.simple.*;
 
@@ -28,51 +29,36 @@ public class TaskPools
     /**
      * A global executor service which can be used for non-CPU-intensive tasks.
      */
-    public static final ExecutorService IO_POOL =
-            Executors.newCachedThreadPool(new NameableThreadFactory("Global IO pool"));
+    public static final SafeExecutor IO_POOL =
+        new SafeExecutor(
+            "Global IO pool",
+            Executors.newCachedThreadPool(new NameableThreadFactory("Global IO pool")));
 
     /**
      * An executor to be used for CPU-intensive tasks.  NOTE that tasks which block should
      * NOT use this pool!
      */
-    public static final ExecutorService CPU_POOL =
+    public static final SafeExecutor CPU_POOL =
+        new SafeExecutor(
+            "Global CPU pool",
             Executors.newFixedThreadPool(
                     Runtime.getRuntime().availableProcessors(),
                     new NameableThreadFactory("Global CPU pool")
-            );
+            ));
 
-    public static final ScheduledExecutorService SCHEDULED_POOL =
-            Executors.newSingleThreadScheduledExecutor(new NameableThreadFactory("Global scheduled pool"));
-
-    @SuppressWarnings("unchecked")
-    public static JSONObject getStatsJson(ExecutorService es)
-    {
-        JSONObject debugState = new JSONObject();
-        debugState.put("executor_class", es.getClass().getSimpleName());
-
-        if (es instanceof ThreadPoolExecutor)
-        {
-            ThreadPoolExecutor ex = (ThreadPoolExecutor)es;
-            debugState.put("pool_size", ex.getPoolSize());
-            debugState.put("active_task_count", ex.getActiveCount());
-            debugState.put("completed_task_count", ex.getCompletedTaskCount());
-            debugState.put("core_pool_size", ex.getCorePoolSize());
-            debugState.put("maximum_pool_size", ex.getMaximumPoolSize());
-            debugState.put("largest_pool_size", ex.getLargestPoolSize());
-            debugState.put("queue_class", ex.getQueue().getClass().getSimpleName());
-            debugState.put("pending_task_count", ex.getQueue().size());
-        }
-
-        return debugState;
-    }
+    public static final SafeScheduledExecutor SCHEDULED_POOL =
+        new SafeScheduledExecutor(
+            "Global scheduled pool",
+            Executors.newSingleThreadScheduledExecutor(new NameableThreadFactory("Global scheduled pool")));
 
     @SuppressWarnings("unchecked")
     public static JSONObject getStatsJson()
     {
         JSONObject debugState = new JSONObject();
 
-        debugState.put("IO_POOL", getStatsJson(IO_POOL));
-        debugState.put("CPU_POOL", getStatsJson(CPU_POOL));
+        debugState.put("IO_POOL", IO_POOL.getStatsJson());
+        debugState.put("CPU_POOL", CPU_POOL.getStatsJson());
+        debugState.put("SCHEDULED_POOL", SCHEDULED_POOL.getStatsJson());
 
         return debugState;
     }
