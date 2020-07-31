@@ -111,7 +111,6 @@ public class VideobridgeStatistics
         unlockedSetStat(THREADS, 0);
         unlockedSetStat(RTP_LOSS, 0d);
         unlockedSetStat(VIDEO_CHANNELS, 0);
-        unlockedSetStat(VIDEO_STREAMS, 0);
         unlockedSetStat(LOSS_RATE_DOWNLOAD, 0d);
         unlockedSetStat(LOSS_RATE_UPLOAD, 0d);
         unlockedSetStat(JITTER_AGGREGATE, 0d);
@@ -180,10 +179,8 @@ public class VideobridgeStatistics
     @SuppressWarnings("unchecked")
     private void generate0()
     {
-        BundleContext bundleContext
-                = StatsManagerBundleActivator.getBundleContext();
-        Videobridge videobridge
-                = ServiceUtils2.getService(bundleContext, Videobridge.class);
+        BundleContext bundleContext = StatsManagerBundleActivator.getBundleContext();
+        Videobridge videobridge = ServiceUtils2.getService(bundleContext, Videobridge.class);
         Videobridge.Statistics jvbStats = videobridge.getStatistics();
 
         int videoChannels = 0;
@@ -191,7 +188,6 @@ public class VideobridgeStatistics
         int octoConferences = 0;
         int endpoints = 0;
         int octoEndpoints = 0;
-        int videoStreams = 0;
         double fractionLostSum = 0d; // TODO verify
         int fractionLostCount = 0;
         long packetsReceived = 0;
@@ -324,20 +320,6 @@ public class VideobridgeStatistics
                     rttSumMs += endpointRtt;
                     rttCount++;
                 }
-
-                // Assume we're receiving a video stream from the endpoint
-                int endpointStreams = 1;
-
-                // Assume we're sending one video stream to this endpoint
-                // for each other endpoint in the conference unless there's
-                // a limit imposed by lastN.
-                int lastN = endpoint.getLastN();
-                endpointStreams
-                   += lastN == -1
-                       ? numConferenceEndpoints - 1
-                       : Math.min(lastN, numConferenceEndpoints - 1);
-
-               videoStreams += endpointStreams;
             }
 
             updateBuckets(audioSendersBuckets, conferenceAudioSenders);
@@ -467,7 +449,6 @@ public class VideobridgeStatistics
             unlockedSetStat(ENDPOINTS_SENDING_AUDIO, numAudioSenders);
             unlockedSetStat(ENDPOINTS_SENDING_VIDEO, numVideoSenders);
             unlockedSetStat(VIDEO_CHANNELS, videoChannels);
-            unlockedSetStat(VIDEO_STREAMS, videoStreams);
             unlockedSetStat(LARGEST_CONFERENCE, largestConferenceSize);
             unlockedSetStat(CONFERENCE_SIZES, conferenceSizesJson);
             unlockedSetStat(CONFERENCES_BY_AUDIO_SENDERS, audioSendersJson);
