@@ -7,43 +7,51 @@ internal class OctoConfigTest : ConfigTest() {
     init {
         "enabled" {
             "when bind address and bind port are defined in legacy config" {
-                withLegacyConfig(legacyConfigWithBindAddressAndBindPort)
-                withNewConfig(newConfigOctoDisabled)
-                should("be true") {
-                    OctoConfig().enabled shouldBe true
+                withLegacyConfig(legacyConfigWithBindAddressAndBindPort) {
+                    withNewConfig(newConfigOctoDisabled) {
+                        should("be true") {
+                            OctoConfig().enabled shouldBe true
+                        }
+                    }
                 }
             }
             "when bind address is set in legacy config but not bind port" {
-                withLegacyConfig(legacyConfigWithBindAddressNoBindPort)
-                should("be false") {
-                    OctoConfig().enabled shouldBe false
-                }
-                "and set as true in new config" {
-                    withNewConfig(newConfigOctoEnabled)
+                withLegacyConfig(legacyConfigWithBindAddressNoBindPort) {
                     should("be false") {
                         OctoConfig().enabled shouldBe false
+                    }
+                    "and set as true in new config" {
+                        withNewConfig(newConfigOctoEnabled) {
+                            should("be false") {
+                                OctoConfig().enabled shouldBe false
+                            }
+                        }
                     }
                 }
             }
             "when bind port is set in legacy config but not bind address" {
-                withLegacyConfig(legacyConfigWithBindPortNoBindAddress)
-                withNewConfig(newConfigOctoEnabled)
-                should("be false") {
-                    OctoConfig().enabled shouldBe false
+                withLegacyConfig(legacyConfigWithBindPortNoBindAddress) {
+                    withNewConfig(newConfigOctoEnabled) {
+                        should("be false") {
+                            OctoConfig().enabled shouldBe false
+                        }
+                    }
                 }
             }
             "when enabled is set to true in new config and bind address/bind port are not defined in old config" {
-                withNewConfig(newConfigOctoEnabled)
-                should("be true") {
-                    OctoConfig().enabled shouldBe true
+                withNewConfig(newConfigOctoEnabled) {
+                    should("be true") {
+                        OctoConfig().enabled shouldBe true
+                    }
                 }
             }
         }
         "bindAddress" {
             "when the value isn't set in legacy config" {
-                withNewConfig(newConfigBindAddress)
-                should("be the value from new config") {
-                    OctoConfig().bindAddress shouldBe "127.0.0.1"
+                withNewConfig(newConfigBindAddress) {
+                    should("be the value from new config") {
+                        OctoConfig().bindAddress shouldBe "127.0.0.1"
+                    }
                 }
             }
         }
