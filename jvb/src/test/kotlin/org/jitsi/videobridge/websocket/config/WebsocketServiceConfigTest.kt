@@ -16,75 +16,70 @@
 
 package org.jitsi.videobridge.websocket.config
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.Spec
 import io.kotlintest.TestCase
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldThrow
-import io.kotlintest.specs.ShouldSpec
-import org.jitsi.config.JitsiConfig
+import org.jitsi.ConfigTest
 import org.jitsi.metaconfig.ConfigException
-import org.jitsi.metaconfig.MapConfigSource
 
-class WebsocketServiceConfigTest : ShouldSpec() {
-    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
-
-    private val newConfig = MapConfigSource("new")
-    private val legacyConfig = MapConfigSource("legacy")
+class WebsocketServiceConfigTest : ConfigTest() {
     private lateinit var config: WebsocketServiceConfig
-
-    override fun beforeSpec(spec: Spec) {
-        super.beforeSpec(spec)
-        JitsiConfig.legacyConfig = legacyConfig
-        JitsiConfig.newConfig = newConfig
-    }
 
     override fun beforeTest(testCase: TestCase) {
         super.beforeTest(testCase)
         config = WebsocketServiceConfig()
     }
 
-    override fun afterSpec(spec: Spec) {
-        super.afterSpec(spec)
-        JitsiConfig.legacyConfig = JitsiConfig.SipCommunicatorPropsConfigSource
-        JitsiConfig.newConfig = JitsiConfig.TypesafeConfig
-    }
-
     init {
         "when websockets are disabled" {
-            newConfig["videobridge.websockets.enabled"] = false
-            "accessing domain should throw" {
-                shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
-                    config.domain
+            withNewConfig("videobridge.websockets.enabled = false") {
+                "accessing domain should throw" {
+                    shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
+                        config.domain
+                    }
                 }
-            }
-            "accessing useTls should throw" {
-                shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
-                    config.useTls
+                "accessing useTls should throw" {
+                    shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
+                        config.useTls
+                    }
                 }
             }
         }
         "when websockets are enabled" {
-            newConfig["videobridge.websockets.enabled"] = true
             "accessing domain" {
-                newConfig["videobridge.websockets.domain"] = "new_domain"
-                should("get the right value") {
-                    config.domain shouldBe "new_domain"
+                withNewConfig(newConfigWebsocketsEnabledDomain) {
+                    should("get the right value") {
+                        config.domain shouldBe "new_domain"
+                    }
                 }
             }
             "accessing useTls" {
                 "when no value has been set" {
-                    should("return null") {
-                        config.useTls shouldBe null
+                    withNewConfig(newConfigWebsocketsEnabled) {
+                        should("return null") {
+                            config.useTls shouldBe null
+                        }
                     }
                 }
                 "when a value has been set" {
-                    newConfig["videobridge.websockets.tls"] = true
-                    should("get the right value xx") {
-                        config.useTls shouldBe true
+                    withNewConfig(newConfigWebsocketsEnableduseTls) {
+                        should("get the right value") {
+                            config.useTls shouldBe true
+                        }
                     }
                 }
             }
         }
     }
 }
+private val newConfigWebsocketsEnabled = """
+    videobridge.websockets.enabled = true
+""".trimIndent()
+
+private val newConfigWebsocketsEnabledDomain = newConfigWebsocketsEnabled + "\n" + """
+    videobridge.websockets.domain = "new_domain"
+""".trimIndent()
+
+private val newConfigWebsocketsEnableduseTls = newConfigWebsocketsEnabled + "\n" + """
+    videobridge.websockets.tls = true
+""".trimIndent()
