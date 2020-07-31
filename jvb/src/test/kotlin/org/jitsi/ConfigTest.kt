@@ -16,39 +16,32 @@
 
 package org.jitsi
 
-import com.typesafe.config.ConfigFactory
-import io.kotlintest.IsolationMode
 import io.kotlintest.Spec
 import io.kotlintest.specs.ShouldSpec
-import org.jitsi.config.ConfigurationServiceConfigSource
-import org.jitsi.config.JitsiConfig
-import org.jitsi.config.TypesafeConfigSource
+import org.jitsi.config.useLegacyConfig
+import org.jitsi.config.useNewConfig
 import org.jitsi.metaconfig.MetaconfigSettings
-import java.io.StringReader
+import org.jitsi.metaconfig.StdOutLogger
 
 /**
  * A helper class for testing configuration properties
  */
 abstract class ConfigTest : ShouldSpec() {
-    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
-
-    private val legacyService = TestReadOnlyConfigurationService()
-    private val legacyConfig = ConfigurationServiceConfigSource("legacy", legacyService)
-
     override fun beforeSpec(spec: Spec) {
         super.beforeSpec(spec)
-        JitsiConfig.legacyConfig = legacyConfig
         MetaconfigSettings.cacheEnabled = false
+        MetaconfigSettings.logger = StdOutLogger
     }
 
-    fun withLegacyConfig(props: String) {
-        legacyService.props.load(StringReader(props))
+    inline fun withLegacyConfig(props: String, block: () -> Unit) {
+        useLegacyConfig(name = "legacy-${this::class.simpleName}", props = props, block = block)
     }
 
-    fun withNewConfig(config: String, loadDefaults: Boolean = false) {
-        JitsiConfig.newConfig = TypesafeConfigSource(
-            "new",
-            ConfigFactory.parseString(config).run { if (loadDefaults) withFallback(ConfigFactory.load()) else this }
-        )
+    inline fun withNewConfig(config: String, block: () -> Unit) {
+        useNewConfig("new-${this::class.simpleName}", config, false, block)
+    }
+
+    inline fun withNewConfig(config: String, loadDefaults: Boolean, block: () -> Unit) {
+        useNewConfig("new-${this::class.simpleName}", config, loadDefaults, block)
     }
 }
