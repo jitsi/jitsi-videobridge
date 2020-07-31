@@ -17,7 +17,7 @@
 package org.jitsi.videobridge.octo
 
 import org.jitsi.utils.logging2.LoggerImpl
-import org.jitsi.videobridge.octo.config.OctoConfig
+import org.jitsi.videobridge.octo.config.OctoConfig.Companion.config
 import org.jitsi.videobridge.transport.octo.BridgeOctoTransport
 import org.jitsi.videobridge.transport.udp.UdpTransport
 import org.jitsi.videobridge.util.TaskPools
@@ -33,8 +33,6 @@ class OctoRelayService : BundleActivator {
      * The [UdpTransport] used to send and receive Octo data
      */
     private var udpTransport: UdpTransport? = null
-
-    private val config = OctoConfig()
 
     /**
      * The [BridgeOctoTransport] for handling incoming and outgoing Octo data

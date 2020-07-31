@@ -16,15 +16,12 @@
 
 package org.jitsi.videobridge.xmpp.config
 
-import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.collections.shouldContainExactly
 import io.kotlintest.matchers.collections.shouldHaveSize
 import io.kotlintest.shouldBe
 import org.jitsi.ConfigTest
 
 internal class XmppClientConnectionConfigTest : ConfigTest() {
-    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
-
     init {
         "Connection configs" {
             "when defined in the legacy config" {

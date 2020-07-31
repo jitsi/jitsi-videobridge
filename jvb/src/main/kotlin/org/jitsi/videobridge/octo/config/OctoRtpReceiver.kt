@@ -71,7 +71,7 @@ class OctoRtpReceiver(
         "octo-transceiver-incoming-packet-queue",
         TaskPools.CPU_POOL,
         this::handleIncomingPacket,
-        OctoConfig().recvQueueSize
+        OctoConfig.config.recvQueueSize
     ).apply {
         setErrorHandler(queueErrorCounter)
     }

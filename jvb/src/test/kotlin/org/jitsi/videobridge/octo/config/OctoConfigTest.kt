@@ -1,12 +1,9 @@
 package org.jitsi.videobridge.octo.config
 
-import io.kotlintest.IsolationMode
 import io.kotlintest.shouldBe
 import org.jitsi.ConfigTest
 
 internal class OctoConfigTest : ConfigTest() {
-    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
-
     init {
         "enabled" {
             "when bind address and bind port are defined in legacy config" {

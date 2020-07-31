@@ -33,8 +33,6 @@ import java.lang.IllegalStateException
  * This is a high-level test for [Conference] and related functionality.
  */
 class ConferenceTest : ConfigTest() {
-    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
-
     private val octoRelayServiceReference: ServiceReference<OctoRelayService> = mockk()
     private val octoRelayService = OctoRelayService()
 

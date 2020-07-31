@@ -495,7 +495,7 @@ public class ConfOctoTransport
             "octo-tentacle-outgoing-packet-queue",
             TaskPools.IO_POOL,
             this::doSend,
-            new OctoConfig().getSendQueueSize());
+            OctoConfig.config.getSendQueueSize());
         q.setErrorHandler(queueErrorCounter);
         return q;
     }
