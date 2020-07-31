@@ -24,8 +24,6 @@ import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.config.S
 import java.time.*;
 import java.util.*;
 
-import static org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.config.SendSideBandwidthEstimationConfig.*;
-
 /**
  * Implements the send-side bandwidth estimation described in
  * https://tools.ietf.org/html/draft-ietf-rmcat-gcc-01
@@ -227,13 +225,13 @@ public class SendSideBandwidthEstimation
         {
             low_loss_threshold_ = SendSideBandwidthEstimationConfig.experimentalLowLossThreshold();
             high_loss_threshold_ = SendSideBandwidthEstimationConfig.experimentalHighLossThreshold();
-            bitrate_threshold_bps_ = 1000 * SendSideBandwidthEstimationConfig.experimentalBitrateThresholdKbps();
+            bitrate_threshold_bps_ = (int) SendSideBandwidthEstimationConfig.experimentalBitrateThreshold().getBps();
         }
         else
         {
             low_loss_threshold_ = SendSideBandwidthEstimationConfig.defaultLowLossThreshold();
             high_loss_threshold_ = SendSideBandwidthEstimationConfig.defaultHighLossThreshold();
-            bitrate_threshold_bps_ = 1000 * SendSideBandwidthEstimationConfig.defaultBitrateThresholdKbps();
+            bitrate_threshold_bps_ = (int) SendSideBandwidthEstimationConfig.defaultBitrateThreshold().getBps();
         }
 
 

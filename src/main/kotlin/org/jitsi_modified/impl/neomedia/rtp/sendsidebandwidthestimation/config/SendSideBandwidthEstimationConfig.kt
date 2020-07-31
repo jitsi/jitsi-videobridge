@@ -20,6 +20,7 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.kbps
 
 class SendSideBandwidthEstimationConfig {
     companion object {
@@ -43,15 +44,15 @@ class SendSideBandwidthEstimationConfig {
         @JvmStatic
         fun defaultHighLossThreshold() = defaultHighLossThreshold
 
-        private val defaultBitrateThresholdKbps: Int by config {
+        private val defaultBitrateThreshold: Bandwidth by config {
             "jmt.bwe.send-side.bitrate-threshold".from(JitsiConfig.newConfig)
-                .convertFrom<String> { Bandwidth.fromString(it).kbps.toInt() }
+                .convertFrom<String> { Bandwidth.fromString(it) }
         }
         /**
          * The bitrate threshold when the loss probability experiment is *not* active.
          */
         @JvmStatic
-        fun defaultBitrateThresholdKbps() = defaultBitrateThresholdKbps
+        fun defaultBitrateThreshold() = defaultBitrateThreshold
 
         private const val LEGACY_BASE_NAME =
             "org.jitsi.impl.neomedia.rtp.sendsidebandwidthestimation.SendSideBandwidthEstimation"
@@ -90,17 +91,17 @@ class SendSideBandwidthEstimationConfig {
         @JvmStatic
         fun experimentalHighLossThreshold() = experimentalHighLossThreshold
 
-        private val experimentalBitrateThresholdKbps: Int by config {
-            "$LEGACY_BASE_NAME.bitrateThresholdKbps".from(JitsiConfig.legacyConfig)
+        private val experimentalBitrateThreshold: Bandwidth by config {
+            "$LEGACY_BASE_NAME.bitrateThresholdKbps".from(JitsiConfig.legacyConfig).convertFrom<Int> { it.kbps }
             "jmt.bwe.send-side.loss-experiment.bitrate-threshold".from(JitsiConfig.newConfig)
-                .convertFrom<String> { Bandwidth.fromString(it).kbps.toInt() }
+                .convertFrom<String> { Bandwidth.fromString(it) }
         }
 
         /**
          * The bitrate threshold when the loss probability experiment is active.
          */
         @JvmStatic
-        fun experimentalBitrateThresholdKbps() = experimentalBitrateThresholdKbps
+        fun experimentalBitrateThreshold() = experimentalBitrateThreshold
 
         private val timeoutExperimentProbability: Double by config {
             "$LEGACY_BASE_NAME.timeoutExperimentProbability".from(JitsiConfig.legacyConfig)
