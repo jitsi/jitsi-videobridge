@@ -16,6 +16,7 @@
 
 package org.jitsi
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.Spec
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.config.useLegacyConfig
@@ -27,6 +28,8 @@ import org.jitsi.metaconfig.StdOutLogger
  * A helper class for testing configuration properties
  */
 abstract class ConfigTest : ShouldSpec() {
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
+
     override fun beforeSpec(spec: Spec) {
         super.beforeSpec(spec)
         MetaconfigSettings.cacheEnabled = false
