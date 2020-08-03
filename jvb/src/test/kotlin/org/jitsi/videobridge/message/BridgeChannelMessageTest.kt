@@ -19,20 +19,21 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import io.kotlintest.matchers.collections.shouldContainExactly
-import io.kotlintest.matchers.types.shouldBeInstanceOf
-import io.kotlintest.shouldBe
-import io.kotlintest.shouldThrow
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage.VideoConstraints
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
 import org.json.simple.JSONArray
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
 
+@Suppress("BlockingMethodInNonBlockingContext")
 class BridgeChannelMessageTest : ShouldSpec() {
     init {
-        "serializing" {
+        context("serializing") {
             should("encode the type as colibriClass") {
                 // Any message will do, this one is just simple
                 val message = ServerHelloMessage()
@@ -46,7 +47,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 parsedColibriClass shouldBe message.type
             }
         }
-        "parsing and serializing a SelectedEndpointsChangedEvent message" {
+        context("parsing and serializing a SelectedEndpointsChangedEvent message") {
             val parsed = parse(SELECTED_ENDPOINTS_MESSAGE)
             should("parse to the correct type") {
                 parsed.shouldBeInstanceOf<SelectedEndpointsMessage>()
@@ -65,7 +66,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 parsed2.selectedEndpoints shouldBe selectedEndpoints
             }
         }
-        "parsing an invalid message" {
+        context("parsing an invalid message") {
             shouldThrow<JsonProcessingException> {
                 parse("{invalid json")
             }
@@ -82,7 +83,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 parse("""{"colibriClass": "invalid-colibri-class" }""")
             }
 
-            "when some of the message-specific fields are missing/invalid" {
+            context("when some of the message-specific fields are missing/invalid") {
                 shouldThrow<JsonProcessingException> {
                     parse("""{"colibriClass": "SelectedEndpointsChangedEvent" }""")
                 }
@@ -91,7 +92,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 }
             }
         }
-        "serializing and parsing EndpointMessage" {
+        context("serializing and parsing EndpointMessage") {
             val endpointsMessage = EndpointMessage("to_value")
             endpointsMessage.otherFields["other_field1"] = "other_value1"
             endpointsMessage.put("other_field2", 97)
@@ -106,7 +107,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed.otherFields["other_field1"] shouldBe "other_value1"
             parsed.otherFields["other_field2"] shouldBe 97
 
-            "parsing" {
+            context("parsing") {
                 val parsed2 = parse(ENDPOINT_MESSAGE)
                 parsed2 as EndpointMessage
                 parsed2.from shouldBe null
@@ -116,7 +117,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
             }
         }
 
-        "serializing and parsing ReceiverVideoConstraintsChangedEvent" {
+        context("serializing and parsing ReceiverVideoConstraintsChangedEvent") {
             val constraints = listOf(
                     VideoConstraints("abcdabcd", 180),
                     VideoConstraints("12341234", 360))
@@ -130,7 +131,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed.videoConstraints shouldBe constraints
         }
 
-        "serializing and parsing DominantSpeakerMessage" {
+        context("serializing and parsing DominantSpeakerMessage") {
             val id = "abc123"
             val original = DominantSpeakerMessage(id)
 
@@ -141,19 +142,19 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed.dominantSpeakerEndpoint shouldBe id
         }
 
-        "serializing and parsing ServerHello" {
+        context("serializing and parsing ServerHello") {
 
             val parsed = parse(ServerHelloMessage().toJson())
             parsed.shouldBeInstanceOf<ServerHelloMessage>()
         }
 
-        "serializing and parsing ClientHello" {
+        context("serializing and parsing ClientHello") {
 
             val parsed = parse(ClientHelloMessage().toJson())
             parsed.shouldBeInstanceOf<ClientHelloMessage>()
         }
 
-        "serializing and parsing EndpointConnectionStatusMessage" {
+        context("serializing and parsing EndpointConnectionStatusMessage") {
 
             val parsed = parse(EndpointConnectionStatusMessage("abcdabcd", true).toJson())
             parsed.shouldBeInstanceOf<EndpointConnectionStatusMessage>()
@@ -163,7 +164,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed.active shouldBe "true"
         }
 
-        "serializing and parsing ForwardedEndpointsMessage" {
+        context("serializing and parsing ForwardedEndpointsMessage") {
             val forwardedEndpoints = listOf("a", "b", "c")
             val endpointsEnteringLastN = listOf("b", "c")
             val conferenceEndpoints = listOf("a", "b", "c", "d")
@@ -188,7 +189,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsedForwardedEndpoints.toList() shouldContainExactly forwardedEndpoints
         }
 
-        "serializing and parsing VideoConstraints and SenderVideoConstraintsMessage" {
+        context("serializing and parsing VideoConstraints and SenderVideoConstraintsMessage") {
             val videoConstraints: org.jitsi.videobridge.VideoConstraints =
                 jacksonObjectMapper().readValue(VIDEO_CONSTRAINTS)
             videoConstraints.idealHeight shouldBe 1080
@@ -206,7 +207,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed.videoConstraints.preferredFps shouldBe 30.0
         }
 
-        "serializing and parsing AddReceiver" {
+        context("serializing and parsing AddReceiver") {
             val message = AddReceiverMessage("bridge1", "abcdabcd", org.jitsi.videobridge.VideoConstraints(360))
             val parsed = parse(message.toJson())
 
@@ -217,7 +218,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed.videoConstraints shouldBe org.jitsi.videobridge.VideoConstraints(360)
         }
 
-        "serializing and parsing RemoveReceiver" {
+        context("serializing and parsing RemoveReceiver") {
             val message = RemoveReceiverMessage("bridge1", "abcdabcd")
             val parsed = parse(message.toJson())
 
