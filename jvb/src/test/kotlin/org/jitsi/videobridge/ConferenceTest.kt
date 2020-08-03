@@ -15,8 +15,8 @@
  */
 package org.jitsi.videobridge
 
-import io.kotlintest.shouldBe
-import io.kotlintest.shouldThrow
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import org.jitsi.ConfigTest
@@ -43,7 +43,7 @@ class ConferenceTest : ConfigTest() {
     }
 
     init {
-        "Adding local endpoints should work" {
+        context("Adding local endpoints should work") {
             withNewConfig(newConfigOctoEnabled, loadDefaults = true) {
                 with(Conference(videobridge, "id", "name", false, Conference.GID_NOT_SET)) {
                     endpointCount shouldBe 0
@@ -53,7 +53,7 @@ class ConferenceTest : ConfigTest() {
                 }
             }
         }
-        "Enabling octo should fail when the GID is not set" {
+        context("Enabling octo should fail when the GID is not set") {
             withNewConfig(newConfigOctoEnabled, loadDefaults = true) {
                 with(Conference(videobridge, "id", "name", false, Conference.GID_NOT_SET)) {
                     isOctoEnabled shouldBe false
@@ -64,7 +64,7 @@ class ConferenceTest : ConfigTest() {
                 }
             }
         }
-        "Enabling octo should work" {
+        context("Enabling octo should work") {
             withNewConfig(newConfigOctoEnabled, loadDefaults = true) {
                 octoRelayService.start(bundleContext)
                 with(Conference(videobridge, "id", "name", false, 1234)) {
