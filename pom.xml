@@ -17,7 +17,7 @@
         <jitsi.utils.version>1.0-47-gdb30505</jitsi.utils.version>
         <ktlint.skip>false</ktlint.skip>
         <spotbugs.version>4.0.6</spotbugs.version>
-        <jicoco.version>1.1-38-g8d7369a</jicoco.version>
+        <jicoco.version>1.1-39-g6b2d353</jicoco.version>
     </properties>
     <dependencies>
         <dependency>
@@ -58,7 +58,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>jitsi-metaconfig</artifactId>
-            <version>1.0</version>
+            <version>ab50680335</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
