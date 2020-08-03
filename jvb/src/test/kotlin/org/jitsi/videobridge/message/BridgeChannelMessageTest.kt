@@ -243,9 +243,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
 
         const val VIDEO_CONSTRAINTS = """
             {
-                "idealHeight": 1080,
-                "preferredHeight": 360,
-                "preferredFps": 30.0
+                "idealHeight": 1080
             }
         """
     }

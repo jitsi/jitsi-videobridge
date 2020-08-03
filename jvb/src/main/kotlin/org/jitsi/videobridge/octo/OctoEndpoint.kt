@@ -16,7 +16,6 @@
 
 package org.jitsi.videobridge.octo
 
-import com.google.common.collect.ImmutableMap
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.PayloadType
