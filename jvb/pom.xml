@@ -17,6 +17,7 @@
   <url>https://github.com/jitsi/jitsi-videobridge</url>
   <properties>
     <assembly.skipAssembly>false</assembly.skipAssembly>
+    <kotest.version>4.1.2</kotest.version>
     <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
   </properties>
 
@@ -285,12 +286,26 @@
       <version>5.5.2</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>io.kotlintest</groupId>
-      <artifactId>kotlintest-runner-junit5</artifactId>
-      <version>3.4.2</version>
-      <scope>test</scope>
-    </dependency>
+	<dependency>
+		<groupId>io.kotest</groupId>
+		<artifactId>kotest-runner-junit5-jvm</artifactId>
+		<version>${kotest.version}</version>
+		<scope>test</scope>
+	</dependency>
+	<dependency>
+		<groupId>io.kotest</groupId>
+		<artifactId>kotest-assertions-core-jvm</artifactId>
+		<version>${kotest.version}</version>
+		<scope>test</scope>
+	</dependency>
+    <!-- Specify this dependency here because kotest needs it, and otherwise an older
+    version will be pulled in -->
+	<dependency>
+		<groupId>org.junit.platform</groupId>
+		<artifactId>junit-platform-engine</artifactId>
+		<version>1.6.2</version>
+		<scope>test</scope>
+	</dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco-test-kotlin</artifactId>
