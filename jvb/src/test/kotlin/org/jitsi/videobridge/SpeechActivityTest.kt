@@ -15,11 +15,11 @@
  */
 package org.jitsi.videobridge
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.collections.shouldContainExactly
-import io.kotlintest.matchers.collections.shouldContainInOrder
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.collections.shouldContainInOrder
+import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 
@@ -36,7 +36,7 @@ class SpeechActivityTest : ShouldSpec() {
     })
 
     init {
-        "Should maintain correct order when everyone has video" {
+        context("Should maintain correct order when everyone has video") {
             conferenceSpeechActivity.endpointsChanged(listOf(a, b, c))
             conferenceSpeechActivity.orderedEndpoints shouldContainExactly listOf(a, b, c)
 
@@ -68,7 +68,7 @@ class SpeechActivityTest : ShouldSpec() {
             conferenceSpeechActivity.orderedEndpoints shouldContainInOrder listOf(d, b, c)
         }
 
-        "Should maintain correct order when endpoints disable/enable video" {
+        context("Should maintain correct order when endpoints disable/enable video") {
             conferenceSpeechActivity.endpointsChanged(listOf(a, b, c, d))
             conferenceSpeechActivity.activeSpeakerChanged(d.id)
             conferenceSpeechActivity.activeSpeakerChanged(c.id)
