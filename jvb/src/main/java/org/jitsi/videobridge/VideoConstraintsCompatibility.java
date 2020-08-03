@@ -16,7 +16,9 @@
 
 package org.jitsi.videobridge;
 
+import org.jitsi.nlj.util.*;
 import org.jitsi.videobridge.cc.config.*;
+import org.json.simple.*;
 
 import java.util.*;
 import java.util.stream.*;
@@ -102,7 +104,7 @@ class VideoConstraintsCompatibility
         {
             final VideoConstraints pinnedEndpointConstraints
                 = new VideoConstraints(Math.min(
-                BitrateControllerConfig.Config.thumbnailMaxHeightPx(), maxFrameHeightCopy));
+                BitrateControllerConfig.thumbnailMaxHeightPx(), maxFrameHeightCopy));
 
             Map<String, VideoConstraints> pinnedVideoConstraintsMap
                 = pinnedEndpointsCopy
@@ -142,16 +144,16 @@ class VideoConstraintsCompatibility
                 // nor the preferred frame-rate because we want even even
                 // distribution of bandwidth among all the tiles to avoid ninjas.
                 selectedEndpointConstraints = new VideoConstraints(
-                    Math.min(BitrateControllerConfig.Config.onstageIdealHeightPx(),
+                    Math.min(BitrateControllerConfig.onstageIdealHeightPx(),
                         maxFrameHeightCopy));
             }
             else
             {
                 selectedEndpointConstraints = new VideoConstraints(
-                    Math.min(BitrateControllerConfig.Config.onstageIdealHeightPx(),
+                    Math.min(BitrateControllerConfig.onstageIdealHeightPx(),
                         maxFrameHeightCopy),
-                    BitrateControllerConfig.Config.onstagePreferredHeightPx(),
-                    BitrateControllerConfig.Config.onstagePreferredFramerate());
+                    BitrateControllerConfig.onstagePreferredHeightPx(),
+                    BitrateControllerConfig.onstagePreferredFramerate());
             }
 
             Map<String, VideoConstraints> selectedVideoConstraintsMap
@@ -199,5 +201,22 @@ class VideoConstraintsCompatibility
     public void setSelectedEndpoints(Set<String> newSelectedEndpoints)
     {
         this.selectedEndpoints = newSelectedEndpoints;
+    }
+
+    OrderedJsonObject getDebugState()
+    {
+        OrderedJsonObject debugState = new OrderedJsonObject();
+
+        JSONArray pinned = new JSONArray();
+        pinned.addAll(pinned);
+        debugState.put("pinned", pinned);
+
+        JSONArray selected = new JSONArray();
+        selected.addAll(selectedEndpoints);
+        debugState.put("selected", selected);
+
+        debugState.put("max_frame_height", maxFrameHeight);
+
+        return debugState;
     }
 }

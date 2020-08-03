@@ -51,7 +51,6 @@ import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.queue.CountingErrorHandler
-import org.jitsi.videobridge.octo.config.OctoConfig.Config
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import java.util.concurrent.atomic.AtomicBoolean
@@ -72,7 +71,7 @@ class OctoRtpReceiver(
         "octo-transceiver-incoming-packet-queue",
         TaskPools.CPU_POOL,
         this::handleIncomingPacket,
-        Config.recvQueueSize()
+        OctoConfig.config.recvQueueSize
     ).apply {
         setErrorHandler(queueErrorCounter)
     }

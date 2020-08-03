@@ -14,19 +14,17 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.cc.config
+package org.jitsi
 
-import org.jitsi.config.JitsiConfig
-import org.jitsi.metaconfig.config
-import java.time.Duration
+import org.jitsi.config.AbstractReadOnlyConfigurationService
+import java.util.Properties
 
-class BandwidthProbingConfig {
-    /**
-     * How often we check to send probing data
-     */
-    val paddingPeriodMs: Long by config {
-        "org.jitsi.videobridge.PADDING_PERIOD_MS".from(JitsiConfig.legacyConfig)
-        "videobridge.cc.padding-period"
-            .from(JitsiConfig.newConfig).convertFrom<Duration> { it.toMillis() }
-    }
+class TestReadOnlyConfigurationService(
+    override var properties: Properties = Properties()
+) : AbstractReadOnlyConfigurationService() {
+
+    val props: Properties
+        get() = properties
+
+    override fun reloadConfiguration() {}
 }

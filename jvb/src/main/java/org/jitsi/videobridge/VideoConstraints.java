@@ -29,7 +29,7 @@ public class VideoConstraints
      * Static instance for the default constraints for a thumbnail.
      */
     public static final VideoConstraints thumbnailVideoConstraints =
-        new VideoConstraints(BitrateControllerConfig.Config.thumbnailMaxHeightPx());
+        new VideoConstraints(BitrateControllerConfig.thumbnailMaxHeightPx());
 
     /**
      * The ideal height of the constrained endpoint. The bridge tries to send an

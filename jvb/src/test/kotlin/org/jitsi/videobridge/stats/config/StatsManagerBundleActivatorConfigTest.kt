@@ -17,67 +17,80 @@
 package org.jitsi.videobridge.stats.config
 
 import com.typesafe.config.ConfigFactory
-import io.kotlintest.TestCase
+import io.kotlintest.Spec
 import io.kotlintest.inspectors.forOne
 import io.kotlintest.matchers.collections.shouldHaveSize
 import io.kotlintest.seconds
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldThrow
+import io.kotlintest.specs.ShouldSpec
+import org.jitsi.config.AbstractReadOnlyConfigurationService
+import org.jitsi.config.ConfigurationServiceConfigSource
+import org.jitsi.config.JitsiConfig
 import org.jitsi.config.TypesafeConfigSource
-import org.jitsi.utils.config.ConfigSource
-import org.jitsi.videobridge.JitsiConfigTest
-import org.jitsi.videobridge.config.ConditionalPropertyConditionNotMetException
-import org.jitsi.videobridge.testutils.resetSingleton
+import org.jitsi.metaconfig.ConfigException
+import org.jitsi.metaconfig.ConfigSource
+import org.jitsi.metaconfig.MapConfigSource
 import java.util.Properties
-import org.jitsi.videobridge.stats.config.StatsManagerBundleActivatorConfig.Config.Companion as Config
+import kotlin.reflect.KType
 
-class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
+internal class StatsManagerBundleActivatorConfigTest : ShouldSpec() {
+    private val legacyConfig = ConfigSourceWrapper(MapConfigSource("legacy"))
+    private val newConfig = ConfigSourceWrapper(MapConfigSource("new"))
 
-    override fun beforeTest(testCase: TestCase) {
-        resetSingletons()
+    override fun beforeSpec(spec: Spec) {
+        super.beforeSpec(spec)
+        JitsiConfig.legacyConfig = legacyConfig
+        JitsiConfig.newConfig = newConfig
+    }
+
+    override fun afterSpec(spec: Spec) {
+        super.afterSpec(spec)
+        JitsiConfig.legacyConfig = JitsiConfig.SipCommunicatorPropsConfigSource
+        JitsiConfig.newConfig = JitsiConfig.TypesafeConfig
     }
 
     init {
         "When only new config contains stats transport config" {
             withLegacyConfig(legacyConfigNoStatsTransports)
-            "A stats transport config" {
-                "with a multiple, valid stats transport configured" {
+            "a stats transport config" {
+                "with multiple, valid stats transports configured" {
                     withNewConfig(newConfigAllStatsTransports())
-                    should("parse the transport correctly") {
-                        val cfg = Config.StatsTransportsProperty()
+                    val cfg = StatsManagerBundleActivatorConfig()
 
-                        cfg.value shouldHaveSize 2
-                        cfg.value.forOne {
-                            it as StatsTransportConfig.MucStatsTransportConfig
-                            it.interval shouldBe 5.seconds
-                        }
-                        cfg.value.forOne {
-                            it as StatsTransportConfig.CallStatsIoStatsTransportConfig
-                            it.interval shouldBe 5.seconds
-                        }
+                    cfg.transportConfigs shouldHaveSize 2
+                    cfg.transportConfigs.forOne {
+                        it as StatsTransportConfig.MucStatsTransportConfig
+                        it.interval shouldBe 5.seconds
+                    }
+                    cfg.transportConfigs.forOne {
+                        it as StatsTransportConfig.CallStatsIoStatsTransportConfig
+                        it.interval shouldBe 5.seconds
                     }
                 }
                 "with an invalid stats transport configured" {
                     withNewConfig(newConfigInvalidStatsTransports())
                     should("ignore the invalid config and parse the valid transport correctly") {
-                        val cfg = Config.StatsTransportsProperty()
+                        val cfg = StatsManagerBundleActivatorConfig()
 
-                        cfg.value shouldHaveSize 1
-                        cfg.value.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
+                        cfg.transportConfigs shouldHaveSize 1
+                        cfg.transportConfigs.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
                     }
                 }
-                "which have valid transports but stats are disabled" {
-                    withNewConfig(newConfigAllStatsTransports(enabled = false))
+                "which has valid transports but stats are disabled" {
+                    withNewConfig(newConfigInvalidStatsTransports(enabled = false))
                     should("throw when trying to access the stats transports") {
-                        val cfg = Config.StatsTransportsProperty()
-                        shouldThrow<ConditionalPropertyConditionNotMetException> { cfg.value }
+                        val cfg = StatsManagerBundleActivatorConfig()
+                        shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
+                            cfg.transportConfigs
+                        }
                     }
                 }
                 "which has a custom interval" {
                     withNewConfig(newConfigOneStatsTransportCustomInterval())
                     should("reflect the custom interval") {
-                        val cfg = Config.StatsTransportsProperty()
-                        cfg.value.forOne {
+                        val cfg = StatsManagerBundleActivatorConfig()
+                        cfg.transportConfigs.forOne {
                             it as StatsTransportConfig.MucStatsTransportConfig
                             it.interval shouldBe 10.seconds
                         }
@@ -85,45 +98,42 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
                 }
             }
         }
-        "When old and new config contain stats transport config" {
+        "When old and new config contain stats transport configs" {
             withLegacyConfig(legacyConfigAllStatsTransports())
             withNewConfig(newConfigOneStatsTransport())
             should("use the values from the old config") {
-                val cfg = Config.StatsTransportsProperty()
+                val cfg = StatsManagerBundleActivatorConfig()
 
-                cfg.value shouldHaveSize 2
-                cfg.value.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
-                cfg.value.forOne { it as StatsTransportConfig.CallStatsIoStatsTransportConfig }
+                cfg.transportConfigs shouldHaveSize 2
+                cfg.transportConfigs.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
+                cfg.transportConfigs.forOne { it as StatsTransportConfig.CallStatsIoStatsTransportConfig }
             }
             "and it's disabled in old config but enabled in new config" {
                 withLegacyConfig(legacyConfigStatsEnabled(enabled = false))
                 withNewConfig(newConfigOneStatsTransport())
-                should("throw when trying to access the stats transports") {
-                    val cfg = Config.StatsTransportsProperty()
-                    shouldThrow<ConditionalPropertyConditionNotMetException> { cfg.value }
+                should("throw when trying to access the stats transports field") {
+                    val cfg = StatsManagerBundleActivatorConfig()
+                    shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> { cfg.transportConfigs }
                 }
             }
         }
     }
 
-    private fun createConfigFrom(configString: String): ConfigSource =
-        TypesafeConfigSource("testConfig") { ConfigFactory.parseString(configString) }
-
-    private fun createConfigFrom(configProps: Properties): ConfigSource =
-        TypesafeConfigSource("testConfig") { ConfigFactory.parseProperties(configProps) }
-
-    private fun resetSingletons() {
-        resetSingleton(
-            "enabledProp",
-            Config
-        )
-        resetSingleton(
-            "statsIntervalProp",
-            Config
-        )
+    private fun withNewConfig(config: ConfigSource) {
+        newConfig.innerConfigSource = config
     }
+    private fun withLegacyConfig(config: ConfigSource) {
+        legacyConfig.innerConfigSource = config
+    }
+}
 
-    private fun newConfigAllStatsTransports(enabled: Boolean = true) = createConfigFrom("""
+private fun createConfigFrom(configString: String): ConfigSource =
+    TypesafeConfigSource("testConfig", ConfigFactory.parseString(configString))
+
+private fun createConfigFrom(configProps: Properties): ConfigSource =
+    ConfigurationServiceConfigSource("legacyConfig", TestReadOnlyConfigurationService(configProps))
+
+private fun newConfigAllStatsTransports(enabled: Boolean = true) = createConfigFrom("""
         videobridge {
             stats {
                 interval=5 seconds
@@ -139,8 +149,8 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
             }
         }
         """.trimIndent()
-    )
-    private fun newConfigOneStatsTransport(enabled: Boolean = true) = createConfigFrom("""
+)
+private fun newConfigOneStatsTransport(enabled: Boolean = true) = createConfigFrom("""
         videobridge {
             stats {
                 enabled=$enabled
@@ -153,8 +163,8 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
             }
         }
         """.trimIndent()
-    )
-    private fun newConfigOneStatsTransportCustomInterval(enabled: Boolean = true) = createConfigFrom("""
+)
+private fun newConfigOneStatsTransportCustomInterval(enabled: Boolean = true) = createConfigFrom("""
         videobridge {
             stats {
                 enabled=$enabled
@@ -168,8 +178,8 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
             }
         }
         """.trimIndent()
-    )
-    private fun newConfigInvalidStatsTransports(enabled: Boolean = true) = createConfigFrom("""
+)
+private fun newConfigInvalidStatsTransports(enabled: Boolean = true) = createConfigFrom("""
         videobridge {
             stats {
                 interval=5 seconds
@@ -185,17 +195,36 @@ class StatsManagerBundleActivatorConfigTest : JitsiConfigTest() {
             }
         }
         """.trimIndent()
-    )
-    private val legacyConfigNoStatsTransports = createConfigFrom(Properties().apply {
-        setProperty("org.jitsi.videobridge.some_other_prop=", "42")
-    })
+)
+private val legacyConfigNoStatsTransports = createConfigFrom(Properties().apply {
+    setProperty("org.jitsi.videobridge.some_other_prop=", "42")
+})
 
-    private fun legacyConfigStatsEnabled(enabled: Boolean = true) = createConfigFrom(Properties().apply {
-        setProperty("org.jitsi.videobridge.ENABLE_STATISTICS", "$enabled")
-    })
+private fun legacyConfigStatsEnabled(enabled: Boolean = true) = createConfigFrom(Properties().apply {
+    setProperty("org.jitsi.videobridge.ENABLE_STATISTICS", "$enabled")
+})
 
-    private fun legacyConfigAllStatsTransports(enabled: Boolean = true) = createConfigFrom(Properties().apply {
-        setProperty("org.jitsi.videobridge.ENABLE_STATISTICS", "$enabled")
-        setProperty("org.jitsi.videobridge.STATISTICS_TRANSPORT", "muc,callstats.io")
-    })
+private fun legacyConfigAllStatsTransports(enabled: Boolean = true) = createConfigFrom(Properties().apply {
+    setProperty("org.jitsi.videobridge.ENABLE_STATISTICS", "$enabled")
+    setProperty("org.jitsi.videobridge.STATISTICS_TRANSPORT", "muc,callstats.io")
+})
+
+// TODO(brian): ideally move to jicoco-test-kotlin. See note below.
+private class ConfigSourceWrapper(
+    var innerConfigSource: ConfigSource
+) : ConfigSource {
+    override val name: String
+        get() = innerConfigSource.name
+
+    override fun getterFor(type: KType): (String) -> Any = innerConfigSource.getterFor(type)
+}
+
+// TODO(brian): ideally move to jicoco-test-kotlin, but it depends on jicoco (where
+// AbstractReadOnlyConfigurationService is defined) which already depends on jicoco-test-kotlin.
+// Once old config is removed, I think we can break the jicoco -> jicoco-test-kotlin dependency.
+private class TestReadOnlyConfigurationService(
+    override var properties: Properties
+) : AbstractReadOnlyConfigurationService() {
+
+    override fun reloadConfiguration() { }
 }

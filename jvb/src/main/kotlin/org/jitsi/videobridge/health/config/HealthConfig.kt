@@ -16,73 +16,28 @@
 
 package org.jitsi.videobridge.health.config
 
-import org.jitsi.config.LegacyFallbackConfigProperty
-import org.jitsi.config.legacyConfigAttributes
-import org.jitsi.config.newConfigAttributes
-import org.jitsi.utils.config.FallbackProperty
-import org.jitsi.utils.config.SimpleProperty
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
 import java.time.Duration
 
 class HealthConfig {
-    class Config {
-        companion object {
-            class HealthIntervalProperty : FallbackProperty<Duration>(
-                legacyConfigAttributes {
-                    name("org.jitsi.videobridge.health.INTERVAL")
-                    readOnce()
-                    retrievedAs<Long>() convertedBy { Duration.ofMillis(it) }
-                },
-                newConfigAttributes {
-                    name("videobridge.health.interval")
-                    readOnce()
-                }
-            )
+    val interval: Duration by config {
+        "org.jitsi.videobridge.health.INTERVAL"
+            .from(JitsiConfig.legacyConfig).convertFrom<Long>(Duration::ofMillis)
+        "videobridge.health.interval".from(JitsiConfig.newConfig)
+    }
 
-            private val intervalProperty = HealthIntervalProperty()
+    val timeout: Duration by config {
+        "org.jitsi.videobridge.health.TIMEOUT"
+            .from(JitsiConfig.legacyConfig).convertFrom<Long>(Duration::ofMillis)
+        "videobridge.health.timeout".from(JitsiConfig.newConfig)
+    }
 
-            @JvmStatic
-            fun getInterval(): Duration = intervalProperty.value
+    val maxCheckDuration: Duration by config("videobridge.health.max-check-duration".from(JitsiConfig.newConfig))
 
-            class TimeoutProperty : FallbackProperty<Duration>(
-                legacyConfigAttributes {
-                    name("org.jitsi.videobridge.health.TIMEOUT")
-                    readOnce()
-                    retrievedAs<Long>() convertedBy { Duration.ofMillis(it) }
-                },
-                newConfigAttributes {
-                    name("videobridge.health.timeout")
-                    readOnce()
-                }
-            )
-
-            private val timeoutProperty = TimeoutProperty()
-
-            @JvmStatic
-            fun getTimeout(): Duration = timeoutProperty.value
-
-            class MaxCheckDurationProperty : SimpleProperty<Duration>(
-                newConfigAttributes {
-                    name("videobridge.health.max-check-duration")
-                    readOnce()
-                }
-            )
-
-            private val maxCheckDurationProperty = MaxCheckDurationProperty()
-
-            @JvmStatic
-            fun getMaxCheckDuration(): Duration = maxCheckDurationProperty.value
-
-            class StickyFailuresProperty : LegacyFallbackConfigProperty<Boolean>(
-                Boolean::class,
-                readOnce = true,
-                legacyName = "org.jitsi.videobridge.health.STICKY_FAILURES",
-                newName = "videobridge.health.sticky-failures"
-            )
-
-            private val stickyFailures = StickyFailuresProperty()
-
-            @JvmStatic
-            fun stickyFailures() = stickyFailures.value
-        }
+    val stickyFailures: Boolean by config {
+        "org.jitsi.videobridge.health.STICKY_FAILURES".from(JitsiConfig.legacyConfig)
+        "videobridge.health.sticky-failures".from(JitsiConfig.newConfig)
     }
 }

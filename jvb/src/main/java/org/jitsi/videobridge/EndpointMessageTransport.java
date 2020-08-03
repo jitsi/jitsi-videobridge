@@ -74,14 +74,12 @@ class EndpointMessageTransport
      * The compatibility layer that translates selected, pinned and max
      * resolution messages into video constraints.
      */
-    private final VideoConstraintsCompatibility
-            videoConstraintsCompatibility = new VideoConstraintsCompatibility();
+    private final VideoConstraintsCompatibility videoConstraintsCompatibility = new VideoConstraintsCompatibility();
 
     /**
      * The number of sent message by type.
      */
-    private final Map<String, AtomicLong> sentMessagesCounts
-            = new ConcurrentHashMap<>();
+    private final Map<String, AtomicLong> sentMessagesCounts = new ConcurrentHashMap<>();
 
     @NotNull
     private final Endpoint endpoint;
@@ -190,8 +188,7 @@ class EndpointMessageTransport
 
         if (dataChannelMessage instanceof DataChannelStringMessage)
         {
-            DataChannelStringMessage dataChannelStringMessage =
-                    (DataChannelStringMessage)dataChannelMessage;
+            DataChannelStringMessage dataChannelStringMessage = (DataChannelStringMessage)dataChannelMessage;
             onMessage(dataChannel.get(), dataChannelStringMessage.data);
         }
     }
@@ -304,11 +301,7 @@ class EndpointMessageTransport
             {
                 webSocket = null;
                 webSocketLastActive = false;
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug("Web socket closed, statusCode " + statusCode
-                            + " ( " + reason + ").");
-                }
+                logger.debug(() -> "Web socket closed, statusCode " + statusCode + " ( " + reason + ").");
             }
         }
 
@@ -328,10 +321,7 @@ class EndpointMessageTransport
                 // available and will not be available again.
                 webSocket.getSession().close(410, "replaced");
                 webSocket = null;
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug("Endpoint expired, closed colibri web-socket.");
-                }
+                logger.debug(() -> "Endpoint expired, closed colibri web-socket.");
             }
         }
     }
@@ -366,8 +356,7 @@ class EndpointMessageTransport
             this.dataChannel = new WeakReference<>(dataChannel);
             // We install the handler first, otherwise the 'ready' might fire after we check it but before we
             //  install the handler
-            dataChannel.onDataChannelEvents(
-                    this::notifyTransportChannelConnected);
+            dataChannel.onDataChannelEvents(this::notifyTransportChannelConnected);
             if (dataChannel.isReady())
             {
                 notifyTransportChannelConnected();
@@ -381,7 +370,8 @@ class EndpointMessageTransport
             // reason for this, we can make this a no-op
             throw new Error("Re-setting the same data channel");
         }
-        else {
+        else
+        {
             throw new Error("Overwriting a previous data channel!");
         }
     }
@@ -395,8 +385,9 @@ class EndpointMessageTransport
 
         JSONObject sentCounts = new JSONObject();
         sentCounts.putAll(sentMessagesCounts);
-
         debugState.put("sent_counts", sentCounts);
+
+        debugState.put("video_constraints_compatibility", videoConstraintsCompatibility.getDebugState());
 
         return debugState;
     }
@@ -438,8 +429,7 @@ class EndpointMessageTransport
         }
 
         videoConstraintsCompatibility.setPinnedEndpoints(newPinnedEndpoints);
-        setSenderVideoConstraints(
-                videoConstraintsCompatibility.computeVideoConstraints());
+        setSenderVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints());
 
         return null;
     }
@@ -477,8 +467,7 @@ class EndpointMessageTransport
 
         logger.debug(() -> "Selected " + newSelectedEndpoints);
         videoConstraintsCompatibility.setSelectedEndpoints(newSelectedEndpoints);
-        setSenderVideoConstraints(
-                videoConstraintsCompatibility.computeVideoConstraints());
+        setSenderVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints());
         return null;
     }
 
@@ -488,8 +477,7 @@ class EndpointMessageTransport
      * @param videoConstraintsMap the sender video constraints of this
      * {@link #endpoint}.
      */
-    public void setSenderVideoConstraints(
-            Map<String, VideoConstraints> videoConstraintsMap)
+    public void setSenderVideoConstraints(Map<String, VideoConstraints> videoConstraintsMap)
     {
         // Don't "pollute" the video constraints map with constraints for this
         // endpoint.
@@ -497,8 +485,7 @@ class EndpointMessageTransport
 
         logger.debug(() -> "New video constraints map: " + videoConstraintsMap);
 
-        endpoint.setSenderVideoConstraints(
-                ImmutableMap.copyOf(videoConstraintsMap));
+        endpoint.setSenderVideoConstraints(ImmutableMap.copyOf(videoConstraintsMap));
     }
 
     /**
@@ -595,5 +582,4 @@ class EndpointMessageTransport
         conference.sendMessage(message, targets, sendToOcto);
         return null;
     }
-
 }

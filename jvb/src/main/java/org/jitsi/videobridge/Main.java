@@ -15,9 +15,12 @@
  */
 package org.jitsi.videobridge;
 
+import kotlin.jvm.functions.*;
+import org.jetbrains.annotations.*;
 import org.jitsi.cmd.*;
-import org.jitsi.config.*;
 import org.jitsi.meet.*;
+import org.jitsi.metaconfig.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.osgi.*;
 
 /**
@@ -59,6 +62,8 @@ public class Main
 
         cmdLine.parse(args);
 
+        setupMetaconfigLogger();
+
         // Parse the command-line arguments.
         String apis = cmdLine.getOptionValue(APIS_ARG_NAME);
 
@@ -77,12 +82,33 @@ public class Main
                 Videobridge.REST_API_PNAME,
                 Boolean.toString(apis.contains(Videobridge.REST_API)));
 
-        // Need to force a reload to see the updated system properties
-        JitsiConfig.Companion.reload();
-
         ComponentMain main = new ComponentMain();
         BundleConfig osgiBundles = new BundleConfig();
 
         main.runMainProgramLoop(osgiBundles);
+    }
+
+    private static void setupMetaconfigLogger() {
+        Logger configLogger = new LoggerImpl("org.jitsi.config");
+        MetaconfigSettings.Companion.setLogger(new MetaconfigLogger()
+        {
+            @Override
+            public void warn(@NotNull Function0<String> function0)
+            {
+                configLogger.warn(function0::invoke);
+            }
+
+            @Override
+            public void error(@NotNull Function0<String> function0)
+            {
+                configLogger.error(function0::invoke);
+            }
+
+            @Override
+            public void debug(@NotNull Function0<String> function0)
+            {
+                configLogger.debug(function0::invoke);
+            }
+        });
     }
 }

@@ -19,12 +19,11 @@ import org.ice4j.ice.harvest.*;
 import org.jitsi.health.*;
 import org.jitsi.osgi.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.health.config.*;
 import org.jitsi.videobridge.ice.*;
 import org.osgi.framework.*;
 
 import java.util.*;
-
-import static org.jitsi.videobridge.health.config.HealthConfig.*;
 
 /**
  * Checks the health of {@link Videobridge}.
@@ -109,13 +108,20 @@ public class Health
 
     private Videobridge videobridge;
 
+    private static final HealthConfig healthConfig = new HealthConfig();
+
     /**
      * Initializes a new {@link Health} instance for a specific
      * {@link Videobridge}.
      */
     public Health()
     {
-        super(Config.getInterval(), Config.getTimeout(), Config.getMaxCheckDuration(), Config.stickyFailures());
+        super(
+            healthConfig.getInterval(),
+            healthConfig.getTimeout(),
+            healthConfig.getMaxCheckDuration(),
+            healthConfig.getStickyFailures()
+        );
     }
 
     @Override

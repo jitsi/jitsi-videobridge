@@ -16,53 +16,22 @@
 
 package org.jitsi.videobridge
 
-import org.jitsi.config.legacyConfigAttributes
-import org.jitsi.config.newConfigAttributes
-import org.jitsi.utils.config.FallbackProperty
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
 import java.time.Duration
 
 class EndpointConnectionStatusConfig {
-    class Config {
-        companion object {
-            /**
-             * How long it can take an endpoint to send first data before it will
-             * be marked as inactive.
-             */
-            class FirstTransferTimeoutProperty : FallbackProperty<Duration>(
-                legacyConfigAttributes {
-                    name("org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT")
-                    readOnce()
-                    retrievedAs<Long>() convertedBy { Duration.ofMillis(it) }
-                },
-                newConfigAttributes {
-                    name("videobridge.ep-connection-status.first-transfer-timeout")
-                    readOnce()
-                }
-            )
-            private val firstTransferTimeout = FirstTransferTimeoutProperty()
+    val firstTransferTimeout: Duration by config {
+        "org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT"
+            .from(JitsiConfig.legacyConfig)
+            .convertFrom<Long>(Duration::ofMillis)
+        "videobridge.ep-connection-status.first-transfer-timeout".from(JitsiConfig.newConfig)
+    }
 
-            @JvmStatic
-            fun getFirstTransferTimeout(): Duration = firstTransferTimeout.value
-
-            /**
-             * How long an endpoint can be inactive before it wil be considered
-             * disconnected.
-             */
-            class MaxInactivityLimitProperty : FallbackProperty<Duration>(
-                legacyConfigAttributes {
-                    name("org.jitsi.videobridge.EndpointConnectionStatus.MAX_INACTIVITY_LIMIT")
-                    readOnce()
-                    retrievedAs<Long>() convertedBy { Duration.ofMillis(it) }
-                },
-                newConfigAttributes {
-                    name("videobridge.ep-connection-status.max-inactivity-limit")
-                    readOnce()
-                }
-            )
-            private val maxInactivityLimit = MaxInactivityLimitProperty()
-
-            @JvmStatic
-            fun getMaxInactivityLimit(): Duration = maxInactivityLimit.value
-        }
+    val maxInactivityLimit: Duration by config {
+        "org.jitsi.videobridge.EndpointConnectionStatus.MAX_INACTIVITY_LIMIT"
+            .from(JitsiConfig.legacyConfig)
+            .convertFrom<Long>(Duration::ofMillis)
+        "videobridge.ep-connection-status.max-inactivity-limit".from(JitsiConfig.newConfig)
     }
 }

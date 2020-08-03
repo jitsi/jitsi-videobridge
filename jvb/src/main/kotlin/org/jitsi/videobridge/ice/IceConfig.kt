@@ -13,179 +13,99 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.jitsi.videobridge.ice
 
 import org.ice4j.ice.KeepAliveStrategy
 import org.ice4j.ice.NominationStrategy
-import org.jitsi.config.LegacyFallbackConfigProperty
-import org.jitsi.config.legacyConfigAttributes
-import org.jitsi.config.newConfigAttributes
-import org.jitsi.utils.config.FallbackProperty
-import org.jitsi.utils.config.SimpleProperty
-import java.util.Objects
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
+import org.jitsi.metaconfig.optionalconfig
 
 class IceConfig {
-    class Config {
-        companion object {
-            /**
-             * The property which enables ICE/TCP.
-             */
-            class TcpEnabledProperty : FallbackProperty<Boolean>(
-                legacyConfigAttributes {
-                    name("org.jitsi.videobridge.DISABLE_TCP_HARVESTER")
-                    readOnce()
-                    // The old property is named 'disable', while the new one
-                    // is 'enable', so invert the old value
-                    transformedBy { !it }
-                },
-                newConfigAttributes {
-                    name("videobridge.ice.tcp.enabled")
-                    readOnce()
-                }
-            )
-            private val tcpEnabledProp = TcpEnabledProperty()
+    /**
+     * Is ICE/TCP enabled.
+     */
+    val tcpEnabled: Boolean by config {
+        // The old property is named 'disable', while the new one
+        // is 'enable', so invert the old value
+        "org.jitsi.videobridge.DISABLE_TCP_HARVESTER".from(JitsiConfig.legacyConfig).transformedBy { !it }
+        "videobridge.ice.tcp.enabled".from(JitsiConfig.newConfig)
+    }
 
-            @JvmStatic
-            fun tcpEnabled() = tcpEnabledProp.value
+    /**
+     * The ICE/TCP port.
+     */
+    val tcpPort: Int by config {
+        "org.jitsi.videobridge.TCP_HARVESTER_PORT".from(JitsiConfig.legacyConfig)
+        "videobridge.ice.tcp.port".from(JitsiConfig.newConfig)
+    }
 
-            /**
-             * The property which configures the ICE/TCP port.
-             */
-            class TcpPortProperty : LegacyFallbackConfigProperty<Int>(
-                Int::class,
-                readOnce = true,
-                legacyName = "org.jitsi.videobridge.TCP_HARVESTER_PORT",
-                newName = "videobridge.ice.tcp.port"
-            )
-            private val tcpPortProperty = TcpPortProperty()
+    /**
+     * The additional port to advertise, or null if none is configured.
+     */
+    val tcpMappedPort: Int? by optionalconfig {
+        "org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT".from(JitsiConfig.legacyConfig)
+        "videobridge.ice.tcp.mapped-port".from(JitsiConfig.newConfig)
+    }
 
-            @JvmStatic
-            fun tcpPort() = tcpPortProperty.value
+    /**
+     * Whether ICE/TCP should use "ssltcp" or not.
+     */
+    val iceSslTcp: Boolean by config {
+        "org.jitsi.videobridge.TCP_HARVESTER_SSLTCP".from(JitsiConfig.legacyConfig)
+        "videobridge.ice.tcp.ssltcp".from(JitsiConfig.newConfig)
+    }
 
-            /**
-             * The property which configures an additional port to advertise.
-             */
-            class TcpMappedPortProperty : LegacyFallbackConfigProperty<Int>(
-                Int::class,
-                readOnce = true,
-                legacyName = "org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT",
-                newName = "videobridge.ice.tcp.mapped-port"
-            )
-            private val tcpMappedPortProperty = TcpMappedPortProperty()
+    /**
+     * The ICE UDP port.
+     */
+    val port: Int by config {
+        "org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT".from(JitsiConfig.legacyConfig)
+        "videobridge.ice.udp.port".from(JitsiConfig.newConfig)
+    }
 
-            /**
-             * Returns the additional port to advertise, or [null] if none is configured.
-             */
-            @JvmStatic
-            fun tcpMappedPort(): Int? = try {
-                tcpMappedPortProperty.value
-            } catch (e: Throwable) {
-                null
-            }
+    /**
+     * The prefix to STUN username fragments we generate.
+     */
+    val ufragPrefix: String? by optionalconfig {
+        "org.jitsi.videobridge.ICE_UFRAG_PREFIX".from(JitsiConfig.legacyConfig)
+        "videobridge.ice.ufrag-prefix".from(JitsiConfig.newConfig)
+    }
 
-            /**
-             * The property that configures whether ICE/TCP should use "ssltcp" or not.
-             */
-            class SslTcpProperty : LegacyFallbackConfigProperty<Boolean>(
-                Boolean::class,
-                readOnce = true,
-                legacyName = "org.jitsi.videobridge.TCP_HARVESTER_SSLTCP",
-                newName = "videobridge.ice.tcp.ssltcp"
-            )
-            private val sslTcpProperty = SslTcpProperty()
+    val keepAliveStrategy: KeepAliveStrategy by config {
+        "org.jitsi.videobridge.KEEP_ALIVE_STRATEGY"
+            .from(JitsiConfig.legacyConfig)
+            .convertFrom<String> { KeepAliveStrategy.fromString(it) }
+        "videobridge.ice.keep-alive-strategy"
+            .from(JitsiConfig.newConfig)
+            .convertFrom<String> { KeepAliveStrategy.fromString(it) }
+    }
 
-            @JvmStatic
-            fun iceSslTcp() = sslTcpProperty.value
+    /**
+     * Whether the ice4j "component socket" mode is used.
+     */
+    val useComponentSocket: Boolean by config {
+        "org.jitsi.videobridge.USE_COMPONENT_SOCKET".from(JitsiConfig.legacyConfig)
+        "videobridge.ice.use-component-socket".from(JitsiConfig.newConfig)
+    }
 
-            /**
-             * The property that configures the ICE UDP port.
-             */
-            class PortProperty : LegacyFallbackConfigProperty<Int>(
-                Int::class,
-                readOnce = true,
-                legacyName = "org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT",
-                newName = "videobridge.ice.udp.port"
-            )
-            private val portProperty = PortProperty()
+    val resolveRemoteCandidates: Boolean by config(
+        "videobridge.ice.resolve-remote-candidates".from(JitsiConfig.newConfig)
+    )
 
-            @JvmStatic
-            fun port() = portProperty.value
+    /**
+     * The ice4j nomination strategy policy.
+     */
+    val nominationStrategy: NominationStrategy by config {
+        "videobridge.ice.nomination-strategy"
+            .from(JitsiConfig.newConfig)
+            .convertFrom<String> { NominationStrategy.fromString(it) }
+    }
 
-            /**
-             * The property that configures the prefix to STUN username fragments we generate.
-             */
-            class UfragPrefixProperty : LegacyFallbackConfigProperty<String>(
-                String::class,
-                readOnce = true,
-                legacyName = "org.jitsi.videobridge.ICE_UFRAG_PREFIX",
-                newName = "videobridge.ice.ufrag-prefix"
-            )
-            private val ufragPrefixProperty = UfragPrefixProperty()
-
-            @JvmStatic
-            fun ufragPrefix(): String? = try {
-                ufragPrefixProperty.value
-            } catch (e: Throwable) {
-                null
-            }
-
-            /**
-             * The property that configures the prefix to STUN username fragments we generate.
-             */
-            class KeepAliveStrategyProperty : FallbackProperty<KeepAliveStrategy>(
-                legacyConfigAttributes {
-                    name("org.jitsi.videobridge.KEEP_ALIVE_STRATEGY")
-                    readOnce()
-                    retrievedAs<String>() convertedBy { Objects.requireNonNull(KeepAliveStrategy.fromString(it)) }
-                },
-                newConfigAttributes {
-                    name("videobridge.ice.keep-alive-strategy")
-                    readOnce()
-                    retrievedAs<String>() convertedBy { Objects.requireNonNull(KeepAliveStrategy.fromString(it)) }
-                }
-            )
-            private val keepAliveStrategyProperty = KeepAliveStrategyProperty()
-
-            @JvmStatic
-            fun keepAliveStrategy() = keepAliveStrategyProperty.value
-
-            /**
-            * The property that configures whether the ice4j "component socket" mode is used.
-            */
-            class ComponentSocketProperty : LegacyFallbackConfigProperty<Boolean>(
-                Boolean::class,
-                readOnce = true,
-                legacyName = "org.jitsi.videobridge.USE_COMPONENT_SOCKET",
-                newName = "videobridge.ice.use-component-socket"
-            )
-            private val componentSocketProperty = ComponentSocketProperty()
-
-            @JvmStatic
-            fun useComponentSocket() = componentSocketProperty.value
-
-            class ResolveRemoteCandidatesProperty : SimpleProperty<Boolean>(
-                newConfigAttributes {
-                    name("videobridge.ice.resolve-remote-candidates")
-                    readOnce()
-            })
-            private val resolveRemoteCandidatesProperty = ResolveRemoteCandidatesProperty()
-
-            @JvmStatic
-            fun resolveRemoteCandidates() = resolveRemoteCandidatesProperty.value
-
-            /**
-             * The property that configures the ice4j nomination strategy policy.
-             */
-            class NominationStrategyProperty : SimpleProperty<NominationStrategy>(
-                newConfigAttributes {
-                    name("videobridge.ice.nomination-strategy")
-                    readOnce()
-                    retrievedAs<String>() convertedBy { Objects.requireNonNull(NominationStrategy.fromString(it)) }
-                })
-            private val nominationStrategyProperty = NominationStrategyProperty()
-
-            @JvmStatic
-            fun nominationStrategy() = nominationStrategyProperty.value
-        }
+    companion object {
+        @JvmField
+        val config = IceConfig()
     }
 }

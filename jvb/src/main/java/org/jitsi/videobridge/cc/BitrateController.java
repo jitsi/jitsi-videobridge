@@ -26,6 +26,7 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.cc.config.*;
 import org.json.simple.*;
 
 import java.lang.*;
@@ -174,7 +175,7 @@ public class BitrateController
      * constraints.
      */
     private static final VideoConstraints defaultVideoConstraints
-        = new VideoConstraints(Config.thumbnailMaxHeightPx());
+        = new VideoConstraints(BitrateControllerConfig.thumbnailMaxHeightPx());
 
     /**
      * The map of endpoint id to video constraints that contains the video
@@ -266,7 +267,7 @@ public class BitrateController
         // the risk of clogging the receiver's pipe.
 
         return deltaBwe > 0
-            ||  deltaBwe < -1 * previousBwe * Config.bweChangeThresholdPct() / 100;
+            ||  deltaBwe < -1 * previousBwe * BitrateControllerConfig.bweChangeThresholdPct() / 100;
     }
 
     /**
@@ -455,7 +456,7 @@ public class BitrateController
     {
         JSONObject debugState = new JSONObject();
         debugState.put("forwardedEndpoints", forwardedEndpointIds.toString());
-        debugState.put("trustBwe", Config.trustBwe());
+        debugState.put("trustBwe", BitrateControllerConfig.trustBwe());
         debugState.put("lastBwe", lastBwe);
         debugState.put("videoConstraints", videoConstraintsMap);
         debugState.put("lastN", lastN);
@@ -577,7 +578,7 @@ public class BitrateController
      */
     private long getAvailableBandwidth(long nowMs)
     {
-        boolean trustBwe = Config.trustBwe();
+        boolean trustBwe = BitrateControllerConfig.trustBwe();
         if (trustBwe)
         {
             // Ignore the bandwidth estimations in the first 10 seconds because
@@ -1409,7 +1410,7 @@ public class BitrateController
 
             if (ratedTargetIdx == -1 && ratedPreferredIdx > -1)
             {
-                if (!Config.enableOnstageVideoSuspend())
+                if (!BitrateControllerConfig.enableOnstageVideoSuspend())
                 {
                     ratedTargetIdx = 0;
                     oversending = ratedIndices[0].bps > maxBps;

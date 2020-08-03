@@ -17,7 +17,7 @@
 package org.jitsi.videobridge.octo
 
 import org.jitsi.utils.logging2.LoggerImpl
-import org.jitsi.videobridge.octo.config.OctoConfig.Config
+import org.jitsi.videobridge.octo.config.OctoConfig
 import org.jitsi.videobridge.transport.octo.BridgeOctoTransport
 import org.jitsi.videobridge.transport.udp.UdpTransport
 import org.jitsi.videobridge.util.TaskPools
@@ -41,14 +41,14 @@ class OctoRelayService : BundleActivator {
         private set
 
     override fun start(bundleContext: BundleContext) {
-        if (!Config.enabled()) {
+        if (!OctoConfig.config.enabled) {
             logger.info("Octo relay is disabled")
             return
         }
 
-        val address = Config.bindAddress()
-        val publicAddress = Config.publicAddress()
-        val port = Config.bindPort()
+        val address = OctoConfig.config.bindAddress
+        val publicAddress = OctoConfig.config.publicAddress
+        val port = OctoConfig.config.bindPort
 
         try {
             udpTransport = UdpTransport(address, port, logger, OCTO_SO_RCVBUF, OCTO_SO_SNDBUF)

@@ -111,7 +111,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>sctp</artifactId>
-      <version>1.0-2-ga3ad2e6</version>
+      <version>1.0-4-g97f4e5e</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
     <!-- we inherit an old version of slf4j-api from tinder, which pcap4j doesn't work with. Adding slf4j-api 1.7.30 (the current stable) as a dep of jvb fixes the problem. -->
@@ -131,6 +131,10 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco-kotlin</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>jicoco-config</artifactId>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -153,6 +157,10 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-utils-kotlin</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>jitsi-metaconfig</artifactId>
     </dependency>
     <dependency>
       <groupId>org.osgi</groupId>
@@ -284,7 +292,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.jitsi</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>jicoco-test-kotlin</artifactId>
       <version>${jicoco.version}</version>
       <scope>test</scope>
@@ -488,9 +496,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.2</version>
-        <configuration>
-          <reuseForks>false</reuseForks>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>com.github.spotbugs</groupId>

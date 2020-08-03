@@ -33,6 +33,7 @@ import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
+import org.json.simple.*;
 import org.osgi.framework.*;
 
 import java.net.*;
@@ -494,7 +495,7 @@ public class ConfOctoTransport
             "octo-tentacle-outgoing-packet-queue",
             TaskPools.IO_POOL,
             this::doSend,
-            OctoConfig.Config.sendQueueSize());
+            OctoConfig.config.getSendQueueSize());
         q.setErrorHandler(queueErrorCounter);
         return q;
     }
@@ -510,7 +511,10 @@ public class ConfOctoTransport
         debugState.put("octoEndpoints", octoEndpoints.getDebugState());
         debugState.putAll(stats.toJson());
         debugState.put("bridgeOctoTransport", bridgeOctoTransport.getStatsJson());
-        debugState.put("remoteRelays", remoteBridges.keySet());
+
+        JSONArray remoteRelays = new JSONArray();
+        remoteRelays.addAll(remoteBridges.keySet());
+        debugState.put("remoteRelays", remoteRelays);
 
         return debugState;
     }

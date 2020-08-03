@@ -19,13 +19,9 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging2.*;
 import org.osgi.framework.*;
-
-import static org.jitsi.videobridge.VideobridgeExpireThreadConfig.*;
 
 /**
  * Implements a <tt>Thread</tt> which expires the {@link AbstractEndpoint}s and
@@ -70,6 +66,8 @@ public class VideobridgeExpireThread
      */
     private Videobridge videobridge;
 
+    public static final VideobridgeExpireThreadConfig config = new VideobridgeExpireThreadConfig();
+
     /**
      * Initializes a new {@link VideobridgeExpireThread} instance which is to
      * expire the {@link Conference}s of a specific {@link Videobridge}.
@@ -88,7 +86,7 @@ public class VideobridgeExpireThread
      */
     void start()
     {
-        Duration expireCheckSleepDuration = Config.interval();
+        Duration expireCheckSleepDuration = config.getInterval();
         logger.info(
             "Starting with " + expireCheckSleepDuration.getSeconds() + " second interval.");
 

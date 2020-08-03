@@ -57,7 +57,7 @@ public class VideobridgeStatistics
     /**
      * The currently configured region.
      */
-    private static final String region = OctoConfig.Config.region();
+    private static final String region = OctoConfig.config.getRegion();
 
 
     public static final String EPS_NO_MSG_TRANSPORT_AFTER_DELAY =

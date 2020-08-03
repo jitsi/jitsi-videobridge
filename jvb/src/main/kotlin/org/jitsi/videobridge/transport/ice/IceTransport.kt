@@ -31,7 +31,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.ice.Harvesters
-import org.jitsi.videobridge.ice.IceConfig.Config
+import org.jitsi.videobridge.ice.IceConfig
 import org.jitsi.videobridge.ice.TransportUtils
 import org.jitsi.xmpp.extensions.jingle.CandidatePacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
@@ -96,11 +96,11 @@ class IceTransport @JvmOverloads constructor(
      */
     private val running = AtomicBoolean(true)
 
-    private val iceAgent = Agent(Config.ufragPrefix(), logger).apply {
+    private val iceAgent = Agent(IceConfig.config.ufragPrefix, logger).apply {
         appendHarvesters(this)
         isControlling = controlling
         performConsentFreshness = true
-        nominationStrategy = Config.nominationStrategy()
+        nominationStrategy = IceConfig.config.nominationStrategy
         addStateChangeListener(this@IceTransport::iceStateChanged)
     }.also {
         logger.addContext("local_ufrag", it.localUfrag)
@@ -112,13 +112,13 @@ class IceTransport @JvmOverloads constructor(
     }
 
     private val iceComponent = iceAgent.createComponent(
-            iceStream,
-            Transport.UDP,
-            -1,
-            -1,
-            -1,
-            Config.keepAliveStrategy(),
-            Config.useComponentSocket()
+        iceStream,
+        Transport.UDP,
+        -1,
+        -1,
+        -1,
+        IceConfig.config.keepAliveStrategy,
+        IceConfig.config.useComponentSocket
     )
 
     private val packetStats = PacketStats()
@@ -240,8 +240,8 @@ class IceTransport @JvmOverloads constructor(
     }
 
     fun getDebugState(): OrderedJsonObject = OrderedJsonObject().apply {
-        put("useComponentSocket", Config.useComponentSocket())
-        put("keepAliveStrategy", Config.keepAliveStrategy().toString())
+        put("useComponentSocket", IceConfig.config.useComponentSocket)
+        put("keepAliveStrategy", IceConfig.config.keepAliveStrategy.toString())
         put("closed", !running.get())
         put("iceConnected", iceConnected.get())
         put("iceFailed", iceFailed.get())
@@ -279,7 +279,7 @@ class IceTransport @JvmOverloads constructor(
             if (candidate.generation != iceAgent.generation) {
                 return@forEach
             }
-            if (candidate.ipNeedsResolution() && !Config.resolveRemoteCandidates()) {
+            if (candidate.ipNeedsResolution() && !IceConfig.config.resolveRemoteCandidates) {
                 logger.cdebug { "Ignoring remote candidate with non-literal address: ${candidate.ip}" }
                 return@forEach
             }

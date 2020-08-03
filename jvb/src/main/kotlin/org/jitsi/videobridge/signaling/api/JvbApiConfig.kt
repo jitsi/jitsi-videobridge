@@ -16,21 +16,15 @@
 
 package org.jitsi.videobridge.signaling.api
 
-import org.jitsi.config.newConfigAttributes
-import org.jitsi.utils.config.SimpleProperty
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
 
 class JvbApiConfig {
     companion object {
-        class EnabledProperty : SimpleProperty<Boolean>(
-            newConfigAttributes {
-                readOnce()
-                name("videobridge.apis.jvb-api.enabled")
-            }
-        )
-
-        private val enabledProperty = EnabledProperty()
+        private val enabled: Boolean by config("videobridge.apis.jvb-api.enabled".from(JitsiConfig.newConfig))
 
         @JvmStatic
-        fun enabled(): Boolean = enabledProperty.value
+        fun enabled() = enabled
     }
 }

@@ -16,40 +16,47 @@
 
 package org.jitsi.videobridge.health.config
 
-import org.jitsi.config.BooleanMockConfigValueGenerator
-import org.jitsi.config.DurationMockConfigValueGenerator
-import org.jitsi.config.LongToDurationMockConfigValueGenerator
-import org.jitsi.config.runBasicTests
-import org.jitsi.videobridge.JitsiConfigTest
+import io.kotlintest.IsolationMode
+import io.kotlintest.Spec
+import io.kotlintest.shouldBe
+import io.kotlintest.specs.ShouldSpec
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.MapConfigSource
+import java.time.Duration
 
-class HealthConfigTest : JitsiConfigTest() {
+class HealthConfigTest : ShouldSpec() {
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
+
+    private val legacyConfig = MapConfigSource("legacy")
+    private val newConfig = MapConfigSource("new")
+
+    override fun beforeSpec(spec: Spec) {
+        super.beforeSpec(spec)
+        JitsiConfig.legacyConfig = legacyConfig
+        JitsiConfig.newConfig = newConfig
+    }
+
+    override fun afterSpec(spec: Spec) {
+        super.afterSpec(spec)
+        JitsiConfig.legacyConfig = JitsiConfig.SipCommunicatorPropsConfigSource
+        JitsiConfig.newConfig = JitsiConfig.TypesafeConfig
+    }
+
     init {
         "health interval" {
-            runBasicTests(
-                legacyConfigName = "org.jitsi.videobridge.health.INTERVAL",
-                legacyValueGenerator = LongToDurationMockConfigValueGenerator,
-                newConfigName = "videobridge.health.interval",
-                newConfigValueGenerator = DurationMockConfigValueGenerator,
-                propCreator = { HealthConfig.Config.Companion.HealthIntervalProperty() }
-            )
-        }
-        "health timeout" {
-            runBasicTests(
-                legacyConfigName = "org.jitsi.videobridge.health.TIMEOUT",
-                legacyValueGenerator = LongToDurationMockConfigValueGenerator,
-                newConfigName = "videobridge.health.timeout",
-                newConfigValueGenerator = DurationMockConfigValueGenerator,
-                propCreator = { HealthConfig.Config.Companion.TimeoutProperty() }
-            )
-        }
-        "sticky failures" {
-            runBasicTests(
-                legacyConfigName = "org.jitsi.videobridge.health.STICKY_FAILURES",
-                legacyValueGenerator = BooleanMockConfigValueGenerator(),
-                newConfigName = "videobridge.health.sticky-failures",
-                newConfigValueGenerator = BooleanMockConfigValueGenerator(),
-                propCreator = { HealthConfig.Config.Companion.StickyFailuresProperty() }
-            )
+            "when legacy config and new config define a value" {
+                legacyConfig["org.jitsi.videobridge.health.INTERVAL"] = 1000L
+                newConfig["videobridge.health.interval"] = Duration.ofSeconds(5)
+                should("use the value from legacy config") {
+                    HealthConfig().interval shouldBe Duration.ofSeconds(1)
+                }
+            }
+            "when only new config defines a value" {
+                newConfig["videobridge.health.interval"] = Duration.ofSeconds(5)
+                should("use the value from the new config") {
+                    HealthConfig().interval shouldBe Duration.ofSeconds(5)
+                }
+            }
         }
     }
 }
