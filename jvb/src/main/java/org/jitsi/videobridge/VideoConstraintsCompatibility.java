@@ -150,9 +150,10 @@ class VideoConstraintsCompatibility
             }
             else
             {
-                selectedEndpointConstraints = new VideoSetup(VideoPolicy.greedyTo360ThenFavorMotion, new VideoConstraints(
-                    Math.min(BitrateControllerConfig.onstageIdealHeightPx(),
-                        maxFrameHeightCopy)));
+                selectedEndpointConstraints = new VideoSetup(
+                    VideoPolicy.greedyTo360ThenFavorMotion, new VideoConstraints(
+                        Math.min(BitrateControllerConfig.onstageIdealHeightPx(),
+                            maxFrameHeightCopy)));
             }
 
             Map<String, VideoSetup> selectedVideoConstraintsMap

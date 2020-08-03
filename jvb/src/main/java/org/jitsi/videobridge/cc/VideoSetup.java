@@ -40,7 +40,8 @@ public class VideoSetup
     /**
      * Ctor.
      *
-     * @param policy The instructions that describe how to chose the layers for a specific endpoint or a specific source.
+     * @param policy The instructions that describe how to chose the layers for a specific endpoint or a specific
+     * source.
      * @param constraints The constraints that limit the layer choices for a specific endpoint or a specific source.
      */
     public VideoSetup(@NotNull VideoPolicy policy, @NotNull VideoConstraints constraints)
@@ -78,7 +79,8 @@ public class VideoSetup
         boolean atLeastPreferredFps = layer.getFrameRate() >= policy.getMinFpsBeyondGreedyHeight();
 
         RtpLayerMatcher rtpLayerMatcher = new RtpLayerMatcher();
-        rtpLayerMatcher.isMatch = lessThanOrEqualIdealResolution && ((lessThanPreferredResolution || atLeastPreferredFps));
+        rtpLayerMatcher.isMatch
+            = lessThanOrEqualIdealResolution && ((lessThanPreferredResolution || atLeastPreferredFps));
         rtpLayerMatcher.withEagerAllocation = layer.getHeight() <= policy.getGreedyHeightAllocationUpperBound();
 
         return rtpLayerMatcher;

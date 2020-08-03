@@ -346,8 +346,10 @@ public class BitrateController
             // We want "o1 has higher preferred height than o2" to imply "o1 is
             // smaller than o2" as this is equivalent to "o1 needs to be
             // prioritized first".
+            int greedyHeightAllocationUpperBound1 = o1.videoSetup.policy.getGreedyHeightAllocationUpperBound();
+            int greedyHeightAllocationUpperBound2 = o2.videoSetup.policy.getGreedyHeightAllocationUpperBound();
             int greedyHeightAllocationUpperBoundDiff =
-                o2.videoSetup.policy.getGreedyHeightAllocationUpperBound() - o1.videoSetup.policy.getGreedyHeightAllocationUpperBound();
+                greedyHeightAllocationUpperBound2 - greedyHeightAllocationUpperBound1;
 
             if (greedyHeightAllocationUpperBoundDiff != 0)
             {
@@ -358,7 +360,8 @@ public class BitrateController
                 // We want "o1 has higher ideal height than o2" to imply "o1 is
                 // smaller than o2" as this is equivalent to "o1 needs to be
                 // prioritized first".
-                int idealHeightDiff = o2.videoSetup.constraints.getIdealHeight() - o1.videoSetup.constraints.getIdealHeight();
+                int idealHeightDiff
+                    = o2.videoSetup.constraints.getIdealHeight() - o1.videoSetup.constraints.getIdealHeight();
                 if (idealHeightDiff != 0)
                 {
                     return idealHeightDiff;
