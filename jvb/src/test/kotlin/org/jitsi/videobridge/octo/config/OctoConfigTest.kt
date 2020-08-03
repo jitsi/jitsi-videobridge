@@ -1,12 +1,12 @@
 package org.jitsi.videobridge.octo.config
 
-import io.kotlintest.shouldBe
+import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
 
 internal class OctoConfigTest : ConfigTest() {
     init {
-        "enabled" {
-            "when bind address and bind port are defined in legacy config" {
+        context("enabled") {
+            context("when bind address and bind port are defined in legacy config") {
                 withLegacyConfig(legacyConfigWithBindAddressAndBindPort) {
                     withNewConfig(newConfigOctoDisabled) {
                         should("be true") {
@@ -15,12 +15,12 @@ internal class OctoConfigTest : ConfigTest() {
                     }
                 }
             }
-            "when bind address is set in legacy config but not bind port" {
+            context("when bind address is set in legacy config but not bind port") {
                 withLegacyConfig(legacyConfigWithBindAddressNoBindPort) {
                     should("be false") {
                         OctoConfig().enabled shouldBe false
                     }
-                    "and set as true in new config" {
+                    context("and set as true in new config") {
                         withNewConfig(newConfigOctoEnabled) {
                             should("be false") {
                                 OctoConfig().enabled shouldBe false
@@ -29,7 +29,7 @@ internal class OctoConfigTest : ConfigTest() {
                     }
                 }
             }
-            "when bind port is set in legacy config but not bind address" {
+            context("when bind port is set in legacy config but not bind address") {
                 withLegacyConfig(legacyConfigWithBindPortNoBindAddress) {
                     withNewConfig(newConfigOctoEnabled) {
                         should("be false") {
@@ -38,7 +38,7 @@ internal class OctoConfigTest : ConfigTest() {
                     }
                 }
             }
-            "when enabled is set to true in new config and bind address/bind port are not defined in old config" {
+            context("when enabled is true in new config and bind address/bind port are not defined in old config") {
                 withNewConfig(newConfigOctoEnabled) {
                     should("be true") {
                         OctoConfig().enabled shouldBe true
@@ -46,8 +46,8 @@ internal class OctoConfigTest : ConfigTest() {
                 }
             }
         }
-        "bindAddress" {
-            "when the value isn't set in legacy config" {
+        context("bindAddress") {
+            context("when the value isn't set in legacy config") {
                 withNewConfig(newConfigBindAddress) {
                     should("be the value from new config") {
                         OctoConfig().bindAddress shouldBe "127.0.0.1"
