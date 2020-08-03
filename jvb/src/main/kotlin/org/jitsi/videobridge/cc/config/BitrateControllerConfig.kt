@@ -31,8 +31,10 @@ class BitrateControllerConfig {
         private val bweChangeThreshold: Double by config {
             "org.jitsi.videobridge.BWE_CHANGE_THRESHOLD_PCT".from(JitsiConfig.legacyConfig)
                 .convertFrom<Int> { it / 100.0 }
+            // This is an old version, include for backward compat.
             "videobridge.cc.bwe-change-threshold-pct".from(JitsiConfig.newConfig)
                 .convertFrom<Int> { it / 100.0 }
+            "videobridge.cc.bwe-change-threshold".from(JitsiConfig.newConfig)
         }
 
         @JvmStatic
