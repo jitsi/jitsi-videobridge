@@ -16,15 +16,15 @@
 
 package org.jitsi.videobridge.xmpp.config
 
-import io.kotlintest.matchers.collections.shouldContainExactly
-import io.kotlintest.matchers.collections.shouldHaveSize
-import io.kotlintest.shouldBe
+import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
 
 internal class XmppClientConnectionConfigTest : ConfigTest() {
     init {
-        "Connection configs" {
-            "when defined in the legacy config" {
+        context("Connection configs") {
+            context("when defined in the legacy config") {
                 withLegacyConfig(legacyConfigSingleXmppConnection) {
                     should("parse things correctly") {
                         val configs = XmppClientConnectionConfig().clientConfigs
@@ -43,7 +43,7 @@ internal class XmppClientConnectionConfigTest : ConfigTest() {
                     }
                 }
             }
-            "when multiple are defined in legacy and one is incomplete" {
+            context("when multiple are defined in legacy and one is incomplete") {
                 withLegacyConfig(legacyConfigOneCompleteConnectionOneIncomplete) {
                     should("only parse the complete one") {
                         val configs = XmppClientConnectionConfig().clientConfigs
@@ -62,7 +62,7 @@ internal class XmppClientConnectionConfigTest : ConfigTest() {
                     }
                 }
             }
-            "when defined in new config" {
+            context("when defined in new config") {
                 withNewConfig(newConfigSingleXmppConnection) {
                     should("parse things correctly") {
                         val configs = XmppClientConnectionConfig().clientConfigs
@@ -81,7 +81,7 @@ internal class XmppClientConnectionConfigTest : ConfigTest() {
                     }
                 }
             }
-            "when defined in new config with some incomplete" {
+            context("when defined in new config with some incomplete") {
                 withNewConfig(newConfigOneCompleteConnectionOneIncomplete) {
                     should("parse things correctly") {
                         val configs = XmppClientConnectionConfig().clientConfigs
