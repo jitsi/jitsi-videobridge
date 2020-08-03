@@ -16,42 +16,35 @@
 
 package org.jitsi.videobridge.stats.config
 
-import com.typesafe.config.ConfigFactory
-import io.kotlintest.inspectors.forOne
-import io.kotlintest.matchers.collections.shouldHaveSize
-import io.kotlintest.seconds
-import io.kotlintest.shouldBe
-import io.kotlintest.shouldThrow
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.inspectors.forOne
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
-import org.jitsi.config.AbstractReadOnlyConfigurationService
-import org.jitsi.config.ConfigurationServiceConfigSource
-import org.jitsi.config.TypesafeConfigSource
 import org.jitsi.metaconfig.ConfigException
-import org.jitsi.metaconfig.ConfigSource
-import java.util.Properties
-import kotlin.reflect.KType
+import java.time.Duration
 
 internal class StatsManagerBundleActivatorConfigTest : ConfigTest() {
 
     init {
-        "When only new config contains stats transport config" {
-            "a stats transport config" {
-                "with multiple, valid stats transports configured" {
+        context("When only new config contains stats transport config") {
+            context("a stats transport config") {
+                context("with multiple, valid stats transports configured") {
                     withNewConfig(newConfigAllStatsTransports()) {
                         val cfg = StatsManagerBundleActivatorConfig()
 
                         cfg.transportConfigs shouldHaveSize 2
                         cfg.transportConfigs.forOne {
                             it as StatsTransportConfig.MucStatsTransportConfig
-                            it.interval shouldBe 5.seconds
+                            it.interval shouldBe Duration.ofSeconds(5)
                         }
                         cfg.transportConfigs.forOne {
                             it as StatsTransportConfig.CallStatsIoStatsTransportConfig
-                            it.interval shouldBe 5.seconds
+                            it.interval shouldBe Duration.ofSeconds(5)
                         }
                     }
                 }
-                "with an invalid stats transport configured" {
+                context("with an invalid stats transport configured") {
                     withNewConfig(newConfigInvalidStatsTransports()) {
                         should("ignore the invalid config and parse the valid transport correctly") {
                             val cfg = StatsManagerBundleActivatorConfig()
@@ -61,7 +54,7 @@ internal class StatsManagerBundleActivatorConfigTest : ConfigTest() {
                         }
                     }
                 }
-                "which has valid transports but stats are disabled" {
+                context("which has valid transports but stats are disabled") {
                     withNewConfig(newConfigInvalidStatsTransports(enabled = false)) {
                         should("throw when trying to access the stats transports") {
                             val cfg = StatsManagerBundleActivatorConfig()
@@ -71,20 +64,20 @@ internal class StatsManagerBundleActivatorConfigTest : ConfigTest() {
                         }
                     }
                 }
-                "which has a custom interval" {
+                context("which has a custom interval") {
                     withNewConfig(newConfigOneStatsTransportCustomInterval()) {
                         should("reflect the custom interval") {
                             val cfg = StatsManagerBundleActivatorConfig()
                             cfg.transportConfigs.forOne {
                                 it as StatsTransportConfig.MucStatsTransportConfig
-                                it.interval shouldBe 10.seconds
+                                it.interval shouldBe Duration.ofSeconds(10)
                             }
                         }
                     }
                 }
             }
         }
-        "When old and new config contain stats transport configs" {
+        context("When old and new config contain stats transport configs") {
             withLegacyConfig(legacyConfigAllStatsTransports()) {
                 withNewConfig(newConfigOneStatsTransport()) {
                     should("use the values from the old config") {
@@ -96,7 +89,7 @@ internal class StatsManagerBundleActivatorConfigTest : ConfigTest() {
                     }
                 }
             }
-            "and it's disabled in old config but enabled in new config" {
+            context("and it's disabled in old config but enabled in new config") {
                 withLegacyConfig(legacyConfigStatsEnabled(enabled = false)) {
                     withNewConfig(newConfigOneStatsTransport()) {
                         should("throw when trying to access the stats transports field") {
@@ -109,12 +102,6 @@ internal class StatsManagerBundleActivatorConfigTest : ConfigTest() {
         }
     }
 }
-
-private fun createConfigFrom(configString: String): ConfigSource =
-    TypesafeConfigSource("testConfig", ConfigFactory.parseString(configString))
-
-private fun createConfigFrom(configProps: Properties): ConfigSource =
-    ConfigurationServiceConfigSource("legacyConfig", TestReadOnlyConfigurationService(configProps))
 
 private fun newConfigAllStatsTransports(enabled: Boolean = true) = """
     videobridge {
@@ -185,23 +172,3 @@ private fun legacyConfigAllStatsTransports(enabled: Boolean = true) = """
     org.jitsi.videobridge.ENABLE_STATISTICS=$enabled
     org.jitsi.videobridge.STATISTICS_TRANSPORT=muc,callstats.io
 """.trimIndent()
-
-// TODO(brian): ideally move to jicoco-test-kotlin. See note below.
-private class ConfigSourceWrapper(
-    var innerConfigSource: ConfigSource
-) : ConfigSource {
-    override val name: String
-        get() = innerConfigSource.name
-
-    override fun getterFor(type: KType): (String) -> Any = innerConfigSource.getterFor(type)
-}
-
-// TODO(brian): ideally move to jicoco-test-kotlin, but it depends on jicoco (where
-// AbstractReadOnlyConfigurationService is defined) which already depends on jicoco-test-kotlin.
-// Once old config is removed, I think we can break the jicoco -> jicoco-test-kotlin dependency.
-private class TestReadOnlyConfigurationService(
-    override var properties: Properties
-) : AbstractReadOnlyConfigurationService() {
-
-    override fun reloadConfiguration() { }
-}
