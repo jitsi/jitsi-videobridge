@@ -79,10 +79,6 @@ class OctoConfig {
     }
 
     companion object {
-        /**
-         * NOTE(brian): Define this here because many classes want to access it from a static context, but
-         * I think we could tweak that if we wanted.
-         */
         @JvmField
         val config = OctoConfig()
     }

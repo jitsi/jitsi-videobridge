@@ -16,86 +16,87 @@
 
 package org.jitsi.videobridge.xmpp.config
 
-import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.collections.shouldContainExactly
 import io.kotlintest.matchers.collections.shouldHaveSize
 import io.kotlintest.shouldBe
 import org.jitsi.ConfigTest
 
 internal class XmppClientConnectionConfigTest : ConfigTest() {
-    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
-
     init {
         "Connection configs" {
             "when defined in the legacy config" {
-                withLegacyConfig(legacyConfigSingleXmppConnection)
-                should("parse things correctly") {
-                    val configs = XmppClientConnectionConfig().clientConfigs
-                    configs shouldHaveSize 1
-                    with(configs[0]) {
-                        this.id shouldBe "shard"
-                        this.mucNickname shouldBe "test_nick"
-                        this.disableCertificateVerification shouldBe true
-                        this.domain shouldBe "auth.some.domain.net"
-                        this.hostname shouldBe "localhost"
-                        this.username shouldBe "jvb"
-                        this.password shouldBe "s3cr3t"
-                        this.mucJids shouldContainExactly listOf("JvbBrewery@internal.some.domain.net")
-                        this.iqHandlerMode shouldBe "sync"
+                withLegacyConfig(legacyConfigSingleXmppConnection) {
+                    should("parse things correctly") {
+                        val configs = XmppClientConnectionConfig().clientConfigs
+                        configs shouldHaveSize 1
+                        with(configs[0]) {
+                            this.id shouldBe "shard"
+                            this.mucNickname shouldBe "test_nick"
+                            this.disableCertificateVerification shouldBe true
+                            this.domain shouldBe "auth.some.domain.net"
+                            this.hostname shouldBe "localhost"
+                            this.username shouldBe "jvb"
+                            this.password shouldBe "s3cr3t"
+                            this.mucJids shouldContainExactly listOf("JvbBrewery@internal.some.domain.net")
+                            this.iqHandlerMode shouldBe "sync"
+                        }
                     }
                 }
             }
             "when multiple are defined in legacy and one is incomplete" {
-                withLegacyConfig(legacyConfigOneCompleteConnectionOneIncomplete)
-                should("only parse the complete one") {
-                    val configs = XmppClientConnectionConfig().clientConfigs
-                    configs shouldHaveSize 1
-                    with(configs[0]) {
-                        this.id shouldBe "shard"
-                        this.mucNickname shouldBe "test_nick"
-                        this.disableCertificateVerification shouldBe true
-                        this.domain shouldBe "auth.some.domain.net"
-                        this.hostname shouldBe "localhost"
-                        this.username shouldBe "jvb"
-                        this.password shouldBe "s3cr3t"
-                        this.mucJids shouldContainExactly listOf("JvbBrewery@internal.some.domain.net")
-                        this.iqHandlerMode shouldBe "sync"
+                withLegacyConfig(legacyConfigOneCompleteConnectionOneIncomplete) {
+                    should("only parse the complete one") {
+                        val configs = XmppClientConnectionConfig().clientConfigs
+                        configs shouldHaveSize 1
+                        with(configs[0]) {
+                            this.id shouldBe "shard"
+                            this.mucNickname shouldBe "test_nick"
+                            this.disableCertificateVerification shouldBe true
+                            this.domain shouldBe "auth.some.domain.net"
+                            this.hostname shouldBe "localhost"
+                            this.username shouldBe "jvb"
+                            this.password shouldBe "s3cr3t"
+                            this.mucJids shouldContainExactly listOf("JvbBrewery@internal.some.domain.net")
+                            this.iqHandlerMode shouldBe "sync"
+                        }
                     }
                 }
             }
             "when defined in new config" {
-                withNewConfig(newConfigSingleXmppConnection)
-                should("parse things correctly") {
-                    val configs = XmppClientConnectionConfig().clientConfigs
-                    configs shouldHaveSize 1
-                    with(configs[0]) {
-                        this.id shouldBe "shard"
-                        this.mucNickname shouldBe "test_nick"
-                        this.disableCertificateVerification shouldBe true
-                        this.domain shouldBe "auth.some.domain.net"
-                        this.hostname shouldBe "localhost"
-                        this.username shouldBe "jvb"
-                        this.password shouldBe "s3cr3t"
-                        this.mucJids shouldContainExactly listOf("JvbBrewery@internal.some.domain.net")
-                        this.iqHandlerMode shouldBe "sync"
+                withNewConfig(newConfigSingleXmppConnection) {
+                    should("parse things correctly") {
+                        val configs = XmppClientConnectionConfig().clientConfigs
+                        configs shouldHaveSize 1
+                        with(configs[0]) {
+                            this.id shouldBe "shard"
+                            this.mucNickname shouldBe "test_nick"
+                            this.disableCertificateVerification shouldBe true
+                            this.domain shouldBe "auth.some.domain.net"
+                            this.hostname shouldBe "localhost"
+                            this.username shouldBe "jvb"
+                            this.password shouldBe "s3cr3t"
+                            this.mucJids shouldContainExactly listOf("JvbBrewery@internal.some.domain.net")
+                            this.iqHandlerMode shouldBe "sync"
+                        }
                     }
                 }
             }
             "when defined in new config with some incomplete" {
-                withNewConfig(newConfigOneCompleteConnectionOneIncomplete)
-                should("parse things correctly") {
-                    val configs = XmppClientConnectionConfig().clientConfigs
-                    configs shouldHaveSize 1
-                    with(configs[0]) {
-                        this.id shouldBe "shard"
-                        this.mucNickname shouldBe "test_nick"
-                        this.disableCertificateVerification shouldBe true
-                        this.domain shouldBe "auth.some.domain.net"
-                        this.hostname shouldBe "localhost"
-                        this.username shouldBe "jvb"
-                        this.password shouldBe "s3cr3t"
-                        this.mucJids shouldContainExactly listOf("JvbBrewery@internal.some.domain.net")
-                        this.iqHandlerMode shouldBe "sync"
+                withNewConfig(newConfigOneCompleteConnectionOneIncomplete) {
+                    should("parse things correctly") {
+                        val configs = XmppClientConnectionConfig().clientConfigs
+                        configs shouldHaveSize 1
+                        with(configs[0]) {
+                            this.id shouldBe "shard"
+                            this.mucNickname shouldBe "test_nick"
+                            this.disableCertificateVerification shouldBe true
+                            this.domain shouldBe "auth.some.domain.net"
+                            this.hostname shouldBe "localhost"
+                            this.username shouldBe "jvb"
+                            this.password shouldBe "s3cr3t"
+                            this.mucJids shouldContainExactly listOf("JvbBrewery@internal.some.domain.net")
+                            this.iqHandlerMode shouldBe "sync"
+                        }
                     }
                 }
             }
