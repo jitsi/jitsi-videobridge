@@ -33,13 +33,13 @@ class ConferenceTest : ConfigTest() {
     private val octoRelayServiceReference: ServiceReference<OctoRelayService> = mockk()
     private val octoRelayService = OctoRelayService()
 
-    private val bundleContext: BundleContext = mockk<BundleContext>().also {
-        every { it.getServiceReference(OctoRelayService::class.java) } returns octoRelayServiceReference
-        every { it.getService(octoRelayServiceReference) } returns octoRelayService
-        every { it.registerService(any() as String, any(), any()) } returns null
+    private val bundleContext = mockk<BundleContext> {
+        every { getServiceReference(OctoRelayService::class.java) } returns octoRelayServiceReference
+        every { getService(octoRelayServiceReference) } returns octoRelayService
+        every { registerService(any() as String, any(), any()) } returns null
     }
-    private val videobridge: Videobridge = mockk<Videobridge>().also {
-        every { it.bundleContext } returns bundleContext
+    private val videobridge = mockk<Videobridge> {
+        every { bundleContext } returns this@ConferenceTest.bundleContext
     }
 
     init {
