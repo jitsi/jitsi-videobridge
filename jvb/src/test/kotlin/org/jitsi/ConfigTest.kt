@@ -22,7 +22,6 @@ import io.kotlintest.specs.ShouldSpec
 import org.jitsi.config.useLegacyConfig
 import org.jitsi.config.useNewConfig
 import org.jitsi.metaconfig.MetaconfigSettings
-import org.jitsi.metaconfig.StdOutLogger
 
 /**
  * A helper class for testing configuration properties
@@ -33,7 +32,6 @@ abstract class ConfigTest : ShouldSpec() {
     override fun beforeSpec(spec: Spec) {
         super.beforeSpec(spec)
         MetaconfigSettings.cacheEnabled = false
-        MetaconfigSettings.logger = StdOutLogger
     }
 
     inline fun withLegacyConfig(props: String, block: () -> Unit) {
