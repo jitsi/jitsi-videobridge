@@ -16,11 +16,11 @@
 
 package org.jitsi.nlj.transform.node.outgoing
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.should
-import io.kotlintest.shouldBe
-import io.kotlintest.shouldNotBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.should
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.resources.srtp_samples.SrtpSample
@@ -44,8 +44,8 @@ internal class SrtpEncryptTest : ShouldSpec() {
             StdoutLogger()
         )
 
-        "encrypting an RTCP packet" {
-            "created from a buffer" {
+        context("encrypting an RTCP packet") {
+            context("created from a buffer") {
                 val packetInfo = PacketInfo(SrtpSample.outgoingUnencryptedRtcpPacket.clone())
                 srtpTransformers.srtcpEncryptTransformer.transform(packetInfo) shouldBe SrtpErrorStatus.OK
 
@@ -55,7 +55,7 @@ internal class SrtpEncryptTest : ShouldSpec() {
                     encryptedPacket should haveSameContentAs(SrtpSample.expectedEncryptedRtcpPacket)
                 }
             }
-            "created from values" {
+            context("created from values") {
                 val originalPacket = RtcpFbNackPacketBuilder(
                     mediaSourceSsrc = 123,
                     missingSeqNums = (10..20 step 2).toSortedSet()
@@ -74,7 +74,7 @@ internal class SrtpEncryptTest : ShouldSpec() {
             }
         }
 
-        "encrypting an RTP packet" {
+        context("encrypting an RTP packet") {
             val packetInfo = PacketInfo(SrtpSample.outgoingUnencryptedRtpPacket.clone())
             srtpTransformers.srtpEncryptTransformer.transform(packetInfo) shouldBe SrtpErrorStatus.OK
 

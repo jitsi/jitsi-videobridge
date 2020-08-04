@@ -16,13 +16,13 @@
 
 package org.jitsi.nlj.module_tests
 
-import java.time.Duration
-import java.util.concurrent.Executors
-import java.util.concurrent.LinkedBlockingQueue
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.safeShutdown
 import org.jitsi.test_utils.Pcaps
+import org.jitsi.utils.secs
+import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
 
 /**
  * Verify that the same buffer we feed into the receive pipeline is the one we get
@@ -75,8 +75,8 @@ fun main() {
     producer.run()
 
     receiver.stop()
-    executor.safeShutdown(Duration.ofSeconds(10))
-    backgroundExecutor.safeShutdown(Duration.ofSeconds(10))
+    executor.safeShutdown(10.secs)
+    backgroundExecutor.safeShutdown(10.secs)
 
     println("Num new arrays: $numNewArrays")
 }

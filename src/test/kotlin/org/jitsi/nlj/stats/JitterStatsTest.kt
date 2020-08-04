@@ -16,11 +16,11 @@
 
 package org.jitsi.nlj.stats
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.doubles.plusOrMinus
-import io.kotlintest.matchers.withClue
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.assertions.withClue
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.rtp.RtpPacket
 
@@ -73,7 +73,7 @@ class JitterStatsTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
-        "Jitter" {
+        context("Jitter") {
             val jitterStats = JitterStats()
             should("update correctly") {
                 // Handled separately since we want to verify the jitter at each

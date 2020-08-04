@@ -16,15 +16,15 @@
 
 package org.jitsi.nlj.format
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 
 internal class PayloadTypeEncodingTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
-        "createFrom" {
+        context("createFrom") {
             should("be case insensitive") {
                 val encoding = PayloadTypeEncoding.createFrom("vp8")
                 val encoding2 = PayloadTypeEncoding.createFrom("vP8")

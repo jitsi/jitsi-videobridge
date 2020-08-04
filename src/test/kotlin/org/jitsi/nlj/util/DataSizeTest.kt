@@ -16,28 +16,27 @@
 
 package org.jitsi.nlj.util
 
-import io.kotlintest.matchers.beGreaterThan
-import io.kotlintest.should
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.shouldBe
 
 class DataSizeTest : ShouldSpec() {
 
     init {
-        "equivalent data sizes" {
+        context("equivalent data sizes") {
             should("match even if created differently") {
                 1000.bytes shouldBe 1.kilobytes
                 1.megabytes shouldBe 8_000_000.bits
             }
         }
-        "arithmetic operations" {
+        context("arithmetic operations") {
             should("work correctly") {
                 1.kilobytes + 1.kilobytes shouldBe 2.kilobytes
                 1.megabytes - 500.kilobytes shouldBe 500.kilobytes
                 1.bytes * 10 shouldBe 10.bytes
             }
         }
-        "printing data sizes" {
+        context("printing data sizes") {
             should("print as the most appropriate unit") {
                 8_000_000.bits.toString() shouldBe "1 MB"
                 1000.bytes.toString() shouldBe "1 KB"
@@ -45,10 +44,10 @@ class DataSizeTest : ShouldSpec() {
                 4.bits.toString() shouldBe "4 bits"
             }
         }
-        "comparing data sizes" {
+        context("comparing data sizes") {
             should("work correctly") {
-                2.megabytes should beGreaterThan(1.megabytes)
-                1000.bits should beGreaterThan(999.bits)
+                2.megabytes shouldBeGreaterThan 1.megabytes
+                1000.bits shouldBeGreaterThan 999.bits
             }
         }
     }

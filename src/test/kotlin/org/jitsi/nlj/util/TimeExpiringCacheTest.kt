@@ -16,14 +16,14 @@
 
 package org.jitsi.nlj.util
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.types.shouldBeSameInstanceAs
-import io.kotlintest.shouldBe
-import io.kotlintest.shouldNotBe
-import io.kotlintest.specs.ShouldSpec
-import java.time.Duration
-import java.time.Instant
+import io.kotest.core.spec.IsolationMode
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeSameInstanceAs
 import org.jitsi.nlj.test_utils.FakeClock
+import org.jitsi.utils.secs
+import java.time.Instant
 
 internal class TimeExpiringCacheTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -33,24 +33,24 @@ internal class TimeExpiringCacheTest : ShouldSpec() {
     private val fakeClock = FakeClock()
 
     private val timeExpiringCache = TimeExpiringCache<Int, Dummy>(
-            Duration.ofSeconds(1),
+            1.secs,
             20,
             fakeClock
     )
 
     init {
-        "adding data" {
+        context("adding data") {
             val data1 = Dummy(1)
             timeExpiringCache.insert(data1.num, data1)
-            "and then retrieving it before the timeout has elapsed" {
+            context("and then retrieving it before the timeout has elapsed") {
                 val retrievedData1 = timeExpiringCache.get(data1.num)
                 should("return the data") {
                     retrievedData1 shouldNotBe null
                     retrievedData1 shouldBeSameInstanceAs data1
                 }
             }
-            "and then retrieving it after the timeout has elapsed" {
-                fakeClock.elapse(Duration.ofSeconds(5))
+            context("and then retrieving it after the timeout has elapsed") {
+                fakeClock.elapse(5.secs)
                 val retrievedData1 = timeExpiringCache.get(data1.num)
                 // We don't prune on 'get', only on 'insert'
                 should("return the data") {
@@ -58,11 +58,11 @@ internal class TimeExpiringCacheTest : ShouldSpec() {
                     retrievedData1 shouldBeSameInstanceAs data1
                 }
             }
-            "and then adding more data > timeout period later" {
+            context("and then adding more data > timeout period later") {
                 val data2 = Dummy(2)
-                fakeClock.elapse(Duration.ofSeconds(5))
+                fakeClock.elapse(5.secs)
                 timeExpiringCache.insert(data2.num, data2)
-                "and then trying to retrieve the old data" {
+                context("and then trying to retrieve the old data") {
                     val retrievedData1 = timeExpiringCache.get(data1.num)
                     should("return null") {
                         retrievedData1 shouldBe null
@@ -70,10 +70,10 @@ internal class TimeExpiringCacheTest : ShouldSpec() {
                 }
             }
         }
-        "adding lots of data over time" {
+        context("adding lots of data over time") {
             for (i in 1..10) {
                 timeExpiringCache.insert(i, Dummy(i))
-                fakeClock.elapse(Duration.ofSeconds(1))
+                fakeClock.elapse(1.secs)
             }
             should("expire things properly") {
                 // Only the last value should still be present
@@ -83,12 +83,12 @@ internal class TimeExpiringCacheTest : ShouldSpec() {
                 timeExpiringCache.get(10) shouldNotBe null
             }
         }
-        "adding data at the same time" {
+        context("adding data at the same time") {
             for (i in 1..10) {
                 timeExpiringCache.insert(i, Dummy(i))
             }
-            "and then another > timeout period later" {
-                fakeClock.elapse(Duration.ofSeconds(10))
+            context("and then another > timeout period later") {
+                fakeClock.elapse(10.secs)
                 timeExpiringCache.insert(11, Dummy(11))
                 should("expire all the old data") {
                     for (i in 1..10) {
@@ -97,7 +97,7 @@ internal class TimeExpiringCacheTest : ShouldSpec() {
                 }
             }
         }
-        "adding data out of order" {
+        context("adding data out of order") {
             // Here we simulate data being inserted out of order (with relation
             // to their index value)
             timeExpiringCache.insert(1, Dummy(1))
@@ -119,7 +119,7 @@ internal class TimeExpiringCacheTest : ShouldSpec() {
                 timeExpiringCache.get(4) shouldNotBe null
             }
         }
-        "adding more than the maximum amount of elements" {
+        context("adding more than the maximum amount of elements") {
             for (i in 1..20) {
                 timeExpiringCache.insert(i, Dummy(i))
             }

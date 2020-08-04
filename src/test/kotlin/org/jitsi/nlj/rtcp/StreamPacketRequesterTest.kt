@@ -17,11 +17,11 @@
 package org.jitsi.nlj.rtcp
 
 import com.nhaarman.mockitokotlin2.spy
-import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.collections.shouldContainExactly
-import io.kotlintest.matchers.collections.shouldHaveSize
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.collections.shouldHaveSize
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.test_utils.FakeScheduledExecutorService
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -42,38 +42,38 @@ class StreamPacketRequesterTest : ShouldSpec() {
     )
 
     init {
-        "receiving the first packet" {
+        context("receiving the first packet") {
             streamPacketRequester.packetReceived(1)
             should("not schedule any work") {
                 scheduler.numPendingJobs() shouldBe 0
             }
-            "and then a packet sequentially after that" {
+            context("and then a packet sequentially after that") {
                 streamPacketRequester.packetReceived(2)
                 should("not schedule any work") {
                     scheduler.numPendingJobs() shouldBe 0
                 }
             }
-            "and then a packet with a gap" {
+            context("and then a packet with a gap") {
                 streamPacketRequester.packetReceived(3)
                 should("schedule work") {
                     scheduler.numPendingJobs() shouldBe 1
                 }
-                "the scheduled work" {
+                context("the scheduled work") {
                     scheduler.runOne()
                     should("send a nack") {
-                        nackPacketsSent.shouldHaveSize(1)
+                        nackPacketsSent shouldHaveSize 1
                         val nackPacket = nackPacketsSent.first() as RtcpFbNackPacket
                         nackPacket.missingSeqNums shouldContainExactly listOf(2)
                     }
                 }
             }
         }
-        "a nack for a specific packet" {
+        context("a nack for a specific packet") {
             streamPacketRequester.packetReceived(1)
             streamPacketRequester.packetReceived(3)
             should("be resent 10 times") {
                 repeat(10) { scheduler.runOne() }
-                nackPacketsSent.shouldHaveSize(10)
+                nackPacketsSent shouldHaveSize 10
                 // It shouldn't reschedule the job after the 10th time
                 scheduler.numPendingJobs() shouldBe 0
             }
@@ -85,19 +85,19 @@ class StreamPacketRequesterTest : ShouldSpec() {
                 scheduler.numPendingJobs() shouldBe 0
             }
         }
-        "multiple missing packets" {
-            "all at once" {
+        context("multiple missing packets") {
+            context("all at once") {
                 streamPacketRequester.packetReceived(1)
                 streamPacketRequester.packetReceived(10)
                 should("all be nacked at once") {
                     scheduler.runOne()
-                    nackPacketsSent.shouldHaveSize(1)
+                    nackPacketsSent shouldHaveSize 1
                     val nackPacket = nackPacketsSent.first() as RtcpFbNackPacket
                     nackPacket.missingSeqNums shouldContainExactly (2..9).toSortedSet()
                 }
                 should("all be nacked 10 times") {
                     repeat(10) { scheduler.runOne() }
-                    nackPacketsSent.shouldHaveSize(10)
+                    nackPacketsSent shouldHaveSize 10
                     nackPacketsSent.forEach { packet ->
                         packet as RtcpFbNackPacket
                         packet.missingSeqNums shouldContainExactly (2..9).toSortedSet()
@@ -105,7 +105,7 @@ class StreamPacketRequesterTest : ShouldSpec() {
                     scheduler.numPendingJobs() shouldBe 0
                 }
             }
-            "spread out over time" {
+            context("spread out over time") {
                 streamPacketRequester.packetReceived(1)
                 streamPacketRequester.packetReceived(3)
                 repeat(5) { scheduler.runOne() }
@@ -125,7 +125,7 @@ class StreamPacketRequesterTest : ShouldSpec() {
                 }
             }
         }
-        "a packet jump of larger than the max" {
+        context("a packet jump of larger than the max") {
             streamPacketRequester.packetReceived(1)
             streamPacketRequester.packetReceived(3)
             should("reset and clear all pending nacks") {

@@ -31,6 +31,7 @@ import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.utils.LRUCache
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.secs
 
 /**
  * The maximum number of SR packets and their timestamps to save.
@@ -113,7 +114,7 @@ class EndpointConnectionStats(
             // in nanoseconds
             val remoteProcessingDelay = Duration.ofNanos((reportBlock.delaySinceLastSr / .000065536).toLong())
             rtt = (Duration.between(srSentTime, receivedTime) - remoteProcessingDelay).toDoubleMillis()
-            if (rtt > Duration.ofSeconds(7).toMillis()) {
+            if (rtt > 7.secs.toMillis()) {
                 logger.warn("Suspiciously high rtt value: $rtt ms, remote processing delay was " +
                     "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, " +
                     "received time was $receivedTime")

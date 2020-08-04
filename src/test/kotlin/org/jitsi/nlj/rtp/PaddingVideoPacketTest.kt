@@ -16,16 +16,16 @@
 
 package org.jitsi.nlj.rtp
 
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.rtp.rtp.RtpHeader
 
 class PaddingVideoPacketTest : ShouldSpec() {
 
     init {
-        "Creating a padding packet" {
-            "from a buffer that previously held other data" {
+        context("Creating a padding packet") {
+            context("from a buffer that previously held other data") {
                 BufferPool.getBuffer = { size ->
                     // A buffer with bogus CSRC count and header ext length values
                     org.jitsi.rtp.extensions.bytearray.byteArrayOf(

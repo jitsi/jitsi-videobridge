@@ -16,10 +16,10 @@
 
 package org.jitsi.nlj.util
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.shouldThrow
-import io.kotlintest.specs.ShouldSpec
-import java.time.Duration
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.spec.IsolationMode
+import io.kotest.core.spec.style.ShouldSpec
+import org.jitsi.utils.secs
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 
@@ -29,8 +29,8 @@ internal class ExecutorUtilsKtTest : ShouldSpec() {
     private val executor = Executors.newSingleThreadExecutor()
 
     init {
-        "shutting down an executor" {
-            "with a blocked task which can be interrupted" {
+        context("shutting down an executor") {
+            context("with a blocked task which can be interrupted") {
                 val queue = LinkedBlockingQueue<Int>()
                 executor.submit {
                     queue.take()
@@ -40,9 +40,9 @@ internal class ExecutorUtilsKtTest : ShouldSpec() {
                 Thread.sleep(1000)
 
                 // This should not throw
-                executor.safeShutdown(Duration.ofSeconds(1))
+                executor.safeShutdown(1.secs)
             }
-            "with an uninterruptable task" {
+            context("with an uninterruptable task") {
                 val queue = LinkedBlockingQueue<Int>()
                 executor.submit {
                     while (true) {
@@ -56,7 +56,7 @@ internal class ExecutorUtilsKtTest : ShouldSpec() {
                 Thread.sleep(1000)
 
                 shouldThrow<ExecutorShutdownTimeoutException> {
-                    executor.safeShutdown(Duration.ofSeconds(1))
+                    executor.safeShutdown(1.secs)
                 }
             }
         }

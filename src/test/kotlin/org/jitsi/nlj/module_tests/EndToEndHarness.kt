@@ -16,13 +16,13 @@
 
 package org.jitsi.nlj.module_tests
 
-import java.time.Duration
-import java.util.concurrent.Executors
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.safeShutdown
 import org.jitsi.test_utils.Pcaps
+import org.jitsi.utils.secs
+import java.util.concurrent.Executors
 
 /**
  * Read packets from a PCAP file and feed them through a receiver
@@ -89,8 +89,8 @@ fun main() {
 
     receiver.stop()
     sender.stop()
-    executor.safeShutdown(Duration.ofSeconds(10))
-    backgroundExecutor.safeShutdown(Duration.ofSeconds(10))
+    executor.safeShutdown(10.secs)
+    backgroundExecutor.safeShutdown(10.secs)
 
     println(receiver.getNodeStats().prettyPrint())
     println(sender.getNodeStats().prettyPrint())

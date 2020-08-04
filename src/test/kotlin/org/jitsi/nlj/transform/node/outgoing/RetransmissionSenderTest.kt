@@ -16,11 +16,11 @@
 
 package org.jitsi.nlj.transform.node.outgoing
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.TestCase
-import io.kotlintest.matchers.instanceOf
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.core.test.TestCase
+import io.kotest.matchers.instanceOf
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.resources.logging.StdoutLogger
@@ -67,8 +67,8 @@ class RetransmissionSenderTest : ShouldSpec() {
     }
 
     init {
-        "retransmitting a packet" {
-            "which has an associated rtx stream" {
+        context("retransmitting a packet") {
+            context("which has an associated rtx stream") {
                 should("rewrite the payload type and ssrc correctly") {
                     retransmissionSender.onOutput {
                         it.packet shouldBe instanceOf(RtpPacket::class)
@@ -80,7 +80,7 @@ class RetransmissionSenderTest : ShouldSpec() {
                     retransmissionSender.processPacket(dummyPacketInfo)
                 }
             }
-            "which does not have an associated rtx stream" {
+            context("which does not have an associated rtx stream") {
                 val noRtxPacket = dummyPacket.clone().apply {
                     payloadType = 99
                     ssrc = 9876L

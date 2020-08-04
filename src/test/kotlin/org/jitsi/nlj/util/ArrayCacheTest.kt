@@ -16,9 +16,9 @@
 
 package org.jitsi.nlj.util
 
-import io.kotlintest.matchers.numerics.shouldBeGreaterThanOrEqual
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 
 internal class ArrayCacheTest : ShouldSpec() {
 
@@ -42,21 +42,21 @@ internal class ArrayCacheTest : ShouldSpec() {
         var numInserts = 0
         var numOldInserts = 0
 
-        "adding and retrieving items " {
+        context("adding and retrieving items ") {
             arrayCache.insertItem(data1, data1.index) shouldBe true
             arrayCache.getContainer(data1.index)!!.item shouldBe data1
             numInserts++
             numHits++
         }
 
-        "adding and retrieving older items " {
+        context("adding and retrieving older items ") {
             arrayCache.insertItem(dataOlder, dataOlder.index) shouldBe true
             arrayCache.getContainer(dataOlder.index)!!.item shouldBe dataOlder
             numInserts++
             numHits++
         }
 
-        "adding an item with an index which is too old, and retrieving existing data " {
+        context("adding an item with an index which is too old, and retrieving existing data ") {
             arrayCache.insertItem(dataTooOld, dataTooOld.index) shouldBe false
             arrayCache.getContainer(data1.index)!!.item shouldBe data1
             arrayCache.getContainer(dataOlder.index)!!.item shouldBe dataOlder
@@ -64,7 +64,7 @@ internal class ArrayCacheTest : ShouldSpec() {
             numHits += 2
         }
 
-        "replacing the data at the latest index" {
+        context("replacing the data at the latest index") {
             val otherData = Dummy(11111)
             arrayCache.insertItem(otherData, 100) shouldBe true
             arrayCache.getContainer(100)!!.item shouldBe otherData
@@ -72,7 +72,7 @@ internal class ArrayCacheTest : ShouldSpec() {
             numHits++
         }
 
-        "replacing the data at an older index" {
+        context("replacing the data at an older index") {
             val otherData = Dummy(22222)
             arrayCache.insertItem(otherData, 98) shouldBe true
             arrayCache.getContainer(98)!!.item shouldBe otherData
@@ -80,7 +80,7 @@ internal class ArrayCacheTest : ShouldSpec() {
             numHits++
         }
 
-        "adding and retrieving more data" {
+        context("adding and retrieving more data") {
             arrayCache.insertItem(dataNewer, dataNewer.index) shouldBe true
             arrayCache.getContainer(dataNewer.index)!!.item shouldBe dataNewer
             numInserts++
@@ -94,7 +94,7 @@ internal class ArrayCacheTest : ShouldSpec() {
             numHits++
         }
 
-        "iterate forEachDescending" {
+        context("iterate forEachDescending") {
             // This should iterate for 200..195. It should not touch the miss/hit count or
             var nextExpected = 200
             val lastExpected = 195
@@ -105,21 +105,21 @@ internal class ArrayCacheTest : ShouldSpec() {
                 nextExpected >= lastExpected
             }
         }
-        "retrieving rewritten data" {
+        context("retrieving rewritten data") {
             arrayCache.getContainer(data1.index) shouldBe null
             numMisses++
         }
-        "retrieving data with a newer index" {
+        context("retrieving data with a newer index") {
             arrayCache.getContainer(1000) shouldBe null
             numMisses++
         }
-        "keeping track of statistics " {
+        context("keeping track of statistics ") {
             arrayCache.numInserts shouldBe numInserts
             arrayCache.numOldInserts shouldBe numOldInserts
             arrayCache.numHits shouldBe numHits
             arrayCache.numMisses shouldBe numMisses
         }
-        "flush should discard all items" {
+        context("flush should discard all items") {
             arrayCache.discarded = 0
             arrayCache.flush()
             arrayCache.discarded shouldBe arrayCache.size

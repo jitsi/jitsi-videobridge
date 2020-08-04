@@ -16,11 +16,11 @@
 
 package org.jitsi.nlj.rtcp
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.collections.shouldHaveSize
-import io.kotlintest.matchers.types.shouldBeInstanceOf
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.resources.node.onOutput
@@ -58,8 +58,8 @@ class CompoundRtcpParserTest : ShouldSpec() {
     ).build()
 
     init {
-        "A compound RTCP packet with invalid data" {
-            "at the beginning of the packet" {
+        context("A compound RTCP packet with invalid data") {
+            context("at the beginning of the packet") {
                 val packet = DummyPacket(invalidRtcpData)
                 val packetInfo = PacketInfo(packet)
                 should("drop the packet entirely") {
@@ -67,7 +67,7 @@ class CompoundRtcpParserTest : ShouldSpec() {
                     parser.processPacket(packetInfo)
                 }
             }
-            "after a valid packet" {
+            context("after a valid packet") {
                 val packet = DummyPacket(rtcpByeNoReason + invalidRtcpData)
                 val packetInfo = PacketInfo(packet)
                 should("drop the packet entirely") {
@@ -76,8 +76,8 @@ class CompoundRtcpParserTest : ShouldSpec() {
                 }
             }
         }
-        "A compound RTCP packet with an unsupported RTCP type" {
-            "at the beginning of the packet" {
+        context("A compound RTCP packet with an unsupported RTCP type") {
+            context("at the beginning of the packet") {
                 val packet = DummyPacket(unsupportedRtcpData)
                 val packetInfo = PacketInfo(packet)
                 should("parse it as UnsupportedRtcpPacket") {
@@ -90,7 +90,7 @@ class CompoundRtcpParserTest : ShouldSpec() {
                     parser.processPacket(packetInfo)
                 }
             }
-            "in between other supported RTCP packets" {
+            context("in between other supported RTCP packets") {
                 val packet = DummyPacket(rtcpByeNoReason + unsupportedRtcpData + rtcpByeNoReason)
                 val packetInfo = PacketInfo(packet)
                 should("parse it as UnsupportedRtcpPacket") {

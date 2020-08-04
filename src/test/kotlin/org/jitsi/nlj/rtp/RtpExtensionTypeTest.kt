@@ -16,13 +16,13 @@
 
 package org.jitsi.nlj.rtp
 
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 
 class RtpExtensionTypeTest : ShouldSpec() {
 
     init {
-        "Creating an extension from a valid URI" {
+        context("Creating an extension from a valid URI") {
             should("work correctly") {
                 RtpExtensionType.createFromUri(RtpExtensionType.TRANSPORT_CC.uri) shouldBe
                     RtpExtensionType.TRANSPORT_CC

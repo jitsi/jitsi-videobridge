@@ -16,11 +16,11 @@
 
 package org.jitsi.nlj.transform.node.incoming
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.should
-import io.kotlintest.shouldBe
-import io.kotlintest.shouldNotBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.should
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.resources.srtp_samples.SrtpSample
@@ -39,7 +39,7 @@ internal class SrtpDecryptTest : ShouldSpec() {
             StdoutLogger()
         )
 
-        "decrypting an RTCP packet" {
+        context("decrypting an RTCP packet") {
             val packetInfo = PacketInfo(SrtpSample.incomingEncryptedRtcpPacket.clone())
             srtpTransformers.srtcpDecryptTransformer.transform(packetInfo) shouldBe SrtpErrorStatus.OK
             val decryptedPacket = packetInfo.packet
@@ -50,7 +50,7 @@ internal class SrtpDecryptTest : ShouldSpec() {
             }
         }
 
-        "decrypting an RTP packet" {
+        context("decrypting an RTP packet") {
             val packetInfo = PacketInfo(SrtpSample.incomingEncryptedRtpPacket.clone())
             srtpTransformers.srtpDecryptTransformer.transform(packetInfo) shouldBe SrtpErrorStatus.OK
 

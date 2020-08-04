@@ -16,24 +16,23 @@
 
 package org.jitsi.nlj.util
 
-import io.kotlintest.matchers.beGreaterThan
-import io.kotlintest.seconds
-import io.kotlintest.should
-import io.kotlintest.shouldBe
-import io.kotlintest.shouldNotBe
-import io.kotlintest.shouldThrow
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import org.jitsi.utils.secs
 
 class BandwidthTest : ShouldSpec() {
 
     init {
-        "equivalent bandwidths" {
+        context("equivalent bandwidths") {
             should("match even if created differently") {
                 2.5.mbps shouldBe 2_500_000.bps
                 2500.kbps shouldBe 2.5.mbps
             }
         }
-        "arithmetic operations on bandwidths" {
+        context("arithmetic operations on bandwidths") {
             should("work correctly") {
                 1.kbps * 10 shouldBe 10.kbps
                 1.mbps + 500.kbps shouldBe 1.5.mbps
@@ -42,7 +41,7 @@ class BandwidthTest : ShouldSpec() {
                 1.mbps / 4.mbps shouldBe 0.25
             }
         }
-        "operation-assign operations on bandwidths" {
+        context("operation-assign operations on bandwidths") {
             should("work correctly") {
                 var b = 1.mbps
                 b += 0.5.mbps
@@ -69,34 +68,34 @@ class BandwidthTest : ShouldSpec() {
                 b.bps shouldBe 500_000.0
             }
         }
-        "printing bandwidths" {
+        context("printing bandwidths") {
             should("print as the most appropriate unit") {
                 2_500_000.bps.toString() shouldBe "2.5 mbps"
                 500_000.bps.toString() shouldBe "500 kbps"
                 .001.mbps.toString() shouldBe "1 kbps"
             }
         }
-        "comparing bandwidths" {
-            "with integral bps" {
+        context("comparing bandwidths") {
+            context("with integral bps") {
                 should("work correctly") {
-                    2.mbps should beGreaterThan(1.mbps)
-                    1000.bps should beGreaterThan(999.bps)
+                    2.mbps shouldBeGreaterThan 1.mbps
+                    1000.bps shouldBeGreaterThan 999.bps
                 }
             }
-            "with fractional bps" {
+            context("with fractional bps") {
                 should("work correctly") {
                     0.2.bps shouldNotBe 0.bps
-                    0.2.bps should beGreaterThan(0.1.bps)
+                    0.2.bps shouldBeGreaterThan 0.1.bps
                 }
             }
         }
-        "creation from 'per'" {
+        context("creation from 'per'") {
             should("work correctly") {
-                1.megabytes.per(1.seconds) shouldBe 8.mbps
-                2.bits.per(5.seconds) shouldBe 0.4.bps
+                1.megabytes.per(1.secs) shouldBe 8.mbps
+                2.bits.per(5.secs) shouldBe 0.4.bps
             }
         }
-        "creation from a string" {
+        context("creation from a string") {
             should("work correctly") {
                 Bandwidth.fromString("10mbps") shouldBe 10.mbps
                 Bandwidth.fromString("10bps") shouldBe 10.bps

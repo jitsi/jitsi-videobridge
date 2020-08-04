@@ -27,7 +27,6 @@ import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.Rfc3711IndexTracker
 import org.jitsi.utils.logging2.cdebug
-import org.jitsi.nlj.util.milliseconds
 import org.jitsi.utils.observableWhenChanged
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
@@ -36,6 +35,7 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.utils.ms
 import org.jitsi.utils.stats.RateStatistics
 
 /**
@@ -172,8 +172,8 @@ class TccGeneratorNode(
         }
 
         val timeSinceLastTcc = Duration.between(lastTccSentTime, now)
-        return timeSinceLastTcc >= 100.milliseconds() ||
-            ((timeSinceLastTcc >= 20.milliseconds()) && currentPacketMarked)
+        return timeSinceLastTcc >= 100.ms ||
+            ((timeSinceLastTcc >= 20.ms) && currentPacketMarked)
     }
 
     override fun trace(f: () -> Unit) = f.invoke()

@@ -15,11 +15,11 @@
  */
 package org.jitsi.nlj.stats
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.types.shouldBeInstanceOf
-import io.kotlintest.shouldBe
-import io.kotlintest.shouldThrow
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.nlj.util.OrderedJsonObject
 import java.lang.IllegalArgumentException
 
@@ -27,7 +27,7 @@ class DelayStatsTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
-        "adding stats" {
+        context("adding stats") {
             val delayStats = DelayStats(longArrayOf(2, 5, 200, 999))
 
             should("calculate the average correctly") {
@@ -79,7 +79,7 @@ class DelayStatsTest : ShouldSpec() {
             }
         }
 
-        "initializing with invalid thresholds should throw" {
+        context("initializing with invalid thresholds should throw") {
             shouldThrow<IllegalArgumentException> {
                 DelayStats(longArrayOf(2, 10, 5))
             }

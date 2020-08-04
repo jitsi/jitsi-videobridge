@@ -18,9 +18,9 @@ package org.jitsi.nlj.transform.node.incoming
 
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
-import io.kotlintest.IsolationMode
-import io.kotlintest.fail
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.assertions.fail
+import io.kotest.core.spec.IsolationMode
+import io.kotest.core.spec.style.ShouldSpec
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.Vp8PayloadType
@@ -93,8 +93,8 @@ class VideoParserTest : ShouldSpec() {
     }
 
     init {
-        "When parsing a VP8 packet" {
-            "with no encoding signaled" {
+        context("When parsing a VP8 packet") {
+            context("with no encoding signaled") {
                 parser.onOutput { pi ->
                     fail("Should not forward the packet")
                 }

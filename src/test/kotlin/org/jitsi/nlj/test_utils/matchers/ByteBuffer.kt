@@ -16,8 +16,8 @@
 
 package org.jitsi.nlj.test_utils.matchers
 
-import io.kotlintest.Matcher
-import io.kotlintest.MatcherResult
+import io.kotest.matchers.Matcher
+import io.kotest.matchers.MatcherResult
 import java.nio.ByteBuffer
 import org.jitsi.rtp.extensions.compareToFromBeginning
 import org.jitsi.rtp.extensions.toHex
