@@ -29,6 +29,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.logging2.cwarn
 import java.util.concurrent.ConcurrentHashMap
+import org.jitsi.nlj.srtp.SrtpConfig.Companion.maxConsecutivePacketsDiscardedEarly
 
 /**
  * Implements the methods common to all 4 transformer implementation (encrypt/decrypt for SRTP/SRTCP)
@@ -177,13 +178,34 @@ class SrtpDecryptTransformer(
     contextFactory: SrtpContextFactory,
     parentLogger: Logger
 ) : SrtpTransformer(contextFactory, parentLogger) {
+    var earlyDiscardedPacketsSinceLastSuccess = 0
+    private val alwaysProcess = maxConsecutivePacketsDiscardedEarly <= 0
 
     override fun transform(packetInfo: PacketInfo, context: SrtpCryptoContext): SrtpErrorStatus {
-        // For silence packets we update the ROC (if authentication passes), but don't decrypt
-        return context.reverseTransformPacket(packetInfo.packetAs(), packetInfo.shouldDiscard).apply {
-            packetInfo.resetPayloadVerification()
+        // We want to avoid authenticating and decrypting packets that we are going to discarded (e.g. silence). We
+        // can not just discard them without passing them to the SRTP stack, because this will eventually break the ROC.
+        // Here we bypass the SRTP stack for packets marked to be discarded, but make sure that we haven't dropped too
+        // many consecutive packets.
+        if (packetInfo.shouldDiscard) {
+            return if (alwaysProcess ||
+                earlyDiscardedPacketsSinceLastSuccess++ > maxConsecutivePacketsDiscardedEarly) {
+                doTransform(packetInfo, context)
+            } else {
+                // Bypass the SRTP stack. The packet is already marked to be discarded, so there's no error condition.
+                SrtpErrorStatus.OK
+            }
         }
+
+        return doTransform(packetInfo, context)
     }
+
+    private fun doTransform(packetInfo: PacketInfo, context: SrtpCryptoContext): SrtpErrorStatus =
+        context.reverseTransformPacket(packetInfo.packetAs(), packetInfo.shouldDiscard).also {
+            packetInfo.resetPayloadVerification()
+            if (it == SrtpErrorStatus.OK) {
+                earlyDiscardedPacketsSinceLastSuccess = 0
+            }
+        }
 }
 
 /**
