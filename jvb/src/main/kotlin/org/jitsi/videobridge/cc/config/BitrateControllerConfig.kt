@@ -25,17 +25,20 @@ class BitrateControllerConfig {
         /**
          * The bandwidth estimation threshold.
          *
-         * In order to limit the resolution changes due to bandwidth changes we
-         * react to bandwidth changes greater bweChangeThresholdPct / 100 of the
-         * last bandwidth estimation.
+         * In order to limit the resolution changes due to bandwidth changes we only react to bandwidth changes greater
+         * than {@code bweChangeThreshold * last_bandwidth_estimation}.
          */
-        private val bweChangeThresholdPct: Int by config {
+        private val bweChangeThreshold: Double by config {
             "org.jitsi.videobridge.BWE_CHANGE_THRESHOLD_PCT".from(JitsiConfig.legacyConfig)
+                .transformedBy { it / 100.0 }
+            // This is an old version, include for backward compat.
             "videobridge.cc.bwe-change-threshold-pct".from(JitsiConfig.newConfig)
+                .transformedBy { it / 100.0 }
+            "videobridge.cc.bwe-change-threshold".from(JitsiConfig.newConfig)
         }
 
         @JvmStatic
-        fun bweChangeThresholdPct() = bweChangeThresholdPct
+        fun bweChangeThreshold() = bweChangeThreshold
 
         /**
          * The max resolution to allocate for the thumbnails.
