@@ -452,7 +452,8 @@ private class SingleLayerFrameGenerator : FrameGenerator() {
             isInterPicturePredicted = (pictureCount > 0),
             pictureId = pictureCount,
             tl0PICIDX = pictureCount,
-            isKeyframe = (pictureCount == 0)
+            isKeyframe = (pictureCount == 0),
+            numSpatialLayers = if (pictureCount == 0) 1 else -1
         )
         pictureCount++
         return f
@@ -493,7 +494,8 @@ private class TemporallyScaledFrameGenerator : FrameGenerator() {
             isInterPicturePredicted = (pictureCount > 0),
             pictureId = pictureCount,
             tl0PICIDX = tl0Count,
-            isKeyframe = (pictureCount == 0)
+            isKeyframe = (pictureCount == 0),
+            numSpatialLayers = if (pictureCount == 0) 1 else -1
         )
         pictureCount++
         return f
@@ -539,7 +541,8 @@ private class SVCFrameGenerator : FrameGenerator() {
             isInterPicturePredicted = !keyframePicture,
             pictureId = pictureCount,
             tl0PICIDX = tl0Count,
-            isKeyframe = keyframePicture && sLayer == 0
+            isKeyframe = keyframePicture && sLayer == 0,
+            numSpatialLayers = if (keyframePicture && sLayer == 0) 3 else -1
         )
         frameCount++
         sLayer++
@@ -590,7 +593,8 @@ private class KSVCFrameGenerator : FrameGenerator() {
             isInterPicturePredicted = !keyframePicture,
             pictureId = pictureCount,
             tl0PICIDX = tl0Count,
-            isKeyframe = keyframePicture && sLayer == 0
+            isKeyframe = keyframePicture && sLayer == 0,
+            numSpatialLayers = if (keyframePicture && sLayer == 0) 3 else -1
         )
         frameCount++
         sLayer++
@@ -641,7 +645,8 @@ private class SimulcastFrameGenerator : FrameGenerator() {
             isInterPicturePredicted = !keyframePicture,
             pictureId = pictureCount,
             tl0PICIDX = tl0Count,
-            isKeyframe = keyframePicture
+            isKeyframe = keyframePicture,
+            numSpatialLayers = if (keyframePicture) 1 else -1
         )
         frameCount++
         enc++

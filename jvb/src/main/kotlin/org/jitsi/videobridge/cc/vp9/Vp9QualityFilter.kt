@@ -197,8 +197,14 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
              */
 
             val spatialLayerOfFrame = getSidFromIndex(incomingIndex)
-            val externalTargetSpatialId = getSidFromIndex(externalTargetIndex)
+            var externalTargetSpatialId = getSidFromIndex(externalTargetIndex)
             var currentSpatialLayer = getSidFromIndex(currentIndex)
+
+            /* If the stream includes a new SS which doesn't list the target spatial layer, lower the target. */
+            /* The target should change the next time the BitrateController runs, but that may be some time. */
+            if (frame.numSpatialLayers != -1 && externalTargetSpatialId >= frame.numSpatialLayers) {
+                externalTargetSpatialId = frame.numSpatialLayers - 1
+            }
 
             val canForwardLayer = (!frame.isInterPicturePredicted || layers[spatialLayerOfFrame]) &&
                 (!frame.usesInterLayerDependency || layers[spatialLayerOfFrame - 1])
@@ -206,7 +212,8 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             /* TODO: this logic is fragile in the presence of frame reordering. */
             val wantToSwitch =
                 (spatialLayerOfFrame > currentSpatialLayer && spatialLayerOfFrame <= externalTargetSpatialId) ||
-                (spatialLayerOfFrame < currentSpatialLayer && spatialLayerOfFrame >= externalTargetSpatialId)
+                (spatialLayerOfFrame < currentSpatialLayer && spatialLayerOfFrame >= externalTargetSpatialId) ||
+                (frame.numSpatialLayers != -1 && currentSpatialLayer >= frame.numSpatialLayers)
 
             if (wantToSwitch) {
                 if (canForwardLayer) {

@@ -120,7 +120,13 @@ class Vp9Frame internal constructor(
      * A boolean that indicates whether the incoming VP9 frame that this
      * instance refers to is a keyframe.
      */
-    var isKeyframe: Boolean
+    var isKeyframe: Boolean,
+
+    /**
+     * The number of spatial layers reported by this frame's scalability structure,
+     * if it has one, otherwise -1.
+     */
+    var numSpatialLayers: Int
 ) {
     /**
      * The earliest RTP sequence number seen of the incoming frame that this instance
@@ -182,7 +188,8 @@ class Vp9Frame internal constructor(
         isInterPicturePredicted = packet.isInterPicturePredicted,
         pictureId = packet.pictureId,
         tl0PICIDX = packet.TL0PICIDX,
-        isKeyframe = packet.isKeyframe
+        isKeyframe = packet.isKeyframe,
+        numSpatialLayers = packet.scalabilityStructureNumSpatial
     )
     /**
      * Remember another packet of this frame.
@@ -208,6 +215,9 @@ class Vp9Frame internal constructor(
         }
         if (packet.isMarked) {
             seenMarker = true
+        }
+        if (packet.hasScalabilityStructure) {
+            numSpatialLayers = packet.scalabilityStructureNumSpatial
         }
     }
 
