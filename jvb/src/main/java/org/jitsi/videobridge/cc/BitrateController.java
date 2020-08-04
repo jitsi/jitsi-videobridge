@@ -1349,6 +1349,13 @@ public class BitrateController
                     ratesList.add(
                         new RateSnapshot(layerBitrateBps, layer));
                 }
+                else {
+                    logger.trace(() ->
+                        "Not including layer " + layer + " in rate snapshot: " +
+                            "layer height " + layer.getHeight() + ", fps " + layer.getFrameRate() +
+                            " with video constraints " +
+                            videoConstraints);
+                }
 
                 if (layer.getHeight() <= videoConstraints.getPreferredHeight())
                 {
