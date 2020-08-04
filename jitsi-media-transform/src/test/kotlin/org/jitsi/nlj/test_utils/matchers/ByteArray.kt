@@ -16,8 +16,8 @@
 
 package org.jitsi.nlj.test_utils.matchers
 
-import io.kotlintest.Matcher
-import io.kotlintest.MatcherResult
+import io.kotest.matchers.Matcher
+import io.kotest.matchers.MatcherResult
 import org.jitsi.rtp.extensions.bytearray.toHex
 
 fun haveSameContentAs(expected: ByteArray) = object : Matcher<ByteArray> {

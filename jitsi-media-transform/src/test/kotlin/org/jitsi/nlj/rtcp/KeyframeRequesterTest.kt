@@ -16,14 +16,12 @@
 
 package org.jitsi.nlj.rtcp
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.collections.shouldBeEmpty
-import io.kotlintest.matchers.collections.shouldHaveSize
-import io.kotlintest.matchers.types.shouldBeInstanceOf
-import io.kotlintest.milliseconds
-import io.kotlintest.seconds
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.resources.logging.StdoutLogger
@@ -38,6 +36,8 @@ import org.jitsi.nlj.util.RtpExtensionHandler
 import org.jitsi.nlj.util.RtpPayloadTypesChangedHandler
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
+import org.jitsi.utils.ms
+import org.jitsi.utils.secs
 
 class KeyframeRequesterTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -75,8 +75,8 @@ class KeyframeRequesterTest : ShouldSpec() {
     init {
         keyframeRequester.onOutput { sentKeyframeRequests.add(it) }
 
-        "requesting a keyframe" {
-            "without a specific SSRC" {
+        context("requesting a keyframe") {
+            context("without a specific SSRC") {
                 keyframeRequester.requestKeyframe()
                 should("result in a sent PLI request with the first video SSRC") {
                     sentKeyframeRequests shouldHaveSize 1
@@ -86,7 +86,7 @@ class KeyframeRequesterTest : ShouldSpec() {
                     packet.mediaSourceSsrc shouldBe 123L
                 }
             }
-            "when PLI is supported" {
+            context("when PLI is supported") {
                 keyframeRequester.requestKeyframe(123L)
                 should("result in a sent PLI request") {
                     sentKeyframeRequests shouldHaveSize 1
@@ -95,17 +95,17 @@ class KeyframeRequesterTest : ShouldSpec() {
                     packet as RtcpFbPliPacket
                     packet.mediaSourceSsrc shouldBe 123L
                 }
-                "and then requesting again" {
+                context("and then requesting again") {
                     sentKeyframeRequests.clear()
-                    "within the wait interval" {
-                        clock.elapse(10.milliseconds)
-                        "on the same SSRC" {
+                    context("within the wait interval") {
+                        clock.elapse(10.ms)
+                        context("on the same SSRC") {
                             keyframeRequester.requestKeyframe(123L)
                             should("not send anything") {
                                 sentKeyframeRequests.shouldBeEmpty()
                             }
                         }
-                        "on a different SSRC" {
+                        context("on a different SSRC") {
                             keyframeRequester.requestKeyframe(456L)
                             should("result in a sent PLI request") {
                                 sentKeyframeRequests shouldHaveSize 1
@@ -116,8 +116,8 @@ class KeyframeRequesterTest : ShouldSpec() {
                             }
                         }
                     }
-                    "after the wait interval has expired" {
-                        clock.elapse(1.seconds)
+                    context("after the wait interval has expired") {
+                        clock.elapse(1.secs)
                         keyframeRequester.requestKeyframe(123L)
                         should("result in a sent PLI request") {
                             sentKeyframeRequests shouldHaveSize 1
@@ -129,7 +129,7 @@ class KeyframeRequesterTest : ShouldSpec() {
                     }
                 }
             }
-            "when PLI isn't supported" {
+            context("when PLI isn't supported") {
                 streamInformationStore.supportsPli = false
                 keyframeRequester.requestKeyframe(123L)
                 should("result in a sent FIR request") {
@@ -140,7 +140,7 @@ class KeyframeRequesterTest : ShouldSpec() {
                     packet.mediaSenderSsrc shouldBe 123L
                 }
             }
-            "when neither PLI nor FIR is supported" {
+            context("when neither PLI nor FIR is supported") {
                 streamInformationStore.supportsFir = false
                 streamInformationStore.supportsPli = false
                 keyframeRequester.requestKeyframe(123L)

@@ -16,10 +16,10 @@
 
 package org.jitsi.nlj.util
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.numerics.shouldBeGreaterThan
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.comparables.shouldBeGreaterThan
 
 internal class Rfc3711IndexTrackerTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -27,29 +27,29 @@ internal class Rfc3711IndexTrackerTest : ShouldSpec() {
     private val indexTracker = Rfc3711IndexTracker()
 
     init {
-        "feeding in the first sequence number" {
+        context("feeding in the first sequence number") {
             val firstIndex = indexTracker.update(65000)
             should("return itself as the index") {
                 firstIndex shouldBe 65000
             }
-            "and then another without rolling over" {
+            context("and then another without rolling over") {
                 val secondIndex = indexTracker.update(65001)
                 should("return itself as the index") {
                     secondIndex shouldBe 65001
                 }
-                "and then another which does roll over" {
+                context("and then another which does roll over") {
                     val rollOverIndex = indexTracker.update(2)
                     should("return the proper index") {
                         rollOverIndex shouldBe 1 /* roc */ * 0x1_0000 + 2
                     }
-                    "and then a sequence number from the previous rollover" {
+                    context("and then a sequence number from the previous rollover") {
                         val prevRollOverIndex = indexTracker.update(65002)
                         should("return the proper index") {
                             prevRollOverIndex shouldBe 65002
                         }
                     }
                 }
-                "and then an older sequence number" {
+                context("and then an older sequence number") {
                     val oldIndex = indexTracker.update(64000)
                     should("return the proper index") {
                         oldIndex shouldBe oldIndex
@@ -57,7 +57,7 @@ internal class Rfc3711IndexTrackerTest : ShouldSpec() {
                 }
             }
         }
-        "a series of sequence numbers" {
+        context("a series of sequence numbers") {
             should("never return a negative index") {
                 var seqNum = 22134
                 repeat(35537) {

@@ -19,10 +19,10 @@ package org.jitsi.nlj.transform.node.incoming
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.whenever
-import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.collections.shouldHaveSize
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.shouldHaveSize
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.resources.node.onOutput
@@ -68,7 +68,7 @@ class RtcpTerminationTest : ShouldSpec() {
             (it.getArgument(0) as? RtcpSrPacket)?.reportBlocks
         }
 
-        "Receiving an SR packet" {
+        context("Receiving an SR packet") {
             val senderInfo = SenderInfoBuilder(
                 ntpTimestampMsw = 0xDEADBEEF,
                 ntpTimestampLsw = 0xBEEFDEAD,
@@ -76,7 +76,7 @@ class RtcpTerminationTest : ShouldSpec() {
                 sendersPacketCount = 42,
                 sendersOctetCount = 4242
             )
-            "without any receiver report blocks" {
+            context("without any receiver report blocks") {
                 val srPacket = RtcpSrPacketBuilder(
                     RtcpHeaderBuilder(
                         senderSsrc = 12345L
@@ -97,7 +97,7 @@ class RtcpTerminationTest : ShouldSpec() {
                     }
                 }
             }
-            "with a receiver report block" {
+            context("with a receiver report block") {
                 val reportBlock = RtcpReportBlock(
                     ssrc = 12345,
                     fractionLost = 42,

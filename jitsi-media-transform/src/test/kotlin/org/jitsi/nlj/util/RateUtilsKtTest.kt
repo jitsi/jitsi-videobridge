@@ -16,26 +16,26 @@
 
 package org.jitsi.nlj.util
 
-import io.kotlintest.seconds
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
-import java.time.Duration
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldBe
+import org.jitsi.utils.ms
+import org.jitsi.utils.secs
 
 class RateUtilsKtTest : ShouldSpec() {
 
     init {
-        "atRate" {
+        context("atRate") {
             should("work correctly") {
-                1.megabytes atRate 1.mbps shouldBe Duration.ofSeconds(8)
+                1.megabytes atRate 1.mbps shouldBe 8.secs
             }
         }
-        "in" {
+        context("in") {
             should("work correctly") {
-                val size = howMuchCanISendAtRate(1.mbps).`in`(8.seconds)
+                val size = howMuchCanISendAtRate(1.mbps).`in`(8.secs)
                 size shouldBe 1.megabytes
             }
             should("work correctly for fractional durations") {
-                val size = howMuchCanISendAtRate(1.mbps).`in`(800.milliseconds())
+                val size = howMuchCanISendAtRate(1.mbps).`in`(800.ms)
                 size shouldBe 100.kilobytes
             }
         }

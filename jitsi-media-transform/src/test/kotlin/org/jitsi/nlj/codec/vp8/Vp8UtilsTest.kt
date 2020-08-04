@@ -16,17 +16,17 @@
 
 package org.jitsi.nlj.codec.vp8
 
-import io.kotlintest.data.forall
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
-import io.kotlintest.tables.row
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.data.forAll
+import io.kotest.data.row
 
 class Vp8UtilsTest : ShouldSpec() {
 
     init {
-        "getPicIdDelta" {
+        context("getPicIdDelta") {
             should("work correctly") {
-                forall(
+                forAll(
                     row(1, 10, -9),
                     row(10, 1, 9),
                     row(1, 32760, 9),
@@ -37,9 +37,9 @@ class Vp8UtilsTest : ShouldSpec() {
                 }
             }
         }
-        "applyPicIdDelta" {
+        context("applyPicIdDelta") {
             should("work correctly") {
-                forall(
+                forAll(
                     row(10, -9, 1),
                     row(1, 9, 10),
                     row(32760, 9, 1),
@@ -50,9 +50,9 @@ class Vp8UtilsTest : ShouldSpec() {
                 }
             }
         }
-        "getTl0PicIdxDelta" {
+        context("getTl0PicIdxDelta") {
             should("work correctly") {
-                forall(
+                forAll(
                     row(1, 10, -9),
                     row(10, 1, 9),
                     row(1, 250, 7),
@@ -63,9 +63,9 @@ class Vp8UtilsTest : ShouldSpec() {
                 }
             }
         }
-        "applyTl0PicIdxDelta" {
+        context("applyTl0PicIdxDelta") {
             should("work correctly") {
-                forall(
+                forAll(
                     row(10, -9, 1),
                     row(1, 9, 10),
                     row(250, 7, 1),

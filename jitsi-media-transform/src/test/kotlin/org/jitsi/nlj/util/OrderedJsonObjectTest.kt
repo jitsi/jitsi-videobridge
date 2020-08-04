@@ -16,14 +16,14 @@
 
 package org.jitsi.nlj.util
 
-import io.kotlintest.matchers.collections.shouldContainExactly
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.shouldContainExactly
 
 class OrderedJsonObjectTest : ShouldSpec() {
 
     init {
-        "an ordered json object" {
+        context("an ordered json object") {
             val ojo = OrderedJsonObject()
             ojo["one"] = 1
             ojo["two"] = 2

@@ -16,12 +16,12 @@
 
 package org.jitsi.nlj.stats
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.minutes
-import io.kotlintest.seconds
-import io.kotlintest.specs.ShouldSpec
-import io.kotlintest.shouldBe
+import io.kotest.core.spec.IsolationMode
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.test_utils.FakeClock
+import org.jitsi.utils.secs
+import java.time.Duration
 
 class PacketIOActivityTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -30,15 +30,15 @@ class PacketIOActivityTest : ShouldSpec() {
     private val clock: FakeClock = FakeClock()
 
     init {
-        "Last packet time values" {
-            clock.elapse(1.minutes)
+        context("Last packet time values") {
+            clock.elapse(Duration.ofMinutes(1))
             val oldTime = clock.instant()
-            clock.elapse(1.minutes)
+            clock.elapse(Duration.ofMinutes(1))
             val newTime = clock.instant()
             packetIoActivity.lastRtpPacketSentInstant = newTime
             packetIoActivity.lastRtpPacketReceivedInstant = newTime
             packetIoActivity.lastIceActivityInstant = newTime
-            "when setting an older time" {
+            context("when setting an older time") {
                 packetIoActivity.lastRtpPacketSentInstant = oldTime
                 packetIoActivity.lastRtpPacketReceivedInstant = oldTime
                 packetIoActivity.lastIceActivityInstant = oldTime
@@ -49,13 +49,13 @@ class PacketIOActivityTest : ShouldSpec() {
                 }
             }
         }
-        "lastOverallRtpActivity" {
+        context("lastOverallRtpActivity") {
             should("only reflect RTP packet time values") {
-                clock.elapse(30.seconds)
+                clock.elapse(30.secs)
                 val rtpSentTime = clock.instant()
-                clock.elapse(5.seconds)
+                clock.elapse(5.secs)
                 val rtpReceivedTime = clock.instant()
-                clock.elapse(10.seconds)
+                clock.elapse(10.secs)
                 val iceTime = clock.instant()
                 packetIoActivity.lastRtpPacketSentInstant = rtpSentTime
                 packetIoActivity.lastRtpPacketReceivedInstant = rtpReceivedTime
@@ -63,13 +63,13 @@ class PacketIOActivityTest : ShouldSpec() {
                 packetIoActivity.lastRtpActivityInstant shouldBe rtpReceivedTime
             }
         }
-        "lastOverallActivity" {
+        context("lastOverallActivity") {
             should("only reflect all packet time values") {
-                clock.elapse(30.seconds)
+                clock.elapse(30.secs)
                 val rtpSentTime = clock.instant()
-                clock.elapse(10.seconds)
+                clock.elapse(10.secs)
                 val iceTime = clock.instant()
-                clock.elapse(5.seconds)
+                clock.elapse(5.secs)
                 val rtpReceivedTime = clock.instant()
                 packetIoActivity.lastRtpPacketSentInstant = rtpSentTime
                 packetIoActivity.lastRtpPacketReceivedInstant = rtpReceivedTime

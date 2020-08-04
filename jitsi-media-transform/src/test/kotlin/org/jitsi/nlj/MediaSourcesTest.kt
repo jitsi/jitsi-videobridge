@@ -15,9 +15,9 @@
  */
 package org.jitsi.nlj
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 
 class MediaSourcesTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -31,7 +31,7 @@ class MediaSourcesTest : ShouldSpec() {
         val sourceC = createSource(3000, 3001)
 
         var changed = mediaSources.setMediaSources(arrayOf(sourceA, sourceB))
-        "Setting initially  must signal a change." {
+        context("Setting initially  must signal a change.") {
             changed shouldBe true
 
             val newSources = mediaSources.getMediaSources()
@@ -39,7 +39,7 @@ class MediaSourcesTest : ShouldSpec() {
             newSources[1] shouldBe sourceB
         }
 
-        "Setting the same sources must not signal a change." {
+        context("Setting the same sources must not signal a change.") {
             changed = mediaSources.setMediaSources(arrayOf(sourceA, sourceB))
             changed shouldBe false
 
@@ -48,7 +48,7 @@ class MediaSourcesTest : ShouldSpec() {
             newSources[1] shouldBe sourceB
         }
 
-        "Setting matching sources must not signal a change, or change the saved sources" {
+        context("Setting matching sources must not signal a change, or change the saved sources") {
             changed = mediaSources.setMediaSources(arrayOf(sourceA2, sourceB2))
             changed shouldBe false
 
@@ -57,7 +57,7 @@ class MediaSourcesTest : ShouldSpec() {
             newSources[1] shouldBe sourceB
         }
 
-        "Adding a new source must signal a change, but not change the previous sources" {
+        context("Adding a new source must signal a change, but not change the previous sources") {
             changed = mediaSources.setMediaSources(arrayOf(sourceA2, sourceB2, sourceC))
             changed shouldBe true
 
@@ -67,7 +67,7 @@ class MediaSourcesTest : ShouldSpec() {
             newSources[2] shouldBe sourceC
         }
 
-        "Removing a source must signal a change, but not change the previous source" {
+        context("Removing a source must signal a change, but not change the previous source") {
             changed = mediaSources.setMediaSources(arrayOf(sourceA))
             changed shouldBe true
 
@@ -75,7 +75,7 @@ class MediaSourcesTest : ShouldSpec() {
             newSources[0] shouldBe sourceA
         }
 
-        "Adding and removing must signal a change, but not change the previous source" {
+        context("Adding and removing must signal a change, but not change the previous source") {
             changed = mediaSources.setMediaSources(arrayOf(sourceA2, sourceC))
             changed shouldBe true
 

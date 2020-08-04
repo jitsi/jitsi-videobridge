@@ -1,9 +1,9 @@
 package org.jitsi.nlj.rtp
 
 import com.nhaarman.mockitokotlin2.mock
-import io.kotlintest.IsolationMode
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.FunSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.test_utils.FakeClock

@@ -1,7 +1,7 @@
 package org.jitsi.nlj.rtp.bandwidthestimation
 
-import io.kotlintest.matchers.doubles.shouldBeBetween
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.doubles.shouldBeBetween
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -210,7 +210,7 @@ class BandwidthEstimationTest : ShouldSpec() {
     private val receiver: PacketReceiver = PacketReceiver(clock, estimator, ctx) { generator.rate = it }
 
     init {
-        "Running bandwidth estimation test" {
+        context("Running bandwidth estimation test") {
             should("work correctly") {
                 bottleneck.rate = bottleneckRate
                 generator.rate = estimator.getCurrentBw(clock.instant())

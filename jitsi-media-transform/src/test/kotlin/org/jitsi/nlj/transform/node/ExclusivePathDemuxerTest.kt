@@ -16,10 +16,10 @@
 
 package org.jitsi.nlj.transform.node
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.Spec
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.core.spec.Spec
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -66,14 +66,14 @@ internal class ExclusivePathDemuxerTest : ShouldSpec() {
     }
 
     init {
-        "a packet which matches only one predicate" {
+        context("a packet which matches only one predicate") {
             demuxer.processPacket(rtcpPacket)
             should("only be demuxed to one path") {
                 rtpHandler.numReceived shouldBe 0
                 rtcpHandler.numReceived shouldBe 1
             }
         }
-        "a packet which matches more than one predicate" {
+        context("a packet which matches more than one predicate") {
             val rtpPath2 = ConditionalPacketPath()
             val handler = DummyHandler("RTP 2")
             rtpPath2.name = "RTP 2"

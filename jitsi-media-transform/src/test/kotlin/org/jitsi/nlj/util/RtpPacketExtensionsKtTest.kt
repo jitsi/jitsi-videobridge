@@ -16,10 +16,10 @@
 
 package org.jitsi.nlj.util
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.should
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.should
 import java.nio.ByteBuffer
 import org.jitsi.nlj.test_utils.matchers.haveSameContentAs
 import org.jitsi.rtp.extensions.plus
@@ -47,8 +47,8 @@ class RtpPacketExtensionsKtTest : ShouldSpec() {
     val rtpPacket = RtpPacket(buf)
 
     init {
-        "shiftPayloadRight" {
-            "when the buffer doesn't have any room" {
+        context("shiftPayloadRight") {
+            context("when the buffer doesn't have any room") {
                 rtpPacket.shiftPayloadRight(2)
                 should("shift things correctly") {
                     // Header should be the same

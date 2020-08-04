@@ -30,6 +30,7 @@ import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.stats.RateStatistics
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
+import org.jitsi.utils.secs
 import java.time.Clock
 import java.time.Duration
 
@@ -122,6 +123,6 @@ open class BitrateCalculator(
         /**
          * The initial period in which we consider the stream active regardless of packet rate.
          */
-        val GRACE_PERIOD = Duration.ofSeconds(10)
+        val GRACE_PERIOD = 10.secs
     }
 }

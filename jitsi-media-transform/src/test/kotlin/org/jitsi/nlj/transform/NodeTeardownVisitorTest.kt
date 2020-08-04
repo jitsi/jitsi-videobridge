@@ -16,8 +16,8 @@
 
 package org.jitsi.nlj.transform
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.core.spec.style.ShouldSpec
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.util.PacketPredicate
@@ -70,10 +70,10 @@ internal class NodeTeardownVisitorTest : ShouldSpec() {
     }
 
     init {
-        "tearing down an 'incoming-style' pipeline" {
+        context("tearing down an 'incoming-style' pipeline") {
             NodeTeardownVisitor().visit(testIncomingPipeline)
         }
-        "tearing down an 'outgoing-style' pipeline" {
+        context("tearing down an 'outgoing-style' pipeline") {
             NodeTeardownVisitor().reverseVisit(testOutgoingPipelineTermination)
         }
     }

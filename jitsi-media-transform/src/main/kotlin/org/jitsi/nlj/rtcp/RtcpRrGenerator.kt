@@ -19,13 +19,13 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ScheduledExecutorService
 import org.jitsi.nlj.transform.node.incoming.IncomingSsrcStats
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
-import org.jitsi.nlj.util.milliseconds
 import org.jitsi.nlj.util.schedule
 import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
 import org.jitsi.rtp.rtcp.RtcpRrPacketBuilder
 import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.utils.ms
 
 /**
  * Information about a sender that is used in the generation of RTCP report blocks.  NOTE that this does NOT correspond
@@ -125,6 +125,6 @@ class RtcpRrGenerator(
         /**
          * The interval at which RRs and REMBs will be sent.
          */
-        val reportingInterval = 500.milliseconds()
+        val reportingInterval = 500.ms
     }
 }

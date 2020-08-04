@@ -16,82 +16,82 @@
 
 package org.jitsi.nlj.util
 
-import io.kotlintest.matchers.withClue
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.assertions.withClue
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 import org.jitsi.nlj.rtp.ResumableStreamRewriter
 
 internal class ResumableStreamRewriterTest : ShouldSpec() {
     init {
-        "Without history" {
+        context("Without history") {
             var ret: Int
             val snr = ResumableStreamRewriter(false)
 
-            "Initial state" {
+            context("Initial state") {
                 snr.seqnumDelta shouldBe 0
                 snr.highestSequenceNumberSent shouldBe -1
             }
 
-            "Accept first packet." {
+            context("Accept first packet.") {
                 ret = snr.rewriteSequenceNumber(true, 0xffff - 2)
                 snr.seqnumDelta shouldBe 0
                 snr.highestSequenceNumberSent shouldBe 0xffff - 2
                 ret shouldBe 0xffff - 2
             }
 
-            "Retransmission." {
+            context("Retransmission.") {
                 ret = snr.rewriteSequenceNumber(true, 0xffff - 2)
                 snr.seqnumDelta shouldBe 0
                 snr.highestSequenceNumberSent shouldBe 0xffff - 2
                 ret shouldBe 0xffff - 2
             }
 
-            "Retransmission & accept toggle." {
+            context("Retransmission & accept toggle.") {
                 snr.rewriteSequenceNumber(false, 0xffff - 2)
                 snr.seqnumDelta shouldBe 0
                 snr.highestSequenceNumberSent shouldBe 0xffff - 2
             }
 
-            "Retransmission & accept toggle again." {
+            context("Retransmission & accept toggle again.") {
                 ret = snr.rewriteSequenceNumber(true, 0xffff - 2)
                 snr.seqnumDelta shouldBe 0
                 snr.highestSequenceNumberSent shouldBe 0xffff - 2
                 ret shouldBe 0xffff - 2
             }
 
-            "Drop ordered packet." {
+            context("Drop ordered packet.") {
                 snr.rewriteSequenceNumber(false, 0xffff - 1)
                 snr.seqnumDelta shouldBe 1
                 snr.highestSequenceNumberSent shouldBe 0xffff - 2
             }
 
-            "Drop re-ordered packet." {
+            context("Drop re-ordered packet.") {
                 snr.rewriteSequenceNumber(false, 0xffff - 3)
                 snr.seqnumDelta shouldBe 1
                 snr.highestSequenceNumberSent shouldBe 0xffff - 2
             }
 
-            "Accept after re-ordered drop." {
+            context("Accept after re-ordered drop.") {
                 ret = snr.rewriteSequenceNumber(true, 0xffff)
                 snr.seqnumDelta shouldBe 1
                 snr.highestSequenceNumberSent shouldBe 0xffff - 1
                 ret shouldBe 0xffff - 1
             }
 
-            "Drop ordered packet again." {
+            context("Drop ordered packet again.") {
                 snr.rewriteSequenceNumber(false, 0)
                 snr.seqnumDelta shouldBe 2
                 snr.highestSequenceNumberSent shouldBe 0xffff - 1
             }
 
-            "Accept ordered packet." {
+            context("Accept ordered packet.") {
                 ret = snr.rewriteSequenceNumber(true, 1)
                 snr.seqnumDelta shouldBe 2
                 snr.highestSequenceNumberSent shouldBe 0xffff
                 ret shouldBe 0xffff
             }
 
-            "Drop ordered packets." {
+            context("Drop ordered packets.") {
                 for (i in 2 until 0xffff) {
                     withClue("index = $i") {
                         snr.rewriteSequenceNumber(false, i)
@@ -101,20 +101,20 @@ internal class ResumableStreamRewriterTest : ShouldSpec() {
                 }
             }
 
-            "Drop ordered packet again(2)" {
+            context("Drop ordered packet again(2)") {
                 snr.rewriteSequenceNumber(false, 0xffff)
                 snr.seqnumDelta shouldBe 0
                 snr.highestSequenceNumberSent shouldBe 0xffff
             }
 
-            "Accept ordered packet again" {
+            context("Accept ordered packet again") {
                 ret = snr.rewriteSequenceNumber(true, 0)
                 snr.seqnumDelta shouldBe 0
                 snr.highestSequenceNumberSent shouldBe 0
                 ret shouldBe 0
             }
 
-            "Retransmission + accept toggle" {
+            context("Retransmission + accept toggle") {
                 ret = snr.rewriteSequenceNumber(true, 0xffff)
                 snr.seqnumDelta shouldBe 0
                 snr.highestSequenceNumberSent shouldBe 0
@@ -122,54 +122,54 @@ internal class ResumableStreamRewriterTest : ShouldSpec() {
             }
         }
 
-        "With history" {
+        context("With history") {
             /* The same as the trace above, other than checking internal state. */
-            "In-order trace" {
+            context("In-order trace") {
                 var ret: Int
                 val snr = ResumableStreamRewriter(true)
 
-                "Accept first packet." {
+                context("Accept first packet.") {
                     ret = snr.rewriteSequenceNumber(true, 0xffff - 2)
                     ret shouldBe 0xffff - 2
                 }
 
-                "Retransmission." {
+                context("Retransmission.") {
                     ret = snr.rewriteSequenceNumber(true, 0xffff - 2)
                     ret shouldBe 0xffff - 2
                 }
 
-                "Retransmission & accept toggle." {
+                context("Retransmission & accept toggle.") {
                     snr.rewriteSequenceNumber(false, 0xffff - 2)
                 }
 
-                "Retransmission & accept toggle again." {
+                context("Retransmission & accept toggle again.") {
                     ret = snr.rewriteSequenceNumber(true, 0xffff - 2)
                     ret shouldBe 0xffff - 2
                 }
 
-                "Drop ordered packet." {
+                context("Drop ordered packet.") {
                     snr.rewriteSequenceNumber(false, 0xffff - 1)
                 }
 
-                "Drop re-ordered packet." {
+                context("Drop re-ordered packet.") {
                     snr.rewriteSequenceNumber(false, 0xffff - 3)
                 }
 
-                "Accept after re-ordered drop." {
+                context("Accept after re-ordered drop.") {
                     ret = snr.rewriteSequenceNumber(true, 0xffff)
                     ret shouldBe 0xffff - 1
                 }
 
-                "Drop ordered packet again." {
+                context("Drop ordered packet again.") {
                     snr.rewriteSequenceNumber(false, 0)
                 }
 
-                "Accept ordered packet." {
+                context("Accept ordered packet.") {
                     ret = snr.rewriteSequenceNumber(true, 1)
                     ret shouldBe 0xffff
                 }
 
-                "Drop ordered packets." {
+                context("Drop ordered packets.") {
                     for (i in 2 until 0xffff) {
                         withClue("index = $i") {
                             snr.rewriteSequenceNumber(false, i)
@@ -177,85 +177,85 @@ internal class ResumableStreamRewriterTest : ShouldSpec() {
                     }
                 }
 
-                "Drop ordered packet again(2)" {
+                context("Drop ordered packet again(2)") {
                     snr.rewriteSequenceNumber(false, 0xffff)
                 }
 
-                "Accept ordered packet again" {
+                context("Accept ordered packet again") {
                     ret = snr.rewriteSequenceNumber(true, 0)
                     ret shouldBe 0
                 }
 
-                "Retransmission + accept toggle" {
+                context("Retransmission + accept toggle") {
                     ret = snr.rewriteSequenceNumber(true, 0xffff)
                     ret shouldBe 0xffff
                 }
             }
 
-            "Reordering trace" {
+            context("Reordering trace") {
                 var ret: Int
                 val snr = ResumableStreamRewriter(true)
 
-                "Accept first packet." {
+                context("Accept first packet.") {
                     ret = snr.rewriteSequenceNumber(true, 0xffff - 2)
                     ret shouldBe 0xffff - 2
                 }
 
-                "Drop packet one after." {
+                context("Drop packet one after.") {
                     snr.rewriteSequenceNumber(false, 0xffff - 1)
                 }
 
-                "Accept next packet." {
+                context("Accept next packet.") {
                     ret = snr.rewriteSequenceNumber(true, 0xffff)
                     ret shouldBe 0xffff - 1
                 }
 
-                "Drop packet before first." {
+                context("Drop packet before first.") {
                     snr.rewriteSequenceNumber(false, 0xffff - 3)
                 }
 
-                "Accept packet before that." {
+                context("Accept packet before that.") {
                     ret = snr.rewriteSequenceNumber(true, 0xffff - 4)
                     ret shouldBe 0xffff - 3
                 }
 
-                "Drop packet after a gap" {
+                context("Drop packet after a gap") {
                     snr.rewriteSequenceNumber(false, 1)
                 }
 
-                "And another" {
+                context("And another") {
                     snr.rewriteSequenceNumber(false, 2)
                 }
 
-                "Accept packet after gap" {
+                context("Accept packet after gap") {
                     ret = snr.rewriteSequenceNumber(true, 3)
                     ret shouldBe 0
                 }
 
-                "Accept packet filling gap" {
+                context("Accept packet filling gap") {
                     ret = snr.rewriteSequenceNumber(true, 0)
                     ret shouldBe 0xffff
                 }
 
-                "Accept packet after another gap" {
+                context("Accept packet after another gap") {
                     ret = snr.rewriteSequenceNumber(true, 6)
                     ret shouldBe 3
                 }
 
-                "Check Gaps Left statistics" {
+                context("Check Gaps Left statistics") {
                     snr.gapsLeft shouldBe 0
                     snr.rewriteSequenceNumber(false, 4)
 
                     snr.gapsLeft shouldBe 1
                 }
 
-                "Check Gaps Left statistics on replay of drop" {
+                context("Check Gaps Left statistics on replay of drop") {
                     snr.rewriteSequenceNumber(false, 4)
 
                     snr.gapsLeft shouldBe 1
                 }
 
-                "Verify that replay of accept works" {
+                context("Verify that replay of accept works") {
                     ret = snr.rewriteSequenceNumber(true, 0)
                     ret shouldBe 0xffff
                 }

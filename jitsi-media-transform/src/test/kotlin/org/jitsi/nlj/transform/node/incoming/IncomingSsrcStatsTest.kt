@@ -16,9 +16,9 @@
 
 package org.jitsi.nlj.transform.node.incoming
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.rtp.RtpPacket
 
@@ -71,7 +71,7 @@ internal class IncomingSsrcStatsTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
-        "Expected packet count" {
+        context("Expected packet count") {
             should("Handle cases with no rollover") {
                 IncomingSsrcStats.calculateExpectedPacketCount(
                     0,
@@ -98,7 +98,7 @@ internal class IncomingSsrcStatsTest : ShouldSpec() {
                 ) shouldBe 17 + 65536
             }
         }
-        "When receiving a series of packets with loss" {
+        context("When receiving a series of packets with loss") {
             // 17 packets between base and max sequence number, 6 packets lost
             val packetSequence = listOf(
                 createStatPacketInfo(0, 0, 0),
@@ -125,12 +125,12 @@ internal class IncomingSsrcStatsTest : ShouldSpec() {
                 )
             }
             val statSnapshot = streamStatistics.getSnapshot()
-            "expected packets" {
+            context("expected packets") {
                 should("be calculated correctly") {
                     statSnapshot.numExpectedPackets shouldBe 17
                 }
             }
-            "cumulative lost" {
+            context("cumulative lost") {
                 should("be calculated correctly") {
                     statSnapshot.cumulativePacketsLost shouldBe 6
                 }

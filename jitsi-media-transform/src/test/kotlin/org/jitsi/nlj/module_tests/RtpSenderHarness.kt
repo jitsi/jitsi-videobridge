@@ -15,9 +15,6 @@
  */
 package org.jitsi.nlj.module_tests
 
-import java.time.Duration
-import java.util.concurrent.Executors
-import kotlin.system.measureTimeMillis
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpSender
 import org.jitsi.nlj.util.safeShutdown
@@ -25,6 +22,9 @@ import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.test_utils.Pcaps
+import org.jitsi.utils.secs
+import java.util.concurrent.Executors
+import kotlin.system.measureTimeMillis
 
 fun main(args: Array<String>) {
     val pcap = Pcaps.Outgoing.ONE_PARITICPANT_RTP_AND_RTCP_DECRYPTED
@@ -56,8 +56,8 @@ fun main(args: Array<String>) {
     }
     println("took $time ms")
     senders.forEach(RtpSender::stop)
-    senderExecutor.safeShutdown(Duration.ofSeconds(10))
-    backgroundExecutor.safeShutdown(Duration.ofSeconds(10))
+    senderExecutor.safeShutdown(10.secs)
+    backgroundExecutor.safeShutdown(10.secs)
 
     senders.forEach { println(it.getNodeStats().prettyPrint()) }
 }

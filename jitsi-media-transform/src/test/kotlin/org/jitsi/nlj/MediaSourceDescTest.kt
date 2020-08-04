@@ -16,8 +16,8 @@
 
 package org.jitsi.nlj
 
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 import org.jitsi.utils.stats.RateStatistics
 
 class MediaSourceDescTest : ShouldSpec() {
@@ -26,7 +26,7 @@ class MediaSourceDescTest : ShouldSpec() {
         val source = createSource(ssrcs,
             1, 3, "Fake owner")
 
-        "Source properties should be correct" {
+        context("Source properties should be correct") {
             source.owner shouldBe "Fake owner"
             source.rtpEncodings.size shouldBe 3
 
@@ -37,7 +37,7 @@ class MediaSourceDescTest : ShouldSpec() {
             source.matches(0xdeadbeef) shouldBe true
         }
 
-        "Encoding and layer properties should be correct" {
+        context("Encoding and layer properties should be correct") {
             for (i in source.rtpEncodings.indices) {
                 val e = source.rtpEncodings[i]
                 e.primarySSRC shouldBe ssrcs[i]
@@ -59,7 +59,7 @@ class MediaSourceDescTest : ShouldSpec() {
             }
         }
 
-        "Layer bitrates should be correct" {
+        context("Layer bitrates should be correct") {
             val t = 0L // Doesn't actually matter for fake rate statistics
 
             /* Rate from layer 0 */

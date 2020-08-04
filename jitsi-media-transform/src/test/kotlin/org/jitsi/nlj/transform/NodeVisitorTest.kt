@@ -16,10 +16,10 @@
 
 package org.jitsi.nlj.transform
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.collections.shouldHaveSize
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.shouldHaveSize
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
@@ -80,7 +80,7 @@ internal class NodeVisitorTest : ShouldSpec() {
     }
 
     init {
-        "visiting an 'incoming-style' pipeline" {
+        context("visiting an 'incoming-style' pipeline") {
             val testVisitor = TestVisitor()
             testVisitor.visit(testIncomingPipeline)
             should("visit every node") {
@@ -95,7 +95,7 @@ internal class NodeVisitorTest : ShouldSpec() {
                 testVisitor.nodeNames[5] shouldBe "Node 2 path 2 Node 2"
             }
         }
-        "visiting an 'outgoing-style' pipeline" {
+        context("visiting an 'outgoing-style' pipeline") {
             val testVisitor = TestVisitor()
             testVisitor.reverseVisit(testOutgoingPipelineTermination)
             should("visit every node") {

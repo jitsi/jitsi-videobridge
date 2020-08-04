@@ -15,15 +15,15 @@
  */
 package org.jitsi.nlj.module_tests
 
-import java.time.Duration
-import java.util.concurrent.Executors
-import java.util.logging.Level
-import kotlin.system.measureTimeMillis
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpReceiver
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.util.safeShutdown
 import org.jitsi.test_utils.Pcaps
+import org.jitsi.utils.secs
+import java.util.concurrent.Executors
+import java.util.logging.Level
+import kotlin.system.measureTimeMillis
 
 /**
  * Feed media data from a PCAP file through N receivers.  This harness
@@ -65,8 +65,8 @@ fun main(args: Array<String>) {
     }
     println("took $time ms")
     receivers.forEach(RtpReceiver::stop)
-    executor.safeShutdown(Duration.ofSeconds(10))
-    backgroundExecutor.safeShutdown(Duration.ofSeconds(10))
+    executor.safeShutdown(10.secs)
+    backgroundExecutor.safeShutdown(10.secs)
 
     receivers.forEach { println(it.getNodeStats().prettyPrint()) }
 }
