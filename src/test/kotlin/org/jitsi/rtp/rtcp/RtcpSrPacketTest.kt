@@ -16,11 +16,11 @@
 
 package org.jitsi.rtp.rtcp
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.collections.shouldHaveSize
-import io.kotlintest.shouldBe
-import io.kotlintest.shouldNotBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import io.kotest.core.spec.style.ShouldSpec
 import java.nio.ByteBuffer
 import org.jitsi.rtp.util.byteBufferOf
 
@@ -84,8 +84,8 @@ internal class RtcpSrPacketTest : ShouldSpec() {
     val srPacketBuffer = ByteBuffer.wrap(srPacket.buffer, srPacket.offset, srPacket.length)
 
     init {
-        "creation" {
-            "from a buffer" {
+        context("creation") {
+            context("from a buffer") {
 //                val srPacket = RtcpSrPacket(srPacketBuffer.array(), srPacketBuffer.arrayOffset(), srPacketBuffer.limit())
                 val srPacket = RtcpSrPacket(srPacketData.array(), srPacketData.arrayOffset(), srPacketData.limit())
                 should("read everything correctly") {
@@ -118,8 +118,8 @@ internal class RtcpSrPacketTest : ShouldSpec() {
 //                    srPacket.reportBlocks[1] shouldBe reportBlock2
                 }
             }
-            "cloneWithoutReportBlocks" {
-                "when there were report blocks" {
+            context("cloneWithoutReportBlocks") {
+                context("when there were report blocks") {
                     val clone = srPacket.cloneWithoutReportBlocks()
                     should("clone everything correctly") {
                         clone.version shouldBe srPacket.version
@@ -131,7 +131,7 @@ internal class RtcpSrPacketTest : ShouldSpec() {
                         clone.buffer shouldNotBe srPacket.buffer
                     }
                 }
-                "when there were no report blocks" {
+                context("when there were no report blocks") {
                     val srPacketNoReportBlocks = RtcpSrPacketBuilder(
                         RtcpHeaderBuilder(
                             senderSsrc = 12345
@@ -150,7 +150,7 @@ internal class RtcpSrPacketTest : ShouldSpec() {
                     }
                 }
             }
-//            "from explicit values" {
+//            context("from explicit values") {
 //                val srPacket = RtcpSrPacket(
 //                    header = expectedHeader,
 //                    senderInfo = expectedSenderInfo,
@@ -165,7 +165,7 @@ internal class RtcpSrPacketTest : ShouldSpec() {
 //                    srPacket.reportBlocks should containAll(reportBlock1, reportBlock2)
 //                }
 //            }
-//            "from an incomplete set of values" {
+//            context("from an incomplete set of values") {
 //                val srPacket = RtcpSrPacket(
 //                    header = RtcpHeader(reportCount = 2, senderSsrc = 12345),
 //                    senderInfo = expectedSenderInfo,
@@ -182,7 +182,7 @@ internal class RtcpSrPacketTest : ShouldSpec() {
 //                }
 //            }
         }
-//        "serialization" {
+//        context("serialization") {
 //            val expectedBuf = ByteBuffer.allocate(1024)
 //            expectedBuf.put(expectedHeader.getBuffer())
 //            expectedBuf.put(expectedSenderInfo.getBuffer())
@@ -191,13 +191,13 @@ internal class RtcpSrPacketTest : ShouldSpec() {
 //            expectedBuf.flip()
 //            val srPacket = RtcpSrPacket.fromBuffer(expectedBuf)
 //
-//            "via getting its buffer" {
+//            context("via getting its buffer") {
 //                val actualBuf = srPacket.getBuffer()
 //                should("write all values correctly") {
 //                    actualBuf should haveSameContentAs(expectedBuf)
 //                }
 //            }
-//            "to an existing buffer" {
+//            context("to an existing buffer") {
 //                val existingBuf = ByteBuffer.allocate(1024)
 //                existingBuf.position(8)
 //                srPacket.serializeTo(existingBuf)

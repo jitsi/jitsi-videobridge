@@ -15,11 +15,11 @@
  */
 package org.jitsi.rtp.extensions
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.should
-import io.kotlintest.shouldBe
-import io.kotlintest.shouldThrow
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.should
+import io.kotest.matchers.shouldBe
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.spec.style.ShouldSpec
 import java.nio.ByteBuffer
 import org.jitsi.rtp.util.byteBufferOf
 import org.jitsi.test_helpers.matchers.haveSameContentAs
@@ -28,10 +28,10 @@ class ByteBufferExtensionsTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
-        "ByteBuffer" {
-            "put3Bytes" {
+        context("ByteBuffer") {
+            context("put3Bytes") {
                 val buf = ByteBuffer.allocate(4)
-                "for a 3 byte value" {
+                context("for a 3 byte value") {
                     // 424242 = 0x067932
                     val num: Int = 424242
                     buf.put3Bytes(num)
@@ -42,7 +42,7 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                         buf.get() shouldBe 0x32.toByte()
                     }
                 }
-                "for a 2 byte value" {
+                context("for a 2 byte value") {
                     // 4242 = 0x1092
                     val num: Int = 4242
                     buf.put3Bytes(num)
@@ -53,7 +53,7 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                         buf.get() shouldBe 0x92.toByte()
                     }
                 }
-                "for a 1 byte value" {
+                context("for a 1 byte value") {
                     // 42 = 0x2A
                     val num: Int = 42
                     buf.put3Bytes(num)
@@ -65,9 +65,9 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                     }
                 }
             }
-            "get3Bytes" {
+            context("get3Bytes") {
                 val buf = ByteBuffer.allocate(4)
-                "for a 3 byte value" {
+                context("for a 3 byte value") {
                     val num: Int = 424242
                     buf.put3Bytes(num)
                     buf.rewind()
@@ -75,7 +75,7 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                         buf.get3Bytes() shouldBe 424242.toInt()
                     }
                 }
-                "for a 2 byte value" {
+                context("for a 2 byte value") {
                     val num: Int = 4242
                     buf.put3Bytes(num)
                     buf.rewind()
@@ -83,7 +83,7 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                         buf.get3Bytes() shouldBe 4242.toInt()
                     }
                 }
-                "for a 1 byte value" {
+                context("for a 1 byte value") {
                     val num: Int = 42
                     buf.put3Bytes(num)
                     buf.rewind()
@@ -92,7 +92,7 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                     }
                 }
             }
-            "putBits" {
+            context("putBits") {
                 should("write the bits into the buffer correctly") {
                     val buf = ByteBuffer.allocate(4)
                     val src: Byte = 0b00001111
@@ -106,9 +106,9 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                     }
                 }
             }
-            "subBuffer(startPosition, size)" {
+            context("subBuffer(startPosition, size)") {
                 val originalBuf = ByteBuffer.allocate(100)
-                "created from a default original buffer" {
+                context("created from a default original buffer") {
                     val subBuf = originalBuf.subBuffer(10, 30)
                     should("have a correctly set position, limit and capacity") {
                         subBuf.position() shouldBe 0
@@ -128,7 +128,7 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                         (40..99).forEach { originalBuf.get(it) shouldBe 0x00.toByte() }
                     }
                 }
-                "created from a buffer whose current position isn't 0" {
+                context("created from a buffer whose current position isn't 0") {
                     originalBuf.position(10)
                     val subBuf = originalBuf.subBuffer(5, 10)
                     should("represent the correct spot in the original buffer") {
@@ -140,9 +140,9 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                     }
                 }
             }
-            "subBuffer(startPosition)" {
+            context("subBuffer(startPosition)") {
                 val originalBuf = ByteBuffer.allocate(100)
-                "created from a default original buffer" {
+                context("created from a default original buffer") {
                     val subBuf = originalBuf.subBuffer(10)
                     should("have a correctly set position, limit and capacity") {
                         subBuf.position() shouldBe 0
@@ -161,7 +161,7 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                         (10..99).forEach { originalBuf.get(it) shouldBe 0x42.toByte() }
                     }
                 }
-                "created from a buffer whose current position isn't 0" {
+                context("created from a buffer whose current position isn't 0") {
                     originalBuf.position(10)
                     val subBuf = originalBuf.subBuffer(5)
                     should("represent the correct spot in the original buffer") {
@@ -172,15 +172,15 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                     }
                 }
             }
-            "shiftDataRight" {
-                "moving data" {
+            context("shiftDataRight") {
+                context("moving data") {
                     val buf = byteBufferOf(0x01, 0x02, 0x03, 0x04, 0x05, 0x06)
                     buf.shiftDataRight(1, 3, 2)
                     should("move things correctly") {
                         buf should haveSameContentAs(byteBufferOf(0x01, 0x02, 0x03, 0x02, 0x03, 0x04))
                     }
                 }
-                "moving data past the current limit but within the capacity" {
+                context("moving data past the current limit but within the capacity") {
                     val buf = byteBufferOf(0x01, 0x02, 0x03, 0x04, 0x00, 0x0, 0x00, 0x00)
                     buf.limit(4)
                     buf.shiftDataRight(1, 3, 2)
@@ -189,22 +189,22 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                         buf should haveSameContentAs(byteBufferOf(0x01, 0x02, 0x03, 0x02, 0x03, 0x04))
                     }
                 }
-                "moving the data past the capacity" {
+                context("moving the data past the capacity") {
                     val buf = byteBufferOf(0x01, 0x02, 0x03, 0x04, 0x00, 0x0, 0x00, 0x00)
                     shouldThrow<Exception>() {
                         buf.shiftDataRight(4, 6, 10)
                     }
                 }
             }
-            "shiftDataLeft" {
-                "moving data" {
+            context("shiftDataLeft") {
+                context("moving data") {
                     val buf = byteBufferOf(0x01, 0x02, 0x03, 0x04, 0x05, 0x06)
                     buf.shiftDataLeft(2, 4, 2)
                     should("move things correctly") {
                         buf should haveSameContentAs(byteBufferOf(0x03, 0x04, 0x05, 0x04, 0x05, 0x06))
                     }
                 }
-                "moving the data past the start" {
+                context("moving the data past the start") {
                     val buf = byteBufferOf(0x01, 0x02, 0x03, 0x04, 0x00, 0x0, 0x00, 0x00)
                     shouldThrow<Exception>() {
                         buf.shiftDataLeft(1, 2, 2)

@@ -15,9 +15,9 @@
  */
 package org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
 import org.jitsi.rtp.util.byteBufferOf
 
@@ -54,8 +54,8 @@ internal class RtcpFbRembPacketTest : ShouldSpec() {
     )
 
     init {
-        "Creating an RtcpFbRembPacket" {
-            "from values" {
+        context("Creating an RtcpFbRembPacket") {
+            context("from normal values") {
                 val rembPacket = RtcpFbRembPacketBuilder(rtcpHeader = RtcpHeaderBuilder(
                         senderSsrc = 4567L
                 ),
@@ -68,7 +68,7 @@ internal class RtcpFbRembPacketTest : ShouldSpec() {
                     rembPacket.bitrate shouldBe 1_000_000L
                 }
             }
-            "from values" {
+            context("from values which overflow the field size by a lot") {
                 val rembPacket = RtcpFbRembPacketBuilder(rtcpHeader = RtcpHeaderBuilder(
                         senderSsrc = 4567L
                 ),
@@ -83,7 +83,7 @@ internal class RtcpFbRembPacketTest : ShouldSpec() {
                     rembPacket.bitrate shouldBe 9223336852482686976L
                 }
             }
-            "from values" {
+            context("from values which overflow the field size by a little") {
                 val rembPacket = RtcpFbRembPacketBuilder(rtcpHeader = RtcpHeaderBuilder(
                         senderSsrc = 4567L
                 ),
@@ -98,8 +98,8 @@ internal class RtcpFbRembPacketTest : ShouldSpec() {
                     rembPacket.bitrate shouldBe 49999872L
                 }
             }
-            "creation" {
-                "from a buffer of a simple REMB" {
+            context("creation") {
+                context("from a buffer of a simple REMB") {
                     val rembPacket =
                         RtcpFbRembPacket(rembPacket1Buf.array(), rembPacket1Buf.arrayOffset(), rembPacket1Buf.limit())
                     should("read everything correctly") {
@@ -109,9 +109,7 @@ internal class RtcpFbRembPacketTest : ShouldSpec() {
                         rembPacket.bitrate shouldBe 954728
                     }
                 }
-            }
-            "creation" {
-                "from a buffer of a REMB with two ssrcs" {
+                context("from a buffer of a REMB with two ssrcs") {
                     val rembPacket =
                         RtcpFbRembPacket(rembPacket2Buf.array(), rembPacket2Buf.arrayOffset(), rembPacket2Buf.limit())
                     should("read everything correctly") {
@@ -121,9 +119,7 @@ internal class RtcpFbRembPacketTest : ShouldSpec() {
                         rembPacket.bitrate shouldBe 971112
                     }
                 }
-            }
-            "creation" {
-                "from a buffer of a REMB signaling unbound bandwidth" {
+                context("from a buffer of a REMB signaling unbound bandwidth") {
                     val rembPacket =
                         RtcpFbRembPacket(rembPacket3Buf.array(), rembPacket3Buf.arrayOffset(), rembPacket3Buf.limit())
                     should("read everything correctly") {

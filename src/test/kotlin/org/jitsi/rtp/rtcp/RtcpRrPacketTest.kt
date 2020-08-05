@@ -16,11 +16,11 @@
 
 package org.jitsi.rtp.rtcp
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.haveSize
-import io.kotlintest.should
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.should
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.haveSize
 import java.nio.ByteBuffer
 
 internal class RtcpRrPacketTest : ShouldSpec() {
@@ -85,8 +85,8 @@ internal class RtcpRrPacketTest : ShouldSpec() {
 //            packetBuf.putInt(delaySinceLastSr2.toInt())
 //            packetBuf.rewind() as ByteBuffer
 //        }
-        "creation" {
-            "from a buffer" {
+        context("creation") {
+            context("from a buffer") {
                 val rrPacket =
                     RtcpRrPacket(rrPacketBuffer.array(), rrPacketBuffer.arrayOffset(), rrPacketBuffer.limit())
                 should("read all values correctly") {

@@ -10,7 +10,7 @@
 
     <properties>
         <kotlin.version>1.3.71</kotlin.version>
-        <kotlintest.version>3.4.2</kotlintest.version>
+        <kotest.version>4.1.3</kotest.version>
         <junit.version>5.2.0</junit.version>
         <jitsi.utils.version>1.0-58-gaa5a28f</jitsi.utils.version>
         <spotbugs.version>4.0.0-RC1</spotbugs.version>
@@ -46,15 +46,15 @@
 
         <!--Testing dependencies-->
         <dependency>
-            <groupId>io.kotlintest</groupId>
-            <artifactId>kotlintest-runner-junit5</artifactId>
-            <version>${kotlintest.version}</version>
+            <groupId>io.kotest</groupId>
+            <artifactId>kotest-runner-junit5-jvm</artifactId>
+            <version>${kotest.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <version>${junit.version}</version>
+            <groupId>io.kotest</groupId>
+            <artifactId>kotest-assertions-core-jvm</artifactId>
+            <version>${kotest.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

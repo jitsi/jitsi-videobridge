@@ -16,44 +16,44 @@
 
 package org.jitsi.rtp.rtp
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.sequences.shouldContainInOrder
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.sequences.shouldContainInOrder
+import io.kotest.matchers.shouldBe
 
 class RtpSequenceNumberTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
-        "rollover" {
+        context("rollover") {
             var num = 65535.toRtpSequenceNumber()
-            "via add-and-assign" {
+            context("via add-and-assign") {
                 should("work correctly") {
                     num += 1
                     num shouldBe 0.toRtpSequenceNumber()
                 }
             }
-            "via plus" {
+            context("via plus") {
                 should("work correctly") {
                     (num + 1) shouldBe 0.toRtpSequenceNumber()
                 }
             }
         }
-        "reverse rollover" {
+        context("reverse rollover") {
             var num = 0.toRtpSequenceNumber()
-            "via subtract-and-assign" {
+            context("via subtract-and-assign") {
                 should("work correctly") {
                     num -= 1
                     num shouldBe 65535.toRtpSequenceNumber()
                 }
             }
-            "via minus" {
+            context("via minus") {
                 should("work correctly") {
                     (num - 1) shouldBe 65535.toRtpSequenceNumber()
                 }
             }
         }
-        "comparison" {
+        context("comparison") {
             should("work correctly") {
                 (1.toRtpSequenceNumber() < 2.toRtpSequenceNumber()) shouldBe true
                 (1.toRtpSequenceNumber() <= 2.toRtpSequenceNumber()) shouldBe true
@@ -65,7 +65,7 @@ class RtpSequenceNumberTest : ShouldSpec() {
                 (32768.toRtpSequenceNumber() < 0.toRtpSequenceNumber()) shouldBe true
             }
         }
-        "rangeTo" {
+        context("rangeTo") {
             should("work correctly") {
                 (65533.toRtpSequenceNumber()..2.toRtpSequenceNumber()).asSequence().shouldContainInOrder(
                     65533.toRtpSequenceNumber(),

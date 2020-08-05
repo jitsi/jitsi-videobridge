@@ -1,7 +1,7 @@
 package org.jitsi.rtp.extensions
 
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 import org.jitsi.rtp.UnparsedPacket
 
 class ByteArrayBufferTest : ShouldSpec() {
@@ -14,7 +14,7 @@ class ByteArrayBufferTest : ShouldSpec() {
     )
 
     init {
-        "ByteArrayBuffer.toHex" {
+        context("ByteArrayBuffer.toHex") {
             should("format a full buffer correctly") {
                 val packet = UnparsedPacket(buffer, 0, buffer.size)
                 packet.toHex() shouldBe "906F16AF 65F3E8CE 480F223A BEDE0001\n10FF0000"

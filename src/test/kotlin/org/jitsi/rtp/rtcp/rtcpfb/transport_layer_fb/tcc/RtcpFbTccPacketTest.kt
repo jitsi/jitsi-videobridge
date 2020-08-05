@@ -16,15 +16,15 @@
 
 package org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc
 
-import io.kotlintest.matchers.beInstanceOf
-import io.kotlintest.matchers.maps.shouldContainKey
-import io.kotlintest.matchers.withClue
-import io.kotlintest.should
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
-import java.time.Duration
+import io.kotest.assertions.withClue
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.beInstanceOf
+import io.kotest.matchers.maps.shouldContainKey
+import io.kotest.matchers.should
+import io.kotest.matchers.shouldBe
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
 import org.jitsi.rtp.util.byteBufferOf
+import java.time.Duration
 
 class RtcpFbTccPacketTest : ShouldSpec() {
     fun Int.toTicks(): Short = (this * 4).toShort()
@@ -135,8 +135,8 @@ class RtcpFbTccPacketTest : ShouldSpec() {
     )
 
     init {
-        "Parsing an RtcpFbTccPacket" {
-            "with RLE" {
+        context("Parsing an RtcpFbTccPacket") {
+            context("with RLE") {
                 val rtcpFbTccPacket = RtcpFbTccPacket(tccRleData.array(), tccRleData.arrayOffset(), tccRleData.limit())
                 should("parse the values correctly") {
                     rtcpFbTccPacket.forEach {
@@ -150,7 +150,7 @@ class RtcpFbTccPacketTest : ShouldSpec() {
                     }
                 }
             }
-            "with mixed chunk types and a negative delta" {
+            context("with mixed chunk types and a negative delta") {
                 val rtcpFbTccPacket = RtcpFbTccPacket(
                     tccMixedChunkTypeData.array(), tccMixedChunkTypeData.arrayOffset(), tccMixedChunkTypeData.limit())
                 should("parse the values correctly") {
@@ -166,7 +166,7 @@ class RtcpFbTccPacketTest : ShouldSpec() {
                 }
             }
         }
-        "Creating an RtcpFbTccPacket" {
+        context("Creating an RtcpFbTccPacket") {
             val rtcpFbTccPacketBuilder = RtcpFbTccPacketBuilder(
                 rtcpHeader = RtcpHeaderBuilder(
                     senderSsrc = 839852602
@@ -177,8 +177,8 @@ class RtcpFbTccPacketTest : ShouldSpec() {
             rtcpFbTccPacketBuilder.SetBase(6227, 107784064)
             rtcpFbTccPacketBuilder.AddReceivedPacket(6228, 107784064) shouldBe true
         }
-        "Creating and parsing an RtcpFbTccPacket" {
-            "with missing packets" {
+        context("Creating and parsing an RtcpFbTccPacket") {
+            context("with missing packets") {
                 val kBaseSeqNo = 1000
                 val kBaseTimestampUs = 10000L
                 val rtcpFbTccPacketBuilder = RtcpFbTccPacketBuilder(

@@ -16,15 +16,15 @@
 
 package org.jitsi.rtp.extensions.unsigned
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 
 internal class UnsignedKtTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
-        "converting a byte to a positive int" {
+        context("converting a byte to a positive int") {
             should("convert correctly") {
                 val byteSizedInts = listOf(0, 1, 63, 127, 128, 244, 255)
                 byteSizedInts.forEach { byteSizedInt ->
@@ -34,7 +34,7 @@ internal class UnsignedKtTest : ShouldSpec() {
                 }
             }
         }
-        "converting a short to a positive int" {
+        context("converting a short to a positive int") {
             val shortSizedInts = listOf(0, 1, 63, 127, 65530, 65535)
             shortSizedInts.forEach { shortSizedInt ->
                 val short = shortSizedInt.toShort()
@@ -42,7 +42,7 @@ internal class UnsignedKtTest : ShouldSpec() {
                 convertedInt shouldBe shortSizedInt
             }
         }
-        "converting an int to a positive long" {
+        context("converting an int to a positive long") {
             val intSizedLongs = listOf(0, 1, 63, 127, 2294967195, 4294967295)
             intSizedLongs.forEach { intSizedLong ->
                 val int = intSizedLong.toInt()

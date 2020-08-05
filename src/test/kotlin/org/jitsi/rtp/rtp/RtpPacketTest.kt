@@ -16,11 +16,11 @@
 
 package org.jitsi.rtp.rtp
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.should
-import io.kotlintest.shouldBe
-import io.kotlintest.shouldNotBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.should
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.bytearray.getShort
 import org.jitsi.rtp.extensions.bytearray.putShort
@@ -85,7 +85,7 @@ class RtpPacketTest : ShouldSpec() {
         RtpPacket(rtpHeaderWithExtensionsPaddingBetween + dummyRtpPayload)
 
     init {
-        "An RTP packet with header extensions" {
+        context("An RTP packet with header extensions") {
             val rtpPacket = rtpPacketWithExtensions
             should("be parsed correctly") {
                 rtpPacket.version shouldBe 2
@@ -116,7 +116,7 @@ class RtpPacketTest : ShouldSpec() {
                 rtpPacket.getHeaderExtension(12) shouldNotBe null
             }
         }
-        "An RTP packet with header extensions with padding between them" {
+        context("An RTP packet with header extensions with padding between them") {
             val rtpPacket = rtpPacketWithExtensionsWithPaddingBetween
             should("be parsed correctly") {
                 rtpPacket should haveSameFixedHeader(rtpPacketWithExtensions)
@@ -133,9 +133,9 @@ class RtpPacketTest : ShouldSpec() {
                 ext2.currExtBuffer.getByteAsInt(ext2.currExtOffset + 1) shouldBe 0xFF.toPositiveInt()
             }
         }
-        "Adding a new RTP header extension" {
-            "to an RTP packet with existing extensions" {
-                "in a buffer that has no more room" {
+        context("Adding a new RTP header extension") {
+            context("to an RTP packet with existing extensions") {
+                context("in a buffer that has no more room") {
                     val rtpPacket = rtpPacketWithExtensions.clone()
                     val newExt = rtpPacket.addHeaderExtension(3, 2)
                     newExt.currExtBuffer.putShort(newExt.currExtOffset + 1, 0xDEAD.toShort())
@@ -161,7 +161,7 @@ class RtpPacketTest : ShouldSpec() {
                         rtpPacket should haveSamePayload(rtpPacketWithExtensions)
                     }
                 }
-                "in a buffer that has room to the right" {
+                context("in a buffer that has room to the right") {
                     val buf = ByteArray(rtpPacketWithExtensions.length + 100)
                     System.arraycopy(
                         rtpPacketWithExtensions.buffer,
@@ -195,7 +195,7 @@ class RtpPacketTest : ShouldSpec() {
                         rtpPacket should haveSamePayload(rtpPacketWithExtensions)
                     }
                 }
-                "in a buffer that has room to the left" {
+                context("in a buffer that has room to the left") {
                     val spaceOnTheLeft = 8 // this is what we often have with Octo.
                     val buf = ByteArray(rtpPacketWithExtensions.length + spaceOnTheLeft + 20)
                     System.arraycopy(
@@ -231,8 +231,8 @@ class RtpPacketTest : ShouldSpec() {
                     }
                 }
             }
-            "to an RTP packet with no existing extensions" {
-                "in a buffer that has no more room" {
+            context("to an RTP packet with no existing extensions") {
+                context("in a buffer that has no more room") {
                     val rtpPacket = rtpPacketNoExtensions.clone()
                     val newExt = rtpPacket.addHeaderExtension(3, 2)
                     newExt.currExtBuffer.putShort(newExt.currExtOffset + 1, 0xDEAD.toShort())
@@ -251,7 +251,7 @@ class RtpPacketTest : ShouldSpec() {
                         rtpPacket should haveSamePayload(rtpPacketNoExtensions)
                     }
                 }
-                "in a buffer that has more room to the right" {
+                context("in a buffer that has more room to the right") {
                     val buf = ByteArray(rtpPacketNoExtensions.length + 100)
                     System.arraycopy(rtpPacketNoExtensions.buffer, 0, buf, 0, rtpPacketNoExtensions.length)
                     val rtpPacket = RtpPacket(buf, 0, rtpPacketNoExtensions.length)
@@ -272,7 +272,7 @@ class RtpPacketTest : ShouldSpec() {
                         rtpPacket should haveSamePayload(rtpPacketNoExtensions)
                     }
                 }
-                "in a buffer that has more room to the left" {
+                context("in a buffer that has more room to the left") {
                     val spaceOnTheLeft = 8 // this is what we often have with Octo.
                     val buf = ByteArray(rtpPacketNoExtensions.length + spaceOnTheLeft + 20)
                     System.arraycopy(

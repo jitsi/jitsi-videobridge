@@ -15,15 +15,15 @@
  */
 package org.jitsi.rtp.extensions
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 
 class ByteExtensionsTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
-        "Byte.getBit" {
+        context("Byte.getBit") {
             should("Correctly get the bit in each position") {
                 for (onePosition in 0..7) {
                     val b: Byte = (0b1 shl (7 - onePosition)).toByte()
@@ -36,7 +36,7 @@ class ByteExtensionsTest : ShouldSpec() {
                 }
             }
         }
-        "Byte.putBit" {
+        context("Byte.putBit") {
             should("Set bits to true correctly") {
                 val b: Byte = 0x00
                 b.putBit(0, true) shouldBe 0b10000000.toByte()
@@ -62,7 +62,7 @@ class ByteExtensionsTest : ShouldSpec() {
                 b shouldBe 0b00000000.toByte()
             }
         }
-        "Byte.putBits" {
+        context("Byte.putBits") {
             should("correctly put bits") {
                 val dest: Byte = 0b00000000
                 val src: Byte = 0b00000101

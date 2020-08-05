@@ -16,18 +16,18 @@
 
 package org.jitsi.rtp.util
 
-import io.kotlintest.data.forall
-import io.kotlintest.matchers.collections.shouldContainInOrder
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
-import io.kotlintest.tables.row
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.data.forAll
+import io.kotest.data.row
+import io.kotest.matchers.collections.shouldContainInOrder
+import io.kotest.matchers.shouldBe
 
 class RtpUtilsTest : ShouldSpec() {
 
     init {
-        "getSequenceNumberDelta" {
+        context("getSequenceNumberDelta") {
             should("work correctly") {
-                forall(
+                forAll(
                     row(1, 10, -9),
                     row(10, 1, 9),
                     row(1, 65530, 7),
@@ -38,9 +38,9 @@ class RtpUtilsTest : ShouldSpec() {
                 }
             }
         }
-        "applySequenceNumberDelta" {
+        context("applySequenceNumberDelta") {
             should("work correctly") {
-                forall(
+                forAll(
                         row(10, -9, 1),
                         row(1, 9, 10),
                         row(65530, 7, 1),
@@ -51,9 +51,9 @@ class RtpUtilsTest : ShouldSpec() {
                 }
             }
         }
-        "isNewerThan" {
+        context("isNewerThan") {
             should("work correctly") {
-                forall(
+                forAll(
                     row(2, 1, true),
                     row(2, 65530, true),
                     row(2, 4, false)
@@ -62,9 +62,9 @@ class RtpUtilsTest : ShouldSpec() {
                 }
             }
         }
-        "applyTimestampDelta" {
+        context("applyTimestampDelta") {
             should("work correctly") {
-                forall(
+                forAll(
                     row(10L, -9L, 1L),
                     row(1L, 9L, 10L),
                     row(0xffff_fff0L, 0x11L, 1L),
@@ -75,9 +75,9 @@ class RtpUtilsTest : ShouldSpec() {
                 }
             }
         }
-        "isOlderThan" {
+        context("isOlderThan") {
             should("work correctly") {
-                forall(
+                forAll(
                     row(2, 1, false),
                     row(2, 65530, false),
                     row(2, 4, true)
@@ -86,7 +86,7 @@ class RtpUtilsTest : ShouldSpec() {
                 }
             }
         }
-        "rolledOverTo" {
+        context("rolledOverTo") {
             should("return true when a rollover has taken place") {
                 65535 rolledOverTo 1 shouldBe true
                 65000 rolledOverTo 200 shouldBe true
@@ -95,7 +95,7 @@ class RtpUtilsTest : ShouldSpec() {
                 0 rolledOverTo 65535 shouldBe false
             }
         }
-        "isNextAfter" {
+        context("isNextAfter") {
             should("return true for sequential packets") {
                 2 isNextAfter 1 shouldBe true
                 0 isNextAfter 65535 shouldBe true
@@ -106,7 +106,7 @@ class RtpUtilsTest : ShouldSpec() {
                 1 isNextAfter 65535 shouldBe false
             }
         }
-        "sequenceNumbersBetween" {
+        context("sequenceNumbersBetween") {
             should("contain all sequence numbers between 2 values") {
                 RtpUtils.sequenceNumbersBetween(1, 10).toList() shouldContainInOrder
                         listOf(2, 3, 4, 5, 6, 7, 8, 9)

@@ -16,18 +16,18 @@
 
 package org.jitsi.rtp.extensions.bytearray
 
-import io.kotlintest.data.forall
-import io.kotlintest.should
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
-import io.kotlintest.tables.row
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.data.forAll
+import io.kotest.data.row
+import io.kotest.matchers.should
+import io.kotest.matchers.shouldBe
 import org.jitsi.test_helpers.matchers.haveSameContentAs
 
 class ByteArrayExtensionsKtTest : ShouldSpec() {
     init {
-        "ByteArray.getShort/putShort" {
+        context("ByteArray.getShort/putShort") {
             should("parse the short correctly") {
-                forall(
+                forAll(
                     row(byteArrayOf(0x00, 0x00), 0.toShort()),
                     row(byteArrayOf(0xFF, 0xFF), 65535.toShort())
                 ) { buf, expectedShort ->
@@ -39,9 +39,9 @@ class ByteArrayExtensionsKtTest : ShouldSpec() {
                 }
             }
         }
-        "ByteArray.getInt/putInt" {
+        context("ByteArray.getInt/putInt") {
             should("parse the short correctly") {
-                forall(
+                forAll(
                     row(byteArrayOf(0x00, 0x00, 0x00, 0x00), 0.toInt()),
                     row(byteArrayOf(0xFF, 0xFF, 0xFF, 0xFF), 4294967295.toInt())
                 ) { buf, expectedInt ->

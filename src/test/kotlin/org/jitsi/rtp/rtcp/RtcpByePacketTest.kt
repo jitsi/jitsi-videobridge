@@ -16,12 +16,12 @@
 
 package org.jitsi.rtp.rtcp
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.collections.shouldContain
-import io.kotlintest.matchers.collections.shouldHaveSize
-import io.kotlintest.should
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.should
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 import java.nio.charset.StandardCharsets
 import org.jitsi.test_helpers.matchers.haveSameContentAs
 
@@ -52,9 +52,9 @@ internal class RtcpByePacketTest : ShouldSpec() {
     ).build() + rtcpByeReasonData + padding
 
     init {
-        "Creating an RtcpByePacket" {
-            "from a buffer" {
-                "of a packet without a reason" {
+        context("Creating an RtcpByePacket") {
+            context("from a buffer") {
+                context("of a packet without a reason") {
                     val packet = RtcpByePacket(rtcpByeNoReason, 0, rtcpByeNoReason.size)
                     should("parse the values correctly") {
                         packet.ssrcs shouldHaveSize 1
@@ -62,21 +62,21 @@ internal class RtcpByePacketTest : ShouldSpec() {
                         packet.reason shouldBe null
                     }
                 }
-                "of a packet with a reason" {
+                context("of a packet with a reason") {
                     val packet = RtcpByePacket(rtcpByeWithReason, 0, rtcpByeWithReason.size)
                     should("parse the values correctly") {
                         packet.ssrcs shouldHaveSize 1
                         packet.ssrcs shouldContain 12345L
                         packet.reason shouldBe byeReason
                     }
-                    "and then serializing it" {
-                        "via requesting a new buffer" {
+                    context("and then serializing it") {
+                        context("via requesting a new buffer") {
                             val serializedBuf = packet.getBuffer()
                             should("write all values correctly") {
                                 serializedBuf should haveSameContentAs(rtcpByeWithReason)
                             }
                         }
-//                        "to an existing buffer" {
+//                        context("to an existing buffer") {
 //                            val existingBuf = ByteBuffer.allocate(8 + rtcpByeWithReason.limit())
 //                            existingBuf.position(8)
 //                            packet.serializeTo(existingBuf)

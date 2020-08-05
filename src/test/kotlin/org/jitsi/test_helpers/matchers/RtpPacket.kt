@@ -15,8 +15,8 @@
  */
 package org.jitsi.test_helpers.matchers
 
-import io.kotlintest.Matcher
-import io.kotlintest.MatcherResult
+import io.kotest.matchers.Matcher
+import io.kotest.matchers.MatcherResult
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtp.RtpHeader

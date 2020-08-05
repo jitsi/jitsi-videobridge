@@ -16,10 +16,10 @@
 
 package org.jitsi.rtp.rtp
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.matchers.collections.shouldContainInOrder
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.collections.shouldContainInOrder
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 
 // TODO: sets shouldn't change any other field
 class RtpHeaderTest : ShouldSpec() {
@@ -43,13 +43,13 @@ class RtpHeaderTest : ShouldSpec() {
     )
 
     init {
-        "version" {
-            "get" {
+        context("version") {
+            context("get") {
                 should("work correctly") {
                     RtpHeader.getVersion(headerData, 0) shouldBe 2
                 }
             }
-            "set" {
+            context("set") {
                 should("work correctly") {
                     RtpHeader.setVersion(headerData, 0, 3)
                     RtpHeader.getVersion(headerData, 0) shouldBe 3
@@ -58,13 +58,13 @@ class RtpHeaderTest : ShouldSpec() {
                 }
             }
         }
-        "hasPadding" {
-            "get" {
+        context("hasPadding") {
+            context("get") {
                 should("work correctly") {
                     RtpHeader.hasPadding(headerData, 0) shouldBe false
                 }
             }
-            "set" {
+            context("set") {
                 should("work correctly") {
                     RtpHeader.setPadding(headerData, 0, true)
                     RtpHeader.hasPadding(headerData, 0) shouldBe true
@@ -73,13 +73,13 @@ class RtpHeaderTest : ShouldSpec() {
                 }
             }
         }
-        "hasExtensions" {
-            "get" {
+        context("hasExtensions") {
+            context("get") {
                 should("work correctly") {
                     RtpHeader.hasExtensions(headerData, 0) shouldBe true
                 }
             }
-            "set" {
+            context("set") {
                 should("work correctly") {
                     RtpHeader.setHasExtensions(headerData, 0, false)
                     RtpHeader.hasExtensions(headerData, 0) shouldBe false
@@ -88,26 +88,26 @@ class RtpHeaderTest : ShouldSpec() {
                 }
             }
         }
-        "csrcCount" {
-            "get" {
+        context("csrcCount") {
+            context("get") {
                 should("work correctly") {
                     RtpHeader.getCsrcCount(headerData, 0) shouldBe 2
                 }
             }
-            "set" {
+            context("set") {
                 should("work correctly") {
                     RtpHeader.setCsrcCount(headerData, 0, 0)
                     RtpHeader.getCsrcCount(headerData, 0) shouldBe 0
                 }
             }
         }
-        "marker" {
-            "get" {
+        context("marker") {
+            context("get") {
                 should("work correctly") {
                     RtpHeader.getMarker(headerData, 0) shouldBe false
                 }
             }
-            "set" {
+            context("set") {
                 should("work correctly") {
                     RtpHeader.setMarker(headerData, 0, true)
                     RtpHeader.getMarker(headerData, 0) shouldBe true
@@ -126,13 +126,13 @@ class RtpHeaderTest : ShouldSpec() {
                 }
             }
         }
-        "payloadType" {
-            "get" {
+        context("payloadType") {
+            context("get") {
                 should("work correctly") {
                     RtpHeader.getPayloadType(headerData, 0) shouldBe 100
                 }
             }
-            "set" {
+            context("set") {
                 should("work correctly") {
                     RtpHeader.setPayloadType(headerData, 0, 111)
                     RtpHeader.getPayloadType(headerData, 0) shouldBe 111
@@ -141,59 +141,59 @@ class RtpHeaderTest : ShouldSpec() {
                 }
             }
         }
-        "sequenceNumber" {
-            "get" {
+        context("sequenceNumber") {
+            context("get") {
                 should("work correctly") {
                     RtpHeader.getSequenceNumber(headerData, 0) shouldBe 16535
                 }
             }
-            "set" {
+            context("set") {
                 should("work correctly") {
                     RtpHeader.setSequenceNumber(headerData, 0, 4242)
                     RtpHeader.getSequenceNumber(headerData, 0) shouldBe 4242
                 }
             }
         }
-        "timestamp" {
-            "get" {
+        context("timestamp") {
+            context("get") {
                 should("work correctly") {
                     RtpHeader.getTimestamp(headerData, 0) shouldBe 3899068446L
                 }
             }
-            "set" {
+            context("set") {
                 should("work correctly") {
                     RtpHeader.setTimestamp(headerData, 0, 3899064242)
                     RtpHeader.getTimestamp(headerData, 0) shouldBe 3899064242
                 }
             }
         }
-        "ssrc" {
-            "get" {
+        context("ssrc") {
+            context("get") {
                 should("work correctly") {
                     RtpHeader.getSsrc(headerData, 0) shouldBe 2828806853
                 }
             }
-            "set" {
+            context("set") {
                 should("work correctly") {
                     RtpHeader.setSsrc(headerData, 0, 424242)
                     RtpHeader.getSsrc(headerData, 0) shouldBe 424242
                 }
             }
         }
-        "csrcs" {
-            "get" {
+        context("csrcs") {
+            context("get") {
                 should("work correctly") {
                     RtpHeader.getCsrcs(headerData, 0) shouldContainInOrder(listOf<Long>(123456, 45678))
                 }
             }
-            "set" {
+            context("set") {
                 should("work correctly") {
                     RtpHeader.setCsrcs(headerData, 0, listOf<Long>(2468, 1357))
                     RtpHeader.getCsrcs(headerData, 0) shouldContainInOrder(listOf<Long>(2468, 1357))
                 }
             }
         }
-        "total length" {
+        context("total length") {
             should("be correct") {
                 RtpHeader.getTotalLength(headerData, 0) shouldBe 28
             }

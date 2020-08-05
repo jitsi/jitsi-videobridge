@@ -16,10 +16,10 @@
 
 package org.jitsi.rtp.rtcp
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.shouldBe
-import io.kotlintest.shouldThrow
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.spec.style.ShouldSpec
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacketBuilder
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbRembPacketBuilder
@@ -28,7 +28,7 @@ internal class CompoundRtcpPacketTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
-        "Creating a compound packet from a list of packets" {
+        context("Creating a compound packet from a list of packets") {
             val rr = RtcpRrPacketBuilder(RtcpHeaderBuilder(), mutableListOf()).build()
             val remb = RtcpFbRembPacketBuilder(RtcpHeaderBuilder(), listOf(123), 12345).build()
             val pli = RtcpFbPliPacketBuilder(RtcpHeaderBuilder(), 456).build()
@@ -41,7 +41,7 @@ internal class CompoundRtcpPacketTest : ShouldSpec() {
                 packet::class shouldBe packets[i]::class
             }
         }
-        "Parsing a compound RTCP packet which contains invalid data" {
+        context("Parsing a compound RTCP packet which contains invalid data") {
             val packet = DummyPacket(rtcpByeNoReason + invalidRtcpData)
             shouldThrow<CompoundRtcpContainedInvalidDataException> {
                 CompoundRtcpPacket.parse(packet.buffer, packet.offset, packet.length)

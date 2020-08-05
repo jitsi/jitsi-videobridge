@@ -16,9 +16,9 @@
 
 package org.jitsi.rtp.rtcp
 
-import io.kotlintest.should
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.matchers.should
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 import java.nio.ByteBuffer
 import org.jitsi.rtp.extensions.put3Bytes
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
@@ -46,8 +46,8 @@ class RtcpReportBlockTest : ShouldSpec() {
     }
 
     init {
-        "creation" {
-            "from a buffer" {
+        context("creation") {
+            context("from a buffer") {
                 val reportBlock = RtcpReportBlock.fromBuffer(reportBlockData.array(), reportBlockData.arrayOffset())
                 should("read the values correctly") {
                     reportBlock.ssrc shouldBe expectedSsrc
@@ -60,7 +60,7 @@ class RtcpReportBlockTest : ShouldSpec() {
                     reportBlock.delaySinceLastSr shouldBe expectedDelaySinceLastSr
                 }
             }
-            "from values" {
+            context("from values") {
                 val reportBlock = RtcpReportBlock(
                     ssrc = expectedSsrc,
                     fractionLost = expectedFractionLost,

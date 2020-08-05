@@ -16,15 +16,15 @@
 
 package org.jitsi.rtp.util
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 
 internal class ByteBufferUtilsKtTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
-        "byteBufferOf(Any)" {
+        context("byteBufferOf(Any)") {
             should("work correctly with values that can be converted to byte") {
                 val buf = byteBufferOf(0x00, 0x01, 0xFF, 0xFE)
                 buf.get(0) shouldBe 0x00.toByte()
