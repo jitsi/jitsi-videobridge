@@ -120,10 +120,6 @@
       <artifactId>jicoco</artifactId>
     </dependency>
     <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>jicoco-kotlin</artifactId>
-    </dependency>
-    <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>jicoco-config</artifactId>
     </dependency>
@@ -144,10 +140,6 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-utils</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>jitsi-utils-kotlin</artifactId>
     </dependency>
     <dependency>
         <groupId>${project.groupId}</groupId>
@@ -281,6 +273,11 @@
         <groupId>io.kotest</groupId>
         <artifactId>kotest-assertions-core-jvm</artifactId>
         <version>${kotest.version}</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>jicoco-test-kotlin</artifactId>
         <scope>test</scope>
     </dependency>
     <!-- Specify this dependency here because kotest needs it, and otherwise an older
