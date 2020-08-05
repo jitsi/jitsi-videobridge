@@ -276,15 +276,13 @@ public class ConferenceShim
      * @param conferenceIQ conference IQ having endpoints
      */
     void initializeSignaledEndpoints(ColibriConferenceIQ conferenceIQ)
-        throws VideobridgeShim.IqProcessingException
     {
         List<ColibriConferenceIQ.ChannelCommon> nonExpiredChannels
             = conferenceIQ.getContents().stream()
-                .map(content ->
+                .flatMap(content ->
                         Stream.concat(
                                 content.getChannels().stream(),
                                 content.getSctpConnections().stream()))
-                .flatMap(Function.identity())
                 .filter(c -> c.getEndpoint() != null && c.getExpire() != 0)
                 .collect(Collectors.toList());
 

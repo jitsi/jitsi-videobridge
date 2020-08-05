@@ -16,47 +16,37 @@
 
 package org.jitsi.videobridge.health.config
 
-import io.kotlintest.IsolationMode
-import io.kotlintest.Spec
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
-import org.jitsi.config.JitsiConfig
-import org.jitsi.metaconfig.MapConfigSource
+import io.kotest.matchers.shouldBe
+import org.jitsi.ConfigTest
 import java.time.Duration
 
-class HealthConfigTest : ShouldSpec() {
-    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
-
-    private val legacyConfig = MapConfigSource("legacy")
-    private val newConfig = MapConfigSource("new")
-
-    override fun beforeSpec(spec: Spec) {
-        super.beforeSpec(spec)
-        JitsiConfig.legacyConfig = legacyConfig
-        JitsiConfig.newConfig = newConfig
-    }
-
-    override fun afterSpec(spec: Spec) {
-        super.afterSpec(spec)
-        JitsiConfig.legacyConfig = JitsiConfig.SipCommunicatorPropsConfigSource
-        JitsiConfig.newConfig = JitsiConfig.TypesafeConfig
-    }
-
+class HealthConfigTest : ConfigTest() {
     init {
-        "health interval" {
-            "when legacy config and new config define a value" {
-                legacyConfig["org.jitsi.videobridge.health.INTERVAL"] = 1000L
-                newConfig["videobridge.health.interval"] = Duration.ofSeconds(5)
-                should("use the value from legacy config") {
-                    HealthConfig().interval shouldBe Duration.ofSeconds(1)
+        context("health interval") {
+            context("when legacy config and new config define a value") {
+                withLegacyConfig(legacyConfigWithHealthInterval) {
+                    withNewConfig(newConfigWithHealthInterval) {
+                        should("use the value from legacy config") {
+                            HealthConfig().interval shouldBe Duration.ofSeconds(1)
+                        }
+                    }
                 }
             }
-            "when only new config defines a value" {
-                newConfig["videobridge.health.interval"] = Duration.ofSeconds(5)
-                should("use the value from the new config") {
-                    HealthConfig().interval shouldBe Duration.ofSeconds(5)
+            context("when only new config defines a value") {
+                withNewConfig(newConfigWithHealthInterval) {
+                    should("use the value from the new config") {
+                        HealthConfig().interval shouldBe Duration.ofSeconds(5)
+                    }
                 }
             }
         }
     }
 }
+
+private val legacyConfigWithHealthInterval = """
+    org.jitsi.videobridge.health.INTERVAL=1000
+""".trimIndent()
+
+private val newConfigWithHealthInterval = """
+    videobridge.health.interval = 5 seconds
+""".trimIndent()

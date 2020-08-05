@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.videobridge.cc.config.*;
 import org.json.simple.*;
@@ -32,12 +33,14 @@ class VideoConstraintsCompatibility
     /**
      * The last pinned endpoints set signaled by the receiving endpoint.
      */
-    private Set<String> pinnedEndpoints;
+    @NotNull
+    private Set<String> pinnedEndpoints = Collections.emptySet();
 
     /**
      * The last selected endpoints set signaled by the receiving endpoint.
      */
-    private Set<String> selectedEndpoints;
+    @NotNull
+    private Set<String> selectedEndpoints = Collections.emptySet();
 
     /**
      * The last max resolution signaled by the receiving endpoint. We set a
@@ -100,7 +103,7 @@ class VideoConstraintsCompatibility
         int maxFrameHeightCopy = maxFrameHeight;
 
         Set<String> pinnedEndpointsCopy = pinnedEndpoints;
-        if (pinnedEndpointsCopy != null && !pinnedEndpointsCopy.isEmpty())
+        if (!pinnedEndpointsCopy.isEmpty())
         {
             final VideoConstraints pinnedEndpointConstraints
                 = new VideoConstraints(Math.min(
@@ -115,7 +118,7 @@ class VideoConstraintsCompatibility
         }
 
         Set<String> selectedEndpointsCopy = selectedEndpoints;
-        if (selectedEndpointsCopy != null && !selectedEndpointsCopy.isEmpty())
+        if (!selectedEndpointsCopy.isEmpty())
         {
             final VideoConstraints selectedEndpointConstraints;
 
@@ -176,7 +179,7 @@ class VideoConstraintsCompatibility
      * @param newPinnedEndpoints the pinned endpoints signaled by the receiving
      * endpoint.
      */
-    public void setPinnedEndpoints(Set<String> newPinnedEndpoints)
+    public void setPinnedEndpoints(@NotNull Set<String> newPinnedEndpoints)
     {
         this.pinnedEndpoints = newPinnedEndpoints;
     }
@@ -198,7 +201,7 @@ class VideoConstraintsCompatibility
      * @param newSelectedEndpoints the selected endpoints signaled by the
      * receiving endpoint.
      */
-    public void setSelectedEndpoints(Set<String> newSelectedEndpoints)
+    public void setSelectedEndpoints(@NotNull Set<String> newSelectedEndpoints)
     {
         this.selectedEndpoints = newSelectedEndpoints;
     }
@@ -208,7 +211,7 @@ class VideoConstraintsCompatibility
         OrderedJsonObject debugState = new OrderedJsonObject();
 
         JSONArray pinned = new JSONArray();
-        pinned.addAll(pinned);
+        pinned.addAll(pinnedEndpoints);
         debugState.put("pinned", pinned);
 
         JSONArray selected = new JSONArray();

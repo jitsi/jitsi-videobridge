@@ -15,16 +15,16 @@
  */
 package org.jitsi.videobridge.octo
 
-import io.kotlintest.shouldBe
-import io.kotlintest.shouldThrow
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldBe
 import org.jitsi.utils.MediaType
 import org.jitsi.rtp.extensions.bytearray.byteArrayOf
 import java.lang.IllegalArgumentException
 
 class OctoPacketTest : ShouldSpec() {
     init {
-        "parsing an OctoPacket" {
+        context("parsing an OctoPacket") {
             should("parse a valid packet correctly") {
                 OctoPacket.readConferenceId(octoHeader, 0, octoHeader.size) shouldBe 1234
                 OctoPacket.readEndpointId(octoHeader, 0, octoHeader.size) shouldBe "abcdabcd"
@@ -36,7 +36,7 @@ class OctoPacketTest : ShouldSpec() {
                 }
             }
         }
-        "creating Octo headers" {
+        context("creating Octo headers") {
             should("create a valid packet correctly") {
                 val octoHeader = ByteArray(12)
                 OctoPacket.writeHeaders(octoHeader, 0, MediaType.AUDIO, 111222, "1234abcd")

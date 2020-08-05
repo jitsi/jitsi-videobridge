@@ -21,6 +21,7 @@ import org.jitsi.osgi.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.health.config.*;
 import org.jitsi.videobridge.ice.*;
+import org.jitsi.videobridge.sctp.*;
 import org.osgi.framework.*;
 
 import java.util.*;
@@ -58,12 +59,14 @@ public class Health
         for (int i = 0; i < numEndpoints; ++i)
         {
             final boolean iceControlling = i % 2 == 0;
-            final Endpoint endpoint = conference.createLocalEndpoint(
-                generateEndpointID(), iceControlling);
+            final Endpoint endpoint = conference.createLocalEndpoint(generateEndpointID(), iceControlling);
 
             //endpoints.add(endpoint);
 
-            endpoint.createSctpConnection();
+            if (SctpConfig.config.enabled())
+            {
+                endpoint.createSctpConnection();
+            }
         }
 
 

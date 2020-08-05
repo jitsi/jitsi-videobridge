@@ -1155,6 +1155,28 @@ public class Conference
     /**
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
+     */
+    public JSONObject getDebugState()
+    {
+        return getDebugState(true);
+    }
+
+    /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
+     *
+     * @param full if specified the result will include more details and will
+     * include the debug state of the endpoint(s). Otherwise just the IDs and
+     * names of the conference and endpoints are included.
+     */
+    public JSONObject getDebugState(boolean full)
+    {
+        return getDebugState(full, null);
+    }
+
+    /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
      *
      * @param full if specified the result will include more details and will
      * include the debug state of the endpoint(s). Otherwise just the IDs and

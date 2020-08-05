@@ -256,7 +256,7 @@ public class BitrateController
         // bitrate is 2.5Mbps, and that the last bitrate allocation was
         // performed with a 2.4Mbps bandwidth estimate.  The bridge keeps
         // probing and, suppose that, eventually the bandwidth estimate reaches
-        // 2.6Mbps, which is plenty to accomodate the target bitrate; but the
+        // 2.6Mbps, which is plenty to accommodate the target bitrate; but the
         // minimum bandwidth estimate that would trigger a new bitrate
         // allocation is 2.4Mbps + 2.4Mbps * 15% = 2.76Mbps.
         //
@@ -267,7 +267,7 @@ public class BitrateController
         // the risk of clogging the receiver's pipe.
 
         return deltaBwe > 0
-            ||  deltaBwe < -1 * previousBwe * BitrateControllerConfig.bweChangeThresholdPct() / 100;
+            ||  deltaBwe < -1 * previousBwe * BitrateControllerConfig.bweChangeThreshold();
     }
 
     /**

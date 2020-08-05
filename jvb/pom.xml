@@ -17,6 +17,7 @@
   <url>https://github.com/jitsi/jitsi-videobridge</url>
   <properties>
     <assembly.skipAssembly>false</assembly.skipAssembly>
+    <kotest.version>4.1.3</kotest.version>
     <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
   </properties>
 
@@ -50,18 +51,13 @@
       <artifactId>json-simple</artifactId>
       <version>1.1.1</version>
       <!-- json-simple 1.1.1 incorrectly listed junit as a compile dependency rather than a test dependency.
-	   This has been fixed in its github repo but a new release hasn't been pushed to maven. -->
+       This has been fixed in its github repo but a new release hasn't been pushed to maven. -->
       <exclusions>
         <exclusion>
           <groupId>junit</groupId>
           <artifactId>junit</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>dom4j</groupId>
-      <artifactId>dom4j</artifactId>
-      <version>1.6.1</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -82,11 +78,6 @@
       <groupId>org.eclipse.jetty.websocket</groupId>
       <artifactId>websocket-server</artifactId>
       <version>${jetty.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.igniterealtime.smack</groupId>
-      <artifactId>smack-extensions</artifactId>
-      <version>${smack.version}</version>
     </dependency>
     <dependency>
       <groupId>org.jetbrains</groupId>
@@ -166,11 +157,6 @@
       <groupId>org.osgi</groupId>
       <artifactId>org.osgi.core</artifactId>
       <version>4.3.1</version>
-    </dependency>
-    <dependency>
-      <groupId>xpp3</groupId>
-      <artifactId>xpp3</artifactId>
-      <version>1.1.4c</version>
     </dependency>
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
@@ -286,16 +272,24 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>io.kotlintest</groupId>
-      <artifactId>kotlintest-runner-junit5</artifactId>
-      <version>3.4.2</version>
-      <scope>test</scope>
+        <groupId>io.kotest</groupId>
+        <artifactId>kotest-runner-junit5-jvm</artifactId>
+        <version>${kotest.version}</version>
+        <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>jicoco-test-kotlin</artifactId>
-      <version>${jicoco.version}</version>
-      <scope>test</scope>
+        <groupId>io.kotest</groupId>
+        <artifactId>kotest-assertions-core-jvm</artifactId>
+        <version>${kotest.version}</version>
+        <scope>test</scope>
+    </dependency>
+    <!-- Specify this dependency here because kotest needs it, and otherwise an older
+    version will be pulled in -->
+    <dependency>
+        <groupId>org.junit.platform</groupId>
+        <artifactId>junit-platform-engine</artifactId>
+        <version>1.6.2</version>
+        <scope>test</scope>
     </dependency>
   </dependencies>
   <build>

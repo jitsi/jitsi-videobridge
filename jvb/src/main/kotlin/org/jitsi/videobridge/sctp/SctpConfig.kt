@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2020 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,18 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.config
+package org.jitsi.videobridge.sctp
 
-import org.jitsi.utils.config.ConfigSource
-import kotlin.reflect.KClass
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
 
-class CommandLineArgsConfigSource(private val commandLineArgs: List<String>) : ConfigSource {
-    override val name: String = "command line args"
+class SctpConfig {
+    val enabled: Boolean by config { "videobridge.sctp.enabled".from(JitsiConfig.newConfig) }
 
-    override fun <T : Any> getterFor(valueType: KClass<T>): (String) -> T {
-        TODO("not implemented")
-    }
+    fun enabled() = enabled
 
-    override fun reload() {
-        TODO("not implemented")
-    }
-
-    override fun toStringMasked(): String {
-        TODO("not implemented")
+    companion object {
+        @JvmField
+        val config = SctpConfig()
     }
 }
