@@ -120,10 +120,6 @@
       <artifactId>jicoco</artifactId>
     </dependency>
     <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>jicoco-kotlin</artifactId>
-    </dependency>
-    <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>jicoco-config</artifactId>
     </dependency>
@@ -144,10 +140,6 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-utils</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>jitsi-utils-kotlin</artifactId>
     </dependency>
     <dependency>
         <groupId>${project.groupId}</groupId>
