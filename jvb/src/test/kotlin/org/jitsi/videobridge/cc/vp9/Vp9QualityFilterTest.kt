@@ -16,15 +16,15 @@
 
 package org.jitsi.videobridge.cc.vp9
 
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.ShouldSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.core.spec.style.ShouldSpec
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.getClassForLogging
 
 internal class Vp9QualityFilterTest : ShouldSpec() {
     init {
-        "A non-scalable stream" {
+        context("A non-scalable stream") {
             should("be entirely projected") {
                 val filter = Vp9QualityFilter(logger)
                 val generator = SingleLayerFrameGenerator()
@@ -39,7 +39,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
             }
         }
 
-        "A temporally scalable stream" {
+        context("A temporally scalable stream") {
             should("be entirely projected when TL2 is requested") {
                 val filter = Vp9QualityFilter(logger)
                 val generator = TemporallyScaledFrameGenerator()
@@ -102,7 +102,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
             }
         }
 
-        "A spatially scalable stream" {
+        context("A spatially scalable stream") {
             should("be entirely projected when SL2/TL2 is requested") {
                 val filter = Vp9QualityFilter(logger)
                 val generator = SVCFrameGenerator()
@@ -194,7 +194,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
             }
         }
 
-        "A K-SVC spatially scalable stream" {
+        context("A K-SVC spatially scalable stream") {
             should("be able to be shaped to SL2/TL2") {
                 val filter = Vp9QualityFilter(logger)
                 val generator = KSVCFrameGenerator()
@@ -295,7 +295,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
             }
         }
 
-        "A simulcast source with multiple encodings" {
+        context("A simulcast source with multiple encodings") {
             should("be able to be shaped to Enc 2/TL2") {
                 val filter = Vp9QualityFilter(logger)
                 val generator = SimulcastFrameGenerator()
