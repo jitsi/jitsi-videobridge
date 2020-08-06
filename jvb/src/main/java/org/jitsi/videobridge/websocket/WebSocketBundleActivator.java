@@ -51,7 +51,7 @@ public class WebSocketBundleActivator
      */
     public WebSocketBundleActivator()
     {
-        super(JETTY_PROPERTY_PREFIX);
+        super(JETTY_PROPERTY_PREFIX, "videobridge.rest");
     }
 
     /**
@@ -133,24 +133,6 @@ public class WebSocketBundleActivator
         }
 
         return servletContextHandler;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected int getDefaultPort()
-    {
-        return -1;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected int getDefaultTlsPort()
-    {
-        return -1;
     }
 
     /**
