@@ -150,6 +150,10 @@ class Vp9PictureMap(
         return nextFrameWith(frame) { it.isAccepted }
     }
 
+    fun findNextBaseTl0(frame: Vp9Frame): Vp9Frame? {
+        return nextFrameWith(frame) { it.spatialLayer <= 0 && it.temporalLayer <= 0 }
+    }
+
     companion object {
         const val PICTURE_MAP_SIZE = 500 /* Matches PacketCache default size. */
     }

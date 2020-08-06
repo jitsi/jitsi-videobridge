@@ -430,7 +430,7 @@ class Vp9AdaptiveSourceProjectionTest {
         runOutOfOrderTest(generator, getIndex(0, 0, 2), 7)
     }
 
-    // @Test
+    @Test
     fun slightlyDelayedKeyframeTest() {
         val generator = Vp9PacketGenerator(1)
         val diagnosticContext = DiagnosticContext()
@@ -459,7 +459,7 @@ class Vp9AdaptiveSourceProjectionTest {
         }
     }
 
-    // @Test
+    @Test
     fun veryDelayedKeyframeTest() {
         val generator = Vp9PacketGenerator(1)
         val diagnosticContext = DiagnosticContext()
@@ -494,7 +494,7 @@ class Vp9AdaptiveSourceProjectionTest {
         }
     }
 
-    // @Test
+    @Test
     fun delayedPartialKeyframeTest() {
         val generator = Vp9PacketGenerator(3)
         val diagnosticContext = DiagnosticContext()
@@ -505,21 +505,24 @@ class Vp9AdaptiveSourceProjectionTest {
         val firstPacketInfo = generator.nextPacket()
         val firstPacket = firstPacketInfo.packetAs<Vp9Packet>()
         val targetIndex = getIndex(0, 0, 2)
+        var lowestSeq = Integer.MAX_VALUE
         for (i in 0..10) {
             val packetInfo = generator.nextPacket()
             val packet = packetInfo.packetAs<Vp9Packet>()
-            Assert.assertFalse(context.accept(packetInfo,
+            Assert.assertTrue(context.accept(packetInfo,
                 getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex))
+            context.rewriteRtp(packetInfo)
+            Assert.assertTrue(packet.sequenceNumber > 10001)
+            lowestSeq = minOf(lowestSeq, packet.sequenceNumber)
         }
-        Assert.assertFalse(context.accept(firstPacketInfo, firstPacket.temporalLayerIndex, 2))
-        for (i in 0..29) {
-            val packetInfo = generator.nextPacket()
-            val packet = packetInfo.packetAs<Vp9Packet>()
-            Assert.assertFalse(context.accept(packetInfo,
-                getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex))
-        }
-        generator.requestKeyframe()
-        for (i in 0..9957) {
+
+        Assert.assertTrue(context.accept(firstPacketInfo,
+            getIndex(0, firstPacket.spatialLayerIndex, firstPacket.temporalLayerIndex),
+            targetIndex))
+        context.rewriteRtp(firstPacketInfo)
+        Assert.assertEquals(lowestSeq - 1, firstPacket.sequenceNumber)
+
+        for (i in 0..9980) {
             val packetInfo = generator.nextPacket()
             val packet = packetInfo.packetAs<Vp9Packet>()
             Assert.assertTrue(context.accept(packetInfo,

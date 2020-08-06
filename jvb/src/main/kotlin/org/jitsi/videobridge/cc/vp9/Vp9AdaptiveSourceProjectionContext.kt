@@ -88,15 +88,15 @@ class Vp9AdaptiveSourceProjectionContext(
         if (result.isNewFrame) {
             if (packet.isKeyframe && frameIsNewSsrc(frame)) {
                 /* If we're not currently projecting this SSRC, check if we've
-                 * already decided to drop a subsequent TL0 frame of this SSRC.
+                 * already decided to drop a subsequent base TL0 frame of this SSRC.
                  * If we have, we can't turn on the encoding starting from this
                  * packet, so treat this frame as though it weren't a keyframe.
                  */
                 /* TODO */
-                /* val f: Vp9Frame? = findNextTl0(frame)
+                val f: Vp9Frame? = findNextBaseTl0(frame)
                 if (f != null && !f.isAccepted) {
                     frame.isKeyframe = false
-                } */
+                }
             }
             val receivedMs = packetInfo.receivedTime
             val acceptResult = vp9QualityFilter
@@ -229,6 +229,16 @@ class Vp9AdaptiveSourceProjectionContext(
     }
 
     /**
+     * Find a subsequent base-layer Tid==0 frame after the given frame
+     * @param frame The frame to query
+     * @return A subsequent base-layer TL0 frame, or null
+     */
+    private fun findNextBaseTl0(frame: Vp9Frame): Vp9Frame? {
+        val frameMap = vp9PictureMaps.get(frame.ssrc) ?: return null
+        return frameMap.findNextBaseTl0(frame)
+    }
+
+    /**
      * For a frame that's been accepted by the quality filter, verify that
      * it's decodable given the projection decisions about previous frames
      * (in case the targetIndex has changed).
@@ -249,24 +259,38 @@ class Vp9AdaptiveSourceProjectionContext(
         receivedMs: Long
     ): Vp9FrameProjection {
         if (frameIsNewSsrc(frame)) {
-            return createLayerSwitchProjection(frame, initialPacket, mark, receivedMs)
+            return createEncodingSwitchProjection(frame, initialPacket, mark, receivedMs)
         } else if (isReset) {
             return createResetProjection(frame, initialPacket, mark, receivedMs)
         }
 
-        return createInLayerProjection(frame, initialPacket, mark, receivedMs)
+        return createInEncodingProjection(frame, initialPacket, mark, receivedMs)
     }
 
-    private fun createLayerSwitchProjection(
+    private fun createEncodingSwitchProjection(
         frame: Vp9Frame,
         initialPacket: Vp9Packet,
         mark: Boolean,
         receivedMs: Long
     ): Vp9FrameProjection {
         assert(frame.isKeyframe)
-        assert(initialPacket.isStartOfFrame)
 
-        var projectedSeqGap = 1
+        var projectedSeqGap = if (!initialPacket.isStartOfFrame) {
+            val f = prevFrame(frame)
+            if (f != null) {
+                /* Leave enough of a gap to fill in the earlier packets of the keyframe */
+                seqGap(f, frame)
+            } else {
+                /* If this is the first packet we've seen on this encoding, and it's not the start of a frame,
+                 * we have a problem - we don't know where this packet might fall in the frame.
+                 * Guess a reasonably-sized guess for the number of packets that might have been dropped, and hope
+                 * we don't end up reusing sequence numbers.
+                 */
+                16
+            }
+        } else {
+            1
+        }
 
         if (lastVp9FrameProjection.vp9Frame != null &&
             lastVp9FrameProjection.vp9Frame?.seenEndOfFrame != true) {
@@ -353,7 +377,7 @@ class Vp9AdaptiveSourceProjectionContext(
         )
     }
 
-    private fun createInLayerProjection(
+    private fun createInEncodingProjection(
         frame: Vp9Frame,
         initialPacket: Vp9Packet,
         mark: Boolean,
@@ -361,24 +385,24 @@ class Vp9AdaptiveSourceProjectionContext(
     ): Vp9FrameProjection {
         val prevFrame = findPrevAcceptedFrame(frame)
         if (prevFrame != null) {
-            return createInLayerProjection(frame, prevFrame, initialPacket, mark, receivedMs)
+            return createInEncodingProjection(frame, prevFrame, initialPacket, mark, receivedMs)
         }
 
         /* prev frame has rolled off beginning of frame map, try next frame */
         val nextFrame = findNextAcceptedFrame(frame)
         if (nextFrame != null) {
-            return createInLayerProjection(frame, nextFrame, initialPacket, mark, receivedMs)
+            return createInEncodingProjection(frame, nextFrame, initialPacket, mark, receivedMs)
         }
 
         /* Neither previous or next is found. Very big frame? Use previous projected.
            (This must be valid because we don't execute this function unless
            frameIsNewSsrc has returned false.)
          */
-        return createInLayerProjection(frame, lastVp9FrameProjection.vp9Frame!!,
+        return createInEncodingProjection(frame, lastVp9FrameProjection.vp9Frame!!,
             initialPacket, mark, receivedMs)
     }
 
-    private fun createInLayerProjection(
+    private fun createInEncodingProjection(
         frame: Vp9Frame,
         refFrame: Vp9Frame,
         initialPacket: Vp9Packet,
