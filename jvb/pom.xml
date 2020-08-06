@@ -17,7 +17,6 @@
   <url>https://github.com/jitsi/jitsi-videobridge</url>
   <properties>
     <assembly.skipAssembly>false</assembly.skipAssembly>
-    <kotest.version>4.1.3</kotest.version>
     <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
   </properties>
 
@@ -272,6 +271,12 @@
     <dependency>
         <groupId>io.kotest</groupId>
         <artifactId>kotest-assertions-core-jvm</artifactId>
+        <version>${kotest.version}</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>io.kotest</groupId>
+        <artifactId>kotest-runner-console-jvm</artifactId>
         <version>${kotest.version}</version>
         <scope>test</scope>
     </dependency>
