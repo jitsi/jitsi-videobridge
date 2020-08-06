@@ -380,6 +380,10 @@ public class BitrateController
      */
     public boolean accept(@NotNull PacketInfo packetInfo)
     {
+        if (packetInfo.getLayeringChanged()) {
+            update();
+        }
+
         VideoRtpPacket videoRtpPacket = packetInfo.packetAs();
         long ssrc = videoRtpPacket.getSsrc();
 
