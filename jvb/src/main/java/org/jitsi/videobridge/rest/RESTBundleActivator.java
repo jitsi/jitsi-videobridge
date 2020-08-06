@@ -15,8 +15,6 @@
  */
 package org.jitsi.videobridge.rest;
 
-import java.util.*;
-
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.servlet.*;
 import org.glassfish.jersey.servlet.*;
@@ -48,6 +46,8 @@ public class RESTBundleActivator
      */
     public static final String JETTY_PROPERTY_PREFIX
         = "org.jitsi.videobridge.rest.private";
+
+    private final RestBundleActivatorConfig config = new RestBundleActivatorConfig();
 
     /**
      * Initializes a new {@code RESTBundleActivator} instance.
@@ -102,7 +102,7 @@ public class RESTBundleActivator
         if (b)
         {
             // The REST API of Videobridge does not start by default.
-            b = getCfgBoolean(Videobridge.REST_API_PNAME, false);
+            b = config.getEnabled();
         }
         return b;
     }
