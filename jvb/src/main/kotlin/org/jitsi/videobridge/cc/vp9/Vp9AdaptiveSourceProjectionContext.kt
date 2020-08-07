@@ -92,7 +92,6 @@ class Vp9AdaptiveSourceProjectionContext(
                  * If we have, we can't turn on the encoding starting from this
                  * packet, so treat this frame as though it weren't a keyframe.
                  */
-                /* TODO */
                 val f: Vp9Frame? = findNextBaseTl0(frame)
                 if (f != null && !f.isAccepted) {
                     frame.isKeyframe = false
@@ -147,7 +146,7 @@ class Vp9AdaptiveSourceProjectionContext(
         return accept
     }
 
-    /** Lookup a Vp9Frame for a packet. */
+    /** Look up a Vp9Frame for a packet. */
     private fun lookupVp9Frame(vp9Packet: Vp9Packet): Vp9Frame? =
         vp9PictureMaps[vp9Packet.ssrc]?.findPicture(vp9Packet)?.frame(vp9Packet.spatialLayerIndex)
 
@@ -229,7 +228,7 @@ class Vp9AdaptiveSourceProjectionContext(
     }
 
     /**
-     * Find a subsequent base-layer Tid==0 frame after the given frame
+     * Find a subsequent base-layer TL0 frame after the given frame
      * @param frame The frame to query
      * @return A subsequent base-layer TL0 frame, or null
      */

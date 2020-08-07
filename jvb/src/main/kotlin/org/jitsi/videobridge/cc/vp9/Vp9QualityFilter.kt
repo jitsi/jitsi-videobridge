@@ -327,7 +327,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
 
     /**
      * Determines whether to accept or drop a VP9 keyframe. This method updates
-     * the spatial layer id.
+     * the encoding id.
      *
      * Note that, at the time of this writing, there's no practical need for a
      * synchronized keyword because there's only one thread accessing this

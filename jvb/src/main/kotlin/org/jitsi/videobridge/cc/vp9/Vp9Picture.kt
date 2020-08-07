@@ -90,15 +90,6 @@ class Vp9Picture(packet: Vp9Packet) {
     val tl0PICIDX: Int
         get() = firstFrame().tl0PICIDX
 
-    val seenStartOfPicture: Boolean
-        /* Note: it's possible that the picture doesn't start with sid 0, but
-         * unfortunately there's no other way of detecting start of picture.
-         */
-        get() = frame(0)?.seenStartOfFrame == true
-
-    val seenEndOfPicture: Boolean
-        get() = lastFrame().seenMarker
-
     /**
      * Remember another packet of this frame.
      * Note: this assumes every packet is received only once, i.e. a filter
@@ -123,28 +114,6 @@ class Vp9Picture(packet: Vp9Packet) {
         setFrameAtSid(newF, sid)
 
         return PacketInsertionResult(newF, this, true)
-    }
-
-    /**
-     * @return true if this is a base temporal layer frame, false otherwise
-     * @note We treat unknown temporal layer frames as TL0.
-     */
-    val isTL0: Boolean
-        get() = temporalLayer <= 0
-
-    /**
-     * Small utility method that checks whether the [Vp9Picture] that is
-     * specified as a parameter belongs to the same RTP stream as the frame that
-     * this instance refers to.
-     *
-     * @param vp9Picture the [Vp9Picture] to check whether it belongs to the
-     * same RTP stream as the frame that this instance refers to.
-     * @return true if the [Vp9Picture] that is specified as a parameter
-     * belongs to the same RTP stream as the frame that this instance refers to,
-     * false otherwise.
-     */
-    fun matchesSSRC(vp9Picture: Vp9Picture): Boolean {
-        return ssrc == vp9Picture.ssrc
     }
 
     /**
