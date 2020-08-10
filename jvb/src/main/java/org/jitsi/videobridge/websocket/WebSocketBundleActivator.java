@@ -51,7 +51,7 @@ public class WebSocketBundleActivator
      */
     public WebSocketBundleActivator()
     {
-        super(JETTY_PROPERTY_PREFIX, "videobridge.rest");
+        super(JETTY_PROPERTY_PREFIX, "videobridge.http-servers.public");
     }
 
     /**
