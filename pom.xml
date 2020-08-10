@@ -64,7 +64,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-metaconfig</artifactId>
-                <version>c3d8c51747</version>
+                <version>30cdd3e22b</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
