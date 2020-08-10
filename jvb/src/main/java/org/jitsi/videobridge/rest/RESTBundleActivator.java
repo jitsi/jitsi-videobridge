@@ -54,7 +54,7 @@ public class RESTBundleActivator
      */
     public RESTBundleActivator()
     {
-        super(JETTY_PROPERTY_PREFIX);
+        super(JETTY_PROPERTY_PREFIX, "videobridge.rest.private");
     }
 
     /**
