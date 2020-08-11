@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.rest.root.colibri.debug;
 
 import org.jitsi.nlj.transform.node.*;
+import org.jitsi.nlj.transform.node.debug.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
@@ -202,6 +203,9 @@ public class Debug extends ColibriResource
             }
             case XMPP_DELAY_STATS: {
                 return XmppCommon.getStatsJson().toJSONString();
+            }
+            case PAYLOAD_VERIFICATION: {
+                return PayloadVerificationPlugin.getStatsJson().toJSONString();
             }
             default: {
                 throw new NotFoundException();
