@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.root.colibri.debug;
+package org.jitsi.videobridge.rest.root.debug;
 
 import org.eclipse.jetty.http.*;
 import org.glassfish.jersey.server.*;
@@ -35,7 +35,7 @@ public class DebugTest extends JerseyTest
 {
     protected VideobridgeProvider videobridgeProvider;
     protected Videobridge videobridge;
-    protected static final String BASE_URL = "/colibri/debug";
+    protected static final String BASE_URL = "/debug";
 
     @Override
     protected Application configure()

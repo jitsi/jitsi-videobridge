@@ -14,22 +14,24 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.root.colibri.debug;
+package org.jitsi.videobridge.rest.root.debug;
 
-public enum FeatureState {
-    ENABLE(true),
-    DISABLE(false);
+public enum EndpointDebugFeatures
+{
+    PCAP_DUMP("pcap-dump");
 
-    boolean value;
 
-    FeatureState(boolean value) {
+    private final String value;
+
+    EndpointDebugFeatures(String value)
+    {
         this.value = value;
     }
 
-    public boolean getValue() {
-        return value;
+    public String getValue()
+    {
+        return this.value;
     }
-
 
     /**
      * A custom 'fromString' implementation which allows creating an instance of
@@ -42,19 +44,9 @@ public enum FeatureState {
      * @return an instance of the enum, if one can be derived by reversing the transformation
      * detailed above
      */
-    public static FeatureState fromString(String value)
+    public static EndpointDebugFeatures fromString(String value)
     {
-        if ("enable".equalsIgnoreCase(value))
-        {
-            return ENABLE;
-        }
-        else if ("disable".equalsIgnoreCase(value))
-        {
-            return DISABLE;
-        }
-        else
-        {
-            throw new IllegalArgumentException("feature state is either enabled or disabled.");
-        }
+        String normalized = value.toUpperCase().replace("-", "_");
+        return EndpointDebugFeatures.valueOf(normalized);
     }
 }

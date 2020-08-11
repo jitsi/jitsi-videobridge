@@ -3,7 +3,7 @@
 This document describes some HTTP endpoints that can be useful when debugging jitsi-videobridge. With a few exceptions, 
 these are NOT intended to be used against production systems. Most endpoints return valid JSON which can be fed to e.g. `jq`:
 ```
-curl http://localhost:8080/colibri/debug | jq .
+curl http://localhost:8080/debug | jq .
 ```
 
 # Basic queries
@@ -45,26 +45,26 @@ The following can be used to get very detailed state of running conferences and 
 ### List conferences
 This includes a list of all conferences and their endpoints, but not the full state.
 ```
-GET /colibri/debug
+GET /debug
 ```
 
 ### List all conferences with full state
 This includes the full state of all conferences and their endpoints. The output can be substantial (~25KB per endpoint).
 ```
-GET /colibri/debug?full=true
+GET /debug?full=true
 ```
 
 ## List a specific conference with full state
 This includes the full state of a specific conference and its endpoints. The output can be substantial (~25KB per endpoint).
 The full output can be suspended (leaving just the list of endpoints) by adding `?full=false`.
 ```
-GET /colibri/debug/CONFERENCE_ID
+GET /debug/CONFERENCE_ID
 ```
 
 ## Get full state for an endpoint
 This includes the full state of a specific endpoint in a specific conference.
 ```
-GET /colibri/debug/CONFERENCE_ID/ENDPOINT_ID
+GET /debug/CONFERENCE_ID/ENDPOINT_ID
 ```
 
 
@@ -77,17 +77,17 @@ This is very CPU intensive and disabled by default (it is only useful for testin
 
 Enable:
 ```
-POST /colibri/debug/enable/payload-verification
+POST /debug/enable/payload-verification
 ```
 
 Disable:
 ```
-POST /colibri/debug/disable/payload-verification
+POST /debug/disable/payload-verification
 ```
 
 Query:
 ```
-GET /colibri/debug/stats/payload-verification
+GET /debug/stats/payload-verification
 ```
 
 ### Pipeline statistics 
@@ -99,16 +99,16 @@ only when endpoints expire.
 
 Enable:
 ```
-POST /colibri/debug/enable/node-stats
+POST /debug/enable/node-stats
 ```
 
 Disable:
 ```
-POST /colibri/debug/disable/node-stats
+POST /debug/disable/node-stats
 ```
 Query:
 ```
-GET /colibri/debug/stats/node-stats
+GET /debug/stats/node-stats
 ```
 
 ### Memory pool statistics
@@ -116,16 +116,16 @@ These include current size, number of requests, allocation rates, etc. for the a
 
 Enable:
 ```
-POST /colibri/debug/enable/pool-stats
+POST /debug/enable/pool-stats
 ```
 
 Disable:
 ```
-POST /colibri/debug/disable/pool-stats
+POST /debug/disable/pool-stats
 ```
 Query:
 ```
-GET /colibri/debug/stats/pool-stats
+GET /debug/stats/pool-stats
 ```
 
 ### Packet queue statistics
@@ -134,17 +134,17 @@ various packet queues. It is enabled by default.
 
 Enable:
 ```
-POST /colibri/debug/enable/queue-stats
+POST /debug/enable/queue-stats
 ```
 
 Disable:
 ```
-POST /colibri/debug/disable/queue-stats
+POST /debug/disable/queue-stats
 ```
 
 Query:
 ```
-GET /colibri/debug/stats/queue-stats
+GET /debug/stats/queue-stats
 ```
 
 ### Packet transit time statistics
@@ -154,7 +154,7 @@ is always enabled.
 
 Query:
 ```
-GET /colibri/debug/stats/transit-stats
+GET /debug/stats/transit-stats
 ```
 
 ### Task pool stats
@@ -163,7 +163,7 @@ It is always enabled.
 
 Query:
 ```
-GET /colibri/debug/stats/task-pool-stats
+GET /debug/stats/task-pool-stats
 ```
 
 ### XMPP Delay stats
@@ -171,7 +171,7 @@ This keeps track of the response time for requests received over XMPP.
 
 Query:
 ```
-GET /colibri/debug/stats/xmpp-delay-stats
+GET /debug/stats/xmpp-delay-stats
 ```
 
 ### Node tracing
@@ -179,12 +179,12 @@ This adds an entry to the stack trace from each Node in the packet processing pi
 
 Enable:
 ```
-POST /colibri/debug/enable/node-tracing
+POST /debug/enable/node-tracing
 ```
 
 Disable:
 ```
-POST /colibri/debug/disable/node-tracing
+POST /debug/disable/node-tracing
 ```
 
 # Endpoint-specific debug options
@@ -197,11 +197,11 @@ allow it by setting `jmt.debug.pcap.enabled=true` in `/etc/jitsi/videobridge/jvb
 
 Enable:
 ```
-POST /colibri/debug/CONFERENCE_ID/ENDPOINT_ID/enable/pcap-dump
+POST /debug/CONFERENCE_ID/ENDPOINT_ID/enable/pcap-dump
 ```
 
 Disable:
 ```
-POST /colibri/debug/CONFERENCE_ID/ENDPOINT_ID/disable/pcap-dump
+POST /debug/CONFERENCE_ID/ENDPOINT_ID/disable/pcap-dump
 ```
 

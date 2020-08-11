@@ -25,7 +25,7 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
-import org.jitsi.videobridge.rest.root.colibri.debug.EndpointDebugFeatures
+import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.videobridge.VideoConstraints

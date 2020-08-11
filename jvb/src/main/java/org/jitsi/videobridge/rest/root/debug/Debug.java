@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.root.colibri.debug;
+package org.jitsi.videobridge.rest.root.debug;
 
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.debug.*;
@@ -23,7 +23,6 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.rest.root.colibri.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -41,8 +40,8 @@ import javax.ws.rs.core.*;
  *
  * @author bbaldino
  */
-@Path("/colibri/debug")
-public class Debug extends ColibriResource
+@Path("/debug")
+public class Debug
 {
     @Inject
     @SuppressWarnings("unused")
@@ -73,7 +72,7 @@ public class Debug extends ColibriResource
      * @param epId the endpoint id
      * @param feature the Feature to enable or disable
      * @param state the feature state in String form. Note that we don't rely on Jersey's automatic parsing here because
-     *              we want /colibri/debug/foo/bar/broken/ to return and HTTP 500 error and without the special handling
+     *              we want /debug/foo/bar/broken/ to return and HTTP 500 error and without the special handling
      *              inside the method it returns 404.
      * @return the Response
      * @throws IllegalArgumentException when parsing the state fails.
