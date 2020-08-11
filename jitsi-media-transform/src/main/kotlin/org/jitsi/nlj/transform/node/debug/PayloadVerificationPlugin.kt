@@ -21,6 +21,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.NodePlugin
 import org.jitsi.utils.logging2.createLogger
+import org.json.simple.JSONObject
 
 /**
  * Verifies that the payload verification string of the packet hasn't changed.
@@ -32,6 +33,9 @@ class PayloadVerificationPlugin {
         private val logger = createLogger()
 
         val numFailures = AtomicInteger()
+
+        @JvmStatic
+        fun getStatsJson() = JSONObject().apply { this["num_payload_verification_failures"] = numFailures.get() }
 
         override fun observe(after: Node, packetInfo: PacketInfo) {
             if (PacketInfo.ENABLE_PAYLOAD_VERIFICATION &&
