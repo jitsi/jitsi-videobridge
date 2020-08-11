@@ -332,9 +332,7 @@ public class ChannelShim
             }
             else
             {
-                logger.debug(
-                        "Adding a payload type to endpoint="
-                                + endpoint.getID() + ": " + pt);
+                logger.debug(() -> "Adding a payload type to endpoint=" + endpoint.getID() + ": " + pt);
 
                 // Note that we never clear the endpoint's list of payload
                 // types. They just accumulate (but they can be replaced). This
