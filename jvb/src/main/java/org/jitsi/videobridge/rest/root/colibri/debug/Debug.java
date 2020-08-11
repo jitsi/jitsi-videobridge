@@ -164,18 +164,23 @@ public class Debug extends ColibriResource
     @GET
     @Path("/{confId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public String confDebug(@PathParam("confId") String confId)
+    public String confDebug(
+            @PathParam("confId") String confId,
+            @DefaultValue("true") @QueryParam("full") boolean full)
     {
-        OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(confId, null, true);
+        OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(confId, null, full);
         return confJson.toJSONString();
     }
 
     @GET
     @Path("/{confId}/{epId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public String epDebug(@PathParam("confId") String confId, @PathParam("epId") String epId)
+    public String epDebug(
+            @PathParam("confId") String confId,
+            @PathParam("epId") String epId,
+            @DefaultValue("true") @QueryParam("full") boolean full)
     {
-        OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(confId, epId, true);
+        OrderedJsonObject confJson = videobridgeProvider.get().getDebugState(confId, epId, full);
         return confJson.toJSONString();
     }
 
