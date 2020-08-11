@@ -78,8 +78,7 @@ public class PayloadTypeUtil
         }
 
         byte id = (byte)ext.getID();
-        PayloadTypeEncoding encoding
-                = PayloadTypeEncoding.Companion.createFrom(ext.getName());
+        PayloadTypeEncoding encoding = PayloadTypeEncoding.Companion.createFrom(ext.getName());
         int clockRate = ext.getClockrate();
 
         if (PayloadTypeEncoding.VP8 == encoding)
@@ -101,6 +100,17 @@ public class PayloadTypeUtil
         else if (PayloadTypeEncoding.OPUS == encoding)
         {
             return new OpusPayloadType(id, parameters);
+        }
+        else if (PayloadTypeEncoding.RED == encoding)
+        {
+            if (MediaType.AUDIO.equals(mediaType))
+            {
+                return new AudioRedPayloadType(id, clockRate, parameters);
+            }
+            else if (MediaType.VIDEO.equals(mediaType))
+            {
+                return new VideoRedPayloadType(id, clockRate, parameters, rtcpFeedbackSet);
+            }
         }
         else if (MediaType.AUDIO.equals(mediaType))
         {
