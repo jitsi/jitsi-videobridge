@@ -18,6 +18,7 @@ package org.jitsi.videobridge.util;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.utils.*;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 
 import java.util.*;
@@ -34,6 +35,8 @@ import java.util.concurrent.*;
  */
 public class PayloadTypeUtil
 {
+    private static final Logger logger = new LoggerImpl(PayloadTypeUtil.class.getName());
+
     /**
      * Creates a {@link PayloadType} for the payload type described in the
      * given {@link PayloadTypePacketExtension}.
@@ -46,7 +49,19 @@ public class PayloadTypeUtil
         Map<String, String> parameters = new ConcurrentHashMap<>();
         for (ParameterPacketExtension parameter : ext.getParameters())
         {
-            parameters.put(parameter.getName(), parameter.getValue());
+            // In SDP, format parameters don't necessarily come in name=value pairs (see e.g. the format used in
+            // RFC2198). However XEP-0167 requires a name and a value. Our SDP-to-Jingle implementation in
+            // lib-jitsi-meet translates a non-name=value SDP string into a parameter extension with a value but no
+            // name. Here we'll just ignore such parameters, because we don't currently support any and changing the
+            // implementation would be inconvenient (we store them mapped by name).
+            if (parameter.getName() != null)
+            {
+                parameters.put(parameter.getName(), parameter.getValue());
+            }
+            else
+            {
+                logger.warn("Ignoring a format parameter with no name: " + parameter.toXML());
+            }
         }
 
         Set<String> rtcpFeedbackSet = new CopyOnWriteArraySet<>();
