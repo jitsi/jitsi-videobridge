@@ -97,12 +97,7 @@ public class BridgeShutdownTest
 
         confIq.setID(respConfIq.getID());
 
-        // Start the shutdown
-        ShutdownIQ shutdownIQ = ShutdownIQ.createGracefulShutdownIQ();
-
-        shutdownIQ.setFrom(focusJid);
-
-        respIq = bridge.handleShutdownIQ(shutdownIQ);
+        bridge.shutdown(true);
 
         assertEquals(IQ.Type.result, respIq.getType());
         assertTrue(bridge.isShutdownInProgress());

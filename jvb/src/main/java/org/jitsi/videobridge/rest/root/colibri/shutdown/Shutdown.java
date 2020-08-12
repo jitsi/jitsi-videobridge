@@ -21,10 +21,6 @@ import org.eclipse.jetty.http.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
 import org.jitsi.videobridge.util.*;
-import org.jitsi.xmpp.extensions.colibri.*;
-import org.jivesoftware.smack.packet.*;
-import org.jxmpp.jid.impl.*;
-import org.jxmpp.stringprep.*;
 
 import javax.inject.*;
 import javax.servlet.http.*;
@@ -43,31 +39,17 @@ public class Shutdown
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response shutdown(ShutdownJson shutdown, @Context HttpServletRequest request) throws XmppStringprepException
+    public Response shutdown(ShutdownJson shutdown, @Context HttpServletRequest request)
     {
-        ShutdownIQ shutdownIq = shutdown.toIq();
-
-        String ipAddress = request.getHeader("X-FORWARDED-FOR");
-        if (ipAddress == null)
+        try
         {
-            ipAddress = request.getRemoteAddr();
-        }
-        shutdownIq.setFrom(JidCreate.from(ipAddress));
-        IQ responseIq = videobridgeProvider.get().handleShutdownIQ(shutdownIq);
-        if (IQ.Type.result.equals(responseIq.getType()))
-        {
+            videobridgeProvider.get().shutdown(shutdown.isGraceful);
             return Response.ok().build();
         }
-        XMPPError.Condition condition = responseIq.getError().getCondition();
-        if (XMPPError.Condition.not_authorized.equals(condition))
+        catch (Throwable t)
         {
-            return Response.status(HttpStatus.UNAUTHORIZED_401).build();
+            return Response.status(HttpStatus.INTERNAL_SERVER_ERROR_500).build();
         }
-        else if (XMPPError.Condition.service_unavailable.equals(condition))
-        {
-            return Response.status(HttpStatus.SERVICE_UNAVAILABLE_503).build();
-        }
-        return Response.status(HttpStatus.INTERNAL_SERVER_ERROR_500).build();
     }
 
     /**
@@ -91,15 +73,6 @@ public class Shutdown
         public ShutdownJson(@JsonProperty(value = "graceful-shutdown", required = true) Boolean isGraceful)
         {
             this.isGraceful = isGraceful;
-        }
-
-        ShutdownIQ toIq()
-        {
-            if (isGraceful)
-            {
-                return ShutdownIQ.createGracefulShutdownIQ();
-            }
-            return ShutdownIQ.createForceShutdownIQ();
         }
     }
 }

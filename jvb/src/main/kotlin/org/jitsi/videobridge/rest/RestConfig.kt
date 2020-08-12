@@ -83,7 +83,7 @@ class RestConfig {
      */
     fun isEnabled() = colibriEnabled || debugEnabled || healthEnabled || shutdownEnabled || versionEnabled
 
-    fun isEnabled(api: RestApis) = when(api) {
+    fun isEnabled(api: RestApis) = when (api) {
         RestApis.COLIBRI -> colibriEnabled
         RestApis.DEBUG -> debugEnabled
         RestApis.HEALTH -> healthEnabled
