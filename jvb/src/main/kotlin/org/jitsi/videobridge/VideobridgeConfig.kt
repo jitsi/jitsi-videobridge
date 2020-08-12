@@ -38,5 +38,6 @@ class VideobridgeConfig {
                     throw ConfigException.UnableToRetrieve.NotFound("not found")
                 }
             }
+        "videobridge.apis.xmpp-client.allow-shutdown-pattern".from(JitsiConfig.newConfig)
     }
 }
