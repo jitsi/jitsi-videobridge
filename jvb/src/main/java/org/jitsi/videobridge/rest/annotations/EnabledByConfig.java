@@ -16,14 +16,12 @@
 
 package org.jitsi.videobridge.rest.annotations;
 
+import org.jitsi.videobridge.rest.*;
+
 import java.lang.annotation.*;
 
 /**
- * An annotation which allows a REST resource to be enabled by
- * a property value in config.  'value' should be set to the String
- * key of a boolean stored in a config.  'defaultValue' can be provided
- * to give a default value if the 'value' key is not present in the
- * config (false by default).
+ * An annotation which allows a REST resource to be enabled/disabled by a property value in {@link RestConfig}.
  *
  * See {@link org.jitsi.videobridge.rest.filters.ConfigFilter}
  */
@@ -32,7 +30,5 @@ import java.lang.annotation.*;
 @Inherited
 public @interface EnabledByConfig
 {
-    String value();
-
-    boolean defaultValue() default false;
+    RestApis value();
 }

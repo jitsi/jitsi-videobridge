@@ -16,7 +16,8 @@
 
 package org.jitsi.videobridge.rest.root.colibri.debug;
 
-import org.jitsi.videobridge.rest.root.colibri.*;
+import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.rest.annotations.*;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
@@ -27,7 +28,8 @@ import java.net.*;
  * We moved /colibri/debug to /debug.
  */
 @Path("/colibri/debug")
-public class Debug extends ColibriResource
+@EnabledByConfig(RestApis.COLIBRI)
+public class Debug
 {
     @POST
     @Path("{path}")

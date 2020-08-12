@@ -18,9 +18,8 @@ package org.jitsi.videobridge.rest.root.colibri.shutdown;
 
 import com.fasterxml.jackson.annotation.*;
 import org.eclipse.jetty.http.*;
-import org.jitsi.service.configuration.*;
+import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
-import org.jitsi.videobridge.rest.root.colibri.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
@@ -33,13 +32,11 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
 /**
- * A resource for shutting down the videobridge via REST.  This
- * must be enabled explicitly via the {@link Constants#ENABLE_REST_SHUTDOWN_PNAME}
- * config value.
+ * A resource for shutting down the videobridge via REST.
  */
 @Path("/colibri/shutdown")
-@EnabledByConfig(Constants.ENABLE_REST_SHUTDOWN_PNAME)
-public class Shutdown extends ColibriResource
+@EnabledByConfig(RestApis.SHUTDOWN)
+public class Shutdown
 {
     @Inject
     protected VideobridgeProvider videobridgeProvider;

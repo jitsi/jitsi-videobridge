@@ -23,6 +23,8 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.rest.annotations.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -41,6 +43,7 @@ import javax.ws.rs.core.*;
  * @author bbaldino
  */
 @Path("/debug")
+@EnabledByConfig(RestApis.DEBUG)
 public class Debug
 {
     @Inject

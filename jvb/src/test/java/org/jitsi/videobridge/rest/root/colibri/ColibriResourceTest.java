@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.rest.root.colibri;
 
+import org.jitsi.videobridge.rest.annotations.*;
 import org.junit.*;
 import org.reflections.*;
 import org.reflections.scanners.*;
@@ -28,12 +29,12 @@ import static org.junit.Assert.*;
 public class ColibriResourceTest
 {
     /**
-     * the /colibri path is enabled via a config parameter, so all resources on
-     * that path must extend ColibriResource so we can ensure they are only
-     * enabled if /colibri is enabled.
+     * The /colibri path is enabled via a config parameter, so all resources on that path must extend be annotated
+     * with @EnabledByConfig. Note that the /colibri/shutdown has its own config property, so not all paths under
+     * /colibri have the same annotation value.
      */
     @Test
-    public void testAllColibriResourcesInheritFromColibriResource()
+    public void testAllResourcesAreBehindConfig()
     {
         Reflections reflections = new Reflections(new ConfigurationBuilder()
                 .setUrls(ClasspathHelper.forPackage("org.jitsi.videobridge.rest.root.colibri"))
@@ -42,18 +43,9 @@ public class ColibriResourceTest
 
         for (Class<?> clazz : reflections.getTypesAnnotatedWith(Path.class))
         {
-            boolean derivesFromColibriResource = false;
-            Class<?> superClass = clazz.getSuperclass();
-            while ((superClass != null) && (superClass != Object.class))
-            {
-                if (superClass == ColibriResource.class)
-                {
-                    derivesFromColibriResource = true;
-                    break;
-                }
-                superClass = superClass.getSuperclass();
-            }
-            assertTrue(clazz + " must derive from ColibriResource", derivesFromColibriResource);
+            assertTrue(
+                    "Class " + clazz.getSimpleName() + " must be annotated with @EnabledByConfig",
+                    clazz.isAnnotationPresent(EnabledByConfig.class));
         }
     }
 

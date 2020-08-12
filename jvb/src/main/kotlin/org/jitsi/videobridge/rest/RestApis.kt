@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2020 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,19 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.jitsi.videobridge.rest
 
-package org.jitsi.videobridge.rest.root.colibri;
-
-import org.jitsi.videobridge.rest.annotations.*;
-
-/**
- * A parent resource from which ALL resources on
- * /colibri/ paths MUST inherit.  The inheritance
- * is required such that we can enforce all sub-paths
- * on /colibri/ are gated by the {@link Constants#ENABLE_REST_COLIBRI_PNAME}
- * config value
- */
-@EnabledByConfig(value = Constants.ENABLE_REST_COLIBRI_PNAME, defaultValue = true)
-public class ColibriResource
-{
+enum class RestApis {
+    COLIBRI,
+    DEBUG,
+    HEALTH,
+    SHUTDOWN,
+    VERSION
 }

@@ -21,14 +21,20 @@ import org.glassfish.jersey.server.*;
 import org.glassfish.jersey.test.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.rest.annotations.*;
 import org.jitsi.videobridge.util.*;
 import org.junit.*;
+import org.reflections.*;
+import org.reflections.scanners.*;
+import org.reflections.util.*;
 
+import javax.ws.rs.*;
 import javax.ws.rs.client.*;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.*;
 
 import static junit.framework.TestCase.*;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 public class DebugTest extends JerseyTest
@@ -57,6 +63,27 @@ public class DebugTest extends JerseyTest
                 register(Debug.class);
             }
         };
+    }
+
+    @Test
+    public void testAllResourcesAreBehindConfig()
+    {
+        Reflections reflections = new Reflections(new ConfigurationBuilder()
+                .setUrls(ClasspathHelper.forPackage("org.jitsi.videobridge.rest.root.debug"))
+                .filterInputsBy(new FilterBuilder().includePackage("org.jitsi.videobridge.rest.root.debug"))
+                .setScanners(new SubTypesScanner(false), new TypeAnnotationsScanner()));
+
+        for (Class<?> clazz : reflections.getTypesAnnotatedWith(Path.class))
+        {
+            assertTrue(
+                    "Class " + clazz + " must be annotated with @EnabledByConfig",
+                    clazz.isAnnotationPresent(EnabledByConfig.class));
+            EnabledByConfig anno = clazz.getAnnotation(EnabledByConfig.class);
+            assertEquals(
+                    "Class " + clazz.getSimpleName() + " must be annotated with @EnabledByConfig(RestApis.debug)",
+                    anno.value(),
+                    RestApis.DEBUG);
+        }
     }
 
     @Test
