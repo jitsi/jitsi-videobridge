@@ -233,10 +233,6 @@ public class XmppCommon
                 delayStats = healthDelayStats;
                 response = videobridge.handleHealthCheckIQ((HealthCheckIQ) request);
             }
-            else if (request instanceof ShutdownIQ)
-            {
-                response = videobridge.handleShutdownIQ((ShutdownIQ) request);
-            }
             else
             {
                 logger.error("Unsupported IQ request " + request.getChildElementName() + " received");
