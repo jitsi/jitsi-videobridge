@@ -616,20 +616,23 @@ public class Endpoint
     @Override
     public void setSenderVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraints)
     {
-        ImmutableMap<String, VideoConstraints> oldVideoConstraints = bitrateController.getVideoConstraints();
-
         bitrateController.setVideoConstraints(newVideoConstraints);
+    }
 
+    public void effectiveVideoConstraintsChanged(
+        ImmutableMap<String, VideoConstraints> oldVideoConstraints,
+        ImmutableMap<String, VideoConstraints> newVideoConstraints)
+    {
         Set<String> removedEndpoints = new HashSet<>(oldVideoConstraints.keySet());
         removedEndpoints.removeAll(newVideoConstraints.keySet());
 
-        // Endpoints that "this" no longer cares about what it receives.
+        // Sources that "this" endpoint no longer cares about what it receives.
         for (String id : removedEndpoints)
         {
             AbstractEndpoint senderEndpoint = getConference().getEndpoint(id);
             if (senderEndpoint != null)
             {
-                senderEndpoint.removeReceiver(getID());
+                senderEndpoint.addReceiver(getID(), VideoConstraints.thumbnailVideoConstraints);
             }
         }
 
