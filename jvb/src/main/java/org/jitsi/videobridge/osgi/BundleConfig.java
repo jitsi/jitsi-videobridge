@@ -66,9 +66,6 @@ public class BundleConfig
             "org/jitsi/videobridge/xmpp/ClientConnectionImpl"
         },
         {
-            "org/jitsi/videobridge/octo/OctoRelayService"
-        },
-        {
             "org/jitsi/videobridge/EndpointConnectionStatus"
         }
     };

@@ -473,8 +473,7 @@ public class VideobridgeStatistics
                     TOTAL_PACKETS_RECEIVED, jvbStats.totalPacketsReceived.get());
             unlockedSetStat(TOTAL_PACKETS_SENT, jvbStats.totalPacketsSent.get());
 
-            OctoRelayService relayService
-                = ServiceUtils2.getService(bundleContext, OctoRelayService.class);
+            OctoRelayService relayService = OctoRelayServiceProviderKt.singleton().get();
             OctoRelayService.Stats octoRelayServiceStats
                 = relayService == null ? null : relayService.getStats();
 
