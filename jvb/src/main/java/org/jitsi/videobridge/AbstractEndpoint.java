@@ -24,7 +24,7 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.message.*;
-import org.jitsi.videobridge.rest.root.colibri.debug.*;
+import org.jitsi.videobridge.rest.root.debug.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
 

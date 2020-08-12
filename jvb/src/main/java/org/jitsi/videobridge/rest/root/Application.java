@@ -17,10 +17,12 @@
 package org.jitsi.videobridge.rest.root;
 
 import org.glassfish.jersey.server.*;
-import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.binders.*;
 import org.jitsi.videobridge.rest.filters.*;
 import org.osgi.framework.*;
+
+import static org.jitsi.videobridge.rest.RestConfig.config;
 
 public class Application extends ResourceConfig
 {
@@ -32,7 +34,14 @@ public class Application extends ResourceConfig
         register(ConfigFilter.class);
         // Register all resources in the package
         packages("org.jitsi.videobridge.rest.root");
-        // Load any resources from Jicoco
-        packages("org.jitsi.rest");
+
+        if (config.isEnabled(RestApis.HEALTH))
+        {
+            register(new org.jitsi.rest.Health());
+        }
+        if (config.isEnabled(RestApis.VERSION))
+        {
+            register(new org.jitsi.rest.Version());
+        }
     }
 }

@@ -18,8 +18,8 @@ package org.jitsi.videobridge.rest.root.colibri.conferences;
 
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.rest.annotations.*;
 import org.jitsi.videobridge.rest.exceptions.*;
-import org.jitsi.videobridge.rest.root.colibri.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
@@ -32,7 +32,8 @@ import javax.ws.rs.core.*;
 import java.util.*;
 
 @Path("/colibri/conferences")
-public class Conferences extends ColibriResource
+@EnabledByConfig(RestApis.COLIBRI)
+public class Conferences
 {
     @Inject
     private VideobridgeProvider videobridgeProvider;

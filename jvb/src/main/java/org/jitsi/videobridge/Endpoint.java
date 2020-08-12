@@ -41,7 +41,7 @@ import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.message.*;
-import org.jitsi.videobridge.rest.root.colibri.debug.*;
+import org.jitsi.videobridge.rest.root.debug.*;
 import org.jitsi.videobridge.sctp.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.stats.*;

@@ -138,8 +138,6 @@ public class Videobridge
      */
     private VideobridgeExpireThread videobridgeExpireThread;
 
-    private final VideobridgeConfig config = new VideobridgeConfig();
-
     /**
      * The shim which handles Colibri-related logic for this
      * {@link Videobridge}.
@@ -483,47 +481,28 @@ public class Videobridge
      *         the specified request or <tt>null</tt> to reply with
      *         <tt>feature-not-implemented</tt>
      */
-    public IQ handleShutdownIQ(ShutdownIQ shutdownIQ)
+    public void shutdown(boolean graceful)
     {
-        // Security not configured - service unavailable
-        if (config.getShutdownSourcePattern() == null)
+        logger.warn("Received shutdown request, graceful=" + graceful);
+        if (graceful)
         {
-            return IQUtils.createError(shutdownIQ, XMPPError.Condition.service_unavailable);
-        }
-        // Check if source matches pattern
-        Jid from = shutdownIQ.getFrom();
-        if (from != null && config.getShutdownSourcePattern().matcher(from).matches())
-        {
-            logger.info("Accepted shutdown request from: " + from);
-            if (shutdownIQ.isGracefulShutdown())
-            {
-                if (!isShutdownInProgress())
-                {
-                    enableGracefulShutdownMode();
-                }
-            }
-            else
-            {
-                new Thread(() -> {
-                    try
-                    {
-                        Thread.sleep(1000);
-                        logger.warn("JVB force shutdown - now");
-                        System.exit(0);
-                    }
-                    catch (InterruptedException e)
-                    {
-                        throw new RuntimeException(e);
-                    }
-                }, "ForceShutdownThread").start();
-            }
-            return IQ.createResultIQ(shutdownIQ);
+            enableGracefulShutdownMode();
         }
         else
         {
-            // Unauthorized
-            logger.error("Rejected shutdown request from: " + from);
-            return IQUtils.createError(shutdownIQ, XMPPError.Condition.not_authorized);
+            logger.warn("Will shutdown in 1 second.");
+            new Thread(() -> {
+                try
+                {
+                    Thread.sleep(1000);
+                    logger.warn("JVB force shutdown - now");
+                    System.exit(0);
+                }
+                catch (InterruptedException e)
+                {
+                    throw new RuntimeException(e);
+                }
+            }, "ForceShutdownThread").start();
         }
     }
 
@@ -745,7 +724,6 @@ public class Videobridge
         debugState.put("time", System.currentTimeMillis());
 
         debugState.put("health", getHealthStatus());
-        debugState.put("e2e_packet_delay", Endpoint.getPacketDelayStats());
         debugState.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
 
         JSONObject conferences = new JSONObject();

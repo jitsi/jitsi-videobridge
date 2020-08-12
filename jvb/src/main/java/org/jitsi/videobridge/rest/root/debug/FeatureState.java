@@ -14,34 +14,22 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.root.colibri.debug;
+package org.jitsi.videobridge.rest.root.debug;
 
-/**
- * Enumerates different debug features which can be enabled and disabled via
- * the debug REST API.
- */
-public enum DebugFeatures
-{
-    PAYLOAD_VERIFICATION("payload-verification"),
-    NODE_STATS("node-stats"),
-    POOL_STATS("pool-stats"),
-    QUEUE_STATS("queue-stats"),
-    TRANSIT_STATS("transit-stats"),
-    TASK_POOL_STATS("task-pool-stats"),
-    NODE_TRACING("node-tracing"),
-    XMPP_DELAY_STATS("xmpp-delay-stats");
+public enum FeatureState {
+    ENABLE(true),
+    DISABLE(false);
 
-    private final String value;
+    boolean value;
 
-    DebugFeatures(String value)
-    {
+    FeatureState(boolean value) {
         this.value = value;
     }
 
-    public String getValue()
-    {
-        return this.value;
+    public boolean getValue() {
+        return value;
     }
+
 
     /**
      * A custom 'fromString' implementation which allows creating an instance of
@@ -54,9 +42,19 @@ public enum DebugFeatures
      * @return an instance of the enum, if one can be derived by reversing the transformation
      * detailed above
      */
-    public static DebugFeatures fromString(String value)
+    public static FeatureState fromString(String value)
     {
-        String normalized = value.toUpperCase().replace("-", "_");
-        return DebugFeatures.valueOf(normalized);
+        if ("enable".equalsIgnoreCase(value))
+        {
+            return ENABLE;
+        }
+        else if ("disable".equalsIgnoreCase(value))
+        {
+            return DISABLE;
+        }
+        else
+        {
+            throw new IllegalArgumentException("feature state is either enabled or disabled.");
+        }
     }
 }
