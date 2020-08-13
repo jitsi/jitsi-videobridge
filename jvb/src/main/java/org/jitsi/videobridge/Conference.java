@@ -72,7 +72,7 @@ public class Conference
      * synchronizing on the map itself, because it must be kept in sync with
      * {@link #endpointsCache}.
      */
-    private final ConcurrentHashMap<String, AbstractEndpoint> endpoints = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, AbstractEndpoint> endpointsById = new ConcurrentHashMap<>();
 
     /**
      * A read-only cache of the endpoints in this conference. Note that it
@@ -669,7 +669,7 @@ public class Conference
     @Nullable
     public AbstractEndpoint getEndpoint(@NotNull String id)
     {
-        return endpoints.get(Objects.requireNonNull(id, "id must be non null"));
+        return endpointsById.get(Objects.requireNonNull(id, "id must be non null"));
     }
 
     /**
@@ -737,14 +737,14 @@ public class Conference
 
     /**
      * Updates {@link #endpointsCache} with the current contents of
-     * {@link #endpoints}.
+     * {@link #endpointsById}.
      */
     private void updateEndpointsCache()
     {
         synchronized (endpointsCacheLock)
         {
-            ArrayList<Endpoint> endpointsList = new ArrayList<>(endpoints.size());
-            endpoints.values().forEach(e ->
+            ArrayList<Endpoint> endpointsList = new ArrayList<>(endpointsById.size());
+            endpointsById.values().forEach(e ->
             {
                 if (e instanceof Endpoint)
                 {
@@ -763,7 +763,7 @@ public class Conference
      */
     public int getEndpointCount()
     {
-        return endpoints.size();
+        return endpointsById.size();
     }
 
     /**
@@ -785,7 +785,7 @@ public class Conference
      */
     public List<AbstractEndpoint> getEndpoints()
     {
-        return new ArrayList<>(this.endpoints.values());
+        return new ArrayList<>(this.endpointsById.values());
     }
 
     /**
@@ -876,13 +876,13 @@ public class Conference
     {
         final AbstractEndpoint removedEndpoint;
         String id = endpoint.getID();
-        removedEndpoint = endpoints.remove(id);
+        removedEndpoint = endpointsById.remove(id);
         if (removedEndpoint != null)
         {
             updateEndpointsCache();
         }
 
-        endpoints.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
+        endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
 
         if (tentacle != null)
         {
@@ -915,7 +915,7 @@ public class Conference
         }
 
         final AbstractEndpoint replacedEndpoint;
-        replacedEndpoint = endpoints.put(endpoint.getID(), endpoint);
+        replacedEndpoint = endpointsById.put(endpoint.getID(), endpoint);
         updateEndpointsCache();
 
         endpointsChanged();
