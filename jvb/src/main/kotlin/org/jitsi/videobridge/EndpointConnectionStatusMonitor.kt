@@ -76,7 +76,8 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
             if (timeSinceCreation > config.firstTransferTimeout) {
                 logger.cdebug { "${endpoint.id} is having trouble establishing the connection " +
                         "and will be marked as inactive" }
-                // TODO: update lastActivity?
+                notifyStatusChange(endpoint.id, false, null)
+                return
             } else {
                 logger.cdebug { "${endpoint.id} not ready for activity checks yet" }
                 return

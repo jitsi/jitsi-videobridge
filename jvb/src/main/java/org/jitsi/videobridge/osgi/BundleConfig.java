@@ -61,9 +61,6 @@ public class BundleConfig
         },
         {
             "org/jitsi/videobridge/xmpp/ClientConnectionImpl"
-        },
-        {
-            "org/jitsi/videobridge/EndpointConnectionStatus"
         }
     };
 
