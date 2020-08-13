@@ -23,7 +23,7 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.mockk.spyk
 import org.jitsi.nlj.resources.logging.StdoutLogger
-import org.jitsi.nlj.test_utils.FakeScheduledExecutorService
+import org.jitsi.test.concurrent.FakeScheduledExecutorService
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacket
 

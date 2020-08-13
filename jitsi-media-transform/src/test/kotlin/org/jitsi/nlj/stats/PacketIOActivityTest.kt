@@ -19,7 +19,7 @@ package org.jitsi.nlj.stats
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import org.jitsi.nlj.test_utils.FakeClock
+import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.secs
 import java.time.Duration
 

@@ -3,7 +3,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.doubles.shouldBeBetween
 import io.mockk.spyk
-import org.jitsi.nlj.test_utils.FakeScheduledExecutorService
+import org.jitsi.test.concurrent.FakeScheduledExecutorService
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant

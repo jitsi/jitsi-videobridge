@@ -22,6 +22,7 @@ import org.jitsi.nlj.util.`in`
 import org.jitsi.nlj.util.atRate
 import org.jitsi.nlj.util.howMuchCanISendAtRate
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.div
 import org.jitsi.utils.secs
 import java.time.Duration
