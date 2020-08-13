@@ -24,7 +24,7 @@ import io.mockk.every
 import io.mockk.mockk
 import java.time.Duration
 import org.jitsi.nlj.resources.logging.StdoutLogger
-import org.jitsi.nlj.test_utils.FakeClock
+import org.jitsi.test.time.FakeClock
 import org.jitsi.nlj.test_utils.timeline
 import org.jitsi.rtp.rtcp.RtcpReportBlock
 import org.jitsi.rtp.rtcp.RtcpRrPacket

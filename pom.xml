@@ -17,7 +17,7 @@
         <jitsi.utils.version>1.0-58-gaa5a28f</jitsi.utils.version>
         <ktlint.skip>false</ktlint.skip>
         <spotbugs.version>4.0.6</spotbugs.version>
-        <jicoco.version>1.1-42-geac01c8</jicoco.version>
+        <jicoco.version>1.1-49-gebc0f90</jicoco.version>
     </properties>
     <dependencies>
         <dependency>
@@ -93,6 +93,11 @@
         </dependency>
 
         <!-- test -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>jicoco-test-kotlin</artifactId>
+            <version>${jicoco.version}</version>
+        </dependency>
         <dependency>
             <groupId>io.pkts</groupId>
             <artifactId>pkts-core</artifactId>

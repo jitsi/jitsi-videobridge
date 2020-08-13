@@ -6,9 +6,9 @@ import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
-import org.jitsi.nlj.test_utils.FakeClock
 import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
+import org.jitsi.test.time.FakeClock
 import java.util.logging.Level
 
 class TransportCcEngineTest : FunSpec() {

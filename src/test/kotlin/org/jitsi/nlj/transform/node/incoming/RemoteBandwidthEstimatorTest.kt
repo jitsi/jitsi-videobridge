@@ -25,7 +25,7 @@ import org.jitsi.nlj.format.Vp9PayloadType
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
-import org.jitsi.nlj.test_utils.FakeClock
+import org.jitsi.test.time.FakeClock
 import org.jitsi.nlj.test_utils.RtpPacketGenerator
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.StreamInformationStoreImpl

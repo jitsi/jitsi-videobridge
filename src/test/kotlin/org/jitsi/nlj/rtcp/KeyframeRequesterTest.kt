@@ -30,7 +30,7 @@ import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.test_utils.FakeClock
+import org.jitsi.test.time.FakeClock
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.RtpExtensionHandler
 import org.jitsi.nlj.util.RtpPayloadTypesChangedHandler
