@@ -188,6 +188,8 @@ public class Conference
      */
     private ScheduledFuture<?> updateLastNEndpointsFuture;
 
+    private final EndpointConnectionStatusMonitor epConnectionStatusMonitor;
+
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
@@ -254,6 +256,10 @@ public class Conference
             Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
         }
+
+        epConnectionStatusMonitor =
+            new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
+        epConnectionStatusMonitor.start();
     }
 
     /**
@@ -885,6 +891,7 @@ public class Conference
 
         if (removedEndpoint != null)
         {
+            epConnectionStatusMonitor.endpointExpired(removedEndpoint.getID());
             final EventAdmin eventAdmin = getEventAdmin();
             if (eventAdmin != null)
             {
@@ -937,6 +944,7 @@ public class Conference
         {
             eventAdmin.postEvent(EventFactory.endpointMessageTransportReady(endpoint));
         }
+        epConnectionStatusMonitor.endpointConnected(endpoint.getID());
 
         if (!isExpired())
         {
