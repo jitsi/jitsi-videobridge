@@ -1,8 +1,5 @@
 package org.jitsi.nlj.test_utils
 
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.whenever
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
@@ -16,14 +13,9 @@ internal abstract class FakeExecutorService : ExecutorService {
     }
 
     override fun submit(task: Runnable): Future<*> {
-        val future: CompletableFuture<Unit> = mock(stubOnly = true)
         val job = Job(task, clock.instant())
-        whenever(future.cancel(any())).thenAnswer {
-            job.cancelled = true
-            true
-        }
         jobs.add(job)
-        return future
+        return EmptyCompletableFuture { job.cancelled = true }
     }
 
     fun runOne() {
@@ -42,5 +34,16 @@ internal abstract class FakeExecutorService : ExecutorService {
         while (jobs.isNotEmpty()) {
             runOne()
         }
+    }
+}
+
+/**
+ * A simple implementation of [CompletableFuture<Unit>] which allows passing
+ * a handler to be invoked on cancellation.
+ */
+private class EmptyCompletableFuture(private val cancelHandler: () -> Unit) : CompletableFuture<Unit>() {
+    override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
+        cancelHandler()
+        return true
     }
 }

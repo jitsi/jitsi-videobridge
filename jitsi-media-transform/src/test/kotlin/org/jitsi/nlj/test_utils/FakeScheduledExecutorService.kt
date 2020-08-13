@@ -1,10 +1,9 @@
 package org.jitsi.nlj.test_utils
 
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.whenever
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.Delayed
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -23,32 +22,20 @@ internal abstract class FakeScheduledExecutorService : ScheduledExecutorService 
         period: Long,
         unit: TimeUnit
     ): ScheduledFuture<*> {
-        val future: ScheduledFuture<Unit> = mock(stubOnly = true)
         val nextRunTime = clock.instant().plus(Duration.ofMillis(unit.toMillis(initialDelay)))
         val job = RecurringJob(command, nextRunTime, Duration.ofMillis(unit.toMillis(period)))
         jobs.add(job)
 
-        whenever(future.cancel(any())).thenAnswer {
-            job.cancelled = true
-            true
-        }
-
-        return future
+        return EmptyFuture { job.cancelled = true }
     }
 
     override fun schedule(command: Runnable, delay: Long, unit: TimeUnit): ScheduledFuture<*> {
 //        println("scheduling job with a delay of $delay $unit from time ${clock.instant()}")
-        val future: ScheduledFuture<Unit> = mock(stubOnly = true)
         val nextRunTime = clock.instant().plus(Duration.ofNanos(unit.toNanos(delay)))
         val job = Job(command, nextRunTime)
         jobs.add(job)
 
-        whenever(future.cancel(any())).thenAnswer {
-            job.cancelled = true
-            true
-        }
-
-        return future
+        return EmptyFuture { job.cancelled = true }
     }
 
     // Note that, when a job is cancelled, we don't remove it from the timeline, we just mark it
@@ -146,5 +133,41 @@ internal class JobsTimeline : ArrayList<Job>() {
         val result = super.add(element)
         sortBy(Job::nextRunTime)
         return result
+    }
+}
+
+/**
+ * A simple implementation of [ScheduledFuture<Unit>] which allows passing a handler
+ * to be invoked on cancellation.
+ */
+@SuppressFBWarnings("EQ_COMPARETO_USE_OBJECT_EQUALS")
+internal class EmptyFuture(
+    private val cancelHandler: () -> Unit
+) : ScheduledFuture<Unit> {
+    private var cancelled = false
+    override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
+        cancelHandler()
+        cancelled = true
+        return true
+    }
+
+    override fun get() {}
+
+    override fun get(timeout: Long, unit: TimeUnit) {}
+
+    override fun getDelay(unit: TimeUnit): Long {
+        TODO("Not yet implemented")
+    }
+
+    override fun isCancelled(): Boolean {
+        return cancelled
+    }
+
+    override fun isDone(): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun compareTo(other: Delayed?): Int {
+        TODO("Not yet implemented")
     }
 }
