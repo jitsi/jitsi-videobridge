@@ -16,13 +16,12 @@
 
 package org.jitsi.nlj.transform.node.incoming
 
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.whenever
 import io.kotest.core.spec.IsolationMode
 import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldHaveSize
+import io.mockk.every
+import io.mockk.mockk
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.resources.node.onOutput
@@ -42,7 +41,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacketBuilder
 class RtcpTerminationTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-    private val rtcpEventNotifier: RtcpEventNotifier = mock()
+    private val rtcpEventNotifier: RtcpEventNotifier = mockk()
     private val rtcpTermination = RtcpTermination(rtcpEventNotifier, StdoutLogger())
 
     val nackPacket = RtcpFbNackPacketBuilder().build()
@@ -64,8 +63,8 @@ class RtcpTerminationTest : ShouldSpec() {
         }
         // Force an access of RtcpSrPacket's report blocks, since it's lazy, to better
         // simulate real conditions
-        whenever(rtcpEventNotifier.notifyRtcpReceived(any<RtcpPacket>(), any())).thenAnswer {
-            (it.getArgument(0) as? RtcpSrPacket)?.reportBlocks
+        every { rtcpEventNotifier.notifyRtcpReceived(any<RtcpPacket>(), any()) } answers {
+            (args[0] as? RtcpSrPacket)?.reportBlocks
         }
 
         context("Receiving an SR packet") {

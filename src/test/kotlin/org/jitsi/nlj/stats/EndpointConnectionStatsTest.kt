@@ -16,12 +16,12 @@
 
 package org.jitsi.nlj.stats
 
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.mock
 import io.kotest.core.spec.IsolationMode
 import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.mockk.every
+import io.mockk.mockk
 import java.time.Duration
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.test_utils.FakeClock
@@ -134,25 +134,25 @@ class EndpointConnectionStatsTest : ShouldSpec() {
     private fun Duration.toDelaySinceLastSrFraction(): Long = (toNanos() * .000065536).toLong()
 
     private fun createSrPacket(senderInfoTs: Long): RtcpSrPacket {
-        val mockSenderInfo = mock<RtcpSrPacket.SenderInfo> {
-            on { compactedNtpTimestamp } doReturn senderInfoTs
+        val mockSenderInfo = mockk<RtcpSrPacket.SenderInfo> {
+            every { compactedNtpTimestamp } returns senderInfoTs
         }
 
-        return mock {
-            on { senderSsrc } doReturn 1234L
-            on { senderInfo } doReturn mockSenderInfo
+        return mockk {
+            every { senderSsrc } returns 1234L
+            every { senderInfo } returns mockSenderInfo
         }
     }
 
     private fun createRrPacket(lastSrTimestamp: Long, delaySinceLastSr: Duration): RtcpRrPacket {
-        val reportBlock = mock<RtcpReportBlock> {
-            on { ssrc } doReturn 1234L
-            on { this.lastSrTimestamp } doReturn lastSrTimestamp
-            on { this.delaySinceLastSr } doReturn delaySinceLastSr.toDelaySinceLastSrFraction()
+        val reportBlock = mockk<RtcpReportBlock> {
+            every { ssrc } returns 1234L
+            every { this@mockk.lastSrTimestamp } returns lastSrTimestamp
+            every { this@mockk.delaySinceLastSr } returns delaySinceLastSr.toDelaySinceLastSrFraction()
         }
 
-        return mock {
-            on { reportBlocks } doReturn listOf(reportBlock)
+        return mockk {
+            every { reportBlocks } returns listOf(reportBlock)
         }
     }
 }
