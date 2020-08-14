@@ -21,6 +21,8 @@ import org.jitsi.cmd.*;
 import org.jitsi.meet.*;
 import org.jitsi.metaconfig.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.octo.*;
+import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.osgi.*;
 
 /**
@@ -81,6 +83,23 @@ public class Main
         System.setProperty(
                 Videobridge.REST_API_PNAME,
                 Boolean.toString(apis.contains(Videobridge.REST_API)));
+
+        OctoRelayService octoRelayService = OctoRelayServiceProviderKt.singleton().get();
+        if (octoRelayService != null)
+        {
+            octoRelayService.start();
+        }
+
+        Logger logger = new LoggerImpl("org.jitsi.videobridge.Main");
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() ->
+        {
+            logger.info("Shutdown hook running");
+            if (octoRelayService != null)
+            {
+                octoRelayService.stop();
+            }
+        }));
 
         ComponentMain main = new ComponentMain();
         BundleConfig osgiBundles = new BundleConfig();

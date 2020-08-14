@@ -19,27 +19,34 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import org.jitsi.ConfigTest
 import org.jitsi.videobridge.octo.OctoRelayService
+import org.jitsi.videobridge.octo.OctoRelayServiceProvider
+import org.jitsi.videobridge.octo.singleton
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
 import org.osgi.framework.BundleContext
-import org.osgi.framework.ServiceReference
 
 /**
  * This is a high-level test for [Conference] and related functionality.
  */
 class ConferenceTest : ConfigTest() {
-    private val octoRelayServiceReference: ServiceReference<OctoRelayService> = mockk()
     private val octoRelayService = OctoRelayService()
+    private val octoRelaySupplier: OctoRelayServiceProvider = mockk() {
+        every { get() } returns octoRelayService
+    }
 
     private val bundleContext = mockk<BundleContext> {
-        every { getServiceReference(OctoRelayService::class.java) } returns octoRelayServiceReference
-        every { getService(octoRelayServiceReference) } returns octoRelayService
         every { registerService(any() as String, any(), any()) } returns null
     }
     private val videobridge = mockk<Videobridge> {
         every { bundleContext } returns this@ConferenceTest.bundleContext
+    }
+
+    init {
+        mockkStatic("org.jitsi.videobridge.octo.OctoRelayServiceProviderKt")
+        every { singleton() } returns octoRelaySupplier
     }
 
     init {
@@ -66,7 +73,7 @@ class ConferenceTest : ConfigTest() {
         }
         context("Enabling octo should work") {
             withNewConfig(newConfigOctoEnabled, loadDefaults = true) {
-                octoRelayService.start(bundleContext)
+                octoRelayService.start()
                 with(Conference(videobridge, "id", "name", false, 1234)) {
                     isOctoEnabled shouldBe false
                     tentacle
