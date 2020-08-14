@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ master ]
+  issue_comment:
+    branches: [ master ]
+    
+jobs:
+  my_first_job:
+    name: Jitsi build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: bbaldino/jitsi-ga-test@HEAD
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v2
+        with:
+            name: logs
+            path: logs
