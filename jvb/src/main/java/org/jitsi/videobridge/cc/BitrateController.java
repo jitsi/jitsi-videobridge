@@ -169,12 +169,6 @@ public class BitrateController
             = Collections.emptyList();
 
     /**
-     * The default video constraints to use for endpoints without video
-     * constraints.
-     */
-    private static final VideoConstraints defaultVideoConstraints = VideoConstraints.thumbnailVideoConstraints;
-
-    /**
      * The map of endpoint id to video constraints that contains the video
      * constraints to respect when allocating bandwidth for a specific endpoint.
      */
@@ -291,7 +285,7 @@ public class BitrateController
         /**
          * The video constraints of the {@link #endpoint}.
          */
-        final VideoConstraints videoConstraints;
+        final VideoConstraints effectiveVideoConstraints;
 
         /**
          * The endpoint (sender) that's constrained and is ranked for bandwidth
@@ -303,13 +297,13 @@ public class BitrateController
          * Ctor.
          *
          * @param speakerRank
-         * @param videoConstraints
+         * @param effectiveVideoConstraints
          * @param endpoint
          */
-        EndpointMultiRank(int speakerRank, VideoConstraints videoConstraints, AbstractEndpoint endpoint)
+        EndpointMultiRank(int speakerRank, VideoConstraints effectiveVideoConstraints, AbstractEndpoint endpoint)
         {
             this.speakerRank = speakerRank;
-            this.videoConstraints = videoConstraints;
+            this.effectiveVideoConstraints = effectiveVideoConstraints;
             this.endpoint = endpoint;
         }
     }
@@ -340,7 +334,7 @@ public class BitrateController
             // smaller than o2" as this is equivalent to "o1 needs to be
             // prioritized first".
             int preferredHeightDiff =
-                o2.videoConstraints.getPreferredHeight() - o1.videoConstraints.getPreferredHeight();
+                o2.effectiveVideoConstraints.getPreferredHeight() - o1.effectiveVideoConstraints.getPreferredHeight();
             if (preferredHeightDiff != 0)
             {
                 return preferredHeightDiff;
@@ -350,7 +344,7 @@ public class BitrateController
                 // We want "o1 has higher ideal height than o2" to imply "o1 is
                 // smaller than o2" as this is equivalent to "o1 needs to be
                 // prioritized first".
-                int idealHeightDiff = o2.videoConstraints.getIdealHeight() - o1.videoConstraints.getIdealHeight();
+                int idealHeightDiff = o2.effectiveVideoConstraints.getIdealHeight() - o1.effectiveVideoConstraints.getIdealHeight();
                 if (idealHeightDiff != 0)
                 {
                     return idealHeightDiff;
@@ -1025,17 +1019,8 @@ public class BitrateController
                 ". Endpoints constraints: " + Arrays.toString(copyOfVideoConstraintsMap.values().toArray()));
         }
 
-        List<EndpointMultiRank> endpointMultiRankList = conferenceEndpoints
-            .stream()
-            .map(endpoint -> {
-                VideoConstraints videoConstraints = copyOfVideoConstraintsMap
-                    .getOrDefault(endpoint.getID(), defaultVideoConstraints);
-
-                int rank = conferenceEndpoints.indexOf(endpoint);
-                return new EndpointMultiRank(rank, videoConstraints, endpoint);
-            })
-            .sorted(new EndpointMultiRanker())
-            .collect(Collectors.toList());
+        List<EndpointMultiRank> endpointMultiRankList
+            = makeEndpointMultiRankList(conferenceEndpoints, copyOfVideoConstraintsMap, adjustedLastN);
 
         for (EndpointMultiRank endpointMultiRank : endpointMultiRankList)
         {
@@ -1044,16 +1029,6 @@ public class BitrateController
                 || sourceEndpoint.getID().equals(destinationEndpoint.getID()))
             {
                 continue;
-            }
-
-            VideoConstraints effectiveVideoConstraints;
-            if (sourceBitrateAllocations.size() < adjustedLastN)
-            {
-                effectiveVideoConstraints = endpointMultiRank.videoConstraints;
-            }
-            else
-            {
-                effectiveVideoConstraints = VideoConstraints.disabledVideoConstraints;
             }
 
             MediaSourceDesc[] sources
@@ -1066,7 +1041,7 @@ public class BitrateController
                     sourceBitrateAllocations.add(
                         new SourceBitrateAllocation(
                             endpointMultiRank.endpoint.getID(),
-                            source, effectiveVideoConstraints));
+                            source, endpointMultiRank.effectiveVideoConstraints));
 
                 }
 
@@ -1076,6 +1051,27 @@ public class BitrateController
         }
 
         return sourceBitrateAllocations.toArray(new SourceBitrateAllocation[0]);
+    }
+
+    public static List<EndpointMultiRank> makeEndpointMultiRankList(
+        List<AbstractEndpoint> conferenceEndpoints,
+        Map<String, VideoConstraints> copyOfVideoConstraintsMap,
+        int adjustedLastN)
+    {
+        List<EndpointMultiRank> endpointMultiRankList = new ArrayList<>(conferenceEndpoints.size());
+        for (int i = 0; i < conferenceEndpoints.size(); i++)
+        {
+            AbstractEndpoint endpoint = conferenceEndpoints.get(i);
+
+            VideoConstraints effectiveVideoConstraints = (i < adjustedLastN || adjustedLastN < 0)
+                ? copyOfVideoConstraintsMap.getOrDefault(endpoint.getID(), VideoConstraints.thumbnailVideoConstraints)
+                : VideoConstraints.disabledVideoConstraints;
+
+            int rank = conferenceEndpoints.indexOf(endpoint);
+            endpointMultiRankList.add(new EndpointMultiRank(rank, effectiveVideoConstraints, endpoint));
+        }
+        endpointMultiRankList.sort(new EndpointMultiRanker());
+        return endpointMultiRankList;
     }
 
     public void setVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraintsMap)
