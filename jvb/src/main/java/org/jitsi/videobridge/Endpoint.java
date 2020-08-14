@@ -271,6 +271,7 @@ public class Endpoint
             diagnosticContext,
             logger,
             transceiverEventHandler,
+            42,
             clock
         );
         transceiver.setIncomingPacketHandler(
