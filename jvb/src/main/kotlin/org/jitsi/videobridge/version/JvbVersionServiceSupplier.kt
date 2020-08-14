@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 - Present, 8x8 Inc
+ * Copyright @ 2018 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,27 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.version;
 
-import org.jitsi.utils.version.*;
-import org.jitsi.version.*;
+package org.jitsi.videobridge.version
 
-/**
- * Extends {@link AbstractVersionActivator} in order to provider the
- * {@code VersionService} implementation for the Jitsi Videobridge.
- *
- * @author Pawel Domas
- * @author Boris Grozev
- */
-public class VersionActivator
-    extends AbstractVersionActivator
-{
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected Version getCurrentVersion()
-    {
-        return CurrentVersionImpl.VERSION;
+class JvbVersionServiceSupplier {
+    private val jvbVersionService: JvbVersionService by lazy {
+        JvbVersionService()
     }
+
+    fun get(): JvbVersionService = jvbVersionService
 }
+
+@JvmField
+val jvbVersionServiceSingleton = JvbVersionServiceSupplier()

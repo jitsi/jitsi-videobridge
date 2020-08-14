@@ -53,6 +53,8 @@ import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.regex.*;
 
+import static org.jitsi.videobridge.version.JvbVersionServiceSupplierKt.jvbVersionServiceSingleton;
+
 /**
  * Represents the Jitsi Videobridge which creates, lists and destroys
  * {@link Conference} instances.
@@ -796,7 +798,7 @@ public class Videobridge
      */
     public Version getVersion()
     {
-        return CurrentVersionImpl.VERSION;
+        return jvbVersionServiceSingleton.get().getCurrentVersion();
     }
 
     /**
