@@ -679,11 +679,11 @@ public class BitrateController
             }
         }
 
-        Map<String, VideoConstraints> copyOfvideoConstraintsMap = videoConstraintsMap;
+        Map<String, VideoConstraints> copyOfVideoConstraintsMap = videoConstraintsMap;
 
         // Compute the bitrate allocation.
         SourceBitrateAllocation[]
-            sourceBitrateAllocations = allocate(bweBps, sortedEndpoints, copyOfvideoConstraintsMap);
+            sourceBitrateAllocations = allocate(bweBps, sortedEndpoints, copyOfVideoConstraintsMap);
 
         // Update the the controllers based on the allocation and send a
         // notification to the client the set of forwarded endpoints has
@@ -907,10 +907,10 @@ public class BitrateController
     private SourceBitrateAllocation[] allocate(
         long maxBandwidth,
         List<AbstractEndpoint> conferenceEndpoints,
-        Map<String, VideoConstraints> copyOfvideoConstraintsMap)
+        Map<String, VideoConstraints> copyOfVideoConstraintsMap)
     {
         SourceBitrateAllocation[] sourceBitrateAllocations
-                = prioritize(copyOfvideoConstraintsMap, conferenceEndpoints);
+                = prioritize(copyOfVideoConstraintsMap, conferenceEndpoints);
 
         if (ArrayUtils.isNullOrEmpty(sourceBitrateAllocations))
         {
