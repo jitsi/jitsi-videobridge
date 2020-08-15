@@ -20,6 +20,7 @@ import org.glassfish.hk2.utilities.binding.*;
 import org.jitsi.health.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.version.*;
+import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.osgi.framework.*;
@@ -46,7 +47,13 @@ public class OsgiServiceBinder extends AbstractBinder
     protected void configure()
     {
         bind(new VideobridgeProvider(bundleContext)).to(VideobridgeProvider.class);
-        bind(new StatsManagerProvider((bundleContext))).to(StatsManagerProvider.class);
+        bind(new StatsManagerProvider(null) {
+            @Override
+            public StatsManager get()
+            {
+                return StatsManagerSupplierKt.singleton.get();
+            }
+        }).to(StatsManagerProvider.class);
         bind(new VideobridgeProvider((bundleContext))).to(VideobridgeProvider.class);
         // Instead of refactoring the service provider hierarchy in order to pull this from a non-osgi location,
         // just pass a null BundleContext and override get()

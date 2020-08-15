@@ -179,8 +179,7 @@ public class VideobridgeStatistics
     @SuppressWarnings("unchecked")
     private void generate0()
     {
-        BundleContext bundleContext = StatsManagerBundleActivator.getBundleContext();
-        Videobridge videobridge = ServiceUtils2.getService(bundleContext, Videobridge.class);
+        Videobridge videobridge = VideobridgeSupplierKt.singleton.get();
         Videobridge.Statistics jvbStats = videobridge.getStatistics();
 
         int videoChannels = 0;

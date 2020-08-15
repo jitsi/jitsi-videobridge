@@ -18,6 +18,7 @@ package org.jitsi.videobridge.stats;
 import java.util.*;
 import java.util.concurrent.*;
 import org.jitsi.utils.concurrent.*;
+import org.jitsi.videobridge.stats.config.*;
 import org.osgi.framework.*;
 
 /**
@@ -29,8 +30,8 @@ import org.osgi.framework.*;
  * @author Lyubomir Marinov
  */
 public class StatsManager
-    extends BundleContextHolder2
 {
+    public static StatsManagerBundleActivatorConfig config = new StatsManagerBundleActivatorConfig();
     /**
      * The <tt>Statistics</tt> added to this <tt>StatsManager</tt>.
      */
@@ -66,7 +67,7 @@ public class StatsManager
      * generated/updated by this <tt>StatsManager</tt>.
      * <p>
      * Warning: {@code Statistics} added to this {@code StatsManager} after
-     * {@link #start(BundleContext)} has been invoked will not be updated.
+     * {@link #start()} has been invoked will not be updated.
      * </p>
      *
      * @param statistics the (set of) <tt>Statistics</tT> to be repeatedly
@@ -76,7 +77,7 @@ public class StatsManager
      * <tt>statistics</tt> is to be generated/updated by this
      * <tt>StatsManager</tt>
      */
-    void addStatistics(Statistics statistics, long period)
+    public void addStatistics(Statistics statistics, long period)
     {
         if (statistics == null)
             throw new NullPointerException("statistics");
@@ -95,7 +96,7 @@ public class StatsManager
      * added to it.
      * <p>
      * Warning: {@code StatsTransport}s added to this {@code StatsManager}
-     * after {@link #start(BundleContext)} has been invoked will not be called.
+     * after {@link #start()} has been invoked will not be called.
      * </p>
      *
      * @param transport the <tt>StatsTransport</tt> to add to this
@@ -105,7 +106,7 @@ public class StatsManager
      * <tt>StatsManager</tt> is to repeatedly send the <tt>Statistics</tt> added
      * to it through the specified <tt>transport</tt>
      */
-    void addTransport(StatsTransport transport, long period)
+    public void addTransport(StatsTransport transport, long period)
     {
         if (transport == null)
             throw new NullPointerException("transport");
@@ -235,12 +236,8 @@ public class StatsManager
      * invocation will not be started.
      * </p>
      */
-    @Override
-    void start(BundleContext bundleContext)
-        throws Exception
+    public void start()
     {
-        super.start(bundleContext);
-
         // Register statistics and transports with their respective
         // RecurringRunnableExecutor in order to have them periodically
         // executed.
@@ -252,8 +249,6 @@ public class StatsManager
         // bundleContext.
         for (TransportPeriodicRunnable tpp : transports)
         {
-            tpp.o.start(bundleContext);
-
             transportExecutor.registerRecurringRunnable(tpp);
         }
     }
@@ -264,12 +259,8 @@ public class StatsManager
      * Stops the <tt>StatsTransport</tt>s added to this <tt>StatsManager</tt> in
      * the specified <tt>bundleContext</tt>.
      */
-    @Override
-    void stop(BundleContext bundleContext)
-        throws Exception
+    public void stop()
     {
-        super.stop(bundleContext);
-
         // De-register statistics and transports from their respective
         // RecurringRunnableExecutor in order to have them no longer
         // periodically executed.
@@ -282,8 +273,6 @@ public class StatsManager
         for (TransportPeriodicRunnable tpp : transports)
         {
             transportExecutor.deRegisterRecurringRunnable(tpp);
-
-            tpp.o.stop(bundleContext);
         }
     }
 

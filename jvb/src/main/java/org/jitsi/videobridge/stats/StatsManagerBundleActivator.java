@@ -134,7 +134,7 @@ public class StatsManagerBundleActivator
             statsMgr.addTransport(transportConfig.toStatsTransport(), transportConfig.getInterval().toMillis());
         });
 
-        statsMgr.start(bundleContext);
+        statsMgr.start();
 
         // Register StatsManager as an OSGi service.
         ServiceRegistration<StatsManager> serviceRegistration = null;
@@ -189,7 +189,7 @@ public class StatsManagerBundleActivator
         {
             serviceRegistration.unregister();
             if (statsMgr != null)
-                statsMgr.stop(bundleContext);
+                statsMgr.stop();
         }
     }
 }
