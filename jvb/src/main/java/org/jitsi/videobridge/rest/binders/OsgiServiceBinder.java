@@ -21,7 +21,7 @@ import org.jitsi.health.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.util.*;
-import org.jitsi.videobridge.version.*;
+import org.jitsi.videobridge.xmpp.*;
 import org.osgi.framework.*;
 
 import static org.jitsi.videobridge.version.JvbVersionServiceSupplierKt.jvbVersionServiceSingleton;
@@ -58,6 +58,13 @@ public class OsgiServiceBinder extends AbstractBinder
             }
         }).to(VersionServiceProvider.class);
         bind(new HealthCheckServiceProvider(bundleContext)).to(HealthCheckServiceProvider.class);
+        bind(new ClientConnectionProvider(null) {
+            @Override
+            public ClientConnectionImpl get()
+            {
+                return ClientConnectionSupplierKt.singleton.get();
+            }
+        }).to(ClientConnectionProvider.class);
         bind(new ClientConnectionProvider((bundleContext))).to(ClientConnectionProvider.class);
         bind(new ConfigProvider(bundleContext)).to(ConfigProvider.class);
     }

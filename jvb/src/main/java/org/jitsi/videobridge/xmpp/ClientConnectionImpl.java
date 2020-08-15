@@ -16,7 +16,6 @@
 package org.jitsi.videobridge.xmpp;
 
 import edu.umd.cs.findbugs.annotations.*;
-import org.jitsi.osgi.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.xmpp.config.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -24,17 +23,15 @@ import org.jitsi.xmpp.extensions.health.*;
 import org.jitsi.xmpp.mucclient.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
-import org.osgi.framework.*;
 
-import java.util.*;
+import java.util.concurrent.atomic.*;
 
 /**
  * Provides jitsi-videobridge functions through an XMPP client connection.
  *
  * @author Boris Grozev
  */
-public class ClientConnectionImpl
-    implements BundleActivator, IQListener
+public class ClientConnectionImpl implements IQListener
 {
     /**
      * The {@link Logger} used by the {@link ClientConnectionImpl}
@@ -49,8 +46,6 @@ public class ClientConnectionImpl
      */
     private MucClientManager mucClientManager;
 
-    private ServiceRegistration<ClientConnectionImpl> serviceRegistration;
-
     /**
      * The {@link XmppCommon} instance which implements handling of Smack IQs
      * for this {@link ClientConnectionImpl}.
@@ -59,21 +54,15 @@ public class ClientConnectionImpl
 
     private final XmppClientConnectionConfig config = new XmppClientConnectionConfig();
 
+    private final AtomicBoolean running = new AtomicBoolean(false);
+
     /**
      * Starts this bundle.
      */
-    @Override
-    public void start(BundleContext bundleContext)
+    public void start()
     {
-        // Register this instance as an OSGi service.
-        Collection<ClientConnectionImpl> userLoginBundles
-            = ServiceUtils2.getServices(
-                bundleContext, ClientConnectionImpl.class);
-
-        if (!userLoginBundles.contains(this))
+        if (running.compareAndSet(false, true))
         {
-            common.start(bundleContext);
-
             mucClientManager = new MucClientManager(XmppCommon.FEATURES);
 
             // These are the IQs that we are interested in.
@@ -88,9 +77,6 @@ public class ClientConnectionImpl
 
             config.getClientConfigs()
                 .forEach(cfg -> mucClientManager.addMucClient(cfg));
-
-            serviceRegistration
-                = bundleContext.registerService(ClientConnectionImpl.class, this, null);
         }
         else
         {
@@ -111,25 +97,16 @@ public class ClientConnectionImpl
         return common.handleIQ(iq);
     }
 
-    /**
-     * Stops this bundle.
-     */
-    @Override
-    public void stop(BundleContext bundleContext)
+    public void stop()
     {
-        if (mucClientManager != null)
+        if (running.compareAndSet(true, false))
         {
-            mucClientManager.stop();
-            mucClientManager = null;
+            if (mucClientManager != null)
+            {
+                mucClientManager.stop();
+                mucClientManager = null;
+            }
         }
-
-        if (serviceRegistration != null)
-        {
-            serviceRegistration.unregister();
-            serviceRegistration = null;
-        }
-
-        common.stop(bundleContext);
     }
 
     /**

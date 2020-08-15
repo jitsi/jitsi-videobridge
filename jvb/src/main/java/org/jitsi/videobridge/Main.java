@@ -22,8 +22,8 @@ import org.jitsi.meet.*;
 import org.jitsi.metaconfig.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.octo.*;
-import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.osgi.*;
+import org.jitsi.videobridge.xmpp.*;
 
 /**
  * Provides the <tt>main</tt> entry point of the Jitsi Videobridge application
@@ -89,6 +89,8 @@ public class Main
         {
             octoRelayService.start();
         }
+        ClientConnectionImpl clientConnectionImpl = ClientConnectionSupplierKt.singleton.get();
+        clientConnectionImpl.start();
 
         Logger logger = new LoggerImpl("org.jitsi.videobridge.Main");
 
@@ -99,6 +101,7 @@ public class Main
             {
                 octoRelayService.stop();
             }
+            clientConnectionImpl.stop();
         }));
 
         ComponentMain main = new ComponentMain();

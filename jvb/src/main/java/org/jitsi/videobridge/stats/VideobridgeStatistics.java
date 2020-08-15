@@ -528,23 +528,19 @@ public class VideobridgeStatistics
             }
             unlockedSetStat(VERSION, videobridge.getVersion().toString());
 
-            ClientConnectionImpl clientConnection
-                    = ServiceUtils2.getService(bundleContext, ClientConnectionImpl.class);
-            if (clientConnection != null)
-            {
-                unlockedSetStat(
-                        MUC_CLIENTS_CONFIGURED,
-                        clientConnection.getMucClientManager().getClientCount());
-                unlockedSetStat(
-                        MUC_CLIENTS_CONNECTED,
-                        clientConnection.getMucClientManager().getClientConnectedCount());
-                unlockedSetStat(
-                        MUCS_CONFIGURED,
-                        clientConnection.getMucClientManager().getMucCount());
-                unlockedSetStat(
-                        MUCS_JOINED,
-                        clientConnection.getMucClientManager().getMucJoinedCount());
-            }
+            ClientConnectionImpl clientConnection = ClientConnectionSupplierKt.singleton.get();
+            unlockedSetStat(
+                    MUC_CLIENTS_CONFIGURED,
+                    clientConnection.getMucClientManager().getClientCount());
+            unlockedSetStat(
+                    MUC_CLIENTS_CONNECTED,
+                    clientConnection.getMucClientManager().getClientConnectedCount());
+            unlockedSetStat(
+                    MUCS_CONFIGURED,
+                    clientConnection.getMucClientManager().getMucCount());
+            unlockedSetStat(
+                    MUCS_JOINED,
+                    clientConnection.getMucClientManager().getMucJoinedCount());
         }
         finally
         {

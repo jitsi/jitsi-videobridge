@@ -16,18 +16,15 @@
 package org.jitsi.videobridge.xmpp;
 
 import org.jitsi.nlj.stats.*;
-import org.jitsi.osgi.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.version.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.health.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smackx.iqversion.packet.Version;
 import org.json.simple.*;
-import org.osgi.framework.*;
 
 import static org.jitsi.videobridge.version.JvbVersionServiceSupplierKt.jvbVersionServiceSingleton;
 
@@ -76,69 +73,6 @@ public class XmppCommon
             "urn:xmpp:jingle:transports:ice-udp:1",
             Version.NAMESPACE
     };
-
-    /**
-     * The <tt>BundleContext</tt> in which this instance has been started as an
-     * OSGi bundle.
-     */
-    private BundleContext bundleContext;
-
-    /**
-     * Gets the OSGi <tt>BundleContext</tt> in which this Jabber component is
-     * executing.
-     *
-     * @return the OSGi <tt>BundleContext</tt> in which this Jabber component is
-     * executing
-     */
-    BundleContext getBundleContext()
-    {
-        return bundleContext;
-    }
-
-    /**
-     * Starts this {@link XmppCommon} in a specific OSGi bundle context.
-     */
-    void start(BundleContext bundleContext)
-    {
-        this.bundleContext = bundleContext;
-    }
-
-    /**
-     * Stops this {@link XmppCommon}.
-     */
-    void stop(BundleContext bundleContext)
-    {
-        this.bundleContext = null;
-    }
-
-    /**
-     * Returns the {@link Videobridge} instance that is managing conferences
-     * for this component. Returns <tt>null</tt> if no instance is running.
-     *
-     * @return the videobridge instance, <tt>null</tt> when none is running.
-     */
-    Videobridge getVideobridge()
-    {
-        BundleContext bundleContext = getBundleContext();
-        return bundleContext != null
-            ? ServiceUtils2.getService(bundleContext, Videobridge.class)
-            : null;
-    }
-
-    /**
-     * Returns the <tt>VersionService</tt> used by this
-     * <tt>Videobridge</tt>.
-     *
-     * @return the <tt>VersionService</tt> used by this
-     * <tt>Videobridge</tt>.
-     */
-    private VersionService getVersionService()
-    {
-        BundleContext bundleContext = getBundleContext();
-        return bundleContext != null
-            ? ServiceUtils2.getService(bundleContext, VersionService.class)
-            : null;
-    }
 
     /**
      * Processes an IQ received from one of the XMPP stacks.
@@ -200,14 +134,7 @@ public class XmppCommon
      */
     private IQ handleIQRequest(IQ request)
     {
-        Videobridge videobridge = getVideobridge();
-        if (videobridge == null)
-        {
-            return IQUtils.createError(
-                request,
-                XMPPError.Condition.internal_server_error,
-                "No Videobridge service is running");
-        }
+        Videobridge videobridge = VideobridgeSupplierKt.singleton.get();
 
         IQ response;
         long start = System.currentTimeMillis();
