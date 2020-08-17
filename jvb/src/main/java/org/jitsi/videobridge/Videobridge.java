@@ -549,8 +549,11 @@ public class Videobridge
      *
      * @param bundleContext the <tt>BundleContext</tt> in which this
      * <tt>Videobridge</tt> is to start
+     *
+     * NOTE: we have to make this public so Jicofo can call it from its
+     * tests
      */
-    void start(final BundleContext bundleContext)
+    public void start(final BundleContext bundleContext)
     {
         this.bundleContext = bundleContext;
 
@@ -658,8 +661,11 @@ public class Videobridge
      *
      * @param bundleContext the <tt>BundleContext</tt> in which this
      * <tt>Videobridge</tt> is to stop
+     *
+     * NOTE: we have to make this public so Jicofo can call it from its
+     * tests
      */
-    void stop(BundleContext bundleContext)
+    public void stop(BundleContext bundleContext)
     {
         try
         {

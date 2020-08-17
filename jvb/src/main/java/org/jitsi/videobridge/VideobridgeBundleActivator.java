@@ -50,7 +50,14 @@ public class VideobridgeBundleActivator
     public void start(BundleContext bundleContext)
         throws Exception
     {
-        Videobridge videobridge = new Videobridge();
+        // We still need to 'start' the Videobridge instance via OSGi because
+        // Videobridge requires a BundleContext for various things, so we have
+        // the instance initialization done in VideobridgeSupplier so that as
+        // we port services away from OSGi they can still get an instance
+        // of Videobridge.  Eventually, once everything is moved over, this
+        // activator can go away and all 'services' can just take the Videobridge
+        // in their constructor
+        Videobridge videobridge = VideobridgeSupplierKt.singleton.get();
 
         videobridge.start(bundleContext);
 
