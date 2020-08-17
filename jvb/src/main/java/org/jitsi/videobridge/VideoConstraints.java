@@ -34,7 +34,7 @@ public class VideoConstraints
     /**
      * Static instance for the video constraints that disable video (ideal resolution is 0).
      */
-    public static VideoConstraints disabledVideoConstraints = new VideoConstraints(0);
+    public static final VideoConstraints disabledVideoConstraints = new VideoConstraints(0);
 
     /**
      * The ideal height of the constrained endpoint. The bridge tries to send an
