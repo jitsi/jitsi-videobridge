@@ -81,7 +81,7 @@ public class Endpoint
      * chain, we track this stats here.  Since they're static, these members will track the delay
      * for packets going out to all endpoints.
      */
-    private static final PacketDelayStats rtpPacketDelayStats = new PacketDelayStats();
+    public static final PacketDelayStats rtpPacketDelayStats = new PacketDelayStats();
     private static final PacketDelayStats rtcpPacketDelayStats = new PacketDelayStats();
 
     /**

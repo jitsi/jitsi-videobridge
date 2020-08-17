@@ -25,7 +25,10 @@ import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.stats.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
+
+import java.util.concurrent.*;
 
 /**
  * Provides the <tt>main</tt> entry point of the Jitsi Videobridge application
@@ -107,7 +110,26 @@ public class Main
         }
         JvbHealthCheckServiceSupplierKt.singleton().get().start();
 
+        JvbLoadManager<RtpPacketDelayMeasurement> jvbLoadManager = new JvbLoadManager<>(
+            JvbLoadManagerKt.getRtpPacketDelayThreshold(),
+            new LastNReducer(VideobridgeSupplierKt.singleton.get(), .75)
+        );
+
         Logger logger = new LoggerImpl("org.jitsi.videobridge.Main");
+
+        ScheduledFuture<?> loadManagerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
+            () -> {
+                double delay = Endpoint.rtpPacketDelayStats.getSnapshot().getAverageDelayMs();
+                if (Double.isNaN(delay))
+                {
+                    return;
+                }
+                jvbLoadManager.loadUpdate(new RtpPacketDelayMeasurement(delay));
+            },
+            0,
+            10,
+            TimeUnit.SECONDS
+        );
 
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
         {
@@ -124,6 +146,8 @@ public class Main
             }
 
             JvbHealthCheckServiceSupplierKt.singleton().get().stop();
+
+            loadManagerTask.cancel(true);
         }));
 
         ComponentMain main = new ComponentMain();
