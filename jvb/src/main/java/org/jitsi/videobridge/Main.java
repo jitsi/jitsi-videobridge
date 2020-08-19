@@ -20,6 +20,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.cmd.*;
 import org.jitsi.meet.*;
 import org.jitsi.metaconfig.*;
+import org.jitsi.nlj.stats.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.octo.*;
@@ -110,22 +111,15 @@ public class Main
         }
         JvbHealthCheckServiceSupplierKt.singleton().get().start();
 
-        JvbLoadManager<RtpPacketDelayMeasurement> jvbLoadManager = new JvbLoadManager<>(
-            JvbLoadManagerKt.getRtpPacketDelayThreshold(),
+        JvbLoadManager<PacketRateMeasurement> jvbLoadManager = new JvbLoadManager<>(
+            JvbLoadManagerKt.getPacketRateThreshold(),
             new LastNReducer(VideobridgeSupplierKt.singleton.get(), .75)
         );
 
         Logger logger = new LoggerImpl("org.jitsi.videobridge.Main");
 
         ScheduledFuture<?> loadManagerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
-            () -> {
-                double delay = Endpoint.rtpPacketDelayStats.getSnapshot().getAverageDelayMs();
-                if (Double.isNaN(delay))
-                {
-                    return;
-                }
-                jvbLoadManager.loadUpdate(new RtpPacketDelayMeasurement(delay));
-            },
+            new PacketRateLoadSampler(VideobridgeSupplierKt.singleton.get(), jvbLoadManager),
             0,
             10,
             TimeUnit.SECONDS

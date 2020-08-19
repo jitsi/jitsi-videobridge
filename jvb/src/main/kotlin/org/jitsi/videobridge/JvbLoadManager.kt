@@ -54,13 +54,13 @@ interface JvbLoadMeasurement {
     fun getLoad(): Double
 }
 
-class RtpPacketDelayMeasurement(private val rtpDelay: Double) : JvbLoadMeasurement {
-    override fun getLoad(): Double = rtpDelay
+class PacketRateMeasurement(private val packetRate: Long) : JvbLoadMeasurement {
+    override fun getLoad(): Double = packetRate.toDouble()
 
-    override fun toString(): String = "RTP packet delay of $rtpDelay ms"
+    override fun toString(): String = "RTP packet rate (up + down) of $packetRate pps"
 }
 
-val RtpPacketDelayThreshold = RtpPacketDelayMeasurement(30.0)
+val PacketRateThreshold = PacketRateMeasurement(50000)
 
 interface JvbLoadReducer {
     fun reduceLoad()
@@ -96,4 +96,23 @@ class LastNReducer(
     override fun impactTime(): Duration = Duration.ofMinutes(1)
 
     override fun toString(): String = "LastNReducer with scale $reductionScale"
+}
+
+class PacketRateLoadSampler(
+    private val videobridge: Videobridge,
+    private val jvbLoadManager: JvbLoadManager<PacketRateMeasurement>
+) : Runnable {
+
+    override fun run() {
+        var totalPacketRate: Long = 0
+        videobridge.conferences.forEach { conf ->
+            conf.localEndpoints.forEach { ep ->
+                with(ep.transceiver.getTransceiverStats()) {
+                    totalPacketRate += incomingPacketStreamStats.packetRate
+                    totalPacketRate += outgoingPacketStreamStats.packetRate
+                }
+            }
+        }
+        jvbLoadManager.loadUpdate(PacketRateMeasurement(totalPacketRate))
+    }
 }
