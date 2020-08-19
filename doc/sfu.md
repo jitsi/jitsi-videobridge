@@ -8,12 +8,12 @@ several advanced features such as RTCP termination [[RTCPT]], bandwidth
 estimations [[BWE]] and bandwidth distributions [[BWD]].
 
 With RTCP termination the endpoints of a group call are "tricked" to believe
-that that are in a one-on-one call with the JVB. This has the notable desirable
+that they are in a one-on-one call with the JVB. This has the desirable
 property that _bad_ down-link conditions at a particular receiver do not
 typically affect the sending bitrate of the senders because, from their
 perspective, there is only one receiver (the JVB) with a presumably good
 down-link. The JVB, in its turn, _estimates_ the available down-link of a
-particular receiver(or, symmetrically, its available up-link bandwidth towards 
+particular receiver (or, symmetrically, its available up-link bandwidth towards 
 a particular receiver) and it _distributes_ it among the several video _sources_
 [[MCS], section 4.3] that the several senders of a group-call are sharing.
 
@@ -35,14 +35,14 @@ described bellow [[BWE]], but, for sake of clarity, we give a couple of
 examples in the next few paragraphs.
 
 Consider, for example, a group call where the endpoints share a video source in
-two encodings, a "high quality" and a "low quality". The JVB will chose to
+two encodings, a "high quality" and a "low quality." The JVB will chose to
 forward at most one encoding at a time to a specific destination endpoint
 depending on the available (estimated) bandwidth and the viewport of the
 projected source. Multistreaming is achieved in different ways, depending on the
-codec that is used to encode a source. For instance, VP8 supports temporal
-scalability but not spatial scalability. So, in the previous example, in order
-to achieve a high and a low quality, simulcast must be used. With VP9 the engine
-could activate spatial scalability.
+codec used to encode a source. For instance, VP8 supports temporal
+scalability but not spatial scalability. In the previous example, to achieve a high 
+and low quality, simulcast must be used. With VP9, the engine could activate 
+spatial scalability.
 
 With scalable video coding (SVC) a bitstream can be broken down into multiple
 sub-bitstreams of lower frame rate (that we call temporal layers or TL)
@@ -51,13 +51,13 @@ dependencies between the different layers of an SVC bitstream are codec
 specific but, as a general rule of thumb higher temporal/spatial layers
 depend on lower temporal/spatial layers creating a dependency graph.
 
-For example, a scalable 720p@30fps VP8 bitstream can be broken down into 3
+For example, a scalable 720p@30fps VP8 bitstream is broken down into 3
 sub-bitstreams: one 720p@30fps layer (the highest temporal layer), that
 depends on a 720p@15fps layer that depends on a 720p7.5fps layer (the lowest
-temporal layer). In order for the decoder to be able decode the highest
+temporal layer). For the decoder to decode the highest
 temporal layer, it needs to get all the packets of its direct and transitive
-dependencies, so of both the other two layers. In this simple case we have a
-linked list of dependencies with the the lowest temporal layer as root and
+dependencies, so of both the other two layers. In this simple case, we have a
+linked list of dependencies with the lowest temporal layer as root and
 the highest temporal layer as a leaf.
 
 In the next few paragraphs, we'll describe how RTCP termination works exactly
@@ -69,7 +69,7 @@ media transport aspects of the WebRTC framework and RTP usage
 
 RTCP Sender Reports (SRs) [[RFC3550], Section 6.4.1] are used by media senders
 to compute RTT and by media receivers for A/V syncing and for computing packet
-loss. In its media sender role the JVB projects SSRCs for bandwidth adaptivity,
+loss. In its media sender role, the JVB projects SSRCs for bandwidth adaptivity,
 it needs to produce its own SRs. RTCP SR generation takes place in the various
 `AdaptiveSourceProjectionContext` implementations (see, for example,
 `BasicAdaptiveSourceProjectionContext#rewriteRtcp`).
@@ -84,7 +84,7 @@ can be used instead of TCCs if the delay-based controller is configured to run
 on the receiving endpoint, but that's not the default nowadays.
 
 The JVB (acting as a sender) consumes the TCC packets and feeds them to the
-delay-based bandwidth estimator of our GCC implementation in order to produce a
+delay-based bandwidth estimator of our GCC implementation to produce a
 bandwidth estimation [[BWE]]. The TCC packets (along with RRs and REMBs) are
 intercepted in `MediaStreamStatsImpl` where listeners can register and receive
 notifications about incoming packets. They are removed from incoming RTCP
@@ -144,41 +144,39 @@ delay-based controller.
 ## Bandwidth Distributions
 
 The `BitrateController` is attached to a _destination_ `VideoChannel` and it
-orchestrates the bandwidth adaptivity towards its attached endpoint (the
-endpoint of the attached video channel). The bitrate controller "reacts" (see
-`BitrateController#update`) on different events such as endpoints joining or
-leaving the call, the available bandwidth estimation changing, the active
-speaker changing, the viewport of a projected source changing, etc. Reacting to
-such an event is a multistep process with the end-goal of delivering to its
-attached endpoint the best overall video quality within the limits set by the
-bandwidth estimation and the options set by the endpoint.
+orchestrates the bandwidth adaptivity towards the endpoint of the attached video 
+channel. The `BitrateController` "reacts" (see `BitrateController#update`) to 
+different events such as endpoints joining or leaving the call, the available 
+bandwidth estimation changing, the active speaker changing, the viewport of 
+a projected source changing, etc. Reacting to events is a multistep process 
+with the end-goal of delivering the best overall video quality to its attached 
+endpoint within limits set by the bandwidth estimation and the options set by 
+the endpoint.
 
-The first step is to produce a bitrate allocation for each video source of each
-sender for each receiver in a call (see `SourceBitrateAllocation`). This step
-essentially determines which bitstream (encoding) will be forwarded for each of
-the projected sources.
+The first step is to produce a bitrate allocation for each sender's video source 
+for each receiver in a call (see `SourceBitrateAllocation`). This step
+determines which bitstream (encoding) to forward to each projected source.
 
 The next step is to update the list of video source projections that it maintains
 (see `AdaptiveSourceProjection`) with the newly computed quality targets. It is
 then the responsibility of the specific adaptive source projection instances to
-strive to achieve the target quality. The specific way of achieving the target
+strive to achieve the target quality. The particular way of achieving the target
 quality depends on the video source codec and on the encodings that the video
 source is offering. The offered encodings and the codec used are orthogonal
-concepts. An endpoint can be configured to send two encodings and it has the
-option to change the codec that its using on the fly and pass from VP8 to H264.
-The specific handling of the different codec in order to achieve the different
+concepts. An endpoint can be configured to send two encodings, and it has the
+option to change the codec used on the fly and pass from VP8 to H264.
+The specific handling of the different codec to achieve the different
 qualities is implemented in the different specializations of the
 `AdaptiveSourceProjectionContext` interface.
 
 ## Bugs
 
-While RTCP termination and bandwidth distribution are essential group
-conferencing features they are not desirable and they may degrade the quality of
-service in one-on-one calls. Unfortunately, there is no way to disable these 
-advanced features at the moment, i.e. it is not possible to make the JVB behave
-as a translator [[RFC7667]], not even for one-on-one calls. Due to this
-limitation it is recommended to use a TURN server [[TURN]] to relay one-to-one 
-calls for optimal conferencing experience.
+While RTCP termination and bandwidth distribution are essential to group
+conferencing, they are not desirable and may degrade service quality in one-on-one 
+calls. Unfortunately, there is no way to disable these advanced features at the 
+moment, i.e. it is not possible to make the JVB behave as a translator [[RFC7667]], 
+not even for one-on-one calls. Due to this limitation, a TURN server [[TURN]] 
+should relay one-to-one requests for the optimal conferencing experience.
 
 [MCS]: https://www.w3.org/TR/mediacapture-streams
 [WEBRTC]: https://www.w3.org/TR/webrtc/
