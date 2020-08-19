@@ -23,6 +23,7 @@ import org.jitsi.metaconfig.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.osgi.*;
+import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.xmpp.*;
 
 /**
@@ -92,6 +93,18 @@ public class Main
         ClientConnectionImpl clientConnectionImpl = ClientConnectionSupplierKt.singleton.get();
         clientConnectionImpl.start();
 
+        final StatsManager statsMgr = StatsManagerSupplierKt.singleton.get();
+        if (statsMgr != null)
+        {
+            statsMgr.addStatistics(new VideobridgeStatistics(), StatsManager.config.getInterval().toMillis());
+
+            StatsManager.config.getTransportConfigs().forEach(transportConfig -> {
+                statsMgr.addTransport(transportConfig.toStatsTransport(), transportConfig.getInterval().toMillis());
+            });
+
+            statsMgr.start();
+        }
+
         Logger logger = new LoggerImpl("org.jitsi.videobridge.Main");
 
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
@@ -102,6 +115,11 @@ public class Main
                 octoRelayService.stop();
             }
             clientConnectionImpl.stop();
+
+            if (statsMgr != null)
+            {
+                statsMgr.stop();
+            }
         }));
 
         ComponentMain main = new ComponentMain();
