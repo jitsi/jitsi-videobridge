@@ -640,7 +640,9 @@ public class BitrateController
     {
         logger.debug(() -> " endpoint ordering has changed, updating");
 
-        sortedEndpointIds = conferenceEndpoints;
+        List<String> newSortedEndpointIds = new ArrayList<>(conferenceEndpoints);
+        newSortedEndpointIds.remove(destinationEndpoint.getID());
+        sortedEndpointIds = newSortedEndpointIds;
         update();
     }
 
@@ -1004,13 +1006,13 @@ public class BitrateController
         if (adjustedLastN < 0)
         {
             // If lastN is disabled, pretend lastN == szConference.
-            adjustedLastN = conferenceEndpoints.size() - 1;
+            adjustedLastN = conferenceEndpoints.size();
         }
         else
         {
             // If lastN is enabled, pretend lastN at most as big as the size
             // of the conference.
-            adjustedLastN = Math.min(lastN, conferenceEndpoints.size() - 1);
+            adjustedLastN = Math.min(lastN, conferenceEndpoints.size());
         }
         if (logger.isDebugEnabled())
         {
@@ -1026,8 +1028,7 @@ public class BitrateController
         for (EndpointMultiRank endpointMultiRank : endpointMultiRankList)
         {
             AbstractEndpoint sourceEndpoint = endpointMultiRank.endpoint;
-            if (sourceEndpoint.isExpired()
-                || sourceEndpoint.getID().equals(destinationEndpoint.getID()))
+            if (sourceEndpoint.isExpired())
             {
                 continue;
             }
