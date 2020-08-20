@@ -20,6 +20,7 @@ import org.glassfish.hk2.utilities.binding.*;
 import org.jitsi.health.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.version.*;
+import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -64,7 +65,13 @@ public class OsgiServiceBinder extends AbstractBinder
                 return jvbVersionServiceSingleton.get();
             }
         }).to(VersionServiceProvider.class);
-        bind(new HealthCheckServiceProvider(bundleContext)).to(HealthCheckServiceProvider.class);
+        bind(new HealthCheckServiceProvider(null) {
+            @Override
+            public HealthCheckService get()
+            {
+                return HealthCheckServiceSupplierKt.singleton.get();
+            }
+        });
         bind(new ClientConnectionProvider(null) {
             @Override
             public ClientConnectionImpl get()

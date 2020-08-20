@@ -17,14 +17,16 @@
 package org.jitsi.videobridge.health
 
 import org.ice4j.ice.harvest.MappingCandidateHarvesters
+import org.jitsi.health.HealthCheckService
 import org.jitsi.health.HealthChecker
 import org.jitsi.videobridge.Conference
-import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.health.config.HealthConfig
 import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.sctp.SctpConfig
+import org.jitsi.videobridge.singleton
 
-class JvbHealthChecker(private val videobridge: Videobridge) {
+class JvbHealthChecker : HealthCheckService {
+    private val videobridge = singleton.get()
     private val config = HealthConfig()
     private val healthChecker = HealthChecker(
         config.interval,
@@ -54,6 +56,8 @@ class JvbHealthChecker(private val videobridge: Videobridge) {
             videobridge.expireConference(conference)
         }
     }
+
+    override fun getResult(): Exception? = healthChecker.result
 
     companion object {
         private var epId: Long = 0

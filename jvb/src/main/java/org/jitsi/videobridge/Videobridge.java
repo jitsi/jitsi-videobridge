@@ -31,6 +31,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.Version;
+import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.ice.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
@@ -464,11 +465,7 @@ public class Videobridge
      */
     private String getHealthStatus()
     {
-        HealthCheckService health = ServiceUtils2.getService(bundleContext, HealthCheckService.class);
-        if (health == null)
-        {
-            return "No health check service running";
-        }
+        HealthCheckService health = HealthCheckServiceSupplierKt.singleton.get();
 
         Exception result = health.getResult();
         return result == null ? "OK" : result.getMessage();
