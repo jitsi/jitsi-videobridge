@@ -16,14 +16,12 @@
 
 package org.jitsi.videobridge.health
 
-import org.jitsi.health.HealthCheckService
-
 class HealthCheckServiceSupplier {
-    private val healthCheckService: HealthCheckService by lazy {
+    private val healthCheckService: JvbHealthChecker by lazy {
         JvbHealthChecker()
     }
 
-    fun get(): HealthCheckService = healthCheckService
+    fun get(): JvbHealthChecker = healthCheckService
 }
 
 @JvmField
