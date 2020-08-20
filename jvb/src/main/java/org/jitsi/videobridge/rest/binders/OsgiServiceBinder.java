@@ -83,7 +83,6 @@ public class OsgiServiceBinder extends AbstractBinder
                 return ClientConnectionSupplierKt.singleton.get();
             }
         }).to(ClientConnectionProvider.class);
-        bind(new ConfigProvider(bundleContext)).to(ConfigProvider.class);
     }
 }
 
