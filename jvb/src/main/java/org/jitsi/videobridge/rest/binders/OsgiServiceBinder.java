@@ -75,7 +75,7 @@ public class OsgiServiceBinder extends AbstractBinder
             {
                 return HealthCheckServiceSupplierKt.singleton.get();
             }
-        });
+        }).to(HealthCheckServiceProvider.class);
         bind(new ClientConnectionProvider(null) {
             @Override
             public ClientConnectionImpl get()
