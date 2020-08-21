@@ -39,16 +39,16 @@ import static org.mockito.Mockito.*;
 
 public class DebugTest extends JerseyTest
 {
-    protected VideobridgeProvider videobridgeProvider;
+    protected VideobridgeSupplier videobridgeSupplier;
     protected Videobridge videobridge;
     protected static final String BASE_URL = "/debug";
 
     @Override
     protected Application configure()
     {
-        videobridgeProvider = mock(VideobridgeProvider.class);
+        videobridgeSupplier = mock(VideobridgeSupplier.class);
         videobridge = mock(Videobridge.class);
-        when(videobridgeProvider.get()).thenReturn(videobridge);
+        when(videobridgeSupplier.get()).thenReturn(videobridge);
 
         Endpoint endpoint = mock(Endpoint.class);
         Conference conference = mock(Conference.class);
@@ -59,7 +59,7 @@ public class DebugTest extends JerseyTest
         enable(TestProperties.DUMP_ENTITY);
         return new ResourceConfig() {
             {
-                register(new MockBinder<>(videobridgeProvider, VideobridgeProvider.class));
+                register(new MockBinder<>(videobridgeSupplier, VideobridgeSupplier.class));
                 register(Debug.class);
             }
         };

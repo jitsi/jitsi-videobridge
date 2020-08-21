@@ -16,6 +16,8 @@
 
 package org.jitsi.videobridge
 
+import org.jitsi.videobridge.service.ServiceSupplier
+
 /**
  * Rather than creating [Videobridge] as part of an OSGi service,
  * centralize its creation here.  This is a temporary solution until
@@ -27,13 +29,16 @@ package org.jitsi.videobridge
  * for testability.  Classes should take in an instance of [VideobridgeSupplier]
  * which can be swapped for testing.  Production code should use
  * [singleton] as the instance it passes everywhere.
+ *
+ * Note: this class needs to be open for testing (java/mockito can't mock
+ * a final class).  If we move tests to kotlin/mockk, we can remove it.
  */
-class VideobridgeSupplier {
+open class VideobridgeSupplier : ServiceSupplier<Videobridge> {
     private val videobridge: Videobridge by lazy {
         Videobridge()
     }
 
-    fun get(): Videobridge = videobridge
+    override fun get(): Videobridge = videobridge
 }
 
 @JvmField

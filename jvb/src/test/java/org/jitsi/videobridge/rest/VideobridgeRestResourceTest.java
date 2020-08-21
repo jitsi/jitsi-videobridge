@@ -26,18 +26,18 @@ import static org.mockito.Mockito.*;
 
 /**
  * A helper test class which handles mocking out a {@link Videobridge}
- * and a {@link VideobridgeProvider} which is needed for many of the
+ * and a {@link VideobridgeSupplier} which is needed for many of the
  * REST resources.
  */
 public abstract class VideobridgeRestResourceTest extends JerseyTest
 {
-    protected static VideobridgeProvider videobridgeProvider;
+    protected static VideobridgeSupplier videobridgeSupplier;
     protected static Videobridge videobridge;
 
     @BeforeClass
     public static void setup()
     {
-        videobridgeProvider = mock(VideobridgeProvider.class);
+        videobridgeSupplier = mock(VideobridgeSupplier.class);
         videobridge = mock(Videobridge.class);
     }
 

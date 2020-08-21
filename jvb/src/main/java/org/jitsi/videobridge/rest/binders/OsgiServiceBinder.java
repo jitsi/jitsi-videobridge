@@ -48,13 +48,6 @@ public class OsgiServiceBinder extends AbstractBinder
     @Override
     protected void configure()
     {
-        bind(new VideobridgeProvider(null) {
-            @Override
-            public Videobridge get()
-            {
-                return VideobridgeSupplierKt.singleton.get();
-            }
-        }).to(VideobridgeProvider.class);
         bind(new StatsManagerProvider(null) {
             @Override
             public StatsManager get()
