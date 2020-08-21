@@ -17,7 +17,12 @@
 package org.jitsi.videobridge.rest.binders;
 
 import org.glassfish.hk2.utilities.binding.*;
+import org.jitsi.health.*;
+import org.jitsi.osgi.*;
+import org.jitsi.utils.version.*;
+import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.version.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.osgi.framework.*;
 
@@ -40,6 +45,22 @@ public class OsgiServiceBinder extends AbstractBinder
     @Override
     protected void configure()
     {
+        // We still have to bind these under these types because this is how Jicoco accesses
+        // them
+        bind(new VersionServiceProvider(null) {
+            @Override
+            public VersionService get()
+            {
+                return VersionServiceSupplierKt.singleton.get();
+            }
+        }).to(VersionServiceProvider.class);
+        bind(new HealthCheckServiceProvider(null) {
+            @Override
+            public HealthCheckService get()
+            {
+                return HealthCheckServiceSupplierKt.singleton.get();
+            }
+        }).to(HealthCheckServiceProvider.class);
     }
 }
 
