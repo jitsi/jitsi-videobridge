@@ -16,7 +16,7 @@
 
 package org.jitsi.videobridge.stats
 
-import org.jitsi.videobridge.service.ServiceSupplier
+import org.jitsi.service.ServiceSupplier
 
 // Open for tests
 open class StatsManagerSupplier : ServiceSupplier<StatsManager?> {

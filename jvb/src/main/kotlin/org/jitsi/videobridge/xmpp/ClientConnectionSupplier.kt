@@ -16,7 +16,7 @@
 
 package org.jitsi.videobridge.xmpp
 
-import org.jitsi.videobridge.service.ServiceSupplier
+import org.jitsi.service.ServiceSupplier
 
 // Open for mocking
 open class ClientConnectionImplSupplier : ServiceSupplier<ClientConnectionImpl> {

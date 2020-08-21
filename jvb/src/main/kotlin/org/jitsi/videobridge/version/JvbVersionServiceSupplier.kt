@@ -14,22 +14,18 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.health
+package org.jitsi.videobridge.version
 
-import org.jitsi.health.HealthCheckService
-import org.jitsi.videobridge.service.ServiceSupplier
+import org.jitsi.utils.version.VersionService
+import org.jitsi.version.VersionServiceSupplier
 
-class HealthCheckServiceSupplier : ServiceSupplier<HealthCheckService> {
-    /**
-     * [HealthCheckService] doesn't expose start/stop methods, so we need
-     * to have [JvbHealthChecker] (which does) be the exposed type here.
-     */
-    private val healthCheckService: JvbHealthChecker by lazy {
-        JvbHealthChecker()
+class JvbVersionServiceSupplier : VersionServiceSupplier {
+    private val versionService: VersionService by lazy {
+        JvbVersionService()
     }
 
-    override fun get(): JvbHealthChecker = healthCheckService
+    override fun get(): VersionService = versionService
 }
 
 @JvmField
-val singleton = HealthCheckServiceSupplier()
+val singleton = JvbVersionServiceSupplier()

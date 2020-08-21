@@ -16,7 +16,7 @@
 
 package org.jitsi.videobridge
 
-import org.jitsi.videobridge.service.ServiceSupplier
+import org.jitsi.service.ServiceSupplier
 
 /**
  * Rather than creating [Videobridge] as part of an OSGi service,
