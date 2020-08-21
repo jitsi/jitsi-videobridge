@@ -21,9 +21,7 @@ import org.jitsi.health.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.health.*;
-import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.version.*;
-import org.jitsi.videobridge.xmpp.*;
 import org.osgi.framework.*;
 
 /**
@@ -63,4 +61,3 @@ public class OsgiServiceBinder extends AbstractBinder
         }).to(HealthCheckServiceProvider.class);
     }
 }
-
