@@ -30,6 +30,8 @@ public class Application extends ResourceConfig
     {
         // Register the resource binder for injecting OSGI services
         register(new OsgiServiceBinder(bundleContext));
+        // For injecting non-OSGi services
+        register(new ServiceBinder());
         // Filters
         register(ConfigFilter.class);
         // Register all resources in the package
