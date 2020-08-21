@@ -19,6 +19,8 @@ package org.jitsi.videobridge.rest.binders
 import org.glassfish.hk2.utilities.binding.AbstractBinder
 import org.jitsi.videobridge.VideobridgeSupplier
 import org.jitsi.videobridge.stats.StatsManagerSupplier
+import org.jitsi.videobridge.version.VersionServiceSupplier
+import org.jitsi.videobridge.version.singleton as versionServiceSupplierSingleton
 import org.jitsi.videobridge.stats.singleton as statsManagerSupplierSingleton
 import org.jitsi.videobridge.singleton as videobridgeSupplierSingleton
 
@@ -26,5 +28,6 @@ class ServiceBinder : AbstractBinder() {
     override fun configure() {
         bind(videobridgeSupplierSingleton).to(VideobridgeSupplier::class.java)
         bind(statsManagerSupplierSingleton).to(StatsManagerSupplier::class.java)
+        bind(versionServiceSupplierSingleton).to(VersionServiceSupplier::class.java)
     }
 }

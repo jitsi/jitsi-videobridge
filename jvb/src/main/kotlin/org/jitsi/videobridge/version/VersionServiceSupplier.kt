@@ -16,13 +16,16 @@
 
 package org.jitsi.videobridge.version
 
-class JvbVersionServiceSupplier {
-    private val jvbVersionService: JvbVersionService by lazy {
+import org.jitsi.utils.version.VersionService
+import org.jitsi.videobridge.service.ServiceSupplier
+
+class VersionServiceSupplier : ServiceSupplier<VersionService> {
+    private val versionService: VersionService by lazy {
         JvbVersionService()
     }
 
-    fun get(): JvbVersionService = jvbVersionService
+    override fun get(): VersionService = versionService
 }
 
 @JvmField
-val jvbVersionServiceSingleton = JvbVersionServiceSupplier()
+val singleton = VersionServiceSupplier()

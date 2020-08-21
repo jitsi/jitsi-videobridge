@@ -19,14 +19,13 @@ import org.jitsi.nlj.stats.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.version.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.health.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smackx.iqversion.packet.Version;
 import org.json.simple.*;
-
-import static org.jitsi.videobridge.version.JvbVersionServiceSupplierKt.jvbVersionServiceSingleton;
 
 /**
  * Implements logic for handling incoming IQs represented as Smack {@link IQ}
@@ -204,7 +203,7 @@ public class XmppCommon
      */
     private IQ handleVersionIQ(Version versionRequest)
     {
-        VersionService versionService = jvbVersionServiceSingleton.get();
+        VersionService versionService = VersionServiceSupplierKt.singleton.get();
 
         org.jitsi.utils.version.Version currentVersion
                 = versionService.getCurrentVersion();

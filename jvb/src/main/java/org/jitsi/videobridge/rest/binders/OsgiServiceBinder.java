@@ -18,16 +18,10 @@ package org.jitsi.videobridge.rest.binders;
 
 import org.glassfish.hk2.utilities.binding.*;
 import org.jitsi.health.*;
-import org.jitsi.osgi.*;
-import org.jitsi.utils.version.*;
-import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.health.*;
-import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.osgi.framework.*;
-
-import static org.jitsi.videobridge.version.JvbVersionServiceSupplierKt.jvbVersionServiceSingleton;
 
 /**
  * OsgiServiceBinder creates various providers for OSGI services
@@ -48,13 +42,6 @@ public class OsgiServiceBinder extends AbstractBinder
     @Override
     protected void configure()
     {
-        bind(new VersionServiceProvider(null) {
-            @Override
-            public VersionService get()
-            {
-                return jvbVersionServiceSingleton.get();
-            }
-        }).to(VersionServiceProvider.class);
         bind(new HealthCheckServiceProvider(null) {
             @Override
             public HealthCheckService get()
