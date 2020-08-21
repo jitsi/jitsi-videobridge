@@ -48,13 +48,6 @@ public class OsgiServiceBinder extends AbstractBinder
     @Override
     protected void configure()
     {
-        bind(new StatsManagerProvider(null) {
-            @Override
-            public StatsManager get()
-            {
-                return StatsManagerSupplierKt.singleton.get();
-            }
-        }).to(StatsManagerProvider.class);
         bind(new VersionServiceProvider(null) {
             @Override
             public VersionService get()
