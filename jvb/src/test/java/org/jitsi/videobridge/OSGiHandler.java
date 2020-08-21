@@ -42,7 +42,7 @@ public class OSGiHandler
             @Override
             protected String[][] getBundlesImpl()
             {
-                // Add an emptuy block at the end so our added BundleActivator, which this class
+                // Add an empty block at the end so our added BundleActivator, which this class
                 // blocks on to make sure all services have started by the end of #start, runs
                 // all by itself at the very end.  If this empty group isn't added, there can
                 // be a race condition between this service and any other service started in
