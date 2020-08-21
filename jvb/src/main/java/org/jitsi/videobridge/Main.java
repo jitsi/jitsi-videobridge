@@ -21,6 +21,7 @@ import org.jitsi.cmd.*;
 import org.jitsi.meet.*;
 import org.jitsi.metaconfig.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.stats.*;
@@ -104,6 +105,7 @@ public class Main
 
             statsMgr.start();
         }
+        HealthCheckServiceSupplierKt.singleton.get().start();
 
         Logger logger = new LoggerImpl("org.jitsi.videobridge.Main");
 
@@ -120,6 +122,8 @@ public class Main
             {
                 statsMgr.stop();
             }
+
+            HealthCheckServiceSupplierKt.singleton.get().stop();
         }));
 
         ComponentMain main = new ComponentMain();

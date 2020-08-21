@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.util;
+package org.jitsi.videobridge.health
 
-import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
-import org.osgi.framework.*;
-
-public class ConfigProvider extends OsgiServiceProvider<ConfigurationService>
-{
-    public ConfigProvider(BundleContext bundleContext)
-    {
-        super(bundleContext, ConfigurationService.class);
+class HealthCheckServiceSupplier {
+    private val healthCheckService: JvbHealthChecker by lazy {
+        JvbHealthChecker()
     }
+
+    fun get(): JvbHealthChecker = healthCheckService
 }
+
+@JvmField
+val singleton = HealthCheckServiceSupplier()

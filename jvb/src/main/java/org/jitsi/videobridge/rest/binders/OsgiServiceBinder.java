@@ -20,6 +20,8 @@ import org.glassfish.hk2.utilities.binding.*;
 import org.jitsi.health.*;
 import org.jitsi.osgi.*;
 import org.jitsi.utils.version.*;
+import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -46,7 +48,13 @@ public class OsgiServiceBinder extends AbstractBinder
     @Override
     protected void configure()
     {
-        bind(new VideobridgeProvider(bundleContext)).to(VideobridgeProvider.class);
+        bind(new VideobridgeProvider(null) {
+            @Override
+            public Videobridge get()
+            {
+                return VideobridgeSupplierKt.singleton.get();
+            }
+        }).to(VideobridgeProvider.class);
         bind(new StatsManagerProvider(null) {
             @Override
             public StatsManager get()
@@ -54,9 +62,6 @@ public class OsgiServiceBinder extends AbstractBinder
                 return StatsManagerSupplierKt.singleton.get();
             }
         }).to(StatsManagerProvider.class);
-        bind(new VideobridgeProvider((bundleContext))).to(VideobridgeProvider.class);
-        // Instead of refactoring the service provider hierarchy in order to pull this from a non-osgi location,
-        // just pass a null BundleContext and override get()
         bind(new VersionServiceProvider(null) {
             @Override
             public VersionService get()
@@ -64,7 +69,13 @@ public class OsgiServiceBinder extends AbstractBinder
                 return jvbVersionServiceSingleton.get();
             }
         }).to(VersionServiceProvider.class);
-        bind(new HealthCheckServiceProvider(bundleContext)).to(HealthCheckServiceProvider.class);
+        bind(new HealthCheckServiceProvider(null) {
+            @Override
+            public HealthCheckService get()
+            {
+                return HealthCheckServiceSupplierKt.singleton.get();
+            }
+        }).to(HealthCheckServiceProvider.class);
         bind(new ClientConnectionProvider(null) {
             @Override
             public ClientConnectionImpl get()
@@ -72,8 +83,6 @@ public class OsgiServiceBinder extends AbstractBinder
                 return ClientConnectionSupplierKt.singleton.get();
             }
         }).to(ClientConnectionProvider.class);
-        bind(new ClientConnectionProvider((bundleContext))).to(ClientConnectionProvider.class);
-        bind(new ConfigProvider(bundleContext)).to(ConfigProvider.class);
     }
 }
 

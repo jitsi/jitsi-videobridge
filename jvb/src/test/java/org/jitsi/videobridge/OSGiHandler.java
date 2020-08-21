@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.apache.commons.lang3.*;
 import org.jitsi.meet.*;
 import org.jitsi.osgi.*;
 import org.jitsi.videobridge.osgi.*;
@@ -37,7 +38,18 @@ public class OSGiHandler
         System.setProperty(
             "net.java.sip.communicator.impl.configuration.USE_PROPFILE_CONFIG",
             "true");
-        OSGi.setBundleConfig(new BundleConfig());
+        OSGi.setBundleConfig(new BundleConfig() {
+            @Override
+            protected String[][] getBundlesImpl()
+            {
+                // Add an empty block at the end so our added BundleActivator, which this class
+                // blocks on to make sure all services have started by the end of #start, runs
+                // all by itself at the very end.  If this empty group isn't added, there can
+                // be a race condition between this service and any other service started in
+                // the last group
+                return ArrayUtils.addAll(super.getBundlesImpl(), new String[1][0]);
+            }
+        });
         OSGi.setClassLoader(ClassLoader.getSystemClassLoader());
 
         activator =
