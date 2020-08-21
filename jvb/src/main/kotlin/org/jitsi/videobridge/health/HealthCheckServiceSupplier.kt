@@ -16,12 +16,19 @@
 
 package org.jitsi.videobridge.health
 
-class HealthCheckServiceSupplier {
+import org.jitsi.health.HealthCheckService
+import org.jitsi.videobridge.service.ServiceSupplier
+
+class HealthCheckServiceSupplier : ServiceSupplier<HealthCheckService> {
+    /**
+     * [HealthCheckService] doesn't expose start/stop methods, so we need
+     * to have [JvbHealthChecker] (which does) be the exposed type here.
+     */
     private val healthCheckService: JvbHealthChecker by lazy {
         JvbHealthChecker()
     }
 
-    fun get(): JvbHealthChecker = healthCheckService
+    override fun get(): JvbHealthChecker = healthCheckService
 }
 
 @JvmField
