@@ -16,10 +16,10 @@
 
 package org.jitsi.videobridge.xmpp
 
-import org.jitsi.service.ServiceSupplier
+import java.util.function.Supplier
 
 // Open for mocking
-open class ClientConnectionImplSupplier : ServiceSupplier<ClientConnectionImpl> {
+open class ClientConnectionImplSupplier : Supplier<ClientConnectionImpl> {
     private val clientConnectionImpl: ClientConnectionImpl by lazy {
         ClientConnectionImpl()
     }

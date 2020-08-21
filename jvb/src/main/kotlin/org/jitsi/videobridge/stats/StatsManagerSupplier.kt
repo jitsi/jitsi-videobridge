@@ -16,10 +16,10 @@
 
 package org.jitsi.videobridge.stats
 
-import org.jitsi.service.ServiceSupplier
+import java.util.function.Supplier
 
 // Open for tests
-open class StatsManagerSupplier : ServiceSupplier<StatsManager?> {
+open class StatsManagerSupplier : Supplier<StatsManager?> {
     private val statsManager: StatsManager? by lazy {
         if (StatsManager.config.enabled) {
             StatsManager()

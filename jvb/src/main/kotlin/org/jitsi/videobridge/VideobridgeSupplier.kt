@@ -16,7 +16,7 @@
 
 package org.jitsi.videobridge
 
-import org.jitsi.service.ServiceSupplier
+import java.util.function.Supplier
 
 /**
  * Rather than creating [Videobridge] as part of an OSGi service,
@@ -33,7 +33,7 @@ import org.jitsi.service.ServiceSupplier
  * Note: this class needs to be open for testing (java/mockito can't mock
  * a final class).  If we move tests to kotlin/mockk, we can remove it.
  */
-open class VideobridgeSupplier : ServiceSupplier<Videobridge> {
+open class VideobridgeSupplier : Supplier<Videobridge> {
     private val videobridge: Videobridge by lazy {
         Videobridge()
     }
