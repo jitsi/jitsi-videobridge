@@ -18,7 +18,6 @@ package org.jitsi.videobridge.rest.root.colibri.mucclient;
 
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
-import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
@@ -36,7 +35,7 @@ import javax.ws.rs.core.*;
 public class MucClient
 {
     @Inject
-    protected ClientConnectionProvider clientConnectionProvider;
+    protected ClientConnectionImplSupplier clientConnectionImplSupplier;
 
     @Path("/add")
     @POST
@@ -52,7 +51,7 @@ public class MucClient
         {
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
         }
-        ClientConnectionImpl clientConnection = clientConnectionProvider.get();
+        ClientConnectionImpl clientConnection = clientConnectionImplSupplier.get();
         if (clientConnection.addMucClient((JSONObject)o))
         {
             return Response.ok().build();
@@ -70,7 +69,7 @@ public class MucClient
         {
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
         }
-        ClientConnectionImpl clientConnection = clientConnectionProvider.get();
+        ClientConnectionImpl clientConnection = clientConnectionImplSupplier.get();
         if (clientConnection.removeMucClient((JSONObject)o))
         {
             return Response.ok().build();

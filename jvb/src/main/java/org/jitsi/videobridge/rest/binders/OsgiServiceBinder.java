@@ -40,13 +40,6 @@ public class OsgiServiceBinder extends AbstractBinder
     @Override
     protected void configure()
     {
-        bind(new ClientConnectionProvider(null) {
-            @Override
-            public ClientConnectionImpl get()
-            {
-                return ClientConnectionSupplierKt.singleton.get();
-            }
-        }).to(ClientConnectionProvider.class);
     }
 }
 
