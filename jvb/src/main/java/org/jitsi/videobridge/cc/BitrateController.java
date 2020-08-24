@@ -158,7 +158,7 @@ public class BitrateController
     private long lastBwe = -1;
 
     /**
-     * The list of endpoints ids ordered by activity.
+     * The list of endpoints ids ordered by activity (minus the id of the {@link #destinationEndpoint}).
      */
     private List<String> sortedEndpointIds;
 
@@ -447,6 +447,7 @@ public class BitrateController
         debugState.put("trustBwe", BitrateControllerConfig.trustBwe());
         debugState.put("lastBwe", lastBwe);
         debugState.put("videoConstraints", videoConstraintsMap);
+        debugState.put("effectiveVideoConstraints", effectiveConstraintsMap);
         debugState.put("lastN", lastN);
         debugState.put("supportsRtx", supportsRtx);
         JSONObject adaptiveSourceProjectionsJson = new JSONObject();
