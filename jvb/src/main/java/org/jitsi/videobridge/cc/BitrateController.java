@@ -27,8 +27,10 @@ import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.cc.config.*;
+import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 
+import javax.annotation.CheckReturnValue;
 import java.lang.*;
 import java.lang.SuppressWarnings;
 import java.time.*;
@@ -214,6 +216,11 @@ public class BitrateController
         new AtomicInteger(0);
 
     private final Clock clock;
+
+    /**
+     * The last time {@link BitrateController#update()} was called
+     */
+    private Instant lastUpdateTime = Instant.MAX;
 
     /**
      * Initializes a new {@link BitrateController} instance which is to
@@ -427,6 +434,11 @@ public class BitrateController
      */
     public boolean accept(RtcpSrPacket rtcpSrPacket)
     {
+        if (Duration.between(lastUpdateTime, clock.instant())
+                .compareTo(BitrateControllerConfig.maxTimeBetweenCalculations()) > 0) {
+            logger.debug("Forcing an update");
+            TaskPools.CPU_POOL.submit(this::update);
+        }
         long ssrc = rtcpSrPacket.getSenderSsrc();
 
         AdaptiveSourceProjection adaptiveSourceProjection
@@ -443,7 +455,6 @@ public class BitrateController
         // We only accept SRs for the SSRC that we're forwarding with.
         return ssrc == adaptiveSourceProjection.getTargetSsrc();
     }
-
 
     public boolean transformRtcp(RtcpSrPacket rtcpSrPacket)
     {
@@ -677,6 +688,7 @@ public class BitrateController
     private synchronized void update()
     {
         Instant now = clock.instant();
+        lastUpdateTime = now;
         long nowMs = now.toEpochMilli();
 
         long bweBps = getAvailableBandwidth(nowMs);
