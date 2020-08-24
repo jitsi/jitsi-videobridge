@@ -31,6 +31,7 @@ import org.json.simple.*;
 
 import java.lang.*;
 import java.lang.SuppressWarnings;
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.*;
@@ -212,6 +213,8 @@ public class BitrateController
     private final AtomicInteger numDroppedPacketsUnknownSsrc =
         new AtomicInteger(0);
 
+    private final Clock clock;
+
     /**
      * Initializes a new {@link BitrateController} instance which is to
      * belong to a particular {@link Endpoint}.
@@ -219,14 +222,24 @@ public class BitrateController
     public BitrateController(
             Endpoint destinationEndpoint,
             @NotNull DiagnosticContext diagnosticContext,
-            Logger parentLogger
+            Logger parentLogger,
+            Clock clock
     )
     {
         this.destinationEndpoint = destinationEndpoint;
         this.diagnosticContext = diagnosticContext;
         this.logger = parentLogger.createChildLogger(BitrateController.class.getName());
+        this.clock = clock;
 
         enableVideoQualityTracing = timeSeriesLogger.isTraceEnabled();
+    }
+
+    public BitrateController(
+        Endpoint destinationEndpoint,
+        @NotNull DiagnosticContext diagnosticContext,
+        Logger parentLogger
+    ) {
+        this(destinationEndpoint, diagnosticContext, parentLogger, Clock.systemUTC());
     }
 
     /**
@@ -520,7 +533,7 @@ public class BitrateController
         }
         List<Long> activeSsrcs = new ArrayList<>();
         long totalTargetBps = 0, totalIdealBps = 0;
-        long nowMs = System.currentTimeMillis();
+        long nowMs = clock.instant().toEpochMilli();
         for (MediaSourceDesc incomingSource : destinationEndpoint
             .getConference().getEndpoints().stream()
             .filter(e -> !destinationEndpoint.equals(e))
@@ -663,7 +676,8 @@ public class BitrateController
      */
     private synchronized void update()
     {
-        long nowMs = System.currentTimeMillis();
+        Instant now = clock.instant();
+        long nowMs = now.toEpochMilli();
 
         long bweBps = getAvailableBandwidth(nowMs);
 
@@ -1120,7 +1134,7 @@ public class BitrateController
         VideoRtpPacket videoPacket = (VideoRtpPacket)packetInfo.getPacket();
         if (firstMediaMs == -1)
         {
-            firstMediaMs = System.currentTimeMillis();
+            firstMediaMs = clock.instant().toEpochMilli();
         }
 
         Long ssrc = videoPacket.getSsrc();
@@ -1302,7 +1316,7 @@ public class BitrateController
                 return;
             }
 
-            long nowMs = System.currentTimeMillis();
+            long nowMs = clock.instant().toEpochMilli();
             List<RateSnapshot> ratesList = new ArrayList<>();
             // Initialize the list of flows that we will consider for sending
             // for this source. For example, for the on-stage participant we
