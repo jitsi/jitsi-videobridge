@@ -27,10 +27,13 @@ import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.cc.config.*;
+import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 
+import javax.annotation.CheckReturnValue;
 import java.lang.*;
 import java.lang.SuppressWarnings;
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.*;
@@ -212,6 +215,13 @@ public class BitrateController
     private final AtomicInteger numDroppedPacketsUnknownSsrc =
         new AtomicInteger(0);
 
+    private final Clock clock;
+
+    /**
+     * The last time {@link BitrateController#update()} was called
+     */
+    private Instant lastUpdateTime = Instant.MIN;
+
     /**
      * Initializes a new {@link BitrateController} instance which is to
      * belong to a particular {@link Endpoint}.
@@ -219,14 +229,24 @@ public class BitrateController
     public BitrateController(
             Endpoint destinationEndpoint,
             @NotNull DiagnosticContext diagnosticContext,
-            Logger parentLogger
+            Logger parentLogger,
+            Clock clock
     )
     {
         this.destinationEndpoint = destinationEndpoint;
         this.diagnosticContext = diagnosticContext;
         this.logger = parentLogger.createChildLogger(BitrateController.class.getName());
+        this.clock = clock;
 
         enableVideoQualityTracing = timeSeriesLogger.isTraceEnabled();
+    }
+
+    public BitrateController(
+        Endpoint destinationEndpoint,
+        @NotNull DiagnosticContext diagnosticContext,
+        Logger parentLogger
+    ) {
+        this(destinationEndpoint, diagnosticContext, parentLogger, Clock.systemUTC());
     }
 
     /**
@@ -414,6 +434,11 @@ public class BitrateController
      */
     public boolean accept(RtcpSrPacket rtcpSrPacket)
     {
+        if (Duration.between(lastUpdateTime, clock.instant())
+                .compareTo(BitrateControllerConfig.maxTimeBetweenCalculations()) > 0) {
+            logger.debug("Forcing an update");
+            TaskPools.CPU_POOL.submit(this::update);
+        }
         long ssrc = rtcpSrPacket.getSenderSsrc();
 
         AdaptiveSourceProjection adaptiveSourceProjection
@@ -430,7 +455,6 @@ public class BitrateController
         // We only accept SRs for the SSRC that we're forwarding with.
         return ssrc == adaptiveSourceProjection.getTargetSsrc();
     }
-
 
     public boolean transformRtcp(RtcpSrPacket rtcpSrPacket)
     {
@@ -520,7 +544,7 @@ public class BitrateController
         }
         List<Long> activeSsrcs = new ArrayList<>();
         long totalTargetBps = 0, totalIdealBps = 0;
-        long nowMs = System.currentTimeMillis();
+        long nowMs = clock.instant().toEpochMilli();
         for (MediaSourceDesc incomingSource : destinationEndpoint
             .getConference().getEndpoints().stream()
             .filter(e -> !destinationEndpoint.equals(e))
@@ -663,7 +687,9 @@ public class BitrateController
      */
     private synchronized void update()
     {
-        long nowMs = System.currentTimeMillis();
+        Instant now = clock.instant();
+        lastUpdateTime = now;
+        long nowMs = now.toEpochMilli();
 
         long bweBps = getAvailableBandwidth(nowMs);
 
@@ -1120,7 +1146,7 @@ public class BitrateController
         VideoRtpPacket videoPacket = (VideoRtpPacket)packetInfo.getPacket();
         if (firstMediaMs == -1)
         {
-            firstMediaMs = System.currentTimeMillis();
+            firstMediaMs = clock.instant().toEpochMilli();
         }
 
         Long ssrc = videoPacket.getSsrc();
@@ -1302,7 +1328,7 @@ public class BitrateController
                 return;
             }
 
-            long nowMs = System.currentTimeMillis();
+            long nowMs = clock.instant().toEpochMilli();
             List<RateSnapshot> ratesList = new ArrayList<>();
             // Initialize the list of flows that we will consider for sending
             // for this source. For example, for the on-stage participant we

@@ -19,6 +19,7 @@ package org.jitsi.videobridge.cc.config
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
+import java.time.Duration
 
 class BitrateControllerConfig {
     companion object {
@@ -108,5 +109,15 @@ class BitrateControllerConfig {
 
         @JvmStatic
         fun onstageIdealHeightPx() = onstageIdealHeightPx
+
+        /**
+         * The maximum amount of time we'll run before recalculating which streams we'll
+         * forward.
+         */
+        private val maxTimeBetweenCalculations: Duration by
+            config("videobridge.cc.max-time-between-calculations".from(JitsiConfig.newConfig))
+
+        @JvmStatic
+        fun maxTimeBetweenCalculations() = maxTimeBetweenCalculations
     }
 }
