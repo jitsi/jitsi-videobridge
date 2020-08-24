@@ -220,7 +220,7 @@ public class BitrateController
     /**
      * The last time {@link BitrateController#update()} was called
      */
-    private Instant lastUpdateTime = Instant.MAX;
+    private Instant lastUpdateTime = Instant.MIN;
 
     /**
      * Initializes a new {@link BitrateController} instance which is to
