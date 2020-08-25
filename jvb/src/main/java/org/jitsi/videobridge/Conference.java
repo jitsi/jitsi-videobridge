@@ -543,10 +543,7 @@ public class Conference
             eventAdmin.sendEvent(EventFactory.conferenceExpired(this));
         }
 
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Expiring endpoints.");
-        }
+        logger.debug(() -> "Expiring endpoints.");
         getEndpoints().forEach(AbstractEndpoint::expire);
         speechActivity.expire();
         if (tentacle != null)
