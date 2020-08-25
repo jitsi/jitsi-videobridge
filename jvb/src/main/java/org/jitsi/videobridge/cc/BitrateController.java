@@ -816,10 +816,12 @@ public class BitrateController
 
         if (!newEffectiveConstraints.equals(effectiveConstraintsMap))
         {
-            // TODO make the call outside the synchornized block.
-            destinationEndpoint.effectiveVideoConstraintsChanged(
-                ImmutableMap.copyOf(effectiveConstraintsMap), ImmutableMap.copyOf(newEffectiveConstraints));
+            ImmutableMap<String, VideoConstraints>
+                oldEffectiveConstraints = ImmutableMap.copyOf(effectiveConstraintsMap);
+            // TODO make the call outside the synchronized block.
             effectiveConstraintsMap = newEffectiveConstraints;
+            destinationEndpoint.effectiveVideoConstraintsChanged(
+                oldEffectiveConstraints, ImmutableMap.copyOf(newEffectiveConstraints));
         }
 
         this.forwardedEndpointIds = newForwardedEndpointIds;
