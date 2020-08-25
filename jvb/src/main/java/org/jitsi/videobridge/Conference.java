@@ -543,30 +543,21 @@ public class Conference
             eventAdmin.sendEvent(EventFactory.conferenceExpired(this));
         }
 
-        Videobridge videobridge = getVideobridge();
-
-        try
+        if (logger.isDebugEnabled())
         {
-            videobridge.expireConference(this);
+            logger.debug("Expiring endpoints.");
         }
-        finally
+        getEndpoints().forEach(AbstractEndpoint::expire);
+        speechActivity.expire();
+        if (tentacle != null)
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Expiring endpoints.");
-            }
-            getEndpoints().forEach(AbstractEndpoint::expire);
-            speechActivity.expire();
-            if (tentacle != null)
-            {
-                tentacle.expire();
-                tentacle = null;
-            }
+            tentacle.expire();
+            tentacle = null;
+        }
 
-            if (includeInStatistics)
-            {
-                updateStatisticsOnExpire();
-            }
+        if (includeInStatistics)
+        {
+            updateStatisticsOnExpire();
         }
     }
 
