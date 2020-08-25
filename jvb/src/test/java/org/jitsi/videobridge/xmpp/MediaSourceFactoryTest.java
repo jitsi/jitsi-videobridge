@@ -22,7 +22,6 @@ import org.jitsi.xmpp.extensions.jingle.*;
 import org.junit.*;
 import org.junit.runner.*;
 import org.powermock.modules.junit4.*;
-import org.powermock.reflect.*;
 
 import java.util.*;
 
@@ -62,15 +61,11 @@ public class MediaSourceFactoryTest
         verifyAll();
     }
 
-    // 1 video stream -> 1 source, 1 encoding
+    // 1 video stream -> 1 source, 1 layer
     @Test
     public void createMediaSource()
-        throws Exception
     {
         replayAll();
-
-        Whitebox.setInternalState(
-                MediaSourceFactory.class, "ENABLE_SVC", false);
 
         long videoSsrc = 12345;
 
@@ -86,16 +81,11 @@ public class MediaSourceFactoryTest
         assertEquals(1, source.numRtpLayers());
     }
 
-    // 1 video stream, 1 rtx -> 1 source, 1 encoding
+    // 1 video stream, 1 rtx -> 1 source, 1 layer
     @Test
     public void createMediaSources1()
-        throws
-        Exception
     {
         replayAll();
-
-        Whitebox.setInternalState(
-                MediaSourceFactory.class, "ENABLE_SVC", false);
 
         long videoSsrc = 12345;
         long rtxSsrc = 54321;
@@ -109,7 +99,7 @@ public class MediaSourceFactoryTest
 
         MediaSourceDesc[] sources =
             MediaSourceFactory.createMediaSources(
-                Arrays.asList(videoSource, rtx), Arrays.asList(rtxGroup));
+                Arrays.asList(videoSource, rtx), Collections.singletonList(rtxGroup));
 
         assertNotNull(sources);
         assertEquals(1, sources.length);
@@ -117,16 +107,11 @@ public class MediaSourceFactoryTest
         assertEquals(1, source.numRtpLayers());
     }
 
-    // 3 sim streams, 3 rtx -> 1 source, 3 encodings
+    // 3 sim streams, 3 rtx -> 1 source, 9 layers
     @Test
     public void createMediaSources2()
-        throws
-        Exception
     {
         replayAll();
-
-        Whitebox.setInternalState(
-                MediaSourceFactory.class, "ENABLE_SVC", false);
 
         long videoSsrc1 = 12345;
         long videoSsrc2 = 23456;
@@ -167,23 +152,14 @@ public class MediaSourceFactoryTest
         assertNotNull(sources);
         assertEquals(1, sources.length);
         MediaSourceDesc source = sources[0];
-        assertEquals(3, source.numRtpLayers());
+        assertEquals(9, source.numRtpLayers());
     }
 
-    // 3 sim streams, svc enabled, 3 rtx -> 1 source, 3 encodings
+    // 3 sim streams, svc enabled, 3 rtx -> 1 source, 3 layers
     @Test
     public void createMediaSources3()
-        throws
-        Exception
     {
         replayAll();
-
-        // Here we add an override for the config service for a specific setting
-        // NOTE: we can't do this via the mock return values, because the mock
-        // values are only read once for the entire test class (because the
-        // fields are static)
-        Whitebox.setInternalState(
-            MediaSourceFactory.class, "ENABLE_SVC", true);
 
         long videoSsrc1 = 12345;
         long videoSsrc2 = 23456;
@@ -228,12 +204,8 @@ public class MediaSourceFactoryTest
     // 3 sim streams with rtx, 1 stream with rtx, 1 stream without rtx
     @Test
     public void createMediaSources4()
-        throws Exception
     {
         replayAll();
-
-        Whitebox.setInternalState(
-            MediaSourceFactory.class, "ENABLE_SVC", true);
 
         long videoSsrc1 = 12345;
         long videoSsrc2 = 23456;
@@ -304,9 +276,9 @@ public class MediaSourceFactoryTest
 
         MediaSourceDesc[] sources =
             MediaSourceFactory.createMediaSources(
-                Arrays.asList(
-                    videoSource1),
-                Arrays.asList(simGroup));
+                Collections.singletonList(videoSource1),
+                Collections.singletonList(simGroup)
+            );
 
         assertNotNull(sources);
         assertEquals(1, sources.length);
@@ -323,7 +295,7 @@ public class MediaSourceFactoryTest
 
         MediaSourceDesc[] sources =
             MediaSourceFactory.createMediaSources(
-                Arrays.asList(videoSource1),
+                Collections.singletonList(videoSource1),
                 Collections.emptyList()
             );
 
