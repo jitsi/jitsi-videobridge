@@ -626,13 +626,13 @@ public class Endpoint
         Set<String> removedEndpoints = new HashSet<>(oldVideoConstraints.keySet());
         removedEndpoints.removeAll(newVideoConstraints.keySet());
 
-        // Sources that "this" endpoint no longer cares about what it receives.
+        // Sources that "this" endpoint no longer receives.
         for (String id : removedEndpoints)
         {
             AbstractEndpoint senderEndpoint = getConference().getEndpoint(id);
             if (senderEndpoint != null)
             {
-                senderEndpoint.addReceiver(getID(), VideoConstraints.thumbnailVideoConstraints);
+                senderEndpoint.removeReceiver(getID());
             }
         }
 
