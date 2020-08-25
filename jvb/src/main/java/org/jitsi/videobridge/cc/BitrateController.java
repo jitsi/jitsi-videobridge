@@ -119,12 +119,6 @@ public class BitrateController
         = TimeSeriesLogger.getTimeSeriesLogger(BitrateController.class);
 
     /**
-     * An empty set of {@link String}s instance.
-     */
-    private static final Set<String> INITIAL_EMPTY_SET
-        = Collections.unmodifiableSet(new HashSet<>(0));
-
-    /**
      * The {@link AdaptiveSourceProjection}s that this instance is managing, keyed
      * by the SSRCs of the associated {@link MediaSourceDesc}.
      */
@@ -136,7 +130,7 @@ public class BitrateController
      * represented by their IDs. Required for backwards compatibility with
      * existing LastN code.
      */
-    private Set<String> forwardedEndpointIds = INITIAL_EMPTY_SET;
+    private Set<String> forwardedEndpointIds = Collections.emptySet();
 
     /**
      * A boolean that indicates whether to enable or disable the video quality
