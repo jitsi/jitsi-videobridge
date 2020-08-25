@@ -33,7 +33,7 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-import static org.jitsi.videobridge.VideoConstraints.thumbnailVideoConstraints;
+import static org.jitsi.videobridge.VideoConstraints.disabledVideoConstraints;
 
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
@@ -50,7 +50,7 @@ public abstract class AbstractEndpoint
     /**
      * The default video constraints to assume when nothing is signaled.
      */
-    private static final VideoConstraints defaultMaxReceiverVideoConstraints = thumbnailVideoConstraints;
+    private static final VideoConstraints defaultMaxReceiverVideoConstraints = disabledVideoConstraints;
 
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a
