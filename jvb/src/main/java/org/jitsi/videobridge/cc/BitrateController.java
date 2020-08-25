@@ -1017,7 +1017,7 @@ public class BitrateController
         List<SourceBitrateAllocation> sourceBitrateAllocations
             = new ArrayList<>();
 
-        int adjustedLastN = this.lastN;
+        int adjustedLastN = JvbLastNKt.calculateLastN(this.lastN, JvbLastNKt.jvbLastNSingleton.getJvbLastN());
         if (adjustedLastN < 0)
         {
             // If lastN is disabled, pretend lastN == szConference.
