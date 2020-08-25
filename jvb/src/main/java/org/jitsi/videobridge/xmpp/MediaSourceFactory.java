@@ -40,20 +40,6 @@ public class MediaSourceFactory
         = new LoggerImpl(MediaSourceFactory.class.getName());
 
     /**
-     * The system property name that for a boolean that's controlling whether or
-     * not to enable temporal scalability filtering for VP8.
-     */
-    public static final String ENABLE_SVC_PNAME = "org.jitsi" +
-        ".videobridge.ENABLE_SVC";
-
-    /**
-     * The system property name that for a boolean that's controlling whether or
-     * not to enable temporal scalability filtering for VP8.
-     */
-    public static final String ENABLE_VP9_SVC_PNAME = "org.jitsi" +
-        ".videobridge.ENABLE_VP9_SVC";
-
-    /**
      * The default number of temporal layers to use for VP8 simulcast.
      *
      * FIXME: hardcoded ugh.. this should be either signaled or somehow included
@@ -68,29 +54,6 @@ public class MediaSourceFactory
      * in the RTP stream.
      */
     private static final int VP8_SIMULCAST_BASE_LAYER_HEIGHT = 180;
-
-    /**
-     * The default number of spatial layers to use for VP9 SVC.
-     *
-     * FIXME: hardcoded ugh.. this should be either signaled or somehow included
-     * in the RTP stream.
-     */
-    private static final int VP9_SVC_SPATIAL_LAYERS = 3;
-
-    /**
-     * The default number of spatial layers to use for VP9 SVC.
-     *
-     * FIXME: hardcoded ugh.. this should be either signaled or somehow included
-     * in the RTP stream.
-     */
-    private static final int VP9_SVC_TEMPORAL_LAYERS = 3;
-
-    /**
-     * A boolean that determines whether to enable support for VP9 SVC. This is
-     * experimental and is left disabled by default.
-     * TODO: make configurable if needed.
-     */
-    private static final boolean ENABLE_VP9_SVC = false;
 
     /**
      * libjitsi isn't aware of the group semantics names defined in
