@@ -61,7 +61,7 @@ public class MediaSourceFactoryTest
         verifyAll();
     }
 
-    // 1 video stream -> 1 source, 1 encoding
+    // 1 video stream -> 1 source, 1 layer
     @Test
     public void createMediaSource()
     {
@@ -81,7 +81,7 @@ public class MediaSourceFactoryTest
         assertEquals(1, source.numRtpLayers());
     }
 
-    // 1 video stream, 1 rtx -> 1 source, 1 encoding
+    // 1 video stream, 1 rtx -> 1 source, 1 layer
     @Test
     public void createMediaSources1()
     {
@@ -107,7 +107,7 @@ public class MediaSourceFactoryTest
         assertEquals(1, source.numRtpLayers());
     }
 
-    // 3 sim streams, 3 rtx -> 1 source, 9 encodings
+    // 3 sim streams, 3 rtx -> 1 source, 9 layers
     @Test
     public void createMediaSources2()
     {
@@ -155,7 +155,7 @@ public class MediaSourceFactoryTest
         assertEquals(9, source.numRtpLayers());
     }
 
-    // 3 sim streams, svc enabled, 3 rtx -> 1 source, 3 encodings
+    // 3 sim streams, svc enabled, 3 rtx -> 1 source, 3 layers
     @Test
     public void createMediaSources3()
     {
