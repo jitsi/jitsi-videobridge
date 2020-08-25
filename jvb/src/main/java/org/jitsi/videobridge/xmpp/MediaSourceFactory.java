@@ -93,13 +93,6 @@ public class MediaSourceFactory
     private static final boolean ENABLE_VP9_SVC = false;
 
     /**
-     * A boolean that's controlling whether or not to enable SVC filtering for
-     * scalable video codecs.
-     * TODO: make configurable if needed.
-     */
-    private static final Boolean ENABLE_SVC = true;
-
-    /**
      * libjitsi isn't aware of the group semantics names defined in
      * {@link SourceGroupPacketExtension}, which is how we distinguish secondary
      * ssrcs, so we'll translate them into constants defined in libjitsi
@@ -553,7 +546,7 @@ public class MediaSourceFactory
             // As of now, we only ever have 1 spatial layer per stream
             int numSpatialLayersPerStream = 1;
             int numTemporalLayersPerStream = 1;
-            if (sourceSsrcs.size() > 1 && ENABLE_SVC)
+            if (sourceSsrcs.size() > 1)
             {
                 numTemporalLayersPerStream = VP8_SIMULCAST_TEMPORAL_LAYERS;
             }
