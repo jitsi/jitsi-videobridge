@@ -40,8 +40,6 @@ val jvbLastNSingleton: JvbLastN = JvbLastN()
 fun calculateLastN(lastN1: Int, lastN2: Int): Int {
     return if (lastN1 != -1 && lastN2 != -1) {
         minOf(lastN1, lastN2)
-    } else if (lastN1 == -1 && lastN2 == -1) {
-        -1
     } else {
         if (lastN1 == -1) lastN2 else lastN1
     }
