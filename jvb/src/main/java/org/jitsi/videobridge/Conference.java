@@ -95,10 +95,7 @@ public class Conference
      * The indicator which determines whether {@link #expire()} has been called
      * on this <tt>Conference</tt>.
      */
-    @SuppressFBWarnings(
-            value = "IS2_INCONSISTENT_SYNC",
-            justification = "The value is deemed safe to read without synchronization.")
-    private boolean expired = false;
+    private AtomicBoolean expired = new AtomicBoolean(false);
 
     /**
      * The locally unique identifier of this conference (i.e. unique across the
@@ -524,16 +521,8 @@ public class Conference
      */
     public void expire()
     {
-        synchronized (this)
-        {
-            if (expired)
-            {
-                return;
-            }
-            else
-            {
-                expired = true;
-            }
+        if (!expired.compareAndSet(false, true)) {
+            return;
         }
 
         logger.info("Expiring.");
@@ -856,7 +845,7 @@ public class Conference
     {
         // this.expired starts as 'false' and only ever changes to 'true',
         // so there is no need to synchronize while reading.
-        return expired;
+        return expired.get();
     }
 
     /**
@@ -1182,7 +1171,7 @@ public class Conference
         if (full)
         {
             debugState.put("gid", gid);
-            debugState.put("expired", expired);
+            debugState.put("expired", expired.get());
             debugState.put("creationTime", creationTime);
             debugState.put("speechActivity", speechActivity.getDebugState());
             debugState.put("includeInStatistics", includeInStatistics);
