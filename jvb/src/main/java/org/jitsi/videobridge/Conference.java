@@ -58,8 +58,7 @@ import static org.jitsi.utils.collections.JMap.entry;
  * @author George Politis
  */
 public class Conference
-     implements Expireable,
-        AbstractEndpointMessageTransport.EndpointMessageTransportEventHandler
+     implements AbstractEndpointMessageTransport.EndpointMessageTransportEventHandler
 {
     /**
      * The constant denoting that {@link #gid} is not specified.
@@ -165,11 +164,6 @@ public class Conference
     private final long creationTime = System.currentTimeMillis();
 
     /**
-     * The {@link ExpireableImpl} which we use to safely expire this conference.
-     */
-    private final ExpireableImpl expireableImpl;
-
-    /**
      * The shim which handles Colibri-related logic for this conference.
      */
     private final ConferenceShim shim;
@@ -247,8 +241,6 @@ public class Conference
             }
 
         }, 3, 3, TimeUnit.SECONDS);
-
-        expireableImpl = new ExpireableImpl(logger, this::expire);
 
         if (enableLogging)
         {
@@ -1007,25 +999,13 @@ public class Conference
     }
 
     /**
-     * {@inheritDoc}
-     * </p>
      * @return {@code true} if this {@link Conference} is ready to be expired.
      */
-    @Override
     public boolean shouldExpire()
     {
         // Allow a conference to have no endpoints in the first 20 seconds.
         return getEndpointCount() == 0
                 && (System.currentTimeMillis() - creationTime > 20000);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void safeExpire()
-    {
-        expireableImpl.safeExpire();
     }
 
     /**
