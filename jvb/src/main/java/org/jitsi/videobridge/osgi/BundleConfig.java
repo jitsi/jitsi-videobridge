@@ -47,6 +47,9 @@ public class BundleConfig
             "org/jitsi/videobridge/osgi/ConfigurationActivator"
         },
         {
+            "org/jitsi/videobridge/eventadmin/callstats/Activator"
+        },
+        {
             "org/jitsi/videobridge/rest/RESTBundleActivator",
         },
         {
