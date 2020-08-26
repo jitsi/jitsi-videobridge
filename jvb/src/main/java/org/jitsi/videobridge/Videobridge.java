@@ -113,7 +113,7 @@ public class Videobridge
      * The <tt>Conference</tt>s of this <tt>Videobridge</tt> mapped by their
      * IDs.
      */
-    private final Map<String, Conference> conferences = new HashMap<>();
+    private final Map<String, Conference> conferencesById = new HashMap<>();
 
     /**
      * Indicates if this bridge instance has entered graceful shutdown mode.
@@ -196,9 +196,9 @@ public class Videobridge
         {
             String id = generateConferenceID();
 
-            synchronized (conferences)
+            synchronized (conferencesById)
             {
-                if (!conferences.containsKey(id))
+                if (!conferencesById.containsKey(id))
                 {
                     conference
                         = new Conference(
@@ -207,7 +207,7 @@ public class Videobridge
                                 name,
                                 enableLogging,
                                 gid);
-                    conferences.put(id, conference);
+                    conferencesById.put(id, conference);
                 }
             }
         }
@@ -286,11 +286,11 @@ public class Videobridge
         String id = conference.getID();
         boolean expireConference;
 
-        synchronized (conferences)
+        synchronized (conferencesById)
         {
-            if (conference.equals(conferences.get(id)))
+            if (conference.equals(conferencesById.get(id)))
             {
-                conferences.remove(id);
+                conferencesById.remove(id);
                 expireConference = true;
             }
             else
@@ -348,9 +348,9 @@ public class Videobridge
      */
     public Conference getConference(String id)
     {
-        synchronized (conferences)
+        synchronized (conferencesById)
         {
-            return conferences.get(id);
+            return conferencesById.get(id);
         }
     }
 
@@ -361,9 +361,9 @@ public class Videobridge
      */
     public Collection<Conference> getConferences()
     {
-        synchronized (conferences)
+        synchronized (conferencesById)
         {
-            return new HashSet<>(conferences.values());
+            return new HashSet<>(conferencesById.values());
         }
     }
 
@@ -523,9 +523,9 @@ public class Videobridge
             return;
         }
 
-        synchronized (conferences)
+        synchronized (conferencesById)
         {
-            if (conferences.isEmpty())
+            if (conferencesById.isEmpty())
             {
                 logger.info("Videobridge is shutting down NOW");
                 ShutdownService shutdownService = ServiceUtils2.getService(bundleContext, ShutdownService.class);
@@ -742,7 +742,7 @@ public class Videobridge
             Conference conference;
             synchronized (conferences)
             {
-                conference = this.conferences.get(conferenceId);
+                conference = this.conferencesById.get(conferenceId);
             }
 
             conferences.put(
