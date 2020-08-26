@@ -58,8 +58,7 @@ import static org.jitsi.utils.collections.JMap.entry;
  * @author George Politis
  */
 public class Conference
-     implements Expireable,
-        AbstractEndpointMessageTransport.EndpointMessageTransportEventHandler
+     implements AbstractEndpointMessageTransport.EndpointMessageTransportEventHandler
 {
     /**
      * The constant denoting that {@link #gid} is not specified.
@@ -96,10 +95,7 @@ public class Conference
      * The indicator which determines whether {@link #expire()} has been called
      * on this <tt>Conference</tt>.
      */
-    @SuppressFBWarnings(
-            value = "IS2_INCONSISTENT_SYNC",
-            justification = "The value is deemed safe to read without synchronization.")
-    private boolean expired = false;
+    private AtomicBoolean expired = new AtomicBoolean(false);
 
     /**
      * The locally unique identifier of this conference (i.e. unique across the
@@ -163,11 +159,6 @@ public class Conference
      * The time when this {@link Conference} was created.
      */
     private final long creationTime = System.currentTimeMillis();
-
-    /**
-     * The {@link ExpireableImpl} which we use to safely expire this conference.
-     */
-    private final ExpireableImpl expireableImpl;
 
     /**
      * The shim which handles Colibri-related logic for this conference.
@@ -247,8 +238,6 @@ public class Conference
             }
 
         }, 3, 3, TimeUnit.SECONDS);
-
-        expireableImpl = new ExpireableImpl(logger, this::expire);
 
         if (enableLogging)
         {
@@ -529,19 +518,15 @@ public class Conference
      * respective <tt>Channel</tt>s. Releases the resources acquired by this
      * instance throughout its life time and prepares it to be garbage
      * collected.
+     *
+     * NOTE: this should _only_ be called by the Conference "manager" (in this
+     * case, Videobridge).  If you need to expire a Conference from elsewhere, use
+     * {@link Videobridge#expireConference(Conference)}
      */
-    public void expire()
+    void expire()
     {
-        synchronized (this)
-        {
-            if (expired)
-            {
-                return;
-            }
-            else
-            {
-                expired = true;
-            }
+        if (!expired.compareAndSet(false, true)) {
+            return;
         }
 
         logger.info("Expiring.");
@@ -558,30 +543,18 @@ public class Conference
             eventAdmin.sendEvent(EventFactory.conferenceExpired(this));
         }
 
-        Videobridge videobridge = getVideobridge();
-
-        try
+        logger.debug(() -> "Expiring endpoints.");
+        getEndpoints().forEach(AbstractEndpoint::expire);
+        speechActivity.expire();
+        if (tentacle != null)
         {
-            videobridge.expireConference(this);
+            tentacle.expire();
+            tentacle = null;
         }
-        finally
-        {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Expiring endpoints.");
-            }
-            getEndpoints().forEach(AbstractEndpoint::expire);
-            speechActivity.expire();
-            if (tentacle != null)
-            {
-                tentacle.expire();
-                tentacle = null;
-            }
 
-            if (includeInStatistics)
-            {
-                updateStatisticsOnExpire();
-            }
+        if (includeInStatistics)
+        {
+            updateStatisticsOnExpire();
         }
     }
 
@@ -862,9 +835,7 @@ public class Conference
      */
     public boolean isExpired()
     {
-        // this.expired starts as 'false' and only ever changes to 'true',
-        // so there is no need to synchronize while reading.
-        return expired;
+        return expired.get();
     }
 
     /**
@@ -1007,25 +978,13 @@ public class Conference
     }
 
     /**
-     * {@inheritDoc}
-     * </p>
      * @return {@code true} if this {@link Conference} is ready to be expired.
      */
-    @Override
     public boolean shouldExpire()
     {
         // Allow a conference to have no endpoints in the first 20 seconds.
         return getEndpointCount() == 0
                 && (System.currentTimeMillis() - creationTime > 20000);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void safeExpire()
-    {
-        expireableImpl.safeExpire();
     }
 
     /**
@@ -1202,7 +1161,7 @@ public class Conference
         if (full)
         {
             debugState.put("gid", gid);
-            debugState.put("expired", expired);
+            debugState.put("expired", expired.get());
             debugState.put("creationTime", creationTime);
             debugState.put("speechActivity", speechActivity.getDebugState());
             debugState.put("includeInStatistics", includeInStatistics);

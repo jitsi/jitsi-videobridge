@@ -152,7 +152,7 @@ public class BridgeShutdownTest
                 .mapToInt(Conference::getEndpointCount)
                 .sum());
 
-        bridge.getConferences().forEach(Conference::expire);
+        bridge.getConferences().forEach(bridge::expireConference);
 
         assertTrue(
             "The bridge should trigger a shutdown after last conference is "
