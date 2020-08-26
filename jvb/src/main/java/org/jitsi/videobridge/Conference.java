@@ -835,8 +835,6 @@ public class Conference
      */
     public boolean isExpired()
     {
-        // this.expired starts as 'false' and only ever changes to 'true',
-        // so there is no need to synchronize while reading.
         return expired.get();
     }
 
