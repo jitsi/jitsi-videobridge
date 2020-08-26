@@ -1178,6 +1178,14 @@ public class BitrateController
         }
     }
 
+    /**
+     * Return the number of endpoint's whose streams are currently being forwarded.
+     */
+    public int numForwardedEndpoints()
+    {
+        return this.forwardedEndpointIds.size();
+    }
+
 
     /**
      * A snapshot of the bitrate for a given {@link RtpLayerDesc}.
