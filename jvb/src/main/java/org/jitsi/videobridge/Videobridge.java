@@ -202,9 +202,9 @@ public class Videobridge
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public @NotNull Conference createConference(Localpart name, long gid)
+    public @NotNull Conference createConference(String name, long gid)
     {
-        return this.createConference(name == null ? null : name.toString(), /* enableLogging */ true, gid);
+        return this.createConference(name, /* enableLogging */ true, gid);
     }
 
     /**

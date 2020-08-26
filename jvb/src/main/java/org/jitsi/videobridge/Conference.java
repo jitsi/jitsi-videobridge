@@ -395,22 +395,7 @@ public class Conference
     public void describeShallow(ColibriConferenceIQ iq)
     {
         iq.setID(getID());
-        try
-        {
-            if (conferenceName == null)
-            {
-                iq.setName(null);
-            }
-            else
-            {
-                iq.setName(Localpart.from(conferenceName));
-            }
-        }
-        catch (XmppStringprepException e)
-        {
-            logger.error("Error converting conference name to a Localpart ", e);
-            iq.setName(null);
-        }
+        iq.setName(conferenceName);
     }
 
     /**
