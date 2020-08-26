@@ -91,10 +91,10 @@ public class Main
         {
             octoRelayService.start();
         }
-        ClientConnectionImpl clientConnectionImpl = ClientConnectionSupplierKt.singleton.get();
+        ClientConnectionImpl clientConnectionImpl = ClientConnectionSupplierKt.singleton().get();
         clientConnectionImpl.start();
 
-        final StatsManager statsMgr = StatsManagerSupplierKt.singleton.get();
+        final StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
         if (statsMgr != null)
         {
             statsMgr.addStatistics(new VideobridgeStatistics(), StatsManager.config.getInterval().toMillis());
@@ -105,7 +105,7 @@ public class Main
 
             statsMgr.start();
         }
-        HealthCheckServiceSupplierKt.singleton.get().start();
+        JvbHealthCheckServiceSupplierKt.singleton().get().start();
 
         Logger logger = new LoggerImpl("org.jitsi.videobridge.Main");
 
@@ -123,7 +123,7 @@ public class Main
                 statsMgr.stop();
             }
 
-            HealthCheckServiceSupplierKt.singleton.get().stop();
+            JvbHealthCheckServiceSupplierKt.singleton().get().stop();
         }));
 
         ComponentMain main = new ComponentMain();

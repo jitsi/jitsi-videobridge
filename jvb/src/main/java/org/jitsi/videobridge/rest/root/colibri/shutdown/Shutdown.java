@@ -18,9 +18,9 @@ package org.jitsi.videobridge.rest.root.colibri.shutdown;
 
 import com.fasterxml.jackson.annotation.*;
 import org.eclipse.jetty.http.*;
+import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
-import org.jitsi.videobridge.util.*;
 
 import javax.inject.*;
 import javax.servlet.http.*;
@@ -35,7 +35,7 @@ import javax.ws.rs.core.*;
 public class Shutdown
 {
     @Inject
-    protected VideobridgeProvider videobridgeProvider;
+    protected VideobridgeSupplier videobridgeSupplier;
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -43,7 +43,7 @@ public class Shutdown
     {
         try
         {
-            videobridgeProvider.get().shutdown(shutdown.isGraceful);
+            videobridgeSupplier.get().shutdown(shutdown.isGraceful);
             return Response.ok().build();
         }
         catch (Throwable t)

@@ -17,7 +17,6 @@ package org.jitsi.videobridge.stats;
 
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
-import org.jitsi.osgi.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.octo.*;
@@ -25,7 +24,6 @@ import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.json.simple.*;
-import org.osgi.framework.*;
 
 import java.lang.management.*;
 import java.text.*;
@@ -179,7 +177,7 @@ public class VideobridgeStatistics
     @SuppressWarnings("unchecked")
     private void generate0()
     {
-        Videobridge videobridge = VideobridgeSupplierKt.singleton.get();
+        Videobridge videobridge = VideobridgeSupplierKt.singleton().get();
         Videobridge.Statistics jvbStats = videobridge.getStatistics();
 
         int videoChannels = 0;
@@ -527,7 +525,7 @@ public class VideobridgeStatistics
             }
             unlockedSetStat(VERSION, videobridge.getVersion().toString());
 
-            ClientConnectionImpl clientConnection = ClientConnectionSupplierKt.singleton.get();
+            ClientConnectionImpl clientConnection = ClientConnectionSupplierKt.singleton().get();
             unlockedSetStat(
                     MUC_CLIENTS_CONFIGURED,
                     clientConnection.getMucClientManager().getClientCount());

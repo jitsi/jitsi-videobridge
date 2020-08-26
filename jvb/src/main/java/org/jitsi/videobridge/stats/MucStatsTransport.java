@@ -43,7 +43,7 @@ public class MucStatsTransport
      */
     private ClientConnectionImpl getUserConnectionBundleActivator()
     {
-        return ClientConnectionSupplierKt.singleton.get();
+        return ClientConnectionSupplierKt.singleton().get();
     }
 
     /**

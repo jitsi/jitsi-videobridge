@@ -57,7 +57,7 @@ public class VideobridgeBundleActivator
         // of Videobridge.  Eventually, once everything is moved over, this
         // activator can go away and all 'services' can just take the Videobridge
         // in their constructor
-        Videobridge videobridge = VideobridgeSupplierKt.singleton.get();
+        Videobridge videobridge = VideobridgeSupplierKt.singleton().get();
 
         videobridge.start(bundleContext);
 

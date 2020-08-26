@@ -16,7 +16,10 @@
 
 package org.jitsi.videobridge.stats
 
-class StatsManagerSupplier {
+import java.util.function.Supplier
+
+// Open for tests
+open class StatsManagerSupplier : Supplier<StatsManager?> {
     private val statsManager: StatsManager? by lazy {
         if (StatsManager.config.enabled) {
             StatsManager()
@@ -25,8 +28,9 @@ class StatsManagerSupplier {
         }
     }
 
-    fun get(): StatsManager? = statsManager
+    override fun get(): StatsManager? = statsManager
 }
 
-@JvmField
-val singleton: StatsManagerSupplier = StatsManagerSupplier()
+val statsManagerSupplier: StatsManagerSupplier = StatsManagerSupplier()
+
+fun singleton() = statsManagerSupplier

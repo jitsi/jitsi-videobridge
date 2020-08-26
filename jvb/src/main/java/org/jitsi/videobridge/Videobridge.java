@@ -20,7 +20,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jetbrains.annotations.*;
-import org.jitsi.config.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.health.*;
 import org.jitsi.meet.*;
@@ -46,15 +45,12 @@ import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.json.simple.*;
-import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
 import org.osgi.framework.*;
 
 import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.regex.*;
-
-import static org.jitsi.videobridge.version.JvbVersionServiceSupplierKt.jvbVersionServiceSingleton;
 
 /**
  * Represents the Jitsi Videobridge which creates, lists and destroys
@@ -465,7 +461,7 @@ public class Videobridge
      */
     private String getHealthStatus()
     {
-        HealthCheckService health = HealthCheckServiceSupplierKt.singleton.get();
+        HealthCheckService health = JvbHealthCheckServiceSupplierKt.singleton().get();
 
         Exception result = health.getResult();
         return result == null ? "OK" : result.getMessage();
@@ -801,7 +797,7 @@ public class Videobridge
      */
     public Version getVersion()
     {
-        return jvbVersionServiceSingleton.get().getCurrentVersion();
+        return JvbVersionServiceSupplierKt.singleton().get().getCurrentVersion();
     }
 
     /**
