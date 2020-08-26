@@ -26,6 +26,7 @@ import java.util.logging.Level
 
 class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
     private val jvbLoadThreshold: T,
+    private val jvbRecoveryThreshold: T,
     private val loadReducer: JvbLoadReducer,
     private val clock: Clock = Clock.systemUTC()
 ) {
@@ -46,6 +47,13 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
                         "but load reducer started running ${Duration.between(lastReducerTime, clock.instant())} " +
                         "ago, and we wait ${loadReducer.impactTime()} between runs")
             }
+        } else if (loadMeasurement.getLoad() < jvbRecoveryThreshold.getLoad()) {
+            if (Duration.between(lastReducerTime, clock.instant()) >= loadReducer.impactTime()) {
+                logger.info("Load measurement $loadMeasurement is above threshold of $jvbLoadThreshold, " +
+                        "running recovery")
+                loadReducer.recover()
+                lastReducerTime = clock.instant()
+            }
         }
     }
 }
@@ -60,36 +68,57 @@ class PacketRateMeasurement(private val packetRate: Long) : JvbLoadMeasurement {
     override fun toString(): String = "RTP packet rate (up + down) of $packetRate pps"
 }
 
-val PacketRateThreshold = PacketRateMeasurement(50000)
+val PacketRateLoadedThreshold = PacketRateMeasurement(50000)
+val PacketRateRecoveryThreshold = PacketRateMeasurement(40000)
 
 interface JvbLoadReducer {
     fun reduceLoad()
+    fun recover()
     fun impactTime(): Duration
 }
 
-class LastNReducer(
+class LastNReducer @JvmOverloads constructor(
     private val videobridge: Videobridge,
     private val jvbLastN: JvbLastN,
-    private val reductionScale: Double
+    private val reductionScale: Double,
+    private val recoverScale: Double = 1 / reductionScale
 ) : JvbLoadReducer {
     private val logger = createLogger()
-    override fun reduceLoad() {
-        // Find the highest amount of endpoints any endpoint on this bridge is forwarding video for
-        // so we can set a new last-n number to something lower
-        val maxForwardedEps = videobridge.conferences
+
+    private fun getMaxForwardedEps(): Int? {
+        return videobridge.conferences
             .flatMap { it.endpoints }
             .asSequence()
             .filterIsInstance<Endpoint>()
-            .map { it.numForwardedEndpoints() }
-            .max() ?: run {
-                    logger.info("No active conferences, can't reduce load by reducing last n")
-                    return
-                }
+            .map {
+                it.numForwardedEndpoints()
+            }
+            .max()
+    }
+
+    override fun reduceLoad() {
+        // Find the highest amount of endpoints any endpoint on this bridge is forwarding video for
+        // so we can set a new last-n number to something lower
+        val maxForwardedEps = getMaxForwardedEps() ?: run {
+            logger.info("No endpoints with video being forwarded, can't reduce load by reducing last n")
+            return
+        }
 
         val newLastN = (maxForwardedEps * reductionScale).toInt()
         logger.info("Largest number of forwarded videos was $maxForwardedEps, A last-n value of $newLastN is " +
                 "being enforced to reduce bridge load")
 
+        jvbLastN.jvbLastN = newLastN
+    }
+
+    override fun recover() {
+        val currLastN = jvbLastN.jvbLastN
+        if (currLastN == -1) {
+            logger.cdebug { "No recovery necessary, no JVB last-n is set" }
+            return
+        }
+        val newLastN = (currLastN * recoverScale).toInt()
+        logger.info("JVB last-n was $currLastN, increasing to $newLastN as part of load recovery")
         jvbLastN.jvbLastN = newLastN
     }
 
