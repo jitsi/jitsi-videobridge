@@ -91,7 +91,7 @@ public class Main
         {
             octoRelayService.start();
         }
-        ClientConnectionImpl clientConnectionImpl = ClientConnectionSupplierKt.singleton.get();
+        ClientConnectionImpl clientConnectionImpl = ClientConnectionSupplierKt.singleton().get();
         clientConnectionImpl.start();
 
         final StatsManager statsMgr = StatsManagerSupplierKt.singleton.get();

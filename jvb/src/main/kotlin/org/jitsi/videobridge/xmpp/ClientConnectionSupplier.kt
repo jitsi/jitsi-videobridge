@@ -27,5 +27,6 @@ open class ClientConnectionImplSupplier : Supplier<ClientConnectionImpl> {
     override fun get(): ClientConnectionImpl = clientConnectionImpl
 }
 
-@JvmField
-val singleton = ClientConnectionImplSupplier()
+val clientConnectionImplSupplier = ClientConnectionImplSupplier()
+
+fun singleton() = clientConnectionImplSupplier

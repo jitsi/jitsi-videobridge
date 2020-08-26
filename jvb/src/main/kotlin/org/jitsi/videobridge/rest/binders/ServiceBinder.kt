@@ -26,13 +26,13 @@ import org.jitsi.videobridge.version.jvbVersionServiceSupplier
 import org.jitsi.videobridge.xmpp.ClientConnectionImplSupplier
 import org.jitsi.videobridge.singleton as videobridgeSupplierSingleton
 import org.jitsi.videobridge.stats.singleton as statsManagerSupplierSingleton
-import org.jitsi.videobridge.xmpp.singleton as clientConnectionImplSupplierSingleton
+import org.jitsi.videobridge.xmpp.clientConnectionImplSupplier
 
 class ServiceBinder : AbstractBinder() {
     override fun configure() {
         bind(videobridgeSupplierSingleton).to(VideobridgeSupplier::class.java)
         bind(statsManagerSupplierSingleton).to(StatsManagerSupplier::class.java)
-        bind(clientConnectionImplSupplierSingleton).to(ClientConnectionImplSupplier::class.java)
+        bind(clientConnectionImplSupplier).to(ClientConnectionImplSupplier::class.java)
         bind(jvbHealthCheckServiceSupplier).to(HealthCheckServiceSupplier::class.java)
         bind(jvbVersionServiceSupplier).to(VersionServiceSupplier::class.java)
     }
