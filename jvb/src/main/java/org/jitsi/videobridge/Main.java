@@ -22,6 +22,7 @@ import org.jitsi.meet.*;
 import org.jitsi.metaconfig.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.health.*;
+import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.stats.*;
@@ -111,8 +112,8 @@ public class Main
         JvbHealthCheckServiceSupplierKt.singleton().get().start();
 
         JvbLoadManager<PacketRateMeasurement> jvbLoadManager = new JvbLoadManager<>(
-            JvbLoadManagerKt.getPacketRateLoadedThreshold(),
-            JvbLoadManagerKt.getPacketRateRecoveryThreshold(),
+            PacketRateMeasurement.getLoadedThreshold(),
+            PacketRateMeasurement.getRecoveryThreshold(),
             new LastNReducer(
                 VideobridgeSupplierKt.singleton().get(),
                 JvbLastNKt.jvbLastNSingleton,
