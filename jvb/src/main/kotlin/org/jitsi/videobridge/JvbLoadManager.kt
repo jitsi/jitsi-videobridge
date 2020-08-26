@@ -74,18 +74,21 @@ class LastNReducer(
 ) : JvbLoadReducer {
     private val logger = createLogger()
     override fun reduceLoad() {
-        // Find the highest number of endpoints sending video in a single conference: we need
-        // to set the last-n value to a size smaller than that
-        val largestConfSize = videobridge.conferences
-            .map { conf -> conf.endpoints.count(AbstractEndpoint::isSendingVideo) }
+        // Find the highest amount of endpoints any endpoint on this bridge is forwarding video for
+        // so we can set a new last-n number to something lower
+        val maxForwardedEps = videobridge.conferences
+            .flatMap { it.endpoints }
+            .asSequence()
+            .filterIsInstance<Endpoint>()
+            .map { it.numForwardedEndpoints() }
             .max() ?: run {
                     logger.info("No active conferences, can't reduce load by reducing last n")
                     return
                 }
 
-        val newLastN = (largestConfSize * reductionScale).toInt()
-        logger.info("Largest conf size was $largestConfSize, A last-n value of $newLastN is being enforced to " +
-                "reduce bridge load")
+        val newLastN = (maxForwardedEps * reductionScale).toInt()
+        logger.info("Largest number of forwarded videos was $maxForwardedEps, A last-n value of $newLastN is " +
+                "being enforced to reduce bridge load")
 
         jvbLastN.jvbLastN = newLastN
     }
