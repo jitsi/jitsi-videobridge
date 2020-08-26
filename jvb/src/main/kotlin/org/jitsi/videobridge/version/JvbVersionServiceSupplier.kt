@@ -27,5 +27,6 @@ class JvbVersionServiceSupplier : VersionServiceSupplier {
     override fun get(): VersionService = versionService
 }
 
-@JvmField
-val singleton = JvbVersionServiceSupplier()
+val jvbVersionServiceSupplier = JvbVersionServiceSupplier()
+
+fun singleton() = jvbVersionServiceSupplier

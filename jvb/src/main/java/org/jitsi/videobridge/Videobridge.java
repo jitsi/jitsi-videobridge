@@ -797,7 +797,7 @@ public class Videobridge
      */
     public Version getVersion()
     {
-        return JvbVersionServiceSupplierKt.singleton.get().getCurrentVersion();
+        return JvbVersionServiceSupplierKt.singleton().get().getCurrentVersion();
     }
 
     /**

@@ -203,7 +203,7 @@ public class XmppCommon
      */
     private IQ handleVersionIQ(Version versionRequest)
     {
-        VersionService versionService = JvbVersionServiceSupplierKt.singleton.get();
+        VersionService versionService = JvbVersionServiceSupplierKt.jvbVersionServiceSupplier.get();
 
         org.jitsi.utils.version.Version currentVersion
                 = versionService.getCurrentVersion();

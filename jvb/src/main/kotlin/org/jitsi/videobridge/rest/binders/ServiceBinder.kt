@@ -22,7 +22,7 @@ import org.jitsi.version.VersionServiceSupplier
 import org.jitsi.videobridge.VideobridgeSupplier
 import org.jitsi.videobridge.health.singleton as healthCheckServiceSupplierSingleton
 import org.jitsi.videobridge.stats.StatsManagerSupplier
-import org.jitsi.videobridge.version.singleton
+import org.jitsi.videobridge.version.jvbVersionServiceSupplier
 import org.jitsi.videobridge.xmpp.ClientConnectionImplSupplier
 import org.jitsi.videobridge.singleton as videobridgeSupplierSingleton
 import org.jitsi.videobridge.stats.singleton as statsManagerSupplierSingleton
@@ -34,6 +34,6 @@ class ServiceBinder : AbstractBinder() {
         bind(statsManagerSupplierSingleton).to(StatsManagerSupplier::class.java)
         bind(clientConnectionImplSupplierSingleton).to(ClientConnectionImplSupplier::class.java)
         bind(healthCheckServiceSupplierSingleton).to(HealthCheckServiceSupplier::class.java)
-        bind(singleton).to(VersionServiceSupplier::class.java)
+        bind(jvbVersionServiceSupplier).to(VersionServiceSupplier::class.java)
     }
 }
