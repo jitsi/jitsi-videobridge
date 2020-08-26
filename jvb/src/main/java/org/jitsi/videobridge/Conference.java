@@ -523,7 +523,7 @@ public class Conference
      * case, Videobridge).  If you need to expire a Conference from elsewhere, use
      * {@link Videobridge#expireConference(Conference)}
      */
-    public void expire()
+    void expire()
     {
         if (!expired.compareAndSet(false, true)) {
             return;
