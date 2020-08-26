@@ -113,13 +113,16 @@ public class Main
 
         JvbLoadManager<PacketRateMeasurement> jvbLoadManager = new JvbLoadManager<>(
             JvbLoadManagerKt.getPacketRateThreshold(),
-            new LastNReducer(VideobridgeSupplierKt.singleton.get(), .75)
+            new LastNReducer(
+                VideobridgeSupplierKt.singleton().get(),
+                JvbLastNKt.jvbLastNSingleton,
+                .75)
         );
 
         Logger logger = new LoggerImpl("org.jitsi.videobridge.Main");
 
         ScheduledFuture<?> loadManagerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
-            new PacketRateLoadSampler(VideobridgeSupplierKt.singleton.get(), jvbLoadManager),
+            new PacketRateLoadSampler(VideobridgeSupplierKt.singleton().get(), jvbLoadManager),
             0,
             10,
             TimeUnit.SECONDS

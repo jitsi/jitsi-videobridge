@@ -69,6 +69,7 @@ interface JvbLoadReducer {
 
 class LastNReducer(
     private val videobridge: Videobridge,
+    private val jvbLastN: JvbLastN,
     private val reductionScale: Double
 ) : JvbLoadReducer {
     private val logger = createLogger()
@@ -86,11 +87,7 @@ class LastNReducer(
         logger.info("Largest conf size was $largestConfSize, A last-n value of $newLastN is being enforced to " +
                 "reduce bridge load")
 
-        videobridge.conferences.forEach { conf ->
-            conf.endpoints.forEach { ep ->
-                (ep as? Endpoint)?.addLastNRequest(LastNRequest(newLastN, LastNSource.JVB))
-            }
-        }
+        jvbLastN.jvbLastN = newLastN
     }
 
     override fun impactTime(): Duration = Duration.ofMinutes(1)
