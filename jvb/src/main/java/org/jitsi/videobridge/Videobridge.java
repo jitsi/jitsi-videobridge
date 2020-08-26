@@ -461,7 +461,7 @@ public class Videobridge
      */
     private String getHealthStatus()
     {
-        HealthCheckService health = JvbHealthCheckServiceSupplierKt.singleton.get();
+        HealthCheckService health = JvbHealthCheckServiceSupplierKt.singleton().get();
 
         Exception result = health.getResult();
         return result == null ? "OK" : result.getMessage();

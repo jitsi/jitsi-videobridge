@@ -20,7 +20,7 @@ import org.glassfish.hk2.utilities.binding.AbstractBinder
 import org.jitsi.health.HealthCheckServiceSupplier
 import org.jitsi.version.VersionServiceSupplier
 import org.jitsi.videobridge.VideobridgeSupplier
-import org.jitsi.videobridge.health.singleton as healthCheckServiceSupplierSingleton
+import org.jitsi.videobridge.health.jvbHealthCheckServiceSupplier
 import org.jitsi.videobridge.stats.StatsManagerSupplier
 import org.jitsi.videobridge.version.jvbVersionServiceSupplier
 import org.jitsi.videobridge.xmpp.ClientConnectionImplSupplier
@@ -33,7 +33,7 @@ class ServiceBinder : AbstractBinder() {
         bind(videobridgeSupplierSingleton).to(VideobridgeSupplier::class.java)
         bind(statsManagerSupplierSingleton).to(StatsManagerSupplier::class.java)
         bind(clientConnectionImplSupplierSingleton).to(ClientConnectionImplSupplier::class.java)
-        bind(healthCheckServiceSupplierSingleton).to(HealthCheckServiceSupplier::class.java)
+        bind(jvbHealthCheckServiceSupplier).to(HealthCheckServiceSupplier::class.java)
         bind(jvbVersionServiceSupplier).to(VersionServiceSupplier::class.java)
     }
 }

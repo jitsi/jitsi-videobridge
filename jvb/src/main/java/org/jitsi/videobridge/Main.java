@@ -105,7 +105,7 @@ public class Main
 
             statsMgr.start();
         }
-        JvbHealthCheckServiceSupplierKt.singleton.get().start();
+        JvbHealthCheckServiceSupplierKt.singleton().get().start();
 
         Logger logger = new LoggerImpl("org.jitsi.videobridge.Main");
 
@@ -123,7 +123,7 @@ public class Main
                 statsMgr.stop();
             }
 
-            JvbHealthCheckServiceSupplierKt.singleton.get().stop();
+            JvbHealthCheckServiceSupplierKt.singleton().get().stop();
         }));
 
         ComponentMain main = new ComponentMain();

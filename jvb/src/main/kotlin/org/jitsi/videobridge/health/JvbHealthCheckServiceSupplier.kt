@@ -31,5 +31,6 @@ class JvbHealthCheckServiceSupplier : HealthCheckServiceSupplier {
     override fun get(): JvbHealthChecker = healthCheckService
 }
 
-@JvmField
-val singleton = JvbHealthCheckServiceSupplier()
+val jvbHealthCheckServiceSupplier = JvbHealthCheckServiceSupplier()
+
+fun singleton() = jvbHealthCheckServiceSupplier
