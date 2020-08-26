@@ -94,7 +94,7 @@ public class Main
         ClientConnectionImpl clientConnectionImpl = ClientConnectionSupplierKt.singleton().get();
         clientConnectionImpl.start();
 
-        final StatsManager statsMgr = StatsManagerSupplierKt.singleton.get();
+        final StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
         if (statsMgr != null)
         {
             statsMgr.addStatistics(new VideobridgeStatistics(), StatsManager.config.getInterval().toMillis());

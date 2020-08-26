@@ -31,5 +31,6 @@ open class StatsManagerSupplier : Supplier<StatsManager?> {
     override fun get(): StatsManager? = statsManager
 }
 
-@JvmField
-val singleton: StatsManagerSupplier = StatsManagerSupplier()
+val statsManagerSupplier: StatsManagerSupplier = StatsManagerSupplier()
+
+fun singleton() = statsManagerSupplier
