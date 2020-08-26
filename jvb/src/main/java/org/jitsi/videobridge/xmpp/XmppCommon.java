@@ -133,7 +133,7 @@ public class XmppCommon
      */
     private IQ handleIQRequest(IQ request)
     {
-        Videobridge videobridge = VideobridgeSupplierKt.singleton.get();
+        Videobridge videobridge = VideobridgeSupplierKt.singleton().get();
 
         IQ response;
         long start = System.currentTimeMillis();
@@ -203,7 +203,7 @@ public class XmppCommon
      */
     private IQ handleVersionIQ(Version versionRequest)
     {
-        VersionService versionService = JvbVersionServiceSupplierKt.jvbVersionServiceSupplier.get();
+        VersionService versionService = JvbVersionServiceSupplierKt.singleton().get();
 
         org.jitsi.utils.version.Version currentVersion
                 = versionService.getCurrentVersion();

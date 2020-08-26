@@ -28,7 +28,7 @@ import java.util.function.Supplier
  * NOTE: This is intentionally implemented as a non-static instance
  * for testability.  Classes should take in an instance of [VideobridgeSupplier]
  * which can be swapped for testing.  Production code should use
- * [singleton] as the instance it passes everywhere.
+ * [videobridgeSupplier] as the instance it passes everywhere.
  *
  * Note: this class needs to be open for testing (java/mockito can't mock
  * a final class).  If we move tests to kotlin/mockk, we can remove it.
@@ -41,5 +41,6 @@ open class VideobridgeSupplier : Supplier<Videobridge> {
     override fun get(): Videobridge = videobridge
 }
 
-@JvmField
-val singleton = VideobridgeSupplier()
+val videobridgeSupplier = VideobridgeSupplier()
+
+fun singleton() = videobridgeSupplier

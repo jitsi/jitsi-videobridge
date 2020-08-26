@@ -177,7 +177,7 @@ public class VideobridgeStatistics
     @SuppressWarnings("unchecked")
     private void generate0()
     {
-        Videobridge videobridge = VideobridgeSupplierKt.singleton.get();
+        Videobridge videobridge = VideobridgeSupplierKt.singleton().get();
         Videobridge.Statistics jvbStats = videobridge.getStatistics();
 
         int videoChannels = 0;
