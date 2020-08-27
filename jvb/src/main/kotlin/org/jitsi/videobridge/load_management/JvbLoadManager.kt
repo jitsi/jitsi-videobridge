@@ -37,23 +37,24 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
     fun loadUpdate(loadMeasurement: T) {
         logger.cdebug { "Got a load measurement of $loadMeasurement" }
         if (loadMeasurement.getLoad() >= jvbLoadThreshold.getLoad()) {
-            if (Duration.between(lastReducerTime, clock.instant()) >= loadReducer.impactTime()) {
-                logger.info("Load measurement $loadMeasurement is above threshold of $jvbLoadThreshold, " +
-                        "running load reducer")
-                loadReducer.reduceLoad()
-                lastReducerTime = clock.instant()
-            } else {
-                logger.info("Load measurement $loadMeasurement is above threshold of $jvbLoadThreshold, " +
-                        "but load reducer started running ${Duration.between(lastReducerTime, clock.instant())} " +
-                        "ago, and we wait ${loadReducer.impactTime()} between runs")
-            }
+            logger.info("Load measurement $loadMeasurement is above threshold of $jvbLoadThreshold, " +
+                    "maybe running load reducer")
+            maybeRun("load reducer") { reduceLoad() }
         } else if (loadMeasurement.getLoad() < jvbRecoveryThreshold.getLoad()) {
-            if (Duration.between(lastReducerTime, clock.instant()) >= loadReducer.impactTime()) {
-                logger.info("Load measurement $loadMeasurement is above threshold of $jvbLoadThreshold, " +
-                        "running recovery")
-                loadReducer.recover()
-                lastReducerTime = clock.instant()
-            }
+            logger.info("Load measurement $loadMeasurement is above threshold of $jvbLoadThreshold, " +
+                    "maybe running recovery")
+            maybeRun("recovery") { recover() }
+        }
+    }
+
+    private fun maybeRun(taskDescription: String, task: JvbLoadReducer.() -> Unit) {
+        if (Duration.between(lastReducerTime, clock.instant()) >= loadReducer.impactTime()) {
+            logger.info("Running $taskDescription")
+            loadReducer.apply(task)
+            lastReducerTime = clock.instant()
+        } else {
+            logger.info("Load reducer started running ${Duration.between(lastReducerTime, clock.instant())} " +
+                    "ago, and we wait ${loadReducer.impactTime()} between runs, so will skip running $taskDescription")
         }
     }
 }
