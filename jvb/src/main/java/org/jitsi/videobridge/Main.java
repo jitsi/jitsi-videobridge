@@ -29,7 +29,9 @@ import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 
+import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.*;
 
 /**
  * Provides the <tt>main</tt> entry point of the Jitsi Videobridge application
@@ -115,7 +117,7 @@ public class Main
             PacketRateMeasurement.getLoadedThreshold(),
             PacketRateMeasurement.getRecoveryThreshold(),
             new LastNReducer(
-                VideobridgeSupplierKt.singleton().get(),
+                () -> VideobridgeSupplierKt.singleton().get().getConferences(),
                 JvbLastNKt.jvbLastNSingleton,
                 .75
             )

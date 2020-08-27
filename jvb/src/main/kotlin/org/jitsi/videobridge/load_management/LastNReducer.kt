@@ -18,13 +18,19 @@ package org.jitsi.videobridge.load_management
 
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createLogger
+import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.Endpoint
 import org.jitsi.videobridge.JvbLastN
-import org.jitsi.videobridge.Videobridge
 import java.time.Duration
+import java.util.function.Supplier
 
+/**
+ * A [JvbLoadReducer] which samples the amount of currently forwarded endpoints across
+ * the entire bridge and sets a bridge-wide last-n value (via [JvbLastN]) to a number
+ * less than that (based on [reductionScale]).
+ */
 class LastNReducer @JvmOverloads constructor(
-    private val videobridge: Videobridge,
+    private val conferencesSupplier: Supplier<Collection<Conference>>,
     private val jvbLastN: JvbLastN,
     private val reductionScale: Double,
     private val recoverScale: Double = 1 / reductionScale
@@ -32,7 +38,7 @@ class LastNReducer @JvmOverloads constructor(
     private val logger = createLogger()
 
     private fun getMaxForwardedEps(): Int? {
-        return videobridge.conferences
+        return conferencesSupplier.get()
             .flatMap { it.endpoints }
             .asSequence()
             .filterIsInstance<Endpoint>()
