@@ -96,3 +96,6 @@ constraints by taking the video constraints signaled by ```R``` and then:
    in the video constraints from ```R```.
 2. Replace the video constraints for the endpoints that fall outside of the
    last-n set with ```{'idealHeight': 0}```.
+   
+Effective video constraints is an internal only structure that is used to
+compute the `SenderVideoConstraints` above.
