@@ -275,8 +275,8 @@ class ReceiverVideoConstraintMessage(val maxFrameHeight: Int) : BridgeChannelMes
  * {
  *   "colibriClass": "ReceiverVideoConstraintsChangedEvent",
  *   "videoConstraints": [
- *     { "id": "abcdabcd", "idealHeight": 180 },
- *     { "id": "12341234", "idealHeight": 360 }
+ *     { "id": "endpoint-1", "idealHeight": 180 },
+ *     { "id": "endpoint-2", "idealHeight": 360, "preferredHeight": 360, "preferredFps": 30.0 }
  *   ]
  * }
  */
