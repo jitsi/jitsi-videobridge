@@ -677,11 +677,9 @@ public class BitrateController
             }
         }
 
-        Map<String, VideoConstraints> copyOfVideoConstraintsMap = videoConstraintsMap;
-
         // Compute the bitrate allocation.
         SourceBitrateAllocation[]
-            sourceBitrateAllocations = allocate(bweBps, sortedEndpoints, copyOfVideoConstraintsMap);
+            sourceBitrateAllocations = allocate(bweBps, sortedEndpoints);
 
         // Update the the controllers based on the allocation and send a
         // notification to the client the set of forwarded endpoints has
@@ -906,11 +904,10 @@ public class BitrateController
      */
     private SourceBitrateAllocation[] allocate(
         long maxBandwidth,
-        List<AbstractEndpoint> conferenceEndpoints,
-        Map<String, VideoConstraints> copyOfVideoConstraintsMap)
+        List<AbstractEndpoint> conferenceEndpoints)
     {
         SourceBitrateAllocation[] sourceBitrateAllocations
-                = prioritize(copyOfVideoConstraintsMap, conferenceEndpoints);
+                = prioritize(conferenceEndpoints);
 
         if (ArrayUtils.isNullOrEmpty(sourceBitrateAllocations))
         {
@@ -998,9 +995,10 @@ public class BitrateController
      * endpoints, finally followed by any other remaining endpoints.
      */
     private SourceBitrateAllocation[] prioritize(
-        Map<String, VideoConstraints> copyOfVideoConstraintsMap,
         List<AbstractEndpoint> conferenceEndpoints)
     {
+        Map<String, VideoConstraints> copyOfVideoConstraintsMap = this.videoConstraintsMap;
+
         // Init.
         List<SourceBitrateAllocation> sourceBitrateAllocations
             = new ArrayList<>();
@@ -1060,7 +1058,7 @@ public class BitrateController
 
     public static List<EndpointMultiRank> makeEndpointMultiRankList(
         List<AbstractEndpoint> conferenceEndpoints,
-        Map<String, VideoConstraints> copyOfVideoConstraintsMap,
+        Map<String, VideoConstraints> videoConstraintsMap,
         int adjustedLastN)
     {
         List<EndpointMultiRank> endpointMultiRankList = new ArrayList<>(conferenceEndpoints.size());
@@ -1069,7 +1067,7 @@ public class BitrateController
             AbstractEndpoint endpoint = conferenceEndpoints.get(i);
 
             VideoConstraints effectiveVideoConstraints = (i < adjustedLastN || adjustedLastN < 0)
-                ? copyOfVideoConstraintsMap.getOrDefault(endpoint.getID(), VideoConstraints.thumbnailVideoConstraints)
+                ? videoConstraintsMap.getOrDefault(endpoint.getID(), VideoConstraints.thumbnailVideoConstraints)
                 : VideoConstraints.disabledVideoConstraints;
 
             endpointMultiRankList.add(new EndpointMultiRank(i, effectiveVideoConstraints, endpoint));
