@@ -1072,8 +1072,7 @@ public class BitrateController
                 ? copyOfVideoConstraintsMap.getOrDefault(endpoint.getID(), VideoConstraints.thumbnailVideoConstraints)
                 : VideoConstraints.disabledVideoConstraints;
 
-            int rank = conferenceEndpoints.indexOf(endpoint);
-            endpointMultiRankList.add(new EndpointMultiRank(rank, effectiveVideoConstraints, endpoint));
+            endpointMultiRankList.add(new EndpointMultiRank(i, effectiveVideoConstraints, endpoint));
         }
         endpointMultiRankList.sort(new EndpointMultiRanker());
         return endpointMultiRankList;
