@@ -121,8 +121,11 @@ fun createServer(config: JettyBundleActivatorConfig): Server {
     }
 }
 
-val Server.servletContextHandler: ServletContextHandler?
-    get() = handler as? ServletContextHandler
+// Note: it's technically possible that this cast fails, but
+// shouldn't happen in practice given that the above methods always install
+// a ServletContextHandler handler.
+val Server.servletContextHandler: ServletContextHandler
+    get() = handler as ServletContextHandler
 
 fun Server.addServlet(servlet: ServletHolder, pathSpec: String) {
     (handler as? ServletContextHandler)?.addServlet(servlet, pathSpec)
