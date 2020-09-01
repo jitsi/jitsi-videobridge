@@ -9,7 +9,9 @@ a max resolution/frame-rate.
 
 An endpoint can request different qualities for different endpoints, so it sends
 a map of endpoint ids -> video constraints back to the bridge. The specific JSON
-format from a specific endpoint to the bridge hasn't been fully finalized yet. 
+format from a specific endpoint to the bridge hasn't been fully finalized yet.
+The Jitsi Meet client currently relies on deprecated/legacy messages via a
+compatibility layer that's described in the next paragraph.  
 
 ###### Message format from the bridge
 
