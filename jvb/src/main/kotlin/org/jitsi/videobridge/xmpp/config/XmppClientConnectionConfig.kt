@@ -30,6 +30,7 @@ class XmppClientConnectionConfig {
             .convertFrom<Map<String, String>> { propsMap ->
                 MucClientConfiguration.loadFromMap(propsMap, "org.jitsi.videobridge.xmpp.user.", true)
                     .toList()
+                    .apply { forEach { it.applyDefaultIqHandlerMode() } }
                     .takeIf { it.isNotEmpty() } ?: throw ConfigException.UnableToRetrieve.NotFound("no configs found")
             }
         "videobridge.apis.xmpp-client.configs".from(JitsiConfig.newConfig)
@@ -41,6 +42,15 @@ class XmppClientConnectionConfig {
     }
 }
 
+/**
+ * We want the bridge to default to using "sync" as the IQ handler mode (unless the config actually overrides it).
+ */
+private fun MucClientConfiguration.applyDefaultIqHandlerMode() {
+    if (this.iqHandlerMode == null) {
+        this.iqHandlerMode = "sync"
+    }
+}
+
 private fun MutableMap.MutableEntry<String, ConfigValue>.toMucClientConfiguration(): MucClientConfiguration {
     val config = MucClientConfiguration(this.key)
     (value as? ConfigObject)?.let {
@@ -49,5 +59,6 @@ private fun MutableMap.MutableEntry<String, ConfigValue>.toMucClientConfiguratio
         }
     } ?: run { throw Exception("Invalid muc client configuration. " +
             "Expected type ConfigObject but got ${value.unwrapped()::class.java}") }
-    return config
+
+    return config.also { it.applyDefaultIqHandlerMode() }
 }
