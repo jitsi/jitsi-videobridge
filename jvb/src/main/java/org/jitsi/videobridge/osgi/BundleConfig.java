@@ -50,9 +50,6 @@ public class BundleConfig
             "org/jitsi/videobridge/rest/RESTBundleActivator",
         },
         {
-            "org/jitsi/videobridge/websocket/WebSocketBundleActivator"
-        },
-        {
             "org/jitsi/videobridge/VideobridgeBundleActivator"
         }
     };
