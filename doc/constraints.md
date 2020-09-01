@@ -8,29 +8,8 @@ a max resolution/frame-rate.
 ###### Message format to the bridge
 
 An endpoint can request different qualities for different endpoints, so it sends
-a map of endpoint ids -> video constraints back to the bridge. In JSON notation
-the message can be represented like this:
-
-    {
-       "colibriClass": "ReceiverVideoConstraintsChangedEvent",
-       "videoConstraints": [{
-           "id": "endpoint-1",
-           "idealHeight": 180,
-           "preferredHeight": 0,
-           "preferredFps": 15.0
-         }, {
-           "id": "endpoint-2",
-           "idealHeight": 360,
-           "preferredHeight": 360,
-           "preferredFps": 30.0
-         },
-         ...
-       ]
-     }
-
-The preferredHeight and preferredFps properties are additional parameters that
-control the bitrate allocation algorithm when it distributes the estimated
-available bandwidth.
+a map of endpoint ids -> video constraints back to the bridge. The specific JSON
+format from a specific endpoint to the bridge hasn't been fully finalized yet. 
 
 ###### Message format from the bridge
 
