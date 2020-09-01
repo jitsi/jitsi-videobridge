@@ -136,7 +136,7 @@ public class ColibriWebSocketService
                 + baseUrl);
             holder = new ServletHolder();
 
-            holder.setServlet(new ColibriWebSocketServlet(bundleContext, this));
+            holder.setServlet(new ColibriWebSocketServlet(this));
 
             // The rules for mappings of the Servlet specification do not allow
             // path matching in the middle of the path.
