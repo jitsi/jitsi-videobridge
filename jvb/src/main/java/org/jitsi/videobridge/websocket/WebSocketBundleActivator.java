@@ -119,9 +119,7 @@ public class WebSocketBundleActivator
         ColibriWebSocketService colibriWebSocketService
             = new ColibriWebSocketService(isTls());
         servletHolder
-            = colibriWebSocketService.initializeColibriWebSocketServlet(
-                    bundleContext,
-                    servletContextHandler);
+            = colibriWebSocketService.initializeColibriWebSocketServlet(servletContextHandler);
         if (servletHolder != null)
         {
             this.colibriWebSocketService = colibriWebSocketService;

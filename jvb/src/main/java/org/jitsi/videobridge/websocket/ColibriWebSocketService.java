@@ -117,16 +117,12 @@ public class ColibriWebSocketService
      * Initializes a {@link ColibriWebSocketServlet} and adds it to the
      * specified {@link ServletContextHandler}.
      *
-     * @param bundleContext the {@code BundleContext} in which the new instance
-     * is to be initialized
      * @param servletContextHandler the {@code ServletContextHandler} to add the
      * new instance to
      * @return the {@link ServletHolder} which holds the newly initialized
      * servlet, or {@code null} if no servlet was initialized.
      */
-    ServletHolder initializeColibriWebSocketServlet(
-        BundleContext bundleContext,
-        ServletContextHandler servletContextHandler)
+    ServletHolder initializeColibriWebSocketServlet(ServletContextHandler servletContextHandler)
     {
         ServletHolder holder = null;
 
