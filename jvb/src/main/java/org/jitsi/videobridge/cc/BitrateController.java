@@ -1382,7 +1382,7 @@ public class BitrateController
                         "Not including layer " + layer + " in rate snapshot: " +
                             "layer height " + layer.getHeight() + ", fps " + layer.getFrameRate() +
                             " with video constraints " +
-                            videoConstraints);
+                            effectiveVideoConstraints);
                 }
 
                 if (layer.getHeight() <= effectiveVideoConstraints.getPreferredHeight())
