@@ -113,23 +113,7 @@ public class Main
         }
         JvbHealthCheckServiceSupplierKt.singleton().get().start();
 
-        JvbLoadManager<PacketRateMeasurement> jvbLoadManager = new JvbLoadManager<>(
-            PacketRateMeasurement.getLoadedThreshold(),
-            PacketRateMeasurement.getRecoveryThreshold(),
-            new LastNReducer(
-                () -> VideobridgeSupplierKt.singleton().get().getConferences(),
-                JvbLastNKt.jvbLastNSingleton
-            )
-        );
-
         Logger logger = new LoggerImpl("org.jitsi.videobridge.Main");
-
-        ScheduledFuture<?> loadManagerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
-            new PacketRateLoadSampler(VideobridgeSupplierKt.singleton().get(), jvbLoadManager),
-            0,
-            10,
-            TimeUnit.SECONDS
-        );
 
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
         {
@@ -146,8 +130,6 @@ public class Main
             }
 
             JvbHealthCheckServiceSupplierKt.singleton().get().stop();
-
-            loadManagerTask.cancel(true);
         }));
 
         ComponentMain main = new ComponentMain();

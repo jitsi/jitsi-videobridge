@@ -32,6 +32,7 @@ import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.Version;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.ice.*;
+import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.shim.*;
@@ -49,6 +50,7 @@ import org.jxmpp.jid.parts.*;
 import org.osgi.framework.*;
 
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.regex.*;
 
@@ -143,6 +145,17 @@ public class Videobridge
      */
     private final VideobridgeShim shim = new VideobridgeShim(this);
 
+    private final JvbLoadManager<PacketRateMeasurement> jvbLoadManager = new JvbLoadManager<>(
+        PacketRateMeasurement.getLoadedThreshold(),
+        PacketRateMeasurement.getRecoveryThreshold(),
+        new LastNReducer(
+            this::getConferences,
+            JvbLastNKt.jvbLastNSingleton
+        )
+    );
+
+    private final ScheduledFuture<?> loadManagerTask;
+
     static
     {
         org.jitsi.rtp.util.BufferPool.Companion.setGetArray(ByteBufferPool::getBuffer);
@@ -163,6 +176,12 @@ public class Videobridge
     public Videobridge()
     {
         videobridgeExpireThread = new VideobridgeExpireThread(this);
+        loadManagerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
+            new PacketRateLoadSampler(this, jvbLoadManager),
+            0,
+            10,
+            TimeUnit.SECONDS
+        );
     }
 
     /**
@@ -668,6 +687,7 @@ public class Videobridge
         finally
         {
             videobridgeExpireThread.stop(bundleContext);
+            loadManagerTask.cancel(true);
             this.bundleContext = null;
         }
     }
