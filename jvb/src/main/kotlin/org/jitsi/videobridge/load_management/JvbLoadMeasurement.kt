@@ -18,4 +18,8 @@ package org.jitsi.videobridge.load_management
 
 interface JvbLoadMeasurement {
     fun getLoad(): Double
+
+    companion object {
+        const val CONFIG_BASE = "videobridge.load-management.load-measurements"
+    }
 }

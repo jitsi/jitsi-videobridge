@@ -27,4 +27,8 @@ interface JvbLoadReducer {
      * before doing another iteration.
      */
     fun impactTime(): Duration
+
+    companion object {
+        const val CONFIG_BASE = "videobridge.load-management.load-reducers"
+    }
 }

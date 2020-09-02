@@ -118,8 +118,7 @@ public class Main
             PacketRateMeasurement.getRecoveryThreshold(),
             new LastNReducer(
                 () -> VideobridgeSupplierKt.singleton().get().getConferences(),
-                JvbLastNKt.jvbLastNSingleton,
-                .75
+                JvbLastNKt.jvbLastNSingleton
             )
         );
 

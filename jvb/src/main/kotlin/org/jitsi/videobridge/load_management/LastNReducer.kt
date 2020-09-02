@@ -16,11 +16,16 @@
 
 package org.jitsi.videobridge.load_management
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
 import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.cinfo
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.Endpoint
 import org.jitsi.videobridge.JvbLastN
+import java.lang.Integer.max
 import java.time.Duration
 import java.util.function.Supplier
 
@@ -29,13 +34,37 @@ import java.util.function.Supplier
  * the entire bridge and sets a bridge-wide last-n value (via [JvbLastN]) to a number
  * less than that (based on [reductionScale]).
  */
-class LastNReducer @JvmOverloads constructor(
+class LastNReducer(
     private val conferencesSupplier: Supplier<Collection<Conference>>,
-    private val jvbLastN: JvbLastN,
-    private val reductionScale: Double,
-    private val recoverScale: Double = 1 / reductionScale
+    private val jvbLastN: JvbLastN
 ) : JvbLoadReducer {
     private val logger = createLogger()
+
+    private val reductionScale: Double by
+        config("${JvbLoadReducer.CONFIG_BASE}.last-n.reduction-scale".from(JitsiConfig.newConfig))
+
+    private val recoverScale: Double by
+        config("${JvbLoadReducer.CONFIG_BASE}.last-n.recover-scale".from(JitsiConfig.newConfig))
+
+    private val impactTime: Duration by
+        config("${JvbLoadReducer.CONFIG_BASE}.last-n.impact-time".from(JitsiConfig.newConfig))
+
+    private val minLastN: Int by
+        config("${JvbLoadReducer.CONFIG_BASE}.last-n.minimum-last-n-value".from(JitsiConfig.newConfig))
+
+    private val maxEnforcedLastN: Int by
+        config("${JvbLoadReducer.CONFIG_BASE}.last-n.maximum-enforced-last-n-value".from(JitsiConfig.newConfig))
+
+    init {
+        logger.cinfo {
+            "Created with configuration:\n" +
+                "reductionScale: $reductionScale\n" +
+                "recoverScale: $recoverScale\n" +
+                "impactTime: $impactTime\n" +
+                "minLastN: $minLastN\n" +
+                "maxEnforcedLastN: $maxEnforcedLastN"
+        }
+    }
 
     private fun getMaxForwardedEps(): Int? {
         return conferencesSupplier.get()
@@ -56,9 +85,9 @@ class LastNReducer @JvmOverloads constructor(
             return
         }
 
-        val newLastN = (maxForwardedEps * reductionScale).toInt()
+        val newLastN = max(minLastN, (maxForwardedEps * reductionScale).toInt())
         logger.info("Largest number of forwarded videos was $maxForwardedEps, A last-n value of $newLastN is " +
-                "being enforced to reduce bridge load")
+            "being enforced to reduce bridge load")
 
         jvbLastN.jvbLastN = newLastN
     }
@@ -70,11 +99,17 @@ class LastNReducer @JvmOverloads constructor(
             return
         }
         val newLastN = (currLastN * recoverScale).toInt()
-        logger.info("JVB last-n was $currLastN, increasing to $newLastN as part of load recovery")
-        jvbLastN.jvbLastN = newLastN
+        if (newLastN >= maxEnforcedLastN) {
+            logger.info("JVB last-n was $currLastN, increasing to $newLastN which is beyond the max enforced value" +
+                "of $maxEnforcedLastN, removing limit completely")
+                jvbLastN.jvbLastN = -1
+        } else {
+            logger.info("JVB last-n was $currLastN, increasing to $newLastN as part of load recovery")
+            jvbLastN.jvbLastN = newLastN
+        }
     }
 
-    override fun impactTime(): Duration = Duration.ofMinutes(1)
+    override fun impactTime(): Duration = impactTime
 
     override fun toString(): String = "LastNReducer with scale $reductionScale"
 }
