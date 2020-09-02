@@ -312,8 +312,7 @@ class ReceiverVideoConstraintsMessage(val videoConstraints: List<VideoConstraint
  */
 class DominantSpeakerMessage(var dominantSpeakerEndpoint: String) : BridgeChannelMessage(TYPE) {
     /**
-     * Serialize manually because it's faster than either Jackson or json-simple. Note that kotlin raw strings (triple
-     * quotes) are also significantly slower.
+     * Serialize manually because it's faster than either Jackson or json-simple.
      */
     override fun toJson(): String =
         """{"colibriClass":"$TYPE","dominantSpeakerEndpoint":"$dominantSpeakerEndpoint"}"""
@@ -336,8 +335,7 @@ class EndpointConnectionStatusMessage(
     val active: String = activeBoolean.toString()
 
     /**
-     * Serialize manually because it's faster than either Jackson or json-simple. Note that kotlin raw strings (triple
-     * quotes) are also significantly slower.
+     * Serialize manually because it's faster than either Jackson or json-simple.
      */
     override fun toJson(): String =
         """{"colibriClass":"$TYPE","endpoint":"$endpoint","active":"$active"}"""
@@ -380,8 +378,7 @@ class ForwardedEndpointsMessage(
  */
 class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : BridgeChannelMessage(TYPE) {
     /**
-     * Serialize manually because it's faster than either Jackson or json-simple. Note that kotlin raw strings (triple
-     * quotes) are also significantly slower.
+     * Serialize manually because it's faster than either Jackson or json-simple.
      * Note that we depend on `VideoConstraints.toString` producing JSON.
      */
     override fun toJson(): String = """{"colibriClass":"$TYPE", "videoConstraints":$videoConstraints}"""
@@ -401,8 +398,7 @@ class AddReceiverMessage(
     val videoConstraints: VideoConstraints
 ) : BridgeChannelMessage(TYPE) {
     /**
-     * Serialize manually because it's faster than either Jackson or json-simple. Note that kotlin raw strings (triple
-     * quotes) are also significantly slower.
+     * Serialize manually because it's faster than either Jackson or json-simple.
      */
     override fun toJson(): String =
         """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId",""" +
@@ -422,8 +418,7 @@ class RemoveReceiverMessage(
     val endpointId: String
 ) : BridgeChannelMessage(TYPE) {
     /**
-     * Serialize manually because it's faster than either Jackson or json-simple. Note that kotlin raw strings (triple
-     * quotes) are also significantly slower.
+     * Serialize manually because it's faster than either Jackson or json-simple.
      */
     override fun toJson(): String =
         """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId"}"""
