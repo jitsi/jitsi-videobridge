@@ -16,7 +16,7 @@
 package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.nlj.codec.vp8.*;
+import org.jitsi.nlj.codec.vpx.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.util.*;
@@ -88,7 +88,7 @@ public class VP8FrameMap
             return false;
         }
 
-        int picDelta = Vp8Utils.getExtendedPictureIdDelta(packet.getPictureId(), latestFrame.getPictureId());
+        int picDelta = VpxUtils.getExtendedPictureIdDelta(packet.getPictureId(), latestFrame.getPictureId());
         if (picDelta > FRAME_MAP_SIZE)
         {
             return true;
@@ -410,7 +410,7 @@ public class VP8FrameMap
                     return seqNum;
                 }
 
-                int delta = Vp8Utils.getExtendedPictureIdDelta(seqNum, highestSeqNumReceived);
+                int delta = VpxUtils.getExtendedPictureIdDelta(seqNum, highestSeqNumReceived);
 
                 int v;
 
@@ -452,7 +452,7 @@ public class VP8FrameMap
              */
             public void resetAt(int seq)
             {
-                int delta = Vp8Utils.getExtendedPictureIdDelta(seq, highestSeqNumReceived);
+                int delta = VpxUtils.getExtendedPictureIdDelta(seq, highestSeqNumReceived);
                 if (delta < 0)
                 {
                     roc++;

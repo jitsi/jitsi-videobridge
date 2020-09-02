@@ -17,10 +17,10 @@ package org.jitsi.videobridge.cc.vp9
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
-import org.jitsi.nlj.codec.vp8.Vp8Utils.Companion.applyExtendedPictureIdDelta
-import org.jitsi.nlj.codec.vp8.Vp8Utils.Companion.applyTl0PicIdxDelta
-import org.jitsi.nlj.codec.vp8.Vp8Utils.Companion.getExtendedPictureIdDelta
-import org.jitsi.nlj.codec.vp8.Vp8Utils.Companion.getTl0PicIdxDelta
+import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.applyExtendedPictureIdDelta
+import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.applyTl0PicIdxDelta
+import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.getExtendedPictureIdDelta
+import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.getTl0PicIdxDelta
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.rtp.rtcp.RtcpSrPacket

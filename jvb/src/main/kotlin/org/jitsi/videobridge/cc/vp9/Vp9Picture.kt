@@ -15,7 +15,7 @@
  */
 package org.jitsi.videobridge.cc.vp9
 
-import org.jitsi.nlj.codec.vp8.Vp8Utils.Companion.applyExtendedPictureIdDelta
+import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.applyExtendedPictureIdDelta
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import java.util.Collections

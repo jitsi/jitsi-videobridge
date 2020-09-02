@@ -17,7 +17,7 @@ package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
-import org.jitsi.nlj.codec.vp8.*;
+import org.jitsi.nlj.codec.vpx.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.rtp.rtcp.*;
@@ -242,7 +242,7 @@ public class VP8AdaptiveSourceProjectionContext
      */
     private int picGap(@NotNull VP8Frame frame1, @NotNull VP8Frame frame2)
     {
-        int picGap = Vp8Utils.getExtendedPictureIdDelta(frame2.getPictureId(), frame1.getPictureId());
+        int picGap = VpxUtils.getExtendedPictureIdDelta(frame2.getPictureId(), frame1.getPictureId());
 
         if (!frame1.isAccepted() && picGap > 0)
         {
@@ -457,9 +457,9 @@ public class VP8AdaptiveSourceProjectionContext
         int tl0PicIdx;
         if (lastVP8FrameProjection.getVP8Frame() != null)
         {
-            picId = Vp8Utils.applyExtendedPictureIdDelta(lastVP8FrameProjection.getPictureId(),
+            picId = VpxUtils.applyExtendedPictureIdDelta(lastVP8FrameProjection.getPictureId(),
                 1);
-            tl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(lastVP8FrameProjection.getTl0PICIDX(),
+            tl0PicIdx = VpxUtils.applyTl0PicIdxDelta(lastVP8FrameProjection.getTl0PICIDX(),
                 1);
         }
         else {
@@ -491,14 +491,14 @@ public class VP8AdaptiveSourceProjectionContext
             lastFrame.getLatestKnownSequenceNumber());
         long tsDelta = RtpUtils.getTimestampDiff(lastVP8FrameProjection.getTimestamp(),
             lastFrame.getTimestamp());
-        int picIdDelta = Vp8Utils.getExtendedPictureIdDelta(lastVP8FrameProjection.getPictureId(),
+        int picIdDelta = VpxUtils.getExtendedPictureIdDelta(lastVP8FrameProjection.getPictureId(),
             lastFrame.getPictureId());
-        int tl0PicIdxDelta = Vp8Utils.getTl0PicIdxDelta(lastVP8FrameProjection.getTl0PICIDX(),
+        int tl0PicIdxDelta = VpxUtils.getTl0PicIdxDelta(lastVP8FrameProjection.getTl0PICIDX(),
             lastFrame.getTl0PICIDX());
 
         long projectedTs = RtpUtils.applyTimestampDelta(frame.getTimestamp(), tsDelta);
-        int projectedPicId = Vp8Utils.applyExtendedPictureIdDelta(frame.getPictureId(), picIdDelta);
-        int projectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(frame.getTl0PICIDX(), tl0PicIdxDelta);
+        int projectedPicId = VpxUtils.applyExtendedPictureIdDelta(frame.getPictureId(), picIdDelta);
+        int projectedTl0PicIdx = VpxUtils.applyTl0PicIdxDelta(frame.getTl0PICIDX(), tl0PicIdxDelta);
 
         VP8FrameProjection projection =
             new VP8FrameProjection(diagnosticContext,
@@ -520,13 +520,13 @@ public class VP8AdaptiveSourceProjectionContext
         long receivedMs)
     {
         long tsGap = RtpUtils.getTimestampDiff(frame.getTimestamp(), refFrame.getTimestamp());
-        int tl0Gap = Vp8Utils.getTl0PicIdxDelta(frame.getTl0PICIDX(), refFrame.getTl0PICIDX());
+        int tl0Gap = VpxUtils.getTl0PicIdxDelta(frame.getTl0PICIDX(), refFrame.getTl0PICIDX());
         int seqGap = 0;
         int picGap = 0;
 
         VP8Frame f1 = refFrame, f2;
         int refSeq;
-        int picIdDelta = Vp8Utils.getExtendedPictureIdDelta(refFrame.getPictureId(), frame.getPictureId());
+        int picIdDelta = VpxUtils.getExtendedPictureIdDelta(refFrame.getPictureId(), frame.getPictureId());
         if (picIdDelta < 0)
         {
             do
@@ -566,8 +566,8 @@ public class VP8AdaptiveSourceProjectionContext
 
         int projectedSeq = RtpUtils.applySequenceNumberDelta(refSeq, seqGap);
         long projectedTs = RtpUtils.applyTimestampDelta(refFrame.getProjection().getTimestamp(), tsGap);
-        int projectedPicId = Vp8Utils.applyExtendedPictureIdDelta(refFrame.getProjection().getPictureId(), picGap);
-        int projectedTl0PicIdx = Vp8Utils.applyTl0PicIdxDelta(refFrame.getProjection().getTl0PICIDX(), tl0Gap);
+        int projectedPicId = VpxUtils.applyExtendedPictureIdDelta(refFrame.getProjection().getPictureId(), picGap);
+        int projectedTl0PicIdx = VpxUtils.applyTl0PicIdxDelta(refFrame.getProjection().getTl0PICIDX(), tl0Gap);
 
         VP8FrameProjection projection =
             new VP8FrameProjection(diagnosticContext,

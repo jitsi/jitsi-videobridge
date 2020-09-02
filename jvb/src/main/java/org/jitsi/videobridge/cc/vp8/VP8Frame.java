@@ -16,7 +16,7 @@
 package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.nlj.codec.vp8.*;
+import org.jitsi.nlj.codec.vpx.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.rtp.util.*;
@@ -407,6 +407,6 @@ class VP8Frame
     boolean isImmediatelyAfter(@NotNull VP8Frame otherFrame)
     {
         return pictureId ==
-            Vp8Utils.applyExtendedPictureIdDelta(otherFrame.getPictureId(), 1);
+            VpxUtils.applyExtendedPictureIdDelta(otherFrame.getPictureId(), 1);
     }
 }
