@@ -41,7 +41,7 @@ private class PacketRateMeasurementConfig {
             .convertFrom<Long>(::PacketRateMeasurement)
     }
     val recoverThreshold: PacketRateMeasurement by config {
-        "${JvbLoadMeasurement.CONFIG_BASE}.packet-rate.recover-threshold"
+        "${JvbLoadMeasurement.CONFIG_BASE}.packet-rate.recovery-threshold"
             .from(JitsiConfig.newConfig)
             .convertFrom<Long>(::PacketRateMeasurement)
     }
