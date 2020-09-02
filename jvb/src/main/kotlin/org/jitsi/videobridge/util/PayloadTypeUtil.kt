@@ -40,7 +40,6 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.xmpp.extensions.jingle.PayloadTypePacketExtension
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArraySet
 
 /**
  * Utilities to deserialize [PayloadTypePacketExtension] into a
@@ -79,15 +78,14 @@ class PayloadTypeUtil {
                 }
             }
 
-            val rtcpFeedbackSet: MutableSet<String> = CopyOnWriteArraySet()
-            ext.rtcpFeedbackTypeList.forEach { rtcpExtension ->
-                var feedbackType = rtcpExtension.feedbackType
-                val feedbackSubtype = rtcpExtension.feedbackSubtype
-                if (feedbackSubtype != null && feedbackSubtype != "") {
-                    feedbackType += " $feedbackSubtype"
+            val rtcpFeedbackSet = ext.rtcpFeedbackTypeList.map { rtcpExtension ->
+                buildString {
+                    append(rtcpExtension.feedbackType)
+                    if (rtcpExtension.feedbackSubtype.isNotBlank()) {
+                        append(" ${rtcpExtension.feedbackSubtype}")
+                    }
                 }
-                rtcpFeedbackSet.add(feedbackType)
-            }
+            }.toSet()
 
             val id = ext.id.toByte()
             val encoding = createFrom(ext.name)
