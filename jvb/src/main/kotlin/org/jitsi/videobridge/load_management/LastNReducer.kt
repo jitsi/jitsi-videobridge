@@ -19,6 +19,7 @@ package org.jitsi.videobridge.load_management
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
+import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.cinfo
 import org.jitsi.utils.logging2.createLogger
@@ -110,6 +111,10 @@ class LastNReducer(
     }
 
     override fun impactTime(): Duration = impactTime
+
+    override fun getStats() = OrderedJsonObject().apply {
+        put("jvbLastN", jvbLastN.jvbLastN)
+    }
 
     override fun toString(): String = "LastNReducer with scale $reductionScale"
 }

@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.load_management
 
 import org.jitsi.nlj.util.NEVER
+import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createLogger
 import java.time.Clock
@@ -34,17 +35,28 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
 
     private var lastReducerTime: Instant = NEVER
 
+    private var state: State = State.NOT_OVERLOADED
+
     fun loadUpdate(loadMeasurement: T) {
         logger.cdebug { "Got a load measurement of $loadMeasurement" }
         if (loadMeasurement.getLoad() >= jvbLoadThreshold.getLoad()) {
+            state = State.OVERLOADED
             logger.info("Load measurement $loadMeasurement is above threshold of $jvbLoadThreshold, " +
                     "maybe running load reducer")
             maybeRun("load reducer") { reduceLoad() }
-        } else if (loadMeasurement.getLoad() < jvbRecoveryThreshold.getLoad()) {
-            logger.info("Load measurement $loadMeasurement is below threshold of $jvbLoadThreshold, " +
-                    "maybe running recovery")
-            maybeRun("recovery") { recover() }
+        } else {
+            state = State.NOT_OVERLOADED
+            if (loadMeasurement.getLoad() < jvbRecoveryThreshold.getLoad()) {
+                logger.info("Load measurement $loadMeasurement is below threshold of $jvbLoadThreshold, " +
+                        "maybe running recovery")
+                maybeRun("recovery") { recover() }
+            }
         }
+    }
+
+    fun getStats() = OrderedJsonObject().apply {
+        put("state", state)
+        put("reducer", loadReducer.getStats())
     }
 
     private fun maybeRun(taskDescription: String, task: JvbLoadReducer.() -> Unit) {
@@ -56,5 +68,10 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
             logger.info("Load reducer started running ${Duration.between(lastReducerTime, clock.instant())} " +
                     "ago, and we wait ${loadReducer.impactTime()} between runs, so will skip running $taskDescription")
         }
+    }
+
+    enum class State {
+        OVERLOADED,
+        NOT_OVERLOADED
     }
 }
