@@ -15,13 +15,11 @@
  */
 package org.jitsi.videobridge.rest;
 
-import java.util.*;
-
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.servlet.*;
 import org.glassfish.jersey.servlet.*;
 import org.jitsi.rest.*;
-import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.root.*;
 import org.osgi.framework.*;
 
@@ -54,7 +52,7 @@ public class RESTBundleActivator
      */
     public RESTBundleActivator()
     {
-        super(JETTY_PROPERTY_PREFIX);
+        super(JETTY_PROPERTY_PREFIX, "videobridge.http-servers.private");
     }
 
     /**
@@ -101,8 +99,8 @@ public class RESTBundleActivator
 
         if (b)
         {
-            // The REST API of Videobridge does not start by default.
-            b = getCfgBoolean(Videobridge.REST_API_PNAME, false);
+            // The HTTP server doesn't need to be started if none of the REST APIs are enabled.
+            b = RestConfig.config.isEnabled();
         }
         return b;
     }

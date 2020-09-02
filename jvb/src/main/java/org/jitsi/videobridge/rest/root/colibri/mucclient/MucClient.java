@@ -16,8 +16,8 @@
 
 package org.jitsi.videobridge.rest.root.colibri.mucclient;
 
-import org.jitsi.videobridge.rest.root.colibri.*;
-import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.rest.annotations.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
@@ -31,10 +31,11 @@ import javax.ws.rs.core.*;
  * Add or remove XMPP environments to which the bridge will connect
  */
 @Path("/colibri/muc-client")
-public class MucClient extends ColibriResource
+@EnabledByConfig(RestApis.COLIBRI)
+public class MucClient
 {
     @Inject
-    protected ClientConnectionProvider clientConnectionProvider;
+    protected ClientConnectionImplSupplier clientConnectionImplSupplier;
 
     @Path("/add")
     @POST
@@ -50,7 +51,7 @@ public class MucClient extends ColibriResource
         {
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
         }
-        ClientConnectionImpl clientConnection = clientConnectionProvider.get();
+        ClientConnectionImpl clientConnection = clientConnectionImplSupplier.get();
         if (clientConnection.addMucClient((JSONObject)o))
         {
             return Response.ok().build();
@@ -68,7 +69,7 @@ public class MucClient extends ColibriResource
         {
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
         }
-        ClientConnectionImpl clientConnection = clientConnectionProvider.get();
+        ClientConnectionImpl clientConnection = clientConnectionImplSupplier.get();
         if (clientConnection.removeMucClient((JSONObject)o))
         {
             return Response.ok().build();

@@ -20,7 +20,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jetbrains.annotations.*;
-import org.jitsi.config.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.health.*;
 import org.jitsi.meet.*;
@@ -31,6 +30,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.Version;
+import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.ice.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
@@ -45,7 +45,6 @@ import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.json.simple.*;
-import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
 import org.osgi.framework.*;
 
@@ -137,8 +136,6 @@ public class Videobridge
      * execute expire procedure for any of them.
      */
     private VideobridgeExpireThread videobridgeExpireThread;
-
-    private final VideobridgeConfig config = new VideobridgeConfig();
 
     /**
      * The shim which handles Colibri-related logic for this
@@ -464,11 +461,7 @@ public class Videobridge
      */
     private String getHealthStatus()
     {
-        HealthCheckService health = ServiceUtils2.getService(bundleContext, HealthCheckService.class);
-        if (health == null)
-        {
-            return "No health check service running";
-        }
+        HealthCheckService health = JvbHealthCheckServiceSupplierKt.singleton().get();
 
         Exception result = health.getResult();
         return result == null ? "OK" : result.getMessage();
@@ -483,47 +476,28 @@ public class Videobridge
      *         the specified request or <tt>null</tt> to reply with
      *         <tt>feature-not-implemented</tt>
      */
-    public IQ handleShutdownIQ(ShutdownIQ shutdownIQ)
+    public void shutdown(boolean graceful)
     {
-        // Security not configured - service unavailable
-        if (config.getShutdownSourcePattern() == null)
+        logger.warn("Received shutdown request, graceful=" + graceful);
+        if (graceful)
         {
-            return IQUtils.createError(shutdownIQ, XMPPError.Condition.service_unavailable);
-        }
-        // Check if source matches pattern
-        Jid from = shutdownIQ.getFrom();
-        if (from != null && config.getShutdownSourcePattern().matcher(from).matches())
-        {
-            logger.info("Accepted shutdown request from: " + from);
-            if (shutdownIQ.isGracefulShutdown())
-            {
-                if (!isShutdownInProgress())
-                {
-                    enableGracefulShutdownMode();
-                }
-            }
-            else
-            {
-                new Thread(() -> {
-                    try
-                    {
-                        Thread.sleep(1000);
-                        logger.warn("JVB force shutdown - now");
-                        System.exit(0);
-                    }
-                    catch (InterruptedException e)
-                    {
-                        throw new RuntimeException(e);
-                    }
-                }, "ForceShutdownThread").start();
-            }
-            return IQ.createResultIQ(shutdownIQ);
+            enableGracefulShutdownMode();
         }
         else
         {
-            // Unauthorized
-            logger.error("Rejected shutdown request from: " + from);
-            return IQUtils.createError(shutdownIQ, XMPPError.Condition.not_authorized);
+            logger.warn("Will shutdown in 1 second.");
+            new Thread(() -> {
+                try
+                {
+                    Thread.sleep(1000);
+                    logger.warn("JVB force shutdown - now");
+                    System.exit(0);
+                }
+                catch (InterruptedException e)
+                {
+                    throw new RuntimeException(e);
+                }
+            }, "ForceShutdownThread").start();
         }
     }
 
@@ -568,8 +542,11 @@ public class Videobridge
      *
      * @param bundleContext the <tt>BundleContext</tt> in which this
      * <tt>Videobridge</tt> is to start
+     *
+     * NOTE: we have to make this public so Jicofo can call it from its
+     * tests
      */
-    void start(final BundleContext bundleContext)
+    public void start(final BundleContext bundleContext)
     {
         this.bundleContext = bundleContext;
 
@@ -677,8 +654,11 @@ public class Videobridge
      *
      * @param bundleContext the <tt>BundleContext</tt> in which this
      * <tt>Videobridge</tt> is to stop
+     *
+     * NOTE: we have to make this public so Jicofo can call it from its
+     * tests
      */
-    void stop(BundleContext bundleContext)
+    public void stop(BundleContext bundleContext)
     {
         try
         {
@@ -745,7 +725,6 @@ public class Videobridge
         debugState.put("time", System.currentTimeMillis());
 
         debugState.put("health", getHealthStatus());
-        debugState.put("e2e_packet_delay", Endpoint.getPacketDelayStats());
         debugState.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
 
         JSONObject conferences = new JSONObject();
@@ -818,7 +797,7 @@ public class Videobridge
      */
     public Version getVersion()
     {
-        return CurrentVersionImpl.VERSION;
+        return JvbVersionServiceSupplierKt.singleton().get().getCurrentVersion();
     }
 
     /**

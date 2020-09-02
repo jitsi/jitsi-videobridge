@@ -145,10 +145,7 @@ public class ConfOctoTransport
         this.conferenceId = conference.getGid();
         this.clock = clock;
         this.logger = conference.getLogger().createChildLogger(this.getClass().getName());
-        BundleContext bundleContext = conference.getBundleContext();
-        OctoRelayService octoRelayService
-            = bundleContext == null ? null :
-            ServiceUtils2.getService(bundleContext, OctoRelayService.class);
+        OctoRelayService octoRelayService = OctoRelayServiceProviderKt.singleton().get();
 
         if (octoRelayService == null)
         {

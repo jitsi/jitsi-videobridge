@@ -17,7 +17,6 @@ package org.jitsi.videobridge.stats;
 
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
-import org.jitsi.osgi.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.octo.*;
@@ -25,7 +24,6 @@ import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.json.simple.*;
-import org.osgi.framework.*;
 
 import java.lang.management.*;
 import java.text.*;
@@ -179,8 +177,7 @@ public class VideobridgeStatistics
     @SuppressWarnings("unchecked")
     private void generate0()
     {
-        BundleContext bundleContext = StatsManagerBundleActivator.getBundleContext();
-        Videobridge videobridge = ServiceUtils2.getService(bundleContext, Videobridge.class);
+        Videobridge videobridge = VideobridgeSupplierKt.singleton().get();
         Videobridge.Statistics jvbStats = videobridge.getStatistics();
 
         int videoChannels = 0;
@@ -473,8 +470,7 @@ public class VideobridgeStatistics
                     TOTAL_PACKETS_RECEIVED, jvbStats.totalPacketsReceived.get());
             unlockedSetStat(TOTAL_PACKETS_SENT, jvbStats.totalPacketsSent.get());
 
-            OctoRelayService relayService
-                = ServiceUtils2.getService(bundleContext, OctoRelayService.class);
+            OctoRelayService relayService = OctoRelayServiceProviderKt.singleton().get();
             OctoRelayService.Stats octoRelayServiceStats
                 = relayService == null ? null : relayService.getStats();
 
@@ -529,23 +525,19 @@ public class VideobridgeStatistics
             }
             unlockedSetStat(VERSION, videobridge.getVersion().toString());
 
-            ClientConnectionImpl clientConnection
-                    = ServiceUtils2.getService(bundleContext, ClientConnectionImpl.class);
-            if (clientConnection != null)
-            {
-                unlockedSetStat(
-                        MUC_CLIENTS_CONFIGURED,
-                        clientConnection.getMucClientManager().getClientCount());
-                unlockedSetStat(
-                        MUC_CLIENTS_CONNECTED,
-                        clientConnection.getMucClientManager().getClientConnectedCount());
-                unlockedSetStat(
-                        MUCS_CONFIGURED,
-                        clientConnection.getMucClientManager().getMucCount());
-                unlockedSetStat(
-                        MUCS_JOINED,
-                        clientConnection.getMucClientManager().getMucJoinedCount());
-            }
+            ClientConnectionImpl clientConnection = ClientConnectionSupplierKt.singleton().get();
+            unlockedSetStat(
+                    MUC_CLIENTS_CONFIGURED,
+                    clientConnection.getMucClientManager().getClientCount());
+            unlockedSetStat(
+                    MUC_CLIENTS_CONNECTED,
+                    clientConnection.getMucClientManager().getClientConnectedCount());
+            unlockedSetStat(
+                    MUCS_CONFIGURED,
+                    clientConnection.getMucClientManager().getMucCount());
+            unlockedSetStat(
+                    MUCS_JOINED,
+                    clientConnection.getMucClientManager().getMucJoinedCount());
         }
         finally
         {

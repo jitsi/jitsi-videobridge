@@ -41,7 +41,7 @@ import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.message.*;
-import org.jitsi.videobridge.rest.root.colibri.debug.*;
+import org.jitsi.videobridge.rest.root.debug.*;
 import org.jitsi.videobridge.sctp.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.stats.*;
@@ -616,14 +616,17 @@ public class Endpoint
     @Override
     public void setSenderVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraints)
     {
-        ImmutableMap<String, VideoConstraints> oldVideoConstraints = bitrateController.getVideoConstraints();
-
         bitrateController.setVideoConstraints(newVideoConstraints);
+    }
 
+    public void effectiveVideoConstraintsChanged(
+        ImmutableMap<String, VideoConstraints> oldVideoConstraints,
+        ImmutableMap<String, VideoConstraints> newVideoConstraints)
+    {
         Set<String> removedEndpoints = new HashSet<>(oldVideoConstraints.keySet());
         removedEndpoints.removeAll(newVideoConstraints.keySet());
 
-        // Endpoints that "this" no longer cares about what it receives.
+        // Sources that "this" endpoint no longer receives.
         for (String id : removedEndpoints)
         {
             AbstractEndpoint senderEndpoint = getConference().getEndpoint(id);

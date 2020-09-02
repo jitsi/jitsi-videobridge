@@ -16,10 +16,9 @@
 
 package org.jitsi.videobridge.rest.filters;
 
+import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
-import org.jitsi.videobridge.util.*;
 
-import javax.inject.*;
 import javax.ws.rs.*;
 import javax.ws.rs.container.*;
 import javax.ws.rs.core.*;
@@ -27,46 +26,24 @@ import javax.ws.rs.core.*;
 /**
  * A filter which returns 404 not found for any path which:
  * 1) Is marked with the {@link EnabledByConfig} annotation and
- * 2) The resulting value corresponding to the provided configuration key
- * after checking the config file (and potentially falling back to the
- * default value) is false
+ * 2) The resulting config value in {@link RestConfig} is `false`.
  */
 public class ConfigFilter implements ContainerRequestFilter
 {
     @Context
     protected ResourceInfo resourceInfo;
 
-    @Inject
-    ConfigProvider configProvider;
-
-    /**
-     * REST paths can be enabled/disabled by config at multiple levels, so it's
-     * possible that the specific resource class for the URI may be enabled, but
-     * part of its parent path isn't.  For example:
-     * /colibri/shutdown, is enabled by
-     * {@link org.jitsi.videobridge.rest.root.colibri.shutdown.Constants#ENABLE_REST_SHUTDOWN_PNAME},
-     * but the root /colibri path is controlled by
-     * {@link org.jitsi.videobridge.rest.root.colibri.Constants#ENABLE_REST_COLIBRI_PNAME}.
-     * So when we check if a specific resource should be enabled, we need to walk its
-     * entire ancestry to make sure all parent resources are also enabled.  This means that
-     * in order to enforce this sort of hierarchy, sub-resources must descend from a common
-     * parent (a la {@link  org.jitsi.videobridge.rest.root.colibri.ColibriResource})
-     */
     @Override
     public void filter(ContainerRequestContext containerRequestContext)
     {
         Class<?> clazz = resourceInfo.getResourceClass();
-        while ((Object.class != clazz) && clazz != null)
+        if  (clazz.isAnnotationPresent(EnabledByConfig.class))
         {
-            if  (clazz.isAnnotationPresent(EnabledByConfig.class))
+            EnabledByConfig anno = clazz.getAnnotation(EnabledByConfig.class);
+            if (!RestConfig.config.isEnabled(anno.value()))
             {
-                EnabledByConfig anno = clazz.getAnnotation(EnabledByConfig.class);
-                if (!(configProvider.get().getBoolean(anno.value(), anno.defaultValue())))
-                {
-                    throw new NotFoundException();
-                }
+                throw new NotFoundException();
             }
-            clazz = clazz.getSuperclass();
         }
     }
 }

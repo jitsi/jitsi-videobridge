@@ -47,29 +47,13 @@ public class BundleConfig
             "org/jitsi/videobridge/osgi/ConfigurationActivator"
         },
         {
-            "org/jitsi/videobridge/version/VersionActivator"
-        },
-        {
             "org/jitsi/videobridge/rest/RESTBundleActivator",
-            "org/jitsi/videobridge/stats/StatsManagerBundleActivator",
         },
         {
             "org/jitsi/videobridge/websocket/WebSocketBundleActivator"
         },
         {
             "org/jitsi/videobridge/VideobridgeBundleActivator"
-        },
-        {
-            "org/jitsi/videobridge/health/Health"
-        },
-        {
-            "org/jitsi/videobridge/xmpp/ClientConnectionImpl"
-        },
-        {
-            "org/jitsi/videobridge/octo/OctoRelayService"
-        },
-        {
-            "org/jitsi/videobridge/EndpointConnectionStatus"
         }
     };
 

@@ -14,18 +14,23 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.root.colibri;
+package org.jitsi.videobridge.stats
 
-import org.jitsi.videobridge.rest.annotations.*;
+import java.util.function.Supplier
 
-/**
- * A parent resource from which ALL resources on
- * /colibri/ paths MUST inherit.  The inheritance
- * is required such that we can enforce all sub-paths
- * on /colibri/ are gated by the {@link Constants#ENABLE_REST_COLIBRI_PNAME}
- * config value
- */
-@EnabledByConfig(value = Constants.ENABLE_REST_COLIBRI_PNAME, defaultValue = true)
-public class ColibriResource
-{
+// Open for tests
+open class StatsManagerSupplier : Supplier<StatsManager?> {
+    private val statsManager: StatsManager? by lazy {
+        if (StatsManager.config.enabled) {
+            StatsManager()
+        } else {
+            null
+        }
+    }
+
+    override fun get(): StatsManager? = statsManager
 }
+
+val statsManagerSupplier: StatsManagerSupplier = StatsManagerSupplier()
+
+fun singleton() = statsManagerSupplier

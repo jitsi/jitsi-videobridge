@@ -58,8 +58,7 @@ import static org.jitsi.utils.collections.JMap.entry;
  * @author George Politis
  */
 public class Conference
-     implements Expireable,
-        AbstractEndpointMessageTransport.EndpointMessageTransportEventHandler
+     implements AbstractEndpointMessageTransport.EndpointMessageTransportEventHandler
 {
     /**
      * The constant denoting that {@link #gid} is not specified.
@@ -72,7 +71,7 @@ public class Conference
      * synchronizing on the map itself, because it must be kept in sync with
      * {@link #endpointsCache}.
      */
-    private final ConcurrentHashMap<String, AbstractEndpoint> endpoints = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, AbstractEndpoint> endpointsById = new ConcurrentHashMap<>();
 
     /**
      * A read-only cache of the endpoints in this conference. Note that it
@@ -96,10 +95,7 @@ public class Conference
      * The indicator which determines whether {@link #expire()} has been called
      * on this <tt>Conference</tt>.
      */
-    @SuppressFBWarnings(
-            value = "IS2_INCONSISTENT_SYNC",
-            justification = "The value is deemed safe to read without synchronization.")
-    private boolean expired = false;
+    private AtomicBoolean expired = new AtomicBoolean(false);
 
     /**
      * The locally unique identifier of this conference (i.e. unique across the
@@ -165,11 +161,6 @@ public class Conference
     private final long creationTime = System.currentTimeMillis();
 
     /**
-     * The {@link ExpireableImpl} which we use to safely expire this conference.
-     */
-    private final ExpireableImpl expireableImpl;
-
-    /**
      * The shim which handles Colibri-related logic for this conference.
      */
     private final ConferenceShim shim;
@@ -187,6 +178,8 @@ public class Conference
      * endpoints stopping or starting to their video streams (which affects the order).
      */
     private ScheduledFuture<?> updateLastNEndpointsFuture;
+
+    private final EndpointConnectionStatusMonitor epConnectionStatusMonitor;
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
@@ -246,14 +239,16 @@ public class Conference
 
         }, 3, 3, TimeUnit.SECONDS);
 
-        expireableImpl = new ExpireableImpl(logger, this::expire);
-
         if (enableLogging)
         {
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
             Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
         }
+
+        epConnectionStatusMonitor =
+            new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
+        epConnectionStatusMonitor.start();
     }
 
     /**
@@ -523,19 +518,15 @@ public class Conference
      * respective <tt>Channel</tt>s. Releases the resources acquired by this
      * instance throughout its life time and prepares it to be garbage
      * collected.
+     *
+     * NOTE: this should _only_ be called by the Conference "manager" (in this
+     * case, Videobridge).  If you need to expire a Conference from elsewhere, use
+     * {@link Videobridge#expireConference(Conference)}
      */
-    public void expire()
+    void expire()
     {
-        synchronized (this)
-        {
-            if (expired)
-            {
-                return;
-            }
-            else
-            {
-                expired = true;
-            }
+        if (!expired.compareAndSet(false, true)) {
+            return;
         }
 
         logger.info("Expiring.");
@@ -552,30 +543,18 @@ public class Conference
             eventAdmin.sendEvent(EventFactory.conferenceExpired(this));
         }
 
-        Videobridge videobridge = getVideobridge();
-
-        try
+        logger.debug(() -> "Expiring endpoints.");
+        getEndpoints().forEach(AbstractEndpoint::expire);
+        speechActivity.expire();
+        if (tentacle != null)
         {
-            videobridge.expireConference(this);
+            tentacle.expire();
+            tentacle = null;
         }
-        finally
-        {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Expiring endpoints.");
-            }
-            getEndpoints().forEach(AbstractEndpoint::expire);
-            speechActivity.expire();
-            if (tentacle != null)
-            {
-                tentacle.expire();
-                tentacle = null;
-            }
 
-            if (includeInStatistics)
-            {
-                updateStatisticsOnExpire();
-            }
+        if (includeInStatistics)
+        {
+            updateStatisticsOnExpire();
         }
     }
 
@@ -663,7 +642,7 @@ public class Conference
     @Nullable
     public AbstractEndpoint getEndpoint(@NotNull String id)
     {
-        return endpoints.get(Objects.requireNonNull(id, "id must be non null"));
+        return endpointsById.get(Objects.requireNonNull(id, "id must be non null"));
     }
 
     /**
@@ -731,14 +710,14 @@ public class Conference
 
     /**
      * Updates {@link #endpointsCache} with the current contents of
-     * {@link #endpoints}.
+     * {@link #endpointsById}.
      */
     private void updateEndpointsCache()
     {
         synchronized (endpointsCacheLock)
         {
-            ArrayList<Endpoint> endpointsList = new ArrayList<>(endpoints.size());
-            endpoints.values().forEach(e ->
+            ArrayList<Endpoint> endpointsList = new ArrayList<>(endpointsById.size());
+            endpointsById.values().forEach(e ->
             {
                 if (e instanceof Endpoint)
                 {
@@ -757,7 +736,7 @@ public class Conference
      */
     public int getEndpointCount()
     {
-        return endpoints.size();
+        return endpointsById.size();
     }
 
     /**
@@ -779,7 +758,7 @@ public class Conference
      */
     public List<AbstractEndpoint> getEndpoints()
     {
-        return new ArrayList<>(this.endpoints.values());
+        return new ArrayList<>(this.endpointsById.values());
     }
 
     /**
@@ -856,9 +835,7 @@ public class Conference
      */
     public boolean isExpired()
     {
-        // this.expired starts as 'false' and only ever changes to 'true',
-        // so there is no need to synchronize while reading.
-        return expired;
+        return expired.get();
     }
 
     /**
@@ -870,13 +847,13 @@ public class Conference
     {
         final AbstractEndpoint removedEndpoint;
         String id = endpoint.getID();
-        removedEndpoint = endpoints.remove(id);
+        removedEndpoint = endpointsById.remove(id);
         if (removedEndpoint != null)
         {
             updateEndpointsCache();
         }
 
-        endpoints.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
+        endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
 
         if (tentacle != null)
         {
@@ -885,6 +862,7 @@ public class Conference
 
         if (removedEndpoint != null)
         {
+            epConnectionStatusMonitor.endpointExpired(removedEndpoint.getID());
             final EventAdmin eventAdmin = getEventAdmin();
             if (eventAdmin != null)
             {
@@ -908,7 +886,7 @@ public class Conference
         }
 
         final AbstractEndpoint replacedEndpoint;
-        replacedEndpoint = endpoints.put(endpoint.getID(), endpoint);
+        replacedEndpoint = endpointsById.put(endpoint.getID(), endpoint);
         updateEndpointsCache();
 
         endpointsChanged();
@@ -937,6 +915,7 @@ public class Conference
         {
             eventAdmin.postEvent(EventFactory.endpointMessageTransportReady(endpoint));
         }
+        epConnectionStatusMonitor.endpointConnected(endpoint.getID());
 
         if (!isExpired())
         {
@@ -999,25 +978,13 @@ public class Conference
     }
 
     /**
-     * {@inheritDoc}
-     * </p>
      * @return {@code true} if this {@link Conference} is ready to be expired.
      */
-    @Override
     public boolean shouldExpire()
     {
         // Allow a conference to have no endpoints in the first 20 seconds.
         return getEndpointCount() == 0
                 && (System.currentTimeMillis() - creationTime > 20000);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void safeExpire()
-    {
-        expireableImpl.safeExpire();
     }
 
     /**
@@ -1194,7 +1161,7 @@ public class Conference
         if (full)
         {
             debugState.put("gid", gid);
-            debugState.put("expired", expired);
+            debugState.put("expired", expired.get());
             debugState.put("creationTime", creationTime);
             debugState.put("speechActivity", speechActivity.getDebugState());
             debugState.put("includeInStatistics", includeInStatistics);

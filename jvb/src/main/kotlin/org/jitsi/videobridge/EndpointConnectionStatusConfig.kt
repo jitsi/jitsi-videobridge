@@ -34,4 +34,9 @@ class EndpointConnectionStatusConfig {
             .convertFrom<Long>(Duration::ofMillis)
         "videobridge.ep-connection-status.max-inactivity-limit".from(JitsiConfig.newConfig)
     }
+
+    val intervalMs: Long by config {
+        "videobridge.ep-connection-status.check-interval".from(JitsiConfig.newConfig)
+            .convertFrom<Duration>(Duration::toMillis)
+    }
 }

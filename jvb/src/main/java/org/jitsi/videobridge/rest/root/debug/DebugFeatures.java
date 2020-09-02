@@ -14,16 +14,26 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.root.colibri.debug;
+package org.jitsi.videobridge.rest.root.debug;
 
-public enum EndpointDebugFeatures
+/**
+ * Enumerates different debug features which can be enabled and disabled via
+ * the debug REST API.
+ */
+public enum DebugFeatures
 {
-    PCAP_DUMP("pcap-dump");
-
+    PAYLOAD_VERIFICATION("payload-verification"),
+    NODE_STATS("node-stats"),
+    POOL_STATS("pool-stats"),
+    QUEUE_STATS("queue-stats"),
+    TRANSIT_STATS("transit-stats"),
+    TASK_POOL_STATS("task-pool-stats"),
+    NODE_TRACING("node-tracing"),
+    XMPP_DELAY_STATS("xmpp-delay-stats");
 
     private final String value;
 
-    EndpointDebugFeatures(String value)
+    DebugFeatures(String value)
     {
         this.value = value;
     }
@@ -44,9 +54,9 @@ public enum EndpointDebugFeatures
      * @return an instance of the enum, if one can be derived by reversing the transformation
      * detailed above
      */
-    public static EndpointDebugFeatures fromString(String value)
+    public static DebugFeatures fromString(String value)
     {
         String normalized = value.toUpperCase().replace("-", "_");
-        return EndpointDebugFeatures.valueOf(normalized);
+        return DebugFeatures.valueOf(normalized);
     }
 }

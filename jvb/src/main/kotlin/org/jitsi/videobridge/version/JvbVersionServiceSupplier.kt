@@ -14,23 +14,19 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.util;
+package org.jitsi.videobridge.version
 
-import org.jitsi.osgi.*;
-import org.jitsi.videobridge.*;
-import org.osgi.framework.*;
+import org.jitsi.utils.version.VersionService
+import org.jitsi.version.VersionServiceSupplier
 
-/**
- * A class to acquire a {@link Videobridge} from a {@link BundleContext}.
- *
- * This abstraction makes it easier to test methods which rely on a
- * {@link Videobridge} instance as this class can easily provide
- * a mock instead of the real Videobridge.
- */
-public class VideobridgeProvider extends OsgiServiceProvider<Videobridge>
-{
-    public VideobridgeProvider(BundleContext bundleContext)
-    {
-        super(bundleContext, Videobridge.class);
+class JvbVersionServiceSupplier : VersionServiceSupplier {
+    private val versionService: VersionService by lazy {
+        JvbVersionService()
     }
+
+    override fun get(): VersionService = versionService
 }
+
+val jvbVersionServiceSupplier = JvbVersionServiceSupplier()
+
+fun singleton() = jvbVersionServiceSupplier

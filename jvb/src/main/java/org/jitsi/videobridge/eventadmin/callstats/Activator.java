@@ -131,11 +131,11 @@ public class Activator
                 CallStatsIOTransport.DEFAULT_BRIDGE_ID);
 
             // Update with per stats transport interval if available.
-            Duration intervalDuration = StatsManagerBundleActivator.config.getTransportConfigs().stream()
+            Duration intervalDuration = StatsManager.config.getTransportConfigs().stream()
                     .filter(tc -> tc instanceof StatsTransportConfig.CallStatsIoStatsTransportConfig)
                     .map(StatsTransportConfig::getInterval)
                     .findFirst()
-                    .orElse(StatsManagerBundleActivator.config.getInterval());
+                    .orElse(StatsManager.config.getInterval());
             int interval = (int)intervalDuration.toMillis();
             String conferenceIDPrefix = ConfigUtils.getString(
                 cfg,

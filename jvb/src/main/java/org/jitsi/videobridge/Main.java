@@ -21,7 +21,11 @@ import org.jitsi.cmd.*;
 import org.jitsi.meet.*;
 import org.jitsi.metaconfig.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.health.*;
+import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.osgi.*;
+import org.jitsi.videobridge.stats.*;
+import org.jitsi.videobridge.xmpp.*;
 
 /**
  * Provides the <tt>main</tt> entry point of the Jitsi Videobridge application
@@ -81,6 +85,46 @@ public class Main
         System.setProperty(
                 Videobridge.REST_API_PNAME,
                 Boolean.toString(apis.contains(Videobridge.REST_API)));
+
+        OctoRelayService octoRelayService = OctoRelayServiceProviderKt.singleton().get();
+        if (octoRelayService != null)
+        {
+            octoRelayService.start();
+        }
+        ClientConnectionImpl clientConnectionImpl = ClientConnectionSupplierKt.singleton().get();
+        clientConnectionImpl.start();
+
+        final StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
+        if (statsMgr != null)
+        {
+            statsMgr.addStatistics(new VideobridgeStatistics(), StatsManager.config.getInterval().toMillis());
+
+            StatsManager.config.getTransportConfigs().forEach(transportConfig -> {
+                statsMgr.addTransport(transportConfig.toStatsTransport(), transportConfig.getInterval().toMillis());
+            });
+
+            statsMgr.start();
+        }
+        JvbHealthCheckServiceSupplierKt.singleton().get().start();
+
+        Logger logger = new LoggerImpl("org.jitsi.videobridge.Main");
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() ->
+        {
+            logger.info("Shutdown hook running");
+            if (octoRelayService != null)
+            {
+                octoRelayService.stop();
+            }
+            clientConnectionImpl.stop();
+
+            if (statsMgr != null)
+            {
+                statsMgr.stop();
+            }
+
+            JvbHealthCheckServiceSupplierKt.singleton().get().stop();
+        }));
 
         ComponentMain main = new ComponentMain();
         BundleConfig osgiBundles = new BundleConfig();

@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2020 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,17 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.jitsi.videobridge.rest
 
-package org.jitsi.videobridge.util;
-
-import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
-import org.osgi.framework.*;
-
-public class ConfigProvider extends OsgiServiceProvider<ConfigurationService>
-{
-    public ConfigProvider(BundleContext bundleContext)
-    {
-        super(bundleContext, ConfigurationService.class);
-    }
+enum class RestApis {
+    COLIBRI,
+    DEBUG,
+    HEALTH,
+    SHUTDOWN,
+    VERSION
 }

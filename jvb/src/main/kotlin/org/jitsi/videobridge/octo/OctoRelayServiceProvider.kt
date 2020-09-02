@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 - Present, 8x8 Inc
+ * Copyright @ 2018 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.util;
 
-/**
- * An interface for an object which can be expired in a thread safe manner.
- *
- * @author Boris Grozev
- */
-public interface Expireable
-{
-    /**
-     * Checks whether this instance is ready to be expired.
-     * @return {@code true} if this instance is ready to be expired, and
-     * {@code false} otherwise.
-     */
-    boolean shouldExpire();
+package org.jitsi.videobridge.octo
 
-    /**
-     * Tries to expire this {@link Expireable}. Thread safe.
-     */
-    void safeExpire();
+import org.jitsi.videobridge.octo.config.OctoConfig
+
+class OctoRelayServiceProvider {
+    private val octoRelayService: OctoRelayService? by lazy {
+        if (OctoConfig.config.enabled) {
+            OctoRelayService()
+        } else {
+            null
+        }
+    }
+
+    fun get(): OctoRelayService? = octoRelayService
 }
+
+private val supplierSingleton: OctoRelayServiceProvider = OctoRelayServiceProvider()
+
+fun singleton(): OctoRelayServiceProvider = supplierSingleton

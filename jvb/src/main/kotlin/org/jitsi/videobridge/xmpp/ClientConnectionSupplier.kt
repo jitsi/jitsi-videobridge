@@ -14,16 +14,19 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.util;
+package org.jitsi.videobridge.xmpp
 
-import org.jitsi.osgi.*;
-import org.jitsi.videobridge.stats.*;
-import org.osgi.framework.*;
+import java.util.function.Supplier
 
-public class StatsManagerProvider extends OsgiServiceProvider<StatsManager>
-{
-    public StatsManagerProvider(BundleContext bundleContext)
-    {
-        super(bundleContext, StatsManager.class);
+// Open for mocking
+open class ClientConnectionImplSupplier : Supplier<ClientConnectionImpl> {
+    private val clientConnectionImpl: ClientConnectionImpl by lazy {
+        ClientConnectionImpl()
     }
+
+    override fun get(): ClientConnectionImpl = clientConnectionImpl
 }
+
+val clientConnectionImplSupplier = ClientConnectionImplSupplier()
+
+fun singleton() = clientConnectionImplSupplier

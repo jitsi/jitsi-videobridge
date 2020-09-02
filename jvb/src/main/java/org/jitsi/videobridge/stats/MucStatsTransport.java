@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.stats;
 
-import org.jitsi.osgi.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.signaling.api.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -44,8 +43,7 @@ public class MucStatsTransport
      */
     private ClientConnectionImpl getUserConnectionBundleActivator()
     {
-        return ServiceUtils2.getService(
-            getBundleContext(), ClientConnectionImpl.class);
+        return ClientConnectionSupplierKt.singleton().get();
     }
 
     /**

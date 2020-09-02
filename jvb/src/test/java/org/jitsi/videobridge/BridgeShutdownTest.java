@@ -97,12 +97,7 @@ public class BridgeShutdownTest
 
         confIq.setID(respConfIq.getID());
 
-        // Start the shutdown
-        ShutdownIQ shutdownIQ = ShutdownIQ.createGracefulShutdownIQ();
-
-        shutdownIQ.setFrom(focusJid);
-
-        respIq = bridge.handleShutdownIQ(shutdownIQ);
+        bridge.shutdown(true);
 
         assertEquals(IQ.Type.result, respIq.getType());
         assertTrue(bridge.isShutdownInProgress());
@@ -157,7 +152,7 @@ public class BridgeShutdownTest
                 .mapToInt(Conference::getEndpointCount)
                 .sum());
 
-        bridge.getConferences().forEach(Conference::expire);
+        bridge.getConferences().forEach(bridge::expireConference);
 
         assertTrue(
             "The bridge should trigger a shutdown after last conference is "
