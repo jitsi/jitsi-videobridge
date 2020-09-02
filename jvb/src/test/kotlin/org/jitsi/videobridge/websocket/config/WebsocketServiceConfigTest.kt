@@ -16,11 +16,9 @@
 
 package org.jitsi.videobridge.websocket.config
 
-import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.test.TestCase
 import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
-import org.jitsi.metaconfig.ConfigException
 
 class WebsocketServiceConfigTest : ConfigTest() {
     private lateinit var config: WebsocketServiceConfig
@@ -31,20 +29,6 @@ class WebsocketServiceConfigTest : ConfigTest() {
     }
 
     init {
-        context("when websockets are disabled") {
-            withNewConfig("videobridge.websockets.enabled = false") {
-                context("accessing domain should throw") {
-                    shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
-                        config.domain
-                    }
-                }
-                context("accessing useTls should throw") {
-                    shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
-                        config.useTls
-                    }
-                }
-            }
-        }
         context("when websockets are enabled") {
             context("accessing domain") {
                 withNewConfig(newConfigWebsocketsEnabledDomain) {
