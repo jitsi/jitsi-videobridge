@@ -145,6 +145,9 @@ public class Videobridge
      */
     private final VideobridgeShim shim = new VideobridgeShim(this);
 
+    /**
+     * The {@link JvbLoadManager} instance used for this bridge.
+     */
     private final JvbLoadManager<PacketRateMeasurement> jvbLoadManager = new JvbLoadManager<>(
         PacketRateMeasurement.getLoadedThreshold(),
         PacketRateMeasurement.getRecoveryThreshold(),
@@ -154,7 +157,11 @@ public class Videobridge
         )
     );
 
-    private final ScheduledFuture<?> loadManagerTask;
+    /**
+     * The tasks which manager the recurring load sampling and updating of
+     * {@link Videobridge#jvbLoadManager}.
+     */
+    private final ScheduledFuture<?> loadSamplerTask;
 
     static
     {
@@ -176,7 +183,7 @@ public class Videobridge
     public Videobridge()
     {
         videobridgeExpireThread = new VideobridgeExpireThread(this);
-        loadManagerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
+        loadSamplerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
             new PacketRateLoadSampler(this, jvbLoadManager),
             0,
             10,
@@ -687,7 +694,7 @@ public class Videobridge
         finally
         {
             videobridgeExpireThread.stop(bundleContext);
-            loadManagerTask.cancel(true);
+            loadSamplerTask.cancel(true);
             this.bundleContext = null;
         }
     }
