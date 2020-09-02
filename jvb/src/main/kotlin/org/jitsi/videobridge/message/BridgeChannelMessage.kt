@@ -339,9 +339,8 @@ class EndpointConnectionStatusMessage(
      * Serialize manually because it's faster than either Jackson or json-simple. Note that kotlin raw strings (triple
      * quotes) are also significantly slower.
      */
-    override fun toJson(): String {
-        return "{\"colibriClass\":\"$TYPE\",\"endpoint\":\"$endpoint\",\"active\":\"$active\"}"
-    }
+    override fun toJson(): String =
+        "{\"colibriClass\":\"$TYPE\",\"endpoint\":\"$endpoint\",\"active\":\"$active\"}"
 
     companion object {
         const val TYPE = "EndpointConnectivityStatusChangeEvent"
@@ -362,14 +361,12 @@ class ForwardedEndpointsMessage(
     /**
      * Serialize using json-simple because it's faster.
      */
-    override fun toJson(): String {
-        val j = JSONObject()
-        j["colibriClass"] = TYPE
-        j["lastNEndpoints"] = forwardedEndpoints
-        j["endpointsEnteringLastN"] = endpointsEnteringLastN
-        j["conferenceEndpoints"] = conferenceEndpoints
-        return j.toJSONString()
-    }
+    override fun toJson(): String = JSONObject().apply {
+        this["colibriClass"] = TYPE
+        this["lastNEndpoints"] = forwardedEndpoints
+        this["endpointsEnteringLastN"] = endpointsEnteringLastN
+        this["conferenceEndpoints"] = conferenceEndpoints
+    }.toJSONString()
 
     companion object {
         const val TYPE = "LastNEndpointsChangeEvent"
