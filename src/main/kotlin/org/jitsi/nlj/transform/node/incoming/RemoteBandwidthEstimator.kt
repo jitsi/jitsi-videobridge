@@ -98,12 +98,15 @@ class RemoteBandwidthEstimator(
         astExtId?.let {
             val rtpPacket = packetInfo.packetAs<RtpPacket>()
             rtpPacket.getHeaderExtension(it)?.let { ext ->
+                val now = clock.instant()
                 bwe.processPacketArrival(
-                    clock.instant(),
+                    now,
                     AbsSendTimeHeaderExtension.getTime(ext),
                     Instant.ofEpochMilli(packetInfo.receivedTime),
                     rtpPacket.sequenceNumber,
                     rtpPacket.length.bytes)
+                /* With receiver-side bwe we need to treat each received packet as separate feedback */
+                bwe.feedbackComplete(now)
                 ssrcs.add(rtpPacket.ssrc)
             }
         } ?: numPacketsWithoutAbsSendTime++

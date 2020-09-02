@@ -157,6 +157,8 @@ class TransportCcEngine(
                 }
             }
         }
+        bandwidthEstimator.feedbackComplete(now)
+
         if (missingPacketDetailSeqNums.isNotEmpty()) {
             logger.warn("TCC packet contained received sequence numbers: " +
                 "${tccPacket.iterator().asSequence()
