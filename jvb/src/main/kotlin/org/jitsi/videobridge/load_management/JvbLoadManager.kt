@@ -41,7 +41,7 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
                     "maybe running load reducer")
             maybeRun("load reducer") { reduceLoad() }
         } else if (loadMeasurement.getLoad() < jvbRecoveryThreshold.getLoad()) {
-            logger.info("Load measurement $loadMeasurement is above threshold of $jvbLoadThreshold, " +
+            logger.info("Load measurement $loadMeasurement is below threshold of $jvbLoadThreshold, " +
                     "maybe running recovery")
             maybeRun("recovery") { recover() }
         }

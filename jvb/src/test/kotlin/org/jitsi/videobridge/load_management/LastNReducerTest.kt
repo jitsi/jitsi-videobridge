@@ -77,7 +77,7 @@ class LastNReducerTest : ShouldSpec({
 })
 
 /**
- * Create a mock [Conference] which has enpoints with the given number of forwarded video streams
+ * Create a mock [Conference] which has endpoints with the given number of forwarded video streams
  */
 private fun createMockConference(vararg epNumForwardedVideo: Int): Conference {
     val eps = epNumForwardedVideo.map {

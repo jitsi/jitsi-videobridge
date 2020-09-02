@@ -1179,7 +1179,7 @@ public class BitrateController
     }
 
     /**
-     * Return the number of endpoint's whose streams are currently being forwarded.
+     * Return the number of endpoints whose streams are currently being forwarded.
      */
     public int numForwardedEndpoints()
     {
