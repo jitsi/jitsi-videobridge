@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc.vp9
 
+import org.jitsi.nlj.codec.vpx.PictureIdIndexTracker
 import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.getExtendedPictureIdDelta
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.nlj.util.ArrayCache
@@ -278,55 +279,5 @@ constructor(size: Int) : ArrayCache<Vp9Picture>(
             firstPicture = false
         }
         return null
-    }
-
-    /** Like Rfc3711IndexTracker, but for picture IDs (so with a rollover
-     * of 0x8000).
-     */
-    class PictureIdIndexTracker {
-        private var roc = 0
-        private var highestSeqNumReceived = -1
-        private fun getIndex(seqNum: Int, updateRoc: Boolean): Int {
-            if (highestSeqNumReceived == -1) {
-                if (updateRoc) {
-                    highestSeqNumReceived = seqNum
-                }
-                return seqNum
-            }
-            val delta = getExtendedPictureIdDelta(seqNum, highestSeqNumReceived)
-            val v: Int
-            if (delta < 0 && highestSeqNumReceived < seqNum) {
-                v = roc - 1
-            } else if (delta > 0 && seqNum < highestSeqNumReceived) {
-                v = roc + 1
-                if (updateRoc) roc = v
-            } else {
-                v = roc
-            }
-            if (updateRoc && delta > 0) {
-                highestSeqNumReceived = seqNum
-            }
-            return 0x8000 * v + seqNum
-        }
-
-        fun update(seq: Int): Int {
-            return getIndex(seq, true)
-        }
-
-        fun interpret(seq: Int): Int {
-            return getIndex(seq, false)
-        }
-
-        /** Force this sequence to be interpreted as the new highest, regardless
-         * of its rollover state.
-         */
-        fun resetAt(seq: Int) {
-            val delta = getExtendedPictureIdDelta(seq, highestSeqNumReceived)
-            if (delta < 0) {
-                roc++
-                highestSeqNumReceived = seq
-            }
-            getIndex(seq, true)
-        }
     }
 }
