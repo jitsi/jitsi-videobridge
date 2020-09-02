@@ -177,6 +177,7 @@ class PacketReceiver(
         /* All delay is send -> receive in this simulation, so one-way delay is rtt. */
         estimator.onRttUpdate(now, Duration.between(packet.sendTime, now))
         estimator.processPacketArrival(now, packet.sendTime, now, seq, packet.packetSize)
+        estimator.feedbackComplete(now)
         seq++
         val bw = estimator.getCurrentBw(now)
         if (timeSeriesLogger.isTraceEnabled) {
