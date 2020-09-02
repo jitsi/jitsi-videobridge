@@ -57,14 +57,7 @@ class LastNReducer(
         config("${JvbLoadReducer.CONFIG_BASE}.last-n.maximum-enforced-last-n-value".from(JitsiConfig.newConfig))
 
     init {
-        logger.cinfo {
-            "Created with configuration:\n" +
-                "reductionScale: $reductionScale\n" +
-                "recoverScale: $recoverScale\n" +
-                "impactTime: $impactTime\n" +
-                "minLastN: $minLastN\n" +
-                "maxEnforcedLastN: $maxEnforcedLastN"
-        }
+        logger.cinfo { this.toString() }
     }
 
     private fun getMaxForwardedEps(): Int? {
@@ -116,5 +109,12 @@ class LastNReducer(
         put("jvbLastN", jvbLastN.jvbLastN)
     }
 
-    override fun toString(): String = "LastNReducer with scale $reductionScale"
+    override fun toString(): String = buildString {
+        append("LastNReducer with")
+        append(" reductionScale: $reductionScale")
+        append(" recoverScale: $recoverScale")
+        append(" impactTime: $impactTime")
+        append(" minLastN: $minLastN")
+        append(" maxEnforcedLastN: $maxEnforcedLastN")
+    }
 }
