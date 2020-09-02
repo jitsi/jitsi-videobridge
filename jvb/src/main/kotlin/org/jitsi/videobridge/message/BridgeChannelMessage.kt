@@ -316,7 +316,7 @@ class DominantSpeakerMessage(var dominantSpeakerEndpoint: String) : BridgeChanne
      * quotes) are also significantly slower.
      */
     override fun toJson(): String =
-        "{\"colibriClass\":\"$TYPE\",\"dominantSpeakerEndpoint\":\"$dominantSpeakerEndpoint\"}"
+        """{"colibriClass":"$TYPE","dominantSpeakerEndpoint":"$dominantSpeakerEndpoint"}"""
 
     companion object {
         const val TYPE = "DominantSpeakerEndpointChangeEvent"
@@ -340,7 +340,7 @@ class EndpointConnectionStatusMessage(
      * quotes) are also significantly slower.
      */
     override fun toJson(): String =
-        "{\"colibriClass\":\"$TYPE\",\"endpoint\":\"$endpoint\",\"active\":\"$active\"}"
+        """{"colibriClass":"$TYPE","endpoint":"$endpoint","active":"$active"}"""
 
     companion object {
         const val TYPE = "EndpointConnectivityStatusChangeEvent"
@@ -382,8 +382,9 @@ class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : Br
     /**
      * Serialize manually because it's faster than either Jackson or json-simple. Note that kotlin raw strings (triple
      * quotes) are also significantly slower.
+     * Note that we depend on `VideoConstraints.toString` producing JSON.
      */
-    override fun toJson(): String = "{\"colibriClass\":\"$TYPE\", \"videoConstraints\":$videoConstraints}"
+    override fun toJson(): String = """{"colibriClass":"$TYPE", "videoConstraints":$videoConstraints}"""
 
     companion object {
         const val TYPE = "SenderVideoConstraints"
@@ -404,7 +405,7 @@ class AddReceiverMessage(
      * quotes) are also significantly slower.
      */
     override fun toJson(): String =
-        "{\"colibriClass\":\"$TYPE\",\"bridgeId\":\"$bridgeId\",\"endpointId\":\"$endpointId\"," +
+        """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId",""" +
             "\"videoConstraints\":$videoConstraints}"
 
     companion object {
@@ -425,7 +426,7 @@ class RemoveReceiverMessage(
      * quotes) are also significantly slower.
      */
     override fun toJson(): String =
-        "{\"colibriClass\":\"${TYPE}\",\"bridgeId\":\"$bridgeId\",\"endpointId\":\"$endpointId\"}"
+        """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId"}"""
 
     companion object {
         const val TYPE = "RemoveReceiver"

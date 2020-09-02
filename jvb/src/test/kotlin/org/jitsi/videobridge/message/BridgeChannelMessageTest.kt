@@ -242,11 +242,12 @@ class BridgeChannelMessageTest : ShouldSpec() {
             "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\",\"dominantSpeakerEndpoint\":\"" +
                 m.dominantSpeakerEndpoint + "\"}"
         fun toJsonStringTemplate(m: DominantSpeakerMessage) =
-            "{\"colibriClass\":\"${DominantSpeakerMessage.TYPE}\",\"dominantSpeakerEndpoint\":\"${m.dominantSpeakerEndpoint}\"}"
+            "{\"colibriClass\":\"${DominantSpeakerMessage.TYPE}\"," +
+                "\"dominantSpeakerEndpoint\":\"${m.dominantSpeakerEndpoint}\"}"
         fun toJsonRawStringTemplate(m: DominantSpeakerMessage) = """
             {"colibriClass":"${DominantSpeakerMessage.TYPE}",
-            "dominantSpeakerEndpoint":"${m.dominantSpeakerEndpoint}"}
-        """.trimMargin()
+             "dominantSpeakerEndpoint":"${m.dominantSpeakerEndpoint}"}
+         """
 
         fun runTest(f: (DominantSpeakerMessage) -> String): Long {
             val start = System.currentTimeMillis()
@@ -265,6 +266,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
         System.err.println("String concat: ${runTest { toJsonStringConcat(it) } }")
         System.err.println("String template: ${runTest { toJsonStringTemplate(it) } }")
         System.err.println("Raw string template: ${runTest { toJsonRawStringTemplate(it) } }")
+        System.err.println("Raw string template (trim): ${runTest { toJsonRawStringTemplate(it).trimMargin() } }")
     }
 
     companion object {
