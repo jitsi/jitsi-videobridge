@@ -427,8 +427,7 @@ public class SendSideBandwidthEstimation
     /**
      * void SendSideBandwidthEstimation::UpdateReceiverBlock
      */
-    synchronized public void updateReceiverBlock(
-            long fraction_lost, long number_of_packets, long now)
+    synchronized private void updateReceiverBlock(long fraction_lost, long number_of_packets, long now)
     {
         last_feedback_ms_ = now;
         if (first_report_time_ms_ == -1)
@@ -459,7 +458,6 @@ public class SendSideBandwidthEstimation
             expected_packets_since_last_loss_update_ = 0;
 
             last_packet_report_ms_ = now;
-            updateEstimate(now);
         }
     }
 
