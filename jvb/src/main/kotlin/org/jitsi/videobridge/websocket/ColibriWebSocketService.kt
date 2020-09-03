@@ -26,7 +26,7 @@ class ColibriWebSocketService(
 ) {
     private val config = WebsocketServiceConfig()
 
-    private val baseUrl: String
+    private val baseUrl: String?
 
     val serverId: String
         get() = config.serverId
@@ -35,10 +35,15 @@ class ColibriWebSocketService(
         // We default to matching the protocol used by the local jetty
         // instance, but we allow for the configuration via properties
         // to override it since certain use-cases require it.
-        val useTls = config.useTls ?: webserverIsTls
-        val protocol = if (useTls) "wss" else "ws"
-        baseUrl = "$protocol://${config.domain}/$COLIBRI_WS_ENDPOINT/${config.serverId}"
-        logger.info("Base URL: $baseUrl")
+        if (config.enabled) {
+            val useTls = config.useTls ?: webserverIsTls
+            val protocol = if (useTls) "wss" else "ws"
+            baseUrl = "$protocol://${config.domain}/$COLIBRI_WS_ENDPOINT/${config.serverId}"
+            logger.info("Base URL: $baseUrl")
+        } else {
+            logger.info("WebSockets are not enabled")
+            baseUrl = null
+        }
     }
 
     /**
