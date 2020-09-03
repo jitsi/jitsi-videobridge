@@ -127,7 +127,5 @@ fun createServer(config: JettyBundleActivatorConfig): Server {
 val Server.servletContextHandler: ServletContextHandler
     get() = handler as ServletContextHandler
 
-fun Server.addServlet(servlet: ServletHolder, pathSpec: String) {
-    (handler as? ServletContextHandler)?.addServlet(servlet, pathSpec)
-        ?: throw Exception("Server handler isn't ServletContextHandler, it's $handler")
-}
+fun Server.addServlet(servlet: ServletHolder, pathSpec: String) =
+    this.servletContextHandler.addServlet(servlet, pathSpec)

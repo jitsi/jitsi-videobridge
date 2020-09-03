@@ -51,9 +51,7 @@ class ColibriWebSocketService(
             return null
         }
         // "wss://example.com/colibri-ws/server-id/conf-id/endpoint-id?pwd=123
-        return "$baseUrl/$conferenceId/$endpointId?pwd=$pwd".also {
-            logger.info("TEMP: returning ep websocket url: $it")
-        }
+        return "$baseUrl/$conferenceId/$endpointId?pwd=$pwd"
     }
 
     fun registerServlet(servletContextHandler: ServletContextHandler) {
