@@ -105,7 +105,7 @@ fun createSecureJettyServer(
  * Create a Jetty [Server] instance based on the given [config].
  */
 fun createServer(config: JettyBundleActivatorConfig): Server {
-    return if (config.keyStorePath != null) {
+    return if (config.isTls) {
         createSecureJettyServer(
             config.tlsPort,
             config.keyStorePath!!,

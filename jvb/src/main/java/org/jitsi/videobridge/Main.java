@@ -180,7 +180,7 @@ public class Main
 
         final Server publicServer = JettyHelpers.createServer(publicServerConfig);
         ColibriWebSocketService colibriWebSocketService =
-            new ColibriWebSocketService(publicServerConfig.getKeyStorePath() != null);
+            new ColibriWebSocketService(publicServerConfig.isTls());
         // Now that we've created the ColibriWebSocketService, set it in the central supplier so others can
         // access it.
         ColibriWebSocketServiceSupplierKt.singleton().setColibriWebSocketService(colibriWebSocketService);
