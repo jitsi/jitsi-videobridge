@@ -36,23 +36,29 @@ class WebsocketServiceConfig {
      * The domain name used in URLs advertised for COLIBRI WebSockets.
      */
     val domain: String by config {
-        "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN".from(JitsiConfig.legacyConfig)
-        "videobridge.websockets.domain".from(JitsiConfig.newConfig)
+        onlyIf("Websockets are enabled", ::enabled) {
+            "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN".from(JitsiConfig.legacyConfig)
+            "videobridge.websockets.domain".from(JitsiConfig.newConfig)
+        }
     }
 
     /**
      * Whether the "wss" or "ws" protocol should be used for websockets
      */
     val useTls: Boolean? by optionalconfig {
-        "org.jitsi.videobridge.rest.COLIBRI_WS_TLS".from(JitsiConfig.legacyConfig)
-        "videobridge.websockets.tls".from(JitsiConfig.newConfig)
+        onlyIf("Websockets are enabled", ::enabled) {
+            "org.jitsi.videobridge.rest.COLIBRI_WS_TLS".from(JitsiConfig.legacyConfig)
+            "videobridge.websockets.tls".from(JitsiConfig.newConfig)
+        }
     }
 
     /**
      * The server ID used in URLs advertised for COLIBRI WebSockets.
      */
     val serverId: String by config {
-        "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID".from(JitsiConfig.legacyConfig)
-        "videobridge.websockets.server-id".from(JitsiConfig.newConfig)
+        onlyIf("Websockets are enabled", ::enabled) {
+            "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID".from(JitsiConfig.legacyConfig)
+            "videobridge.websockets.server-id".from(JitsiConfig.newConfig)
+        }
     }
 }
