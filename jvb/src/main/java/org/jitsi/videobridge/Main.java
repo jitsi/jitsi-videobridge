@@ -110,10 +110,17 @@ public class Main
         }
         JvbHealthCheckServiceSupplierKt.singleton().get().start();
 
-        Server publicHttpServer = setupPublicHttpServer();
-        publicHttpServer.start();
-
         Logger logger = new LoggerImpl("org.jitsi.videobridge.Main");
+
+        Server publicHttpServer = setupPublicHttpServer();
+        if (publicHttpServer != null)
+        {
+            publicHttpServer.start();
+        }
+        else
+        {
+            logger.info("Not starting public http server");
+        }
 
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
         {
@@ -177,6 +184,10 @@ public class Main
             "org.jitsi.videobridge.rest",
             "videobridge.http-servers.public"
         );
+        if (publicServerConfig.getPort() == -1 && publicServerConfig.getTlsPort() == -1)
+        {
+            return null;
+        }
 
         final Server publicServer = JettyHelpers.createServer(publicServerConfig);
         ColibriWebSocketService colibriWebSocketService =
