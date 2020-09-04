@@ -27,6 +27,7 @@ import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
 import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.jitsi.rest.JettyBundleActivatorConfig
+import org.jitsi.videobridge.util.getJavaVersion
 import java.nio.file.Paths
 
 /**
@@ -61,7 +62,11 @@ fun createSecureJettyServer(
 ): Server {
     val sslContextFactoryKeyStoreFile = Paths.get(keyStorePath).toFile()
     val sslContextFactory = SslContextFactory().apply {
-        setIncludeProtocols("TLSv1.2")
+        if (supportsTls13()) {
+            setIncludeProtocols("TLSv1.2", "TLSv1.3")
+        } else {
+            setIncludeProtocols("TLSv1.2")
+        }
         setIncludeCipherSuites(
             "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
             "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
@@ -129,3 +134,12 @@ val Server.servletContextHandler: ServletContextHandler
 
 fun Server.addServlet(servlet: ServletHolder, pathSpec: String) =
     this.servletContextHandler.addServlet(servlet, pathSpec)
+
+// TLS 1.3 requires Java 11 or later.
+private fun supportsTls13(): Boolean {
+    return try {
+        getJavaVersion() >= 11
+    } catch (t: Throwable) {
+        false
+    }
+}
