@@ -1355,6 +1355,14 @@ public class Endpoint
     }
 
     /**
+     * Returns how many endpoints this Endpoint is currently forwarding video for
+     */
+    public int numForwardedEndpoints()
+    {
+        return bitrateController.numForwardedEndpoints();
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override

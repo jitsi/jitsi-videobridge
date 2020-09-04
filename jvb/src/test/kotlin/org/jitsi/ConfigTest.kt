@@ -34,6 +34,11 @@ abstract class ConfigTest : ShouldSpec() {
         MetaconfigSettings.cacheEnabled = false
     }
 
+    override fun afterSpec(spec: Spec) {
+        super.afterSpec(spec)
+        MetaconfigSettings.cacheEnabled = true
+    }
+
     inline fun withLegacyConfig(props: String, block: () -> Unit) {
         useLegacyConfig(name = "legacy-${this::class.simpleName}", props = props, block = block)
     }
