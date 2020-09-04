@@ -138,7 +138,10 @@ public class Main
 
             try
             {
-                publicHttpServer.stop();
+                if (publicHttpServer != null)
+                {
+                    publicHttpServer.stop();
+                }
             }
             catch (Exception e)
             {
