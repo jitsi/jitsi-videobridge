@@ -26,7 +26,6 @@ import org.jitsi.nlj.rtp.bandwidthestimation.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.osgi.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.extensions.*;
 import org.jitsi.rtp.rtcp.*;
@@ -1065,8 +1064,7 @@ public class Endpoint
         IceUdpTransportPacketExtension iceUdpTransportPacketExtension = new IceUdpTransportPacketExtension();
         iceTransport.describe(iceUdpTransportPacketExtension);
         dtlsTransport.describe(iceUdpTransportPacketExtension);
-        ColibriWebSocketService colibriWebSocketService
-                = ServiceUtils2.getService(getConference().getBundleContext(), ColibriWebSocketService.class);
+        ColibriWebSocketService colibriWebSocketService = ColibriWebSocketServiceSupplierKt.singleton().get();
         if (colibriWebSocketService != null)
         {
             String wsUrl = colibriWebSocketService.getColibriWebSocketUrl(

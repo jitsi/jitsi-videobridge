@@ -619,18 +619,6 @@ public class Conference
     }
 
     /**
-     * Returns the OSGi <tt>BundleContext</tt> in which this Conference is
-     * executing.
-     *
-     * @return the OSGi <tt>BundleContext</tt> in which the Conference is
-     * executing.
-     */
-    public BundleContext getBundleContext()
-    {
-        return getVideobridge().getBundleContext();
-    }
-
-    /**
      * Gets an <tt>Endpoint</tt> participating in this <tt>Conference</tt> which
      * has a specific identifier/ID.
      *

@@ -16,22 +16,19 @@
 package org.jitsi.videobridge;
 
 import kotlin.jvm.functions.*;
+import org.eclipse.jetty.server.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.cmd.*;
 import org.jitsi.meet.*;
 import org.jitsi.metaconfig.*;
+import org.jitsi.rest.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.health.*;
-import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.stats.*;
-import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.websocket.*;
 import org.jitsi.videobridge.xmpp.*;
-
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.function.*;
 
 /**
  * Provides the <tt>main</tt> entry point of the Jitsi Videobridge application
@@ -115,6 +112,16 @@ public class Main
 
         Logger logger = new LoggerImpl("org.jitsi.videobridge.Main");
 
+        Server publicHttpServer = setupPublicHttpServer();
+        if (publicHttpServer != null)
+        {
+            publicHttpServer.start();
+        }
+        else
+        {
+            logger.info("Not starting public http server");
+        }
+
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
         {
             logger.info("Shutdown hook running");
@@ -127,6 +134,15 @@ public class Main
             if (statsMgr != null)
             {
                 statsMgr.stop();
+            }
+
+            try
+            {
+                publicHttpServer.stop();
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
             }
 
             JvbHealthCheckServiceSupplierKt.singleton().get().stop();
@@ -160,5 +176,28 @@ public class Main
                 configLogger.debug(function0::invoke);
             }
         });
+    }
+
+    private static Server setupPublicHttpServer()
+    {
+        JettyBundleActivatorConfig publicServerConfig = new JettyBundleActivatorConfig(
+            "org.jitsi.videobridge.rest",
+            "videobridge.http-servers.public"
+        );
+        if (publicServerConfig.getPort() == -1 && publicServerConfig.getTlsPort() == -1)
+        {
+            return null;
+        }
+
+        final Server publicServer = JettyHelpers.createServer(publicServerConfig);
+        ColibriWebSocketService colibriWebSocketService =
+            new ColibriWebSocketService(publicServerConfig.isTls());
+        // Now that we've created the ColibriWebSocketService, set it in the central supplier so others can
+        // access it.
+        ColibriWebSocketServiceSupplierKt.singleton().setColibriWebSocketService(colibriWebSocketService);
+
+        colibriWebSocketService.registerServlet(JettyHelpers.getServletContextHandler(publicServer));
+
+        return publicServer;
     }
 }
