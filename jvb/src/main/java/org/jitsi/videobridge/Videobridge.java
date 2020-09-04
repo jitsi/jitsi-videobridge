@@ -20,6 +20,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jetbrains.annotations.*;
+import org.jitsi.config.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.health.*;
 import org.jitsi.meet.*;
@@ -402,16 +403,7 @@ public class Videobridge
      */
     public ConfigurationService getConfigurationService()
     {
-        BundleContext bundleContext = getBundleContext();
-
-        if (bundleContext == null)
-        {
-            return null;
-        }
-        else
-        {
-            return ServiceUtils2.getService(bundleContext, ConfigurationService.class);
-        }
+        return JitsiConfig.getSipCommunicatorProps();
     }
 
     /**
