@@ -618,7 +618,7 @@ public class Videobridge
                 new HealthCheckIQProvider());
 
         ConfigurationService cfg = getConfigurationService();
-        startIce4j(bundleContext, cfg);
+        startIce4j(cfg);
     }
 
     /**
@@ -627,9 +627,7 @@ public class Videobridge
      * @param bundleContext the {@code BundleContext} in which this
      * {@code Videobridge} is to start
      */
-    private void startIce4j(
-            BundleContext bundleContext,
-            ConfigurationService cfg)
+    private void startIce4j(ConfigurationService cfg)
     {
         // TODO Packet logging for ice4j is not supported at this time.
         StunStack.setPacketLogger(null);
@@ -684,16 +682,16 @@ public class Videobridge
      * NOTE: we have to make this public so Jicofo can call it from its
      * tests
      */
-    public void stop(BundleContext bundleContext)
+    public void stop()
     {
         try
         {
             ConfigurationService cfg = getConfigurationService();
-            stopIce4j(bundleContext, cfg);
+            stopIce4j(cfg);
         }
         finally
         {
-            videobridgeExpireThread.stop(bundleContext);
+            videobridgeExpireThread.stop();
             loadSamplerTask.cancel(true);
             this.bundleContext = null;
         }
@@ -705,9 +703,7 @@ public class Videobridge
      * @param bundleContext the {@code BundleContext} in which this
      * {@code Videobridge} is to start
      */
-    private void stopIce4j(
-        BundleContext bundleContext,
-        ConfigurationService cfg)
+    private void stopIce4j(ConfigurationService cfg)
     {
         // Shut down harvesters.
         Harvesters.closeStaticConfiguration();
