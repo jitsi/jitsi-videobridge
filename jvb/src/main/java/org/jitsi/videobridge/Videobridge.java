@@ -158,7 +158,7 @@ public class Videobridge
     );
 
     /**
-     * The tasks which manager the recurring load sampling and updating of
+     * The task which manages the recurring load sampling and updating of
      * {@link Videobridge#jvbLoadManager}.
      */
     private final ScheduledFuture<?> loadSamplerTask;
