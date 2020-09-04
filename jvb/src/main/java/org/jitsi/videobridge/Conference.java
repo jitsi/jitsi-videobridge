@@ -456,7 +456,7 @@ public class Conference
 
         if (logger.isInfoEnabled())
         {
-            logger.info("ds_change ds_id=" + id);
+            logger.info("ds_change ds_id=" + dominantSpeakerId);
             getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
         }
 
