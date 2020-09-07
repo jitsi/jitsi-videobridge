@@ -31,11 +31,10 @@ import org.jitsi.utils.logging2.LoggerImpl;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
+import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
-import org.jxmpp.jid.parts.*;
-import org.jxmpp.stringprep.*;
 import org.osgi.framework.*;
 
 import java.io.*;
@@ -241,7 +240,12 @@ public class Conference
 
         if (enableLogging)
         {
+            // TODO: remove?
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
+
+            StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
+            statsMgr.getTransports().forEach(transport -> transport.conferenceCreated(this));
+
             Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
         }
@@ -522,11 +526,15 @@ public class Conference
             updateLastNEndpointsFuture = null;
         }
 
+        // TODO: remove?
         EventAdmin eventAdmin = getEventAdmin();
         if (eventAdmin != null)
         {
             eventAdmin.sendEvent(EventFactory.conferenceExpired(this));
         }
+
+        StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
+        statsMgr.getTransports().forEach(transport -> transport.conferenceExpired(this));
 
         logger.debug(() -> "Expiring endpoints.");
         getEndpoints().forEach(AbstractEndpoint::expire);

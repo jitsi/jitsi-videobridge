@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.eventadmin.callstats;
+package org.jitsi.videobridge.stats;
 
 import java.util.*;
 import java.util.concurrent.*;
 
-import org.jitsi.eventadmin.*;
 import org.jitsi.stats.media.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging2.*;
@@ -31,7 +30,6 @@ import org.jitsi.videobridge.*;
  * @author Damian Minkov
  */
 class CallStatsConferenceStatsHandler
-    implements EventHandler
 {
     /**
      * The <tt>Logger</tt> used by the <tt>CallStatsConferenceStatsHandler</tt>
@@ -45,9 +43,7 @@ class CallStatsConferenceStatsHandler
      * generating and pushing statistics per conference for every Channel.
      */
     private static final RecurringRunnableExecutor statisticsExecutor
-        = new RecurringRunnableExecutor(
-        CallStatsConferenceStatsHandler.class.getSimpleName()
-            + "-statisticsExecutor");
+        = new RecurringRunnableExecutor(CallStatsConferenceStatsHandler.class.getSimpleName() + "-statisticsExecutor");
 
     /**
      * The entry point into the jitsi-stats library.
@@ -68,9 +64,7 @@ class CallStatsConferenceStatsHandler
      * List of the processor per conference. Kept in order to stop and
      * deRegister them from the executor.
      */
-    private final Map<Conference,ConferencePeriodicRunnable>
-        statisticsProcessors
-            = new ConcurrentHashMap<>();
+    private final Map<Conference, ConferencePeriodicRunnable> statisticsProcessors = new ConcurrentHashMap<>();
 
     /**
      * The interval to poll for stats and to push them to the callstats service.
@@ -109,42 +103,14 @@ class CallStatsConferenceStatsHandler
     }
 
     /**
-     * Handles events.
-     * @param event the event
-     */
-    @Override
-    public void handleEvent(Event event)
-    {
-        if (event == null)
-        {
-            logger.debug(() -> "Could not handle an event because it was null.");
-            return;
-        }
-
-        String topic = event.getTopic();
-
-        if (EventFactory.CONFERENCE_CREATED_TOPIC.equals(topic))
-        {
-            conferenceCreated(
-                    (Conference) event.getProperty(EventFactory.EVENT_SOURCE));
-        }
-        else if (EventFactory.CONFERENCE_EXPIRED_TOPIC.equals(topic))
-        {
-            conferenceExpired(
-                    (Conference) event.getProperty(EventFactory.EVENT_SOURCE));
-        }
-    }
-
-    /**
      * Conference created.
      * @param conference the conference that is created.
      */
-    private void conferenceCreated(final Conference conference)
+    void conferenceCreated(final Conference conference)
     {
         if (conference == null)
         {
-            logger.debug(() -> "Could not log conference created event because " +
-                "the conference is null.");
+            logger.debug(() -> "Could not log conference created event because the conference is null.");
             return;
         }
 
@@ -167,17 +133,15 @@ class CallStatsConferenceStatsHandler
      * Conference expired.
      * @param conference the conference that expired.
      */
-    private void conferenceExpired(Conference conference)
+    void conferenceExpired(Conference conference)
     {
         if (conference == null)
         {
-            logger.debug(() -> "Could not log conference expired event " +
-                "because the conference is null.");
+            logger.debug(() -> "Could not log conference expired event because the conference is null.");
             return;
         }
 
-        ConferencePeriodicRunnable cpr
-            = statisticsProcessors.remove(conference);
+        ConferencePeriodicRunnable cpr = statisticsProcessors.remove(conference);
 
         if (cpr == null)
         {
