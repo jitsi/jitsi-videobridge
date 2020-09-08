@@ -104,4 +104,6 @@ class JvbLoadManagerTest : ShouldSpec({
 
 class MockLoadMeasurement(var loadMeasurement: Double) : JvbLoadMeasurement {
     override fun getLoad(): Double = loadMeasurement
+
+    override fun toString(): String = "Mock load measurement of $loadMeasurement"
 }
