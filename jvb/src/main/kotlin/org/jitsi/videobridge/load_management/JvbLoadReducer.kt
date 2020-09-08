@@ -21,7 +21,13 @@ import java.time.Duration
 
 interface JvbLoadReducer {
     fun reduceLoad()
-    fun recover()
+
+    /**
+     * Run this [JvbLoadReducer]'s recovery logic, returning true if the logic
+     * *did* run, false otherwise (if, for example, no limit was currently
+     * in place so no more 'recovery' was needed)
+     */
+    fun recover(): Boolean
 
     /**
      * How long to wait for load reduction / recovery operations to take effect

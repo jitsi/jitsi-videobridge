@@ -16,6 +16,10 @@
 
 package org.jitsi.videobridge.load_management
 
+/**
+ * A measurement of load on the JVB.  Implementations should implement a description of the
+ * measurement in the [toString] method.
+ */
 interface JvbLoadMeasurement {
     fun getLoad(): Double
 

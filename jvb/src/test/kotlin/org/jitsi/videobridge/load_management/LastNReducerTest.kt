@@ -18,6 +18,7 @@ package org.jitsi.videobridge.load_management
 
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -64,7 +65,7 @@ class LastNReducerTest : ShouldSpec() {
             }
             context("and no jvb last-n has been set") {
                 context("running recovery") {
-                    reducer.recover()
+                    reducer.recover() shouldBe false
                     should("not alter the last-n value") {
                         verify(exactly = 0) { jvbLastN setProperty "jvbLastN" value any<Int>() }
                     }
@@ -73,7 +74,7 @@ class LastNReducerTest : ShouldSpec() {
             context("and a jvb last-n has been set") {
                 jvbLastN.jvbLastN = 4
                 context("running recovery") {
-                    reducer.recover()
+                    reducer.recover() shouldBe true
                     should("increase the jvb last-n value") {
                         verify(exactly = 1) { jvbLastN setProperty "jvbLastN" value 8 }
                     }
