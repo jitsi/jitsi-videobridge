@@ -17,6 +17,8 @@ package org.jitsi.videobridge;
 
 import kotlin.jvm.functions.*;
 import org.eclipse.jetty.server.*;
+import org.eclipse.jetty.servlet.*;
+import org.glassfish.jersey.servlet.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.cmd.*;
 import org.jitsi.meet.*;
@@ -26,6 +28,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.osgi.*;
+import org.jitsi.videobridge.rest.root.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.websocket.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -115,11 +118,23 @@ public class Main
         Server publicHttpServer = setupPublicHttpServer();
         if (publicHttpServer != null)
         {
+            logger.info("Starting public http server");
             publicHttpServer.start();
         }
         else
         {
             logger.info("Not starting public http server");
+        }
+
+        Server privateHttpServer = setupPrivateHttpServer();
+        if (privateHttpServer != null)
+        {
+            logger.info("Starting private http server");
+            privateHttpServer.start();
+        }
+        else
+        {
+            logger.info("Not starting private http server");
         }
 
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
@@ -141,6 +156,10 @@ public class Main
                 if (publicHttpServer != null)
                 {
                     publicHttpServer.stop();
+                }
+                if (privateHttpServer != null)
+                {
+                    privateHttpServer.stop();
                 }
             }
             catch (Exception e)
@@ -202,5 +221,30 @@ public class Main
         colibriWebSocketService.registerServlet(JettyHelpers.getServletContextHandler(publicServer));
 
         return publicServer;
+    }
+
+    private static Server setupPrivateHttpServer()
+    {
+        JettyBundleActivatorConfig privateServerConfig = new JettyBundleActivatorConfig(
+            "org.jitsi.videobridge.rest.private",
+            "videobridge.http-servers.private"
+        );
+        if (privateServerConfig.getPort() == -1 && privateServerConfig.getTlsPort() == -1)
+        {
+            return null;
+        }
+
+        final Server privateServer = JettyHelpers.createServer(privateServerConfig);
+
+        JettyHelpers.getServletContextHandler(privateServer).addServlet(
+            new ServletHolder(
+                new ServletContainer(
+                    new Application(null)
+                )
+            ),
+            "/*"
+        );
+
+        return privateServer;
     }
 }
