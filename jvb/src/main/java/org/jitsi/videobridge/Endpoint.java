@@ -1521,7 +1521,7 @@ public class Endpoint
     {
         private final Object sctpManagerLock = new Object();
         public SctpManager sctpManager = null;
-        public BlockingQueue<PacketInfo> cachedSctpPackets = new LinkedBlockingQueue<>();
+        public BlockingQueue<PacketInfo> cachedSctpPackets = new LinkedBlockingQueue<>(100);
 
         /**
          * Initializes a new {@link SctpHandler} instance.
