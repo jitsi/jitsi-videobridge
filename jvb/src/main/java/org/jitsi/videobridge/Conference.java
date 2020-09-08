@@ -179,7 +179,7 @@ public class Conference
      */
     private ScheduledFuture<?> updateLastNEndpointsFuture;
 
-    private final EndpointConnectionStatusMonitor epConnectionStatusMonitor;
+    private EndpointConnectionStatusMonitor epConnectionStatusMonitor;
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
@@ -244,11 +244,11 @@ public class Conference
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
             Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
+            epConnectionStatusMonitor =
+                new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
+            epConnectionStatusMonitor.start();
         }
 
-        epConnectionStatusMonitor =
-            new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
-        epConnectionStatusMonitor.start();
     }
 
     /**
