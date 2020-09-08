@@ -74,7 +74,7 @@ public class VideobridgeBundleActivator
         finally
         {
             if (serviceRegistration == null)
-                videobridge.stop(bundleContext);
+                videobridge.stop();
             else
                 this.serviceRegistration = serviceRegistration;
         }
@@ -109,7 +109,7 @@ public class VideobridgeBundleActivator
         {
             serviceRegistration.unregister();
             if (videobridge != null)
-                videobridge.stop(bundleContext);
+                videobridge.stop();
         }
     }
 }
