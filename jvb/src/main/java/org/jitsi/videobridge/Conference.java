@@ -854,7 +854,10 @@ public class Conference
 
         if (removedEndpoint != null)
         {
-            epConnectionStatusMonitor.endpointExpired(removedEndpoint.getID());
+            if (epConnectionStatusMonitor != null)
+            {
+                epConnectionStatusMonitor.endpointExpired(removedEndpoint.getID());
+            }
             final EventAdmin eventAdmin = getEventAdmin();
             if (eventAdmin != null)
             {
@@ -907,7 +910,10 @@ public class Conference
         {
             eventAdmin.postEvent(EventFactory.endpointMessageTransportReady(endpoint));
         }
-        epConnectionStatusMonitor.endpointConnected(endpoint.getID());
+        if (epConnectionStatusMonitor != null)
+        {
+            epConnectionStatusMonitor.endpointConnected(endpoint.getID());
+        }
 
         if (!isExpired())
         {
