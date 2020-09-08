@@ -239,7 +239,7 @@ public class Main
         JettyHelpers.getServletContextHandler(privateServer).addServlet(
             new ServletHolder(
                 new ServletContainer(
-                    new Application(null)
+                    new Application()
                 )
             ),
             "/*"
