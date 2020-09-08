@@ -57,7 +57,7 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
                 if (canRunReducer(now)) {
                     if (loadReducer.recover()) {
                         logger.info("Recovery ran after a load measurement of $loadMeasurement (which was below " +
-                            "threshold of $jvbLoadThreshold) was received")
+                            "threshold of $jvbRecoveryThreshold) was received")
                         lastReducerTime = now
                     } else {
                         logger.cdebug { "Recovery had no work to do" }
