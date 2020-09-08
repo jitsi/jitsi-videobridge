@@ -112,11 +112,8 @@ class RtpUtils {
 
         /**
          * Returns the difference between two RTP timestamps as an [Int].
-         *
-         * TODO: since [Int] can fully represent timestamp deltas,
-         *   change this to be the public API?
          */
-        private inline fun getTimestampDiffAsInt(a: Long, b: Long): Int =
+        inline fun getTimestampDiffAsInt(a: Long, b: Long): Int =
             /* Coercing to int forces diff to the range -0x8000_0000 - 0x7fff_ffff,
               which is what we want. */
             (a - b).toInt()

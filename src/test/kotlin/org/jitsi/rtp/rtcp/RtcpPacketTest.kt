@@ -19,13 +19,14 @@ package org.jitsi.rtp.rtcp
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.types.shouldBeInstanceOf
+import org.jitsi.rtp.extensions.bytearray.byteArrayOf
 
 class RtcpPacketTest : ShouldSpec() {
 
     init {
         context("Parsing") {
             context("a valid but unsupported RTCP packet") {
-                val unsupportedRtcpData = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+                val unsupportedRtcpData = byteArrayOf(
                     // V=2, PT=195, length = 2
                     0x80, 0xC3, 0x00, 0x02,
                     0x00, 0x00, 0x00, 0x00,
@@ -50,7 +51,7 @@ class RtcpPacketTest : ShouldSpec() {
                 }
             }
             context("a packet with invalid length") {
-                val invalidRtcpLengthData = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+                val invalidRtcpLengthData = byteArrayOf(
                     // V=2, PT=195, length = 8
                     0x80, 0xC3, 0x00, 0x08,
                     0x00, 0x00, 0x00, 0x00,

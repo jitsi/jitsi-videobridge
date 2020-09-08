@@ -220,7 +220,7 @@ open class RtpPacket(
                 extDataLength +
                 3 /* padding */
 
-        var newPayloadOffset = 0
+        val newPayloadOffset: Int
         val newBuffer = if (buffer.size >= (maxRequiredLength + BYTES_TO_LEAVE_AT_END_OF_PACKET)) {
             // We don't need a new buffer
             if ((offset + headerLength) >= (maxRequiredLength - currPayloadLength)) {

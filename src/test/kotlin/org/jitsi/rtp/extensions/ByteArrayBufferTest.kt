@@ -2,10 +2,11 @@ package org.jitsi.rtp.extensions
 
 import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
+import org.jitsi.rtp.extensions.bytearray.byteArrayOf
 import org.jitsi.rtp.UnparsedPacket
 
 class ByteArrayBufferTest : ShouldSpec() {
-    private val buffer = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+    private val buffer = byteArrayOf(
         0x90, 0x6f, 0x16, 0xaf,
         0x65, 0xf3, 0xe8, 0xce,
         0x48, 0x0f, 0x22, 0x3a,

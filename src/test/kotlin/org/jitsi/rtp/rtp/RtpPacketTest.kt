@@ -22,6 +22,7 @@ import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.jitsi.rtp.UnparsedPacket
+import org.jitsi.rtp.extensions.bytearray.byteArrayOf
 import org.jitsi.rtp.extensions.bytearray.getShort
 import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
@@ -34,7 +35,7 @@ import org.jitsi.test_helpers.matchers.haveSamePayload
 class RtpPacketTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-    private val rtpHeaderWithExtensions = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+    private val rtpHeaderWithExtensions = byteArrayOf(
         // V=2,P=false,X=true,CC=0,M=false,PT=111,SeqNum=5807
         0x90, 0x6f, 0x16, 0xaf,
         // Timestamp: 1710483662
@@ -47,7 +48,7 @@ class RtpPacketTest : ShouldSpec() {
         0x10, 0xff, 0x00, 0x00
     )
 
-    private val rtpHeaderWithExtensionsPaddingBetween = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+    private val rtpHeaderWithExtensionsPaddingBetween = byteArrayOf(
         // V=2,P=false,X=true,CC=0,M=false,PT=111,SeqNum=5807
         0x90, 0x6f, 0x16, 0xaf,
         // Timestamp: 1710483662
@@ -62,7 +63,7 @@ class RtpPacketTest : ShouldSpec() {
         0x20, 0xff, 0x00, 0x00
     )
 
-    private val rtpHeaderWithNoExtensions = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+    private val rtpHeaderWithNoExtensions = byteArrayOf(
         // V=2,P=false,X=false,CC=0,M=false,PT=111,SeqNum=5807
         0x80, 0x6f, 0x16, 0xaf,
         // Timestamp: 1710483662
@@ -71,7 +72,7 @@ class RtpPacketTest : ShouldSpec() {
         0x48, 0x0f, 0x22, 0x3a
     )
 
-    private val dummyRtpPayload = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+    private val dummyRtpPayload = byteArrayOf(
         0x42, 0x42, 0x42, 0x42,
         0x42, 0x42, 0x42, 0x42,
         0x42, 0x42, 0x42, 0x42,

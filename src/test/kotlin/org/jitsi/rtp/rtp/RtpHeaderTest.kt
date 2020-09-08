@@ -20,13 +20,14 @@ import io.kotest.core.spec.IsolationMode
 import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
+import org.jitsi.rtp.extensions.bytearray.byteArrayOf
 
 // TODO: sets shouldn't change any other field
 class RtpHeaderTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 //    override fun isolationMode(): IsolationMode? = IsolationMode.SingleInstance
 
-    private val headerData = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+    private val headerData = byteArrayOf(
         // V=2,P=false,X=true,CC=2,M=false,PT=100,SeqNum=16535
         0x92, 0x64, 0x40, 0x97,
         // Timestamp: 3899068446

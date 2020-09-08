@@ -23,6 +23,7 @@ import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
 import java.nio.charset.StandardCharsets
+import org.jitsi.rtp.extensions.bytearray.byteArrayOf
 import org.jitsi.test_helpers.matchers.haveSameContentAs
 
 internal class RtcpByePacketTest : ShouldSpec() {
@@ -37,7 +38,7 @@ internal class RtcpByePacketTest : ShouldSpec() {
 
     private val byeReason = "Connection terminated"
     private val byeReasonData = byeReason.toByteArray(StandardCharsets.US_ASCII)
-    private val rtcpByeReasonData = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
+    private val rtcpByeReasonData = byteArrayOf(
         byeReasonData.size.toByte(), *byeReasonData.toTypedArray()
     )
     private val reasonSize = 1 + byeReasonData.size

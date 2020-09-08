@@ -292,7 +292,7 @@ class RtcpFbTccPacket(
         val status_count = getPacketStatusCount(buffer, offset)
         val encoded_chunks_ = mutableListOf<Chunk>()
         val last_chunk_ = LastChunk()
-        var num_seq_no_: Int = 0
+        val num_seq_no_: Int
         var last_timestamp_us_: Long = 0
         val packets_ = mutableListOf<PacketReport>()
 
