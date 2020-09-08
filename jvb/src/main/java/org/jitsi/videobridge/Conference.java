@@ -174,7 +174,7 @@ public class Conference
      */
     private ScheduledFuture<?> updateLastNEndpointsFuture;
 
-    private EndpointConnectionStatusMonitor epConnectionStatusMonitor;
+    private final EndpointConnectionStatusMonitor epConnectionStatusMonitor;
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
@@ -242,6 +242,10 @@ public class Conference
             epConnectionStatusMonitor =
                 new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
             epConnectionStatusMonitor.start();
+        }
+        else
+        {
+            epConnectionStatusMonitor = null;
         }
 
     }
