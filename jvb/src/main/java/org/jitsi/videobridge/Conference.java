@@ -15,19 +15,17 @@
  */
 package org.jitsi.videobridge;
 
-import edu.umd.cs.findbugs.annotations.*;
 import org.jetbrains.annotations.*;
-import org.jetbrains.annotations.Nullable;
 import org.jitsi.eventadmin.*;
 import org.jitsi.nlj.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.collections.*;
-import org.jitsi.utils.logging.DiagnosticContext;
-import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
@@ -36,18 +34,15 @@ import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
 import org.jxmpp.jid.parts.*;
 import org.jxmpp.stringprep.*;
-import org.osgi.framework.*;
 
 import java.io.*;
-import java.lang.*;
-import java.lang.SuppressWarnings;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.logging.*;
 import java.util.stream.*;
 
-import static org.jitsi.utils.collections.JMap.entry;
+import static org.jitsi.utils.collections.JMap.*;
 
 /**
  * Represents a conference in the terms of Jitsi Videobridge.
@@ -95,7 +90,7 @@ public class Conference
      * The indicator which determines whether {@link #expire()} has been called
      * on this <tt>Conference</tt>.
      */
-    private AtomicBoolean expired = new AtomicBoolean(false);
+    private final AtomicBoolean expired = new AtomicBoolean(false);
 
     /**
      * The locally unique identifier of this conference (i.e. unique across the
@@ -244,11 +239,15 @@ public class Conference
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
             Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
+            epConnectionStatusMonitor =
+                new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
+            epConnectionStatusMonitor.start();
+        }
+        else
+        {
+            epConnectionStatusMonitor = null;
         }
 
-        epConnectionStatusMonitor =
-            new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
-        epConnectionStatusMonitor.start();
     }
 
     /**
@@ -530,6 +529,11 @@ public class Conference
         }
 
         logger.info("Expiring.");
+
+        if (epConnectionStatusMonitor != null)
+        {
+            epConnectionStatusMonitor.stop();
+        }
 
         if (updateLastNEndpointsFuture != null)
         {
