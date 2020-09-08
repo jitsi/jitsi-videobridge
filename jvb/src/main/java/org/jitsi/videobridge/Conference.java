@@ -24,10 +24,10 @@ import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.collections.*;
-import org.jitsi.utils.logging.DiagnosticContext;
-import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
@@ -39,7 +39,6 @@ import org.jxmpp.stringprep.*;
 import org.osgi.framework.*;
 
 import java.io.*;
-import java.lang.*;
 import java.lang.SuppressWarnings;
 import java.util.*;
 import java.util.concurrent.*;
@@ -47,7 +46,7 @@ import java.util.concurrent.atomic.*;
 import java.util.logging.*;
 import java.util.stream.*;
 
-import static org.jitsi.utils.collections.JMap.entry;
+import static org.jitsi.utils.collections.JMap.*;
 
 /**
  * Represents a conference in the terms of Jitsi Videobridge.
@@ -255,11 +254,15 @@ public class Conference
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
             Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
+            epConnectionStatusMonitor =
+                new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
+            epConnectionStatusMonitor.start();
+        }
+        else
+        {
+            epConnectionStatusMonitor = null;
         }
 
-        epConnectionStatusMonitor =
-            new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
-        epConnectionStatusMonitor.start();
     }
 
     /**
@@ -545,6 +548,11 @@ public class Conference
         }
 
         logger.info("Expiring.");
+
+        if (epConnectionStatusMonitor != null)
+        {
+            epConnectionStatusMonitor.stop();
+        }
 
         if (updateLastNEndpointsFuture != null)
         {
