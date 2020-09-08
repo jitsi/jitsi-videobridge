@@ -39,17 +39,34 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
 
     fun loadUpdate(loadMeasurement: T) {
         logger.cdebug { "Got a load measurement of $loadMeasurement" }
+        val now = clock.instant()
         if (loadMeasurement.getLoad() >= jvbLoadThreshold.getLoad()) {
             state = State.OVERLOADED
-            logger.info("Load measurement $loadMeasurement is above threshold of $jvbLoadThreshold, " +
-                    "maybe running load reducer")
-            maybeRun("load reducer") { reduceLoad() }
+            logger.info("Load measurement $loadMeasurement is above threshold of $jvbLoadThreshold")
+            if (canRunReducer(now)) {
+                logger.info("Running load reducer")
+                loadReducer.reduceLoad()
+                lastReducerTime = now
+            } else {
+                logger.info("Load reducer ran at $lastReducerTime, which is within ${loadReducer.impactTime()} " +
+                    "of now, not running reduce")
+            }
         } else {
             state = State.NOT_OVERLOADED
             if (loadMeasurement.getLoad() < jvbRecoveryThreshold.getLoad()) {
-                logger.info("Load measurement $loadMeasurement is below threshold of $jvbLoadThreshold, " +
-                        "maybe running recovery")
-                maybeRun("recovery") { recover() }
+                if (canRunReducer(now)) {
+                    if (loadReducer.recover()) {
+                        logger.info("Recovery ran after a load measurement of $loadMeasurement (which was below " +
+                            "threshold of $jvbLoadThreshold) was received")
+                        lastReducerTime = now
+                    } else {
+                        logger.cdebug { "Recovery had no work to do" }
+                    }
+                } else {
+                    logger.cdebug { "Load measurement $loadMeasurement is below recovery threshold, but load reducer " +
+                        "ran at $lastReducerTime, which is within ${loadReducer.impactTime()} of now, not running " +
+                        "recover" }
+                }
             }
         }
     }
@@ -59,16 +76,8 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
         put("reducer", loadReducer.getStats())
     }
 
-    private fun maybeRun(taskDescription: String, task: JvbLoadReducer.() -> Unit) {
-        if (Duration.between(lastReducerTime, clock.instant()) >= loadReducer.impactTime()) {
-            logger.info("Running $taskDescription")
-            loadReducer.apply(task)
-            lastReducerTime = clock.instant()
-        } else {
-            logger.info("Load reducer started running ${Duration.between(lastReducerTime, clock.instant())} " +
-                    "ago, and we wait ${loadReducer.impactTime()} between runs, so will skip running $taskDescription")
-        }
-    }
+    private fun canRunReducer(now: Instant): Boolean =
+        Duration.between(lastReducerTime, now) >= loadReducer.impactTime()
 
     enum class State {
         OVERLOADED,
