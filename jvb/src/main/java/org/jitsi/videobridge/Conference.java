@@ -531,6 +531,11 @@ public class Conference
 
         logger.info("Expiring.");
 
+        if (epConnectionStatusMonitor != null)
+        {
+            epConnectionStatusMonitor.stop();
+        }
+
         if (updateLastNEndpointsFuture != null)
         {
             updateLastNEndpointsFuture.cancel(true);
