@@ -58,6 +58,7 @@ import java.nio.*;
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 import java.util.function.Function;
 import java.util.function.*;
 import java.util.stream.*;
@@ -593,7 +594,7 @@ public class Endpoint
     private void dtlsAppPacketReceived(byte[] data, int off, int len)
     {
         //TODO(brian): change sctp handler to take buf, off, len
-        sctpHandler.consume(new PacketInfo(new UnparsedPacket(data, off, len)));
+        sctpHandler.processPacket(new PacketInfo(new UnparsedPacket(data, off, len)));
     }
 
     /**
@@ -758,6 +759,7 @@ public class Endpoint
             {
                 messageTransport.close();
             }
+            sctpHandler.stop();
             if (sctpManager != null)
             {
                 sctpManager.closeConnection();
@@ -1521,7 +1523,8 @@ public class Endpoint
     {
         private final Object sctpManagerLock = new Object();
         public SctpManager sctpManager = null;
-        public BlockingQueue<PacketInfo> cachedSctpPackets = new LinkedBlockingQueue<>();
+        public BlockingQueue<PacketInfo> cachedSctpPackets = new LinkedBlockingQueue<>(100);
+        private AtomicLong numCachedSctpPackets = new AtomicLong();
 
         /**
          * Initializes a new {@link SctpHandler} instance.
@@ -1536,15 +1539,27 @@ public class Endpoint
         {
             synchronized (sctpManagerLock)
             {
-                if (sctpManager == null)
+                if (SctpConfig.config.enabled())
                 {
-                    cachedSctpPackets.add(packetInfo);
-                }
-                else
-                {
-                    sctpManager.handleIncomingSctp(packetInfo);
+                    if (sctpManager == null)
+                    {
+                        numCachedSctpPackets.incrementAndGet();
+                        cachedSctpPackets.add(packetInfo);
+                    }
+                    else
+                    {
+                        sctpManager.handleIncomingSctp(packetInfo);
+                    }
                 }
             }
+        }
+
+        @Override
+        public NodeStatsBlock getNodeStats()
+        {
+            NodeStatsBlock nodeStats = super.getNodeStats();
+            nodeStats.addNumber("num_cached_packets", numCachedSctpPackets.get());
+            return nodeStats;
         }
 
         /**
