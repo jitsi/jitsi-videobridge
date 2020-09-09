@@ -101,6 +101,7 @@ fun createSecureJettyServer(
         HttpConnectionFactory(config)
     ).apply {
         this.host = host
+        this.port = port
     }
     server.addConnector(connector)
     return server
