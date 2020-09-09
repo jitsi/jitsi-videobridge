@@ -29,27 +29,14 @@ class PacketCache(
     /**
      * A function which dictates which packets to cache.
      */
-    val packetPredicate: (RtpPacket) -> Boolean = { it is VideoRtpPacket }
-) : NodeStatsProducer {
+    val packetPredicate: (RtpPacket) -> Boolean = { it is VideoRtpPacket },
     /**
      * The max number of packets to cache per SSRC.
      */
-    private val size: Int
+    val size: Int = 500
+) : NodeStatsProducer {
     private val packetCaches: MutableMap<Long, RtpPacketCache> = ConcurrentHashMap()
     private var stopped = false
-
-    companion object {
-        val SIZE_PACKETS: String = "${PacketCache::class.java}.SIZE_PACKETS"
-        private val defaultConfiguration = Configuration()
-
-        init {
-            defaultConfiguration[SIZE_PACKETS] = 500
-        }
-    }
-
-    init {
-        size = defaultConfiguration.getInt(SIZE_PACKETS)
-    }
 
     private fun getCache(ssrc: Long): RtpPacketCache {
         return packetCaches.computeIfAbsent(ssrc) { RtpPacketCache(size) }
@@ -58,8 +45,7 @@ class PacketCache(
     /**
      * Stores a copy of the given packet in the cache.
      */
-    fun insert(packet: RtpPacket) =
-        !stopped && packetPredicate(packet) && getCache(packet.ssrc).insert(packet)
+    fun insert(packet: RtpPacket) = !stopped && packetPredicate(packet) && getCache(packet.ssrc).insert(packet)
 
     /**
      * Gets a copy of the packet in the cache with the given SSRC and sequence number, if the cache contains it.
@@ -81,7 +67,7 @@ class PacketCache(
 
     fun stop() {
         stopped = true
-        packetCaches.forEach { _, cache -> cache.flush() }
+        packetCaches.forEach { (_, cache) -> cache.flush() }
     }
 
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("PacketCache").apply {
@@ -94,7 +80,13 @@ class PacketCache(
 /**
  * Implements a cache for RTP packets.
  */
-class RtpPacketCache(size: Int) : ArrayCache<RtpPacket>(size, RtpPacket::clone) {
+class RtpPacketCache(
+    size: Int,
+    synchronize: Boolean = true
+) : ArrayCache<RtpPacket>(
+    size = size,
+    cloneItem = RtpPacket::clone,
+    synchronize = synchronize) {
 
     private val rfc3711IndexTracker = Rfc3711IndexTracker()
 
@@ -103,13 +95,33 @@ class RtpPacketCache(size: Int) : ArrayCache<RtpPacket>(size, RtpPacket::clone) 
     }
 
     /**
-     * Gets a packet with a given RTP sequence number from the cache.
+     * Gets a packet with a given RTP sequence number from the cache (clones the packet).
      */
     fun get(sequenceNumber: Int): Container? {
+        return doGet(sequenceNumber, true)
+    }
+
+    fun doGet(sequenceNumber: Int, shouldCloneItem: Boolean): Container? {
         // Note that we use [interpret] because we don't want the ROC to get out of sync because of funny requests
         // (NACKs)
         val index = rfc3711IndexTracker.interpret(sequenceNumber)
-        return super.getContainer(index)
+        // The RFC3711 tracker may produce negative numbers (example, if it is initialized with 0,
+        // then 65535 is interpreted). These are invalid indexes.
+        return if (index < 0) null else super.getContainer(index, shouldCloneItem)
+    }
+
+    /**
+     * Gets a packet with a given RTP sequence number from the cache (does not clone the packet).
+     */
+    fun peek(sequenceNumber: Int): Container? {
+        return doGet(sequenceNumber, false)
+    }
+
+    fun contains(sequenceNumber: Int): Boolean {
+        // Note that we use [interpret] because we don't want the ROC to get out of sync because of funny requests
+        // (NACKs)
+        val index = rfc3711IndexTracker.interpret(sequenceNumber)
+        return super.containsIndex(index)
     }
 
     fun insert(rtpPacket: RtpPacket): Boolean {
