@@ -146,15 +146,15 @@ class DtlsStack(
      */
     fun start() {
         roleSet.thenRun {
+            dtlsTransport = role?.start()
             // There is a bit of a race here: It's technically possible the
             // far side could finish the handshake and send a message before
             // this side assigns dtlsTransport here.  If so, that message
             // would be passed to #processIncomingProtocolData and put in
             // incomingProtocolData, but, since dtlsTransport won't be set
-            // yet, we won't 'receive' it yet.  The message isn't lost, but
-            // won't be received until another message comes after
-            // dtlsTransport has been set.
-            dtlsTransport = role?.start()
+            // yet, we won't 'receive' it yet.  Check for any incoming packets
+            // here, to handle this case.
+            processIncomingProtocolData()
         }
     }
 
@@ -182,6 +182,27 @@ class DtlsStack(
         dtlsTransport?.send(data, off, len)
     }
 
+    private fun processIncomingProtocolData() {
+        var bytesReceived: Int
+        do {
+            val bufCopy2: ByteArray? = synchronized(dtlsAppDataBuf) {
+                bytesReceived = dtlsTransport?.receive(dtlsAppDataBuf, 0, 1500, 1) ?: -1
+
+                if (bytesReceived > 0) {
+                    // Copy again to copy out of dtlsAppDataBuf, which we re-use.
+                    BufferPool.getBuffer(bytesReceived).apply {
+                        System.arraycopy(dtlsAppDataBuf, 0, this, 0, bytesReceived)
+                    }
+                } else {
+                    null
+                }
+            }
+            if (bufCopy2 != null) {
+                incomingDataHandler?.dataReceived(bufCopy2, 0, bytesReceived)
+            }
+        } while (bytesReceived > 0)
+    }
+
     /**
      * We get 'pushed' the data from a lower transport layer, but bouncycastle wants to 'pull' the data
      * itself.  To mimic this, we put the received data into a queue, and then 'pull' it through ourselves by
@@ -204,17 +225,8 @@ class DtlsStack(
             BufferPool.returnBuffer(bufCopy)
             numPacketDropsQueueFull++
         }
-        var bytesReceived: Int
-        do {
-            bytesReceived = dtlsTransport?.receive(dtlsAppDataBuf, 0, 1500, 1) ?: -1
-            if (bytesReceived > 0) {
-                // Copy again to copy out of dtlsAppDataBuf, which we re-use.
-                val bufCopy2 = BufferPool.getBuffer(bytesReceived).apply {
-                    System.arraycopy(dtlsAppDataBuf, 0, this, 0, bytesReceived)
-                }
-                incomingDataHandler?.dataReceived(bufCopy2, 0, bytesReceived)
-            }
-        } while (bytesReceived > 0)
+
+        processIncomingProtocolData()
     }
 
     fun getDebugState(): OrderedJsonObject = OrderedJsonObject().apply {
