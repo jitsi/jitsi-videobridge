@@ -31,6 +31,7 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
+import org.jitsi.nlj.transform.node.AudioRedHandler
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketCacher
@@ -128,6 +129,7 @@ class RtpSenderImpl(
         incomingPacketQueue.setErrorHandler(queueErrorCounter)
 
         outgoingRtpRoot = pipeline {
+            node(AudioRedHandler(streamInformationStore))
             node(outgoingPacketCache)
             node(absSendTime)
             node(statsTracker)

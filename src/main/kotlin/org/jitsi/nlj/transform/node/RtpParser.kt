@@ -16,7 +16,9 @@
 package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.format.PayloadTypeEncoding.RED
 import org.jitsi.nlj.rtp.AudioRtpPacket
+import org.jitsi.nlj.rtp.RedAudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.utils.logging2.cdebug
@@ -41,7 +43,10 @@ class RtpParser(
         }
 
         packetInfo.packet = when (payloadType.mediaType) {
-            MediaType.AUDIO -> packet.toOtherType(::AudioRtpPacket)
+            MediaType.AUDIO -> when (payloadType.encoding) {
+                RED -> packet.toOtherType(::RedAudioRtpPacket)
+                else -> packet.toOtherType(::AudioRtpPacket)
+            }
             MediaType.VIDEO -> packet.toOtherType(::VideoRtpPacket)
             else -> throw Exception("Unrecognized media type: '${payloadType.mediaType}'")
         }

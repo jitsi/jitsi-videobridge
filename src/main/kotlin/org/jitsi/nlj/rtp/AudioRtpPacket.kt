@@ -17,7 +17,7 @@ package org.jitsi.nlj.rtp
 
 import org.jitsi.rtp.rtp.RtpPacket
 
-class AudioRtpPacket(
+open class AudioRtpPacket(
     buffer: ByteArray,
     offset: Int,
     length: Int
