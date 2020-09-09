@@ -114,19 +114,21 @@ class CallStatsConferenceStatsHandler
             return;
         }
 
-        // Create a new PeriodicRunnable and start it.
-        ConferencePeriodicRunnable cpr
-            = new ConferencePeriodicRunnable(
-                    conference,
-                    interval,
-                    this.statsService,
-                    this.conferenceIDPrefix,
-                    this.bridgeId);
-        cpr.start();
+        if (conference.getName() != null)
+        {
+            // Create a new PeriodicRunnable and start it.
+            ConferencePeriodicRunnable cpr = new ConferencePeriodicRunnable(
+                conference,
+                interval,
+                this.statsService,
+                this.conferenceIDPrefix,
+                this.bridgeId);
+            cpr.start();
 
-        // register for periodic execution.
-        statisticsProcessors.put(conference, cpr);
-        statisticsExecutor.registerRecurringRunnable(cpr);
+            // register for periodic execution.
+            statisticsProcessors.put(conference, cpr);
+            statisticsExecutor.registerRecurringRunnable(cpr);
+        }
     }
 
     /**

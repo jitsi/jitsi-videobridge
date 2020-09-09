@@ -35,7 +35,9 @@ import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
-import org.osgi.framework.*;
+import org.jxmpp.jid.*;
+import org.jxmpp.jid.impl.*;
+import org.jxmpp.stringprep.*;
 
 import java.io.*;
 import java.lang.*;
@@ -125,7 +127,7 @@ public class Conference
     /**
      * The world readable name of this instance if any.
      */
-    private final String conferenceName;
+    private final EntityBareJid conferenceName;
 
     /**
      * The speech activity (representation) of the <tt>Endpoint</tt>s of this
@@ -196,7 +198,7 @@ public class Conference
      */
     public Conference(Videobridge videobridge,
                       String id,
-                      String conferenceName,
+                      EntityBareJid conferenceName,
                       boolean enableLogging,
                       long gid)
     {
@@ -212,7 +214,7 @@ public class Conference
         );
         if (conferenceName != null)
         {
-            context.put("conf_name", conferenceName);
+            context.put("conf_name", conferenceName.toString());
         }
         logger = new LoggerImpl(Conference.class.getName(), minLevel, new LogContext(context));
         this.shim = new ConferenceShim(this, logger);
@@ -299,7 +301,7 @@ public class Conference
      * Sends a message to a subset of endpoints in the call, primary use
      * case being a message that has originated from an endpoint (as opposed to
      * a message originating from the bridge and being sent to all endpoints in
-     * the call, for that see {@link #broadcastMessage(String)}.
+     * the call, for that see {@link #broadcastMessage(BridgeChannelMessage)}.
      *
      * @param msg the message to be sent
      * @param endpoints the list of <tt>Endpoint</tt>s to which the message will
@@ -332,7 +334,7 @@ public class Conference
      * Used to send a message to a subset of endpoints in the call, primary use
      * case being a message that has originated from an endpoint (as opposed to
      * a message originating from the bridge and being sent to all endpoints in
-     * the call, for that see {@link #broadcastMessage(String)}.
+     * the call, for that see {@link #broadcastMessage(BridgeChannelMessage)}.
      *
      * @param msg the message to be sent
      * @param endpoints the list of <tt>Endpoint</tt>s to which the message will
@@ -399,7 +401,22 @@ public class Conference
     public void describeShallow(ColibriConferenceIQ iq)
     {
         iq.setID(getID());
-        iq.setName(conferenceName);
+        try
+        {
+            if (conferenceName == null)
+            {
+                iq.setName(null);
+            }
+            else
+            {
+                iq.setName(JidCreate.entityBareFrom(conferenceName));
+            }
+        }
+        catch (XmppStringprepException e)
+        {
+            logger.error("Error converting conference name to a BareJid ", e);
+            iq.setName(null);
+        }
     }
 
     /**
@@ -923,7 +940,7 @@ public class Conference
      *
      * @return the conference name
      */
-    public String getName()
+    public EntityBareJid getName()
     {
         return conferenceName;
     }

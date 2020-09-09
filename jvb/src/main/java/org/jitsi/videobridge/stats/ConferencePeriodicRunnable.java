@@ -50,8 +50,7 @@ public class ConferencePeriodicRunnable
         super(conference,
             period,
             statsService,
-            conference.getName() == null
-                  ? "null" : conference.getName(),
+            conference.getName(),
             conferenceIDPrefix,
             initiatorID);
     }
