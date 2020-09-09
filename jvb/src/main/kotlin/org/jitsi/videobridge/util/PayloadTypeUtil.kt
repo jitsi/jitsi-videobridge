@@ -81,7 +81,7 @@ class PayloadTypeUtil {
             val rtcpFeedbackSet = ext.rtcpFeedbackTypeList.map { rtcpExtension ->
                 buildString {
                     append(rtcpExtension.feedbackType)
-                    if (rtcpExtension.feedbackSubtype.isNotBlank()) {
+                    if (!rtcpExtension.feedbackSubtype.isNullOrBlank()) {
                         append(" ${rtcpExtension.feedbackSubtype}")
                     }
                 }
