@@ -246,7 +246,10 @@ public class Conference
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
 
             StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
-            statsMgr.getTransports().forEach(transport -> transport.conferenceCreated(this));
+            if (statsMgr != null)
+            {
+                statsMgr.getTransports().forEach(transport -> transport.conferenceCreated(this));
+            }
 
             Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
@@ -551,7 +554,10 @@ public class Conference
         }
 
         StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
-        statsMgr.getTransports().forEach(transport -> transport.conferenceExpired(this));
+        if (statsMgr != null)
+        {
+            statsMgr.getTransports().forEach(transport -> transport.conferenceExpired(this));
+        }
 
         logger.debug(() -> "Expiring endpoints.");
         getEndpoints().forEach(AbstractEndpoint::expire);
@@ -1154,7 +1160,7 @@ public class Conference
     {
         JSONObject debugState = new JSONObject();
         debugState.put("id", id);
-        debugState.put("name", conferenceName);
+        debugState.put("name", conferenceName.toString());
 
         if (full)
         {
