@@ -26,6 +26,7 @@ import org.jitsi.videobridge.octo.OctoRelayServiceProvider
 import org.jitsi.videobridge.octo.singleton
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
+import org.jxmpp.jid.impl.JidCreate
 import org.osgi.framework.BundleContext
 
 /**
@@ -50,9 +51,10 @@ class ConferenceTest : ConfigTest() {
     }
 
     init {
+        val name = JidCreate.entityBareFrom("roomName@somedomain.com")
         context("Adding local endpoints should work") {
             withNewConfig(newConfigOctoEnabled, loadDefaults = true) {
-                with(Conference(videobridge, "id", "name", false, Conference.GID_NOT_SET)) {
+                with(Conference(videobridge, "id", name, false, Conference.GID_NOT_SET)) {
                     endpointCount shouldBe 0
                     createLocalEndpoint("abcdabcd", true)
                     endpointCount shouldBe 1
@@ -62,7 +64,7 @@ class ConferenceTest : ConfigTest() {
         }
         context("Enabling octo should fail when the GID is not set") {
             withNewConfig(newConfigOctoEnabled, loadDefaults = true) {
-                with(Conference(videobridge, "id", "name", false, Conference.GID_NOT_SET)) {
+                with(Conference(videobridge, "id", name, false, Conference.GID_NOT_SET)) {
                     isOctoEnabled shouldBe false
                     shouldThrow<IllegalStateException> {
                         tentacle
@@ -74,7 +76,7 @@ class ConferenceTest : ConfigTest() {
         context("Enabling octo should work") {
             withNewConfig(newConfigOctoEnabled, loadDefaults = true) {
                 octoRelayService.start()
-                with(Conference(videobridge, "id", "name", false, 1234)) {
+                with(Conference(videobridge, "id", name, false, 1234)) {
                     isOctoEnabled shouldBe false
                     tentacle
                     isOctoEnabled shouldBe true

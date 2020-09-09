@@ -84,12 +84,12 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-xmpp-extensions</artifactId>
-                <version>1.0-8-g340be56</version>
+                <version>1.0-15-g813e4c4</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-stats</artifactId>
-                <version>1.0-3-gd5cc199</version>
+                <version>1.0-4-g6d906b2</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

@@ -15,12 +15,18 @@
  */
 package org.jitsi.videobridge.stats;
 
-import org.jitsi.osgi.*;
+import org.jitsi.config.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.stats.media.*;
 import org.jitsi.utils.*;
-import org.osgi.framework.*;
+import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.stats.config.*;
+import org.jitsi.videobridge.version.*;
 
+import java.time.*;
+
+import static org.jitsi.videobridge.version.JvbVersionServiceSupplierKt.*;
 import static org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.*;
 
 /**
@@ -32,6 +38,11 @@ import static org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.*;
 public class CallStatsIOTransport
     extends StatsTransport
 {
+    /**
+     * The {@link Logger} used by the {@link CallStatsIOTransport} class to print debug information.
+     */
+    private static final Logger logger = new LoggerImpl(CallStatsIOTransport.class.getName());
+
     /**
      * The callstats AppID.
      */
@@ -88,50 +99,13 @@ public class CallStatsIOTransport
     private StatsService statsService;
 
     /**
-     * Stats service listener.
+     * Handles conference stats.
      */
-    private StatsServiceListener serviceListener;
+    private CallStatsConferenceStatsHandler conferenceStatsHandler;
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void bundleContextChanged(
-            BundleContext oldValue,
-            BundleContext newValue)
+    public CallStatsIOTransport()
     {
-        super.bundleContextChanged(oldValue, newValue);
-
-        if (newValue == null)
-            dispose(oldValue);
-        else if (oldValue == null)
-            init(newValue);
-    }
-
-    /**
-     * Disposes of this {@code StatsTransport} so that
-     * {@link #publishStatistics(Statistics)} may not execute successfully any
-     * longer.
-     *
-     * @param bundleContext the {@code BundleContext} in which this
-     * {@code StatsTransport} is to be disposed
-     */
-    private void dispose(BundleContext bundleContext)
-    {
-        if (serviceListener != null)
-        {
-            bundleContext.removeServiceListener(serviceListener);
-            serviceListener = null;
-        }
-
-        if (statsService != null)
-        {
-            StatsServiceFactory.getInstance()
-                .stopStatsService(bundleContext, statsService.getId());
-            statsService = null;
-        }
-
-        bridgeStatusInfoBuilder = null;
+        init(JitsiConfig.getSipCommunicatorProps());
     }
 
     /**
@@ -139,30 +113,10 @@ public class CallStatsIOTransport
      * {@link #publishStatistics(Statistics)} may executed successfully.
      * Initializes {@link #statsService} i.e. the jitsi-stats library.
      *
-     * @param bundleContext the {@code BundleContext} in which this
-     * {@code StatsTransport} is to be initialized
-     */
-    private void init(BundleContext bundleContext)
-    {
-        ConfigurationService cfg
-            = ServiceUtils2.getService(
-                    bundleContext,
-                    ConfigurationService.class);
-
-        init(bundleContext, cfg);
-    }
-
-    /**
-     * Initializes this {@code StatsTransport} so that
-     * {@link #publishStatistics(Statistics)} may executed successfully.
-     * Initializes {@link #statsService} i.e. the jitsi-stats library.
-     *
-     * @param bundleContext the {@code BundleContext} in which this
-     * {@code StatsTransport} is to be initialized
      * @param cfg the {@code ConfigurationService} registered in
      * {@code bundleContext} if any
      */
-    private void init(BundleContext bundleContext, ConfigurationService cfg)
+    private void init(ConfigurationService cfg)
     {
         int appId = ConfigUtils.getInt(cfg, PNAME_CALLSTATS_IO_APP_ID, 0);
         String appSecret
@@ -174,13 +128,26 @@ public class CallStatsIOTransport
         String bridgeId = ConfigUtils.getString(
             cfg, PNAME_CALLSTATS_IO_BRIDGE_ID, DEFAULT_BRIDGE_ID);
 
-        // as we create only one instance of StatsService we will expect
-        // it to register in OSGi as service, if it doesn't it means it failed
-        serviceListener = new StatsServiceListener(appId, bundleContext);
-        bundleContext.addServiceListener(serviceListener);
-
+        // as we create only one instance of StatsService
         StatsServiceFactory.getInstance().createStatsService(
-            bundleContext, appId, appSecret, keyId, keyPath, bridgeId, false);
+            JvbVersionServiceSupplierKt.singleton().get().getCurrentVersion(),
+            appId, appSecret, keyId, keyPath, bridgeId, false,
+            new StatsServiceFactory.InitCallback()
+            {
+                @Override
+                public void error(String reason, String message)
+                {
+                    logger.error("Jitsi-stats library failed to initialize with reason: "
+                        + reason + " and error message: " + message);
+                }
+
+                @Override
+                public void onInitialized(StatsService statsService, String message)
+                {
+                    logger.info("Stats service initialized:" + message);
+                    initConferenceStatsHandler(statsService);
+                }
+            });
     }
 
     /**
@@ -259,66 +226,62 @@ public class CallStatsIOTransport
     }
 
     /**
-     * Listens for registering StatsService with specific id.
+     * Initializes the callstats media stats.
+     * @param statsService the created stats service instance.
      */
-    private class StatsServiceListener
-        implements ServiceListener
+    private void initConferenceStatsHandler(StatsService statsService)
     {
-        /**
-         * The id of the StatsService we expect.
-         */
-        private final int id;
+        this.statsService = statsService;
 
-        /**
-         * The bundle context.
-         */
-        private final BundleContext bundleContext;
+        ConfigurationService cfg = JitsiConfig.getSipCommunicatorProps();
+        String bridgeId = ConfigUtils.getString(
+            cfg,
+            CallStatsIOTransport.PNAME_CALLSTATS_IO_BRIDGE_ID,
+            CallStatsIOTransport.DEFAULT_BRIDGE_ID);
 
-        /**
-         * Constructs StatsServiceListener.
-         * @param id the id of the StatsService to expect.
-         * @param bundleContext the bundle context.
-         */
-        StatsServiceListener(int id, BundleContext bundleContext)
+        // Update with per stats transport interval if available.
+        Duration intervalDuration = StatsManager.config.getTransportConfigs().stream()
+            .filter(tc -> tc instanceof StatsTransportConfig.CallStatsIoStatsTransportConfig)
+            .map(StatsTransportConfig::getInterval)
+            .findFirst()
+            .orElse(StatsManager.config.getInterval());
+        int interval = (int)intervalDuration.toMillis();
+        String conferenceIDPrefix = ConfigUtils.getString(
+            cfg,
+            CallStatsIOTransport.PNAME_CALLSTATS_IO_CONF_PREFIX,
+            null);
+
+        conferenceStatsHandler = new CallStatsConferenceStatsHandler();
+        conferenceStatsHandler.start(
+            this.statsService,
+            bridgeId,
+            conferenceIDPrefix,
+            interval);
+    }
+
+    /**
+     * Notification that a conference was created.
+     * @param conference the conference that is created.
+     */
+    @Override
+    public void conferenceCreated(Conference conference)
+    {
+        if (this.conferenceStatsHandler != null)
         {
-            this.id = id;
-            this.bundleContext = bundleContext;
+            conferenceStatsHandler.conferenceCreated(conference);
         }
+    }
 
-        @Override
-        public void serviceChanged(ServiceEvent serviceEvent)
+    /**
+     * Notification that a conference has expired.
+     * @param conference the conference that expired.
+     */
+    @Override
+    public void conferenceExpired(Conference conference)
+    {
+        if (this.conferenceStatsHandler != null)
         {
-            Object service;
-
-            try
-            {
-                service = bundleContext.getService(
-                    serviceEvent.getServiceReference());
-            }
-            catch (IllegalArgumentException
-                | IllegalStateException
-                | SecurityException ex)
-            {
-                service = null;
-            }
-
-            if (service == null || !(service instanceof StatsService))
-                return;
-
-            if (((StatsService) service).getId() != id)
-                return;
-
-            switch (serviceEvent.getType())
-            {
-            case ServiceEvent.REGISTERED:
-                statsService = (StatsService) service;
-                break;
-            case ServiceEvent.UNREGISTERING:
-                statsService = null;
-                break;
-            default:
-                break;
-            }
+            conferenceStatsHandler.conferenceExpired(conference);
         }
     }
 }

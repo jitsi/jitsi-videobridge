@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge.stats;
 
+import org.jitsi.videobridge.*;
+
 /**
  * Defines an interface for classes that will send statistics.
  *
@@ -22,7 +24,6 @@ package org.jitsi.videobridge.stats;
  * @author Lyubomir Marinov
  */
 public abstract class StatsTransport
-    extends BundleContextHolder2
 {
     /**
      * Publishes a specific (set of) <tt>Statistics</tt> through this
@@ -50,4 +51,18 @@ public abstract class StatsTransport
     {
         publishStatistics(statistics);
     }
+
+    /**
+     * Notification that a conference was created.
+     * @param conference the conference that is created.
+     */
+    public void conferenceCreated(Conference conference)
+    {}
+
+    /**
+     * Notification that a conference has expired.
+     * @param conference the conference that expired.
+     */
+    public void conferenceExpired(Conference conference)
+    {}
 }
