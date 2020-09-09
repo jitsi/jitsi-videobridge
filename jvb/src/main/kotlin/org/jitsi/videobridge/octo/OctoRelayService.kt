@@ -85,21 +85,21 @@ class OctoRelayService {
     }
 
     fun getStats(): Stats {
-        val octoUdpTransportStats = udpTransport!!.getStats()
-        val octoTransportStats = bridgeOctoTransport!!.getStats()
+        val octoUdpTransportStats = udpTransport?.getStats()
+        val octoTransportStats = bridgeOctoTransport?.getStats()
         return Stats(
-            bytesReceived = octoUdpTransportStats.bytesReceived,
-            bytesSent = octoUdpTransportStats.bytesSent,
-            packetsReceived = octoUdpTransportStats.packetsReceived,
-            packetsSent = octoUdpTransportStats.packetsSent,
-            receiveBitrate = octoUdpTransportStats.receiveBitRate,
-            receivePacketRate = octoUdpTransportStats.receivePacketRate,
-            packetsDropped = octoUdpTransportStats.incomingPacketsDropped +
-                    octoTransportStats.numInvalidPackets +
-                    octoTransportStats.numIncomingDroppedNoHandler,
-            sendBitrate = octoUdpTransportStats.sendBitRate,
-            sendPacketRate = octoUdpTransportStats.sendPacketRate,
-            relayId = bridgeOctoTransport!!.relayId
+            bytesReceived = octoUdpTransportStats?.bytesReceived ?: 0,
+            bytesSent = octoUdpTransportStats?.bytesSent ?: 0,
+            packetsReceived = octoUdpTransportStats?.packetsReceived ?: 0,
+            packetsSent = octoUdpTransportStats?.packetsSent ?: 0,
+            receiveBitrate = octoUdpTransportStats?.receiveBitRate ?: 0,
+            receivePacketRate = octoUdpTransportStats?.receivePacketRate ?: 0,
+            packetsDropped = (octoUdpTransportStats?.incomingPacketsDropped ?: 0) +
+                    (octoTransportStats?.numInvalidPackets ?: 0) +
+                    (octoTransportStats?.numIncomingDroppedNoHandler ?: 0),
+            sendBitrate = octoUdpTransportStats?.sendBitRate ?: 0,
+            sendPacketRate = octoUdpTransportStats?.sendPacketRate ?: 0,
+            relayId = bridgeOctoTransport?.relayId ?: "no relay ID"
         )
     }
 

@@ -33,6 +33,7 @@ import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.Version;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.ice.*;
+import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.shim.*;
@@ -46,15 +47,13 @@ import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.json.simple.*;
-import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
 import org.osgi.framework.*;
 
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.regex.*;
-
-import static org.jitsi.videobridge.version.JvbVersionServiceSupplierKt.jvbVersionServiceSingleton;
 
 /**
  * Represents the Jitsi Videobridge which creates, lists and destroys
@@ -117,7 +116,7 @@ public class Videobridge
      * The <tt>Conference</tt>s of this <tt>Videobridge</tt> mapped by their
      * IDs.
      */
-    private final Map<String, Conference> conferences = new HashMap<>();
+    private final Map<String, Conference> conferencesById = new HashMap<>();
 
     /**
      * Indicates if this bridge instance has entered graceful shutdown mode.
@@ -147,6 +146,24 @@ public class Videobridge
      */
     private final VideobridgeShim shim = new VideobridgeShim(this);
 
+    /**
+     * The {@link JvbLoadManager} instance used for this bridge.
+     */
+    private final JvbLoadManager<PacketRateMeasurement> jvbLoadManager = new JvbLoadManager<>(
+        PacketRateMeasurement.getLoadedThreshold(),
+        PacketRateMeasurement.getRecoveryThreshold(),
+        new LastNReducer(
+            this::getConferences,
+            JvbLastNKt.jvbLastNSingleton
+        )
+    );
+
+    /**
+     * The task which manages the recurring load sampling and updating of
+     * {@link Videobridge#jvbLoadManager}.
+     */
+    private final ScheduledFuture<?> loadSamplerTask;
+
     static
     {
         org.jitsi.rtp.util.BufferPool.Companion.setGetArray(ByteBufferPool::getBuffer);
@@ -167,6 +184,12 @@ public class Videobridge
     public Videobridge()
     {
         videobridgeExpireThread = new VideobridgeExpireThread(this);
+        loadSamplerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
+            new PacketRateLoadSampler(this, jvbLoadManager),
+            0,
+            10,
+            TimeUnit.SECONDS
+        );
     }
 
     /**
@@ -200,9 +223,9 @@ public class Videobridge
         {
             String id = generateConferenceID();
 
-            synchronized (conferences)
+            synchronized (conferencesById)
             {
-                if (!conferences.containsKey(id))
+                if (!conferencesById.containsKey(id))
                 {
                     conference
                         = new Conference(
@@ -211,7 +234,7 @@ public class Videobridge
                                 name,
                                 enableLogging,
                                 gid);
-                    conferences.put(id, conference);
+                    conferencesById.put(id, conference);
                 }
             }
         }
@@ -290,11 +313,11 @@ public class Videobridge
         String id = conference.getID();
         boolean expireConference;
 
-        synchronized (conferences)
+        synchronized (conferencesById)
         {
-            if (conference.equals(conferences.get(id)))
+            if (conference.equals(conferencesById.get(id)))
             {
-                conferences.remove(id);
+                conferencesById.remove(id);
                 expireConference = true;
             }
             else
@@ -352,9 +375,9 @@ public class Videobridge
      */
     public Conference getConference(String id)
     {
-        synchronized (conferences)
+        synchronized (conferencesById)
         {
-            return conferences.get(id);
+            return conferencesById.get(id);
         }
     }
 
@@ -365,9 +388,9 @@ public class Videobridge
      */
     public Collection<Conference> getConferences()
     {
-        synchronized (conferences)
+        synchronized (conferencesById)
         {
-            return new HashSet<>(conferences.values());
+            return new HashSet<>(conferencesById.values());
         }
     }
 
@@ -380,16 +403,7 @@ public class Videobridge
      */
     public ConfigurationService getConfigurationService()
     {
-        BundleContext bundleContext = getBundleContext();
-
-        if (bundleContext == null)
-        {
-            return null;
-        }
-        else
-        {
-            return ServiceUtils2.getService(bundleContext, ConfigurationService.class);
-        }
+        return JitsiConfig.getSipCommunicatorProps();
     }
 
     /**
@@ -465,7 +479,7 @@ public class Videobridge
      */
     private String getHealthStatus()
     {
-        HealthCheckService health = HealthCheckServiceSupplierKt.singleton.get();
+        HealthCheckService health = JvbHealthCheckServiceSupplierKt.singleton().get();
 
         Exception result = health.getResult();
         return result == null ? "OK" : result.getMessage();
@@ -527,9 +541,9 @@ public class Videobridge
             return;
         }
 
-        synchronized (conferences)
+        synchronized (conferencesById)
         {
-            if (conferences.isEmpty())
+            if (conferencesById.isEmpty())
             {
                 logger.info("Videobridge is shutting down NOW");
                 ShutdownService shutdownService = ServiceUtils2.getService(bundleContext, ShutdownService.class);
@@ -596,7 +610,7 @@ public class Videobridge
                 new HealthCheckIQProvider());
 
         ConfigurationService cfg = getConfigurationService();
-        startIce4j(bundleContext, cfg);
+        startIce4j(cfg);
     }
 
     /**
@@ -605,9 +619,7 @@ public class Videobridge
      * @param bundleContext the {@code BundleContext} in which this
      * {@code Videobridge} is to start
      */
-    private void startIce4j(
-            BundleContext bundleContext,
-            ConfigurationService cfg)
+    private void startIce4j(ConfigurationService cfg)
     {
         // TODO Packet logging for ice4j is not supported at this time.
         StunStack.setPacketLogger(null);
@@ -662,16 +674,17 @@ public class Videobridge
      * NOTE: we have to make this public so Jicofo can call it from its
      * tests
      */
-    public void stop(BundleContext bundleContext)
+    public void stop()
     {
         try
         {
             ConfigurationService cfg = getConfigurationService();
-            stopIce4j(bundleContext, cfg);
+            stopIce4j(cfg);
         }
         finally
         {
-            videobridgeExpireThread.stop(bundleContext);
+            videobridgeExpireThread.stop();
+            loadSamplerTask.cancel(true);
             this.bundleContext = null;
         }
     }
@@ -682,9 +695,7 @@ public class Videobridge
      * @param bundleContext the {@code BundleContext} in which this
      * {@code Videobridge} is to start
      */
-    private void stopIce4j(
-        BundleContext bundleContext,
-        ConfigurationService cfg)
+    private void stopIce4j(ConfigurationService cfg)
     {
         // Shut down harvesters.
         Harvesters.closeStaticConfiguration();
@@ -729,6 +740,7 @@ public class Videobridge
         debugState.put("time", System.currentTimeMillis());
 
         debugState.put("health", getHealthStatus());
+        debugState.put("load-management", jvbLoadManager.getStats());
         debugState.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
 
         JSONObject conferences = new JSONObject();
@@ -746,7 +758,7 @@ public class Videobridge
             Conference conference;
             synchronized (conferences)
             {
-                conference = this.conferences.get(conferenceId);
+                conference = this.conferencesById.get(conferenceId);
             }
 
             conferences.put(
@@ -801,7 +813,7 @@ public class Videobridge
      */
     public Version getVersion()
     {
-        return jvbVersionServiceSingleton.get().getCurrentVersion();
+        return JvbVersionServiceSupplierKt.singleton().get().getCurrentVersion();
     }
 
     /**

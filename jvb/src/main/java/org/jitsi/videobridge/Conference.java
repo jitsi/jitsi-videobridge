@@ -15,19 +15,17 @@
  */
 package org.jitsi.videobridge;
 
-import edu.umd.cs.findbugs.annotations.*;
 import org.jetbrains.annotations.*;
-import org.jetbrains.annotations.Nullable;
 import org.jitsi.eventadmin.*;
 import org.jitsi.nlj.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.collections.*;
-import org.jitsi.utils.logging.DiagnosticContext;
-import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
@@ -36,18 +34,15 @@ import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
 import org.jxmpp.jid.parts.*;
 import org.jxmpp.stringprep.*;
-import org.osgi.framework.*;
 
 import java.io.*;
-import java.lang.*;
-import java.lang.SuppressWarnings;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.logging.*;
 import java.util.stream.*;
 
-import static org.jitsi.utils.collections.JMap.entry;
+import static org.jitsi.utils.collections.JMap.*;
 
 /**
  * Represents a conference in the terms of Jitsi Videobridge.
@@ -58,8 +53,7 @@ import static org.jitsi.utils.collections.JMap.entry;
  * @author George Politis
  */
 public class Conference
-     implements Expireable,
-        AbstractEndpointMessageTransport.EndpointMessageTransportEventHandler
+     implements AbstractEndpointMessageTransport.EndpointMessageTransportEventHandler
 {
     /**
      * The constant denoting that {@link #gid} is not specified.
@@ -96,10 +90,7 @@ public class Conference
      * The indicator which determines whether {@link #expire()} has been called
      * on this <tt>Conference</tt>.
      */
-    @SuppressFBWarnings(
-            value = "IS2_INCONSISTENT_SYNC",
-            justification = "The value is deemed safe to read without synchronization.")
-    private boolean expired = false;
+    private final AtomicBoolean expired = new AtomicBoolean(false);
 
     /**
      * The locally unique identifier of this conference (i.e. unique across the
@@ -163,11 +154,6 @@ public class Conference
      * The time when this {@link Conference} was created.
      */
     private final long creationTime = System.currentTimeMillis();
-
-    /**
-     * The {@link ExpireableImpl} which we use to safely expire this conference.
-     */
-    private final ExpireableImpl expireableImpl;
 
     /**
      * The shim which handles Colibri-related logic for this conference.
@@ -248,18 +234,20 @@ public class Conference
 
         }, 3, 3, TimeUnit.SECONDS);
 
-        expireableImpl = new ExpireableImpl(logger, this::expire);
-
         if (enableLogging)
         {
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
             Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
+            epConnectionStatusMonitor =
+                new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
+            epConnectionStatusMonitor.start();
+        }
+        else
+        {
+            epConnectionStatusMonitor = null;
         }
 
-        epConnectionStatusMonitor =
-            new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
-        epConnectionStatusMonitor.start();
     }
 
     /**
@@ -529,22 +517,23 @@ public class Conference
      * respective <tt>Channel</tt>s. Releases the resources acquired by this
      * instance throughout its life time and prepares it to be garbage
      * collected.
+     *
+     * NOTE: this should _only_ be called by the Conference "manager" (in this
+     * case, Videobridge).  If you need to expire a Conference from elsewhere, use
+     * {@link Videobridge#expireConference(Conference)}
      */
-    public void expire()
+    void expire()
     {
-        synchronized (this)
-        {
-            if (expired)
-            {
-                return;
-            }
-            else
-            {
-                expired = true;
-            }
+        if (!expired.compareAndSet(false, true)) {
+            return;
         }
 
         logger.info("Expiring.");
+
+        if (epConnectionStatusMonitor != null)
+        {
+            epConnectionStatusMonitor.stop();
+        }
 
         if (updateLastNEndpointsFuture != null)
         {
@@ -558,30 +547,18 @@ public class Conference
             eventAdmin.sendEvent(EventFactory.conferenceExpired(this));
         }
 
-        Videobridge videobridge = getVideobridge();
-
-        try
+        logger.debug(() -> "Expiring endpoints.");
+        getEndpoints().forEach(AbstractEndpoint::expire);
+        speechActivity.expire();
+        if (tentacle != null)
         {
-            videobridge.expireConference(this);
+            tentacle.expire();
+            tentacle = null;
         }
-        finally
-        {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Expiring endpoints.");
-            }
-            getEndpoints().forEach(AbstractEndpoint::expire);
-            speechActivity.expire();
-            if (tentacle != null)
-            {
-                tentacle.expire();
-                tentacle = null;
-            }
 
-            if (includeInStatistics)
-            {
-                updateStatisticsOnExpire();
-            }
+        if (includeInStatistics)
+        {
+            updateStatisticsOnExpire();
         }
     }
 
@@ -643,18 +620,6 @@ public class Conference
                 .filter(ep -> ep.receivesSsrc(receiveSSRC))
                 .findFirst()
                 .orElse(null);
-    }
-
-    /**
-     * Returns the OSGi <tt>BundleContext</tt> in which this Conference is
-     * executing.
-     *
-     * @return the OSGi <tt>BundleContext</tt> in which the Conference is
-     * executing.
-     */
-    public BundleContext getBundleContext()
-    {
-        return getVideobridge().getBundleContext();
     }
 
     /**
@@ -862,9 +827,7 @@ public class Conference
      */
     public boolean isExpired()
     {
-        // this.expired starts as 'false' and only ever changes to 'true',
-        // so there is no need to synchronize while reading.
-        return expired;
+        return expired.get();
     }
 
     /**
@@ -891,7 +854,10 @@ public class Conference
 
         if (removedEndpoint != null)
         {
-            epConnectionStatusMonitor.endpointExpired(removedEndpoint.getID());
+            if (epConnectionStatusMonitor != null)
+            {
+                epConnectionStatusMonitor.endpointExpired(removedEndpoint.getID());
+            }
             final EventAdmin eventAdmin = getEventAdmin();
             if (eventAdmin != null)
             {
@@ -944,7 +910,10 @@ public class Conference
         {
             eventAdmin.postEvent(EventFactory.endpointMessageTransportReady(endpoint));
         }
-        epConnectionStatusMonitor.endpointConnected(endpoint.getID());
+        if (epConnectionStatusMonitor != null)
+        {
+            epConnectionStatusMonitor.endpointConnected(endpoint.getID());
+        }
 
         if (!isExpired())
         {
@@ -1007,25 +976,13 @@ public class Conference
     }
 
     /**
-     * {@inheritDoc}
-     * </p>
      * @return {@code true} if this {@link Conference} is ready to be expired.
      */
-    @Override
     public boolean shouldExpire()
     {
         // Allow a conference to have no endpoints in the first 20 seconds.
         return getEndpointCount() == 0
                 && (System.currentTimeMillis() - creationTime > 20000);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void safeExpire()
-    {
-        expireableImpl.safeExpire();
     }
 
     /**
@@ -1202,7 +1159,7 @@ public class Conference
         if (full)
         {
             debugState.put("gid", gid);
-            debugState.put("expired", expired);
+            debugState.put("expired", expired.get());
             debugState.put("creationTime", creationTime);
             debugState.put("speechActivity", speechActivity.getDebugState());
             debugState.put("includeInStatistics", includeInStatistics);

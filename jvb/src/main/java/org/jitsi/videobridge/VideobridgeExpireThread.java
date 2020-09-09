@@ -117,7 +117,7 @@ public class VideobridgeExpireThread
     /**
      * Stops this {@link VideobridgeExpireThread}.
      */
-    void stop(final BundleContext bundleContext)
+    void stop()
     {
         logger.info("Stopping.");
         if (expireRunnable != null)

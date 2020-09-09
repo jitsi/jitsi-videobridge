@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 - Present, 8x8 Inc
+ * Copyright @ 2018 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.util;
+
+package org.jitsi.videobridge.load_management
 
 /**
- * An interface for an object which can be expired in a thread safe manner.
- *
- * @author Boris Grozev
+ * A measurement of load on the JVB.  Implementations should implement a description of the
+ * measurement in the [toString] method.
  */
-public interface Expireable
-{
-    /**
-     * Checks whether this instance is ready to be expired.
-     * @return {@code true} if this instance is ready to be expired, and
-     * {@code false} otherwise.
-     */
-    boolean shouldExpire();
+interface JvbLoadMeasurement {
+    fun getLoad(): Double
 
-    /**
-     * Tries to expire this {@link Expireable}. Thread safe.
-     */
-    void safeExpire();
+    companion object {
+        const val CONFIG_BASE = "videobridge.load-management.load-measurements"
+    }
 }

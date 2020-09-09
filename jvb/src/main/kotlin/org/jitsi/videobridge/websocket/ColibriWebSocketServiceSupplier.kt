@@ -14,23 +14,21 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.stats
+package org.jitsi.videobridge.websocket
 
+import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Supplier
 
-// Open for tests
-open class StatsManagerSupplier : Supplier<StatsManager?> {
-    private val statsManager: StatsManager? by lazy {
-        if (StatsManager.config.enabled) {
-            StatsManager()
-        } else {
-            null
-        }
+class ColibriWebSocketServiceSupplier : Supplier<ColibriWebSocketService?> {
+    private val colibriWebSocketService = AtomicReference<ColibriWebSocketService?>(null)
+
+    fun setColibriWebSocketService(colibriWebSocketService: ColibriWebSocketService) {
+        this.colibriWebSocketService.compareAndSet(null, colibriWebSocketService)
     }
 
-    override fun get(): StatsManager? = statsManager
+    override fun get(): ColibriWebSocketService? = colibriWebSocketService.get()
 }
 
-val statsManagerSupplier: StatsManagerSupplier = StatsManagerSupplier()
+val colibriWebSocketServiceSupplier = ColibriWebSocketServiceSupplier()
 
-fun singleton() = statsManagerSupplier
+fun singleton() = colibriWebSocketServiceSupplier

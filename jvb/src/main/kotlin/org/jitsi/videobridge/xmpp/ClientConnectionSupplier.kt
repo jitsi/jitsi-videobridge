@@ -16,13 +16,17 @@
 
 package org.jitsi.videobridge.xmpp
 
-class ClientConnectionImplSupplier {
+import java.util.function.Supplier
+
+// Open for mocking
+open class ClientConnectionImplSupplier : Supplier<ClientConnectionImpl> {
     private val clientConnectionImpl: ClientConnectionImpl by lazy {
         ClientConnectionImpl()
     }
 
-    fun get(): ClientConnectionImpl = clientConnectionImpl
+    override fun get(): ClientConnectionImpl = clientConnectionImpl
 }
 
-@JvmField
-val singleton = ClientConnectionImplSupplier()
+val clientConnectionImplSupplier = ClientConnectionImplSupplier()
+
+fun singleton() = clientConnectionImplSupplier

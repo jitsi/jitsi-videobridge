@@ -32,6 +32,11 @@ public class VideoConstraints
         new VideoConstraints(BitrateControllerConfig.thumbnailMaxHeightPx());
 
     /**
+     * Static instance for the video constraints that disable video (ideal resolution is 0).
+     */
+    public static final VideoConstraints disabledVideoConstraints = new VideoConstraints(0);
+
+    /**
      * The ideal height of the constrained endpoint. The bridge tries to send an
      * encoding that matches this resolution as close as possible, if bandwidth
      * is available.

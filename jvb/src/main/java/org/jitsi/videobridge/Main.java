@@ -16,15 +16,18 @@
 package org.jitsi.videobridge;
 
 import kotlin.jvm.functions.*;
+import org.eclipse.jetty.server.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.cmd.*;
 import org.jitsi.meet.*;
 import org.jitsi.metaconfig.*;
+import org.jitsi.rest.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.stats.*;
+import org.jitsi.videobridge.websocket.*;
 import org.jitsi.videobridge.xmpp.*;
 
 /**
@@ -91,10 +94,10 @@ public class Main
         {
             octoRelayService.start();
         }
-        ClientConnectionImpl clientConnectionImpl = ClientConnectionSupplierKt.singleton.get();
+        ClientConnectionImpl clientConnectionImpl = ClientConnectionSupplierKt.singleton().get();
         clientConnectionImpl.start();
 
-        final StatsManager statsMgr = StatsManagerSupplierKt.singleton.get();
+        final StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
         if (statsMgr != null)
         {
             statsMgr.addStatistics(new VideobridgeStatistics(), StatsManager.config.getInterval().toMillis());
@@ -105,9 +108,19 @@ public class Main
 
             statsMgr.start();
         }
-        HealthCheckServiceSupplierKt.singleton.get().start();
+        JvbHealthCheckServiceSupplierKt.singleton().get().start();
 
         Logger logger = new LoggerImpl("org.jitsi.videobridge.Main");
+
+        Server publicHttpServer = setupPublicHttpServer();
+        if (publicHttpServer != null)
+        {
+            publicHttpServer.start();
+        }
+        else
+        {
+            logger.info("Not starting public http server");
+        }
 
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
         {
@@ -123,7 +136,19 @@ public class Main
                 statsMgr.stop();
             }
 
-            HealthCheckServiceSupplierKt.singleton.get().stop();
+            try
+            {
+                if (publicHttpServer != null)
+                {
+                    publicHttpServer.stop();
+                }
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+
+            JvbHealthCheckServiceSupplierKt.singleton().get().stop();
         }));
 
         ComponentMain main = new ComponentMain();
@@ -154,5 +179,28 @@ public class Main
                 configLogger.debug(function0::invoke);
             }
         });
+    }
+
+    private static Server setupPublicHttpServer()
+    {
+        JettyBundleActivatorConfig publicServerConfig = new JettyBundleActivatorConfig(
+            "org.jitsi.videobridge.rest",
+            "videobridge.http-servers.public"
+        );
+        if (publicServerConfig.getPort() == -1 && publicServerConfig.getTlsPort() == -1)
+        {
+            return null;
+        }
+
+        final Server publicServer = JettyHelpers.createServer(publicServerConfig);
+        ColibriWebSocketService colibriWebSocketService =
+            new ColibriWebSocketService(publicServerConfig.isTls());
+        // Now that we've created the ColibriWebSocketService, set it in the central supplier so others can
+        // access it.
+        ColibriWebSocketServiceSupplierKt.singleton().setColibriWebSocketService(colibriWebSocketService);
+
+        colibriWebSocketService.registerServlet(JettyHelpers.getServletContextHandler(publicServer));
+
+        return publicServer;
     }
 }

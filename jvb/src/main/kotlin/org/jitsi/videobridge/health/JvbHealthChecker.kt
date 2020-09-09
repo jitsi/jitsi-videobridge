@@ -23,10 +23,10 @@ import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.health.config.HealthConfig
 import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.sctp.SctpConfig
-import org.jitsi.videobridge.singleton
+import org.jitsi.videobridge.videobridgeSupplier
 
 class JvbHealthChecker : HealthCheckService {
-    private val videobridge = singleton.get()
+    private val videobridge = videobridgeSupplier.get()
     private val config = HealthConfig()
     private val healthChecker = HealthChecker(
         config.interval,
