@@ -919,6 +919,7 @@ public class Endpoint
 
                 if (attempts > 100)
                 {
+                    logger.error("Timed out waiting for SCTP connection from remote side");
                     break;
                 }
             }
