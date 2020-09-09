@@ -137,7 +137,8 @@ public class CallStatsIOTransport
                 @Override
                 public void error(String reason, String message)
                 {
-                    logger.error(" Jitsi-stats library failed to initialize with reason: " + reason + " and error message: " + message);
+                    logger.error("Jitsi-stats library failed to initialize with reason: "
+                        + reason + " and error message: " + message);
                 }
 
                 @Override
