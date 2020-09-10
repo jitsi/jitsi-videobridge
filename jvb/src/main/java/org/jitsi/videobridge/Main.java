@@ -19,11 +19,14 @@ import kotlin.jvm.functions.*;
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.servlet.*;
 import org.glassfish.jersey.servlet.*;
+import org.ice4j.*;
+import org.ice4j.ice.harvest.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.cmd.*;
 import org.jitsi.meet.*;
 import org.jitsi.metaconfig.*;
 import org.jitsi.rest.*;
+import org.jitsi.stats.media.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.octo.*;
@@ -34,6 +37,8 @@ import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.websocket.*;
 import org.jitsi.videobridge.xmpp.*;
+
+import java.util.*;
 
 /**
  * Provides the <tt>main</tt> entry point of the Jitsi Videobridge application
@@ -249,5 +254,54 @@ public class Main
         );
 
         return privateServer;
+    }
+
+    private static void setSystemPropertyDefaults()
+    {
+        Map<String, String> defaults = getSystemPropertyDefaults();
+
+        for (Map.Entry<String,String> e : defaults.entrySet())
+        {
+            String key = e.getKey();
+
+            if (System.getProperty(key) == null)
+                System.setProperty(key, e.getValue());
+        }
+    }
+
+    private static Map<String, String> getSystemPropertyDefaults()
+    {
+        Map<String, String> defaults = new HashMap<>();
+        // Sends "consent freshness" check every 3 seconds
+        defaults.put(StackProperties.CONSENT_FRESHNESS_INTERVAL, "3000");
+        // Retry every 500ms by setting original and max wait intervals
+        defaults.put(
+            StackProperties.CONSENT_FRESHNESS_ORIGINAL_WAIT_INTERVAL,
+            "500");
+        defaults.put(
+            StackProperties.CONSENT_FRESHNESS_MAX_WAIT_INTERVAL, "500");
+        // Retry max 5 times which will take up to 2500ms, that is before
+        // the next "consent freshness" transaction starts
+        defaults.put(
+            StackProperties.CONSENT_FRESHNESS_MAX_RETRANSMISSIONS, "5");
+
+        // In the majority of use-cases the clients which connect to Jitsi
+        // Videobridge are not in the same network, so we don't need to
+        // advertise link-local addresses.
+        defaults.put(StackProperties.DISABLE_LINK_LOCAL_ADDRESSES, "true");
+
+        // Configure the receive buffer size for the sockets used for the
+        // single-port mode to be 10MB.
+        defaults.put(AbstractUdpListener.SO_RCVBUF_PNAME, "10485760");
+
+        // make sure we use the properties files for configuration
+        defaults.put(
+            "net.java.sip.communicator.impl.configuration.USE_PROPFILE_CONFIG",
+            "true");
+
+        // callstats-java-sdk
+        Utils.getCallStatsJavaSDKSystemPropertyDefaults(defaults);
+
+        return defaults;
     }
 }
