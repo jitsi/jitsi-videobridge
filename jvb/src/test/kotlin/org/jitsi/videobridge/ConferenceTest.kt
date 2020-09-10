@@ -16,7 +16,6 @@
 package org.jitsi.videobridge
 
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.core.spec.IsolationMode
 import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import org.jitsi.ConfigTest
@@ -24,19 +23,17 @@ import org.jitsi.videobridge.octo.singleton as octoRelayServiceProvider
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
 import org.jxmpp.jid.impl.JidCreate
+import kotlin.random.Random
 
 /**
  * This is a high-level test for [Conference] and related functionality.
  */
 class ConferenceTest : ConfigTest() {
-    // The octo relay binds on a port
-    override fun isolationMode(): IsolationMode? = IsolationMode.SingleInstance
-
     private val videobridge = mockk<Videobridge>()
 
     init {
         val name = JidCreate.entityBareFrom("roomName@somedomain.com")
-        withNewConfig(newConfigOctoEnabled, loadDefaults = true) {
+        withNewConfig(newConfigOctoEnabled(), loadDefaults = true) {
             octoRelayServiceProvider().get()?.start()
         }
 
@@ -70,12 +67,12 @@ class ConferenceTest : ConfigTest() {
     }
 }
 
-private val newConfigOctoEnabled = """
+private fun newConfigOctoEnabled(port: Int = Random.nextInt(10000, 65535)) = """
     videobridge {
         octo {
             enabled = true
             bind-address = 127.0.0.1
-            bind-port = 54096
+            bind-port = $port
         }
     }
 """.trimMargin()
