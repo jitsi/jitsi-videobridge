@@ -174,6 +174,9 @@ public class Main
 
         VideobridgeSupplierKt.getVideobridgeSupplier().get().stop();
 
+        TaskPools.SCHEDULED_POOL.shutdownNow();
+        TaskPools.CPU_POOL.shutdownNow();
+        TaskPools.IO_POOL.shutdownNow();
     }
 
     private static void setupMetaconfigLogger() {
