@@ -22,10 +22,8 @@ import org.ice4j.stack.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.config.*;
 import org.jitsi.health.*;
-import org.jitsi.meet.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
@@ -48,7 +46,6 @@ import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
-import org.osgi.framework.*;
 
 import java.util.*;
 import java.util.concurrent.*;

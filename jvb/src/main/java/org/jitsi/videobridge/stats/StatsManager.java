@@ -15,11 +15,11 @@
  */
 package org.jitsi.videobridge.stats;
 
-import java.util.*;
-import java.util.concurrent.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.videobridge.stats.config.*;
-import org.osgi.framework.*;
+
+import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * A class that manages the statistics. Periodically calls the
