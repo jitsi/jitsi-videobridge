@@ -148,14 +148,7 @@ public class Videobridge
     /**
      * The {@link JvbLoadManager} instance used for this bridge.
      */
-    private final JvbLoadManager<PacketRateMeasurement> jvbLoadManager = new JvbLoadManager<>(
-        PacketRateMeasurement.getLoadedThreshold(),
-        PacketRateMeasurement.getRecoveryThreshold(),
-        new LastNReducer(
-            this::getConferences,
-            JvbLastNKt.jvbLastNSingleton
-        )
-    );
+    private final JvbLoadManager<PacketRateMeasurement> jvbLoadManager;
 
     /**
      * The task which manages the recurring load sampling and updating of
@@ -183,12 +176,29 @@ public class Videobridge
     public Videobridge()
     {
         videobridgeExpireThread = new VideobridgeExpireThread(this);
-        loadSamplerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
-            new PacketRateLoadSampler(this, jvbLoadManager),
-            0,
-            10,
-            TimeUnit.SECONDS
-        );
+        if (JvbLoadManager.isEnabled())
+        {
+            logger.info("Starting JVB load management task");
+            jvbLoadManager = new JvbLoadManager<>(
+                PacketRateMeasurement.getLoadedThreshold(),
+                PacketRateMeasurement.getRecoveryThreshold(),
+                new LastNReducer(
+                    this::getConferences,
+                    JvbLastNKt.jvbLastNSingleton
+                )
+            );
+            loadSamplerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
+                new PacketRateLoadSampler(this, jvbLoadManager),
+                0,
+                10,
+                TimeUnit.SECONDS
+            );
+        }
+        else
+        {
+            jvbLoadManager = null;
+            loadSamplerTask = null;
+        }
     }
 
     /**
@@ -660,7 +670,10 @@ public class Videobridge
         finally
         {
             videobridgeExpireThread.stop();
-            loadSamplerTask.cancel(true);
+            if (loadSamplerTask != null)
+            {
+                loadSamplerTask.cancel(true);
+            }
             this.bundleContext = null;
         }
     }
@@ -716,7 +729,10 @@ public class Videobridge
         debugState.put("time", System.currentTimeMillis());
 
         debugState.put("health", getHealthStatus());
-        debugState.put("load-management", jvbLoadManager.getStats());
+        if (jvbLoadManager != null)
+        {
+            debugState.put("load-management", jvbLoadManager.getStats());
+        }
         debugState.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
 
         JSONObject conferences = new JSONObject();
