@@ -20,13 +20,12 @@ import org.glassfish.jersey.server.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.binders.*;
 import org.jitsi.videobridge.rest.filters.*;
-import org.osgi.framework.*;
 
 import static org.jitsi.videobridge.rest.RestConfig.config;
 
 public class Application extends ResourceConfig
 {
-    public Application(BundleContext bundleContext)
+    public Application()
     {
         // For injecting non-OSGi services
         register(new ServiceBinder());
