@@ -122,11 +122,6 @@
         <groupId>${project.groupId}</groupId>
         <artifactId>jicoco-config</artifactId>
     </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>jitsi-android-osgi</artifactId>
-      <version>1.0-20190327.160432-3</version>
-    </dependency>
     <!-- Note that this is not part of jitsi/jitsi, and it has a separate version. -->
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -143,11 +138,6 @@
     <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>jitsi-metaconfig</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.core</artifactId>
-      <version>4.3.1</version>
     </dependency>
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
