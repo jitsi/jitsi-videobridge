@@ -16,7 +16,9 @@
 package org.jitsi.videobridge
 
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.spec.IsolationMode
 import io.kotest.matchers.shouldBe
+import io.mockk.mockk
 import org.jitsi.ConfigTest
 import org.jitsi.videobridge.octo.singleton as octoRelayServiceProvider
 import org.json.simple.JSONObject
@@ -27,40 +29,42 @@ import org.jxmpp.jid.impl.JidCreate
  * This is a high-level test for [Conference] and related functionality.
  */
 class ConferenceTest : ConfigTest() {
-    private val videobridge = Videobridge()
+    // The octo relay binds on a port
+    override fun isolationMode(): IsolationMode? = IsolationMode.SingleInstance
+
+    private val videobridge = mockk<Videobridge>()
 
     init {
         val name = JidCreate.entityBareFrom("roomName@somedomain.com")
-
         withNewConfig(newConfigOctoEnabled, loadDefaults = true) {
             octoRelayServiceProvider().get()?.start()
+        }
 
-            context("Adding local endpoints should work") {
-                with(Conference(videobridge, "id", name, false, Conference.GID_NOT_SET)) {
-                    endpointCount shouldBe 0
-                    createLocalEndpoint("abcdabcd", true)
-                    endpointCount shouldBe 1
-                    debugState.shouldBeValidJson()
-                }
+        context("Adding local endpoints should work") {
+            with(Conference(videobridge, "id", name, false, Conference.GID_NOT_SET)) {
+                endpointCount shouldBe 0
+                createLocalEndpoint("abcdabcd", true)
+                endpointCount shouldBe 1
+                debugState.shouldBeValidJson()
             }
-            context("Enabling octo should fail when the GID is not set") {
-                with(Conference(videobridge, "id", name, false, Conference.GID_NOT_SET)) {
-                    isOctoEnabled shouldBe false
-                    shouldThrow<IllegalStateException> {
-                        tentacle
-                    }
-                    debugState.shouldBeValidJson()
-                }
-            }
-            context("Enabling octo should work") {
-                with(Conference(videobridge, "id", name, false, 1234)) {
-                    isOctoEnabled shouldBe false
+        }
+        context("Enabling octo should fail when the GID is not set") {
+            with(Conference(videobridge, "id", name, false, Conference.GID_NOT_SET)) {
+                isOctoEnabled shouldBe false
+                shouldThrow<IllegalStateException> {
                     tentacle
-                    isOctoEnabled shouldBe true
-                    tentacle.setRelays(listOf("127.0.0.1:4097"))
-
-                    debugState.shouldBeValidJson()
                 }
+                debugState.shouldBeValidJson()
+            }
+        }
+        context("Enabling octo should work") {
+            with(Conference(videobridge, "id", name, false, 1234)) {
+                isOctoEnabled shouldBe false
+                tentacle
+                isOctoEnabled shouldBe true
+                tentacle.setRelays(listOf("127.0.0.1:4097"))
+
+                debugState.shouldBeValidJson()
             }
         }
     }
@@ -71,7 +75,7 @@ private val newConfigOctoEnabled = """
         octo {
             enabled = true
             bind-address = 127.0.0.1
-            bind-port = 4096
+            bind-port = 54096
         }
     }
 """.trimMargin()
