@@ -469,9 +469,6 @@ public class Videobridge
      *
      * @param shutdownIQ the <tt>GracefulShutdownIQ</tt> stanza represents
      *        the request to handle
-     * @return an <tt>IQ</tt> stanza which represents the response to
-     *         the specified request or <tt>null</tt> to reply with
-     *         <tt>feature-not-implemented</tt>
      */
     public void shutdown(boolean graceful)
     {
