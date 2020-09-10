@@ -17,43 +17,25 @@ package org.jitsi.videobridge
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkStatic
 import org.jitsi.ConfigTest
-import org.jitsi.videobridge.octo.OctoRelayService
-import org.jitsi.videobridge.octo.OctoRelayServiceProvider
-import org.jitsi.videobridge.octo.singleton
+import org.jitsi.videobridge.octo.singleton as octoRelayServiceProvider
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
 import org.jxmpp.jid.impl.JidCreate
-import org.osgi.framework.BundleContext
 
 /**
  * This is a high-level test for [Conference] and related functionality.
  */
 class ConferenceTest : ConfigTest() {
-    private val octoRelayService = OctoRelayService()
-    private val octoRelaySupplier: OctoRelayServiceProvider = mockk() {
-        every { get() } returns octoRelayService
-    }
-
-    private val bundleContext = mockk<BundleContext> {
-        every { registerService(any() as String, any(), any()) } returns null
-    }
-    private val videobridge = mockk<Videobridge> {
-        every { bundleContext } returns this@ConferenceTest.bundleContext
-    }
-
-    init {
-        mockkStatic("org.jitsi.videobridge.octo.OctoRelayServiceProviderKt")
-        every { singleton() } returns octoRelaySupplier
-    }
+    private val videobridge = Videobridge()
 
     init {
         val name = JidCreate.entityBareFrom("roomName@somedomain.com")
-        context("Adding local endpoints should work") {
-            withNewConfig(newConfigOctoEnabled, loadDefaults = true) {
+
+        withNewConfig(newConfigOctoEnabled, loadDefaults = true) {
+            octoRelayServiceProvider().get()?.start()
+
+            context("Adding local endpoints should work") {
                 with(Conference(videobridge, "id", name, false, Conference.GID_NOT_SET)) {
                     endpointCount shouldBe 0
                     createLocalEndpoint("abcdabcd", true)
@@ -61,9 +43,7 @@ class ConferenceTest : ConfigTest() {
                     debugState.shouldBeValidJson()
                 }
             }
-        }
-        context("Enabling octo should fail when the GID is not set") {
-            withNewConfig(newConfigOctoEnabled, loadDefaults = true) {
+            context("Enabling octo should fail when the GID is not set") {
                 with(Conference(videobridge, "id", name, false, Conference.GID_NOT_SET)) {
                     isOctoEnabled shouldBe false
                     shouldThrow<IllegalStateException> {
@@ -72,10 +52,7 @@ class ConferenceTest : ConfigTest() {
                     debugState.shouldBeValidJson()
                 }
             }
-        }
-        context("Enabling octo should work") {
-            withNewConfig(newConfigOctoEnabled, loadDefaults = true) {
-                octoRelayService.start()
+            context("Enabling octo should work") {
                 with(Conference(videobridge, "id", name, false, 1234)) {
                     isOctoEnabled shouldBe false
                     tentacle
