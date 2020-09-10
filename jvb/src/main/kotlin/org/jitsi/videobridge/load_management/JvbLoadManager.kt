@@ -72,7 +72,7 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
     }
 
     fun getStats() = OrderedJsonObject().apply {
-        put("state", state)
+        put("state", state.toString())
         put("reducer", loadReducer.getStats())
     }
 
