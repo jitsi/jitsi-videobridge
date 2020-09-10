@@ -57,6 +57,7 @@ public class MucClientTest extends JerseyTest
         };
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void testAddMuc()
     {
@@ -77,6 +78,7 @@ public class MucClientTest extends JerseyTest
         assertEquals(json, jsonConfigCaptor.getValue());
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void testAddMucFailure()
     {
@@ -93,6 +95,7 @@ public class MucClientTest extends JerseyTest
         assertEquals(HttpStatus.BAD_REQUEST_400, resp.getStatus());
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void testRemoveMuc()
     {
@@ -108,6 +111,7 @@ public class MucClientTest extends JerseyTest
         assertEquals(json, jsonConfigCaptor.getValue());
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void testRemoveMucFailure()
     {
