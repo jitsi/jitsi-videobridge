@@ -16,7 +16,6 @@
 package org.jitsi.videobridge;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.eventadmin.*;
 import org.jitsi.nlj.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
@@ -80,13 +79,6 @@ public class Conference
     private List<Endpoint> endpointsCache = Collections.emptyList();
 
     private final Object endpointsCacheLock = new Object();
-
-    /**
-     * The {@link EventAdmin} instance (to be) used by this {@code Conference}
-     * and all instances (of {@code Content}, {@code Channel}, etc.) created by
-     * it.
-     */
-    private final EventAdmin eventAdmin;
 
     /**
      * The indicator which determines whether {@link #expire()} has been called
@@ -216,7 +208,6 @@ public class Conference
         this.shim = new ConferenceShim(this, logger);
         this.id = Objects.requireNonNull(id, "id");
         this.gid = gid;
-        this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
         this.includeInStatistics = enableLogging;
         this.conferenceName = conferenceName;
 
@@ -238,9 +229,6 @@ public class Conference
 
         if (enableLogging)
         {
-            // TODO: remove?
-            eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
-
             StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
             if (statsMgr != null)
             {
@@ -551,13 +539,6 @@ public class Conference
             updateLastNEndpointsFuture = null;
         }
 
-        // TODO: remove?
-        EventAdmin eventAdmin = getEventAdmin();
-        if (eventAdmin != null)
-        {
-            eventAdmin.sendEvent(EventFactory.conferenceExpired(this));
-        }
-
         StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
         if (statsMgr != null)
         {
@@ -687,12 +668,6 @@ public class Conference
         final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling);
 
         addEndpoint(endpoint);
-
-        EventAdmin eventAdmin = getEventAdmin();
-        if (eventAdmin != null)
-        {
-            eventAdmin.sendEvent(EventFactory.endpointCreated(endpoint));
-        }
 
         return endpoint;
     }
@@ -875,11 +850,6 @@ public class Conference
             {
                 epConnectionStatusMonitor.endpointExpired(removedEndpoint.getID());
             }
-            final EventAdmin eventAdmin = getEventAdmin();
-            if (eventAdmin != null)
-            {
-                eventAdmin.sendEvent(EventFactory.endpointExpired(removedEndpoint));
-            }
             endpointsChanged();
         }
     }
@@ -921,12 +891,6 @@ public class Conference
     @Override
     public void endpointMessageTransportConnected(@NotNull AbstractEndpoint endpoint)
     {
-        EventAdmin eventAdmin = getEventAdmin();
-
-        if (eventAdmin != null)
-        {
-            eventAdmin.postEvent(EventFactory.endpointMessageTransportReady(endpoint));
-        }
         if (epConnectionStatusMonitor != null)
         {
             epConnectionStatusMonitor.endpointConnected(endpoint.getID());
@@ -960,18 +924,6 @@ public class Conference
     public EntityBareJid getName()
     {
         return conferenceName;
-    }
-
-    /**
-     * Returns the <tt>EventAdmin</tt> instance used by this <tt>Conference</tt>
-     * and all instances (of {@code Content}, {@code Channel}, etc.) created by
-     * it.
-     *
-     * @return the <tt>EventAdmin</tt> instance used by this <tt>Conference</tt>
-     */
-    public EventAdmin getEventAdmin()
-    {
-        return eventAdmin;
     }
 
     /**

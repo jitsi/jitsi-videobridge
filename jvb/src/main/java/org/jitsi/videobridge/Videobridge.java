@@ -16,12 +16,11 @@
 package org.jitsi.videobridge;
 
 import kotlin.*;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.config.*;
-import org.jitsi.eventadmin.*;
 import org.jitsi.health.*;
 import org.jitsi.meet.*;
 import org.jitsi.nlj.*;
@@ -402,27 +401,6 @@ public class Videobridge
     public ConfigurationService getConfigurationService()
     {
         return JitsiConfig.getSipCommunicatorProps();
-    }
-
-    /**
-     * Returns the <tt>EventAdmin</tt> instance (to be) used by this
-     * <tt>Videobridge</tt>.
-     *
-     * @return the <tt>EventAdmin</tt> instance (to be) used by this
-     * <tt>Videobridge</tt>.
-     */
-    public EventAdmin getEventAdmin()
-    {
-        BundleContext bundleContext = getBundleContext();
-
-        if (bundleContext == null)
-        {
-            return null;
-        }
-        else
-        {
-            return ServiceUtils2.getService(bundleContext, EventAdmin.class);
-        }
     }
 
     /**
