@@ -29,10 +29,12 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
+import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
-import org.jxmpp.jid.parts.*;
+import org.jxmpp.jid.*;
+import org.jxmpp.jid.impl.*;
 import org.jxmpp.stringprep.*;
 
 import java.io.*;
@@ -121,7 +123,7 @@ public class Conference
     /**
      * The world readable name of this instance if any.
      */
-    private final String conferenceName;
+    private final EntityBareJid conferenceName;
 
     /**
      * The speech activity (representation) of the <tt>Endpoint</tt>s of this
@@ -192,7 +194,7 @@ public class Conference
      */
     public Conference(Videobridge videobridge,
                       String id,
-                      String conferenceName,
+                      EntityBareJid conferenceName,
                       boolean enableLogging,
                       long gid)
     {
@@ -208,7 +210,7 @@ public class Conference
         );
         if (conferenceName != null)
         {
-            context.put("conf_name", conferenceName);
+            context.put("conf_name", conferenceName.toString());
         }
         logger = new LoggerImpl(Conference.class.getName(), minLevel, new LogContext(context));
         this.shim = new ConferenceShim(this, logger);
@@ -236,7 +238,15 @@ public class Conference
 
         if (enableLogging)
         {
+            // TODO: remove?
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
+
+            StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
+            if (statsMgr != null)
+            {
+                statsMgr.getTransports().forEach(transport -> transport.conferenceCreated(this));
+            }
+
             Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
             epConnectionStatusMonitor =
@@ -294,7 +304,7 @@ public class Conference
      * Sends a message to a subset of endpoints in the call, primary use
      * case being a message that has originated from an endpoint (as opposed to
      * a message originating from the bridge and being sent to all endpoints in
-     * the call, for that see {@link #broadcastMessage(String)}.
+     * the call, for that see {@link #broadcastMessage(BridgeChannelMessage)}.
      *
      * @param msg the message to be sent
      * @param endpoints the list of <tt>Endpoint</tt>s to which the message will
@@ -327,7 +337,7 @@ public class Conference
      * Used to send a message to a subset of endpoints in the call, primary use
      * case being a message that has originated from an endpoint (as opposed to
      * a message originating from the bridge and being sent to all endpoints in
-     * the call, for that see {@link #broadcastMessage(String)}.
+     * the call, for that see {@link #broadcastMessage(BridgeChannelMessage)}.
      *
      * @param msg the message to be sent
      * @param endpoints the list of <tt>Endpoint</tt>s to which the message will
@@ -402,12 +412,12 @@ public class Conference
             }
             else
             {
-                iq.setName(Localpart.from(conferenceName));
+                iq.setName(JidCreate.entityBareFrom(conferenceName));
             }
         }
         catch (XmppStringprepException e)
         {
-            logger.error("Error converting conference name to a Localpart ", e);
+            logger.error("Error converting conference name to a BareJid ", e);
             iq.setName(null);
         }
     }
@@ -455,7 +465,7 @@ public class Conference
 
         if (logger.isInfoEnabled())
         {
-            logger.info("ds_change ds_id=" + id);
+            logger.info("ds_change ds_id=" + dominantSpeakerId);
             getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
         }
 
@@ -541,10 +551,17 @@ public class Conference
             updateLastNEndpointsFuture = null;
         }
 
+        // TODO: remove?
         EventAdmin eventAdmin = getEventAdmin();
         if (eventAdmin != null)
         {
             eventAdmin.sendEvent(EventFactory.conferenceExpired(this));
+        }
+
+        StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
+        if (statsMgr != null)
+        {
+            statsMgr.getTransports().forEach(transport -> transport.conferenceExpired(this));
         }
 
         logger.debug(() -> "Expiring endpoints.");
@@ -940,7 +957,7 @@ public class Conference
      *
      * @return the conference name
      */
-    public String getName()
+    public EntityBareJid getName()
     {
         return conferenceName;
     }
@@ -1154,7 +1171,7 @@ public class Conference
     {
         JSONObject debugState = new JSONObject();
         debugState.put("id", id);
-        debugState.put("name", conferenceName);
+        debugState.put("name", conferenceName.toString());
 
         if (full)
         {

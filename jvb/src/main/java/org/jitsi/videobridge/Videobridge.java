@@ -47,7 +47,7 @@ import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.json.simple.*;
-import org.jxmpp.jid.parts.*;
+import org.jxmpp.jid.*;
 import org.osgi.framework.*;
 
 import java.util.*;
@@ -203,9 +203,9 @@ public class Videobridge
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public @NotNull Conference createConference(Localpart name, long gid)
+    public @NotNull Conference createConference(EntityBareJid name, long gid)
     {
-        return this.createConference(name == null ? null : name.toString(), /* enableLogging */ true, gid);
+        return this.createConference(name, /* enableLogging */ true, gid);
     }
 
     /**
@@ -216,7 +216,7 @@ public class Videobridge
      * @param gid
      * @return
      */
-    private @NotNull Conference doCreateConference(String name, boolean enableLogging, long gid)
+    private @NotNull Conference doCreateConference(EntityBareJid name, boolean enableLogging, long gid)
     {
         Conference conference = null;
         do
@@ -253,8 +253,7 @@ public class Videobridge
      * @param enableLogging whether logging should be enabled or disabled for
      * the {@link Conference}.
      */
-    public @NotNull Conference createConference(
-            String name, boolean enableLogging)
+    public @NotNull Conference createConference(EntityBareJid name, boolean enableLogging)
     {
         return createConference(name, enableLogging, Conference.GID_NOT_SET);
     }
@@ -273,8 +272,7 @@ public class Videobridge
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public @NotNull Conference createConference(
-            String name, boolean enableLogging, long gid)
+    public @NotNull Conference createConference(EntityBareJid name, boolean enableLogging, long gid)
     {
         final Conference conference = doCreateConference(name, enableLogging, gid);
 
