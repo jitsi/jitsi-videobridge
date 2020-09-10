@@ -123,12 +123,6 @@ public class Videobridge
     private boolean shutdownInProgress;
 
     /**
-     * The pattern used to filter entities that are allowed to trigger graceful
-     * shutdown mode.
-     */
-    private Pattern shutdownSourcePattern;
-
-    /**
      * A class that holds some instance statistics.
      */
     private final Statistics statistics = new Statistics();
