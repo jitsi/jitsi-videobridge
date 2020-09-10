@@ -175,7 +175,7 @@ public class BitrateController
      * A modified copy of the original video constraints map, augmented with video constraints for the endpoints that
      * fall outside of the last-n set + endpoints not announced in the videoConstraintsMap.
      */
-    private Map<String, VideoConstraints> effectiveConstraintsMap = Collections.EMPTY_MAP;
+    private Map<String, VideoConstraints> effectiveConstraintsMap = Collections.emptyMap();
 
     /**
      * The last-n value for the endpoint to which this {@link BitrateController}
