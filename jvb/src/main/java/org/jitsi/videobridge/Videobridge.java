@@ -52,7 +52,6 @@ import org.osgi.framework.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
-import java.util.regex.*;
 
 /**
  * Represents the Jitsi Videobridge which creates, lists and destroys
