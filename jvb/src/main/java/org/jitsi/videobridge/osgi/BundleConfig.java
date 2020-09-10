@@ -41,9 +41,6 @@ public class BundleConfig
     private static final String[][] BUNDLES
         = {
         {
-            "org/jitsi/eventadmin/Activator"
-        },
-        {
             "org/jitsi/videobridge/osgi/ConfigurationActivator"
         },
         {
