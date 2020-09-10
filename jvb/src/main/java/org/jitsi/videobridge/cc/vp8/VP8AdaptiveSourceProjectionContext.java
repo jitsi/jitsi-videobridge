@@ -27,6 +27,7 @@ import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.*;
 import org.json.simple.*;
 
+import java.time.Clock;
 import java.util.*;
 
 /**
@@ -59,6 +60,12 @@ public class VP8AdaptiveSourceProjectionContext
     private final DiagnosticContext diagnosticContext;
 
     /**
+     * The {@link VP8SimulcastBitrateCalculator} instance that checks
+     * if stream is stable before upscaling
+     */
+    private final VP8SimulcastBitrateCalculator vp8SimulcastBitrateCalculator;
+
+    /**
      * The "last" {@link VP8FrameProjection} that this instance has accepted.
      * In this context, last here means with the highest sequence number
      * and not, for example, the last one received by the bridge.
@@ -85,11 +92,25 @@ public class VP8AdaptiveSourceProjectionContext
             @NotNull RtpState rtpState,
             @NotNull Logger parentLogger)
     {
+        this(diagnosticContext, payloadType, rtpState, parentLogger,
+            Clock.systemUTC());
+    }
+
+    public VP8AdaptiveSourceProjectionContext(
+            @NotNull DiagnosticContext diagnosticContext,
+            @NotNull PayloadType payloadType,
+            @NotNull RtpState rtpState,
+            @NotNull Logger parentLogger,
+            @NotNull Clock clock)
+    {
         this.diagnosticContext = diagnosticContext;
         this.logger = parentLogger.createChildLogger(
             VP8AdaptiveSourceProjectionContext.class.getName());
         this.payloadType = payloadType;
-        this.vp8QualityFilter = new VP8QualityFilter(parentLogger);
+        this.vp8SimulcastBitrateCalculator =
+            new VP8SimulcastBitrateCalculator(clock);
+        this.vp8QualityFilter = new VP8QualityFilter(parentLogger,
+            this.vp8SimulcastBitrateCalculator);
 
         lastVP8FrameProjection = new VP8FrameProjection(diagnosticContext,
             rtpState.ssrc, rtpState.maxSequenceNumber, rtpState.maxTimestamp);
@@ -287,6 +308,10 @@ public class VP8AdaptiveSourceProjectionContext
             return false;
         }
 
+        long receivedMs = packetInfo.getReceivedTime();
+        vp8SimulcastBitrateCalculator.update(RtpLayerDesc.getEidFromIndex(incomingIndex),
+            vp8Packet.getLength(), receivedMs);
+
         VP8Frame frame = result.getFrame();
 
         if (result.isNewFrame())
@@ -305,7 +330,6 @@ public class VP8AdaptiveSourceProjectionContext
                 }
             }
 
-            long receivedMs = packetInfo.getReceivedTime();
             boolean accepted = vp8QualityFilter
                 .acceptFrame(frame, incomingIndex, targetIndex, receivedMs);
 

@@ -10,11 +10,13 @@ import org.jitsi.rtp.rtp.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging.DiagnosticContext;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.test.time.FakeClock;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi_modified.impl.neomedia.codec.video.vp8.*;
 import org.junit.*;
 
 import javax.xml.bind.*;
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -22,6 +24,7 @@ import static org.junit.Assert.*;
 
 public class VP8AdaptiveSourceProjectionTest
 {
+    private static final long BASE_RECEIVED_TIME = 1577836800000L; /* 2020-01-01 00:00:00 UTC */
     private final Logger logger = new LoggerImpl(getClass().getName());
     private final PayloadType payloadType = new Vp8PayloadType((byte)96,
         new ConcurrentHashMap<>(), new CopyOnWriteArraySet<>());
@@ -501,7 +504,7 @@ public class VP8AdaptiveSourceProjectionTest
     @Test
     public void twoStreamsNoSwitchingTest() throws RewriteException
     {
-        Vp8PacketGenerator generator1 = new Vp8PacketGenerator(3);
+        Vp8PacketGenerator generator1 = new Vp8PacketGenerator(3, 900);
         Vp8PacketGenerator generator2 = new Vp8PacketGenerator(3);
         generator2.setSsrc(0xdeadbeefL);
 
@@ -511,9 +514,11 @@ public class VP8AdaptiveSourceProjectionTest
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
 
+        FakeClock fakeClock = new FakeClock();
+        fakeClock.setTime(Instant.ofEpochMilli(BASE_RECEIVED_TIME));
         VP8AdaptiveSourceProjectionContext context =
             new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+                initialState, logger, fakeClock);
 
         int targetIndex = RtpLayerDesc.getIndex(1, 0, 2);
 
@@ -540,6 +545,7 @@ public class VP8AdaptiveSourceProjectionTest
             if (packet1.isEndOfFrame())
             {
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
+                fakeClock.elapse(Duration.ofMillis(34));
             }
         }
     }
@@ -548,7 +554,7 @@ public class VP8AdaptiveSourceProjectionTest
     public void twoStreamsSwitchingTest() throws RewriteException
     {
         Vp8PacketGenerator generator1 = new Vp8PacketGenerator(3);
-        Vp8PacketGenerator generator2 = new Vp8PacketGenerator(3);
+        Vp8PacketGenerator generator2 = new Vp8PacketGenerator(3, 900);
         generator2.setSsrc(0xdeadbeefL);
 
         DiagnosticContext diagnosticContext = new DiagnosticContext();
@@ -557,9 +563,11 @@ public class VP8AdaptiveSourceProjectionTest
         RtpState initialState =
             new RtpState(1, 10000, 1000000);
 
+        FakeClock fakeClock = new FakeClock();
+        fakeClock.setTime(Instant.ofEpochMilli(BASE_RECEIVED_TIME));
         VP8AdaptiveSourceProjectionContext context =
             new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+                initialState, logger, fakeClock);
 
         int expectedSeq = 10001;
         long expectedTs = 1003000;
@@ -605,6 +613,7 @@ public class VP8AdaptiveSourceProjectionTest
             {
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
                 expectedPicId = Vp8Utils.applyExtendedPictureIdDelta(expectedPicId, 1);
+                fakeClock.elapse(Duration.ofMillis(34));
             }
         }
 
@@ -647,6 +656,7 @@ public class VP8AdaptiveSourceProjectionTest
             {
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
                 expectedPicId = Vp8Utils.applyExtendedPictureIdDelta(expectedPicId, 1);
+                fakeClock.elapse(Duration.ofMillis(34));
             }
         }
 
@@ -713,6 +723,7 @@ public class VP8AdaptiveSourceProjectionTest
             {
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000);
                 expectedPicId = Vp8Utils.applyExtendedPictureIdDelta(expectedPicId, 1);
+                fakeClock.elapse(Duration.ofMillis(34));
             }
         }
     }
@@ -1004,10 +1015,17 @@ public class VP8AdaptiveSourceProjectionTest
             );
 
         final int packetsPerFrame;
+        final int payloadSize;
 
         Vp8PacketGenerator(int packetsPerFrame)
         {
+            this(packetsPerFrame, 0);
+        }
+
+        Vp8PacketGenerator(int packetsPerFrame, int payloadSize)
+        {
             this.packetsPerFrame = packetsPerFrame;
+            this.payloadSize = payloadSize;
 
             reset();
         }
@@ -1026,7 +1044,6 @@ public class VP8AdaptiveSourceProjectionTest
         private int octetCount;
         private int frameCount;
 
-        private static final long baseReceivedTime = 1577836800000L; /* 2020-01-01 00:00:00 UTC */
         private long receivedTime;
 
         void reset()
@@ -1050,7 +1067,7 @@ public class VP8AdaptiveSourceProjectionTest
             octetCount = 0;
             frameCount = 0;
 
-            receivedTime = baseReceivedTime;
+            receivedTime = BASE_RECEIVED_TIME;
         }
 
 
@@ -1087,7 +1104,8 @@ public class VP8AdaptiveSourceProjectionTest
                 tl0picidx = Vp8Utils.applyTl0PicIdxDelta(tl0picidx, 1);
             }
 
-            byte[] buffer = vp8PacketTemplate.clone();
+            byte[] buffer = new byte[vp8PacketTemplate.length + payloadSize];
+            System.arraycopy(vp8PacketTemplate, 0, buffer, 0, vp8PacketTemplate.length);
 
             RtpPacket rtpPacket = new RtpPacket(buffer,0, buffer.length);
 
@@ -1144,7 +1162,7 @@ public class VP8AdaptiveSourceProjectionTest
                     tidCycle = 0;
                 }
                 frameCount++;
-                receivedTime = baseReceivedTime + frameCount * 100 / 3;
+                receivedTime = BASE_RECEIVED_TIME + frameCount * 100 / 3;
             }
             else
             {

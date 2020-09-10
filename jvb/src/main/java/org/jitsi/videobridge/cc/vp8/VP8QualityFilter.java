@@ -39,6 +39,12 @@ class VP8QualityFilter
     private final Logger logger;
 
     /**
+     * The {@link VP8SimulcastBitrateCalculator} instance that checks
+     * if stream is stable before upscaling
+     */
+    private final VP8SimulcastBitrateCalculator vp8SimulcastBitrateCalculator;
+
+    /**
      * The default maximum frequency (in millis) at which the media engine
      * generates key frame.
      */
@@ -82,9 +88,11 @@ class VP8QualityFilter
      */
     private int currentEncodingId = SUSPENDED_ENCODING_ID;
 
-    public VP8QualityFilter(Logger parentLogger)
+    public VP8QualityFilter(Logger parentLogger,
+        VP8SimulcastBitrateCalculator vp8SimulcastBitrateCalculator)
     {
         this.logger = parentLogger.createChildLogger(VP8QualityFilter.class.getName());
+        this.vp8SimulcastBitrateCalculator = vp8SimulcastBitrateCalculator;
     }
 
     /**
@@ -304,7 +312,8 @@ class VP8QualityFilter
                 "currentEncodingId: " + encodingIdOfKeyframe +
                 ". Target is " + internalEncodingIdTarget);
 
-            if (encodingIdOfKeyframe <= internalEncodingIdTarget)
+            if (encodingIdOfKeyframe <= internalEncodingIdTarget
+                && vp8SimulcastBitrateCalculator.isStreamStable(encodingIdOfKeyframe))
             {
                 // If the target is 180p and the first keyframe of a group of
                 // keyframes is a 720p keyframe we don't project it. If we
@@ -325,7 +334,8 @@ class VP8QualityFilter
             // upscale/downscale is possible.
 
             if (currentEncodingId <= encodingIdOfKeyframe
-                && encodingIdOfKeyframe <= internalEncodingIdTarget)
+                && encodingIdOfKeyframe <= internalEncodingIdTarget
+                && vp8SimulcastBitrateCalculator.isStreamStable(encodingIdOfKeyframe))
             {
                 // upscale or current quality case
                 currentEncodingId = encodingIdOfKeyframe;
