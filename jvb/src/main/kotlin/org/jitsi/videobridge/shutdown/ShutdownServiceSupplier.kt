@@ -19,7 +19,7 @@ package org.jitsi.videobridge.shutdown
 import org.jitsi.shutdown.ShutdownServiceImpl
 import java.util.function.Supplier
 
-class ShutdownServiceSupplier : Supplier<ShutdownServiceImpl> {
+open class ShutdownServiceSupplier : Supplier<ShutdownServiceImpl> {
     private val shutdownService: ShutdownServiceImpl by lazy {
         ShutdownServiceImpl()
     }
