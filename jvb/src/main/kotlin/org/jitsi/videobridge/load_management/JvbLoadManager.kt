@@ -16,6 +16,9 @@
 
 package org.jitsi.videobridge.load_management
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
@@ -82,5 +85,12 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
     enum class State {
         OVERLOADED,
         NOT_OVERLOADED
+    }
+
+    companion object {
+        val enabled: Boolean by config("videobridge.load-management.enabled".from(JitsiConfig.newConfig))
+
+        @JvmStatic
+        fun isEnabled() = enabled
     }
 }

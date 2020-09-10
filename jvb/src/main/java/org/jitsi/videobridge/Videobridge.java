@@ -50,7 +50,6 @@ import org.jxmpp.jid.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
-import java.util.regex.*;
 
 /**
  * Represents the Jitsi Videobridge which creates, lists and destroys
@@ -115,12 +114,6 @@ public class Videobridge
     private boolean shutdownInProgress;
 
     /**
-     * The pattern used to filter entities that are allowed to trigger graceful
-     * shutdown mode.
-     */
-    private Pattern shutdownSourcePattern;
-
-    /**
      * A class that holds some instance statistics.
      */
     private final Statistics statistics = new Statistics();
@@ -129,7 +122,7 @@ public class Videobridge
      * Thread that checks expiration for conferences, contents, channels and
      * execute expire procedure for any of them.
      */
-    private VideobridgeExpireThread videobridgeExpireThread;
+    private final VideobridgeExpireThread videobridgeExpireThread;
 
     /**
      * The shim which handles Colibri-related logic for this
@@ -140,14 +133,7 @@ public class Videobridge
     /**
      * The {@link JvbLoadManager} instance used for this bridge.
      */
-    private final JvbLoadManager<PacketRateMeasurement> jvbLoadManager = new JvbLoadManager<>(
-        PacketRateMeasurement.getLoadedThreshold(),
-        PacketRateMeasurement.getRecoveryThreshold(),
-        new LastNReducer(
-            this::getConferences,
-            JvbLastNKt.jvbLastNSingleton
-        )
-    );
+    private final JvbLoadManager<PacketRateMeasurement> jvbLoadManager;
 
     /**
      * The task which manages the recurring load sampling and updating of
@@ -175,12 +161,29 @@ public class Videobridge
     public Videobridge()
     {
         videobridgeExpireThread = new VideobridgeExpireThread(this);
-        loadSamplerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
-            new PacketRateLoadSampler(this, jvbLoadManager),
-            0,
-            10,
-            TimeUnit.SECONDS
-        );
+        if (JvbLoadManager.isEnabled())
+        {
+            logger.info("Starting JVB load management task");
+            jvbLoadManager = new JvbLoadManager<>(
+                PacketRateMeasurement.getLoadedThreshold(),
+                PacketRateMeasurement.getRecoveryThreshold(),
+                new LastNReducer(
+                    this::getConferences,
+                    JvbLastNKt.jvbLastNSingleton
+                )
+            );
+            loadSamplerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
+                new PacketRateLoadSampler(this, jvbLoadManager),
+                0,
+                10,
+                TimeUnit.SECONDS
+            );
+        }
+        else
+        {
+            jvbLoadManager = null;
+            loadSamplerTask = null;
+        }
     }
 
     /**
@@ -430,8 +433,6 @@ public class Videobridge
      * Returns a string representing the health of this {@link Videobridge}.
      * Note that this method does not perform any tests, but only checks the
      * cached value provided by the {@link org.jitsi.health.HealthCheckService}.
-     *
-     * @throws Exception if the videobridge is not healthy.
      */
     private String getHealthStatus()
     {
@@ -446,9 +447,6 @@ public class Videobridge
      *
      * @param shutdownIQ the <tt>GracefulShutdownIQ</tt> stanza represents
      *        the request to handle
-     * @return an <tt>IQ</tt> stanza which represents the response to
-     *         the specified request or <tt>null</tt> to reply with
-     *         <tt>feature-not-implemented</tt>
      */
     public void shutdown(boolean graceful)
     {
@@ -631,7 +629,10 @@ public class Videobridge
         finally
         {
             videobridgeExpireThread.stop();
-            loadSamplerTask.cancel(true);
+            if (loadSamplerTask != null)
+            {
+                loadSamplerTask.cancel(true);
+            }
         }
     }
 
@@ -686,7 +687,10 @@ public class Videobridge
         debugState.put("time", System.currentTimeMillis());
 
         debugState.put("health", getHealthStatus());
-        debugState.put("load-management", jvbLoadManager.getStats());
+        if (jvbLoadManager != null)
+        {
+            debugState.put("load-management", jvbLoadManager.getStats());
+        }
         debugState.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
 
         JSONObject conferences = new JSONObject();
