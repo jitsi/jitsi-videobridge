@@ -338,18 +338,6 @@ public class Videobridge
     }
 
     /**
-     * Returns the OSGi <tt>BundleContext</tt> in which this
-     * <tt>Videobridge</tt> is executing.
-     *
-     * @return the OSGi <tt>BundleContext</tt> in which this
-     * <tt>Videobridge</tt> is executing.
-     */
-    public BundleContext getBundleContext()
-    {
-        return null;
-    }
-
-    /**
      * Gets the statistics of this instance.
      *
      * @return the statistics of this instance.

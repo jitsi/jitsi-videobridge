@@ -27,7 +27,6 @@ import org.jitsi.videobridge.octo.singleton
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
 import org.jxmpp.jid.impl.JidCreate
-import org.osgi.framework.BundleContext
 
 /**
  * This is a high-level test for [Conference] and related functionality.
@@ -38,12 +37,7 @@ class ConferenceTest : ConfigTest() {
         every { get() } returns octoRelayService
     }
 
-    private val bundleContext = mockk<BundleContext> {
-        every { registerService(any() as String, any(), any()) } returns null
-    }
-    private val videobridge = mockk<Videobridge> {
-        every { bundleContext } returns this@ConferenceTest.bundleContext
-    }
+    private val videobridge = mockk<Videobridge>()
 
     init {
         mockkStatic("org.jitsi.videobridge.octo.OctoRelayServiceProviderKt")
