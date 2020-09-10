@@ -59,7 +59,7 @@ public class VideobridgeBundleActivator
         // in their constructor
         Videobridge videobridge = VideobridgeSupplierKt.singleton().get();
 
-        videobridge.start(bundleContext);
+        videobridge.start();
 
         ServiceRegistration<Videobridge> serviceRegistration = null;
 

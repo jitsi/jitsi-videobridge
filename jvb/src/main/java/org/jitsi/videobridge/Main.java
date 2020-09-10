@@ -29,7 +29,9 @@ import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.rest.root.*;
+import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.stats.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.websocket.*;
 import org.jitsi.videobridge.xmpp.*;
 
@@ -137,43 +139,41 @@ public class Main
             logger.info("Not starting private http server");
         }
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() ->
+        ShutdownServiceSupplierKt.singleton().get().waitForShutdown();
+
+        logger.info("Bridge shutting down");
+
+        if (octoRelayService != null)
         {
-            logger.info("Shutdown hook running");
-            if (octoRelayService != null)
+            octoRelayService.stop();
+        }
+        clientConnectionImpl.stop();
+
+        if (statsMgr != null)
+        {
+            statsMgr.stop();
+        }
+
+        try
+        {
+            if (publicHttpServer != null)
             {
-                octoRelayService.stop();
+                publicHttpServer.stop();
             }
-            clientConnectionImpl.stop();
-
-            if (statsMgr != null)
+            if (privateHttpServer != null)
             {
-                statsMgr.stop();
+                privateHttpServer.stop();
             }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
 
-            try
-            {
-                if (publicHttpServer != null)
-                {
-                    publicHttpServer.stop();
-                }
-                if (privateHttpServer != null)
-                {
-                    privateHttpServer.stop();
-                }
-            }
-            catch (Exception e)
-            {
-                e.printStackTrace();
-            }
+        JvbHealthCheckServiceSupplierKt.singleton().get().stop();
 
-            JvbHealthCheckServiceSupplierKt.singleton().get().stop();
-        }));
+        VideobridgeSupplierKt.getVideobridgeSupplier().get().stop();
 
-        ComponentMain main = new ComponentMain();
-        BundleConfig osgiBundles = new BundleConfig();
-
-        main.runMainProgramLoop(osgiBundles);
     }
 
     private static void setupMetaconfigLogger() {
