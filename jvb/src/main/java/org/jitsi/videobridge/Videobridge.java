@@ -453,8 +453,6 @@ public class Videobridge
      * Returns a string representing the health of this {@link Videobridge}.
      * Note that this method does not perform any tests, but only checks the
      * cached value provided by the {@link org.jitsi.health.HealthCheckService}.
-     *
-     * @throws Exception if the videobridge is not healthy.
      */
     private String getHealthStatus()
     {
