@@ -137,7 +137,7 @@ public class Videobridge
      * Thread that checks expiration for conferences, contents, channels and
      * execute expire procedure for any of them.
      */
-    private VideobridgeExpireThread videobridgeExpireThread;
+    private final VideobridgeExpireThread videobridgeExpireThread;
 
     /**
      * The shim which handles Colibri-related logic for this
