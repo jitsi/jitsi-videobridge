@@ -22,6 +22,13 @@ import org.jitsi.metaconfig.config
 class PacketRateMeasurement(private val packetRate: Long) : JvbLoadMeasurement {
     override fun getLoad(): Double = packetRate.toDouble()
 
+    override fun div(other: JvbLoadMeasurement): Double {
+        if (other !is PacketRateMeasurement) {
+            throw UnsupportedOperationException("Can only divide load measurements of same type")
+        }
+        return packetRate / other.packetRate.toDouble()
+    }
+
     override fun toString(): String = "RTP packet rate (up + down) of $packetRate pps"
 
     companion object {
