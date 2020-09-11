@@ -6,6 +6,11 @@ set -e
 # export DEBFULLNAME="Jitsi Team"
 # export DEBEMAIL="dev@jitsi.org"
 # You need package devscripts installed (command dch).
+#
+# There is an optional param that can be used to add an extra string to the version.
+# That string can be used to mark custom version passing "hf" as param
+# will result debian version 2.1-123-gabcabcab-hf-1, instead of just 2.1-123-gabcabcab-1
+VER_EXTRA_LABEL=$1
 
 echo "==================================================================="
 echo "   Building DEB packages...   "
@@ -32,6 +37,10 @@ VERSION_FULL=$(git describe --match "v[0-9\.]*" --long)
 echo "Full version: ${VERSION_FULL}"
 
 export VERSION=${VERSION_FULL:1}
+if [ -n "${VER_EXTRA_LABEL}" ]
+then
+  VERSION+="-${VER_EXTRA_LABEL}"
+fi
 echo "Package version: ${VERSION}"
 
 REV=$(git log --pretty=format:'%h' -n 1)
