@@ -5,7 +5,7 @@ set -e
 # Make sure you have the following environment variables set, example:
 # export DEBFULLNAME="Jitsi Team"
 # export DEBEMAIL="dev@jitsi.org"
-# You need package devscripts installed (command dch).
+# You need package devscripts installed (command dch) and libxml2-utils(provides xmllint), dh-systemd.
 #
 # There is an optional param that can be used to add an extra string to the version.
 # That string can be used to mark custom version passing "hf" as param
