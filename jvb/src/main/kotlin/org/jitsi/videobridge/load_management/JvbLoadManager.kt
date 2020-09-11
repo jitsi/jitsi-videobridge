@@ -40,6 +40,8 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
 
     private var state: State = State.NOT_OVERLOADED
 
+    private var mostRecentLoadMeasurement: T? = null
+
     fun loadUpdate(loadMeasurement: T) {
         logger.cdebug { "Got a load measurement of $loadMeasurement" }
         val now = clock.instant()
@@ -72,7 +74,11 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
                 }
             }
         }
+        mostRecentLoadMeasurement = loadMeasurement
     }
+
+    fun getCurrentStressLevel(): Double =
+        mostRecentLoadMeasurement?.div(jvbLoadThreshold) ?: 0.0
 
     fun getStats() = OrderedJsonObject().apply {
         put("state", state.toString())

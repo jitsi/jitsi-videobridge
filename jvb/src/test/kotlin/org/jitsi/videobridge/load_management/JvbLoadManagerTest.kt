@@ -18,6 +18,7 @@ package org.jitsi.videobridge.load_management
 
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldBe
 import io.mockk.Called
 import io.mockk.every
 import io.mockk.mockk
@@ -98,6 +99,19 @@ class JvbLoadManagerTest : ShouldSpec({
                     }
                 }
             }
+        }
+    }
+    context("the stress level") {
+        should("be 0 if no measurement has been received") {
+            loadManager.getCurrentStressLevel() shouldBe 0.0
+        }
+        should("update with every load measurement") {
+            loadManager.loadUpdate(MockLoadMeasurement(1.0))
+            loadManager.getCurrentStressLevel() shouldBe .1
+            loadManager.loadUpdate(MockLoadMeasurement(3.0))
+            loadManager.getCurrentStressLevel() shouldBe .3
+            loadManager.loadUpdate(MockLoadMeasurement(11.0))
+            loadManager.getCurrentStressLevel() shouldBe 1.1
         }
     }
 })
