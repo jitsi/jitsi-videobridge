@@ -161,29 +161,20 @@ public class Videobridge
     public Videobridge()
     {
         videobridgeExpireThread = new VideobridgeExpireThread(this);
-        if (JvbLoadManager.isEnabled())
-        {
-            logger.info("Starting JVB load management task");
-            jvbLoadManager = new JvbLoadManager<>(
-                PacketRateMeasurement.getLoadedThreshold(),
-                PacketRateMeasurement.getRecoveryThreshold(),
-                new LastNReducer(
-                    this::getConferences,
-                    JvbLastNKt.jvbLastNSingleton
-                )
-            );
-            loadSamplerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
-                new PacketRateLoadSampler(this, jvbLoadManager),
-                0,
-                10,
-                TimeUnit.SECONDS
-            );
-        }
-        else
-        {
-            jvbLoadManager = null;
-            loadSamplerTask = null;
-        }
+        jvbLoadManager = new JvbLoadManager<>(
+            PacketRateMeasurement.getLoadedThreshold(),
+            PacketRateMeasurement.getRecoveryThreshold(),
+            new LastNReducer(
+                this::getConferences,
+                JvbLastNKt.jvbLastNSingleton
+            )
+        );
+        loadSamplerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
+            new PacketRateLoadSampler(this, jvbLoadManager),
+            0,
+            10,
+            TimeUnit.SECONDS
+        );
     }
 
     /**
@@ -687,10 +678,7 @@ public class Videobridge
         debugState.put("time", System.currentTimeMillis());
 
         debugState.put("health", getHealthStatus());
-        if (jvbLoadManager != null)
-        {
-            debugState.put("load-management", jvbLoadManager.getStats());
-        }
+        debugState.put("load-management", jvbLoadManager.getStats());
         debugState.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
 
         JSONObject conferences = new JSONObject();
