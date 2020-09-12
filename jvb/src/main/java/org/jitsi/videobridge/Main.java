@@ -272,36 +272,7 @@ public class Main
     private static Map<String, String> getSystemPropertyDefaults()
     {
         Map<String, String> defaults = new HashMap<>();
-        // Sends "consent freshness" check every 3 seconds
-        defaults.put(StackProperties.CONSENT_FRESHNESS_INTERVAL, "3000");
-        // Retry every 500ms by setting original and max wait intervals
-        defaults.put(
-            StackProperties.CONSENT_FRESHNESS_ORIGINAL_WAIT_INTERVAL,
-            "500");
-        defaults.put(
-            StackProperties.CONSENT_FRESHNESS_MAX_WAIT_INTERVAL, "500");
-        // Retry max 5 times which will take up to 2500ms, that is before
-        // the next "consent freshness" transaction starts
-        defaults.put(
-            StackProperties.CONSENT_FRESHNESS_MAX_RETRANSMISSIONS, "5");
-
-        // In the majority of use-cases the clients which connect to Jitsi
-        // Videobridge are not in the same network, so we don't need to
-        // advertise link-local addresses.
-        defaults.put(StackProperties.DISABLE_LINK_LOCAL_ADDRESSES, "true");
-
-        // Configure the receive buffer size for the sockets used for the
-        // single-port mode to be 10MB.
-        defaults.put(AbstractUdpListener.SO_RCVBUF_PNAME, "10485760");
-
-        // make sure we use the properties files for configuration
-        defaults.put(
-            "net.java.sip.communicator.impl.configuration.USE_PROPFILE_CONFIG",
-            "true");
-
-        // callstats-java-sdk
         Utils.getCallStatsJavaSDKSystemPropertyDefaults(defaults);
-
         return defaults;
     }
 }

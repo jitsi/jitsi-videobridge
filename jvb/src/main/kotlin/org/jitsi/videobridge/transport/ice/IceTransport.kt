@@ -351,8 +351,6 @@ class IceTransport @JvmOverloads constructor(
                 iceAgent.addCandidateHarvester(it)
             }
             Harvesters.singlePortHarvesters?.forEach(iceAgent::addCandidateHarvester)
-
-            iceAgent.setUseHostHarvester(false)
         }
     }
 

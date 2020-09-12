@@ -17,6 +17,7 @@ package org.jitsi.videobridge;
 
 import kotlin.*;
 import org.apache.commons.lang3.*;
+import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jetbrains.annotations.*;
@@ -566,10 +567,7 @@ public class Videobridge
      */
     private void startIce4j(ConfigurationService cfg)
     {
-        // TODO Packet logging for ice4j is not supported at this time.
-        StunStack.setPacketLogger(null);
-
-        // Make all ice4j properties system properties.
+        // Make legacy ice4j properties system properties.
         if (cfg != null)
         {
             List<String> ice4jPropertyNames = cfg.getPropertyNamesByPrefix("org.ice4j", false);
