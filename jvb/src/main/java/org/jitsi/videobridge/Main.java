@@ -82,6 +82,8 @@ public class Main
         // Parse the command-line arguments.
         String apis = cmdLine.getOptionValue(APIS_ARG_NAME);
 
+        setSystemPropertyDefaults();
+
         // Some of our dependencies bring in slf4j, which means Jetty will default to using
         // slf4j as its logging backend.  The version of slf4j brought in, however, is too old
         // for Jetty so it throws errors.  We use java.util.logging so tell Jetty to use that
