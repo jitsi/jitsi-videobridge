@@ -22,10 +22,8 @@ import org.ice4j.stack.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.config.*;
 import org.jitsi.health.*;
-import org.jitsi.meet.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
@@ -36,6 +34,7 @@ import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.shim.*;
+import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.version.*;
 import org.jitsi.xmpp.extensions.*;
@@ -47,7 +46,6 @@ import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
-import org.osgi.framework.*;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -103,12 +101,6 @@ public class Videobridge
      */
     public static final String SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME
         = "org.jitsi.videobridge.shutdown.ALLOWED_SOURCE_REGEXP";
-
-    /**
-     * The (OSGi) <tt>BundleContext</tt> in which this <tt>Videobridge</tt> has
-     * been started.
-     */
-    private BundleContext bundleContext;
 
     /**
      * The <tt>Conference</tt>s of this <tt>Videobridge</tt> mapped by their
@@ -346,18 +338,6 @@ public class Videobridge
     }
 
     /**
-     * Returns the OSGi <tt>BundleContext</tt> in which this
-     * <tt>Videobridge</tt> is executing.
-     *
-     * @return the OSGi <tt>BundleContext</tt> in which this
-     * <tt>Videobridge</tt> is executing.
-     */
-    public BundleContext getBundleContext()
-    {
-        return bundleContext;
-    }
-
-    /**
      * Gets the statistics of this instance.
      *
      * @return the statistics of this instance.
@@ -520,11 +500,7 @@ public class Videobridge
             if (conferencesById.isEmpty())
             {
                 logger.info("Videobridge is shutting down NOW");
-                ShutdownService shutdownService = ServiceUtils2.getService(bundleContext, ShutdownService.class);
-                if (shutdownService != null)
-                {
-                    shutdownService.beginShutdown();
-                }
+                ShutdownServiceSupplierKt.singleton().get().beginShutdown();
             }
         }
     }
@@ -532,16 +508,11 @@ public class Videobridge
     /**
      * Starts this <tt>Videobridge</tt> in a specific <tt>BundleContext</tt>.
      *
-     * @param bundleContext the <tt>BundleContext</tt> in which this
-     * <tt>Videobridge</tt> is to start
-     *
      * NOTE: we have to make this public so Jicofo can call it from its
      * tests
      */
-    public void start(final BundleContext bundleContext)
+    public void start()
     {
-        this.bundleContext = bundleContext;
-
         UlimitCheck.printUlimits();
 
         videobridgeExpireThread.start();
@@ -662,7 +633,6 @@ public class Videobridge
             {
                 loadSamplerTask.cancel(true);
             }
-            this.bundleContext = null;
         }
     }
 

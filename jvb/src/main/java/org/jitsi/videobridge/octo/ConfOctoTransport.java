@@ -20,7 +20,6 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.osgi.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
@@ -34,7 +33,6 @@ import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.json.simple.*;
-import org.osgi.framework.*;
 
 import java.net.*;
 import java.time.*;
@@ -43,7 +41,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.stream.*;
 
-import static org.jitsi.videobridge.transport.octo.OctoUtils.JVB_EP_ID;
+import static org.jitsi.videobridge.transport.octo.OctoUtils.*;
 
 /**
  * The single class in the octo package which serves as a link between a

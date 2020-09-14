@@ -16,7 +16,6 @@
 
 package org.jitsi.videobridge.transport.udp
 
-import org.ice4j.socket.SocketClosedException
 import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
@@ -83,7 +82,7 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
             packet.setData(buf, 0, 1500)
             try {
                 socket.receive(packet)
-            } catch (sce: SocketClosedException) {
+            } catch (sce: SocketException) {
                 logger.info("Socket closed, stopping reader")
                 break
             } catch (e: IOException) {

@@ -27,7 +27,6 @@ public class Application extends ResourceConfig
 {
     public Application()
     {
-        // For injecting non-OSGi services
         register(new ServiceBinder());
         // Filters
         register(ConfigFilter.class);

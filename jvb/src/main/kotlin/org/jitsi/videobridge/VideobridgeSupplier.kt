@@ -19,8 +19,7 @@ package org.jitsi.videobridge
 import java.util.function.Supplier
 
 /**
- * Rather than creating [Videobridge] as part of an OSGi service,
- * centralize its creation here.  This is a temporary solution until
+ * Centralize the creation of [Videobridge] here.  This is a temporary solution until
  * all other services are moved off of OSGi; once that is done then
  * [Videobridge] can be created normally (in main, most likely) and
  * passed to the other entities when they are created.
@@ -35,7 +34,7 @@ import java.util.function.Supplier
  */
 open class VideobridgeSupplier : Supplier<Videobridge> {
     private val videobridge: Videobridge by lazy {
-        Videobridge()
+        Videobridge().apply { start() }
     }
 
     override fun get(): Videobridge = videobridge
