@@ -435,6 +435,10 @@ public class VideobridgeStatistics
                 EPS_NO_MSG_TRANSPORT_AFTER_DELAY,
                 jvbStats.numEndpointsNoMessageTransportAfterDelay.get()
             );
+            unlockedSetStat(
+                "stress_level",
+                jvbStats.stressLevel
+            );
             unlockedSetStat(CONFERENCES, conferences);
             unlockedSetStat(OCTO_CONFERENCES, octoConferences);
             unlockedSetStat(INACTIVE_CONFERENCES, inactiveConferences);

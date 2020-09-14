@@ -20,7 +20,7 @@ import org.jitsi.videobridge.Videobridge
 
 class PacketRateLoadSampler(
     private val videobridge: Videobridge,
-    private val jvbLoadManager: JvbLoadManager<PacketRateMeasurement>
+    private val newMeasurementHandler: (PacketRateMeasurement) -> Unit
 ) : Runnable {
 
     override fun run() {
@@ -33,6 +33,6 @@ class PacketRateLoadSampler(
                 }
             }
         }
-        jvbLoadManager.loadUpdate(PacketRateMeasurement(totalPacketRate))
+        newMeasurementHandler(PacketRateMeasurement(totalPacketRate))
     }
 }
