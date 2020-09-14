@@ -17,20 +17,14 @@ package org.jitsi.videobridge;
 
 import kotlin.*;
 import org.apache.commons.lang3.*;
-import org.ice4j.ice.*;
-import org.ice4j.ice.harvest.*;
-import org.ice4j.stack.*;
 import org.jetbrains.annotations.*;
-import org.jitsi.config.*;
 import org.jitsi.health.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.Version;
 import org.jitsi.videobridge.health.*;
-import org.jitsi.videobridge.ice.*;
 import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
@@ -94,14 +88,6 @@ public class Videobridge
      * enabled so it doesn't conflict.
      */
     public static final String REST_API_PNAME = "org.jitsi.videobridge." + REST_API + "_api_temp";
-
-    /**
-     * The property that specifies allowed entities for turning on graceful
-     * shutdown mode. For XMPP API this is "from" JID. In case of REST
-     * the source IP is being copied into the "from" field of the IQ.
-     */
-    public static final String SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME
-        = "org.jitsi.videobridge.shutdown.ALLOWED_SOURCE_REGEXP";
 
     /**
      * The <tt>Conference</tt>s of this <tt>Videobridge</tt> mapped by their
@@ -376,18 +362,6 @@ public class Videobridge
     }
 
     /**
-     * Returns the <tt>ConfigurationService</tt> used by this
-     * <tt>Videobridge</tt>.
-     *
-     * @return the <tt>ConfigurationService</tt> used by this
-     * <tt>Videobridge</tt>.
-     */
-    public ConfigurationService getConfigurationService()
-    {
-        return JitsiConfig.getSipCommunicatorProps();
-    }
-
-    /**
      * Handles a <tt>ColibriConferenceIQ</tt> stanza which represents a request.
      *
      * @param conferenceIQ the <tt>ColibriConferenceIQ</tt> stanza represents
@@ -554,62 +528,6 @@ public class Videobridge
                 HealthCheckIQ.ELEMENT_NAME,
                 HealthCheckIQ.NAMESPACE,
                 new HealthCheckIQProvider());
-
-        ConfigurationService cfg = getConfigurationService();
-        startIce4j(cfg);
-    }
-
-    /**
-     * Implements the ice4j-related portion of {@link #start(BundleContext)}.
-     *
-     * @param bundleContext the {@code BundleContext} in which this
-     * {@code Videobridge} is to start
-     */
-    private void startIce4j(ConfigurationService cfg)
-    {
-        // Make legacy ice4j properties system properties.
-        if (cfg != null)
-        {
-            List<String> ice4jPropertyNames = cfg.getPropertyNamesByPrefix("org.ice4j", false);
-
-            if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
-            {
-                for (String propertyName : ice4jPropertyNames)
-                {
-                    String propertyValue = cfg.getString(propertyName);
-
-                    // we expect the getString to return either null or a
-                    // non-empty String object.
-                    if (propertyValue != null)
-                    {
-                        System.setProperty(propertyName, propertyValue);
-                    }
-                }
-            }
-        }
-
-        // We need to reload the Typesafe config used by ice4j, because the original was initialized before the new
-        // system properties were set.
-        JitsiConfig.Companion.reloadNewConfig();
-
-        // Initialize the the host candidate interface filters in the ice4j
-        // stack.
-        try
-        {
-            HostCandidateHarvester.initializeInterfaceFilters();
-        }
-        catch (Exception e)
-        {
-            logger.warn(
-                    "There were errors during host candidate interface filters"
-                        + " initialization.",
-                    e);
-        }
-
-        // Start the initialization of the mapping candidate harvesters.
-        // Asynchronous, because the AWS and STUN harvester may take a long
-        // time to initialize.
-        new Thread(MappingCandidateHarvesters::initialize).start();
     }
 
     /**
@@ -623,48 +541,10 @@ public class Videobridge
      */
     public void stop()
     {
-        try
+        videobridgeExpireThread.stop();
+        if (loadSamplerTask != null)
         {
-            ConfigurationService cfg = getConfigurationService();
-            stopIce4j(cfg);
-        }
-        finally
-        {
-            videobridgeExpireThread.stop();
-            if (loadSamplerTask != null)
-            {
-                loadSamplerTask.cancel(true);
-            }
-        }
-    }
-
-    /**
-     * Implements the ice4j-related portion of {@link #stop(BundleContext)}.
-     *
-     * @param bundleContext the {@code BundleContext} in which this
-     * {@code Videobridge} is to start
-     */
-    private void stopIce4j(ConfigurationService cfg)
-    {
-        // Shut down harvesters.
-        Harvesters.closeStaticConfiguration();
-
-        // Clear all system properties that were ice4j properties. This is done
-        // to deal with any properties that are conditionally set during
-        // initialization. If the conditions have changed upon restart (of the
-        // component, rather than the JVM), it would not be enough to "not set"
-        // the system property (as it would have survived the restart).
-        if (cfg != null)
-        {
-            List<String> ice4jPropertyNames = cfg.getPropertyNamesByPrefix("org.ice4j", false);
-
-            if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
-            {
-                for (String propertyName : ice4jPropertyNames)
-                {
-                    System.clearProperty(propertyName);
-                }
-            }
+            loadSamplerTask.cancel(true);
         }
     }
 

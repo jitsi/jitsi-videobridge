@@ -19,15 +19,17 @@ import kotlin.jvm.functions.*;
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.servlet.*;
 import org.glassfish.jersey.servlet.*;
-import org.ice4j.*;
 import org.ice4j.ice.harvest.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.cmd.*;
+import org.jitsi.config.*;
 import org.jitsi.metaconfig.*;
 import org.jitsi.rest.*;
+import org.jitsi.service.configuration.*;
 import org.jitsi.stats.media.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.health.*;
+import org.jitsi.videobridge.ice.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.rest.root.*;
 import org.jitsi.videobridge.shutdown.*;
@@ -98,6 +100,12 @@ public class Main
         System.setProperty(
                 Videobridge.REST_API_PNAME,
                 Boolean.toString(apis.contains(Videobridge.REST_API)));
+
+        // Reload the Typesafe config used by ice4j, because the original was initialized before the new system
+        // properties were set.
+        JitsiConfig.Companion.reloadNewConfig();
+
+        startIce4j();
 
         OctoRelayService octoRelayService = OctoRelayServiceProviderKt.singleton().get();
         if (octoRelayService != null)
@@ -178,6 +186,8 @@ public class Main
         JvbHealthCheckServiceSupplierKt.singleton().get().stop();
 
         VideobridgeSupplierKt.getVideobridgeSupplier().get().stop();
+
+        stopIce4j();
 
         TaskPools.SCHEDULED_POOL.shutdownNow();
         TaskPools.CPU_POOL.shutdownNow();
@@ -273,6 +283,46 @@ public class Main
     {
         Map<String, String> defaults = new HashMap<>();
         Utils.getCallStatsJavaSDKSystemPropertyDefaults(defaults);
+
+        // Make legacy ice4j properties system properties.
+        ConfigurationService cfg = JitsiConfig.getSipCommunicatorProps();
+        List<String> ice4jPropertyNames = cfg.getPropertyNamesByPrefix("org.ice4j", false);
+
+        if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
+        {
+            for (String propertyName : ice4jPropertyNames)
+            {
+                String propertyValue = cfg.getString(propertyName);
+                if (propertyValue != null)
+                {
+                    defaults.put(propertyName, propertyValue);
+                }
+            }
+        }
+
         return defaults;
+    }
+
+    private static void startIce4j()
+    {
+
+        // Start the initialization of the mapping candidate harvesters.
+        // Asynchronous, because the AWS and STUN harvester may take a long
+        // time to initialize.
+        new Thread(MappingCandidateHarvesters::initialize).start();
+    }
+
+    private static void stopIce4j()
+    {
+        // Shut down harvesters.
+        Harvesters.closeStaticConfiguration();
+
+        for (Map.Entry<Object, Object> property : System.getProperties().entrySet())
+        {
+            if (property.getKey().toString().startsWith("org.ice4j"))
+            {
+                System.clearProperty(property.getKey().toString());
+            }
+        }
     }
 }
