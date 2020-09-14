@@ -588,6 +588,10 @@ public class Videobridge
             }
         }
 
+        // We need to reload the Typesafe config used by ice4j, because the original was initialized before the new
+        // system properties were set.
+        JitsiConfig.Companion.reloadNewConfig();
+
         // Initialize the the host candidate interface filters in the ice4j
         // stack.
         try
