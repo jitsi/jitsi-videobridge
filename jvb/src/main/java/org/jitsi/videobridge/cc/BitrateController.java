@@ -117,6 +117,21 @@ public class BitrateController
         = TimeSeriesLogger.getTimeSeriesLogger(BitrateController.class);
 
     /**
+     * The map containg "height - minimal bitrate" pairs for simulcast layers
+     * according to WebRTC kSimulcastFormats array (see simulcast.cc).
+     */
+    private static final ImmutableMap<Integer, Integer> LAYER_MINIMAL_BITRATE_MAP
+        = new ImmutableMap.Builder<Integer, Integer>()
+            .put(0, 0)
+            .put(180, 0)
+            .put(270, 150000)
+            .put(360, 150000)
+            .put(540, 350000)
+            .put(720, 600000)
+            .put(1080, 800000)
+            .build();
+
+    /**
      * The {@link AdaptiveSourceProjection}s that this instance is managing, keyed
      * by the SSRCs of the associated {@link MediaSourceDesc}.
      */
@@ -395,6 +410,52 @@ public class BitrateController
                     "been signaled:" + ssrc);
             numDroppedPacketsUnknownSsrc.incrementAndGet();
             return false;
+        }
+
+        long nowMs = System.currentTimeMillis();
+        if (firstMediaMs == -1
+            || nowMs - firstMediaMs < RtpLayerDesc.AVERAGE_BITRATE_WINDOW_MS)
+        {
+            // ignore layer bitrates until RateStatistics ramp up back window
+            AbstractEndpoint sourceEndpoint =
+                destinationEndpoint.getConference().getEndpoint(packetInfo.getEndpointId());
+            for (MediaSourceDesc source : sourceEndpoint.getMediaSources())
+            {
+                RtpLayerDesc layer = source.findRtpLayerDesc(videoRtpPacket);
+                if (layer != null
+                    && layer.getSid() == RtpLayerDesc.SUSPENDED_INDEX)
+                {
+                    // This branch considers non-SVC cases only
+                    int layerHeight = layer.getHeight();
+
+                    if (layer.getTid() != RtpLayerDesc.SUSPENDED_INDEX)
+                    {
+                        /**
+                        * Check bitrate for the highest temporal layer for this height
+                        * because it includes the rest temporal layers as dependencies
+                        * and bitrate check gets more accurate
+                        */
+                        RtpLayerDesc highestTemporalLayer = source.getRtpLayers().stream()
+                            .filter(l -> l.getHeight() == layerHeight)
+                            .sorted(Comparator.comparingInt(RtpLayerDesc::getTid).reversed())
+                            .findFirst()
+                            .orElse(null);
+                        if (highestTemporalLayer != null)
+                        {
+                            layer = highestTemporalLayer;
+                        }
+                    }
+
+                    long layerBitrateBps = layer.getBitrateBps(nowMs);
+                    if (layerBitrateBps < LAYER_MINIMAL_BITRATE_MAP.get(layerHeight))
+                    {
+                        logger.debug("Suspiciously low bitrate for " + layerHeight + "p = "
+                            + layerBitrateBps + " bps.");
+                        return false;
+                    }
+                    break;
+                }
+            }
         }
 
         return adaptiveSourceProjection.accept(packetInfo);
