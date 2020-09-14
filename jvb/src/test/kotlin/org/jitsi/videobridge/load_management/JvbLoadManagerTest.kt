@@ -23,6 +23,8 @@ import io.mockk.Called
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.jitsi.config.setNewConfig
+import org.jitsi.metaconfig.MetaconfigSettings
 import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.mins
 import org.jitsi.utils.secs
@@ -35,12 +37,17 @@ class JvbLoadManagerTest : ShouldSpec({
     }
     val clock = FakeClock()
 
-    val loadManager = JvbLoadManager<MockLoadMeasurement>(
-        MockLoadMeasurement(10.0),
-        MockLoadMeasurement(7.0),
-        reducer,
-        clock
-    )
+    val loadManager = createWithConfig("""
+        videobridge.load-management.reducer-enabled=true
+        """.trimIndent()
+    ) {
+        JvbLoadManager(
+            MockLoadMeasurement(10.0),
+            MockLoadMeasurement(7.0),
+            reducer,
+            clock
+        )
+    }
 
     context("a load update") {
         context("with a load which isn't overloaded") {
@@ -125,4 +132,20 @@ class MockLoadMeasurement(var loadMeasurement: Double) : JvbLoadMeasurement {
     }
 
     override fun toString(): String = "Mock load measurement of $loadMeasurement"
+}
+
+/**
+ * A helper function to run the given [block] with the given [config] in place and
+ * return the result.
+ *
+ * This assumes that the result of [block] should be created with exactly the given
+ * [config] in place, and all config values will be retrieved immediately.
+ */
+private fun <T : Any> createWithConfig(config: String, block: () -> T): T {
+    setNewConfig(config, true, "name")
+    MetaconfigSettings.retrieveValuesImmediately = true
+    val result = block()
+    MetaconfigSettings.retrieveValuesImmediately = false
+    setNewConfig("", true, "name")
+    return result
 }

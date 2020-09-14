@@ -36,10 +36,7 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
 ) {
     private val logger = createLogger(minLogLevel = Level.ALL)
 
-    /**
-     * Whether or not we'll take actions to reduce load
-     */
-    val enabled: Boolean by config("videobridge.load-management.enabled".from(JitsiConfig.newConfig))
+    val reducerEnabled: Boolean by config("videobridge.load-management.reducer-enabled".from(JitsiConfig.newConfig))
 
     private var lastReducerTime: Instant = NEVER
 
@@ -53,7 +50,7 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
         val now = clock.instant()
         if (loadMeasurement.getLoad() >= jvbLoadThreshold.getLoad()) {
             state = State.OVERLOADED
-            if (enabled) {
+            if (reducerEnabled) {
                 logger.info("Load measurement $loadMeasurement is above threshold of $jvbLoadThreshold")
                 if (canRunReducer(now)) {
                     logger.info("Running load reducer")
@@ -66,7 +63,7 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
             }
         } else {
             state = State.NOT_OVERLOADED
-            if (enabled) {
+            if (reducerEnabled) {
                 if (loadMeasurement.getLoad() < jvbRecoveryThreshold.getLoad()) {
                     if (canRunReducer(now)) {
                         if (loadReducer.recover()) {
@@ -94,7 +91,7 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
     fun getStats() = OrderedJsonObject().apply {
         put("state", state.toString())
         put("stress", getCurrentStressLevel().toString())
-        put("reducer_enabled", enabled.toString())
+        put("reducer_enabled", reducerEnabled.toString())
         put("reducer", loadReducer.getStats())
     }
 
@@ -104,12 +101,5 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
     enum class State {
         OVERLOADED,
         NOT_OVERLOADED
-    }
-
-    companion object {
-        val enabled: Boolean by config("videobridge.load-management.enabled".from(JitsiConfig.newConfig))
-
-        @JvmStatic
-        fun isEnabled() = enabled
     }
 }
