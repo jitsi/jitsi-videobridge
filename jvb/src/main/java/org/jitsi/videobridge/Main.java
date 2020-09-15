@@ -118,7 +118,14 @@ public class Main
         final StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
         if (statsMgr != null)
         {
-            statsMgr.addStatistics(new VideobridgeStatistics(), StatsManager.config.getInterval().toMillis());
+            statsMgr.addStatistics(
+                new VideobridgeStatistics(
+                    VideobridgeSupplierKt.getVideobridgeSupplier().get(),
+                    octoRelayService,
+                    clientConnectionImpl
+                ),
+                StatsManager.config.getInterval().toMillis()
+            );
 
             StatsManager.config.getTransportConfigs().forEach(transportConfig -> {
                 statsMgr.addTransport(transportConfig.toStatsTransport(), transportConfig.getInterval().toMillis());
