@@ -16,23 +16,23 @@
 
 package org.jitsi.videobridge.load_management
 
-import org.jitsi.videobridge.Videobridge
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldBe
 
-class PacketRateLoadSampler(
-    private val videobridge: Videobridge,
-    private val newMeasurementHandler: (PacketRateMeasurement) -> Unit
-) : Runnable {
-
-    override fun run() {
-        var totalPacketRate: Long = 0
-        videobridge.conferences.forEach { conf ->
-            conf.localEndpoints.forEach { ep ->
-                with(ep.transceiver.getTransceiverStats()) {
-                    totalPacketRate += incomingPacketStreamStats.packetRate
-                    totalPacketRate += outgoingPacketStreamStats.packetRate
+class PacketRateMeasurementTest : ShouldSpec({
+    context("division") {
+        context("between two PacketRateMeasurements") {
+            should("yield the correct result") {
+                PacketRateMeasurement(10) / PacketRateMeasurement(2) shouldBe 5.0
+            }
+        }
+        context("between a PacketRateMeasurement and another measurement type") {
+            should("throw an exception") {
+                shouldThrow<UnsupportedOperationException> {
+                    PacketRateMeasurement(10) / MockLoadMeasurement(1.1)
                 }
             }
         }
-        newMeasurementHandler(PacketRateMeasurement(totalPacketRate))
     }
-}
+})

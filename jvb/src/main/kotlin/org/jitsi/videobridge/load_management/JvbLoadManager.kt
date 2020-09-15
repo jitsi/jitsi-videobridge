@@ -36,46 +36,62 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
 ) {
     private val logger = createLogger(minLogLevel = Level.ALL)
 
+    val reducerEnabled: Boolean by config("videobridge.load-management.reducer-enabled".from(JitsiConfig.newConfig))
+
     private var lastReducerTime: Instant = NEVER
 
     private var state: State = State.NOT_OVERLOADED
 
+    private var mostRecentLoadMeasurement: T? = null
+
     fun loadUpdate(loadMeasurement: T) {
         logger.cdebug { "Got a load measurement of $loadMeasurement" }
+        mostRecentLoadMeasurement = loadMeasurement
         val now = clock.instant()
         if (loadMeasurement.getLoad() >= jvbLoadThreshold.getLoad()) {
             state = State.OVERLOADED
-            logger.info("Load measurement $loadMeasurement is above threshold of $jvbLoadThreshold")
-            if (canRunReducer(now)) {
-                logger.info("Running load reducer")
-                loadReducer.reduceLoad()
-                lastReducerTime = now
-            } else {
-                logger.info("Load reducer ran at $lastReducerTime, which is within ${loadReducer.impactTime()} " +
-                    "of now, not running reduce")
+            if (reducerEnabled) {
+                logger.info("Load measurement $loadMeasurement is above threshold of $jvbLoadThreshold")
+                if (canRunReducer(now)) {
+                    logger.info("Running load reducer")
+                    loadReducer.reduceLoad()
+                    lastReducerTime = now
+                } else {
+                    logger.info("Load reducer ran at $lastReducerTime, which is within " +
+                        "${loadReducer.impactTime()} of now, not running reduce")
+                }
             }
         } else {
             state = State.NOT_OVERLOADED
-            if (loadMeasurement.getLoad() < jvbRecoveryThreshold.getLoad()) {
-                if (canRunReducer(now)) {
-                    if (loadReducer.recover()) {
-                        logger.info("Recovery ran after a load measurement of $loadMeasurement (which was below " +
-                            "threshold of $jvbRecoveryThreshold) was received")
-                        lastReducerTime = now
+            if (reducerEnabled) {
+                if (loadMeasurement.getLoad() < jvbRecoveryThreshold.getLoad()) {
+                    if (canRunReducer(now)) {
+                        if (loadReducer.recover()) {
+                            logger.info("Recovery ran after a load measurement of $loadMeasurement (which was " +
+                                "below threshold of $jvbRecoveryThreshold) was received")
+                            lastReducerTime = now
+                        } else {
+                            logger.cdebug { "Recovery had no work to do" }
+                        }
                     } else {
-                        logger.cdebug { "Recovery had no work to do" }
+                        logger.cdebug {
+                            "Load measurement $loadMeasurement is below recovery threshold, but load reducer " +
+                                "ran at $lastReducerTime, which is within ${loadReducer.impactTime()} of now, " +
+                                "not running recover"
+                        }
                     }
-                } else {
-                    logger.cdebug { "Load measurement $loadMeasurement is below recovery threshold, but load reducer " +
-                        "ran at $lastReducerTime, which is within ${loadReducer.impactTime()} of now, not running " +
-                        "recover" }
                 }
             }
         }
     }
 
+    fun getCurrentStressLevel(): Double =
+        mostRecentLoadMeasurement?.div(jvbLoadThreshold) ?: 0.0
+
     fun getStats() = OrderedJsonObject().apply {
         put("state", state.toString())
+        put("stress", getCurrentStressLevel().toString())
+        put("reducer_enabled", reducerEnabled.toString())
         put("reducer", loadReducer.getStats())
     }
 
@@ -85,12 +101,5 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
     enum class State {
         OVERLOADED,
         NOT_OVERLOADED
-    }
-
-    companion object {
-        val enabled: Boolean by config("videobridge.load-management.enabled".from(JitsiConfig.newConfig))
-
-        @JvmStatic
-        fun isEnabled() = enabled
     }
 }

@@ -148,29 +148,29 @@ public class Videobridge
     public Videobridge()
     {
         videobridgeExpireThread = new VideobridgeExpireThread(this);
-        if (JvbLoadManager.isEnabled())
-        {
-            logger.info("Starting JVB load management task");
-            jvbLoadManager = new JvbLoadManager<>(
-                PacketRateMeasurement.getLoadedThreshold(),
-                PacketRateMeasurement.getRecoveryThreshold(),
-                new LastNReducer(
-                    this::getConferences,
-                    JvbLastNKt.jvbLastNSingleton
-                )
-            );
-            loadSamplerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
-                new PacketRateLoadSampler(this, jvbLoadManager),
-                0,
-                10,
-                TimeUnit.SECONDS
-            );
-        }
-        else
-        {
-            jvbLoadManager = null;
-            loadSamplerTask = null;
-        }
+        jvbLoadManager = new JvbLoadManager<>(
+            PacketRateMeasurement.getLoadedThreshold(),
+            PacketRateMeasurement.getRecoveryThreshold(),
+            new LastNReducer(
+                this::getConferences,
+                JvbLastNKt.jvbLastNSingleton
+            )
+        );
+        loadSamplerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
+            new PacketRateLoadSampler(
+                this,
+                (loadMeasurement) -> {
+                    // Update the load manager with the latest measurement
+                    jvbLoadManager.loadUpdate(loadMeasurement);
+                    // Update the stats with the latest stress level
+                    getStatistics().stressLevel = jvbLoadManager.getCurrentStressLevel();
+                    return Unit.INSTANCE;
+                }
+            ),
+            0,
+            10,
+            TimeUnit.SECONDS
+        );
     }
 
     /**
@@ -569,10 +569,7 @@ public class Videobridge
         debugState.put("time", System.currentTimeMillis());
 
         debugState.put("health", getHealthStatus());
-        if (jvbLoadManager != null)
-        {
-            debugState.put("load-management", jvbLoadManager.getStats());
-        }
+        debugState.put("load-management", jvbLoadManager.getStats());
         debugState.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
 
         JSONObject conferences = new JSONObject();
@@ -804,5 +801,10 @@ public class Videobridge
          * wasn't (at the time of expiration).
          */
         public AtomicInteger dtlsFailedEndpoints = new AtomicInteger();
+
+        /**
+         * The stress level for this bridge
+         */
+        public Double stressLevel = 0.0;
     }
 }
