@@ -29,7 +29,6 @@ import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage.VideoConstr
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
 import org.json.simple.JSONArray
 import org.json.simple.JSONObject
-import org.json.simple.JSONValue
 import org.json.simple.parser.JSONParser
 
 @Suppress("BlockingMethodInNonBlockingContext")
