@@ -361,9 +361,11 @@ class ForwardedEndpointsMessage(
      */
     override fun toJson(): String = JSONObject().apply {
         this["colibriClass"] = TYPE
-        this["lastNEndpoints"] = forwardedEndpoints
-        this["endpointsEnteringLastN"] = endpointsEnteringLastN
-        this["conferenceEndpoints"] = conferenceEndpoints
+        // json-simple does not property serialize collections properly (it handles [List]s correctly, but not [Set]s)
+        // As a short-term solution force the use of a list.
+        this["lastNEndpoints"] = ArrayList(forwardedEndpoints)
+        this["endpointsEnteringLastN"] = ArrayList(endpointsEnteringLastN)
+        this["conferenceEndpoints"] = ArrayList(conferenceEndpoints)
     }.toJSONString()
 
     companion object {

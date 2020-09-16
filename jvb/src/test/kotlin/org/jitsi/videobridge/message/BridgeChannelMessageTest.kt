@@ -29,6 +29,7 @@ import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage.VideoConstr
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
 import org.json.simple.JSONArray
 import org.json.simple.JSONObject
+import org.json.simple.JSONValue
 import org.json.simple.parser.JSONParser
 
 @Suppress("BlockingMethodInNonBlockingContext")
@@ -166,8 +167,8 @@ class BridgeChannelMessageTest : ShouldSpec() {
         }
 
         context("serializing and parsing ForwardedEndpointsMessage") {
-            val forwardedEndpoints = listOf("a", "b", "c")
-            val endpointsEnteringLastN = listOf("b", "c")
+            val forwardedEndpoints = setOf("a", "b", "c")
+            val endpointsEnteringLastN = setOf("b", "c")
             val conferenceEndpoints = listOf("a", "b", "c", "d")
 
             val message = ForwardedEndpointsMessage(forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints)
