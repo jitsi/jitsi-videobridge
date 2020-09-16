@@ -54,6 +54,13 @@ import java.util.*;
       */
      public boolean enabled = false;
 
+     /**
+      * The number of bytes left over from one run of probing to the next.  The
+      * primary use case for this is when the number of bytes we want to send is
+      * less than the size of an RTP header extension.
+      */
+     long bytesLeftOver = 0;
+
      private Long latestBwe = -1L;
 
      private DiagnosticContext diagnosticContext;
@@ -116,7 +123,8 @@ import java.util.*;
          long totalNeededBps = bitrateControllerStatus.currentIdealBps - bitrateControllerStatus.currentTargetBps;
          if (totalNeededBps < 1)
          {
-             // Not much.
+             // Don't need to send any probing.
+             bytesLeftOver = 0;
              return;
          }
 
@@ -151,28 +159,15 @@ import java.util.*;
          if (paddingBps < 1)
          {
              // Not much.
+             bytesLeftOver = 0;
              return;
          }
 
+         long bytes = (config.getPaddingPeriodMs() * paddingBps / 1000 / 8) + bytesLeftOver;
 
-         // XXX a signed int is practically sufficient, as it can represent up to
-         // ~ 2GB
-         int bytes = (int) (config.getPaddingPeriodMs() * paddingBps / 1000 / 8);
+         long bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, bytes);
 
-         if (!bitrateControllerStatus.activeSsrcs.isEmpty())
-         {
-             // stream protection with padding.
-             for (Long ssrc : bitrateControllerStatus.activeSsrcs)
-             {
-                 long bytesSent = probingDataSender.sendProbing(ssrc, bytes);
-                 bytes -= bytesSent;
-                 if (bytes < 1)
-                 {
-                     // We're done.
-                     return;
-                 }
-             }
-         }
+         bytesLeftOver = Math.min(bytes - bytesSent, 0);
      }
 
      @Override
@@ -200,11 +195,11 @@ import java.util.*;
      public interface ProbingDataSender
      {
          /**
-          * Sends a specific number of bytes with a specific SSRC.
-          * @param mediaSsrc the SSRC
+          * Sends a specific number of bytes with a specific set of SSRCs.
+          * @param mediaSsrcs the SSRCs
           * @param numBytes the number of probing bytes we want to send
           * @return the number of bytes of probing data actually sent
           */
-         int sendProbing(long mediaSsrc, int numBytes);
+         int sendProbing(Collection<Long> mediaSsrcs, long numBytes);
      }
  }
