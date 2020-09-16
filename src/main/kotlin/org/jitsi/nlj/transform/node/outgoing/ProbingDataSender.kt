@@ -62,8 +62,8 @@ class ProbingDataSender(
     private var localVideoSsrc: Long? = null
 
     // Stats
-    private var numProbingBytesSentRtx: Int = 0
-    private var numProbingBytesSentDummyData: Int = 0
+    private var numProbingBytesSentRtx: Long = 0
+    private var numProbingBytesSentDummyData: Long = 0
 
     init {
         streamInformationStore.onRtpPayloadTypesChanged { currentRtpPayloadTypes ->
@@ -84,17 +84,23 @@ class ProbingDataSender(
         }
     }
 
-    fun sendProbing(mediaSsrc: Long, numBytes: Int): Int {
+    fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int {
         var totalBytesSent = 0
 
         if (rtxSupported) {
-            val rtxBytesSent = sendRedundantDataOverRtx(mediaSsrc, numBytes)
-            numProbingBytesSentRtx += rtxBytesSent
-            totalBytesSent += rtxBytesSent
-            if (timeSeriesLogger.isTraceEnabled()) {
-                timeSeriesLogger.trace(diagnosticContext
+            for (mediaSsrc in mediaSsrcs) {
+                if (totalBytesSent >= numBytes) {
+                    break
+                }
+                val rtxBytesSent = sendRedundantDataOverRtx(mediaSsrc, numBytes - totalBytesSent)
+                numProbingBytesSentRtx += rtxBytesSent
+                totalBytesSent += rtxBytesSent
+                if (timeSeriesLogger.isTraceEnabled()) {
+                    timeSeriesLogger.trace(diagnosticContext
                         .makeTimeSeriesPoint("rtx_probing_bytes")
+                        .addField("ssrc", mediaSsrc)
                         .addField("bytes", rtxBytesSent))
+                }
             }
         }
         if (totalBytesSent < numBytes) {
@@ -137,12 +143,16 @@ class ProbingDataSender(
         var bytesSent = 0
         val pt = videoPayloadTypes.firstOrNull() ?: return bytesSent
         val senderSsrc = localVideoSsrc ?: return bytesSent
-        // TODO(brian): shouldn't this take into account numBytes? what if it's less than
-        // the size of one dummy packet?
-        val packetLength = RtpHeader.FIXED_HEADER_SIZE_BYTES + 0xFF
-        val numPackets = (numBytes / packetLength) + 1 /* account for the mod */
-        for (i in 0 until numPackets) {
-            val paddingPacket = PaddingVideoPacket.create(packetLength)
+
+        while (bytesSent < numBytes) {
+            val remainingBytes = numBytes - bytesSent
+            if (remainingBytes < RtpHeader.FIXED_HEADER_SIZE_BYTES) {
+                break
+            }
+            val paddingSize = (remainingBytes - RtpHeader.FIXED_HEADER_SIZE_BYTES).coerceAtMost(0xFF)
+            val packetLength = RtpHeader.FIXED_HEADER_SIZE_BYTES + paddingSize
+
+            val paddingPacket = PaddingVideoPacket.create(packetLength.toInt())
             paddingPacket.payloadType = pt.pt.toPositiveInt()
             paddingPacket.ssrc = senderSsrc
             paddingPacket.timestamp = currDummyTimestamp
