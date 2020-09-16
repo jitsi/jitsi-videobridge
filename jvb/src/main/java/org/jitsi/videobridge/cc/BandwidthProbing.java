@@ -136,27 +136,37 @@ import java.util.*;
          long maxPaddingBps = latestBweCopy - bitrateControllerStatus.currentTargetBps;
          long paddingBps = Math.min(totalNeededBps, maxPaddingBps);
 
+         DiagnosticContext.TimeSeriesPoint timeSeriesPoint = null;
+
          if (timeSeriesLogger.isTraceEnabled() && diagnosticContext != null)
          {
-             timeSeriesLogger.trace(diagnosticContext
+             timeSeriesPoint = diagnosticContext
                      .makeTimeSeriesPoint("sent_padding")
                      .addField("padding_bps", paddingBps)
                      .addField("total_ideal_bps", bitrateControllerStatus.currentIdealBps)
                      .addField("total_target_bps", bitrateControllerStatus.currentTargetBps)
                      .addField("needed_bps", totalNeededBps)
                      .addField("max_padding_bps", maxPaddingBps)
-                     .addField("bwe_bps", latestBweCopy));
+                     .addField("bwe_bps", latestBweCopy);
          }
 
-         if (paddingBps < 1)
+         if (paddingBps >= 1)
          {
-             // Not much.
-             return;
+             int bytes = (int) (config.getPaddingPeriodMs() * paddingBps / 1000 / 8);
+
+             int bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, bytes);
+
+             if (timeSeriesPoint != null)
+             {
+                 timeSeriesPoint.addField("bytesRequested", bytes)
+                     .addField("bytesSent", bytesSent);
+             }
          }
 
-         int bytes = (int) (config.getPaddingPeriodMs() * paddingBps / 1000 / 8);
-
-         int bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, bytes);
+         if (timeSeriesLogger.isTraceEnabled() && timeSeriesPoint != null)
+         {
+             timeSeriesLogger.trace(timeSeriesPoint);
+         }
      }
 
      @Override
