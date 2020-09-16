@@ -151,8 +151,12 @@ open class RtpPacket(
             return buffer.getByteAsInt(offset + length - 1)
         }
         set(value) {
-            hasPadding = true
-            buffer[offset + length - 1] = value.toByte()
+            if (value > 0) {
+                hasPadding = true
+                buffer[offset + length - 1] = value.toByte()
+            } else {
+                hasPadding = false
+            }
         }
 
     private val _headerExtensions: HeaderExtensions = HeaderExtensions()
