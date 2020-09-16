@@ -17,7 +17,7 @@
   <url>https://github.com/jitsi/jitsi-videobridge</url>
   <properties>
     <assembly.skipAssembly>false</assembly.skipAssembly>
-    <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
+    <exec.mainClass>org.jitsi.videobridge.MainKt</exec.mainClass>
   </properties>
 
   <profiles>
