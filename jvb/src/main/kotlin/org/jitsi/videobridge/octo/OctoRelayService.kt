@@ -22,6 +22,8 @@ import org.jitsi.videobridge.transport.octo.BridgeOctoTransport
 import org.jitsi.videobridge.transport.udp.UdpTransport
 import org.jitsi.videobridge.util.TaskPools
 import java.net.SocketAddress
+import java.net.SocketException
+import java.net.UnknownHostException
 import java.time.Instant
 
 /**
@@ -50,7 +52,20 @@ class OctoRelayService {
         val publicAddress = config.publicAddress
         val port = config.bindPort
 
-        udpTransport = UdpTransport(address, port, logger, OCTO_SO_RCVBUF, OCTO_SO_SNDBUF)
+        try {
+            udpTransport = UdpTransport(address, port, logger, OCTO_SO_RCVBUF, OCTO_SO_SNDBUF)
+        } catch (t: Throwable) {
+            when (t) {
+                is UnknownHostException, is SocketException -> {
+                    logger.error("Failed to initialize Octo UDP transport with " +
+                            "address " + address + ":" + port + ".", t)
+                }
+                else -> {
+                    logger.error("Error creating OctoRelayService UdpTransport", t)
+                }
+            }
+            throw t
+        }
         logger.info("Created Octo UDP transport")
 
         bridgeOctoTransport = BridgeOctoTransport("$publicAddress:$port", logger)
