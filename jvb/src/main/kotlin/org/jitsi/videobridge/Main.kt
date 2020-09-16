@@ -70,6 +70,7 @@ fun main(args: Array<String>) {
     val statsMgr = org.jitsi.videobridge.stats.singleton().get()?.apply {
         addStatistics(
             VideobridgeStatistics(
+                // The Videobridge singleton
                 singleton().get(),
                 octoRelayService,
                 clientConnection
@@ -114,6 +115,7 @@ fun main(args: Array<String>) {
     }
     org.jitsi.videobridge.health.singleton().get().stop()
 
+    // The Videobridge singleton
     singleton().get().stop()
 
     stopIce4j()
