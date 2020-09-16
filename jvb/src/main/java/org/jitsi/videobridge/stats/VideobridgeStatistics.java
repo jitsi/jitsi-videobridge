@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.stats;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.utils.*;
@@ -93,11 +94,23 @@ public class VideobridgeStatistics
      */
     private boolean inGenerate = false;
 
+    private final @NotNull Videobridge videobridge;
+    private final @Nullable OctoRelayService octoRelayService;
+    private final @NotNull ClientConnectionImpl clientConnection;
+
     /**
      * Creates instance of <tt>VideobridgeStatistics</tt>.
      */
-    public VideobridgeStatistics()
+    public VideobridgeStatistics(
+        @NotNull Videobridge videobridge,
+        @Nullable OctoRelayService octoRelayService,
+        @NotNull ClientConnectionImpl clientConnection
+    )
     {
+        this.videobridge = videobridge;
+        this.octoRelayService = octoRelayService;
+        this.clientConnection = clientConnection;
+
         timestampFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         timestampFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 
@@ -177,7 +190,6 @@ public class VideobridgeStatistics
     @SuppressWarnings("unchecked")
     private void generate0()
     {
-        Videobridge videobridge = VideobridgeSupplierKt.singleton().get();
         Videobridge.Statistics jvbStats = videobridge.getStatistics();
 
         int videoChannels = 0;
@@ -474,11 +486,10 @@ public class VideobridgeStatistics
                     TOTAL_PACKETS_RECEIVED, jvbStats.totalPacketsReceived.get());
             unlockedSetStat(TOTAL_PACKETS_SENT, jvbStats.totalPacketsSent.get());
 
-            OctoRelayService relayService = OctoRelayServiceProviderKt.singleton().get();
             OctoRelayService.Stats octoRelayServiceStats
-                = relayService == null ? null : relayService.getStats();
+                = octoRelayService == null ? null : octoRelayService.getStats();
 
-            if (relayService != null)
+            if (octoRelayService != null)
             {
                 unlockedSetStat("octo_version", OctoRelayService.OCTO_VERSION);
             }
@@ -529,7 +540,6 @@ public class VideobridgeStatistics
             }
             unlockedSetStat(VERSION, videobridge.getVersion().toString());
 
-            ClientConnectionImpl clientConnection = ClientConnectionSupplierKt.singleton().get();
             unlockedSetStat(
                     MUC_CLIENTS_CONFIGURED,
                     clientConnection.getMucClientManager().getClientCount());
