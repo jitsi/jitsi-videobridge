@@ -167,7 +167,7 @@ class Transceiver(
         rtpSender.processPacket(packetInfo)
     }
 
-    fun sendProbing(mediaSsrc: Long, numBytes: Int): Int = rtpSender.sendProbing(mediaSsrc, numBytes)
+    fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int = rtpSender.sendProbing(mediaSsrcs, numBytes)
 
     /**
      * Set a handler to be invoked when incoming RTP packets have finished
