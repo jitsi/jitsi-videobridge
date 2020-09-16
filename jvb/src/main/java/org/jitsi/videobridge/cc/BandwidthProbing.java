@@ -54,13 +54,6 @@ import java.util.*;
       */
      public boolean enabled = false;
 
-     /**
-      * The number of bytes left over from one run of probing to the next.  The
-      * primary use case for this is when the number of bytes we want to send is
-      * less than the size of an RTP header extension.
-      */
-     long bytesLeftOver = 0;
-
      private Long latestBwe = -1L;
 
      private DiagnosticContext diagnosticContext;
@@ -123,8 +116,7 @@ import java.util.*;
          long totalNeededBps = bitrateControllerStatus.currentIdealBps - bitrateControllerStatus.currentTargetBps;
          if (totalNeededBps < 1)
          {
-             // Don't need to send any probing.
-             bytesLeftOver = 0;
+             // Not much.
              return;
          }
 
@@ -159,15 +151,12 @@ import java.util.*;
          if (paddingBps < 1)
          {
              // Not much.
-             bytesLeftOver = 0;
              return;
          }
 
-         long bytes = (config.getPaddingPeriodMs() * paddingBps / 1000 / 8) + bytesLeftOver;
+         int bytes = (int) (config.getPaddingPeriodMs() * paddingBps / 1000 / 8);
 
-         long bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, bytes);
-
-         bytesLeftOver = Math.min(bytes - bytesSent, 0);
+         int bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, bytes);
      }
 
      @Override
@@ -200,6 +189,6 @@ import java.util.*;
           * @param numBytes the number of probing bytes we want to send
           * @return the number of bytes of probing data actually sent
           */
-         int sendProbing(Collection<Long> mediaSsrcs, long numBytes);
+         int sendProbing(Collection<Long> mediaSsrcs, int numBytes);
      }
  }
