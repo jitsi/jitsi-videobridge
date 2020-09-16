@@ -21,7 +21,11 @@ import org.jitsi.videobridge.octo.config.OctoConfig
 class OctoRelayServiceProvider {
     private val octoRelayService: OctoRelayService? by lazy {
         if (OctoConfig.config.enabled) {
-            OctoRelayService()
+            try {
+                OctoRelayService()
+            } catch (t: Throwable) {
+                null
+            }
         } else {
             null
         }
