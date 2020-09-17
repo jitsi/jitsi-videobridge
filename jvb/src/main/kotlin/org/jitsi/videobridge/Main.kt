@@ -34,6 +34,12 @@ import org.jitsi.videobridge.stats.VideobridgeStatistics
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
 import kotlin.concurrent.thread
+import org.jitsi.videobridge.octo.singleton as octoRelayService
+import org.jitsi.videobridge.xmpp.singleton as clientConnection
+import org.jitsi.videobridge.stats.singleton as statsMgr
+import org.jitsi.videobridge.health.singleton as healthCheck
+import org.jitsi.videobridge.shutdown.singleton as shutdownService
+import org.jitsi.videobridge.singleton as videobridge
 
 fun main(args: Array<String>) {
     val cmdLine = CmdLine().apply { parse(args) }
@@ -65,13 +71,12 @@ fun main(args: Array<String>) {
 
     startIce4j()
 
-    val octoRelayService = org.jitsi.videobridge.octo.singleton().get()?.apply { start() }
-    val clientConnection = org.jitsi.videobridge.xmpp.singleton().get().apply { start() }
-    val statsMgr = org.jitsi.videobridge.stats.singleton().get()?.apply {
+    val octoRelayService = octoRelayService().get()?.apply { start() }
+    val clientConnection = clientConnection().get().apply { start() }
+    val statsMgr = statsMgr().get()?.apply {
         addStatistics(
             VideobridgeStatistics(
-                // The Videobridge singleton
-                singleton().get(),
+                videobridge().get(),
                 octoRelayService,
                 clientConnection
             ),
@@ -82,7 +87,7 @@ fun main(args: Array<String>) {
         }
         start()
     }
-    org.jitsi.videobridge.health.singleton().get().start()
+    healthCheck().get().start()
 
     val publicHttpServer = setupPublicHttpServer()?.apply {
         logger.info("Starting public http server")
@@ -100,7 +105,8 @@ fun main(args: Array<String>) {
         null
     }
 
-    org.jitsi.videobridge.shutdown.singleton().get().waitForShutdown()
+    // Block here until the bridge shuts down
+    shutdownService().get().waitForShutdown()
 
     logger.info("Bridge shutting down")
     octoRelayService?.stop()
@@ -113,11 +119,8 @@ fun main(args: Array<String>) {
     } catch (t: Throwable) {
         logger.error("Error shutting down http servers", t)
     }
-    org.jitsi.videobridge.health.singleton().get().stop()
-
-    // The Videobridge singleton
-    singleton().get().stop()
-
+    healthCheck().get().stop()
+    videobridge().get().stop()
     stopIce4j()
 
     TaskPools.SCHEDULED_POOL.shutdownNow()
