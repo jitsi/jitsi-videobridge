@@ -54,6 +54,14 @@ import java.util.*;
       */
      public boolean enabled = false;
 
+     /**
+      * The number of bytes left over from one run of probing to the next.  This
+      * avoids accumulated rounding errors causing us to under-shoot the probing
+      * bandwidth, and also handles the use when the number of bytes we want to
+      * send is less than the size of an RTP header.
+      */
+     double bytesLeftOver = 0;
+
      private Long latestBwe = -1L;
 
      private DiagnosticContext diagnosticContext;
@@ -116,7 +124,8 @@ import java.util.*;
          long totalNeededBps = bitrateControllerStatus.currentIdealBps - bitrateControllerStatus.currentTargetBps;
          if (totalNeededBps < 1)
          {
-             // Not much.
+             // Don't need to send any probing.
+             bytesLeftOver = 0;
              return;
          }
 
@@ -138,6 +147,9 @@ import java.util.*;
 
          DiagnosticContext.TimeSeriesPoint timeSeriesPoint = null;
 
+         double newBytesNeeded = (config.getPaddingPeriodMs() * paddingBps / 1000.0 / 8.0);
+         double bytesNeeded = newBytesNeeded + bytesLeftOver;
+
          if (timeSeriesLogger.isTraceEnabled() && diagnosticContext != null)
          {
              timeSeriesPoint = diagnosticContext
@@ -147,20 +159,26 @@ import java.util.*;
                      .addField("total_target_bps", bitrateControllerStatus.currentTargetBps)
                      .addField("needed_bps", totalNeededBps)
                      .addField("max_padding_bps", maxPaddingBps)
-                     .addField("bwe_bps", latestBweCopy);
+                     .addField("bwe_bps", latestBweCopy)
+                     .addField("bytes_needed", bytesNeeded)
+                     .addField("prev_bytes_left_over", bytesLeftOver);
          }
 
-         if (paddingBps >= 1)
+         if (bytesNeeded >= 1)
          {
-             int bytes = (int) (config.getPaddingPeriodMs() * paddingBps / 1000 / 8);
+             int bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, (int)bytesNeeded);
 
-             int bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, bytes);
+             bytesLeftOver = Math.max(bytesNeeded - bytesSent, 0);
 
              if (timeSeriesPoint != null)
              {
-                 timeSeriesPoint.addField("bytesRequested", bytes)
-                     .addField("bytesSent", bytesSent);
+                 timeSeriesPoint.addField("bytes_sent", bytesSent)
+                    .addField("new_bytes_left_over", bytesLeftOver);
              }
+         }
+         else
+         {
+             bytesLeftOver = Math.max(bytesNeeded, 0);
          }
 
          if (timeSeriesLogger.isTraceEnabled() && timeSeriesPoint != null)
