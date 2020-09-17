@@ -150,15 +150,15 @@ import java.util.*;
                      .addField("bwe_bps", latestBweCopy);
          }
 
-         if (paddingBps >= 1)
-         {
-             int bytes = (int) (config.getPaddingPeriodMs() * paddingBps / 1000 / 8);
+         int bytesNeeded = (int) (config.getPaddingPeriodMs() * paddingBps / 1000 / 8);
 
-             int bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, bytes);
+         if (bytesNeeded > 0)
+         {
+             int bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, bytesNeeded);
 
              if (timeSeriesPoint != null)
              {
-                 timeSeriesPoint.addField("bytesRequested", bytes)
+                 timeSeriesPoint.addField("bytesNeeded", bytesNeeded)
                      .addField("bytesSent", bytesSent);
              }
          }
