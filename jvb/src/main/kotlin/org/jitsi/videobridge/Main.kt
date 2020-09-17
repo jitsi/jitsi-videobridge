@@ -111,7 +111,7 @@ fun main(args: Array<String>) {
         publicHttpServer?.stop()
         privateHttpServer?.stop()
     } catch (t: Throwable) {
-        t.printStackTrace()
+        logger.error("Error shutting down http servers", t)
     }
     org.jitsi.videobridge.health.singleton().get().stop()
 
@@ -160,14 +160,12 @@ private fun setupPrivateHttpServer(): Server? {
     if (privateServerConfig.port == -1 && privateServerConfig.tlsPort == -1) {
         return null
     }
-    val privateServer = createServer(privateServerConfig)
-
-    privateServer.servletContextHandler.addServlet(
-        ServletHolder(ServletContainer(Application())),
-        "/*"
-    )
-
-    return privateServer
+    return createServer(privateServerConfig).apply {
+        servletContextHandler.addServlet(
+            ServletHolder(ServletContainer(Application())),
+            "/*"
+        )
+    }
 }
 
 private fun setSystemPropertyDefaults() {
