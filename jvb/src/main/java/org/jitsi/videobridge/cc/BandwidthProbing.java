@@ -54,6 +54,14 @@ import java.util.*;
       */
      public boolean enabled = false;
 
+     /**
+      * The number of bytes left over from one run of probing to the next.  This
+      * avoids accumulated rounding errors causing us to under-shoot the probing
+      * bandwidth, and also handles the use when the number of bytes we want to
+      * send is less than the size of an RTP header.
+      */
+     double bytesLeftOver = 0;
+
      private Long latestBwe = -1L;
 
      private DiagnosticContext diagnosticContext;
@@ -116,7 +124,8 @@ import java.util.*;
          long totalNeededBps = bitrateControllerStatus.currentIdealBps - bitrateControllerStatus.currentTargetBps;
          if (totalNeededBps < 1)
          {
-             // Not much.
+             // Don't need to send any probing.
+             bytesLeftOver = 0;
              return;
          }
 
@@ -147,20 +156,27 @@ import java.util.*;
                      .addField("total_target_bps", bitrateControllerStatus.currentTargetBps)
                      .addField("needed_bps", totalNeededBps)
                      .addField("max_padding_bps", maxPaddingBps)
-                     .addField("bwe_bps", latestBweCopy);
+                     .addField("bwe_bps", latestBweCopy)
+                     .addField("bytes_left_over", bytesLeftOver);
          }
 
-         int bytesNeeded = (int) (config.getPaddingPeriodMs() * paddingBps / 1000 / 8);
+         double bytesNeeded = (config.getPaddingPeriodMs() * paddingBps / 1000.0 / 8.0) + bytesLeftOver;
 
-         if (bytesNeeded > 0)
+         if (bytesNeeded >= 1)
          {
-             int bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, bytesNeeded);
+             int bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, (int)bytesNeeded);
+
+             bytesLeftOver = Math.min(bytesNeeded - bytesSent, 0);
 
              if (timeSeriesPoint != null)
              {
                  timeSeriesPoint.addField("bytes_needed", bytesNeeded)
                      .addField("bytes_sent", bytesSent);
              }
+         }
+         else
+         {
+             bytesLeftOver = bytesNeeded;
          }
 
          if (timeSeriesLogger.isTraceEnabled() && timeSeriesPoint != null)
