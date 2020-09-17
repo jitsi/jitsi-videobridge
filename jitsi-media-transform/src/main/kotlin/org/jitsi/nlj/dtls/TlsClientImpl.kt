@@ -26,7 +26,6 @@ import org.bouncycastle.tls.ExporterLabel
 import org.bouncycastle.tls.ExtensionType
 import org.bouncycastle.tls.HashAlgorithm
 import org.bouncycastle.tls.ProtocolVersion
-import org.bouncycastle.tls.SRTPProtectionProfile
 import org.bouncycastle.tls.SignatureAlgorithm
 import org.bouncycastle.tls.SignatureAndHashAlgorithm
 import org.bouncycastle.tls.TlsAuthentication
@@ -39,6 +38,7 @@ import org.bouncycastle.tls.UseSRTPData
 import org.bouncycastle.tls.crypto.TlsCryptoParameters
 import org.bouncycastle.tls.crypto.impl.bc.BcDefaultTlsCredentialedSigner
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto
+import org.jitsi.nlj.srtp.SrtpConfig
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.cinfo
@@ -68,11 +68,6 @@ class TlsClientImpl(
      * Only set after a handshake has completed
      */
     lateinit var srtpKeyingMaterial: ByteArray
-
-    private val srtpProtectionProfiles = intArrayOf(
-        SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_80,
-        SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_32
-    )
 
     var chosenSrtpProtectionProfile: Int = 0
 
@@ -109,7 +104,7 @@ class TlsClientImpl(
 
             TlsSRTPUtils.addUseSRTPExtension(
                 clientExtensions,
-                UseSRTPData(srtpProtectionProfiles, TlsUtils.EMPTY_BYTES)
+                UseSRTPData(SrtpConfig.protectionProfiles.toIntArray(), TlsUtils.EMPTY_BYTES)
             )
         }
         clientExtensions.put(ExtensionType.renegotiation_info, byteArrayOf(0))
@@ -121,7 +116,8 @@ class TlsClientImpl(
         // TODO: a few cases we should be throwing alerts for in here.  see old TlsClientImpl
         val useSRTPData = TlsSRTPUtils.getUseSRTPExtension(serverExtensions)
         val protectionProfiles = useSRTPData.protectionProfiles
-        chosenSrtpProtectionProfile = DtlsUtils.chooseSrtpProtectionProfile(srtpProtectionProfiles, protectionProfiles)
+        chosenSrtpProtectionProfile =
+            DtlsUtils.chooseSrtpProtectionProfile(SrtpConfig.protectionProfiles, protectionProfiles.asIterable())
     }
 
     override fun getCipherSuites(): IntArray {
