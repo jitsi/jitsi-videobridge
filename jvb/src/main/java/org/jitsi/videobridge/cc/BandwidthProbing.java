@@ -158,8 +158,8 @@ import java.util.*;
 
              if (timeSeriesPoint != null)
              {
-                 timeSeriesPoint.addField("bytesNeeded", bytesNeeded)
-                     .addField("bytesSent", bytesSent);
+                 timeSeriesPoint.addField("bytes_needed", bytesNeeded)
+                     .addField("bytes_sent", bytesSent);
              }
          }
 
