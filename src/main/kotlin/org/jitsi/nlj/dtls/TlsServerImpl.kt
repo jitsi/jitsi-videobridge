@@ -28,7 +28,6 @@ import org.bouncycastle.tls.DefaultTlsServer
 import org.bouncycastle.tls.ExporterLabel
 import org.bouncycastle.tls.HashAlgorithm
 import org.bouncycastle.tls.ProtocolVersion
-import org.bouncycastle.tls.SRTPProtectionProfile
 import org.bouncycastle.tls.SignatureAlgorithm
 import org.bouncycastle.tls.SignatureAndHashAlgorithm
 import org.bouncycastle.tls.TlsCredentialedDecryptor
@@ -41,6 +40,7 @@ import org.bouncycastle.tls.crypto.TlsCryptoParameters
 import org.bouncycastle.tls.crypto.impl.bc.BcDefaultTlsCredentialedDecryptor
 import org.bouncycastle.tls.crypto.impl.bc.BcDefaultTlsCredentialedSigner
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto
+import org.jitsi.nlj.srtp.SrtpConfig
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.utils.logging2.cinfo
 import org.jitsi.utils.logging2.createChildLogger
@@ -65,13 +65,6 @@ class TlsServerImpl(
      */
     lateinit var srtpKeyingMaterial: ByteArray
 
-    // TODO: leave all these...choose which one to respond with
-    // based on the client usesrtp extension
-    private val srtpProtectionProfiles = intArrayOf(
-        SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_80
-//        SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_32
-    )
-
     var chosenSrtpProtectionProfile: Int = 0
 
     override fun getSessionToResume(sessionID: ByteArray?): TlsSession? {
@@ -87,7 +80,7 @@ class TlsServerImpl(
             if (TlsSRTPUtils.getUseSRTPExtension(it) == null) {
                 TlsSRTPUtils.addUseSRTPExtension(
                     it,
-                    UseSRTPData(srtpProtectionProfiles, TlsUtils.EMPTY_BYTES)
+                    UseSRTPData(intArrayOf(chosenSrtpProtectionProfile), TlsUtils.EMPTY_BYTES)
                 )
             }
         }
@@ -97,7 +90,8 @@ class TlsServerImpl(
         super.processClientExtensions(clientExtensions)
         val useSRTPData = TlsSRTPUtils.getUseSRTPExtension(clientExtensions)
         val protectionProfiles = useSRTPData.protectionProfiles
-        chosenSrtpProtectionProfile = DtlsUtils.chooseSrtpProtectionProfile(srtpProtectionProfiles, protectionProfiles)
+        chosenSrtpProtectionProfile =
+            DtlsUtils.chooseSrtpProtectionProfile(SrtpConfig.protectionProfiles, protectionProfiles.asIterable())
     }
 
     override fun getCipherSuites(): IntArray {

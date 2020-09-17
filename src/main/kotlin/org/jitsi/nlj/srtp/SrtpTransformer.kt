@@ -47,7 +47,6 @@ abstract class AbstractSrtpTransformer<CryptoContextType : BaseSrtpCryptoContext
     fun close() {
         synchronized(contexts) {
             contextFactory.close()
-            contexts.values.forEach { it.close() }
         }
     }
 
