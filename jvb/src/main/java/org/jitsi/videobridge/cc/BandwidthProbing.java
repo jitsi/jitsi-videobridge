@@ -136,42 +136,36 @@ import java.util.*;
          long maxPaddingBps = latestBweCopy - bitrateControllerStatus.currentTargetBps;
          long paddingBps = Math.min(totalNeededBps, maxPaddingBps);
 
+         DiagnosticContext.TimeSeriesPoint timeSeriesPoint = null;
+
          if (timeSeriesLogger.isTraceEnabled() && diagnosticContext != null)
          {
-             timeSeriesLogger.trace(diagnosticContext
+             timeSeriesPoint = diagnosticContext
                      .makeTimeSeriesPoint("sent_padding")
                      .addField("padding_bps", paddingBps)
                      .addField("total_ideal_bps", bitrateControllerStatus.currentIdealBps)
                      .addField("total_target_bps", bitrateControllerStatus.currentTargetBps)
                      .addField("needed_bps", totalNeededBps)
                      .addField("max_padding_bps", maxPaddingBps)
-                     .addField("bwe_bps", latestBweCopy));
+                     .addField("bwe_bps", latestBweCopy);
          }
 
-         if (paddingBps < 1)
+         if (paddingBps >= 1)
          {
-             // Not much.
-             return;
-         }
+             int bytes = (int) (config.getPaddingPeriodMs() * paddingBps / 1000 / 8);
 
+             int bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, bytes);
 
-         // XXX a signed int is practically sufficient, as it can represent up to
-         // ~ 2GB
-         int bytes = (int) (config.getPaddingPeriodMs() * paddingBps / 1000 / 8);
-
-         if (!bitrateControllerStatus.activeSsrcs.isEmpty())
-         {
-             // stream protection with padding.
-             for (Long ssrc : bitrateControllerStatus.activeSsrcs)
+             if (timeSeriesPoint != null)
              {
-                 long bytesSent = probingDataSender.sendProbing(ssrc, bytes);
-                 bytes -= bytesSent;
-                 if (bytes < 1)
-                 {
-                     // We're done.
-                     return;
-                 }
+                 timeSeriesPoint.addField("bytesRequested", bytes)
+                     .addField("bytesSent", bytesSent);
              }
+         }
+
+         if (timeSeriesLogger.isTraceEnabled() && timeSeriesPoint != null)
+         {
+             timeSeriesLogger.trace(timeSeriesPoint);
          }
      }
 
@@ -200,11 +194,11 @@ import java.util.*;
      public interface ProbingDataSender
      {
          /**
-          * Sends a specific number of bytes with a specific SSRC.
-          * @param mediaSsrc the SSRC
+          * Sends a specific number of bytes with a specific set of SSRCs.
+          * @param mediaSsrcs the SSRCs
           * @param numBytes the number of probing bytes we want to send
           * @return the number of bytes of probing data actually sent
           */
-         int sendProbing(long mediaSsrc, int numBytes);
+         int sendProbing(Collection<Long> mediaSsrcs, int numBytes);
      }
  }
