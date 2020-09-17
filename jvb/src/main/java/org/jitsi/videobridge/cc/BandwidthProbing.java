@@ -147,6 +147,9 @@ import java.util.*;
 
          DiagnosticContext.TimeSeriesPoint timeSeriesPoint = null;
 
+         double newBytesNeeded = (config.getPaddingPeriodMs() * paddingBps / 1000.0 / 8.0);
+         double bytesNeeded = newBytesNeeded + bytesLeftOver;
+
          if (timeSeriesLogger.isTraceEnabled() && diagnosticContext != null)
          {
              timeSeriesPoint = diagnosticContext
@@ -157,10 +160,9 @@ import java.util.*;
                      .addField("needed_bps", totalNeededBps)
                      .addField("max_padding_bps", maxPaddingBps)
                      .addField("bwe_bps", latestBweCopy)
-                     .addField("bytes_left_over", bytesLeftOver);
+                     .addField("bytes_needed", bytesNeeded)
+                     .addField("prev_bytes_left_over", bytesLeftOver);
          }
-
-         double bytesNeeded = (config.getPaddingPeriodMs() * paddingBps / 1000.0 / 8.0) + bytesLeftOver;
 
          if (bytesNeeded >= 1)
          {
@@ -170,8 +172,8 @@ import java.util.*;
 
              if (timeSeriesPoint != null)
              {
-                 timeSeriesPoint.addField("bytes_needed", bytesNeeded)
-                     .addField("bytes_sent", bytesSent);
+                 timeSeriesPoint.addField("bytes_sent", bytesSent)
+                    .addField("new_bytes_left_over", bytesLeftOver);
              }
          }
          else
