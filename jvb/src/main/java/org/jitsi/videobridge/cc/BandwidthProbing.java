@@ -166,7 +166,7 @@ import java.util.*;
          {
              int bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, (int)bytesNeeded);
 
-             bytesLeftOver = Math.min(bytesNeeded - bytesSent, 0);
+             bytesLeftOver = Math.max(bytesNeeded - bytesSent, 0);
 
              if (timeSeriesPoint != null)
              {
@@ -176,7 +176,7 @@ import java.util.*;
          }
          else
          {
-             bytesLeftOver = bytesNeeded;
+             bytesLeftOver = Math.max(bytesNeeded, 0);
          }
 
          if (timeSeriesLogger.isTraceEnabled() && timeSeriesPoint != null)
