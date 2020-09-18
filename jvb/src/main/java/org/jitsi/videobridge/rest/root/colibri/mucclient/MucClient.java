@@ -35,7 +35,7 @@ import javax.ws.rs.core.*;
 public class MucClient
 {
     @Inject
-    protected ClientConnectionImplSupplier clientConnectionImplSupplier;
+    protected ClientConnectionSupplier clientConnectionSupplier;
 
     @Path("/add")
     @POST
@@ -51,7 +51,7 @@ public class MucClient
         {
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
         }
-        ClientConnectionImpl clientConnection = clientConnectionImplSupplier.get();
+        ClientConnection clientConnection = clientConnectionSupplier.get();
         if (clientConnection.addMucClient((JSONObject)o))
         {
             return Response.ok().build();
@@ -69,7 +69,7 @@ public class MucClient
         {
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
         }
-        ClientConnectionImpl clientConnection = clientConnectionImplSupplier.get();
+        ClientConnection clientConnection = clientConnectionSupplier.get();
         if (clientConnection.removeMucClient((JSONObject)o))
         {
             return Response.ok().build();

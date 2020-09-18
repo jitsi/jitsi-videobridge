@@ -37,11 +37,11 @@ public class MucStatsTransport
         = new LoggerImpl(MucStatsTransport.class.getName());
 
     /**
-     * Gets the {@link ClientConnectionImpl} to be used to publish
+     * Gets the {@link ClientConnection} to be used to publish
      * statistics.
-     * @return the {@link ClientConnectionImpl} or {@code null}.
+     * @return the {@link ClientConnection} or {@code null}.
      */
-    private ClientConnectionImpl getUserConnectionBundleActivator()
+    private ClientConnection getUserConnectionBundleActivator()
     {
         return ClientConnectionSupplierKt.singleton().get();
     }
@@ -52,9 +52,8 @@ public class MucStatsTransport
     @Override
     public void publishStatistics(Statistics stats)
     {
-        ClientConnectionImpl clientConnectionImpl
-            = getUserConnectionBundleActivator();
-        if (clientConnectionImpl != null)
+        ClientConnection clientConnection = getUserConnectionBundleActivator();
+        if (clientConnection != null)
         {
             logger.debug(() -> "Publishing statistics through MUC: " + stats);
 
@@ -68,12 +67,12 @@ public class MucStatsTransport
 //                );
             }
 
-            clientConnectionImpl.setPresenceExtension(statsExt);
+            clientConnection.setPresenceExtension(statsExt);
         }
         else
         {
             logger.warn(
-                "Can not publish via presence, no ClientConnectionImpl.");
+                "Can not publish via presence, no ClientConnection.");
         }
     }
 }
