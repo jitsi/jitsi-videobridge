@@ -24,5 +24,5 @@ Or you can clone the Git repo and run the JVB from source using maven.
 ```sh
 JVB_HOME="The path to your JVB clone."
 
-mvn compile exec:exec -Dexec.executable=java -Dexec.args="-cp %classpath org.jitsi.videobridge.Main -Djava.library.path=$JVB_HOME/lib/native/linux-64 -Djava.util.logging.config.file=$JVB_HOME/lib/logging.properties -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=.jitsi-videobridge "
+mvn compile exec:exec -Dexec.executable=java -Dexec.args="-cp %classpath org.jitsi.videobridge.MainKt -Djava.library.path=$JVB_HOME/lib/native/linux-64 -Djava.util.logging.config.file=$JVB_HOME/lib/logging.properties -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=.jitsi-videobridge "
 ```
