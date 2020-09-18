@@ -25,6 +25,7 @@ import org.jitsi.metaconfig.config
 import org.jitsi.videobridge.stats.CallStatsIOTransport
 import org.jitsi.videobridge.stats.MucStatsTransport
 import org.jitsi.videobridge.stats.StatsTransport
+import org.jitsi.videobridge.xmpp.ClientConnection
 import java.time.Duration
 
 class StatsManagerBundleActivatorConfig {
@@ -117,13 +118,11 @@ class StatsManagerBundleActivatorConfig {
 sealed class StatsTransportConfig(
     val interval: Duration
 ) {
-    abstract fun toStatsTransport(): StatsTransport?
-
     class MucStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval) {
-        override fun toStatsTransport(): StatsTransport = MucStatsTransport()
+        fun toStatsTransport(clientConnection: ClientConnection): StatsTransport = MucStatsTransport(clientConnection)
     }
 
     class CallStatsIoStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval) {
-        override fun toStatsTransport(): StatsTransport = CallStatsIOTransport()
+        fun toStatsTransport(): StatsTransport = CallStatsIOTransport()
     }
 }

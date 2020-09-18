@@ -33,8 +33,14 @@ public class MucStatsTransport
      * The <tt>Logger</tt> used by the <tt>MucStatsTransport</tt> class and
      * its instances to print debug information.
      */
-    private static final Logger logger
-        = new LoggerImpl(MucStatsTransport.class.getName());
+    private static final Logger logger = new LoggerImpl(MucStatsTransport.class.getName());
+
+    private final ClientConnection clientConnection;
+
+    public MucStatsTransport(ClientConnection clientConnection)
+    {
+        this.clientConnection = clientConnection;
+    }
 
     /**
      * {@inheritDoc}
@@ -42,7 +48,6 @@ public class MucStatsTransport
     @Override
     public void publishStatistics(Statistics stats)
     {
-        ClientConnection clientConnection = ClientConnectionSupplierKt.singleton().get();
         logger.debug(() -> "Publishing statistics through MUC: " + stats);
 
         ColibriStatsExtension statsExt = Statistics.toXmppExtensionElement(stats);

@@ -31,6 +31,7 @@ import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.rest.root.Application
 import org.jitsi.videobridge.stats.StatsManager
 import org.jitsi.videobridge.stats.VideobridgeStatistics
+import org.jitsi.videobridge.stats.config.StatsTransportConfig
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
 import kotlin.concurrent.thread
@@ -83,7 +84,17 @@ fun main(args: Array<String>) {
             StatsManager.config.interval.toMillis()
         )
         StatsManager.config.transportConfigs.forEach { transportConfig ->
-            addTransport(transportConfig.toStatsTransport(), transportConfig.interval.toMillis())
+            when (transportConfig) {
+                is StatsTransportConfig.MucStatsTransportConfig -> {
+                    addTransport(
+                        transportConfig.toStatsTransport(clientConnection),
+                        transportConfig.interval.toMillis()
+                    )
+                }
+                is StatsTransportConfig.CallStatsIoStatsTransportConfig -> {
+                    addTransport(transportConfig.toStatsTransport(), transportConfig.interval.toMillis())
+                }
+            }
         }
         start()
     }
