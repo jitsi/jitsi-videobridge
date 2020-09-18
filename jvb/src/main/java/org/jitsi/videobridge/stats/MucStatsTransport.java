@@ -37,43 +37,25 @@ public class MucStatsTransport
         = new LoggerImpl(MucStatsTransport.class.getName());
 
     /**
-     * Gets the {@link ClientConnection} to be used to publish
-     * statistics.
-     * @return the {@link ClientConnection} or {@code null}.
-     */
-    private ClientConnection getUserConnectionBundleActivator()
-    {
-        return ClientConnectionSupplierKt.singleton().get();
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
     public void publishStatistics(Statistics stats)
     {
-        ClientConnection clientConnection = getUserConnectionBundleActivator();
-        if (clientConnection != null)
+        ClientConnection clientConnection = ClientConnectionSupplierKt.singleton().get();
+        logger.debug(() -> "Publishing statistics through MUC: " + stats);
+
+        ColibriStatsExtension statsExt = Statistics.toXmppExtensionElement(stats);
+
+        if (JvbApiConfig.enabled())
         {
-            logger.debug(() -> "Publishing statistics through MUC: " + stats);
-
-            ColibriStatsExtension statsExt = Statistics.toXmppExtensionElement(stats);
-
-            if (JvbApiConfig.enabled())
-            {
 //                statsExt.addStat(
 //                    "jvb-api-version",
 //                    SupportedApiVersionsKt.toPresenceString(ApplicationKt.SUPPORTED_API_VERSIONS)
 //                );
-            }
+        }
 
-            clientConnection.setPresenceExtension(statsExt);
-        }
-        else
-        {
-            logger.warn(
-                "Can not publish via presence, no ClientConnection.");
-        }
+        clientConnection.setPresenceExtension(statsExt);
     }
 }
 
