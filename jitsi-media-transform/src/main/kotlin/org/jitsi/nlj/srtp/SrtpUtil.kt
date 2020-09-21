@@ -18,6 +18,7 @@ package org.jitsi.nlj.srtp
 import org.bouncycastle.tls.SRTPProtectionProfile
 import org.jitsi.srtp.SrtpContextFactory
 import org.jitsi.srtp.SrtpPolicy
+import org.jitsi.srtp.crypto.Aes
 import org.jitsi.utils.logging2.Logger
 
 enum class TlsRole {
@@ -27,6 +28,10 @@ enum class TlsRole {
 
 class SrtpUtil {
     companion object {
+        init {
+            SrtpConfig.factoryClass?.let { Aes.setFactoryClassName(it) }
+        }
+
         fun getSrtpProtectionProfileFromName(profileName: String): Int {
             return when (profileName) {
                 "SRTP_AES128_CM_HMAC_SHA1_80" -> { SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_80 }

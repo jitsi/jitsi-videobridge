@@ -30,6 +30,8 @@
     <Bug pattern="SF_SWITCH_NO_DEFAULT"/>
     <!-- False positives with lazy vals -->
     <Bug pattern="NP_NULL_ON_SOME_PATH"/>
+    <!-- False positives with lazy vals -->
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
 
 
     <!-- False positives for an unknown reason -->
