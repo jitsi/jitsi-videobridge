@@ -117,10 +117,7 @@ public class VideobridgeStatistics
         unlockedSetStat(CONFERENCES, 0);
         unlockedSetStat(PARTICIPANTS, 0);
         unlockedSetStat(THREADS, 0);
-        unlockedSetStat(RTP_LOSS, 0d);
         unlockedSetStat(VIDEO_CHANNELS, 0);
-        unlockedSetStat(LOSS_RATE_DOWNLOAD, 0d);
-        unlockedSetStat(LOSS_RATE_UPLOAD, 0d);
         unlockedSetStat(JITTER_AGGREGATE, 0d);
         unlockedSetStat(RTT_AGGREGATE, 0d);
         unlockedSetStat(LARGEST_CONFERENCE, 0);
@@ -194,10 +191,6 @@ public class VideobridgeStatistics
         int octoConferences = 0;
         int endpoints = 0;
         int octoEndpoints = 0;
-        double fractionLostSum = 0d; // TODO verify
-        int fractionLostCount = 0;
-        long packetsReceived = 0;
-        long packetsReceivedLost = 0; // TODO verify
         double bitrateDownloadBps = 0;
         double bitrateUploadBps = 0;
         long packetRateUpload = 0;
@@ -287,18 +280,6 @@ public class VideobridgeStatistics
                 packetRateDownload += incomingPacketStreamStats.getPacketRate();
                 for (IncomingSsrcStats.Snapshot ssrcStats : incomingStats.getSsrcStats().values())
                 {
-                    packetsReceived += ssrcStats.getNumReceivedPackets();
-
-                    packetsReceivedLost += ssrcStats.getCumulativePacketsLost();
-
-                    fractionLostCount++;
-                    // note(george) this computes the fraction of lost packets
-                    // since beginning of reception, which is different from the
-                    // rfc 3550 sense.
-                    double fractionLost = ssrcStats.getCumulativePacketsLost()
-                        / (double) ssrcStats.getNumReceivedPackets();
-                    fractionLostSum += fractionLost;
-
                     double ssrcJitter = ssrcStats.getJitter();
                     if (ssrcJitter != 0)
                     {
@@ -326,16 +307,6 @@ public class VideobridgeStatistics
             updateBuckets(videoSendersBuckets, conferenceVideoSenders);
             numVideoSenders += conferenceVideoSenders;
         }
-
-        // Loss rates
-        double lossRateDownload
-            = (packetsReceived + packetsReceivedLost > 0)
-            ? ((double) packetsReceivedLost) / (packetsReceived + packetsReceivedLost)
-            : 0d;
-        double lossRateUpload
-            = (fractionLostCount > 0)
-            ? fractionLostSum / fractionLostCount
-            : 0d;
 
         // JITTER_AGGREGATE
         double jitterAggregate
@@ -384,14 +355,6 @@ public class VideobridgeStatistics
                     (bitrateUploadBps + 500) / 1000 /* kbps */);
             unlockedSetStat(PACKET_RATE_DOWNLOAD, packetRateDownload);
             unlockedSetStat(PACKET_RATE_UPLOAD, packetRateUpload);
-            // Keep for backward compatibility
-            unlockedSetStat(
-                    RTP_LOSS,
-                    lossRateDownload + lossRateUpload);
-            // TODO verify
-            unlockedSetStat(LOSS_RATE_DOWNLOAD, lossRateDownload);
-            // TODO verify
-            unlockedSetStat(LOSS_RATE_UPLOAD, lossRateUpload);
             // TODO seems broken (I see values of > 11 seconds)
             unlockedSetStat(JITTER_AGGREGATE, jitterAggregate);
             unlockedSetStat(RTT_AGGREGATE, rttAggregate);
