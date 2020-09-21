@@ -17,6 +17,7 @@ package org.jitsi.nlj.srtp
 
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.optionalconfig
 import org.jitsi.nlj.srtp.SrtpUtil.Companion.getSrtpProtectionProfileFromName
 
 class SrtpConfig {
@@ -28,6 +29,10 @@ class SrtpConfig {
         val protectionProfiles: List<Int> by config {
             "jmt.srtp.protection-profiles".from(JitsiConfig.newConfig)
                 .convertFrom<List<String>> { list -> list.map { getSrtpProtectionProfileFromName(it) } }
+        }
+
+        val factoryClass: String? by optionalconfig {
+            "jmt.srtp.factory-class".from(JitsiConfig.newConfig)
         }
     }
 }
