@@ -549,7 +549,7 @@ public class BitrateController
             }
 
             long targetBps
-                    = (long) incomingSource.getBitrateBps(nowMs, adaptiveSourceProjection.getTargetIndex()).getBps();
+                    = (long) incomingSource.getBitrate(nowMs, adaptiveSourceProjection.getTargetIndex()).getBps();
             if (targetBps > 0)
             {
                 long ssrc = adaptiveSourceProjection.getTargetSsrc();
@@ -565,7 +565,7 @@ public class BitrateController
             // we compute the ideal bitrate bellow in
             // {@link SourceBitrateAllocation#idealBitrate} and the logic should
             // be extracted in a utility method somehow.
-            totalIdealBps += incomingSource.getBitrateBps(nowMs, adaptiveSourceProjection.getIdealIndex()).getBps();
+            totalIdealBps += incomingSource.getBitrate(nowMs, adaptiveSourceProjection.getIdealIndex()).getBps();
         }
         return new StatusSnapshot(totalTargetBps, totalIdealBps, activeSsrcs);
     }
@@ -1381,7 +1381,7 @@ public class BitrateController
                     || (lessThanOrEqualIdealResolution && atLeastPreferredFps))
                     || ratesList.isEmpty())
                 {
-                    long layerBitrateBps = (long) layer.getBitrateBps(nowMs).getBps();
+                    long layerBitrateBps = (long) layer.getBitrate(nowMs).getBps();
                     if (layerBitrateBps > 0)
                     {
                         idealBps = layerBitrateBps;
