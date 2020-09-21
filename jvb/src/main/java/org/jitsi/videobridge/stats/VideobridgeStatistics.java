@@ -59,11 +59,8 @@ public class VideobridgeStatistics
     private static final String region = OctoConfig.config.getRegion();
 
 
-    public static final String EPS_NO_MSG_TRANSPORT_AFTER_DELAY =
-        "num_eps_no_msg_transport_after_delay";
-
-    public static final String TOTAL_ICE_SUCCEEDED_RELAYED =
-        "total_ice_succeeded_relayed";
+    public static final String EPS_NO_MSG_TRANSPORT_AFTER_DELAY = "num_eps_no_msg_transport_after_delay";
+    public static final String TOTAL_ICE_SUCCEEDED_RELAYED = "total_ice_succeeded_relayed";
 
     /**
      * Number of configured MUC clients.
@@ -283,16 +280,12 @@ public class VideobridgeStatistics
                 {
                     receiveOnlyEndpoints++;
                 }
-                TransceiverStats transceiverStats
-                        = endpoint.getTransceiver().getTransceiverStats();
-                IncomingStatisticsSnapshot incomingStats
-                        = transceiverStats.getIncomingStats();
-                PacketStreamStats.Snapshot incomingPacketStreamStats
-                        = transceiverStats.getIncomingPacketStreamStats();
+                TransceiverStats transceiverStats = endpoint.getTransceiver().getTransceiverStats();
+                IncomingStatisticsSnapshot incomingStats = transceiverStats.getIncomingStats();
+                PacketStreamStats.Snapshot incomingPacketStreamStats = transceiverStats.getIncomingPacketStreamStats();
                 bitrateDownloadBps += incomingPacketStreamStats.getBitrate().getBps();
                 packetRateDownload += incomingPacketStreamStats.getPacketRate();
-                for (IncomingSsrcStats.Snapshot ssrcStats
-                        : incomingStats.getSsrcStats().values())
+                for (IncomingSsrcStats.Snapshot ssrcStats : incomingStats.getSsrcStats().values())
                 {
                     packetsReceived += ssrcStats.getNumReceivedPackets();
 
@@ -314,16 +307,13 @@ public class VideobridgeStatistics
                         jitterSumMs += Math.abs(ssrcJitter);
                         jitterCount++;
                     }
-
                 }
 
-                PacketStreamStats.Snapshot outgoingStats
-                        = transceiverStats.getOutgoingPacketStreamStats();
+                PacketStreamStats.Snapshot outgoingStats = transceiverStats.getOutgoingPacketStreamStats();
                 bitrateUploadBps += outgoingStats.getBitrate().getBps();
                 packetRateUpload += outgoingStats.getPacketRate();
 
-                double endpointRtt
-                        = transceiverStats.getEndpointConnectionStats().getRtt();
+                double endpointRtt = transceiverStats.getEndpointConnectionStats().getRtt();
                 if (endpointRtt > 0)
                 {
                     rttSumMs += endpointRtt;
