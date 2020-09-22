@@ -196,6 +196,15 @@ public class VideobridgeStatistics
         long packetRateUpload = 0;
         long packetRateDownload = 0;
 
+        // Packets we received
+        long packetsReceivedReceived = 0;
+        // Packets we should have received but were lost
+        long packetsReceivedLost = 0;
+        // Packets we sent that were reported received
+        long packetsSentReceived = 0;
+        // Packets we sent that were reported lost
+        long packetsSentLost = 0;
+
         // Average jitter and RTT across MediaStreams which report a valid value.
         double jitterSumMs = 0; // TODO verify
         int jitterCount = 0;
@@ -294,12 +303,18 @@ public class VideobridgeStatistics
                 bitrateUploadBps += outgoingStats.getBitrate().getBps();
                 packetRateUpload += outgoingStats.getPacketRate();
 
-                double endpointRtt = transceiverStats.getEndpointConnectionStats().getRtt();
+                EndpointConnectionStats.Snapshot endpointConnectionStats = transceiverStats.getEndpointConnectionStats();
+                double endpointRtt = endpointConnectionStats.getRtt();
                 if (endpointRtt > 0)
                 {
                     rttSumMs += endpointRtt;
                     rttCount++;
                 }
+
+                packetsReceivedReceived += endpointConnectionStats.getReceiveLoss().getPacketsReceived();
+                packetsReceivedLost += endpointConnectionStats.getReceiveLoss().getPacketsLost();
+                packetsSentReceived += endpointConnectionStats.getSendLoss().getPacketsReceived();
+                packetsSentLost += endpointConnectionStats.getSendLoss().getPacketsLost();
             }
 
             updateBuckets(audioSendersBuckets, conferenceAudioSenders);
@@ -339,6 +354,18 @@ public class VideobridgeStatistics
         // THREADS
         int threadCount = ManagementFactory.getThreadMXBean().getThreadCount();
 
+        double receiveLoss = 0;
+        if (packetsReceivedReceived + packetsReceivedLost > 0)
+        {
+            receiveLoss = ((double) packetsReceivedLost) / (packetsReceivedReceived + packetsReceivedLost);
+        }
+
+        double sendLoss = 0;
+        if (packetsSentReceived + packetsSentLost > 0)
+        {
+            sendLoss = ((double) packetsSentLost) / (packetsSentReceived + packetsSentLost);
+        }
+
         // Now that (the new values of) the statistics have been calculated and
         // the risks of the current thread hanging have been reduced as much as
         // possible, commit (the new values of) the statistics.
@@ -347,6 +374,8 @@ public class VideobridgeStatistics
         lock.lock();
         try
         {
+            unlockedSetStat("receive_loss", receiveLoss);
+            unlockedSetStat("send_loss", sendLoss);
             unlockedSetStat(
                     BITRATE_DOWNLOAD,
                     (bitrateDownloadBps + 500) / 1000 /* kbps */);
