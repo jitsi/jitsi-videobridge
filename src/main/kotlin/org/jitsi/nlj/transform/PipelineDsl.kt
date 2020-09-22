@@ -47,7 +47,9 @@ class PipelineBuilder {
         tail = node
     }
 
-    fun node(node: Node) = addNode(node)
+    fun node(node: Node, condition: () -> Boolean = { true }) {
+        if (condition()) { addNode(node) }
+    }
 
     /**
      * simpleNode allows the caller to pass in a block of code which takes a list of input

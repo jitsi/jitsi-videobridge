@@ -35,6 +35,7 @@ import org.jitsi.nlj.transform.node.AudioRedHandler
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketCacher
+import org.jitsi.nlj.transform.node.PacketLossNode
 import org.jitsi.nlj.transform.node.PacketStreamStatsNode
 import org.jitsi.nlj.transform.node.SrtcpEncryptNode
 import org.jitsi.nlj.transform.node.SrtpEncryptNode
@@ -111,6 +112,13 @@ class RtpSenderImpl(
 
     private val nackHandler: NackHandler
 
+    /**
+     * The packet loss to introduce in the send pipeline (for debugging/testing purposes).
+     */
+    private val lossFractionToIntroduce: Double by config {
+        "jmt.debug.packet-loss.send".from(JitsiConfig.newConfig)
+    }
+
     private val outputPipelineTerminationNode = object : ConsumerNode("Output pipeline termination node") {
         override fun consume(packetInfo: PacketInfo) {
             // While there's no handler set we're effectively dropping packets, so their buffers
@@ -126,6 +134,10 @@ class RtpSenderImpl(
     init {
         logger.cdebug { "Sender $id using executor ${executor.hashCode()}" }
 
+        if (lossFractionToIntroduce > 0) {
+            logger.warn("Will simulate ${lossFractionToIntroduce * 100}% packet loss.")
+        }
+
         incomingPacketQueue.setErrorHandler(queueErrorCounter)
 
         outgoingRtpRoot = pipeline {
@@ -137,6 +149,7 @@ class RtpSenderImpl(
             node(toggleablePcapWriter.newObserverNode())
             node(srtpEncryptWrapper)
             node(packetStreamStats.createNewNode())
+            node(PacketLossNode(lossFractionToIntroduce), condition = { lossFractionToIntroduce > 0 })
             node(outputPipelineTerminationNode)
         }
 
@@ -169,6 +182,7 @@ class RtpSenderImpl(
             node(toggleablePcapWriter.newObserverNode())
             node(srtcpEncryptWrapper)
             node(packetStreamStats.createNewNode())
+            node(PacketLossNode(lossFractionToIntroduce), condition = { lossFractionToIntroduce > 0 })
             node(outputPipelineTerminationNode)
         }
 
