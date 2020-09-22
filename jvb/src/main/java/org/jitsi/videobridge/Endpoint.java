@@ -63,6 +63,7 @@ import java.util.function.Function;
 import java.util.function.*;
 import java.util.stream.*;
 
+
 /**
  * Represents an endpoint of a participant in a <tt>Conference</tt>.
  *
@@ -75,6 +76,67 @@ public class Endpoint
     extends AbstractEndpoint implements PotentialPacketHandler,
         EncodingsManager.EncodingsUpdateListener
 {
+    //  hasevr
+    public Set<String> perceptibleEndpoints = ConcurrentHashMap.newKeySet();
+    public Set<Long> perceptibleAudioSSRCs = ConcurrentHashMap.newKeySet();
+    public Set<Long> perceptibleVideoSSRCs = ConcurrentHashMap.newKeySet();
+    //  update SSRCs from Endpoints
+    public void updatePerceptibleSSRCs(){
+        if (perceptibleEndpoints.isEmpty()){
+            for(AbstractEndpoint e : getConference().getEndpoints()){
+                if (! e.getID().equals(getID())){
+                    perceptibleEndpoints.add(e.getID());
+                }
+            }
+        }
+        String msg = "Perceptible end points:";
+        for(String id: perceptibleEndpoints){
+            msg += " " + id;
+        }
+        msg += "\n";
+        logger.info(msg);
+
+        perceptibleAudioSSRCs = ConcurrentHashMap.newKeySet();
+        perceptibleVideoSSRCs = ConcurrentHashMap.newKeySet();
+        for(String id : perceptibleEndpoints){
+            AbstractEndpoint srcEndpoint = getConference().getEndpoint(id);
+            if (srcEndpoint != null){
+                MediaSourceDesc[] descs = srcEndpoint.getMediaSources();
+                for(MediaSourceDesc desc : descs){
+                    logger.info("MediaSourceDesc:" + desc + "\n");
+                    perceptibleVideoSSRCs.add(desc.getPrimarySSRC());
+                }
+            }
+        }        
+
+        /*
+        for(ChannelShim channelShim: channelShims){
+            ColibriConferenceIQ.Channel commonIq = new ColibriConferenceIQ.Channel();
+            channelShim.describe(commonIq);
+            if (!perceptibleEndpoints.isEmpty() &&
+                !perceptibleEndpoints.contains(commonIq.getEndpoint())){
+                continue;
+            } 
+            int[] ssrcs = commonIq.getSSRCs();
+            if (MediaType.AUDIO.equals(channelShim.getMediaType())){
+                for(int ssrc: ssrcs) perceptibleAudioSSRCs.add(ssrc);
+            }else{
+                for(int ssrc: ssrcs) perceptibleVideoSSRCs.add(ssrc);
+            }
+        }
+        */
+        msg = "Perceptible Video ssrcs:";
+        for(long ssrc: perceptibleVideoSSRCs){
+            msg += " " + ssrc;
+        }
+        logger.info("\nPerceptible Audio ssrcs:");
+        for(long ssrc: perceptibleAudioSSRCs){
+            msg += " " + ssrc;
+        }
+        msg += "\n";
+        logger.info(msg);
+    }
+
     /**
      * Track how long it takes for all RTP and RTCP packets to make their way through the bridge.
      * Since {@link Endpoint} is the 'last place' that is aware of {@link PacketInfo} in the outgoing
@@ -511,12 +573,20 @@ public class Endpoint
 
         if (packet instanceof RtpPacket)
         {
+            //  hasevr
             if (packet instanceof VideoRtpPacket)
             {
+                VideoRtpPacket videoRtpPacket = packetInfo.packetAs();
+                long ssrc = videoRtpPacket.getSsrc();
+                logger.info("videoRtpPacket.getSsrc() = " + ssrc + "\n");
+//                return acceptVideo && perceptibleVideoSSRCs.contains(ssrc) && bitrateController.accept(packetInfo);
                 return acceptVideo && bitrateController.accept(packetInfo);
-            }
+}
             if (packet instanceof AudioRtpPacket)
             {
+                AudioRtpPacket audioRtpPacket = packetInfo.packetAs();
+                long ssrc = audioRtpPacket.getSsrc();
+//                return acceptAudio && perceptibleAudioSSRCs.contains(ssrc);
                 return acceptAudio;
             }
         }
@@ -1295,6 +1365,9 @@ public class Endpoint
      */
     public void updateAcceptedMediaTypes()
     {
+        //  hasevr
+        updatePerceptibleSSRCs();
+
         boolean acceptAudio = false;
         boolean acceptVideo = false;
         for (ChannelShim channelShim : channelShims)

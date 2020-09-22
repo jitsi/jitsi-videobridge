@@ -382,7 +382,15 @@ public class BitrateController
             }
         }
     }
-
+/*
+    //  hasevr 
+    public boolean acceptAudio(@NotNull AudioRtpPacket packetInfo)
+    {
+        logger.info("acceptAudio() called for " + packetInfo.endpointId + "\n");
+        return destinationEndpoint.endpointsAccept == null 
+        || destinationEndpoint.endpointsAccept.has(packetInfo.endPointId);
+    }
+*/
     /**
      * Defines a packet filter that controls which RTP packets to be written
      * into the {@link Endpoint} that owns this {@link BitrateController}.
@@ -1037,6 +1045,13 @@ public class BitrateController
                 ". Endpoints constraints: " + Arrays.toString(videoConstraintsMap.values().toArray()));
         }
 
+        //  hasevr
+/*        logger.info("Prioritizing endpoints, adjusted last-n: " + adjustedLastN +
+        ", sorted endpoint list: " +
+        conferenceEndpoints.stream().map(AbstractEndpoint::getID).collect(Collectors.joining(", ")) +
+        ". Endpoints constraints: " + Arrays.toString(videoConstraintsMap.values().toArray()));
+*/
+
         Map<String, VideoConstraints> videoConstraintsMapCopy = videoConstraintsMap;
 
         List<EndpointMultiRank> endpointMultiRankList = conferenceEndpoints
@@ -1064,6 +1079,12 @@ public class BitrateController
 
             MediaSourceDesc[] sources
                 = sourceEndpoint.getMediaSources();
+
+            //  hasevr
+/*            logger.info("Sources of " + sourceEndpoint.getID() + "\n");
+            for (MediaSourceDesc source : sources){
+                logger.info(source.toString());
+            }*/
 
             if (!ArrayUtils.isNullOrEmpty(sources))
             {
