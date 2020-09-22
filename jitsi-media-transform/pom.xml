@@ -28,7 +28,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>jitsi-srtp</artifactId>
-            <version>1.0-31-gafcaea7</version>
+            <version>1.0-32-g5317529</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
