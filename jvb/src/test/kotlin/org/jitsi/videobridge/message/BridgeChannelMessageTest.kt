@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.message
 
 import com.fasterxml.jackson.core.JsonProcessingException
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -165,8 +166,8 @@ class BridgeChannelMessageTest : ShouldSpec() {
         }
 
         context("serializing and parsing ForwardedEndpointsMessage") {
-            val forwardedEndpoints = listOf("a", "b", "c")
-            val endpointsEnteringLastN = listOf("b", "c")
+            val forwardedEndpoints = setOf("a", "b", "c")
+            val endpointsEnteringLastN = setOf("b", "c")
             val conferenceEndpoints = listOf("a", "b", "c", "d")
 
             val message = ForwardedEndpointsMessage(forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints)
@@ -227,6 +228,45 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed.bridgeId shouldBe "bridge1"
             parsed.endpointId shouldBe "abcdabcd"
         }
+    }
+
+    private fun testSerializePerformance() {
+        val m = DominantSpeakerMessage("x")
+        val times = 1_000_000
+
+        fun toJsonJackson(m: DominantSpeakerMessage): String = ObjectMapper().writeValueAsString(m)
+        fun toJsonJsonSimple(m: DominantSpeakerMessage) = JSONObject().apply {
+            this["dominantSpeakerEndpoint"] = m.dominantSpeakerEndpoint
+        }.toJSONString()
+        fun toJsonStringConcat(m: DominantSpeakerMessage) =
+            "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\",\"dominantSpeakerEndpoint\":\"" +
+                m.dominantSpeakerEndpoint + "\"}"
+        fun toJsonStringTemplate(m: DominantSpeakerMessage) =
+            "{\"colibriClass\":\"${DominantSpeakerMessage.TYPE}\"," +
+                "\"dominantSpeakerEndpoint\":\"${m.dominantSpeakerEndpoint}\"}"
+        fun toJsonRawStringTemplate(m: DominantSpeakerMessage) = """
+            {"colibriClass":"${DominantSpeakerMessage.TYPE}",
+             "dominantSpeakerEndpoint":"${m.dominantSpeakerEndpoint}"}
+         """
+
+        fun runTest(f: (DominantSpeakerMessage) -> String): Long {
+            val start = System.currentTimeMillis()
+            for (i in 0..times) {
+                m.dominantSpeakerEndpoint = i.toString()
+                f(m)
+            }
+            val end = System.currentTimeMillis()
+
+            return end - start
+        }
+
+        System.err.println("Times=$times")
+        System.err.println("Jackson: ${runTest { toJsonJackson(it) } }")
+        System.err.println("Json-simple: ${runTest { toJsonJsonSimple(it) } }")
+        System.err.println("String concat: ${runTest { toJsonStringConcat(it) } }")
+        System.err.println("String template: ${runTest { toJsonStringTemplate(it) } }")
+        System.err.println("Raw string template: ${runTest { toJsonRawStringTemplate(it) } }")
+        System.err.println("Raw string template (trim): ${runTest { toJsonRawStringTemplate(it).trimMargin() } }")
     }
 
     companion object {

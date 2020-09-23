@@ -29,6 +29,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.apache.logging.log4j.util.Strings.isEmpty
 import org.jitsi.videobridge.VideoConstraints
+import org.json.simple.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
@@ -63,7 +64,11 @@ import java.util.concurrent.atomic.AtomicLong
 sealed class BridgeChannelMessage(
     val type: String
 ) {
-    fun toJson(): String = ObjectMapper().writeValueAsString(this)
+    /**
+     * Serialize this [BridgeChannelMessage] to a string in JSON format. Note that this default implementation is very
+     * slow, which is why some of the messages that we serialize often override it with a custom optimized version.
+     */
+    open fun toJson(): String = ObjectMapper().writeValueAsString(this)
 
     companion object {
         @JvmStatic
@@ -196,8 +201,11 @@ class ClientHelloMessage : BridgeChannelMessage(TYPE) {
  * A message sent from a bridge to a client in response to a [ClientHelloMessage] or when a websocket is accepted.
  */
 class ServerHelloMessage : BridgeChannelMessage(TYPE) {
+    override fun toJson() = JSON_STRING
+
     companion object {
         const val TYPE = "ServerHello"
+        val JSON_STRING: String = ObjectMapper().writeValueAsString(ServerHelloMessage())
     }
 }
 
@@ -227,6 +235,16 @@ class EndpointMessage(val to: String) : BridgeChannelMessage(TYPE) {
     fun put(key: String, value: Any) {
         otherFields[key] = value
     }
+
+    /**
+     * Serialize using json-simple because it's faster.
+     */
+    override fun toJson(): String = JSONObject().apply {
+        this["colibriClass"] = TYPE
+        from?.let { this["from"] = it }
+        this["to"] = to
+        putAll(otherFields)
+    }.toJSONString()
 
     companion object {
         const val TYPE = "EndpointMessage"
@@ -311,7 +329,13 @@ class ReceiverVideoConstraintsMessage(val videoConstraints: List<VideoConstraint
 /**
  * A message sent from the bridge to a client, indicating that the dominant speaker in the conference changed.
  */
-class DominantSpeakerMessage(val dominantSpeakerEndpoint: String) : BridgeChannelMessage(TYPE) {
+class DominantSpeakerMessage(var dominantSpeakerEndpoint: String) : BridgeChannelMessage(TYPE) {
+    /**
+     * Serialize manually because it's faster than either Jackson or json-simple.
+     */
+    override fun toJson(): String =
+        """{"colibriClass":"$TYPE","dominantSpeakerEndpoint":"$dominantSpeakerEndpoint"}"""
+
     companion object {
         const val TYPE = "DominantSpeakerEndpointChangeEvent"
     }
@@ -329,6 +353,12 @@ class EndpointConnectionStatusMessage(
     // For whatever reason we encode the boolean in JSON as a string.
     val active: String = activeBoolean.toString()
 
+    /**
+     * Serialize manually because it's faster than either Jackson or json-simple.
+     */
+    override fun toJson(): String =
+        """{"colibriClass":"$TYPE","endpoint":"$endpoint","active":"$active"}"""
+
     companion object {
         const val TYPE = "EndpointConnectivityStatusChangeEvent"
     }
@@ -345,6 +375,17 @@ class ForwardedEndpointsMessage(
     val endpointsEnteringLastN: Collection<String>,
     val conferenceEndpoints: Collection<String>
 ) : BridgeChannelMessage(TYPE) {
+    /**
+     * Serialize using json-simple because it's faster.
+     */
+    override fun toJson(): String = JSONObject().apply {
+        this["colibriClass"] = TYPE
+        // json-simple does not property serialize collections properly (it handles [List]s correctly, but not [Set]s)
+        // As a short-term solution force the use of a list.
+        this["lastNEndpoints"] = ArrayList(forwardedEndpoints)
+        this["endpointsEnteringLastN"] = ArrayList(endpointsEnteringLastN)
+        this["conferenceEndpoints"] = ArrayList(conferenceEndpoints)
+    }.toJSONString()
 
     companion object {
         const val TYPE = "LastNEndpointsChangeEvent"
@@ -357,6 +398,12 @@ class ForwardedEndpointsMessage(
  * TODO: consider and adjust the format of videoConstraints. Do we need all of the VideoConstraints fields? Document.
  */
 class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : BridgeChannelMessage(TYPE) {
+    /**
+     * Serialize manually because it's faster than either Jackson or json-simple.
+     * Note that we depend on `VideoConstraints.toString` producing JSON.
+     */
+    override fun toJson(): String = """{"colibriClass":"$TYPE", "videoConstraints":$videoConstraints}"""
+
     companion object {
         const val TYPE = "SenderVideoConstraints"
     }
@@ -371,6 +418,13 @@ class AddReceiverMessage(
     val endpointId: String,
     val videoConstraints: VideoConstraints
 ) : BridgeChannelMessage(TYPE) {
+    /**
+     * Serialize manually because it's faster than either Jackson or json-simple.
+     */
+    override fun toJson(): String =
+        """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId",""" +
+            "\"videoConstraints\":$videoConstraints}"
+
     companion object {
         const val TYPE = "AddReceiver"
     }
@@ -384,6 +438,12 @@ class RemoveReceiverMessage(
     val bridgeId: String,
     val endpointId: String
 ) : BridgeChannelMessage(TYPE) {
+    /**
+     * Serialize manually because it's faster than either Jackson or json-simple.
+     */
+    override fun toJson(): String =
+        """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId"}"""
+
     companion object {
         const val TYPE = "RemoveReceiver"
     }

@@ -32,14 +32,14 @@ import java.net.*;
 public class Debug
 {
     @POST
-    @Path("{path}")
+    @Path("{path:.+}")
     public Response post(@PathParam("path") String path, @Context UriInfo uriInfo)
     {
         return create301(path, uriInfo);
     }
 
     @GET
-    @Path("{path}")
+    @Path("{path:.+}")
     public Response get(@PathParam("path") String path, @Context UriInfo uriInfo)
     {
         return create301(path, uriInfo);

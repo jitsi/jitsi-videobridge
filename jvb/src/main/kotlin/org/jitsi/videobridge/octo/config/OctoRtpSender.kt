@@ -89,7 +89,7 @@ class OctoRtpSender(
         keyframeRequester.requestKeyframe(mediaSsrc)
     }
 
-    override fun sendProbing(mediaSsrc: Long, numBytes: Int): Int = 0
+    override fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int = 0
 
     override fun setSrtpTransformers(srtpTransformers: SrtpTransformers) {}
 

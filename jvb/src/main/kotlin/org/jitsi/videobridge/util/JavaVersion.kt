@@ -14,26 +14,18 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.octo
+package org.jitsi.videobridge.util
 
-import org.jitsi.videobridge.octo.config.OctoConfig
-
-class OctoRelayServiceProvider {
-    private val octoRelayService: OctoRelayService? by lazy {
-        if (OctoConfig.config.enabled) {
-            try {
-                OctoRelayService()
-            } catch (t: Throwable) {
-                null
-            }
+fun getJavaVersion(): Int {
+    val javaVersionString = System.getProperty("java.version")
+    return if (javaVersionString.startsWith("1.")) {
+        javaVersionString.substring(2, 3).toInt()
+    } else {
+        val dotIndex = javaVersionString.indexOf(".")
+        if (dotIndex != -1) {
+            javaVersionString.substring(0, dotIndex).toInt()
         } else {
-            null
+            javaVersionString.toInt()
         }
     }
-
-    fun get(): OctoRelayService? = octoRelayService
 }
-
-private val supplierSingleton: OctoRelayServiceProvider = OctoRelayServiceProvider()
-
-fun singleton(): OctoRelayServiceProvider = supplierSingleton

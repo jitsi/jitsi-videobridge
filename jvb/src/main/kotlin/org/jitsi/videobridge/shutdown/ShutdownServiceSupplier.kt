@@ -14,26 +14,19 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.octo
+package org.jitsi.videobridge.shutdown
 
-import org.jitsi.videobridge.octo.config.OctoConfig
+import org.jitsi.shutdown.ShutdownServiceImpl
+import java.util.function.Supplier
 
-class OctoRelayServiceProvider {
-    private val octoRelayService: OctoRelayService? by lazy {
-        if (OctoConfig.config.enabled) {
-            try {
-                OctoRelayService()
-            } catch (t: Throwable) {
-                null
-            }
-        } else {
-            null
-        }
+open class ShutdownServiceSupplier : Supplier<ShutdownServiceImpl> {
+    private val shutdownService: ShutdownServiceImpl by lazy {
+        ShutdownServiceImpl()
     }
 
-    fun get(): OctoRelayService? = octoRelayService
+    override fun get(): ShutdownServiceImpl = shutdownService
 }
 
-private val supplierSingleton: OctoRelayServiceProvider = OctoRelayServiceProvider()
+val shutdownServiceSupplier = ShutdownServiceSupplier()
 
-fun singleton(): OctoRelayServiceProvider = supplierSingleton
+fun singleton() = shutdownServiceSupplier

@@ -14,26 +14,18 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.octo
+package org.jitsi.videobridge.load_management
 
-import org.jitsi.videobridge.octo.config.OctoConfig
+/**
+ * A measurement of load on the JVB.  Implementations should implement a description of the
+ * measurement in the [toString] method.
+ */
+interface JvbLoadMeasurement {
+    fun getLoad(): Double
 
-class OctoRelayServiceProvider {
-    private val octoRelayService: OctoRelayService? by lazy {
-        if (OctoConfig.config.enabled) {
-            try {
-                OctoRelayService()
-            } catch (t: Throwable) {
-                null
-            }
-        } else {
-            null
-        }
+    operator fun div(other: JvbLoadMeasurement): Double
+
+    companion object {
+        const val CONFIG_BASE = "videobridge.load-management.load-measurements"
     }
-
-    fun get(): OctoRelayService? = octoRelayService
 }
-
-private val supplierSingleton: OctoRelayServiceProvider = OctoRelayServiceProvider()
-
-fun singleton(): OctoRelayServiceProvider = supplierSingleton

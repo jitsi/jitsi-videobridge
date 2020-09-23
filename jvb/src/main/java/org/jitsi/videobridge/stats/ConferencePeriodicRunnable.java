@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.eventadmin.callstats;
+package org.jitsi.videobridge.stats;
 
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
@@ -50,8 +50,7 @@ public class ConferencePeriodicRunnable
         super(conference,
             period,
             statsService,
-            conference.getName() == null
-                  ? "null" : conference.getName(),
+            conference.getName(),
             conferenceIDPrefix,
             initiatorID);
     }
