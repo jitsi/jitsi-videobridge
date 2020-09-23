@@ -209,7 +209,7 @@ public class Debug
                 return TaskPools.getStatsJson().toJSONString();
             }
             case XMPP_DELAY_STATS: {
-                return XmppCommon.getStatsJson().toJSONString();
+                return XmppConnection.getStatsJson().toJSONString();
             }
             case PAYLOAD_VERIFICATION: {
                 return PayloadVerificationPlugin.getStatsJson().toJSONString();

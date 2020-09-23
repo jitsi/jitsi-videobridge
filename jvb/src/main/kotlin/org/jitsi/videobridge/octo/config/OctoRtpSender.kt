@@ -21,6 +21,7 @@ import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpSender
 import org.jitsi.nlj.rtcp.KeyframeRequester
+import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.stats.PacketStreamStats
@@ -100,6 +101,9 @@ class OctoRtpSender(
 
     override fun tearDown() {
     }
+
+    override val bandwidthEstimator: BandwidthEstimator
+        get() = TODO("Not implemented")
 
     override fun handleEvent(event: Event) {}
 

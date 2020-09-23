@@ -35,7 +35,7 @@ import javax.ws.rs.core.*;
 public class MucClient
 {
     @Inject
-    protected ClientConnectionImplSupplier clientConnectionImplSupplier;
+    protected XmppConnectionSupplier xmppConnectionSupplier;
 
     @Path("/add")
     @POST
@@ -51,8 +51,8 @@ public class MucClient
         {
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
         }
-        ClientConnectionImpl clientConnection = clientConnectionImplSupplier.get();
-        if (clientConnection.addMucClient((JSONObject)o))
+        XmppConnection xmppConnection = xmppConnectionSupplier.get();
+        if (xmppConnection.addMucClient((JSONObject)o))
         {
             return Response.ok().build();
         }
@@ -69,8 +69,8 @@ public class MucClient
         {
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
         }
-        ClientConnectionImpl clientConnection = clientConnectionImplSupplier.get();
-        if (clientConnection.removeMucClient((JSONObject)o))
+        XmppConnection xmppConnection = xmppConnectionSupplier.get();
+        if (xmppConnection.removeMucClient((JSONObject)o))
         {
             return Response.ok().build();
         }
