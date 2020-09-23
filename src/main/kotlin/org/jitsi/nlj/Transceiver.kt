@@ -18,9 +18,7 @@ package org.jitsi.nlj
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
-import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
-import org.jitsi.nlj.rtp.bandwidthestimation.GoogleCcEstimator
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
@@ -91,16 +89,6 @@ class Transceiver(
 
     private var mediaSources = MediaSources()
 
-    private val bandwidthEstimator: BandwidthEstimator = GoogleCcEstimator(diagnosticContext, logger).apply {
-        addListener(object : BandwidthEstimator.Listener {
-            override fun bandwidthEstimationChanged(newValue: Bandwidth) {
-                eventHandler.bandwidthEstimationChanged(newValue)
-            }
-        })
-    }
-
-    private val transportCcEngine = TransportCcEngine(bandwidthEstimator, logger)
-
     /**
      * Whether this [Transceiver] is receiving audio from the remote endpoint.
      */
@@ -113,7 +101,6 @@ class Transceiver(
 
     private val rtpSender: RtpSender = RtpSenderImpl(
         id,
-        transportCcEngine,
         rtcpEventNotifier,
         senderExecutor,
         backgroundExecutor,
@@ -141,9 +128,15 @@ class Transceiver(
         )
 
     init {
-        rtcpEventNotifier.addRtcpEventListener(endpointConnectionStats)
+        rtpSender.bandwidthEstimator.addListener(
+            object : BandwidthEstimator.Listener {
+                override fun bandwidthEstimationChanged(newValue: Bandwidth) {
+                    eventHandler.bandwidthEstimationChanged(newValue)
+                }
+            }
+        )
 
-        rtcpEventNotifier.addRtcpEventListener(transportCcEngine)
+        rtcpEventNotifier.addRtcpEventListener(endpointConnectionStats)
 
         endpointConnectionStats.addListener(rtpSender)
         endpointConnectionStats.addListener(rtpReceiver)
@@ -290,10 +283,8 @@ class Transceiver(
             addBlock(streamInformationStore.getNodeStats())
             addBlock(mediaSources.getNodeStats())
             addString("endpointConnectionStats", endpointConnectionStats.getSnapshot().toString())
-            addJson("Bandwidth Estimation", bandwidthEstimator.getStats(clock.instant()).toJson())
             addBlock(rtpReceiver.getNodeStats())
             addBlock(rtpSender.getNodeStats())
-            addJson("transportCcEngine", transportCcEngine.getStatistics().toJson())
         }
     }
 
@@ -307,7 +298,7 @@ class Transceiver(
             rtpReceiver.getPacketStreamStats(),
             rtpSender.getStreamStats(),
             rtpSender.getPacketStreamStats(),
-            bandwidthEstimator.getStats(clock.instant()))
+            rtpSender.bandwidthEstimator.getStats(clock.instant()))
     }
 
     override fun stop() {

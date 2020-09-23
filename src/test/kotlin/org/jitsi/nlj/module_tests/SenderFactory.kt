@@ -47,7 +47,6 @@ class SenderFactory {
             val streamInformationStore = StreamInformationStoreImpl()
             val sender = RtpSenderImpl(
                 Random().nextLong().toString(),
-                null,
                 RtcpEventNotifier(),
                 executor,
                 backgroundExecutor,

@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.PacketStreamStats
@@ -40,4 +41,6 @@ abstract class RtpSender :
     abstract fun getPacketStreamStats(): PacketStreamStats.Snapshot
     abstract fun requestKeyframe(mediaSsrc: Long? = null)
     abstract fun tearDown()
+
+    abstract val bandwidthEstimator: BandwidthEstimator
 }

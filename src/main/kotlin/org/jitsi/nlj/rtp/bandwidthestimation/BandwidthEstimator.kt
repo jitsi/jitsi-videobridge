@@ -27,6 +27,7 @@ import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.formatMilli
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
+import java.time.Clock
 
 /**
  * An abstract interface to a bandwidth estimation algorithm.
@@ -62,9 +63,8 @@ abstract class BandwidthEstimator(
      * Inform the bandwidth estimator about a packet that has arrived at its
      * destination.
      *
-     * This function will be called at most once for any value of [seq];
-     * however, it may be called after a call to [processPacketLoss] for the
-     * same [seq] value, if a packet is delayed.
+     * This function will be called at most once for any value of [seq]; however, it may be called after a call to
+     * [processPacketLoss] for the same [seq] value, if a packet is delayed.
      *
      * It is possible (e.g., if feedback was lost) that neither
      * [processPacketArrival] nor [processPacketLoss] is called for a given [seq].
@@ -210,7 +210,7 @@ abstract class BandwidthEstimator(
      *
      * @param[now] The current time, when this function is called.
      */
-    abstract fun getStats(now: Instant): StatisticsSnapshot
+    abstract fun getStats(now: Instant = Clock.systemUTC().instant()): StatisticsSnapshot
 
     /** Reset the estimator to its initial state. */
     abstract fun reset(): Unit
