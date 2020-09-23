@@ -303,7 +303,8 @@ public class VideobridgeStatistics
                 bitrateUploadBps += outgoingStats.getBitrate().getBps();
                 packetRateUpload += outgoingStats.getPacketRate();
 
-                EndpointConnectionStats.Snapshot endpointConnectionStats = transceiverStats.getEndpointConnectionStats();
+                EndpointConnectionStats.Snapshot endpointConnectionStats
+                        = transceiverStats.getEndpointConnectionStats();
                 double endpointRtt = endpointConnectionStats.getRtt();
                 if (endpointRtt > 0)
                 {
