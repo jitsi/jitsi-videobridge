@@ -518,16 +518,16 @@ public class ConfOctoTransport
     {
         // RX
         private Long packetsReceived = 0L;
-        private final RateTracker receivePacketRate = new RateTracker(Duration.ofSeconds(60));
+        private final RateTracker receivePacketRate = new RateTracker(Duration.ofSeconds(60), Duration.ofSeconds(1));
         private Long bytesReceived = 0L;
-        private final BitrateTracker receiveBitRate = new BitrateTracker(Duration.ofSeconds(60));
+        private final BitrateTracker receiveBitRate = new BitrateTracker(Duration.ofSeconds(60), Duration.ofSeconds(1));
         private long incomingPacketsDropped = 0;
 
         // TX
         private final LongAdder packetsSent = new LongAdder();
-        private final RateTracker sendPacketRate = new RateTracker(Duration.ofSeconds(60));
+        private final RateTracker sendPacketRate = new RateTracker(Duration.ofSeconds(60), Duration.ofSeconds(1));
         private final LongAdder bytesSent = new LongAdder();
-        private final BitrateTracker sendBitRate = new BitrateTracker(Duration.ofSeconds(60));
+        private final BitrateTracker sendBitRate = new BitrateTracker(Duration.ofSeconds(60), Duration.ofSeconds(1));
 
         void packetReceived(int size, Instant time)
         {
