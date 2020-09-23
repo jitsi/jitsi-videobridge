@@ -689,9 +689,6 @@ public class BitrateController
      */
     private synchronized void update()
     {
-        //  hasevr
-        destinationEndpoint.updatePerceptibleSSRCs();
-
         Instant now = clock.instant();
         lastUpdateTime = now;
         long nowMs = now.toEpochMilli();
@@ -704,6 +701,9 @@ public class BitrateController
         {
             return;
         }
+
+        //  hasevr
+        destinationEndpoint.updatePerceptibleSSRCs();
 
         List<AbstractEndpoint> sortedEndpoints
             = new ArrayList<>(sortedEndpointIdsCopy.size());

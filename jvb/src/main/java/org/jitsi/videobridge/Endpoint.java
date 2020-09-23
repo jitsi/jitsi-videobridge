@@ -90,14 +90,16 @@ public class Endpoint
             }
         }
         //  end for test.
-        //  TODO: list actual perceptibleEndpoints.
+        
+        //  TODO: List up actual perceptibleEndpoints.
 
+        /*
         String msg = "Perceptible end points:";
         for(String id: perceptibleEndpoints){
             msg += " " + id;
         }
         msg += "\n";
-        logger.info(msg);
+        logger.info(msg);   //  */
 
         perceptibleAudioSSRCs = ConcurrentHashMap.newKeySet();
         perceptibleVideoSSRCs = ConcurrentHashMap.newKeySet();
@@ -130,7 +132,7 @@ public class Endpoint
         }
         //  */
 
-//*  //  log ssrcs 
+/*  //  log ssrcs 
         msg = "Perceptible Video ssrcs:";
         for(long ssrc: perceptibleVideoSSRCs){
             msg += " " + ssrc;
