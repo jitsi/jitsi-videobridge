@@ -21,6 +21,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.stats.*;
 import org.json.simple.*;
 
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -222,14 +223,12 @@ class PartitionedByteBufferPool
         /**
          * Request rate in requests per second over the last 10 seconds.
          */
-        private final RateStatistics requestRate
-            = new RateStatistics(10000, 1000);
+        private final RateTracker requestRate = new RateTracker(Duration.ofSeconds(10));
 
         /**
          * Return rate in requests per second over the last 10 seconds.
          */
-        private final RateStatistics returnRate
-            = new RateStatistics(1000, 1000);
+        private final RateTracker returnRate = new RateTracker(Duration.ofSeconds(10));
 
         /**
          * Initializes a new partition.
@@ -263,7 +262,7 @@ class PartitionedByteBufferPool
             if (enableStatistics)
             {
                 numRequests.increment();
-                requestRate.update(1, System.currentTimeMillis());
+                requestRate.update(1);
                 if (requiredSize > defaultBufferSize)
                 {
                     numLargeRequests.increment();
@@ -342,7 +341,7 @@ class PartitionedByteBufferPool
             if (enableStatistics)
             {
                 numReturns.increment();
-                returnRate.update(1, System.currentTimeMillis());
+                returnRate.update(1);
             }
 
             if (buf.length < defaultBufferSize)
