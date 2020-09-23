@@ -17,13 +17,12 @@ package org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator;
 
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging.DiagnosticContext;
 import org.jitsi.utils.logging.TimeSeriesLogger;
 import org.jitsi.utils.logging2.*;
 
-import org.jitsi.utils.stats.*;
-
-import java.util.*;
+import java.time.*;
 
 /**
  * webrtc.org abs_send_time implementation as of June 26, 2017.
@@ -38,8 +37,6 @@ public class RemoteBitrateEstimatorAbsSendTime
      * webrtc/modules/remote_bitrate_estimator/include/bwe_defines.h
      */
     static final private int kBitrateWindowMs = 1000;
-
-    static final private int kBitrateScale = 8000;
 
     static final int kDefaultMinBitrateBps = 30000;
 
@@ -141,7 +138,7 @@ public class RemoteBitrateEstimatorAbsSendTime
     /**
      * Keeps track of how much data we're receiving.
      */
-    private RateStatistics incomingBitrate;
+    private BitrateTracker incomingBitrate;
 
     /**
      * Determines whether or not the incoming bitrate is initialized or not.
@@ -170,7 +167,7 @@ public class RemoteBitrateEstimatorAbsSendTime
         this.logger = parentLogger.createChildLogger(getClass().getName());
         this.diagnosticContext = diagnosticContext;
         this.remoteRate = new AimdRateControl(diagnosticContext);
-        this.incomingBitrate = new RateStatistics(kBitrateWindowMs, kBitrateScale);
+        this.incomingBitrate = new BitrateTracker(Duration.ofMillis(kBitrateWindowMs));
         this.incomingBitrateInitialized = false;
         this.firstPacketTimeMs = -1;
         this.lastPacketTimeMs = -1;
@@ -183,7 +180,7 @@ public class RemoteBitrateEstimatorAbsSendTime
     public synchronized void reset()
     {
         remoteRate.reset();
-        this.incomingBitrate = new RateStatistics(kBitrateWindowMs, kBitrateScale);
+        this.incomingBitrate = new BitrateTracker(Duration.ofMillis(kBitrateWindowMs));
         this.incomingBitrateInitialized = false;
         this.firstPacketTimeMs = -1;
         this.lastPacketTimeMs = -1;
@@ -225,7 +222,7 @@ public class RemoteBitrateEstimatorAbsSendTime
         // should be broken out from  here.
         // Check if incoming bitrate estimate is valid, and if it
         // needs to be reset.
-        long incomingBitrate_ = incomingBitrate.getRate(arrivalTimeMs);
+        long incomingBitrate_ = (long) incomingBitrate.getRate(arrivalTimeMs).getBps();
         if (incomingBitrate_ != 0)
         {
             incomingBitrateInitialized = true;
@@ -236,11 +233,11 @@ public class RemoteBitrateEstimatorAbsSendTime
             // enough data point are left within the current window.
             // Reset incoming bitrate estimator so that the window
             // size will only contain new data points.
-            incomingBitrate = new RateStatistics(kBitrateWindowMs, kBitrateScale);
+            incomingBitrate = new BitrateTracker(Duration.ofMillis(kBitrateWindowMs));
             incomingBitrateInitialized = false;
         }
 
-        incomingBitrate.update(payloadSize, arrivalTimeMs);
+        incomingBitrate.update(DataSizeKt.getBytes(payloadSize), arrivalTimeMs);
 
         if (firstPacketTimeMs == -1)
         {
@@ -289,7 +286,7 @@ public class RemoteBitrateEstimatorAbsSendTime
         else if (
             detector.detector.getState() == BandwidthUsage.kBwOverusing)
         {
-            long incomingRate_ = incomingBitrate.getRate(arrivalTimeMs);
+            long incomingRate_ = (long) incomingBitrate.getRate(arrivalTimeMs).getBps();
 
             if (incomingRate_ > 0 && remoteRate
                 .isTimeToReduceFurther(nowMs, incomingBitrate_))
@@ -305,7 +302,7 @@ public class RemoteBitrateEstimatorAbsSendTime
             // overusing and the target bitrate is too high compared to
             // what we are receiving.
             input.bwState = detector.detector.getState();
-            input.incomingBitRate = incomingBitrate.getRate(arrivalTimeMs);
+            input.incomingBitRate = (long) incomingBitrate.getRate(arrivalTimeMs).getBps();
             input.noiseVar = detector.estimator.getVarNoise();
 
             remoteRate.update(input, nowMs);
