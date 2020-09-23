@@ -30,7 +30,6 @@ import org.jitsi.videobridge.cc.config.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 
-import javax.annotation.CheckReturnValue;
 import java.lang.*;
 import java.lang.SuppressWarnings;
 import java.time.*;
@@ -553,8 +552,8 @@ public class BitrateController
                 continue;
             }
 
-            long targetBps = incomingSource.getBitrateBps(nowMs,
-                    adaptiveSourceProjection.getTargetIndex());
+            long targetBps
+                    = (long) incomingSource.getBitrate(nowMs, adaptiveSourceProjection.getTargetIndex()).getBps();
             if (targetBps > 0)
             {
                 long ssrc = adaptiveSourceProjection.getTargetSsrc();
@@ -570,8 +569,7 @@ public class BitrateController
             // we compute the ideal bitrate bellow in
             // {@link SourceBitrateAllocation#idealBitrate} and the logic should
             // be extracted in a utility method somehow.
-            totalIdealBps += incomingSource.getBitrateBps(nowMs,
-                    adaptiveSourceProjection.getIdealIndex());
+            totalIdealBps += incomingSource.getBitrate(nowMs, adaptiveSourceProjection.getIdealIndex()).getBps();
         }
         return new StatusSnapshot(totalTargetBps, totalIdealBps, activeSsrcs);
     }
@@ -1387,7 +1385,7 @@ public class BitrateController
                     || (lessThanOrEqualIdealResolution && atLeastPreferredFps))
                     || ratesList.isEmpty())
                 {
-                    long layerBitrateBps = layer.getBitrateBps(nowMs);
+                    long layerBitrateBps = (long) layer.getBitrate(nowMs).getBps();
                     if (layerBitrateBps > 0)
                     {
                         idealBps = layerBitrateBps;

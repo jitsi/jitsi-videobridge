@@ -518,18 +518,16 @@ public class ConfOctoTransport
     {
         // RX
         private Long packetsReceived = 0L;
-        private final RateStatistics receivePacketRate =
-            new RateStatistics(60000, 1000.0f);
+        private final RateTracker receivePacketRate = new RateTracker(Duration.ofSeconds(60));
         private Long bytesReceived = 0L;
-        private final RateStatistics receiveBitRate = new RateStatistics(60000);
+        private final BitrateTracker receiveBitRate = new BitrateTracker(Duration.ofSeconds(60));
         private long incomingPacketsDropped = 0;
 
         // TX
         private final LongAdder packetsSent = new LongAdder();
-        private final RateStatistics sendPacketRate =
-            new RateStatistics(60000, 1000.0f);
+        private final RateTracker sendPacketRate = new RateTracker(Duration.ofSeconds(60));
         private final LongAdder bytesSent = new LongAdder();
-        private final RateStatistics sendBitRate = new RateStatistics(60000);
+        private final BitrateTracker sendBitRate = new BitrateTracker(Duration.ofSeconds(60));
 
         void packetReceived(int size, Instant time)
         {
@@ -537,7 +535,7 @@ public class ConfOctoTransport
             packetsReceived++;
             receivePacketRate.update(1, timeMs);
             bytesReceived += size;
-            receiveBitRate.update(size, timeMs);
+            receiveBitRate.update(DataSizeKt.getBytes(size), timeMs);
         }
 
         void incomingPacketDropped()
@@ -551,7 +549,7 @@ public class ConfOctoTransport
             packetsSent.increment();
             sendPacketRate.update(1, timeMs);
             bytesSent.add(size);
-            sendBitRate.update(size, timeMs);
+            sendBitRate.update(DataSizeKt.getBytes(size), timeMs);
         }
 
         OrderedJsonObject toJson()
@@ -560,13 +558,13 @@ public class ConfOctoTransport
             debugState.put("packets_received", packetsReceived);
             debugState.put("receive_packet_rate_pps", receivePacketRate.getRate());
             debugState.put("bytes_received", bytesReceived);
-            debugState.put("receive_bitrate_bps", receiveBitRate.getRate());
+            debugState.put("receive_bitrate_bps", receiveBitRate.getRate().getBps());
             debugState.put("incoming_packets_dropped", incomingPacketsDropped);
 
             debugState.put("packets_sent", packetsSent.sum());
             debugState.put("send_packet_rate_pps", sendPacketRate.getRate());
             debugState.put("bytes_sent", bytesSent.sum());
-            debugState.put("send_bitrate_bps", sendBitRate.getRate());
+            debugState.put("send_bitrate_bps", sendBitRate.getRate().getBps());
 
             return debugState;
         }
