@@ -22,10 +22,9 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeTypeOf
 import org.jitsi.config.useNewConfig
 import org.jitsi.metaconfig.MetaconfigSettings
-import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.AudioRedPayloadType
+import org.jitsi.nlj.node.processPackets
 import org.jitsi.nlj.transform.node.AudioRedHandler
-import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.RedPolicy
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.rtp.rtp.RtpPacket
@@ -135,14 +134,6 @@ class AudioRedHandlerTest : ShouldSpec() {
         }
     }
 
-    private fun AudioRedHandler.processPackets(packets: List<RtpPacket>): List<RtpPacket> {
-        val collector = CollectorNode()
-        attach(collector)
-        packets.forEach { processPacket(PacketInfo(it)) }
-        detachNext()
-        return collector.result
-    }
-
     /**
      * Process the sample stream of RED packets.
      */
@@ -173,50 +164,9 @@ class AudioRedHandlerTest : ShouldSpec() {
         )
     )
 
-    private class CollectorNode : ConsumerNode("Collector") {
-        val result = mutableListOf<RtpPacket>()
-        override fun consume(packetInfo: PacketInfo) {
-            result.add(packetInfo.packetAs())
-        }
-
-        override fun trace(f: () -> Unit) {}
-    }
-
     private val redPt = 112
 
-    private val audioPacketBytes = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
-        // RTP Header. PT=111, seq=0x7b2b
-        0x90, 0x6f, 0x7b, 0x2b,
-        // TS
-        0x44, 0xb2, 0x83, 0x6e,
-        // SSRC
-        0x16, 0x49, 0x3f, 0x2d,
-        // Extension
-        0xbe, 0xde, 0x00, 0x01,
-        // ID=1, value=0xbd (VAD=true)
-        0x10, 0xbd, 0x00, 0x00,
-
-        // RTP Payload (length = 65)
-        0x68, 0x2f, 0x3b, 0x25,
-        0xab, 0x1a, 0x72, 0xfb,
-        0x75, 0x2d, 0xf0, 0x9b,
-        0xa2, 0xa3, 0xfc, 0x20,
-        0x51, 0xf7, 0x9c, 0xe8,
-        0x75, 0xe9, 0x02, 0xd6,
-        0xc1, 0xe4, 0xa1, 0x51,
-        0x02, 0x00, 0x59, 0x55,
-        0x04, 0x56, 0x5e, 0xed,
-        0x31, 0x55, 0xb5, 0x04,
-        0x9d, 0xf6, 0x1c, 0x40,
-        0x7b, 0xb7, 0x00, 0x0c,
-        0xd9, 0x7b, 0x5d, 0x13,
-        0x4c, 0xeb, 0x7d, 0xf1,
-        0x74, 0xf8, 0xd5, 0xb9,
-        0x07, 0xda, 0x18, 0x19,
-        0x92
-    )
-
-    private fun createAudioPacket(seq: Int) = AudioRtpPacket(audioPacketBytes.clone(), 0, audioPacketBytes.size).apply {
+    private fun createAudioPacket(seq: Int) = AudioRtpPacket(audioPacketBytes, 0, audioPacketBytes.size).apply {
         sequenceNumber = seq
         timestamp = seq * 960.toLong()
         // Encode the SEQ in the payload

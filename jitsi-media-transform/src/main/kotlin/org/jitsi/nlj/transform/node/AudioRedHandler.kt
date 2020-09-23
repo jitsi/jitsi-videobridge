@@ -35,7 +35,7 @@ class AudioRedHandler(
     streamInformationStore: ReadOnlyStreamInformationStore
 ) : MultipleOutputTransformerNode("RedHandler") {
 
-    val stats = Stats()
+    private val stats = Stats()
     val config = Config()
 
     var audioLevelExtId: Int? = null

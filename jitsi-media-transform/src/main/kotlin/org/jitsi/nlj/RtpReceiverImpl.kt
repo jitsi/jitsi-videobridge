@@ -34,6 +34,7 @@ import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.PacketLossConfig
 import org.jitsi.nlj.transform.node.PacketLossNode
 import org.jitsi.nlj.transform.node.PacketStreamStatsNode
 import org.jitsi.nlj.transform.node.RtpParser
@@ -142,18 +143,16 @@ class RtpReceiverImpl @JvmOverloads constructor(
     override fun isReceivingAudio() = audioBitrateCalculator.active
     override fun isReceivingVideo() = videoBitrateCalculator.active
 
-    /**
-     * The packet loss to introduce in the receive pipeline (for debugging/testing purposes).
-     */
-    private val lossFractionToIntroduce: Double by config {
-        "jmt.debug.packet-loss.receive".from(JitsiConfig.newConfig)
-    }
-
     companion object {
         val queueErrorCounter = CountingErrorHandler()
 
         private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP receiver incoming queue"
         private const val PACKET_QUEUE_EXIT_EVENT = "Exited RTP receiver incoming queue"
+
+        /**
+         * Configuration for the packet loss to introduce in the receive pipeline (for debugging/testing purposes).
+         */
+        private val packetLossConfig = PacketLossConfig("jmt.debug.packet-loss.incoming")
     }
 
     /**
@@ -183,8 +182,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
     init {
         logger.cdebug { "using executor ${executor.hashCode()}" }
 
-        if (lossFractionToIntroduce > 0) {
-            logger.warn("Will simulate ${lossFractionToIntroduce * 100}% packet loss.")
+        if (packetLossConfig.enabled) {
+            logger.warn("Will simulate packet loss: $packetLossConfig")
         }
 
         rtcpEventNotifier.addRtcpEventListener(rtcpRrGenerator)
@@ -199,7 +198,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     name = "SRTP path"
                     predicate = PacketPredicate(Packet::looksLikeRtp)
                     path = pipeline {
-                        node(PacketLossNode(lossFractionToIntroduce), condition = { lossFractionToIntroduce > 0 })
+                        node(PacketLossNode(packetLossConfig), condition = { packetLossConfig.enabled })
                         node(RtpParser(streamInformationStore, logger))
                         node(tccGenerator)
                         node(remoteBandwidthEstimator)
