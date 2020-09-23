@@ -35,11 +35,11 @@ public class MucStatsTransport
      */
     private static final Logger logger = new LoggerImpl(MucStatsTransport.class.getName());
 
-    private final ClientConnection clientConnection;
+    private final XmppConnection xmppConnection;
 
-    public MucStatsTransport(ClientConnection clientConnection)
+    public MucStatsTransport(XmppConnection xmppConnection)
     {
-        this.clientConnection = clientConnection;
+        this.xmppConnection = xmppConnection;
     }
 
     /**
@@ -60,7 +60,7 @@ public class MucStatsTransport
 //                );
         }
 
-        clientConnection.setPresenceExtension(statsExt);
+        xmppConnection.setPresenceExtension(statsExt);
     }
 }
 

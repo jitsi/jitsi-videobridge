@@ -96,7 +96,7 @@ public class VideobridgeStatistics
 
     private final @NotNull Videobridge videobridge;
     private final @Nullable OctoRelayService octoRelayService;
-    private final @NotNull ClientConnection clientConnection;
+    private final @NotNull XmppConnection xmppConnection;
 
     /**
      * Creates instance of <tt>VideobridgeStatistics</tt>.
@@ -104,12 +104,12 @@ public class VideobridgeStatistics
     public VideobridgeStatistics(
         @NotNull Videobridge videobridge,
         @Nullable OctoRelayService octoRelayService,
-        @NotNull ClientConnection clientConnection
+        @NotNull XmppConnection xmppConnection
     )
     {
         this.videobridge = videobridge;
         this.octoRelayService = octoRelayService;
-        this.clientConnection = clientConnection;
+        this.xmppConnection = xmppConnection;
 
         timestampFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         timestampFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -540,20 +540,20 @@ public class VideobridgeStatistics
             }
             unlockedSetStat(VERSION, videobridge.getVersion().toString());
 
-            // TODO(brian): expose these stats in a `getStats` call in ClientConnection
-            //  rather than calling clientConnection.getMucClientManager?
+            // TODO(brian): expose these stats in a `getStats` call in XmppConnection
+            //  rather than calling xmppConnection.getMucClientManager?
             unlockedSetStat(
                     MUC_CLIENTS_CONFIGURED,
-                    clientConnection.getMucClientManager().getClientCount());
+                    xmppConnection.getMucClientManager().getClientCount());
             unlockedSetStat(
                     MUC_CLIENTS_CONNECTED,
-                    clientConnection.getMucClientManager().getClientConnectedCount());
+                    xmppConnection.getMucClientManager().getClientConnectedCount());
             unlockedSetStat(
                     MUCS_CONFIGURED,
-                    clientConnection.getMucClientManager().getMucCount());
+                    xmppConnection.getMucClientManager().getMucCount());
             unlockedSetStat(
                     MUCS_JOINED,
-                    clientConnection.getMucClientManager().getMucJoinedCount());
+                    xmppConnection.getMucClientManager().getMucJoinedCount());
         }
         finally
         {

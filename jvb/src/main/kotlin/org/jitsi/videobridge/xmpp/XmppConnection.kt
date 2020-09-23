@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * The XMPP client connection for the videobridge
  */
-class ClientConnection : IQListener {
+class XmppConnection : IQListener {
     private val logger = createLogger()
 
     /**
@@ -60,7 +60,7 @@ class ClientConnection : IQListener {
                 registerIQ(Version())
                 registerIQ(ShutdownIQ.createForceShutdownIQ())
                 registerIQ(ShutdownIQ.createGracefulShutdownIQ())
-                setIQListener(this@ClientConnection)
+                setIQListener(this@XmppConnection)
             }
 
             config.clientConfigs.forEach { cfg -> mucClientManager.addMucClient(cfg) }

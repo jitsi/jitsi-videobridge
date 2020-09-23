@@ -129,8 +129,8 @@ public class Videobridge
      */
     private final ScheduledFuture<?> loadSamplerTask;
 
-    private final ClientConnection.EventHandler xmppConnectionEventHandler =
-        new ClientConnectionEventHandler();
+    private final XmppConnection.EventHandler xmppConnectionEventHandler =
+        new XmppConnectionEventHandler();
 
     static
     {
@@ -175,7 +175,7 @@ public class Videobridge
             10,
             TimeUnit.SECONDS
         );
-        ClientConnectionSupplierKt.singleton().get().setEventHandler(xmppConnectionEventHandler);
+        XmppConnectionSupplierKt.singleton().get().setEventHandler(xmppConnectionEventHandler);
     }
 
     /**
@@ -650,7 +650,7 @@ public class Videobridge
         return JvbVersionServiceSupplierKt.singleton().get().getCurrentVersion();
     }
 
-    private class ClientConnectionEventHandler implements ClientConnection.EventHandler
+    private class XmppConnectionEventHandler implements XmppConnection.EventHandler
     {
         @NotNull
         @Override

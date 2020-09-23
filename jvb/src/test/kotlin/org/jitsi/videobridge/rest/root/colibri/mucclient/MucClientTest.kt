@@ -25,29 +25,29 @@ import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.test.JerseyTest
 import org.glassfish.jersey.test.TestProperties
 import org.jitsi.videobridge.rest.MockBinder
-import org.jitsi.videobridge.xmpp.ClientConnection
-import org.jitsi.videobridge.xmpp.ClientConnectionSupplier
+import org.jitsi.videobridge.xmpp.XmppConnection
+import org.jitsi.videobridge.xmpp.XmppConnectionSupplier
 import org.json.simple.JSONObject
 import org.junit.Test
 import javax.ws.rs.client.Entity
 import javax.ws.rs.core.Application
 
 class MucClientTest : JerseyTest() {
-    private lateinit var clientConnection: ClientConnection
-    private lateinit var clientConnectionSupplier: ClientConnectionSupplier
+    private lateinit var xmppConnection: XmppConnection
+    private lateinit var xmppConnectionSupplier: XmppConnectionSupplier
     private val baseUrl = "/colibri/muc-client"
 
     override fun configure(): Application {
-        clientConnection = mockk()
-        clientConnectionSupplier = mockk {
-            every { get() } returns clientConnection
+        xmppConnection = mockk()
+        xmppConnectionSupplier = mockk {
+            every { get() } returns xmppConnection
         }
 
         enable(TestProperties.LOG_TRAFFIC)
         enable(TestProperties.DUMP_ENTITY)
         return object : ResourceConfig() {
             init {
-                register(MockBinder(clientConnectionSupplier, ClientConnectionSupplier::class.java))
+                register(MockBinder(xmppConnectionSupplier, XmppConnectionSupplier::class.java))
                 register(MucClient::class.java)
             }
         }
@@ -57,7 +57,7 @@ class MucClientTest : JerseyTest() {
     fun testAddMuc() {
         val jsonConfigSlot = slot<JSONObject>()
 
-        every { clientConnection.addMucClient(capture(jsonConfigSlot)) } returns true
+        every { xmppConnection.addMucClient(capture(jsonConfigSlot)) } returns true
 
         val json = JSONObject().apply {
             put("id", "id")
@@ -77,7 +77,7 @@ class MucClientTest : JerseyTest() {
     fun testAddMucFailure() {
         val jsonConfigSlot = slot<JSONObject>()
 
-        every { clientConnection.addMucClient(capture(jsonConfigSlot)) } returns false
+        every { xmppConnection.addMucClient(capture(jsonConfigSlot)) } returns false
 
         val json = JSONObject().apply {
             put("id", "id")
@@ -96,7 +96,7 @@ class MucClientTest : JerseyTest() {
     fun testRemoveMuc() {
         val jsonConfigSlot = slot<JSONObject>()
 
-        every { clientConnection.addMucClient(capture(jsonConfigSlot)) } returns true
+        every { xmppConnection.addMucClient(capture(jsonConfigSlot)) } returns true
 
         val json = JSONObject().apply {
             put("id", "id")
@@ -109,7 +109,7 @@ class MucClientTest : JerseyTest() {
 
     @Test
     fun testRemoveMucFailure() {
-        every { clientConnection.addMucClient(any()) } returns false
+        every { xmppConnection.addMucClient(any()) } returns false
 
         val json = JSONObject().apply {
             put("id", "id")
