@@ -93,6 +93,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-media-transform</artifactId>
+      <version>1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -589,6 +590,11 @@
     </plugins>
   </build>
   <repositories>
+    <repository>
+        <id>local.repo</id>
+        <name>Local Staging Repository</name>
+        <url>file://${project.build.directory}/../../jvb-libs/jitsi-media-transform/target/mvn-repo</url>
+    </repository>
     <repository>
       <id>jitsi-maven-repository-releases</id>
       <layout>default</layout>
