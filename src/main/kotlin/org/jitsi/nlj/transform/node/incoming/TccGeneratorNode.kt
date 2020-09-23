@@ -23,9 +23,11 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
+import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.Rfc3711IndexTracker
+import org.jitsi.nlj.util.bytes
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.observableWhenChanged
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -36,7 +38,7 @@ import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.ms
-import org.jitsi.utils.stats.RateStatistics
+import org.jitsi.utils.secs
 
 /**
  * Extract the TCC sequence numbers from each passing packet and generate
@@ -57,7 +59,7 @@ class TccGeneratorNode(
     private val packetArrivalTimes = TreeMap<Int, Long>()
     // The first sequence number of the current tcc feedback packet
     private var windowStartSeq: Int = -1
-    private val tccFeedbackBitrate = RateStatistics(1000)
+    private val tccFeedbackBitrate = BitrateTracker(1.secs)
     private var numTccSent: Int = 0
     private var numMultipleTccPackets = 0
     private var enabled: Boolean by observableWhenChanged(false) {
@@ -158,7 +160,7 @@ class TccGeneratorNode(
         logger.cdebug { "sent TCC packet with seq num ${tccPacket.feedbackSeqNum}" }
         numTccSent++
         lastTccSentTime = clock.instant()
-        tccFeedbackBitrate.update(tccPacket.length, clock.millis())
+        tccFeedbackBitrate.update(tccPacket.length.bytes, clock.millis())
     }
 
     private fun isTccReadyToSend(currentPacketMarked: Boolean): Boolean {
@@ -181,7 +183,7 @@ class TccGeneratorNode(
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
             addNumber("num_tcc_packets_sent", numTccSent)
-            addNumber("tcc_feedback_bitrate_bps", tccFeedbackBitrate.rate)
+            addNumber("tcc_feedback_bitrate_bps", tccFeedbackBitrate.rate.bps)
             addString("tcc_extension_id", tccExtensionId.toString())
             addNumber("num_multiple_tcc_packets", numMultipleTccPackets)
             addBoolean("enabled", enabled)

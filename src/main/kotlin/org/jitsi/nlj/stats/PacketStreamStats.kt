@@ -15,8 +15,12 @@
  */
 package org.jitsi.nlj.stats
 
+import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.BitrateTracker
+import org.jitsi.nlj.util.bytes
+import org.jitsi.utils.secs
 import java.util.concurrent.atomic.AtomicLong
-import org.jitsi.utils.stats.RateStatistics
+import org.jitsi.utils.stats.RateTracker
 
 /**
  * Keeps tracks of the basic statistics for a stream of packets.
@@ -27,12 +31,12 @@ class PacketStreamStats {
     /**
      * The bitrate in bits per second.
      */
-    private val bitrate = RateStatistics(1000)
+    private val bitrate = BitrateTracker(1.secs)
 
     /**
      * The packet rate in packets per second.
      */
-    private val packetRate = RateStatistics(1000, 1000f)
+    private val packetRate = RateTracker(1.secs)
 
     /**
      * Total total number of bytes.
@@ -47,7 +51,7 @@ class PacketStreamStats {
     fun update(lengthInBytes: Int) {
         val now = System.currentTimeMillis()
 
-        bitrate.update(lengthInBytes, now)
+        bitrate.update(lengthInBytes.bytes, now)
         bytes.addAndGet(lengthInBytes.toLong())
 
         packetRate.update(1, now)
@@ -63,7 +67,7 @@ class PacketStreamStats {
         /**
          * The current bitrate in bits per second.
          */
-        val bitrate: Long,
+        val bitrate: Bandwidth,
         /**
          * The current packet rate in packets per second.
          */

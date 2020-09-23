@@ -18,7 +18,10 @@ package org.jitsi.nlj
 
 import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
-import org.jitsi.utils.stats.RateStatistics
+import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.BitrateTracker
+import org.jitsi.nlj.util.bps
+import org.jitsi.utils.secs
 
 class MediaSourceDescTest : ShouldSpec() {
     init {
@@ -53,7 +56,7 @@ class MediaSourceDescTest : ShouldSpec() {
                     if ((i < source.rtpEncodings.size - 1 && j < e.layers.size - 1) ||
                         (i == source.rtpEncodings.size - 1 && j == e.layers.size - 1)) {
                         /* Encode the layer ID into the rate, so it's unambiguous which layers are getting summed. */
-                        l.inheritStatistics(FakeRateStatistics(1L shl (i * source.rtpEncodings.size + j)))
+                        l.inheritStatistics(FakeBitrateTracker(1L shl (i * source.rtpEncodings.size + j)))
                     }
                 }
             }
@@ -63,27 +66,27 @@ class MediaSourceDescTest : ShouldSpec() {
             val t = 0L // Doesn't actually matter for fake rate statistics
 
             /* Rate from layer 0 */
-            source.getBitrateBps(t, RtpLayerDesc.getIndex(0, 0, 0)) shouldBe 1
+            source.getBitrate(t, RtpLayerDesc.getIndex(0, 0, 0)) shouldBe 1.bps
             /* Rates from layer 1 and its dependency, 0 */
-            source.getBitrateBps(t, RtpLayerDesc.getIndex(0, 0, 1)) shouldBe 2 + 1
+            source.getBitrate(t, RtpLayerDesc.getIndex(0, 0, 1)) shouldBe (2 + 1).bps
             /* Layer 2's own rate is 0, so rates from its dependencies, 1 and 0 */
-            source.getBitrateBps(t, RtpLayerDesc.getIndex(0, 0, 2)) shouldBe 2 + 1
+            source.getBitrate(t, RtpLayerDesc.getIndex(0, 0, 2)) shouldBe (2 + 1).bps
 
             /* Rate from layer 3 */
-            source.getBitrateBps(t, RtpLayerDesc.getIndex(1, 0, 0)) shouldBe 8
+            source.getBitrate(t, RtpLayerDesc.getIndex(1, 0, 0)) shouldBe 8.bps
             /* Rates from layer 4 and its dependency, 3 */
-            source.getBitrateBps(t, RtpLayerDesc.getIndex(1, 0, 1)) shouldBe 16 + 8
+            source.getBitrate(t, RtpLayerDesc.getIndex(1, 0, 1)) shouldBe (16 + 8).bps
             /* Layer 5's own rate is 0, so rates from its dependencies, 4 and 3 */
-            source.getBitrateBps(t, RtpLayerDesc.getIndex(1, 0, 2)) shouldBe 16 + 8
+            source.getBitrate(t, RtpLayerDesc.getIndex(1, 0, 2)) shouldBe (16 + 8).bps
 
             /* If a layer returns a 0 rate, the function gets the next lower non-zero rate */
             /* Layer 6's own rate is 0, and it has no dependencies, so get the rate from the next-lower
                layer, 5 */
-            source.getBitrateBps(t, RtpLayerDesc.getIndex(2, 0, 0)) shouldBe 16 + 8
+            source.getBitrate(t, RtpLayerDesc.getIndex(2, 0, 0)) shouldBe (16 + 8).bps
             /* Layer 7's own rate is also 0, so similarly get the rate from layer 5 */
-            source.getBitrateBps(t, RtpLayerDesc.getIndex(2, 0, 1)) shouldBe 16 + 8
+            source.getBitrate(t, RtpLayerDesc.getIndex(2, 0, 1)) shouldBe (16 + 8).bps
             /* Layer 8's rate.  Its dependencies (7 and 6) are 0. */
-            source.getBitrateBps(t, RtpLayerDesc.getIndex(2, 0, 2)) shouldBe 256
+            source.getBitrate(t, RtpLayerDesc.getIndex(2, 0, 2)) shouldBe 256.bps
         }
     }
 }
@@ -198,10 +201,10 @@ private fun createSource(
 }
 
 /** A fake rate statistics object, for testing */
-private class FakeRateStatistics(
-    private val fakeRate: Long
-) : RateStatistics(RtpLayerDesc.AVERAGE_BITRATE_WINDOW_MS) {
-    override fun getRate(nowMs: Long): Long {
-        return fakeRate
+private class FakeBitrateTracker(
+    private val fakeRateBps: Long
+) : BitrateTracker(1.secs) {
+    override fun getRate(nowMs: Long): Bandwidth {
+        return fakeRateBps.bps
     }
 }

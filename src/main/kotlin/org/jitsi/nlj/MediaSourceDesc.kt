@@ -16,6 +16,8 @@
 package org.jitsi.nlj
 
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.bps
 import org.jitsi.utils.ArrayUtils
 import java.util.Collections
 import java.util.NavigableMap
@@ -97,14 +99,14 @@ class MediaSourceDesc
      * @return the last "stable" bitrate (bps) of the encoding with a non-zero rate
      * at or below the specified index.
      */
-    fun getBitrateBps(nowMs: Long, idx: Int): Long {
+    fun getBitrate(nowMs: Long, idx: Int): Bandwidth {
         for (entry in layersByIndex.headMap(idx, true).descendingMap()) {
-            val bps = entry.value.getBitrateBps(nowMs)
-            if (bps > 0) {
-                return bps
+            val bitrate = entry.value.getBitrate(nowMs)
+            if (bitrate.bps > 0) {
+                return bitrate
             }
         }
-        return 0
+        return 0.bps
     }
 
     @Synchronized
