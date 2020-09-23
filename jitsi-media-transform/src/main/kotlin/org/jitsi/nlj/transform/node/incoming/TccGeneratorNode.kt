@@ -59,7 +59,7 @@ class TccGeneratorNode(
     private val packetArrivalTimes = TreeMap<Int, Long>()
     // The first sequence number of the current tcc feedback packet
     private var windowStartSeq: Int = -1
-    private val tccFeedbackBitrate = BitrateTracker(1.secs)
+    private val tccFeedbackBitrate = BitrateTracker(1.secs, 10.ms)
     private var numTccSent: Int = 0
     private var numMultipleTccPackets = 0
     private var enabled: Boolean by observableWhenChanged(false) {

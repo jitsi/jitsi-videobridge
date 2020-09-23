@@ -16,6 +16,8 @@
 
 package org.jitsi.nlj.transform.node.incoming
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetMediaSourcesEvent
@@ -88,8 +90,8 @@ open class BitrateCalculator(
     private val activePacketRateThreshold: Int = 5,
     private val clock: Clock = Clock.systemUTC()
 ) : ObserverNode(name) {
-    private val bitrateTracker = BitrateTracker(5.secs)
-    private val packetRateTracker = RateTracker(5.secs)
+    private val bitrateTracker = createBitrateTracker()
+    private val packetRateTracker = createRateTracker()
     val bitrate: Bandwidth
         get() = bitrateTracker.rate
     val packetRatePps: Long
@@ -125,5 +127,22 @@ open class BitrateCalculator(
          * The initial period in which we consider the stream active regardless of packet rate.
          */
         val GRACE_PERIOD = 10.secs
+
+        /**
+         * The size of the window over which to calculate average rates.
+         */
+        val windowSize: Duration by config {
+            "jmt.rtp.bitrate-calculator.window-size".from(JitsiConfig.newConfig)
+        }
+
+        /**
+         * The size of the buckets to use when calculating average rates.
+         */
+        val bucketSize: Duration by config {
+            "jmt.rtp.bitrate-calculator.bucket-size".from(JitsiConfig.newConfig)
+        }
+
+        fun createBitrateTracker() = BitrateTracker(windowSize, bucketSize)
+        fun createRateTracker() = RateTracker(windowSize, bucketSize)
     }
 }

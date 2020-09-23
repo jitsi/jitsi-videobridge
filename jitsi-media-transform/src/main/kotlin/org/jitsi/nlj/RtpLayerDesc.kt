@@ -16,10 +16,10 @@
 package org.jitsi.nlj
 
 import org.jitsi.nlj.stats.NodeStatsBlock
+import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.DataSize
-import org.jitsi.utils.secs
 
 /**
  * Keeps track of its subjective quality index,
@@ -67,7 +67,7 @@ constructor(
     /**
      * The [BitrateTracker] instance used to calculate the receiving bitrate of this RTP layer.
      */
-    private var bitrateTracker = BitrateTracker(AVERAGE_BITRATE_WINDOW)
+    private var bitrateTracker = BitrateCalculator.createBitrateTracker()
 
     /**
      * @return the "id" of this layer within this encoding. This is a server-side id and should
@@ -162,13 +162,6 @@ constructor(
          * A value used to designate the absence of frame rate information.
          */
         private const val NO_FRAME_RATE = -1.0
-
-        /**
-         * The default window size in ms for the bitrate estimation.
-         *
-         * TODO maybe make this configurable.
-         */
-        val AVERAGE_BITRATE_WINDOW = 5.secs
 
         /**
          * Calculate the "id" of a layer based on its encoding, spatial, and temporal ID.

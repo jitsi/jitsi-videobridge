@@ -15,12 +15,10 @@
  */
 package org.jitsi.nlj.stats
 
+import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.util.Bandwidth
-import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.bytes
-import org.jitsi.utils.secs
 import java.util.concurrent.atomic.AtomicLong
-import org.jitsi.utils.stats.RateTracker
 
 /**
  * Keeps tracks of the basic statistics for a stream of packets.
@@ -31,12 +29,12 @@ class PacketStreamStats {
     /**
      * The bitrate in bits per second.
      */
-    private val bitrate = BitrateTracker(1.secs)
+    private val bitrate = BitrateCalculator.createBitrateTracker()
 
     /**
      * The packet rate in packets per second.
      */
-    private val packetRate = RateTracker(1.secs)
+    private val packetRate = BitrateCalculator.createRateTracker()
 
     /**
      * Total total number of bytes.
