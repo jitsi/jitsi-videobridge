@@ -75,10 +75,34 @@ class ClientConnection : IQListener {
         }
     }
 
+    /**
+     * Adds an [ExtensionElement] to our presence, and removes any other
+     * extensions with the same element name and namespace, if any exists.
+     * @param extension the extension to add.
+     */
     fun setPresenceExtension(extension: ExtensionElement) {
         mucClientManager.setPresenceExtension(extension)
     }
 
+    /**
+     * Adds a new [MucClient] with configuration described in JSON.
+     * @param jsonObject the JSON which describes the configuration of the
+     * client.
+     * <p/>
+     * <pre>{@code
+     * The expected JSON format is:
+     * {
+     *     "id": "muc-client-id",
+     *     "key": "value"
+     * }
+     * }</pre>
+     * The [key, value] pairs are interpreted as property names and values to
+     * set for the client's configuration (see {@link MucClientConfiguration}).
+     *
+     * @return {@code true} if the request was successful (i.e. the JSON
+     * is in the required format and either a new {@link MucClient} was added
+     * or a client with the same ID already existed).
+     */
     fun addMucClient(jsonObject: JSONObject): Boolean {
         if (jsonObject["id"] !is String) {
             return false
@@ -103,6 +127,22 @@ class ClientConnection : IQListener {
         return true
     }
 
+    /**
+     * Removes a {@link MucClient} with an ID described in JSON.
+     * @param jsonObject the JSON which contains the ID of the client to remove.
+     * </p>
+     * <pre>{@code
+     * The expected JSON format is:
+     * {
+     *     "id": "muc-client-id",
+     * }
+     * }</pre>
+     *
+     * @return {@code true} if the MUC client with the specified ID was removed.
+     * Otherwise (if instance has not been initialized, if the JSON is not in
+     * the expected format, or if no MUC client with the specified ID exists),
+     * returns {@code false}.
+     */
     fun removeMucClient(jsonObject: JSONObject): Boolean {
         if (jsonObject["id"] !is String) {
             return false
