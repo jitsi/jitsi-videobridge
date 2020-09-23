@@ -175,7 +175,7 @@ public class BitrateController
      * A modified copy of the original video constraints map, augmented with video constraints for the endpoints that
      * fall outside of the last-n set + endpoints not announced in the videoConstraintsMap.
      */
-    private Map<String, VideoConstraints> effectiveConstraintsMap = Collections.EMPTY_MAP;
+    private Map<String, VideoConstraints> effectiveConstraintsMap = Collections.emptyMap();
 
     /**
      * The last-n value for the endpoint to which this {@link BitrateController}
@@ -964,6 +964,16 @@ public class BitrateController
 
                 maxBandwidth += sourceBitrateAllocation.getTargetBitrate();
                 sourceBitrateAllocation.improve(maxBandwidth);
+                // We will "force" forward the lowest layer of the highest priority (first in line)
+                // participant if we weren't able to allocate any bandwidth for it and
+                // enableOnstageVideoSuspend is false.
+                if (i == 0 &&
+                        sourceBitrateAllocation.ratedTargetIdx < 0 &&
+                        !BitrateControllerConfig.enableOnstageVideoSuspend())
+                {
+                    sourceBitrateAllocation.ratedTargetIdx = 0;
+                    sourceBitrateAllocation.oversending = true;
+                }
                 maxBandwidth -= sourceBitrateAllocation.getTargetBitrate();
 
                 newRatedTargetIndices[i]
@@ -1453,14 +1463,8 @@ public class BitrateController
 
             if (ratedTargetIdx == -1 && ratedPreferredIdx > -1)
             {
-                if (!BitrateControllerConfig.enableOnstageVideoSuspend())
-                {
-                    ratedTargetIdx = 0;
-                    oversending = ratedIndices[0].bps > maxBps;
-                }
-
-                // Boost on stage participant to 360p, if there's enough bw.
-                for (int i = ratedTargetIdx + 1; i < ratedIndices.length; i++)
+                // Boost on stage participant to preferred, if there's enough bw.
+                for (int i = 0; i < ratedIndices.length; i++)
                 {
                     if (i > ratedPreferredIdx || maxBps < ratedIndices[i].bps)
                     {

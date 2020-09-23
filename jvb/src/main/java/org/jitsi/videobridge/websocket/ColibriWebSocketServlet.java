@@ -16,10 +16,8 @@
 package org.jitsi.videobridge.websocket;
 
 import org.eclipse.jetty.websocket.servlet.*;
-import org.jitsi.osgi.*;
-import org.jitsi.videobridge.*;
 import org.jitsi.utils.logging2.*;
-import org.osgi.framework.*;
+import org.jitsi.videobridge.*;
 
 import java.io.*;
 
@@ -35,24 +33,15 @@ class ColibriWebSocketServlet
     private static final Logger logger = new LoggerImpl(ColibriWebSocketServlet.class.getName());
 
     /**
-     * The {@link BundleContext} in which this instance is running.
-     */
-    private BundleContext bundleContext;
-
-    /**
      * The {@link ColibriWebSocketService} instance which created this servlet.
      */
-    private ColibriWebSocketService service;
+    private final ColibriWebSocketService service;
 
     /**
      * Initializes a new {@link ColibriWebSocketServlet} instance.
-     * @param bundleContext the {@code BundleContext} in which the new instance
-     * is to be initialized
      */
-    ColibriWebSocketServlet(BundleContext bundleContext,
-                            ColibriWebSocketService service)
+    ColibriWebSocketServlet(ColibriWebSocketService service)
     {
-        this.bundleContext = bundleContext;
         this.service = service;
     }
 
@@ -65,23 +54,18 @@ class ColibriWebSocketServlet
         // set a timeout of 1min
         webSocketServletFactory.getPolicy().setIdleTimeout(60000);
 
-        webSocketServletFactory.setCreator(new WebSocketCreator()
+        webSocketServletFactory.setCreator((request, response) ->
         {
-            @Override
-            public Object createWebSocket(ServletUpgradeRequest request,
-                                          ServletUpgradeResponse response)
+            try
             {
-                try
-                {
-                    return
-                        ColibriWebSocketServlet
-                            .this.createWebSocket(request, response);
-                }
-                catch (IOException ioe)
-                {
-                    response.setSuccess(false);
-                    return null;
-                }
+                return
+                    ColibriWebSocketServlet
+                        .this.createWebSocket(request, response);
+            }
+            catch (IOException ioe)
+            {
+                response.setSuccess(false);
+                return null;
             }
         });
     }
@@ -149,7 +133,7 @@ class ColibriWebSocketServlet
         }
 
         AbstractEndpoint abstractEndpoint = conference.getEndpoint(ids[2]);
-        if (abstractEndpoint == null || !(abstractEndpoint instanceof Endpoint))
+        if (!(abstractEndpoint instanceof Endpoint))
         {
             logger.warn("Received request for a nonexistent endpoint: "
                             + ids[2] + "(conference " + conference.getID());
@@ -201,6 +185,6 @@ class ColibriWebSocketServlet
      */
     Videobridge getVideobridge()
     {
-       return ServiceUtils2.getService(bundleContext, Videobridge.class);
+        return VideobridgeSupplierKt.singleton().get();
     }
 }

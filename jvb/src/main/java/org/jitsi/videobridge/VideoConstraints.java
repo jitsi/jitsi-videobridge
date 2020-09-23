@@ -135,6 +135,7 @@ public class VideoConstraints
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public String toString()
     {
         JSONObject jsonObject = new JSONObject();

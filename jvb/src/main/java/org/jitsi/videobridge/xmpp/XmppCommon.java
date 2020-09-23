@@ -52,6 +52,7 @@ public class XmppCommon
     private static final DelayStats versionDelayStats = new DelayStats(thresholds);
     private static final DelayStats responseDelayStats = new DelayStats(thresholds);
 
+    @SuppressWarnings("unchecked")
     public static JSONObject getStatsJson()
     {
         JSONObject jsonObject = new JSONObject();

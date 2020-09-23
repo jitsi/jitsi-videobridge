@@ -86,11 +86,11 @@ class LastNReducer(
         jvbLastN.jvbLastN = newLastN
     }
 
-    override fun recover() {
+    override fun recover(): Boolean {
         val currLastN = jvbLastN.jvbLastN
         if (currLastN == -1) {
             logger.cdebug { "No recovery necessary, no JVB last-n is set" }
-            return
+            return false
         }
         val newLastN = (currLastN * recoverScale).toInt()
         if (newLastN >= maxEnforcedLastN) {
@@ -101,6 +101,8 @@ class LastNReducer(
             logger.info("JVB last-n was $currLastN, increasing to $newLastN as part of load recovery")
             jvbLastN.jvbLastN = newLastN
         }
+
+        return true
     }
 
     override fun impactTime(): Duration = impactTime

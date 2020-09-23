@@ -14,36 +14,50 @@ wss://example.com/colibri-ws/server-id/conf-id/endpoint-id?pwd=123
 ```
 
 # Bridge configuration
-The following properties configure the bridge.
+To enable WebSockets on the bridge, both the publicly-accessible HTTP server and WebSockets
+themselves must be enabled.
 
-To enable the HTTP interface without TLS:
-```
-org.jitsi.videobridge.rest.jetty.port=9090
-```
+The following block in jvb.conf configures the publicly-accessible HTTP server:
 
-To enable the HTTP interface with TLS:
+To enable the publicly-accessible HTTP server without TLS:
 ```
-org.jitsi.videobridge.rest.jetty.tls.port=443
-org.jitsi.videobridge.rest.jetty.sslContextFactory.keyStorePath=/etc/jitsi/videobridge/ssl.store
-org.jitsi.videobridge.rest.jetty.sslContextFactory.keyStorePassword=KEY_STORE_PASSWORD
-```
-
-To specify that the bridge should advertise the web socket protocol as "wss"
-even if it is locally using plain HTTP. This is useful if TLS is terminated
-elsewhere:
-```
-org.jitsi.videobridge.rest.COLIBRI_WS_TLS=true
+videobridge {
+    http-servers {
+        public {
+            port = 9090
+        }
+    }
+}
 ```
 
-To specify the domain and port number to advertise:
+To enable the publicly-accessible HTTP server with TLS:
 ```
-org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN=example.com:443
+videobridge {
+    http-servers {
+        public {
+            tls-port = 443
+            key-store-path=/etc/jitsi/videobridge/ssl.store
+            key-store-password=KEY_STORE_PASSWORD
+        }
+    }
+}
 ```
 
-To specify a specific server ID to be advertised as path of the HTTP request path. This is useful
-when a set of jitsi-videobridge instances are fronted by an HTTP proxy, and they advertise the same domain:
+To enable WebSockets:
 ```
-org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID=jvb2
+videobridge {
+    websockets {
+        enabled = true
+        tls = true # or false, depending on your HTTP server config
+        # The port here is the 'advertise port' for websockets, which means the publicly-accessible
+        # port clients will use.  This may match the public http server port, but could also be different
+        # if a proxy is being used.
+        domain = example.com:443
+        # A server ID can optionally be provided.  This is useful when a set of jitsi-videobridge instances
+        # are fronted by an HTTP proxy and they advertise the same domain.
+        server-id = jvb2
+    }
+}
 ```
 
 # Proxy configuration

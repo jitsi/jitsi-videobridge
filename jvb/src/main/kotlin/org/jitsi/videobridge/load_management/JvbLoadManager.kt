@@ -16,6 +16,9 @@
 
 package org.jitsi.videobridge.load_management
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
@@ -33,42 +36,67 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
 ) {
     private val logger = createLogger(minLogLevel = Level.ALL)
 
+    val reducerEnabled: Boolean by config("videobridge.load-management.reducer-enabled".from(JitsiConfig.newConfig))
+
     private var lastReducerTime: Instant = NEVER
 
     private var state: State = State.NOT_OVERLOADED
 
+    private var mostRecentLoadMeasurement: T? = null
+
     fun loadUpdate(loadMeasurement: T) {
         logger.cdebug { "Got a load measurement of $loadMeasurement" }
+        mostRecentLoadMeasurement = loadMeasurement
+        val now = clock.instant()
         if (loadMeasurement.getLoad() >= jvbLoadThreshold.getLoad()) {
             state = State.OVERLOADED
-            logger.info("Load measurement $loadMeasurement is above threshold of $jvbLoadThreshold, " +
-                    "maybe running load reducer")
-            maybeRun("load reducer") { reduceLoad() }
+            if (reducerEnabled) {
+                logger.info("Load measurement $loadMeasurement is above threshold of $jvbLoadThreshold")
+                if (canRunReducer(now)) {
+                    logger.info("Running load reducer")
+                    loadReducer.reduceLoad()
+                    lastReducerTime = now
+                } else {
+                    logger.info("Load reducer ran at $lastReducerTime, which is within " +
+                        "${loadReducer.impactTime()} of now, not running reduce")
+                }
+            }
         } else {
             state = State.NOT_OVERLOADED
-            if (loadMeasurement.getLoad() < jvbRecoveryThreshold.getLoad()) {
-                logger.info("Load measurement $loadMeasurement is below threshold of $jvbLoadThreshold, " +
-                        "maybe running recovery")
-                maybeRun("recovery") { recover() }
+            if (reducerEnabled) {
+                if (loadMeasurement.getLoad() < jvbRecoveryThreshold.getLoad()) {
+                    if (canRunReducer(now)) {
+                        if (loadReducer.recover()) {
+                            logger.info("Recovery ran after a load measurement of $loadMeasurement (which was " +
+                                "below threshold of $jvbRecoveryThreshold) was received")
+                            lastReducerTime = now
+                        } else {
+                            logger.cdebug { "Recovery had no work to do" }
+                        }
+                    } else {
+                        logger.cdebug {
+                            "Load measurement $loadMeasurement is below recovery threshold, but load reducer " +
+                                "ran at $lastReducerTime, which is within ${loadReducer.impactTime()} of now, " +
+                                "not running recover"
+                        }
+                    }
+                }
             }
         }
     }
 
+    fun getCurrentStressLevel(): Double =
+        mostRecentLoadMeasurement?.div(jvbLoadThreshold) ?: 0.0
+
     fun getStats() = OrderedJsonObject().apply {
-        put("state", state)
+        put("state", state.toString())
+        put("stress", getCurrentStressLevel().toString())
+        put("reducer_enabled", reducerEnabled.toString())
         put("reducer", loadReducer.getStats())
     }
 
-    private fun maybeRun(taskDescription: String, task: JvbLoadReducer.() -> Unit) {
-        if (Duration.between(lastReducerTime, clock.instant()) >= loadReducer.impactTime()) {
-            logger.info("Running $taskDescription")
-            loadReducer.apply(task)
-            lastReducerTime = clock.instant()
-        } else {
-            logger.info("Load reducer started running ${Duration.between(lastReducerTime, clock.instant())} " +
-                    "ago, and we wait ${loadReducer.impactTime()} between runs, so will skip running $taskDescription")
-        }
-    }
+    private fun canRunReducer(now: Instant): Boolean =
+        Duration.between(lastReducerTime, now) >= loadReducer.impactTime()
 
     enum class State {
         OVERLOADED,
