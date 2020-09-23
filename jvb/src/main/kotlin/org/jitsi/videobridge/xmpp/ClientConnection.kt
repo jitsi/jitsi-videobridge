@@ -159,14 +159,10 @@ class ClientConnection : IQListener {
         }
         logger.cdebug { "RECV: ${iq.toXML()}" }
 
-        val response = when (iq.type) {
-            IQ.Type.get, IQ.Type.set -> handleIqRequest(iq)
+        return when (iq.type) {
+            IQ.Type.get, IQ.Type.set -> handleIqRequest(iq).also { logger.cdebug { "SENT: ${it.toXML() ?: "null"}" } }
             else -> null
         }
-
-        logger.cdebug { "SENT: ${response?.toXML() ?: "null"}" }
-
-        return response
     }
 
     private fun handleIqRequest(iq: IQ): IQ {
