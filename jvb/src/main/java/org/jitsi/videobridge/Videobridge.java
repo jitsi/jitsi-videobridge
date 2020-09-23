@@ -129,9 +129,6 @@ public class Videobridge
      */
     private final ScheduledFuture<?> loadSamplerTask;
 
-    private final XmppConnection.EventHandler xmppConnectionEventHandler =
-        new XmppConnectionEventHandler();
-
     static
     {
         org.jitsi.rtp.util.BufferPool.Companion.setGetArray(ByteBufferPool::getBuffer);
@@ -175,7 +172,7 @@ public class Videobridge
             10,
             TimeUnit.SECONDS
         );
-        XmppConnectionSupplierKt.singleton().get().setEventHandler(xmppConnectionEventHandler);
+        XmppConnectionSupplierKt.singleton().get().setEventHandler(new XmppConnectionEventHandler());
     }
 
     /**
