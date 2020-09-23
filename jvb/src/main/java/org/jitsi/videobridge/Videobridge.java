@@ -23,7 +23,7 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
-import org.jitsi.utils.version.Version;
+import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
@@ -32,6 +32,7 @@ import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.version.*;
+import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.health.*;
@@ -171,6 +172,7 @@ public class Videobridge
             10,
             TimeUnit.SECONDS
         );
+        XmppConnectionSupplierKt.singleton().get().setEventHandler(new XmppConnectionEventHandler());
     }
 
     /**
@@ -643,6 +645,56 @@ public class Videobridge
     public Version getVersion()
     {
         return JvbVersionServiceSupplierKt.singleton().get().getCurrentVersion();
+    }
+
+    private class XmppConnectionEventHandler implements XmppConnection.EventHandler
+    {
+        @NotNull
+        @Override
+        public IQ colibriConferenceIqReceived(@NotNull ColibriConferenceIQ iq)
+        {
+            return handleColibriConferenceIQ(iq);
+        }
+
+        @NotNull
+        @Override
+        public IQ versionIqReceived(@NotNull org.jivesoftware.smackx.iqversion.packet.Version iq)
+        {
+            VersionService versionService = JvbVersionServiceSupplierKt.singleton().get();
+            org.jitsi.utils.version.Version currentVersion = versionService.getCurrentVersion();
+            if (currentVersion == null)
+            {
+                return IQ.createErrorResponse(
+                    iq,
+                    XMPPError.getBuilder(XMPPError.Condition.internal_server_error)
+                );
+            }
+
+            // send packet
+            org.jivesoftware.smackx.iqversion.packet.Version versionResult =
+                new org.jivesoftware.smackx.iqversion.packet.Version(
+                    currentVersion.getApplicationName(),
+                    currentVersion.toString(),
+                    System.getProperty("os.name")
+                );
+
+            // to, from and packetId are set by the caller.
+            // versionResult.setTo(versionRequest.getFrom());
+            // versionResult.setFrom(versionRequest.getTo());
+            // versionResult.setPacketID(versionRequest.getPacketID());
+            versionResult.setType(IQ.Type.result);
+
+            return versionResult;
+        }
+
+        @NotNull
+        @Override
+        public IQ healthCheckIqReceived(@NotNull HealthCheckIQ iq)
+        {
+            return handleHealthCheckIQ(iq);
+        }
+
+
     }
 
     /**
