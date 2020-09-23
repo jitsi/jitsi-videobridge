@@ -197,13 +197,13 @@ public class VideobridgeStatistics
         long packetRateDownload = 0;
 
         // Packets we received
-        long packetsReceivedReceived = 0;
+        long incomingPacketsReceived = 0;
         // Packets we should have received but were lost
-        long packetsReceivedLost = 0;
+        long incomingPacketsLost = 0;
         // Packets we sent that were reported received
-        long packetsSentReceived = 0;
+        long outgoingPacketsReceived = 0;
         // Packets we sent that were reported lost
-        long packetsSentLost = 0;
+        long outgoingPacketsLost = 0;
 
         // Average jitter and RTT across MediaStreams which report a valid value.
         double jitterSumMs = 0; // TODO verify
@@ -311,10 +311,10 @@ public class VideobridgeStatistics
                     rttCount++;
                 }
 
-                packetsReceivedReceived += endpointConnectionStats.getReceiveLoss().getPacketsReceived();
-                packetsReceivedLost += endpointConnectionStats.getReceiveLoss().getPacketsLost();
-                packetsSentReceived += endpointConnectionStats.getSendLoss().getPacketsReceived();
-                packetsSentLost += endpointConnectionStats.getSendLoss().getPacketsLost();
+                incomingPacketsReceived += endpointConnectionStats.getIncomingLossStats().getPacketsReceived();
+                incomingPacketsLost += endpointConnectionStats.getIncomingLossStats().getPacketsLost();
+                outgoingPacketsReceived += endpointConnectionStats.getOutgoingLossStats().getPacketsReceived();
+                outgoingPacketsLost += endpointConnectionStats.getOutgoingLossStats().getPacketsLost();
             }
 
             updateBuckets(audioSendersBuckets, conferenceAudioSenders);
@@ -354,16 +354,16 @@ public class VideobridgeStatistics
         // THREADS
         int threadCount = ManagementFactory.getThreadMXBean().getThreadCount();
 
-        double receiveLoss = 0;
-        if (packetsReceivedReceived + packetsReceivedLost > 0)
+        double incomingLoss = 0;
+        if (incomingPacketsReceived + incomingPacketsLost > 0)
         {
-            receiveLoss = ((double) packetsReceivedLost) / (packetsReceivedReceived + packetsReceivedLost);
+            incomingLoss = ((double) incomingPacketsLost) / (incomingPacketsReceived + incomingPacketsLost);
         }
 
-        double sendLoss = 0;
-        if (packetsSentReceived + packetsSentLost > 0)
+        double outgoingLoss = 0;
+        if (outgoingPacketsReceived + outgoingPacketsLost > 0)
         {
-            sendLoss = ((double) packetsSentLost) / (packetsSentReceived + packetsSentLost);
+            outgoingLoss = ((double) outgoingPacketsLost) / (outgoingPacketsReceived + outgoingPacketsLost);
         }
 
         // Now that (the new values of) the statistics have been calculated and
@@ -374,8 +374,8 @@ public class VideobridgeStatistics
         lock.lock();
         try
         {
-            unlockedSetStat("receive_loss", receiveLoss);
-            unlockedSetStat("send_loss", sendLoss);
+            unlockedSetStat("incoming_loss", incomingLoss);
+            unlockedSetStat("outgoing_loss", outgoingLoss);
             unlockedSetStat(
                     BITRATE_DOWNLOAD,
                     (bitrateDownloadBps + 500) / 1000 /* kbps */);
