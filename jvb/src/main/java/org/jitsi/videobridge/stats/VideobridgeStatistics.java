@@ -201,8 +201,8 @@ public class VideobridgeStatistics
         int fractionLostCount = 0;
         long packetsReceived = 0;
         long packetsReceivedLost = 0; // TODO verify
-        long bitrateDownloadBps = 0;
-        long bitrateUploadBps = 0;
+        double bitrateDownloadBps = 0;
+        double bitrateUploadBps = 0;
         long packetRateUpload = 0;
         long packetRateDownload = 0;
 
@@ -289,7 +289,7 @@ public class VideobridgeStatistics
                         = transceiverStats.getIncomingStats();
                 PacketStreamStats.Snapshot incomingPacketStreamStats
                         = transceiverStats.getIncomingPacketStreamStats();
-                bitrateDownloadBps += incomingPacketStreamStats.getBitrate();
+                bitrateDownloadBps += incomingPacketStreamStats.getBitrate().getBps();
                 packetRateDownload += incomingPacketStreamStats.getPacketRate();
                 for (IncomingSsrcStats.Snapshot ssrcStats
                         : incomingStats.getSsrcStats().values())
@@ -319,7 +319,7 @@ public class VideobridgeStatistics
 
                 PacketStreamStats.Snapshot outgoingStats
                         = transceiverStats.getOutgoingPacketStreamStats();
-                bitrateUploadBps += outgoingStats.getBitrate();
+                bitrateUploadBps += outgoingStats.getBitrate().getBps();
                 packetRateUpload += outgoingStats.getPacketRate();
 
                 double endpointRtt
