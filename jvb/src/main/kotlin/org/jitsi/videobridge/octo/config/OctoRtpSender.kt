@@ -21,6 +21,7 @@ import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpSender
 import org.jitsi.nlj.rtcp.KeyframeRequester
+import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
@@ -110,6 +111,9 @@ class OctoRtpSender(
     override fun onRttUpdate(newRttMs: Double) {}
 
     override fun getPacketStreamStats(): PacketStreamStats.Snapshot = PacketStreamStats.Snapshot(0.bps, 0, 0, 0)
+
+    override fun getTransportCcEngineStats(): TransportCcEngine.StatisticsSnapshot =
+        TransportCcEngine.StatisticsSnapshot(0, 0, 0, 0, 0)
 
     override fun getStreamStats(): OutgoingStatisticsSnapshot = OutgoingStatisticsSnapshot(mapOf())
 
