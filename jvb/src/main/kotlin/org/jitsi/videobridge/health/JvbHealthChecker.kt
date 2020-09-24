@@ -47,7 +47,7 @@ class JvbHealthChecker : HealthCheckService {
             throw Exception("Failed to bind single-port")
         }
 
-        // TODO: check if ClientConnectionImpl is configured and connected.
+        // TODO: check if XmppConnection is configured and connected.
 
         val conference = videobridge.createConference(null, false)
         try {
