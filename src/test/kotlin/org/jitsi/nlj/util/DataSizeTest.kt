@@ -40,7 +40,10 @@ class DataSizeTest : ShouldSpec() {
             should("print as the most appropriate unit") {
                 8_000_000.bits.toString() shouldBe "1 MB"
                 1000.bytes.toString() shouldBe "1 KB"
+                1551.bytes.toString() shouldBe "1.55 KB"
+                1551.kilobytes.toString() shouldBe "1.55 MB"
                 32.bits.toString() shouldBe "4 B"
+                36.bits.toString() shouldBe "4.5 B"
                 4.bits.toString() shouldBe "4 bits"
             }
         }

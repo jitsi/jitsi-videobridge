@@ -103,7 +103,7 @@ class TransportCcEngine(
 
     private fun tccReceived(tccPacket: RtcpFbTccPacket) {
         val now = clock.instant()
-        var currArrivalTimestamp = Instant.ofEpochMilli(tccPacket.GetBaseTimeUs() / 1000)
+        var currArrivalTimestamp = Instant.ofEpochMilli((tccPacket.GetBaseTimeUs() + 500) / 1000)
         if (remoteReferenceTime == NEVER) {
             remoteReferenceTime = currArrivalTimestamp
             localReferenceTime = now

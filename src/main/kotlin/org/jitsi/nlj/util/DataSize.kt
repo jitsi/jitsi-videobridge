@@ -28,9 +28,9 @@ class DataSize(
     var bits: Long = bits
         private set
 
-    val bytes: Long = bits / 8
-    val kiloBytes: Long = bytes / 1000
-    val megaBytes: Long = kiloBytes / 1000
+    val bytes: Double = bits / 8.0
+    val kiloBytes: Double = bytes / 1000.0
+    val megaBytes: Double = kiloBytes / 1000.0
 
     operator fun minus(other: DataSize): DataSize =
         DataSize(bits - other.bits)
