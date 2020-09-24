@@ -29,9 +29,12 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
 import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.UnreceivedPacketReport
 import org.jitsi.utils.LRUCache
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.secs
+import org.jitsi.utils.stats.RateTracker
 
 /**
  * The maximum number of SR packets and their timestamps to save.
@@ -50,8 +53,16 @@ class EndpointConnectionStats(
         fun onRttUpdate(newRttMs: Double)
     }
     data class Snapshot(
-        val rtt: Double
+        val rtt: Double,
+        val incomingLossStats: LossStatsSnapshot,
+        val outgoingLossStats: LossStatsSnapshot
     )
+
+    data class LossStatsSnapshot(
+        val packetsLost: Long,
+        val packetsReceived: Long
+    )
+
     private val endpointConnectionStatsListeners: MutableList<EndpointConnectionStatsListener> = CopyOnWriteArrayList()
 
     // Per-SSRC, maps the compacted NTP timestamp found in an SR SenderInfo to
@@ -60,19 +71,33 @@ class EndpointConnectionStats(
         Collections.synchronizedMap(LRUCache(MAX_SR_TIMESTAMP_HISTORY))
     private val logger = createChildLogger(parentLogger)
 
+    private val lock = Object()
     /**
      * The calculated RTT, in milliseconds, between the bridge and the endpoint
      */
     private var rtt: Double = 0.0
+
+    private val incomingLossTracker = LossTracker()
+    private val outgoingLossTracker = LossTracker()
 
     fun addListener(listener: EndpointConnectionStatsListener) {
         endpointConnectionStatsListeners.add(listener)
     }
 
     fun getSnapshot(): Snapshot {
-        // NOTE(brian): right now we only track a single stat, so synchronization isn't necessary.  If we add more
-        // stats and it's appropriate they be 'snapshotted' together at the same time, we'll need to add a lock here
-        return Snapshot(rtt)
+        return synchronized(lock) {
+            Snapshot(
+                rtt = rtt,
+                incomingLossStats = LossStatsSnapshot(
+                    packetsLost = incomingLossTracker.lostPackets.getAccumulatedCount(),
+                    packetsReceived = incomingLossTracker.receivedPackets.getAccumulatedCount()
+                ),
+                outgoingLossStats = LossStatsSnapshot(
+                    packetsLost = outgoingLossTracker.lostPackets.getAccumulatedCount(),
+                    packetsReceived = outgoingLossTracker.receivedPackets.getAccumulatedCount()
+                )
+            )
+        }
     }
 
     // TODO: change this flow to pass Instant instead of Long
@@ -87,6 +112,8 @@ class EndpointConnectionStats(
                 logger.cdebug { "Received RR packet with ${packet.reportBlocks.size} report blocks" }
                 packet.reportBlocks.forEach { reportBlock -> processReportBlock(receivedInstant, reportBlock) }
             }
+            // Received TCC feedback reports loss on packets we *sent*
+            is RtcpFbTccPacket -> processTcc(packet, outgoingLossTracker)
         }
     }
 
@@ -98,10 +125,12 @@ class EndpointConnectionStats(
                 val entry = SsrcAndTimestamp(packet.senderSsrc, packet.senderInfo.compactedNtpTimestamp)
                 srSentTimes[entry] = clock.instant()
             }
+            // Sent TCC feedback reports loss on packets we *received*
+            is RtcpFbTccPacket -> processTcc(packet, incomingLossTracker)
         }
     }
 
-    private fun processReportBlock(receivedTime: Instant, reportBlock: RtcpReportBlock) {
+    private fun processReportBlock(receivedTime: Instant, reportBlock: RtcpReportBlock) = synchronized(lock) {
         if (reportBlock.lastSrTimestamp == 0L && reportBlock.delaySinceLastSr == 0L) {
             logger.cdebug { "Report block for ssrc ${reportBlock.ssrc} didn't have SR data: " +
                 "lastSrTimestamp was ${reportBlock.lastSrTimestamp}, " +
@@ -130,5 +159,23 @@ class EndpointConnectionStats(
             logger.cdebug { "No sent SR found for SSRC ${reportBlock.ssrc} and SR " +
                 "timestamp ${reportBlock.lastSrTimestamp}" }
         }
+    }
+
+    private fun processTcc(tccPacket: RtcpFbTccPacket, lossTracker: LossTracker) = synchronized(lock) {
+        var lost = 0L
+        var received = 0L
+        for (packetReport in tccPacket) {
+            when (packetReport) {
+                is UnreceivedPacketReport -> lost++
+                else -> received++
+            }
+        }
+        lossTracker.lostPackets.update(lost)
+        lossTracker.receivedPackets.update(received)
+    }
+
+    private class LossTracker {
+        val lostPackets = RateTracker(60.secs, 1.secs)
+        val receivedPackets = RateTracker(60.secs, 1.secs)
     }
 }
