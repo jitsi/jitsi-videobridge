@@ -408,9 +408,16 @@ public class SendSideBandwidthEstimation
     /**
      * Report that one packet has arrived.
      */
-    public void reportPacketArrived(long now)
+    public void reportPacketArrived(long now, boolean previouslyReportedLost)
     {
-        updateReceiverBlock(0, 1, now);
+        if (previouslyReportedLost)
+        {
+            lostPacketArrived();
+        }
+        else
+        {
+            updateReceiverBlock(0, 1, now);
+        }
     }
 
     /**
@@ -420,9 +427,6 @@ public class SendSideBandwidthEstimation
     {
         updateReceiverBlock(256, 1, now);
     }
-
-    /* TODO: We need an API to report that a packet that was previously
-       reported lost has in fact arrived after all. */
 
     /**
      * void SendSideBandwidthEstimation::UpdateReceiverBlock
@@ -458,6 +462,16 @@ public class SendSideBandwidthEstimation
             expected_packets_since_last_loss_update_ = 0;
 
             last_packet_report_ms_ = now;
+        }
+    }
+
+    synchronized private void lostPacketArrived()
+    {
+        /* This algorithm can only cancel out losses that have occurred
+           since the last loss update, unfortunately. */
+        if (lost_packets_since_last_loss_update_Q8_ >= 256)
+        {
+            lost_packets_since_last_loss_update_Q8_ -= 256;
         }
     }
 

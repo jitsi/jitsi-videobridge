@@ -63,8 +63,9 @@ abstract class BandwidthEstimator(
      * Inform the bandwidth estimator about a packet that has arrived at its
      * destination.
      *
-     * This function will be called at most once for any value of [seq]; however, it may be called after a call to
-     * [processPacketLoss] for the same [seq] value, if a packet is delayed.
+     * This function will be called at most once for any value of [seq] (up to cycles);
+     * however, it may be called after a call to [processPacketLoss] for the
+     * same [seq] value, if a packet is delayed.
      *
      * It is possible (e.g., if feedback was lost) that neither
      * [processPacketArrival] nor [processPacketLoss] is called for a given [seq].
@@ -84,6 +85,8 @@ abstract class BandwidthEstimator(
      *  [BandwidthEstimator].
      * @param[size] The size of the packet.
      * @param[ecn] The ECN markings with which the packet was received.
+     * @param[previouslyReportedLost] Whether [processPacketLoss] was previously
+     *  called for this packet.
      */
     fun processPacketArrival(
         now: Instant,
@@ -91,7 +94,8 @@ abstract class BandwidthEstimator(
         recvTime: Instant?,
         seq: Int,
         size: DataSize,
-        ecn: Byte = 0
+        ecn: Byte = 0,
+        previouslyReportedLost: Boolean = false
     ) {
         if (timeSeriesLogger.isTraceEnabled) {
             val point = diagnosticContext.makeTimeSeriesPoint("bwe_packet_arrival", now)
@@ -106,10 +110,11 @@ abstract class BandwidthEstimator(
             if (ecn != 0.toByte()) {
                 point.addField("ecn", ecn)
             }
+            point.addField("previouslyReportedLost", previouslyReportedLost)
             timeSeriesLogger.trace(point)
         }
 
-        doProcessPacketArrival(now, sendTime, recvTime, seq, size, ecn)
+        doProcessPacketArrival(now, sendTime, recvTime, seq, size, ecn, previouslyReportedLost)
     }
 
     /**
@@ -123,7 +128,8 @@ abstract class BandwidthEstimator(
         recvTime: Instant?,
         seq: Int,
         size: DataSize,
-        ecn: Byte = 0
+        ecn: Byte = 0,
+        previouslyReportedLost: Boolean = false
     )
 
     /**
