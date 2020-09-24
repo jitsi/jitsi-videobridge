@@ -109,7 +109,7 @@ class GoogleCcEstimator(diagnosticContext: DiagnosticContext, parentLogger: Logg
         "GoogleCcEstimator", getCurrentBw(now)
     ).apply {
         addNumber("latestDelayEstimate", sendSideBandwidthEstimation.latestREMB)
-        addNumber("latestFractionLoss", sendSideBandwidthEstimation.latestFractionLoss)
+        addNumber("latestLossFraction", sendSideBandwidthEstimation.latestFractionLoss / 256.0)
         with(sendSideBandwidthEstimation.statistics) {
             update(now.toEpochMilli())
             addNumber("lossDegradedMs", lossDegradedMs)

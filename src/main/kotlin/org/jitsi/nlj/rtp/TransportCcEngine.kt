@@ -18,7 +18,6 @@ package org.jitsi.nlj.rtp
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.atomic.AtomicInteger
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.util.ArrayCache
@@ -35,6 +34,7 @@ import org.jitsi.utils.joinToRangedString
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.json.simple.JSONObject
+import java.util.concurrent.atomic.LongAdder
 
 /**
  * Implements transport-cc functionality.
@@ -56,10 +56,12 @@ class TransportCcEngine(
      */
     private val logger: Logger = createChildLogger(parentLogger)
 
-    val numDuplicateReports = AtomicInteger()
-    val numPacketsReportedAfterLost = AtomicInteger()
-    val numPacketsUnreported = AtomicInteger()
-    val numMissingPacketReports = AtomicInteger()
+    val numPacketsReported = LongAdder()
+    val numPacketsReportedLost = LongAdder()
+    val numDuplicateReports = LongAdder()
+    val numPacketsReportedAfterLost = LongAdder()
+    val numPacketsUnreported = LongAdder()
+    val numMissingPacketReports = LongAdder()
 
     /**
      * The reference time of the remote clock. This is used to rebase the
@@ -117,7 +119,7 @@ class TransportCcEngine(
                 if (packetReport is ReceivedPacketReport) {
                     currArrivalTimestamp += packetReport.deltaDuration
                     missingPacketDetailSeqNums.add(tccSeqNum)
-                    numMissingPacketReports.getAndIncrement()
+                    numMissingPacketReports.increment()
                 }
                 continue
             }
@@ -127,6 +129,8 @@ class TransportCcEngine(
                     if (packetDetail.state == PacketDetailState.unreported) {
                         bandwidthEstimator.processPacketLoss(now, packetDetail.packetSendTime, tccSeqNum)
                         packetDetail.state = PacketDetailState.reportedLost
+                        numPacketsReported.increment()
+                        numPacketsReportedLost.increment()
                     }
                 }
                 is ReceivedPacketReport -> {
@@ -136,7 +140,11 @@ class TransportCcEngine(
                         PacketDetailState.unreported, PacketDetailState.reportedLost -> {
                             val previouslyReportedLost = packetDetail.state == PacketDetailState.reportedLost
                             if (previouslyReportedLost) {
-                                numPacketsReportedAfterLost.getAndIncrement()
+                                numPacketsReportedAfterLost.increment()
+                                numPacketsReportedLost.decrement()
+                                /* Packet has already been counted in numPacketsReported */
+                            } else {
+                                numPacketsReported.increment()
                             }
 
                             val arrivalTimeInLocalClock =
@@ -150,7 +158,7 @@ class TransportCcEngine(
                         }
 
                         PacketDetailState.reportedReceived ->
-                            numDuplicateReports.getAndIncrement()
+                            numDuplicateReports.increment()
                     }
                 }
             }
@@ -192,10 +200,12 @@ class TransportCcEngine(
     }
 
     fun getStatistics(): StatisticsSnapshot {
-        return StatisticsSnapshot(numDuplicateReports.get(),
-            numPacketsReportedAfterLost.get(),
-            numPacketsUnreported.get(),
-            numMissingPacketReports.get()
+        return StatisticsSnapshot(numPacketsReported.sum(),
+            numPacketsReportedLost.sum(),
+            numDuplicateReports.sum(),
+            numPacketsReportedAfterLost.sum(),
+            numPacketsUnreported.sum(),
+            numMissingPacketReports.sum()
         )
     }
 
@@ -226,13 +236,17 @@ class TransportCcEngine(
     }
 
     data class StatisticsSnapshot(
-        val numDuplicateReports: Int,
-        val numPacketsReportedAfterLost: Int,
-        val numPacketsUnreported: Int,
-        val numMissingPacketReports: Int
+        val numPacketsReported: Long,
+        val numPacketsReportedLost: Long,
+        val numDuplicateReports: Long,
+        val numPacketsReportedAfterLost: Long,
+        val numPacketsUnreported: Long,
+        val numMissingPacketReports: Long
     ) {
         fun toJson(): JSONObject {
             return JSONObject().also {
+                it.put("numPacketsReported", numPacketsReported)
+                it.put("numPacketsReportedLost", numPacketsReportedLost)
                 it.put("numDuplicateReports", numDuplicateReports)
                 it.put("numPacketsReportedAfterLost", numPacketsReportedAfterLost)
                 it.put("numPacketsUnreported", numPacketsUnreported)
@@ -249,7 +263,7 @@ class TransportCcEngine(
     ) {
         override fun discardItem(item: PacketDetail) {
             if (item.state == PacketDetailState.unreported)
-                numPacketsUnreported.getAndIncrement()
+                numPacketsUnreported.increment()
         }
 
         private val rfc3711IndexTracker = Rfc3711IndexTracker()

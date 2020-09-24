@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.EndpointConnectionStats
@@ -39,6 +40,7 @@ abstract class RtpSender :
     abstract fun setSrtpTransformers(srtpTransformers: SrtpTransformers)
     abstract fun getStreamStats(): OutgoingStatisticsSnapshot
     abstract fun getPacketStreamStats(): PacketStreamStats.Snapshot
+    abstract fun getTransportCcEngineStats(): TransportCcEngine.StatisticsSnapshot
     abstract fun requestKeyframe(mediaSsrc: Long? = null)
     abstract fun tearDown()
 

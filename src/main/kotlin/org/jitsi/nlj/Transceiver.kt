@@ -298,7 +298,8 @@ class Transceiver(
             rtpReceiver.getPacketStreamStats(),
             rtpSender.getStreamStats(),
             rtpSender.getPacketStreamStats(),
-            rtpSender.bandwidthEstimator.getStats(clock.instant()))
+            rtpSender.bandwidthEstimator.getStats(clock.instant()),
+            rtpSender.getTransportCcEngineStats())
     }
 
     override fun stop() {

@@ -253,6 +253,8 @@ class RtpSenderImpl(
 
     override fun getPacketStreamStats() = packetStreamStats.snapshot()
 
+    override fun getTransportCcEngineStats() = transportCcEngine.getStatistics()
+
     override fun handleEvent(event: Event) {
         when (event) {
             is SetLocalSsrcEvent -> {
