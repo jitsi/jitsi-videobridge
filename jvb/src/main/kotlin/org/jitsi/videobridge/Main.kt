@@ -40,7 +40,6 @@ import org.jitsi.videobridge.octo.singleton as octoRelayService
 import org.jitsi.videobridge.xmpp.singleton as xmppConnection
 import org.jitsi.videobridge.stats.singleton as statsMgr
 import org.jitsi.videobridge.shutdown.singleton as shutdownService
-import org.jitsi.videobridge.singleton as videobridge
 
 fun main(args: Array<String>) {
     val cmdLine = CmdLine().apply { parse(args) }
@@ -72,7 +71,7 @@ fun main(args: Array<String>) {
 
     startIce4j()
 
-    val videobridge = videobridge().get().apply { start() }
+    val videobridge = Videobridge().apply { start() }
     val octoRelayService = octoRelayService().get()?.apply { start() }
     val xmppConnection = xmppConnection().get().apply { start() }
     val statsMgr = statsMgr().get()?.apply {
