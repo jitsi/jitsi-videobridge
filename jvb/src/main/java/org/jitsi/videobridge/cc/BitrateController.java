@@ -231,14 +231,6 @@ public class BitrateController
         enableVideoQualityTracing = timeSeriesLogger.isTraceEnabled();
     }
 
-    public BitrateController(
-        Endpoint destinationEndpoint,
-        @NotNull DiagnosticContext diagnosticContext,
-        Logger parentLogger
-    ) {
-        this(destinationEndpoint, diagnosticContext, parentLogger, Clock.systemUTC());
-    }
-
     /**
      * Returns a boolean that indicates whether or not the current bandwidth
      * estimation (in bps) has changed above the configured threshold (in
