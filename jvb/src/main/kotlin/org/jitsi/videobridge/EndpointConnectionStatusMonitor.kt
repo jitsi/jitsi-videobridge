@@ -28,11 +28,11 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
-class EndpointConnectionStatusMonitor @JvmOverloads constructor(
+class EndpointConnectionStatusMonitor(
     private val conference: Conference,
     private val executor: ScheduledExecutorService,
     parentLogger: Logger,
-    private val clock: Clock = Clock.systemUTC()
+    private val clock: Clock
 ) {
     private val logger = createChildLogger(parentLogger)
 
