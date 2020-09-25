@@ -43,7 +43,7 @@ import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicBoolean
 
-class IceTransport @JvmOverloads constructor(
+class IceTransport(
     id: String,
     /**
      * Whether or not the ICE agent created by this transport should be the
@@ -51,7 +51,7 @@ class IceTransport @JvmOverloads constructor(
      */
     controlling: Boolean,
     parentLogger: Logger,
-    private val clock: Clock = Clock.systemUTC()
+    private val clock: Clock
 ) {
     private val logger = createChildLogger(parentLogger)
 
