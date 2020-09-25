@@ -883,7 +883,8 @@ public class BitrateController
                         destinationEndpoint.getConference().requestKeyframe(
                             endpointID, targetSSRC),
                     payloadTypes,
-                    logger);
+                    logger,
+                    clock);
 
             logger.debug(() -> "new source projection for " + sourceBitrateAllocation.source);
 

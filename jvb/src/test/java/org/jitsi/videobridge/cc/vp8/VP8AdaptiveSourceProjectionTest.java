@@ -15,6 +15,7 @@ import org.jitsi_modified.impl.neomedia.codec.video.vp8.*;
 import org.junit.*;
 
 import javax.xml.bind.*;
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -37,7 +38,7 @@ public class VP8AdaptiveSourceProjectionTest
 
         VP8AdaptiveSourceProjectionContext context =
             new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+                initialState, logger, Clock.systemUTC());
 
         Vp8PacketGenerator generator = new Vp8PacketGenerator(1);
 
@@ -69,7 +70,7 @@ public class VP8AdaptiveSourceProjectionTest
 
         VP8AdaptiveSourceProjectionContext context =
             new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+                initialState, logger, Clock.systemUTC());
 
         int expectedSeq = 10001;
         long expectedTs = 1003000;
@@ -161,7 +162,7 @@ public class VP8AdaptiveSourceProjectionTest
         VP8AdaptiveSourceProjectionContext context =
             new VP8AdaptiveSourceProjectionContext(diagnosticContext,
                 payloadType,
-                initialState, logger);
+                initialState, logger, Clock.systemUTC());
 
         int latestSeq = buffer.get(0).<Vp8Packet>packetAs().getSequenceNumber();
 
@@ -370,7 +371,7 @@ public class VP8AdaptiveSourceProjectionTest
 
         VP8AdaptiveSourceProjectionContext context =
             new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+                initialState, logger, Clock.systemUTC());
 
         PacketInfo firstPacketInfo = generator.nextPacket();
         Vp8Packet firstPacket = firstPacketInfo.packetAs();
@@ -411,7 +412,7 @@ public class VP8AdaptiveSourceProjectionTest
 
         VP8AdaptiveSourceProjectionContext context =
             new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+                initialState, logger, Clock.systemUTC());
 
         PacketInfo firstPacketInfo = generator.nextPacket();
         Vp8Packet firstPacket = firstPacketInfo.packetAs();
@@ -461,7 +462,7 @@ public class VP8AdaptiveSourceProjectionTest
 
         VP8AdaptiveSourceProjectionContext context =
             new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+                initialState, logger, Clock.systemUTC());
 
         PacketInfo firstPacketInfo = generator.nextPacket();
         Vp8Packet firstPacket = firstPacketInfo.packetAs();
@@ -513,7 +514,7 @@ public class VP8AdaptiveSourceProjectionTest
 
         VP8AdaptiveSourceProjectionContext context =
             new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+                initialState, logger, Clock.systemUTC());
 
         int targetIndex = RtpLayerDesc.getIndex(1, 0, 2);
 
@@ -559,7 +560,7 @@ public class VP8AdaptiveSourceProjectionTest
 
         VP8AdaptiveSourceProjectionContext context =
             new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+                initialState, logger, Clock.systemUTC());
 
         int expectedSeq = 10001;
         long expectedTs = 1003000;
@@ -730,7 +731,7 @@ public class VP8AdaptiveSourceProjectionTest
 
         VP8AdaptiveSourceProjectionContext context =
             new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+                initialState, logger, Clock.systemUTC());
 
         int targetTid = 0;
         int decodableTid = 0;
@@ -816,7 +817,7 @@ public class VP8AdaptiveSourceProjectionTest
         VP8AdaptiveSourceProjectionContext context =
             new VP8AdaptiveSourceProjectionContext(diagnosticContext,
                 payloadType,
-                initialState, logger);
+                initialState, logger, Clock.systemUTC());
 
         int expectedSeq = 10001;
         long expectedTs = 1003000;

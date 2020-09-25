@@ -28,6 +28,7 @@ import org.jitsi.videobridge.cc.vp8.*;
 import org.json.simple.*;
 
 import java.lang.*;
+import java.time.*;
 import java.util.*;
 
 /**
@@ -60,6 +61,8 @@ public class AdaptiveSourceProjection
      * parent?
      */
     private final Logger parentLogger;
+
+    @NotNull private final Clock clock;
 
     /**
      * The main SSRC of the source (if simulcast is used, this is the SSRC
@@ -118,13 +121,15 @@ public class AdaptiveSourceProjection
         @NotNull MediaSourceDesc source,
         Runnable keyframeRequester,
         Map<Byte, PayloadType> payloadTypes,
-        Logger parentLogger
+        Logger parentLogger,
+        @NotNull Clock clock
     )
     {
         targetSsrc = source.getPrimarySSRC();
         this.diagnosticContext = diagnosticContext;
         this.payloadTypes = payloadTypes;
         this.parentLogger = parentLogger;
+        this.clock = clock;
         this.logger = parentLogger.createChildLogger(AdaptiveSourceProjection.class.getName(),
             JMap.of("targetSsrc", Long.toString(targetSsrc),
                 "srcEpId", Objects.toString(source.getOwner(), "")));
@@ -286,7 +291,7 @@ public class AdaptiveSourceProjection
                     + payloadType +
                     ", source packet ssrc " + rtpPacket.getSsrc());
                 context = new VP8AdaptiveSourceProjectionContext(
-                    diagnosticContext, payloadTypeObject, rtpState, parentLogger);
+                    diagnosticContext, payloadTypeObject, rtpState, parentLogger, clock);
                 contextPayloadType = payloadType;
             }
             else if (!projectable

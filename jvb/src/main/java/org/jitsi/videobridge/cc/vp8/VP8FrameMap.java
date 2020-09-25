@@ -36,7 +36,7 @@ public class VP8FrameMap
     static final int FRAME_MAP_SIZE = 500; /* Matches PacketCache default size. */
 
     /** Cache mapping picture IDs to frames. */
-    private final FrameHistory frameHistory = new FrameHistory(FRAME_MAP_SIZE);
+    private final FrameHistory frameHistory;
 
     private final Logger logger;
 
@@ -45,9 +45,11 @@ public class VP8FrameMap
      *
      */
     public VP8FrameMap(
-        @NotNull Logger parentLogger)
+        @NotNull Logger parentLogger,
+        @NotNull Clock clock)
     {
         this.logger = parentLogger.createChildLogger(VP8FrameMap.class.getName());
+        this.frameHistory = new FrameHistory(FRAME_MAP_SIZE, clock);
     }
 
     /** Find a frame in the frame map, based on a packet. */
@@ -270,9 +272,9 @@ public class VP8FrameMap
 
     private static class FrameHistory extends ArrayCache<VP8Frame>
     {
-        FrameHistory(int size)
+        FrameHistory(int size, Clock clock)
         {
-            super(size, (k) -> k, false, Clock.systemUTC());
+            super(size, (k) -> k, false, clock);
         }
 
         int numCached = 0;

@@ -27,6 +27,7 @@ import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.*;
 import org.json.simple.*;
 
+import java.time.*;
 import java.util.*;
 
 /**
@@ -73,6 +74,8 @@ public class VP8AdaptiveSourceProjectionContext
      */
     private final PayloadType payloadType;
 
+    private final Clock clock;
+
     /**
      * Ctor.
      *
@@ -83,11 +86,13 @@ public class VP8AdaptiveSourceProjectionContext
             @NotNull DiagnosticContext diagnosticContext,
             @NotNull PayloadType payloadType,
             @NotNull RtpState rtpState,
-            @NotNull Logger parentLogger)
+            @NotNull Logger parentLogger,
+            @NotNull Clock clock)
     {
         this.diagnosticContext = diagnosticContext;
         this.logger = parentLogger.createChildLogger(
             VP8AdaptiveSourceProjectionContext.class.getName());
+        this.clock = clock;
         this.payloadType = payloadType;
         this.vp8QualityFilter = new VP8QualityFilter(parentLogger);
 
@@ -112,7 +117,7 @@ public class VP8AdaptiveSourceProjectionContext
         @NotNull Vp8Packet vp8Packet)
     {
         VP8FrameMap frameMap = vp8FrameMaps.computeIfAbsent(vp8Packet.getSsrc(),
-            ssrc -> new VP8FrameMap(logger));
+            ssrc -> new VP8FrameMap(logger, clock));
         /* TODO: add more context (ssrc?) to frame map's logger? */
 
         return frameMap.insertPacket(vp8Packet);
