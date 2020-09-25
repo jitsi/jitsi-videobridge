@@ -34,7 +34,7 @@ import java.util.function.Supplier
  */
 open class VideobridgeSupplier : Supplier<Videobridge> {
     private val videobridge: Videobridge by lazy {
-        Videobridge().apply { start() }
+        Videobridge()
     }
 
     override fun get(): Videobridge = videobridge

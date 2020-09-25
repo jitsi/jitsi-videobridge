@@ -72,12 +72,13 @@ fun main(args: Array<String>) {
 
     startIce4j()
 
+    val videobridge = videobridge().get().apply { start() }
     val octoRelayService = octoRelayService().get()?.apply { start() }
     val xmppConnection = xmppConnection().get().apply { start() }
     val statsMgr = statsMgr().get()?.apply {
         addStatistics(
             VideobridgeStatistics(
-                videobridge().get(),
+                videobridge,
                 octoRelayService,
                 xmppConnection
             ),
@@ -124,7 +125,7 @@ fun main(args: Array<String>) {
     )
     val privateHttpServer = if (privateServerConfig.isEnabled()) {
         logger.info("Starting private http server")
-        val restApp = Application(videobridge().get(), xmppConnection, statsMgr)
+        val restApp = Application(videobridge, xmppConnection, statsMgr)
         createServer(privateServerConfig).also {
             it.servletContextHandler.addServlet(
                 ServletHolder(ServletContainer(restApp)),
@@ -152,7 +153,7 @@ fun main(args: Array<String>) {
         logger.error("Error shutting down http servers", t)
     }
     healthCheck().get().stop()
-    videobridge().get().stop()
+    videobridge.stop()
     stopIce4j()
 
     TaskPools.SCHEDULED_POOL.shutdownNow()
