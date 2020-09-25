@@ -33,13 +33,13 @@ import java.io.IOException
 import java.time.Clock
 import java.time.Duration
 
-class ConferenceK @JvmOverloads constructor(
+class ConferenceK(
     videobridge: Videobridge,
     id: String,
     confName: EntityBareJid,
     enableLogging: Boolean,
     gid: Long,
-    private val clock: Clock = Clock.systemUTC()
+    private val clock: Clock
 ) : Conference(videobridge, id, confName, enableLogging, gid) {
 
     private val creationTime = clock.instant()

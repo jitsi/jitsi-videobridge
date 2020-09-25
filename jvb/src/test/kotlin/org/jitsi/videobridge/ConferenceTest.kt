@@ -24,6 +24,7 @@ import org.jitsi.videobridge.octo.singleton as octoRelayServiceProvider
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
 import org.jxmpp.jid.impl.JidCreate
+import java.time.Clock
 import kotlin.random.Random
 
 /**
@@ -39,7 +40,7 @@ class ConferenceTest : ConfigTest() {
         }
 
         context("Adding local endpoints should work") {
-            with(ConferenceK(videobridge, "id", name, false, Conference.GID_NOT_SET)) {
+            with(ConferenceK(videobridge, "id", name, false, Conference.GID_NOT_SET, Clock.systemUTC())) {
                 endpointCount shouldBe 0
                 createLocalEndpoint("abcdabcd", true)
                 endpointCount shouldBe 1
@@ -47,7 +48,7 @@ class ConferenceTest : ConfigTest() {
             }
         }
         context("Enabling octo should fail when the GID is not set") {
-            with(ConferenceK(videobridge, "id", name, false, Conference.GID_NOT_SET)) {
+            with(ConferenceK(videobridge, "id", name, false, Conference.GID_NOT_SET, Clock.systemUTC())) {
                 isOctoEnabled shouldBe false
                 shouldThrow<IllegalStateException> {
                     getTentacle()
@@ -56,7 +57,7 @@ class ConferenceTest : ConfigTest() {
             }
         }
         context("Enabling octo should work") {
-            with(ConferenceK(videobridge, "id", name, false, 1234)) {
+            with(ConferenceK(videobridge, "id", name, false, 1234, Clock.systemUTC())) {
                 isOctoEnabled shouldBe false
                 getTentacle()
                 isOctoEnabled shouldBe true
