@@ -325,15 +325,6 @@ public class Endpoint
         }
     }
 
-    public Endpoint(
-        String id,
-        Conference conference,
-        Logger parentLogger,
-        boolean iceControlling)
-    {
-        this(id, conference, parentLogger, iceControlling, Clock.systemUTC());
-    }
-
     /**
      * {@inheritDoc}
      */
