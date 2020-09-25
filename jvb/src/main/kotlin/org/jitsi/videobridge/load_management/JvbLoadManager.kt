@@ -28,11 +28,11 @@ import java.time.Duration
 import java.time.Instant
 import java.util.logging.Level
 
-class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
+class JvbLoadManager<T : JvbLoadMeasurement>(
     private val jvbLoadThreshold: T,
     private val jvbRecoveryThreshold: T,
     private val loadReducer: JvbLoadReducer,
-    private val clock: Clock = Clock.systemUTC()
+    private val clock: Clock
 ) {
     private val logger = createLogger(minLogLevel = Level.ALL)
 
