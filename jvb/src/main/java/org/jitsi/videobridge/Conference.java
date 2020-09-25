@@ -859,18 +859,7 @@ public abstract class Conference
     /**
      * @return The {@link ConfOctoTransport} for this conference.
      */
-    public ConfOctoTransport getTentacle()
-    {
-        if (gid == GID_NOT_SET)
-        {
-            throw new IllegalStateException("Can not enable Octo without the GID being set.");
-        }
-        if (tentacle == null)
-        {
-            tentacle = new ConfOctoTransport(this);
-        }
-        return tentacle;
-    }
+    public abstract ConfOctoTransport getTentacle();
 
     public boolean isOctoEnabled()
     {

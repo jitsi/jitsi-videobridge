@@ -24,6 +24,7 @@ import org.jitsi.videobridge.Endpoint
 import org.jitsi.videobridge.EndpointConnectionStatusMonitor
 import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.message.DominantSpeakerMessage
+import org.jitsi.videobridge.octo.ConfOctoTransport
 import org.jitsi.videobridge.octo.OctoEndpoint
 import org.jitsi.videobridge.util.TaskPools
 import org.json.simple.JSONObject
@@ -67,6 +68,16 @@ class ConferenceK @JvmOverloads constructor(
             tentacle?.endpointExpired(it.id)
             endpointsChanged()
         }
+    }
+
+    override fun getTentacle(): ConfOctoTransport {
+        if (gid == GID_NOT_SET) {
+            throw IllegalStateException("Can not enable Octo without the GID being set.")
+        }
+        if (tentacle == null) {
+            tentacle = ConfOctoTransport(this, clock)
+        }
+        return tentacle
     }
 
     /**
