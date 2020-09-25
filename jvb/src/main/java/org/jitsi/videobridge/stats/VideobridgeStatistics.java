@@ -59,11 +59,8 @@ public class VideobridgeStatistics
     private static final String region = OctoConfig.config.getRegion();
 
 
-    public static final String EPS_NO_MSG_TRANSPORT_AFTER_DELAY =
-        "num_eps_no_msg_transport_after_delay";
-
-    public static final String TOTAL_ICE_SUCCEEDED_RELAYED =
-        "total_ice_succeeded_relayed";
+    public static final String EPS_NO_MSG_TRANSPORT_AFTER_DELAY = "num_eps_no_msg_transport_after_delay";
+    public static final String TOTAL_ICE_SUCCEEDED_RELAYED = "total_ice_succeeded_relayed";
 
     /**
      * Number of configured MUC clients.
@@ -120,10 +117,7 @@ public class VideobridgeStatistics
         unlockedSetStat(CONFERENCES, 0);
         unlockedSetStat(PARTICIPANTS, 0);
         unlockedSetStat(THREADS, 0);
-        unlockedSetStat(RTP_LOSS, 0d);
         unlockedSetStat(VIDEO_CHANNELS, 0);
-        unlockedSetStat(LOSS_RATE_DOWNLOAD, 0d);
-        unlockedSetStat(LOSS_RATE_UPLOAD, 0d);
         unlockedSetStat(JITTER_AGGREGATE, 0d);
         unlockedSetStat(RTT_AGGREGATE, 0d);
         unlockedSetStat(LARGEST_CONFERENCE, 0);
@@ -197,14 +191,19 @@ public class VideobridgeStatistics
         int octoConferences = 0;
         int endpoints = 0;
         int octoEndpoints = 0;
-        double fractionLostSum = 0d; // TODO verify
-        int fractionLostCount = 0;
-        long packetsReceived = 0;
-        long packetsReceivedLost = 0; // TODO verify
         double bitrateDownloadBps = 0;
         double bitrateUploadBps = 0;
         long packetRateUpload = 0;
         long packetRateDownload = 0;
+
+        // Packets we received
+        long incomingPacketsReceived = 0;
+        // Packets we should have received but were lost
+        long incomingPacketsLost = 0;
+        // Packets we sent that were reported received
+        long outgoingPacketsReceived = 0;
+        // Packets we sent that were reported lost
+        long outgoingPacketsLost = 0;
 
         // Average jitter and RTT across MediaStreams which report a valid value.
         double jitterSumMs = 0; // TODO verify
@@ -283,29 +282,13 @@ public class VideobridgeStatistics
                 {
                     receiveOnlyEndpoints++;
                 }
-                TransceiverStats transceiverStats
-                        = endpoint.getTransceiver().getTransceiverStats();
-                IncomingStatisticsSnapshot incomingStats
-                        = transceiverStats.getIncomingStats();
-                PacketStreamStats.Snapshot incomingPacketStreamStats
-                        = transceiverStats.getIncomingPacketStreamStats();
+                TransceiverStats transceiverStats = endpoint.getTransceiver().getTransceiverStats();
+                IncomingStatisticsSnapshot incomingStats = transceiverStats.getIncomingStats();
+                PacketStreamStats.Snapshot incomingPacketStreamStats = transceiverStats.getIncomingPacketStreamStats();
                 bitrateDownloadBps += incomingPacketStreamStats.getBitrate().getBps();
                 packetRateDownload += incomingPacketStreamStats.getPacketRate();
-                for (IncomingSsrcStats.Snapshot ssrcStats
-                        : incomingStats.getSsrcStats().values())
+                for (IncomingSsrcStats.Snapshot ssrcStats : incomingStats.getSsrcStats().values())
                 {
-                    packetsReceived += ssrcStats.getNumReceivedPackets();
-
-                    packetsReceivedLost += ssrcStats.getCumulativePacketsLost();
-
-                    fractionLostCount++;
-                    // note(george) this computes the fraction of lost packets
-                    // since beginning of reception, which is different from the
-                    // rfc 3550 sense.
-                    double fractionLost = ssrcStats.getCumulativePacketsLost()
-                        / (double) ssrcStats.getNumReceivedPackets();
-                    fractionLostSum += fractionLost;
-
                     double ssrcJitter = ssrcStats.getJitter();
                     if (ssrcJitter != 0)
                     {
@@ -314,21 +297,25 @@ public class VideobridgeStatistics
                         jitterSumMs += Math.abs(ssrcJitter);
                         jitterCount++;
                     }
-
                 }
 
-                PacketStreamStats.Snapshot outgoingStats
-                        = transceiverStats.getOutgoingPacketStreamStats();
+                PacketStreamStats.Snapshot outgoingStats = transceiverStats.getOutgoingPacketStreamStats();
                 bitrateUploadBps += outgoingStats.getBitrate().getBps();
                 packetRateUpload += outgoingStats.getPacketRate();
 
-                double endpointRtt
-                        = transceiverStats.getEndpointConnectionStats().getRtt();
+                EndpointConnectionStats.Snapshot endpointConnectionStats
+                        = transceiverStats.getEndpointConnectionStats();
+                double endpointRtt = endpointConnectionStats.getRtt();
                 if (endpointRtt > 0)
                 {
                     rttSumMs += endpointRtt;
                     rttCount++;
                 }
+
+                incomingPacketsReceived += endpointConnectionStats.getIncomingLossStats().getPacketsReceived();
+                incomingPacketsLost += endpointConnectionStats.getIncomingLossStats().getPacketsLost();
+                outgoingPacketsReceived += endpointConnectionStats.getOutgoingLossStats().getPacketsReceived();
+                outgoingPacketsLost += endpointConnectionStats.getOutgoingLossStats().getPacketsLost();
             }
 
             updateBuckets(audioSendersBuckets, conferenceAudioSenders);
@@ -336,16 +323,6 @@ public class VideobridgeStatistics
             updateBuckets(videoSendersBuckets, conferenceVideoSenders);
             numVideoSenders += conferenceVideoSenders;
         }
-
-        // Loss rates
-        double lossRateDownload
-            = (packetsReceived + packetsReceivedLost > 0)
-            ? ((double) packetsReceivedLost) / (packetsReceived + packetsReceivedLost)
-            : 0d;
-        double lossRateUpload
-            = (fractionLostCount > 0)
-            ? fractionLostSum / fractionLostCount
-            : 0d;
 
         // JITTER_AGGREGATE
         double jitterAggregate
@@ -378,6 +355,18 @@ public class VideobridgeStatistics
         // THREADS
         int threadCount = ManagementFactory.getThreadMXBean().getThreadCount();
 
+        double incomingLoss = 0;
+        if (incomingPacketsReceived + incomingPacketsLost > 0)
+        {
+            incomingLoss = ((double) incomingPacketsLost) / (incomingPacketsReceived + incomingPacketsLost);
+        }
+
+        double outgoingLoss = 0;
+        if (outgoingPacketsReceived + outgoingPacketsLost > 0)
+        {
+            outgoingLoss = ((double) outgoingPacketsLost) / (outgoingPacketsReceived + outgoingPacketsLost);
+        }
+
         // Now that (the new values of) the statistics have been calculated and
         // the risks of the current thread hanging have been reduced as much as
         // possible, commit (the new values of) the statistics.
@@ -386,6 +375,8 @@ public class VideobridgeStatistics
         lock.lock();
         try
         {
+            unlockedSetStat("incoming_loss", incomingLoss);
+            unlockedSetStat("outgoing_loss", outgoingLoss);
             unlockedSetStat(
                     BITRATE_DOWNLOAD,
                     (bitrateDownloadBps + 500) / 1000 /* kbps */);
@@ -394,14 +385,6 @@ public class VideobridgeStatistics
                     (bitrateUploadBps + 500) / 1000 /* kbps */);
             unlockedSetStat(PACKET_RATE_DOWNLOAD, packetRateDownload);
             unlockedSetStat(PACKET_RATE_UPLOAD, packetRateUpload);
-            // Keep for backward compatibility
-            unlockedSetStat(
-                    RTP_LOSS,
-                    lossRateDownload + lossRateUpload);
-            // TODO verify
-            unlockedSetStat(LOSS_RATE_DOWNLOAD, lossRateDownload);
-            // TODO verify
-            unlockedSetStat(LOSS_RATE_UPLOAD, lossRateUpload);
             // TODO seems broken (I see values of > 11 seconds)
             unlockedSetStat(JITTER_AGGREGATE, jitterAggregate);
             unlockedSetStat(RTT_AGGREGATE, rttAggregate);
