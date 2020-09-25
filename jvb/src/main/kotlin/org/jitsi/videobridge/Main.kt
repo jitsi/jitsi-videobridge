@@ -115,7 +115,7 @@ fun main(args: Array<String>) {
         val websocketService = ColibriWebSocketService(publicServerConfig.isTls)
         webSocketServiceSingleton().setColibriWebSocketService(websocketService)
         createServer(publicServerConfig).also {
-            websocketService.registerServlet(it.servletContextHandler)
+            websocketService.registerServlet(it.servletContextHandler, videobridge)
             it.start()
         }
     } else {

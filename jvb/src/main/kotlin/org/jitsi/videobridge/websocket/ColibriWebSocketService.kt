@@ -19,6 +19,7 @@ package org.jitsi.videobridge.websocket
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
 import org.jitsi.utils.logging2.createLogger
+import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
 
 class ColibriWebSocketService(
@@ -59,11 +60,14 @@ class ColibriWebSocketService(
         return "$baseUrl/$conferenceId/$endpointId?pwd=$pwd"
     }
 
-    fun registerServlet(servletContextHandler: ServletContextHandler) {
+    fun registerServlet(
+        servletContextHandler: ServletContextHandler,
+        videobridge: Videobridge
+    ) {
         if (config.enabled) {
             logger.info("Registering servlet at /$COLIBRI_WS_ENDPOINT/*, baseUrl = $baseUrl")
             val holder = ServletHolder().apply {
-                servlet = ColibriWebSocketServlet(this@ColibriWebSocketService)
+                servlet = ColibriWebSocketServlet(this@ColibriWebSocketService, videobridge)
             }
             servletContextHandler.addServlet(holder, "/$COLIBRI_WS_ENDPOINT/*")
         } else {

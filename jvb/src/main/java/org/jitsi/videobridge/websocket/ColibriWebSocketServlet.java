@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.websocket;
 
 import org.eclipse.jetty.websocket.servlet.*;
+import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 
@@ -37,12 +38,18 @@ class ColibriWebSocketServlet
      */
     private final ColibriWebSocketService service;
 
+    @NotNull
+    private final Videobridge videobridge;
+
     /**
      * Initializes a new {@link ColibriWebSocketServlet} instance.
      */
-    ColibriWebSocketServlet(ColibriWebSocketService service)
+    ColibriWebSocketServlet(
+        ColibriWebSocketService service,
+        @NotNull Videobridge videobridge)
     {
         this.service = service;
+        this.videobridge = videobridge;
     }
 
     /**
@@ -112,14 +119,6 @@ class ColibriWebSocketServlet
             return null;
         }
 
-        Videobridge videobridge = getVideobridge();
-        if (videobridge == null)
-        {
-            logger.warn("No associated Videobridge");
-            response.sendError(500, "no videobridge");
-            return null;
-        }
-
         // Note: intentionally fail with the exact same message (as to not leak
         // info)
         String authFailed = "authentication failed";
@@ -178,13 +177,5 @@ class ColibriWebSocketServlet
     ColibriWebSocketService getService()
     {
         return service;
-    }
-
-    /**
-     * @return the {@link Videobridge} instance associated with this instance.
-     */
-    Videobridge getVideobridge()
-    {
-        return VideobridgeSupplierKt.singleton().get();
     }
 }
