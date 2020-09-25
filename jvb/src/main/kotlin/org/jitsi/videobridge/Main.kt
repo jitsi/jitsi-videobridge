@@ -39,7 +39,6 @@ import kotlin.concurrent.thread
 import org.jitsi.videobridge.octo.singleton as octoRelayService
 import org.jitsi.videobridge.xmpp.singleton as xmppConnection
 import org.jitsi.videobridge.stats.singleton as statsMgr
-import org.jitsi.videobridge.health.singleton as healthCheck
 import org.jitsi.videobridge.shutdown.singleton as shutdownService
 import org.jitsi.videobridge.singleton as videobridge
 
@@ -103,7 +102,6 @@ fun main(args: Array<String>) {
         }
         start()
     }
-    healthCheck().get().start()
 
     val publicServerConfig = JettyBundleActivatorConfig(
         "org.jitsi.videobridge.rest",
@@ -156,7 +154,6 @@ fun main(args: Array<String>) {
     } catch (t: Throwable) {
         logger.error("Error shutting down http servers", t)
     }
-    healthCheck().get().stop()
     videobridge.stop()
     stopIce4j()
 

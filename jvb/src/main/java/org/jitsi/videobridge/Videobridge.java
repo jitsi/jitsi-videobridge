@@ -129,6 +129,8 @@ public class Videobridge
      */
     private final ScheduledFuture<?> loadSamplerTask;
 
+    public final JvbHealthChecker healthChecker;
+
     static
     {
         org.jitsi.rtp.util.BufferPool.Companion.setGetArray(ByteBufferPool::getBuffer);
@@ -173,6 +175,7 @@ public class Videobridge
             TimeUnit.SECONDS
         );
         XmppConnectionSupplierKt.singleton().get().setEventHandler(new XmppConnectionEventHandler());
+        healthChecker = new JvbHealthChecker(this);
     }
 
     /**
@@ -413,9 +416,7 @@ public class Videobridge
      */
     private String getHealthStatus()
     {
-        HealthCheckService health = JvbHealthCheckServiceSupplierKt.singleton().get();
-
-        Exception result = health.getResult();
+        Exception result = healthChecker.getResult();
         return result == null ? "OK" : result.getMessage();
     }
 
@@ -493,6 +494,7 @@ public class Videobridge
         UlimitCheck.printUlimits();
 
         videobridgeExpireThread.start();
+        healthChecker.start();
 
         // <conference>
         ProviderManager.addIQProvider(
@@ -544,6 +546,7 @@ public class Videobridge
     public void stop()
     {
         videobridgeExpireThread.stop();
+        healthChecker.stop();
         if (loadSamplerTask != null)
         {
             loadSamplerTask.cancel(true);

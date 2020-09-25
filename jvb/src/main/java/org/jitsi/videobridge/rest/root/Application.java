@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.rest.root;
 
 import org.glassfish.jersey.server.*;
+import org.jitsi.health.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.binders.*;
