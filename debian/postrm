@@ -24,6 +24,7 @@ case "$1" in
         fi
 
         rm -f /etc/jitsi/videobridge/config
+        rm -f /etc/jitsi/videobridge/jvb.conf
         rm -f /etc/jitsi/videobridge/sip-communicator.properties
         rm -f /etc/jitsi/videobridge/logging.properties
         rm -rf /usr/share/jitsi-videobridge/.java
