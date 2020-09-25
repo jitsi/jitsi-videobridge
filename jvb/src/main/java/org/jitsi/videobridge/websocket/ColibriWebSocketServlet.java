@@ -34,9 +34,10 @@ class ColibriWebSocketServlet
     private static final Logger logger = new LoggerImpl(ColibriWebSocketServlet.class.getName());
 
     /**
-     * The {@link ColibriWebSocketService} instance which created this servlet.
+     * The server ID of this websocket servlet.  Incoming requests must have a matching
+     * server ID to be handled.
      */
-    private final ColibriWebSocketService service;
+    private final String serverId;
 
     @NotNull
     private final Videobridge videobridge;
@@ -45,10 +46,10 @@ class ColibriWebSocketServlet
      * Initializes a new {@link ColibriWebSocketServlet} instance.
      */
     ColibriWebSocketServlet(
-        ColibriWebSocketService service,
+        @NotNull String serverId,
         @NotNull Videobridge videobridge)
     {
-        this.service = service;
+        this.serverId = serverId;
         this.videobridge = videobridge;
     }
 
@@ -109,7 +110,6 @@ class ColibriWebSocketServlet
             return null;
         }
 
-        String serverId = getService().getServerId();
         if (!serverId.equals(ids[0]))
         {
             logger.warn("Received request with a mismatching server ID "
@@ -168,14 +168,5 @@ class ColibriWebSocketServlet
             return null;
         }
         return query.substring("pwd=".length());
-    }
-
-
-    /**
-     * @return the {@link ColibriWebSocketService} of this servlet.
-     */
-    ColibriWebSocketService getService()
-    {
-        return service;
     }
 }
