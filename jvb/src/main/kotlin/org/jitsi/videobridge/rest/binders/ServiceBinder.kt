@@ -21,18 +21,18 @@ import org.jitsi.health.HealthCheckServiceSupplier
 import org.jitsi.version.VersionServiceSupplier
 import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.health.jvbHealthCheckServiceSupplier
-import org.jitsi.videobridge.stats.StatsManagerSupplier
-import org.jitsi.videobridge.stats.statsManagerSupplier
+import org.jitsi.videobridge.stats.StatsManager
 import org.jitsi.videobridge.version.jvbVersionServiceSupplier
 import org.jitsi.videobridge.xmpp.XmppConnection
 
 class ServiceBinder(
     val videobridge: Videobridge,
-    val xmppConnection: XmppConnection
+    val xmppConnection: XmppConnection,
+    val statsManager: StatsManager
 ) : AbstractBinder() {
     override fun configure() {
         bind(videobridge).to(Videobridge::class.java)
-        bind(statsManagerSupplier).to(StatsManagerSupplier::class.java)
+        bind(statsManager).to(StatsManager::class.java)
         bind(xmppConnection).to(XmppConnection::class.java)
         bind(jvbHealthCheckServiceSupplier).to(HealthCheckServiceSupplier::class.java)
         bind(jvbVersionServiceSupplier).to(VersionServiceSupplier::class.java)

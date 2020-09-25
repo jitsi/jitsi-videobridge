@@ -21,6 +21,7 @@ import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.binders.*;
 import org.jitsi.videobridge.rest.filters.*;
+import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.xmpp.*;
 
 import static org.jitsi.videobridge.rest.RestConfig.config;
@@ -29,12 +30,14 @@ public class Application extends ResourceConfig
 {
     public Application(
         Videobridge videobridge,
-        XmppConnection xmppConnection)
+        XmppConnection xmppConnection,
+        StatsManager statsManager)
     {
         register(
             new ServiceBinder(
                 videobridge,
-                xmppConnection
+                xmppConnection,
+                statsManager
             )
         );
         // Filters
