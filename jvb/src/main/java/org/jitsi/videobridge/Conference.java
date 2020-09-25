@@ -145,11 +145,6 @@ public abstract class Conference
     protected final boolean includeInStatistics;
 
     /**
-     * The time when this {@link Conference} was created.
-     */
-    protected final long creationTime = System.currentTimeMillis();
-
-    /**
      * The shim which handles Colibri-related logic for this conference.
      */
     protected final ConferenceShim shim;
@@ -254,20 +249,7 @@ public abstract class Conference
      *
      * @return the new {@link DiagnosticContext} instance.
      */
-    public DiagnosticContext newDiagnosticContext()
-    {
-        if (conferenceName != null)
-        {
-            DiagnosticContext diagnosticContext = new DiagnosticContext();
-            diagnosticContext.put("conf_name", conferenceName);
-            diagnosticContext.put("conf_creation_time_ms", creationTime);
-            return diagnosticContext;
-        }
-        else
-        {
-            return new NoOpDiagnosticContext();
-        }
-    }
+    public abstract DiagnosticContext newDiagnosticContext();
 
     /**
      * Gets the statistics of this {@link Conference}.
@@ -563,44 +545,7 @@ public abstract class Conference
     /**
      * Updates the statistics for this conference when it is about to expire.
      */
-    protected void updateStatisticsOnExpire()
-    {
-        long durationSeconds = Math.round((System.currentTimeMillis() - creationTime) / 1000d);
-
-        Videobridge.Statistics videobridgeStatistics = getVideobridge().getStatistics();
-
-        videobridgeStatistics.totalConferencesCompleted.incrementAndGet();
-        videobridgeStatistics.totalConferenceSeconds.addAndGet(durationSeconds);
-
-        videobridgeStatistics.totalBytesReceived.addAndGet(statistics.totalBytesReceived.get());
-        videobridgeStatistics.totalBytesSent.addAndGet(statistics.totalBytesSent.get());
-        videobridgeStatistics.totalPacketsReceived.addAndGet(statistics.totalPacketsReceived.get());
-        videobridgeStatistics.totalPacketsSent.addAndGet(statistics.totalPacketsSent.get());
-
-        boolean hasFailed = statistics.hasIceFailedEndpoint && !statistics.hasIceSucceededEndpoint;
-        boolean hasPartiallyFailed = statistics.hasIceFailedEndpoint && statistics.hasIceSucceededEndpoint;
-
-        videobridgeStatistics.dtlsFailedEndpoints.addAndGet(statistics.dtlsFailedEndpoints.get());
-
-        if (hasPartiallyFailed)
-        {
-            videobridgeStatistics.totalPartiallyFailedConferences.incrementAndGet();
-        }
-
-        if (hasFailed)
-        {
-            videobridgeStatistics.totalFailedConferences.incrementAndGet();
-        }
-
-        if (logger.isInfoEnabled())
-        {
-            StringBuilder sb = new StringBuilder("expire_conf,");
-            sb.append("duration=").append(durationSeconds)
-                .append(",has_failed=").append(hasFailed)
-                .append(",has_partially_failed=").append(hasPartiallyFailed);
-            logger.info(sb.toString());
-        }
-    }
+    protected abstract void updateStatisticsOnExpire();
 
     /**
      * Finds an <tt>Endpoint</tt> of this <tt>Conference</tt> which sends an RTP
@@ -947,12 +892,7 @@ public abstract class Conference
     /**
      * @return {@code true} if this {@link Conference} is ready to be expired.
      */
-    public boolean shouldExpire()
-    {
-        // Allow a conference to have no endpoints in the first 20 seconds.
-        return getEndpointCount() == 0
-                && (System.currentTimeMillis() - creationTime > 20000);
-    }
+    public abstract boolean shouldExpire();
 
     /**
      * @return this {@link Conference}'s Colibri shim.
@@ -1119,38 +1059,7 @@ public abstract class Conference
      * {@code null}, all endpoints will be included.
      */
     @SuppressWarnings("unchecked")
-    public JSONObject getDebugState(boolean full, String endpointId)
-    {
-        JSONObject debugState = new JSONObject();
-        debugState.put("id", id);
-        debugState.put("name", conferenceName.toString());
-
-        if (full)
-        {
-            debugState.put("gid", gid);
-            debugState.put("expired", expired.get());
-            debugState.put("creationTime", creationTime);
-            debugState.put("speechActivity", speechActivity.getDebugState());
-            debugState.put("includeInStatistics", includeInStatistics);
-            debugState.put("statistics", statistics.getJson());
-            //debugState.put("encodingsManager", encodingsManager.getDebugState());
-            ConfOctoTransport tentacle = this.tentacle;
-            debugState.put(
-                    "tentacle",
-                    tentacle == null ? null : tentacle.getDebugState());
-        }
-
-        JSONObject endpoints = new JSONObject();
-        debugState.put("endpoints", endpoints);
-        for (Endpoint e : endpointsCache)
-        {
-            if (endpointId == null || endpointId.equals(e.getID()))
-            {
-                endpoints.put(e.getID(), full ? e.getDebugState() : e.getStatsId());
-            }
-        }
-        return debugState;
-    }
+    public abstract JSONObject getDebugState(boolean full, String endpointId);
 
     /**
      * Whether this looks like a conference in which the two endpoints are
@@ -1182,48 +1091,48 @@ public abstract class Conference
          * The total number of bytes received in RTP packets in channels in this
          * conference. Note that this is only updated when channels expire.
          */
-        AtomicLong totalBytesReceived = new AtomicLong();
+        public AtomicLong totalBytesReceived = new AtomicLong();
 
         /**
          * The total number of bytes sent in RTP packets in channels in this
          * conference. Note that this is only updated when channels expire.
          */
-        AtomicLong totalBytesSent = new AtomicLong();
+        public AtomicLong totalBytesSent = new AtomicLong();
 
         /**
          * The total number of RTP packets received in channels in this
          * conference. Note that this is only updated when channels expire.
          */
-        AtomicLong totalPacketsReceived = new AtomicLong();
+        public AtomicLong totalPacketsReceived = new AtomicLong();
 
         /**
          * The total number of RTP packets received in channels in this
          * conference. Note that this is only updated when channels expire.
          */
-        AtomicLong totalPacketsSent = new AtomicLong();
+        public AtomicLong totalPacketsSent = new AtomicLong();
 
         /**
          * Whether at least one endpoint in this conference failed ICE.
          */
-        boolean hasIceFailedEndpoint = false;
+        public boolean hasIceFailedEndpoint = false;
 
         /**
          * Whether at least one endpoint in this conference completed ICE
          * successfully.
          */
-        boolean hasIceSucceededEndpoint = false;
+        public boolean hasIceSucceededEndpoint = false;
 
         /**
          * Number of endpoints whose ICE connection was established, but DTLS
          * wasn't (at the time of expiration).
          */
-        AtomicInteger dtlsFailedEndpoints = new AtomicInteger();
+        public AtomicInteger dtlsFailedEndpoints = new AtomicInteger();
 
         /**
          * Gets a snapshot of this object's state as JSON.
          */
         @SuppressWarnings("unchecked")
-        protected JSONObject getJson()
+        public JSONObject getJson()
         {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("total_bytes_received", totalBytesReceived.get());
