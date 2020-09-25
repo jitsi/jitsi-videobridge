@@ -38,7 +38,6 @@ import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 import org.jitsi.nlj.transform.node.incoming.VideoBitrateCalculator
 import org.jitsi.nlj.transform.node.incoming.VideoParser
-import org.jitsi.nlj.transform.node.incoming.Vp8Parser
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.OrderedJsonObject
@@ -113,7 +112,6 @@ class OctoRtpReceiver(
                             predicate = PacketPredicate { it is VideoRtpPacket }
                             path = pipeline {
                                 node(VideoParser(streamInformationStore, logger))
-                                node(Vp8Parser(logger))
                                 node(videoBitrateCalculator)
                                 node(pipelineTerminationNode)
                             }
