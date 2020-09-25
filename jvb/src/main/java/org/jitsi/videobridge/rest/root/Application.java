@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.rest.root;
 
 import org.glassfish.jersey.server.*;
+import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.binders.*;
 import org.jitsi.videobridge.rest.filters.*;
@@ -25,9 +26,10 @@ import static org.jitsi.videobridge.rest.RestConfig.config;
 
 public class Application extends ResourceConfig
 {
-    public Application()
+    public Application(
+        Videobridge videobridge)
     {
-        register(new ServiceBinder());
+        register(new ServiceBinder(videobridge));
         // Filters
         register(ConfigFilter.class);
         // Register all resources in the package

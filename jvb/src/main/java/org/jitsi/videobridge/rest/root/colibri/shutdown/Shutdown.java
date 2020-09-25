@@ -35,7 +35,7 @@ import javax.ws.rs.core.*;
 public class Shutdown
 {
     @Inject
-    protected VideobridgeSupplier videobridgeSupplier;
+    protected Videobridge videobridge;
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -43,7 +43,7 @@ public class Shutdown
     {
         try
         {
-            videobridgeSupplier.get().shutdown(shutdown.isGraceful);
+            videobridge.shutdown(shutdown.isGraceful);
             return Response.ok().build();
         }
         catch (Throwable t)

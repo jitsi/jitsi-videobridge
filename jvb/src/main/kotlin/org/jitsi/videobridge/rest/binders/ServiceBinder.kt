@@ -19,18 +19,19 @@ package org.jitsi.videobridge.rest.binders
 import org.glassfish.hk2.utilities.binding.AbstractBinder
 import org.jitsi.health.HealthCheckServiceSupplier
 import org.jitsi.version.VersionServiceSupplier
-import org.jitsi.videobridge.VideobridgeSupplier
+import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.health.jvbHealthCheckServiceSupplier
 import org.jitsi.videobridge.stats.StatsManagerSupplier
+import org.jitsi.videobridge.stats.statsManagerSupplier
 import org.jitsi.videobridge.version.jvbVersionServiceSupplier
 import org.jitsi.videobridge.xmpp.XmppConnectionSupplier
-import org.jitsi.videobridge.videobridgeSupplier
-import org.jitsi.videobridge.stats.statsManagerSupplier
 import org.jitsi.videobridge.xmpp.xmppConnectionSupplier
 
-class ServiceBinder : AbstractBinder() {
+class ServiceBinder(
+    val videobridge: Videobridge
+) : AbstractBinder() {
     override fun configure() {
-        bind(videobridgeSupplier).to(VideobridgeSupplier::class.java)
+        bind(videobridge).to(Videobridge::class.java)
         bind(statsManagerSupplier).to(StatsManagerSupplier::class.java)
         bind(xmppConnectionSupplier).to(XmppConnectionSupplier::class.java)
         bind(jvbHealthCheckServiceSupplier).to(HealthCheckServiceSupplier::class.java)
