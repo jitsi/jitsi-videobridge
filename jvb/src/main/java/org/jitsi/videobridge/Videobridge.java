@@ -165,7 +165,8 @@ public class Videobridge
             new LastNReducer(
                 this::getConferences,
                 JvbLastNKt.jvbLastNSingleton
-            )
+            ),
+            clock
         );
         loadSamplerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
             new PacketRateLoadSampler(
