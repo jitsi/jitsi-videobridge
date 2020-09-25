@@ -18,12 +18,17 @@ package org.jitsi.videobridge.conference
 
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.cinfo
+import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.Endpoint
+import org.jitsi.videobridge.EndpointConnectionStatusMonitor
 import org.jitsi.videobridge.Videobridge
+import org.jitsi.videobridge.message.DominantSpeakerMessage
 import org.jitsi.videobridge.octo.OctoEndpoint
+import org.jitsi.videobridge.util.TaskPools
 import org.json.simple.JSONObject
 import org.jxmpp.jid.EntityBareJid
+import java.io.IOException
 import java.time.Clock
 import java.time.Duration
 
@@ -37,6 +42,53 @@ class ConferenceK @JvmOverloads constructor(
 ) : Conference(videobridge, id, confName, enableLogging, gid) {
 
     private val creationTime = clock.instant()
+
+    private val epConnectionStatusMonitor: EndpointConnectionStatusMonitor?
+
+    init {
+        if (enableLogging) {
+            epConnectionStatusMonitor = EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger, clock)
+            epConnectionStatusMonitor.start()
+        } else {
+            epConnectionStatusMonitor = null
+        }
+    }
+
+    override fun expire() {
+        super.expire()
+        epConnectionStatusMonitor?.stop()
+    }
+
+    override fun endpointExpired(endpoint: AbstractEndpoint) {
+        endpointsById.remove(endpoint.id)?.let {
+            updateEndpointsCache()
+            endpointsById.values.forEach { ep -> ep.removeReceiver(it.id) }
+            epConnectionStatusMonitor?.endpointConnected(it.id)
+            tentacle?.endpointExpired(it.id)
+            endpointsChanged()
+        }
+    }
+
+    /**
+     * Notifies this {@link Conference} that one of its {@link Endpoint}s
+     * transport channel has become available.
+     *
+     * @param endpoint the {@link Endpoint} whose transport channel has become
+     * available.
+     */
+    override fun endpointMessageTransportConnected(endpoint: AbstractEndpoint) {
+        epConnectionStatusMonitor?.endpointConnected(endpoint.id)
+
+        if (!isExpired) {
+            speechActivity.dominantEndpoint?.let {
+                try {
+                    endpoint.sendMessage(DominantSpeakerMessage(it.id))
+                } catch (e: IOException) {
+                    logger.error("Failed to send dominant speaker update to ${endpoint.id}", e)
+                }
+            }
+        }
+    }
 
     override fun createLocalEndpoint(id: String, iceControlling: Boolean): Endpoint {
         val existingEndpoint = getEndpoint(id)

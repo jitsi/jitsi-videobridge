@@ -163,7 +163,6 @@ public abstract class Conference
      */
     protected ScheduledFuture<?> updateLastNEndpointsFuture;
 
-    protected final EndpointConnectionStatusMonitor epConnectionStatusMonitor;
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
@@ -232,13 +231,6 @@ public abstract class Conference
 
             Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
-            epConnectionStatusMonitor =
-                new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
-            epConnectionStatusMonitor.start();
-        }
-        else
-        {
-            epConnectionStatusMonitor = null;
         }
 
     }
@@ -502,18 +494,13 @@ public abstract class Conference
      * case, Videobridge).  If you need to expire a Conference from elsewhere, use
      * {@link Videobridge#expireConference(Conference)}
      */
-    void expire()
+    public void expire()
     {
         if (!expired.compareAndSet(false, true)) {
             return;
         }
 
         logger.info("Expiring.");
-
-        if (epConnectionStatusMonitor != null)
-        {
-            epConnectionStatusMonitor.stop();
-        }
 
         if (updateLastNEndpointsFuture != null)
         {
@@ -749,32 +736,7 @@ public abstract class Conference
      *
      * @param endpoint the <tt>Endpoint</tt> which expired.
      */
-    void endpointExpired(AbstractEndpoint endpoint)
-    {
-        final AbstractEndpoint removedEndpoint;
-        String id = endpoint.getID();
-        removedEndpoint = endpointsById.remove(id);
-        if (removedEndpoint != null)
-        {
-            updateEndpointsCache();
-        }
-
-        endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
-
-        if (tentacle != null)
-        {
-            tentacle.endpointExpired(id);
-        }
-
-        if (removedEndpoint != null)
-        {
-            if (epConnectionStatusMonitor != null)
-            {
-                epConnectionStatusMonitor.endpointExpired(removedEndpoint.getID());
-            }
-            endpointsChanged();
-        }
-    }
+    public abstract void endpointExpired(AbstractEndpoint endpoint);
 
     /**
      * Adds a specific {@link AbstractEndpoint} instance to the list of
@@ -800,41 +762,6 @@ public abstract class Conference
             logger.info("Endpoint with id " + endpoint.getID() + ": " +
                 replacedEndpoint + " has been replaced by new " +
                 "endpoint with same id: " + endpoint);
-        }
-    }
-
-    /**
-     * Notifies this {@link Conference} that one of its {@link Endpoint}s
-     * transport channel has become available.
-     *
-     * @param endpoint the {@link Endpoint} whose transport channel has become
-     * available.
-     */
-    @Override
-    public void endpointMessageTransportConnected(@NotNull AbstractEndpoint endpoint)
-    {
-        if (epConnectionStatusMonitor != null)
-        {
-            epConnectionStatusMonitor.endpointConnected(endpoint.getID());
-        }
-
-        if (!isExpired())
-        {
-            AbstractEndpoint dominantSpeaker = speechActivity.getDominantEndpoint();
-
-            if (dominantSpeaker != null)
-            {
-                try
-                {
-                    endpoint.sendMessage(new DominantSpeakerMessage(dominantSpeaker.getID()));
-                }
-                catch (IOException e)
-                {
-                    logger.error(
-                            "Failed to send dominant speaker update on data channel to " + endpoint.getID(),
-                            e);
-                }
-            }
         }
     }
 
