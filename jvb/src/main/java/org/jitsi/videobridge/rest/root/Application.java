@@ -21,15 +21,22 @@ import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.binders.*;
 import org.jitsi.videobridge.rest.filters.*;
+import org.jitsi.videobridge.xmpp.*;
 
 import static org.jitsi.videobridge.rest.RestConfig.config;
 
 public class Application extends ResourceConfig
 {
     public Application(
-        Videobridge videobridge)
+        Videobridge videobridge,
+        XmppConnection xmppConnection)
     {
-        register(new ServiceBinder(videobridge));
+        register(
+            new ServiceBinder(
+                videobridge,
+                xmppConnection
+            )
+        );
         // Filters
         register(ConfigFilter.class);
         // Register all resources in the package
