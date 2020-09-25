@@ -26,7 +26,6 @@ import org.jitsi.videobridge.stats.config.*;
 
 import java.time.*;
 
-import static org.jitsi.videobridge.version.JvbVersionServiceSupplierKt.*;
 import static org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.*;
 
 /**

@@ -24,6 +24,7 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.MetaconfigLogger
 import org.jitsi.metaconfig.MetaconfigSettings
 import org.jitsi.rest.JettyBundleActivatorConfig
+import org.jitsi.shutdown.ShutdownServiceImpl
 import org.jitsi.stats.media.Utils
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.ice.Harvesters
@@ -37,7 +38,6 @@ import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
 import org.jitsi.videobridge.xmpp.XmppConnection
 import kotlin.concurrent.thread
 import org.jitsi.videobridge.octo.singleton as octoRelayService
-import org.jitsi.videobridge.shutdown.singleton as shutdownService
 import org.jitsi.videobridge.stats.singleton as statsMgr
 
 fun main(args: Array<String>) {
@@ -71,7 +71,8 @@ fun main(args: Array<String>) {
     startIce4j()
 
     val xmppConnection = XmppConnection().apply { start() }
-    val videobridge = Videobridge(xmppConnection).apply { start() }
+    val shutdownService = ShutdownServiceImpl()
+    val videobridge = Videobridge(xmppConnection, shutdownService).apply { start() }
     val octoRelayService = octoRelayService().get()?.apply { start() }
     val statsMgr = statsMgr().get()?.apply {
         addStatistics(
@@ -139,7 +140,7 @@ fun main(args: Array<String>) {
     }
 
     // Block here until the bridge shuts down
-    shutdownService().get().waitForShutdown()
+    shutdownService.waitForShutdown()
 
     logger.info("Bridge shutting down")
     octoRelayService?.stop()

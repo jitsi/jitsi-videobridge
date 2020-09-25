@@ -18,9 +18,9 @@ package org.jitsi.videobridge;
 import kotlin.*;
 import org.apache.commons.lang3.*;
 import org.jetbrains.annotations.*;
-import org.jitsi.health.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.util.*;
+import org.jitsi.shutdown.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.*;
@@ -29,7 +29,6 @@ import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.shim.*;
-import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.version.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -133,6 +132,8 @@ public class Videobridge
 
     private final VersionService versionService;
 
+    @NotNull private final ShutdownServiceImpl shutdownService;
+
     static
     {
         org.jitsi.rtp.util.BufferPool.Companion.setGetArray(ByteBufferPool::getBuffer);
@@ -151,8 +152,8 @@ public class Videobridge
      * Initializes a new <tt>Videobridge</tt> instance.
      */
     public Videobridge(
-        @Nullable XmppConnection xmppConnection
-    )
+        @Nullable XmppConnection xmppConnection,
+        @NotNull ShutdownServiceImpl shutdownService)
     {
         videobridgeExpireThread = new VideobridgeExpireThread(this);
         jvbLoadManager = new JvbLoadManager<>(
@@ -184,6 +185,7 @@ public class Videobridge
         }
         healthChecker = new JvbHealthChecker(this);
         versionService = new JvbVersionService();
+        this.shutdownService = shutdownService;
     }
 
     /**
@@ -486,7 +488,7 @@ public class Videobridge
             if (conferencesById.isEmpty())
             {
                 logger.info("Videobridge is shutting down NOW");
-                ShutdownServiceSupplierKt.singleton().get().beginShutdown();
+                shutdownService.beginShutdown();
             }
         }
     }
