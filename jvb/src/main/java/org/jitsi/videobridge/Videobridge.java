@@ -44,6 +44,7 @@ import org.jivesoftware.smack.provider.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
 
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -69,7 +70,7 @@ public class Videobridge
     /**
      * The pseudo-random generator which is to be used when generating
      * {@link Conference} IDs in order to minimize busy
-     * waiting for the value of {@link System#currentTimeMillis()} to change.
+     * waiting for the value of {@link Clock#millis()} to change.
      */
     public static final Random RANDOM = new Random();
 
@@ -124,6 +125,8 @@ public class Videobridge
      */
     private final JvbLoadManager<PacketRateMeasurement> jvbLoadManager;
 
+    private final Clock clock;
+
     /**
      * The task which manages the recurring load sampling and updating of
      * {@link Videobridge#jvbLoadManager}.
@@ -149,6 +152,12 @@ public class Videobridge
      */
     public Videobridge()
     {
+        this(Clock.systemUTC());
+    }
+
+    public Videobridge(Clock clock)
+    {
+        this.clock = clock;
         videobridgeExpireThread = new VideobridgeExpireThread(this);
         jvbLoadManager = new JvbLoadManager<>(
             PacketRateMeasurement.getLoadedThreshold(),
@@ -217,7 +226,8 @@ public class Videobridge
                                 id,
                                 name,
                                 enableLogging,
-                                gid);
+                                gid,
+                                clock);
                     conferencesById.put(id, conference);
                 }
             }
@@ -324,7 +334,7 @@ public class Videobridge
      */
     private String generateConferenceID()
     {
-        return Long.toHexString(System.currentTimeMillis() + RANDOM.nextLong());
+        return Long.toHexString(clock.millis() + RANDOM.nextLong());
     }
 
     /**
@@ -569,7 +579,7 @@ public class Videobridge
     {
         OrderedJsonObject debugState = new OrderedJsonObject();
         debugState.put("shutdownInProgress", shutdownInProgress);
-        debugState.put("time", System.currentTimeMillis());
+        debugState.put("time", clock.millis());
 
         debugState.put("health", getHealthStatus());
         debugState.put("load-management", jvbLoadManager.getStats());
