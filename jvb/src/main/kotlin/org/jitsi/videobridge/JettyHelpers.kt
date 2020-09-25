@@ -127,6 +127,8 @@ fun createServer(config: JettyBundleActivatorConfig): Server {
     }
 }
 
+fun JettyBundleActivatorConfig.isEnabled(): Boolean = port != -1 || tlsPort != -1
+
 // Note: it's technically possible that this cast fails, but
 // shouldn't happen in practice given that the above methods always install
 // a ServletContextHandler handler.

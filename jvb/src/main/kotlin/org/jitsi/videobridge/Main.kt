@@ -16,7 +16,6 @@
 
 package org.jitsi.videobridge
 
-import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.servlet.ServletHolder
 import org.glassfish.jersey.servlet.ServletContainer
 import org.ice4j.ice.harvest.MappingCandidateHarvesters
@@ -100,18 +99,38 @@ fun main(args: Array<String>) {
     }
     healthCheck().get().start()
 
-    val publicHttpServer = setupPublicHttpServer()?.apply {
+    val publicServerConfig = JettyBundleActivatorConfig(
+        "org.jitsi.videobridge.rest",
+        "videobridge.http-servers.public"
+    )
+    val publicHttpServer = if (publicServerConfig.isEnabled()) {
         logger.info("Starting public http server")
-        start()
-    } ?: run {
+
+        val websocketService = ColibriWebSocketService(publicServerConfig.isTls)
+        createServer(publicServerConfig).also {
+            websocketService.registerServlet(it.servletContextHandler)
+            it.start()
+        }
+    } else {
         logger.info("Not starting public http server")
         null
     }
 
-    val privateHttpServer = setupPrivateHttpServer()?.apply {
+    val privateServerConfig = JettyBundleActivatorConfig(
+        "org.jitsi.videobridge.rest.private",
+        "videobridge.http-servers.private"
+    )
+    val privateHttpServer = if (privateServerConfig.isEnabled()) {
         logger.info("Starting private http server")
-        start()
-    } ?: run {
+        val restApp = Application()
+        createServer(privateServerConfig).also {
+            it.servletContextHandler.addServlet(
+                ServletHolder(ServletContainer(restApp)),
+                "/*"
+            )
+            it.start()
+        }
+    } else {
         logger.info("Not starting private http server")
         null
     }
@@ -145,40 +164,6 @@ private fun setupMetaconfigLogger() {
         override fun warn(block: () -> String) = configLogger.warn(block)
         override fun error(block: () -> String) = configLogger.error(block)
         override fun debug(block: () -> String) = configLogger.debug(block)
-    }
-}
-
-private fun setupPublicHttpServer(): Server? {
-    val publicServerConfig = JettyBundleActivatorConfig(
-        "org.jitsi.videobridge.rest",
-        "videobridge.http-servers.public"
-    )
-    if (publicServerConfig.port == -1 && publicServerConfig.tlsPort == -1) {
-        return null
-    }
-    val publicServer = createServer(publicServerConfig)
-
-    val websocketService = ColibriWebSocketService(publicServerConfig.isTls)
-    org.jitsi.videobridge.websocket.singleton().setColibriWebSocketService(websocketService)
-
-    websocketService.registerServlet(publicServer.servletContextHandler)
-
-    return publicServer
-}
-
-private fun setupPrivateHttpServer(): Server? {
-    val privateServerConfig = JettyBundleActivatorConfig(
-        "org.jitsi.videobridge.rest.private",
-        "videobridge.http-servers.private"
-    )
-    if (privateServerConfig.port == -1 && privateServerConfig.tlsPort == -1) {
-        return null
-    }
-    return createServer(privateServerConfig).apply {
-        servletContextHandler.addServlet(
-            ServletHolder(ServletContainer(Application())),
-            "/*"
-        )
     }
 }
 
