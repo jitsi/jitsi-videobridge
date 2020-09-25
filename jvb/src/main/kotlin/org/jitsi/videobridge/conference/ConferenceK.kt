@@ -19,7 +19,9 @@ package org.jitsi.videobridge.conference
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.cinfo
 import org.jitsi.videobridge.Conference
+import org.jitsi.videobridge.Endpoint
 import org.jitsi.videobridge.Videobridge
+import org.jitsi.videobridge.octo.OctoEndpoint
 import org.json.simple.JSONObject
 import org.jxmpp.jid.EntityBareJid
 import java.time.Clock
@@ -35,6 +37,24 @@ class ConferenceK @JvmOverloads constructor(
 ) : Conference(videobridge, id, confName, enableLogging, gid) {
 
     private val creationTime = clock.instant()
+
+    override fun createLocalEndpoint(id: String, iceControlling: Boolean): Endpoint {
+        val existingEndpoint = getEndpoint(id)
+        if (existingEndpoint is OctoEndpoint) {
+            // It is possible that an Endpoint was migrated from another bridge
+            // in the conference to this one, and the sources lists (which
+            // implicitly signal the Octo endpoints in the conference) haven't
+            // been updated yet. We'll force the Octo endpoint to expire and
+            // we'll continue with the creation of a new local Endpoint for the
+            // participant.
+            existingEndpoint.expire()
+        } else if (existingEndpoint != null) {
+            throw IllegalArgumentException("Local endpoint with ID = $id already created")
+        }
+        return Endpoint(id, this, logger, iceControlling, clock).also {
+            addEndpoint(it)
+        }
+    }
 
     override fun newDiagnosticContext(): DiagnosticContext {
         return DiagnosticContext().apply {

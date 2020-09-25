@@ -592,30 +592,7 @@ public abstract class Conference
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      */
     @NotNull
-    public Endpoint createLocalEndpoint(String id, boolean iceControlling)
-    {
-        final AbstractEndpoint existingEndpoint = getEndpoint(id);
-        if (existingEndpoint instanceof OctoEndpoint)
-        {
-            // It is possible that an Endpoint was migrated from another bridge
-            // in the conference to this one, and the sources lists (which
-            // implicitly signal the Octo endpoints in the conference) haven't
-            // been updated yet. We'll force the Octo endpoint to expire and
-            // we'll continue with the creation of a new local Endpoint for the
-            // participant.
-            existingEndpoint.expire();
-        }
-        else if (existingEndpoint != null)
-        {
-            throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
-        }
-
-        final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling);
-
-        addEndpoint(endpoint);
-
-        return endpoint;
-    }
+    public abstract Endpoint createLocalEndpoint(String id, boolean iceControlling);
 
     /**
      * An endpoint was added or removed.
