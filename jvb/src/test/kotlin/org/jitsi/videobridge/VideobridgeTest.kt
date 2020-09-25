@@ -38,7 +38,7 @@ class VideobridgeTest : ShouldSpec() {
     private val shutdownServiceSupplier: ShutdownServiceSupplier = mockk {
         every { get() } returns shutdownService
     }
-    private val videobridge = Videobridge()
+    private val videobridge = Videobridge(null)
     init {
         mockkStatic("org.jitsi.videobridge.shutdown.ShutdownServiceSupplierKt")
         every { org.jitsi.videobridge.shutdown.singleton() } returns shutdownServiceSupplier

@@ -35,9 +35,9 @@ import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.version.singleton as versionService
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
 import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
+import org.jitsi.videobridge.xmpp.XmppConnection
 import kotlin.concurrent.thread
 import org.jitsi.videobridge.octo.singleton as octoRelayService
-import org.jitsi.videobridge.xmpp.singleton as xmppConnection
 import org.jitsi.videobridge.stats.singleton as statsMgr
 import org.jitsi.videobridge.shutdown.singleton as shutdownService
 
@@ -71,9 +71,9 @@ fun main(args: Array<String>) {
 
     startIce4j()
 
-    val videobridge = Videobridge().apply { start() }
+    val xmppConnection = XmppConnection().apply { start() }
+    val videobridge = Videobridge(xmppConnection).apply { start() }
     val octoRelayService = octoRelayService().get()?.apply { start() }
-    val xmppConnection = xmppConnection().get().apply { start() }
     val statsMgr = statsMgr().get()?.apply {
         addStatistics(
             VideobridgeStatistics(

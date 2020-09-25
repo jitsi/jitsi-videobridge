@@ -148,7 +148,9 @@ public class Videobridge
     /**
      * Initializes a new <tt>Videobridge</tt> instance.
      */
-    public Videobridge()
+    public Videobridge(
+        @Nullable XmppConnection xmppConnection
+    )
     {
         videobridgeExpireThread = new VideobridgeExpireThread(this);
         jvbLoadManager = new JvbLoadManager<>(
@@ -174,7 +176,10 @@ public class Videobridge
             10,
             TimeUnit.SECONDS
         );
-        XmppConnectionSupplierKt.singleton().get().setEventHandler(new XmppConnectionEventHandler());
+        if (xmppConnection != null)
+        {
+            xmppConnection.setEventHandler(new XmppConnectionEventHandler());
+        }
         healthChecker = new JvbHealthChecker(this);
     }
 
