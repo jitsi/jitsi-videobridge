@@ -131,6 +131,8 @@ public class Videobridge
 
     public final JvbHealthChecker healthChecker;
 
+    private final VersionService versionService;
+
     static
     {
         org.jitsi.rtp.util.BufferPool.Companion.setGetArray(ByteBufferPool::getBuffer);
@@ -181,6 +183,7 @@ public class Videobridge
             xmppConnection.setEventHandler(new XmppConnectionEventHandler());
         }
         healthChecker = new JvbHealthChecker(this);
+        versionService = new JvbVersionService();
     }
 
     /**
@@ -650,9 +653,12 @@ public class Videobridge
     /**
      * Gets the version of the jitsi-videobridge application.
      */
-    public Version getVersion()
+    // TODO(brian): this should just return a Version, instead of the VersionService,
+    // but Jicoco needs access to the VersionService right now (though it would work
+    // just fine with just having the Version).  So fix this once Jicoco is fixed.
+    public VersionService getVersionService()
     {
-        return JvbVersionServiceSupplierKt.singleton().get().getCurrentVersion();
+        return versionService;
     }
 
     private class XmppConnectionEventHandler implements XmppConnection.EventHandler
@@ -668,8 +674,7 @@ public class Videobridge
         @Override
         public IQ versionIqReceived(@NotNull org.jivesoftware.smackx.iqversion.packet.Version iq)
         {
-            VersionService versionService = JvbVersionServiceSupplierKt.singleton().get();
-            org.jitsi.utils.version.Version currentVersion = versionService.getCurrentVersion();
+            Version currentVersion = versionService.getCurrentVersion();
             if (currentVersion == null)
             {
                 return IQ.createErrorResponse(

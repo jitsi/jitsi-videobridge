@@ -18,6 +18,7 @@ package org.jitsi.videobridge.rest.root;
 
 import org.glassfish.jersey.server.*;
 import org.jitsi.health.*;
+import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.binders.*;
@@ -33,6 +34,7 @@ public class Application extends ResourceConfig
         Videobridge videobridge,
         XmppConnection xmppConnection,
         StatsManager statsManager)
+
     {
         register(
             new ServiceBinder(
