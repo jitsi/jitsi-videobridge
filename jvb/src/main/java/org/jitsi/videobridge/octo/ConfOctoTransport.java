@@ -132,11 +132,6 @@ public class ConfOctoTransport
      * Initializes a new {@link ConfOctoTransport} instance.
      * @param conference the conference.
      */
-    public ConfOctoTransport(Conference conference)
-    {
-        this(conference, Clock.systemUTC());
-    }
-
     public ConfOctoTransport(Conference conference, Clock clock)
     {
         this.conference = conference;
