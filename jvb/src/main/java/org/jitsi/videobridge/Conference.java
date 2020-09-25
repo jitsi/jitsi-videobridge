@@ -53,7 +53,7 @@ import static org.jitsi.utils.collections.JMap.*;
  * @author Hristo Terezov
  * @author George Politis
  */
-public class Conference
+public abstract class Conference
      implements AbstractEndpointMessageTransport.EndpointMessageTransportEventHandler
 {
     /**
@@ -67,7 +67,7 @@ public class Conference
      * synchronizing on the map itself, because it must be kept in sync with
      * {@link #endpointsCache}.
      */
-    private final ConcurrentHashMap<String, AbstractEndpoint> endpointsById = new ConcurrentHashMap<>();
+    protected final ConcurrentHashMap<String, AbstractEndpoint> endpointsById = new ConcurrentHashMap<>();
 
     /**
      * A read-only cache of the endpoints in this conference. Note that it
@@ -76,15 +76,15 @@ public class Conference
      * (we iterate over it for each RTP packet) and the Octo endpoints are not
      * needed.
      */
-    private List<Endpoint> endpointsCache = Collections.emptyList();
+    protected List<Endpoint> endpointsCache = Collections.emptyList();
 
-    private final Object endpointsCacheLock = new Object();
+    protected final Object endpointsCacheLock = new Object();
 
     /**
      * The indicator which determines whether {@link #expire()} has been called
      * on this <tt>Conference</tt>.
      */
-    private final AtomicBoolean expired = new AtomicBoolean(false);
+    protected final AtomicBoolean expired = new AtomicBoolean(false);
 
     /**
      * The locally unique identifier of this conference (i.e. unique across the
@@ -94,7 +94,7 @@ public class Conference
      * The current thinking is that we will phase out use of this ID (but keep
      * it for backward compatibility) in favor of {@link #gid}.
      */
-    private final String id;
+    protected final String id;
 
     /**
      * The "global" id of this conference, selected by the controller of the
@@ -110,49 +110,49 @@ public class Conference
      * This ID is shared between all bridges in an Octo conference, and included
      * on-the-wire in Octo packets.
      */
-    private final long gid;
+    protected final long gid;
 
     /**
      * The world readable name of this instance if any.
      */
-    private final EntityBareJid conferenceName;
+    protected final EntityBareJid conferenceName;
 
     /**
      * The speech activity (representation) of the <tt>Endpoint</tt>s of this
      * <tt>Conference</tt>.
      */
-    private final ConferenceSpeechActivity speechActivity;
+    protected final ConferenceSpeechActivity speechActivity;
 
     /**
      * The <tt>Videobridge</tt> which has initialized this <tt>Conference</tt>.
      */
-    private final Videobridge videobridge;
+    protected final Videobridge videobridge;
 
     /**
      * Holds conference statistics.
      */
-    private final Statistics statistics = new Statistics();
+    protected final Statistics statistics = new Statistics();
 
     /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
-    private final Logger logger;
+    protected final Logger logger;
 
     /**
      * Whether this conference should be considered when generating statistics.
      */
-    private final boolean includeInStatistics;
+    protected final boolean includeInStatistics;
 
     /**
      * The time when this {@link Conference} was created.
      */
-    private final long creationTime = System.currentTimeMillis();
+    protected final long creationTime = System.currentTimeMillis();
 
     /**
      * The shim which handles Colibri-related logic for this conference.
      */
-    private final ConferenceShim shim;
+    protected final ConferenceShim shim;
 
     //TODO not public
     final public EncodingsManager encodingsManager = new EncodingsManager();
@@ -160,15 +160,15 @@ public class Conference
     /**
      * This {@link Conference}'s link to Octo.
      */
-    private ConfOctoTransport tentacle;
+    protected ConfOctoTransport tentacle;
 
     /**
      * The task of updating the ordered list of endpoints in the conference. It runs periodically in order to adapt to
      * endpoints stopping or starting to their video streams (which affects the order).
      */
-    private ScheduledFuture<?> updateLastNEndpointsFuture;
+    protected ScheduledFuture<?> updateLastNEndpointsFuture;
 
-    private final EndpointConnectionStatusMonitor epConnectionStatusMonitor;
+    protected final EndpointConnectionStatusMonitor epConnectionStatusMonitor;
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
@@ -413,7 +413,7 @@ public class Conference
     /**
      * Runs {@link #lastNEndpointsChanged()} in an IO pool thread.
      */
-    private void lastNEndpointsChangedAsync()
+    protected void lastNEndpointsChangedAsync()
     {
         TaskPools.IO_POOL.submit(() ->
         {
@@ -431,7 +431,7 @@ public class Conference
     /**
      * Updates all endpoints with a new list of ordered endpoints in the conference.
      */
-    private void lastNEndpointsChanged()
+    protected void lastNEndpointsChanged()
     {
         List<String> lastNEndpointIds
                 = speechActivity.getOrderedEndpoints().stream()
@@ -446,7 +446,7 @@ public class Conference
      * speaker switch event in this multipoint conference and there is now a new
      * dominant speaker.
      */
-    private void dominantSpeakerChanged()
+    protected void dominantSpeakerChanged()
     {
         AbstractEndpoint dominantSpeaker = speechActivity.getDominantEndpoint();
         String dominantSpeakerId = dominantSpeaker == null ? null : dominantSpeaker.getID();
@@ -481,7 +481,7 @@ public class Conference
         }
     }
 
-    private double getRtt(AbstractEndpoint endpoint)
+    protected double getRtt(AbstractEndpoint endpoint)
     {
         if (endpoint instanceof Endpoint)
         {
@@ -500,7 +500,7 @@ public class Conference
         }
     }
 
-    private double getMaxReceiverRtt(String excludedEndpointId)
+    protected double getMaxReceiverRtt(String excludedEndpointId)
     {
         return endpointsCache.stream()
                 .filter(ep -> !ep.getID().equalsIgnoreCase(excludedEndpointId))
@@ -563,7 +563,7 @@ public class Conference
     /**
      * Updates the statistics for this conference when it is about to expire.
      */
-    private void updateStatisticsOnExpire()
+    protected void updateStatisticsOnExpire()
     {
         long durationSeconds = Math.round((System.currentTimeMillis() - creationTime) / 1000d);
 
@@ -675,7 +675,7 @@ public class Conference
     /**
      * An endpoint was added or removed.
      */
-    private void endpointsChanged()
+    protected void endpointsChanged()
     {
         speechActivity.endpointsChanged(getEndpoints());
     }
@@ -696,7 +696,7 @@ public class Conference
      * Updates {@link #endpointsCache} with the current contents of
      * {@link #endpointsById}.
      */
-    private void updateEndpointsCache()
+    protected void updateEndpointsCache()
     {
         synchronized (endpointsCacheLock)
         {
@@ -967,7 +967,7 @@ public class Conference
      *
      * @param packetInfo the packet
      */
-    private void sendOut(PacketInfo packetInfo)
+    protected void sendOut(PacketInfo packetInfo)
     {
         String sourceEndpointId = packetInfo.getEndpointId();
         // We want to avoid calling 'clone' for the last receiver of this packet
@@ -1223,7 +1223,7 @@ public class Conference
          * Gets a snapshot of this object's state as JSON.
          */
         @SuppressWarnings("unchecked")
-        private JSONObject getJson()
+        protected JSONObject getJson()
         {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("total_bytes_received", totalBytesReceived.get());
@@ -1277,7 +1277,7 @@ public class Conference
         }
     }
 
-    private class SpeechActivityListener implements ConferenceSpeechActivity.Listener
+    protected class SpeechActivityListener implements ConferenceSpeechActivity.Listener
     {
         @Override
         public void dominantSpeakerChanged()

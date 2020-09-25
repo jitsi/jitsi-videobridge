@@ -24,6 +24,7 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.*;
+import org.jitsi.videobridge.conference.*;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
@@ -211,7 +212,7 @@ public class Videobridge
                 if (!conferencesById.containsKey(id))
                 {
                     conference
-                        = new Conference(
+                        = new ConferenceK(
                                 this,
                                 id,
                                 name,

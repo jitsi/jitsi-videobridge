@@ -19,6 +19,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import org.jitsi.ConfigTest
+import org.jitsi.videobridge.conference.ConferenceK
 import org.jitsi.videobridge.octo.singleton as octoRelayServiceProvider
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
@@ -38,7 +39,7 @@ class ConferenceTest : ConfigTest() {
         }
 
         context("Adding local endpoints should work") {
-            with(Conference(videobridge, "id", name, false, Conference.GID_NOT_SET)) {
+            with(ConferenceK(videobridge, "id", name, false, Conference.GID_NOT_SET)) {
                 endpointCount shouldBe 0
                 createLocalEndpoint("abcdabcd", true)
                 endpointCount shouldBe 1
@@ -46,20 +47,20 @@ class ConferenceTest : ConfigTest() {
             }
         }
         context("Enabling octo should fail when the GID is not set") {
-            with(Conference(videobridge, "id", name, false, Conference.GID_NOT_SET)) {
+            with(ConferenceK(videobridge, "id", name, false, Conference.GID_NOT_SET)) {
                 isOctoEnabled shouldBe false
                 shouldThrow<IllegalStateException> {
-                    tentacle
+                    getTentacle()
                 }
                 debugState.shouldBeValidJson()
             }
         }
         context("Enabling octo should work") {
-            with(Conference(videobridge, "id", name, false, 1234)) {
+            with(ConferenceK(videobridge, "id", name, false, 1234)) {
                 isOctoEnabled shouldBe false
-                tentacle
+                getTentacle()
                 isOctoEnabled shouldBe true
-                tentacle.setRelays(listOf("127.0.0.1:4097"))
+                getTentacle().setRelays(listOf("127.0.0.1:4097"))
 
                 debugState.shouldBeValidJson()
             }
