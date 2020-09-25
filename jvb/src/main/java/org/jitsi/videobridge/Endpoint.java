@@ -288,7 +288,7 @@ public class Endpoint
                     f.invoke();
                 }
             });
-        bitrateController = new BitrateController(this, diagnosticContext, logger);
+        bitrateController = new BitrateController(this, diagnosticContext, logger, clock);
 
         outgoingSrtpPacketQueue = new PacketInfoQueue(
             getClass().getSimpleName() + "-outgoing-packet-queue",
