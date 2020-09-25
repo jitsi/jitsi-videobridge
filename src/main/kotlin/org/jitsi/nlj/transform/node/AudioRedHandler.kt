@@ -81,10 +81,19 @@ class AudioRedHandler(
         addNumber("redundancy_packets_added", stats.redundancyPacketsAdded)
     }
 
+    override fun stop() = super.stop().also {
+        ssrcRedHandlers.values.forEach { it.stop() }
+        ssrcRedHandlers.clear()
+    }
+
     /**
      * Handler for a specific stream (SSRC)
      */
     private inner class SsrcRedHandler {
+        /**
+         * Saves audio (non-RED) packets that we've sent. Packets are cloned on insert and the inserted copies are owned
+         * by the cache, meaning that the cache is responsible for returning their buffers to the pool.
+         */
         val sentAudioCache = RtpPacketCache(20, synchronize = false)
 
         /**
@@ -145,7 +154,8 @@ class AudioRedHandler(
                 val redPacket = RedAudioRtpPacket.builder.build(redPayloadType, audioRtpPacket, redundancy)
                 packetInfo.packet = redPacket
 
-                redundancy.forEach { BufferPool.returnBuffer(it.buffer) }
+                // We replaced packetInfo.packet with our newly allocated packet, so the original can now be returned.
+                // We do not return the redundancy packets, because we only peek()ed at them from the cache.
                 BufferPool.returnBuffer(audioRtpPacket.buffer)
 
                 stats.audioPacketEncapsulated()
@@ -171,6 +181,8 @@ class AudioRedHandler(
         private fun RtpPacket.hasVad(): Boolean = audioLevelExtId?.let { extId ->
                 getHeaderExtension(extId)?.let { AudioLevelHeaderExtension.getVad(it) } ?: false
             } ?: false
+
+        fun stop() = sentAudioCache.flush()
 
         /**
          * Process an incoming RED packet. Depending on the configured policy and whether the receiver supports the
