@@ -20,9 +20,9 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.stats.media.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.stats.config.*;
-import org.jitsi.videobridge.version.*;
 
 import java.time.*;
 
@@ -103,9 +103,9 @@ public class CallStatsIOTransport
      */
     private CallStatsConferenceStatsHandler conferenceStatsHandler;
 
-    public CallStatsIOTransport()
+    public CallStatsIOTransport(Version jvbVersion)
     {
-        init(JitsiConfig.getSipCommunicatorProps());
+        init(jvbVersion, JitsiConfig.getSipCommunicatorProps());
     }
 
     /**
@@ -116,7 +116,7 @@ public class CallStatsIOTransport
      * @param cfg the {@code ConfigurationService} registered in
      * {@code bundleContext} if any
      */
-    private void init(ConfigurationService cfg)
+    private void init(Version jvbVersion, ConfigurationService cfg)
     {
         int appId = ConfigUtils.getInt(cfg, PNAME_CALLSTATS_IO_APP_ID, 0);
         String appSecret
@@ -130,7 +130,7 @@ public class CallStatsIOTransport
 
         // as we create only one instance of StatsService
         StatsServiceFactory.getInstance().createStatsService(
-            JvbVersionServiceSupplierKt.singleton().get().getCurrentVersion(),
+            jvbVersion,
             appId, appSecret, keyId, keyPath, bridgeId, false,
             new StatsServiceFactory.InitCallback()
             {

@@ -22,6 +22,7 @@ import com.typesafe.config.ConfigObject
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.config
+import org.jitsi.utils.version.Version
 import org.jitsi.videobridge.stats.CallStatsIOTransport
 import org.jitsi.videobridge.stats.MucStatsTransport
 import org.jitsi.videobridge.stats.StatsTransport
@@ -123,6 +124,6 @@ sealed class StatsTransportConfig(
     }
 
     class CallStatsIoStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval) {
-        fun toStatsTransport(): StatsTransport = CallStatsIOTransport()
+        fun toStatsTransport(jvbVersion: Version): StatsTransport = CallStatsIOTransport(jvbVersion)
     }
 }

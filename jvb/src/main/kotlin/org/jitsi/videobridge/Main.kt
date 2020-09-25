@@ -32,6 +32,7 @@ import org.jitsi.videobridge.stats.StatsManager
 import org.jitsi.videobridge.stats.VideobridgeStatistics
 import org.jitsi.videobridge.stats.config.StatsTransportConfig
 import org.jitsi.videobridge.util.TaskPools
+import org.jitsi.videobridge.version.singleton as versionService
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
 import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
 import kotlin.concurrent.thread
@@ -93,7 +94,10 @@ fun main(args: Array<String>) {
                     )
                 }
                 is StatsTransportConfig.CallStatsIoStatsTransportConfig -> {
-                    addTransport(transportConfig.toStatsTransport(), transportConfig.interval.toMillis())
+                    addTransport(
+                        transportConfig.toStatsTransport(versionService().get().currentVersion),
+                        transportConfig.interval.toMillis()
+                    )
                 }
             }
         }
