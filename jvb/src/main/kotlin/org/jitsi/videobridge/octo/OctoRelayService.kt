@@ -24,6 +24,7 @@ import org.jitsi.videobridge.util.TaskPools
 import java.net.SocketAddress
 import java.net.SocketException
 import java.net.UnknownHostException
+import java.time.Clock
 import java.time.Instant
 
 /**
@@ -53,7 +54,9 @@ class OctoRelayService {
         val port = config.bindPort
 
         try {
-            udpTransport = UdpTransport(address, port, logger, OCTO_SO_RCVBUF, OCTO_SO_SNDBUF)
+            // TODO(brian): this should change to have OctoRelayService take a clock which it passes down,
+            // but we need to move it away from being created via the singleton first
+            udpTransport = UdpTransport(address, port, logger, OCTO_SO_RCVBUF, OCTO_SO_SNDBUF, Clock.systemUTC())
         } catch (t: Throwable) {
             when (t) {
                 is UnknownHostException, is SocketException -> {

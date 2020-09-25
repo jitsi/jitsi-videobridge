@@ -43,13 +43,13 @@ import java.util.concurrent.atomic.LongAdder
  * can be done via [send], and a remote address (or a set of remote addresses)
  * must be provided.
  */
-class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostException::class) constructor(
+class UdpTransport @Throws(SocketException::class, UnknownHostException::class) constructor(
     private val bindAddress: String,
     private val bindPort: Int,
     parentLogger: Logger,
     soRcvBuf: Int? = null,
     soSndBuf: Int? = null,
-    private val clock: Clock = Clock.systemUTC()
+    private val clock: Clock
 ) {
     private val logger = createChildLogger(parentLogger, mapOf(
         "address" to bindAddress,
