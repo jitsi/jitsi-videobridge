@@ -314,7 +314,7 @@ public class Endpoint
         bandwidthProbing.enabled = true;
         recurringRunnableExecutor.registerRecurringRunnable(bandwidthProbing);
 
-        iceTransport = new IceTransport(getID(), iceControlling, logger);
+        iceTransport = new IceTransport(getID(), iceControlling, logger, clock);
         setupIceTransport();
         dtlsTransport = new DtlsTransport(logger);
         setupDtlsTransport();
