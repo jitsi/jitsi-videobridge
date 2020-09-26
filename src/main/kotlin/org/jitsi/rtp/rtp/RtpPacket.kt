@@ -174,6 +174,8 @@ open class RtpPacket(
             "hashCode=${buffer.hashCodeOfSegment(payloadOffset, payloadOffset + payloadLength)}"
 
     fun getHeaderExtension(extensionId: Int): HeaderExtension? {
+        if (!hasExtensions) return null
+
         headerExtensions.forEach { ext ->
             if (ext.id == extensionId) {
                 return ext
@@ -477,7 +479,10 @@ open class RtpPacket(
          * Resets this iterator back to the beginning of the extensions
          */
         internal fun reset() {
-            val extLength = extensionBlockLength - HeaderExtensionHelpers.TOP_LEVEL_EXT_HEADER_SIZE_BYTES
+            val extLength =
+                if (hasExtensions) extensionBlockLength - HeaderExtensionHelpers.TOP_LEVEL_EXT_HEADER_SIZE_BYTES
+                else 0
+
             if (extLength <= 0) {
                 // No extensions
                 nextOffset = -1
