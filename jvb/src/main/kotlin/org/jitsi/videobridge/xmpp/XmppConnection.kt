@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * The XMPP client connection for the videobridge
  */
-class XmppConnection : IQListener {
+public class XmppConnection : IQListener {
     private val logger = createLogger()
 
     /**
