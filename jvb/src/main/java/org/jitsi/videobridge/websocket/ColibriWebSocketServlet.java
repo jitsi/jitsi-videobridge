@@ -92,6 +92,7 @@ class ColibriWebSocketServlet
         // /colibri-ws/server-id/conf-id/endpoint-id?pwd=password
         // The "path" does not include "?pwd=password", which is in the "query"
         String path = request.getRequestURI().getPath();
+        logger.debug(() -> "Got a create websocket request at path " + path);
         if (path == null
             || !path.startsWith(ColibriWebSocketService.COLIBRI_WS_PATH))
         {
