@@ -22,7 +22,6 @@ import org.glassfish.jersey.test.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
-import org.jitsi.videobridge.util.*;
 import org.junit.*;
 import org.reflections.*;
 import org.reflections.scanners.*;
@@ -39,16 +38,13 @@ import static org.mockito.Mockito.*;
 
 public class DebugTest extends JerseyTest
 {
-    protected VideobridgeSupplier videobridgeSupplier;
     protected Videobridge videobridge;
     protected static final String BASE_URL = "/debug";
 
     @Override
     protected Application configure()
     {
-        videobridgeSupplier = mock(VideobridgeSupplier.class);
         videobridge = mock(Videobridge.class);
-        when(videobridgeSupplier.get()).thenReturn(videobridge);
 
         Endpoint endpoint = mock(Endpoint.class);
         Conference conference = mock(Conference.class);
@@ -59,7 +55,7 @@ public class DebugTest extends JerseyTest
         enable(TestProperties.DUMP_ENTITY);
         return new ResourceConfig() {
             {
-                register(new MockBinder<>(videobridgeSupplier, VideobridgeSupplier.class));
+                register(new MockBinder<>(videobridge, Videobridge.class));
                 register(Debug.class);
             }
         };

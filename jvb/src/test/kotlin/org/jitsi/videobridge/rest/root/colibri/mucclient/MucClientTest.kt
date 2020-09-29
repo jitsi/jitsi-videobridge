@@ -26,7 +26,6 @@ import org.glassfish.jersey.test.JerseyTest
 import org.glassfish.jersey.test.TestProperties
 import org.jitsi.videobridge.rest.MockBinder
 import org.jitsi.videobridge.xmpp.XmppConnection
-import org.jitsi.videobridge.xmpp.XmppConnectionSupplier
 import org.json.simple.JSONObject
 import org.junit.Test
 import javax.ws.rs.client.Entity
@@ -34,20 +33,16 @@ import javax.ws.rs.core.Application
 
 class MucClientTest : JerseyTest() {
     private lateinit var xmppConnection: XmppConnection
-    private lateinit var xmppConnectionSupplier: XmppConnectionSupplier
     private val baseUrl = "/colibri/muc-client"
 
     override fun configure(): Application {
         xmppConnection = mockk()
-        xmppConnectionSupplier = mockk {
-            every { get() } returns xmppConnection
-        }
 
         enable(TestProperties.LOG_TRAFFIC)
         enable(TestProperties.DUMP_ENTITY)
         return object : ResourceConfig() {
             init {
-                register(MockBinder(xmppConnectionSupplier, XmppConnectionSupplier::class.java))
+                register(MockBinder(xmppConnection, XmppConnection::class.java))
                 register(MucClient::class.java)
             }
         }
