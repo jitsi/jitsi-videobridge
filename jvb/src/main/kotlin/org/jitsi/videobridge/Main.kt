@@ -33,6 +33,7 @@ import org.jitsi.videobridge.stats.VideobridgeStatistics
 import org.jitsi.videobridge.stats.config.StatsTransportConfig
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
+import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
 import kotlin.concurrent.thread
 import org.jitsi.videobridge.octo.singleton as octoRelayService
 import org.jitsi.videobridge.xmpp.singleton as xmppConnection
@@ -107,6 +108,7 @@ fun main(args: Array<String>) {
         logger.info("Starting public http server")
 
         val websocketService = ColibriWebSocketService(publicServerConfig.isTls)
+        webSocketServiceSingleton().setColibriWebSocketService(websocketService)
         createServer(publicServerConfig).also {
             websocketService.registerServlet(it.servletContextHandler)
             it.start()
