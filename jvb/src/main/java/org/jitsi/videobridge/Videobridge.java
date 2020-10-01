@@ -18,9 +18,9 @@ package org.jitsi.videobridge;
 import kotlin.*;
 import org.apache.commons.lang3.*;
 import org.jetbrains.annotations.*;
-import org.jitsi.health.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.util.*;
+import org.jitsi.shutdown.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.*;
@@ -29,7 +29,6 @@ import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.shim.*;
-import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.version.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -129,6 +128,12 @@ public class Videobridge
      */
     private final ScheduledFuture<?> loadSamplerTask;
 
+    public final JvbHealthChecker healthChecker;
+
+    private final VersionService versionService;
+
+    @NotNull private final ShutdownServiceImpl shutdownService;
+
     static
     {
         org.jitsi.rtp.util.BufferPool.Companion.setGetArray(ByteBufferPool::getBuffer);
@@ -146,7 +151,9 @@ public class Videobridge
     /**
      * Initializes a new <tt>Videobridge</tt> instance.
      */
-    public Videobridge()
+    public Videobridge(
+        @Nullable XmppConnection xmppConnection,
+        @NotNull ShutdownServiceImpl shutdownService)
     {
         videobridgeExpireThread = new VideobridgeExpireThread(this);
         jvbLoadManager = new JvbLoadManager<>(
@@ -172,7 +179,13 @@ public class Videobridge
             10,
             TimeUnit.SECONDS
         );
-        XmppConnectionSupplierKt.singleton().get().setEventHandler(new XmppConnectionEventHandler());
+        if (xmppConnection != null)
+        {
+            xmppConnection.setEventHandler(new XmppConnectionEventHandler());
+        }
+        healthChecker = new JvbHealthChecker(this);
+        versionService = new JvbVersionService();
+        this.shutdownService = shutdownService;
     }
 
     /**
@@ -413,9 +426,7 @@ public class Videobridge
      */
     private String getHealthStatus()
     {
-        HealthCheckService health = JvbHealthCheckServiceSupplierKt.singleton().get();
-
-        Exception result = health.getResult();
+        Exception result = healthChecker.getResult();
         return result == null ? "OK" : result.getMessage();
     }
 
@@ -477,7 +488,7 @@ public class Videobridge
             if (conferencesById.isEmpty())
             {
                 logger.info("Videobridge is shutting down NOW");
-                ShutdownServiceSupplierKt.singleton().get().beginShutdown();
+                shutdownService.beginShutdown();
             }
         }
     }
@@ -493,6 +504,7 @@ public class Videobridge
         UlimitCheck.printUlimits();
 
         videobridgeExpireThread.start();
+        healthChecker.start();
 
         // <conference>
         ProviderManager.addIQProvider(
@@ -544,6 +556,7 @@ public class Videobridge
     public void stop()
     {
         videobridgeExpireThread.stop();
+        healthChecker.stop();
         if (loadSamplerTask != null)
         {
             loadSamplerTask.cancel(true);
@@ -642,9 +655,12 @@ public class Videobridge
     /**
      * Gets the version of the jitsi-videobridge application.
      */
-    public Version getVersion()
+    // TODO(brian): this should just return a Version, instead of the VersionService,
+    // but Jicoco needs access to the VersionService right now (though it would work
+    // just fine with just having the Version).  So fix this once Jicoco is fixed.
+    public VersionService getVersionService()
     {
-        return JvbVersionServiceSupplierKt.singleton().get().getCurrentVersion();
+        return versionService;
     }
 
     private class XmppConnectionEventHandler implements XmppConnection.EventHandler
@@ -660,8 +676,7 @@ public class Videobridge
         @Override
         public IQ versionIqReceived(@NotNull org.jivesoftware.smackx.iqversion.packet.Version iq)
         {
-            VersionService versionService = JvbVersionServiceSupplierKt.singleton().get();
-            org.jitsi.utils.version.Version currentVersion = versionService.getCurrentVersion();
+            Version currentVersion = versionService.getCurrentVersion();
             if (currentVersion == null)
             {
                 return IQ.createErrorResponse(

@@ -19,13 +19,10 @@ import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import io.mockk.verify
 import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.shutdown.ShutdownServiceImpl
-import org.jitsi.videobridge.shutdown.ShutdownServiceSupplier
 import org.jivesoftware.smack.packet.ErrorIQ
 import org.jivesoftware.smack.packet.XMPPError
 import org.json.simple.parser.JSONParser
@@ -35,14 +32,7 @@ class VideobridgeTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val shutdownService: ShutdownServiceImpl = mockk(relaxed = true)
-    private val shutdownServiceSupplier: ShutdownServiceSupplier = mockk {
-        every { get() } returns shutdownService
-    }
-    private val videobridge = Videobridge()
-    init {
-        mockkStatic("org.jitsi.videobridge.shutdown.ShutdownServiceSupplierKt")
-        every { org.jitsi.videobridge.shutdown.singleton() } returns shutdownServiceSupplier
-    }
+    private val videobridge = Videobridge(null, shutdownService)
     init {
         context("Debug state should be JSON") {
             videobridge.getDebugState(null, null, true).shouldBeValidJson()
