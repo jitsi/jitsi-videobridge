@@ -101,6 +101,15 @@ fun main(args: Array<String>) {
         }
         start()
     }
+    videobridge.addEventHandler(object : Videobridge.EventHandler {
+        override fun conferenceCreated(conference: Conference) {
+            statsMgr?.transports?.forEach { it.conferenceCreated(conference) }
+        }
+
+        override fun conferenceExpired(conference: Conference) {
+            statsMgr?.transports?.forEach { it.conferenceExpired(conference) }
+        }
+    })
 
     val publicServerConfig = JettyBundleActivatorConfig(
         "org.jitsi.videobridge.rest",

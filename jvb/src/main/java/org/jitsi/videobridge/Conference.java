@@ -229,12 +229,6 @@ public class Conference
 
         if (enableLogging)
         {
-            StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
-            if (statsMgr != null)
-            {
-                statsMgr.getTransports().forEach(transport -> transport.conferenceCreated(this));
-            }
-
             Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
             epConnectionStatusMonitor =
@@ -537,12 +531,6 @@ public class Conference
         {
             updateLastNEndpointsFuture.cancel(true);
             updateLastNEndpointsFuture = null;
-        }
-
-        StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
-        if (statsMgr != null)
-        {
-            statsMgr.getTransports().forEach(transport -> transport.conferenceExpired(this));
         }
 
         logger.debug(() -> "Expiring endpoints.");
