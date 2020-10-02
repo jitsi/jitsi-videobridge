@@ -134,6 +134,8 @@ public class Videobridge
 
     @NotNull private final ShutdownServiceImpl shutdownService;
 
+    private final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
+
     static
     {
         org.jitsi.rtp.util.BufferPool.Companion.setGetArray(ByteBufferPool::getBuffer);
@@ -276,6 +278,15 @@ public class Videobridge
                 + " gid=" + conference.getGid()
                 + " logging=" + enableLogging);
 
+        if (conference.includeInStatistics())
+        {
+            eventEmitter.fireEvent(handler ->
+            {
+                handler.conferenceCreated(conference);
+                return Unit.INSTANCE;
+            });
+        }
+
         return conference;
     }
 
@@ -305,23 +316,22 @@ public class Videobridge
     public void expireConference(Conference conference)
     {
         String id = conference.getID();
-        boolean expireConference;
 
         synchronized (conferencesById)
         {
             if (conference.equals(conferencesById.get(id)))
             {
                 conferencesById.remove(id);
-                expireConference = true;
+                conference.expire();
+                if (conference.includeInStatistics())
+                {
+                    eventEmitter.fireEvent(handler ->
+                    {
+                        handler.conferenceExpired(conference);
+                        return Unit.INSTANCE;
+                    });
+                }
             }
-            else
-            {
-                expireConference = false;
-            }
-        }
-        if (expireConference)
-        {
-            conference.expire();
         }
 
         // Check if it's the time to shutdown now
@@ -663,6 +673,16 @@ public class Videobridge
         return versionService;
     }
 
+    public void addEventHandler(EventHandler eventHandler)
+    {
+        eventEmitter.addHandler(eventHandler);
+    }
+
+    public void removeEventHandler(EventHandler eventHandler)
+    {
+        eventEmitter.removeHandler(eventHandler);
+    }
+
     private class XmppConnectionEventHandler implements XmppConnection.EventHandler
     {
         @NotNull
@@ -873,5 +893,10 @@ public class Videobridge
          * The stress level for this bridge
          */
         public Double stressLevel = 0.0;
+    }
+
+    public static interface EventHandler {
+        void conferenceCreated(Conference conference);
+        void conferenceExpired(Conference conference);
     }
 }
