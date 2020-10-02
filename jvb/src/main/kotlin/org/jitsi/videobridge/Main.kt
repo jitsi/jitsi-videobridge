@@ -38,7 +38,6 @@ import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
 import org.jitsi.videobridge.xmpp.XmppConnection
 import kotlin.concurrent.thread
 import org.jitsi.videobridge.octo.singleton as octoRelayService
-import org.jitsi.videobridge.stats.singleton as statsMgr
 
 fun main(args: Array<String>) {
     val cmdLine = CmdLine().apply { parse(args) }
@@ -74,42 +73,47 @@ fun main(args: Array<String>) {
     val shutdownService = ShutdownServiceImpl()
     val videobridge = Videobridge(xmppConnection, shutdownService).apply { start() }
     val octoRelayService = octoRelayService().get()?.apply { start() }
-    val statsMgr = statsMgr().get()?.apply {
-        addStatistics(
-            VideobridgeStatistics(
-                videobridge,
-                octoRelayService,
-                xmppConnection
-            ),
-            StatsManager.config.interval.toMillis()
-        )
-        StatsManager.config.transportConfigs.forEach { transportConfig ->
-            when (transportConfig) {
-                is StatsTransportConfig.MucStatsTransportConfig -> {
-                    addTransport(
-                        transportConfig.toStatsTransport(xmppConnection),
-                        transportConfig.interval.toMillis()
-                    )
-                }
-                is StatsTransportConfig.CallStatsIoStatsTransportConfig -> {
-                    addTransport(
-                        transportConfig.toStatsTransport(videobridge.versionService.currentVersion),
-                        transportConfig.interval.toMillis()
-                    )
+    val statsMgr = if (StatsManager.config.enabled) {
+        StatsManager().apply {
+            addStatistics(
+                VideobridgeStatistics(
+                    videobridge,
+                    octoRelayService,
+                    xmppConnection
+                ),
+                StatsManager.config.interval.toMillis()
+            )
+            StatsManager.config.transportConfigs.forEach { transportConfig ->
+                when (transportConfig) {
+                    is StatsTransportConfig.MucStatsTransportConfig -> {
+                        addTransport(
+                            transportConfig.toStatsTransport(xmppConnection),
+                            transportConfig.interval.toMillis()
+                        )
+                    }
+                    is StatsTransportConfig.CallStatsIoStatsTransportConfig -> {
+                        addTransport(
+                            transportConfig.toStatsTransport(videobridge.versionService.currentVersion),
+                            transportConfig.interval.toMillis()
+                        )
+                    }
                 }
             }
-        }
-        start()
-    }
-    videobridge.addEventHandler(object : Videobridge.EventHandler {
-        override fun conferenceCreated(conference: Conference) {
-            statsMgr?.transports?.forEach { it.conferenceCreated(conference) }
-        }
+            start()
+        }.also {
+            videobridge.addEventHandler(object : Videobridge.EventHandler {
+                override fun conferenceCreated(conference: Conference) {
+                    it.transports.forEach { transport -> transport.conferenceCreated(conference) }
+                }
 
-        override fun conferenceExpired(conference: Conference) {
-            statsMgr?.transports?.forEach { it.conferenceExpired(conference) }
+                override fun conferenceExpired(conference: Conference) {
+                    it.transports.forEach { transport -> transport.conferenceExpired(conference) }
+                }
+            })
         }
-    })
+    } else {
+        null
+    }
 
     val publicServerConfig = JettyBundleActivatorConfig(
         "org.jitsi.videobridge.rest",
