@@ -386,8 +386,10 @@ public class Endpoint
 
             @Override
             public void failed() {
-                getConference().getStatistics().hasIceFailedEndpoint = true;
-                getConference().getVideobridge().getStatistics().totalIceFailed.incrementAndGet();
+                eventEmitter.fireEvent(handler -> {
+                    handler.iceFailed();
+                    return Unit.INSTANCE;
+                });
             }
 
             @Override

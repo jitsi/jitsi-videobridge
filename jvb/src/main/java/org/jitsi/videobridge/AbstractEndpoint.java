@@ -460,5 +460,6 @@ public abstract class AbstractEndpoint
 
     interface EventHandler {
         void iceSucceeded();
+        void iceFailed();
     }
 }
