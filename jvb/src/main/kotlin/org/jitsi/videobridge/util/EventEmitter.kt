@@ -16,8 +16,10 @@
 
 package org.jitsi.videobridge.util
 
+import java.util.concurrent.CopyOnWriteArrayList
+
 class EventEmitter<EventHandlerType> {
-    private val eventHandlers = mutableListOf<EventHandlerType>()
+    private val eventHandlers: MutableList<EventHandlerType> = CopyOnWriteArrayList()
 
     fun fireEvent(event: EventHandlerType.() -> Unit) {
         eventHandlers.forEach { it.apply(event) }
