@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.websocket;
 
 import org.eclipse.jetty.websocket.servlet.*;
+import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 
@@ -33,16 +34,23 @@ class ColibriWebSocketServlet
     private static final Logger logger = new LoggerImpl(ColibriWebSocketServlet.class.getName());
 
     /**
-     * The {@link ColibriWebSocketService} instance which created this servlet.
+     * The server ID of this websocket servlet.  Incoming requests must have a matching
+     * server ID to be handled.
      */
-    private final ColibriWebSocketService service;
+    private final String serverId;
+
+    @NotNull
+    private final Videobridge videobridge;
 
     /**
      * Initializes a new {@link ColibriWebSocketServlet} instance.
      */
-    ColibriWebSocketServlet(ColibriWebSocketService service)
+    ColibriWebSocketServlet(
+        @NotNull String serverId,
+        @NotNull Videobridge videobridge)
     {
-        this.service = service;
+        this.serverId = serverId;
+        this.videobridge = videobridge;
     }
 
     /**
@@ -84,6 +92,7 @@ class ColibriWebSocketServlet
         // /colibri-ws/server-id/conf-id/endpoint-id?pwd=password
         // The "path" does not include "?pwd=password", which is in the "query"
         String path = request.getRequestURI().getPath();
+        logger.debug(() -> "Got a create websocket request at path " + path);
         if (path == null
             || !path.startsWith(ColibriWebSocketService.COLIBRI_WS_PATH))
         {
@@ -102,21 +111,12 @@ class ColibriWebSocketServlet
             return null;
         }
 
-        String serverId = getService().getServerId();
         if (!serverId.equals(ids[0]))
         {
             logger.warn("Received request with a mismatching server ID "
                             + "(expected '" + serverId
                             + "', received '" + ids[0] + "').");
             response.sendError(404, "server ID mismatch");
-            return null;
-        }
-
-        Videobridge videobridge = getVideobridge();
-        if (videobridge == null)
-        {
-            logger.warn("No associated Videobridge");
-            response.sendError(500, "no videobridge");
             return null;
         }
 
@@ -169,22 +169,5 @@ class ColibriWebSocketServlet
             return null;
         }
         return query.substring("pwd=".length());
-    }
-
-
-    /**
-     * @return the {@link ColibriWebSocketService} of this servlet.
-     */
-    ColibriWebSocketService getService()
-    {
-        return service;
-    }
-
-    /**
-     * @return the {@link Videobridge} instance associated with this instance.
-     */
-    Videobridge getVideobridge()
-    {
-        return VideobridgeSupplierKt.singleton().get();
     }
 }

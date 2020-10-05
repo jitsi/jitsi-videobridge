@@ -16,7 +16,6 @@
 
 package org.jitsi.videobridge
 
-import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.servlet.ServletHolder
 import org.glassfish.jersey.servlet.ServletContainer
 import org.ice4j.ice.harvest.MappingCandidateHarvesters
@@ -25,6 +24,7 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.MetaconfigLogger
 import org.jitsi.metaconfig.MetaconfigSettings
 import org.jitsi.rest.JettyBundleActivatorConfig
+import org.jitsi.shutdown.ShutdownServiceImpl
 import org.jitsi.stats.media.Utils
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.ice.Harvesters
@@ -34,13 +34,11 @@ import org.jitsi.videobridge.stats.VideobridgeStatistics
 import org.jitsi.videobridge.stats.config.StatsTransportConfig
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
+import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
+import org.jitsi.videobridge.xmpp.XmppConnection
 import kotlin.concurrent.thread
 import org.jitsi.videobridge.octo.singleton as octoRelayService
-import org.jitsi.videobridge.xmpp.singleton as xmppConnection
 import org.jitsi.videobridge.stats.singleton as statsMgr
-import org.jitsi.videobridge.health.singleton as healthCheck
-import org.jitsi.videobridge.shutdown.singleton as shutdownService
-import org.jitsi.videobridge.singleton as videobridge
 
 fun main(args: Array<String>) {
     val cmdLine = CmdLine().apply { parse(args) }
@@ -72,12 +70,14 @@ fun main(args: Array<String>) {
 
     startIce4j()
 
+    val xmppConnection = XmppConnection().apply { start() }
+    val shutdownService = ShutdownServiceImpl()
+    val videobridge = Videobridge(xmppConnection, shutdownService).apply { start() }
     val octoRelayService = octoRelayService().get()?.apply { start() }
-    val xmppConnection = xmppConnection().get().apply { start() }
     val statsMgr = statsMgr().get()?.apply {
         addStatistics(
             VideobridgeStatistics(
-                videobridge().get(),
+                videobridge,
                 octoRelayService,
                 xmppConnection
             ),
@@ -92,32 +92,55 @@ fun main(args: Array<String>) {
                     )
                 }
                 is StatsTransportConfig.CallStatsIoStatsTransportConfig -> {
-                    addTransport(transportConfig.toStatsTransport(), transportConfig.interval.toMillis())
+                    addTransport(
+                        transportConfig.toStatsTransport(videobridge.versionService.currentVersion),
+                        transportConfig.interval.toMillis()
+                    )
                 }
             }
         }
         start()
     }
-    healthCheck().get().start()
 
-    val publicHttpServer = setupPublicHttpServer()?.apply {
+    val publicServerConfig = JettyBundleActivatorConfig(
+        "org.jitsi.videobridge.rest",
+        "videobridge.http-servers.public"
+    )
+    val publicHttpServer = if (publicServerConfig.isEnabled()) {
         logger.info("Starting public http server")
-        start()
-    } ?: run {
+
+        val websocketService = ColibriWebSocketService(publicServerConfig.isTls)
+        webSocketServiceSingleton().setColibriWebSocketService(websocketService)
+        createServer(publicServerConfig).also {
+            websocketService.registerServlet(it.servletContextHandler, videobridge)
+            it.start()
+        }
+    } else {
         logger.info("Not starting public http server")
         null
     }
 
-    val privateHttpServer = setupPrivateHttpServer()?.apply {
+    val privateServerConfig = JettyBundleActivatorConfig(
+        "org.jitsi.videobridge.rest.private",
+        "videobridge.http-servers.private"
+    )
+    val privateHttpServer = if (privateServerConfig.isEnabled()) {
         logger.info("Starting private http server")
-        start()
-    } ?: run {
+        val restApp = Application(videobridge, xmppConnection, statsMgr)
+        createServer(privateServerConfig).also {
+            it.servletContextHandler.addServlet(
+                ServletHolder(ServletContainer(restApp)),
+                "/*"
+            )
+            it.start()
+        }
+    } else {
         logger.info("Not starting private http server")
         null
     }
 
     // Block here until the bridge shuts down
-    shutdownService().get().waitForShutdown()
+    shutdownService.waitForShutdown()
 
     logger.info("Bridge shutting down")
     octoRelayService?.stop()
@@ -130,8 +153,7 @@ fun main(args: Array<String>) {
     } catch (t: Throwable) {
         logger.error("Error shutting down http servers", t)
     }
-    healthCheck().get().stop()
-    videobridge().get().stop()
+    videobridge.stop()
     stopIce4j()
 
     TaskPools.SCHEDULED_POOL.shutdownNow()
@@ -145,40 +167,6 @@ private fun setupMetaconfigLogger() {
         override fun warn(block: () -> String) = configLogger.warn(block)
         override fun error(block: () -> String) = configLogger.error(block)
         override fun debug(block: () -> String) = configLogger.debug(block)
-    }
-}
-
-private fun setupPublicHttpServer(): Server? {
-    val publicServerConfig = JettyBundleActivatorConfig(
-        "org.jitsi.videobridge.rest",
-        "videobridge.http-servers.public"
-    )
-    if (publicServerConfig.port == -1 && publicServerConfig.tlsPort == -1) {
-        return null
-    }
-    val publicServer = createServer(publicServerConfig)
-
-    val websocketService = ColibriWebSocketService(publicServerConfig.isTls)
-    org.jitsi.videobridge.websocket.singleton().setColibriWebSocketService(websocketService)
-
-    websocketService.registerServlet(publicServer.servletContextHandler)
-
-    return publicServer
-}
-
-private fun setupPrivateHttpServer(): Server? {
-    val privateServerConfig = JettyBundleActivatorConfig(
-        "org.jitsi.videobridge.rest.private",
-        "videobridge.http-servers.private"
-    )
-    if (privateServerConfig.port == -1 && privateServerConfig.tlsPort == -1) {
-        return null
-    }
-    return createServer(privateServerConfig).apply {
-        servletContextHandler.addServlet(
-            ServletHolder(ServletContainer(Application())),
-            "/*"
-        )
     }
 }
 

@@ -52,7 +52,7 @@ videobridge {
         # The port here is the 'advertise port' for websockets, which means the publicly-accessible
         # port clients will use.  This may match the public http server port, but could also be different
         # if a proxy is being used.
-        domain = example.com:443
+        domain = "example.com:443"
         # A server ID can optionally be provided.  This is useful when a set of jitsi-videobridge instances
         # are fronted by an HTTP proxy and they advertise the same domain.
         server-id = jvb2

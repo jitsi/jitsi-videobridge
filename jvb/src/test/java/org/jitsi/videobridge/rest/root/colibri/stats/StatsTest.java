@@ -34,22 +34,19 @@ import static org.mockito.Mockito.*;
 
 public class StatsTest extends JerseyTest
 {
-    protected StatsManagerSupplier statsManagerSupplier;
     protected StatsManager statsManager;
     protected static final String BASE_URL = "colibri/stats";
 
     @Override
     protected Application configure()
     {
-        statsManagerSupplier = mock(StatsManagerSupplier.class);
         statsManager = mock(StatsManager.class);
-        when(statsManagerSupplier.get()).thenReturn(statsManager);
 
         enable(TestProperties.LOG_TRAFFIC);
         enable(TestProperties.DUMP_ENTITY);
         return new ResourceConfig() {
             {
-                register(new MockBinder<>(statsManagerSupplier, StatsManagerSupplier.class));
+                register(new MockBinder<>(statsManager, StatsManager.class));
                 register(Stats.class);
             }
         };

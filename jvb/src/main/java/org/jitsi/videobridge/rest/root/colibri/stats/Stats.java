@@ -30,15 +30,15 @@ import javax.ws.rs.core.*;
 public class Stats
 {
     @Inject
-    protected StatsManagerSupplier statsManagerSupplier;
+    protected StatsManager statsManager;
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public String getStats()
     {
-        StatsManager statsManager = statsManagerSupplier.get();
+        StatsManager statsManager = this.statsManager;
 
-        if (statsManagerSupplier != null)
+        if (this.statsManager != null)
         {
             Statistics videobridgeStats =
                 statsManager.getStatistics().stream()

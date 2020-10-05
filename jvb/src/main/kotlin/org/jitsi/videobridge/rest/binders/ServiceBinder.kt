@@ -19,21 +19,24 @@ package org.jitsi.videobridge.rest.binders
 import org.glassfish.hk2.utilities.binding.AbstractBinder
 import org.jitsi.health.HealthCheckServiceSupplier
 import org.jitsi.version.VersionServiceSupplier
-import org.jitsi.videobridge.VideobridgeSupplier
-import org.jitsi.videobridge.health.jvbHealthCheckServiceSupplier
-import org.jitsi.videobridge.stats.StatsManagerSupplier
-import org.jitsi.videobridge.version.jvbVersionServiceSupplier
-import org.jitsi.videobridge.xmpp.XmppConnectionSupplier
-import org.jitsi.videobridge.videobridgeSupplier
-import org.jitsi.videobridge.stats.statsManagerSupplier
-import org.jitsi.videobridge.xmpp.xmppConnectionSupplier
+import org.jitsi.videobridge.Videobridge
+import org.jitsi.videobridge.health.JvbHealthCheckServiceSupplier
+import org.jitsi.videobridge.stats.StatsManager
+import org.jitsi.videobridge.version.JvbVersionServiceSupplier
+import org.jitsi.videobridge.xmpp.XmppConnection
 
-class ServiceBinder : AbstractBinder() {
+class ServiceBinder(
+    private val videobridge: Videobridge,
+    private val xmppConnection: XmppConnection,
+    private val statsManager: StatsManager
+) : AbstractBinder() {
     override fun configure() {
-        bind(videobridgeSupplier).to(VideobridgeSupplier::class.java)
-        bind(statsManagerSupplier).to(StatsManagerSupplier::class.java)
-        bind(xmppConnectionSupplier).to(XmppConnectionSupplier::class.java)
-        bind(jvbHealthCheckServiceSupplier).to(HealthCheckServiceSupplier::class.java)
-        bind(jvbVersionServiceSupplier).to(VersionServiceSupplier::class.java)
+        bind(videobridge).to(Videobridge::class.java)
+        bind(statsManager).to(StatsManager::class.java)
+        bind(xmppConnection).to(XmppConnection::class.java)
+        // These are still suppliers rather than direct instances because that's what
+        // Jicoco requires
+        bind(JvbHealthCheckServiceSupplier(videobridge.healthChecker)).to(HealthCheckServiceSupplier::class.java)
+        bind(JvbVersionServiceSupplier(videobridge.versionService)).to(VersionServiceSupplier::class.java)
     }
 }

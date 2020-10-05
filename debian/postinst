@@ -127,7 +127,17 @@ case "$1" in
         if [ ! -f $HOCON_CONFIG ]; then
             echo "Generating an empty hocon config"
             echo "videobridge {
-            }" >> $HOCON_CONFIG
+    http-servers {
+        public {
+            port = 9090
+        }
+    }
+    websockets {
+        enabled = true
+        domain = \"$JVB_HOSTNAME:443\"
+        tls = true
+    }
+}" >> $HOCON_CONFIG
         fi
 
         APIS_VALUE=$(grep -v '^\s*#' $CONFIG | grep -oPe '--apis=\K(\w*,*\w*)' || true)
