@@ -1123,7 +1123,10 @@ public class Conference
     {
         JSONObject debugState = new JSONObject();
         debugState.put("id", id);
-        debugState.put("name", conferenceName.toString());
+        if (conferenceName != null)
+        {
+            debugState.put("name", conferenceName.toString());
+        }
 
         if (full)
         {
