@@ -685,6 +685,12 @@ public class Conference
             {
                 endpointSourcesChanged(endpoint);
             }
+
+            @Override
+            public void audioLevelChanged(long level)
+            {
+                getSpeechActivity().levelChanged(endpoint, level);
+            }
         });
     }
 
