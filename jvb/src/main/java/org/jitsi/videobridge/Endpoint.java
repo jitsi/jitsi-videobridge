@@ -1110,7 +1110,10 @@ public class Endpoint
     {
         if (transceiver.setMediaSources(mediaSources))
         {
-            getConference().endpointSourcesChanged(this);
+            eventEmitter.fireEvent(handler -> {
+                handler.sourcesChanged();
+                return Unit.INSTANCE;
+            });
         }
     }
 

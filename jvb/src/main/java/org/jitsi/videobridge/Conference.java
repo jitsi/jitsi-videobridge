@@ -679,6 +679,12 @@ public class Conference
                 getStatistics().hasIceFailedEndpoint = true;
                 getVideobridge().getStatistics().totalIceFailed.incrementAndGet();
             }
+
+            @Override
+            public void sourcesChanged()
+            {
+                endpointSourcesChanged(endpoint);
+            }
         });
     }
 
