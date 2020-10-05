@@ -655,9 +655,24 @@ public class Conference
 
         final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling);
 
+        subscribeToEndpointEvents(endpoint);
+
         addEndpoint(endpoint);
 
         return endpoint;
+    }
+
+    private void subscribeToEndpointEvents(AbstractEndpoint endpoint)
+    {
+        endpoint.addEventHandler(new AbstractEndpoint.EventHandler()
+        {
+            @Override
+            public void iceSucceeded()
+            {
+                getStatistics().hasIceSucceededEndpoint = true;
+                getVideobridge().getStatistics().totalIceSucceeded.incrementAndGet();
+            }
+        });
     }
 
     /**

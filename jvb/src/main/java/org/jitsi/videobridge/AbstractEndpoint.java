@@ -25,6 +25,7 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.rest.root.debug.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
 
@@ -96,6 +97,8 @@ public abstract class AbstractEndpoint
      * all receivers.
      */
     private VideoConstraints maxReceiverVideoConstraints = defaultMaxReceiverVideoConstraints;
+
+    protected final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
 
     /**
      * Initializes a new {@link AbstractEndpoint} instance.
@@ -178,6 +181,16 @@ public abstract class AbstractEndpoint
     public Conference getConference()
     {
         return conference;
+    }
+
+    void addEventHandler(EventHandler eventHandler)
+    {
+        eventEmitter.addHandler(eventHandler);
+    }
+
+    void removeEventHandler(EventHandler eventHandler)
+    {
+        eventEmitter.removeHandler(eventHandler);
     }
 
     /**
@@ -443,5 +456,9 @@ public abstract class AbstractEndpoint
             logger.debug(() -> "Removed receiver " + receiverId);
             receiverVideoConstraintsChanged(receiverVideoConstraintsMap.values());
         }
+    }
+
+    interface EventHandler {
+        void iceSucceeded();
     }
 }

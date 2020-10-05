@@ -375,8 +375,10 @@ public class Endpoint
             @Override
             public void connected() {
                 logger.info("ICE connected");
-                getConference().getStatistics().hasIceSucceededEndpoint = true;
-                getConference().getVideobridge().getStatistics().totalIceSucceeded.incrementAndGet();
+                eventEmitter.fireEvent(handler -> {
+                    handler.iceSucceeded();
+                    return Unit.INSTANCE;
+                });
                 transceiver.setOutgoingPacketHandler(outgoingSrtpPacketQueue::add);
                 TaskPools.IO_POOL.submit(iceTransport::startReadingData);
                 TaskPools.IO_POOL.submit(dtlsTransport::startDtlsHandshake);
