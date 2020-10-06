@@ -111,7 +111,7 @@ public class Conference
     private final long gid;
 
     /**
-     * The world readable name of this instance if any.
+     * The world readable name of this instance
      */
     @NotNull
     private final EntityBareJid conferenceName;
@@ -161,7 +161,7 @@ public class Conference
      * endpoints stopping or starting to their video streams (which affects the order).
      */
     private ScheduledFuture<?> updateLastNEndpointsFuture;
-    
+
     @NotNull
     private final EndpointConnectionStatusMonitor epConnectionStatusMonitor;
 
@@ -174,8 +174,6 @@ public class Conference
      * <tt>Conference</tt> instance is to be initialized
      * @param id the (unique) ID of the new instance to be initialized
      * @param conferenceName world readable name of this conference
-     * {@link Conference} and its sub-components, and whether this conference
-     * should be considered when generating statistics.
      * @param gid the optional "global" id of the conference.
      */
     public Conference(Videobridge videobridge,
