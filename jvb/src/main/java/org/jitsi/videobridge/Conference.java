@@ -111,7 +111,7 @@ public class Conference
     private final long gid;
 
     /**
-     * The world readable name of this instance
+     * The world readable name of this instance if any.
      */
     private final EntityBareJid conferenceName;
 
