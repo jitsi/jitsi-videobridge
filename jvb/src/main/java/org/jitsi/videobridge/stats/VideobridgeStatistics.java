@@ -83,6 +83,21 @@ public class VideobridgeStatistics
     public static final String MUCS_JOINED = "mucs_joined";
 
     /**
+     * Fraction of incoming packets that were lost.
+     */
+    public static final String INCOMING_LOSS = "incoming_loss";
+
+    /**
+     * Fraction of outgoing packets that were lost.
+     */
+    public static final String OUTGOING_LOSS = "outgoing_loss";
+
+    /**
+     * Fraction of incoming and outgoing packets that were lost.
+     */
+    public static final String OVERALL_LOSS = "overall_loss";
+
+    /**
      * The indicator which determines whether {@link #generate()} is executing
      * on this <tt>VideobridgeStatistics</tt>. If <tt>true</tt>, invocations of
      * <tt>generate()</tt> will do nothing. Introduced in order to mitigate an
@@ -367,6 +382,13 @@ public class VideobridgeStatistics
             outgoingLoss = ((double) outgoingPacketsLost) / (outgoingPacketsReceived + outgoingPacketsLost);
         }
 
+        double overallLoss = 0;
+        if (incomingPacketsReceived + incomingPacketsLost + outgoingPacketsReceived + outgoingPacketsLost > 0)
+        {
+            overallLoss = ((double) (outgoingPacketsLost + incomingPacketsLost))
+                    / (incomingPacketsReceived + incomingPacketsLost + outgoingPacketsReceived + outgoingPacketsLost);
+        }
+
         // Now that (the new values of) the statistics have been calculated and
         // the risks of the current thread hanging have been reduced as much as
         // possible, commit (the new values of) the statistics.
@@ -375,8 +397,9 @@ public class VideobridgeStatistics
         lock.lock();
         try
         {
-            unlockedSetStat("incoming_loss", incomingLoss);
-            unlockedSetStat("outgoing_loss", outgoingLoss);
+            unlockedSetStat(INCOMING_LOSS, incomingLoss);
+            unlockedSetStat(OUTGOING_LOSS, outgoingLoss);
+            unlockedSetStat(OVERALL_LOSS, overallLoss);
             unlockedSetStat(
                     BITRATE_DOWNLOAD,
                     (bitrateDownloadBps + 500) / 1000 /* kbps */);
