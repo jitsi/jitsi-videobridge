@@ -35,16 +35,14 @@ public class StatsManager
     /**
      * The <tt>Statistics</tt> added to this <tt>StatsManager</tt>.
      */
-    private final List<StatisticsPeriodicRunnable> statistics
-        = new CopyOnWriteArrayList<>();
+    private final List<StatisticsPeriodicRunnable> statistics = new CopyOnWriteArrayList<>();
 
     /**
      * The {@link RecurringRunnableExecutor} which periodically invokes
      * {@link Statistics#generate()} on {@link #statistics}.
      */
     private final RecurringRunnableExecutor statisticsExecutor
-        = new RecurringRunnableExecutor(
-                StatsManager.class.getSimpleName() + "-statisticsExecutor");
+        = new RecurringRunnableExecutor(StatsManager.class.getSimpleName() + "-statisticsExecutor");
 
     /**
      * The {@link RecurringRunnableExecutor} which periodically invokes
@@ -52,15 +50,13 @@ public class StatsManager
      * {@link #transports}.
      */
     private final RecurringRunnableExecutor transportExecutor
-        = new RecurringRunnableExecutor(
-                StatsManager.class.getSimpleName() + "-transportExecutor");
+        = new RecurringRunnableExecutor(StatsManager.class.getSimpleName() + "-transportExecutor");
 
     /**
      * The <tt>StatsTransport</tt>s added to this <tt>StatsManager</tt> to
      * transport {@link #statistics}.
      */
-    private final List<TransportPeriodicRunnable> transports
-        = new CopyOnWriteArrayList<>();
+    private final List<TransportPeriodicRunnable> transports = new CopyOnWriteArrayList<>();
 
     /**
      * Adds a specific (set of) <tt>Statistics</tt> to be periodically
@@ -79,15 +75,15 @@ public class StatsManager
      */
     public void addStatistics(Statistics statistics, long period)
     {
-        if (statistics == null)
-            throw new NullPointerException("statistics");
+        Objects.requireNonNull(statistics, "statistics");
         if (period < 1)
+        {
             throw new IllegalArgumentException("period " + period);
+        }
 
         // XXX The field statistics is a CopyOnWriteArrayList in order to avoid
         // synchronization here.
-        this.statistics.add(
-                new StatisticsPeriodicRunnable(statistics, period));
+        this.statistics.add(new StatisticsPeriodicRunnable(statistics, period));
     }
 
     /**
@@ -108,10 +104,11 @@ public class StatsManager
      */
     public void addTransport(StatsTransport transport, long period)
     {
-        if (transport == null)
-            throw new NullPointerException("transport");
+        Objects.requireNonNull(transport, "transport");
         if (period < 1)
+        {
             throw new IllegalArgumentException("period " + period);
+        }
 
         // XXX The field transport is a CopyOnWriteArrayList in order to avoid
         // synchronization here.
@@ -172,7 +169,9 @@ public class StatsManager
         {
             ret = new ArrayList<>(count);
             for (StatisticsPeriodicRunnable spp : statistics)
+            {
                 ret.add(spp.o);
+            }
         }
         return ret;
     }
@@ -218,7 +217,9 @@ public class StatsManager
         {
             ret = new ArrayList<>(count);
             for (TransportPeriodicRunnable tpp : transports)
+            {
                 ret.add(tpp.o);
+            }
         }
         return ret;
     }
@@ -292,9 +293,7 @@ public class StatsManager
          * @param period the time in milliseconds between consecutive
          * generations of {@code statistics}
          */
-        public StatisticsPeriodicRunnable(
-                Statistics statistics,
-                long period)
+        public StatisticsPeriodicRunnable(Statistics statistics, long period)
         {
             super(statistics, period);
         }
@@ -327,9 +326,7 @@ public class StatsManager
          * @param period the time in milliseconds between consecutive
          * invocations of {@code publishStatistics()} on {@code transport}
          */
-        public TransportPeriodicRunnable(
-                StatsTransport transport,
-                long period)
+        public TransportPeriodicRunnable(StatsTransport transport, long period)
         {
             super(transport, period);
         }
@@ -346,8 +343,7 @@ public class StatsManager
 
             // XXX The field statistics is a CopyOnWriteArrayList in order to
             // avoid synchronization here.
-            for (StatisticsPeriodicRunnable spp
-                    : StatsManager.this.statistics)
+            for (StatisticsPeriodicRunnable spp : StatsManager.this.statistics)
             {
                 // A Statistics instance is associated with a period and a
                 // StatsTransport is associated with a period. Match the two
