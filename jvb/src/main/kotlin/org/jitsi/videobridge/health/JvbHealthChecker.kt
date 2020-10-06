@@ -19,15 +19,10 @@ package org.jitsi.videobridge.health
 import org.ice4j.ice.harvest.MappingCandidateHarvesters
 import org.jitsi.health.HealthCheckService
 import org.jitsi.health.HealthChecker
-import org.jitsi.videobridge.Conference
-import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.health.config.HealthConfig
 import org.jitsi.videobridge.ice.Harvesters
-import org.jitsi.videobridge.sctp.SctpConfig
 
-class JvbHealthChecker(
-    private val videobridge: Videobridge
-) : HealthCheckService {
+class JvbHealthChecker : HealthCheckService {
     private val config = HealthConfig()
     private val healthChecker = HealthChecker(
         config.interval,
@@ -49,31 +44,7 @@ class JvbHealthChecker(
         }
 
         // TODO: check if XmppConnection is configured and connected.
-
-        val conference = videobridge.createConference(null, false)
-        try {
-            checkConference(conference)
-        } finally {
-            videobridge.expireConference(conference)
-        }
     }
 
     override fun getResult(): Exception? = healthChecker.result
-
-    companion object {
-        private var epId: Long = 0
-        fun checkConference(conference: Conference) {
-            val numEndpoints = 2
-            repeat(numEndpoints) { index ->
-                val iceControlling = index % 2 == 0
-                val endpoint = conference.createLocalEndpoint(epId++.toString(), iceControlling)
-                if (SctpConfig.config.enabled) {
-                    endpoint.createSctpConnection()
-                }
-            }
-
-            // NOTE(brian): We can't attempt an ICE connection between the endpoints in single-port mode.  I think
-            // this is because both agents bind to the single port and we can't demux the ice packets correctly.
-        }
-    }
 }

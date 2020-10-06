@@ -185,7 +185,7 @@ public class Videobridge
         {
             xmppConnection.setEventHandler(new XmppConnectionEventHandler());
         }
-        healthChecker = new JvbHealthChecker(this);
+        healthChecker = new JvbHealthChecker();
         versionService = new JvbVersionService();
         this.shutdownService = shutdownService;
     }
