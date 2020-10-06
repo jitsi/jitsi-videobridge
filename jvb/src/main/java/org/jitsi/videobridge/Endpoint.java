@@ -1431,10 +1431,7 @@ public class Endpoint
         @Override
         public void audioLevelReceived(long sourceSsrc, long level)
         {
-            eventEmitter.fireEvent(handler -> {
-                handler.audioLevelChanged(level);
-                return Unit.INSTANCE;
-            });
+            getConference().getSpeechActivity().levelChanged(Endpoint.this, level);
         }
 
         /**

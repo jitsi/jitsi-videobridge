@@ -462,6 +462,5 @@ public abstract class AbstractEndpoint
         void iceSucceeded();
         void iceFailed();
         void sourcesChanged();
-        void audioLevelChanged(long level);
     }
 }
