@@ -225,10 +225,6 @@ public class VideobridgeStatistics
         {
             ConferenceShim conferenceShim = conference.getShim();
             //TODO: can/should we do everything here via the shim only?
-            if (!conference.includeInStatistics())
-            {
-                continue;
-            }
             conferences++;
             if (conference.isP2p())
             {

@@ -319,10 +319,7 @@ public class Endpoint
         dtlsTransport = new DtlsTransport(logger);
         setupDtlsTransport();
 
-        if (conference.includeInStatistics())
-        {
-            conference.getVideobridge().getStatistics().totalEndpoints.incrementAndGet();
-        }
+        conference.getVideobridge().getStatistics().totalEndpoints.incrementAndGet();
     }
 
     public Endpoint(
@@ -748,7 +745,7 @@ public class Endpoint
 
             updateStatsOnExpire();
             this.transceiver.stop();
-            if (logger.isDebugEnabled() && getConference().includeInStatistics())
+            if (logger.isDebugEnabled())
             {
                 logger.debug(transceiver.getNodeStats().prettyPrint(0));
                 logger.debug(bitrateController.getDebugState().toJSONString());
