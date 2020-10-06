@@ -161,8 +161,9 @@ public class Conference
      * endpoints stopping or starting to their video streams (which affects the order).
      */
     private ScheduledFuture<?> updateLastNEndpointsFuture;
-
-    @NotNull private final EndpointConnectionStatusMonitor epConnectionStatusMonitor;
+    
+    @NotNull
+    private final EndpointConnectionStatusMonitor epConnectionStatusMonitor;
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
