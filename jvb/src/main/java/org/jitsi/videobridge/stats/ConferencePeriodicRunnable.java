@@ -72,10 +72,8 @@ public class ConferencePeriodicRunnable
             }
             EndpointStats endpointStats = new EndpointStats(id);
 
-            TransceiverStats transceiverStats
-                    = endpoint.getTransceiver().getTransceiverStats();
-            int rttMs
-                    = (int) transceiverStats.getEndpointConnectionStats().getRtt();
+            TransceiverStats transceiverStats = endpoint.getTransceiver().getTransceiverStats();
+            int rttMs = (int) (transceiverStats.getEndpointConnectionStats().getRtt() + 0.5);
 
             Map<Long, IncomingSsrcStats.Snapshot> incomingStats
                     = transceiverStats.getIncomingStats().getSsrcStats();
