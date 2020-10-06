@@ -113,7 +113,6 @@ public class Conference
     /**
      * The world readable name of this instance
      */
-    @NotNull
     private final EntityBareJid conferenceName;
 
     /**
@@ -178,7 +177,7 @@ public class Conference
      */
     public Conference(Videobridge videobridge,
                       String id,
-                      @NotNull EntityBareJid conferenceName,
+                      EntityBareJid conferenceName,
                       long gid)
     {
         if (gid != GID_NOT_SET && (gid < 0 || gid > 0xffff_ffffL))
@@ -188,9 +187,12 @@ public class Conference
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
         Map<String, String> context = JMap.ofEntries(
             entry("confId", id),
-            entry("gid", String.valueOf(gid)),
-            entry("conf_name", conferenceName.toString())
+            entry("gid", String.valueOf(gid))
         );
+        if (conferenceName != null)
+        {
+            context.put("conf_name", conferenceName.toString());
+        }
         logger = new LoggerImpl(Conference.class.getName(), new LogContext(context));
         this.shim = new ConferenceShim(this, logger);
         this.id = Objects.requireNonNull(id, "id");
@@ -227,10 +229,17 @@ public class Conference
      */
     public DiagnosticContext newDiagnosticContext()
     {
-        DiagnosticContext diagnosticContext = new DiagnosticContext();
-        diagnosticContext.put("conf_name", conferenceName);
-        diagnosticContext.put("conf_creation_time_ms", creationTime);
-        return diagnosticContext;
+        if (conferenceName != null)
+        {
+            DiagnosticContext diagnosticContext = new DiagnosticContext();
+            diagnosticContext.put("conf_name", conferenceName);
+            diagnosticContext.put("conf_creation_time_ms", creationTime);
+            return diagnosticContext;
+        }
+        else
+        {
+            return new NoOpDiagnosticContext();
+        }
     }
 
     /**
@@ -349,7 +358,14 @@ public class Conference
         iq.setID(getID());
         try
         {
-            iq.setName(JidCreate.entityBareFrom(conferenceName));
+            if (conferenceName == null)
+            {
+                iq.setName(null);
+            }
+            else
+            {
+                iq.setName(JidCreate.entityBareFrom(conferenceName));
+            }
         }
         catch (XmppStringprepException e)
         {
@@ -1081,7 +1097,10 @@ public class Conference
     {
         JSONObject debugState = new JSONObject();
         debugState.put("id", id);
-        debugState.put("name", conferenceName.toString());
+        if (conferenceName != null)
+        {
+            debugState.put("name", conferenceName.toString());
+        }
 
         if (full)
         {
