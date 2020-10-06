@@ -111,9 +111,6 @@ public class CallStatsIOTransport
      * Initializes this {@code StatsTransport} so that
      * {@link #publishStatistics(Statistics)} may executed successfully.
      * Initializes {@link #statsService} i.e. the jitsi-stats library.
-     *
-     * @param cfg the {@code ConfigurationService} registered in
-     * {@code bundleContext} if any
      */
     private void init(Version jvbVersion, ConfigurationService cfg)
     {

@@ -29,7 +29,7 @@ import org.jitsi.videobridge.stats.StatsTransport
 import org.jitsi.videobridge.xmpp.XmppConnection
 import java.time.Duration
 
-class StatsManagerBundleActivatorConfig {
+class StatsManagerConfig {
     /**
      * Whether or not the stats are enabled
      */
@@ -90,7 +90,7 @@ class StatsManagerBundleActivatorConfig {
         return transportTypes.mapNotNull { transportType ->
             val interval = this["org.jitsi.videobridge.STATISTICS_INTERVAL.$transportType"]?.let {
                 Duration.ofMillis(it.toLong())
-            } ?: this@StatsManagerBundleActivatorConfig.interval
+            } ?: this@StatsManagerConfig.interval
             when (transportType) {
                 "muc" -> StatsTransportConfig.MucStatsTransportConfig(interval)
                 "callstats.io" -> StatsTransportConfig.CallStatsIoStatsTransportConfig(interval)
@@ -103,7 +103,7 @@ class StatsManagerBundleActivatorConfig {
         val interval = if (hasPath("interval")) {
             getDuration("interval")
         } else {
-            this@StatsManagerBundleActivatorConfig.interval
+            this@StatsManagerConfig.interval
         }
         return when (getString("type")) {
             "muc" -> StatsTransportConfig.MucStatsTransportConfig(interval)

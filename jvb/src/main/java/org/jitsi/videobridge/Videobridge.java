@@ -492,10 +492,9 @@ public class Videobridge
     }
 
     /**
-     * Starts this <tt>Videobridge</tt> in a specific <tt>BundleContext</tt>.
+     * Starts this {@link Videobridge}.
      *
-     * NOTE: we have to make this public so Jicofo can call it from its
-     * tests
+     * NOTE: we have to make this public so Jicofo can call it from its tests.
      */
     public void start()
     {
@@ -543,13 +542,9 @@ public class Videobridge
     }
 
     /**
-     * Stops this <tt>Videobridge</tt> in a specific <tt>BundleContext</tt>.
+     * Stops this {@link Videobridge}.
      *
-     * @param bundleContext the <tt>BundleContext</tt> in which this
-     * <tt>Videobridge</tt> is to stop
-     *
-     * NOTE: we have to make this public so Jicofo can call it from its
-     * tests
+     * NOTE: we have to make this public so Jicofo can call it from its tests.
      */
     public void stop()
     {
