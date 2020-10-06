@@ -19,6 +19,7 @@ import org.jitsi.utils.concurrent.PeriodicRunnableWithObject
 import org.jitsi.utils.concurrent.RecurringRunnableExecutor
 import org.jitsi.videobridge.stats.config.StatsManagerConfig
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * A class that manages the statistics. Periodically calls the
@@ -59,10 +60,10 @@ class StatsManager(statistics: Statistics) {
     val transports: Collection<StatsTransport>
         get() = transportRunnables.map { it.o }
 
+    private val running = AtomicBoolean()
+
     /**
      * Adds a specific <tt>StatsTransport</tt> through which this [StatsManager] is to periodically send statistics.
-     *
-     * Warning: `StatsTransport`s added to this `StatsManager` after [start] has been invoked will not be called.
      *
      * @param transport the [StatsTransport] to add
      * @param period the internal/period in milliseconds at which this [StatsManager] is to repeatedly send statistics
@@ -71,8 +72,12 @@ class StatsManager(statistics: Statistics) {
     fun addTransport(transport: StatsTransport, period: Long) {
         require(period >= 1) { "period $period" }
 
-        // XXX The field transport is a CopyOnWriteArrayList in order to avoid synchronization here.
-        transportRunnables.add(TransportPeriodicRunnable(transport, period))
+        TransportPeriodicRunnable(transport, period).also {
+            transportRunnables.add(it)
+            if (running.get()) {
+                transportExecutor.registerRecurringRunnable(it)
+            }
+        }
     }
 
     /**
@@ -85,16 +90,13 @@ class StatsManager(statistics: Statistics) {
      * {@inheritDoc}
      *
      * Starts the [StatsTransport]s added to this [StatsManager]. Commences the generation of [Statistics].
-     *
-     * Warning: `StatsTransport`s added by way of [addTransport] after the current method invocation will not be started.
-     *
      */
     fun start() {
-        // Register statistics and transports with their respective RecurringRunnableExecutor in order to have them
-        // periodically executed.
-        statisticsExecutor.registerRecurringRunnable(statisticsRunnable)
-        for (tpp in transportRunnables) {
-            transportExecutor.registerRecurringRunnable(tpp)
+        if (running.compareAndSet(false, true)) {
+            // Register statistics and transports with their respective RecurringRunnableExecutor in order to have them
+            // periodically executed.
+            statisticsExecutor.registerRecurringRunnable(statisticsRunnable)
+            transportRunnables.forEach { transportExecutor.registerRecurringRunnable(it) }
         }
     }
 
@@ -104,13 +106,13 @@ class StatsManager(statistics: Statistics) {
      * Stops the [StatsTransport]s added to this [StatsManager] and the [StatisticsPeriodicRunnable].
      */
     fun stop() {
-        // De-register statistics and transports from their respective
-        // RecurringRunnableExecutor in order to have them no longer
-        // periodically executed.
-        statisticsExecutor.deRegisterRecurringRunnable(statisticsRunnable)
-        // Stop the StatTransports added to this StatsManager
-        for (tpp in transportRunnables) {
-            transportExecutor.deRegisterRecurringRunnable(tpp)
+        if (running.compareAndSet(true, false)) {
+            // De-register statistics and transports from their respective
+            // RecurringRunnableExecutor in order to have them no longer
+            // periodically executed.
+            statisticsExecutor.deRegisterRecurringRunnable(statisticsRunnable)
+            // Stop the StatTransports added to this StatsManager
+            transportRunnables.forEach { transportExecutor.deRegisterRecurringRunnable(it) }
         }
     }
 
