@@ -40,15 +40,7 @@ public class Stats
 
         if (this.statsManager != null)
         {
-            Statistics videobridgeStats =
-                statsManager.getStatistics().stream()
-                    .filter(s -> s instanceof VideobridgeStatistics)
-                    .findAny()
-                    .orElse(null);
-            if (videobridgeStats != null)
-            {
-                return JSONSerializer.serializeStatistics(videobridgeStats).toJSONString();
-            }
+            return JSONSerializer.serializeStatistics(statsManager.getStatistics()).toJSONString();
         }
         return new JSONObject().toJSONString();
     }

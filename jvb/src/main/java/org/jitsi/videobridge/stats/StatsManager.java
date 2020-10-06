@@ -33,9 +33,9 @@ public class StatsManager
 {
     public static StatsManagerBundleActivatorConfig config = new StatsManagerBundleActivatorConfig();
     /**
-     * The <tt>Statistics</tt> added to this <tt>StatsManager</tt>.
+     * The periodic runnable which will gather statistics.
      */
-    private final List<StatisticsPeriodicRunnable> statistics = new CopyOnWriteArrayList<>();
+    private final StatisticsPeriodicRunnable statisticsRunnable;
 
     /**
      * The {@link RecurringRunnableExecutor} which periodically invokes
@@ -58,32 +58,16 @@ public class StatsManager
      */
     private final List<TransportPeriodicRunnable> transports = new CopyOnWriteArrayList<>();
 
-    /**
-     * Adds a specific (set of) <tt>Statistics</tt> to be periodically
-     * generated/updated by this <tt>StatsManager</tt>.
-     * <p>
-     * Warning: {@code Statistics} added to this {@code StatsManager} after
-     * {@link #start()} has been invoked will not be updated.
-     * </p>
-     *
-     * @param statistics the (set of) <tt>Statistics</tT> to be repeatedly
-     * generated/updated by this <tt>StatsManager</tt> at the specified
-     * <tt>period</tt>
-     * @param period the internal/period in milliseconds at which the specified
-     * <tt>statistics</tt> is to be generated/updated by this
-     * <tt>StatsManager</tt>
-     */
-    public void addStatistics(Statistics statistics, long period)
+    public StatsManager(Statistics statistics)
     {
         Objects.requireNonNull(statistics, "statistics");
+        long period = config.getInterval().toMillis();
         if (period < 1)
         {
             throw new IllegalArgumentException("period " + period);
         }
 
-        // XXX The field statistics is a CopyOnWriteArrayList in order to avoid
-        // synchronization here.
-        this.statistics.add(new StatisticsPeriodicRunnable(statistics, period));
+        this.statisticsRunnable = new StatisticsPeriodicRunnable(statistics, period);
     }
 
     /**
@@ -116,78 +100,15 @@ public class StatsManager
     }
 
     /**
-     * Finds the first instance of {@code Statistics} with a specific runtime
-     * type generated/updated at a specific interval/period.
-     *
-     * @param clazz the runtime type of the {@code Statistics} to be found
-     * @param period the internal/period in milliseconds at which the
-     * {@code Statistics} to be found is generated/updated by this
-     * {@code StatsManager}
-     * @return the first instance of {@code Statistics} with runtime type
-     * {@code clazz} generated/updated every {@code period} milliseconds if any;
-     * otherwise, {@code null}
-     */
-    public <T extends Statistics> T findStatistics(Class<T> clazz, long period)
-    {
-        // XXX The field statistics is a CopyOnWriteArrayList in order to avoid
-        // synchronization here.
-        for (StatisticsPeriodicRunnable spp : statistics)
-        {
-            if (spp.getPeriod() == period && clazz.isInstance(spp.o))
-            {
-                @SuppressWarnings("unchecked")
-                T t = (T) spp.o;
-
-                return t;
-            }
-        }
-        return null;
-    }
-
-    /**
      * Gets the (sets of) <tt>Statistics</tt> which this <tt>StatsManager</tt>
      * periodically generates/updates.
      *
      * @return a <tt>Collection</tt> of the (sets of) <tt>Statistics</tt> which
      * this <tt>StatsManager</tt> periodically generates/updates
      */
-    public Collection<Statistics> getStatistics()
+    public Statistics getStatistics()
     {
-        // XXX The field statistics is a CopyOnWriteArrayList in order to avoid
-        // synchronization here.
-
-        // XXX The local variable count is an optimization effort and the
-        // execution should be fine if the value is not precise.
-        int count = statistics.size();
-        Collection<Statistics> ret;
-
-        if (count < 1)
-        {
-            ret = Collections.emptyList();
-        }
-        else
-        {
-            ret = new ArrayList<>(count);
-            for (StatisticsPeriodicRunnable spp : statistics)
-            {
-                ret.add(spp.o);
-            }
-        }
-        return ret;
-    }
-
-    /**
-     * Gets the number of (sets of) <tt>Statistics</tt> which this
-     * <tt>StatsManager</tt> periodically generates/updates.
-     *
-     * @return the number of (sets of) <tt>Statistics</tt> which this
-     * <tt>StatsManager</tt> periodically generates/updates
-     */
-    public int getStatisticsCount()
-    {
-        // XXX The field statistics is a CopyOnWriteArrayList in order to avoid
-        // synchronization here.
-        return statistics.size();
+        return statisticsRunnable.o;
     }
 
     /**
@@ -242,10 +163,8 @@ public class StatsManager
         // Register statistics and transports with their respective
         // RecurringRunnableExecutor in order to have them periodically
         // executed.
-        for (StatisticsPeriodicRunnable spp : statistics)
-        {
-            statisticsExecutor.registerRecurringRunnable(spp);
-        }
+        statisticsExecutor.registerRecurringRunnable(statisticsRunnable);
+
         // Start the StatTransports added to this StatsManager in the specified
         // bundleContext.
         for (TransportPeriodicRunnable tpp : transports)
@@ -265,10 +184,7 @@ public class StatsManager
         // De-register statistics and transports from their respective
         // RecurringRunnableExecutor in order to have them no longer
         // periodically executed.
-        for (StatisticsPeriodicRunnable spp : statistics)
-        {
-            statisticsExecutor.deRegisterRecurringRunnable(spp);
-        }
+        statisticsExecutor.deRegisterRecurringRunnable(statisticsRunnable);
         // Stop the StatTransports added to this StatsManager in the specified
         // bundleContext.
         for (TransportPeriodicRunnable tpp : transports)
@@ -339,29 +255,11 @@ public class StatsManager
          */
         protected void doRun()
         {
-            long transportPeriod = getPeriod();
+            // FIXME measurementInterval was meant to be the actual interval of time that the information of the
+            //  Statistics covers. However, it became difficult after a refactoring to calculate measurementInterval.
+            long measurementInterval = getPeriod();
 
-            // XXX The field statistics is a CopyOnWriteArrayList in order to
-            // avoid synchronization here.
-            for (StatisticsPeriodicRunnable spp : StatsManager.this.statistics)
-            {
-                // A Statistics instance is associated with a period and a
-                // StatsTransport is associated with a period. Match the two
-                // periods.
-                long statisticsPeriod = spp.getPeriod();
-
-                if (transportPeriod == statisticsPeriod)
-                {
-                    // FIXME measurementInterval was meant to be the actual
-                    // interval of time that the information of the Statistics
-                    // covers. In contrast, statisticsPeriod is the intended
-                    // interval. However, it became difficult after a
-                    // refactoring to calculate measurementInterval.
-                    long measurementInterval = statisticsPeriod;
-
-                    o.publishStatistics(spp.o, measurementInterval);
-                }
-            }
+            o.publishStatistics(statisticsRunnable.o, measurementInterval);
         }
     }
 }

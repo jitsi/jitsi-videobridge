@@ -21,7 +21,6 @@ import org.glassfish.jersey.server.*;
 import org.glassfish.jersey.test.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.stats.*;
-import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 import org.junit.*;
@@ -60,7 +59,7 @@ public class StatsTest extends JerseyTest
         fakeStats.put("stat2", "value2");
         VideobridgeStatistics videobridgeStatistics = mock(VideobridgeStatistics.class);
         when(videobridgeStatistics.getStats()).thenReturn(fakeStats);
-        when(statsManager.getStatistics()).thenReturn(Collections.singletonList(videobridgeStatistics));
+        when(statsManager.getStatistics()).thenReturn(videobridgeStatistics);
 
         Response resp = target(BASE_URL).request().get();
         assertEquals(HttpStatus.OK_200, resp.getStatus());
@@ -70,47 +69,6 @@ public class StatsTest extends JerseyTest
 
         assertEquals("value1", json.get("stat1"));
         assertEquals("value2", json.get("stat2"));
-    }
-
-    @Test
-    public void testGetStatsVideobridgeStatsNotFirst() throws ParseException
-    {
-        Map<String, Object> fakeStats = new HashMap<>();
-        fakeStats.put("stat1", "value1");
-        fakeStats.put("stat2", "value2");
-        VideobridgeStatistics videobridgeStatistics = mock(VideobridgeStatistics.class);
-        when(videobridgeStatistics.getStats()).thenReturn(fakeStats);
-
-        DummyStats dummyStats = new DummyStats();
-
-        List<Statistics> stats = new ArrayList<>();
-        stats.add(dummyStats);
-        stats.add(videobridgeStatistics);
-
-        when(statsManager.getStatistics()).thenReturn(stats);
-
-        Response resp = target(BASE_URL).request().get();
-        assertEquals(HttpStatus.OK_200, resp.getStatus());
-        assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getMediaType());
-
-        JSONObject json = getJsonResult(resp);
-
-        assertEquals("value1", json.get("stat1"));
-        assertEquals("value2", json.get("stat2"));
-    }
-
-    @Test
-    public void testGetStatsNoStatsPresent() throws ParseException
-    {
-        when(statsManager.getStatistics()).thenReturn(Collections.emptyList());
-
-        Response resp = target(BASE_URL).request().get();
-        assertEquals(HttpStatus.OK_200, resp.getStatus());
-        assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getMediaType());
-
-        JSONObject json = getJsonResult(resp);
-
-        assertTrue(json.isEmpty());
     }
 
     private JSONObject getJsonResult(Response resp) throws ParseException
@@ -120,12 +78,5 @@ public class StatsTest extends JerseyTest
         assertTrue("Stats response must be a JSON object", obj instanceof JSONObject);
 
         return (JSONObject)obj;
-    }
-
-
-    private static class DummyStats extends Statistics
-    {
-        @Override
-        public void generate() { }
     }
 }

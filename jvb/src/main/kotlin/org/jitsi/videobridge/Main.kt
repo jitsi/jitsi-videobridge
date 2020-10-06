@@ -74,15 +74,7 @@ fun main(args: Array<String>) {
     val videobridge = Videobridge(xmppConnection, shutdownService).apply { start() }
     val octoRelayService = octoRelayService().get()?.apply { start() }
     val statsMgr = if (StatsManager.config.enabled) {
-        StatsManager().apply {
-            addStatistics(
-                VideobridgeStatistics(
-                    videobridge,
-                    octoRelayService,
-                    xmppConnection
-                ),
-                StatsManager.config.interval.toMillis()
-            )
+        StatsManager(VideobridgeStatistics(videobridge, octoRelayService, xmppConnection)).apply {
             StatsManager.config.transportConfigs.forEach { transportConfig ->
                 when (transportConfig) {
                     is StatsTransportConfig.MucStatsTransportConfig -> {
