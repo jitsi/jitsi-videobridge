@@ -878,8 +878,8 @@ public class Videobridge
         public Double stressLevel = 0.0;
     }
 
-    public static interface EventHandler {
-        void conferenceCreated(Conference conference);
-        void conferenceExpired(Conference conference);
+    public interface EventHandler {
+        void conferenceCreated(@NotNull Conference conference);
+        void conferenceExpired(@NotNull Conference conference);
     }
 }

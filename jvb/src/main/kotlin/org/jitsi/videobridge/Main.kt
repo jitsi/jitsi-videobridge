@@ -31,6 +31,7 @@ import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.rest.root.Application
 import org.jitsi.videobridge.stats.StatsManager
 import org.jitsi.videobridge.stats.VideobridgeStatistics
+import org.jitsi.videobridge.stats.callstats.CallstatsService
 import org.jitsi.videobridge.stats.config.StatsTransportConfig
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
@@ -76,34 +77,24 @@ fun main(args: Array<String>) {
     val statsMgr = if (StatsManager.config.enabled) {
         StatsManager(VideobridgeStatistics(videobridge, octoRelayService, xmppConnection)).apply {
             StatsManager.config.transportConfigs.forEach { transportConfig ->
-                when (transportConfig) {
-                    is StatsTransportConfig.MucStatsTransportConfig -> {
-                        addTransport(
-                            transportConfig.toStatsTransport(xmppConnection),
-                            transportConfig.interval.toMillis()
-                        )
-                    }
-                    is StatsTransportConfig.CallStatsIoStatsTransportConfig -> {
-                        addTransport(
-                            transportConfig.toStatsTransport(videobridge.versionService.currentVersion),
-                            transportConfig.interval.toMillis()
-                        )
-                    }
+                // TODO move this config and code to the Muc classes
+                if (transportConfig is StatsTransportConfig.MucStatsTransportConfig) {
+                    addTransport(
+                        transportConfig.toStatsTransport(xmppConnection),
+                        transportConfig.interval.toMillis()
+                    )
                 }
             }
             start()
-        }.also {
-            videobridge.addEventHandler(object : Videobridge.EventHandler {
-                override fun conferenceCreated(conference: Conference) {
-                    it.transports.forEach { transport -> transport.conferenceCreated(conference) }
-                }
-
-                override fun conferenceExpired(conference: Conference) {
-                    it.transports.forEach { transport -> transport.conferenceExpired(conference) }
-                }
-            })
         }
     } else {
+        null
+    }
+
+    val callstats = if (CallstatsService.config.enabled) {
+        CallstatsService(videobridge, statsMgr)
+    } else {
+        logger.info("Not starting CallstatsService, disabled in configuration.")
         null
     }
 
@@ -150,6 +141,7 @@ fun main(args: Array<String>) {
     logger.info("Bridge shutting down")
     octoRelayService?.stop()
     xmppConnection.stop()
+    callstats?.stop()
     statsMgr?.stop()
 
     try {

@@ -15,8 +15,6 @@
  */
 package org.jitsi.videobridge.stats;
 
-import org.jitsi.videobridge.*;
-
 /**
  * Defines an interface for classes that will send statistics.
  *
@@ -45,24 +43,8 @@ public abstract class StatsTransport
      * @param measurementInterval the interval of time in milliseconds covered
      * by the measurements carried by the specified {@code statistics}
      */
-    public void publishStatistics(
-            Statistics statistics,
-            long measurementInterval)
+    public void publishStatistics(Statistics statistics, long measurementInterval)
     {
         publishStatistics(statistics);
     }
-
-    /**
-     * Notification that a conference was created.
-     * @param conference the conference that is created.
-     */
-    public void conferenceCreated(Conference conference)
-    {}
-
-    /**
-     * Notification that a conference has expired.
-     * @param conference the conference that expired.
-     */
-    public void conferenceExpired(Conference conference)
-    {}
 }

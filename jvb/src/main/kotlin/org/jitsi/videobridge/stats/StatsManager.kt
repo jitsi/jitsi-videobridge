@@ -22,15 +22,15 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * A class that manages the statistics. Periodically calls the
- * passes them to <tt>StatsTransport</tt> instances that sends them.
+ * [StatsManager] periodically gathers statistics via the [Statistics] it was created with, and periodically pushes
+ * the latest gathered statistics to the [StatTransport]s that have been added to it.
  *
  * @author Hristo Terezov
  * @author Lyubomir Marinov
  */
 class StatsManager(statistics: Statistics) {
     /**
-     * The periodic runnable which will gather statistics.
+     * The periodic runnable which gathers statistics.
      */
     private val statisticsRunnable: StatisticsPeriodicRunnable
 
@@ -77,6 +77,14 @@ class StatsManager(statistics: Statistics) {
             if (running.get()) {
                 transportExecutor.registerRecurringRunnable(it)
             }
+        }
+    }
+
+    fun removeTransport(transport: StatsTransport) {
+        val runnable = transportRunnables.find { it.o == transport }
+        runnable?.let {
+            transportExecutor.deRegisterRecurringRunnable(it)
+            transportRunnables.remove(it)
         }
     }
 
