@@ -170,16 +170,10 @@ public class CallStatsIOTransport
         bsib.avgIntervalRtt(s.getStatAsInt(RTT_AGGREGATE));
         bsib.conferenceCount(s.getStatAsInt(CONFERENCES));
         bsib.cpuUsage((float) s.getStatAsDouble(CPU_USAGE));
-        bsib.intervalDownloadBitRate(
-            (int) Math.round(s.getStatAsDouble(BITRATE_DOWNLOAD)));
-        // TODO intervalReceivedBytes
-        // uses download loss rate, as the upload is not properly measured
-        // currently and vary a lot, which also breaks RTP_LOSS value.
-        bsib.intervalRtpFractionLoss(
-            (float)s.getStatAsDouble(LOSS_RATE_DOWNLOAD));
+        bsib.intervalDownloadBitRate((int) Math.round(s.getStatAsDouble(BITRATE_DOWNLOAD)));
+        bsib.intervalRtpFractionLoss((float)s.getStatAsDouble(VideobridgeStatistics.OVERALL_LOSS));
         // TODO intervalSentBytes
-        bsib.intervalUploadBitRate(
-            (int) Math.round(s.getStatAsDouble(BITRATE_UPLOAD)));
+        bsib.intervalUploadBitRate((int) Math.round(s.getStatAsDouble(BITRATE_UPLOAD)));
         bsib.measurementInterval((int) measurementInterval);
         bsib.memoryUsage(s.getStatAsInt(USED_MEMORY));
         bsib.participantsCount(s.getStatAsInt(PARTICIPANTS));

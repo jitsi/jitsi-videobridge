@@ -72,10 +72,8 @@ public class ConferencePeriodicRunnable
             }
             EndpointStats endpointStats = new EndpointStats(id);
 
-            TransceiverStats transceiverStats
-                    = endpoint.getTransceiver().getTransceiverStats();
-            int rttMs
-                    = (int) transceiverStats.getEndpointConnectionStats().getRtt();
+            TransceiverStats transceiverStats = endpoint.getTransceiver().getTransceiverStats();
+            int rttMs = (int) (transceiverStats.getEndpointConnectionStats().getRtt() + 0.5);
 
             Map<Long, IncomingSsrcStats.Snapshot> incomingStats
                     = transceiverStats.getIncomingStats().getSsrcStats();
@@ -87,9 +85,10 @@ public class ConferencePeriodicRunnable
                 receiveStats.packets = stats.getNumReceivedPackets();
                 receiveStats.packetsLost = stats.getCumulativePacketsLost();
                 receiveStats.rtt_ms = rttMs;
-                // TODO: the incoming stats don't have the fractional packet
-                //  loss, it has to be computed between snapshots.
-                //receiveStats.fractionalPacketLoss = TODO;
+                // TODO: The per-SSRC stats do not keep the fraction loss in the last interval. We use the per-endpoint
+                // value, which is an average over all received SSRCs.
+                receiveStats.fractionalPacketLoss
+                        = getFractionLost(transceiverStats.getEndpointConnectionStats().getIncomingLossStats());
                 receiveStats.jitter_ms = stats.getJitter();
                 endpointStats.addReceiveStats(receiveStats);
             });
@@ -105,9 +104,10 @@ public class ConferencePeriodicRunnable
                 // TODO: we don't keep track of outgoing loss per ssrc.
                 //sendStats.packetsLost = TODO
                 sendStats.rtt_ms = rttMs;
-                // TODO: we don't keep track of outgoing loss per ssrc.
-                //sendStats.fractionalPacketLoss = TODO
-                // TODO: we don't keep track of outgoing loss per ssrc.
+                // TODO: The per-SSRC stats do not keep the fraction loss in the last interval. We use the per-endpoint
+                // value, which is an average over all received SSRCs.
+                sendStats.fractionalPacketLoss
+                        = getFractionLost(transceiverStats.getEndpointConnectionStats().getOutgoingLossStats());
                 //sendStats.jitter_ms = TODO
                 endpointStats.addSendStats(sendStats);
             });
@@ -117,4 +117,16 @@ public class ConferencePeriodicRunnable
 
         return allEndpointStats;
     }
+
+    private static double getFractionLost(EndpointConnectionStats.LossStatsSnapshot lossStatsSnapshot)
+    {
+        if (lossStatsSnapshot.getPacketsLost() + lossStatsSnapshot.getPacketsReceived() > 0)
+        {
+            return lossStatsSnapshot.getPacketsLost() /
+                    ((double) (lossStatsSnapshot.getPacketsLost() + lossStatsSnapshot.getPacketsReceived()));
+
+        }
+        return 0;
+    }
+
 }
