@@ -129,7 +129,7 @@ class CallstatsConfig {
      */
     val appId: Int by config {
         "io.callstats.sdk.CallStats.appId".from(JitsiConfig.legacyConfig)
-        "default" { 0 }
+        "videobridge.callstats.app-id".from(JitsiConfig.newConfig)
     }
 
     /**
@@ -137,6 +137,7 @@ class CallstatsConfig {
      */
     val appSecret: String? by optionalconfig {
         "io.callstats.sdk.CallStats.appSecret".from(JitsiConfig.legacyConfig)
+        "videobridge.callstats.app-secret".from(JitsiConfig.newConfig)
     }
 
     /**
@@ -144,6 +145,7 @@ class CallstatsConfig {
      */
     val keyId: String? by optionalconfig {
         "io.callstats.sdk.CallStats.keyId".from(JitsiConfig.legacyConfig)
+        "videobridge.callstats.key-id".from(JitsiConfig.newConfig)
     }
 
     /**
@@ -151,11 +153,12 @@ class CallstatsConfig {
      */
     val keyPath: String? by optionalconfig {
         "io.callstats.sdk.CallStats.keyPath".from(JitsiConfig.legacyConfig)
+        "videobridge.callstats.key-path".from(JitsiConfig.newConfig)
     }
 
     val bridgeId: String by config {
         "io.callstats.sdk.CallStats.bridgeId".from(JitsiConfig.legacyConfig)
-        "default" { "jitsi" }
+        "videobridge.callstats.bridge-id".from(JitsiConfig.newConfig)
     }
 
     /**
@@ -163,19 +166,23 @@ class CallstatsConfig {
      */
     val conferenceIdPrefix: String? by optionalconfig {
         "io.callstats.sdk.CallStats.conferenceIDPrefix".from(JitsiConfig.legacyConfig)
+        "videobridge.callstats.conference-id-prefix".from(JitsiConfig.newConfig)
+    }
+
+    private val intervalProperty: Duration by config {
+        "videobridge.callstats.interval".from(JitsiConfig.newConfig)
     }
 
     /**
      * This is the interval at which stats are pushed to callstats. It affects both global and per-conference stats.
      *
-     * For backwards compatibility, we read it from the stats manager "callstatsio" transport, if present, and
-     * default to the stats manager interval.
+     * For backwards compatibility, we read it from the stats manager "callstatsio" transport, if present.
      */
     val interval: Duration = StatsManager.config.transportConfigs.stream()
         .filter { tc -> tc is StatsTransportConfig.CallStatsIoStatsTransportConfig }
         .map(StatsTransportConfig::interval)
         .findFirst()
-        .orElse(StatsManager.config.interval)
+        .orElse(intervalProperty)
 
     val enabled: Boolean = appId > 0
 
