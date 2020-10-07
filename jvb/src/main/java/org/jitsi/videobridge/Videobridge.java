@@ -185,7 +185,7 @@ public class Videobridge
         {
             xmppConnection.setEventHandler(new XmppConnectionEventHandler());
         }
-        healthChecker = new JvbHealthChecker(this);
+        healthChecker = new JvbHealthChecker();
         versionService = new JvbVersionService();
         this.shutdownService = shutdownService;
     }
@@ -225,13 +225,7 @@ public class Videobridge
             {
                 if (!conferencesById.containsKey(id))
                 {
-                    conference
-                        = new Conference(
-                                this,
-                                id,
-                                name,
-                                enableLogging,
-                                gid);
+                    conference = new Conference(this, id, name, gid);
                     conferencesById.put(id, conference);
                 }
             }
@@ -278,14 +272,11 @@ public class Videobridge
                 + " gid=" + conference.getGid()
                 + " logging=" + enableLogging);
 
-        if (conference.includeInStatistics())
+        eventEmitter.fireEvent(handler ->
         {
-            eventEmitter.fireEvent(handler ->
-            {
-                handler.conferenceCreated(conference);
-                return Unit.INSTANCE;
-            });
-        }
+            handler.conferenceCreated(conference);
+            return Unit.INSTANCE;
+        });
 
         return conference;
     }
@@ -323,14 +314,11 @@ public class Videobridge
             {
                 conferencesById.remove(id);
                 conference.expire();
-                if (conference.includeInStatistics())
+                eventEmitter.fireEvent(handler ->
                 {
-                    eventEmitter.fireEvent(handler ->
-                    {
-                        handler.conferenceExpired(conference);
-                        return Unit.INSTANCE;
-                    });
-                }
+                    handler.conferenceExpired(conference);
+                    return Unit.INSTANCE;
+                });
             }
         }
 
