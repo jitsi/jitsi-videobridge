@@ -40,20 +40,6 @@ class StatsManager(
     private val statisticsRunnable: StatisticsPeriodicRunnable
 
     /**
-     * The [RecurringRunnableExecutor] which periodically invokes [statisticsRunnable].
-     */
-    private val statisticsExecutor = RecurringRunnableExecutor(
-        StatsManager::class.java.simpleName + "-statisticsExecutor"
-    )
-
-    /**
-     * The [RecurringRunnableExecutor] which periodically invokes [transportRunnables].
-     */
-    private val transportExecutor = RecurringRunnableExecutor(
-        StatsManager::class.java.simpleName + "-transportExecutor"
-    )
-
-    /**
      * The runnables which periodically push statistics to the [StatsTransport]s that have been added.
      */
     private val transportRunnables: MutableList<TransportPeriodicRunnable> = CopyOnWriteArrayList()
@@ -66,6 +52,12 @@ class StatsManager(
         get() = transportRunnables.map { it.o }
 
     private val running = AtomicBoolean()
+
+    init {
+        val period = config.interval.toMillis()
+        require(period >= 1) { "period $period" }
+        statisticsRunnable = StatisticsPeriodicRunnable(statistics, period)
+    }
 
     /**
      * Adds a specific <tt>StatsTransport</tt> through which this [StatsManager] is to periodically send statistics.
@@ -151,11 +143,19 @@ class StatsManager(
     companion object {
         @JvmField
         val config = StatsManagerConfig()
-    }
 
-    init {
-        val period = config.interval.toMillis()
-        require(period >= 1) { "period $period" }
-        statisticsRunnable = StatisticsPeriodicRunnable(statistics, period)
+        /**
+         * The [RecurringRunnableExecutor] which periodically invokes [statisticsRunnable].
+         */
+        private val statisticsExecutor = RecurringRunnableExecutor(
+            StatsManager::class.java.simpleName + "-statisticsExecutor"
+        )
+
+        /**
+         * The [RecurringRunnableExecutor] which periodically invokes [transportRunnables].
+         */
+        private val transportExecutor = RecurringRunnableExecutor(
+            StatsManager::class.java.simpleName + "-transportExecutor"
+        )
     }
 }
