@@ -28,9 +28,14 @@ import java.util.concurrent.atomic.AtomicBoolean
  * @author Hristo Terezov
  * @author Lyubomir Marinov
  */
-class StatsManager(statistics: Statistics) {
+class StatsManager(
     /**
-     * The periodic runnable which gathers statistics.
+     * The instance which can gather/generate statistics via [Statistics.generate]. The [StatsManager] invokes this
+     * periodically.
+     */
+    val statistics: Statistics) {
+    /**
+     * The periodic runnable which gathers statistics by invoking `statistics.generate()`.
      */
     private val statisticsRunnable: StatisticsPeriodicRunnable
 
@@ -49,7 +54,7 @@ class StatsManager(statistics: Statistics) {
     )
 
     /**
-     * The [StatsTransport]s added to this [StatsManager].
+     * The runnables which periodically push statistics to the [StatsTransport]s that have been added.
      */
     private val transportRunnables: MutableList<TransportPeriodicRunnable> = CopyOnWriteArrayList()
 
@@ -87,12 +92,6 @@ class StatsManager(statistics: Statistics) {
             transportRunnables.remove(it)
         }
     }
-
-    /**
-     * The [Statistics] which this [StatsManager] periodically generates/updates.
-     */
-    val statistics: Statistics
-        get() = statisticsRunnable.o
 
     /**
      * {@inheritDoc}
