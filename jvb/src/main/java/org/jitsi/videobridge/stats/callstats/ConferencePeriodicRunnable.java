@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.stats;
+package org.jitsi.videobridge.stats.callstats;
 
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
@@ -24,12 +24,12 @@ import org.jitsi.videobridge.*;
 import java.util.*;
 
 /**
- * Extends a {@link AbstractStatsPeriodicRunnable} which periodically generates
- * a statistics for the conference channels.
+ * A {@link org.jitsi.utils.concurrent.RecurringRunnable} which periodically extracts statistics for a specific
+ * {@link Conference} and sends them to callstats.
  *
  * @author Damian Minkov
  */
-public class ConferencePeriodicRunnable
+class ConferencePeriodicRunnable
     extends AbstractStatsPeriodicRunnable<Conference>
 {
     /**

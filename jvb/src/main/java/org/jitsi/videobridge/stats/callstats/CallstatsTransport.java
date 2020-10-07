@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.stats;
+package org.jitsi.videobridge.stats.callstats;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.stats.media.*;
+import org.jitsi.videobridge.stats.*;
 
 import static org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.*;
 
@@ -25,8 +26,7 @@ import static org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.*;
  *
  * @author Lyubomir Marinov
  */
-public class CallStatsIOTransport
-    implements StatsTransport
+class CallstatsTransport implements StatsTransport
 {
     /**
      * The {@code BridgeStatistics} which initializes new {@code BridgeStatusInfo} instances.
@@ -41,7 +41,7 @@ public class CallStatsIOTransport
      */
     @NotNull private final StatsService statsService;
 
-    public CallStatsIOTransport(@NotNull StatsService statsService)
+    public CallstatsTransport(@NotNull StatsService statsService)
     {
         this.statsService = statsService;
     }

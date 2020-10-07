@@ -23,8 +23,6 @@ import org.jitsi.stats.media.StatsService
 import org.jitsi.stats.media.StatsServiceFactory
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.Videobridge
-import org.jitsi.videobridge.stats.CallStatsConferenceStatsHandler
-import org.jitsi.videobridge.stats.CallStatsIOTransport
 import org.jitsi.videobridge.stats.StatsManager
 import org.jitsi.videobridge.stats.config.StatsTransportConfig
 import java.time.Duration
@@ -36,7 +34,7 @@ class CallstatsService(
     private val logger = createLogger()
 
     /**
-     * The entry point into the jitsi-stats library. It is initialized asynchronously.
+     * The entry point into the jitsi-stats library used to send stats to callstats. It is initialized asynchronously.
      */
     private var statsService: StatsService? = null
 
@@ -44,13 +42,13 @@ class CallstatsService(
      * The handler for conference created/expired events, which enables sending of per-conference statistics.
      * Initialized asynchronously.
      */
-    private var conferenceStatsHandler: CallStatsConferenceStatsHandler? = null
+    private var conferenceManager: CallstatsConferenceManager? = null
 
     /**
      * The [StatsTransport] used to send global stats to callstats. Initialized asynchronously, and only if the stats
      * manager is available to provide stats.
      */
-    private var statsTransport: CallStatsIOTransport? = null
+    private var statsTransport: CallstatsTransport? = null
 
     init {
         logger.info("Initializing CallstatsService with config: $config")
@@ -86,23 +84,26 @@ class CallstatsService(
 
         statsManager?.let { statsManager ->
             logger.info("Subscribing to global stats with interval ${config.interval}")
-            statsTransport = CallStatsIOTransport(statsService).also { statsTransport ->
+            statsTransport = CallstatsTransport(statsService)
+                .also { statsTransport ->
                 statsManager.addTransport(statsTransport, config.interval.toMillis())
             }
         }
 
-        conferenceStatsHandler = CallStatsConferenceStatsHandler(
-            statsService,
-            config.bridgeId,
-            config.interval.toMillis(),
-            config.conferenceIdPrefix)
+        conferenceManager =
+            CallstatsConferenceManager(
+                statsService,
+                config.bridgeId,
+                config.interval.toMillis(),
+                config.conferenceIdPrefix
+            )
 
-        videobridge.addEventHandler(conferenceStatsHandler)
+        videobridge.addEventHandler(conferenceManager)
     }
 
     fun stop() {
         logger.info("Stopping CallstatsService")
-        conferenceStatsHandler?.let {
+        conferenceManager?.let {
             videobridge.removeEventHandler(it)
             it.stop()
         }
@@ -112,7 +113,7 @@ class CallstatsService(
             }
         }
 
-        conferenceStatsHandler = null
+        conferenceManager = null
         statsTransport = null
         statsService = null
     }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.stats;
+package org.jitsi.videobridge.stats.callstats;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -25,26 +25,25 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 
 /**
- * Handles events of the bridge for creating a conference/channel or expiring it
- * and reports statistics per endpoint.
+ * Manages sending per-conference stats to callstats. Maintains a list of active conferences, and handles conference
+ * create/expire events.
  *
  * @author Damian Minkov
  */
-public class CallStatsConferenceStatsHandler
+class CallstatsConferenceManager
     implements Videobridge.EventHandler
 {
     /**
      * The <tt>Logger</tt> used by the <tt>CallStatsConferenceStatsHandler</tt>
      * class and its instances to print debug information.
      */
-    private static final Logger logger
-        = new LoggerImpl(CallStatsConferenceStatsHandler.class.getName());
+    private static final Logger logger = new LoggerImpl(CallstatsConferenceManager.class.getName());
 
     /**
      * The {@link RecurringRunnableExecutor} which sends per-conference statistics to callstats.
      */
-    private static final RecurringRunnableExecutor statisticsExecutor
-        = new RecurringRunnableExecutor(CallStatsConferenceStatsHandler.class.getSimpleName() + "-statisticsExecutor");
+    private static final RecurringRunnableExecutor executor
+        = new RecurringRunnableExecutor(CallstatsConferenceManager.class.getSimpleName());
 
     /**
      * The entry point into the jitsi-stats library.
@@ -71,7 +70,7 @@ public class CallStatsConferenceStatsHandler
      */
     private final long interval;
 
-    public CallStatsConferenceStatsHandler(
+    public CallstatsConferenceManager(
             StatsService statsService,
             String bridgeId,
             long intervalMs,
@@ -91,7 +90,7 @@ public class CallStatsConferenceStatsHandler
         // Let's stop all left runnables.
         for (ConferencePeriodicRunnable cpr : statisticsProcessors.values())
         {
-            statisticsExecutor.deRegisterRecurringRunnable(cpr);
+            executor.deRegisterRecurringRunnable(cpr);
         }
     }
 
@@ -115,7 +114,7 @@ public class CallStatsConferenceStatsHandler
 
             // register for periodic execution.
             statisticsProcessors.put(conference, cpr);
-            statisticsExecutor.registerRecurringRunnable(cpr);
+            executor.registerRecurringRunnable(cpr);
         }
     }
 
@@ -135,6 +134,6 @@ public class CallStatsConferenceStatsHandler
         }
 
         cpr.stop();
-        statisticsExecutor.deRegisterRecurringRunnable(cpr);
+        executor.deRegisterRecurringRunnable(cpr);
     }
 }
