@@ -39,7 +39,7 @@ class VideobridgeTest : ShouldSpec() {
         }
         context("Shutdown") {
             context("when a conference is active") {
-                val conf = videobridge.createConference(JidCreate.entityBareFrom("conf@domain.org"), true)
+                val conf = videobridge.createConference(JidCreate.entityBareFrom("conf@domain.org"))
                 context("starting a graceful shutdown") {
                     videobridge.shutdown(true)
                     should("report that shutdown is in progress") {

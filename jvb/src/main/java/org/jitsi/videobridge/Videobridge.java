@@ -191,30 +191,13 @@ public class Videobridge
     }
 
     /**
-     * Initializes a new {@link Conference} instance with an ID unique to the
-     * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt> and
-     * adds the new instance to the list of existing <tt>Conference</tt>
-     * instances.
-     *
-     * @param name world readable name of the conference to create.
-     * @param gid the optional "global" id of the conference.
-     * @return a new <tt>Conference</tt> instance with an ID unique to the
-     * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
-     */
-    public @NotNull Conference createConference(EntityBareJid name, long gid)
-    {
-        return this.createConference(name, /* enableLogging */ true, gid);
-    }
-
-    /**
      * Generate conference IDs until one is found that isn't in use and create a new {@link Conference}
      * object using that ID
      * @param name
-     * @param enableLogging
      * @param gid
      * @return
      */
-    private @NotNull Conference doCreateConference(EntityBareJid name, boolean enableLogging, long gid)
+    private @NotNull Conference doCreateConference(EntityBareJid name, long gid)
     {
         Conference conference = null;
         do
@@ -242,12 +225,11 @@ public class Videobridge
      * instances.
      *
      * @param name world readable name of the conference to create.
-     * @param enableLogging whether logging should be enabled or disabled for
      * the {@link Conference}.
      */
-    public @NotNull Conference createConference(EntityBareJid name, boolean enableLogging)
+    public @NotNull Conference createConference(EntityBareJid name)
     {
-        return createConference(name, enableLogging, Conference.GID_NOT_SET);
+        return createConference(name, Conference.GID_NOT_SET);
     }
 
     /**
@@ -257,20 +239,16 @@ public class Videobridge
      * instances.
      *
      * @param name world readable name of the conference to create.
-     * @param enableLogging whether logging should be enabled or disabled for
-     * the {@link Conference}.
      * @param gid the "global" id of the conference (or
      * {@link Conference#GID_NOT_SET} if it is not specified.
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public @NotNull Conference createConference(EntityBareJid name, boolean enableLogging, long gid)
+    public @NotNull Conference createConference(EntityBareJid name, long gid)
     {
-        final Conference conference = doCreateConference(name, enableLogging, gid);
+        final Conference conference = doCreateConference(name, gid);
 
-        logger.info(() -> "create_conf, id=" + conference.getID()
-                + " gid=" + conference.getGid()
-                + " logging=" + enableLogging);
+        logger.info(() -> "create_conf, id=" + conference.getID() + " gid=" + conference.getGid());
 
         eventEmitter.fireEvent(handler ->
         {
@@ -429,10 +407,7 @@ public class Videobridge
     }
 
     /**
-     * Handles a <tt>GracefulShutdownIQ</tt> stanza which represents a request.
-     *
-     * @param shutdownIQ the <tt>GracefulShutdownIQ</tt> stanza represents
-     *        the request to handle
+     * Handles a shutdown request.
      */
     public void shutdown(boolean graceful)
     {
