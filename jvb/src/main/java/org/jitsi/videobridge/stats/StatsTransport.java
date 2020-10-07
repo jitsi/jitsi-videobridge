@@ -21,30 +21,14 @@ package org.jitsi.videobridge.stats;
  * @author Hristo Terezov
  * @author Lyubomir Marinov
  */
-public abstract class StatsTransport
+public interface StatsTransport
 {
     /**
-     * Publishes a specific (set of) <tt>Statistics</tt> through this
-     * <tt>StatsTransport</tt>.
+     * Publishes a specific (set of) {@link Statistics} through this {@link StatsTransport}.
      *
-     * @param statistics the <tt>Statistics</tt> to be published through this
-     * <tt>StatsTransport</tt>
+     * @param statistics the {@link Statistics} to be published.
+     * @param measurementInterval the interval of time in milliseconds covered by the measurements carried by the
+     * specified {@link Statistics}.
      */
-    public abstract void publishStatistics(Statistics statistics);
-
-    /**
-     * Publishes a specific (set of) <tt>Statistics</tt> through this
-     * <tt>StatsTransport</tt>. The default implementation invokes
-     * {@link #publishStatistics(Statistics)} to preserve legacy
-     * implementations.
-     *
-     * @param statistics the <tt>Statistics</tt> to be published through this
-     * <tt>StatsTransport</tt>
-     * @param measurementInterval the interval of time in milliseconds covered
-     * by the measurements carried by the specified {@code statistics}
-     */
-    public void publishStatistics(Statistics statistics, long measurementInterval)
-    {
-        publishStatistics(statistics);
-    }
+    void publishStatistics(Statistics statistics, long measurementInterval);
 }

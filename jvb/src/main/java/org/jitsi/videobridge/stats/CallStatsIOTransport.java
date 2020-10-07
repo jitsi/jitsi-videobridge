@@ -21,20 +21,18 @@ import org.jitsi.stats.media.*;
 import static org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.*;
 
 /**
- * Implements {@code StatsTransport} for
- * <a href="http://www.callstats.io">callstats.io</a>.
+ * Implements {@link StatsTransport} for <a href="http://www.callstats.io">callstats.io</a>.
  *
  * @author Lyubomir Marinov
  */
 public class CallStatsIOTransport
-    extends StatsTransport
+    implements StatsTransport
 {
     /**
-     * The {@code BridgeStatistics} which initializes new
-     * {@code BridgeStatusInfo} instances (to be sent by {@code jitsi-stats}).
-     * Since reentrancy and thread-safety related issues are taken care of by
-     * the invoker of {@link #publishStatistics(Statistics)}, the instance is
-     * cached for the sake of performance.
+     * The {@code BridgeStatistics} which initializes new {@code BridgeStatusInfo} instances.
+     *
+     * Since reentrancy and thread-safety related issues are taken care of by the invoker of
+     * {@link #publishStatistics(Statistics, long)}, the instance is cached for the sake of performance.
      */
     private final BridgeStatistics bridgeStatusInfoBuilder = new BridgeStatistics();
 
@@ -49,8 +47,7 @@ public class CallStatsIOTransport
     }
 
     /**
-     * Reads data from {@code statistics} and writes it into
-     * {@code bridgeStatusInfoBuilder}.
+     * Reads data from a {@link Statistics} instance and populates a {@link BridgeStatistics} instance.
      *
      * @param bsib the {@code BridgeStatistics} into which data read from
      * {@code statistics} is to be written
@@ -80,18 +77,6 @@ public class CallStatsIOTransport
         // TODO totalLoss
         bsib.totalMemory(s.getStatAsInt(TOTAL_MEMORY));
         bsib.videoFabricCount(s.getStatAsInt(VIDEO_CHANNELS));
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * {@code CallStatsIOTransport} overrides
-     * {@link #publishStatistics(Statistics, long)} so it does not have to do
-     * anything in its implementation of {@link #publishStatistics(Statistics)}.
-     */
-    @Override
-    public void publishStatistics(Statistics statistics)
-    {
     }
 
     /**

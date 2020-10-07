@@ -21,13 +21,12 @@ import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 
 /**
- * Implements a {@link StatsTransport} which publishes via Presence in an XMPP
- * MUC.
+ * Implements a {@link StatsTransport} which publishes via Presence in an XMPP MUC.
  *
  * @author Boris Grozev
  */
 public class MucStatsTransport
-    extends StatsTransport
+    implements StatsTransport
 {
     /**
      * The <tt>Logger</tt> used by the <tt>MucStatsTransport</tt> class and
@@ -46,7 +45,7 @@ public class MucStatsTransport
      * {@inheritDoc}
      */
     @Override
-    public void publishStatistics(Statistics stats)
+    public void publishStatistics(Statistics stats, long measurementInterval)
     {
         logger.debug(() -> "Publishing statistics through MUC: " + stats);
 
