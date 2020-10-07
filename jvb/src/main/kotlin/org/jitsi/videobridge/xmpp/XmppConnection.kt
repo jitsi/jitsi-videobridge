@@ -20,6 +20,8 @@ import org.jitsi.nlj.stats.DelayStats
 import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createLogger
+import org.jitsi.videobridge.stats.MucStatsTransport
+import org.jitsi.videobridge.stats.StatsManager
 import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig
 import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 import org.jitsi.xmpp.extensions.colibri.ShutdownIQ
@@ -38,7 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * The XMPP client connection for the videobridge
  */
-public class XmppConnection : IQListener {
+class XmppConnection : IQListener {
     private val logger = createLogger()
 
     /**
@@ -52,7 +54,7 @@ public class XmppConnection : IQListener {
 
     var eventHandler: EventHandler? = null
 
-    fun start() {
+    fun start(statsManager: StatsManager?) {
         if (running.compareAndSet(false, true)) {
             mucClientManager.apply {
                 registerIQ(HealthCheckIQ())
@@ -64,6 +66,9 @@ public class XmppConnection : IQListener {
             }
 
             config.clientConfigs.forEach { cfg -> mucClientManager.addMucClient(cfg) }
+
+            statsManager?.addTransport(MucStatsTransport(this), config.presenceInterval.toMillis())
+                ?: logger.warn("Statistics are not enabled, will not publish presence updates!")
         } else {
             logger.info("Already started")
         }

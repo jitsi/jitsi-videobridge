@@ -16,12 +16,10 @@
 
 package org.jitsi.videobridge.stats.config
 
-import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.inspectors.forOne
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
-import org.jitsi.metaconfig.ConfigException
 import java.time.Duration
 
 internal class StatsManagerConfigTest : ConfigTest() {
@@ -54,16 +52,6 @@ internal class StatsManagerConfigTest : ConfigTest() {
                         }
                     }
                 }
-                context("which has valid transports but stats are disabled") {
-                    withNewConfig(newConfigInvalidStatsTransports(enabled = false)) {
-                        should("throw when trying to access the stats transports") {
-                            val cfg = StatsManagerConfig()
-                            shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
-                                cfg.transportConfigs
-                            }
-                        }
-                    }
-                }
                 context("which has a custom interval") {
                     withNewConfig(newConfigOneStatsTransportCustomInterval()) {
                         should("reflect the custom interval") {
@@ -86,16 +74,6 @@ internal class StatsManagerConfigTest : ConfigTest() {
                         cfg.transportConfigs shouldHaveSize 2
                         cfg.transportConfigs.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
                         cfg.transportConfigs.forOne { it as StatsTransportConfig.CallStatsIoStatsTransportConfig }
-                    }
-                }
-            }
-            context("and it's disabled in old config but enabled in new config") {
-                withLegacyConfig(legacyConfigStatsEnabled(enabled = false)) {
-                    withNewConfig(newConfigOneStatsTransport()) {
-                        should("throw when trying to access the stats transports field") {
-                            val cfg = StatsManagerConfig()
-                            shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> { cfg.transportConfigs }
-                        }
                     }
                 }
             }

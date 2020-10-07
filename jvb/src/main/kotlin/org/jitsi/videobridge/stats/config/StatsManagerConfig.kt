@@ -22,8 +22,6 @@ import com.typesafe.config.ConfigObject
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.config
-import org.jitsi.videobridge.stats.MucStatsTransport
-import org.jitsi.videobridge.stats.StatsTransport
 import org.jitsi.videobridge.xmpp.XmppConnection
 import java.time.Duration
 
@@ -54,29 +52,31 @@ class StatsManagerConfig {
      * Note that if 'org.jitsi.videobridge.STATISTICS_TRANSPORT' is present at all
      * in the legacy config, we won't search the new config (we don't support merging
      * stats transport configs from old and new config together).
+     *
+     * These are now obsolete and only maintained for backward compatibility. Transports should be configured in the
+     * modules that define them. See e.g. the implementations in [CallstatsService] and [XmppConnection].
     */
     val transportConfigs: List<StatsTransportConfig> by config {
-        onlyIf("Stats transports are enabled", ::enabled) {
-            "org.jitsi.videobridge."
-                .from(JitsiConfig.legacyConfig)
-                .convertFrom<Map<String, String>> {
-                    if ("org.jitsi.videobridge.STATISTICS_TRANSPORT" in it) {
-                        it.toStatsTransportConfig()
-                    } else {
-                        throw ConfigException.UnableToRetrieve.NotFound("not found in legacy config")
-                    }
+        "org.jitsi.videobridge."
+            .from(JitsiConfig.legacyConfig)
+            .convertFrom<Map<String, String>> {
+                if ("org.jitsi.videobridge.STATISTICS_TRANSPORT" in it) {
+                    it.toStatsTransportConfig()
+                } else {
+                    throw ConfigException.UnableToRetrieve.NotFound("not found in legacy config")
                 }
-            "videobridge.stats"
-                .from(JitsiConfig.newConfig)
-                .convertFrom<ConfigObject> { cfg ->
-                    val transports = cfg["transports"]
-                        ?: throw ConfigException.UnableToRetrieve.NotFound("Could not find transports within stats")
-                    transports as ConfigList
-                    transports.map { it as ConfigObject }
-                            .map { it.toConfig() }
-                            .mapNotNull { it.toStatsTransportConfig() }
-                }
-        }
+            }
+        "videobridge.stats"
+            .from(JitsiConfig.newConfig)
+            .convertFrom<ConfigObject> { cfg ->
+                val transports = cfg["transports"]
+                    ?: throw ConfigException.UnableToRetrieve.NotFound("Could not find transports within stats")
+                transports as ConfigList
+                transports.map { it as ConfigObject }
+                        .map { it.toConfig() }
+                        .mapNotNull { it.toStatsTransportConfig() }
+            }
+        "default" { emptyList() }
     }
 
     /**
@@ -117,9 +117,6 @@ class StatsManagerConfig {
 sealed class StatsTransportConfig(
     val interval: Duration
 ) {
-    class MucStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval) {
-        fun toStatsTransport(xmppConnection: XmppConnection): StatsTransport = MucStatsTransport(xmppConnection)
-    }
-
+    class MucStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval)
     class CallStatsIoStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval)
 }

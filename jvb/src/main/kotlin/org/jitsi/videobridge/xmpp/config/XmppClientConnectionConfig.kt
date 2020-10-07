@@ -21,7 +21,10 @@ import com.typesafe.config.ConfigValue
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.config
+import org.jitsi.videobridge.stats.StatsManager
+import org.jitsi.videobridge.stats.config.StatsTransportConfig
 import org.jitsi.xmpp.mucclient.MucClientConfiguration
+import java.time.Duration
 
 class XmppClientConnectionConfig {
     val clientConfigs: List<MucClientConfiguration> by config {
@@ -40,6 +43,20 @@ class XmppClientConnectionConfig {
                     .filter { it.isComplete }
             }
     }
+
+    private val presenceIntervalProperty: Duration by config {
+        "videobridge.apis.xmpp-client.presence-interval".from(JitsiConfig.newConfig)
+    }
+
+    /**
+     * The interval at which presence updates (with updates stats/status) are published. Allow to be overriden by
+     * legacy-style "stats-transports" config.
+     */
+    val presenceInterval: Duration = StatsManager.config.transportConfigs.stream()
+        .filter { tc -> tc is StatsTransportConfig.CallStatsIoStatsTransportConfig }
+        .map(StatsTransportConfig::interval)
+        .findFirst()
+        .orElse(presenceIntervalProperty)
 }
 
 /**

@@ -32,7 +32,6 @@ import org.jitsi.videobridge.rest.root.Application
 import org.jitsi.videobridge.stats.StatsManager
 import org.jitsi.videobridge.stats.VideobridgeStatistics
 import org.jitsi.videobridge.stats.callstats.CallstatsService
-import org.jitsi.videobridge.stats.config.StatsTransportConfig
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
 import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
@@ -70,26 +69,18 @@ fun main(args: Array<String>) {
 
     startIce4j()
 
-    val xmppConnection = XmppConnection().apply { start() }
+    val xmppConnection = XmppConnection()
     val shutdownService = ShutdownServiceImpl()
     val videobridge = Videobridge(xmppConnection, shutdownService).apply { start() }
     val octoRelayService = octoRelayService().get()?.apply { start() }
     val statsMgr = if (StatsManager.config.enabled) {
         StatsManager(VideobridgeStatistics(videobridge, octoRelayService, xmppConnection)).apply {
-            StatsManager.config.transportConfigs.forEach { transportConfig ->
-                // TODO move this config and code to the Muc classes
-                if (transportConfig is StatsTransportConfig.MucStatsTransportConfig) {
-                    addTransport(
-                        transportConfig.toStatsTransport(xmppConnection),
-                        transportConfig.interval.toMillis()
-                    )
-                }
-            }
             start()
         }
     } else {
         null
     }
+    xmppConnection.start(statsMgr)
 
     val callstats = if (CallstatsService.config.enabled) {
         CallstatsService(videobridge, statsMgr)
