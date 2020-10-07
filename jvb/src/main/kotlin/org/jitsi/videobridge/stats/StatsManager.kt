@@ -71,13 +71,13 @@ class StatsManager(
      * Adds a specific <tt>StatsTransport</tt> through which this [StatsManager] is to periodically send statistics.
      *
      * @param transport the [StatsTransport] to add
-     * @param period the internal/period in milliseconds at which this [StatsManager] is to repeatedly send statistics
+     * @param updatePeriodMs the period in milliseconds at which this [StatsManager] is to repeatedly send statistics
      * to the specified [transport].
      */
-    fun addTransport(transport: StatsTransport, period: Long) {
-        require(period >= 1) { "period $period" }
+    fun addTransport(transport: StatsTransport, updatePeriodMs: Long) {
+        require(updatePeriodMs >= 1) { "period $updatePeriodMs" }
 
-        TransportPeriodicRunnable(transport, period).also {
+        TransportPeriodicRunnable(transport, updatePeriodMs).also {
             transportRunnables.add(it)
             if (running.get()) {
                 transportExecutor.registerRecurringRunnable(it)
