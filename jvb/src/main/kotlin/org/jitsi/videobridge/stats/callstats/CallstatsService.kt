@@ -54,7 +54,8 @@ class CallstatsService(
      */
     private var callstatsTransport: CallstatsTransport? = null
 
-    val statsTransport: StatsTransport? = callstatsTransport
+    val statsTransport: StatsTransport?
+        get() = callstatsTransport
 
     fun start(
         /**

@@ -53,7 +53,7 @@ class XmppClientConnectionConfig {
      * legacy-style "stats-transports" config.
      */
     val presenceInterval: Duration = StatsCollector.config.transportConfigs.stream()
-        .filter { tc -> tc is StatsTransportConfig.CallStatsIoStatsTransportConfig }
+        .filter { tc -> tc is StatsTransportConfig.MucStatsTransportConfig }
         .map(StatsTransportConfig::interval)
         .findFirst()
         .orElse(presenceIntervalProperty)
