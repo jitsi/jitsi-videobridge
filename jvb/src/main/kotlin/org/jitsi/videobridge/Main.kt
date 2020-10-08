@@ -30,7 +30,7 @@ import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.rest.root.Application
 import org.jitsi.videobridge.stats.MucStatsTransport
-import org.jitsi.videobridge.stats.StatsManager
+import org.jitsi.videobridge.stats.StatsCollector
 import org.jitsi.videobridge.stats.VideobridgeStatistics
 import org.jitsi.videobridge.stats.callstats.CallstatsService
 import org.jitsi.videobridge.util.TaskPools
@@ -75,8 +75,8 @@ fun main(args: Array<String>) {
     val shutdownService = ShutdownServiceImpl()
     val videobridge = Videobridge(xmppConnection, shutdownService).apply { start() }
     val octoRelayService = octoRelayService().get()?.apply { start() }
-    val statsManager = if (StatsManager.config.enabled) {
-        StatsManager(VideobridgeStatistics(videobridge, octoRelayService, xmppConnection)).apply {
+    val statsManager = if (StatsCollector.config.enabled) {
+        StatsCollector(VideobridgeStatistics(videobridge, octoRelayService, xmppConnection)).apply {
             start()
             addTransport(MucStatsTransport(xmppConnection), xmppConnection.config.presenceInterval.toMillis())
         }

@@ -21,7 +21,7 @@ import com.typesafe.config.ConfigValue
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.config
-import org.jitsi.videobridge.stats.StatsManager
+import org.jitsi.videobridge.stats.StatsCollector
 import org.jitsi.videobridge.stats.config.StatsTransportConfig
 import org.jitsi.xmpp.mucclient.MucClientConfiguration
 import java.time.Duration
@@ -52,7 +52,7 @@ class XmppClientConnectionConfig {
      * The interval at which presence updates (with updates stats/status) are published. Allow to be overriden by
      * legacy-style "stats-transports" config.
      */
-    val presenceInterval: Duration = StatsManager.config.transportConfigs.stream()
+    val presenceInterval: Duration = StatsCollector.config.transportConfigs.stream()
         .filter { tc -> tc is StatsTransportConfig.CallStatsIoStatsTransportConfig }
         .map(StatsTransportConfig::interval)
         .findFirst()

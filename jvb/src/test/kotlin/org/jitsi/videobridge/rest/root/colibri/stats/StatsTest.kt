@@ -25,7 +25,7 @@ import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.test.JerseyTest
 import org.glassfish.jersey.test.TestProperties
 import org.jitsi.videobridge.rest.MockBinder
-import org.jitsi.videobridge.stats.StatsManager
+import org.jitsi.videobridge.stats.StatsCollector
 import org.jitsi.videobridge.stats.VideobridgeStatistics
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
@@ -35,17 +35,17 @@ import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
 
 class StatsTest : JerseyTest() {
-    private lateinit var statsManager: StatsManager
+    private lateinit var statsCollector: StatsCollector
     private val baseUrl = "/colibri/stats"
 
     override fun configure(): Application {
-        statsManager = mockk()
+        statsCollector = mockk()
 
         enable(TestProperties.LOG_TRAFFIC)
         enable(TestProperties.DUMP_ENTITY)
         return object : ResourceConfig() {
             init {
-                register(MockBinder(statsManager, StatsManager::class.java))
+                register(MockBinder(statsCollector, StatsCollector::class.java))
                 register(Stats::class.java)
             }
         }
@@ -56,7 +56,7 @@ class StatsTest : JerseyTest() {
         val fakeStats = mutableMapOf<String, Any>("stat1" to "value1", "stat2" to "value2")
         val videobridgeStatistics = mockk<VideobridgeStatistics>()
         every { videobridgeStatistics.stats } returns fakeStats
-        every { statsManager.statistics } returns videobridgeStatistics
+        every { statsCollector.statistics } returns videobridgeStatistics
 
         val resp = target(baseUrl).request().get()
         resp.status shouldBe HttpStatus.OK_200

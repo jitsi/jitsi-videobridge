@@ -22,15 +22,15 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * [StatsManager] periodically gathers statistics via the [Statistics] it was created with, and periodically pushes
- * the latest gathered statistics to the [StatTransport]s that have been added to it.
+ * [StatsCollector] periodically collects statistics by calling [Statistics.generate] on [statistics], and periodically
+ * pushes the latest collected statistics to the [StatsTransport]s that have been added to it.
  *
  * @author Hristo Terezov
  * @author Lyubomir Marinov
  */
-class StatsManager(
+class StatsCollector(
     /**
-     * The instance which can gather/generate statistics via [Statistics.generate]. The [StatsManager] invokes this
+     * The instance which can collect statistics via [Statistics.generate]. The [StatsCollector] invokes this
      * periodically.
      */
     val statistics: Statistics
@@ -39,18 +39,18 @@ class StatsManager(
      * The [RecurringRunnableExecutor] which periodically invokes [statisticsRunnable].
      */
     private val statisticsExecutor = RecurringRunnableExecutor(
-        StatsManager::class.java.simpleName + "-statisticsExecutor"
+        StatsCollector::class.java.simpleName + "-statisticsExecutor"
     )
 
     /**
      * The [RecurringRunnableExecutor] which periodically invokes [transportRunnables].
      */
     private val transportExecutor = RecurringRunnableExecutor(
-        StatsManager::class.java.simpleName + "-transportExecutor"
+        StatsCollector::class.java.simpleName + "-transportExecutor"
     )
 
     /**
-     * The periodic runnable which gathers statistics by invoking `statistics.generate()`.
+     * The periodic runnable which collects statistics by invoking `statistics.generate()`.
      */
     private val statisticsRunnable: StatisticsPeriodicRunnable
 
@@ -60,8 +60,8 @@ class StatsManager(
     private val transportRunnables: MutableList<TransportPeriodicRunnable> = CopyOnWriteArrayList()
 
     /**
-     * Gets the [StatsTransport]s through which this [StatsManager] periodically sends the statistics that it
-     * generates/updates.
+     * Gets the [StatsTransport]s through which this [StatsCollector] periodically sends the statistics that it
+     * collects.
      */
     val transports: Collection<StatsTransport>
         get() = transportRunnables.map { it.o }
@@ -75,10 +75,10 @@ class StatsManager(
     }
 
     /**
-     * Adds a specific <tt>StatsTransport</tt> through which this [StatsManager] is to periodically send statistics.
+     * Adds a specific <tt>StatsTransport</tt> through which this [StatsCollector] is to periodically send statistics.
      *
      * @param transport the [StatsTransport] to add
-     * @param updatePeriodMs the period in milliseconds at which this [StatsManager] is to repeatedly send statistics
+     * @param updatePeriodMs the period in milliseconds at which this [StatsCollector] is to repeatedly send statistics
      * to the specified [transport].
      */
     fun addTransport(transport: StatsTransport, updatePeriodMs: Long) {
@@ -103,7 +103,7 @@ class StatsManager(
     /**
      * {@inheritDoc}
      *
-     * Starts the [StatsTransport]s added to this [StatsManager]. Commences the generation of [Statistics].
+     * Starts the [StatsTransport]s added to this [StatsCollector]. Commences the collection of statistics.
      */
     fun start() {
         if (running.compareAndSet(false, true)) {
@@ -117,7 +117,7 @@ class StatsManager(
     /**
      * {@inheritDoc}
      *
-     * Stops the [StatsTransport]s added to this [StatsManager] and the [StatisticsPeriodicRunnable].
+     * Stops the [StatsTransport]s added to this [StatsCollector] and the [StatisticsPeriodicRunnable].
      */
     fun stop() {
         if (running.compareAndSet(true, false)) {
@@ -131,7 +131,7 @@ class StatsManager(
     }
 
     /**
-     * Implements a [RecurringRunnable] which periodically generates a specific [Statistics].
+     * Implements a [RecurringRunnable] which periodically collects statistics from a specific [Statistics].
      */
     private class StatisticsPeriodicRunnable(statistics: Statistics, period: Long) :
         PeriodicRunnableWithObject<Statistics>(statistics, period) {
