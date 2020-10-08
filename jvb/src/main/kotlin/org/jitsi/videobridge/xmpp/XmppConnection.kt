@@ -48,13 +48,13 @@ class XmppConnection : IQListener {
      */
     val mucClientManager = MucClientManager(FEATURES)
 
-    private val config = XmppClientConnectionConfig()
+    val config = XmppClientConnectionConfig()
 
     private val running = AtomicBoolean(false)
 
     var eventHandler: EventHandler? = null
 
-    fun start(statsManager: StatsManager?) {
+    fun start() {
         if (running.compareAndSet(false, true)) {
             mucClientManager.apply {
                 registerIQ(HealthCheckIQ())
@@ -66,9 +66,6 @@ class XmppConnection : IQListener {
             }
 
             config.clientConfigs.forEach { cfg -> mucClientManager.addMucClient(cfg) }
-
-            statsManager?.addTransport(MucStatsTransport(this), config.presenceInterval.toMillis())
-                ?: logger.warn("Statistics are not enabled, will not publish presence updates!")
         } else {
             logger.info("Already started")
         }

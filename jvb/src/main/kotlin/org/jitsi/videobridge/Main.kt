@@ -29,6 +29,7 @@ import org.jitsi.stats.media.Utils
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.rest.root.Application
+import org.jitsi.videobridge.stats.MucStatsTransport
 import org.jitsi.videobridge.stats.StatsManager
 import org.jitsi.videobridge.stats.VideobridgeStatistics
 import org.jitsi.videobridge.stats.callstats.CallstatsService
@@ -69,21 +70,22 @@ fun main(args: Array<String>) {
 
     startIce4j()
 
-    val xmppConnection = XmppConnection()
+    val xmppConnection = XmppConnection().apply { start() }
     val shutdownService = ShutdownServiceImpl()
     val videobridge = Videobridge(xmppConnection, shutdownService).apply { start() }
     val octoRelayService = octoRelayService().get()?.apply { start() }
-    val statsMgr = if (StatsManager.config.enabled) {
+    val statsManager = if (StatsManager.config.enabled) {
         StatsManager(VideobridgeStatistics(videobridge, octoRelayService, xmppConnection)).apply {
             start()
+            addTransport(MucStatsTransport(xmppConnection), xmppConnection.config.presenceInterval.toMillis())
         }
     } else {
+        logger.warn("Statistics are not enabled, publishing updated presence will not work.")
         null
     }
-    xmppConnection.start(statsMgr)
 
     val callstats = if (CallstatsService.config.enabled) {
-        CallstatsService(videobridge, statsMgr)
+        CallstatsService(videobridge, statsManager)
     } else {
         logger.info("Not starting CallstatsService, disabled in configuration.")
         null
@@ -113,7 +115,7 @@ fun main(args: Array<String>) {
     )
     val privateHttpServer = if (privateServerConfig.isEnabled()) {
         logger.info("Starting private http server")
-        val restApp = Application(videobridge, xmppConnection, statsMgr)
+        val restApp = Application(videobridge, xmppConnection, statsManager)
         createServer(privateServerConfig).also {
             it.servletContextHandler.addServlet(
                 ServletHolder(ServletContainer(restApp)),
@@ -133,7 +135,7 @@ fun main(args: Array<String>) {
     octoRelayService?.stop()
     xmppConnection.stop()
     callstats?.stop()
-    statsMgr?.stop()
+    statsManager?.stop()
 
     try {
         publicHttpServer?.stop()
