@@ -84,8 +84,7 @@ class CallstatsService(
 
         statsManager?.let { statsManager ->
             logger.info("Subscribing to global stats with interval ${config.interval}")
-            statsTransport = CallstatsTransport(statsService)
-                .also { statsTransport ->
+            statsTransport = CallstatsTransport(statsService).also { statsTransport ->
                 statsManager.addTransport(statsTransport, config.interval.toMillis())
             }
         }
