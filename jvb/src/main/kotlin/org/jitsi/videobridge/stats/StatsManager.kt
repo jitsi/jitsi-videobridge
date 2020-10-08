@@ -36,6 +36,20 @@ class StatsManager(
     val statistics: Statistics
 ) {
     /**
+     * The [RecurringRunnableExecutor] which periodically invokes [statisticsRunnable].
+     */
+    private val statisticsExecutor = RecurringRunnableExecutor(
+        StatsManager::class.java.simpleName + "-statisticsExecutor"
+    )
+
+    /**
+     * The [RecurringRunnableExecutor] which periodically invokes [transportRunnables].
+     */
+    private val transportExecutor = RecurringRunnableExecutor(
+        StatsManager::class.java.simpleName + "-transportExecutor"
+    )
+
+    /**
      * The periodic runnable which gathers statistics by invoking `statistics.generate()`.
      */
     private val statisticsRunnable: StatisticsPeriodicRunnable
@@ -144,19 +158,5 @@ class StatsManager(
     companion object {
         @JvmField
         val config = StatsManagerConfig()
-
-        /**
-         * The [RecurringRunnableExecutor] which periodically invokes [statisticsRunnable].
-         */
-        private val statisticsExecutor = RecurringRunnableExecutor(
-            StatsManager::class.java.simpleName + "-statisticsExecutor"
-        )
-
-        /**
-         * The [RecurringRunnableExecutor] which periodically invokes [transportRunnables].
-         */
-        private val transportExecutor = RecurringRunnableExecutor(
-            StatsManager::class.java.simpleName + "-transportExecutor"
-        )
     }
 }
