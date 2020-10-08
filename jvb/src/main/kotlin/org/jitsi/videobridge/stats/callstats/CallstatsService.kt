@@ -128,7 +128,7 @@ class CallstatsConfig {
      */
     val appId: Int by config {
         "io.callstats.sdk.CallStats.appId".from(JitsiConfig.legacyConfig)
-        "videobridge.callstats.app-id".from(JitsiConfig.newConfig)
+        "videobridge.stats.callstats.app-id".from(JitsiConfig.newConfig)
     }
 
     /**
@@ -136,7 +136,7 @@ class CallstatsConfig {
      */
     val appSecret: String? by optionalconfig {
         "io.callstats.sdk.CallStats.appSecret".from(JitsiConfig.legacyConfig)
-        "videobridge.callstats.app-secret".from(JitsiConfig.newConfig)
+        "videobridge.stats.callstats.app-secret".from(JitsiConfig.newConfig)
     }
 
     /**
@@ -144,7 +144,7 @@ class CallstatsConfig {
      */
     val keyId: String? by optionalconfig {
         "io.callstats.sdk.CallStats.keyId".from(JitsiConfig.legacyConfig)
-        "videobridge.callstats.key-id".from(JitsiConfig.newConfig)
+        "videobridge.stats.callstats.key-id".from(JitsiConfig.newConfig)
     }
 
     /**
@@ -152,12 +152,12 @@ class CallstatsConfig {
      */
     val keyPath: String? by optionalconfig {
         "io.callstats.sdk.CallStats.keyPath".from(JitsiConfig.legacyConfig)
-        "videobridge.callstats.key-path".from(JitsiConfig.newConfig)
+        "videobridge.stats.callstats.key-path".from(JitsiConfig.newConfig)
     }
 
     val bridgeId: String by config {
         "io.callstats.sdk.CallStats.bridgeId".from(JitsiConfig.legacyConfig)
-        "videobridge.callstats.bridge-id".from(JitsiConfig.newConfig)
+        "videobridge.stats.callstats.bridge-id".from(JitsiConfig.newConfig)
     }
 
     /**
@@ -165,11 +165,11 @@ class CallstatsConfig {
      */
     val conferenceIdPrefix: String? by optionalconfig {
         "io.callstats.sdk.CallStats.conferenceIDPrefix".from(JitsiConfig.legacyConfig)
-        "videobridge.callstats.conference-id-prefix".from(JitsiConfig.newConfig)
+        "videobridge.stats.callstats.conference-id-prefix".from(JitsiConfig.newConfig)
     }
 
     private val intervalProperty: Duration by config {
-        "videobridge.callstats.interval".from(JitsiConfig.newConfig)
+        "videobridge.stats.callstats.interval".from(JitsiConfig.newConfig)
     }
 
     /**
