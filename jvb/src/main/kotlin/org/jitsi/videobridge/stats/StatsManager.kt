@@ -33,7 +33,8 @@ class StatsManager(
      * The instance which can gather/generate statistics via [Statistics.generate]. The [StatsManager] invokes this
      * periodically.
      */
-    val statistics: Statistics) {
+    val statistics: Statistics
+) {
     /**
      * The periodic runnable which gathers statistics by invoking `statistics.generate()`.
      */

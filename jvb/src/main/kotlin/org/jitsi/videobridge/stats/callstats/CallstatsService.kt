@@ -22,14 +22,18 @@ import org.jitsi.metaconfig.optionalconfig
 import org.jitsi.stats.media.StatsService
 import org.jitsi.stats.media.StatsServiceFactory
 import org.jitsi.utils.logging2.createLogger
+import org.jitsi.utils.version.Version
 import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.stats.StatsManager
+import org.jitsi.videobridge.stats.StatsTransport
 import org.jitsi.videobridge.stats.config.StatsTransportConfig
 import java.time.Duration
 
 class CallstatsService(
-    private val videobridge: Videobridge,
-    private val statsManager: StatsManager?
+    /**
+     * The version of the running application.
+     */
+    val version: Version
 ) {
     private val logger = createLogger()
 
@@ -48,14 +52,21 @@ class CallstatsService(
      * The [StatsTransport] used to send global stats to callstats. Initialized asynchronously, and only if the stats
      * manager is available to provide stats.
      */
-    private var statsTransport: CallstatsTransport? = null
+    private var callstatsTransport: CallstatsTransport? = null
 
-    init {
-        logger.info("Initializing CallstatsService with config: $config")
+    val statsTransport: StatsTransport? = callstatsTransport
+
+    fun start(
+        /**
+        * Function to call if and when the service successfully initializes.
+        */
+        initializedCallback: () -> Unit = {}
+    ) {
+        logger.info("Starting CallstatsService with config: $config")
 
         // as we create only one instance of StatsService
         StatsServiceFactory.getInstance().createStatsService(
-            videobridge.versionService.currentVersion,
+            version,
             config.appId,
             config.appSecret,
             config.keyId,
@@ -71,24 +82,18 @@ class CallstatsService(
 
                 override fun onInitialized(statsService: StatsService, message: String) {
                     logger.info("Jitsi-stats service initialized: $message")
-                    statsServiceInitialized(statsService)
+                    statsServiceInitialized(statsService, initializedCallback)
                 }
             })
     }
 
-    fun statsServiceInitialized(statsService: StatsService) {
+    fun statsServiceInitialized(statsService: StatsService, callback: () -> Unit) {
         // Now that the callstats/jitsi-stats service has been initialized, we can hook up to global statistics and
         // conference create/expire events from [Videobridge]
 
         this.statsService = statsService
 
-        statsManager?.let { statsManager ->
-            logger.info("Subscribing to global stats with interval ${config.interval}")
-            statsTransport = CallstatsTransport(statsService).also { statsTransport ->
-                statsManager.addTransport(statsTransport, config.interval.toMillis())
-            }
-        }
-
+        callstatsTransport = CallstatsTransport(statsService)
         conferenceManager =
             CallstatsConferenceManager(
                 statsService,
@@ -97,25 +102,22 @@ class CallstatsService(
                 config.conferenceIdPrefix
             )
 
-        videobridge.addEventHandler(conferenceManager)
+        callback()
     }
 
     fun stop() {
         logger.info("Stopping CallstatsService")
         conferenceManager?.let {
-            videobridge.removeEventHandler(it)
             it.stop()
-        }
-        statsManager?.let { statsManager ->
-            statsTransport?.let {
-                statsManager.removeTransport(it)
-            }
         }
 
         conferenceManager = null
-        statsTransport = null
+        callstatsTransport = null
         statsService = null
     }
+
+    val videobridgeEventHandler: Videobridge.EventHandler?
+        get() = conferenceManager
 
     companion object {
         val config = CallstatsConfig()

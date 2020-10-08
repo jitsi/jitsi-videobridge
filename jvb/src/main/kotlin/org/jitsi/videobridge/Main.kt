@@ -37,6 +37,7 @@ import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
 import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
 import org.jitsi.videobridge.xmpp.XmppConnection
+import java.lang.IllegalStateException
 import kotlin.concurrent.thread
 import org.jitsi.videobridge.octo.singleton as octoRelayService
 
@@ -85,7 +86,17 @@ fun main(args: Array<String>) {
     }
 
     val callstats = if (CallstatsService.config.enabled) {
-        CallstatsService(videobridge, statsManager)
+        CallstatsService(videobridge.versionService.currentVersion).apply {
+            start {
+                statsTransport?.let { statsTransport ->
+                    statsManager?.addTransport(statsTransport, CallstatsService.config.interval.toMillis())
+                        ?: logger.warn("Callstats is enabled, but the stats manager is not. Will not publish" +
+                            " per-conference stats.")
+                } ?: throw IllegalStateException("Stats transport is null after the service is started")
+
+                videobridge.addEventHandler(videobridgeEventHandler)
+            }
+        }
     } else {
         logger.info("Not starting CallstatsService, disabled in configuration.")
         null
@@ -134,7 +145,13 @@ fun main(args: Array<String>) {
     logger.info("Bridge shutting down")
     octoRelayService?.stop()
     xmppConnection.stop()
-    callstats?.stop()
+    callstats?.let {
+        videobridge.removeEventHandler(it.videobridgeEventHandler)
+        it.statsTransport?.let { statsTransport ->
+            statsManager?.removeTransport(statsTransport)
+        }
+        it.stop()
+    }
     statsManager?.stop()
 
     try {
