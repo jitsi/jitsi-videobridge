@@ -42,7 +42,7 @@ public class ByteBufferPool
      */
     private static int T1 = 220;
     private static int T2 = 775;
-    private static int T3 = 1240;
+    private static int T3 = 1244;
 
     /**
      * The pool of buffers with size <= T1
