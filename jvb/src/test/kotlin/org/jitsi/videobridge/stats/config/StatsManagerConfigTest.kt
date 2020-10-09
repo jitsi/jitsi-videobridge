@@ -16,22 +16,20 @@
 
 package org.jitsi.videobridge.stats.config
 
-import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.inspectors.forOne
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
-import org.jitsi.metaconfig.ConfigException
 import java.time.Duration
 
-internal class StatsManagerBundleActivatorConfigTest : ConfigTest() {
+internal class StatsManagerConfigTest : ConfigTest() {
 
     init {
         context("When only new config contains stats transport config") {
             context("a stats transport config") {
                 context("with multiple, valid stats transports configured") {
                     withNewConfig(newConfigAllStatsTransports()) {
-                        val cfg = StatsManagerBundleActivatorConfig()
+                        val cfg = StatsManagerConfig()
 
                         cfg.transportConfigs shouldHaveSize 2
                         cfg.transportConfigs.forOne {
@@ -47,27 +45,17 @@ internal class StatsManagerBundleActivatorConfigTest : ConfigTest() {
                 context("with an invalid stats transport configured") {
                     withNewConfig(newConfigInvalidStatsTransports()) {
                         should("ignore the invalid config and parse the valid transport correctly") {
-                            val cfg = StatsManagerBundleActivatorConfig()
+                            val cfg = StatsManagerConfig()
 
                             cfg.transportConfigs shouldHaveSize 1
                             cfg.transportConfigs.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
                         }
                     }
                 }
-                context("which has valid transports but stats are disabled") {
-                    withNewConfig(newConfigInvalidStatsTransports(enabled = false)) {
-                        should("throw when trying to access the stats transports") {
-                            val cfg = StatsManagerBundleActivatorConfig()
-                            shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
-                                cfg.transportConfigs
-                            }
-                        }
-                    }
-                }
                 context("which has a custom interval") {
                     withNewConfig(newConfigOneStatsTransportCustomInterval()) {
                         should("reflect the custom interval") {
-                            val cfg = StatsManagerBundleActivatorConfig()
+                            val cfg = StatsManagerConfig()
                             cfg.transportConfigs.forOne {
                                 it as StatsTransportConfig.MucStatsTransportConfig
                                 it.interval shouldBe Duration.ofSeconds(10)
@@ -81,21 +69,11 @@ internal class StatsManagerBundleActivatorConfigTest : ConfigTest() {
             withLegacyConfig(legacyConfigAllStatsTransports()) {
                 withNewConfig(newConfigOneStatsTransport()) {
                     should("use the values from the old config") {
-                        val cfg = StatsManagerBundleActivatorConfig()
+                        val cfg = StatsManagerConfig()
 
                         cfg.transportConfigs shouldHaveSize 2
                         cfg.transportConfigs.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
                         cfg.transportConfigs.forOne { it as StatsTransportConfig.CallStatsIoStatsTransportConfig }
-                    }
-                }
-            }
-            context("and it's disabled in old config but enabled in new config") {
-                withLegacyConfig(legacyConfigStatsEnabled(enabled = false)) {
-                    withNewConfig(newConfigOneStatsTransport()) {
-                        should("throw when trying to access the stats transports field") {
-                            val cfg = StatsManagerBundleActivatorConfig()
-                            shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> { cfg.transportConfigs }
-                        }
                     }
                 }
             }

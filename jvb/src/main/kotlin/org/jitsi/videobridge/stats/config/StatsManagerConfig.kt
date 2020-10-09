@@ -22,14 +22,10 @@ import com.typesafe.config.ConfigObject
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.config
-import org.jitsi.utils.version.Version
-import org.jitsi.videobridge.stats.CallStatsIOTransport
-import org.jitsi.videobridge.stats.MucStatsTransport
-import org.jitsi.videobridge.stats.StatsTransport
 import org.jitsi.videobridge.xmpp.XmppConnection
 import java.time.Duration
 
-class StatsManagerBundleActivatorConfig {
+class StatsManagerConfig {
     /**
      * Whether or not the stats are enabled
      */
@@ -56,29 +52,31 @@ class StatsManagerBundleActivatorConfig {
      * Note that if 'org.jitsi.videobridge.STATISTICS_TRANSPORT' is present at all
      * in the legacy config, we won't search the new config (we don't support merging
      * stats transport configs from old and new config together).
+     *
+     * These are now obsolete and only maintained for backward compatibility. Transports should be configured in the
+     * modules that define them. See e.g. the implementations in [CallstatsService] and [XmppConnection].
     */
     val transportConfigs: List<StatsTransportConfig> by config {
-        onlyIf("Stats transports are enabled", ::enabled) {
-            "org.jitsi.videobridge."
-                .from(JitsiConfig.legacyConfig)
-                .convertFrom<Map<String, String>> {
-                    if ("org.jitsi.videobridge.STATISTICS_TRANSPORT" in it) {
-                        it.toStatsTransportConfig()
-                    } else {
-                        throw ConfigException.UnableToRetrieve.NotFound("not found in legacy config")
-                    }
+        "org.jitsi.videobridge."
+            .from(JitsiConfig.legacyConfig)
+            .convertFrom<Map<String, String>> {
+                if ("org.jitsi.videobridge.STATISTICS_TRANSPORT" in it) {
+                    it.toStatsTransportConfig()
+                } else {
+                    throw ConfigException.UnableToRetrieve.NotFound("not found in legacy config")
                 }
-            "videobridge.stats"
-                .from(JitsiConfig.newConfig)
-                .convertFrom<ConfigObject> { cfg ->
-                    val transports = cfg["transports"]
-                        ?: throw ConfigException.UnableToRetrieve.NotFound("Could not find transports within stats")
-                    transports as ConfigList
-                    transports.map { it as ConfigObject }
-                            .map { it.toConfig() }
-                            .mapNotNull { it.toStatsTransportConfig() }
-                }
-        }
+            }
+        "videobridge.stats"
+            .from(JitsiConfig.newConfig)
+            .convertFrom<ConfigObject> { cfg ->
+                val transports = cfg["transports"]
+                    ?: throw ConfigException.UnableToRetrieve.NotFound("Could not find transports within stats")
+                transports as ConfigList
+                transports.map { it as ConfigObject }
+                        .map { it.toConfig() }
+                        .mapNotNull { it.toStatsTransportConfig() }
+            }
+        "default" { emptyList() }
     }
 
     /**
@@ -90,7 +88,7 @@ class StatsManagerBundleActivatorConfig {
         return transportTypes.mapNotNull { transportType ->
             val interval = this["org.jitsi.videobridge.STATISTICS_INTERVAL.$transportType"]?.let {
                 Duration.ofMillis(it.toLong())
-            } ?: this@StatsManagerBundleActivatorConfig.interval
+            } ?: this@StatsManagerConfig.interval
             when (transportType) {
                 "muc" -> StatsTransportConfig.MucStatsTransportConfig(interval)
                 "callstats.io" -> StatsTransportConfig.CallStatsIoStatsTransportConfig(interval)
@@ -103,7 +101,7 @@ class StatsManagerBundleActivatorConfig {
         val interval = if (hasPath("interval")) {
             getDuration("interval")
         } else {
-            this@StatsManagerBundleActivatorConfig.interval
+            this@StatsManagerConfig.interval
         }
         return when (getString("type")) {
             "muc" -> StatsTransportConfig.MucStatsTransportConfig(interval)
@@ -119,11 +117,6 @@ class StatsManagerBundleActivatorConfig {
 sealed class StatsTransportConfig(
     val interval: Duration
 ) {
-    class MucStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval) {
-        fun toStatsTransport(xmppConnection: XmppConnection): StatsTransport = MucStatsTransport(xmppConnection)
-    }
-
-    class CallStatsIoStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval) {
-        fun toStatsTransport(jvbVersion: Version): StatsTransport = CallStatsIOTransport(jvbVersion)
-    }
+    class MucStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval)
+    class CallStatsIoStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval)
 }

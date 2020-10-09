@@ -30,13 +30,13 @@ import javax.ws.rs.core.*;
 public class Stats
 {
     @Inject
-    protected StatsManager statsManager;
+    protected StatsCollector statsManager;
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public String getStats()
     {
-        StatsManager statsManager = this.statsManager;
+        StatsCollector statsManager = this.statsManager;
 
         if (this.statsManager != null)
         {
