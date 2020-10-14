@@ -1443,7 +1443,7 @@ public class BitrateController
             // smaller than o2" as this is equivalent to "o1 needs to be
             // prioritized first".
             int preferredHeightDiff =
-                    o2.effectiveVideoConstraints.getPreferredHeight() - o1.effectiveVideoConstraints.getPreferredHeight();
+                o2.effectiveVideoConstraints.getPreferredHeight() - o1.effectiveVideoConstraints.getPreferredHeight();
             if (preferredHeightDiff != 0)
             {
                 return preferredHeightDiff;
