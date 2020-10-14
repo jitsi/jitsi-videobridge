@@ -102,17 +102,77 @@ public class BitrateController
     private static final RateSnapshot[] EMPTY_RATE_SNAPSHOT_ARRAY = new RateSnapshot[0];
 
     /**
-     * The {@link Logger} to be used by this instance to print debug
-     * information.
-     */
-    private final Logger logger;
-
-    /**
      * The {@link TimeSeriesLogger} to be used by this instance to print time
      * series.
      */
     private static final TimeSeriesLogger timeSeriesLogger
         = TimeSeriesLogger.getTimeSeriesLogger(BitrateController.class);
+
+    /**
+     * Returns a boolean that indicates whether or not the current bandwidth
+     * estimation (in bps) has changed above the configured threshold (in
+     * percent) {@link #BWE_CHANGE_THRESHOLD_PCT} with respect to the previous
+     * bandwidth estimation.
+     *
+     * @param previousBwe the previous bandwidth estimation (in bps).
+     * @param currentBwe the current bandwidth estimation (in bps).
+     *
+     * @return true if the bandwidth has changed above the configured threshold,
+     * false otherwise.
+     */
+    private static boolean changeIsLargerThanThreshold(
+            long previousBwe, long currentBwe)
+    {
+        if (previousBwe == -1 || currentBwe == -1)
+        {
+            return true;
+        }
+
+        long deltaBwe = currentBwe - previousBwe;
+
+        // if the bwe has increased, we should act upon it, otherwise
+        // we may end up in this broken situation: Suppose that the target
+        // bitrate is 2.5Mbps, and that the last bitrate allocation was
+        // performed with a 2.4Mbps bandwidth estimate.  The bridge keeps
+        // probing and, suppose that, eventually the bandwidth estimate reaches
+        // 2.6Mbps, which is plenty to accommodate the target bitrate; but the
+        // minimum bandwidth estimate that would trigger a new bitrate
+        // allocation is 2.4Mbps + 2.4Mbps * 15% = 2.76Mbps.
+        //
+        // if, on the other hand, the bwe has decreased, we require a 15%
+        // (configurable) drop at last in order to update the bitrate
+        // allocation. This is an ugly hack to prevent too many resolution/UI
+        // changes in case the bridge produces too low bandwidth estimate, at
+        // the risk of clogging the receiver's pipe.
+
+        return deltaBwe > 0 ||  deltaBwe < -1 * previousBwe * BitrateControllerConfig.bweChangeThreshold();
+    }
+
+    public static List<EndpointMultiRank> makeEndpointMultiRankList(
+            List<AbstractEndpoint> conferenceEndpoints,
+            Map<String, VideoConstraints> videoConstraintsMap,
+            int adjustedLastN)
+    {
+        List<EndpointMultiRank> endpointMultiRankList = new ArrayList<>(conferenceEndpoints.size());
+        for (int i = 0; i < conferenceEndpoints.size(); i++)
+        {
+            AbstractEndpoint endpoint = conferenceEndpoints.get(i);
+
+            VideoConstraints effectiveVideoConstraints = (i < adjustedLastN || adjustedLastN < 0)
+                    ? videoConstraintsMap.getOrDefault(endpoint.getID(), VideoConstraints.thumbnailVideoConstraints)
+                    : VideoConstraints.disabledVideoConstraints;
+
+            endpointMultiRankList.add(new EndpointMultiRank(i, effectiveVideoConstraints, endpoint));
+        }
+        endpointMultiRankList.sort(new EndpointMultiRanker());
+        return endpointMultiRankList;
+    }
+
+    /**
+     * The {@link Logger} to be used by this instance to print debug
+     * information.
+     */
+    private final Logger logger;
 
     /**
      * The {@link AdaptiveSourceProjection}s that this instance is managing, keyed
@@ -234,45 +294,6 @@ public class BitrateController
         this(destinationEndpoint, diagnosticContext, parentLogger, Clock.systemUTC());
     }
 
-    /**
-     * Returns a boolean that indicates whether or not the current bandwidth
-     * estimation (in bps) has changed above the configured threshold (in
-     * percent) {@link #BWE_CHANGE_THRESHOLD_PCT} with respect to the previous
-     * bandwidth estimation.
-     *
-     * @param previousBwe the previous bandwidth estimation (in bps).
-     * @param currentBwe the current bandwidth estimation (in bps).
-     *
-     * @return true if the bandwidth has changed above the configured threshold,
-     * false otherwise.
-     */
-    private static boolean changeIsLargerThanThreshold(
-        long previousBwe, long currentBwe)
-    {
-        if (previousBwe == -1 || currentBwe == -1)
-        {
-            return true;
-        }
-
-        long deltaBwe = currentBwe - previousBwe;
-
-        // if the bwe has increased, we should act upon it, otherwise
-        // we may end up in this broken situation: Suppose that the target
-        // bitrate is 2.5Mbps, and that the last bitrate allocation was
-        // performed with a 2.4Mbps bandwidth estimate.  The bridge keeps
-        // probing and, suppose that, eventually the bandwidth estimate reaches
-        // 2.6Mbps, which is plenty to accommodate the target bitrate; but the
-        // minimum bandwidth estimate that would trigger a new bitrate
-        // allocation is 2.4Mbps + 2.4Mbps * 15% = 2.76Mbps.
-        //
-        // if, on the other hand, the bwe has decreased, we require a 15%
-        // (configurable) drop at last in order to update the bitrate
-        // allocation. This is an ugly hack to prevent too many resolution/UI
-        // changes in case the bridge produces too low bandwidth estimate, at
-        // the risk of clogging the receiver's pipe.
-
-        return deltaBwe > 0 ||  deltaBwe < -1 * previousBwe * BitrateControllerConfig.bweChangeThreshold();
-    }
 
     /**
      * Defines a packet filter that controls which RTP packets to be written
@@ -916,26 +937,6 @@ public class BitrateController
         return sourceBitrateAllocations.toArray(new SourceBitrateAllocation[0]);
     }
 
-    public static List<EndpointMultiRank> makeEndpointMultiRankList(
-        List<AbstractEndpoint> conferenceEndpoints,
-        Map<String, VideoConstraints> videoConstraintsMap,
-        int adjustedLastN)
-    {
-        List<EndpointMultiRank> endpointMultiRankList = new ArrayList<>(conferenceEndpoints.size());
-        for (int i = 0; i < conferenceEndpoints.size(); i++)
-        {
-            AbstractEndpoint endpoint = conferenceEndpoints.get(i);
-
-            VideoConstraints effectiveVideoConstraints = (i < adjustedLastN || adjustedLastN < 0)
-                ? videoConstraintsMap.getOrDefault(endpoint.getID(), VideoConstraints.thumbnailVideoConstraints)
-                : VideoConstraints.disabledVideoConstraints;
-
-            endpointMultiRankList.add(new EndpointMultiRank(i, effectiveVideoConstraints, endpoint));
-        }
-        endpointMultiRankList.sort(new EndpointMultiRanker());
-        return endpointMultiRankList;
-    }
-
     public void setVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraintsMap)
     {
         if (!this.videoConstraintsMap.equals(newVideoConstraintsMap))
@@ -1433,8 +1434,7 @@ public class BitrateController
      * leverages it). If two endpoints have the same ideal and preferred height,
      * then we look at their speech rank (whoever spoke last has is ranked higher).
      */
-    static class EndpointMultiRanker
-            implements Comparator<EndpointMultiRank>
+    static class EndpointMultiRanker implements Comparator<EndpointMultiRank>
     {
         @Override
         public int compare(EndpointMultiRank o1, EndpointMultiRank o2)
