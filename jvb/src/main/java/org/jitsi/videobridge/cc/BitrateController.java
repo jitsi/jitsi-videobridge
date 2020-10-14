@@ -571,16 +571,14 @@ public class BitrateController
 
         long bweBps = getAvailableBandwidth(nowMs);
 
-        // Create a copy as we may modify the list in the prioritize method.
-        List<String> sortedEndpointIdsCopy = sortedEndpointIds;
-        if (sortedEndpointIdsCopy == null || sortedEndpointIdsCopy.isEmpty())
+        if (sortedEndpointIds == null || sortedEndpointIds.isEmpty())
         {
             return;
         }
 
-        List<AbstractEndpoint> sortedEndpoints = new ArrayList<>(sortedEndpointIdsCopy.size());
+        List<AbstractEndpoint> sortedEndpoints = new ArrayList<>(sortedEndpointIds.size());
         List<AbstractEndpoint> conferenceEndpoints = endpointsSupplier.get();
-        for (String endpointId : sortedEndpointIdsCopy)
+        for (String endpointId : sortedEndpointIds)
         {
             conferenceEndpoints.stream()
                     .filter(e -> e.getID().equals(endpointId))
@@ -800,7 +798,7 @@ public class BitrateController
      * {@link ConferenceSpeechActivity}.
      * @return an array of {@link SourceBitrateAllocation}.
      */
-    private SourceBitrateAllocation[] allocate(long maxBandwidth, List<AbstractEndpoint> conferenceEndpoints)
+    private synchronized SourceBitrateAllocation[] allocate(long maxBandwidth, List<AbstractEndpoint> conferenceEndpoints)
     {
         SourceBitrateAllocation[] sourceBitrateAllocations = prioritize(conferenceEndpoints);
 
@@ -894,10 +892,8 @@ public class BitrateController
      * selected endpoint are at the top of the array, followed by the pinned
      * endpoints, finally followed by any other remaining endpoints.
      */
-    private SourceBitrateAllocation[] prioritize(List<AbstractEndpoint> conferenceEndpoints)
+    private synchronized SourceBitrateAllocation[] prioritize(List<AbstractEndpoint> conferenceEndpoints)
     {
-        Map<String, VideoConstraints> copyOfVideoConstraintsMap = this.videoConstraintsMap;
-
         // Init.
         List<SourceBitrateAllocation> sourceBitrateAllocations = new ArrayList<>();
 
@@ -918,11 +914,11 @@ public class BitrateController
             logger.debug("Prioritizing endpoints, adjusted last-n: " + adjustedLastN +
                 ", sorted endpoint list: " +
                 conferenceEndpoints.stream().map(AbstractEndpoint::getID).collect(Collectors.joining(", ")) +
-                ". Endpoints constraints: " + Arrays.toString(copyOfVideoConstraintsMap.values().toArray()));
+                ". Endpoints constraints: " + Arrays.toString(videoConstraintsMap.values().toArray()));
         }
 
         List<EndpointMultiRank> endpointMultiRankList
-            = makeEndpointMultiRankList(conferenceEndpoints, copyOfVideoConstraintsMap, adjustedLastN);
+            = makeEndpointMultiRankList(conferenceEndpoints, videoConstraintsMap, adjustedLastN);
 
         for (EndpointMultiRank endpointMultiRank : endpointMultiRankList)
         {
