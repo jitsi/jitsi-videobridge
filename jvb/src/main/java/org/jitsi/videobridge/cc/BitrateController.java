@@ -275,96 +275,6 @@ public class BitrateController
     }
 
     /**
-     * A helper class that is used to determine the bandwidth allocation
-     * rank/priority of an endpoint that is based on its speaker rank and its
-     * video constraints. See {@link EndpointMultiRanker} for more information
-     * on how the ranking works.
-     */
-    static class EndpointMultiRank
-    {
-        /**
-         * The speaker rank of the {@link #endpoint} with 0 meaning that the
-         * {@link #endpoint} is the most recent dominant speaker. Also see
-         * {@link ConferenceSpeechActivity#endpoints}
-         */
-        final int speakerRank;
-
-        /**
-         * The video constraints of the {@link #endpoint}.
-         */
-        final VideoConstraints effectiveVideoConstraints;
-
-        /**
-         * The endpoint (sender) that's constrained and is ranked for bandwidth
-         * allocation.
-         */
-        final AbstractEndpoint endpoint;
-
-        /**
-         * Ctor.
-         *
-         * @param speakerRank
-         * @param effectiveVideoConstraints
-         * @param endpoint
-         */
-        EndpointMultiRank(int speakerRank, VideoConstraints effectiveVideoConstraints, AbstractEndpoint endpoint)
-        {
-            this.speakerRank = speakerRank;
-            this.effectiveVideoConstraints = effectiveVideoConstraints;
-            this.endpoint = endpoint;
-        }
-    }
-
-    /**
-     * An endpoint that has higher priority/rank will be allocated
-     * bandwidth prior to other endpoints with lower priority/rank
-     * (see the allocate method bellow)
-     *
-     * Once the endpoints are ranked, the bandwidth allocation algorithm
-     * loops over the endpoints multiple times, improving their target
-     * bitrate at every step, until no further improvement is possible.
-     *
-     * In this multi-rank implementation, endpoints that have a preferred height
-     * set (on-stage endpoints in Jitsi Meet) will be given bandwidth first.
-     * Then we prioritize endpoints that have higher ideal height (this rule is
-     * somewhat arbitrary since we don't have a use case in Jitsi Meet that
-     * leverages it). If two endpoints have the same ideal and preferred height,
-     * then we look at their speech rank (whoever spoke last has is ranked higher).
-     */
-    static class EndpointMultiRanker
-        implements Comparator<EndpointMultiRank>
-    {
-        @Override
-        public int compare(EndpointMultiRank o1, EndpointMultiRank o2)
-        {
-            // We want "o1 has higher preferred height than o2" to imply "o1 is
-            // smaller than o2" as this is equivalent to "o1 needs to be
-            // prioritized first".
-            int preferredHeightDiff =
-                o2.effectiveVideoConstraints.getPreferredHeight() - o1.effectiveVideoConstraints.getPreferredHeight();
-            if (preferredHeightDiff != 0)
-            {
-                return preferredHeightDiff;
-            }
-            else
-            {
-                // We want "o1 has higher ideal height than o2" to imply "o1 is
-                // smaller than o2" as this is equivalent to "o1 needs to be
-                // prioritized first".
-                int idealHeightDiff
-                    = o2.effectiveVideoConstraints.getIdealHeight() - o1.effectiveVideoConstraints.getIdealHeight();
-                if (idealHeightDiff != 0)
-                {
-                    return idealHeightDiff;
-                }
-
-                // Everything else being equal, we rely on the speaker order.
-                return o1.speakerRank - o2.speakerRank;
-            }
-        }
-    }
-
-    /**
      * Defines a packet filter that controls which RTP packets to be written
      * into the {@link Endpoint} that owns this {@link BitrateController}.
      *
@@ -462,29 +372,6 @@ public class BitrateController
         debugState.put("adaptiveSourceProjectionMap", adaptiveSourceProjectionsJson);
         debugState.put("numDroppedPacketsUnknownSsrc", numDroppedPacketsUnknownSsrc.intValue());
         return debugState;
-    }
-
-    /**
-     * TODO Document
-     */
-    static class StatusSnapshot
-    {
-        final long currentTargetBps;
-        final long currentIdealBps;
-        final Collection<Long> activeSsrcs;
-
-        StatusSnapshot()
-        {
-            currentTargetBps = -1L;
-            currentIdealBps = -1L;
-            activeSsrcs = Collections.emptyList();
-        }
-        StatusSnapshot(Long currentTargetBps, Long currentIdealBps, Collection<Long> activeSsrcs)
-        {
-            this.currentTargetBps = currentTargetBps;
-            this.currentIdealBps = currentIdealBps;
-            this.activeSsrcs = activeSsrcs;
-        }
     }
 
     /**
@@ -1148,7 +1035,6 @@ public class BitrateController
         return this.forwardedEndpointIds.size();
     }
 
-
     /**
      * A snapshot of the bitrate for a given {@link RtpLayerDesc}.
      */
@@ -1489,4 +1375,118 @@ public class BitrateController
             return ratedIndices.length != 0 ? ratedIndices[ratedIndices.length - 1].layer.getIndex() : -1;
         }
     }
+
+    /**
+     * A helper class that is used to determine the bandwidth allocation
+     * rank/priority of an endpoint that is based on its speaker rank and its
+     * video constraints. See {@link EndpointMultiRanker} for more information
+     * on how the ranking works.
+     */
+    static class EndpointMultiRank
+    {
+        /**
+         * The speaker rank of the {@link #endpoint} with 0 meaning that the
+         * {@link #endpoint} is the most recent dominant speaker. Also see
+         * {@link ConferenceSpeechActivity#endpoints}
+         */
+        final int speakerRank;
+
+        /**
+         * The video constraints of the {@link #endpoint}.
+         */
+        final VideoConstraints effectiveVideoConstraints;
+
+        /**
+         * The endpoint (sender) that's constrained and is ranked for bandwidth
+         * allocation.
+         */
+        final AbstractEndpoint endpoint;
+
+        /**
+         * Ctor.
+         *
+         * @param speakerRank
+         * @param effectiveVideoConstraints
+         * @param endpoint
+         */
+        EndpointMultiRank(int speakerRank, VideoConstraints effectiveVideoConstraints, AbstractEndpoint endpoint)
+        {
+            this.speakerRank = speakerRank;
+            this.effectiveVideoConstraints = effectiveVideoConstraints;
+            this.endpoint = endpoint;
+        }
+    }
+
+    /**
+     * An endpoint that has higher priority/rank will be allocated
+     * bandwidth prior to other endpoints with lower priority/rank
+     * (see the allocate method bellow)
+     *
+     * Once the endpoints are ranked, the bandwidth allocation algorithm
+     * loops over the endpoints multiple times, improving their target
+     * bitrate at every step, until no further improvement is possible.
+     *
+     * In this multi-rank implementation, endpoints that have a preferred height
+     * set (on-stage endpoints in Jitsi Meet) will be given bandwidth first.
+     * Then we prioritize endpoints that have higher ideal height (this rule is
+     * somewhat arbitrary since we don't have a use case in Jitsi Meet that
+     * leverages it). If two endpoints have the same ideal and preferred height,
+     * then we look at their speech rank (whoever spoke last has is ranked higher).
+     */
+    static class EndpointMultiRanker
+            implements Comparator<EndpointMultiRank>
+    {
+        @Override
+        public int compare(EndpointMultiRank o1, EndpointMultiRank o2)
+        {
+            // We want "o1 has higher preferred height than o2" to imply "o1 is
+            // smaller than o2" as this is equivalent to "o1 needs to be
+            // prioritized first".
+            int preferredHeightDiff =
+                    o2.effectiveVideoConstraints.getPreferredHeight() - o1.effectiveVideoConstraints.getPreferredHeight();
+            if (preferredHeightDiff != 0)
+            {
+                return preferredHeightDiff;
+            }
+            else
+            {
+                // We want "o1 has higher ideal height than o2" to imply "o1 is
+                // smaller than o2" as this is equivalent to "o1 needs to be
+                // prioritized first".
+                int idealHeightDiff
+                        = o2.effectiveVideoConstraints.getIdealHeight() - o1.effectiveVideoConstraints.getIdealHeight();
+                if (idealHeightDiff != 0)
+                {
+                    return idealHeightDiff;
+                }
+
+                // Everything else being equal, we rely on the speaker order.
+                return o1.speakerRank - o2.speakerRank;
+            }
+        }
+    }
+
+    /**
+     * TODO Document
+     */
+    static class StatusSnapshot
+    {
+        final long currentTargetBps;
+        final long currentIdealBps;
+        final Collection<Long> activeSsrcs;
+
+        StatusSnapshot()
+        {
+            currentTargetBps = -1L;
+            currentIdealBps = -1L;
+            activeSsrcs = Collections.emptyList();
+        }
+        StatusSnapshot(Long currentTargetBps, Long currentIdealBps, Collection<Long> activeSsrcs)
+        {
+            this.currentTargetBps = currentTargetBps;
+            this.currentIdealBps = currentIdealBps;
+            this.activeSsrcs = activeSsrcs;
+        }
+    }
+
 }
