@@ -99,8 +99,7 @@ public class BitrateController
     /**
      * An reusable empty array of {@link RateSnapshot} to reduce allocations.
      */
-    private static final RateSnapshot[] EMPTY_RATE_SNAPSHOT_ARRAY
-        = new RateSnapshot[0];
+    private static final RateSnapshot[] EMPTY_RATE_SNAPSHOT_ARRAY = new RateSnapshot[0];
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -119,8 +118,7 @@ public class BitrateController
      * The {@link AdaptiveSourceProjection}s that this instance is managing, keyed
      * by the SSRCs of the associated {@link MediaSourceDesc}.
      */
-    private final Map<Long, AdaptiveSourceProjection>
-        adaptiveSourceProjectionMap = new ConcurrentHashMap<>();
+    private final Map<Long, AdaptiveSourceProjection> adaptiveSourceProjectionMap = new ConcurrentHashMap<>();
 
     /**
      * The {@link List} of endpoints that are currently being forwarded,
@@ -161,8 +159,7 @@ public class BitrateController
     /**
      * The main result of the bitrate allocation algorithm computation.
      */
-    private List<AdaptiveSourceProjection> adaptiveSourceProjections
-            = Collections.emptyList();
+    private List<AdaptiveSourceProjection> adaptiveSourceProjections = Collections.emptyList();
 
     /**
      * The map of endpoint id to video constraints that contains the video
@@ -199,11 +196,9 @@ public class BitrateController
     // is the main use case for wanting to disable adaptivity).
     private boolean supportsRtx = false;
 
-    private final Map<Byte, PayloadType> payloadTypes =
-        new ConcurrentHashMap<>();
+    private final Map<Byte, PayloadType> payloadTypes = new ConcurrentHashMap<>();
 
-    private final AtomicInteger numDroppedPacketsUnknownSsrc =
-        new AtomicInteger(0);
+    private final AtomicInteger numDroppedPacketsUnknownSsrc = new AtomicInteger(0);
 
     private final Clock clock;
 
@@ -276,8 +271,7 @@ public class BitrateController
         // changes in case the bridge produces too low bandwidth estimate, at
         // the risk of clogging the receiver's pipe.
 
-        return deltaBwe > 0
-            ||  deltaBwe < -1 * previousBwe * BitrateControllerConfig.bweChangeThreshold();
+        return deltaBwe > 0 ||  deltaBwe < -1 * previousBwe * BitrateControllerConfig.bweChangeThreshold();
     }
 
     /**
@@ -384,14 +378,11 @@ public class BitrateController
         VideoRtpPacket videoRtpPacket = packetInfo.packetAs();
         long ssrc = videoRtpPacket.getSsrc();
 
-        AdaptiveSourceProjection adaptiveSourceProjection
-            = adaptiveSourceProjectionMap.get(ssrc);
+        AdaptiveSourceProjection adaptiveSourceProjection = adaptiveSourceProjectionMap.get(ssrc);
 
         if (adaptiveSourceProjection == null)
         {
-            logger.debug(() ->
-                "Dropping an RTP packet, because the SSRC has not " +
-                    "been signaled:" + ssrc);
+            logger.debug(() -> "Dropping an RTP packet, because the SSRC has not been signaled:" + ssrc);
             numDroppedPacketsUnknownSsrc.incrementAndGet();
             return false;
         }
@@ -422,8 +413,7 @@ public class BitrateController
         }
         long ssrc = rtcpSrPacket.getSenderSsrc();
 
-        AdaptiveSourceProjection adaptiveSourceProjection
-                = adaptiveSourceProjectionMap.get(ssrc);
+        AdaptiveSourceProjection adaptiveSourceProjection = adaptiveSourceProjectionMap.get(ssrc);
 
         if (adaptiveSourceProjection == null)
         {
@@ -441,11 +431,9 @@ public class BitrateController
     {
         long ssrc = rtcpSrPacket.getSenderSsrc();
 
-        AdaptiveSourceProjection adaptiveSourceProjection
-                = adaptiveSourceProjectionMap.get(ssrc);
+        AdaptiveSourceProjection adaptiveSourceProjection = adaptiveSourceProjectionMap.get(ssrc);
 
-        return adaptiveSourceProjection != null
-                && adaptiveSourceProjection.rewriteRtcp(rtcpSrPacket);
+        return adaptiveSourceProjection != null && adaptiveSourceProjection.rewriteRtcp(rtcpSrPacket);
     }
 
     /**
@@ -455,8 +443,7 @@ public class BitrateController
     @SuppressWarnings("unchecked")
     @SuppressFBWarnings(
             value = "IS2_INCONSISTENT_SYNC",
-            justification = "We intentionally avoid synchronizing while reading" +
-                    " fields only used in debug output.")
+            justification = "We intentionally avoid synchronizing while reading fields only used in debug output.")
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
@@ -468,19 +455,12 @@ public class BitrateController
         debugState.put("lastN", lastN);
         debugState.put("supportsRtx", supportsRtx);
         JSONObject adaptiveSourceProjectionsJson = new JSONObject();
-        for (Map.Entry<Long, AdaptiveSourceProjection> entry
-                : adaptiveSourceProjectionMap.entrySet())
+        for (Map.Entry<Long, AdaptiveSourceProjection> entry : adaptiveSourceProjectionMap.entrySet())
         {
-            adaptiveSourceProjectionsJson.put(
-                    entry.getKey(),
-                    entry.getValue().getDebugState());
+            adaptiveSourceProjectionsJson.put(entry.getKey(), entry.getValue().getDebugState());
         }
-        debugState.put(
-                "adaptiveSourceProjectionMap",
-                adaptiveSourceProjectionsJson);
-        debugState.put(
-            "numDroppedPacketsUnknownSsrc",
-            numDroppedPacketsUnknownSsrc.intValue());
+        debugState.put("adaptiveSourceProjectionMap", adaptiveSourceProjectionsJson);
+        debugState.put("numDroppedPacketsUnknownSsrc", numDroppedPacketsUnknownSsrc.intValue());
         return debugState;
     }
 
@@ -499,10 +479,7 @@ public class BitrateController
             currentIdealBps = -1L;
             activeSsrcs = Collections.emptyList();
         }
-        StatusSnapshot(
-                Long currentTargetBps,
-                Long currentIdealBps,
-                Collection<Long> activeSsrcs)
+        StatusSnapshot(Long currentTargetBps, Long currentIdealBps, Collection<Long> activeSsrcs)
         {
             this.currentTargetBps = currentTargetBps;
             this.currentIdealBps = currentIdealBps;
@@ -519,8 +496,7 @@ public class BitrateController
      */
     StatusSnapshot getStatusSnapshot()
     {
-        if (adaptiveSourceProjections == null
-            || adaptiveSourceProjections.isEmpty())
+        if (adaptiveSourceProjections == null || adaptiveSourceProjections.isEmpty())
         {
             return new StatusSnapshot();
         }
@@ -683,12 +659,10 @@ public class BitrateController
             return;
         }
 
-        List<AbstractEndpoint> sortedEndpoints
-            = new ArrayList<>(sortedEndpointIdsCopy.size());
+        List<AbstractEndpoint> sortedEndpoints = new ArrayList<>(sortedEndpointIdsCopy.size());
         for (String endpointId : sortedEndpointIdsCopy)
         {
-            AbstractEndpoint abstractEndpoint
-                 = destinationEndpoint.getConference().getEndpoint(endpointId);
+            AbstractEndpoint abstractEndpoint = destinationEndpoint.getConference().getEndpoint(endpointId);
             if (abstractEndpoint != null)
             {
                 sortedEndpoints.add(abstractEndpoint);
@@ -696,8 +670,7 @@ public class BitrateController
         }
 
         // Compute the bitrate allocation.
-        SourceBitrateAllocation[]
-            sourceBitrateAllocations = allocate(bweBps, sortedEndpoints);
+        SourceBitrateAllocation[] sourceBitrateAllocations = allocate(bweBps, sortedEndpoints);
 
         // Update the the controllers based on the allocation and send a
         // notification to the client the set of forwarded endpoints has
@@ -719,19 +692,17 @@ public class BitrateController
         // constraints map which are used in layer suspension.
         Map<String, VideoConstraints> newEffectiveConstraints = new HashMap<>();
 
-        List<AdaptiveSourceProjection> adaptiveSourceProjections
-                = new ArrayList<>();
+        List<AdaptiveSourceProjection> adaptiveSourceProjections = new ArrayList<>();
         if (!ArrayUtils.isNullOrEmpty(sourceBitrateAllocations))
         {
-            for (SourceBitrateAllocation
-                sourceBitrateAllocation : sourceBitrateAllocations)
+            for (SourceBitrateAllocation sourceBitrateAllocation : sourceBitrateAllocations)
             {
                 conferenceEndpointIds.add(sourceBitrateAllocation.endpointID);
                 newEffectiveConstraints.put(
                         sourceBitrateAllocation.endpointID, sourceBitrateAllocation.effectiveVideoConstraints);
 
-                int sourceTargetIdx = sourceBitrateAllocation.getTargetIndex(),
-                    sourceIdealIdx = sourceBitrateAllocation.getIdealIndex();
+                int sourceTargetIdx = sourceBitrateAllocation.getTargetIndex();
+                int sourceIdealIdx = sourceBitrateAllocation.getIdealIndex();
 
                 // Review this.
                 AdaptiveSourceProjection adaptiveSourceProjection
@@ -743,13 +714,10 @@ public class BitrateController
                     adaptiveSourceProjection.setTargetIndex(sourceTargetIdx);
                     adaptiveSourceProjection.setIdealIndex(sourceIdealIdx);
 
-                    if (sourceBitrateAllocation.source != null
-                            && enableVideoQualityTracing)
+                    if (sourceBitrateAllocation.source != null && enableVideoQualityTracing)
                     {
-                        long sourceTargetBps
-                            = sourceBitrateAllocation.getTargetBitrate();
-                        long sourceIdealBps
-                            = sourceBitrateAllocation.getIdealBitrate();
+                        long sourceTargetBps = sourceBitrateAllocation.getTargetBitrate();
+                        long sourceIdealBps = sourceBitrateAllocation.getIdealBitrate();
                         totalTargetBps += sourceTargetBps;
                         totalIdealBps += sourceIdealBps;
                         totalTargetIdx += sourceTargetIdx;
@@ -777,31 +745,25 @@ public class BitrateController
 
                 if (sourceTargetIdx > -1)
                 {
-                    newForwardedEndpointIds
-                        .add(sourceBitrateAllocation.endpointID);
-                    if (!oldForwardedEndpointIds
-                        .contains(sourceBitrateAllocation.endpointID))
+                    newForwardedEndpointIds.add(sourceBitrateAllocation.endpointID);
+                    if (!oldForwardedEndpointIds.contains(sourceBitrateAllocation.endpointID))
                     {
-                        endpointsEnteringLastNIds
-                            .add(sourceBitrateAllocation.endpointID);
+                        endpointsEnteringLastNIds.add(sourceBitrateAllocation.endpointID);
                     }
                 }
             }
         }
         else
         {
-            for (AdaptiveSourceProjection adaptiveSourceProjection
-                : adaptiveSourceProjectionMap.values())
+            for (AdaptiveSourceProjection adaptiveSourceProjection : adaptiveSourceProjectionMap.values())
             {
                 if (enableVideoQualityTracing)
                 {
                     totalIdealIdx--;
                     totalTargetIdx--;
                 }
-                adaptiveSourceProjection
-                    .setTargetIndex(RtpLayerDesc.SUSPENDED_INDEX);
-                adaptiveSourceProjection
-                    .setIdealIndex(RtpLayerDesc.SUSPENDED_INDEX);
+                adaptiveSourceProjection.setTargetIndex(RtpLayerDesc.SUSPENDED_INDEX);
+                adaptiveSourceProjection.setIdealIndex(RtpLayerDesc.SUSPENDED_INDEX);
             }
         }
 
@@ -816,9 +778,8 @@ public class BitrateController
                     .addField("total_ideal_bps", totalIdealBps));
         }
 
-        // The BandwidthProber will pick this up.
-        this.adaptiveSourceProjections
-            = Collections.unmodifiableList(adaptiveSourceProjections);
+        // The bandwidth brober will pick this up.
+        this.adaptiveSourceProjections = Collections.unmodifiableList(adaptiveSourceProjections);
 
         if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
         {
@@ -851,24 +812,20 @@ public class BitrateController
      * @return the adaptive source projection for the source bitrate allocation
      * that is specified as an argument.
      */
-    private AdaptiveSourceProjection
-    lookupOrCreateAdaptiveSourceProjection(
+    private AdaptiveSourceProjection lookupOrCreateAdaptiveSourceProjection(
         SourceBitrateAllocation sourceBitrateAllocation)
     {
         synchronized (adaptiveSourceProjectionMap)
         {
             AdaptiveSourceProjection adaptiveSourceProjection
-                = adaptiveSourceProjectionMap.get(
-                        sourceBitrateAllocation.targetSSRC);
+                = adaptiveSourceProjectionMap.get(sourceBitrateAllocation.targetSSRC);
 
-            if (adaptiveSourceProjection != null
-                || sourceBitrateAllocation.source == null)
+            if (adaptiveSourceProjection != null || sourceBitrateAllocation.source == null)
             {
                 return adaptiveSourceProjection;
             }
 
-            RtpEncodingDesc[] rtpEncodings =
-                sourceBitrateAllocation.source.getRtpEncodings();
+            RtpEncodingDesc[] rtpEncodings = sourceBitrateAllocation.source.getRtpEncodings();
 
             if (ArrayUtils.isNullOrEmpty(rtpEncodings))
             {
@@ -887,9 +844,8 @@ public class BitrateController
             adaptiveSourceProjection
                 = new AdaptiveSourceProjection(
                     diagnosticContext,
-                    sourceBitrateAllocation.source, () ->
-                        destinationEndpoint.getConference().requestKeyframe(
-                            endpointID, targetSSRC),
+                    sourceBitrateAllocation.source,
+                    () -> destinationEndpoint.getConference().requestKeyframe(endpointID, targetSSRC),
                     payloadTypes,
                     logger);
 
@@ -898,8 +854,7 @@ public class BitrateController
             // Route all encodings to the specified bitrate controller.
             for (RtpEncodingDesc rtpEncoding: rtpEncodings)
             {
-                adaptiveSourceProjectionMap.put(
-                    rtpEncoding.getPrimarySSRC(), adaptiveSourceProjection);
+                adaptiveSourceProjectionMap.put(rtpEncoding.getPrimarySSRC(), adaptiveSourceProjection);
             }
 
             return adaptiveSourceProjection;
@@ -920,12 +875,9 @@ public class BitrateController
      * {@link ConferenceSpeechActivity}.
      * @return an array of {@link SourceBitrateAllocation}.
      */
-    private SourceBitrateAllocation[] allocate(
-        long maxBandwidth,
-        List<AbstractEndpoint> conferenceEndpoints)
+    private SourceBitrateAllocation[] allocate(long maxBandwidth, List<AbstractEndpoint> conferenceEndpoints)
     {
-        SourceBitrateAllocation[] sourceBitrateAllocations
-                = prioritize(conferenceEndpoints);
+        SourceBitrateAllocation[] sourceBitrateAllocations = prioritize(conferenceEndpoints);
 
         if (ArrayUtils.isNullOrEmpty(sourceBitrateAllocations))
         {
@@ -942,14 +894,12 @@ public class BitrateController
         while (oldMaxBandwidth != maxBandwidth)
         {
             oldMaxBandwidth = maxBandwidth;
-            System.arraycopy(newRatedTargetIndices, 0,
-                oldRatedTargetIndices, 0, oldRatedTargetIndices.length);
+            System.arraycopy(newRatedTargetIndices, 0, oldRatedTargetIndices, 0, oldRatedTargetIndices.length);
 
             int newStateLen = 0;
             for (int i = 0; i < sourceBitrateAllocations.length; i++)
             {
-                SourceBitrateAllocation sourceBitrateAllocation
-                    = sourceBitrateAllocations[i];
+                SourceBitrateAllocation sourceBitrateAllocation = sourceBitrateAllocations[i];
 
                 if (sourceBitrateAllocation.effectiveVideoConstraints.getIdealHeight() <= 0)
                 {
@@ -970,15 +920,13 @@ public class BitrateController
                 }
                 maxBandwidth -= sourceBitrateAllocation.getTargetBitrate();
 
-                newRatedTargetIndices[i]
-                    = sourceBitrateAllocation.ratedTargetIdx;
+                newRatedTargetIndices[i] = sourceBitrateAllocation.ratedTargetIdx;
                 if (sourceBitrateAllocation.getTargetIndex() > -1)
                 {
                     newStateLen++;
                 }
 
-                if (sourceBitrateAllocation.ratedTargetIdx
-                    < sourceBitrateAllocation.ratedPreferredIdx)
+                if (sourceBitrateAllocation.ratedTargetIdx < sourceBitrateAllocation.ratedPreferredIdx)
                 {
                     break;
                 }
@@ -990,8 +938,7 @@ public class BitrateController
                 // participants.
                 for (int i = 0; i < sourceBitrateAllocations.length; i++)
                 {
-                    sourceBitrateAllocations[i].ratedTargetIdx
-                        = oldRatedTargetIndices[i];
+                    sourceBitrateAllocations[i].ratedTargetIdx = oldRatedTargetIndices[i];
                 }
 
                 break;
@@ -1022,14 +969,12 @@ public class BitrateController
      * selected endpoint are at the top of the array, followed by the pinned
      * endpoints, finally followed by any other remaining endpoints.
      */
-    private SourceBitrateAllocation[] prioritize(
-        List<AbstractEndpoint> conferenceEndpoints)
+    private SourceBitrateAllocation[] prioritize(List<AbstractEndpoint> conferenceEndpoints)
     {
         Map<String, VideoConstraints> copyOfVideoConstraintsMap = this.videoConstraintsMap;
 
         // Init.
-        List<SourceBitrateAllocation> sourceBitrateAllocations
-            = new ArrayList<>();
+        List<SourceBitrateAllocation> sourceBitrateAllocations = new ArrayList<>();
 
         int adjustedLastN = JvbLastNKt.calculateLastN(this.lastN, JvbLastNKt.jvbLastNSingleton.getJvbLastN());
         if (adjustedLastN < 0)
@@ -1062,8 +1007,7 @@ public class BitrateController
                 continue;
             }
 
-            MediaSourceDesc[] sources
-                = sourceEndpoint.getMediaSources();
+            MediaSourceDesc[] sources = sourceEndpoint.getMediaSources();
 
             if (!ArrayUtils.isNullOrEmpty(sources))
             {
@@ -1072,7 +1016,8 @@ public class BitrateController
                     sourceBitrateAllocations.add(
                         new SourceBitrateAllocation(
                             endpointMultiRank.endpoint.getID(),
-                            source, endpointMultiRank.effectiveVideoConstraints));
+                            source,
+                            endpointMultiRank.effectiveVideoConstraints));
 
                 }
 
@@ -1164,8 +1109,7 @@ public class BitrateController
         }
 
         Long ssrc = videoPacket.getSsrc();
-        AdaptiveSourceProjection adaptiveSourceProjection
-                = adaptiveSourceProjectionMap.get(ssrc);
+        AdaptiveSourceProjection adaptiveSourceProjection = adaptiveSourceProjectionMap.get(ssrc);
 
         if (adaptiveSourceProjection == null)
         {
@@ -1183,9 +1127,7 @@ public class BitrateController
                 String actual = videoPacket.getPayloadVerification();
                 if (!"".equals(expected) && !expected.equals(actual))
                 {
-                    logger.warn(
-                        "Payload unexpectedly modified! Expected: " + expected
-                            + ", actual: " + actual);
+                    logger.warn("Payload unexpectedly modified! Expected: " + expected + ", actual: " + actual);
                 }
             }
 
@@ -1357,8 +1299,7 @@ public class BitrateController
                 int idealHeight = effectiveVideoConstraints.getIdealHeight();
                 // We don't want to exceed the ideal resolution but we also
                 // want to make sure we have at least 1 rated encoding.
-                if (idealHeight >= 0 && layer.getHeight() > idealHeight
-                    && !ratesList.isEmpty())
+                if (idealHeight >= 0 && layer.getHeight() > idealHeight && !ratesList.isEmpty())
                 {
                     continue;
                 }
@@ -1386,8 +1327,7 @@ public class BitrateController
                     {
                         idealBps = layerBitrateBps;
                     }
-                    ratesList.add(
-                        new RateSnapshot(layerBitrateBps, layer));
+                    ratesList.add(new RateSnapshot(layerBitrateBps, layer));
                 }
 
                 if (layer.getHeight() <= effectiveVideoConstraints.getPreferredHeight())
@@ -1464,8 +1404,7 @@ public class BitrateController
             else
             {
                 // Try the next element in the ratedIndices array.
-                if (ratedTargetIdx + 1 < ratedIndices.length
-                    && ratedIndices[ratedTargetIdx + 1].bps < maxBps)
+                if (ratedTargetIdx + 1 < ratedIndices.length && ratedIndices[ratedTargetIdx + 1].bps < maxBps)
                 {
                     ratedTargetIdx++;
                 }
@@ -1486,8 +1425,7 @@ public class BitrateController
                 // stream and immediately select the 1080p stream.
                 for (int i = ratedTargetIdx + 1; i < ratedIndices.length; i++)
                 {
-                    if (ratedIndices[i].bps > 0
-                        && ratedIndices[i].bps <= ratedIndices[ratedTargetIdx].bps)
+                    if (ratedIndices[i].bps > 0 && ratedIndices[i].bps <= ratedIndices[ratedTargetIdx].bps)
                     {
                         ratedTargetIdx = i;
                     }
@@ -1524,8 +1462,7 @@ public class BitrateController
         {
             // figures out the quality of the layer of the target rated
             // quality.
-            return ratedTargetIdx != -1
-                ? ratedIndices[ratedTargetIdx].layer.getIndex() : -1;
+            return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx].layer.getIndex() : -1;
         }
 
         /**
@@ -1537,8 +1474,7 @@ public class BitrateController
         {
             // figures out the quality of the layer of the target rated
             // quality.
-            return ratedPreferredIdx != -1
-                ? ratedIndices[ratedPreferredIdx].layer.getIndex() : -1;
+            return ratedPreferredIdx != -1 ? ratedIndices[ratedPreferredIdx].layer.getIndex() : -1;
         }
 
         /**
@@ -1550,8 +1486,7 @@ public class BitrateController
         {
             // figures out the quality of the layer of the ideal rated
             // quality.
-            return ratedIndices.length != 0
-                ? ratedIndices[ratedIndices.length - 1].layer.getIndex() : -1;
+            return ratedIndices.length != 0 ? ratedIndices[ratedIndices.length - 1].layer.getIndex() : -1;
         }
     }
 }
