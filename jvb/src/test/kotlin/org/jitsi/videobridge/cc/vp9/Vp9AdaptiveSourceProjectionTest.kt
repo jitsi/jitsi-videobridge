@@ -935,13 +935,13 @@ class Vp9AdaptiveSourceProjectionTest {
             /* Do VP9 manipulations on buffer before constructing Vp9Packet, because
                Vp9Packet computes values at construct-time. */
             DePacketizer.VP9PayloadDescriptor.setStartOfFrame(rtpPacket.buffer,
-                rtpPacket.payloadOffset, startOfFrame)
+                rtpPacket.payloadOffset, rtpPacket.payloadLength, startOfFrame)
             DePacketizer.VP9PayloadDescriptor.setEndOfFrame(rtpPacket.buffer,
-                rtpPacket.payloadOffset, endOfFrame)
+                rtpPacket.payloadOffset, rtpPacket.payloadLength, endOfFrame)
             DePacketizer.VP9PayloadDescriptor.setInterPicturePredicted(rtpPacket.buffer,
-                rtpPacket.payloadOffset, !keyframePicture)
+                rtpPacket.payloadOffset, rtpPacket.payloadLength, !keyframePicture)
             DePacketizer.VP9PayloadDescriptor.setUpperLevelReference(rtpPacket.buffer,
-                rtpPacket.payloadOffset, sid != numLayers - 1)
+                rtpPacket.payloadOffset, rtpPacket.payloadLength, sid != numLayers - 1)
 
             Assert.assertTrue(DePacketizer.VP9PayloadDescriptor.setLayerIndices(rtpPacket.buffer,
                 rtpPacket.payloadOffset, rtpPacket.payloadLength, sid, tid, tid > 0,
