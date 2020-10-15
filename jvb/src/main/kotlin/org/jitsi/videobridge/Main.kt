@@ -29,16 +29,17 @@ import org.jitsi.stats.media.Utils
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.rest.root.Application
-import org.jitsi.videobridge.stats.StatsManager
+import org.jitsi.videobridge.stats.MucStatsTransport
+import org.jitsi.videobridge.stats.StatsCollector
 import org.jitsi.videobridge.stats.VideobridgeStatistics
-import org.jitsi.videobridge.stats.config.StatsTransportConfig
+import org.jitsi.videobridge.stats.callstats.CallstatsService
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
 import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
 import org.jitsi.videobridge.xmpp.XmppConnection
+import java.lang.IllegalStateException
 import kotlin.concurrent.thread
 import org.jitsi.videobridge.octo.singleton as octoRelayService
-import org.jitsi.videobridge.stats.singleton as statsMgr
 
 fun main(args: Array<String>) {
     val cmdLine = CmdLine().apply { parse(args) }
@@ -74,32 +75,31 @@ fun main(args: Array<String>) {
     val shutdownService = ShutdownServiceImpl()
     val videobridge = Videobridge(xmppConnection, shutdownService).apply { start() }
     val octoRelayService = octoRelayService().get()?.apply { start() }
-    val statsMgr = statsMgr().get()?.apply {
-        addStatistics(
-            VideobridgeStatistics(
-                videobridge,
-                octoRelayService,
-                xmppConnection
-            ),
-            StatsManager.config.interval.toMillis()
-        )
-        StatsManager.config.transportConfigs.forEach { transportConfig ->
-            when (transportConfig) {
-                is StatsTransportConfig.MucStatsTransportConfig -> {
-                    addTransport(
-                        transportConfig.toStatsTransport(xmppConnection),
-                        transportConfig.interval.toMillis()
-                    )
-                }
-                is StatsTransportConfig.CallStatsIoStatsTransportConfig -> {
-                    addTransport(
-                        transportConfig.toStatsTransport(videobridge.versionService.currentVersion),
-                        transportConfig.interval.toMillis()
-                    )
-                }
+    val statsManager = if (StatsCollector.config.enabled) {
+        StatsCollector(VideobridgeStatistics(videobridge, octoRelayService, xmppConnection)).apply {
+            start()
+            addTransport(MucStatsTransport(xmppConnection), xmppConnection.config.presenceInterval.toMillis())
+        }
+    } else {
+        logger.warn("Statistics are not enabled, publishing updated presence will not work.")
+        null
+    }
+
+    val callstats = if (CallstatsService.config.enabled) {
+        CallstatsService(videobridge.versionService.currentVersion).apply {
+            start {
+                statsTransport?.let { statsTransport ->
+                    statsManager?.addTransport(statsTransport, CallstatsService.config.interval.toMillis())
+                        ?: logger.warn("Callstats is enabled, but the stats manager is not. Will not publish" +
+                            " per-conference stats.")
+                } ?: throw IllegalStateException("Stats transport is null after the service is started")
+
+                videobridge.addEventHandler(videobridgeEventHandler)
             }
         }
-        start()
+    } else {
+        logger.info("Not starting CallstatsService, disabled in configuration.")
+        null
     }
 
     val publicServerConfig = JettyBundleActivatorConfig(
@@ -126,7 +126,7 @@ fun main(args: Array<String>) {
     )
     val privateHttpServer = if (privateServerConfig.isEnabled()) {
         logger.info("Starting private http server")
-        val restApp = Application(videobridge, xmppConnection, statsMgr)
+        val restApp = Application(videobridge, xmppConnection, statsManager)
         createServer(privateServerConfig).also {
             it.servletContextHandler.addServlet(
                 ServletHolder(ServletContainer(restApp)),
@@ -145,7 +145,14 @@ fun main(args: Array<String>) {
     logger.info("Bridge shutting down")
     octoRelayService?.stop()
     xmppConnection.stop()
-    statsMgr?.stop()
+    callstats?.let {
+        videobridge.removeEventHandler(it.videobridgeEventHandler)
+        it.statsTransport?.let { statsTransport ->
+            statsManager?.removeTransport(statsTransport)
+        }
+        it.stop()
+    }
+    statsManager?.stop()
 
     try {
         publicHttpServer?.stop()

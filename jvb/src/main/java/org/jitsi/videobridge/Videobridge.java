@@ -134,6 +134,8 @@ public class Videobridge
 
     @NotNull private final ShutdownServiceImpl shutdownService;
 
+    private final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
+
     static
     {
         org.jitsi.rtp.util.BufferPool.Companion.setGetArray(ByteBufferPool::getBuffer);
@@ -183,36 +185,19 @@ public class Videobridge
         {
             xmppConnection.setEventHandler(new XmppConnectionEventHandler());
         }
-        healthChecker = new JvbHealthChecker(this);
+        healthChecker = new JvbHealthChecker();
         versionService = new JvbVersionService();
         this.shutdownService = shutdownService;
-    }
-
-    /**
-     * Initializes a new {@link Conference} instance with an ID unique to the
-     * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt> and
-     * adds the new instance to the list of existing <tt>Conference</tt>
-     * instances.
-     *
-     * @param name world readable name of the conference to create.
-     * @param gid the optional "global" id of the conference.
-     * @return a new <tt>Conference</tt> instance with an ID unique to the
-     * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
-     */
-    public @NotNull Conference createConference(EntityBareJid name, long gid)
-    {
-        return this.createConference(name, /* enableLogging */ true, gid);
     }
 
     /**
      * Generate conference IDs until one is found that isn't in use and create a new {@link Conference}
      * object using that ID
      * @param name
-     * @param enableLogging
      * @param gid
      * @return
      */
-    private @NotNull Conference doCreateConference(EntityBareJid name, boolean enableLogging, long gid)
+    private @NotNull Conference doCreateConference(EntityBareJid name, long gid)
     {
         Conference conference = null;
         do
@@ -223,13 +208,7 @@ public class Videobridge
             {
                 if (!conferencesById.containsKey(id))
                 {
-                    conference
-                        = new Conference(
-                                this,
-                                id,
-                                name,
-                                enableLogging,
-                                gid);
+                    conference = new Conference(this, id, name, gid);
                     conferencesById.put(id, conference);
                 }
             }
@@ -246,12 +225,11 @@ public class Videobridge
      * instances.
      *
      * @param name world readable name of the conference to create.
-     * @param enableLogging whether logging should be enabled or disabled for
      * the {@link Conference}.
      */
-    public @NotNull Conference createConference(EntityBareJid name, boolean enableLogging)
+    public @NotNull Conference createConference(EntityBareJid name)
     {
-        return createConference(name, enableLogging, Conference.GID_NOT_SET);
+        return createConference(name, Conference.GID_NOT_SET);
     }
 
     /**
@@ -261,20 +239,22 @@ public class Videobridge
      * instances.
      *
      * @param name world readable name of the conference to create.
-     * @param enableLogging whether logging should be enabled or disabled for
-     * the {@link Conference}.
      * @param gid the "global" id of the conference (or
      * {@link Conference#GID_NOT_SET} if it is not specified.
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public @NotNull Conference createConference(EntityBareJid name, boolean enableLogging, long gid)
+    public @NotNull Conference createConference(EntityBareJid name, long gid)
     {
-        final Conference conference = doCreateConference(name, enableLogging, gid);
+        final Conference conference = doCreateConference(name, gid);
 
-        logger.info(() -> "create_conf, id=" + conference.getID()
-                + " gid=" + conference.getGid()
-                + " logging=" + enableLogging);
+        logger.info(() -> "create_conf, id=" + conference.getID() + " gid=" + conference.getGid());
+
+        eventEmitter.fireEvent(handler ->
+        {
+            handler.conferenceCreated(conference);
+            return Unit.INSTANCE;
+        });
 
         return conference;
     }
@@ -305,23 +285,19 @@ public class Videobridge
     public void expireConference(Conference conference)
     {
         String id = conference.getID();
-        boolean expireConference;
 
         synchronized (conferencesById)
         {
             if (conference.equals(conferencesById.get(id)))
             {
                 conferencesById.remove(id);
-                expireConference = true;
+                conference.expire();
+                eventEmitter.fireEvent(handler ->
+                {
+                    handler.conferenceExpired(conference);
+                    return Unit.INSTANCE;
+                });
             }
-            else
-            {
-                expireConference = false;
-            }
-        }
-        if (expireConference)
-        {
-            conference.expire();
         }
 
         // Check if it's the time to shutdown now
@@ -431,10 +407,7 @@ public class Videobridge
     }
 
     /**
-     * Handles a <tt>GracefulShutdownIQ</tt> stanza which represents a request.
-     *
-     * @param shutdownIQ the <tt>GracefulShutdownIQ</tt> stanza represents
-     *        the request to handle
+     * Handles a shutdown request.
      */
     public void shutdown(boolean graceful)
     {
@@ -494,10 +467,9 @@ public class Videobridge
     }
 
     /**
-     * Starts this <tt>Videobridge</tt> in a specific <tt>BundleContext</tt>.
+     * Starts this {@link Videobridge}.
      *
-     * NOTE: we have to make this public so Jicofo can call it from its
-     * tests
+     * NOTE: we have to make this public so Jicofo can call it from its tests.
      */
     public void start()
     {
@@ -545,13 +517,9 @@ public class Videobridge
     }
 
     /**
-     * Stops this <tt>Videobridge</tt> in a specific <tt>BundleContext</tt>.
+     * Stops this {@link Videobridge}.
      *
-     * @param bundleContext the <tt>BundleContext</tt> in which this
-     * <tt>Videobridge</tt> is to stop
-     *
-     * NOTE: we have to make this public so Jicofo can call it from its
-     * tests
+     * NOTE: we have to make this public so Jicofo can call it from its tests.
      */
     public void stop()
     {
@@ -661,6 +629,16 @@ public class Videobridge
     public VersionService getVersionService()
     {
         return versionService;
+    }
+
+    public void addEventHandler(EventHandler eventHandler)
+    {
+        eventEmitter.addHandler(eventHandler);
+    }
+
+    public void removeEventHandler(EventHandler eventHandler)
+    {
+        eventEmitter.removeHandler(eventHandler);
     }
 
     private class XmppConnectionEventHandler implements XmppConnection.EventHandler
@@ -873,5 +851,10 @@ public class Videobridge
          * The stress level for this bridge
          */
         public Double stressLevel = 0.0;
+    }
+
+    public interface EventHandler {
+        void conferenceCreated(@NotNull Conference conference);
+        void conferenceExpired(@NotNull Conference conference);
     }
 }

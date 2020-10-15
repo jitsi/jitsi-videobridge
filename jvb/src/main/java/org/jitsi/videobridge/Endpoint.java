@@ -319,10 +319,7 @@ public class Endpoint
         dtlsTransport = new DtlsTransport(logger);
         setupDtlsTransport();
 
-        if (conference.includeInStatistics())
-        {
-            conference.getVideobridge().getStatistics().totalEndpoints.incrementAndGet();
-        }
+        conference.getVideobridge().getStatistics().totalEndpoints.incrementAndGet();
     }
 
     public Endpoint(
@@ -375,8 +372,10 @@ public class Endpoint
             @Override
             public void connected() {
                 logger.info("ICE connected");
-                getConference().getStatistics().hasIceSucceededEndpoint = true;
-                getConference().getVideobridge().getStatistics().totalIceSucceeded.incrementAndGet();
+                eventEmitter.fireEvent(handler -> {
+                    handler.iceSucceeded();
+                    return Unit.INSTANCE;
+                });
                 transceiver.setOutgoingPacketHandler(outgoingSrtpPacketQueue::add);
                 TaskPools.IO_POOL.submit(iceTransport::startReadingData);
                 TaskPools.IO_POOL.submit(dtlsTransport::startDtlsHandshake);
@@ -384,8 +383,10 @@ public class Endpoint
 
             @Override
             public void failed() {
-                getConference().getStatistics().hasIceFailedEndpoint = true;
-                getConference().getVideobridge().getStatistics().totalIceFailed.incrementAndGet();
+                eventEmitter.fireEvent(handler -> {
+                    handler.iceFailed();
+                    return Unit.INSTANCE;
+                });
             }
 
             @Override
@@ -744,7 +745,7 @@ public class Endpoint
 
             updateStatsOnExpire();
             this.transceiver.stop();
-            if (logger.isDebugEnabled() && getConference().includeInStatistics())
+            if (logger.isDebugEnabled())
             {
                 logger.debug(transceiver.getNodeStats().prettyPrint(0));
                 logger.debug(bitrateController.getDebugState().toJSONString());
@@ -1106,7 +1107,10 @@ public class Endpoint
     {
         if (transceiver.setMediaSources(mediaSources))
         {
-            getConference().endpointSourcesChanged(this);
+            eventEmitter.fireEvent(handler -> {
+                handler.sourcesChanged();
+                return Unit.INSTANCE;
+            });
         }
     }
 

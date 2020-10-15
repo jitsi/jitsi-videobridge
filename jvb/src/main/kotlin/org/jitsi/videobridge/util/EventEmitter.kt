@@ -14,23 +14,22 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.stats
+package org.jitsi.videobridge.util
 
-import java.util.function.Supplier
+import java.util.concurrent.CopyOnWriteArrayList
 
-// Open for tests
-open class StatsManagerSupplier : Supplier<StatsManager?> {
-    private val statsManager: StatsManager? by lazy {
-        if (StatsManager.config.enabled) {
-            StatsManager()
-        } else {
-            null
-        }
+class EventEmitter<EventHandlerType> {
+    private val eventHandlers: MutableList<EventHandlerType> = CopyOnWriteArrayList()
+
+    fun fireEvent(event: EventHandlerType.() -> Unit) {
+        eventHandlers.forEach { it.apply(event) }
     }
 
-    override fun get(): StatsManager? = statsManager
+    fun addHandler(handler: EventHandlerType) {
+        eventHandlers += handler
+    }
+
+    fun removeHandler(handler: EventHandlerType) {
+        eventHandlers -= handler
+    }
 }
-
-val statsManagerSupplier: StatsManagerSupplier = StatsManagerSupplier()
-
-fun singleton() = statsManagerSupplier

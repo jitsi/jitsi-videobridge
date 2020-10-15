@@ -27,12 +27,37 @@
         <kotlin.version>1.3.72</kotlin.version>
         <kotest.version>4.1.3</kotest.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jicoco.version>1.1-58-g13ed16a</jicoco.version>
+        <jicoco.version>1.1-60-g3bc6ace</jicoco.version>
         <jitsi.utils.version>1.0-60-g07c4a0b</jitsi.utils.version>
         <maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
         <spotbugs.version>4.0.1</spotbugs.version>
         <jersey.version>2.30.1</jersey.version>
     </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.0.0-M3</version>
+                <executions>
+                    <execution>
+                        <id>enforce-maven</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>3.5.0</version>
+                                </requireMavenVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
     <modules>
         <module>jvb-api</module>
@@ -69,7 +94,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>ice4j</artifactId>
-                <version>3.0-21-g3a55627</version>
+                <version>3.0-22-g67ffceb</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>

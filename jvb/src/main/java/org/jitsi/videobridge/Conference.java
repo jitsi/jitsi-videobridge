@@ -28,7 +28,6 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
-import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
@@ -40,7 +39,6 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
-import java.util.logging.*;
 import java.util.stream.*;
 
 import static org.jitsi.utils.collections.JMap.*;
@@ -140,11 +138,6 @@ public class Conference
     private final Logger logger;
 
     /**
-     * Whether this conference should be considered when generating statistics.
-     */
-    private final boolean includeInStatistics;
-
-    /**
      * The time when this {@link Conference} was created.
      */
     private final long creationTime = System.currentTimeMillis();
@@ -168,6 +161,7 @@ public class Conference
      */
     private ScheduledFuture<?> updateLastNEndpointsFuture;
 
+    @NotNull
     private final EndpointConnectionStatusMonitor epConnectionStatusMonitor;
 
     /**
@@ -179,15 +173,11 @@ public class Conference
      * <tt>Conference</tt> instance is to be initialized
      * @param id the (unique) ID of the new instance to be initialized
      * @param conferenceName world readable name of this conference
-     * @param enableLogging whether logging should be enabled for this
-     * {@link Conference} and its sub-components, and whether this conference
-     * should be considered when generating statistics.
      * @param gid the optional "global" id of the conference.
      */
     public Conference(Videobridge videobridge,
                       String id,
                       EntityBareJid conferenceName,
-                      boolean enableLogging,
                       long gid)
     {
         if (gid != GID_NOT_SET && (gid < 0 || gid > 0xffff_ffffL))
@@ -195,7 +185,6 @@ public class Conference
             throw new IllegalArgumentException("Invalid GID:" + gid);
         }
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
-        Level minLevel = enableLogging ? Level.ALL : Level.WARNING;
         Map<String, String> context = JMap.ofEntries(
             entry("confId", id),
             entry("gid", String.valueOf(gid))
@@ -204,11 +193,10 @@ public class Conference
         {
             context.put("conf_name", conferenceName.toString());
         }
-        logger = new LoggerImpl(Conference.class.getName(), minLevel, new LogContext(context));
+        logger = new LoggerImpl(Conference.class.getName(), new LogContext(context));
         this.shim = new ConferenceShim(this, logger);
         this.id = Objects.requireNonNull(id, "id");
         this.gid = gid;
-        this.includeInStatistics = enableLogging;
         this.conferenceName = conferenceName;
 
         speechActivity = new ConferenceSpeechActivity(new SpeechActivityListener());
@@ -227,25 +215,10 @@ public class Conference
 
         }, 3, 3, TimeUnit.SECONDS);
 
-        if (enableLogging)
-        {
-            StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
-            if (statsMgr != null)
-            {
-                statsMgr.getTransports().forEach(transport -> transport.conferenceCreated(this));
-            }
-
-            Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
-            videobridgeStatistics.totalConferencesCreated.incrementAndGet();
-            epConnectionStatusMonitor =
-                new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
-            epConnectionStatusMonitor.start();
-        }
-        else
-        {
-            epConnectionStatusMonitor = null;
-        }
-
+        Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
+        videobridgeStatistics.totalConferencesCreated.incrementAndGet();
+        epConnectionStatusMonitor = new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
+        epConnectionStatusMonitor.start();
     }
 
     /**
@@ -278,15 +251,6 @@ public class Conference
     {
         return statistics;
     }
-
-    /**
-     * @return whether this conference should be included in generated
-     * statistics.
-     */
-     public boolean includeInStatistics()
-     {
-         return includeInStatistics;
-     }
 
     /**
      * Sends a message to a subset of endpoints in the call, primary use
@@ -528,21 +492,12 @@ public class Conference
 
         logger.info("Expiring.");
 
-        if (epConnectionStatusMonitor != null)
-        {
-            epConnectionStatusMonitor.stop();
-        }
+        epConnectionStatusMonitor.stop();
 
         if (updateLastNEndpointsFuture != null)
         {
             updateLastNEndpointsFuture.cancel(true);
             updateLastNEndpointsFuture = null;
-        }
-
-        StatsManager statsMgr = StatsManagerSupplierKt.singleton().get();
-        if (statsMgr != null)
-        {
-            statsMgr.getTransports().forEach(transport -> transport.conferenceExpired(this));
         }
 
         logger.debug(() -> "Expiring endpoints.");
@@ -554,10 +509,7 @@ public class Conference
             tentacle = null;
         }
 
-        if (includeInStatistics)
-        {
-            updateStatisticsOnExpire();
-        }
+        updateStatisticsOnExpire();
     }
 
     /**
@@ -667,9 +619,37 @@ public class Conference
 
         final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling);
 
+        subscribeToEndpointEvents(endpoint);
+
         addEndpoint(endpoint);
 
         return endpoint;
+    }
+
+    private void subscribeToEndpointEvents(AbstractEndpoint endpoint)
+    {
+        endpoint.addEventHandler(new AbstractEndpoint.EventHandler()
+        {
+            @Override
+            public void iceSucceeded()
+            {
+                getStatistics().hasIceSucceededEndpoint = true;
+                getVideobridge().getStatistics().totalIceSucceeded.incrementAndGet();
+            }
+
+            @Override
+            public void iceFailed()
+            {
+                getStatistics().hasIceFailedEndpoint = true;
+                getVideobridge().getStatistics().totalIceFailed.incrementAndGet();
+            }
+
+            @Override
+            public void sourcesChanged()
+            {
+                endpointSourcesChanged(endpoint);
+            }
+        });
     }
 
     /**
@@ -846,10 +826,7 @@ public class Conference
 
         if (removedEndpoint != null)
         {
-            if (epConnectionStatusMonitor != null)
-            {
-                epConnectionStatusMonitor.endpointExpired(removedEndpoint.getID());
-            }
+            epConnectionStatusMonitor.endpointExpired(removedEndpoint.getID());
             endpointsChanged();
         }
     }
@@ -891,10 +868,7 @@ public class Conference
     @Override
     public void endpointMessageTransportConnected(@NotNull AbstractEndpoint endpoint)
     {
-        if (epConnectionStatusMonitor != null)
-        {
-            epConnectionStatusMonitor.endpointConnected(endpoint.getID());
-        }
+        epConnectionStatusMonitor.endpointConnected(endpoint.getID());
 
         if (!isExpired())
         {
@@ -1134,7 +1108,6 @@ public class Conference
             debugState.put("expired", expired.get());
             debugState.put("creationTime", creationTime);
             debugState.put("speechActivity", speechActivity.getDebugState());
-            debugState.put("includeInStatistics", includeInStatistics);
             debugState.put("statistics", statistics.getJson());
             //debugState.put("encodingsManager", encodingsManager.getDebugState());
             ConfOctoTransport tentacle = this.tentacle;
