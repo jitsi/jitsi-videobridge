@@ -505,6 +505,27 @@ class EndpointMessageTransport
     }
 
     /**
+     * Sets the receiver video constraints for this {@code Endpoint}.
+     *
+     * @param message the message that was received.
+     */
+    @Override
+    public BridgeChannelMessage receiverVideoConstraints(ReceiverVideoConstraintsMessage message)
+    {
+        if (endpoint != null) {
+            Map<String, VideoConstraints> newEffectiveConstraints = new HashMap<>();
+            for (ReceiverVideoConstraintsMessage.VideoConstraints messageVideoConstraints
+                    : message.getVideoConstraints()) {
+                VideoConstraints videoConstraints = new VideoConstraints(messageVideoConstraints.getIdealHeight());
+                newEffectiveConstraints.put(messageVideoConstraints.getId(), videoConstraints);
+            }
+            endpoint.setReceiverVideoConstraints(ImmutableMap.copyOf(newEffectiveConstraints));
+        }
+
+        return null;
+    }
+
+    /**
      * Notifies this {@code Endpoint} that a {@link LastNMessage} has been
      * received.
      *

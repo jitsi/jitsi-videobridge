@@ -620,6 +620,36 @@ public class Endpoint
         bitrateController.setVideoConstraints(newVideoConstraints);
     }
 
+    /**
+     * Applies the receiver video constraints requested by the client.
+     *
+     * For all endpoints not included in the new constraints, calls to remove
+     * receiving video from them. For endpoints included in the new constraints,
+     * calls to add/update the receiving video with specified constraint.
+     *
+     * @param newVideoConstraints Video Constraints specified by the client.
+     */
+    public void setReceiverVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraints)
+    {
+        List<AbstractEndpoint> allEndpoints = getConference().getEndpoints();
+        for (AbstractEndpoint potentialRemovedEndpoint : allEndpoints) {
+            if (newVideoConstraints.get(potentialRemovedEndpoint.getID()) == null)
+            {
+                potentialRemovedEndpoint.removeReceiver(getID());
+            }
+        }
+
+        for (Map.Entry<String, VideoConstraints> videoConstraintsEntry : newVideoConstraints.entrySet())
+        {
+            AbstractEndpoint senderEndpoint = getConference().getEndpoint(videoConstraintsEntry.getKey());
+
+            if (senderEndpoint != null)
+            {
+                senderEndpoint.addReceiver(getID(), videoConstraintsEntry.getValue());
+            }
+        }
+    }
+
     public void effectiveVideoConstraintsChanged(
         ImmutableMap<String, VideoConstraints> oldVideoConstraints,
         ImmutableMap<String, VideoConstraints> newVideoConstraints)
