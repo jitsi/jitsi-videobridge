@@ -297,6 +297,7 @@ public class ConfOctoTransport
             conferenceId,
             packetInfo.getEndpointId()
         );
+        ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
 
         return true;
     }
