@@ -17,7 +17,7 @@
   <url>https://github.com/jitsi/jitsi-videobridge</url>
   <properties>
     <assembly.skipAssembly>false</assembly.skipAssembly>
-    <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
+    <exec.mainClass>org.jitsi.videobridge.MainKt</exec.mainClass>
   </properties>
 
   <profiles>
@@ -123,11 +123,6 @@
         <groupId>${project.groupId}</groupId>
         <artifactId>jicoco-config</artifactId>
     </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>jitsi-android-osgi</artifactId>
-      <version>1.0-20190327.160432-3</version>
-    </dependency>
     <!-- Note that this is not part of jitsi/jitsi, and it has a separate version. -->
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -144,11 +139,6 @@
     <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>jitsi-metaconfig</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.core</artifactId>
-      <version>4.3.1</version>
     </dependency>
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
@@ -200,6 +190,12 @@
       <scope>runtime</scope>
     </dependency>
     <!-- test -->
+    <dependency>
+      <groupId>io.mockk</groupId>
+      <artifactId>mockk</artifactId>
+      <version>1.10.0</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
@@ -253,14 +249,14 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.12</version>
+      <version>4.13.1</version>
       <scope>test</scope>
     </dependency>
     <!-- We need this so that maven-surefire-plugin can run junit4 tests -->
     <dependency>
       <groupId>org.junit.vintage</groupId>
       <artifactId>junit-vintage-engine</artifactId>
-      <version>5.5.2</version>
+      <version>5.7.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>

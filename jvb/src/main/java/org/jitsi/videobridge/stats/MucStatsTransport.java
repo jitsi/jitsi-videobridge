@@ -21,60 +21,45 @@ import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 
 /**
- * Implements a {@link StatsTransport} which publishes via Presence in an XMPP
- * MUC.
+ * Implements a {@link StatsTransport} which publishes via Presence in an XMPP MUC.
  *
  * @author Boris Grozev
  */
 public class MucStatsTransport
-    extends StatsTransport
+    implements StatsTransport
 {
     /**
      * The <tt>Logger</tt> used by the <tt>MucStatsTransport</tt> class and
      * its instances to print debug information.
      */
-    private static final Logger logger
-        = new LoggerImpl(MucStatsTransport.class.getName());
+    private static final Logger logger = new LoggerImpl(MucStatsTransport.class.getName());
 
-    /**
-     * Gets the {@link ClientConnectionImpl} to be used to publish
-     * statistics.
-     * @return the {@link ClientConnectionImpl} or {@code null}.
-     */
-    private ClientConnectionImpl getUserConnectionBundleActivator()
+    private final XmppConnection xmppConnection;
+
+    public MucStatsTransport(XmppConnection xmppConnection)
     {
-        return ClientConnectionSupplierKt.singleton().get();
+        this.xmppConnection = xmppConnection;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void publishStatistics(Statistics stats)
+    public void publishStatistics(Statistics stats, long measurementInterval)
     {
-        ClientConnectionImpl clientConnectionImpl
-            = getUserConnectionBundleActivator();
-        if (clientConnectionImpl != null)
+        logger.debug(() -> "Publishing statistics through MUC: " + stats);
+
+        ColibriStatsExtension statsExt = Statistics.toXmppExtensionElement(stats);
+
+        if (JvbApiConfig.enabled())
         {
-            logger.debug(() -> "Publishing statistics through MUC: " + stats);
-
-            ColibriStatsExtension statsExt = Statistics.toXmppExtensionElement(stats);
-
-            if (JvbApiConfig.enabled())
-            {
 //                statsExt.addStat(
 //                    "jvb-api-version",
 //                    SupportedApiVersionsKt.toPresenceString(ApplicationKt.SUPPORTED_API_VERSIONS)
 //                );
-            }
+        }
 
-            clientConnectionImpl.setPresenceExtension(statsExt);
-        }
-        else
-        {
-            logger.warn(
-                "Can not publish via presence, no ClientConnectionImpl.");
-        }
+        xmppConnection.setPresenceExtension(statsExt);
     }
 }
 

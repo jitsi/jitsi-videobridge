@@ -35,13 +35,13 @@ import java.util.*;
 public class Conferences
 {
     @Inject
-    private VideobridgeSupplier videobridgeSupplier;
+    private Videobridge videobridge;
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public String getConferences()
     {
-        Videobridge videobridge = videobridgeSupplier.get();
+        Videobridge videobridge = this.videobridge;
         List<ColibriConferenceIQ> conferenceIQs = new ArrayList<>();
 
         for (Conference conference : videobridge.getConferences())
@@ -69,7 +69,7 @@ public class Conferences
     @Path("/{confId}")
     public String getConference(@PathParam("confId") String confId)
     {
-        Conference conference = videobridgeSupplier.get().getConference(confId);
+        Conference conference = videobridge.getConference(confId);
 
         if (conference == null)
         {
@@ -91,7 +91,7 @@ public class Conferences
     @Path("/{confId}/dominant-speaker-identification")
     public String getDominantSpeakerIdentification(@PathParam("confId") String confId)
     {
-        Conference conference = videobridgeSupplier.get().getConference(confId);
+        Conference conference = videobridge.getConference(confId);
 
         if (conference == null)
         {
@@ -140,7 +140,7 @@ public class Conferences
     @Produces(MediaType.APPLICATION_JSON)
     public String patchConference(@PathParam("confId") String confId, String requestBody)
     {
-        Conference conference = videobridgeSupplier.get().getConference(confId);
+        Conference conference = videobridge.getConference(confId);
         if (conference == null)
         {
             throw new NotFoundException();
@@ -168,7 +168,7 @@ public class Conferences
 
     private String getVideobridgeIqResponseAsJson(ColibriConferenceIQ request)
     {
-        IQ responseIq = videobridgeSupplier.get()
+        IQ responseIq = videobridge
                 .handleColibriConferenceIQ(request);
 
         if (responseIq.getError() != null)

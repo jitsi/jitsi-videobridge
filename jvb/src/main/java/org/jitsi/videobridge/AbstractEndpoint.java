@@ -25,6 +25,7 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.rest.root.debug.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
 
@@ -33,7 +34,7 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-import static org.jitsi.videobridge.VideoConstraints.thumbnailVideoConstraints;
+import static org.jitsi.videobridge.VideoConstraints.disabledVideoConstraints;
 
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
@@ -50,7 +51,7 @@ public abstract class AbstractEndpoint
     /**
      * The default video constraints to assume when nothing is signaled.
      */
-    private static final VideoConstraints defaultMaxReceiverVideoConstraints = thumbnailVideoConstraints;
+    private static final VideoConstraints defaultMaxReceiverVideoConstraints = disabledVideoConstraints;
 
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a
@@ -96,6 +97,8 @@ public abstract class AbstractEndpoint
      * all receivers.
      */
     private VideoConstraints maxReceiverVideoConstraints = defaultMaxReceiverVideoConstraints;
+
+    protected final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
 
     /**
      * Initializes a new {@link AbstractEndpoint} instance.
@@ -178,6 +181,16 @@ public abstract class AbstractEndpoint
     public Conference getConference()
     {
         return conference;
+    }
+
+    void addEventHandler(EventHandler eventHandler)
+    {
+        eventEmitter.addHandler(eventHandler);
+    }
+
+    void removeEventHandler(EventHandler eventHandler)
+    {
+        eventEmitter.removeHandler(eventHandler);
     }
 
     /**
@@ -443,5 +456,11 @@ public abstract class AbstractEndpoint
             logger.debug(() -> "Removed receiver " + receiverId);
             receiverVideoConstraintsChanged(receiverVideoConstraintsMap.values());
         }
+    }
+
+    interface EventHandler {
+        void iceSucceeded();
+        void iceFailed();
+        void sourcesChanged();
     }
 }

@@ -16,27 +16,22 @@
 package org.jitsi.videobridge;
 
 import kotlin.*;
-import org.apache.commons.lang3.StringUtils;
-import org.ice4j.ice.harvest.*;
-import org.ice4j.stack.*;
+import org.apache.commons.lang3.*;
 import org.jetbrains.annotations.*;
-import org.jitsi.eventadmin.*;
-import org.jitsi.health.*;
-import org.jitsi.meet.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.osgi.*;
-import org.jitsi.service.configuration.*;
+import org.jitsi.shutdown.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
-import org.jitsi.utils.version.Version;
+import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.health.*;
-import org.jitsi.videobridge.ice.*;
+import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.version.*;
+import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.health.*;
@@ -45,12 +40,11 @@ import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.json.simple.*;
-import org.jxmpp.jid.parts.*;
-import org.osgi.framework.*;
+import org.jxmpp.jid.*;
 
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
-import java.util.regex.*;
 
 /**
  * Represents the Jitsi Videobridge which creates, lists and destroys
@@ -96,35 +90,15 @@ public class Videobridge
     public static final String REST_API_PNAME = "org.jitsi.videobridge." + REST_API + "_api_temp";
 
     /**
-     * The property that specifies allowed entities for turning on graceful
-     * shutdown mode. For XMPP API this is "from" JID. In case of REST
-     * the source IP is being copied into the "from" field of the IQ.
-     */
-    public static final String SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME
-        = "org.jitsi.videobridge.shutdown.ALLOWED_SOURCE_REGEXP";
-
-    /**
-     * The (OSGi) <tt>BundleContext</tt> in which this <tt>Videobridge</tt> has
-     * been started.
-     */
-    private BundleContext bundleContext;
-
-    /**
      * The <tt>Conference</tt>s of this <tt>Videobridge</tt> mapped by their
      * IDs.
      */
-    private final Map<String, Conference> conferences = new HashMap<>();
+    private final Map<String, Conference> conferencesById = new HashMap<>();
 
     /**
      * Indicates if this bridge instance has entered graceful shutdown mode.
      */
     private boolean shutdownInProgress;
-
-    /**
-     * The pattern used to filter entities that are allowed to trigger graceful
-     * shutdown mode.
-     */
-    private Pattern shutdownSourcePattern;
 
     /**
      * A class that holds some instance statistics.
@@ -135,13 +109,32 @@ public class Videobridge
      * Thread that checks expiration for conferences, contents, channels and
      * execute expire procedure for any of them.
      */
-    private VideobridgeExpireThread videobridgeExpireThread;
+    private final VideobridgeExpireThread videobridgeExpireThread;
 
     /**
      * The shim which handles Colibri-related logic for this
      * {@link Videobridge}.
      */
     private final VideobridgeShim shim = new VideobridgeShim(this);
+
+    /**
+     * The {@link JvbLoadManager} instance used for this bridge.
+     */
+    private final JvbLoadManager<PacketRateMeasurement> jvbLoadManager;
+
+    /**
+     * The task which manages the recurring load sampling and updating of
+     * {@link Videobridge#jvbLoadManager}.
+     */
+    private final ScheduledFuture<?> loadSamplerTask;
+
+    public final JvbHealthChecker healthChecker;
+
+    private final VersionService versionService;
+
+    @NotNull private final ShutdownServiceImpl shutdownService;
+
+    private final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
 
     static
     {
@@ -160,54 +153,63 @@ public class Videobridge
     /**
      * Initializes a new <tt>Videobridge</tt> instance.
      */
-    public Videobridge()
+    public Videobridge(
+        @Nullable XmppConnection xmppConnection,
+        @NotNull ShutdownServiceImpl shutdownService)
     {
         videobridgeExpireThread = new VideobridgeExpireThread(this);
-    }
-
-    /**
-     * Initializes a new {@link Conference} instance with an ID unique to the
-     * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt> and
-     * adds the new instance to the list of existing <tt>Conference</tt>
-     * instances.
-     *
-     * @param name world readable name of the conference to create.
-     * @param gid the optional "global" id of the conference.
-     * @return a new <tt>Conference</tt> instance with an ID unique to the
-     * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
-     */
-    public @NotNull Conference createConference(Localpart name, long gid)
-    {
-        return this.createConference(name == null ? null : name.toString(), /* enableLogging */ true, gid);
+        jvbLoadManager = new JvbLoadManager<>(
+            PacketRateMeasurement.getLoadedThreshold(),
+            PacketRateMeasurement.getRecoveryThreshold(),
+            new LastNReducer(
+                this::getConferences,
+                JvbLastNKt.jvbLastNSingleton
+            )
+        );
+        loadSamplerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
+            new PacketRateLoadSampler(
+                this,
+                (loadMeasurement) -> {
+                    // Update the load manager with the latest measurement
+                    jvbLoadManager.loadUpdate(loadMeasurement);
+                    // Update the stats with the latest stress level
+                    getStatistics().stressLevel = jvbLoadManager.getCurrentStressLevel();
+                    return Unit.INSTANCE;
+                }
+            ),
+            0,
+            10,
+            TimeUnit.SECONDS
+        );
+        if (xmppConnection != null)
+        {
+            xmppConnection.setEventHandler(new XmppConnectionEventHandler());
+        }
+        healthChecker = new JvbHealthChecker();
+        versionService = new JvbVersionService();
+        this.shutdownService = shutdownService;
     }
 
     /**
      * Generate conference IDs until one is found that isn't in use and create a new {@link Conference}
      * object using that ID
      * @param name
-     * @param enableLogging
      * @param gid
      * @return
      */
-    private @NotNull Conference doCreateConference(String name, boolean enableLogging, long gid)
+    private @NotNull Conference doCreateConference(EntityBareJid name, long gid)
     {
         Conference conference = null;
         do
         {
             String id = generateConferenceID();
 
-            synchronized (conferences)
+            synchronized (conferencesById)
             {
-                if (!conferences.containsKey(id))
+                if (!conferencesById.containsKey(id))
                 {
-                    conference
-                        = new Conference(
-                                this,
-                                id,
-                                name,
-                                enableLogging,
-                                gid);
-                    conferences.put(id, conference);
+                    conference = new Conference(this, id, name, gid);
+                    conferencesById.put(id, conference);
                 }
             }
         }
@@ -223,13 +225,11 @@ public class Videobridge
      * instances.
      *
      * @param name world readable name of the conference to create.
-     * @param enableLogging whether logging should be enabled or disabled for
      * the {@link Conference}.
      */
-    public @NotNull Conference createConference(
-            String name, boolean enableLogging)
+    public @NotNull Conference createConference(EntityBareJid name)
     {
-        return createConference(name, enableLogging, Conference.GID_NOT_SET);
+        return createConference(name, Conference.GID_NOT_SET);
     }
 
     /**
@@ -239,21 +239,22 @@ public class Videobridge
      * instances.
      *
      * @param name world readable name of the conference to create.
-     * @param enableLogging whether logging should be enabled or disabled for
-     * the {@link Conference}.
      * @param gid the "global" id of the conference (or
      * {@link Conference#GID_NOT_SET} if it is not specified.
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public @NotNull Conference createConference(
-            String name, boolean enableLogging, long gid)
+    public @NotNull Conference createConference(EntityBareJid name, long gid)
     {
-        final Conference conference = doCreateConference(name, enableLogging, gid);
+        final Conference conference = doCreateConference(name, gid);
 
-        logger.info(() -> "create_conf, id=" + conference.getID()
-                + " gid=" + conference.getGid()
-                + " logging=" + enableLogging);
+        logger.info(() -> "create_conf, id=" + conference.getID() + " gid=" + conference.getGid());
+
+        eventEmitter.fireEvent(handler ->
+        {
+            handler.conferenceCreated(conference);
+            return Unit.INSTANCE;
+        });
 
         return conference;
     }
@@ -284,23 +285,19 @@ public class Videobridge
     public void expireConference(Conference conference)
     {
         String id = conference.getID();
-        boolean expireConference;
 
-        synchronized (conferences)
+        synchronized (conferencesById)
         {
-            if (conference.equals(conferences.get(id)))
+            if (conference.equals(conferencesById.get(id)))
             {
-                conferences.remove(id);
-                expireConference = true;
+                conferencesById.remove(id);
+                conference.expire();
+                eventEmitter.fireEvent(handler ->
+                {
+                    handler.conferenceExpired(conference);
+                    return Unit.INSTANCE;
+                });
             }
-            else
-            {
-                expireConference = false;
-            }
-        }
-        if (expireConference)
-        {
-            conference.expire();
         }
 
         // Check if it's the time to shutdown now
@@ -316,18 +313,6 @@ public class Videobridge
     private String generateConferenceID()
     {
         return Long.toHexString(System.currentTimeMillis() + RANDOM.nextLong());
-    }
-
-    /**
-     * Returns the OSGi <tt>BundleContext</tt> in which this
-     * <tt>Videobridge</tt> is executing.
-     *
-     * @return the OSGi <tt>BundleContext</tt> in which this
-     * <tt>Videobridge</tt> is executing.
-     */
-    public BundleContext getBundleContext()
-    {
-        return bundleContext;
     }
 
     /**
@@ -348,9 +333,9 @@ public class Videobridge
      */
     public Conference getConference(String id)
     {
-        synchronized (conferences)
+        synchronized (conferencesById)
         {
-            return conferences.get(id);
+            return conferencesById.get(id);
         }
     }
 
@@ -361,51 +346,9 @@ public class Videobridge
      */
     public Collection<Conference> getConferences()
     {
-        synchronized (conferences)
+        synchronized (conferencesById)
         {
-            return new HashSet<>(conferences.values());
-        }
-    }
-
-    /**
-     * Returns the <tt>ConfigurationService</tt> used by this
-     * <tt>Videobridge</tt>.
-     *
-     * @return the <tt>ConfigurationService</tt> used by this
-     * <tt>Videobridge</tt>.
-     */
-    public ConfigurationService getConfigurationService()
-    {
-        BundleContext bundleContext = getBundleContext();
-
-        if (bundleContext == null)
-        {
-            return null;
-        }
-        else
-        {
-            return ServiceUtils2.getService(bundleContext, ConfigurationService.class);
-        }
-    }
-
-    /**
-     * Returns the <tt>EventAdmin</tt> instance (to be) used by this
-     * <tt>Videobridge</tt>.
-     *
-     * @return the <tt>EventAdmin</tt> instance (to be) used by this
-     * <tt>Videobridge</tt>.
-     */
-    public EventAdmin getEventAdmin()
-    {
-        BundleContext bundleContext = getBundleContext();
-
-        if (bundleContext == null)
-        {
-            return null;
-        }
-        else
-        {
-            return ServiceUtils2.getService(bundleContext, EventAdmin.class);
+            return new HashSet<>(conferencesById.values());
         }
     }
 
@@ -456,25 +399,15 @@ public class Videobridge
      * Returns a string representing the health of this {@link Videobridge}.
      * Note that this method does not perform any tests, but only checks the
      * cached value provided by the {@link org.jitsi.health.HealthCheckService}.
-     *
-     * @throws Exception if the videobridge is not healthy.
      */
     private String getHealthStatus()
     {
-        HealthCheckService health = JvbHealthCheckServiceSupplierKt.singleton().get();
-
-        Exception result = health.getResult();
+        Exception result = healthChecker.getResult();
         return result == null ? "OK" : result.getMessage();
     }
 
     /**
-     * Handles a <tt>GracefulShutdownIQ</tt> stanza which represents a request.
-     *
-     * @param shutdownIQ the <tt>GracefulShutdownIQ</tt> stanza represents
-     *        the request to handle
-     * @return an <tt>IQ</tt> stanza which represents the response to
-     *         the specified request or <tt>null</tt> to reply with
-     *         <tt>feature-not-implemented</tt>
+     * Handles a shutdown request.
      */
     public void shutdown(boolean graceful)
     {
@@ -523,36 +456,27 @@ public class Videobridge
             return;
         }
 
-        synchronized (conferences)
+        synchronized (conferencesById)
         {
-            if (conferences.isEmpty())
+            if (conferencesById.isEmpty())
             {
                 logger.info("Videobridge is shutting down NOW");
-                ShutdownService shutdownService = ServiceUtils2.getService(bundleContext, ShutdownService.class);
-                if (shutdownService != null)
-                {
-                    shutdownService.beginShutdown();
-                }
+                shutdownService.beginShutdown();
             }
         }
     }
 
     /**
-     * Starts this <tt>Videobridge</tt> in a specific <tt>BundleContext</tt>.
+     * Starts this {@link Videobridge}.
      *
-     * @param bundleContext the <tt>BundleContext</tt> in which this
-     * <tt>Videobridge</tt> is to start
-     *
-     * NOTE: we have to make this public so Jicofo can call it from its
-     * tests
+     * NOTE: we have to make this public so Jicofo can call it from its tests.
      */
-    public void start(final BundleContext bundleContext)
+    public void start()
     {
-        this.bundleContext = bundleContext;
-
         UlimitCheck.printUlimits();
 
         videobridgeExpireThread.start();
+        healthChecker.start();
 
         // <conference>
         ProviderManager.addIQProvider(
@@ -590,117 +514,20 @@ public class Videobridge
                 HealthCheckIQ.ELEMENT_NAME,
                 HealthCheckIQ.NAMESPACE,
                 new HealthCheckIQProvider());
-
-        ConfigurationService cfg = getConfigurationService();
-        startIce4j(bundleContext, cfg);
     }
 
     /**
-     * Implements the ice4j-related portion of {@link #start(BundleContext)}.
+     * Stops this {@link Videobridge}.
      *
-     * @param bundleContext the {@code BundleContext} in which this
-     * {@code Videobridge} is to start
+     * NOTE: we have to make this public so Jicofo can call it from its tests.
      */
-    private void startIce4j(
-            BundleContext bundleContext,
-            ConfigurationService cfg)
+    public void stop()
     {
-        // TODO Packet logging for ice4j is not supported at this time.
-        StunStack.setPacketLogger(null);
-
-        // Make all ice4j properties system properties.
-        if (cfg != null)
+        videobridgeExpireThread.stop();
+        healthChecker.stop();
+        if (loadSamplerTask != null)
         {
-            List<String> ice4jPropertyNames = cfg.getPropertyNamesByPrefix("org.ice4j", false);
-
-            if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
-            {
-                for (String propertyName : ice4jPropertyNames)
-                {
-                    String propertyValue = cfg.getString(propertyName);
-
-                    // we expect the getString to return either null or a
-                    // non-empty String object.
-                    if (propertyValue != null)
-                    {
-                        System.setProperty(propertyName, propertyValue);
-                    }
-                }
-            }
-        }
-
-        // Initialize the the host candidate interface filters in the ice4j
-        // stack.
-        try
-        {
-            HostCandidateHarvester.initializeInterfaceFilters();
-        }
-        catch (Exception e)
-        {
-            logger.warn(
-                    "There were errors during host candidate interface filters"
-                        + " initialization.",
-                    e);
-        }
-
-        // Start the initialization of the mapping candidate harvesters.
-        // Asynchronous, because the AWS and STUN harvester may take a long
-        // time to initialize.
-        new Thread(MappingCandidateHarvesters::initialize).start();
-    }
-
-    /**
-     * Stops this <tt>Videobridge</tt> in a specific <tt>BundleContext</tt>.
-     *
-     * @param bundleContext the <tt>BundleContext</tt> in which this
-     * <tt>Videobridge</tt> is to stop
-     *
-     * NOTE: we have to make this public so Jicofo can call it from its
-     * tests
-     */
-    public void stop(BundleContext bundleContext)
-    {
-        try
-        {
-            ConfigurationService cfg = getConfigurationService();
-            stopIce4j(bundleContext, cfg);
-        }
-        finally
-        {
-            videobridgeExpireThread.stop(bundleContext);
-            this.bundleContext = null;
-        }
-    }
-
-    /**
-     * Implements the ice4j-related portion of {@link #stop(BundleContext)}.
-     *
-     * @param bundleContext the {@code BundleContext} in which this
-     * {@code Videobridge} is to start
-     */
-    private void stopIce4j(
-        BundleContext bundleContext,
-        ConfigurationService cfg)
-    {
-        // Shut down harvesters.
-        Harvesters.closeStaticConfiguration();
-
-        // Clear all system properties that were ice4j properties. This is done
-        // to deal with any properties that are conditionally set during
-        // initialization. If the conditions have changed upon restart (of the
-        // component, rather than the JVM), it would not be enough to "not set"
-        // the system property (as it would have survived the restart).
-        if (cfg != null)
-        {
-            List<String> ice4jPropertyNames = cfg.getPropertyNamesByPrefix("org.ice4j", false);
-
-            if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
-            {
-                for (String propertyName : ice4jPropertyNames)
-                {
-                    System.clearProperty(propertyName);
-                }
-            }
+            loadSamplerTask.cancel(true);
         }
     }
 
@@ -725,6 +552,7 @@ public class Videobridge
         debugState.put("time", System.currentTimeMillis());
 
         debugState.put("health", getHealthStatus());
+        debugState.put("load-management", jvbLoadManager.getStats());
         debugState.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
 
         JSONObject conferences = new JSONObject();
@@ -742,7 +570,7 @@ public class Videobridge
             Conference conference;
             synchronized (conferences)
             {
-                conference = this.conferences.get(conferenceId);
+                conference = this.conferencesById.get(conferenceId);
             }
 
             conferences.put(
@@ -795,9 +623,71 @@ public class Videobridge
     /**
      * Gets the version of the jitsi-videobridge application.
      */
-    public Version getVersion()
+    // TODO(brian): this should just return a Version, instead of the VersionService,
+    // but Jicoco needs access to the VersionService right now (though it would work
+    // just fine with just having the Version).  So fix this once Jicoco is fixed.
+    public VersionService getVersionService()
     {
-        return JvbVersionServiceSupplierKt.singleton().get().getCurrentVersion();
+        return versionService;
+    }
+
+    public void addEventHandler(EventHandler eventHandler)
+    {
+        eventEmitter.addHandler(eventHandler);
+    }
+
+    public void removeEventHandler(EventHandler eventHandler)
+    {
+        eventEmitter.removeHandler(eventHandler);
+    }
+
+    private class XmppConnectionEventHandler implements XmppConnection.EventHandler
+    {
+        @NotNull
+        @Override
+        public IQ colibriConferenceIqReceived(@NotNull ColibriConferenceIQ iq)
+        {
+            return handleColibriConferenceIQ(iq);
+        }
+
+        @NotNull
+        @Override
+        public IQ versionIqReceived(@NotNull org.jivesoftware.smackx.iqversion.packet.Version iq)
+        {
+            Version currentVersion = versionService.getCurrentVersion();
+            if (currentVersion == null)
+            {
+                return IQ.createErrorResponse(
+                    iq,
+                    XMPPError.getBuilder(XMPPError.Condition.internal_server_error)
+                );
+            }
+
+            // send packet
+            org.jivesoftware.smackx.iqversion.packet.Version versionResult =
+                new org.jivesoftware.smackx.iqversion.packet.Version(
+                    currentVersion.getApplicationName(),
+                    currentVersion.toString(),
+                    System.getProperty("os.name")
+                );
+
+            // to, from and packetId are set by the caller.
+            // versionResult.setTo(versionRequest.getFrom());
+            // versionResult.setFrom(versionRequest.getTo());
+            // versionResult.setPacketID(versionRequest.getPacketID());
+            versionResult.setType(IQ.Type.result);
+
+            return versionResult;
+        }
+
+        @NotNull
+        @Override
+        public IQ healthCheckIqReceived(@NotNull HealthCheckIQ iq)
+        {
+            return handleHealthCheckIQ(iq);
+        }
+
+
     }
 
     /**
@@ -956,5 +846,15 @@ public class Videobridge
          * wasn't (at the time of expiration).
          */
         public AtomicInteger dtlsFailedEndpoints = new AtomicInteger();
+
+        /**
+         * The stress level for this bridge
+         */
+        public Double stressLevel = 0.0;
+    }
+
+    public interface EventHandler {
+        void conferenceCreated(@NotNull Conference conference);
+        void conferenceExpired(@NotNull Conference conference);
     }
 }

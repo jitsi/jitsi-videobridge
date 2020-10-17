@@ -568,15 +568,15 @@ class EndpointMessageTransport
             String to = message.getTo();
 
             AbstractEndpoint targetEndpoint = conference.getEndpoint(to);
-            if (targetEndpoint instanceof Endpoint)
-            {
-                targets = Collections.singletonList(targetEndpoint);
-                sendToOcto = false;
-            }
-            else if (targetEndpoint instanceof OctoEndpoint)
+            if (targetEndpoint instanceof OctoEndpoint)
             {
                 targets = Collections.emptyList();
                 sendToOcto = true;
+            }
+            else if (targetEndpoint != null)
+            {
+                targets = Collections.singletonList(targetEndpoint);
+                sendToOcto = false;
             }
             else
             {

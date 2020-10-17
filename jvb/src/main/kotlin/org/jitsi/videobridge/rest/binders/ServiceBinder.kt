@@ -19,21 +19,24 @@ package org.jitsi.videobridge.rest.binders
 import org.glassfish.hk2.utilities.binding.AbstractBinder
 import org.jitsi.health.HealthCheckServiceSupplier
 import org.jitsi.version.VersionServiceSupplier
-import org.jitsi.videobridge.VideobridgeSupplier
-import org.jitsi.videobridge.health.jvbHealthCheckServiceSupplier
-import org.jitsi.videobridge.stats.StatsManagerSupplier
-import org.jitsi.videobridge.version.jvbVersionServiceSupplier
-import org.jitsi.videobridge.xmpp.ClientConnectionImplSupplier
-import org.jitsi.videobridge.videobridgeSupplier
-import org.jitsi.videobridge.stats.statsManagerSupplier
-import org.jitsi.videobridge.xmpp.clientConnectionImplSupplier
+import org.jitsi.videobridge.Videobridge
+import org.jitsi.videobridge.health.JvbHealthCheckServiceSupplier
+import org.jitsi.videobridge.stats.StatsCollector
+import org.jitsi.videobridge.version.JvbVersionServiceSupplier
+import org.jitsi.videobridge.xmpp.XmppConnection
 
-class ServiceBinder : AbstractBinder() {
+class ServiceBinder(
+    private val videobridge: Videobridge,
+    private val xmppConnection: XmppConnection,
+    private val statsCollector: StatsCollector
+) : AbstractBinder() {
     override fun configure() {
-        bind(videobridgeSupplier).to(VideobridgeSupplier::class.java)
-        bind(statsManagerSupplier).to(StatsManagerSupplier::class.java)
-        bind(clientConnectionImplSupplier).to(ClientConnectionImplSupplier::class.java)
-        bind(jvbHealthCheckServiceSupplier).to(HealthCheckServiceSupplier::class.java)
-        bind(jvbVersionServiceSupplier).to(VersionServiceSupplier::class.java)
+        bind(videobridge).to(Videobridge::class.java)
+        bind(statsCollector).to(StatsCollector::class.java)
+        bind(xmppConnection).to(XmppConnection::class.java)
+        // These are still suppliers rather than direct instances because that's what
+        // Jicoco requires
+        bind(JvbHealthCheckServiceSupplier(videobridge.healthChecker)).to(HealthCheckServiceSupplier::class.java)
+        bind(JvbVersionServiceSupplier(videobridge.versionService)).to(VersionServiceSupplier::class.java)
     }
 }

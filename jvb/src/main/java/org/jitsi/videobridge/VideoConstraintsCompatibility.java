@@ -206,6 +206,7 @@ class VideoConstraintsCompatibility
         this.selectedEndpoints = newSelectedEndpoints;
     }
 
+    @SuppressWarnings("unchecked")
     OrderedJsonObject getDebugState()
     {
         OrderedJsonObject debugState = new OrderedJsonObject();

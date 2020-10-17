@@ -21,6 +21,8 @@ import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpSender
 import org.jitsi.nlj.rtcp.KeyframeRequester
+import org.jitsi.nlj.rtp.TransportCcEngine
+import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.stats.PacketStreamStats
@@ -29,6 +31,7 @@ import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
 import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
+import org.jitsi.nlj.util.bps
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.util.ByteBufferPool
@@ -89,7 +92,7 @@ class OctoRtpSender(
         keyframeRequester.requestKeyframe(mediaSsrc)
     }
 
-    override fun sendProbing(mediaSsrc: Long, numBytes: Int): Int = 0
+    override fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int = 0
 
     override fun setSrtpTransformers(srtpTransformers: SrtpTransformers) {}
 
@@ -100,15 +103,19 @@ class OctoRtpSender(
     override fun tearDown() {
     }
 
+    override val bandwidthEstimator: BandwidthEstimator
+        get() = TODO("Not implemented")
+
     override fun handleEvent(event: Event) {}
 
     override fun onRttUpdate(newRttMs: Double) {}
 
-    override fun getPacketStreamStats(): PacketStreamStats.Snapshot =
-        PacketStreamStats.Snapshot(0, 0, 0, 0)
+    override fun getPacketStreamStats(): PacketStreamStats.Snapshot = PacketStreamStats.Snapshot(0.bps, 0, 0, 0)
 
-    override fun getStreamStats(): OutgoingStatisticsSnapshot =
-        OutgoingStatisticsSnapshot(mapOf())
+    override fun getTransportCcEngineStats(): TransportCcEngine.StatisticsSnapshot =
+        TransportCcEngine.StatisticsSnapshot(0, 0, 0, 0, 0, 0)
+
+    override fun getStreamStats(): OutgoingStatisticsSnapshot = OutgoingStatisticsSnapshot(mapOf())
 
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("Octo sender").apply {
         addBlock(super.getNodeStats())

@@ -508,11 +508,17 @@ public class MediaSourceFactory
         sourceSsrcsList.forEach(sourceSsrcs -> {
             // As of now, we only ever have 1 spatial layer per stream
             int numSpatialLayersPerStream = 1;
-            int numTemporalLayersPerStream = 1;
-            if (sourceSsrcs.size() > 1)
-            {
-                numTemporalLayersPerStream = VP8_SIMULCAST_TEMPORAL_LAYERS;
-            }
+            // Previously, we assumed that when simulcast was enabled, 3 temporal layers would
+            // be present in each stream and if simulcast wasn't enabled, there would be only
+            // 1 temporal layer per stream, but we found that screenshare started sending 2
+            // temporal layers, and we'd therefore start dropping layer 1 packets since we didn't
+            // recognize them.  The truth is we have no way of _knowing_ how many temporal layers
+            // there are going to be (as it's not signaled) unless we dynamically read the layers
+            // as the packets come in (which we may want to do in the future)--but for now we'll
+            // over-estimate how many layers there are per stream to avoid dropping packets for a
+            // layer we don't recognize.  Since there are already situations where chrome sends fewer
+            // temporal layers than we assume, this should be safe.
+            final int numTemporalLayersPerStream = 3;
             Map<Long, SecondarySsrcs> secondarySsrcs
                 = getAllSecondarySsrcs(sourceSsrcs, finalSourceGroups);
             MediaSourceDesc mediaSource

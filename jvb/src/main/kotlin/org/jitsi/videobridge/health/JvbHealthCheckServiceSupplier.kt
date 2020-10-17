@@ -16,21 +16,11 @@
 
 package org.jitsi.videobridge.health
 
-import org.jitsi.health.HealthCheckService
 import org.jitsi.health.HealthCheckServiceSupplier
 
-class JvbHealthCheckServiceSupplier : HealthCheckServiceSupplier {
-    /**
-     * [HealthCheckService] doesn't expose start/stop methods, so we need
-     * to have [JvbHealthChecker] (which does) be the exposed type here.
-     */
-    private val healthCheckService: JvbHealthChecker by lazy {
-        JvbHealthChecker()
-    }
+class JvbHealthCheckServiceSupplier(
+    private val healthChecker: JvbHealthChecker
+) : HealthCheckServiceSupplier {
 
-    override fun get(): JvbHealthChecker = healthCheckService
+    override fun get(): JvbHealthChecker = healthChecker
 }
-
-val jvbHealthCheckServiceSupplier = JvbHealthCheckServiceSupplier()
-
-fun singleton() = jvbHealthCheckServiceSupplier

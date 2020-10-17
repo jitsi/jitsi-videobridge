@@ -30,25 +30,17 @@ import javax.ws.rs.core.*;
 public class Stats
 {
     @Inject
-    protected StatsManagerSupplier statsManagerSupplier;
+    protected StatsCollector statsManager;
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public String getStats()
     {
-        StatsManager statsManager = statsManagerSupplier.get();
+        StatsCollector statsManager = this.statsManager;
 
-        if (statsManagerSupplier != null)
+        if (this.statsManager != null)
         {
-            Statistics videobridgeStats =
-                statsManager.getStatistics().stream()
-                    .filter(s -> s instanceof VideobridgeStatistics)
-                    .findAny()
-                    .orElse(null);
-            if (videobridgeStats != null)
-            {
-                return JSONSerializer.serializeStatistics(videobridgeStats).toJSONString();
-            }
+            return JSONSerializer.serializeStatistics(statsManager.getStatistics()).toJSONString();
         }
         return new JSONObject().toJSONString();
     }

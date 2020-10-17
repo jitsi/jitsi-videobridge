@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.stats;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.utils.*;
@@ -58,11 +59,8 @@ public class VideobridgeStatistics
     private static final String region = OctoConfig.config.getRegion();
 
 
-    public static final String EPS_NO_MSG_TRANSPORT_AFTER_DELAY =
-        "num_eps_no_msg_transport_after_delay";
-
-    public static final String TOTAL_ICE_SUCCEEDED_RELAYED =
-        "total_ice_succeeded_relayed";
+    public static final String EPS_NO_MSG_TRANSPORT_AFTER_DELAY = "num_eps_no_msg_transport_after_delay";
+    public static final String TOTAL_ICE_SUCCEEDED_RELAYED = "total_ice_succeeded_relayed";
 
     /**
      * Number of configured MUC clients.
@@ -85,6 +83,21 @@ public class VideobridgeStatistics
     public static final String MUCS_JOINED = "mucs_joined";
 
     /**
+     * Fraction of incoming packets that were lost.
+     */
+    public static final String INCOMING_LOSS = "incoming_loss";
+
+    /**
+     * Fraction of outgoing packets that were lost.
+     */
+    public static final String OUTGOING_LOSS = "outgoing_loss";
+
+    /**
+     * Fraction of incoming and outgoing packets that were lost.
+     */
+    public static final String OVERALL_LOSS = "overall_loss";
+
+    /**
      * The indicator which determines whether {@link #generate()} is executing
      * on this <tt>VideobridgeStatistics</tt>. If <tt>true</tt>, invocations of
      * <tt>generate()</tt> will do nothing. Introduced in order to mitigate an
@@ -93,11 +106,23 @@ public class VideobridgeStatistics
      */
     private boolean inGenerate = false;
 
+    private final @NotNull Videobridge videobridge;
+    private final @Nullable OctoRelayService octoRelayService;
+    private final @NotNull XmppConnection xmppConnection;
+
     /**
      * Creates instance of <tt>VideobridgeStatistics</tt>.
      */
-    public VideobridgeStatistics()
+    public VideobridgeStatistics(
+        @NotNull Videobridge videobridge,
+        @Nullable OctoRelayService octoRelayService,
+        @NotNull XmppConnection xmppConnection
+    )
     {
+        this.videobridge = videobridge;
+        this.octoRelayService = octoRelayService;
+        this.xmppConnection = xmppConnection;
+
         timestampFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         timestampFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 
@@ -107,10 +132,7 @@ public class VideobridgeStatistics
         unlockedSetStat(CONFERENCES, 0);
         unlockedSetStat(PARTICIPANTS, 0);
         unlockedSetStat(THREADS, 0);
-        unlockedSetStat(RTP_LOSS, 0d);
         unlockedSetStat(VIDEO_CHANNELS, 0);
-        unlockedSetStat(LOSS_RATE_DOWNLOAD, 0d);
-        unlockedSetStat(LOSS_RATE_UPLOAD, 0d);
         unlockedSetStat(JITTER_AGGREGATE, 0d);
         unlockedSetStat(RTT_AGGREGATE, 0d);
         unlockedSetStat(LARGEST_CONFERENCE, 0);
@@ -177,7 +199,6 @@ public class VideobridgeStatistics
     @SuppressWarnings("unchecked")
     private void generate0()
     {
-        Videobridge videobridge = VideobridgeSupplierKt.singleton().get();
         Videobridge.Statistics jvbStats = videobridge.getStatistics();
 
         int videoChannels = 0;
@@ -185,14 +206,19 @@ public class VideobridgeStatistics
         int octoConferences = 0;
         int endpoints = 0;
         int octoEndpoints = 0;
-        double fractionLostSum = 0d; // TODO verify
-        int fractionLostCount = 0;
-        long packetsReceived = 0;
-        long packetsReceivedLost = 0; // TODO verify
-        long bitrateDownloadBps = 0;
-        long bitrateUploadBps = 0;
+        double bitrateDownloadBps = 0;
+        double bitrateUploadBps = 0;
         long packetRateUpload = 0;
         long packetRateDownload = 0;
+
+        // Packets we received
+        long incomingPacketsReceived = 0;
+        // Packets we should have received but were lost
+        long incomingPacketsLost = 0;
+        // Packets we sent that were reported received
+        long outgoingPacketsReceived = 0;
+        // Packets we sent that were reported lost
+        long outgoingPacketsLost = 0;
 
         // Average jitter and RTT across MediaStreams which report a valid value.
         double jitterSumMs = 0; // TODO verify
@@ -214,10 +240,6 @@ public class VideobridgeStatistics
         {
             ConferenceShim conferenceShim = conference.getShim();
             //TODO: can/should we do everything here via the shim only?
-            if (!conference.includeInStatistics())
-            {
-                continue;
-            }
             conferences++;
             if (conference.isP2p())
             {
@@ -271,29 +293,13 @@ public class VideobridgeStatistics
                 {
                     receiveOnlyEndpoints++;
                 }
-                TransceiverStats transceiverStats
-                        = endpoint.getTransceiver().getTransceiverStats();
-                IncomingStatisticsSnapshot incomingStats
-                        = transceiverStats.getIncomingStats();
-                PacketStreamStats.Snapshot incomingPacketStreamStats
-                        = transceiverStats.getIncomingPacketStreamStats();
-                bitrateDownloadBps += incomingPacketStreamStats.getBitrate();
+                TransceiverStats transceiverStats = endpoint.getTransceiver().getTransceiverStats();
+                IncomingStatisticsSnapshot incomingStats = transceiverStats.getIncomingStats();
+                PacketStreamStats.Snapshot incomingPacketStreamStats = transceiverStats.getIncomingPacketStreamStats();
+                bitrateDownloadBps += incomingPacketStreamStats.getBitrate().getBps();
                 packetRateDownload += incomingPacketStreamStats.getPacketRate();
-                for (IncomingSsrcStats.Snapshot ssrcStats
-                        : incomingStats.getSsrcStats().values())
+                for (IncomingSsrcStats.Snapshot ssrcStats : incomingStats.getSsrcStats().values())
                 {
-                    packetsReceived += ssrcStats.getNumReceivedPackets();
-
-                    packetsReceivedLost += ssrcStats.getCumulativePacketsLost();
-
-                    fractionLostCount++;
-                    // note(george) this computes the fraction of lost packets
-                    // since beginning of reception, which is different from the
-                    // rfc 3550 sense.
-                    double fractionLost = ssrcStats.getCumulativePacketsLost()
-                        / (double) ssrcStats.getNumReceivedPackets();
-                    fractionLostSum += fractionLost;
-
                     double ssrcJitter = ssrcStats.getJitter();
                     if (ssrcJitter != 0)
                     {
@@ -302,21 +308,25 @@ public class VideobridgeStatistics
                         jitterSumMs += Math.abs(ssrcJitter);
                         jitterCount++;
                     }
-
                 }
 
-                PacketStreamStats.Snapshot outgoingStats
-                        = transceiverStats.getOutgoingPacketStreamStats();
-                bitrateUploadBps += outgoingStats.getBitrate();
+                PacketStreamStats.Snapshot outgoingStats = transceiverStats.getOutgoingPacketStreamStats();
+                bitrateUploadBps += outgoingStats.getBitrate().getBps();
                 packetRateUpload += outgoingStats.getPacketRate();
 
-                double endpointRtt
-                        = transceiverStats.getEndpointConnectionStats().getRtt();
+                EndpointConnectionStats.Snapshot endpointConnectionStats
+                        = transceiverStats.getEndpointConnectionStats();
+                double endpointRtt = endpointConnectionStats.getRtt();
                 if (endpointRtt > 0)
                 {
                     rttSumMs += endpointRtt;
                     rttCount++;
                 }
+
+                incomingPacketsReceived += endpointConnectionStats.getIncomingLossStats().getPacketsReceived();
+                incomingPacketsLost += endpointConnectionStats.getIncomingLossStats().getPacketsLost();
+                outgoingPacketsReceived += endpointConnectionStats.getOutgoingLossStats().getPacketsReceived();
+                outgoingPacketsLost += endpointConnectionStats.getOutgoingLossStats().getPacketsLost();
             }
 
             updateBuckets(audioSendersBuckets, conferenceAudioSenders);
@@ -324,16 +334,6 @@ public class VideobridgeStatistics
             updateBuckets(videoSendersBuckets, conferenceVideoSenders);
             numVideoSenders += conferenceVideoSenders;
         }
-
-        // Loss rates
-        double lossRateDownload
-            = (packetsReceived + packetsReceivedLost > 0)
-            ? ((double) packetsReceivedLost) / (packetsReceived + packetsReceivedLost)
-            : 0d;
-        double lossRateUpload
-            = (fractionLostCount > 0)
-            ? fractionLostSum / fractionLostCount
-            : 0d;
 
         // JITTER_AGGREGATE
         double jitterAggregate
@@ -366,6 +366,25 @@ public class VideobridgeStatistics
         // THREADS
         int threadCount = ManagementFactory.getThreadMXBean().getThreadCount();
 
+        double incomingLoss = 0;
+        if (incomingPacketsReceived + incomingPacketsLost > 0)
+        {
+            incomingLoss = ((double) incomingPacketsLost) / (incomingPacketsReceived + incomingPacketsLost);
+        }
+
+        double outgoingLoss = 0;
+        if (outgoingPacketsReceived + outgoingPacketsLost > 0)
+        {
+            outgoingLoss = ((double) outgoingPacketsLost) / (outgoingPacketsReceived + outgoingPacketsLost);
+        }
+
+        double overallLoss = 0;
+        if (incomingPacketsReceived + incomingPacketsLost + outgoingPacketsReceived + outgoingPacketsLost > 0)
+        {
+            overallLoss = ((double) (outgoingPacketsLost + incomingPacketsLost))
+                    / (incomingPacketsReceived + incomingPacketsLost + outgoingPacketsReceived + outgoingPacketsLost);
+        }
+
         // Now that (the new values of) the statistics have been calculated and
         // the risks of the current thread hanging have been reduced as much as
         // possible, commit (the new values of) the statistics.
@@ -374,6 +393,9 @@ public class VideobridgeStatistics
         lock.lock();
         try
         {
+            unlockedSetStat(INCOMING_LOSS, incomingLoss);
+            unlockedSetStat(OUTGOING_LOSS, outgoingLoss);
+            unlockedSetStat(OVERALL_LOSS, overallLoss);
             unlockedSetStat(
                     BITRATE_DOWNLOAD,
                     (bitrateDownloadBps + 500) / 1000 /* kbps */);
@@ -382,14 +404,6 @@ public class VideobridgeStatistics
                     (bitrateUploadBps + 500) / 1000 /* kbps */);
             unlockedSetStat(PACKET_RATE_DOWNLOAD, packetRateDownload);
             unlockedSetStat(PACKET_RATE_UPLOAD, packetRateUpload);
-            // Keep for backward compatibility
-            unlockedSetStat(
-                    RTP_LOSS,
-                    lossRateDownload + lossRateUpload);
-            // TODO verify
-            unlockedSetStat(LOSS_RATE_DOWNLOAD, lossRateDownload);
-            // TODO verify
-            unlockedSetStat(LOSS_RATE_UPLOAD, lossRateUpload);
             // TODO seems broken (I see values of > 11 seconds)
             unlockedSetStat(JITTER_AGGREGATE, jitterAggregate);
             unlockedSetStat(RTT_AGGREGATE, rttAggregate);
@@ -435,6 +449,10 @@ public class VideobridgeStatistics
                 EPS_NO_MSG_TRANSPORT_AFTER_DELAY,
                 jvbStats.numEndpointsNoMessageTransportAfterDelay.get()
             );
+            unlockedSetStat(
+                "stress_level",
+                jvbStats.stressLevel
+            );
             unlockedSetStat(CONFERENCES, conferences);
             unlockedSetStat(OCTO_CONFERENCES, octoConferences);
             unlockedSetStat(INACTIVE_CONFERENCES, inactiveConferences);
@@ -470,11 +488,10 @@ public class VideobridgeStatistics
                     TOTAL_PACKETS_RECEIVED, jvbStats.totalPacketsReceived.get());
             unlockedSetStat(TOTAL_PACKETS_SENT, jvbStats.totalPacketsSent.get());
 
-            OctoRelayService relayService = OctoRelayServiceProviderKt.singleton().get();
             OctoRelayService.Stats octoRelayServiceStats
-                = relayService == null ? null : relayService.getStats();
+                = octoRelayService == null ? null : octoRelayService.getStats();
 
-            if (relayService != null)
+            if (octoRelayService != null)
             {
                 unlockedSetStat("octo_version", OctoRelayService.OCTO_VERSION);
             }
@@ -523,21 +540,22 @@ public class VideobridgeStatistics
             {
                 unlockedSetStat(REGION, region);
             }
-            unlockedSetStat(VERSION, videobridge.getVersion().toString());
+            unlockedSetStat(VERSION, videobridge.getVersionService().getCurrentVersion().toString());
 
-            ClientConnectionImpl clientConnection = ClientConnectionSupplierKt.singleton().get();
+            // TODO(brian): expose these stats in a `getStats` call in XmppConnection
+            //  rather than calling xmppConnection.getMucClientManager?
             unlockedSetStat(
                     MUC_CLIENTS_CONFIGURED,
-                    clientConnection.getMucClientManager().getClientCount());
+                    xmppConnection.getMucClientManager().getClientCount());
             unlockedSetStat(
                     MUC_CLIENTS_CONNECTED,
-                    clientConnection.getMucClientManager().getClientConnectedCount());
+                    xmppConnection.getMucClientManager().getClientConnectedCount());
             unlockedSetStat(
                     MUCS_CONFIGURED,
-                    clientConnection.getMucClientManager().getMucCount());
+                    xmppConnection.getMucClientManager().getMucCount());
             unlockedSetStat(
                     MUCS_JOINED,
-                    clientConnection.getMucClientManager().getMucJoinedCount());
+                    xmppConnection.getMucClientManager().getMucJoinedCount());
         }
         finally
         {

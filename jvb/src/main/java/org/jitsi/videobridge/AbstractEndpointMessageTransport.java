@@ -111,6 +111,7 @@ public abstract class AbstractEndpointMessageTransport<T extends AbstractEndpoin
     {
     }
 
+    @SuppressWarnings("unchecked")
     public JSONObject getDebugState() {
         JSONObject receivedCounts = new JSONObject();
         getReceivedCounts().forEach(receivedCounts::put);
