@@ -26,22 +26,26 @@ import java.net.SocketException
 import java.net.UnknownHostException
 import java.time.Instant
 
+/**
+ * The service which is responsible for sending and receiving packets on the Octo link.  Only
+ * a single instance exists, and it handles all Octo traffic.  It should _only_ be created
+ * when it has been enabled in configuration.  It will throw in the constructor if it
+ * is not enabled
+ */
 class OctoRelayService {
     /**
      * The [UdpTransport] used to send and receive Octo data
      */
-    private var udpTransport: UdpTransport? = null
+    private val udpTransport: UdpTransport
 
     /**
      * The [BridgeOctoTransport] for handling incoming and outgoing Octo data
      */
-    var bridgeOctoTransport: BridgeOctoTransport? = null
-        private set
+    val bridgeOctoTransport: BridgeOctoTransport
 
-    fun start() {
+    init {
         if (!config.enabled) {
-            logger.info("Octo relay is disabled")
-            return
+            throw IllegalStateException("Octo relay service is not enabled")
         }
 
         val address = config.bindAddress
@@ -50,43 +54,49 @@ class OctoRelayService {
 
         try {
             udpTransport = UdpTransport(address, port, logger, OCTO_SO_RCVBUF, OCTO_SO_SNDBUF)
-            logger.info("Created Octo UDP transport")
-        } catch (e: Exception) {
-            when (e) {
+        } catch (t: Throwable) {
+            when (t) {
                 is UnknownHostException, is SocketException -> {
                     logger.error("Failed to initialize Octo UDP transport with " +
-                            "address " + address + ":" + port + ".", e)
-                    return
+                            "address " + address + ":" + port + ".", t)
                 }
-                else -> throw e
+                else -> {
+                    logger.error("Error creating OctoRelayService UdpTransport", t)
+                }
             }
+            throw t
         }
+        logger.info("Created Octo UDP transport")
+
         bridgeOctoTransport = BridgeOctoTransport("$publicAddress:$port", logger)
 
         // Wire the data coming from the UdpTransport to the OctoTransport
-        udpTransport!!.incomingDataHandler = object : UdpTransport.IncomingDataHandler {
+        udpTransport.incomingDataHandler = object : UdpTransport.IncomingDataHandler {
             override fun dataReceived(data: ByteArray, offset: Int, length: Int, receivedTime: Instant) {
-                bridgeOctoTransport!!.dataReceived(data, offset, length, receivedTime)
+                bridgeOctoTransport.dataReceived(data, offset, length, receivedTime)
             }
         }
         // Wire the data going out of OctoTransport to UdpTransport
-        bridgeOctoTransport!!.outgoingDataHandler = object : BridgeOctoTransport.OutgoingOctoPacketHandler {
+        bridgeOctoTransport.outgoingDataHandler = object : BridgeOctoTransport.OutgoingOctoPacketHandler {
             override fun sendData(data: ByteArray, off: Int, length: Int, remoteAddresses: Collection<SocketAddress>) {
-                udpTransport!!.send(data, off, length, remoteAddresses)
+                udpTransport.send(data, off, length, remoteAddresses)
             }
         }
-        TaskPools.IO_POOL.submit { udpTransport!!.startReadingData() }
+    }
+
+    fun start() {
+        TaskPools.IO_POOL.submit { udpTransport.startReadingData() }
     }
 
     fun stop() {
         logger.info("Stopping")
-        udpTransport?.stop()
-        bridgeOctoTransport?.stop()
+        udpTransport.stop()
+        bridgeOctoTransport.stop()
     }
 
     fun getStats(): Stats {
-        val octoUdpTransportStats = udpTransport!!.getStats()
-        val octoTransportStats = bridgeOctoTransport!!.getStats()
+        val octoUdpTransportStats = udpTransport.getStats()
+        val octoTransportStats = bridgeOctoTransport.getStats()
         return Stats(
             bytesReceived = octoUdpTransportStats.bytesReceived,
             bytesSent = octoUdpTransportStats.bytesSent,
@@ -94,12 +104,12 @@ class OctoRelayService {
             packetsSent = octoUdpTransportStats.packetsSent,
             receiveBitrate = octoUdpTransportStats.receiveBitRate,
             receivePacketRate = octoUdpTransportStats.receivePacketRate,
-            packetsDropped = octoUdpTransportStats.incomingPacketsDropped +
-                    octoTransportStats.numInvalidPackets +
-                    octoTransportStats.numIncomingDroppedNoHandler,
+            packetsDropped = (octoUdpTransportStats.incomingPacketsDropped) +
+                (octoTransportStats.numInvalidPackets) +
+                (octoTransportStats.numIncomingDroppedNoHandler),
             sendBitrate = octoUdpTransportStats.sendBitRate,
             sendPacketRate = octoUdpTransportStats.sendPacketRate,
-            relayId = bridgeOctoTransport!!.relayId
+            relayId = bridgeOctoTransport.relayId
         )
     }
 

@@ -26,7 +26,6 @@ import org.jitsi.nlj.rtp.bandwidthestimation.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.osgi.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.extensions.*;
 import org.jitsi.rtp.rtcp.*;
@@ -59,6 +58,7 @@ import java.nio.*;
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 import java.util.function.Function;
 import java.util.function.*;
 import java.util.stream.*;
@@ -319,10 +319,7 @@ public class Endpoint
         dtlsTransport = new DtlsTransport(logger);
         setupDtlsTransport();
 
-        if (conference.includeInStatistics())
-        {
-            conference.getVideobridge().getStatistics().totalEndpoints.incrementAndGet();
-        }
+        conference.getVideobridge().getStatistics().totalEndpoints.incrementAndGet();
     }
 
     public Endpoint(
@@ -375,8 +372,10 @@ public class Endpoint
             @Override
             public void connected() {
                 logger.info("ICE connected");
-                getConference().getStatistics().hasIceSucceededEndpoint = true;
-                getConference().getVideobridge().getStatistics().totalIceSucceeded.incrementAndGet();
+                eventEmitter.fireEvent(handler -> {
+                    handler.iceSucceeded();
+                    return Unit.INSTANCE;
+                });
                 transceiver.setOutgoingPacketHandler(outgoingSrtpPacketQueue::add);
                 TaskPools.IO_POOL.submit(iceTransport::startReadingData);
                 TaskPools.IO_POOL.submit(dtlsTransport::startDtlsHandshake);
@@ -384,8 +383,10 @@ public class Endpoint
 
             @Override
             public void failed() {
-                getConference().getStatistics().hasIceFailedEndpoint = true;
-                getConference().getVideobridge().getStatistics().totalIceFailed.incrementAndGet();
+                eventEmitter.fireEvent(handler -> {
+                    handler.iceFailed();
+                    return Unit.INSTANCE;
+                });
             }
 
             @Override
@@ -594,7 +595,7 @@ public class Endpoint
     private void dtlsAppPacketReceived(byte[] data, int off, int len)
     {
         //TODO(brian): change sctp handler to take buf, off, len
-        sctpHandler.consume(new PacketInfo(new UnparsedPacket(data, off, len)));
+        sctpHandler.processPacket(new PacketInfo(new UnparsedPacket(data, off, len)));
     }
 
     /**
@@ -616,14 +617,17 @@ public class Endpoint
     @Override
     public void setSenderVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraints)
     {
-        ImmutableMap<String, VideoConstraints> oldVideoConstraints = bitrateController.getVideoConstraints();
-
         bitrateController.setVideoConstraints(newVideoConstraints);
+    }
 
+    public void effectiveVideoConstraintsChanged(
+        ImmutableMap<String, VideoConstraints> oldVideoConstraints,
+        ImmutableMap<String, VideoConstraints> newVideoConstraints)
+    {
         Set<String> removedEndpoints = new HashSet<>(oldVideoConstraints.keySet());
         removedEndpoints.removeAll(newVideoConstraints.keySet());
 
-        // Endpoints that "this" no longer cares about what it receives.
+        // Sources that "this" endpoint no longer receives.
         for (String id : removedEndpoints)
         {
             AbstractEndpoint senderEndpoint = getConference().getEndpoint(id);
@@ -741,7 +745,7 @@ public class Endpoint
 
             updateStatsOnExpire();
             this.transceiver.stop();
-            if (logger.isDebugEnabled() && getConference().includeInStatistics())
+            if (logger.isDebugEnabled())
             {
                 logger.debug(transceiver.getNodeStats().prettyPrint(0));
                 logger.debug(bitrateController.getDebugState().toJSONString());
@@ -756,6 +760,7 @@ public class Endpoint
             {
                 messageTransport.close();
             }
+            sctpHandler.stop();
             if (sctpManager != null)
             {
                 sctpManager.closeConnection();
@@ -915,6 +920,7 @@ public class Endpoint
 
                 if (attempts > 100)
                 {
+                    logger.error("Timed out waiting for SCTP connection from remote side");
                     break;
                 }
             }
@@ -1062,8 +1068,7 @@ public class Endpoint
         IceUdpTransportPacketExtension iceUdpTransportPacketExtension = new IceUdpTransportPacketExtension();
         iceTransport.describe(iceUdpTransportPacketExtension);
         dtlsTransport.describe(iceUdpTransportPacketExtension);
-        ColibriWebSocketService colibriWebSocketService
-                = ServiceUtils2.getService(getConference().getBundleContext(), ColibriWebSocketService.class);
+        ColibriWebSocketService colibriWebSocketService = ColibriWebSocketServiceSupplierKt.singleton().get();
         if (colibriWebSocketService != null)
         {
             String wsUrl = colibriWebSocketService.getColibriWebSocketUrl(
@@ -1102,7 +1107,10 @@ public class Endpoint
     {
         if (transceiver.setMediaSources(mediaSources))
         {
-            getConference().endpointSourcesChanged(this);
+            eventEmitter.fireEvent(handler -> {
+                handler.sourcesChanged();
+                return Unit.INSTANCE;
+            });
         }
     }
 
@@ -1352,6 +1360,14 @@ public class Endpoint
     }
 
     /**
+     * Returns how many endpoints this Endpoint is currently forwarding video for
+     */
+    public int numForwardedEndpoints()
+    {
+        return bitrateController.numForwardedEndpoints();
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -1512,7 +1528,8 @@ public class Endpoint
     {
         private final Object sctpManagerLock = new Object();
         public SctpManager sctpManager = null;
-        public BlockingQueue<PacketInfo> cachedSctpPackets = new LinkedBlockingQueue<>();
+        public BlockingQueue<PacketInfo> cachedSctpPackets = new LinkedBlockingQueue<>(100);
+        private AtomicLong numCachedSctpPackets = new AtomicLong();
 
         /**
          * Initializes a new {@link SctpHandler} instance.
@@ -1527,15 +1544,27 @@ public class Endpoint
         {
             synchronized (sctpManagerLock)
             {
-                if (sctpManager == null)
+                if (SctpConfig.config.enabled())
                 {
-                    cachedSctpPackets.add(packetInfo);
-                }
-                else
-                {
-                    sctpManager.handleIncomingSctp(packetInfo);
+                    if (sctpManager == null)
+                    {
+                        numCachedSctpPackets.incrementAndGet();
+                        cachedSctpPackets.add(packetInfo);
+                    }
+                    else
+                    {
+                        sctpManager.handleIncomingSctp(packetInfo);
+                    }
                 }
             }
+        }
+
+        @Override
+        public NodeStatsBlock getNodeStats()
+        {
+            NodeStatsBlock nodeStats = super.getNodeStats();
+            nodeStats.addNumber("num_cached_packets", numCachedSctpPackets.get());
+            return nodeStats;
         }
 
         /**

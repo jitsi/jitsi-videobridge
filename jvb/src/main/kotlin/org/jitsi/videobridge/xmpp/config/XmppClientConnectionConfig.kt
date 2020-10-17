@@ -21,7 +21,10 @@ import com.typesafe.config.ConfigValue
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.config
+import org.jitsi.videobridge.stats.StatsCollector
+import org.jitsi.videobridge.stats.config.StatsTransportConfig
 import org.jitsi.xmpp.mucclient.MucClientConfiguration
+import java.time.Duration
 
 class XmppClientConnectionConfig {
     val clientConfigs: List<MucClientConfiguration> by config {
@@ -30,6 +33,7 @@ class XmppClientConnectionConfig {
             .convertFrom<Map<String, String>> { propsMap ->
                 MucClientConfiguration.loadFromMap(propsMap, "org.jitsi.videobridge.xmpp.user.", true)
                     .toList()
+                    .apply { forEach { it.applyDefaultIqHandlerMode() } }
                     .takeIf { it.isNotEmpty() } ?: throw ConfigException.UnableToRetrieve.NotFound("no configs found")
             }
         "videobridge.apis.xmpp-client.configs".from(JitsiConfig.newConfig)
@@ -38,6 +42,29 @@ class XmppClientConnectionConfig {
                     .map { it.toMucClientConfiguration() }
                     .filter { it.isComplete }
             }
+    }
+
+    private val presenceIntervalProperty: Duration by config {
+        "videobridge.apis.xmpp-client.presence-interval".from(JitsiConfig.newConfig)
+    }
+
+    /**
+     * The interval at which presence updates (with updates stats/status) are published. Allow to be overriden by
+     * legacy-style "stats-transports" config.
+     */
+    val presenceInterval: Duration = StatsCollector.config.transportConfigs.stream()
+        .filter { tc -> tc is StatsTransportConfig.MucStatsTransportConfig }
+        .map(StatsTransportConfig::interval)
+        .findFirst()
+        .orElse(presenceIntervalProperty)
+}
+
+/**
+ * We want the bridge to default to using "sync" as the IQ handler mode (unless the config actually overrides it).
+ */
+private fun MucClientConfiguration.applyDefaultIqHandlerMode() {
+    if (this.iqHandlerMode == null) {
+        this.iqHandlerMode = "sync"
     }
 }
 
@@ -49,5 +76,6 @@ private fun MutableMap.MutableEntry<String, ConfigValue>.toMucClientConfiguratio
         }
     } ?: run { throw Exception("Invalid muc client configuration. " +
             "Expected type ConfigObject but got ${value.unwrapped()::class.java}") }
-    return config
+
+    return config.also { it.applyDefaultIqHandlerMode() }
 }

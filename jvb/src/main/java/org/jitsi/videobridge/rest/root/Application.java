@@ -17,19 +17,30 @@
 package org.jitsi.videobridge.rest.root;
 
 import org.glassfish.jersey.server.*;
+import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.binders.*;
 import org.jitsi.videobridge.rest.filters.*;
-import org.osgi.framework.*;
+import org.jitsi.videobridge.stats.*;
+import org.jitsi.videobridge.xmpp.*;
 
 import static org.jitsi.videobridge.rest.RestConfig.config;
 
 public class Application extends ResourceConfig
 {
-    public Application(BundleContext bundleContext)
+    public Application(
+            Videobridge videobridge,
+            XmppConnection xmppConnection,
+            StatsCollector statsManager)
+
     {
-        // For injecting non-OSGi services
-        register(new ServiceBinder());
+        register(
+            new ServiceBinder(
+                videobridge,
+                xmppConnection,
+                statsManager
+            )
+        );
         // Filters
         register(ConfigFilter.class);
         // Register all resources in the package

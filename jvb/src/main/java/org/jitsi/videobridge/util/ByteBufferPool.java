@@ -42,7 +42,7 @@ public class ByteBufferPool
      */
     private static int T1 = 220;
     private static int T2 = 775;
-    private static int T3 = 1240;
+    private static int T3 = 1500;
 
     /**
      * The pool of buffers with size <= T1
@@ -161,10 +161,7 @@ public class ByteBufferPool
         else
         {
             buf = new byte[size];
-            if (enableStatistics)
-            {
-                numLargeRequests.increment();
-            }
+            numLargeRequests.increment();
         }
 
         if (ENABLE_BOOKKEEPING)
@@ -227,7 +224,7 @@ public class ByteBufferPool
         {
             pool2.returnBuffer(buf);
         }
-        else if (len < 2000)
+        else if (len <= T3)
         {
             pool3.returnBuffer(buf);
         }

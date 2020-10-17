@@ -21,7 +21,6 @@ import java.util.concurrent.*;
 
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging2.*;
-import org.osgi.framework.*;
 
 /**
  * Implements a <tt>Thread</tt> which expires the {@link AbstractEndpoint}s and
@@ -81,8 +80,7 @@ public class VideobridgeExpireThread
     }
 
     /**
-     * Starts this {@link VideobridgeExpireThread} in a specific
-     * {@link BundleContext}.
+     * Starts this {@link VideobridgeExpireThread}
      */
     void start()
     {
@@ -117,7 +115,7 @@ public class VideobridgeExpireThread
     /**
      * Stops this {@link VideobridgeExpireThread}.
      */
-    void stop(final BundleContext bundleContext)
+    void stop()
     {
         logger.info("Stopping.");
         if (expireRunnable != null)

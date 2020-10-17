@@ -63,7 +63,7 @@ internal class XmppClientConnectionConfigTest : ConfigTest() {
                 }
             }
             context("when defined in new config") {
-                withNewConfig(newConfigSingleXmppConnection) {
+                withNewConfig(newConfigSingleXmppConnection, true) {
                     should("parse things correctly") {
                         val configs = XmppClientConnectionConfig().clientConfigs
                         configs shouldHaveSize 1
@@ -82,7 +82,7 @@ internal class XmppClientConnectionConfigTest : ConfigTest() {
                 }
             }
             context("when defined in new config with some incomplete") {
-                withNewConfig(newConfigOneCompleteConnectionOneIncomplete) {
+                withNewConfig(newConfigOneCompleteConnectionOneIncomplete, true) {
                     should("parse things correctly") {
                         val configs = XmppClientConnectionConfig().clientConfigs
                         configs shouldHaveSize 1

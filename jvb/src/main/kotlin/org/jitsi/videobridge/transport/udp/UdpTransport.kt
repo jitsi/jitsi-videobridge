@@ -16,11 +16,13 @@
 
 package org.jitsi.videobridge.transport.udp
 
-import org.ice4j.socket.SocketClosedException
+import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.OrderedJsonObject
+import org.jitsi.nlj.util.bytes
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
-import org.jitsi.utils.stats.RateStatistics
+import org.jitsi.utils.secs
+import org.jitsi.utils.stats.RateTracker
 import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -83,7 +85,7 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
             packet.setData(buf, 0, 1500)
             try {
                 socket.receive(packet)
-            } catch (sce: SocketClosedException) {
+            } catch (sce: SocketException) {
                 logger.info("Socket closed, stopping reader")
                 break
             } catch (e: IOException) {
@@ -139,17 +141,17 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
         private val packetsSent = LongAdder()
         private val bytesSent = LongAdder()
         private val outgoingPacketsDropped = LongAdder()
-        private val receivePacketRate: RateStatistics = RateStatistics(RATE_INTERVAL, SCALE)
-        private val receiveBitRate: RateStatistics = RateStatistics(RATE_INTERVAL)
-        private val sendPacketRate: RateStatistics = RateStatistics(RATE_INTERVAL, SCALE)
-        private val sendBitRate: RateStatistics = RateStatistics(RATE_INTERVAL)
+        private val receivePacketRate: RateTracker = RateTracker(RATE_INTERVAL)
+        private val receiveBitRate: BitrateTracker = BitrateTracker(RATE_INTERVAL)
+        private val sendPacketRate: RateTracker = RateTracker(RATE_INTERVAL)
+        private val sendBitRate: BitrateTracker = BitrateTracker(RATE_INTERVAL)
 
         fun packetReceived(numBytes: Int, time: Instant) {
             packetsReceived.increment()
             bytesReceived.add(numBytes.toLong())
             time.toEpochMilli().also { timeMs ->
                 receivePacketRate.update(1, timeMs)
-                receiveBitRate.update(numBytes, timeMs)
+                receiveBitRate.update(numBytes.bytes, timeMs)
             }
         }
 
@@ -158,7 +160,7 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
             bytesSent.add(numBytes.toLong())
             time.toEpochMilli().also { timeMs ->
                 sendPacketRate.update(1, timeMs)
-                sendBitRate.update(numBytes, timeMs)
+                sendBitRate.update(numBytes.bytes, timeMs)
             }
         }
 
@@ -189,14 +191,13 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
             bytesSent = bytesSent.sum(),
             outgoingPacketsDropped = outgoingPacketsDropped.sum(),
             receivePacketRate = receivePacketRate.rate,
-            receiveBitRate = receiveBitRate.rate,
+            receiveBitRate = receiveBitRate.rate.bps.toLong(),
             sendPacketRate = sendPacketRate.rate,
-            sendBitRate = sendBitRate.rate
+            sendBitRate = sendBitRate.rate.bps.toLong()
         )
 
         companion object {
-            const val RATE_INTERVAL: Int = 60000
-            const val SCALE: Float = 1000f
+            val RATE_INTERVAL = 60.secs
         }
     }
 

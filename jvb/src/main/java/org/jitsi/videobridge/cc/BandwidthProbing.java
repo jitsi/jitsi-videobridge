@@ -54,6 +54,14 @@ import java.util.*;
       */
      public boolean enabled = false;
 
+     /**
+      * The number of bytes left over from one run of probing to the next.  This
+      * avoids accumulated rounding errors causing us to under-shoot the probing
+      * bandwidth, and also handles the use when the number of bytes we want to
+      * send is less than the size of an RTP header.
+      */
+     double bytesLeftOver = 0;
+
      private Long latestBwe = -1L;
 
      private DiagnosticContext diagnosticContext;
@@ -116,7 +124,8 @@ import java.util.*;
          long totalNeededBps = bitrateControllerStatus.currentIdealBps - bitrateControllerStatus.currentTargetBps;
          if (totalNeededBps < 1)
          {
-             // Not much.
+             // Don't need to send any probing.
+             bytesLeftOver = 0;
              return;
          }
 
@@ -136,42 +145,45 @@ import java.util.*;
          long maxPaddingBps = latestBweCopy - bitrateControllerStatus.currentTargetBps;
          long paddingBps = Math.min(totalNeededBps, maxPaddingBps);
 
+         DiagnosticContext.TimeSeriesPoint timeSeriesPoint = null;
+
+         double newBytesNeeded = (config.getPaddingPeriodMs() * paddingBps / 1000.0 / 8.0);
+         double bytesNeeded = newBytesNeeded + bytesLeftOver;
+
          if (timeSeriesLogger.isTraceEnabled() && diagnosticContext != null)
          {
-             timeSeriesLogger.trace(diagnosticContext
+             timeSeriesPoint = diagnosticContext
                      .makeTimeSeriesPoint("sent_padding")
                      .addField("padding_bps", paddingBps)
                      .addField("total_ideal_bps", bitrateControllerStatus.currentIdealBps)
                      .addField("total_target_bps", bitrateControllerStatus.currentTargetBps)
                      .addField("needed_bps", totalNeededBps)
                      .addField("max_padding_bps", maxPaddingBps)
-                     .addField("bwe_bps", latestBweCopy));
+                     .addField("bwe_bps", latestBweCopy)
+                     .addField("bytes_needed", bytesNeeded)
+                     .addField("prev_bytes_left_over", bytesLeftOver);
          }
 
-         if (paddingBps < 1)
+         if (bytesNeeded >= 1)
          {
-             // Not much.
-             return;
-         }
+             int bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, (int)bytesNeeded);
 
+             bytesLeftOver = Math.max(bytesNeeded - bytesSent, 0);
 
-         // XXX a signed int is practically sufficient, as it can represent up to
-         // ~ 2GB
-         int bytes = (int) (config.getPaddingPeriodMs() * paddingBps / 1000 / 8);
-
-         if (!bitrateControllerStatus.activeSsrcs.isEmpty())
-         {
-             // stream protection with padding.
-             for (Long ssrc : bitrateControllerStatus.activeSsrcs)
+             if (timeSeriesPoint != null)
              {
-                 long bytesSent = probingDataSender.sendProbing(ssrc, bytes);
-                 bytes -= bytesSent;
-                 if (bytes < 1)
-                 {
-                     // We're done.
-                     return;
-                 }
+                 timeSeriesPoint.addField("bytes_sent", bytesSent)
+                    .addField("new_bytes_left_over", bytesLeftOver);
              }
+         }
+         else
+         {
+             bytesLeftOver = Math.max(bytesNeeded, 0);
+         }
+
+         if (timeSeriesLogger.isTraceEnabled() && timeSeriesPoint != null)
+         {
+             timeSeriesLogger.trace(timeSeriesPoint);
          }
      }
 
@@ -200,11 +212,11 @@ import java.util.*;
      public interface ProbingDataSender
      {
          /**
-          * Sends a specific number of bytes with a specific SSRC.
-          * @param mediaSsrc the SSRC
+          * Sends a specific number of bytes with a specific set of SSRCs.
+          * @param mediaSsrcs the SSRCs
           * @param numBytes the number of probing bytes we want to send
           * @return the number of bytes of probing data actually sent
           */
-         int sendProbing(long mediaSsrc, int numBytes);
+         int sendProbing(Collection<Long> mediaSsrcs, int numBytes);
      }
  }
