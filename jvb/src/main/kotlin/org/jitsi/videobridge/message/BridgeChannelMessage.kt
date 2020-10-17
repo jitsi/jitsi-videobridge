@@ -270,7 +270,7 @@ class LastNMessage(val lastN: Int) : BridgeChannelMessage(TYPE) {
  * A message sent from a client, indicating that it wishes to change its "lastN" (i.e. the maximum number of video
  * streams to be received).
  */
-class PerceptibleEndpointChangedMessage(val perceptibleEndpoint: Int) : BridgeChannelMessage(TYPE) {
+class PerceptibleEndpointChangedMessage(val perceptibleEndpoints: Array<ArrayList<String>>) : BridgeChannelMessage(TYPE) {
     companion object {
         const val TYPE = "PerceptibleEndpointChangedEvent"
     }

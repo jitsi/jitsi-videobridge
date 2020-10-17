@@ -537,8 +537,8 @@ public class Endpoint
     }
 
     //  hasevr
-    public void setPerceptibleEndPoints(ArrayList<String> endPoints[]){
-        perceptibleEndpoints = endPoints;
+    public void setPerceptibleEndpoints(ArrayList<String> endpoints[]){
+        perceptibleEndpoints = endpoints;
     }
 
     /**

@@ -526,9 +526,10 @@ class EndpointMessageTransport
     @Override
     public BridgeChannelMessage perceptibleEndpointChanged(PerceptibleEndpointChangedMessage message){
         if (endpoint != null){
-            ArrayList<String> endPoints[] = message.getPerceptibleEndPoints();
-            endpoint.setPerceptibleEndPoints(endPoints);
+            ArrayList<String> endPoints[] = message.getPerceptibleEndpoints();
+            endpoint.setPerceptibleEndpoints(endPoints);
         }
+        return null;
     }
 
     /**
