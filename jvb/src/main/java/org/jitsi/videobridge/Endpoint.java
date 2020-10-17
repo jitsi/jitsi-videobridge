@@ -77,16 +77,17 @@ public class Endpoint
         EncodingsManager.EncodingsUpdateListener
 {
     //  hasevr
-    public Set<String> perceptibleEndpoints = ConcurrentHashMap.newKeySet();
+    public ArrayList<String> perceptibleEndpoints[] = null;
     public Set<Long> perceptibleAudioSSRCs = ConcurrentHashMap.newKeySet();
     public Set<Long> perceptibleVideoSSRCs = ConcurrentHashMap.newKeySet();
     //  update SSRCs from Endpoints
     public void updatePerceptibleSSRCs(){
         //  For test to forward all packets
-        perceptibleEndpoints = ConcurrentHashMap.newKeySet();
+        perceptibleEndpoints = (ArrayList<String>[]) new ArrayList[2];  //  video,audio
         for(AbstractEndpoint e : getConference().getEndpoints()){
             if (! e.getID().equals(getID())){
-                perceptibleEndpoints.add(e.getID());
+                perceptibleEndpoints[0].add(e.getID());
+                perceptibleEndpoints[1].add(e.getID());
             }
         }
         //  end for test.
@@ -104,18 +105,18 @@ public class Endpoint
         perceptibleAudioSSRCs = ConcurrentHashMap.newKeySet();
         perceptibleVideoSSRCs = ConcurrentHashMap.newKeySet();
 
-        for(String id : perceptibleEndpoints){
-            Endpoint srcEndpoint = (Endpoint)(getConference().getEndpoint(id));
-            if (srcEndpoint != null){
-                Set<Long> videoSsrcs = srcEndpoint.transceiver.receiveSsrcsByMediaType().get(MediaType.VIDEO);
-                perceptibleVideoSSRCs.addAll(videoSsrcs);
-                Set<Long> audioSsrcs = srcEndpoint.transceiver.receiveSsrcsByMediaType().get(MediaType.AUDIO);
-                perceptibleAudioSSRCs.addAll(audioSsrcs);
-                /*
-                String str = "audioSsrcs:";
-                for(long ssrc: audioSsrcs){ str += " " + ssrc; }
-                logger.info(str);   //*/
-            }
+        Set<Long> perceptibleSSRCs[] = (Set<Long>[]) new Set[2];
+        perceptibleSSRCs[0] = perceptibleVideoSSRCs;
+        perceptibleSSRCs[1] = perceptibleAudioSSRCs;
+
+        for(int i=0; i<2; ++i){
+            for(String id : perceptibleEndpoints[i]){
+                Endpoint srcEndpoint = (Endpoint)(getConference().getEndpoint(id));
+                if (srcEndpoint != null){
+                    Set<Long> ssrcs = srcEndpoint.transceiver.receiveSsrcsByMediaType().get(i==0 ? MediaType.VIDEO: MediaType.AUDIO);
+                    perceptibleSSRCs[i].addAll(ssrcs);
+                }
+            }    
         }
 
         /*
@@ -132,16 +133,16 @@ public class Endpoint
         }
         //  */
 
-/*  //  log ssrcs 
-        msg = "Perceptible Video ssrcs:";
+//*  //  log ssrcs 
+        String msg2 = "Perceptible Video ssrcs:";
         for(long ssrc: perceptibleVideoSSRCs){
-            msg += " " + ssrc;
+            msg2 += " " + ssrc;
         }
-        msg += ("\nPerceptible Audio ssrcs:");
+        msg2 += ("\nPerceptible Audio ssrcs:");
         for(long ssrc: perceptibleAudioSSRCs){
-            msg += " " + ssrc;
+            msg2 += " " + ssrc;
         }
-        logger.info(msg);
+        logger.info(msg2);
 //  */
     }
 
@@ -532,6 +533,11 @@ public class Endpoint
     public void setLastN(Integer lastN)
     {
         bitrateController.setLastN(lastN);
+    }
+
+    //  hasevr
+    public void setPerceptibleEndPoints(ArrayList<String> endPoints[]){
+        perceptibleEndpoints = endPoints;
     }
 
     /**

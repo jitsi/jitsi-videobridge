@@ -49,6 +49,10 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = ServerHelloMessage::class, name = ServerHelloMessage.TYPE),
     JsonSubTypes.Type(value = EndpointMessage::class, name = EndpointMessage.TYPE),
     JsonSubTypes.Type(value = LastNMessage::class, name = LastNMessage.TYPE),
+
+    //  hasevr
+    JsonSubTypes.Type(value = PerceptibleEndpointChangedMessage::class, name = PerceptibleEndpointChangedMessage.TYPE),
+
     JsonSubTypes.Type(value = ReceiverVideoConstraintMessage::class, name = ReceiverVideoConstraintMessage.TYPE),
     JsonSubTypes.Type(value = ReceiverVideoConstraintsMessage::class, name = ReceiverVideoConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = DominantSpeakerMessage::class, name = DominantSpeakerMessage.TYPE),
@@ -93,7 +97,7 @@ open class MessageHandler {
             is EndpointMessage -> endpointMessage(message)
 
             //  hasevr
-            is AcceptingEndpointChangedMessage -> acceptingEndpointChanged(message)
+            is PerceptibleEndpointChangedMessage -> perceptibleEndpointChanged(message)
 
             is LastNMessage -> lastN(message)
             is ReceiverVideoConstraintMessage -> receiverVideoConstraint(message)
@@ -123,7 +127,7 @@ open class MessageHandler {
     open fun lastN(message: LastNMessage) = unhandledMessageReturnNull(message)
 
     //  hasevr
-    open fun acceptingEndpointChanged(message: AcceptingEndpointChangedMessage) = unhandledMessageReturnNull(message)
+    open fun perceptibleEndpointChanged(message: PerceptibleEndpointChangedMessage) = unhandledMessageReturnNull(message)
 
     open fun receiverVideoConstraint(message: ReceiverVideoConstraintMessage) = unhandledMessageReturnNull(message)
     open fun receiverVideoConstraints(message: ReceiverVideoConstraintsMessage) = unhandledMessageReturnNull(message)
@@ -248,9 +252,9 @@ class LastNMessage(val lastN: Int) : BridgeChannelMessage(TYPE) {
  * A message sent from a client, indicating that it wishes to change its "lastN" (i.e. the maximum number of video
  * streams to be received).
  */
-class AcceptingEndpointChangedMessage(val acceptingEndpoint: Int) : BridgeChannelMessage(TYPE) {
+class PerceptibleEndpointChangedMessage(val perceptibleEndpoint: Int) : BridgeChannelMessage(TYPE) {
     companion object {
-        const val TYPE = "AcceptingEndpointChangedEvent"
+        const val TYPE = "PerceptibleEndpointChangedEvent"
     }
 }
 

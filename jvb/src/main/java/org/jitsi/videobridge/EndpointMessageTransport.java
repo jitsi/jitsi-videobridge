@@ -522,6 +522,15 @@ class EndpointMessageTransport
         return null;
     }
 
+    //  hasevr
+    @Override
+    public BridgeChannelMessage perceptibleEndpointChanged(PerceptibleEndpointChangedMessage message){
+        if (endpoint != null){
+            ArrayList<String> endPoints[] = message.getPerceptibleEndPoints();
+            endpoint.setPerceptibleEndPoints(endPoints);
+        }
+    }
+
     /**
      * Handles an opaque message from this {@code Endpoint} that should be forwarded to either: a) another client in
      * this conference (1:1 message) or b) all other clients in this conference (broadcast message).
