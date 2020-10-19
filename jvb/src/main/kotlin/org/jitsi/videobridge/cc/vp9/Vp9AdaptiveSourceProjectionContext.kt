@@ -53,13 +53,13 @@ class Vp9AdaptiveSourceProjectionContext(
     private val logger: Logger = createChildLogger(parentLogger)
 
     /**
-     * A map that stores the per-encoding VP9 frame maps.
+     * A map that stores the per-encoding VP9 picture maps.
      */
     private val vp9PictureMaps = HashMap<Long, Vp9PictureMap>()
 
     /**
      * The [Vp9QualityFilter] instance that does quality filtering on the
-     * incoming frames.
+     * incoming pictures, to choose encodings and layers to forward.
      */
     private val vp9QualityFilter = Vp9QualityFilter(logger)
 
@@ -78,8 +78,7 @@ class Vp9AdaptiveSourceProjectionContext(
             return false
         }
 
-        val result = insertPacketInMap(packet)
-            ?: return false
+        val result = insertPacketInMap(packet) ?: return false
             /* Very old frame, more than Vp9FrameMap.FRAME_MAP_SIZE old,
               or something wrong with the stream. */
 
