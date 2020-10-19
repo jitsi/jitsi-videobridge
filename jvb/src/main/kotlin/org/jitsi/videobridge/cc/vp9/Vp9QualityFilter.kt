@@ -146,12 +146,8 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             currentIndex = SUSPENDED_INDEX
             return false
         }
-        var temporalLayerIdOfFrame = frame.temporalLayer
-        if (temporalLayerIdOfFrame < 0) {
-            // temporal scalability is not enabled. Pretend that
-            // this is the base temporal layer.
-            temporalLayerIdOfFrame = 0
-        }
+        // If temporal scalability is not enabled, pretend that this is the base temporal layer.
+        val temporalLayerIdOfFrame = frame.temporalLayer.coerceAtLeast(0)
         val incomingEncoding = getEidFromIndex(incomingIndex)
         return if (frame.isKeyframe) {
             logger.debug {
