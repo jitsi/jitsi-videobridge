@@ -46,8 +46,7 @@ class Vp9PictureMap(
 
     /** Check whether this is a large jump from previous state, so the map should be reset.  */
     private fun isLargeJump(packet: Vp9Packet): Boolean {
-        val latestPicture: Vp9Picture = pictureHistory.latestPicture
-            ?: return false
+        val latestPicture: Vp9Picture = pictureHistory.latestPicture ?: return false
         val picDelta = getExtendedPictureIdDelta(packet.pictureId, latestPicture.pictureId)
         if (picDelta > PICTURE_MAP_SIZE) {
             return true
