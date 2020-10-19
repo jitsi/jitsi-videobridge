@@ -18,7 +18,7 @@ package org.jitsi.videobridge.cc.vp9
 import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.applyExtendedPictureIdDelta
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
-import java.util.Collections
+import org.jitsi.nlj.util.setAndExtend
 import kotlin.collections.ArrayList
 
 /**
@@ -40,14 +40,8 @@ class Vp9Picture(packet: Vp9Packet) {
 
     fun frame(sid: Int) = frames.getOrNull(sid)
 
-    private fun setFrameAtSid(frame: Vp9Frame, sid: Int) {
-        if (sid >= frames.size) {
-            frames.addAll(Collections.nCopies(sid - frames.size, null))
-            frames.add(frame)
-        } else {
-            frames[sid] = frame
-        }
-    }
+    private fun setFrameAtSid(frame: Vp9Frame, sid: Int) =
+        frames.setAndExtend(sid, frame, null)
 
     /**
      * Return the first (lowest-sid, earliest in decoding order) frame that we've received so far.
