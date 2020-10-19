@@ -50,7 +50,7 @@ class Vp9Picture(packet: Vp9Packet) {
     }
 
     /**
-     * Return the first (lowest-sid, earliest in decoding order) frame.
+     * Return the first (lowest-sid, earliest in decoding order) frame that we've received so far.
      * A valid picture must have at least one frame, so this will always return one.
      */
     private fun firstFrame(): Vp9Frame {
@@ -60,7 +60,7 @@ class Vp9Picture(packet: Vp9Packet) {
     }
 
     /**
-     * Return the last (highest-sid, earliest in decoding order) frame.
+     * Return the last (highest-sid, earliest in decoding order) frame that we've received so far.
      * A valid picture must have at least one frame, so this will always return one.
      */
     private fun lastFrame(): Vp9Frame {
