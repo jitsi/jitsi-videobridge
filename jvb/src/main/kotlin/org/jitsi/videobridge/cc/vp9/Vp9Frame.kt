@@ -168,7 +168,8 @@ class Vp9Frame internal constructor(
     var projection: Vp9FrameProjection? = null
 
     /**
-     * A boolean that records whether this frame was accepted.
+     * A boolean that records whether this frame was accepted, i.e. should be forwarded to the receiver
+     * given the layer currently being forwarded.
      */
     var isAccepted = false
 

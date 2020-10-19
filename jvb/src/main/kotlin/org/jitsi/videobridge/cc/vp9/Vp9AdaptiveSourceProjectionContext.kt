@@ -249,6 +249,9 @@ class Vp9AdaptiveSourceProjectionContext(
         return createInEncodingProjection(frame, initialPacket, mark, receivedMs)
     }
 
+    /**
+     * Create an projection for the first frame after an encoding switch.
+     */
     private fun createEncodingSwitchProjection(
         frame: Vp9Frame,
         initialPacket: Vp9Packet,
@@ -327,6 +330,9 @@ class Vp9AdaptiveSourceProjectionContext(
         )
     }
 
+    /**
+     * Create a projection for the first frame after a frame reset, i.e. after a large gap in sequence numbers.
+     */
     private fun createResetProjection(
         frame: Vp9Frame,
         initialPacket: Vp9Packet,
@@ -359,6 +365,10 @@ class Vp9AdaptiveSourceProjectionContext(
         )
     }
 
+    /**
+     * Create a frame projection for the normal case, i.e. as part of the same encoding as the
+     * previously-projected frame.
+     */
     private fun createInEncodingProjection(
         frame: Vp9Frame,
         initialPacket: Vp9Packet,
@@ -384,6 +394,10 @@ class Vp9AdaptiveSourceProjectionContext(
             initialPacket, mark, receivedMs)
     }
 
+    /**
+     * Create a frame projection for the normal case, i.e. as part of the same encoding as the
+     * previously-projected frame, based on a specific chosen previously-projected frame.
+     */
     private fun createInEncodingProjection(
         frame: Vp9Frame,
         refFrame: Vp9Frame,
