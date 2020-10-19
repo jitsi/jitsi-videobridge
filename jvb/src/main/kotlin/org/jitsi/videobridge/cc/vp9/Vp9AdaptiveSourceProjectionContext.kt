@@ -78,9 +78,9 @@ class Vp9AdaptiveSourceProjectionContext(
             return false
         }
 
+        /* If insertPacketInMap returns null, this is a very old picture, more than Vp9PictureMap.PICTURE_MAP_SIZE old,
+           or something is wrong with the stream. */
         val result = insertPacketInMap(packet) ?: return false
-            /* Very old frame, more than Vp9FrameMap.FRAME_MAP_SIZE old,
-              or something wrong with the stream. */
 
         val frame = result.frame
 
@@ -176,7 +176,8 @@ class Vp9AdaptiveSourceProjectionContext(
                 seqGap--
             }
             /* Similarly, if the later frame wasn't projected and we haven't seen
-             * its first packet. */if (!frame2.isAccepted && !frame2.seenStartOfFrame && seqGap > 1) {
+             * its first packet. */
+            if (!frame2.isAccepted && !frame2.seenStartOfFrame && seqGap > 1) {
                 seqGap--
             }
             if (!frame1.isAccepted && seqGap > 0) {
