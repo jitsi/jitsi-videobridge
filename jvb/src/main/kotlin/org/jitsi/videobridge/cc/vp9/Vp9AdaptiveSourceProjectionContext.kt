@@ -293,9 +293,6 @@ class Vp9AdaptiveSourceProjectionContext(
 
         // this is a simulcast switch. The typical incremental value =
         // 90kHz / 30 = 90,000Hz / 30 = 3000 per frame or per 33ms
-
-        // this is a simulcast switch. The typical incremental value =
-        // 90kHz / 30 = 90,000Hz / 30 = 3000 per frame or per 33ms
         val tsDelta: Long
         tsDelta = if (lastVp9FrameProjection.createdMs != 0L) {
             (3000 * Math.max(1, (receivedMs - lastVp9FrameProjection.createdMs) / 33)).toLong()
