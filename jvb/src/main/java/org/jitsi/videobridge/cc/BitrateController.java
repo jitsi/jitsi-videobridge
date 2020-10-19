@@ -694,7 +694,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
                     .addField("total_ideal_bps", totalIdealBps));
         }
 
-        // The bandwidth brober will pick this up.
+        // The bandwidth prober will pick this up.
         this.adaptiveSourceProjections = Collections.unmodifiableList(adaptiveSourceProjections);
 
         if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
