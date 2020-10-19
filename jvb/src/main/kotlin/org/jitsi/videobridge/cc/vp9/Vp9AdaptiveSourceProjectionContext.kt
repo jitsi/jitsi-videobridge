@@ -99,12 +99,8 @@ class Vp9AdaptiveSourceProjectionContext(
             val receivedMs = packetInfo.receivedTime
             val acceptResult = vp9QualityFilter
                 .acceptFrame(frame, incomingIndex, targetIndex, receivedMs)
-            var accepted = acceptResult.accept
-            if (accepted) {
-                accepted = checkDecodability(frame)
-            }
-            frame.isAccepted = accepted
-            if (accepted) {
+            frame.isAccepted = acceptResult.accept && checkDecodability(frame)
+            if (frame.isAccepted) {
                 val projection: Vp9FrameProjection
                 try {
                     projection = createProjection(frame = frame, initialPacket = packet,
