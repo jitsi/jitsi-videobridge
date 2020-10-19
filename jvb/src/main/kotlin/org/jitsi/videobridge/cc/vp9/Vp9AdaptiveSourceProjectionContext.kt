@@ -424,6 +424,7 @@ class Vp9AdaptiveSourceProjectionContext(
                 seqGap += seqGap(f1, f2)
                 f1 = f2
             } while (f2 !== frame)
+            /* refFrame is a projected frame, so it has a projection. */
             refSeq = refFrame.projection!!.latestProjectedSeqNum
         } else {
             do {
