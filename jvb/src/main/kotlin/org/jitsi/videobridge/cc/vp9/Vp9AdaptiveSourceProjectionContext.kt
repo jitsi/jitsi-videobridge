@@ -277,7 +277,7 @@ class Vp9AdaptiveSourceProjectionContext(
             1
         }
 
-        if (lastVp9FrameProjection.vp9Frame?.seenEndOfFrame != true) {
+        if (lastVp9FrameProjection.vp9Frame?.seenEndOfFrame == false) {
             /* Leave a gap to signal to the decoder that the previously routed
                frame was incomplete. */
             projectedSeqGap++
