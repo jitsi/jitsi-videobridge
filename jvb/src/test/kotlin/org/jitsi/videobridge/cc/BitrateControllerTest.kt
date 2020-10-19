@@ -19,8 +19,7 @@ package org.jitsi.videobridge.cc
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.maps.shouldContainExactly
-import io.mockk.every
-import io.mockk.mockk
+import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.videobridge.VideoConstraints
 
 class BitrateControllerTest : ShouldSpec() {
@@ -29,13 +28,8 @@ class BitrateControllerTest : ShouldSpec() {
     init {
 
         context("Effective constraints") {
-            val conferenceEndpoints = listOf(
-                mockk<BitrateController.MediaSourceContainer>().apply { every { id } returns "endpoint-1" },
-                mockk<BitrateController.MediaSourceContainer>().apply { every { id } returns "endpoint-2" },
-                mockk<BitrateController.MediaSourceContainer>().apply { every { id } returns "endpoint-3" },
-                mockk<BitrateController.MediaSourceContainer>().apply { every { id } returns "endpoint-4" },
-                mockk<BitrateController.MediaSourceContainer>().apply { every { id } returns "endpoint-5" }
-            )
+            val conferenceEndpoints = List(5) { i -> Endpoint("endpoint-${i + 1}") }
+
             context("When nothing is specified (expect 180p)") {
                 val lastN = -1
                 val videoConstraints = mapOf("endpoint-1" to VideoConstraints(720))
@@ -71,4 +65,12 @@ class BitrateControllerTest : ShouldSpec() {
             }
         }
     }
+}
+
+class Endpoint(
+    val id: String,
+    val mediaSources_: Array<MediaSourceDesc> = arrayOf()
+) : BitrateController.MediaSourceContainer {
+    override fun getID() = id
+    override fun getMediaSources() = mediaSources_
 }
