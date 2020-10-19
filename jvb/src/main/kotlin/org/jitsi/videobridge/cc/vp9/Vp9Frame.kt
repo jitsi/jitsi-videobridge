@@ -282,7 +282,7 @@ class Vp9Frame internal constructor(
      * @param pkt the RTP packet to check whether its parameters match this frame.
      * @throws RuntimeException if the specified RTP packet is inconsistent with this frame
      */
-    fun validateConsistent(pkt: Vp9Packet) {
+    fun validateConsistency(pkt: Vp9Packet) {
         if (temporalLayer == pkt.temporalLayerIndex &&
             tl0PICIDX == pkt.TL0PICIDX &&
             pictureId == pkt.pictureId &&

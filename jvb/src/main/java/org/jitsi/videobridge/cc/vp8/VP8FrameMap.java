@@ -69,7 +69,7 @@ public class VP8FrameMap
     {
         try
         {
-            frame.validateConsistent(packet);
+            frame.validateConsistency(packet);
         }
         catch (Exception e)
         {

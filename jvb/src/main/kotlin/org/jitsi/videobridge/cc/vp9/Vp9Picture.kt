@@ -153,10 +153,10 @@ class Vp9Picture(packet: Vp9Packet) {
      * @param pkt the RTP packet to check whether its parameters match this frame.
      * @throws RuntimeException if the specified RTP packet is inconsistent with this frame
      */
-    fun validateConsistent(pkt: Vp9Packet) {
+    fun validateConsistency(pkt: Vp9Packet) {
         val f = frame(pkt.spatialLayerIndex)
         if (f != null) {
-            f.validateConsistent(pkt)
+            f.validateConsistency(pkt)
             return
         }
 

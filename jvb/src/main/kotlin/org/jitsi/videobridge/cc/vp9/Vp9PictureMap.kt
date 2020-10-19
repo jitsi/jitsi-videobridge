@@ -108,7 +108,7 @@ class Vp9PictureMap(
                 return null
             }
             try {
-                picture.validateConsistent(packet)
+                picture.validateConsistency(packet)
             } catch (e: Exception) {
                 logger.warn(e)
             }
