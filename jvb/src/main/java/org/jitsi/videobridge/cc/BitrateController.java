@@ -303,7 +303,12 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         @NotNull DiagnosticContext diagnosticContext,
         Logger parentLogger
     ) {
-        this(destinationEndpointId, eventHandler, endpointsSupplier, diagnosticContext, parentLogger, Clock.systemUTC());
+        this(destinationEndpointId,
+                eventHandler,
+                endpointsSupplier,
+                diagnosticContext,
+                parentLogger,
+                Clock.systemUTC());
     }
 
 
@@ -798,7 +803,9 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
      * {@link ConferenceSpeechActivity}.
      * @return an array of {@link SourceBitrateAllocation}.
      */
-    private synchronized SourceBitrateAllocation[] allocate(long maxBandwidth, List<MediaSourceContainer> conferenceEndpoints)
+    private synchronized SourceBitrateAllocation[] allocate(
+            long maxBandwidth,
+            List<MediaSourceContainer> conferenceEndpoints)
     {
         SourceBitrateAllocation[] sourceBitrateAllocations = prioritize(conferenceEndpoints);
 
