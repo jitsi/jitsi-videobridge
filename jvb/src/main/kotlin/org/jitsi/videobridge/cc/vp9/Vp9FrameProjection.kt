@@ -146,7 +146,7 @@ internal constructor(
         pkt.ssrc = ssrc
         pkt.timestamp = timestamp
         pkt.sequenceNumber = sequenceNumber
-        if (pkt.TL0PICIDX != -1) {
+        if (pkt.hasTL0PICIDX) {
             pkt.TL0PICIDX = tl0PICIDX
         }
         pkt.pictureId = pictureId
