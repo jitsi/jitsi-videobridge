@@ -34,7 +34,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     f, result ->
                     result.accept shouldBe true
                     result.mark shouldBe true
-                    filter.needsKeyframe() shouldBe false
+                    filter.needsKeyframe shouldBe false
                 }
             }
         }
@@ -49,7 +49,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     f, result ->
                     result.accept shouldBe true
                     result.mark shouldBe true
-                    filter.needsKeyframe() shouldBe false
+                    filter.needsKeyframe shouldBe false
                 }
             }
             should("project only the base temporal layer when targeted") {
@@ -62,7 +62,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.temporalLayer == 0)
                     if (result.accept) {
                         result.mark shouldBe true
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
             }
@@ -76,7 +76,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.temporalLayer <= 1)
                     if (result.accept) {
                         result.mark shouldBe true
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
             }
@@ -89,7 +89,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.temporalLayer == 0)
                     if (result.accept) {
                         result.mark shouldBe true
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
                 val targetIndex2 = RtpLayerDesc.getIndex(0, 0, 2)
@@ -97,7 +97,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                 testGenerator(generator, filter, targetIndex2) { f, result ->
                     result.accept shouldBe true
                     result.mark shouldBe true
-                    filter.needsKeyframe() shouldBe false
+                    filter.needsKeyframe shouldBe false
                 }
             }
         }
@@ -111,7 +111,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                 testGenerator(generator, filter, targetIndex) { f, result ->
                     result.accept shouldBe true
                     result.mark shouldBe (f.spatialLayer == 2)
-                    filter.needsKeyframe() shouldBe false
+                    filter.needsKeyframe shouldBe false
                 }
             }
             should("be able to be shaped to SL0/TL2") {
@@ -123,7 +123,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.spatialLayer == 0)
                     if (result.accept) {
                         result.mark shouldBe (f.spatialLayer == 0)
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
             }
@@ -136,7 +136,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.spatialLayer <= 1)
                     if (result.accept) {
                         result.mark shouldBe (f.spatialLayer == 1)
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
             }
@@ -149,7 +149,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.temporalLayer == 0)
                     if (result.accept) {
                         result.mark shouldBe (f.spatialLayer == 2)
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
             }
@@ -164,7 +164,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.spatialLayer == 0)
                     if (result.accept) {
                         result.mark shouldBe (f.spatialLayer == 0)
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
 
@@ -178,7 +178,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe if (!sawKeyframe) (f.spatialLayer == 0) else true
                     if (result.accept) {
                         result.mark shouldBe if (!sawKeyframe) (f.spatialLayer == 0) else (f.spatialLayer == 2)
-                        filter.needsKeyframe() shouldBe (sawTargetLayer && !sawKeyframe)
+                        filter.needsKeyframe shouldBe (sawTargetLayer && !sawKeyframe)
                     }
                 }
 
@@ -188,7 +188,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.spatialLayer <= 1)
                     if (result.accept) {
                         result.mark shouldBe (f.spatialLayer == 1)
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
             }
@@ -203,7 +203,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                 testGenerator(generator, filter, targetIndex) { f, result ->
                     result.accept shouldBe (f.spatialLayer == 2 || !f.isInterPicturePredicted)
                     result.mark shouldBe (f.spatialLayer == 2)
-                    filter.needsKeyframe() shouldBe false
+                    filter.needsKeyframe shouldBe false
                 }
             }
             should("be able to be shaped to SL0/TL2") {
@@ -215,7 +215,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.spatialLayer == 0)
                     if (result.accept) {
                         result.mark shouldBe (f.spatialLayer == 0)
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
             }
@@ -228,7 +228,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.spatialLayer == 1 || f.spatialLayer < 1 && !f.isInterPicturePredicted)
                     if (result.accept) {
                         result.mark shouldBe (f.spatialLayer == 1)
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
             }
@@ -242,7 +242,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                         (f.spatialLayer == 2 || !f.isInterPicturePredicted))
                     if (result.accept) {
                         result.mark shouldBe (f.spatialLayer == 2)
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
             }
@@ -257,7 +257,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.spatialLayer == 0)
                     if (result.accept) {
                         result.mark shouldBe (f.spatialLayer == 0)
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
 
@@ -272,7 +272,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                         (f.spatialLayer == 2 || !f.isInterPicturePredicted)
                     if (result.accept) {
                         result.mark shouldBe if (!sawKeyframe) (f.spatialLayer == 0) else (f.spatialLayer == 2)
-                        filter.needsKeyframe() shouldBe (sawTargetLayer && !sawKeyframe)
+                        filter.needsKeyframe shouldBe (sawTargetLayer && !sawKeyframe)
                     }
                 }
 
@@ -289,7 +289,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                         (f.spatialLayer == 1 || (!f.isInterPicturePredicted && f.spatialLayer < 1))
                     if (result.accept) {
                         result.mark shouldBe if (!sawKeyframe) (f.spatialLayer == 2) else (f.spatialLayer == 1)
-                        filter.needsKeyframe() shouldBe !sawKeyframe
+                        filter.needsKeyframe shouldBe !sawKeyframe
                     }
                 }
             }
@@ -305,7 +305,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.ssrc == 2L || f.isKeyframe)
                     if (result.accept) {
                         result.mark shouldBe true
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
             }
@@ -318,7 +318,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.ssrc == 0L)
                     if (result.accept) {
                         result.mark shouldBe true
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
             }
@@ -331,7 +331,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.ssrc == 1L || f.isKeyframe && f.ssrc < 1L)
                     if (result.accept) {
                         result.mark shouldBe true
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
             }
@@ -344,7 +344,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.temporalLayer == 0 && (f.ssrc == 2L || f.isKeyframe))
                     if (result.accept) {
                         result.mark shouldBe true
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
             }
@@ -359,7 +359,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.ssrc == 0L)
                     if (result.accept) {
                         result.mark shouldBe true
-                        filter.needsKeyframe() shouldBe false
+                        filter.needsKeyframe shouldBe false
                     }
                 }
 
@@ -371,7 +371,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                     result.accept shouldBe if (!sawKeyframe) (f.ssrc == 0L) else (f.ssrc == 2L || f.isKeyframe)
                     if (result.accept) {
                         result.mark shouldBe true
-                        filter.needsKeyframe() shouldBe !sawKeyframe
+                        filter.needsKeyframe shouldBe !sawKeyframe
                     }
                 }
 
@@ -386,7 +386,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                         (f.ssrc == 1L || (f.isKeyframe && f.ssrc < 1L))
                     if (result.accept) {
                         result.mark shouldBe true
-                        filter.needsKeyframe() shouldBe !sawKeyframe
+                        filter.needsKeyframe shouldBe !sawKeyframe
                     }
                 }
             }

@@ -460,7 +460,7 @@ class Vp9AdaptiveSourceProjectionContext(
     }
 
     override fun needsKeyframe(): Boolean {
-        if (vp9QualityFilter.needsKeyframe()) {
+        if (vp9QualityFilter.needsKeyframe) {
             return true
         }
 

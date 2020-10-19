@@ -49,10 +49,9 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     /**
      * A boolean flag that indicates whether a keyframe is needed, due to an
      * encoding or (in some cases) a spatial layer switch.
-     *
-     * Reading/writing of this field is synchronized on this instance.
      */
-    private var needsKeyframe = false
+    var needsKeyframe = false
+        private set
 
     /**
      * The encoding ID that this instance tries to achieve. Upon
@@ -80,14 +79,6 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
      * Which spatial layers are currently being forwarded.
      */
     private val layers: Array<Boolean> = Array(MAX_VP9_LAYERS) { false }
-
-    /**
-     * @return true if a keyframe is needed and hasn't been received yet, false otherwise.
-     * (This will be set if the encoding changes, and in some cases if the spatial layer changes.)
-     */
-    fun needsKeyframe(): Boolean {
-        return needsKeyframe
-    }
 
     /**
      * Determines whether to accept or drop a VP9 frame.
