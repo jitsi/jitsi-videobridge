@@ -413,6 +413,7 @@ class Vp9AdaptiveSourceProjectionContext(
         var f2: Vp9Frame?
         val refSeq: Int
         if (picGap > 0 || (picGap == 0 && layerGap > 0)) {
+            /* refFrame is earlier than frame in decode order. */
             do {
                 f2 = nextFrame(f1)
                 checkNotNull(f2) {
@@ -426,6 +427,7 @@ class Vp9AdaptiveSourceProjectionContext(
             /* refFrame is a projected frame, so it has a projection. */
             refSeq = refFrame.projection!!.latestProjectedSeqNum
         } else {
+            /* refFrame is later than frame in decode order. */
             do {
                 f2 = prevFrame(f1)
                 checkNotNull(f2) {
