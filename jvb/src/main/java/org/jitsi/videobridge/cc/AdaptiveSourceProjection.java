@@ -278,9 +278,6 @@ public class AdaptiveSourceProjection
             {
                 // context switch
                 RtpState rtpState = getRtpState();
-                if (rtpState == null) {
-                    return null;
-                }
                 logger.debug(() -> "adaptive source projection " +
                     (context == null ? "creating new" : "changing to") +
                     " VP8 context for payload type "
@@ -294,9 +291,6 @@ public class AdaptiveSourceProjection
                 && !(context instanceof GenericAdaptiveSourceProjectionContext))
             {
                 RtpState rtpState = getRtpState();
-                if (rtpState == null) {
-                    return null;
-                }
                 // context switch
                 logger.debug(() -> {
                     boolean hasTemporalLayer = rtpPacket instanceof Vp8Packet &&
@@ -324,9 +318,6 @@ public class AdaptiveSourceProjection
             {
                 // context switch
                 RtpState rtpState = getRtpState();
-                if (rtpState == null) {
-                    return null;
-                }
                 logger.debug(() -> "adaptive source projection " +
                     (context == null ? "creating new" : "changing to") +
                     " VP9 context for payload type "
@@ -342,9 +333,6 @@ public class AdaptiveSourceProjection
         else if (context == null || contextPayloadType != payloadType)
         {
             RtpState rtpState = getRtpState();
-            if (rtpState == null) {
-                return null;
-            }
             logger.debug(() -> "adaptive source projection "  +
                 (context == null ? "creating new" : "changing to") +
                 " generic context for payload type " + payloadType);
@@ -361,7 +349,7 @@ public class AdaptiveSourceProjection
     /**
      * Gets the {@link RtpState}.
      */
-    private RtpState getRtpState()
+    private @NotNull RtpState getRtpState()
     {
         if (context == null)
         {
