@@ -10,7 +10,7 @@ fi
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 
-mainClass="org.jitsi.videobridge.Main"
+mainClass="org.jitsi.videobridge.MainKt"
 #cp=$SCRIPT_DIR/jitsi-videobridge.jar:$SCRIPT_DIR/lib/*
 cp=$SCRIPT_DIR/classes:$SCRIPT_DIR/lib/*
 logging_config="$SCRIPT_DIR/lib/logging.properties"

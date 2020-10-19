@@ -52,7 +52,7 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = LastNMessage::class, name = LastNMessage.TYPE),
 
     //  hasevr
-    JsonSubTypes.Type(value = PerceptibleEndpointChangedMessage::class, name = PerceptibleEndpointChangedMessage.TYPE),
+    JsonSubTypes.Type(value = PercieveMessage::class, name = PercieveMessage.TYPE),
 
     JsonSubTypes.Type(value = ReceiverVideoConstraintMessage::class, name = ReceiverVideoConstraintMessage.TYPE),
     JsonSubTypes.Type(value = ReceiverVideoConstraintsMessage::class, name = ReceiverVideoConstraintsMessage.TYPE),
@@ -102,7 +102,7 @@ open class MessageHandler {
             is EndpointMessage -> endpointMessage(message)
 
             //  hasevr
-            is PerceptibleEndpointChangedMessage -> perceptibleEndpointChanged(message)
+            is PercieveMessage -> perceived(message)
 
             is LastNMessage -> lastN(message)
             is ReceiverVideoConstraintMessage -> receiverVideoConstraint(message)
@@ -132,7 +132,7 @@ open class MessageHandler {
     open fun lastN(message: LastNMessage) = unhandledMessageReturnNull(message)
 
     //  hasevr
-    open fun perceptibleEndpointChanged(message: PerceptibleEndpointChangedMessage) = unhandledMessageReturnNull(message)
+    open fun perceived(message: PercieveMessage) = unhandledMessageReturnNull(message)
 
     open fun receiverVideoConstraint(message: ReceiverVideoConstraintMessage) = unhandledMessageReturnNull(message)
     open fun receiverVideoConstraints(message: ReceiverVideoConstraintsMessage) = unhandledMessageReturnNull(message)
@@ -270,9 +270,9 @@ class LastNMessage(val lastN: Int) : BridgeChannelMessage(TYPE) {
  * A message sent from a client, indicating that it wishes to change its "lastN" (i.e. the maximum number of video
  * streams to be received).
  */
-class PerceptibleEndpointChangedMessage(val perceptibleEndpoints: Array<ArrayList<String>>) : BridgeChannelMessage(TYPE) {
+class PercieveMessage(val perceptibles: Array<Array<String>>) : BridgeChannelMessage(TYPE) {
     companion object {
-        const val TYPE = "PerceptibleEndpointChangedEvent"
+        const val TYPE = "PercieveEvent"
     }
 }
 
