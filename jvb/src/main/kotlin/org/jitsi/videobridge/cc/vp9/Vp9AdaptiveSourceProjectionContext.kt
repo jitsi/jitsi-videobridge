@@ -176,6 +176,8 @@ class Vp9AdaptiveSourceProjectionContext(
             if (!frame2.isAccepted && !frame2.seenStartOfFrame && seqGap > 1) {
                 seqGap--
             }
+            /* If the frame wasn't accepted, it has to have consumed at least one sequence number,
+             * which we can collapse out. */
             if (!frame1.isAccepted && seqGap > 0) {
                 seqGap--
             }
