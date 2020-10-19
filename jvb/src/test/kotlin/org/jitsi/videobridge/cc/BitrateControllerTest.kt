@@ -20,17 +20,16 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.maps.shouldContainExactly
 import io.mockk.every
 import io.mockk.mockk
-import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.VideoConstraints
 
 class BitrateControllerTest : FunSpec({
     test("effective constraints is 180p if nothing specified") {
         val conferenceEndpoints = listOf(
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-1" },
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-2" },
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-3" },
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-4" },
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-5" }
+            mockk<BitrateController.MediaSourceContainer>().apply { every { id } returns "endpoint-1" },
+            mockk<BitrateController.MediaSourceContainer>().apply { every { id } returns "endpoint-2" },
+            mockk<BitrateController.MediaSourceContainer>().apply { every { id } returns "endpoint-3" },
+            mockk<BitrateController.MediaSourceContainer>().apply { every { id } returns "endpoint-4" },
+            mockk<BitrateController.MediaSourceContainer>().apply { every { id } returns "endpoint-5" }
         )
         val lastN = -1
         val videoConstraints = mapOf(
@@ -51,11 +50,11 @@ class BitrateControllerTest : FunSpec({
 
     test("effective constraints is 0p if outside of LastN") {
         val conferenceEndpoints = listOf(
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-1" },
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-2" },
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-3" },
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-4" },
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-5" }
+            mockk<BitrateController.MediaSourceContainer>().apply { every { id } returns "endpoint-1" },
+            mockk<BitrateController.MediaSourceContainer>().apply { every { id } returns "endpoint-2" },
+            mockk<BitrateController.MediaSourceContainer>().apply { every { id } returns "endpoint-3" },
+            mockk<BitrateController.MediaSourceContainer>().apply { every { id } returns "endpoint-4" },
+            mockk<BitrateController.MediaSourceContainer>().apply { every { id } returns "endpoint-5" }
         )
         val lastN = 3
         val videoConstraints = mapOf<String, VideoConstraints>()

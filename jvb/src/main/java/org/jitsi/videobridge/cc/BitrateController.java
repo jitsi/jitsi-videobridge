@@ -96,7 +96,7 @@ import java.util.concurrent.atomic.*;
  * @author George Politis
  */
 @SuppressWarnings("JavadocReference")
-public class BitrateController
+public class BitrateController<T extends BitrateController.MediaSourceContainer>
 {
     /**
      * An reusable empty array of {@link RateSnapshot} to reduce allocations.
@@ -151,14 +151,14 @@ public class BitrateController
     }
 
     public static List<EndpointMultiRank> makeEndpointMultiRankList(
-            List<AbstractEndpoint> conferenceEndpoints,
+            List<MediaSourceContainer> conferenceEndpoints,
             Map<String, VideoConstraints> videoConstraintsMap,
             int adjustedLastN)
     {
         List<EndpointMultiRank> endpointMultiRankList = new ArrayList<>(conferenceEndpoints.size());
         for (int i = 0; i < conferenceEndpoints.size(); i++)
         {
-            AbstractEndpoint endpoint = conferenceEndpoints.get(i);
+            MediaSourceContainer endpoint = conferenceEndpoints.get(i);
 
             VideoConstraints effectiveVideoConstraints = (i < adjustedLastN || adjustedLastN < 0)
                     ? videoConstraintsMap.getOrDefault(endpoint.getID(), VideoConstraints.thumbnailVideoConstraints)
@@ -266,7 +266,7 @@ public class BitrateController
 
     private final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
 
-    private final Supplier<List<AbstractEndpoint>> endpointsSupplier;
+    private final Supplier<List<T>> endpointsSupplier;
 
     /**
      * The last time {@link BitrateController#update()} was called
@@ -280,7 +280,7 @@ public class BitrateController
     public BitrateController(
             String destinationEndpointId,
             EventHandler eventHandler,
-            Supplier<List<AbstractEndpoint>> endpointsSupplier,
+            Supplier<List<T>> endpointsSupplier,
             @NotNull DiagnosticContext diagnosticContext,
             Logger parentLogger,
             Clock clock
@@ -299,7 +299,7 @@ public class BitrateController
     public BitrateController(
         String destinationEndpointId,
         EventHandler eventHandler,
-        Supplier<List<AbstractEndpoint>> endpointsSupplier,
+        Supplier<List<T>> endpointsSupplier,
         @NotNull DiagnosticContext diagnosticContext,
         Logger parentLogger
     ) {
@@ -425,7 +425,7 @@ public class BitrateController
         long nowMs = clock.instant().toEpochMilli();
         for (MediaSourceDesc incomingSource : endpointsSupplier.get().stream()
             .filter(e -> !destinationEndpointId.equals(e.getID()))
-            .map(AbstractEndpoint::getMediaSources)
+            .map(MediaSourceContainer::getMediaSources)
             .flatMap(Arrays::stream)
             .filter(MediaSourceDesc::hasRtpLayers)
             .collect(Collectors.toList()))
@@ -576,8 +576,8 @@ public class BitrateController
             return;
         }
 
-        List<AbstractEndpoint> sortedEndpoints = new ArrayList<>(sortedEndpointIds.size());
-        List<AbstractEndpoint> conferenceEndpoints = endpointsSupplier.get();
+        List<MediaSourceContainer> sortedEndpoints = new ArrayList<>(sortedEndpointIds.size());
+        List<T> conferenceEndpoints = endpointsSupplier.get();
         for (String endpointId : sortedEndpointIds)
         {
             conferenceEndpoints.stream()
@@ -798,7 +798,7 @@ public class BitrateController
      * {@link ConferenceSpeechActivity}.
      * @return an array of {@link SourceBitrateAllocation}.
      */
-    private synchronized SourceBitrateAllocation[] allocate(long maxBandwidth, List<AbstractEndpoint> conferenceEndpoints)
+    private synchronized SourceBitrateAllocation[] allocate(long maxBandwidth, List<MediaSourceContainer> conferenceEndpoints)
     {
         SourceBitrateAllocation[] sourceBitrateAllocations = prioritize(conferenceEndpoints);
 
@@ -892,7 +892,7 @@ public class BitrateController
      * selected endpoint are at the top of the array, followed by the pinned
      * endpoints, finally followed by any other remaining endpoints.
      */
-    private synchronized SourceBitrateAllocation[] prioritize(List<AbstractEndpoint> conferenceEndpoints)
+    private synchronized SourceBitrateAllocation[] prioritize(List<MediaSourceContainer> conferenceEndpoints)
     {
         // Init.
         List<SourceBitrateAllocation> sourceBitrateAllocations = new ArrayList<>();
@@ -913,7 +913,7 @@ public class BitrateController
         {
             logger.debug("Prioritizing endpoints, adjusted last-n: " + adjustedLastN +
                 ", sorted endpoint list: " +
-                conferenceEndpoints.stream().map(AbstractEndpoint::getID).collect(Collectors.joining(", ")) +
+                conferenceEndpoints.stream().map(MediaSourceContainer::getID).collect(Collectors.joining(", ")) +
                 ". Endpoints constraints: " + Arrays.toString(videoConstraintsMap.values().toArray()));
         }
 
@@ -922,11 +922,7 @@ public class BitrateController
 
         for (EndpointMultiRank endpointMultiRank : endpointMultiRankList)
         {
-            AbstractEndpoint sourceEndpoint = endpointMultiRank.endpoint;
-            if (sourceEndpoint.isExpired())
-            {
-                continue;
-            }
+            MediaSourceContainer sourceEndpoint = endpointMultiRank.endpoint;
 
             MediaSourceDesc[] sources = sourceEndpoint.getMediaSources();
 
@@ -1082,7 +1078,7 @@ public class BitrateController
      *
      * @author George Politis
      */
-    private class SourceBitrateAllocation
+    private class SourceBitrateAllocation<T extends MediaSourceContainer>
     {
         /**
          * The ID of the {@link Endpoint} that this instance pertains to.
@@ -1414,7 +1410,7 @@ public class BitrateController
          * The endpoint (sender) that's constrained and is ranked for bandwidth
          * allocation.
          */
-        final AbstractEndpoint endpoint;
+        final MediaSourceContainer endpoint;
 
         /**
          * Ctor.
@@ -1423,7 +1419,7 @@ public class BitrateController
          * @param effectiveVideoConstraints
          * @param endpoint
          */
-        EndpointMultiRank(int speakerRank, VideoConstraints effectiveVideoConstraints, AbstractEndpoint endpoint)
+        EndpointMultiRank(int speakerRank, VideoConstraints effectiveVideoConstraints, MediaSourceContainer endpoint)
         {
             this.speakerRank = speakerRank;
             this.effectiveVideoConstraints = effectiveVideoConstraints;
@@ -1502,7 +1498,8 @@ public class BitrateController
         }
     }
 
-    public interface EventHandler {
+    public interface EventHandler
+    {
         void lastNEndpointsChanged(
             Collection<String> forwardedEndpoints,
             Collection<String> endpointsEnteringLastN,
@@ -1511,5 +1508,14 @@ public class BitrateController
             ImmutableMap<String, VideoConstraints> oldVideoConstraints,
             ImmutableMap<String, VideoConstraints> newVideoConstraints);
         void keyframeNeeded(String endpointId, long ssrc);
+    }
+
+    /**
+     * Abstracts a source endpoint for the purposes of {@link BitrateController}.
+     */
+    public interface MediaSourceContainer
+    {
+        String getID();
+        MediaSourceDesc[] getMediaSources();
     }
 }

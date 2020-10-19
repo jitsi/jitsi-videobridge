@@ -160,7 +160,7 @@ public class Endpoint
     /**
      * The bitrate controller.
      */
-    private final BitrateController bitrateController;
+    private final BitrateController<AbstractEndpoint> bitrateController;
 
     /**
      * TODO Brian
@@ -317,7 +317,7 @@ public class Endpoint
                 getConference().requestKeyframe(endpointId, ssrc);
             }
         };
-        bitrateController = new BitrateController(
+        bitrateController = new BitrateController<>(
                 id,
                 bcEventHandler,
                 conference::getEndpoints,
