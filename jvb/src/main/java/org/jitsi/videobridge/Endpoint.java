@@ -292,15 +292,9 @@ public class Endpoint
         BitrateController.EventHandler bcEventHandler = new BitrateController.EventHandler()
         {
             @Override
-            public void lastNEndpointsChanged(
-                    Collection<String> forwardedEndpoints,
-                    Collection<String> endpointsEnteringLastN,
-                    Collection<String> conferenceEndpoints)
+            public void forwardedEndpointsChanged(Collection<String> forwardedEndpoints)
             {
-                sendLastNEndpointsChangeEvent(
-                        forwardedEndpoints,
-                        endpointsEnteringLastN,
-                        conferenceEndpoints);
+                sendForwardedEndpointsMessage(forwardedEndpoints);
             }
 
             @Override
@@ -1018,34 +1012,14 @@ public class Endpoint
     }
 
     /**
-     * Sends a message to this {@link Endpoint} in order to notify it that the
-     * list/set of {@code lastN} has changed.
+     * Sends a message to this {@link Endpoint} in order to notify it that the set of endpoints for which the bridge
+     * is sending video has changed.
      *
      * @param forwardedEndpoints the collection of forwarded endpoints.
-     * @param endpointsEnteringLastN the <tt>Endpoint</tt>s which are entering
-     * the list of <tt>Endpoint</tt>s defined by <tt>lastN</tt>
-     * @param conferenceEndpoints the collection of all endpoints in the
-     * conference.
      */
-    private void sendLastNEndpointsChangeEvent(
-        Collection<String> forwardedEndpoints,
-        Collection<String> endpointsEnteringLastN,
-        Collection<String> conferenceEndpoints)
+    private void sendForwardedEndpointsMessage(Collection<String> forwardedEndpoints)
     {
-        // We want endpointsEnteringLastN to always to reported. Consequently,
-        // we will pretend that all lastNEndpoints are entering if no explicit
-        // endpointsEnteringLastN is specified.
-        // XXX do we really want that?
-        if (endpointsEnteringLastN == null)
-        {
-            endpointsEnteringLastN = forwardedEndpoints;
-        }
-
-        ForwardedEndpointsMessage msg
-                = new ForwardedEndpointsMessage(
-                    forwardedEndpoints,
-                    endpointsEnteringLastN,
-                    conferenceEndpoints);
+        ForwardedEndpointsMessage msg = new ForwardedEndpointsMessage(forwardedEndpoints);
 
         TaskPools.IO_POOL.submit(() -> {
             try

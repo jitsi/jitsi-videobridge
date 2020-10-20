@@ -597,13 +597,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         // notification to the client the set of forwarded endpoints has
         // changed.
         Set<String> oldForwardedEndpointIds = forwardedEndpointIds;
-
         Set<String> newForwardedEndpointIds = new HashSet<>();
-        Set<String> endpointsEnteringLastNIds = new HashSet<>();
-        // TODO: The only use of conferenceEndpointIds is sending it to the client. Since it is just a set of all
-        // endpoints in the conference (not ordered by anything specific), it carries no useful information to the
-        // client. Check if we can remove its use from the client and subsequently from this code.
-        Set<String> conferenceEndpointIds = new HashSet<>();
 
         // Accumulators used for tracing purposes.
         long totalIdealBps = 0, totalTargetBps = 0;
@@ -618,7 +612,6 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         {
             for (SourceBitrateAllocation<T> sourceBitrateAllocation : sourceBitrateAllocations)
             {
-                conferenceEndpointIds.add(sourceBitrateAllocation.endpointID);
                 newEffectiveConstraints.put(
                         sourceBitrateAllocation.endpointID, sourceBitrateAllocation.effectiveVideoConstraints);
 
@@ -667,10 +660,6 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
                 if (sourceTargetIdx > -1)
                 {
                     newForwardedEndpointIds.add(sourceBitrateAllocation.endpointID);
-                    if (!oldForwardedEndpointIds.contains(sourceBitrateAllocation.endpointID))
-                    {
-                        endpointsEnteringLastNIds.add(sourceBitrateAllocation.endpointID);
-                    }
                 }
             }
         }
@@ -707,8 +696,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
             // TODO(george) bring back sending this message on message transport
             //  connect
             eventEmitter.fireEvent(handler -> {
-                handler.lastNEndpointsChanged(
-                        newForwardedEndpointIds, endpointsEnteringLastNIds, conferenceEndpointIds);
+                handler.forwardedEndpointsChanged(newForwardedEndpointIds);
                 return Unit.INSTANCE;
             });
         }
@@ -1507,10 +1495,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
 
     public interface EventHandler
     {
-        void lastNEndpointsChanged(
-            Collection<String> forwardedEndpoints,
-            Collection<String> endpointsEnteringLastN,
-            Collection<String> conferenceEndpoints);
+        void forwardedEndpointsChanged(Collection<String> forwardedEndpoints);
         void effectiveVideoConstraintsChanged(
             ImmutableMap<String, VideoConstraints> oldVideoConstraints,
             ImmutableMap<String, VideoConstraints> newVideoConstraints);
