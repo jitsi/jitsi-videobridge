@@ -64,5 +64,5 @@ class EndpointMultiRankerTest : FunSpec({
 private val stageVideoConstraints = VideoConstraints(720)
 private val thumbnailVideoConstraints = VideoConstraints(180)
 
-private fun VideoConstraints.toRank(rank: Int): BitrateController.EndpointMultiRank =
-    BitrateController.EndpointMultiRank(rank, this, null)
+private fun VideoConstraints.toRank(rank: Int): BitrateController.EndpointMultiRank<Endpoint> =
+    BitrateController.EndpointMultiRank<Endpoint>(rank, this, null)

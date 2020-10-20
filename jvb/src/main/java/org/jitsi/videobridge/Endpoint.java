@@ -160,7 +160,7 @@ public class Endpoint
     /**
      * The bitrate controller.
      */
-    private final BitrateController bitrateController;
+    private final BitrateController<AbstractEndpoint> bitrateController;
 
     /**
      * TODO Brian
@@ -288,7 +288,40 @@ public class Endpoint
                     f.invoke();
                 }
             });
-        bitrateController = new BitrateController(this, diagnosticContext, logger);
+
+        BitrateController.EventHandler bcEventHandler = new BitrateController.EventHandler()
+        {
+            @Override
+            public void lastNEndpointsChanged(
+                    Collection<String> forwardedEndpoints,
+                    Collection<String> endpointsEnteringLastN,
+                    Collection<String> conferenceEndpoints)
+            {
+                sendLastNEndpointsChangeEvent(
+                        forwardedEndpoints,
+                        endpointsEnteringLastN,
+                        conferenceEndpoints);
+            }
+
+            @Override
+            public void effectiveVideoConstraintsChanged(
+                    ImmutableMap<String, VideoConstraints> oldVideoConstraints,
+                    ImmutableMap<String, VideoConstraints> newVideoConstraints)
+            {
+                Endpoint.this.effectiveVideoConstraintsChanged(oldVideoConstraints, newVideoConstraints);
+            }
+
+            @Override
+            public void keyframeNeeded(String endpointId, long ssrc)
+            {
+                getConference().requestKeyframe(endpointId, ssrc);
+            }
+        };
+        bitrateController = new BitrateController<>(
+                id,
+                bcEventHandler,
+                conference::getEndpoints,
+                diagnosticContext, logger);
 
         outgoingSrtpPacketQueue = new PacketInfoQueue(
             getClass().getSimpleName() + "-outgoing-packet-queue",
@@ -620,7 +653,7 @@ public class Endpoint
         bitrateController.setVideoConstraints(newVideoConstraints);
     }
 
-    public void effectiveVideoConstraintsChanged(
+    private void effectiveVideoConstraintsChanged(
         ImmutableMap<String, VideoConstraints> oldVideoConstraints,
         ImmutableMap<String, VideoConstraints> newVideoConstraints)
     {
@@ -994,7 +1027,7 @@ public class Endpoint
      * @param conferenceEndpoints the collection of all endpoints in the
      * conference.
      */
-    public void sendLastNEndpointsChangeEvent(
+    private void sendLastNEndpointsChangeEvent(
         Collection<String> forwardedEndpoints,
         Collection<String> endpointsEnteringLastN,
         Collection<String> conferenceEndpoints)
