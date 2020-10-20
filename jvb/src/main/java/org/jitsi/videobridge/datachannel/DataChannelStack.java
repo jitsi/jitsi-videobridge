@@ -58,10 +58,11 @@ public class DataChannelStack
         logger.debug(() -> "Data channel stack received SCTP message");
         DataChannelMessage message = DataChannelProtocolMessageParser.parse(data.array(), ppid);
 
-        //  hasevr  log all message
+        /*  hasevr  log all message
         byte[] byteArray = new byte[message.getBuffer().remaining()];
         message.getBuffer().get(byteArray);
         logger.info("DataChannel msg:" + new String(byteArray));
+        //  */
 
         if (message instanceof OpenChannelMessage)
         {
@@ -84,11 +85,10 @@ public class DataChannelStack
             DataChannel dataChannel= dataChannels.get(sid);
             if (dataChannel == null)
             {
-                logger.error("Could not find data channel for sid " + sid + " in "
-                    + Arrays.toString(dataChannels.keySet().toArray()) );
+                logger.error("Could not find data channel for sid " + sid);
                 return;
             }
-            logger.info("Data channel found for sid " + sid);
+            //  logger.info("Data channel found for sid " + sid);
             dataChannel.onIncomingMsg(message);
         }
     }

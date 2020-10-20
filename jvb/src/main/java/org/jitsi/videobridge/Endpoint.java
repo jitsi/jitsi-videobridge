@@ -101,13 +101,6 @@ public class Endpoint
         //  end for test.       */
         
         if (perceptibles != null){
-            /*
-            String msg = "Perceptible end points:";
-            for(String id: perceptibles){
-                msg += " " + id;
-            }
-            msg += "\n";
-            logger.info(msg);   //  */
             perceptibleAudioSSRCs = ConcurrentHashMap.newKeySet();
             perceptibleVideoSSRCs = ConcurrentHashMap.newKeySet();
 
@@ -139,17 +132,11 @@ public class Endpoint
             }
             //  */
 
-    //*  //  log ssrcs 
-            String msg2 = "Perceptible Video ssrcs:";
-            for(long ssrc: perceptibleVideoSSRCs){
-                msg2 += " " + ssrc;
-            }
-            msg2 += ("\nPerceptible Audio ssrcs:");
-            for(long ssrc: perceptibleAudioSSRCs){
-                msg2 += " " + ssrc;
-            }
-            logger.info(msg2);
-    //  */
+            //*  //  log ssrcs 
+            logger.info("Perceptibles of " + getID() + "ep=(v:" + Arrays.toString(perceptibles[0]) + " a:" + Arrays.toString(perceptibles[1]) + ")"
+                + " ssrcs=(v:" + Arrays.toString(perceptibleVideoSSRCs.toArray())
+                + " a:" +  Arrays.toString(perceptibleAudioSSRCs.toArray()) + ")");
+            //  */
         }
     }
 
@@ -546,7 +533,7 @@ public class Endpoint
     //  hasevr
     public void setPerceptibles(String value[][]){
         perceptibles = value;
-        logger.info("setPerceptibleEndpoints: ep:" + getID() + " [" + perceptibles[0].length + "," + perceptibles[1].length + "]" );
+        logger.info("setPerceptible called on ep:" + getID() + " [" + Arrays.toString(perceptibles[0]) + "," + Arrays.toString(perceptibles[1]) + "]" );
     }
 
     /**
