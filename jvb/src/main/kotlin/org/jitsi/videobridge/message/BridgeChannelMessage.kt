@@ -347,14 +347,13 @@ class EndpointConnectionStatusMessage(
 
 /**
  * A message sent from the bridge to a client, indicating the set of endpoints that are currently being forwarded.
- *
- * TODO: document the semantics of the fields.
  */
 class ForwardedEndpointsMessage(
     @get:JsonProperty("lastNEndpoints")
-    val forwardedEndpoints: Collection<String>,
-    val endpointsEnteringLastN: Collection<String>,
-    val conferenceEndpoints: Collection<String>
+    /**
+     * The set of endpoints for which the bridge is currently sending video.
+     */
+    val forwardedEndpoints: Collection<String>
 ) : BridgeChannelMessage(TYPE) {
     /**
      * Serialize using json-simple because it's faster.
@@ -364,8 +363,6 @@ class ForwardedEndpointsMessage(
         // json-simple does not property serialize collections properly (it handles [List]s correctly, but not [Set]s)
         // As a short-term solution force the use of a list.
         this["lastNEndpoints"] = ArrayList(forwardedEndpoints)
-        this["endpointsEnteringLastN"] = ArrayList(endpointsEnteringLastN)
-        this["conferenceEndpoints"] = ArrayList(conferenceEndpoints)
     }.toJSONString()
 
     companion object {
