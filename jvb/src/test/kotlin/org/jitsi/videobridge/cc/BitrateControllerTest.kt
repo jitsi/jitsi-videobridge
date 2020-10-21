@@ -16,59 +16,61 @@
 
 package org.jitsi.videobridge.cc
 
-import io.kotest.core.spec.style.FunSpec
+import io.kotest.core.spec.IsolationMode
+import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.maps.shouldContainExactly
-import io.mockk.every
-import io.mockk.mockk
-import org.jitsi.videobridge.AbstractEndpoint
+import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.videobridge.VideoConstraints
 
-class BitrateControllerTest : FunSpec({
-    test("effective constraints is 180p if nothing specified") {
-        val conferenceEndpoints = listOf(
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-1" },
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-2" },
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-3" },
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-4" },
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-5" }
-        )
-        val lastN = -1
-        val videoConstraints = mapOf(
-                "endpoint-1" to VideoConstraints(720)
-        )
+class BitrateControllerTest : ShouldSpec() {
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-        BitrateController.makeEndpointMultiRankList(conferenceEndpoints, videoConstraints, lastN).map {
-            it.endpoint.id to it.effectiveVideoConstraints
-        }.toMap().shouldContainExactly((
-            mapOf(
-                "endpoint-1" to VideoConstraints(720),
-                "endpoint-2" to VideoConstraints.thumbnailVideoConstraints,
-                "endpoint-3" to VideoConstraints.thumbnailVideoConstraints,
-                "endpoint-4" to VideoConstraints.thumbnailVideoConstraints,
-                "endpoint-5" to VideoConstraints.thumbnailVideoConstraints
-        )))
+    init {
+
+        context("Effective constraints") {
+            val conferenceEndpoints = List(5) { i -> Endpoint("endpoint-${i + 1}") }
+
+            context("When nothing is specified (expect 180p)") {
+                val lastN = -1
+                val videoConstraints = mapOf("endpoint-1" to VideoConstraints(720))
+
+                BitrateController.makeEndpointMultiRankList(conferenceEndpoints, videoConstraints, lastN).map {
+                    it.endpoint.id to it.effectiveVideoConstraints
+                }.toMap().shouldContainExactly(
+                    mapOf(
+                        "endpoint-1" to VideoConstraints(720),
+                        "endpoint-2" to VideoConstraints.thumbnailVideoConstraints,
+                        "endpoint-3" to VideoConstraints.thumbnailVideoConstraints,
+                        "endpoint-4" to VideoConstraints.thumbnailVideoConstraints,
+                        "endpoint-5" to VideoConstraints.thumbnailVideoConstraints
+                    )
+                )
+            }
+
+            context("With LastN") {
+                val lastN = 3
+                val videoConstraints = mapOf<String, VideoConstraints>()
+
+                BitrateController.makeEndpointMultiRankList(conferenceEndpoints, videoConstraints, lastN).map {
+                    it.endpoint.id to it.effectiveVideoConstraints
+                }.toMap().shouldContainExactly(
+                    mapOf(
+                        "endpoint-1" to VideoConstraints.thumbnailVideoConstraints,
+                        "endpoint-2" to VideoConstraints.thumbnailVideoConstraints,
+                        "endpoint-3" to VideoConstraints.thumbnailVideoConstraints,
+                        "endpoint-4" to VideoConstraints.disabledVideoConstraints,
+                        "endpoint-5" to VideoConstraints.disabledVideoConstraints
+                    )
+                )
+            }
+        }
     }
+}
 
-    test("effective constraints is 0p if outside of LastN") {
-        val conferenceEndpoints = listOf(
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-1" },
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-2" },
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-3" },
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-4" },
-            mockk<AbstractEndpoint>().apply { every { id } returns "endpoint-5" }
-        )
-        val lastN = 3
-        val videoConstraints = mapOf<String, VideoConstraints>()
-
-        BitrateController.makeEndpointMultiRankList(conferenceEndpoints, videoConstraints, lastN).map {
-            it.endpoint.id to it.effectiveVideoConstraints
-        }.toMap().shouldContainExactly((
-            mapOf(
-                "endpoint-1" to VideoConstraints.thumbnailVideoConstraints,
-                "endpoint-2" to VideoConstraints.thumbnailVideoConstraints,
-                "endpoint-3" to VideoConstraints.thumbnailVideoConstraints,
-                "endpoint-4" to VideoConstraints.disabledVideoConstraints,
-                "endpoint-5" to VideoConstraints.disabledVideoConstraints
-        )))
-    }
-})
+class Endpoint(
+    val id: String,
+    val mediaSources_: Array<MediaSourceDesc> = arrayOf()
+) : BitrateController.MediaSourceContainer {
+    override fun getID() = id
+    override fun getMediaSources() = mediaSources_
+}

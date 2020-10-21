@@ -23,6 +23,7 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.rest.root.debug.*;
 import org.jitsi.videobridge.util.*;
@@ -47,6 +48,7 @@ import static org.jitsi.videobridge.VideoConstraints.disabledVideoConstraints;
  * @author Brian Baldino
  */
 public abstract class AbstractEndpoint
+    implements BitrateController.MediaSourceContainer
 {
     /**
      * The default video constraints to assume when nothing is signaled.

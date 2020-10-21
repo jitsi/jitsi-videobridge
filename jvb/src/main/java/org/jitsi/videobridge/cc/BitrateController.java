@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc;
 
 import com.google.common.collect.*;
 import edu.umd.cs.findbugs.annotations.*;
+import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
@@ -35,6 +36,7 @@ import java.lang.SuppressWarnings;
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.*;
 import java.util.stream.*;
 import java.util.concurrent.atomic.*;
 
@@ -94,7 +96,7 @@ import java.util.concurrent.atomic.*;
  * @author George Politis
  */
 @SuppressWarnings("JavadocReference")
-public class BitrateController
+public class BitrateController<T extends BitrateController.MediaSourceContainer>
 {
     /**
      * An reusable empty array of {@link RateSnapshot} to reduce allocations.
@@ -148,21 +150,21 @@ public class BitrateController
         return deltaBwe > 0 ||  deltaBwe < -1 * previousBwe * BitrateControllerConfig.bweChangeThreshold();
     }
 
-    public static List<EndpointMultiRank> makeEndpointMultiRankList(
-            List<AbstractEndpoint> conferenceEndpoints,
+    public static <T extends MediaSourceContainer> List<EndpointMultiRank<T>> makeEndpointMultiRankList(
+            List<T> conferenceEndpoints,
             Map<String, VideoConstraints> videoConstraintsMap,
             int adjustedLastN)
     {
-        List<EndpointMultiRank> endpointMultiRankList = new ArrayList<>(conferenceEndpoints.size());
+        List<EndpointMultiRank<T>> endpointMultiRankList = new ArrayList<>(conferenceEndpoints.size());
         for (int i = 0; i < conferenceEndpoints.size(); i++)
         {
-            AbstractEndpoint endpoint = conferenceEndpoints.get(i);
+            T endpoint = conferenceEndpoints.get(i);
 
             VideoConstraints effectiveVideoConstraints = (i < adjustedLastN || adjustedLastN < 0)
                     ? videoConstraintsMap.getOrDefault(endpoint.getID(), VideoConstraints.thumbnailVideoConstraints)
                     : VideoConstraints.disabledVideoConstraints;
 
-            endpointMultiRankList.add(new EndpointMultiRank(i, effectiveVideoConstraints, endpoint));
+            endpointMultiRankList.add(new EndpointMultiRank<>(i, effectiveVideoConstraints, endpoint));
         }
         endpointMultiRankList.sort(new EndpointMultiRanker());
         return endpointMultiRankList;
@@ -242,7 +244,7 @@ public class BitrateController
     /**
      * The ID of the endpoint to which this {@link BitrateController} belongs
      */
-    private final Endpoint destinationEndpoint;
+    private final String destinationEndpointId;
 
     private final DiagnosticContext diagnosticContext;
 
@@ -262,6 +264,10 @@ public class BitrateController
 
     private final Clock clock;
 
+    private final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
+
+    private final Supplier<List<T>> endpointsSupplier;
+
     /**
      * The last time {@link BitrateController#update()} was called
      */
@@ -272,26 +278,37 @@ public class BitrateController
      * belong to a particular {@link Endpoint}.
      */
     public BitrateController(
-            Endpoint destinationEndpoint,
+            String destinationEndpointId,
+            EventHandler eventHandler,
+            Supplier<List<T>> endpointsSupplier,
             @NotNull DiagnosticContext diagnosticContext,
             Logger parentLogger,
             Clock clock
     )
     {
-        this.destinationEndpoint = destinationEndpoint;
+        this.destinationEndpointId = destinationEndpointId;
         this.diagnosticContext = diagnosticContext;
         this.logger = parentLogger.createChildLogger(BitrateController.class.getName());
         this.clock = clock;
 
         enableVideoQualityTracing = timeSeriesLogger.isTraceEnabled();
+        this.endpointsSupplier = endpointsSupplier;
+        eventEmitter.addHandler(eventHandler);
     }
 
     public BitrateController(
-        Endpoint destinationEndpoint,
+        String destinationEndpointId,
+        EventHandler eventHandler,
+        Supplier<List<T>> endpointsSupplier,
         @NotNull DiagnosticContext diagnosticContext,
         Logger parentLogger
     ) {
-        this(destinationEndpoint, diagnosticContext, parentLogger, Clock.systemUTC());
+        this(destinationEndpointId,
+                eventHandler,
+                endpointsSupplier,
+                diagnosticContext,
+                parentLogger,
+                Clock.systemUTC());
     }
 
 
@@ -415,10 +432,9 @@ public class BitrateController
         List<Long> activeSsrcs = new ArrayList<>();
         long totalTargetBps = 0, totalIdealBps = 0;
         long nowMs = clock.instant().toEpochMilli();
-        for (MediaSourceDesc incomingSource : destinationEndpoint
-            .getConference().getEndpoints().stream()
-            .filter(e -> !destinationEndpoint.equals(e))
-            .map(AbstractEndpoint::getMediaSources)
+        for (MediaSourceDesc incomingSource : endpointsSupplier.get().stream()
+            .filter(e -> !destinationEndpointId.equals(e.getID()))
+            .map(MediaSourceContainer::getMediaSources)
             .flatMap(Arrays::stream)
             .filter(MediaSourceDesc::hasRtpLayers)
             .collect(Collectors.toList()))
@@ -430,7 +446,7 @@ public class BitrateController
 
             if (adaptiveSourceProjection == null)
             {
-                logger.debug(destinationEndpoint.getID() + " is missing " +
+                logger.debug(destinationEndpointId + " is missing " +
                     "an adaptive source projection for endpoint=" +
                     incomingSource.getOwner() + ", ssrc=" + primarySsrc);
                 continue;
@@ -546,7 +562,7 @@ public class BitrateController
         logger.debug(() -> " endpoint ordering has changed, updating");
 
         List<String> newSortedEndpointIds = new ArrayList<>(conferenceEndpoints);
-        newSortedEndpointIds.remove(destinationEndpoint.getID());
+        newSortedEndpointIds.remove(destinationEndpointId);
         sortedEndpointIds = newSortedEndpointIds;
         update();
     }
@@ -564,37 +580,28 @@ public class BitrateController
 
         long bweBps = getAvailableBandwidth(nowMs);
 
-        // Create a copy as we may modify the list in the prioritize method.
-        List<String> sortedEndpointIdsCopy = sortedEndpointIds;
-        if (sortedEndpointIdsCopy == null || sortedEndpointIdsCopy.isEmpty())
+        if (sortedEndpointIds == null || sortedEndpointIds.isEmpty())
         {
             return;
         }
 
-        List<AbstractEndpoint> sortedEndpoints = new ArrayList<>(sortedEndpointIdsCopy.size());
-        for (String endpointId : sortedEndpointIdsCopy)
+        List<T> sortedEndpoints = new ArrayList<>(sortedEndpointIds.size());
+        List<T> conferenceEndpoints = endpointsSupplier.get();
+        for (String endpointId : sortedEndpointIds)
         {
-            AbstractEndpoint abstractEndpoint = destinationEndpoint.getConference().getEndpoint(endpointId);
-            if (abstractEndpoint != null)
-            {
-                sortedEndpoints.add(abstractEndpoint);
-            }
+            conferenceEndpoints.stream()
+                    .filter(e -> e.getID().equals(endpointId))
+                    .findFirst().ifPresent(sortedEndpoints::add);
         }
 
         // Compute the bitrate allocation.
-        SourceBitrateAllocation[] sourceBitrateAllocations = allocate(bweBps, sortedEndpoints);
+        SourceBitrateAllocation<T>[] sourceBitrateAllocations = allocate(bweBps, sortedEndpoints);
 
         // Update the the controllers based on the allocation and send a
         // notification to the client the set of forwarded endpoints has
         // changed.
         Set<String> oldForwardedEndpointIds = forwardedEndpointIds;
-
         Set<String> newForwardedEndpointIds = new HashSet<>();
-        Set<String> endpointsEnteringLastNIds = new HashSet<>();
-        // TODO: The only use of conferenceEndpointIds is sending it to the client. Since it is just a set of all
-        // endpoints in the conference (not ordered by anything specific), it carries no useful information to the
-        // client. Check if we can remove its use from the client and subsequently from this code.
-        Set<String> conferenceEndpointIds = new HashSet<>();
 
         // Accumulators used for tracing purposes.
         long totalIdealBps = 0, totalTargetBps = 0;
@@ -607,9 +614,8 @@ public class BitrateController
         List<AdaptiveSourceProjection> adaptiveSourceProjections = new ArrayList<>();
         if (!ArrayUtils.isNullOrEmpty(sourceBitrateAllocations))
         {
-            for (SourceBitrateAllocation sourceBitrateAllocation : sourceBitrateAllocations)
+            for (SourceBitrateAllocation<T> sourceBitrateAllocation : sourceBitrateAllocations)
             {
-                conferenceEndpointIds.add(sourceBitrateAllocation.endpointID);
                 newEffectiveConstraints.put(
                         sourceBitrateAllocation.endpointID, sourceBitrateAllocation.effectiveVideoConstraints);
 
@@ -658,10 +664,6 @@ public class BitrateController
                 if (sourceTargetIdx > -1)
                 {
                     newForwardedEndpointIds.add(sourceBitrateAllocation.endpointID);
-                    if (!oldForwardedEndpointIds.contains(sourceBitrateAllocation.endpointID))
-                    {
-                        endpointsEnteringLastNIds.add(sourceBitrateAllocation.endpointID);
-                    }
                 }
             }
         }
@@ -690,17 +692,17 @@ public class BitrateController
                     .addField("total_ideal_bps", totalIdealBps));
         }
 
-        // The bandwidth brober will pick this up.
+        // The bandwidth prober will pick this up.
         this.adaptiveSourceProjections = Collections.unmodifiableList(adaptiveSourceProjections);
 
         if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
         {
             // TODO(george) bring back sending this message on message transport
             //  connect
-            destinationEndpoint.sendLastNEndpointsChangeEvent(
-                newForwardedEndpointIds,
-                endpointsEnteringLastNIds,
-                conferenceEndpointIds);
+            eventEmitter.fireEvent(handler -> {
+                handler.forwardedEndpointsChanged(newForwardedEndpointIds);
+                return Unit.INSTANCE;
+            });
         }
 
         if (!newEffectiveConstraints.equals(effectiveConstraintsMap))
@@ -709,8 +711,11 @@ public class BitrateController
                 oldEffectiveConstraints = ImmutableMap.copyOf(effectiveConstraintsMap);
             // TODO make the call outside the synchronized block.
             effectiveConstraintsMap = newEffectiveConstraints;
-            destinationEndpoint.effectiveVideoConstraintsChanged(
-                oldEffectiveConstraints, ImmutableMap.copyOf(newEffectiveConstraints));
+            eventEmitter.fireEvent(handler -> {
+                handler.effectiveVideoConstraintsChanged(
+                    oldEffectiveConstraints, ImmutableMap.copyOf(newEffectiveConstraints));
+                return Unit.INSTANCE;
+            });
         }
 
         this.forwardedEndpointIds = newForwardedEndpointIds;
@@ -725,7 +730,7 @@ public class BitrateController
      * that is specified as an argument.
      */
     private AdaptiveSourceProjection lookupOrCreateAdaptiveSourceProjection(
-        SourceBitrateAllocation sourceBitrateAllocation)
+        SourceBitrateAllocation<T> sourceBitrateAllocation)
     {
         synchronized (adaptiveSourceProjectionMap)
         {
@@ -757,7 +762,10 @@ public class BitrateController
                 = new AdaptiveSourceProjection(
                     diagnosticContext,
                     sourceBitrateAllocation.source,
-                    () -> destinationEndpoint.getConference().requestKeyframe(endpointID, targetSSRC),
+                    () -> eventEmitter.fireEvent(handler -> {
+                        handler.keyframeNeeded(endpointID, targetSSRC);
+                        return Unit.INSTANCE;
+                    }),
                     payloadTypes,
                     logger);
 
@@ -787,9 +795,11 @@ public class BitrateController
      * {@link ConferenceSpeechActivity}.
      * @return an array of {@link SourceBitrateAllocation}.
      */
-    private SourceBitrateAllocation[] allocate(long maxBandwidth, List<AbstractEndpoint> conferenceEndpoints)
+    private synchronized SourceBitrateAllocation<T>[] allocate(
+            long maxBandwidth,
+            List<T> conferenceEndpoints)
     {
-        SourceBitrateAllocation[] sourceBitrateAllocations = prioritize(conferenceEndpoints);
+        SourceBitrateAllocation<T>[] sourceBitrateAllocations = prioritize(conferenceEndpoints);
 
         if (ArrayUtils.isNullOrEmpty(sourceBitrateAllocations))
         {
@@ -881,12 +891,10 @@ public class BitrateController
      * selected endpoint are at the top of the array, followed by the pinned
      * endpoints, finally followed by any other remaining endpoints.
      */
-    private SourceBitrateAllocation[] prioritize(List<AbstractEndpoint> conferenceEndpoints)
+    private synchronized SourceBitrateAllocation<T>[] prioritize(List<T> conferenceEndpoints)
     {
-        Map<String, VideoConstraints> copyOfVideoConstraintsMap = this.videoConstraintsMap;
-
         // Init.
-        List<SourceBitrateAllocation> sourceBitrateAllocations = new ArrayList<>();
+        List<SourceBitrateAllocation<T>> sourceBitrateAllocations = new ArrayList<>();
 
         int adjustedLastN = JvbLastNKt.calculateLastN(this.lastN, JvbLastNKt.jvbLastNSingleton.getJvbLastN());
         if (adjustedLastN < 0)
@@ -904,20 +912,16 @@ public class BitrateController
         {
             logger.debug("Prioritizing endpoints, adjusted last-n: " + adjustedLastN +
                 ", sorted endpoint list: " +
-                conferenceEndpoints.stream().map(AbstractEndpoint::getID).collect(Collectors.joining(", ")) +
-                ". Endpoints constraints: " + Arrays.toString(copyOfVideoConstraintsMap.values().toArray()));
+                conferenceEndpoints.stream().map(MediaSourceContainer::getID).collect(Collectors.joining(", ")) +
+                ". Endpoints constraints: " + Arrays.toString(videoConstraintsMap.values().toArray()));
         }
 
-        List<EndpointMultiRank> endpointMultiRankList
-            = makeEndpointMultiRankList(conferenceEndpoints, copyOfVideoConstraintsMap, adjustedLastN);
+        List<EndpointMultiRank<T>> endpointMultiRankList
+            = makeEndpointMultiRankList(conferenceEndpoints, videoConstraintsMap, adjustedLastN);
 
-        for (EndpointMultiRank endpointMultiRank : endpointMultiRankList)
+        for (EndpointMultiRank<T> endpointMultiRank : endpointMultiRankList)
         {
-            AbstractEndpoint sourceEndpoint = endpointMultiRank.endpoint;
-            if (sourceEndpoint.isExpired())
-            {
-                continue;
-            }
+            MediaSourceContainer sourceEndpoint = endpointMultiRank.endpoint;
 
             MediaSourceDesc[] sources = sourceEndpoint.getMediaSources();
 
@@ -926,7 +930,7 @@ public class BitrateController
                 for (MediaSourceDesc source : sources)
                 {
                     sourceBitrateAllocations.add(
-                        new SourceBitrateAllocation(
+                        new SourceBitrateAllocation<T>(
                             endpointMultiRank.endpoint.getID(),
                             source,
                             endpointMultiRank.effectiveVideoConstraints));
@@ -958,7 +962,7 @@ public class BitrateController
         if (this.lastN != lastN) {
             this.lastN = lastN;
 
-            logger.debug(() -> destinationEndpoint.getID() + " lastN has changed, updating");
+            logger.debug(() -> destinationEndpointId + " lastN has changed, updating");
 
             update();
         }
@@ -1073,7 +1077,7 @@ public class BitrateController
      *
      * @author George Politis
      */
-    private class SourceBitrateAllocation
+    private class SourceBitrateAllocation<T extends MediaSourceContainer>
     {
         /**
          * The ID of the {@link Endpoint} that this instance pertains to.
@@ -1394,7 +1398,7 @@ public class BitrateController
      * video constraints. See {@link EndpointMultiRanker} for more information
      * on how the ranking works.
      */
-    static class EndpointMultiRank
+    static class EndpointMultiRank<T extends MediaSourceContainer>
     {
         /**
          * The speaker rank of the {@link #endpoint} with 0 meaning that the
@@ -1412,7 +1416,7 @@ public class BitrateController
          * The endpoint (sender) that's constrained and is ranked for bandwidth
          * allocation.
          */
-        final AbstractEndpoint endpoint;
+        final T endpoint;
 
         /**
          * Ctor.
@@ -1421,7 +1425,7 @@ public class BitrateController
          * @param effectiveVideoConstraints
          * @param endpoint
          */
-        EndpointMultiRank(int speakerRank, VideoConstraints effectiveVideoConstraints, AbstractEndpoint endpoint)
+        EndpointMultiRank(int speakerRank, VideoConstraints effectiveVideoConstraints, T endpoint)
         {
             this.speakerRank = speakerRank;
             this.effectiveVideoConstraints = effectiveVideoConstraints;
@@ -1500,4 +1504,21 @@ public class BitrateController
         }
     }
 
+    public interface EventHandler
+    {
+        void forwardedEndpointsChanged(Collection<String> forwardedEndpoints);
+        void effectiveVideoConstraintsChanged(
+            ImmutableMap<String, VideoConstraints> oldVideoConstraints,
+            ImmutableMap<String, VideoConstraints> newVideoConstraints);
+        void keyframeNeeded(String endpointId, long ssrc);
+    }
+
+    /**
+     * Abstracts a source endpoint for the purposes of {@link BitrateController}.
+     */
+    public interface MediaSourceContainer
+    {
+        String getID();
+        MediaSourceDesc[] getMediaSources();
+    }
 }
