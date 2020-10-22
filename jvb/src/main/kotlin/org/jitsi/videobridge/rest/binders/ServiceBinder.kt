@@ -28,11 +28,15 @@ import org.jitsi.videobridge.xmpp.XmppConnection
 class ServiceBinder(
     private val videobridge: Videobridge,
     private val xmppConnection: XmppConnection,
-    private val statsCollector: StatsCollector
+    private val statsCollector: StatsCollector?
 ) : AbstractBinder() {
     override fun configure() {
         bind(videobridge).to(Videobridge::class.java)
-        bind(statsCollector).to(StatsCollector::class.java)
+        // We have to test this, because the nullablle 'StatsCollector?' type doesn't play
+        // nicely in hk2 since we're binding to 'StatsCollector'
+        if (statsCollector != null) {
+            bind(statsCollector).to(StatsCollector::class.java)
+        }
         bind(xmppConnection).to(XmppConnection::class.java)
         // These are still suppliers rather than direct instances because that's what
         // Jicoco requires
