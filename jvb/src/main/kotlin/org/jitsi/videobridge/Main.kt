@@ -75,7 +75,7 @@ fun main(args: Array<String>) {
     val shutdownService = ShutdownServiceImpl()
     val videobridge = Videobridge(xmppConnection, shutdownService).apply { start() }
     val octoRelayService = octoRelayService().get()?.apply { start() }
-    val statsManager = if (StatsCollector.config.enabled) {
+    val statsCollector = if (StatsCollector.config.enabled) {
         StatsCollector(VideobridgeStatistics(videobridge, octoRelayService, xmppConnection)).apply {
             start()
             addTransport(MucStatsTransport(xmppConnection), xmppConnection.config.presenceInterval.toMillis())
@@ -89,7 +89,7 @@ fun main(args: Array<String>) {
         CallstatsService(videobridge.versionService.currentVersion).apply {
             start {
                 statsTransport?.let { statsTransport ->
-                    statsManager?.addTransport(statsTransport, CallstatsService.config.interval.toMillis())
+                    statsCollector?.addTransport(statsTransport, CallstatsService.config.interval.toMillis())
                         ?: logger.warn("Callstats is enabled, but the stats manager is not. Will not publish" +
                             " per-conference stats.")
                 } ?: throw IllegalStateException("Stats transport is null after the service is started")
@@ -126,7 +126,7 @@ fun main(args: Array<String>) {
     )
     val privateHttpServer = if (privateServerConfig.isEnabled()) {
         logger.info("Starting private http server")
-        val restApp = Application(videobridge, xmppConnection, statsManager)
+        val restApp = Application(videobridge, xmppConnection, statsCollector)
         createServer(privateServerConfig).also {
             it.servletContextHandler.addServlet(
                 ServletHolder(ServletContainer(restApp)),
@@ -148,11 +148,11 @@ fun main(args: Array<String>) {
     callstats?.let {
         videobridge.removeEventHandler(it.videobridgeEventHandler)
         it.statsTransport?.let { statsTransport ->
-            statsManager?.removeTransport(statsTransport)
+            statsCollector?.removeTransport(statsTransport)
         }
         it.stop()
     }
-    statsManager?.stop()
+    statsCollector?.stop()
 
     try {
         publicHttpServer?.stop()
