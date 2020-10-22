@@ -80,6 +80,8 @@ public abstract class AbstractEndpointMessageTransport<T extends AbstractEndpoin
             return;
         }
 
+        logger.debug(() -> "RECV: " + msg);
+
         TaskPools.IO_POOL.submit(() ->
         {
             BridgeChannelMessage response = handleMessage(message);
@@ -102,6 +104,7 @@ public abstract class AbstractEndpointMessageTransport<T extends AbstractEndpoin
 
     protected void sendMessage(Object dst, BridgeChannelMessage message)
     {
+        logger.debug(() -> "SEND: " + message.toJson());
     }
 
     /**
