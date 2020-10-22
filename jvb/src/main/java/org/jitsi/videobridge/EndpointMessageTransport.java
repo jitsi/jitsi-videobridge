@@ -141,6 +141,8 @@ class EndpointMessageTransport
      */
     protected void sendMessage(Object dst, BridgeChannelMessage message)
     {
+        super.sendMessage(dst, message); // Log message
+
         if (dst instanceof ColibriWebSocket)
         {
             sendMessage((ColibriWebSocket) dst, message);
