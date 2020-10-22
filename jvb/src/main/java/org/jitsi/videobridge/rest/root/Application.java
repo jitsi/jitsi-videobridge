@@ -31,14 +31,14 @@ public class Application extends ResourceConfig
     public Application(
             Videobridge videobridge,
             XmppConnection xmppConnection,
-            StatsCollector statsManager)
+            StatsCollector statsCollector)
 
     {
         register(
             new ServiceBinder(
                 videobridge,
                 xmppConnection,
-                statsManager
+                statsCollector
             )
         );
         // Filters

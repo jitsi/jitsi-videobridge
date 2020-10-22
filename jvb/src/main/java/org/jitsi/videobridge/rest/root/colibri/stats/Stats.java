@@ -20,6 +20,7 @@ import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
 import org.jitsi.videobridge.stats.*;
 import org.json.simple.*;
+import org.jvnet.hk2.annotations.*;
 
 import javax.inject.*;
 import javax.ws.rs.*;
@@ -30,6 +31,7 @@ import javax.ws.rs.core.*;
 public class Stats
 {
     @Inject
+    @Optional
     protected StatsCollector statsManager;
 
     @GET
