@@ -63,6 +63,24 @@ class BitrateControllerTest : ShouldSpec() {
                     )
                 )
             }
+
+            context("With explicitly selected ep outside LastN") {
+                // This replicates what the client's low-bandwidth mode does when there is a screenshare -
+                // it explicitly selects only the share, ignoring the last-N list.
+                val lastN = 1
+                val videoConstraints = mapOf("endpoint-2" to VideoConstraints(1080))
+                BitrateController.makeEndpointMultiRankList(conferenceEndpoints, videoConstraints, lastN).map {
+                    it.endpoint.id to it.effectiveVideoConstraints
+                }.toMap().shouldContainExactly(
+                    mapOf(
+                        "endpoint-1" to VideoConstraints.disabledVideoConstraints,
+                        "endpoint-2" to VideoConstraints(1080),
+                        "endpoint-3" to VideoConstraints.disabledVideoConstraints,
+                        "endpoint-4" to VideoConstraints.disabledVideoConstraints,
+                        "endpoint-5" to VideoConstraints.disabledVideoConstraints
+                    )
+                )
+            }
         }
     }
 }
