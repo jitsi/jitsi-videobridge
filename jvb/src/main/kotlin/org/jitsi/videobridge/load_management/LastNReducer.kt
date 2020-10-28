@@ -41,20 +41,25 @@ class LastNReducer(
 ) : JvbLoadReducer {
     private val logger = createLogger()
 
-    private val reductionScale: Double by
-    config("${JvbLoadReducer.CONFIG_BASE}.last-n.reduction-scale".from(JitsiConfig.newConfig))
+    private val reductionScale: Double by config(
+        "${JvbLoadReducer.CONFIG_BASE}.last-n.reduction-scale".from(JitsiConfig.newConfig)
+    )
 
-    private val recoverScale: Double by
-    config("${JvbLoadReducer.CONFIG_BASE}.last-n.recover-scale".from(JitsiConfig.newConfig))
+    private val recoverScale: Double by config(
+        "${JvbLoadReducer.CONFIG_BASE}.last-n.recover-scale".from(JitsiConfig.newConfig)
+    )
 
-    private val impactTime: Duration by
-    config("${JvbLoadReducer.CONFIG_BASE}.last-n.impact-time".from(JitsiConfig.newConfig))
+    private val impactTime: Duration by config(
+        "${JvbLoadReducer.CONFIG_BASE}.last-n.impact-time".from(JitsiConfig.newConfig)
+    )
 
-    private val minLastN: Int by
-    config("${JvbLoadReducer.CONFIG_BASE}.last-n.minimum-last-n-value".from(JitsiConfig.newConfig))
+    private val minLastN: Int by config(
+        "${JvbLoadReducer.CONFIG_BASE}.last-n.minimum-last-n-value".from(JitsiConfig.newConfig)
+    )
 
-    private val maxEnforcedLastN: Int by
-    config("${JvbLoadReducer.CONFIG_BASE}.last-n.maximum-enforced-last-n-value".from(JitsiConfig.newConfig))
+    private val maxEnforcedLastN: Int by config(
+        "${JvbLoadReducer.CONFIG_BASE}.last-n.maximum-enforced-last-n-value".from(JitsiConfig.newConfig)
+    )
 
     init {
         logger.cinfo { this.toString() }
