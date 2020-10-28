@@ -599,7 +599,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         }
 
         // Compute the bitrate allocation.
-        SourceBitrateAllocation<T>[] sourceBitrateAllocations = allocate(bweBps, sortedEndpoints);
+        List<SourceBitrateAllocation> sourceBitrateAllocations = allocate(bweBps, sortedEndpoints);
 
         // Update the the controllers based on the allocation and send a
         // notification to the client the set of forwarded endpoints has
@@ -616,9 +616,9 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         Map<String, VideoConstraints> newEffectiveConstraints = new HashMap<>();
 
         List<AdaptiveSourceProjection> adaptiveSourceProjections = new ArrayList<>();
-        if (!ArrayUtils.isNullOrEmpty(sourceBitrateAllocations))
+        if (!sourceBitrateAllocations.isEmpty())
         {
-            for (SourceBitrateAllocation<T> sourceBitrateAllocation : sourceBitrateAllocations)
+            for (SourceBitrateAllocation sourceBitrateAllocation : sourceBitrateAllocations)
             {
                 newEffectiveConstraints.put(
                         sourceBitrateAllocation.endpointID, sourceBitrateAllocation.effectiveVideoConstraints);
@@ -734,7 +734,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
      * that is specified as an argument.
      */
     private AdaptiveSourceProjection lookupOrCreateAdaptiveSourceProjection(
-        SourceBitrateAllocation<T> sourceBitrateAllocation)
+        SourceBitrateAllocation sourceBitrateAllocation)
     {
         synchronized (adaptiveSourceProjectionMap)
         {
@@ -799,13 +799,13 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
      * {@link ConferenceSpeechActivity}.
      * @return an array of {@link SourceBitrateAllocation}.
      */
-    private synchronized SourceBitrateAllocation<T>[] allocate(
+    private synchronized @NotNull List<SourceBitrateAllocation> allocate(
             long maxBandwidth,
             List<T> conferenceEndpoints)
     {
-        SourceBitrateAllocation<T>[] sourceBitrateAllocations = prioritize(conferenceEndpoints);
+        List<SourceBitrateAllocation> sourceBitrateAllocations = prioritize(conferenceEndpoints);
 
-        if (ArrayUtils.isNullOrEmpty(sourceBitrateAllocations))
+        if (sourceBitrateAllocations.isEmpty())
         {
             return sourceBitrateAllocations;
         }
@@ -813,8 +813,8 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         long oldMaxBandwidth = 0;
 
         int oldStateLen = 0;
-        int[] oldRatedTargetIndices = new int[sourceBitrateAllocations.length];
-        int[] newRatedTargetIndices = new int[sourceBitrateAllocations.length];
+        int[] oldRatedTargetIndices = new int[sourceBitrateAllocations.size()];
+        int[] newRatedTargetIndices = new int[sourceBitrateAllocations.size()];
         Arrays.fill(newRatedTargetIndices, -1);
 
         while (oldMaxBandwidth != maxBandwidth)
@@ -823,9 +823,9 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
             System.arraycopy(newRatedTargetIndices, 0, oldRatedTargetIndices, 0, oldRatedTargetIndices.length);
 
             int newStateLen = 0;
-            for (int i = 0; i < sourceBitrateAllocations.length; i++)
+            for (int i = 0; i < sourceBitrateAllocations.size(); i++)
             {
-                SourceBitrateAllocation sourceBitrateAllocation = sourceBitrateAllocations[i];
+                SourceBitrateAllocation sourceBitrateAllocation = sourceBitrateAllocations.get(i);
 
                 if (sourceBitrateAllocation.effectiveVideoConstraints.getIdealHeight() <= 0)
                 {
@@ -862,9 +862,9 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
             {
                 // rollback state to prevent jumps in the number of forwarded
                 // participants.
-                for (int i = 0; i < sourceBitrateAllocations.length; i++)
+                for (int i = 0; i < sourceBitrateAllocations.size(); i++)
                 {
-                    sourceBitrateAllocations[i].ratedTargetIdx = oldRatedTargetIndices[i];
+                    sourceBitrateAllocations.get(i).ratedTargetIdx = oldRatedTargetIndices[i];
                 }
 
                 break;
@@ -895,10 +895,10 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
      * selected endpoint are at the top of the array, followed by the pinned
      * endpoints, finally followed by any other remaining endpoints.
      */
-    private synchronized SourceBitrateAllocation<T>[] prioritize(List<T> conferenceEndpoints)
+    private synchronized @NotNull List<SourceBitrateAllocation> prioritize(List<T> conferenceEndpoints)
     {
         // Init.
-        List<SourceBitrateAllocation<T>> sourceBitrateAllocations = new ArrayList<>();
+        List<SourceBitrateAllocation> sourceBitrateAllocations = new ArrayList<>(conferenceEndpoints.size());
 
         int adjustedLastN = JvbLastNKt.calculateLastN(this.lastN, JvbLastNKt.jvbLastNSingleton.getJvbLastN());
         if (adjustedLastN < 0)
@@ -934,7 +934,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
                 for (MediaSourceDesc source : sources)
                 {
                     sourceBitrateAllocations.add(
-                        new SourceBitrateAllocation<T>(
+                        new SourceBitrateAllocation(
                             endpointMultiRank.endpoint.getID(),
                             source,
                             endpointMultiRank.effectiveVideoConstraints));
@@ -946,7 +946,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
             }
         }
 
-        return sourceBitrateAllocations.toArray(new SourceBitrateAllocation[0]);
+        return sourceBitrateAllocations;
     }
 
     public void setVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraintsMap)
@@ -1081,7 +1081,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
      *
      * @author George Politis
      */
-    private class SourceBitrateAllocation<T extends MediaSourceContainer>
+    private class SourceBitrateAllocation
     {
         /**
          * The ID of the {@link Endpoint} that this instance pertains to.
@@ -1446,7 +1446,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
      * leverages it). If two endpoints have the same ideal and preferred height,
      * then we look at their speech rank (whoever spoke last has is ranked higher).
      */
-    static class EndpointMultiRanker implements Comparator<EndpointMultiRank>
+    static class EndpointMultiRanker<T extends MediaSourceContainer> implements Comparator<EndpointMultiRank<T>>
     {
         @Override
         public int compare(EndpointMultiRank o1, EndpointMultiRank o2)
