@@ -148,6 +148,7 @@ public class Debug
             }
             case NODE_TRACING: {
                 Node.Companion.enableNodeTracing(enabled);
+                break;
             }
             case TRANSIT_STATS: {
                 //TODO

@@ -782,7 +782,7 @@ public class Endpoint
 
             transceiver.teardown();
 
-            AbstractEndpointMessageTransport messageTransport = getMessageTransport();
+            EndpointMessageTransport messageTransport = getMessageTransport();
             if (messageTransport != null)
             {
                 messageTransport.close();
@@ -967,7 +967,7 @@ public class Endpoint
     {
         TaskPools.SCHEDULED_POOL.schedule(() -> {
             if (!isExpired()) {
-                AbstractEndpointMessageTransport t = getMessageTransport();
+                EndpointMessageTransport t = getMessageTransport();
                 if (t != null)
                 {
                     if (!t.isConnected())

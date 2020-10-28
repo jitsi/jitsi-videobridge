@@ -61,7 +61,7 @@ fun createSecureJettyServer(
     needClientAuth: Boolean = false
 ): Server {
     val sslContextFactoryKeyStoreFile = Paths.get(keyStorePath).toFile()
-    val sslContextFactory = SslContextFactory().apply {
+    val sslContextFactory = SslContextFactory.Server().apply {
         if (supportsTls13()) {
             setIncludeProtocols("TLSv1.2", "TLSv1.3")
         } else {
