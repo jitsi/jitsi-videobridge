@@ -44,7 +44,7 @@ fun main() {
         return ByteArray(size)
     }
     var numBuffersReturned = 0
-    fun returnBuffer(buf: ByteArray) {
+    fun returnBuffer(@Suppress("UNUSED_PARAMETER") buf: ByteArray) {
         numBuffersReturned++
     }
     BufferPool.getBuffer = ::getBuffer

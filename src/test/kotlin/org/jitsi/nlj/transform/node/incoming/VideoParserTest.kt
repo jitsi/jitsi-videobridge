@@ -95,7 +95,7 @@ class VideoParserTest : ShouldSpec() {
     init {
         context("When parsing a VP8 packet") {
             context("with no encoding signaled") {
-                parser.onOutput { pi ->
+                parser.onOutput { _ ->
                     fail("Should not forward the packet")
                 }
                 parser.processPacket(packetInfo)

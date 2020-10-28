@@ -141,9 +141,6 @@ class TccGeneratorNodeTest : ShouldSpec() {
         context("when sequence numbers cycle") {
             var prevSize = tccPackets.size
             repeat(100000) { tccSeqNum ->
-                if (tccSeqNum > 0xffff) {
-                    val x = 1
-                }
                 val pi = PacketInfo(createPacket(tccSeqNum % 0xffff)).apply {
                     receivedTime = clock.millis()
                 }

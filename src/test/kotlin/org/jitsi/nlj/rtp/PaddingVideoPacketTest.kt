@@ -26,7 +26,7 @@ class PaddingVideoPacketTest : ShouldSpec() {
     init {
         context("Creating a padding packet") {
             context("from a buffer that previously held other data") {
-                BufferPool.getBuffer = { size ->
+                BufferPool.getBuffer = {
                     // A buffer with bogus CSRC count and header ext length values
                     org.jitsi.rtp.extensions.bytearray.byteArrayOf(
                         0xF7, 0xF8, 0x04, 0x54,

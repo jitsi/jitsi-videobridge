@@ -40,8 +40,8 @@ class EndpointConnectionStatsTest : ShouldSpec() {
     private var numRttUpdates: Int = 0
     private val stats = EndpointConnectionStats(StdoutLogger(), clock).also {
         it.addListener(object : EndpointConnectionStats.EndpointConnectionStatsListener {
-            override fun onRttUpdate(newRtt: Double) {
-                mostRecentPublishedRtt = newRtt
+            override fun onRttUpdate(newRttMs: Double) {
+                mostRecentPublishedRtt = newRttMs
                 numRttUpdates++
             }
         })
