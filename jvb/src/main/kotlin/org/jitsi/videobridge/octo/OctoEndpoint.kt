@@ -110,10 +110,13 @@ class OctoEndpoint(
      * constraints to the bridge that is local for the sending endpoint via an [AddReceiverMessage].
      */
     override fun maxReceiverVideoConstraintsChanged(maxVideoConstraints: VideoConstraints) {
-        conference.tentacle.sendMessage(AddReceiverMessage(
-            conference.tentacle.bridgeId,
-            id,
-            maxVideoConstraints))
+        conference.tentacle.sendMessage(
+            AddReceiverMessage(
+                conference.tentacle.bridgeId,
+                id,
+                maxVideoConstraints
+            )
+        )
     }
 
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)

@@ -173,9 +173,9 @@ private fun generateIq(
     toJidStr: String? = null,
     fromJidStr: String? = null
 ): IQ = ColibriConferenceIQ().apply {
-        to = JidCreate.bareFrom(toJidStr ?: Random.nextPrintableAlphaString(5))
-        from = JidCreate.bareFrom(fromJidStr ?: Random.nextPrintableAlphaString(5))
-    }
+    to = JidCreate.bareFrom(toJidStr ?: Random.nextPrintableAlphaString(5))
+    from = JidCreate.bareFrom(fromJidStr ?: Random.nextPrintableAlphaString(5))
+}
 
 private fun Random.nextPrintableAlphaString(length: Int): String {
     return (0 until length).map { nextInt(from = 65, until = 90).toChar() }.joinToString("")

@@ -45,7 +45,8 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
     fun start() {
         if (taskHandle.compareAndSet(
                 null,
-                executor.scheduleWithFixedDelay(::run, config.intervalMs, config.intervalMs, TimeUnit.MILLISECONDS))
+                executor.scheduleWithFixedDelay(::run, config.intervalMs, config.intervalMs, TimeUnit.MILLISECONDS)
+            )
         ) {
             logger.info("Starting connection status monitor")
         } else {
@@ -74,8 +75,10 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
             // the first endpoint's channel has been created.
             val timeSinceCreation = Duration.between(mostRecentChannelCreatedTime, now)
             if (timeSinceCreation > config.firstTransferTimeout) {
-                logger.cdebug { "${endpoint.id} is having trouble establishing the connection " +
-                        "and will be marked as inactive" }
+                logger.cdebug {
+                    "${endpoint.id} is having trouble establishing the connection " +
+                        "and will be marked as inactive"
+                }
                 notifyStatusChange(endpoint.id, false, null)
                 return
             } else {

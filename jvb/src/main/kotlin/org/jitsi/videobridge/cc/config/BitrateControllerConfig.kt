@@ -105,7 +105,7 @@ class BitrateControllerConfig {
          * participant.
          */
         private val onstageIdealHeightPx: Int by
-            config("videobridge.cc.onstage-ideal-height-px".from(JitsiConfig.newConfig))
+        config("videobridge.cc.onstage-ideal-height-px".from(JitsiConfig.newConfig))
 
         @JvmStatic
         fun onstageIdealHeightPx() = onstageIdealHeightPx
@@ -115,7 +115,7 @@ class BitrateControllerConfig {
          * forward.
          */
         private val maxTimeBetweenCalculations: Duration by
-            config("videobridge.cc.max-time-between-calculations".from(JitsiConfig.newConfig))
+        config("videobridge.cc.max-time-between-calculations".from(JitsiConfig.newConfig))
 
         @JvmStatic
         fun maxTimeBetweenCalculations() = maxTimeBetweenCalculations
