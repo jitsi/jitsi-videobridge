@@ -120,8 +120,10 @@ class EndpointConnectionStats(
     override fun rtcpPacketSent(packet: RtcpPacket) {
         when (packet) {
             is RtcpSrPacket -> {
-                logger.cdebug { "Tracking sent SR packet with compacted timestamp " +
-                    "${packet.senderInfo.compactedNtpTimestamp}" }
+                logger.cdebug {
+                    "Tracking sent SR packet with compacted timestamp " +
+                        "${packet.senderInfo.compactedNtpTimestamp}"
+                }
                 val entry = SsrcAndTimestamp(packet.senderSsrc, packet.senderInfo.compactedNtpTimestamp)
                 srSentTimes[entry] = clock.instant()
             }
@@ -132,9 +134,11 @@ class EndpointConnectionStats(
 
     private fun processReportBlock(receivedTime: Instant, reportBlock: RtcpReportBlock) = synchronized(lock) {
         if (reportBlock.lastSrTimestamp == 0L && reportBlock.delaySinceLastSr == 0L) {
-            logger.cdebug { "Report block for ssrc ${reportBlock.ssrc} didn't have SR data: " +
-                "lastSrTimestamp was ${reportBlock.lastSrTimestamp}, " +
-                "delaySinceLastSr was ${reportBlock.delaySinceLastSr}" }
+            logger.cdebug {
+                "Report block for ssrc ${reportBlock.ssrc} didn't have SR data: " +
+                    "lastSrTimestamp was ${reportBlock.lastSrTimestamp}, " +
+                    "delaySinceLastSr was ${reportBlock.delaySinceLastSr}"
+            }
             return
         }
         // We need to know when we sent the last SR
@@ -144,20 +148,26 @@ class EndpointConnectionStats(
             val remoteProcessingDelay = Duration.ofNanos((reportBlock.delaySinceLastSr / .000065536).toLong())
             rtt = (Duration.between(srSentTime, receivedTime) - remoteProcessingDelay).toDoubleMillis()
             if (rtt > 7.secs.toMillis()) {
-                logger.warn("Suspiciously high rtt value: $rtt ms, remote processing delay was " +
-                    "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, " +
-                    "received time was $receivedTime")
+                logger.warn(
+                    "Suspiciously high rtt value: $rtt ms, remote processing delay was " +
+                        "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, " +
+                        "received time was $receivedTime"
+                )
             } else if (rtt < -1.0) {
                 // Allow some small slop here, since receivedTime and srSentTime are only accurate to the nearest
                 // millisecond.
-                logger.warn("Negative rtt value: $rtt ms, remote processing delay was " +
-                    "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, " +
-                    "received time was $receivedTime")
+                logger.warn(
+                    "Negative rtt value: $rtt ms, remote processing delay was " +
+                        "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, " +
+                        "received time was $receivedTime"
+                )
             }
             endpointConnectionStatsListeners.forEach { it.onRttUpdate(rtt) }
         } ?: run {
-            logger.cdebug { "No sent SR found for SSRC ${reportBlock.ssrc} and SR " +
-                "timestamp ${reportBlock.lastSrTimestamp}" }
+            logger.cdebug {
+                "No sent SR found for SSRC ${reportBlock.ssrc} and SR " +
+                    "timestamp ${reportBlock.lastSrTimestamp}"
+            }
         }
     }
 

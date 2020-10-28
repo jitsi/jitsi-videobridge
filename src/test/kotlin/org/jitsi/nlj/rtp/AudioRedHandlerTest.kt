@@ -89,11 +89,13 @@ class AudioRedHandlerTest : ShouldSpec() {
             }
         }
         context("Policy PROTECT_ALL") {
-            withNewConfig("""
+            withNewConfig(
+                """
                 jmt.audio.red.policy=PROTECT_ALL
                 # TODO: add tests for the VAD-only case too.
                 jmt.audio.red.vad-only=false
-            """.trimIndent()) {
+                """.trimIndent()
+            ) {
                 val redHandler = AudioRedHandler(streamInformationStore)
                 redHandler.config.policy shouldBe RedPolicy.PROTECT_ALL
 

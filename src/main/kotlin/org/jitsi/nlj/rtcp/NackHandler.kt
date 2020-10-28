@@ -65,7 +65,7 @@ class NackHandler(
                 val delay = now - container.timeAdded
                 val shouldResendPacket =
                     (currRtt == -1.0) ||
-                    (delay >= Math.min(currRtt * .9, currRtt - 5))
+                        (delay >= Math.min(currRtt * .9, currRtt - 5))
                 if (shouldResendPacket) {
                     // The cache returns a null container on failure, never a container with a null packet. Maybe we
                     // can refactor to make it explicit.

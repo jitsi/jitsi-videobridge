@@ -48,9 +48,11 @@ class DtlsTest : ShouldSpec() {
         val pcapWriter = if (pcapEnabled) PcapWriter(logger, "/tmp/dtls-test.pcap") else null
 
         dtlsClient.remoteFingerprints = mapOf(
-            dtlsServer.localFingerprintHashFunction to dtlsServer.localFingerprint)
+            dtlsServer.localFingerprintHashFunction to dtlsServer.localFingerprint
+        )
         dtlsServer.remoteFingerprints = mapOf(
-            dtlsClient.localFingerprintHashFunction to dtlsClient.localFingerprint)
+            dtlsClient.localFingerprintHashFunction to dtlsClient.localFingerprint
+        )
 
         // The DTLS server's send is wired directly to the DTLS client's receive
         dtlsServer.outgoingDataHandler = object : DtlsStack.OutgoingDataHandler {

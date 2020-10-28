@@ -117,7 +117,7 @@ class ResumableStreamRewriter(val keepHistory: Boolean = false) {
         { it },
         /* Caller should have this object synchronized if needed. */
         synchronize = false
-        ) {
+    ) {
         var firstIndex: Int = -1
 
         var gapsLeft = 0

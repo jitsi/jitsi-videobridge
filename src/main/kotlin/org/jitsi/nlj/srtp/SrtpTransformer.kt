@@ -100,7 +100,7 @@ abstract class SrtpTransformer(
 ) : AbstractSrtpTransformer<SrtpCryptoContext>(contextFactory, logger) {
 
     override fun deriveContext(ssrc: Long, index: Long): SrtpCryptoContext? =
-            contextFactory.deriveContext(ssrc.toInt(), 0) ?: null
+        contextFactory.deriveContext(ssrc.toInt(), 0) ?: null
 
     override fun getContext(packetInfo: PacketInfo): SrtpCryptoContext? {
         val rtpPacket: RtpPacket = packetInfo.packet as? RtpPacket ?: run {
@@ -120,7 +120,7 @@ abstract class SrtcpTransformer(
 ) : AbstractSrtpTransformer<SrtcpCryptoContext>(contextFactory, logger) {
 
     override fun deriveContext(ssrc: Long, index: Long): SrtcpCryptoContext? =
-            contextFactory.deriveControlContext(ssrc.toInt()) ?: null
+        contextFactory.deriveControlContext(ssrc.toInt()) ?: null
 
     override fun getContext(packetInfo: PacketInfo): SrtcpCryptoContext? {
         // Contrary to RTP packets, RTCP packets do not get parsed before they are
@@ -187,7 +187,8 @@ class SrtpDecryptTransformer(
         // many consecutive packets.
         if (packetInfo.shouldDiscard) {
             return if (alwaysProcess ||
-                earlyDiscardedPacketsSinceLastSuccess++ > maxConsecutivePacketsDiscardedEarly) {
+                earlyDiscardedPacketsSinceLastSuccess++ > maxConsecutivePacketsDiscardedEarly
+            ) {
                 doTransform(packetInfo, context)
             } else {
                 // Bypass the SRTP stack. The packet is already marked to be discarded, so there's no error condition.

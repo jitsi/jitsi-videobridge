@@ -23,8 +23,10 @@ import org.jitsi.nlj.transform.node.NodePlugin
 class BufferTracePlugin {
     companion object : NodePlugin {
         override fun observe(after: Node, packetInfo: PacketInfo) {
-            println("array trace @${after.name}: ${System.identityHashCode(packetInfo.packet.buffer)} " +
-                    "offset ${packetInfo.packet.offset} length ${packetInfo.packet.length}")
+            println(
+                "array trace @${after.name}: ${System.identityHashCode(packetInfo.packet.buffer)} " +
+                    "offset ${packetInfo.packet.offset} length ${packetInfo.packet.length}"
+            )
         }
     }
 }

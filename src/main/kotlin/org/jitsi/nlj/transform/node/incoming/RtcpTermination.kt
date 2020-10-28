@@ -63,8 +63,10 @@ class RtcpTermination(
                     // we want to forward in the same compound packet.  If we can, then we may need
                     // to turn this into a MultipleOutputNode
                     forwardedRtcp?.let {
-                        logger.cinfo { "Failed to forward a packet of type ${it::class.simpleName} " +
-                            ". Replaced by ${rtcpPacket::class.simpleName}." }
+                        logger.cinfo {
+                            "Failed to forward a packet of type ${it::class.simpleName} " +
+                                ". Replaced by ${rtcpPacket::class.simpleName}."
+                        }
                         numFailedToForward++
                     }
                     forwardedRtcp = rtcpPacket
@@ -80,12 +82,16 @@ class RtcpTermination(
                     // of the packetReceiveCount
                 }
                 is UnsupportedRtcpFbPacket -> {
-                    logger.cinfo { "TODO: not yet handling RTCP packet of type ${rtcpPacket.packetType} fmt " +
-                        "${rtcpPacket.reportCount} ${rtcpPacket.javaClass}" }
+                    logger.cinfo {
+                        "TODO: not yet handling RTCP packet of type ${rtcpPacket.packetType} fmt " +
+                            "${rtcpPacket.reportCount} ${rtcpPacket.javaClass}"
+                    }
                 }
                 else -> {
-                    logger.cinfo { "TODO: not yet handling RTCP packet of type ${rtcpPacket.packetType} " +
-                        "${rtcpPacket.javaClass}" }
+                    logger.cinfo {
+                        "TODO: not yet handling RTCP packet of type ${rtcpPacket.packetType} " +
+                            "${rtcpPacket.javaClass}"
+                    }
                 }
             }
             // TODO: keep an eye on if anything in here takes a while it could slow the packet pipeline down
@@ -93,8 +99,10 @@ class RtcpTermination(
             rtcpEventNotifier.notifyRtcpReceived(rtcpPacket, packetInfo.receivedTime)
 
             (forwardedRtcp as? RtcpSrPacket)?.let {
-                logger.cdebug { "Saw an sr from ssrc=${rtcpPacket.senderSsrc}, " +
-                    "timestamp=${it.senderInfo.rtpTimestamp}" }
+                logger.cdebug {
+                    "Saw an sr from ssrc=${rtcpPacket.senderSsrc}, " +
+                        "timestamp=${it.senderInfo.rtpTimestamp}"
+                }
                 forwardedRtcp = if (it.reportCount > 0) {
                     // Eliminates any report blocks as we don't want to relay those
                     it.cloneWithoutReportBlocks()

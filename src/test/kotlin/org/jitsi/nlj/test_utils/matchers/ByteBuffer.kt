@@ -24,7 +24,8 @@ import org.jitsi.rtp.extensions.toHex
 
 fun haveSameContentAs(expected: ByteBuffer) = object : Matcher<ByteBuffer> {
     override fun test(value: ByteBuffer): MatcherResult {
-        return MatcherResult(value.compareToFromBeginning(expected) == 0,
+        return MatcherResult(
+            value.compareToFromBeginning(expected) == 0,
             "Buffer\n${value.toHex()}\nwas supposed to be:\n${expected.toHex()}",
             "Buffer\n${value.toHex()}\nshould not have equaled buffer\n${expected.toHex()}"
         )

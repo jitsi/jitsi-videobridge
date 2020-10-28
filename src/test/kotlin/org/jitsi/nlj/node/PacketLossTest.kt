@@ -32,7 +32,8 @@ class PacketLossTest : ShouldSpec() {
 
     init {
         context("Burst loss") {
-            withNewConfig("""
+            withNewConfig(
+                """
                 prefix.uniform-rate=0
                 prefix.burst-size=3
                 prefix.burst-interval=100"""

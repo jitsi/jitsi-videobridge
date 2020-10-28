@@ -113,8 +113,10 @@ class Transceiver(
             id,
             { rtcpPacket ->
                 if (rtcpPacket.length >= 1500) {
-                    logger.warn("Sending large locally-generated RTCP packet of size ${rtcpPacket.length}, " +
-                        "first packet of type ${rtcpPacket.packetType}.")
+                    logger.warn(
+                        "Sending large locally-generated RTCP packet of size ${rtcpPacket.length}, " +
+                            "first packet of type ${rtcpPacket.packetType}."
+                    )
                 }
                 rtpSender.processPacket(PacketInfo(rtcpPacket))
             },
@@ -250,9 +252,11 @@ class Transceiver(
     fun setSrtpInformation(chosenSrtpProtectionProfile: Int, tlsRole: TlsRole, keyingMaterial: ByteArray) {
         val srtpProfileInfo =
             SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(chosenSrtpProtectionProfile)
-        logger.cdebug { "Transceiver $id creating transformers with:\n" +
+        logger.cdebug {
+            "Transceiver $id creating transformers with:\n" +
                 "profile info:\n$srtpProfileInfo\n" +
-                "tls role: $tlsRole" }
+                "tls role: $tlsRole"
+        }
         val srtpTransformers = SrtpUtil.initializeTransformer(
             srtpProfileInfo,
             keyingMaterial,
@@ -299,7 +303,8 @@ class Transceiver(
             rtpSender.getStreamStats(),
             rtpSender.getPacketStreamStats(),
             rtpSender.bandwidthEstimator.getStats(clock.instant()),
-            rtpSender.getTransportCcEngineStats())
+            rtpSender.getTransportCcEngineStats()
+        )
     }
 
     override fun stop() {

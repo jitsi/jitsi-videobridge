@@ -41,7 +41,8 @@ class RedAudioRtpPacket(
         RedAudioRtpPacket(
             cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
             BYTES_TO_LEAVE_AT_START_OF_PACKET,
-            length)
+            length
+        )
 
     companion object {
         val parser = RedPacketParser(::AudioRtpPacket)

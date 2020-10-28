@@ -153,7 +153,8 @@ class TransportCcEngine(
                             bandwidthEstimator.processPacketArrival(
                                 now, packetDetail.packetSendTime, arrivalTimeInLocalClock,
                                 tccSeqNum, packetDetail.packetLength,
-                                previouslyReportedLost = previouslyReportedLost)
+                                previouslyReportedLost = previouslyReportedLost
+                            )
                             packetDetail.state = PacketDetailState.reportedReceived
                         }
 
@@ -166,22 +167,27 @@ class TransportCcEngine(
         bandwidthEstimator.feedbackComplete(now)
 
         if (missingPacketDetailSeqNums.isNotEmpty()) {
-            logger.warn("TCC packet contained received sequence numbers: " +
-                "${tccPacket.iterator().asSequence()
-                    .filterIsInstance<ReceivedPacketReport>()
-                    .map(PacketReport::seqNum)
-                    .joinToRangedString()}. " +
-                "Couldn't find packet detail for the seq nums: ${missingPacketDetailSeqNums.joinToRangedString()}. " +
-                if (sentPacketDetails.empty) {
-                    "Sent packet details map was empty."
-                } else {
-                    "Latest seqNum was ${sentPacketDetails.lastSequence}, size is ${sentPacketDetails.size}."
-                } +
-                (lastRtt?.let {
-                    " Latest RTT is ${it.formatMilli()} ms."
-                } ?: run {
-                    ""
-                }))
+            logger.warn(
+                "TCC packet contained received sequence numbers: " +
+                    "${tccPacket.iterator().asSequence()
+                        .filterIsInstance<ReceivedPacketReport>()
+                        .map(PacketReport::seqNum)
+                        .joinToRangedString()}. " +
+                    "Couldn't find packet detail for the seq nums: " +
+                    "${missingPacketDetailSeqNums.joinToRangedString()}. " +
+                    if (sentPacketDetails.empty) {
+                        "Sent packet details map was empty."
+                    } else {
+                        "Latest seqNum was ${sentPacketDetails.lastSequence}, size is ${sentPacketDetails.size}."
+                    } +
+                    (
+                        lastRtt?.let {
+                            " Latest RTT is ${it.formatMilli()} ms."
+                        } ?: run {
+                            ""
+                        }
+                        )
+            )
             missingPacketDetailSeqNums.clear()
         }
     }
@@ -193,14 +199,17 @@ class TransportCcEngine(
             /* Very old seq? Something odd is happening with whatever is
              * generating tccSeqNum values.
              */
-            logger.warn("Not inserting very old TCC seq num $seq ($tccSeqNum), latest is " +
-                "${sentPacketDetails.lastSequence}, size is ${sentPacketDetails.size}")
+            logger.warn(
+                "Not inserting very old TCC seq num $seq ($tccSeqNum), latest is " +
+                    "${sentPacketDetails.lastSequence}, size is ${sentPacketDetails.size}"
+            )
             return
         }
     }
 
     fun getStatistics(): StatisticsSnapshot {
-        return StatisticsSnapshot(numPacketsReported.sum(),
+        return StatisticsSnapshot(
+            numPacketsReported.sum(),
             numPacketsReportedLost.sum(),
             numDuplicateReports.sum(),
             numPacketsReportedAfterLost.sum(),

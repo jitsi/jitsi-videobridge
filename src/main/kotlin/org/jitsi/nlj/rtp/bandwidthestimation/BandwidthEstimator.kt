@@ -240,7 +240,8 @@ abstract class BandwidthEstimator(
         if (timeSeriesLogger.isTraceEnabled) {
             if (newValue != curBandwidth ||
                 lastBweLogTime == NEVER ||
-                Duration.between(lastBweLogTime, now) >= minBweLogInterval) {
+                Duration.between(lastBweLogTime, now) >= minBweLogInterval
+            ) {
                 val point = diagnosticContext.makeTimeSeriesPoint("bwe_estimate", now)
                 point.addField("bw", newValue.bps)
                 timeSeriesLogger.trace(point)

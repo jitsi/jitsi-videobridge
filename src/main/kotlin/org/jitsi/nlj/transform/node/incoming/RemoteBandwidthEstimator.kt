@@ -56,7 +56,8 @@ class RemoteBandwidthEstimator(
      * The remote bandwidth estimation is enabled when REMB support is signaled, but TCC is not signaled.
      */
     private var enabled: Boolean by observableWhenChanged(false) {
-        _, _, newValue -> logger.debug { "Setting enabled=$newValue." }
+        _, _, newValue ->
+        logger.debug { "Setting enabled=$newValue." }
     }
     private var astExtId: Int? = null
     /**
@@ -104,7 +105,8 @@ class RemoteBandwidthEstimator(
                     AbsSendTimeHeaderExtension.getTime(ext),
                     Instant.ofEpochMilli(packetInfo.receivedTime),
                     rtpPacket.sequenceNumber,
-                    rtpPacket.length.bytes)
+                    rtpPacket.length.bytes
+                )
                 /* With receiver-side bwe we need to treat each received packet as separate feedback */
                 bwe.feedbackComplete(now)
                 ssrcs.add(rtpPacket.ssrc)
@@ -131,7 +133,8 @@ class RemoteBandwidthEstimator(
         return RtcpFbRembPacketBuilder(
             rtcpHeader = RtcpHeaderBuilder(senderSsrc = localSsrc),
             brBps = currentBw.bps.toLong(),
-            ssrcs = ssrcs.toList()).build()
+            ssrcs = ssrcs.toList()
+        ).build()
     }
 
     fun onRttUpdate(newRttMs: Double) {

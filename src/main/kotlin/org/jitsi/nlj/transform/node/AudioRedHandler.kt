@@ -179,8 +179,8 @@ class AudioRedHandler(
         }
 
         private fun RtpPacket.hasVad(): Boolean = audioLevelExtId?.let { extId ->
-                getHeaderExtension(extId)?.let { AudioLevelHeaderExtension.getVad(it) } ?: false
-            } ?: false
+            getHeaderExtension(extId)?.let { AudioLevelHeaderExtension.getVad(it) } ?: false
+        } ?: false
 
         fun stop() = sentAudioCache.flush()
 
@@ -213,7 +213,8 @@ class AudioRedHandler(
                 if (prevMissing || prev2Missing) {
                     redPacket.removeRedAndGetRedundancyPackets().forEach {
                         if ((it.sequenceNumber == prev && prevMissing) ||
-                            (it.sequenceNumber == prev2 && prev2Missing)) {
+                            (it.sequenceNumber == prev2 && prev2Missing)
+                        ) {
                             add(PacketInfo(it))
                             stats.lostPacketRecovered()
                         }

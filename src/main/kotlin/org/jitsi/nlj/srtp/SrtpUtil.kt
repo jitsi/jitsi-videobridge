@@ -137,9 +137,11 @@ class SrtpUtil {
             for (i in 0 until keyingMaterialValues.size) {
                 val keyingMaterialValue = keyingMaterialValues[i]
 
-                System.arraycopy(keyingMaterial, keyingMaterialOffset,
+                System.arraycopy(
+                    keyingMaterial, keyingMaterialOffset,
                     keyingMaterialValue, 0,
-                    keyingMaterialValue.size)
+                    keyingMaterialValue.size
+                )
                 keyingMaterialOffset += keyingMaterialValue.size
             }
 

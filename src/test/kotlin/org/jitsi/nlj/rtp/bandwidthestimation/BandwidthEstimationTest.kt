@@ -155,9 +155,10 @@ class PacketBottleneck(
 
         if (timeSeriesLogger.isTraceEnabled) {
             val delay = Duration.between(packet.sendTime, now)
-            timeSeriesLogger.trace(ctx.makeTimeSeriesPoint("queue", now)
-                .addField("depth", queue.size)
-                .addField("delay", delay.toNanos() / 1e6)
+            timeSeriesLogger.trace(
+                ctx.makeTimeSeriesPoint("queue", now)
+                    .addField("depth", queue.size)
+                    .addField("delay", delay.toNanos() / 1e6)
             )
         }
 

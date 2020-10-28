@@ -86,7 +86,8 @@ class RtpPacketCache(
 ) : ArrayCache<RtpPacket>(
     size = size,
     cloneItem = RtpPacket::clone,
-    synchronize = synchronize) {
+    synchronize = synchronize
+) {
 
     private val rfc3711IndexTracker = Rfc3711IndexTracker()
 

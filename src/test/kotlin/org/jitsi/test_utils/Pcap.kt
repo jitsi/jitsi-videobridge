@@ -58,7 +58,8 @@ object Pcaps {
     object Incoming {
         val ONE_PARTICIPANT_RTP_RTCP_SIM_RTX = PcapInformation(
             filePath = javaClass.classLoader.getResource(
-                "pcaps/1_incoming_participant_rtp_rtcp_sim_rtx.pcap").path,
+                "pcaps/1_incoming_participant_rtp_rtcp_sim_rtx.pcap"
+            ).path,
             srtpData = SrtpData(
                 srtpProfileInformation = SrtpProfileInformation(
                     cipherKeyLength = 16,
@@ -102,7 +103,8 @@ object Pcaps {
         )
         val ONE_PARTICIPANT_RTP_RTCP = PcapInformation(
             filePath = javaClass.classLoader.getResource(
-                "pcaps/capture_1_incoming_participant_1_rtp_and_rtcp.pcap").path,
+                "pcaps/capture_1_incoming_participant_1_rtp_and_rtcp.pcap"
+            ).path,
             srtpData = SrtpData(
                 srtpProfileInformation = SrtpProfileInformation(
                     cipherKeyLength = 16,
@@ -143,7 +145,8 @@ object Pcaps {
     object Outgoing {
         val ONE_PARITICPANT_RTP_AND_RTCP_DECRYPTED = PcapInformation(
             filePath = javaClass.classLoader.getResource(
-                "pcaps/capture_1_incoming_participant_1_rtp_and_rtcp_decrypted_2.pcap").path,
+                "pcaps/capture_1_incoming_participant_1_rtp_and_rtcp_decrypted_2.pcap"
+            ).path,
             srtpData = SrtpData(
                 srtpProfileInformation = SrtpProfileInformation(
                     cipherKeyLength = 16,

@@ -265,8 +265,10 @@ class DtlsStack(
             val data = this@DtlsStack.incomingProtocolData.poll(waitMillis.toLong(), TimeUnit.MILLISECONDS) ?: return -1
             val length = min(len, data.limit())
             if (length < data.limit()) {
-                logger.warn("Passed buffer size ($len) was too small to hold incoming data size (${data.limit()}); " +
-                    "data was truncated")
+                logger.warn(
+                    "Passed buffer size ($len) was too small to hold incoming data size (${data.limit()}); " +
+                        "data was truncated"
+                )
             }
             System.arraycopy(data.array(), data.arrayOffset(), buf, off, length)
             BufferPool.returnBuffer(data.array())

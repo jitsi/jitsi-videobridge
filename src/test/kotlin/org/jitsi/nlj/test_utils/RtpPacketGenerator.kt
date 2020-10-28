@@ -114,12 +114,15 @@ class RtpPacketGenerator internal constructor(
         timeline(clock) {
             repeat(count) {
                 run {
-                    processPacket(createPacket(
-                        seq = startSeq + it,
-                        len = length.bytes.toInt(),
-                        packetSsrc = ssrc,
-                        pt = payloadType,
-                        receivedTime = clock.millis()))
+                    processPacket(
+                        createPacket(
+                            seq = startSeq + it,
+                            len = length.bytes.toInt(),
+                            packetSsrc = ssrc,
+                            pt = payloadType,
+                            receivedTime = clock.millis()
+                        )
+                    )
                 }
                 elapse(interval)
             }

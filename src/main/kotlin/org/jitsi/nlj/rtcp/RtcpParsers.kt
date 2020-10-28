@@ -21,16 +21,23 @@ import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.logging2.Logger
 
-class CompoundRtcpParser(parentLogger: Logger) : PacketParser("Compound RTCP parser", parentLogger, {
-    CompoundRtcpPacket(it.buffer, it.offset, it.length).also { compoundPacket ->
-        // Force packets to be evaluated to trigger any parsing errors
-        compoundPacket.packets
+class CompoundRtcpParser(parentLogger: Logger) : PacketParser(
+    "Compound RTCP parser", parentLogger,
+    {
+        CompoundRtcpPacket(it.buffer, it.offset, it.length).also { compoundPacket ->
+            // Force packets to be evaluated to trigger any parsing errors
+            compoundPacket.packets
+        }
     }
-}) {
+) {
     override fun trace(f: () -> Unit) = f.invoke()
 }
 
-class SingleRtcpParser(parentLogger: Logger) : PacketParser("Single RTCP parser", parentLogger, {
-    RtcpPacket.parse(it.buffer, it.offset, it.length) }) {
+class SingleRtcpParser(parentLogger: Logger) : PacketParser(
+    "Single RTCP parser", parentLogger,
+    {
+        RtcpPacket.parse(it.buffer, it.offset, it.length)
+    }
+) {
     override fun trace(f: () -> Unit) = f.invoke()
 }

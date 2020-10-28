@@ -154,8 +154,10 @@ class IncomingSsrcStats(
 
     fun getSnapshot(): Snapshot {
         synchronized(statsLock) {
-            return Snapshot(numReceivedPackets, numReceivedBytes, maxSeqNum, seqNumCycles, numExpectedPackets,
-                    cumulativePacketsLost, jitterStats.jitter)
+            return Snapshot(
+                numReceivedPackets, numReceivedBytes, maxSeqNum, seqNumCycles, numExpectedPackets,
+                cumulativePacketsLost, jitterStats.jitter
+            )
         }
     }
 

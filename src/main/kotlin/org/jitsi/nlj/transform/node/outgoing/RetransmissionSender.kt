@@ -79,8 +79,8 @@ class RetransmissionSender(
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
         logger.cdebug {
             "${hashCode()} sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum " +
-                    "$rtxSeqNum with original ssrc ${rtpPacket.ssrc}, original sequence number " +
-                    "${rtpPacket.sequenceNumber} and original payload type: ${rtpPacket.payloadType}"
+                "$rtxSeqNum with original ssrc ${rtpPacket.ssrc}, original sequence number " +
+                "${rtpPacket.sequenceNumber} and original payload type: ${rtpPacket.payloadType}"
         }
         RtxPacket.addOriginalSequenceNumber(rtpPacket)
         rtpPacket.ssrc = rtxSsrc
@@ -95,9 +95,11 @@ class RetransmissionSender(
 
     private fun retransmitPlain(packetInfo: PacketInfo): PacketInfo {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        logger.cdebug { "${hashCode()} plain retransmission packet with original ssrc " +
+        logger.cdebug {
+            "${hashCode()} plain retransmission packet with original ssrc " +
                 "${rtpPacket.ssrc}, original sequence number ${rtpPacket.sequenceNumber} and original " +
-                "payload type: ${rtpPacket.payloadType}" }
+                "payload type: ${rtpPacket.payloadType}"
+        }
 
         numRetransmittedPlainPackets++
         // No work needed

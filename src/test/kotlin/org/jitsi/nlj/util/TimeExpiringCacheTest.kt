@@ -33,9 +33,9 @@ internal class TimeExpiringCacheTest : ShouldSpec() {
     private val fakeClock = FakeClock()
 
     private val timeExpiringCache = TimeExpiringCache<Int, Dummy>(
-            1.secs,
-            20,
-            fakeClock
+        1.secs,
+        20,
+        fakeClock
     )
 
     init {

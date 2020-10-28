@@ -26,8 +26,10 @@ import org.jitsi.utils.secs
 class MediaSourceDescTest : ShouldSpec() {
     init {
         val ssrcs = arrayOf(0xdeadbeef, 0xcafebabe, 0x01234567)
-        val source = createSource(ssrcs,
-            1, 3, "Fake owner")
+        val source = createSource(
+            ssrcs,
+            1, 3, "Fake owner"
+        )
 
         context("Source properties should be correct") {
             source.owner shouldBe "Fake owner"
@@ -54,7 +56,8 @@ class MediaSourceDescTest : ShouldSpec() {
                     /* Set up rate statistics testing */
                     /* Set non-zero rates for (0,0), (0,1), (1,0), (1,1), and (2,2) */
                     if ((i < source.rtpEncodings.size - 1 && j < e.layers.size - 1) ||
-                        (i == source.rtpEncodings.size - 1 && j == e.layers.size - 1)) {
+                        (i == source.rtpEncodings.size - 1 && j == e.layers.size - 1)
+                    ) {
                         /* Encode the layer ID into the rate, so it's unambiguous which layers are getting summed. */
                         l.inheritStatistics(FakeBitrateTracker(1L shl (i * source.rtpEncodings.size + j)))
                     }
@@ -129,27 +132,49 @@ private fun createRTPLayerDescs(
             dependencies = if (spatialIdx > 0 && temporalIdx > 0) {
                 // this layer depends on spatialIdx-1 and temporalIdx-1.
                 arrayOf(
-                    rtpLayers[idx(spatialIdx, temporalIdx - 1,
-                        temporalLen)]!!,
-                    rtpLayers[idx(spatialIdx - 1, temporalIdx,
-                        temporalLen)]!!
+                    rtpLayers[
+                        idx(
+                            spatialIdx, temporalIdx - 1,
+                            temporalLen
+                        )
+                    ]!!,
+                    rtpLayers[
+                        idx(
+                            spatialIdx - 1, temporalIdx,
+                            temporalLen
+                        )
+                    ]!!
                 )
             } else if (spatialIdx > 0) {
                 // this layer depends on spatialIdx-1.
-                arrayOf(rtpLayers[idx(spatialIdx - 1, temporalIdx,
-                    temporalLen)]!!)
+                arrayOf(
+                    rtpLayers[
+                        idx(
+                            spatialIdx - 1, temporalIdx,
+                            temporalLen
+                        )
+                    ]!!
+                )
             } else if (temporalIdx > 0) {
                 // this layer depends on temporalIdx-1.
-                arrayOf(rtpLayers[idx(spatialIdx, temporalIdx - 1,
-                    temporalLen)]!!)
+                arrayOf(
+                    rtpLayers[
+                        idx(
+                            spatialIdx, temporalIdx - 1,
+                            temporalLen
+                        )
+                    ]!!
+                )
             } else {
                 // this is a base layer without any dependencies.
                 null
             }
             val temporalId = if (temporalLen > 1) temporalIdx else -1
             val spatialId = if (spatialLen > 1) spatialIdx else -1
-            rtpLayers[idx] = RtpLayerDesc(encodingIdx,
-                temporalId, spatialId, height, frameRate, dependencies)
+            rtpLayers[idx] = RtpLayerDesc(
+                encodingIdx,
+                temporalId, spatialId, height, frameRate, dependencies
+            )
             frameRate *= 2.0
         }
     }
@@ -174,8 +199,10 @@ private fun createRtpEncodingDesc(
     encodingIdx: Int,
     height: Int
 ): RtpEncodingDesc {
-    val layers: Array<RtpLayerDesc> = createRTPLayerDescs(spatialLen, temporalLen,
-        encodingIdx, height)
+    val layers: Array<RtpLayerDesc> = createRTPLayerDescs(
+        spatialLen, temporalLen,
+        encodingIdx, height
+    )
     val enc = RtpEncodingDesc(primarySsrc, layers)
     return enc
 }
@@ -191,8 +218,10 @@ private fun createSource(
     val encodings = Array(primarySsrcs.size) {
         encodingIdx ->
         val primarySsrc: Long = primarySsrcs.get(encodingIdx)
-        val ret = createRtpEncodingDesc(primarySsrc,
-            numSpatialLayersPerStream, numTemporalLayersPerStream, encodingIdx, height)
+        val ret = createRtpEncodingDesc(
+            primarySsrc,
+            numSpatialLayersPerStream, numTemporalLayersPerStream, encodingIdx, height
+        )
         height *= 2
         ret
     }

@@ -39,7 +39,8 @@ class PayloadVerificationPlugin {
 
         override fun observe(after: Node, packetInfo: PacketInfo) {
             if (PacketInfo.ENABLE_PAYLOAD_VERIFICATION &&
-                packetInfo.payloadVerification != null) {
+                packetInfo.payloadVerification != null
+            ) {
 
                 val expected = packetInfo.payloadVerification
                 val actual = packetInfo.packet.payloadVerification

@@ -114,8 +114,8 @@ internal class IncomingSsrcStatsTest : ShouldSpec() {
                 createStatPacketInfo(16, 0, 0)
             )
             val streamStatistics = IncomingSsrcStats(
-                    123L,
-                    packetSequence.first().packetInfo.packetAs<RtpPacket>().sequenceNumber
+                123L,
+                packetSequence.first().packetInfo.packetAs<RtpPacket>().sequenceNumber
             )
             packetSequence.forEach {
                 streamStatistics.packetReceived(

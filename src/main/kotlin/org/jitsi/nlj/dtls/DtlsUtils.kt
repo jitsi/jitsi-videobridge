@@ -88,7 +88,8 @@ class DtlsUtils {
             } catch (e: NoSuchElementException) {
                 throw DtlsException(
                     "No common SRTP protection profile found.  Ours: ${ours.joinToString()} " +
-                        "Theirs: ${theirs.joinToString()}")
+                        "Theirs: ${theirs.joinToString()}"
+                )
             }
         }
 
@@ -197,8 +198,9 @@ class DtlsUtils {
             // Security (DTLS)" states, "the certificate presented during the DTLS
             // handshake MUST match the fingerprint exchanged via the signaling path
             // in the SDP."
-            val remoteFingerprint = remoteFingerprints[hashFunction] ?: throw DtlsException("No fingerprint " +
-                    "declared over the signaling path with hash function: $hashFunction")
+            val remoteFingerprint = remoteFingerprints[hashFunction] ?: throw DtlsException(
+                "No fingerprint declared over the signaling path with hash function: $hashFunction"
+            )
 
             // TODO(boris) check if the below is still true, and re-introduce the hack if it is.
             // Unfortunately, Firefox does not comply with RFC 5763 at the time
@@ -225,8 +227,10 @@ class DtlsUtils {
             val certificateFingerprint = certificate.getFingerprint(hashFunction)
 
             if (remoteFingerprint != certificateFingerprint) {
-                throw DtlsException("Fingerprint $remoteFingerprint does not match the $hashFunction-hashed " +
-                        "certificate $certificateFingerprint")
+                throw DtlsException(
+                    "Fingerprint $remoteFingerprint does not match the $hashFunction-hashed " +
+                        "certificate $certificateFingerprint"
+                )
             }
         }
 
@@ -338,8 +342,10 @@ inline fun Logger.notifyAlertRaised(alertLevel: Short, alertDescription: Short, 
                 }
                 toString()
             }
-            cinfo { "Alert raised: level=$alertLevel, description=$alertDescription, message=$message " +
-                "cause=$cause $stack" }
+            cinfo {
+                "Alert raised: level=$alertLevel, description=$alertDescription, message=$message " +
+                    "cause=$cause $stack"
+            }
         }
     }
 }
@@ -350,6 +356,7 @@ inline fun Logger.notifyAlertReceived(alertLevel: Short, alertDescription: Short
         AlertDescription.close_notify -> cinfo { "close_notify received, connection closing" }
         else -> cerror {
             "Alert received: level=$alertLevel, description=$alertDescription " +
-                "(${AlertDescription.getName(alertDescription)})" }
+                "(${AlertDescription.getName(alertDescription)})"
+        }
     }
 }

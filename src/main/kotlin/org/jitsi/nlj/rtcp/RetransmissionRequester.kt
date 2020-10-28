@@ -104,7 +104,7 @@ class RetransmissionRequester(
                     highestReceivedSeqNum numPacketsTo seqNum < maxMissingSeqNums -> {
                         logger.cdebug {
                             "$ssrc missing packet detected! Just received " +
-                                    "$seqNum, last received was $highestReceivedSeqNum"
+                                "$seqNum, last received was $highestReceivedSeqNum"
                         }
                         RtpUtils.sequenceNumbersBetween(highestReceivedSeqNum, seqNum).forEach { missingSeqNum ->
                             val request = PacketRetransmissionRequest(missingSeqNum)
@@ -156,7 +156,7 @@ class RetransmissionRequester(
                         // re-schedule the task
                         currentTaskHandle?.cancel(false)
                         currentTaskHandle = scheduler.schedule(
-                                ::doWork,
+                            ::doWork,
                             Duration.between(clock.instant(), newWorkDueTs).toMillis(),
                             TimeUnit.MILLISECONDS
                         )
@@ -185,15 +185,19 @@ class RetransmissionRequester(
                     requests[nackedSeqNum]?.let { request ->
                         request.requested(timestamp)
                         if (request.numTimesRequested == MAX_REQUESTS) {
-                            logger.cdebug { "$ssrc generated the last NACK for seq num ${request.seqNum}, " +
-                                "time since the first request = " +
-                                "${Duration.between(request.firstRequestTimestamp, timestamp)}" }
+                            logger.cdebug {
+                                "$ssrc generated the last NACK for seq num ${request.seqNum}, " +
+                                    "time since the first request = " +
+                                    "${Duration.between(request.firstRequestTimestamp, timestamp)}"
+                            }
 
                             requests.remove(nackedSeqNum)
                         }
                     } ?: run {
-                        logger.cdebug { "$ssrc packet $nackedSeqNum must have just been received, it was" +
-                                " no longer in the requests map" }
+                        logger.cdebug {
+                            "$ssrc packet $nackedSeqNum must have just been received, it was " +
+                                "no longer in the requests map"
+                        }
                     }
                 }
                 val nextDueTime = if (requests.isNotEmpty()) timestamp.plus(REQUEST_INTERVAL) else NO_REQUEST_DUE

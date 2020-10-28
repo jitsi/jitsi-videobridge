@@ -96,10 +96,12 @@ class ProbingDataSender(
                 numProbingBytesSentRtx += rtxBytesSent
                 totalBytesSent += rtxBytesSent
                 if (timeSeriesLogger.isTraceEnabled()) {
-                    timeSeriesLogger.trace(diagnosticContext
-                        .makeTimeSeriesPoint("rtx_probing_bytes")
-                        .addField("ssrc", mediaSsrc)
-                        .addField("bytes", rtxBytesSent))
+                    timeSeriesLogger.trace(
+                        diagnosticContext
+                            .makeTimeSeriesPoint("rtx_probing_bytes")
+                            .addField("ssrc", mediaSsrc)
+                            .addField("bytes", rtxBytesSent)
+                    )
                 }
             }
         }
@@ -108,9 +110,11 @@ class ProbingDataSender(
             numProbingBytesSentDummyData += dummyBytesSent
             totalBytesSent += dummyBytesSent
             if (timeSeriesLogger.isTraceEnabled()) {
-                timeSeriesLogger.trace(diagnosticContext
+                timeSeriesLogger.trace(
+                    diagnosticContext
                         .makeTimeSeriesPoint("dummy_probing_bytes")
-                        .addField("bytes", dummyBytesSent))
+                        .addField("bytes", dummyBytesSent)
+                )
             }
         }
 

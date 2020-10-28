@@ -32,18 +32,20 @@ class Vp8Utils {
         private const val SUSPENDED_LAYER_ID = -1
 
         fun isKeyFrame(vp8Payload: ByteBuffer): Boolean =
-                DePacketizer.isKeyFrame(vp8Payload.array(), vp8Payload.arrayOffset(), vp8Payload.limit())
+            DePacketizer.isKeyFrame(vp8Payload.array(), vp8Payload.arrayOffset(), vp8Payload.limit())
 
         fun getSpatialLayerIndexFromKeyFrame(vp8Payload: ByteBuffer): Int {
             // Copied from VP8QUalityFilter#getSpatialLayerIndexFromKeyframe
             val payloadDescriptorLen =
-                    DePacketizer.VP8PayloadDescriptor.getSize(
-                            vp8Payload.array(),
-                            vp8Payload.arrayOffset(),
-                            vp8Payload.limit())
-            val height = DePacketizer.VP8KeyframeHeader.getHeight(
+                DePacketizer.VP8PayloadDescriptor.getSize(
                     vp8Payload.array(),
-                    vp8Payload.arrayOffset() + payloadDescriptorLen + VP8_PAYLOAD_HEADER_LEN)
+                    vp8Payload.arrayOffset(),
+                    vp8Payload.limit()
+                )
+            val height = DePacketizer.VP8KeyframeHeader.getHeight(
+                vp8Payload.array(),
+                vp8Payload.arrayOffset() + payloadDescriptorLen + VP8_PAYLOAD_HEADER_LEN
+            )
             return when {
                 height >= MIN_HD_HEIGHT -> HD_LAYER_ID
                 height >= MIN_SD_HEIGHT -> SD_LAYER_ID
@@ -57,9 +59,11 @@ class Vp8Utils {
                 DePacketizer.VP8PayloadDescriptor.getSize(
                     vp8Packet.buffer,
                     vp8Packet.payloadOffset,
-                    vp8Packet.payloadLength)
+                    vp8Packet.payloadLength
+                )
             return DePacketizer.VP8KeyframeHeader.getHeight(
-                vp8Packet.buffer, vp8Packet.payloadOffset + payloadDescriptorLen + VP8_PAYLOAD_HEADER_LEN)
+                vp8Packet.buffer, vp8Packet.payloadOffset + payloadDescriptorLen + VP8_PAYLOAD_HEADER_LEN
+            )
         }
 
         fun getSpatialLayerIndexFromKeyFrame(vp8Packet: RtpPacket): Int {
@@ -74,12 +78,14 @@ class Vp8Utils {
         }
 
         fun getTemporalLayerIdOfFrame(vp8Payload: ByteBuffer) =
-                DePacketizer.VP8PayloadDescriptor.getTemporalLayerIndex(
-                        vp8Payload.array(), vp8Payload.arrayOffset(), vp8Payload.limit())
+            DePacketizer.VP8PayloadDescriptor.getTemporalLayerIndex(
+                vp8Payload.array(), vp8Payload.arrayOffset(), vp8Payload.limit()
+            )
 
         fun getTemporalLayerIdOfFrame(vp8Packet: RtpPacket) =
             DePacketizer.VP8PayloadDescriptor.getTemporalLayerIndex(
-                vp8Packet.buffer, vp8Packet.payloadOffset, vp8Packet.payloadLength)
+                vp8Packet.buffer, vp8Packet.payloadOffset, vp8Packet.payloadLength
+            )
 
         /**
          * Returns the delta between two VP8 extended picture IDs, taking into account

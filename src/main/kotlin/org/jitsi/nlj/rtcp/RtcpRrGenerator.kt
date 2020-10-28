@@ -94,16 +94,18 @@ class RtcpRrGenerator(
                 val fractionLost = statsSnapshot.computeFractionLost(senderInfo.statsSnapshot)
                 senderInfo.statsSnapshot = statsSnapshot
 
-                reportBlocks.add(RtcpReportBlock(
-                    ssrc,
-                    fractionLost,
-                    statsSnapshot.cumulativePacketsLost,
-                    statsSnapshot.seqNumCycles,
-                    statsSnapshot.maxSeqNum,
-                    statsSnapshot.jitter.toLong(),
-                    senderInfo.lastSrCompactedTimestamp,
-                    senderInfo.getDelaySinceLastSr(now)
-                ))
+                reportBlocks.add(
+                    RtcpReportBlock(
+                        ssrc,
+                        fractionLost,
+                        statsSnapshot.cumulativePacketsLost,
+                        statsSnapshot.seqNumCycles,
+                        statsSnapshot.maxSeqNum,
+                        statsSnapshot.jitter.toLong(),
+                        senderInfo.lastSrCompactedTimestamp,
+                        senderInfo.getDelaySinceLastSr(now)
+                    )
+                )
             }
 
             val packets = mutableListOf<RtcpPacket>()

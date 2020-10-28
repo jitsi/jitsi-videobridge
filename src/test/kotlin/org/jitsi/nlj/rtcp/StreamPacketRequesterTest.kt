@@ -38,7 +38,7 @@ class StreamPacketRequesterTest : ShouldSpec() {
     }
 
     private val streamPacketRequester = RetransmissionRequester.StreamPacketRequester(
-            123L, scheduler, scheduler.clock, ::rtcpSender, StdoutLogger()
+        123L, scheduler, scheduler.clock, ::rtcpSender, StdoutLogger()
     )
 
     init {
@@ -117,8 +117,8 @@ class StreamPacketRequesterTest : ShouldSpec() {
                 should("all be nacked 10 times each over time") {
                     for (missingSeqNum in listOf(2, 4, 6)) {
                         val numNacksForSeqNum = nackPacketsSent.map { it as RtcpFbNackPacket }
-                                .filter { it.missingSeqNums.contains(missingSeqNum) }
-                                .size
+                            .filter { it.missingSeqNums.contains(missingSeqNum) }
+                            .size
                         numNacksForSeqNum shouldBe 10
                     }
                     scheduler.numPendingJobs() shouldBe 0

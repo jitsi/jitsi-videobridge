@@ -205,12 +205,16 @@ class StreamInformationStoreImpl : StreamInformationStore {
         receiveSsrcStore.removeReceiveSsrc(ssrc)
 
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("Stream Information Store").apply {
-        addBlock(NodeStatsBlock("RTP Extensions").apply {
-            rtpExtensions.forEach { addString(it.id.toString(), it.type.toString()) }
-        })
-        addBlock(NodeStatsBlock("RTP Payload Types").apply {
-            rtpPayloadTypes.forEach { addString(it.key.toString(), it.value.toString()) }
-        })
+        addBlock(
+            NodeStatsBlock("RTP Extensions").apply {
+                rtpExtensions.forEach { addString(it.id.toString(), it.type.toString()) }
+            }
+        )
+        addBlock(
+            NodeStatsBlock("RTP Payload Types").apply {
+                rtpPayloadTypes.forEach { addString(it.key.toString(), it.value.toString()) }
+            }
+        )
         addBlock(localSsrcAssociations.getNodeStats())
         addBlock(remoteSsrcAssociations.getNodeStats())
         addBlock(receiveSsrcStore.getNodeStats())

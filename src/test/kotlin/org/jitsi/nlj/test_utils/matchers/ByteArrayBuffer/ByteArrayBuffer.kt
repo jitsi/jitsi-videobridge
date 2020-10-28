@@ -34,7 +34,8 @@ fun haveSameContentAs(expected: ByteArrayBuffer) = object : Matcher<ByteArrayBuf
                 }
             }
         }
-        return MatcherResult(matches,
+        return MatcherResult(
+            matches,
             "\n${value.toHex()}\nwas supposed to be:\n${expected.toHex()}",
             "\n${value.toHex()}\nshould not have equaled \n${expected.toHex()}"
         )

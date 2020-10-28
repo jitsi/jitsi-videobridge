@@ -125,8 +125,9 @@ class KeyframeRequester @JvmOverloads constructor(
         }
         synchronized(keyframeRequestsSyncRoot) {
             return if (Duration.between(keyframeRequests.getOrDefault(mediaSsrc, NEVER), now) < waitInterval) {
-                logger.cdebug { "Sent a keyframe request less than $waitInterval ago for $mediaSsrc, " +
-                    "ignoring request" }
+                logger.cdebug {
+                    "Sent a keyframe request less than $waitInterval ago for $mediaSsrc, ignoring request"
+                }
                 false
             } else {
                 keyframeRequests[mediaSsrc] = now

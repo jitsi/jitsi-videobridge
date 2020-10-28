@@ -43,7 +43,8 @@ fun main() {
 
     val receiver = ReceiverFactory.createReceiver(
         executor, backgroundExecutor, pcap.srtpData,
-        pcap.payloadTypes, pcap.headerExtensions, pcap.ssrcAssociations)
+        pcap.payloadTypes, pcap.headerExtensions, pcap.ssrcAssociations
+    )
 
     val sentArrays = LinkedBlockingQueue<Int>()
 

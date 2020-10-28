@@ -30,7 +30,8 @@ import org.jitsi.nlj.util.Util.Companion.getMbps
 fun NodeStatsBlock.addMbps(name: String, bytesKey: String, durationMsKey: String) = addCompoundValue(name) {
     getMbps(
         it.getNumberOrDefault(bytesKey, 0),
-        Duration.ofMillis(it.getNumberOrDefault(durationMsKey, 1).toLong()))
+        Duration.ofMillis(it.getNumberOrDefault(durationMsKey, 1).toLong())
+    )
 }
 
 /**

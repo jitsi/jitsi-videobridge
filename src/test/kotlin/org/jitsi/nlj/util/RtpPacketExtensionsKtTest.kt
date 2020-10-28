@@ -67,7 +67,8 @@ class RtpPacketExtensionsKtTest : ShouldSpec() {
                         rtpPacket.payloadLength
                     ).slice()
                     newPayload should haveSameContentAs(
-                        byteBufferOf(0x01, 0x02) + ByteBuffer.wrap(payload))
+                        byteBufferOf(0x01, 0x02) + ByteBuffer.wrap(payload)
+                    )
                 }
             }
         }

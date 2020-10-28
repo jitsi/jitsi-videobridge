@@ -109,16 +109,16 @@ class NodeStatsBlock(val name: String) {
             // We only aggregate numbers, and we "only" handle Long and Double because we've already
             // promoted them when adding. For other value types, we override with the new one.
             when {
-                existingValue == null && (value is Long || value is Double)
-                    -> stats[name] = value
-                existingValue is Long && value is Long
-                    -> stats[name] = existingValue + value
-                existingValue is Double && value is Double
-                    -> stats[name] = existingValue + value
-                existingValue is Long && value is Double
-                    -> stats[name] = existingValue + value
-                existingValue is Double && value is Long
-                    -> stats[name] = existingValue + value
+                existingValue == null && (value is Long || value is Double) ->
+                    stats[name] = value
+                existingValue is Long && value is Long ->
+                    stats[name] = existingValue + value
+                existingValue is Double && value is Double ->
+                    stats[name] = existingValue + value
+                existingValue is Long && value is Double ->
+                    stats[name] = existingValue + value
+                existingValue is Double && value is Long ->
+                    stats[name] = existingValue + value
                 else -> stats[name] = value
             }
         }

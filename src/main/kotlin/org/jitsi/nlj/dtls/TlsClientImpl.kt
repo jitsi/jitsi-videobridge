@@ -147,11 +147,11 @@ class TlsClientImpl(
             }
         }
         val srtpProfileInformation =
-                SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(chosenSrtpProtectionProfile)
+            SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(chosenSrtpProtectionProfile)
         srtpKeyingMaterial = context.exportKeyingMaterial(
-                ExporterLabel.dtls_srtp,
-                null,
-                2 * (srtpProfileInformation.cipherKeyLength + srtpProfileInformation.cipherSaltLength)
+            ExporterLabel.dtls_srtp,
+            null,
+            2 * (srtpProfileInformation.cipherKeyLength + srtpProfileInformation.cipherSaltLength)
         )
     }
 

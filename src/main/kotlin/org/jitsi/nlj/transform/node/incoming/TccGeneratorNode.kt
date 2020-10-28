@@ -63,7 +63,8 @@ class TccGeneratorNode(
     private var numTccSent: Int = 0
     private var numMultipleTccPackets = 0
     private var enabled: Boolean by observableWhenChanged(false) {
-        _, _, newValue -> logger.debug("Setting enabled=$newValue")
+        _, _, newValue ->
+        logger.debug("Setting enabled=$newValue")
     }
     private val rfc3711IndexTracker = Rfc3711IndexTracker()
 
@@ -144,8 +145,10 @@ class TccGeneratorNode(
             tccPackets.add(currentTccPacket.build())
             if (tccPackets.size > 1) {
                 numMultipleTccPackets++
-                logger.info("Sending TCC feedback in ${tccPackets.size} packets " +
-                    "(${feedbackBlockPackets.size} media packets)")
+                logger.info(
+                    "Sending TCC feedback in ${tccPackets.size} packets " +
+                        "(${feedbackBlockPackets.size} media packets)"
+                )
             }
             // The next window will start with the sequence number after the last one we included in the previous
             // feedback

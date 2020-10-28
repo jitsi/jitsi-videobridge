@@ -102,11 +102,11 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val inputTreeRoot: Node
     private val queueSize: Int by config("jmt.transceiver.recv.queue-size".from(JitsiConfig.newConfig))
     private val incomingPacketQueue = PacketInfoQueue(
-            "rtp-receiver-incoming-packet-queue",
-            executor,
-            this::handleIncomingPacket,
-            queueSize
-        )
+        "rtp-receiver-incoming-packet-queue",
+        executor,
+        this::handleIncomingPacket,
+        queueSize
+    )
     private val srtpDecryptWrapper = SrtpDecryptNode()
     private val srtcpDecryptWrapper = SrtcpDecryptNode()
     private val tccGenerator = TccGeneratorNode(rtcpSender, streamInformationStore, logger)
