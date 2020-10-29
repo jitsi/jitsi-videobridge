@@ -96,7 +96,7 @@ private fun newConfigAllStatsTransports(enabled: Boolean = true) = """
             ]
         }
     }
-    """.trimIndent()
+""".trimIndent()
 
 private fun newConfigOneStatsTransport(enabled: Boolean = true) = """
     videobridge {
@@ -110,7 +110,7 @@ private fun newConfigOneStatsTransport(enabled: Boolean = true) = """
             ]
         }
     }
-    """.trimIndent()
+""".trimIndent()
 
 private fun newConfigOneStatsTransportCustomInterval(enabled: Boolean = true) = """
     videobridge {
@@ -125,7 +125,7 @@ private fun newConfigOneStatsTransportCustomInterval(enabled: Boolean = true) = 
             ]
         }
     }
-    """.trimIndent()
+""".trimIndent()
 
 private fun newConfigInvalidStatsTransports(enabled: Boolean = true) = """
     videobridge {
@@ -142,7 +142,7 @@ private fun newConfigInvalidStatsTransports(enabled: Boolean = true) = """
             ]
         }
     }
-    """.trimIndent()
+""".trimIndent()
 
 private fun legacyConfigStatsEnabled(enabled: Boolean = true) = "org.jitsi.videobridge.ENABLE_STATISTICS=$enabled"
 

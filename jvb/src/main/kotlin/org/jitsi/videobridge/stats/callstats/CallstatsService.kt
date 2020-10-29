@@ -59,8 +59,8 @@ class CallstatsService(
 
     fun start(
         /**
-        * Function to call if and when the service successfully initializes.
-        */
+         * Function to call if and when the service successfully initializes.
+         */
         initializedCallback: () -> Unit = {}
     ) {
         logger.info("Starting CallstatsService with config: $config")
@@ -85,7 +85,8 @@ class CallstatsService(
                     logger.info("Jitsi-stats service initialized: $message")
                     statsServiceInitialized(statsService, initializedCallback)
                 }
-            })
+            }
+        )
     }
 
     fun statsServiceInitialized(statsService: StatsService, callback: () -> Unit) {

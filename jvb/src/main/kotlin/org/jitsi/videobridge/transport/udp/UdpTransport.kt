@@ -51,10 +51,13 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
     soSndBuf: Int? = null,
     private val clock: Clock = Clock.systemUTC()
 ) {
-    private val logger = createChildLogger(parentLogger, mapOf(
-        "address" to bindAddress,
-        "port" to bindPort.toString()
-    ))
+    private val logger = createChildLogger(
+        parentLogger,
+        mapOf(
+            "address" to bindAddress,
+            "port" to bindPort.toString()
+        )
+    )
 
     private val running = AtomicBoolean(true)
 
@@ -64,9 +67,11 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
         soRcvBuf?.let { receiveBufferSize = it }
         soSndBuf?.let { sendBufferSize = it }
     }.also { socket ->
-        logger.info("Initialized with bind address $bindAddress and bind port $bindPort. " +
+        logger.info(
+            "Initialized with bind address $bindAddress and bind port $bindPort. " +
                 "Receive buffer size ${socket.receiveBufferSize}${soRcvBuf?.let { " (asked for $it)"} ?: ""}. " +
-                "Send buffer size ${socket.sendBufferSize}${soSndBuf?.let { " (asked for $it)"} ?: ""}.")
+                "Send buffer size ${socket.sendBufferSize}${soSndBuf?.let { " (asked for $it)"} ?: ""}."
+        )
     }
 
     private val stats = Stats()

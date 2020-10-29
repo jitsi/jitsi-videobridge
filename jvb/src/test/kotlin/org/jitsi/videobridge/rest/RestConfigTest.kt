@@ -60,18 +60,22 @@ class RestConfigTest : ConfigTest() {
                 }
             }
             context("Shutdown with colibri") {
-                withNewConfig("""
+                withNewConfig(
+                    """
                     videobridge.apis.rest.enabled=true
                     videobridge.rest.shutdown.enabled=true
-                """.trimMargin()) {
+                    """.trimMargin()
+                ) {
                     config.isEnabled(RestApis.SHUTDOWN) shouldBe true
                 }
             }
             context("Shutdown without colibri") {
-                withNewConfig("""
+                withNewConfig(
+                    """
                     videobridge.apis.rest.enabled=false
                     videobridge.rest.shutdown.enabled=true
-                """.trimMargin()) {
+                    """.trimMargin()
+                ) {
                     config.isEnabled(RestApis.SHUTDOWN) shouldBe false
                 }
             }

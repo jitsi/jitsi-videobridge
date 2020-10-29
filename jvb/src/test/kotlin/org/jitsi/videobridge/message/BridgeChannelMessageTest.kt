@@ -120,8 +120,9 @@ class BridgeChannelMessageTest : ShouldSpec() {
 
         context("serializing and parsing ReceiverVideoConstraintsChangedEvent") {
             val constraints = listOf(
-                    VideoConstraints("abcdabcd", 180),
-                    VideoConstraints("12341234", 360))
+                VideoConstraints("abcdabcd", 180),
+                VideoConstraints("12341234", 360)
+            )
             val message = ReceiverVideoConstraintsMessage(constraints)
 
             val parsed = parse(message.toJson())

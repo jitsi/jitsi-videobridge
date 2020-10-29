@@ -55,7 +55,7 @@ class StatsManagerConfig {
      *
      * These are now obsolete and only maintained for backward compatibility. Transports should be configured in the
      * modules that define them. See e.g. the implementations in [CallstatsService] and [XmppConnection].
-    */
+     */
     val transportConfigs: List<StatsTransportConfig> by config {
         "org.jitsi.videobridge."
             .from(JitsiConfig.legacyConfig)
@@ -73,8 +73,8 @@ class StatsManagerConfig {
                     ?: throw ConfigException.UnableToRetrieve.NotFound("Could not find transports within stats")
                 transports as ConfigList
                 transports.map { it as ConfigObject }
-                        .map { it.toConfig() }
-                        .mapNotNull { it.toStatsTransportConfig() }
+                    .map { it.toConfig() }
+                    .mapNotNull { it.toStatsTransportConfig() }
             }
         "default" { emptyList() }
     }

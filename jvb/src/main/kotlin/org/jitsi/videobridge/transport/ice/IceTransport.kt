@@ -150,8 +150,10 @@ class IceTransport @JvmOverloads constructor(
 
         val remoteCandidates = transportPacketExtension.getChildExtensionsOfType(CandidatePacketExtension::class.java)
         if (iceAgentStateIsRunning && remoteCandidates.isEmpty()) {
-            logger.cdebug { "Ignoring transport extensions with no candidates, " +
-                    "the Agent is already running." }
+            logger.cdebug {
+                "Ignoring transport extensions with no candidates, " +
+                    "the Agent is already running."
+            }
             return
         }
 
@@ -285,12 +287,12 @@ class IceTransport @JvmOverloads constructor(
             }
             val component = iceStream.getComponent(candidate.component)
             val remoteCandidate = RemoteCandidate(
-                    TransportAddress(candidate.ip, candidate.port, Transport.parse(candidate.protocol)),
-                    component,
-                    CandidateType.parse(candidate.type.toString()),
-                    candidate.foundation,
-                    candidate.priority.toLong(),
-                    null
+                TransportAddress(candidate.ip, candidate.port, Transport.parse(candidate.protocol)),
+                component,
+                CandidateType.parse(candidate.type.toString()),
+                candidate.foundation,
+                candidate.priority.toLong(),
+                null
             )
             // XXX IceTransport harvests host candidates only and the
             // ICE Components utilize the UDP protocol/transport only at the
@@ -407,15 +409,15 @@ private data class IceProcessingStateTransition(
 
     fun failed(): Boolean {
         return newState == IceProcessingState.FAILED ||
-                (oldState == IceProcessingState.RUNNING && newState == IceProcessingState.TERMINATED)
+            (oldState == IceProcessingState.RUNNING && newState == IceProcessingState.TERMINATED)
     }
 }
 
 private fun IceMediaStream.remoteUfragAndPasswordKnown(): Boolean =
-        remoteUfrag != null && remotePassword != null
+    remoteUfrag != null && remotePassword != null
 
 private fun CandidatePacketExtension.ipNeedsResolution(): Boolean =
-        !InetAddresses.isInetAddress(ip)
+    !InetAddresses.isInetAddress(ip)
 
 private fun Transport.isTcpType(): Boolean = this == Transport.TCP || this == Transport.SSLTCP
 

@@ -28,13 +28,15 @@ internal class CallstatsConfigTest : ConfigTest() {
                 config.enabled shouldBe false
             }
             context("With legacy config") {
-                withLegacyConfig("""
+                withLegacyConfig(
+                    """
                     io.callstats.sdk.CallStats.appId=1234
                     io.callstats.sdk.CallStats.keyId=foo
                     io.callstats.sdk.CallStats.keyPath=/tmp/ecpriv.jwk
                     io.callstats.sdk.CallStats.bridgeId=bar
                     io.callstats.sdk.CallStats.conferenceIDPrefix=baz
-                """.trimIndent()) {
+                    """.trimIndent()
+                ) {
                     val config = CallstatsConfig()
                     config.appId shouldBe 1234
                     config.enabled shouldBe true
@@ -45,7 +47,8 @@ internal class CallstatsConfigTest : ConfigTest() {
                 }
             }
             context("With new config") {
-                withNewConfig("""
+                withNewConfig(
+                    """
                     videobridge.stats.callstats {
                       app-id = 1234
                       key-id = "foo"
@@ -53,7 +56,9 @@ internal class CallstatsConfigTest : ConfigTest() {
                       bridge-id = "bar"
                       conference-id-prefix = "baz"
                     }
-                """.trimIndent(), loadDefaults = true) {
+                    """.trimIndent(),
+                    loadDefaults = true
+                ) {
                     val config = CallstatsConfig()
                     config.appId shouldBe 1234
                     config.enabled shouldBe true
@@ -69,15 +74,18 @@ internal class CallstatsConfigTest : ConfigTest() {
                 CallstatsConfig().interval shouldBe 5.secs
             }
             context("With legacy config") {
-                withLegacyConfig("""
+                withLegacyConfig(
+                    """
                     org.jitsi.videobridge.STATISTICS_INTERVAL.callstats.io=6000
                     org.jitsi.videobridge.STATISTICS_TRANSPORT=callstats.io
-                """.trimIndent()) {
+                    """.trimIndent()
+                ) {
                     CallstatsConfig().interval shouldBe 6.secs
                 }
             }
             context("With new config (deprecated syntax)") {
-                withNewConfig("""
+                withNewConfig(
+                    """
                     videobridge {
                       stats {
                         transports = [
@@ -85,7 +93,9 @@ internal class CallstatsConfigTest : ConfigTest() {
                         ]
                       }
                     }
-                """.trimIndent(), loadDefaults = true) {
+                    """.trimIndent(),
+                    loadDefaults = true
+                ) {
                     CallstatsConfig().interval shouldBe 7.secs
                 }
             }

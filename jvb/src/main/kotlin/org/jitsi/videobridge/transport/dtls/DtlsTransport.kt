@@ -125,8 +125,10 @@ class DtlsTransport(parentLogger: Logger) {
                 dtlsStack.actAsClient()
             }
             else -> {
-                logger.error("The remote side sent an unrecognized DTLS setup value: " +
-                        setupAttr)
+                logger.error(
+                    "The remote side sent an unrecognized DTLS setup value: " +
+                        setupAttr
+                )
             }
         }
     }

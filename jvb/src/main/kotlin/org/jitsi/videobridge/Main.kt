@@ -90,8 +90,10 @@ fun main(args: Array<String>) {
             start {
                 statsTransport?.let { statsTransport ->
                     statsCollector?.addTransport(statsTransport, CallstatsService.config.interval.toMillis())
-                        ?: logger.warn("Callstats is enabled, but the stats manager is not. Will not publish" +
-                            " per-conference stats.")
+                        ?: logger.warn(
+                            "Callstats is enabled, but the stats manager is not. Will not publish" +
+                                " per-conference stats."
+                        )
                 } ?: throw IllegalStateException("Stats transport is null after the service is started")
 
                 videobridge.addEventHandler(videobridgeEventHandler)
