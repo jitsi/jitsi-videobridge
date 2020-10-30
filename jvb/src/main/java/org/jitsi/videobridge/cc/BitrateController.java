@@ -287,6 +287,8 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
      */
     private boolean oversending = false;
 
+    private final OversendingTimeTracker oversendingTimeTracker = new OversendingTimeTracker();
+
     /**
      * Initializes a new {@link BitrateController} instance which is to
      * belong to a particular {@link Endpoint}.
@@ -417,6 +419,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         debugState.put("lastN", lastN);
         debugState.put("supportsRtx", supportsRtx);
         debugState.put("oversending", oversending);
+        debugState.put("total_oversending_time_secs", oversendingTimeTracker.getTotalOversendingTime().getSeconds());
         JSONObject adaptiveSourceProjectionsJson = new JSONObject();
         for (Map.Entry<Long, AdaptiveSourceProjection> entry : adaptiveSourceProjectionMap.entrySet())
         {
@@ -848,12 +851,14 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
                         sourceBitrateAllocation.ratedTargetIdx < 0 &&
                         !BitrateControllerConfig.enableOnstageVideoSuspend())
                 {
+                    oversendingTimeTracker.startedOversending();
                     oversending = true;
                     sourceBitrateAllocation.ratedTargetIdx = 0;
                     sourceBitrateAllocation.oversending = true;
                 }
                 else if (i == 0)
                 {
+                    oversendingTimeTracker.stoppedOversending();
                     oversending = false;
                 }
                 maxBandwidth -= sourceBitrateAllocation.getTargetBitrate();
