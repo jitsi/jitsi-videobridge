@@ -282,6 +282,12 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
     private Instant lastUpdateTime = Instant.MIN;
 
     /**
+     * Whether or not we are knowingly oversending (due to enableOnstageVideoSuspend being
+     * false)
+     */
+    private boolean oversending = false;
+
+    /**
      * Initializes a new {@link BitrateController} instance which is to
      * belong to a particular {@link Endpoint}.
      */
@@ -410,6 +416,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         debugState.put("effectiveVideoConstraints", effectiveConstraintsMap);
         debugState.put("lastN", lastN);
         debugState.put("supportsRtx", supportsRtx);
+        debugState.put("oversending", oversending);
         JSONObject adaptiveSourceProjectionsJson = new JSONObject();
         for (Map.Entry<Long, AdaptiveSourceProjection> entry : adaptiveSourceProjectionMap.entrySet())
         {
@@ -841,8 +848,13 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
                         sourceBitrateAllocation.ratedTargetIdx < 0 &&
                         !BitrateControllerConfig.enableOnstageVideoSuspend())
                 {
+                    oversending = true;
                     sourceBitrateAllocation.ratedTargetIdx = 0;
                     sourceBitrateAllocation.oversending = true;
+                }
+                else if (i == 0)
+                {
+                    oversending = false;
                 }
                 maxBandwidth -= sourceBitrateAllocation.getTargetBitrate();
 
