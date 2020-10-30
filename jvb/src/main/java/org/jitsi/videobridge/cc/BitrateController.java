@@ -610,6 +610,23 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
 
         // Compute the bitrate allocation.
         List<SourceBitrateAllocation> sourceBitrateAllocations = allocate(bweBps, sortedEndpoints);
+        if (!sourceBitrateAllocations.isEmpty())
+        {
+            // If we're oversending, we only do it with a single stream, so check the first
+            // one we're forwarding and see if it required and oversend.  Note: this is not
+            // as flexible as adding up the bitrates and seeing if they exceed the bwe, but
+            // it's more efficient than summing them all up.
+            if (sourceBitrateAllocations.get(0).oversending)
+            {
+                oversendingTimeTracker.startedOversending();
+                oversending = true;
+            }
+            else
+            {
+                oversendingTimeTracker.stoppedOversending();
+                oversending = false;
+            }
+        }
 
         // Update the the controllers based on the allocation and send a
         // notification to the client the set of forwarded endpoints has
@@ -851,15 +868,8 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
                         sourceBitrateAllocation.ratedTargetIdx < 0 &&
                         !BitrateControllerConfig.enableOnstageVideoSuspend())
                 {
-                    oversendingTimeTracker.startedOversending();
-                    oversending = true;
                     sourceBitrateAllocation.ratedTargetIdx = 0;
                     sourceBitrateAllocation.oversending = true;
-                }
-                else if (i == 0)
-                {
-                    oversendingTimeTracker.stoppedOversending();
-                    oversending = false;
                 }
                 maxBandwidth -= sourceBitrateAllocation.getTargetBitrate();
 
