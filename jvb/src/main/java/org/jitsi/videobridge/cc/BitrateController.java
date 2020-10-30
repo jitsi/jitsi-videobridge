@@ -1060,6 +1060,11 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         return this.forwardedEndpointIds.size();
     }
 
+    public boolean isOversending()
+    {
+        return this.oversending;
+    }
+
     /**
      * A snapshot of the bitrate for a given {@link RtpLayerDesc}.
      */

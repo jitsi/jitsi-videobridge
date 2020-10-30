@@ -235,6 +235,9 @@ public class VideobridgeStatistics
         int receiveOnlyEndpoints = 0;
         int numAudioSenders = 0;
         int numVideoSenders = 0;
+        // The amount of endpoints to which we're "oversending" (which can occur when
+        // enableOnstageVideoSuspend is false)
+        int numOversending = 0;
 
         for (Conference conference : videobridge.getConferences())
         {
@@ -279,6 +282,10 @@ public class VideobridgeStatistics
             }
             for (Endpoint endpoint : conference.getLocalEndpoints())
             {
+                if (endpoint.isOversending())
+                {
+                    numOversending++;
+                }
                 boolean sendingAudio = endpoint.isSendingAudio();
                 boolean sendingVideo = endpoint.isSendingVideo();
                 if (sendingAudio)
@@ -453,6 +460,7 @@ public class VideobridgeStatistics
                 "stress_level",
                 jvbStats.stressLevel
             );
+            unlockedSetStat("num_eps_oversending", numOversending);
             unlockedSetStat(CONFERENCES, conferences);
             unlockedSetStat(OCTO_CONFERENCES, octoConferences);
             unlockedSetStat(INACTIVE_CONFERENCES, inactiveConferences);

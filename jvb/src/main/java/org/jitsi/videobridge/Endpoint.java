@@ -1424,6 +1424,11 @@ public class Endpoint
         return transceiver.isReceivingVideo();
     }
 
+    public boolean isOversending()
+    {
+        return bitrateController.isOversending();
+    }
+
     private class TransceiverEventHandlerImpl implements TransceiverEventHandler
     {
         /**
