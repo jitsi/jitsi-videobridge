@@ -780,6 +780,8 @@ public class Endpoint
                 logger.debug(dtlsTransport.getDebugState().toJSONString());
             }
 
+            logger.info("Spent " + bitrateController.getTotalOversendingTime().getSeconds() + " seconds oversending");
+
             transceiver.teardown();
 
             EndpointMessageTransport messageTransport = getMessageTransport();

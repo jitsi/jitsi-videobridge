@@ -1080,6 +1080,11 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         return this.oversending;
     }
 
+    public Duration getTotalOversendingTime()
+    {
+        return this.oversendingTimeTracker.getTotalOversendingTime();
+    }
+
     /**
      * A snapshot of the bitrate for a given {@link RtpLayerDesc}.
      */
