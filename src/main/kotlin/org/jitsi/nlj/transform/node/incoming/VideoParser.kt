@@ -66,7 +66,7 @@ class VideoParser(
         } catch (e: Exception) {
             logger.error(
                 "Exception parsing video packet.  Packet data is: " +
-                    "${packet.buffer.toHex(packet.offset, Math.min(packet.length, 80))}",
+                    packet.buffer.toHex(packet.offset, Math.min(packet.length, 80)),
                 e
             )
             return null
@@ -76,11 +76,7 @@ class VideoParser(
         val encodingDesc = findRtpLayerDesc(videoPacket) ?: run {
             logger.warn(
                 "Unable to find encoding matching packet! packet=$videoPacket, " +
-                    "encodings=${sources.joinToString(
-                        separator = "\n", limit = 1,
-                        truncated = "[${sources.size - 1} " +
-                            "more source descriptions omitted]"
-                    )}"
+                    "sources=${sources.joinToString(separator = "\n")}"
             )
             numPacketsDroppedNoEncoding.incrementAndGet()
             return null
