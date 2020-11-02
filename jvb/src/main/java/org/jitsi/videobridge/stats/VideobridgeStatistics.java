@@ -235,7 +235,7 @@ public class VideobridgeStatistics
         int receiveOnlyEndpoints = 0;
         int numAudioSenders = 0;
         int numVideoSenders = 0;
-        // The amount of endpoints to which we're "oversending" (which can occur when
+        // The number of endpoints to which we're "oversending" (which can occur when
         // enableOnstageVideoSuspend is false)
         int numOversending = 0;
 
