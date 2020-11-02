@@ -780,6 +780,8 @@ public class Endpoint
                 logger.debug(dtlsTransport.getDebugState().toJSONString());
             }
 
+            logger.info("Spent " + bitrateController.getTotalOversendingTime().getSeconds() + " seconds oversending");
+
             transceiver.teardown();
 
             EndpointMessageTransport messageTransport = getMessageTransport();
@@ -1422,6 +1424,11 @@ public class Endpoint
     {
         // The endpoint is sending video if we (the transceiver) are receiving video.
         return transceiver.isReceivingVideo();
+    }
+
+    public boolean isOversending()
+    {
+        return bitrateController.isOversending();
     }
 
     private class TransceiverEventHandlerImpl implements TransceiverEventHandler
