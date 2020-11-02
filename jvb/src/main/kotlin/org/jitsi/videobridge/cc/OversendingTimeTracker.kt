@@ -24,22 +24,35 @@ import java.time.Instant
 class OversendingTimeTracker(
     private val clock: Clock = Clock.systemUTC()
 ) {
-    var totalOversendingTime: Duration = Duration.ofMillis(0)
-        private set
+    private var totalOversendingTime: Duration = Duration.ofMillis(0)
     private var mostRecentStartOversendingTimestamp: Instant = NEVER
     private var currentlyOversending: Boolean = false
+    private val lock = Any()
+
+    fun totalOversendingTime(): Duration {
+        synchronized(lock) {
+            if (currentlyOversending) {
+                return totalOversendingTime + Duration.between(mostRecentStartOversendingTimestamp, clock.instant())
+            }
+            return totalOversendingTime
+        }
+    }
 
     fun startedOversending() {
-        if (!currentlyOversending) {
-            currentlyOversending = true
-            mostRecentStartOversendingTimestamp = clock.instant()
+        synchronized(lock) {
+            if (!currentlyOversending) {
+                currentlyOversending = true
+                mostRecentStartOversendingTimestamp = clock.instant()
+            }
         }
     }
 
     fun stoppedOversending() {
-        if (currentlyOversending) {
-            currentlyOversending = false
-            totalOversendingTime += Duration.between(mostRecentStartOversendingTimestamp, clock.instant())
+        synchronized(lock) {
+            if (currentlyOversending) {
+                currentlyOversending = false
+                totalOversendingTime += Duration.between(mostRecentStartOversendingTimestamp, clock.instant())
+            }
         }
     }
 }
