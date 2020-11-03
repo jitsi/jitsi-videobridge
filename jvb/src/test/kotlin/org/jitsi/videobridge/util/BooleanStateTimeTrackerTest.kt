@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.cc
+package org.jitsi.videobridge.util
 
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
@@ -22,33 +22,38 @@ import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.secs
 import java.time.Duration
 
-class OversendingTimeTrackerTest : ShouldSpec() {
+class BooleanStateTimeTrackerTest : ShouldSpec() {
     private val clock = FakeClock()
-    private val oversendingTracker = OversendingTimeTracker(clock)
+    private val oversendingTracker = BooleanStateTimeTracker(clock = clock)
 
     init {
-        context("OversendingTimeTracker") {
+        context("BooleanStateTimeTracker") {
             should("start with a time of 0") {
-                oversendingTracker.totalOversendingTime() shouldBe Duration.ofSeconds(0)
+                oversendingTracker.totalTimeOn() shouldBe Duration.ofSeconds(0)
+                oversendingTracker.totalTimeOff() shouldBe Duration.ofSeconds(0)
             }
-            context("when oversending starts") {
-                oversendingTracker.startedOversending()
-                should("increment the oversending time") {
+            context("when the state changes") {
+                oversendingTracker.on()
+                should("increment the time in the 'on' state") {
                     clock.elapse(5.secs)
-                    oversendingTracker.totalOversendingTime() shouldBe 5.secs
+                    oversendingTracker.totalTimeOn() shouldBe 5.secs
+                    oversendingTracker.totalTimeOff() shouldBe 0.secs
                     clock.elapse(5.secs)
-                    oversendingTracker.totalOversendingTime() shouldBe 10.secs
+                    oversendingTracker.totalTimeOn() shouldBe 10.secs
+                    oversendingTracker.totalTimeOff() shouldBe 0.secs
                 }
-                context("and then stops") {
+                context("and then changes again") {
                     clock.elapse(5.secs)
-                    oversendingTracker.stoppedOversending()
+                    oversendingTracker.off()
                     should("have the correct time") {
-                        oversendingTracker.totalOversendingTime() shouldBe 15.secs
+                        oversendingTracker.totalTimeOn() shouldBe 15.secs
+                        oversendingTracker.totalTimeOff() shouldBe 0.secs
                     }
                     context("and time elapses") {
                         clock.elapse(5.secs)
                         should("not increase the time") {
-                            oversendingTracker.totalOversendingTime() shouldBe 15.secs
+                            oversendingTracker.totalTimeOn() shouldBe 15.secs
+                            oversendingTracker.totalTimeOff() shouldBe 5.secs
                         }
                     }
                 }

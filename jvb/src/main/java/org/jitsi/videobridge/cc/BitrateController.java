@@ -282,12 +282,9 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
     private Instant lastUpdateTime = Instant.MIN;
 
     /**
-     * Whether or not we are knowingly oversending (due to enableOnstageVideoSuspend being
-     * false)
+     * Keep track of how much time we spend knowingly oversending (due to enableOnstageVideoSuspend being false)
      */
-    private boolean oversending = false;
-
-    private final OversendingTimeTracker oversendingTimeTracker = new OversendingTimeTracker();
+    private final BooleanStateTimeTracker oversendingTimeTracker = new BooleanStateTimeTracker();
 
     /**
      * Initializes a new {@link BitrateController} instance which is to
@@ -418,8 +415,8 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         debugState.put("effectiveVideoConstraints", effectiveConstraintsMap);
         debugState.put("lastN", lastN);
         debugState.put("supportsRtx", supportsRtx);
-        debugState.put("oversending", oversending);
-        debugState.put("total_oversending_time_secs", oversendingTimeTracker.totalOversendingTime().getSeconds());
+        debugState.put("oversending", oversendingTimeTracker);
+        debugState.put("total_oversending_time_secs", oversendingTimeTracker.totalTimeOn().getSeconds());
         JSONObject adaptiveSourceProjectionsJson = new JSONObject();
         for (Map.Entry<Long, AdaptiveSourceProjection> entry : adaptiveSourceProjectionMap.entrySet())
         {
@@ -618,13 +615,11 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
             // it's more efficient than summing them all up.
             if (sourceBitrateAllocations.get(0).oversending)
             {
-                oversendingTimeTracker.startedOversending();
-                oversending = true;
+                oversendingTimeTracker.on();
             }
             else
             {
-                oversendingTimeTracker.stoppedOversending();
-                oversending = false;
+                oversendingTimeTracker.off();
             }
         }
 
@@ -1077,12 +1072,12 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
 
     public boolean isOversending()
     {
-        return this.oversending;
+        return this.oversendingTimeTracker.getState();
     }
 
     public Duration getTotalOversendingTime()
     {
-        return this.oversendingTimeTracker.totalOversendingTime();
+        return this.oversendingTimeTracker.totalTimeOn();
     }
 
     /**
