@@ -1535,10 +1535,10 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
 
     public interface EventHandler
     {
-        void forwardedEndpointsChanged(Collection<String> forwardedEndpoints);
+        void forwardedEndpointsChanged(@NotNull Collection<String> forwardedEndpoints);
         void effectiveVideoConstraintsChanged(
-            ImmutableMap<String, VideoConstraints> oldVideoConstraints,
-            ImmutableMap<String, VideoConstraints> newVideoConstraints);
+            @NotNull ImmutableMap<String, VideoConstraints> oldVideoConstraints,
+            @NotNull ImmutableMap<String, VideoConstraints> newVideoConstraints);
         void keyframeNeeded(String endpointId, long ssrc);
     }
 
