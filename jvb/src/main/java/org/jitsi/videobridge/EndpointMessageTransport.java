@@ -515,11 +515,7 @@ class EndpointMessageTransport
     @Override
     public BridgeChannelMessage lastN(LastNMessage message)
     {
-        int lastN = message.getLastN();
-        if (endpoint != null)
-        {
-            endpoint.setLastN(lastN);
-        }
+        endpoint.setLastN(message.getLastN());
 
         return null;
     }
