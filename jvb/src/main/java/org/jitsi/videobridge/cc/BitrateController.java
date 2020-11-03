@@ -227,11 +227,6 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
     private List<String> sortedEndpointIds;
 
     /**
-     * The main result of the bitrate allocation algorithm computation.
-     */
-    private List<AdaptiveSourceProjection> adaptiveSourceProjections = Collections.emptyList();
-
-    /**
      * The map of endpoint id to video constraints that contains the video
      * constraints to respect when allocating bandwidth for a specific endpoint.
      */
@@ -436,10 +431,6 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
      */
     StatusSnapshot getStatusSnapshot()
     {
-        if (adaptiveSourceProjections == null || adaptiveSourceProjections.isEmpty())
-        {
-            return new StatusSnapshot();
-        }
         List<Long> activeSsrcs = new ArrayList<>();
         long totalTargetBps = 0, totalIdealBps = 0;
         long nowMs = clock.instant().toEpochMilli();
@@ -637,7 +628,6 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         // constraints map which are used in layer suspension.
         Map<String, VideoConstraints> newEffectiveConstraints = new HashMap<>();
 
-        List<AdaptiveSourceProjection> adaptiveSourceProjections = new ArrayList<>();
         if (!sourceBitrateAllocations.isEmpty())
         {
             for (SourceBitrateAllocation sourceBitrateAllocation : sourceBitrateAllocations)
@@ -654,7 +644,6 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
 
                 if (adaptiveSourceProjection != null)
                 {
-                    adaptiveSourceProjections.add(adaptiveSourceProjection);
                     adaptiveSourceProjection.setTargetIndex(sourceTargetIdx);
                     adaptiveSourceProjection.setIdealIndex(sourceIdealIdx);
 
@@ -717,9 +706,6 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
                     .addField("total_target_bps", totalTargetBps)
                     .addField("total_ideal_bps", totalIdealBps));
         }
-
-        // The bandwidth prober will pick this up.
-        this.adaptiveSourceProjections = Collections.unmodifiableList(adaptiveSourceProjections);
 
         if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
         {
