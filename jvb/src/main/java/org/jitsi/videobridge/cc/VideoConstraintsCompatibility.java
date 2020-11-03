@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge;
+package org.jitsi.videobridge.cc;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.util.*;
+import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.cc.config.*;
 import org.json.simple.*;
 
@@ -28,7 +29,7 @@ import java.util.stream.*;
  * A class that translates between old-world selected/pinned/maxFrameHeight
  * messages to new-world video constraints.
  */
-class VideoConstraintsCompatibility
+public class VideoConstraintsCompatibility
 {
     /**
      * The last pinned endpoints set signaled by the receiving endpoint.
@@ -96,7 +97,7 @@ class VideoConstraintsCompatibility
      * controller that it needs to (evenly) distribute bandwidth across all
      * participants, up to X.
      */
-    Map<String, VideoConstraints> computeVideoConstraints()
+    public Map<String, VideoConstraints> computeVideoConstraints()
     {
         Map<String, VideoConstraints> newVideoConstraints = new HashMap<>();
 
@@ -207,7 +208,7 @@ class VideoConstraintsCompatibility
     }
 
     @SuppressWarnings("unchecked")
-    OrderedJsonObject getDebugState()
+    public OrderedJsonObject getDebugState()
     {
         OrderedJsonObject debugState = new OrderedJsonObject();
 
