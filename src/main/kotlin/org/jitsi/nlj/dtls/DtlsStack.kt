@@ -28,7 +28,7 @@ import org.jitsi.utils.logging2.createChildLogger
 import java.nio.ByteBuffer
 import java.time.Duration
 import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.math.min
@@ -54,7 +54,7 @@ class DtlsStack(
     parentLogger: Logger
 ) {
     private val logger = createChildLogger(parentLogger)
-    private val roleSet = CompletableFuture<Unit>()
+    private val roleSet = CountDownLatch(1)
 
     /**
      * The certificate info for this particular [DtlsStack] instance. We save it in a local val because the global one
@@ -124,7 +124,7 @@ class DtlsStack(
             this::verifyAndValidateRemoteCertificate,
             logger
         )
-        roleSet.complete(Unit)
+        roleSet.countDown()
     }
 
     fun actAsClient() {
@@ -137,7 +137,7 @@ class DtlsStack(
             this::verifyAndValidateRemoteCertificate,
             logger
         )
-        roleSet.complete(Unit)
+        roleSet.countDown()
     }
     /**
      * 'start' this stack, in whatever role it has been told to operate (client or server).  If a role
@@ -145,17 +145,17 @@ class DtlsStack(
      * has been set.
      */
     fun start() {
-        roleSet.thenRun {
-            dtlsTransport = role?.start()
-            // There is a bit of a race here: It's technically possible the
-            // far side could finish the handshake and send a message before
-            // this side assigns dtlsTransport here.  If so, that message
-            // would be passed to #processIncomingProtocolData and put in
-            // incomingProtocolData, but, since dtlsTransport won't be set
-            // yet, we won't 'receive' it yet.  Check for any incoming packets
-            // here, to handle this case.
-            processIncomingProtocolData()
-        }
+        roleSet.await()
+
+        dtlsTransport = role?.start()
+        // There is a bit of a race here: It's technically possible the
+        // far side could finish the handshake and send a message before
+        // this side assigns dtlsTransport here.  If so, that message
+        // would be passed to #processIncomingProtocolData and put in
+        // incomingProtocolData, but, since dtlsTransport won't be set
+        // yet, we won't 'receive' it yet.  Check for any incoming packets
+        // here, to handle this case.
+        processIncomingProtocolData()
     }
 
     fun close() {
