@@ -60,6 +60,8 @@ class TlsClientImpl(
 
     private val logger = createChildLogger(parentLogger)
 
+    private val config = DtlsConfig()
+
     private var session: TlsSession? = null
 
     private var clientCredentials: TlsCredentials? = null
@@ -126,6 +128,8 @@ class TlsClientImpl(
             CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
         )
     }
+
+    override fun getHandshakeTimeoutMillis(): Int = config.handshakeTimeout.toMillis().toInt()
 
     override fun notifyHandshakeComplete() {
         super.notifyHandshakeComplete()

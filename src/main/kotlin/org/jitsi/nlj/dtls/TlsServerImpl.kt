@@ -58,6 +58,8 @@ class TlsServerImpl(
 
     private val logger = createChildLogger(parentLogger)
 
+    private val config = DtlsConfig()
+
     private var session: TlsSession? = null
 
     /**
@@ -141,6 +143,8 @@ class TlsServerImpl(
             else -> throw DtlsUtils.DtlsException("Unsupported version: ${context.clientVersion}")
         }
     }
+
+    override fun getHandshakeTimeoutMillis(): Int = config.handshakeTimeout.toMillis().toInt()
 
     override fun notifyHandshakeComplete() {
         super.notifyHandshakeComplete()
