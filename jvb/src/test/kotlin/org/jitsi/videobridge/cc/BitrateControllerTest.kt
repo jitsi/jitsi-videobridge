@@ -137,120 +137,178 @@ class BitrateControllerTest : ShouldSpec() {
                 bc.allocationHistory.removeIf { it.bwe <= 0.bps }
 
                 bc.allocationHistory.shouldMatchInOrder(
-                    Event(10.kbps,
+                    Event(
+                        10.kbps,
                         listOf(
                             AllocationInfo("A", ld7_5, oversending = true),
                             AllocationInfo("B", noVideo),
                             AllocationInfo("C", noVideo),
-                            AllocationInfo("D", noVideo))),
-                    Event(100.kbps,
+                            AllocationInfo("D", noVideo)
+                        )
+                    ),
+                    Event(
+                        100.kbps,
                         listOf(
                             AllocationInfo("A", ld15),
                             AllocationInfo("B", noVideo),
                             AllocationInfo("C", noVideo),
-                            AllocationInfo("D", noVideo))),
-                    Event(150.kbps,
+                            AllocationInfo("D", noVideo)
+                        )
+                    ),
+                    Event(
+                        150.kbps,
                         listOf(
                             AllocationInfo("A", ld30),
                             AllocationInfo("B", noVideo),
                             AllocationInfo("C", noVideo),
-                            AllocationInfo("D", noVideo))),
-                    Event(550.kbps,
+                            AllocationInfo("D", noVideo)
+                        )
+                    ),
+                    Event(
+                        550.kbps,
                         listOf(
                             AllocationInfo("A", sd30),
                             AllocationInfo("B", ld7_5),
                             AllocationInfo("C", noVideo),
-                            AllocationInfo("D", noVideo))),
-                    Event(600.kbps,
+                            AllocationInfo("D", noVideo)
+                        )
+                    ),
+                    Event(
+                        600.kbps,
                         listOf(
                             AllocationInfo("A", sd30),
                             AllocationInfo("B", ld7_5),
                             AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", noVideo))),
-                    Event(650.kbps,
+                            AllocationInfo("D", noVideo)
+                        )
+                    ),
+                    Event(
+                        650.kbps,
                         listOf(
                             AllocationInfo("A", sd30),
                             AllocationInfo("B", ld7_5),
                             AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", ld7_5))),
-                    Event(700.kbps,
+                            AllocationInfo("D", ld7_5)
+                        )
+                    ),
+                    Event(
+                        700.kbps,
                         listOf(
                             AllocationInfo("A", sd30),
                             AllocationInfo("B", ld15),
                             AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", ld7_5))),
-                    Event(750.kbps,
+                            AllocationInfo("D", ld7_5)
+                        )
+                    ),
+                    Event(
+                        750.kbps,
                         listOf(
                             AllocationInfo("A", sd30),
                             AllocationInfo("B", ld15),
                             AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld7_5))),
-                    Event(800.kbps,
+                            AllocationInfo("D", ld7_5)
+                        )
+                    ),
+                    Event(
+                        800.kbps,
                         listOf(
                             AllocationInfo("A", sd30),
                             AllocationInfo("B", ld15),
                             AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld15))),
-                    Event(850.kbps,
+                            AllocationInfo("D", ld15)
+                        )
+                    ),
+                    Event(
+                        850.kbps,
                         listOf(
                             AllocationInfo("A", sd30),
                             AllocationInfo("B", ld30),
                             AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld15))),
-                    Event(900.kbps,
+                            AllocationInfo("D", ld15)
+                        )
+                    ),
+                    Event(
+                        900.kbps,
                         listOf(
                             AllocationInfo("A", sd30),
                             AllocationInfo("B", ld30),
                             AllocationInfo("C", ld30),
-                            AllocationInfo("D", ld15))),
-                    Event(960.kbps,
+                            AllocationInfo("D", ld15)
+                        )
+                    ),
+                    Event(
+                        960.kbps,
                         listOf(
                             AllocationInfo("A", sd30),
                             AllocationInfo("B", ld30),
                             AllocationInfo("C", ld30),
-                            AllocationInfo("D", ld30))),
-                    Event(2150.kbps,
+                            AllocationInfo("D", ld30)
+                        )
+                    ),
+                    Event(
+                        2150.kbps,
                         listOf(
                             AllocationInfo("A", hd30),
                             AllocationInfo("B", ld7_5),
                             AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", ld7_5))),
-                    Event(2200.kbps,
+                            AllocationInfo("D", ld7_5)
+                        )
+                    ),
+                    Event(
+                        2200.kbps,
                         listOf(
                             AllocationInfo("A", hd30),
                             AllocationInfo("B", ld15),
                             AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", ld7_5))),
-                    Event(2250.kbps,
+                            AllocationInfo("D", ld7_5)
+                        )
+                    ),
+                    Event(
+                        2250.kbps,
                         listOf(
                             AllocationInfo("A", hd30),
                             AllocationInfo("B", ld15),
                             AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld7_5))),
-                    Event(2300.kbps,
+                            AllocationInfo("D", ld7_5)
+                        )
+                    ),
+                    Event(
+                        2300.kbps,
                         listOf(
                             AllocationInfo("A", hd30),
                             AllocationInfo("B", ld15),
                             AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld15))),
-                    Event(2350.kbps,
+                            AllocationInfo("D", ld15)
+                        )
+                    ),
+                    Event(
+                        2350.kbps,
                         listOf(
                             AllocationInfo("A", hd30),
                             AllocationInfo("B", ld30),
                             AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld15))),
-                    Event(2400.kbps,
+                            AllocationInfo("D", ld15)
+                        )
+                    ),
+                    Event(
+                        2400.kbps,
                         listOf(
                             AllocationInfo("A", hd30),
                             AllocationInfo("B", ld30),
                             AllocationInfo("C", ld30),
-                            AllocationInfo("D", ld15))),
-                    Event(2460.kbps,
+                            AllocationInfo("D", ld15)
+                        )
+                    ),
+                    Event(
+                        2460.kbps,
                         listOf(
                             AllocationInfo("A", hd30),
                             AllocationInfo("B", ld30),
                             AllocationInfo("C", ld30),
-                            AllocationInfo("D", ld30))))
+                            AllocationInfo("D", ld30)
+                        )
+                    )
+                )
             }
             context("Tile view") {
                 bc.setEndpointOrdering("A", "B", "C", "D")
@@ -280,78 +338,115 @@ class BitrateControllerTest : ShouldSpec() {
                 bc.allocationHistory.removeIf { it.bwe <= 0.bps }
 
                 bc.allocationHistory.shouldMatchInOrder(
-                    Event(10.kbps,
-                          listOf(
-                              AllocationInfo("A", ld7_5, oversending = true),
-                              AllocationInfo("B", noVideo),
-                              AllocationInfo("C", noVideo),
-                              AllocationInfo("D", noVideo))),
-                    Event(100.kbps,
+                    Event(
+                        10.kbps,
+                        listOf(
+                            AllocationInfo("A", ld7_5, oversending = true),
+                            AllocationInfo("B", noVideo),
+                            AllocationInfo("C", noVideo),
+                            AllocationInfo("D", noVideo)
+                        )
+                    ),
+                    Event(
+                        100.kbps,
                         listOf(
                             AllocationInfo("A", ld7_5),
                             AllocationInfo("B", ld7_5),
                             AllocationInfo("C", noVideo),
-                            AllocationInfo("D", noVideo))),
-                    Event(150.kbps,
+                            AllocationInfo("D", noVideo)
+                        )
+                    ),
+                    Event(
+                        150.kbps,
                         listOf(
                             AllocationInfo("A", ld7_5),
                             AllocationInfo("B", ld7_5),
                             AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", noVideo))),
-                    Event(200.kbps,
+                            AllocationInfo("D", noVideo)
+                        )
+                    ),
+                    Event(
+                        200.kbps,
                         listOf(
                             AllocationInfo("A", ld7_5),
                             AllocationInfo("B", ld7_5),
                             AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", ld7_5))),
-                    Event(250.kbps,
+                            AllocationInfo("D", ld7_5)
+                        )
+                    ),
+                    Event(
+                        250.kbps,
                         listOf(
                             AllocationInfo("A", ld15),
                             AllocationInfo("B", ld7_5),
                             AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", ld7_5))),
-                    Event(300.kbps,
+                            AllocationInfo("D", ld7_5)
+                        )
+                    ),
+                    Event(
+                        300.kbps,
                         listOf(
                             AllocationInfo("A", ld15),
                             AllocationInfo("B", ld15),
                             AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", ld7_5))),
-                    Event(350.kbps,
+                            AllocationInfo("D", ld7_5)
+                        )
+                    ),
+                    Event(
+                        350.kbps,
                         listOf(
                             AllocationInfo("A", ld15),
                             AllocationInfo("B", ld15),
                             AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld7_5))),
-                    Event(400.kbps,
+                            AllocationInfo("D", ld7_5)
+                        )
+                    ),
+                    Event(
+                        400.kbps,
                         listOf(
                             AllocationInfo("A", ld15),
                             AllocationInfo("B", ld15),
                             AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld15))),
-                    Event(450.kbps,
+                            AllocationInfo("D", ld15)
+                        )
+                    ),
+                    Event(
+                        450.kbps,
                         listOf(
                             AllocationInfo("A", ld30),
                             AllocationInfo("B", ld15),
                             AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld15))),
-                    Event(500.kbps,
+                            AllocationInfo("D", ld15)
+                        )
+                    ),
+                    Event(
+                        500.kbps,
                         listOf(
                             AllocationInfo("A", ld30),
                             AllocationInfo("B", ld30),
                             AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld15))),
-                    Event(550.kbps,
+                            AllocationInfo("D", ld15)
+                        )
+                    ),
+                    Event(
+                        550.kbps,
                         listOf(
                             AllocationInfo("A", ld30),
                             AllocationInfo("B", ld30),
                             AllocationInfo("C", ld30),
-                            AllocationInfo("D", ld15))),
-                    Event(610.kbps,
+                            AllocationInfo("D", ld15)
+                        )
+                    ),
+                    Event(
+                        610.kbps,
                         listOf(
                             AllocationInfo("A", ld30),
                             AllocationInfo("B", ld30),
                             AllocationInfo("C", ld30),
-                            AllocationInfo("D", ld30))))
+                            AllocationInfo("D", ld30)
+                        )
+                    )
+                )
             }
         }
     }
@@ -372,7 +467,7 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
 
     var bwe = (-1).bps
         set(value) {
-            logger.debug("Setting bwe=${bwe}")
+            logger.debug("Setting bwe=$bwe")
             bc.bandwidthChanged(bwe.bps.toLong())
             field = value
         }
@@ -421,8 +516,8 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
         bc.endpointOrderingChanged(mutableListOf(*endpoints))
     }
 
-    fun setVideoConstraints(videoConstraints: ImmutableMap<String, VideoConstraints>)
-        = bc.setVideoConstraints(videoConstraints)
+    fun setVideoConstraints(videoConstraints: ImmutableMap<String, VideoConstraints>) =
+        bc.setVideoConstraints(videoConstraints)
 
     init {
         // The BC only starts working 10 seconds after it first received media, so fake that.
@@ -453,8 +548,8 @@ data class AllocationInfo(
     val bitrate: Bandwidth,
     val oversending: Boolean = false
 ) {
-    constructor(id: String, layer: RtpLayerDesc, oversending: Boolean = false)
-        : this(id, layer.height, layer.frameRate, layer.getBitrate(0), oversending)
+    constructor(id: String, layer: RtpLayerDesc, oversending: Boolean = false) :
+        this(id, layer.height, layer.frameRate, layer.getBitrate(0), oversending)
 
     override fun toString(): String =
         "\n\t[id=$id, height=$height, fps=$fps, bitrate=$bitrate oversending=$oversending]"
@@ -466,7 +561,8 @@ fun BitrateController.SourceBitrateAllocation.toEndpointAllocationInfo() =
         targetLayer?.height ?: 0,
         targetLayer?.frameRate ?: 0.0,
         targetLayer?.getBitrate(0) ?: 0.bps, // 0 is fine with our Mck RtpLayerDesc
-        oversending)
+        oversending
+    )
 
 /**
  * List the normal List<T>.shouldContainInOrder, but compare elements' contents.
@@ -503,14 +599,19 @@ fun createEndpoints(vararg ids: String): List<Endpoint> {
             createSource(
                 3 * i + 1,
                 3 * i + 2,
-                3 * i + 3))
+                3 * i + 3
+            )
+        )
     }
 }
 
-fun createSource(ssrc1: Int, ssrc2: Int, ssrc3: Int): MediaSourceDesc = MediaSourceDesc(arrayOf(
-    RtpEncodingDesc(ssrc1.toLong(), arrayOf(ld7_5, ld15, ld30)),
-    RtpEncodingDesc(ssrc2.toLong(), arrayOf(sd7_5, sd15, sd30)),
-    RtpEncodingDesc(ssrc3.toLong(), arrayOf(hd7_5, hd15, hd30))))
+fun createSource(ssrc1: Int, ssrc2: Int, ssrc3: Int): MediaSourceDesc = MediaSourceDesc(
+    arrayOf(
+        RtpEncodingDesc(ssrc1.toLong(), arrayOf(ld7_5, ld15, ld30)),
+        RtpEncodingDesc(ssrc2.toLong(), arrayOf(sd7_5, sd15, sd30)),
+        RtpEncodingDesc(ssrc3.toLong(), arrayOf(hd7_5, hd15, hd30))
+    )
+)
 
 fun createEncoding(ssrc: Int, height: Int, bitrate: Bandwidth): RtpEncodingDesc {
     // Give each temporal layer a third of the bitrate. The per-layer bitrates include dependencies
@@ -557,7 +658,7 @@ fun createLayer(
      * Note: this mock impl does not model the dependency layers, so the cumulative bitrate should be provided.
      */
     bitrate: Bandwidth
-) : RtpLayerDesc {
+): RtpLayerDesc {
     val eid = 0
     val sid = -1
 
