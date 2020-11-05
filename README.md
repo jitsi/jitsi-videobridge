@@ -5,7 +5,7 @@ Jitsi Media Transform contains classes for processing and transforming RTP and R
 We use ktlint for linting and autoformatting. The ktlint command-line utility
 can be installed by running:
 ```
-curl -sSLO https://github.com/pinterest/ktlint/releases/download/0.34.2/ktlint && chmod a+x ktlint && sudo mv ktlint /usr/local/bin/
+curl -sSLO https://github.com/pinterest/ktlint/releases/download/0.39.0/ktlint && chmod a+x ktlint && sudo mv ktlint /usr/local/bin/
 ```
 
 Or, on macOS with Homebrew:
@@ -22,10 +22,9 @@ ktlint --install-git-pre-commit-hook
 ```
 
 You can automatically update Intellij IDEA's formatting rules to to be
-compatible with ktlint. However, note that version 0.34.2 of ktlint will
-override any Java code style settings.
+compatible with ktlint:
 ```
 ktlint --apply-to-idea-project
 ```
 
-Autoformatting can be run by calling `mvn antrun:run@ktlint-format`.
+Autoformatting can be run by calling `ktlint -F`.
