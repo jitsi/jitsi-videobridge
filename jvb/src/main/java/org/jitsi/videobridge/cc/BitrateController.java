@@ -410,7 +410,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         debugState.put("effectiveVideoConstraints", effectiveConstraintsMap);
         debugState.put("lastN", lastN);
         debugState.put("supportsRtx", supportsRtx);
-        debugState.put("oversending", oversendingTimeTracker);
+        debugState.put("oversending", oversendingTimeTracker.getState());
         debugState.put("total_oversending_time_secs", oversendingTimeTracker.totalTimeOn().getSeconds());
         JSONObject adaptiveSourceProjectionsJson = new JSONObject();
         for (Map.Entry<Long, AdaptiveSourceProjection> entry : adaptiveSourceProjectionMap.entrySet())
