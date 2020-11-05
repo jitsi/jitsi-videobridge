@@ -628,6 +628,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         // constraints map which are used in layer suspension.
         Map<String, VideoConstraints> newEffectiveConstraints = new HashMap<>();
 
+        boolean changed = false;
         if (!sourceBitrateAllocations.isEmpty())
         {
             for (SourceBitrateAllocation sourceBitrateAllocation : sourceBitrateAllocations)
@@ -644,8 +645,8 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
 
                 if (adaptiveSourceProjection != null)
                 {
-                    adaptiveSourceProjection.setTargetIndex(sourceTargetIdx);
-                    adaptiveSourceProjection.setIdealIndex(sourceIdealIdx);
+                    changed |= adaptiveSourceProjection.setTargetIndex(sourceTargetIdx);
+                    changed |= adaptiveSourceProjection.setIdealIndex(sourceIdealIdx);
 
                     if (sourceBitrateAllocation.source != null && enableVideoQualityTracing)
                     {
@@ -694,6 +695,13 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
                 adaptiveSourceProjection.setTargetIndex(RtpLayerDesc.SUSPENDED_INDEX);
                 adaptiveSourceProjection.setIdealIndex(RtpLayerDesc.SUSPENDED_INDEX);
             }
+        }
+        if (changed)
+        {
+            eventEmitter.fireEvent(handler -> {
+                handler.allocationChanged(sourceBitrateAllocations);
+                return Unit.INSTANCE;
+            });
         }
 
         if (enableVideoQualityTracing)
@@ -945,8 +953,9 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
                         new SourceBitrateAllocation(
                             endpointMultiRank.endpoint.getID(),
                             source,
-                            endpointMultiRank.effectiveVideoConstraints));
-
+                            endpointMultiRank.effectiveVideoConstraints,
+                            clock,
+                            diagnosticContext));
                 }
 
 
@@ -1099,12 +1108,12 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
      *
      * @author George Politis
      */
-    private class SourceBitrateAllocation
+    public static class SourceBitrateAllocation
     {
         /**
          * The ID of the {@link Endpoint} that this instance pertains to.
          */
-        private final String endpointID;
+        public final String endpointID;
 
         /**
          * Indicates whether this {@link Endpoint} is on-stage/selected or not
@@ -1154,7 +1163,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
          * A boolean that indicates whether or not we're force pushing through
          * the bottleneck this source.
          */
-        private boolean oversending = false;
+        public boolean oversending = false;
 
         /**
          * the bitrate (in bps) of the layer that is the closest to the ideal
@@ -1178,7 +1187,9 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         private SourceBitrateAllocation(
             String endpointID,
             MediaSourceDesc source,
-            VideoConstraints effectiveVideoConstraints)
+            VideoConstraints effectiveVideoConstraints,
+            Clock clock,
+            DiagnosticContext diagnosticContext)
         {
             this.endpointID = endpointID;
             this.effectiveVideoConstraints = effectiveVideoConstraints;
@@ -1361,6 +1372,14 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         }
 
         /**
+         * Expose for testing only.
+         */
+        public RtpLayerDesc getTargetLayer()
+        {
+            return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx].layer : null;
+        }
+
+        /**
          * @return the bitrate (in bps) of the layer that is the closest to
          * the ideal and has a bitrate, or 0 if there are no layers with a
          * bitrate (for example, the endpoint is video muted).
@@ -1404,6 +1423,17 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
             // figures out the quality of the layer of the ideal rated
             // quality.
             return ratedIndices.length != 0 ? ratedIndices[ratedIndices.length - 1].layer.getIndex() : -1;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "[id=" + endpointID
+                    + " effectiveVideoConstraints=" + effectiveVideoConstraints
+                    + " ratedPreferredIdx=" + ratedPreferredIdx
+                    + " ratedTargetIdx=" + ratedTargetIdx
+                    + " oversending=" + oversending
+                    + " idealBitrate=" + idealBitrate;
         }
     }
 
@@ -1526,6 +1556,11 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
             @NotNull ImmutableMap<String, VideoConstraints> oldVideoConstraints,
             @NotNull ImmutableMap<String, VideoConstraints> newVideoConstraints);
         void keyframeNeeded(String endpointId, long ssrc);
+
+        /**
+         * This is exposed just for testing. Once we have tests, we can more confidently refactor it away.
+         */
+        default void allocationChanged(@NotNull List<SourceBitrateAllocation> allocation) {}
     }
 
     /**

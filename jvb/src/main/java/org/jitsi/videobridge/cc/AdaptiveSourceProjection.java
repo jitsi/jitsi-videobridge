@@ -143,10 +143,14 @@ public class AdaptiveSourceProjection
      * Update the ideal quality for this source projection.
      *
      * @param value the ideal quality for this source projection.
+     * @return {@code true} if the value was changed as a result of this call.
      */
-    void setIdealIndex(int value)
+    boolean setIdealIndex(int value)
     {
+        boolean changed = idealIndex != value;
         idealIndex = value;
+
+        return changed;
     }
 
     /**
@@ -163,10 +167,14 @@ public class AdaptiveSourceProjection
      * Sets the target index value for this source projection.
      *
      * @param value the new target index value for this source projection.
+     * @return {@code true} if the value was changed as a result of this call.
      */
-    void setTargetIndex(int value)
+    boolean setTargetIndex(int value)
     {
+        boolean changed = targetIndex != value;
         targetIndex = value;
+
+        return changed;
     }
 
     /**
