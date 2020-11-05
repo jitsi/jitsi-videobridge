@@ -565,7 +565,7 @@ fun BitrateController.SourceBitrateAllocation.toEndpointAllocationInfo() =
     )
 
 /**
- * List the normal List<T>.shouldContainInOrder, but compare elements' contents.
+ * Like the normal List<T>.shouldContainInOrder, but compare elements' contents.
  */
 fun <T> List<Collection<T>>.shouldContainInOrder(vararg ts: Collection<T>) {
     this.size shouldBe ts.size
@@ -612,15 +612,6 @@ fun createSource(ssrc1: Int, ssrc2: Int, ssrc3: Int): MediaSourceDesc = MediaSou
         RtpEncodingDesc(ssrc3.toLong(), arrayOf(hd7_5, hd15, hd30))
     )
 )
-
-fun createEncoding(ssrc: Int, height: Int, bitrate: Bandwidth): RtpEncodingDesc {
-    // Give each temporal layer a third of the bitrate. The per-layer bitrates include dependencies
-    val l0 = createLayer(tid = 0, height = height, frameRate = 7.5, bitrate = bitrate * 0.33)
-    val l1 = createLayer(tid = 1, height = height, frameRate = 15.0, bitrate = bitrate * 0.66)
-    val l2 = createLayer(tid = 2, height = height, frameRate = 30.0, bitrate = bitrate)
-
-    return RtpEncodingDesc(ssrc.toLong(), arrayOf(l0, l1, l2))
-}
 
 val bitrateLd = 150.kbps
 val bitrateSd = 500.kbps
