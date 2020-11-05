@@ -45,6 +45,7 @@ class BitrateControllerTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val logger = createLogger()
+    val clock = FakeClock()
 
     init {
 
@@ -105,222 +106,22 @@ class BitrateControllerTest : ShouldSpec() {
         }
 
         context("Allocation") {
-            val clock = FakeClock()
             val bc = BitrateControllerWrapper("A", "B", "C", "D", clock = clock)
             val vcc = VideoConstraintsCompatibility()
 
             context("Stage view") {
-                bc.setEndpointOrdering("A", "B", "C", "D")
-                bc.setVideoConstraints(vcc.stageView("A"))
+                context("When the dominant speaker is on stage") {
+                    bc.setEndpointOrdering("A", "B", "C", "D")
+                    bc.setVideoConstraints(vcc.stageView("A"))
 
-                for (bwe in 0..5_000_000 step 10_000) {
-                    bc.bwe = bwe.bps
-                    clock.elapse(100.ms)
+                    testStageView(bc)
                 }
-                logger.info("Forwarded endpoints history: ${bc.forwardedEndpointsHistory}")
-                logger.info("Effective constraints history: ${bc.effectiveConstraintsHistory}")
-                logger.info("Allocation history: ${bc.allocationHistory}")
+                context("When a non-dominant speaker is on stage") {
+                    bc.setEndpointOrdering("B", "A", "C", "D")
+                    bc.setVideoConstraints(vcc.stageView("A"))
 
-                // At this stage the purpose of this is just to document current behavior.
-                // TODO: The results with bwe==-1 are wrong.
-                bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
-                bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-                    emptyList(),
-                    listOf("A"),
-                    listOf("A", "B"),
-                    listOf("A", "B", "C"),
-                    listOf("A", "B", "C", "D")
-                )
-
-                // At this stage the purpose of this is just to document current behavior.
-                // TODO: the allocations for bwe=-1 are wrong.
-                bc.allocationHistory.removeIf { it.bwe < 0.bps }
-
-                bc.allocationHistory.shouldMatchInOrder(
-                    Event(
-                        0.kbps,
-                        listOf(
-                            // TODO: this looks like a bug. We should be oversending to A. In practice this is probably
-                            // harmless since it works as expected with bwe=10kbps.
-                            // AllocationInfo("A", ld7_5, oversending = true),
-                            AllocationInfo("A", noVideo),
-                            AllocationInfo("B", noVideo),
-                            AllocationInfo("C", noVideo),
-                            AllocationInfo("D", noVideo)
-                        )
-                    ),
-                    Event(
-                        10.kbps,
-                        listOf(
-                            AllocationInfo("A", ld7_5, oversending = true),
-                            AllocationInfo("B", noVideo),
-                            AllocationInfo("C", noVideo),
-                            AllocationInfo("D", noVideo)
-                        )
-                    ),
-                    Event(
-                        100.kbps,
-                        listOf(
-                            AllocationInfo("A", ld15),
-                            AllocationInfo("B", noVideo),
-                            AllocationInfo("C", noVideo),
-                            AllocationInfo("D", noVideo)
-                        )
-                    ),
-                    Event(
-                        150.kbps,
-                        listOf(
-                            AllocationInfo("A", ld30),
-                            AllocationInfo("B", noVideo),
-                            AllocationInfo("C", noVideo),
-                            AllocationInfo("D", noVideo)
-                        )
-                    ),
-                    Event(
-                        550.kbps,
-                        listOf(
-                            AllocationInfo("A", sd30),
-                            AllocationInfo("B", ld7_5),
-                            AllocationInfo("C", noVideo),
-                            AllocationInfo("D", noVideo)
-                        )
-                    ),
-                    Event(
-                        600.kbps,
-                        listOf(
-                            AllocationInfo("A", sd30),
-                            AllocationInfo("B", ld7_5),
-                            AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", noVideo)
-                        )
-                    ),
-                    Event(
-                        650.kbps,
-                        listOf(
-                            AllocationInfo("A", sd30),
-                            AllocationInfo("B", ld7_5),
-                            AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", ld7_5)
-                        )
-                    ),
-                    Event(
-                        700.kbps,
-                        listOf(
-                            AllocationInfo("A", sd30),
-                            AllocationInfo("B", ld15),
-                            AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", ld7_5)
-                        )
-                    ),
-                    Event(
-                        750.kbps,
-                        listOf(
-                            AllocationInfo("A", sd30),
-                            AllocationInfo("B", ld15),
-                            AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld7_5)
-                        )
-                    ),
-                    Event(
-                        800.kbps,
-                        listOf(
-                            AllocationInfo("A", sd30),
-                            AllocationInfo("B", ld15),
-                            AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld15)
-                        )
-                    ),
-                    Event(
-                        850.kbps,
-                        listOf(
-                            AllocationInfo("A", sd30),
-                            AllocationInfo("B", ld30),
-                            AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld15)
-                        )
-                    ),
-                    Event(
-                        900.kbps,
-                        listOf(
-                            AllocationInfo("A", sd30),
-                            AllocationInfo("B", ld30),
-                            AllocationInfo("C", ld30),
-                            AllocationInfo("D", ld15)
-                        )
-                    ),
-                    Event(
-                        960.kbps,
-                        listOf(
-                            AllocationInfo("A", sd30),
-                            AllocationInfo("B", ld30),
-                            AllocationInfo("C", ld30),
-                            AllocationInfo("D", ld30)
-                        )
-                    ),
-                    Event(
-                        2150.kbps,
-                        listOf(
-                            AllocationInfo("A", hd30),
-                            AllocationInfo("B", ld7_5),
-                            AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", ld7_5)
-                        )
-                    ),
-                    Event(
-                        2200.kbps,
-                        listOf(
-                            AllocationInfo("A", hd30),
-                            AllocationInfo("B", ld15),
-                            AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", ld7_5)
-                        )
-                    ),
-                    Event(
-                        2250.kbps,
-                        listOf(
-                            AllocationInfo("A", hd30),
-                            AllocationInfo("B", ld15),
-                            AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld7_5)
-                        )
-                    ),
-                    Event(
-                        2300.kbps,
-                        listOf(
-                            AllocationInfo("A", hd30),
-                            AllocationInfo("B", ld15),
-                            AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld15)
-                        )
-                    ),
-                    Event(
-                        2350.kbps,
-                        listOf(
-                            AllocationInfo("A", hd30),
-                            AllocationInfo("B", ld30),
-                            AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld15)
-                        )
-                    ),
-                    Event(
-                        2400.kbps,
-                        listOf(
-                            AllocationInfo("A", hd30),
-                            AllocationInfo("B", ld30),
-                            AllocationInfo("C", ld30),
-                            AllocationInfo("D", ld15)
-                        )
-                    ),
-                    Event(
-                        2460.kbps,
-                        listOf(
-                            AllocationInfo("A", hd30),
-                            AllocationInfo("B", ld30),
-                            AllocationInfo("C", ld30),
-                            AllocationInfo("D", ld30)
-                        )
-                    )
-                )
+                    testStageView(bc)
+                }
             }
             context("Tile view") {
                 bc.setEndpointOrdering("A", "B", "C", "D")
@@ -470,6 +271,218 @@ class BitrateControllerTest : ShouldSpec() {
                 )
             }
         }
+    }
+
+    private fun testStageView(bc: BitrateControllerWrapper) {
+        for (bwe in 0..5_000_000 step 10_000) {
+            bc.bwe = bwe.bps
+            clock.elapse(100.ms)
+        }
+        logger.info("Forwarded endpoints history: ${bc.forwardedEndpointsHistory}")
+        logger.info("Effective constraints history: ${bc.effectiveConstraintsHistory}")
+        logger.info("Allocation history: ${bc.allocationHistory}")
+
+        // At this stage the purpose of this is just to document current behavior.
+        // TODO: The results with bwe==-1 are wrong.
+        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
+        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
+            emptyList(),
+            listOf("A"),
+            listOf("A", "B"),
+            listOf("A", "B", "C"),
+            listOf("A", "B", "C", "D")
+        )
+
+        // At this stage the purpose of this is just to document current behavior.
+        // TODO: the allocations for bwe=-1 are wrong.
+        bc.allocationHistory.removeIf { it.bwe < 0.bps }
+
+        bc.allocationHistory.shouldMatchInOrder(
+            Event(
+                0.kbps,
+                listOf(
+                    // TODO: this looks like a bug. We should be oversending to A. In practice this is probably
+                    // harmless since it works as expected with bwe=10kbps.
+                    // AllocationInfo("A", ld7_5, oversending = true),
+                    AllocationInfo("A", noVideo),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                10.kbps,
+                listOf(
+                    AllocationInfo("A", ld7_5, oversending = true),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                100.kbps,
+                listOf(
+                    AllocationInfo("A", ld15),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                150.kbps,
+                listOf(
+                    AllocationInfo("A", ld30),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                550.kbps,
+                listOf(
+                    AllocationInfo("A", sd30),
+                    AllocationInfo("B", ld7_5),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                600.kbps,
+                listOf(
+                    AllocationInfo("A", sd30),
+                    AllocationInfo("B", ld7_5),
+                    AllocationInfo("C", ld7_5),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                650.kbps,
+                listOf(
+                    AllocationInfo("A", sd30),
+                    AllocationInfo("B", ld7_5),
+                    AllocationInfo("C", ld7_5),
+                    AllocationInfo("D", ld7_5)
+                )
+            ),
+            Event(
+                700.kbps,
+                listOf(
+                    AllocationInfo("A", sd30),
+                    AllocationInfo("B", ld15),
+                    AllocationInfo("C", ld7_5),
+                    AllocationInfo("D", ld7_5)
+                )
+            ),
+            Event(
+                750.kbps,
+                listOf(
+                    AllocationInfo("A", sd30),
+                    AllocationInfo("B", ld15),
+                    AllocationInfo("C", ld15),
+                    AllocationInfo("D", ld7_5)
+                )
+            ),
+            Event(
+                800.kbps,
+                listOf(
+                    AllocationInfo("A", sd30),
+                    AllocationInfo("B", ld15),
+                    AllocationInfo("C", ld15),
+                    AllocationInfo("D", ld15)
+                )
+            ),
+            Event(
+                850.kbps,
+                listOf(
+                    AllocationInfo("A", sd30),
+                    AllocationInfo("B", ld30),
+                    AllocationInfo("C", ld15),
+                    AllocationInfo("D", ld15)
+                )
+            ),
+            Event(
+                900.kbps,
+                listOf(
+                    AllocationInfo("A", sd30),
+                    AllocationInfo("B", ld30),
+                    AllocationInfo("C", ld30),
+                    AllocationInfo("D", ld15)
+                )
+            ),
+            Event(
+                960.kbps,
+                listOf(
+                    AllocationInfo("A", sd30),
+                    AllocationInfo("B", ld30),
+                    AllocationInfo("C", ld30),
+                    AllocationInfo("D", ld30)
+                )
+            ),
+            Event(
+                2150.kbps,
+                listOf(
+                    AllocationInfo("A", hd30),
+                    AllocationInfo("B", ld7_5),
+                    AllocationInfo("C", ld7_5),
+                    AllocationInfo("D", ld7_5)
+                )
+            ),
+            Event(
+                2200.kbps,
+                listOf(
+                    AllocationInfo("A", hd30),
+                    AllocationInfo("B", ld15),
+                    AllocationInfo("C", ld7_5),
+                    AllocationInfo("D", ld7_5)
+                )
+            ),
+            Event(
+                2250.kbps,
+                listOf(
+                    AllocationInfo("A", hd30),
+                    AllocationInfo("B", ld15),
+                    AllocationInfo("C", ld15),
+                    AllocationInfo("D", ld7_5)
+                )
+            ),
+            Event(
+                2300.kbps,
+                listOf(
+                    AllocationInfo("A", hd30),
+                    AllocationInfo("B", ld15),
+                    AllocationInfo("C", ld15),
+                    AllocationInfo("D", ld15)
+                )
+            ),
+            Event(
+                2350.kbps,
+                listOf(
+                    AllocationInfo("A", hd30),
+                    AllocationInfo("B", ld30),
+                    AllocationInfo("C", ld15),
+                    AllocationInfo("D", ld15)
+                )
+            ),
+            Event(
+                2400.kbps,
+                listOf(
+                    AllocationInfo("A", hd30),
+                    AllocationInfo("B", ld30),
+                    AllocationInfo("C", ld30),
+                    AllocationInfo("D", ld15)
+                )
+            ),
+            Event(
+                2460.kbps,
+                listOf(
+                    AllocationInfo("A", hd30),
+                    AllocationInfo("B", ld30),
+                    AllocationInfo("C", ld30),
+                    AllocationInfo("D", ld30)
+                )
+            )
+        )
+
     }
 }
 
