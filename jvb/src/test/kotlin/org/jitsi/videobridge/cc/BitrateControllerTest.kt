@@ -119,6 +119,7 @@ class BitrateControllerTest : ShouldSpec() {
                 }
                 logger.info("Forwarded endpoints history: ${bc.forwardedEndpointsHistory}")
                 logger.info("Effective constraints history: ${bc.effectiveConstraintsHistory}")
+                logger.info("Allocation history: ${bc.allocationHistory}")
 
                 // At this stage the purpose of this is just to document current behavior.
                 // The change from [A] to [] looks like a bug
@@ -130,6 +131,126 @@ class BitrateControllerTest : ShouldSpec() {
                     listOf("A", "B", "C"),
                     listOf("A", "B", "C", "D")
                 )
+
+                // At this stage the purpose of this is just to document current behavior.
+                // Skip the allocations for bwe=-1, bwe=0. They seem like a bug.
+                bc.allocationHistory.removeIf { it.bwe <= 0.bps }
+
+                bc.allocationHistory.shouldMatchInOrder(
+                    Event(10.kbps,
+                        listOf(
+                            AllocationInfo("A", ld7_5, oversending = true),
+                            AllocationInfo("B", noVideo),
+                            AllocationInfo("C", noVideo),
+                            AllocationInfo("D", noVideo))),
+                    Event(100.kbps,
+                        listOf(
+                            AllocationInfo("A", ld15),
+                            AllocationInfo("B", noVideo),
+                            AllocationInfo("C", noVideo),
+                            AllocationInfo("D", noVideo))),
+                    Event(150.kbps,
+                        listOf(
+                            AllocationInfo("A", ld30),
+                            AllocationInfo("B", noVideo),
+                            AllocationInfo("C", noVideo),
+                            AllocationInfo("D", noVideo))),
+                    Event(550.kbps,
+                        listOf(
+                            AllocationInfo("A", sd30),
+                            AllocationInfo("B", ld7_5),
+                            AllocationInfo("C", noVideo),
+                            AllocationInfo("D", noVideo))),
+                    Event(600.kbps,
+                        listOf(
+                            AllocationInfo("A", sd30),
+                            AllocationInfo("B", ld7_5),
+                            AllocationInfo("C", ld7_5),
+                            AllocationInfo("D", noVideo))),
+                    Event(650.kbps,
+                        listOf(
+                            AllocationInfo("A", sd30),
+                            AllocationInfo("B", ld7_5),
+                            AllocationInfo("C", ld7_5),
+                            AllocationInfo("D", ld7_5))),
+                    Event(700.kbps,
+                        listOf(
+                            AllocationInfo("A", sd30),
+                            AllocationInfo("B", ld15),
+                            AllocationInfo("C", ld7_5),
+                            AllocationInfo("D", ld7_5))),
+                    Event(750.kbps,
+                        listOf(
+                            AllocationInfo("A", sd30),
+                            AllocationInfo("B", ld15),
+                            AllocationInfo("C", ld15),
+                            AllocationInfo("D", ld7_5))),
+                    Event(800.kbps,
+                        listOf(
+                            AllocationInfo("A", sd30),
+                            AllocationInfo("B", ld15),
+                            AllocationInfo("C", ld15),
+                            AllocationInfo("D", ld15))),
+                    Event(850.kbps,
+                        listOf(
+                            AllocationInfo("A", sd30),
+                            AllocationInfo("B", ld30),
+                            AllocationInfo("C", ld15),
+                            AllocationInfo("D", ld15))),
+                    Event(900.kbps,
+                        listOf(
+                            AllocationInfo("A", sd30),
+                            AllocationInfo("B", ld30),
+                            AllocationInfo("C", ld30),
+                            AllocationInfo("D", ld15))),
+                    Event(960.kbps,
+                        listOf(
+                            AllocationInfo("A", sd30),
+                            AllocationInfo("B", ld30),
+                            AllocationInfo("C", ld30),
+                            AllocationInfo("D", ld30))),
+                    Event(2150.kbps,
+                        listOf(
+                            AllocationInfo("A", hd30),
+                            AllocationInfo("B", ld7_5),
+                            AllocationInfo("C", ld7_5),
+                            AllocationInfo("D", ld7_5))),
+                    Event(2200.kbps,
+                        listOf(
+                            AllocationInfo("A", hd30),
+                            AllocationInfo("B", ld15),
+                            AllocationInfo("C", ld7_5),
+                            AllocationInfo("D", ld7_5))),
+                    Event(2250.kbps,
+                        listOf(
+                            AllocationInfo("A", hd30),
+                            AllocationInfo("B", ld15),
+                            AllocationInfo("C", ld15),
+                            AllocationInfo("D", ld7_5))),
+                    Event(2300.kbps,
+                        listOf(
+                            AllocationInfo("A", hd30),
+                            AllocationInfo("B", ld15),
+                            AllocationInfo("C", ld15),
+                            AllocationInfo("D", ld15))),
+                    Event(2350.kbps,
+                        listOf(
+                            AllocationInfo("A", hd30),
+                            AllocationInfo("B", ld30),
+                            AllocationInfo("C", ld15),
+                            AllocationInfo("D", ld15))),
+                    Event(2400.kbps,
+                        listOf(
+                            AllocationInfo("A", hd30),
+                            AllocationInfo("B", ld30),
+                            AllocationInfo("C", ld30),
+                            AllocationInfo("D", ld15))),
+                    Event(2460.kbps,
+                        listOf(
+                            AllocationInfo("A", hd30),
+                            AllocationInfo("B", ld30),
+                            AllocationInfo("C", ld30),
+                            AllocationInfo("D", ld30))))
             }
             context("Tile view") {
                 bc.setEndpointOrdering("A", "B", "C", "D")
@@ -141,6 +262,7 @@ class BitrateControllerTest : ShouldSpec() {
                 }
                 logger.info("Forwarded endpoints history: ${bc.forwardedEndpointsHistory}")
                 logger.info("Effective constraints history: ${bc.effectiveConstraintsHistory}")
+                logger.info("Allocation history: ${bc.allocationHistory}")
 
                 // At this stage the purpose of this is just to document current behavior.
                 // The change from [A] to [] looks like a bug
@@ -152,8 +274,95 @@ class BitrateControllerTest : ShouldSpec() {
                     listOf("A", "B", "C"),
                     listOf("A", "B", "C", "D")
                 )
+
+                // At this stage the purpose of this is just to document current behavior.
+                // Skip the allocations for bwe=-1, bwe=0. They seem like a bug.
+                bc.allocationHistory.removeIf { it.bwe <= 0.bps }
+
+                bc.allocationHistory.shouldMatchInOrder(
+                    Event(10.kbps,
+                          listOf(
+                              AllocationInfo("A", ld7_5, oversending = true),
+                              AllocationInfo("B", noVideo),
+                              AllocationInfo("C", noVideo),
+                              AllocationInfo("D", noVideo))),
+                    Event(100.kbps,
+                        listOf(
+                            AllocationInfo("A", ld7_5),
+                            AllocationInfo("B", ld7_5),
+                            AllocationInfo("C", noVideo),
+                            AllocationInfo("D", noVideo))),
+                    Event(150.kbps,
+                        listOf(
+                            AllocationInfo("A", ld7_5),
+                            AllocationInfo("B", ld7_5),
+                            AllocationInfo("C", ld7_5),
+                            AllocationInfo("D", noVideo))),
+                    Event(200.kbps,
+                        listOf(
+                            AllocationInfo("A", ld7_5),
+                            AllocationInfo("B", ld7_5),
+                            AllocationInfo("C", ld7_5),
+                            AllocationInfo("D", ld7_5))),
+                    Event(250.kbps,
+                        listOf(
+                            AllocationInfo("A", ld15),
+                            AllocationInfo("B", ld7_5),
+                            AllocationInfo("C", ld7_5),
+                            AllocationInfo("D", ld7_5))),
+                    Event(300.kbps,
+                        listOf(
+                            AllocationInfo("A", ld15),
+                            AllocationInfo("B", ld15),
+                            AllocationInfo("C", ld7_5),
+                            AllocationInfo("D", ld7_5))),
+                    Event(350.kbps,
+                        listOf(
+                            AllocationInfo("A", ld15),
+                            AllocationInfo("B", ld15),
+                            AllocationInfo("C", ld15),
+                            AllocationInfo("D", ld7_5))),
+                    Event(400.kbps,
+                        listOf(
+                            AllocationInfo("A", ld15),
+                            AllocationInfo("B", ld15),
+                            AllocationInfo("C", ld15),
+                            AllocationInfo("D", ld15))),
+                    Event(450.kbps,
+                        listOf(
+                            AllocationInfo("A", ld30),
+                            AllocationInfo("B", ld15),
+                            AllocationInfo("C", ld15),
+                            AllocationInfo("D", ld15))),
+                    Event(500.kbps,
+                        listOf(
+                            AllocationInfo("A", ld30),
+                            AllocationInfo("B", ld30),
+                            AllocationInfo("C", ld15),
+                            AllocationInfo("D", ld15))),
+                    Event(550.kbps,
+                        listOf(
+                            AllocationInfo("A", ld30),
+                            AllocationInfo("B", ld30),
+                            AllocationInfo("C", ld30),
+                            AllocationInfo("D", ld15))),
+                    Event(610.kbps,
+                        listOf(
+                            AllocationInfo("A", ld30),
+                            AllocationInfo("B", ld30),
+                            AllocationInfo("C", ld30),
+                            AllocationInfo("D", ld30))))
             }
         }
+    }
+}
+
+fun List<Event<List<AllocationInfo>>>.shouldMatchInOrder(vararg events: Event<List<AllocationInfo>>) {
+    events.size shouldBe size
+    events.forEachIndexed { i, it ->
+        this[i].bwe shouldBe it.bwe
+        this[i].event.shouldContainExactly(it.event)
+        // Ignore this.time
     }
 }
 
@@ -171,12 +380,13 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
     // Save the output.
     val effectiveConstraintsHistory: History<ImmutableMap<String, VideoConstraints>> = mutableListOf()
     val forwardedEndpointsHistory: History<Collection<String>> = mutableListOf()
+    val allocationHistory: History<List<AllocationInfo>> = mutableListOf()
 
     val bc = BitrateController<Endpoint>(
         "destinationEndpoint",
         object : BitrateController.EventHandler {
             override fun forwardedEndpointsChanged(forwardedEndpoints: Collection<String>) {
-                Event(clock.instant(), bwe, forwardedEndpoints).apply {
+                Event(bwe, forwardedEndpoints, clock.instant()).apply {
                     logger.info("Forwarded endpoints changed: $this")
                     forwardedEndpointsHistory.add(this)
                 }
@@ -186,13 +396,20 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
                 oldVideoConstraints: ImmutableMap<String, VideoConstraints>,
                 newVideoConstraints: ImmutableMap<String, VideoConstraints>
             ) {
-                Event(clock.instant(), bwe, newVideoConstraints).apply {
+                Event(bwe, newVideoConstraints, clock.instant()).apply {
                     logger.info("Effective constraints changed: $this")
                     effectiveConstraintsHistory.add(this)
                 }
             }
 
             override fun keyframeNeeded(endpointId: String?, ssrc: Long) { }
+
+            override fun allocationChanged(allocation: List<BitrateController.SourceBitrateAllocation>) {
+                Event(bwe, allocation.map { it.toEndpointAllocationInfo() }, clock.instant()).apply {
+                    logger.info("Allocation changed: $this")
+                    allocationHistory.add(this)
+                }
+            }
         },
         { endpoints },
         DiagnosticContext(),
@@ -219,13 +436,37 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
 
 typealias History<T> = MutableList<Event<T>>
 data class Event<T>(
-    val time: Instant,
     val bwe: Bandwidth,
-    val event: T) {
-    override fun toString(): String {
-        return "\n[time=${time.toEpochMilli()} bwe=$bwe] $event"
-    }
+    val event: T,
+    val time: Instant = Instant.MIN
+) {
+    override fun toString(): String = "\n[time=${time.toEpochMilli()} bwe=$bwe] $event"
 }
+
+/**
+ * Describe the layer that is currently forwarded to an endpoint in a human-readable way.
+ */
+data class AllocationInfo(
+    val id: String,
+    val height: Int,
+    val fps: Double,
+    val bitrate: Bandwidth,
+    val oversending: Boolean = false
+) {
+    constructor(id: String, layer: RtpLayerDesc, oversending: Boolean = false)
+        : this(id, layer.height, layer.frameRate, layer.getBitrate(0), oversending)
+
+    override fun toString(): String =
+        "\n\t[id=$id, height=$height, fps=$fps, bitrate=$bitrate oversending=$oversending]"
+}
+
+fun BitrateController.SourceBitrateAllocation.toEndpointAllocationInfo() =
+    AllocationInfo(
+        endpointID,
+        targetLayer?.height ?: 0,
+        targetLayer?.frameRate ?: 0.0,
+        targetLayer?.getBitrate(0) ?: 0.bps, // 0 is fine with our Mck RtpLayerDesc
+        oversending)
 
 /**
  * List the normal List<T>.shouldContainInOrder, but compare elements' contents.
@@ -267,9 +508,9 @@ fun createEndpoints(vararg ids: String): List<Endpoint> {
 }
 
 fun createSource(ssrc1: Int, ssrc2: Int, ssrc3: Int): MediaSourceDesc = MediaSourceDesc(arrayOf(
-    createEncoding(ssrc1, 180, 150.kbps),
-    createEncoding(ssrc2, 360, 500.kbps),
-    createEncoding(ssrc3, 720, 2000.kbps)))
+    RtpEncodingDesc(ssrc1.toLong(), arrayOf(ld7_5, ld15, ld30)),
+    RtpEncodingDesc(ssrc2.toLong(), arrayOf(sd7_5, sd15, sd30)),
+    RtpEncodingDesc(ssrc3.toLong(), arrayOf(hd7_5, hd15, hd30))))
 
 fun createEncoding(ssrc: Int, height: Int, bitrate: Bandwidth): RtpEncodingDesc {
     // Give each temporal layer a third of the bitrate. The per-layer bitrates include dependencies
@@ -279,6 +520,34 @@ fun createEncoding(ssrc: Int, height: Int, bitrate: Bandwidth): RtpEncodingDesc 
 
     return RtpEncodingDesc(ssrc.toLong(), arrayOf(l0, l1, l2))
 }
+
+val bitrateLd = 150.kbps
+val bitrateSd = 500.kbps
+val bitrateHd = 2000.kbps
+
+val ld7_5
+    get() = createLayer(tid = 0, height = 180, frameRate = 7.5, bitrate = bitrateLd * 0.33)
+val ld15
+    get() = createLayer(tid = 1, height = 180, frameRate = 15.0, bitrate = bitrateLd * 0.66)
+val ld30
+    get() = createLayer(tid = 2, height = 180, frameRate = 30.0, bitrate = bitrateLd)
+
+val sd7_5
+    get() = createLayer(tid = 0, height = 360, frameRate = 7.5, bitrate = bitrateSd * 0.33)
+val sd15
+    get() = createLayer(tid = 1, height = 360, frameRate = 15.0, bitrate = bitrateSd * 0.66)
+val sd30
+    get() = createLayer(tid = 2, height = 360, frameRate = 30.0, bitrate = bitrateSd)
+
+val hd7_5
+    get() = createLayer(tid = 0, height = 720, frameRate = 7.5, bitrate = bitrateHd * 0.33)
+val hd15
+    get() = createLayer(tid = 1, height = 720, frameRate = 15.0, bitrate = bitrateHd * 0.66)
+val hd30
+    get() = createLayer(tid = 2, height = 720, frameRate = 30.0, bitrate = bitrateHd)
+
+val noVideo
+    get() = createLayer(tid = -1, height = 0, frameRate = 0.0, bitrate = 0.bps)
 
 fun createLayer(
     tid: Int,
