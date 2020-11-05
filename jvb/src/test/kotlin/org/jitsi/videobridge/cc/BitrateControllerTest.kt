@@ -122,9 +122,9 @@ class BitrateControllerTest : ShouldSpec() {
                 logger.info("Allocation history: ${bc.allocationHistory}")
 
                 // At this stage the purpose of this is just to document current behavior.
-                // The change from [A] to [] looks like a bug
+                // TODO: The results with bwe==-1 are wrong.
+                bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
                 bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-                    listOf("A"),
                     emptyList(),
                     listOf("A"),
                     listOf("A", "B"),
@@ -133,10 +133,22 @@ class BitrateControllerTest : ShouldSpec() {
                 )
 
                 // At this stage the purpose of this is just to document current behavior.
-                // Skip the allocations for bwe=-1, bwe=0. They seem like a bug.
-                bc.allocationHistory.removeIf { it.bwe <= 0.bps }
+                // TODO: the allocations for bwe=-1 are wrong.
+                bc.allocationHistory.removeIf { it.bwe < 0.bps }
 
                 bc.allocationHistory.shouldMatchInOrder(
+                    Event(
+                        0.kbps,
+                        listOf(
+                            // TODO: this looks like a bug. We should be oversending to A. In practice this is probably
+                            // harmless since it works as expected with bwe=10kbps.
+                            // AllocationInfo("A", ld7_5, oversending = true),
+                            AllocationInfo("A", noVideo),
+                            AllocationInfo("B", noVideo),
+                            AllocationInfo("C", noVideo),
+                            AllocationInfo("D", noVideo)
+                        )
+                    ),
                     Event(
                         10.kbps,
                         listOf(
@@ -323,9 +335,9 @@ class BitrateControllerTest : ShouldSpec() {
                 logger.info("Allocation history: ${bc.allocationHistory}")
 
                 // At this stage the purpose of this is just to document current behavior.
-                // The change from [A] to [] looks like a bug
+                // TODO: The results with bwe==-1 are wrong.
+                bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
                 bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-                    listOf("A"),
                     emptyList(),
                     listOf("A"),
                     listOf("A", "B"),
@@ -334,10 +346,19 @@ class BitrateControllerTest : ShouldSpec() {
                 )
 
                 // At this stage the purpose of this is just to document current behavior.
-                // Skip the allocations for bwe=-1, bwe=0. They seem like a bug.
-                bc.allocationHistory.removeIf { it.bwe <= 0.bps }
+                // TODO: the allocations for bwe=-1 are wrong.
+                bc.allocationHistory.removeIf { it.bwe < 0.bps }
 
                 bc.allocationHistory.shouldMatchInOrder(
+                    Event(
+                        0.kbps,
+                        listOf(
+                            AllocationInfo("A", noVideo),
+                            AllocationInfo("B", noVideo),
+                            AllocationInfo("C", noVideo),
+                            AllocationInfo("D", noVideo)
+                        )
+                    ),
                     Event(
                         10.kbps,
                         listOf(
