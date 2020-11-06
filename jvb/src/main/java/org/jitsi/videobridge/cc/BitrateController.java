@@ -826,7 +826,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
             return sourceBitrateAllocations;
         }
 
-        long oldMaxBandwidth = 0;
+        long oldMaxBandwidth = -1;
 
         int oldStateLen = 0;
         int[] oldRatedTargetIndices = new int[sourceBitrateAllocations.size()];
