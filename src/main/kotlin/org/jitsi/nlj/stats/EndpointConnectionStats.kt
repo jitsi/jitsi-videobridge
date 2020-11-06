@@ -22,6 +22,7 @@ import java.time.Instant
 import java.util.Collections
 import java.util.concurrent.CopyOnWriteArrayList
 import org.jitsi.nlj.rtcp.RtcpListener
+import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.nlj.util.toDoubleMillis
@@ -56,12 +57,23 @@ class EndpointConnectionStats(
         val rtt: Double,
         val incomingLossStats: LossStatsSnapshot,
         val outgoingLossStats: LossStatsSnapshot
-    )
+    ) {
+        fun toJson() = OrderedJsonObject().apply {
+            put("rtt", rtt)
+            put("incoming_loss_stats", incomingLossStats.toJson())
+            put("outgoing_loss_stats", outgoingLossStats.toJson())
+        }
+    }
 
     data class LossStatsSnapshot(
         val packetsLost: Long,
         val packetsReceived: Long
-    )
+    ) {
+        fun toJson() = OrderedJsonObject().apply {
+            put("packets_lost", packetsLost)
+            put("packets_received", packetsReceived)
+        }
+    }
 
     private val endpointConnectionStatsListeners: MutableList<EndpointConnectionStatsListener> = CopyOnWriteArrayList()
 

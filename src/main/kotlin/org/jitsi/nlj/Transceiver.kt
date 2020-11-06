@@ -286,7 +286,7 @@ class Transceiver(
         return NodeStatsBlock("Transceiver $id").apply {
             addBlock(streamInformationStore.getNodeStats())
             addBlock(mediaSources.getNodeStats())
-            addString("endpointConnectionStats", endpointConnectionStats.getSnapshot().toString())
+            addJson("endpointConnectionStats", endpointConnectionStats.getSnapshot().toJson())
             addBlock(rtpReceiver.getNodeStats())
             addBlock(rtpSender.getNodeStats())
         }

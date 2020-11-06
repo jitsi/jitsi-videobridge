@@ -18,7 +18,6 @@ package org.jitsi.nlj.stats
 
 import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.nlj.util.appendLnIndent
-import org.json.simple.JSONObject
 
 class NodeStatsBlock(val name: String) {
     private val stats = mutableMapOf<String, Any>()
@@ -59,16 +58,9 @@ class NodeStatsBlock(val name: String) {
     }
 
     /**
-     * Adds a block with a given name from a JSON object.
+     * Adds a block with a given name from a from a JSON-ish key-value object map.
      */
-    fun addJson(name: String, json: JSONObject) {
-        addBlock(fromJson(name, json))
-    }
-
-    /**
-     * Adds a block with a given name from an ordered JSON object.
-     */
-    fun addJson(name: String, json: OrderedJsonObject) {
+    fun addJson(name: String, json: Map<*, *>) {
         addBlock(fromJson(name, json))
     }
 
@@ -182,20 +174,14 @@ class NodeStatsBlock(val name: String) {
         private const val AGGREGATES = "_aggregates"
 
         /**
-         * Creates a [NodeStatsBlock] from a JSON object. It's shallow and uses only strings.
+         * Creates a [NodeStatsBlock] from a JSON-ish key-value object map. It recognizes recursively included objects.
          */
-        fun fromJson(name: String, json: JSONObject): NodeStatsBlock = NodeStatsBlock(name).apply {
-            json.keys.forEach {
-                addString(it!!.toString(), json[it].toString())
-            }
-        }
-
-        /**
-         * Creates a [NodeStatsBlock] from an ordered JSON object. It's shallow and uses only strings.
-         */
-        fun fromJson(name: String, json: OrderedJsonObject): NodeStatsBlock = NodeStatsBlock(name).apply {
-            json.keys.forEach {
-                addString(it.toString(), json[it].toString())
+        fun fromJson(name: String, json: Map<*, *>): NodeStatsBlock = NodeStatsBlock(name).apply {
+            json.entries.forEach { (key, value) ->
+                when (value) {
+                    is Map<*, *> -> addBlock(fromJson(key.toString(), value))
+                    else -> addString(key.toString(), value.toString())
+                }
             }
         }
     }

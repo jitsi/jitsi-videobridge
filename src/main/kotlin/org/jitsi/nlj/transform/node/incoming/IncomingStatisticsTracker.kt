@@ -21,6 +21,7 @@ import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.stats.JitterStats
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
+import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.RtpUtils.Companion.convertRtpTimestampToMs
@@ -56,7 +57,7 @@ class IncomingStatisticsTracker(
         return super.getNodeStats().apply {
             val stats = getSnapshot()
             stats.ssrcStats.forEach { (ssrc, streamStats) ->
-                addString(ssrc.toString(), streamStats.toString())
+                addJson(ssrc.toString(), streamStats.toJson())
             }
         }
     }
@@ -262,6 +263,16 @@ class IncomingSsrcStats(
                 0
             else
                 (((numLostPacketsInterval shl 8) / numExpectedPacketsInterval.toDouble())).toInt()
+        }
+
+        fun toJson() = OrderedJsonObject().apply {
+            put("num_received_packets", numReceivedPackets)
+            put("num_received_bytes", numReceivedBytes)
+            put("max_seq_num", maxSeqNum)
+            put("seq_num_cycles", seqNumCycles)
+            put("num_expected_packets", numExpectedPackets)
+            put("cumulative_packets_lost", cumulativePacketsLost)
+            put("jitter", jitter)
         }
     }
 }
