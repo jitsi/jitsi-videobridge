@@ -45,7 +45,8 @@ class BitrateControllerTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val logger = createLogger()
-    val clock = FakeClock()
+    private val clock = FakeClock()
+    private val bc = BitrateControllerWrapper("A", "B", "C", "D", clock = clock)
 
     init {
 
@@ -106,174 +107,80 @@ class BitrateControllerTest : ShouldSpec() {
         }
 
         context("Allocation") {
-            val bc = BitrateControllerWrapper("A", "B", "C", "D", clock = clock)
             val vcc = VideoConstraintsCompatibility()
 
             context("Stage view") {
-                context("When the dominant speaker is on stage") {
+                context("When LastN is not set") {
+                    context("and the dominant speaker is on stage") {
+                        bc.setEndpointOrdering("A", "B", "C", "D")
+                        bc.setVideoConstraints(vcc.stageView("A"))
+                        runBweLoop()
+
+                        verifyStageView()
+                    }
+                    context("and a non-dominant speaker is on stage") {
+                        bc.setEndpointOrdering("B", "A", "C", "D")
+                        bc.setVideoConstraints(vcc.stageView("A"))
+                        runBweLoop()
+
+                        verifyStageView()
+                    }
+                }
+                context("When LastN=0") {
+                    // LastN=0 is used when the client goes in "audio-only" mode.
                     bc.setEndpointOrdering("A", "B", "C", "D")
                     bc.setVideoConstraints(vcc.stageView("A"))
+                    bc.setLastN(0)
+                    runBweLoop()
 
-                    testStageView(bc)
+                    verifyLastN0()
                 }
-                context("When a non-dominant speaker is on stage") {
-                    bc.setEndpointOrdering("B", "A", "C", "D")
-                    bc.setVideoConstraints(vcc.stageView("A"))
+                context("When LastN=1") {
+                    // LastN=1 is used when the client goes in "audio-only" mode, but someone starts a screenshare.
+                    context("and the dominant speaker is on-stage") {
+                        bc.setEndpointOrdering("A", "B", "C", "D")
+                        bc.setVideoConstraints(vcc.stageView("A"))
+                        bc.setLastN(1)
+                        runBweLoop()
 
-                    testStageView(bc)
+                        verifyStageViewLastN1()
+                    }
+                    context("and a non-dominant speaker is on stage") {
+                        bc.setEndpointOrdering("B", "A", "C", "D")
+                        bc.setVideoConstraints(vcc.stageView("A"))
+                        bc.setLastN(1)
+                        runBweLoop()
+
+                        verifyStageViewLastN1()
+                    }
                 }
             }
             context("Tile view") {
                 bc.setEndpointOrdering("A", "B", "C", "D")
                 bc.setVideoConstraints(vcc.tileView("A", "B", "C", "D"))
 
-                for (bwe in 0..5_000_000 step 10_000) {
-                    bc.bwe = bwe.bps
-                    clock.elapse(100.ms)
+                context("When LastN is not set") {
+                    runBweLoop()
+
+                    verifyTileView()
                 }
-                logger.info("Forwarded endpoints history: ${bc.forwardedEndpointsHistory}")
-                logger.info("Effective constraints history: ${bc.effectiveConstraintsHistory}")
-                logger.info("Allocation history: ${bc.allocationHistory}")
+                context("When LastN=0") {
+                    bc.setLastN(0)
+                    runBweLoop()
 
-                // At this stage the purpose of this is just to document current behavior.
-                // TODO: The results with bwe==-1 are wrong.
-                bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
-                bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-                    emptyList(),
-                    listOf("A"),
-                    listOf("A", "B"),
-                    listOf("A", "B", "C"),
-                    listOf("A", "B", "C", "D")
-                )
+                    verifyLastN0()
+                }
+                context("When LastN=1") {
+                    bc.setLastN(1)
+                    runBweLoop()
 
-                // At this stage the purpose of this is just to document current behavior.
-                // TODO: the allocations for bwe=-1 are wrong.
-                bc.allocationHistory.removeIf { it.bwe < 0.bps }
-
-                bc.allocationHistory.shouldMatchInOrder(
-                    Event(
-                        0.kbps,
-                        listOf(
-                            AllocationInfo("A", noVideo),
-                            AllocationInfo("B", noVideo),
-                            AllocationInfo("C", noVideo),
-                            AllocationInfo("D", noVideo)
-                        )
-                    ),
-                    Event(
-                        10.kbps,
-                        listOf(
-                            AllocationInfo("A", ld7_5, oversending = true),
-                            AllocationInfo("B", noVideo),
-                            AllocationInfo("C", noVideo),
-                            AllocationInfo("D", noVideo)
-                        )
-                    ),
-                    Event(
-                        100.kbps,
-                        listOf(
-                            AllocationInfo("A", ld7_5),
-                            AllocationInfo("B", ld7_5),
-                            AllocationInfo("C", noVideo),
-                            AllocationInfo("D", noVideo)
-                        )
-                    ),
-                    Event(
-                        150.kbps,
-                        listOf(
-                            AllocationInfo("A", ld7_5),
-                            AllocationInfo("B", ld7_5),
-                            AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", noVideo)
-                        )
-                    ),
-                    Event(
-                        200.kbps,
-                        listOf(
-                            AllocationInfo("A", ld7_5),
-                            AllocationInfo("B", ld7_5),
-                            AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", ld7_5)
-                        )
-                    ),
-                    Event(
-                        250.kbps,
-                        listOf(
-                            AllocationInfo("A", ld15),
-                            AllocationInfo("B", ld7_5),
-                            AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", ld7_5)
-                        )
-                    ),
-                    Event(
-                        300.kbps,
-                        listOf(
-                            AllocationInfo("A", ld15),
-                            AllocationInfo("B", ld15),
-                            AllocationInfo("C", ld7_5),
-                            AllocationInfo("D", ld7_5)
-                        )
-                    ),
-                    Event(
-                        350.kbps,
-                        listOf(
-                            AllocationInfo("A", ld15),
-                            AllocationInfo("B", ld15),
-                            AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld7_5)
-                        )
-                    ),
-                    Event(
-                        400.kbps,
-                        listOf(
-                            AllocationInfo("A", ld15),
-                            AllocationInfo("B", ld15),
-                            AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld15)
-                        )
-                    ),
-                    Event(
-                        450.kbps,
-                        listOf(
-                            AllocationInfo("A", ld30),
-                            AllocationInfo("B", ld15),
-                            AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld15)
-                        )
-                    ),
-                    Event(
-                        500.kbps,
-                        listOf(
-                            AllocationInfo("A", ld30),
-                            AllocationInfo("B", ld30),
-                            AllocationInfo("C", ld15),
-                            AllocationInfo("D", ld15)
-                        )
-                    ),
-                    Event(
-                        550.kbps,
-                        listOf(
-                            AllocationInfo("A", ld30),
-                            AllocationInfo("B", ld30),
-                            AllocationInfo("C", ld30),
-                            AllocationInfo("D", ld15)
-                        )
-                    ),
-                    Event(
-                        610.kbps,
-                        listOf(
-                            AllocationInfo("A", ld30),
-                            AllocationInfo("B", ld30),
-                            AllocationInfo("C", ld30),
-                            AllocationInfo("D", ld30)
-                        )
-                    )
-                )
+                    verifyTileViewLastN1()
+                }
             }
         }
     }
 
-    private fun testStageView(bc: BitrateControllerWrapper) {
+    private fun runBweLoop() {
         for (bwe in 0..5_000_000 step 10_000) {
             bc.bwe = bwe.bps
             clock.elapse(100.ms)
@@ -281,12 +188,14 @@ class BitrateControllerTest : ShouldSpec() {
         logger.info("Forwarded endpoints history: ${bc.forwardedEndpointsHistory}")
         logger.info("Effective constraints history: ${bc.effectiveConstraintsHistory}")
         logger.info("Allocation history: ${bc.allocationHistory}")
+    }
 
+
+    private fun verifyStageView() {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
         bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
         bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            emptyList(),
             listOf("A"),
             listOf("A", "B"),
             listOf("A", "B", "C"),
@@ -300,18 +209,6 @@ class BitrateControllerTest : ShouldSpec() {
         bc.allocationHistory.shouldMatchInOrder(
             Event(
                 0.kbps,
-                listOf(
-                    // TODO: this looks like a bug. We should be oversending to A. In practice this is probably
-                    // harmless since it works as expected with bwe=10kbps.
-                    // AllocationInfo("A", ld7_5, oversending = true),
-                    AllocationInfo("A", noVideo),
-                    AllocationInfo("B", noVideo),
-                    AllocationInfo("C", noVideo),
-                    AllocationInfo("D", noVideo)
-                )
-            ),
-            Event(
-                10.kbps,
                 listOf(
                     AllocationInfo("A", ld7_5, oversending = true),
                     AllocationInfo("B", noVideo),
@@ -332,6 +229,15 @@ class BitrateControllerTest : ShouldSpec() {
                 150.kbps,
                 listOf(
                     AllocationInfo("A", ld30),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                500.kbps,
+                listOf(
+                    AllocationInfo("A", sd30),
                     AllocationInfo("B", noVideo),
                     AllocationInfo("C", noVideo),
                     AllocationInfo("D", noVideo)
@@ -482,7 +388,253 @@ class BitrateControllerTest : ShouldSpec() {
                 )
             )
         )
+    }
 
+    private fun verifyLastN0() {
+        // No video forwarded even with high BWE.
+        bc.forwardedEndpointsHistory.size shouldBe 0
+
+        // TODO: The history contains 3 identical elements, which is probably a bug.
+        bc.allocationHistory.last().event shouldContainExactly listOf(
+            AllocationInfo("A", noVideo),
+            AllocationInfo("B", noVideo),
+            AllocationInfo("C", noVideo),
+            AllocationInfo("D", noVideo)
+        )
+    }
+
+    private fun verifyStageViewLastN1() {
+        // At this stage the purpose of this is just to document current behavior.
+        // TODO: The results with bwe==-1 are wrong.
+        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
+
+        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
+            listOf("A")
+        )
+
+        // At this stage the purpose of this is just to document current behavior.
+        // TODO: the allocations for bwe=-1 are wrong.
+        bc.allocationHistory.removeIf { it.bwe < 0.bps }
+
+        bc.allocationHistory.shouldMatchInOrder(
+            Event(
+                0.kbps,
+                listOf(
+                    AllocationInfo("A", ld7_5, oversending = true),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                100.kbps,
+                listOf(
+                    AllocationInfo("A", ld15),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                150.kbps,
+                listOf(
+                    AllocationInfo("A", ld30),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                500.kbps,
+                listOf(
+                    AllocationInfo("A", sd30),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                2010.kbps,
+                listOf(
+                    AllocationInfo("A", hd30),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            )
+        )
+    }
+
+
+    private fun verifyTileView() {
+        // At this stage the purpose of this is just to document current behavior.
+        // TODO: The results with bwe==-1 are wrong.
+        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
+        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
+            listOf("A"),
+            listOf("A", "B"),
+            listOf("A", "B", "C"),
+            listOf("A", "B", "C", "D")
+        )
+
+        // At this stage the purpose of this is just to document current behavior.
+        // TODO: the allocations for bwe=-1 are wrong.
+        bc.allocationHistory.removeIf { it.bwe < 0.bps }
+
+        bc.allocationHistory.shouldMatchInOrder(
+            Event(
+                0.kbps,
+                listOf(
+                    // TODO: do we want to oversend in tile view?
+                    AllocationInfo("A", ld7_5, oversending = true),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                100.kbps,
+                listOf(
+                    AllocationInfo("A", ld7_5),
+                    AllocationInfo("B", ld7_5),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                150.kbps,
+                listOf(
+                    AllocationInfo("A", ld7_5),
+                    AllocationInfo("B", ld7_5),
+                    AllocationInfo("C", ld7_5),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                200.kbps,
+                listOf(
+                    AllocationInfo("A", ld7_5),
+                    AllocationInfo("B", ld7_5),
+                    AllocationInfo("C", ld7_5),
+                    AllocationInfo("D", ld7_5)
+                )
+            ),
+            Event(
+                250.kbps,
+                listOf(
+                    AllocationInfo("A", ld15),
+                    AllocationInfo("B", ld7_5),
+                    AllocationInfo("C", ld7_5),
+                    AllocationInfo("D", ld7_5)
+                )
+            ),
+            Event(
+                300.kbps,
+                listOf(
+                    AllocationInfo("A", ld15),
+                    AllocationInfo("B", ld15),
+                    AllocationInfo("C", ld7_5),
+                    AllocationInfo("D", ld7_5)
+                )
+            ),
+            Event(
+                350.kbps,
+                listOf(
+                    AllocationInfo("A", ld15),
+                    AllocationInfo("B", ld15),
+                    AllocationInfo("C", ld15),
+                    AllocationInfo("D", ld7_5)
+                )
+            ),
+            Event(
+                400.kbps,
+                listOf(
+                    AllocationInfo("A", ld15),
+                    AllocationInfo("B", ld15),
+                    AllocationInfo("C", ld15),
+                    AllocationInfo("D", ld15)
+                )
+            ),
+            Event(
+                450.kbps,
+                listOf(
+                    AllocationInfo("A", ld30),
+                    AllocationInfo("B", ld15),
+                    AllocationInfo("C", ld15),
+                    AllocationInfo("D", ld15)
+                )
+            ),
+            Event(
+                500.kbps,
+                listOf(
+                    AllocationInfo("A", ld30),
+                    AllocationInfo("B", ld30),
+                    AllocationInfo("C", ld15),
+                    AllocationInfo("D", ld15)
+                )
+            ),
+            Event(
+                550.kbps,
+                listOf(
+                    AllocationInfo("A", ld30),
+                    AllocationInfo("B", ld30),
+                    AllocationInfo("C", ld30),
+                    AllocationInfo("D", ld15)
+                )
+            ),
+            Event(
+                610.kbps,
+                listOf(
+                    AllocationInfo("A", ld30),
+                    AllocationInfo("B", ld30),
+                    AllocationInfo("C", ld30),
+                    AllocationInfo("D", ld30)
+                )
+            )
+        )
+    }
+
+    private fun verifyTileViewLastN1() {
+        // At this stage the purpose of this is just to document current behavior.
+        // TODO: The results with bwe==-1 are wrong.
+        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
+        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
+            listOf("A")
+        )
+
+        // At this stage the purpose of this is just to document current behavior.
+        // TODO: the allocations for bwe=-1 are wrong.
+        bc.allocationHistory.removeIf { it.bwe < 0.bps }
+
+        bc.allocationHistory.shouldMatchInOrder(
+            Event(
+                0.kbps,
+                listOf(
+                    // TODO: do we want to oversend in tile view?
+                    AllocationInfo("A", ld7_5, oversending = true),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                100.kbps,
+                listOf(
+                    AllocationInfo("A", ld15),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                160.kbps, // TODO: why 160 instead of 150? weird.
+                listOf(
+                    AllocationInfo("A", ld30),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ))
     }
 }
 
@@ -501,9 +653,9 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
 
     var bwe = (-1).bps
         set(value) {
-            logger.debug("Setting bwe=$bwe")
-            bc.bandwidthChanged(bwe.bps.toLong())
+            logger.debug("Setting bwe=$value")
             field = value
+            bc.bandwidthChanged(value.bps.toLong())
         }
 
     // Save the output.
@@ -547,11 +699,19 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
     )
 
     fun setEndpointOrdering(vararg endpoints: String) {
+        logger.info("Set endpoints $endpoints")
         bc.endpointOrderingChanged(mutableListOf(*endpoints))
     }
 
-    fun setVideoConstraints(videoConstraints: ImmutableMap<String, VideoConstraints>) =
+    fun setVideoConstraints(videoConstraints: ImmutableMap<String, VideoConstraints>) {
+        logger.info("Set video constraints $videoConstraints")
         bc.setVideoConstraints(videoConstraints)
+    }
+
+    fun setLastN(n: Int) {
+        logger.info("Set LastN $n")
+        bc.lastN = n
+    }
 
     init {
         // The BC only starts working 10 seconds after it first received media, so fake that.
@@ -586,7 +746,7 @@ data class AllocationInfo(
         this(id, layer.height, layer.frameRate, layer.getBitrate(0), oversending)
 
     override fun toString(): String =
-        "\n\t[id=$id, height=$height, fps=$fps, bitrate=$bitrate oversending=$oversending]"
+        "\n\t[id=$id, height=$height, fps=$fps, bitrate=$bitrate, oversending=$oversending]"
 }
 
 fun BitrateController.SourceBitrateAllocation.toEndpointAllocationInfo() =
