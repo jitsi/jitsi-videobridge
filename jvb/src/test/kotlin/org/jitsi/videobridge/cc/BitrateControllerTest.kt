@@ -190,7 +190,6 @@ class BitrateControllerTest : ShouldSpec() {
         logger.info("Allocation history: ${bc.allocationHistory}")
     }
 
-
     private fun verifyStageView() {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
@@ -465,7 +464,6 @@ class BitrateControllerTest : ShouldSpec() {
         )
     }
 
-
     private fun verifyTileView() {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
@@ -634,7 +632,8 @@ class BitrateControllerTest : ShouldSpec() {
                     AllocationInfo("C", noVideo),
                     AllocationInfo("D", noVideo)
                 )
-            ))
+            )
+        )
     }
 }
 
