@@ -652,31 +652,32 @@ val bitrateSd = 500.kbps
 val bitrateHd = 2000.kbps
 
 val ld7_5
-    get() = createLayer(tid = 0, height = 180, frameRate = 7.5, bitrate = bitrateLd * 0.33)
+    get() = createLayer(tid = 0, eid = 0, height = 180, frameRate = 7.5, bitrate = bitrateLd * 0.33)
 val ld15
-    get() = createLayer(tid = 1, height = 180, frameRate = 15.0, bitrate = bitrateLd * 0.66)
+    get() = createLayer(tid = 1, eid = 0, height = 180, frameRate = 15.0, bitrate = bitrateLd * 0.66)
 val ld30
-    get() = createLayer(tid = 2, height = 180, frameRate = 30.0, bitrate = bitrateLd)
+    get() = createLayer(tid = 2, eid = 0, height = 180, frameRate = 30.0, bitrate = bitrateLd)
 
 val sd7_5
-    get() = createLayer(tid = 0, height = 360, frameRate = 7.5, bitrate = bitrateSd * 0.33)
+    get() = createLayer(tid = 0, eid = 1, height = 360, frameRate = 7.5, bitrate = bitrateSd * 0.33)
 val sd15
-    get() = createLayer(tid = 1, height = 360, frameRate = 15.0, bitrate = bitrateSd * 0.66)
+    get() = createLayer(tid = 1, eid = 1, height = 360, frameRate = 15.0, bitrate = bitrateSd * 0.66)
 val sd30
-    get() = createLayer(tid = 2, height = 360, frameRate = 30.0, bitrate = bitrateSd)
+    get() = createLayer(tid = 2, eid = 1, height = 360, frameRate = 30.0, bitrate = bitrateSd)
 
 val hd7_5
-    get() = createLayer(tid = 0, height = 720, frameRate = 7.5, bitrate = bitrateHd * 0.33)
+    get() = createLayer(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = bitrateHd * 0.33)
 val hd15
-    get() = createLayer(tid = 1, height = 720, frameRate = 15.0, bitrate = bitrateHd * 0.66)
+    get() = createLayer(tid = 1, eid = 2, height = 720, frameRate = 15.0, bitrate = bitrateHd * 0.66)
 val hd30
-    get() = createLayer(tid = 2, height = 720, frameRate = 30.0, bitrate = bitrateHd)
+    get() = createLayer(tid = 2, eid = 2, height = 720, frameRate = 30.0, bitrate = bitrateHd)
 
 val noVideo
-    get() = createLayer(tid = -1, height = 0, frameRate = 0.0, bitrate = 0.bps)
+    get() = createLayer(tid = -1, eid = -1, height = 0, frameRate = 0.0, bitrate = 0.bps)
 
 fun createLayer(
     tid: Int,
+    eid: Int,
     height: Int,
     frameRate: Double,
     /**
@@ -684,7 +685,6 @@ fun createLayer(
      */
     bitrate: Bandwidth
 ): RtpLayerDesc {
-    val eid = 0
     val sid = -1
 
     val rtpLayerDesc = mockk<RtpLayerDesc>()
