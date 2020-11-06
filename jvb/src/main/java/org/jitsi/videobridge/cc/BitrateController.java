@@ -227,11 +227,6 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
     private List<String> sortedEndpointIds;
 
     /**
-     * The main result of the bitrate allocation algorithm computation.
-     */
-    private List<AdaptiveSourceProjection> adaptiveSourceProjections = Collections.emptyList();
-
-    /**
      * The map of endpoint id to video constraints that contains the video
      * constraints to respect when allocating bandwidth for a specific endpoint.
      */
@@ -282,12 +277,9 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
     private Instant lastUpdateTime = Instant.MIN;
 
     /**
-     * Whether or not we are knowingly oversending (due to enableOnstageVideoSuspend being
-     * false)
+     * Keep track of how much time we spend knowingly oversending (due to enableOnstageVideoSuspend being false)
      */
-    private boolean oversending = false;
-
-    private final OversendingTimeTracker oversendingTimeTracker = new OversendingTimeTracker();
+    private final BooleanStateTimeTracker oversendingTimeTracker = new BooleanStateTimeTracker();
 
     /**
      * Initializes a new {@link BitrateController} instance which is to
@@ -418,8 +410,8 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         debugState.put("effectiveVideoConstraints", effectiveConstraintsMap);
         debugState.put("lastN", lastN);
         debugState.put("supportsRtx", supportsRtx);
-        debugState.put("oversending", oversending);
-        debugState.put("total_oversending_time_secs", oversendingTimeTracker.totalOversendingTime().getSeconds());
+        debugState.put("oversending", oversendingTimeTracker.getState());
+        debugState.put("total_oversending_time_secs", oversendingTimeTracker.totalTimeOn().getSeconds());
         JSONObject adaptiveSourceProjectionsJson = new JSONObject();
         for (Map.Entry<Long, AdaptiveSourceProjection> entry : adaptiveSourceProjectionMap.entrySet())
         {
@@ -439,10 +431,6 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
      */
     StatusSnapshot getStatusSnapshot()
     {
-        if (adaptiveSourceProjections == null || adaptiveSourceProjections.isEmpty())
-        {
-            return new StatusSnapshot();
-        }
         List<Long> activeSsrcs = new ArrayList<>();
         long totalTargetBps = 0, totalIdealBps = 0;
         long nowMs = clock.instant().toEpochMilli();
@@ -618,13 +606,11 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
             // it's more efficient than summing them all up.
             if (sourceBitrateAllocations.get(0).oversending)
             {
-                oversendingTimeTracker.startedOversending();
-                oversending = true;
+                oversendingTimeTracker.on();
             }
             else
             {
-                oversendingTimeTracker.stoppedOversending();
-                oversending = false;
+                oversendingTimeTracker.off();
             }
         }
 
@@ -642,7 +628,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         // constraints map which are used in layer suspension.
         Map<String, VideoConstraints> newEffectiveConstraints = new HashMap<>();
 
-        List<AdaptiveSourceProjection> adaptiveSourceProjections = new ArrayList<>();
+        boolean changed = false;
         if (!sourceBitrateAllocations.isEmpty())
         {
             for (SourceBitrateAllocation sourceBitrateAllocation : sourceBitrateAllocations)
@@ -659,9 +645,8 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
 
                 if (adaptiveSourceProjection != null)
                 {
-                    adaptiveSourceProjections.add(adaptiveSourceProjection);
-                    adaptiveSourceProjection.setTargetIndex(sourceTargetIdx);
-                    adaptiveSourceProjection.setIdealIndex(sourceIdealIdx);
+                    changed |= adaptiveSourceProjection.setTargetIndex(sourceTargetIdx);
+                    changed |= adaptiveSourceProjection.setIdealIndex(sourceIdealIdx);
 
                     if (sourceBitrateAllocation.source != null && enableVideoQualityTracing)
                     {
@@ -711,6 +696,13 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
                 adaptiveSourceProjection.setIdealIndex(RtpLayerDesc.SUSPENDED_INDEX);
             }
         }
+        if (changed)
+        {
+            eventEmitter.fireEvent(handler -> {
+                handler.allocationChanged(sourceBitrateAllocations);
+                return Unit.INSTANCE;
+            });
+        }
 
         if (enableVideoQualityTracing)
         {
@@ -722,9 +714,6 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
                     .addField("total_target_bps", totalTargetBps)
                     .addField("total_ideal_bps", totalIdealBps));
         }
-
-        // The bandwidth prober will pick this up.
-        this.adaptiveSourceProjections = Collections.unmodifiableList(adaptiveSourceProjections);
 
         if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
         {
@@ -837,7 +826,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
             return sourceBitrateAllocations;
         }
 
-        long oldMaxBandwidth = 0;
+        long oldMaxBandwidth = -1;
 
         int oldStateLen = 0;
         int[] oldRatedTargetIndices = new int[sourceBitrateAllocations.size()];
@@ -964,8 +953,9 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
                         new SourceBitrateAllocation(
                             endpointMultiRank.endpoint.getID(),
                             source,
-                            endpointMultiRank.effectiveVideoConstraints));
-
+                            endpointMultiRank.effectiveVideoConstraints,
+                            clock,
+                            diagnosticContext));
                 }
 
 
@@ -1077,12 +1067,12 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
 
     public boolean isOversending()
     {
-        return this.oversending;
+        return this.oversendingTimeTracker.getState();
     }
 
     public Duration getTotalOversendingTime()
     {
-        return this.oversendingTimeTracker.totalOversendingTime();
+        return this.oversendingTimeTracker.totalTimeOn();
     }
 
     /**
@@ -1118,12 +1108,12 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
      *
      * @author George Politis
      */
-    private class SourceBitrateAllocation
+    public static class SourceBitrateAllocation
     {
         /**
          * The ID of the {@link Endpoint} that this instance pertains to.
          */
-        private final String endpointID;
+        public final String endpointID;
 
         /**
          * Indicates whether this {@link Endpoint} is on-stage/selected or not
@@ -1173,7 +1163,7 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
          * A boolean that indicates whether or not we're force pushing through
          * the bottleneck this source.
          */
-        private boolean oversending = false;
+        public boolean oversending = false;
 
         /**
          * the bitrate (in bps) of the layer that is the closest to the ideal
@@ -1197,7 +1187,9 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         private SourceBitrateAllocation(
             String endpointID,
             MediaSourceDesc source,
-            VideoConstraints effectiveVideoConstraints)
+            VideoConstraints effectiveVideoConstraints,
+            Clock clock,
+            DiagnosticContext diagnosticContext)
         {
             this.endpointID = endpointID;
             this.effectiveVideoConstraints = effectiveVideoConstraints;
@@ -1380,6 +1372,14 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
         }
 
         /**
+         * Expose for testing only.
+         */
+        public RtpLayerDesc getTargetLayer()
+        {
+            return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx].layer : null;
+        }
+
+        /**
          * @return the bitrate (in bps) of the layer that is the closest to
          * the ideal and has a bitrate, or 0 if there are no layers with a
          * bitrate (for example, the endpoint is video muted).
@@ -1423,6 +1423,17 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
             // figures out the quality of the layer of the ideal rated
             // quality.
             return ratedIndices.length != 0 ? ratedIndices[ratedIndices.length - 1].layer.getIndex() : -1;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "[id=" + endpointID
+                    + " effectiveVideoConstraints=" + effectiveVideoConstraints
+                    + " ratedPreferredIdx=" + ratedPreferredIdx
+                    + " ratedTargetIdx=" + ratedTargetIdx
+                    + " oversending=" + oversending
+                    + " idealBitrate=" + idealBitrate;
         }
     }
 
@@ -1540,11 +1551,16 @@ public class BitrateController<T extends BitrateController.MediaSourceContainer>
 
     public interface EventHandler
     {
-        void forwardedEndpointsChanged(Collection<String> forwardedEndpoints);
+        void forwardedEndpointsChanged(@NotNull Collection<String> forwardedEndpoints);
         void effectiveVideoConstraintsChanged(
-            ImmutableMap<String, VideoConstraints> oldVideoConstraints,
-            ImmutableMap<String, VideoConstraints> newVideoConstraints);
+            @NotNull ImmutableMap<String, VideoConstraints> oldVideoConstraints,
+            @NotNull ImmutableMap<String, VideoConstraints> newVideoConstraints);
         void keyframeNeeded(String endpointId, long ssrc);
+
+        /**
+         * This is exposed just for testing. Once we have tests, we can more confidently refactor it away.
+         */
+        default void allocationChanged(@NotNull List<SourceBitrateAllocation> allocation) {}
     }
 
     /**
