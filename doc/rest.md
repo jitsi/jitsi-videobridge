@@ -18,7 +18,7 @@ private interface, but for the public interface additional properties are requir
 Configuration
 ==============
 
-The following configuration properties can be added to the jitsi-videobridge configuration file to control the behaviour of the HTTP interfaces
+The following configuration properties can be added to the jitsi-videobridge configuration file (`sip-communicator.properties`) to control the behaviour of the HTTP interfaces
 
 For the _private_ interface:
 
