@@ -23,13 +23,13 @@ For the _private_ interface, use the following block and values:
 videobridge {
     http-servers {
         private {
-            // Specifices the port for the private HTTP interface (or -1 to disable it).  Defaults to 8080.
+            // The port for the private HTTP interface (or -1 to disable it).  Defaults to 8080.
             port = <Number>
-            // Specifics the port for the private HTTP interface if TLS is to be used (or -1 to disable). Defaults to 8443.
+            // The port for the private HTTP interface if TLS is to be used (or -1 to disable). Defaults to 8443.
             tls-port = <Number>
             // The address on which the server will listen
             host = <String>
-            // Specific the path to the keystore to be used with HTTPS for the private interface.  If this is not specified,
+            // The file path to the keystore to be used with HTTPS for the private interface.  If this is not specified,
             // HTTPS is disabled for the private interface
             key-store-path = <String (path to key store)>
             // The password to be used by the SslContextFactory when HTTPS is used
