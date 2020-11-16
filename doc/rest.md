@@ -27,7 +27,7 @@ videobridge {
             port = <Number>
             // Specifics the port for the private HTTP interface if TLS is to be used (or -1 to disable). Defaults to 8443.
             tls-port = <Number>
-            // The address on whicih the server will listen
+            // The address on which the server will listen
             host = <String>
             // Specific the path to the keystore to be used with HTTPS for the private interface.  If this is not specified,
             // HTTPS is disabled for the private interface
